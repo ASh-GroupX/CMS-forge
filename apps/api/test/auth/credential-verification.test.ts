@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import argon2 from 'argon2';
+import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
 import { AuthService } from '../../src/modules/auth/auth.service.ts';
 import type { StaffAuthRecord } from '../../src/modules/auth/auth.repository.ts';
@@ -82,4 +83,41 @@ test('invalid, inactive, locked, and missing-hash users are denied generically',
     }),
     isAuthError('AUTH_INVALID_CREDENTIALS'),
   );
+});
+
+test('failed credential verification records safe auth audit metadata', async () => {
+  const passwordHash = await argon2.hash('correct-password', { type: argon2.argon2id });
+  const auditRecords: AuditRecordInput[] = [];
+  const service = new AuthService(
+    {
+      findStaffByIdentifier: async () => ({ ...baseUser, passwordHash }),
+      createStaffSession: async () => ({ id: 'session_unused' }),
+      findStaffSessionByTokenHash: async () => null,
+      revokeStaffSession: async () => 0,
+    },
+    { record: async (input) => auditRecords.push(input) } as AuditService,
+  );
+
+  await assert.rejects(
+    service.verifyCredentials({
+      identifier: 'admin@cms-auto.test',
+      password: 'wrong-password',
+      audit: { correlationId: 'req_test', ipAddress: '127.0.0.1', userAgent: 'node:test' },
+    }),
+    isAuthError('AUTH_INVALID_CREDENTIALS'),
+  );
+
+  assert.deepEqual(auditRecords, [
+    {
+      eventType: 'AUTH',
+      action: 'login_failure',
+      targetType: 'user',
+      metadata: { reason: 'AUTH_INVALID_CREDENTIALS' },
+      correlationId: 'req_test',
+      ipAddress: '127.0.0.1',
+      userAgent: 'node:test',
+    },
+  ]);
+  assert.equal(JSON.stringify(auditRecords).includes('wrong-password'), false);
+  assert.equal(JSON.stringify(auditRecords).includes(passwordHash), false);
 });

@@ -2,7 +2,29 @@
 
 Status: Ready to Build
 Phase: Phase 1 - Security Baseline
-Next Task: F1-01E1 - Auth HTTP Login/Logout Routes
+Next Task: F1-02 - RBAC and branch-scope enforcement
+
+## Phase 1 — Auth Foundation Verified (gate passed)
+
+VERIFY-F1-01E decision: **Accept** (independent VERIFY, fresh context / Opus 4.8,
+2026-06-18). Builder honesty Honest, code quality Good. All five proof commands
+independently re-run green (lint, typecheck, test 19/19, test:api -- auth 15/15,
+openapi:check); change scope clean; no secret/token exposure, missing audit, or
+OpenAPI drift. Full record in `.forge/trust.md` (VERIFY-F1-01E). The `Verify Gate`
+on `F1-01E3` is cleared — AUTO PHASE may resume from `F1-02`.
+
+### Carry-forward conditions into the rest of Phase 1 (see trust.md VERIFY-F1-01E)
+
+1. Login rate limiting (NFR-SEC-001 AC3) and CSRF on session-authenticated mutation
+   routes (NFR-SEC-001 AC5) are unbuilt `[must]` items and blocking at the MVP
+   "Security baseline" gate. Tracked as new backlog item `F1-06`; must land before the
+   Phase 1 PHASE-REVIEWER gate.
+2. Username login (REQ-AUTH-001 AC1) is email-only until the users/admin model adds a
+   username column; `identifier` naming is already forward-compatible.
+3. Lock (REQ-AUTH-001 AC5) and password-reset (AC6) audit/flows land with those
+   features; login/logout/failure auditing is complete.
+4. Audit append-only is application-level only; DB-level UPDATE/DELETE revocation is
+   F1-03's job.
 
 ## Phase 0 — Accepted
 
@@ -35,4 +57,14 @@ thresholds), openapi:check, build, prisma validate.
 - F0-06 — boundary lint, coverage thresholds, OpenAPI scaffold drift, fail-loud UI/perf proofs.
 - F0-07 — dependency-free module generator; `branches` reserved as future golden CRUD.
 - F0-08 — coherent MVP data model: complaint history, audit, SLA, portal verification/session, comments, attachments, approvals, notifications, surveys, compensation.
+- F1-00A — generated + applied the F0-08 Prisma migration inside the Docker network; seed data preserved.
+- F1-00B — bootstrapped NestJS app + core kernel (Prisma lifecycle, correlation, error envelope); liveness preserved.
+- F1-01A — dev-only Argon2id staff seed hashes; real `test:api -- auth` runner replacing the placeholder.
+- F1-01B — service credential verification (Argon2id), generic denial of wrong/inactive/locked/missing-hash.
+- F1-01C — `StaffSession` model + migration; session creation stores only a SHA-256 token hash; HttpOnly/SameSite/Secure cookie.
+- F1-01D — session validation + logout invalidation by token hash; generic denial of missing/unknown/expired/revoked.
+- F1-01E1 — `AuthModule` + `POST /auth/login` and `/auth/logout` routes with DTO parsing.
+- F1-01E2 — append-only `AuditService`; AUTH login_success/login_failure/logout entries; audit-in-transaction for state changes.
+- F1-01E3 — auth OpenAPI contract (paths + safe schemas + Set-Cookie); `openapi:check` hardened against auth-path/schema removal.
+- VERIFY-F1-01E — independent gate Accept (Honest/Good); five proof commands re-run green; carry-forward security conditions recorded.
 - Known limitation: Prisma's Rust engine cannot connect through Docker Desktop's Windows port-forwarding (P1000); run DB ops inside the Docker network. Does not affect application code.

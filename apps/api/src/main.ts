@@ -3,9 +3,9 @@ import { Controller, Get, Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import {
   AppExceptionFilter,
-  PrismaService,
   correlationMiddleware,
 } from './core/http-kernel.js';
+import { AuthModule } from './modules/auth/auth.module.js';
 
 @Controller()
 class HealthController {
@@ -26,8 +26,8 @@ class HealthController {
 }
 
 @Module({
+  imports: [AuthModule],
   controllers: [HealthController],
-  providers: [PrismaService],
 })
 class AppModule {}
 

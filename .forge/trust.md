@@ -381,3 +381,116 @@ Phase 1, already disclosed in the build logs — not hidden gaps. Accepting.
   - The task stayed service-level and did not add HTTP routes, audit, RBAC, OpenAPI, or UI.
   - Required proof commands passed; auth API tests cover valid and denied session validation plus logout revocation.
   - Remaining final auth work is still too broad for one builder task and should be replanned before implementation.
+
+## F1-01E1 - Auth HTTP Login/Logout Routes
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - The task stayed route-only: module wiring, login/logout controller, minimal DTO parsing, and focused auth API tests.
+  - Required proof commands passed; the initial `test:api -- auth` failure was recorded and fixed by making the API test runner load the API tsconfig for Nest decorators.
+  - Audit and OpenAPI remain intentionally deferred to `F1-01E2` and `F1-01E3`.
+
+## F1-01E2 - Auth Audit Entries
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - The task stayed auth-audit-only: minimal audit writer, auth service audit hooks, source context from the controller, and focused auth API tests.
+  - Required proof commands passed after recording and fixing the initial typecheck and API-test failures.
+  - Remaining auth foundation work is OpenAPI contract documentation and the gated final security proof.
+
+## F1-01E3 - Auth OpenAPI Contract And Final Security Proof
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept pending independent VERIFY
+- Notes:
+  - The task stayed OpenAPI/proof-only: canonical auth paths and schemas, OpenAPI drift tests, and final security self-check evidence.
+  - Required proof commands passed.
+  - Because this task is marked `Verify Gate: required`, AUTO PHASE is paused at `Needs Verify` before Phase 1 continues to RBAC/branch scope.
+
+## VERIFY-F1-01E - Auth Foundation Verify Gate
+
+- Date: 2026-06-18
+- Reviewer tier: independent VERIFY (fresh context, Opus 4.8) — distinct from the F1-01* builder context
+- Risk: High
+- Builder honesty: **Honest**
+- Code quality: **Good**
+- Recommendation: **Accept** (with carry-forward conditions)
+- AUTO PHASE: may resume — state set to `Ready to Build` on `F1-02`.
+
+### Method
+
+Independent verification, not log-trust. Read every changed auth/audit/OpenAPI/test
+file directly, confirmed the working-tree change scope against `git diff`, re-ran all
+five required proof commands, cross-checked the delivered behavior against the cited
+SRS acceptance criteria, and probed the fail-loud guard.
+
+### Verification labels (re-run by reviewer)
+
+- Passed: `corepack pnpm lint`
+- Passed: `corepack pnpm typecheck` (6 tsconfig projects, clean)
+- Passed: `corepack pnpm test` (19/19; coverage 89.81% lines / 79.55% branch / 91.53% funcs — clears 80/65/75)
+- Passed: `corepack pnpm test:api -- auth` (15/15)
+- Passed: `corepack pnpm openapi:check` (committed spec equals canonical generator output)
+- Passed: fail-loud probe — `test:api -- nonexistent-suite` exits 1, so the suite runner is not theater.
+
+### Key findings
+
+- **Scope clean.** Working-tree diff is entirely auth/audit/OpenAPI/tests + `.forge`
+  tracking. No leak into unrelated modules; `apps/api` still exposes only auth + liveness.
+- **Builder labels reproduced exactly.** Every "Passed" in F1-01A..E3 evidence
+  re-ran green; the 19/19 and 15/15 counts match. Out-of-scope items are disclosed,
+  never claimed.
+- **Security self-check holds under inspection:**
+  - Role/branch claims derive from the persisted user/session record, never request
+    input (`verifyCredentials`, `validateStaffSession`).
+  - Session stores only a SHA-256 token hash; the raw token leaves the server only in
+    the HttpOnly/SameSite=Lax/Secure-in-prod cookie. Login response is safe claims +
+    expiry; tests assert no `passwordHash`/raw token in the body.
+  - `AuditService.record` is `create`-only (append-only); login_success and logout
+    audit writes run inside the same `prisma.$transaction` as the session insert/revoke.
+    Failed-login audit is a standalone write (no state change to bind), with metadata
+    limited to the error `code` — no password, identifier, hash, or token.
+  - Generic denial verified: missing-user / wrong-password / missing-hash all collapse
+    to `AUTH_INVALID_CREDENTIALS` + identical message (REQ-AUTH-001 AC2). The distinct
+    `AUTH_LOCKED_OR_INACTIVE` code is **SRS-sanctioned** (§23 error table; UI-001 lists
+    "lock/inactive handling"), not an enumeration defect.
+  - Trust boundaries tested both ways: allowed login + denied (wrong pw / inactive /
+    locked / missing hash); valid session + denied (missing / unknown / expired /
+    revoked); logout revocation; malformed-body → `VALIDATION_FAILED`.
+- **AC mapping.** Met: ARCH-AUTH-001 AC1–4; REQ-AUTH-001 AC2–4; NFR-SEC-001 AC1–2;
+  REQ-AUDIT-001 (login/logout/failure). Deferred and disclosed below.
+
+### Carry-forward conditions (must be closed before the Phase 1 PHASE-REVIEWER gate)
+
+1. **Login rate limiting + CSRF are unbuilt and currently homeless in the backlog.**
+   NFR-SEC-001 AC3 (rate limit by account+IP) and AC5 (CSRF on session-authenticated
+   mutation routes) are `[must]` and the SRS MVP "Security baseline" gate (§ gate table)
+   lists CSRF + rate limit as *blocking*. SameSite=Lax is only a partial CSRF baseline.
+   Added Phase 1 backlog item `F1-06` so this cannot be silently dropped at phase review.
+2. **Username login (REQ-AUTH-001 AC1) is email-only.** The accepted schema has no
+   username column; `findStaffByIdentifier` looks up by email. Forward-compatible
+   `identifier` naming is in place. Close when the users/admin model adds the column.
+3. **REQ-AUTH-001 AC5 lock + AC6 password-reset events** are not yet auditable because
+   those flows do not exist. Login/logout/failure auditing is complete; lock + reset
+   auditing lands with those features.
+4. **App-level append-only only.** `AuditService` never updates/deletes, but DB-level
+   append-only enforcement (revoke UPDATE/DELETE) is F1-03's explicit job — not yet done.
+
+### Minor (non-blocking) observations
+
+- In `verifyCredentials`, the failure-audit `await` precedes the rethrow; if the audit
+  write itself threw (e.g. DB down) it would mask the original auth error. A defensive
+  try/catch around the failure-audit write would be more robust. Success/logout paths
+  are fine — they are inside the transaction, so audit failure correctly rolls back.
+- `MODULE.md` is slightly stale: it says the staff-session table "will be added in
+  `F1-01C`" (now done) and lists only `users` under Owns tables; it should also list
+  `staff_sessions`. Manifest still satisfies the required lint fields. Fix opportunistically.
+- `corepack pnpm test` coverage measures only `tools/*`; the auth TS tests run under
+  `tsx` via `test:api` and are not coverage-gated. The auth tests are real and thorough,
+  but no coverage threshold enforces auth-service coverage yet (pre-existing Phase 0
+  structural limitation, not introduced here).

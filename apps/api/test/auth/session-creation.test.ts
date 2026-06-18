@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
 import { AuthService, hashStaffSessionToken } from '../../src/modules/auth/auth.service.ts';
 
 test('staff session creation stores only a token hash and returns a safe cookie', async () => {
@@ -45,4 +46,49 @@ test('staff session cookie omits Secure outside production mode', async () => {
   });
 
   assert.doesNotMatch(result.cookie, /; Secure/);
+});
+
+test('staff session creation writes login success audit in the same transaction hook', async () => {
+  const auditRecords: AuditRecordInput[] = [];
+  let stored: { userId: string; tokenHash: string; expiresAt: Date } | undefined;
+  let usedTransaction = false;
+  const service = new AuthService(
+    {
+      findStaffByIdentifier: async () => null,
+      createStaffSession: async (input) => {
+        stored = input;
+        return { id: 'session_test' };
+      },
+      findStaffSessionByTokenHash: async () => null,
+      revokeStaffSession: async () => 0,
+      transaction: async (work) => {
+        usedTransaction = true;
+        return work({} as never);
+      },
+    },
+    { record: async (input) => auditRecords.push(input) } as AuditService,
+  );
+
+  const result = await service.createStaffSession({
+    userId: 'usr_test',
+    branchId: 'branch_main',
+    now: new Date('2026-06-18T12:00:00.000Z'),
+    audit: { correlationId: 'req_test', ipAddress: '127.0.0.1', userAgent: 'node:test' },
+  });
+
+  assert.equal(usedTransaction, true);
+  assert.equal(stored?.tokenHash, hashStaffSessionToken(result.cookie.match(/^cms_staff_session=([^;]+)/)?.[1] ?? ''));
+  assert.deepEqual(auditRecords, [
+    {
+      eventType: 'AUTH',
+      action: 'login_success',
+      actorId: 'usr_test',
+      branchId: 'branch_main',
+      targetType: 'user',
+      targetId: 'usr_test',
+      correlationId: 'req_test',
+      ipAddress: '127.0.0.1',
+      userAgent: 'node:test',
+    },
+  ]);
 });

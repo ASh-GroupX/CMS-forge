@@ -1,4 +1,4 @@
-# Next Task: F1-01E1 - Auth HTTP Login/Logout Routes
+# Next Task: F1-02 - RBAC and branch-scope enforcement
 
 Status: Ready to Build
 Required model tier: BUILDER-STRONG
@@ -7,70 +7,71 @@ Phase: Phase 1 - Security Baseline
 
 ## Why This Exists
 
-The auth service can verify credentials, create staff sessions, validate sessions,
-and revoke sessions, but the API has no staff login/logout HTTP routes yet.
-Add only the route layer and Nest module wiring. Audit and OpenAPI are separate
-follow-up tasks so the final auth gate stays small.
+The auth foundation (F1-01A..E3) is verified and accepted (see trust.md
+VERIFY-F1-01E). `AuthService.validateStaffSession` already returns safe,
+server-derived staff claims (role + branch) but nothing resolves a session per
+request yet, and no route is access-controlled. F1-02 turns those claims into
+enforced authority: authenticate the request from the session cookie, then gate
+routes by role and branch scope — decided on the server, never from client input.
 
 ## Scope
 
-Implement staff auth HTTP route wiring only:
+Enforce RBAC + branch scope using the canonical pattern in `docs/ARCHITECTURE.md`
+§6.2, reusing the existing `validateStaffSession` and `AuditService`. Do not invent
+a new guard, error, or audit mechanism.
 
-- Add `AuthModule` and `AuthController` for `POST /auth/login` and
-  `POST /auth/logout`.
-- Wire `AuthModule` into the existing Nest app.
-- Use existing `AuthService.verifyCredentials`, `createStaffSession`, and
-  `logoutStaffSession`; do not redesign credential or session behavior.
-- Validate malformed login bodies and return the standard error envelope.
-- Set the staff session `Set-Cookie` header on login and the expired cookie on
-  logout.
-- Return only safe staff claims and session expiry. Never return raw session
-  tokens, password hashes, OTPs, or credentials.
-- Add focused auth API tests for successful login cookie issuance, generic failed
-  login, logout expired cookie, and malformed input.
+- Add a core session-authentication guard that reads the `cms_staff_session` cookie,
+  validates it via `AuthService.validateStaffSession`, and attaches the server-derived
+  principal (claims) to the request. Unauthenticated/invalid requests to protected
+  routes are denied with the stable `AUTH_INVALID_CREDENTIALS` envelope.
+- Add `@Roles(...)` and `@BranchScoped()` decorators plus an `RbacGuard` that reads the
+  role and branch **from the attached principal only**. Deny with stable codes
+  `RBAC_FORBIDDEN` / `BRANCH_SCOPE_FORBIDDEN` and emit a `SECURITY` audit entry on deny.
+- Demonstrate enforcement on one protected route (e.g. an authenticated `GET /auth/me`
+  returning safe claims) — not a broad feature surface.
+- Tests: at least one allowed and one denied case for role, one allowed and one denied
+  case for branch scope, and one unauthenticated denial. Assert deny paths write a
+  `SECURITY` audit and never trust client-supplied role/branch.
+
+## Scope Guard
+
+Keep to ~1–5 source files plus tests. If session-resolution + role gate + branch-scope
+gate + deny-audit cannot fit that budget, **stop and replan**: rewrite this file as
+`PLAN-F1-02` splitting it into (a) session-authentication guard that resolves the
+principal, then (b) role/branch decorators + `RbacGuard` + deny-audit, and set
+`.forge/state.md` to `Ready to Plan`. Do not ship a large diff.
 
 ## Out Of Scope
 
-- Audit entries for login success, login failure, and logout. That is `F1-01E2`.
-- OpenAPI path/schema updates and final auth security proof. That is `F1-01E3`.
-- CSRF, rate limiting, password reset, RBAC guards, UI login page, or external SSO.
-
-## Expected Application Files
-
-- `apps/api/src/main.ts`
-- `apps/api/src/modules/auth/auth.module.ts`
-- `apps/api/src/modules/auth/auth.controller.ts`
-- `apps/api/src/modules/auth/dto/login-request.dto.ts`
-- `apps/api/test/auth/http-routes.test.ts`
+- Login rate limiting and CSRF (tracked as `F1-06`; NFR-SEC-001 AC3/AC5).
+- Audit log search/export and DB-level append-only enforcement (`F1-03`).
+- Full stable error-code surface (`F1-04`).
+- Golden CRUD module (`F1-05`), username login, password reset, lock flows, and any UI.
 
 ## Requirement IDs
 
-- CONTRACT-READINESS-002
+- REQ-RBAC-001
+- NFR-SEC-002
 - ARCH-AUTH-001
-- REQ-AUTH-001
-- REQ-AUDIT-001
-- NFR-SEC-001
-- METHOD-API-001
 - METHOD-AUDIT-001
+- METHOD-API-001
 - METHOD-TEST-001
 - API-STANDARD-001
 
 ## Acceptance Criteria
 
-- `POST /auth/login` succeeds for a valid active staff user and sets an HttpOnly
-  staff session cookie.
-- Failed login returns a generic auth error and does not reveal whether identifier
-  or password failed.
-- `POST /auth/logout` invalidates the active session via the existing auth service
-  and returns an expired staff session cookie.
-- Malformed login input returns the standard error envelope.
-- Responses never include password hashes, raw session tokens, OTPs, or secrets.
-- New app/package/tool source files stay under the 300-line agentic budget.
-- The final auth foundation gate remains `F1-01E3`.
+- Role and branch scope are resolved from the server-side session principal, never from
+  client input (REQ-RBAC-001, NFR-SEC-002).
+- A denied role returns `RBAC_FORBIDDEN`; a denied branch returns
+  `BRANCH_SCOPE_FORBIDDEN`; both emit a `SECURITY` audit entry.
+- At least one allowed and one denied case per gate is tested (role and branch scope),
+  plus an unauthenticated denial.
+- No secrets/tokens logged or returned; no portal data exposed.
+- New/changed protected route(s) documented in OpenAPI; `openapi:check` passes.
+- Required proof commands pass and actually ran.
 
 ## Verification Commands
 
-- `corepack pnpm install --lockfile-only` (only if package dependencies change)
 - `corepack pnpm lint`
 - `corepack pnpm typecheck`
 - `corepack pnpm test`
@@ -79,10 +80,8 @@ Implement staff auth HTTP route wiring only:
 
 ## Evidence To Record
 
-Append `F1-01E1 - Auth HTTP Login/Logout Routes` to `.forge/evidence.md` with
-honest labels and the High-risk security self-check from `.forge/policy.md`.
-
-## Next Step On Success
-
-Mark `F1-01E1` done in `.forge/backlog.md`, write `F1-01E2 - Auth Audit Entries`
-to `.forge/next.md`, and keep `.forge/state.md` as `Ready to Build`.
+This is a High-risk task: record the `policy.md` Security Self-Check in
+`.forge/evidence.md` (citing where each item is enforced/tested), update
+`.forge/trust.md`, mark the task in `.forge/backlog.md`, and update
+`.forge/next.md` + `.forge/state.md` per the BUILD rules. F1-02 is **not** a
+`Verify Gate`; on success AUTO PHASE continues to the next Phase 1 task.

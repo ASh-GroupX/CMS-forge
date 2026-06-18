@@ -8,7 +8,86 @@ const canonical = {
     title: 'CMS-Auto API',
     version: '0.1.0',
   },
-  paths: {},
+  paths: {
+    '/auth/login': {
+      post: {
+        tags: ['Auth'],
+        operationId: 'authLogin',
+        summary: 'Log in a staff user',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/AuthLoginRequest' },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Staff session created',
+            headers: {
+              'Set-Cookie': {
+                schema: { type: 'string' },
+                description: 'HttpOnly staff session cookie',
+              },
+            },
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/AuthLoginResponse' },
+              },
+            },
+          },
+          400: {
+            description: 'Invalid request body',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorEnvelope' },
+              },
+            },
+          },
+          401: {
+            description: 'Invalid credentials',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorEnvelope' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/auth/logout': {
+      post: {
+        tags: ['Auth'],
+        operationId: 'authLogout',
+        summary: 'Log out the active staff session',
+        responses: {
+          200: {
+            description: 'Staff session invalidated',
+            headers: {
+              'Set-Cookie': {
+                schema: { type: 'string' },
+                description: 'Expired HttpOnly staff session cookie',
+              },
+            },
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/AuthLogoutResponse' },
+              },
+            },
+          },
+          401: {
+            description: 'Invalid session',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorEnvelope' },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
   components: {
     schemas: {
       ErrorEnvelope: {
@@ -43,6 +122,45 @@ const canonical = {
         },
         additionalProperties: false,
       },
+      AuthLoginRequest: {
+        type: 'object',
+        required: ['identifier', 'password'],
+        properties: {
+          identifier: { type: 'string', minLength: 1 },
+          password: { type: 'string', minLength: 1 },
+        },
+        additionalProperties: false,
+      },
+      StaffAuthClaims: {
+        type: 'object',
+        required: ['userId', 'email', 'nameEn', 'nameAr', 'roleCode', 'branchId'],
+        properties: {
+          userId: { type: 'string' },
+          email: { type: 'string', format: 'email' },
+          nameEn: { type: 'string' },
+          nameAr: { type: 'string' },
+          roleCode: { type: 'string' },
+          branchId: { type: ['string', 'null'] },
+        },
+        additionalProperties: false,
+      },
+      AuthLoginResponse: {
+        type: 'object',
+        required: ['user', 'expiresAt'],
+        properties: {
+          user: { $ref: '#/components/schemas/StaffAuthClaims' },
+          expiresAt: { type: 'string', format: 'date-time' },
+        },
+        additionalProperties: false,
+      },
+      AuthLogoutResponse: {
+        type: 'object',
+        required: ['ok'],
+        properties: {
+          ok: { const: true },
+        },
+        additionalProperties: false,
+      },
     },
   },
 };
@@ -74,6 +192,18 @@ export function checkOpenApiText(text) {
   }
 
   for (const schema of ['ErrorEnvelope', 'ErrorBody', 'FieldError']) {
+    if (!document.components?.schemas?.[schema]) {
+      errors.push(`OpenAPI document missing ${schema} schema`);
+    }
+  }
+
+  for (const path of ['/auth/login', '/auth/logout']) {
+    if (!document.paths?.[path]?.post) {
+      errors.push(`OpenAPI document missing ${path} post operation`);
+    }
+  }
+
+  for (const schema of ['AuthLoginRequest', 'AuthLoginResponse', 'AuthLogoutResponse', 'StaffAuthClaims']) {
     if (!document.components?.schemas?.[schema]) {
       errors.push(`OpenAPI document missing ${schema} schema`);
     }

@@ -827,3 +827,117 @@ Append build and verification evidence here. Do not delete failed evidence.
     portal, or logging behavior was implemented.
   - Planned gate: `F1-01E3` remains `Verify Gate: required` before dependent Phase 1
     work proceeds.
+
+## F1-01E1 - Auth HTTP Login/Logout Routes
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - ARCH-AUTH-001
+  - REQ-AUTH-001
+  - REQ-AUDIT-001
+  - NFR-SEC-001
+  - METHOD-API-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Added `AuthModule` and wired it into the Nest app.
+  - Added `AuthController` with `POST /auth/login` and `POST /auth/logout`.
+  - Added `LoginRequestDto` parsing for malformed login bodies without adding new dependencies.
+  - Login delegates to existing credential/session service behavior and sets the staff session cookie.
+  - Logout delegates to existing session invalidation and returns an expired staff session cookie.
+  - Added auth API tests for login cookie issuance, generic failed login, logout expired cookie, and malformed login input.
+  - Updated the API test runner to load `apps/api/tsconfig.json` so Nest parameter decorators compile in API tests.
+  - No audit writes, OpenAPI path updates, CSRF, rate limiting, password reset, RBAC guard, UI, or external SSO behavior was implemented.
+- Verification:
+  - Not Run: `corepack pnpm install --lockfile-only` because package dependencies did not change.
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (18/18; coverage thresholds cleared)
+  - Failed then passed: `corepack pnpm test:api -- auth` initially failed because TSX did not load decorator settings for API tests; after setting `TSX_TSCONFIG_PATH` in the API test runner and fixing one DTO assertion, it passed (12/12).
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope from server session: Passed for this task's scope; login returns safe claims from `AuthService.verifyCredentials`, which derives role and branch from the persisted user record, not client input.
+  - State history and audit in same transaction: Not Run; auth audit writes are explicitly queued for `F1-01E2`, and no complaint workflow state change was implemented.
+  - No passwords, OTPs, tokens, hashes, or provider secrets logged or returned: Passed; route tests assert the response excludes password hashes and the raw session token.
+  - Customer portal exposure rules: Passed by separation; staff auth routes do not touch portal tables or expose portal data.
+  - Trust boundaries tested: Passed; `test:api -- auth` covers valid login, failed login, logout, and malformed login input.
+
+## F1-01E2 - Auth Audit Entries
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - ARCH-AUTH-001
+  - REQ-AUTH-001
+  - REQ-AUDIT-001
+  - NFR-SEC-001
+  - METHOD-API-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Added a minimal core `AuditService` for append-only `audit_logs` inserts.
+  - Auth failed credential verification records `AUTH/login_failure` with safe metadata only.
+  - Staff session creation records `AUTH/login_success` in the same transaction hook as the session insert.
+  - Logout records `AUTH/logout` in the same transaction hook as session revocation.
+  - Auth controller passes correlation ID, IP address, and user agent context into the auth service.
+  - Added focused auth API tests proving login failure, login success, and logout audit payloads.
+  - No OpenAPI path updates, CSRF, rate limiting, password reset, RBAC guard, UI, external SSO, or audit search/export behavior was implemented.
+- Verification:
+  - Not Run: `corepack pnpm install --lockfile-only` because package dependencies did not change.
+  - Passed: `corepack pnpm lint`
+  - Failed then passed: `corepack pnpm typecheck` initially failed on Prisma JSON null typing in `AuditService`; after removing raw `null` metadata, it passed.
+  - Passed: `corepack pnpm test` (18/18; coverage thresholds cleared)
+  - Failed then passed: `corepack pnpm test:api -- auth` initially failed because the logout route test mocked the pre-audit service method; after updating the mock to `logoutStaffSessionWithAudit`, it passed (15/15).
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope from server session: Passed for this task's scope; auth success audit uses actor and branch from service-derived claims/session records, not client input.
+  - State history and audit in same transaction: Passed for auth session state changes; session creation and logout revocation call audit within the same transaction hook. Complaint status history was not applicable.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed; audit tests assert failed login does not log the submitted password or hash, and logout audit does not log the raw token.
+  - Customer portal exposure rules: Passed by separation; staff auth audit uses staff users/sessions only and does not expose portal data.
+  - Trust boundaries tested: Passed; `test:api -- auth` covers successful login audit, failed login audit, logout audit, and existing allowed/denied auth behavior.
+
+## F1-01E3 - Auth OpenAPI Contract And Final Security Proof
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - ARCH-AUTH-001
+  - REQ-AUTH-001
+  - REQ-AUDIT-001
+  - NFR-SEC-001
+  - METHOD-API-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Added `POST /auth/login` and `POST /auth/logout` to the canonical OpenAPI contract.
+  - Added auth request/response schemas for login, logout, and safe staff claims.
+  - Documented `Set-Cookie` response headers and standard validation/auth error envelopes.
+  - Strengthened `openapi:check` so removing auth paths or schemas fails explicitly.
+  - Regenerated `packages/contracts/openapi.json` from the canonical OpenAPI checker.
+  - No CSRF, rate limiting, password reset, RBAC guard, UI, external SSO, or audit search/export behavior was implemented.
+- Verification:
+  - Not Run: `corepack pnpm install --lockfile-only` because package dependencies did not change.
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (19/19; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- auth` (15/15)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope from server session: Passed for auth foundation scope; credential/session validation returns role and branch claims from persisted users/sessions, never client input.
+  - State history and audit in same transaction: Passed for auth session state changes; session creation and logout revocation audit writes run in the same transaction hook. Complaint status history was not applicable.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed; tests cover safe login responses, failed-login audit metadata, token-hash storage, and logout audit not exposing raw tokens. OpenAPI response schemas expose only safe claims and expiry.
+  - Customer portal exposure rules: Passed by separation; staff auth routes, sessions, audit entries, and OpenAPI schemas do not expose portal comments, audit, DMS codes, staff PII to portal users, or unrelated complaints.
+  - Trust boundaries tested: Passed; `test:api -- auth` covers allowed login, denied credentials/inactive/locked/missing-hash users, session creation, session validation denial, logout, malformed login input, and auth audit events.

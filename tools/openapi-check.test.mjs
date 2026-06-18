@@ -17,8 +17,28 @@ test('openapi check rejects missing baseline error schemas', () => {
   assert.ok(checkOpenApiText(text).includes('OpenAPI document missing ErrorEnvelope schema'));
 });
 
+test('openapi check rejects missing auth contract pieces', () => {
+  const withoutLoginPath = JSON.parse(canonicalOpenApiText());
+  delete withoutLoginPath.paths['/auth/login'];
+
+  assert.ok(
+    checkOpenApiText(`${JSON.stringify(withoutLoginPath, null, 2)}\n`).includes(
+      'OpenAPI document missing /auth/login post operation',
+    ),
+  );
+
+  const withoutLoginSchema = JSON.parse(canonicalOpenApiText());
+  delete withoutLoginSchema.components.schemas.AuthLoginResponse;
+
+  assert.ok(
+    checkOpenApiText(`${JSON.stringify(withoutLoginSchema, null, 2)}\n`).includes(
+      'OpenAPI document missing AuthLoginResponse schema',
+    ),
+  );
+});
+
 test('openapi check rejects non-canonical drift', () => {
-  const text = canonicalOpenApiText().replace('"paths": {}', '"paths": {\n    "/drift": {}\n  }');
+  const text = canonicalOpenApiText().replace('"summary": "Log in a staff user"', '"summary": "Drift"');
 
   assert.ok(checkOpenApiText(text).includes('OpenAPI document is not canonical; run corepack pnpm openapi:generate'));
 });

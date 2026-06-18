@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
 import { AuthService, hashStaffSessionToken } from '../../src/modules/auth/auth.service.ts';
 import type { StaffSessionRecord } from '../../src/modules/auth/auth.repository.ts';
@@ -107,4 +108,46 @@ test('logout revokes by token hash and returns an expired HttpOnly cookie', asyn
   assert.match(cookie, /; HttpOnly/);
   assert.match(cookie, /; Max-Age=0/);
   assert.match(cookie, /; Secure/);
+});
+
+test('logout writes audit in the same transaction hook without exposing the token', async () => {
+  const auditRecords: AuditRecordInput[] = [];
+  let usedTransaction = false;
+  const service = new AuthService(
+    {
+      findStaffByIdentifier: async () => null,
+      createStaffSession: async () => ({ id: 'session_unused' }),
+      findStaffSessionByTokenHash: async (tokenHash) =>
+        tokenHash === hashStaffSessionToken(token) ? validSession : null,
+      revokeStaffSession: async () => 1,
+      transaction: async (work) => {
+        usedTransaction = true;
+        return work({} as never);
+      },
+    },
+    { record: async (input) => auditRecords.push(input) } as AuditService,
+  );
+
+  await service.logoutStaffSessionWithAudit(
+    token,
+    false,
+    new Date('2026-06-18T12:00:00.000Z'),
+    { correlationId: 'req_test', ipAddress: '127.0.0.1', userAgent: 'node:test' },
+  );
+
+  assert.equal(usedTransaction, true);
+  assert.deepEqual(auditRecords, [
+    {
+      eventType: 'AUTH',
+      action: 'logout',
+      actorId: 'usr_test',
+      branchId: 'branch_main',
+      targetType: 'staff_session',
+      targetId: 'ses_test',
+      correlationId: 'req_test',
+      ipAddress: '127.0.0.1',
+      userAgent: 'node:test',
+    },
+  ]);
+  assert.equal(JSON.stringify(auditRecords).includes(token), false);
 });

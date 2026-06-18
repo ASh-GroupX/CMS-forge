@@ -23,6 +23,7 @@ if (files.length === 0) {
 }
 
 const result = spawnSync(process.execPath, ['--import', 'tsx', '--test', ...files], {
+  env: { ...process.env, TSX_TSCONFIG_PATH: 'apps/api/tsconfig.json' },
   stdio: 'inherit',
 });
 

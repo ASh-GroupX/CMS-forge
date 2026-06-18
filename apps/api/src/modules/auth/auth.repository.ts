@@ -1,4 +1,4 @@
-import type { RoleCode } from '@prisma/client';
+import type { Prisma, RoleCode } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
 
 export type StaffAuthRecord = {
@@ -29,6 +29,10 @@ export type StaffSessionRecord = {
 export class AuthRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async transaction<T>(work: (client: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    return this.prisma.$transaction(work);
+  }
+
   async findStaffByIdentifier(identifier: string): Promise<StaffAuthRecord | null> {
     return this.prisma.user.findUnique({
       where: { email: identifier.toLowerCase() },
@@ -46,8 +50,11 @@ export class AuthRepository {
     });
   }
 
-  async createStaffSession(input: CreateStaffSessionInput): Promise<{ id: string }> {
-    return this.prisma.staffSession.create({
+  async createStaffSession(
+    input: CreateStaffSessionInput,
+    client: Pick<PrismaService, 'staffSession'> = this.prisma,
+  ): Promise<{ id: string }> {
+    return client.staffSession.create({
       data: input,
       select: { id: true },
     });
@@ -76,8 +83,12 @@ export class AuthRepository {
     });
   }
 
-  async revokeStaffSession(tokenHash: string, revokedAt: Date): Promise<number> {
-    const result = await this.prisma.staffSession.updateMany({
+  async revokeStaffSession(
+    tokenHash: string,
+    revokedAt: Date,
+    client: Pick<PrismaService, 'staffSession'> = this.prisma,
+  ): Promise<number> {
+    const result = await client.staffSession.updateMany({
       where: { tokenHash, revokedAt: null },
       data: { revokedAt },
     });
