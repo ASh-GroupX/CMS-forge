@@ -562,3 +562,68 @@ and focused audit tests. Re-ran every required proof command.
   - Focused tests now cover Admin allow, Branch Manager deny with `SECURITY` audit, CR Officer deny with `SECURITY` audit, non-admin direct service denial, invalid query, and metadata redaction.
   - Required proof commands passed: lint, typecheck, test 19/19, test:api -- audit 5/5, openapi:check.
   - Because `F1-03A` is a verify gate, state is set to `Needs Verify` before `F1-03B` can start.
+
+## VERIFY-F1-03A-REPAIR - Audit Search RBAC Repair Verify Gate
+
+- Date: 2026-06-18
+- Reviewer tier: independent VERIFY (fresh context, Opus 4.8) — distinct from the F1-03A builder and the REPAIR-F1-03A builder
+- Risk: High
+- Builder honesty: **Honest**
+- Code quality: **Good**
+- Recommendation: **Accept**
+- AUTO PHASE: may resume — state set to `Ready to Build` on `F1-03B`.
+
+### Method
+
+Independent verification, not log-trust. Read the audit module (controller, service,
+repository, manifest), the `core/auth.guard` RBAC/session guards, the focused audit
+tests, the OpenAPI generator/contract, and the F1-03A / VERIFY-F1-03A / REPAIR-F1-03A
+records. Cross-checked the access rule against `RBAC-MATRIX-001` directly. Re-ran all
+five required proof commands and confirmed file budgets.
+
+### Verification labels (re-run by reviewer)
+
+- Passed: `corepack pnpm lint`
+- Passed: `corepack pnpm typecheck` (6 tsconfig projects, clean)
+- Passed: `corepack pnpm test` (19/19; coverage 89.50% lines / 80.71% branch / 92.54% funcs — clears 80/65/75)
+- Passed: `corepack pnpm test:api -- audit` (5/5)
+- Passed: `corepack pnpm openapi:check`
+
+### Findings — repair confirmed
+
+- **Admin-only matches the matrix.** `audit.controller.ts` now uses `@Roles('ADMIN')`
+  under `SessionAuthGuard` + `RbacGuard`. `RBAC-MATRIX-001` (SRS line 2329, "View audit
+  log") is Admin = Yes; CR Officer / CR Manager / Branch Manager = No; Management
+  Read-Only = **Configurable**. With no per-user permission-config system in the MVP,
+  defaulting MGMT_READONLY to no-access is the *stricter* reading the SRS intro (line 32)
+  requires — not an under-permissive defect. The now-moot `@BranchScoped()` was removed
+  (Admin sees all branches), which is correct.
+- **Denials are audited.** `RbacGuard.recordSecurityDeny` writes a `SECURITY` /
+  `rbac_forbidden` entry on deny; tests assert this for both Branch Manager and CR
+  Officer (the originally-misallowed role plus an ordinary non-admin).
+- **Service fails closed.** `AuditSearchService.search` throws `RBAC_FORBIDDEN` for any
+  non-admin principal, so the service boundary is no looser than the HTTP guard
+  (defense-in-depth); tested via a direct Branch Manager call.
+- **No collateral regressions.** Admin branch filtering, `pageSize` clamp (200 → 100),
+  explicit safe response fields, secret-like metadata redaction (`password`, nested
+  `tokenHash` → `[REDACTED]`), and invalid-query → `VALIDATION_FAILED` all survive and
+  remain tested. `/audit/logs` GET stays canonical in OpenAPI and `openapi:check` is
+  drift-enforced.
+- **Budgets honored.** `audit.service.ts` 170 lines, `audit.controller.ts` 24,
+  `core/auth.guard.ts` 153 — all under the 300-line budget (lint-enforced, passed).
+
+### Minor (non-blocking) note
+
+- REPAIR-F1-03A evidence states "audit service is 151 lines"; the file is actually 170.
+  An imprecise supporting figure, not a gate claim — the material "under 300" assertion
+  is true and lint enforces it. No effect on the decision; worth tightening next time.
+
+### Carry-forward conditions (unchanged scope, tracked for later Phase 1 / Phase 7)
+
+1. **Management Read-Only audit view (`Configurable`)** stays deferred until a per-user
+   permission/config model exists; revisit when management dashboards land (Phase 7).
+2. **DB-level append-only enforcement** (revoke UPDATE/DELETE on `audit_logs`;
+   REQ-ARCH AC3 "audit data cannot be overwritten by ordinary update flows") is still
+   owed by `F1-03C` — application-level writes remain create-only today.
+3. **Audit log export** (`RBAC-MATRIX-001`: Admin Yes, MGMT_READONLY "No by default")
+   plus its scope-parity (`RBAC-MATRIX-001` AC2) is `F1-03B`, queued next.
