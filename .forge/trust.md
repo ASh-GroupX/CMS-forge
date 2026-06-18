@@ -767,3 +767,95 @@ five required proof commands and confirmed file budgets.
     test:api -- auth 21/21, openapi:check.
   - Because this task is a verify gate, state is set to `Needs Verify` before F1-06C
     can reuse the CSRF mechanism on branch admin mutation routes.
+
+## VERIFY-F1-06B - CSRF Kernel Guard Verify Gate
+
+- Date: 2026-06-18
+- Reviewer tier: independent VERIFY (fresh context, Opus 4.8) — distinct from the F1-06A/F1-06B builder context
+- Risk: High
+- Builder honesty: **Honest**
+- Code quality: **Good**
+- Recommendation: **Accept**
+- AUTO PHASE: may resume — state set to `Ready to Build` on `F1-06C`.
+
+### Method
+
+Independent verification, not log-trust. Read the CSRF guard, the auth controller/module
+wiring, the `SessionAuthGuard` it composes with, the audit service, the HTTP kernel /
+`AppException`, the rate-limit guard, the OpenAPI generator/contract, and the focused
+security/auth route tests. Confirmed the commit scope (`8885216`). Re-ran all six required
+proof commands. Cross-checked behavior against `NFR-SEC-001` AC5 and every `next.md`
+required check.
+
+### Verification labels (re-run by reviewer)
+
+- Passed: `corepack pnpm lint`
+- Passed: `corepack pnpm typecheck` (6 tsconfig projects, clean)
+- Passed: `corepack pnpm test` (20/20; coverage 91.69% lines / 80.00% branch / 94.52% funcs — clears 80/65/75)
+- Passed: `corepack pnpm test:api -- security` (4/4 — 2 CSRF allow/deny + 2 rate-limit)
+- Passed: `corepack pnpm test:api -- auth` (21/21)
+- Passed: `corepack pnpm openapi:check` (committed spec equals canonical generator output)
+
+### Findings — required checks all hold
+
+- **Scope clean.** Commit `8885216` touches only CSRF/rate-limit guards, auth
+  controller/module, security+auth tests, OpenAPI (+generator), the suite runner, and
+  `.forge` tracking. No leak into portal/complaint/branches source. (F1-06A rate limiting
+  rides in the same commit and was already independently accepted.)
+- **Logout requires session + CSRF.** `auth.controller.ts` guards logout with
+  `@UseGuards(SessionAuthGuard, CsrfGuard)` — declared order runs `SessionAuthGuard` first
+  (validates the staff session, attaches the server-derived `principal`), then `CsrfGuard`.
+  Correct both semantically (must be authenticated to log out) and for audit (principal is
+  present on the deny path).
+- **Login issues but is not gated by CSRF.** `POST /auth/login` carries only
+  `LoginRateLimitGuard`; it sets a readable `cms_csrf_token` SameSite=Lax cookie next to the
+  HttpOnly session cookie. The double-submit cookie is intentionally JS-readable so the
+  client echoes it in `x-csrf-token`. Pre-session login is covered by rate limiting (AC3),
+  not CSRF (AC5) — matches the plan.
+- **Stable CSRF_INVALID 403.** Denial throws `AppException('CSRF_INVALID', …, 403)`,
+  rendered through the canonical envelope. `matchesToken` requires both tokens present,
+  equal length, and `timingSafeEqual` — missing / empty / length-mismatch all fail closed.
+- **Safe SECURITY audit on deny.** `csrf_rejected` / `SECURITY` with actor+branch from the
+  server principal, route, correlation, IP, UA, and metadata `{ reason: 'missing_or_mismatch' }`
+  only. No token, cookie, password, or hash value is recorded or returned; the test asserts
+  the audit and rendered 403 contain none of `csrf-secret`, `raw-session`, `password`, `hash`.
+- **Trust boundary tested both ways.** `csrf.test.ts` proves allow (matching cookie+header,
+  zero audit) and deny (mismatch → CSRF_INVALID 403 + exact safe audit). `http-routes.test.ts`
+  proves login sets both cookies (`cms_csrf_token=…; Path=/; SameSite=Lax; Max-Age=28800`)
+  and logout expires both.
+- **OpenAPI documents the behavior without drift.** Canonical `/auth/login` 200 advertises
+  the dual Set-Cookie + a 429; `/auth/logout` 200 advertises expired cookies + a 403
+  `Invalid CSRF token (CSRF_INVALID)`. `openapi:check` enforces byte-canonical equality and
+  passed.
+- **Security self-check holds under inspection.** Server-derived authority only; logout's
+  session revoke + AUTH logout audit stay in the existing same-transaction path; CSRF denial
+  is correctly a standalone append-only SECURITY write (no domain state change).
+
+### Non-blocking observations (carry forward)
+
+1. **Guard *wiring* is inspection-verified, not e2e-tested.** All "API tests" here are
+   unit-level (construct guards/controllers directly with stubs); none boot Nest. So the
+   decorator order `SessionAuthGuard, CsrfGuard` on logout is verified by reading the code,
+   not by an executing request. The `AuthModule` injector is complete and self-contained
+   (registers `SESSION_AUTH_SERVICE`, `CsrfGuard`, and the other guards), so F1-06B itself
+   resolves — but an integration/bootstrap smoke test remains owed (pre-existing structural
+   gap noted since VERIFY-F1-01E).
+2. **`branches.module.ts` does not register `SessionAuthGuard`/`RbacGuard`/`SESSION_AUTH_SERVICE`**
+   even though `branches.controller.ts` uses those guards, and no test boots Nest to prove
+   they resolve. Out of scope for F1-06B, but F1-06C edits this module to add `CsrfGuard`
+   (which only needs the already-provided `AuditService`); the F1-06C builder should register
+   the guard there and confirm the branch mutation routes actually bootstrap. A small Nest
+   smoke test would close both this and observation 1.
+3. **CSRF cookie TTL is 8h, independent of session lifetime.** If a session outlives the CSRF
+   cookie, logout would 403 until the next login re-issues it. Fail-closed and minor;
+   acceptable for MVP.
+4. **Audit-before-throw on the deny path.** If `auditService.record` itself threw (DB down),
+   it would surface as a 500 instead of the 403. Still fail-closed (request rejected); a
+   defensive try/catch would be more robust. Same minor note as VERIFY-F1-01E's failure-audit
+   path.
+
+### Gate
+
+`F1-06B` verify gate cleared. Queued `F1-06C - Enforce CSRF On Branch Admin Mutation Routes`
+and set state to `Ready to Build`. After F1-06C, all Phase 1 backlog tasks are done → the
+Phase 1 `PHASE-REVIEWER` gate.

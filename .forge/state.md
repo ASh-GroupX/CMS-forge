@@ -1,8 +1,33 @@
 # Current State
 
-Status: Needs Verify
+Status: Ready to Build
 Phase: Phase 1 - Security Baseline
-Next Task: VERIFY-F1-06B - CSRF Kernel Guard Verify Gate
+Next Task: F1-06C - Enforce CSRF On Branch Admin Mutation Routes
+
+## Phase 1 — CSRF Kernel Gate Passed (VERIFY-F1-06B, gate cleared)
+
+VERIFY-F1-06B decision: **Accept** (independent VERIFY, fresh context / Opus 4.8,
+2026-06-18). Builder honesty Honest, code quality Good. All six proof commands
+independently re-run green (lint, typecheck, test 20/20, test:api -- security 4/4,
+test:api -- auth 21/21, openapi:check). CSRF kernel + auth-route enforcement confirmed:
+`POST /auth/logout` requires session auth + matching double-submit CSRF cookie/header;
+`POST /auth/login` issues a readable CSRF cookie but is not CSRF-gated (rate-limited
+instead); denial is stable `CSRF_INVALID` 403 with a safe `SECURITY`/`csrf_rejected`
+audit and no secret exposure; OpenAPI documents it drift-free. Full record in
+`.forge/trust.md` (VERIFY-F1-06B). The `Verify Gate` on `F1-06B` is cleared — AUTO PHASE
+may resume from `F1-06C`.
+
+### Carry-forward into F1-06C (see trust.md VERIFY-F1-06B observations)
+
+1. `branches.module.ts` does not register `SessionAuthGuard`/`RbacGuard`/`SESSION_AUTH_SERVICE`
+   though the branches controller uses them, and no test boots Nest to prove resolution.
+   F1-06C edits this module to add `CsrfGuard` (needs only the provided `AuditService`); the
+   builder should register the guard there and confirm the branch mutation routes bootstrap.
+2. Guard wiring across the app is inspection-verified, not e2e-tested (all API tests are
+   unit-level). A small Nest bootstrap smoke test would close this; flag for the Phase 1
+   PHASE-REVIEWER if not added in F1-06C.
+
+After `F1-06C`, all Phase 1 backlog tasks are done → `Needs Phase Review` before Phase 2.
 
 ## Phase 1 — F1-06 Split (PLAN-F1-06, 2026-06-18)
 
