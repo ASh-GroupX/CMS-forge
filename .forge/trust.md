@@ -422,6 +422,17 @@ Phase 1, already disclosed in the build logs — not hidden gaps. Accepting.
   - Required proof commands passed after recording and fixing the initial typecheck failures.
   - `F1-03` is too broad as written, so AUTO PHASE stops at `Ready to Plan` for a split before audit search/export/append-only work.
 
+## F1-03A - Audit Log Search Endpoint
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept pending independent VERIFY
+- Notes:
+  - The task stayed on audit search only: new audit module, guarded `GET /audit/logs`, focused audit API tests, API-suite registration, and OpenAPI contract update.
+  - Required proof commands passed after recording and fixing the initial exact-optional typecheck failure.
+  - Audit export and DB-level append-only enforcement remain correctly deferred to `F1-03B` and `F1-03C`.
+  - Because this task is marked `Verify Gate: required`, AUTO PHASE is paused at `Needs Verify` before export builds on this access surface.
+
 ## VERIFY-F1-01E - Auth Foundation Verify Gate
 
 - Date: 2026-06-18

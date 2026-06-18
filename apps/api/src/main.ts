@@ -5,6 +5,7 @@ import {
   AppExceptionFilter,
   correlationMiddleware,
 } from './core/http-kernel.js';
+import { AuditModule } from './modules/audit/audit.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 
 @Controller()
@@ -26,7 +27,7 @@ class HealthController {
 }
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, AuditModule],
   controllers: [HealthController],
 })
 class AppModule {}

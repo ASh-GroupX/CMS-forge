@@ -27,7 +27,9 @@ history from another project.
 - [x] F1-01E2: Auth audit entries for login success, login failure, and logout
 - [x] F1-01E3: Auth OpenAPI contract and final security proof (Verify Gate: required)
 - [x] F1-02: RBAC and branch-scope enforcement
-- [ ] F1-03: Audit log search/export and append-only enforcement
+- [x] F1-03A: Audit log search endpoint for authorized admins (Verify Gate: required)
+- [ ] F1-03B: Audit log export endpoint with configured limits and branch/role scope
+- [ ] F1-03C: Audit append-only enforcement proof
 - [ ] F1-04: Stable API error shape and correlation IDs
 - [ ] F1-05: Build golden CRUD reference module for branches or categories and freeze its pattern
 - [ ] F1-06: Login rate limiting (account + IP) and CSRF protection for session-authenticated mutation routes (NFR-SEC-001 AC3, AC5; blocking at the MVP Security-baseline gate) — added by VERIFY-F1-01E

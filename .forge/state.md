@@ -1,8 +1,8 @@
 # Current State
 
-Status: Ready to Plan
+Status: Needs Verify
 Phase: Phase 1 - Security Baseline
-Next Task: PLAN-F1-03 - Split Audit Search/Export And Append-Only Enforcement
+Next Task: VERIFY-F1-03A - Audit Log Search Endpoint
 
 ## Phase 1 — Auth Foundation Verified (gate passed)
 

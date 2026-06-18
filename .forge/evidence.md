@@ -976,3 +976,64 @@ Append build and verification evidence here. Do not delete failed evidence.
   - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed; guards do not log cookies/tokens, and `/auth/me` returns safe principal claims only.
   - Customer portal exposure rules hold: Passed by separation; protected staff auth route exposes only the current staff principal and no portal comments, DMS codes, audit rows, or unrelated complaints.
   - Trust boundaries are tested: Passed; `test:api -- auth` covers unauthenticated denial, allowed and denied role cases, and allowed and denied branch-scope cases.
+
+## PLAN-F1-03 - Split Audit Search/Export And Append-Only Enforcement
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: PLANNER
+- Requirement IDs:
+  - REQ-AUDIT-001
+  - NFR-SEC-002
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Split the broad `F1-03` backlog item into `F1-03A` audit search, `F1-03B` audit export, and `F1-03C` audit append-only enforcement proof.
+  - Queued `F1-03A - Audit Log Search Endpoint` as the next buildable Phase 1 task with `BUILDER-STRONG`.
+  - Marked `F1-03A` as `Verify Gate: required` because audit access is high-risk and export builds on the same authorization surface.
+  - Kept implementation deferred; no application source code was changed.
+  - Called out the 300-line source-file budget and the current `tools/openapi-check.mjs` size risk for the builder.
+  - Set `.forge/state.md` to `Ready to Build`.
+- Verification:
+  - Passed: `rg -n "PLAN-F1-03|F1-03A|F1-03B|F1-03C|Ready to Build|300" .forge/backlog.md .forge/next.md .forge/state.md`
+- Security Self-Check:
+  - Not Run: planning-only task; no auth, RBAC, branch-scope, audit read/write, portal, logging, or state-change behavior was implemented.
+  - Planned gate: `F1-03A` requires server-session RBAC, branch scope, safe audit response fields, one allowed case, one denied case, OpenAPI proof, and independent VERIFY before the audit export task proceeds.
+
+## F1-03A - Audit Log Search Endpoint
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-AUDIT-001
+  - NFR-SEC-002
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Added the `audit` module manifest, controller, service, and repository.
+  - Added `GET /audit/logs` guarded by `SessionAuthGuard`, `RbacGuard`, `@Roles('ADMIN', 'BRANCH_MANAGER')`, and `@BranchScoped()`.
+  - Audit search supports the planned filters, clamps `pageSize` to 100, and scopes branch-manager searches to the server-session branch.
+  - Audit search returns explicit safe fields only and redacts secret-like metadata keys.
+  - Registered `test:api -- audit` and added focused API tests for admin allow, RBAC deny, branch deny, branch scoping, validation errors, and metadata redaction.
+  - Added `GET /audit/logs`, `AuditLogEntry`, and `AuditLogSearchResponse` to the canonical OpenAPI contract.
+  - Kept app/tool source files under the 300-line agentic budget; largest touched source file is `tools/openapi-check.mjs` at 190 lines.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Failed then passed: `corepack pnpm typecheck` initially failed on exact-optional filter objects; after omitting undefined keys, it passed.
+  - Passed: `corepack pnpm test` (19/19; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- audit` (5/5)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (only CRLF warnings)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed; controller uses existing session/RBAC guards, and tests cover non-admin denial, cross-branch denial, and branch-manager searches scoped to the principal branch.
+  - Each state change writes status history and an audit entry in the same transaction; side effects enqueue after commit: Not Run for workflow state changes; this task adds read-only audit search. Denied access writes `SECURITY` audit entries through the existing guard.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed; search maps explicit response fields and tests prove secret-like metadata keys are redacted.
+  - Customer portal exposure rules hold: Passed by separation; this is a staff-only guarded route and no portal behavior or customer portal data exposure was added.
+  - Trust boundaries are tested: Passed; `test:api -- audit` covers one allowed admin case, one denied role case, one denied branch case, and invalid input.

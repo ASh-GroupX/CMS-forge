@@ -1,36 +1,29 @@
-# Next Task: PLAN-F1-03 - Split Audit Search/Export And Append-Only Enforcement
+# Next Task: VERIFY-F1-03A - Audit Log Search Endpoint
 
-Status: Ready to Plan
+Status: Needs Verify
 Required model tier: PLANNER
 Risk: High
 Phase: Phase 1 - Security Baseline
 
 ## Why This Exists
 
-`F1-03 - Audit log search/export and append-only enforcement` is too broad for one
-builder task. It likely spans a new audit module, admin authorization, search
-query validation, export limits, OpenAPI, tests, and DB/application append-only
-proof. Split it before coding.
+`F1-03A` is marked `Verify Gate: required`. Audit search is a high-risk security
+surface, and `F1-03B` audit export builds directly on the same authorization and
+privacy behavior.
 
 ## Scope
 
-Planning only. Split `F1-03` into ordered buildable tasks that each stay near
-1 to 5 files plus focused tests.
+Independent VERIFY only. Do not implement new feature work.
 
-Minimum split to consider:
+Check:
 
-1. `F1-03A` - audit module read/search endpoint for authorized admins only, using
-   existing `AuditLog` data and RBAC guard.
-2. `F1-03B` - audit export endpoint with configured limits and branch/role scope.
-3. `F1-03C` - append-only enforcement proof for audit logs (application behavior
-   and, if feasible in scope, DB-level guard/migration).
-
-Do not implement source code in this planning task.
-
-## Out Of Scope
-
-- Feature implementation.
-- Phase review.
+- Did `GET /audit/logs` stay inside `F1-03A` scope?
+- Are role and branch scope enforced from the server session, never client input?
+- Are non-admin and cross-branch denials audited through `SECURITY` entries?
+- Does audit search return only the allowed fields and redact secret-like metadata?
+- Is the route documented in canonical OpenAPI?
+- Did all required proof commands actually run and pass?
+- Did app/package/tool source files stay under the 300-line budget?
 
 ## Requirement IDs
 
@@ -41,19 +34,20 @@ Do not implement source code in this planning task.
 - METHOD-TEST-001
 - API-STANDARD-001
 
-## Acceptance Criteria
-
-- `.forge/next.md` contains only the first buildable audit task.
-- `.forge/state.md` is `Ready to Build` after planning.
-- Backlog is split into small ordered F1-03 subtasks.
-- The first build task includes exact verification commands and SRS IDs.
-- Scope stays near 1 to 5 files plus tests.
-
 ## Verification Commands
 
-- `rg -n "PLAN-F1-03|F1-03A|F1-03B|F1-03C|Ready to Build|300" .forge/backlog.md .forge/next.md .forge/state.md`
+- `corepack pnpm lint`
+- `corepack pnpm typecheck`
+- `corepack pnpm test`
+- `corepack pnpm test:api -- audit`
+- `corepack pnpm openapi:check`
 
-## Evidence To Record
+## Output
 
-Append `PLAN-F1-03 - Split Audit Search/Export And Append-Only Enforcement` to
-`.forge/evidence.md` with honest labels.
+Record Builder honesty, Code quality, and Recommendation in `.forge/trust.md`.
+
+On `Accept`, queue `F1-03B - Audit Log Export Endpoint With Limits And Scope`
+and set `.forge/state.md` to `Ready to Build`.
+
+On `Repair` or `Redo`, set `.forge/state.md` to `Needs Repair` and write the
+smallest repair task.
