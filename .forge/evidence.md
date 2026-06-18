@@ -315,3 +315,39 @@ Append build and verification evidence here. Do not delete failed evidence.
 - Notes:
   - No real domain module was generated in the repository.
   - No routes, migrations, RBAC, audit, OpenAPI paths, or business logic were added.
+
+## F0-08 - Coherent Prisma Data Model Draft
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - ARCH-DATA-001
+  - ARCH-WORKFLOW-001
+  - METHOD-AUDIT-001
+  - API-STANDARD-001
+  - REQ-ADMIN-001
+  - REQ-CUSTOMER-001
+  - REQ-COMPLAINT-001
+  - SLA-CALENDAR-001
+  - PORTAL-SEC-001
+  - ARCH-STACK-001
+  - METHOD-MODULAR-001
+  - METHOD-TEST-001
+- Evidence:
+  - Expanded `packages/database/prisma/schema.prisma` from the F0-04 seed model into the MVP core data model.
+  - Added first-class models for departments, complaint status history, approvals, attachments, comments, SLA policies/events, notifications, surveys, compensation, portal verifications, portal sessions, and audit logs.
+  - Kept stable UPPER_SNAKE enum codes and snake_case table/column mapping.
+  - Preserved seed compatibility through defaults/optional fields; no seed logic changes were required.
+  - Added `tools/schema-check.mjs` and tests to fail if core schema tables, complaint status history, or audit log storage are removed.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (15 tests passed; coverage thresholds enforced)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `corepack pnpm build`
+  - Passed: `DATABASE_URL=postgresql://postgres@localhost:5432/cms_auto?schema=public corepack pnpm --filter @cms-auto/database exec prisma validate --schema prisma/schema.prisma`
+- Notes:
+  - No destructive migration was run.
+  - No API modules, routes, UI, business services, workflow logic, jobs, OpenAPI paths, or provider adapters were implemented.

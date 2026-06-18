@@ -1,8 +1,8 @@
 # Current State
 
 Status: Ready to Build
-Phase: Phase 0 - Repository Foundation
-Next Task: F0-08 - Coherent Prisma Data Model Draft
+Phase: Phase 1 - Security Baseline
+Next Task: F1-01 - Staff Auth With Argon2id And HttpOnly Sessions
 
 ## Notes
 
@@ -19,4 +19,5 @@ Next Task: F0-08 - Coherent Prisma Data Model Draft
 - F0-05 is complete; added design tokens, Tailwind config, and shadcn/ui foundation to apps/web.
 - F0-06 is complete; Node-based lint enforces current architecture boundaries, tests enforce coverage thresholds, OpenAPI scaffold drift is checked, and pending UI/perf proof commands are tested fail-loud.
 - F0-07 is complete; dependency-free module generator creates canonical API module skeletons, refuses invalid names/overwrites, and keeps `branches` as the future golden CRUD reference.
+- F0-08 is complete; Prisma schema now drafts the MVP core data model with first-class complaint history, audit, SLA, portal verification/session, comments, attachments, approvals, notification, survey, and compensation storage.
 - Known limitation: Prisma's Rust query engine cannot connect through Docker Desktop's Windows port-forwarding layer (P1000). DB operations must be run inside the Docker network (see evidence). This does not affect application code.

@@ -1,6 +1,6 @@
 # Next Task
 
-## F0-08 - Coherent Prisma Data Model Draft
+## F1-01 - Staff Auth With Argon2id And HttpOnly Sessions
 
 Status: Ready to Build
 Required model tier: BUILDER-STRONG
@@ -9,43 +9,40 @@ Risk: High
 ## Requirement IDs
 
 - CONTRACT-READINESS-002
-- ARCH-DATA-001
-- ARCH-WORKFLOW-001
-- METHOD-AUDIT-001
+- ARCH-AUTH-001
+- REQ-AUTH-001
 - API-STANDARD-001
-- REQ-ADMIN-001
-- REQ-CUSTOMER-001
-- REQ-COMPLAINT-001
-- SLA-CALENDAR-001
-- PORTAL-SEC-001
-- ARCH-STACK-001
-- METHOD-MODULAR-001
+- METHOD-AUDIT-001
+- METHOD-API-001
 - METHOD-TEST-001
+- NFR-SEC-001
 
 ## Scope
 
-Draft the coherent Prisma schema before feature migrations:
+Add the smallest staff authentication baseline:
 
-1. Expand `packages/database/prisma/schema.prisma` from the seed-era minimal model to the MVP core data model named in `docs/ARCHITECTURE.md` and the SRS.
-2. Include complaint status history, audit logs, departments, approvals, attachments, comments, SLA policies/events, notifications, surveys, compensation, and portal verification/session support.
-3. Keep enums stable UPPER_SNAKE codes and mapped DB names snake_case.
-4. Preserve existing seeded model intent where possible; update seed only enough to compile against the schema.
-5. Add or update the smallest schema-focused test/check needed to catch missing core tables or missing complaint history/audit support.
+1. Use the module generator to create the `auth` module skeleton if it does not exist.
+2. Add password hash/verify helpers using Argon2id through an already-approved dependency.
+3. Add a minimal session shape suitable for HttpOnly cookie issuance; do not trust client roles.
+4. Add login/logout service behavior for active staff users only, with generic failed-login errors.
+5. Add focused tests for valid login, invalid password, and inactive/locked user rejection.
+6. Add/update OpenAPI scaffold only for auth routes if a controller route is introduced.
 
 ## Expected Files
 
-- `packages/database/prisma/schema.prisma`
-- `packages/database/prisma/seed.ts`
-- `tools/*.mjs` / `tools/*.test.mjs` only if needed for schema assertions
+- `apps/api/src/modules/auth/**`
+- `apps/api/package.json` or root package files only if needed for Argon2 dependency wiring
+- `packages/contracts/openapi.json` only if auth routes are exposed
+- `tools/*.test.mjs` only if needed to keep current scaffold checks honest
 
-Do not implement API modules, routes, UI, business services, workflow logic, jobs, OpenAPI paths, or provider adapters in this task. Do not run destructive migrations on a shared database.
+Do not implement RBAC/branch-scope policy beyond loading role/branch from the server-side user record. Do not add UI login screens, password reset, CSRF, rate limiting, or full audit persistence in this task; those are later Phase 1 tasks unless needed to keep tests honest.
 
 ## Acceptance Criteria
 
-- Prisma schema contains the MVP core tables and relationships required before feature migrations.
-- Existing seed data compiles against the expanded schema.
-- Complaint status history and audit log storage exist as first-class models, not JSON-only blobs.
-- Tests or checks fail if core schema tables are missing.
+- Password hashing uses Argon2id, not plaintext or reversible storage.
+- Login succeeds only for a valid active staff user.
+- Invalid credentials, inactive users, and locked users are rejected with generic safe errors.
+- Session data is server-derived and includes user id, role, and branch scope from storage, not client input.
 - Existing lint, typecheck, test coverage, OpenAPI check, and build gates still pass.
 
 ## Verification Commands
@@ -58,5 +55,5 @@ Do not implement API modules, routes, UI, business services, workflow logic, job
 
 ## Evidence To Record
 
-Append `F0-08 - Coherent Prisma Data Model Draft` to `.forge/evidence.md` with honest Passed/Failed labels and cite the requirement IDs above.
-Update `.forge/trust.md`, mark `F0-08` done in `.forge/backlog.md` only if all verification commands pass, and write the next task before finishing.
+Append `F1-01 - Staff Auth With Argon2id And HttpOnly Sessions` to `.forge/evidence.md` with honest Passed/Failed labels and cite the requirement IDs above.
+Update `.forge/trust.md`, mark `F1-01` done in `.forge/backlog.md` only if all verification commands pass, and write the next task before finishing.

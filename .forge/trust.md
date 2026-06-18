@@ -134,3 +134,13 @@ Append review decisions here.
   - Required verification commands ran and passed.
   - The generator is intentionally dependency-free and structural only; it does not create runtime Nest decorators until the Nest package baseline exists.
   - Remaining risk: generated skeletons are construction-only placeholders, not CRUD behavior. `branches` remains scheduled as the actual golden CRUD exemplar in F1-05.
+
+## F0-08 - Coherent Prisma Data Model Draft
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - Required verification commands and Prisma schema validation passed.
+  - The schema now has first-class audit and complaint status history storage before workflow implementation.
+  - Remaining risk: no migration was generated or applied in this task; this is acceptable for the draft step and should be handled before DB-dependent feature work.

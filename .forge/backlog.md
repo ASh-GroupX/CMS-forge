@@ -13,7 +13,7 @@ history from another project.
 - [x] F0-05: Add frontend design tokens and shared UI component foundation
 - [x] F0-06: Add architecture rules, boundary lint, coverage gates, OpenAPI drift, visual/a11y/perf checks
 - [x] F0-07: Add module generator template and designate golden CRUD reference module
-- [ ] F0-08: Draft coherent Prisma data model before feature migrations
+- [x] F0-08: Draft coherent Prisma data model before feature migrations
 
 ## Phase 1 - Security Baseline
 
