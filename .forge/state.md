@@ -1,8 +1,22 @@
 # Current State
 
-Status: Needs Verify
+Status: Ready to Build
 Phase: Phase 2 - Complaint Core
-Next Task: VERIFY-F2-02B-REPAIR - Complaint Transition Persistence Repair Gate
+Next Task: F2-02C - Add Complaint Transition HTTP Route, RBAC/Branch-Scope Tests, And OpenAPI
+
+## VERIFY-F2-02B-REPAIR Accepted
+
+Independent VERIFY accepted the `REPAIR-F2-02B` fix. The repair stayed inside the
+scoped service/repository/workflow-test files; valid persisted transitions still
+run through the matrix validator; the status update atomically checks persisted
+current status; stale persisted status rejects with `COMPLAINT_INVALID_TRANSITION`
+before history or audit writes; successful status, history, and WORKFLOW audit
+writes still share one transaction.
+
+Required proof re-ran and passed: lint, typecheck, test 20/20,
+test:api -- workflow 7/7, and openapi:check.
+
+The F2-02B verify gate is cleared. Phase 2 continues with `F2-02C`.
 
 ## REPAIR-F2-02B Built - Verify Gate
 

@@ -1084,3 +1084,34 @@ tasks (notably the backend-owned complaint state machine).
     and openapi:check.
   - Because this is still the `F2-02B` Verify Gate, AUTO PHASE stops at `Needs Verify`
     before `F2-02C`.
+
+## VERIFY-F2-02B-REPAIR - Complaint Transition Persistence Repair Gate
+
+- Date: 2026-06-18
+- Required model tier: independent VERIFY
+- Builder honesty: Honest
+- Code quality: Good
+- Recommendation: Accept
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (7/7)
+  - Passed: `corepack pnpm openapi:check`
+- Findings:
+  - No blocking findings.
+- Scope review:
+  - The repair stayed inside the scoped service/repository/workflow-test files. No
+    route, OpenAPI path, UI, job, notification, SLA, portal, attachment, or comment
+    behavior was added.
+  - Every valid persisted transition still calls `validateTransition` before the
+    repository transaction starts.
+  - `ComplaintsRepository.updateStatus` now updates by `complaintId` and expected
+    persisted `fromStatus`; a zero-row update returns `null`.
+  - `ComplaintsService.applyTransition` maps that stale/mismatched persisted status
+    to stable `COMPLAINT_INVALID_TRANSITION` before status history or WORKFLOW audit
+    writes.
+  - Successful transitions still write complaint status, status history, and WORKFLOW
+    audit in one transaction client.
+  - Invalid matrix inputs and unauthorized roles still reject before starting a
+    transaction.
