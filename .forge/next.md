@@ -1,50 +1,66 @@
-# Repair Task: REPAIR-PHASE-2-TRANSITION-BRANCH-SCOPE - Enforce Target Complaint Branch Scope Before Transitions
+# Planner Task: PLAN-F3-01 - Split SLA And Workflow Operations
 
-Status: Ready to Build
-Required model tier: BUILDER-STRONG
+Status: Ready to Plan
+Required model tier: PLANNER
 Risk: High
-Phase: Phase 2 - Complaint Core Repair
+Phase: Phase 3 - SLA And Workflow Operations
 
 ## Why This Exists
 
-PHASE-2-REVIEW found that `POST /complaints/:id/transitions` checks the request
-`branchId` query against the server session, but does not verify that the target
-complaint ID belongs to that scoped branch before calling `applyTransition`.
-Phase 3 must not start until this branch-scope bypass is repaired.
+Phase 2 Complaint Core is accepted with non-blocking carry-forward conditions.
+Phase 3 spans SLA policy math, SLA jobs, escalation notification events, and
+additional workflow operations. Split it into the smallest buildable first task
+before coding.
 
-## Scope
+## Planning Scope
 
-Fix only the complaint transition branch-scope path:
+Plan only Phase 3:
 
-- `apps/api/src/modules/complaints/complaints.controller.ts`
-- focused workflow API test(s) under `apps/api/test/workflow/`
-- service/repository signatures only if needed for the smallest correct branch predicate
+- `F3-01`: SLA policy model and deterministic deadline calculation
+- `F3-02`: SLA warning and breach jobs
+- `F3-03`: Escalation notification events
+- `F3-04`: Reopen, send-back, resolve, and close workflows
 
-Do not implement Phase 3 SLA/workflow operations.
+Do not implement code during this planner task.
 
-## Acceptance Criteria
+## Required Inputs
 
-- Non-admin staff transitions derive branch authority from the server session or guarded query, never client body data.
-- A scoped staff user cannot transition a complaint outside their authorized branch.
-- The denial happens before status update, status history, or WORKFLOW audit writes.
-- Admin transition behavior remains valid.
-- Existing same-transaction status history/audit behavior remains unchanged for allowed transitions.
-- OpenAPI remains drift-free; update it only if the route contract changes.
+- `.forge/project.md`
+- `.forge/policy.md`
+- `.forge/state.md`
+- `.forge/backlog.md`
+- `.forge/evidence.md`
+- `.forge/trust.md`
+- `AGENTS.md`
+- `docs/ARCHITECTURE.md`
+- `docs/CMS_AUTO_SRS.md`
 
-## Requirement IDs
+## Requirement IDs To Reconcile
 
-- REQ-RBAC-001
-- RBAC-MATRIX-001
-- ARCH-WORKFLOW-001
-- WORKFLOW-MATRIX-001
-- METHOD-AUDIT-001
-- API-STANDARD-001
-- METHOD-TEST-001
+- `REQ-SLA-001`
+- `REQ-WORKFLOW-001`
+- `REQ-WORKFLOW-002`
+- `REQ-RESOLUTION-001`
+- `REQ-NOTIFY-001`
+- `SLA-CALENDAR-001`
+- `ARCH-WORKFLOW-001`
+- `METHOD-AUDIT-001`
+- `METHOD-TEST-001`
+- `API-STANDARD-001`
 
-## Verification Commands
+## Carry-Forward From Phase 2 Review
 
-- `corepack pnpm lint`
-- `corepack pnpm typecheck`
-- `corepack pnpm test`
-- `corepack pnpm test:api -- workflow`
-- `corepack pnpm openapi:check`
+- First-response reporting: Phase 2 captures public staff comment timestamps.
+  Before reports depend on this KPI, decide whether to compute first response from
+  the first public staff comment or materialize it into `Complaint.firstResponseAt`.
+- No real notification/SLA side effects exist yet; Phase 3 must enqueue side
+  effects only after state commits.
+
+## Output
+
+- Write one buildable Phase 3 task to `.forge/next.md`.
+- Set `.forge/state.md` to `Ready to Build`.
+- Keep the task near 1 to 5 files plus focused tests.
+- Include exact verification commands and SRS requirement IDs.
+- Mark any Phase 3 security/workflow/SLA foundation that later Phase 3 tasks build
+  on as `Verify Gate: required`.

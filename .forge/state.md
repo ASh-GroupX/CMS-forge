@@ -1,8 +1,52 @@
 # Current State
 
-Status: Ready to Build
-Phase: Phase 2 - Complaint Core Repair
-Next Task: REPAIR-PHASE-2-TRANSITION-BRANCH-SCOPE - Enforce Target Complaint Branch Scope Before Transitions
+Status: Ready to Plan
+Phase: Phase 3 - SLA And Workflow Operations
+Next Task: PLAN-F3-01 - Split SLA And Workflow Operations
+
+## Phase 2 Accepted With Conditions - Ready To Plan Phase 3
+
+PHASE-2-REVIEW accepted Complaint Core after the branch-scope and transition
+role-denial audit repairs. Required proof re-ran and passed: lint, typecheck,
+test 20/20, test:api -- workflow 27/27, and openapi:check.
+
+Phase 3 may start with one non-blocking carry-forward: first-response reporting
+must later either compute from the first public staff comment timestamp or
+materialize `Complaint.firstResponseAt` before reporting depends on it.
+
+## REPAIR-PHASE-2-TRANSITION-ROLE-DENIAL-AUDIT Built - Needs Phase Review
+
+The transition role-denial audit repair is built. Valid state/action transitions
+denied because of actor role now write a `SECURITY` / `workflow_role_forbidden`
+audit event before returning `RBAC_FORBIDDEN`, and still reject before status
+update, status history, or WORKFLOW audit writes.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- workflow 27/27,
+and openapi:check.
+
+Phase 2 is back at the mandatory PHASE-REVIEWER gate before Phase 3 planning.
+
+## PHASE-2-REVIEW Repair Required After Branch-Scope Repair
+
+PHASE-2-REVIEW re-ran the required proof surface successfully after
+`REPAIR-PHASE-2-TRANSITION-BRANCH-SCOPE`: lint, typecheck, test 20/20,
+test:api -- workflow 27/27, and openapi:check.
+
+Decision: Repair Required. Transition-specific role denials inside
+`ComplaintsService.validateTransition` throw `RBAC_FORBIDDEN` before a transaction,
+but do not write the `SECURITY` audit event required by `REQ-RBAC-001` AC5 and
+`WORKFLOW-MATRIX-001` AC2. Repair this before Phase 3 planning.
+
+## REPAIR-PHASE-2-TRANSITION-BRANCH-SCOPE Built - Needs Phase Review
+
+The Phase 2 transition branch-scope repair is built. `POST /complaints/:id/transitions`
+now verifies scoped complaint detail before applying a transition, so hidden complaint
+IDs reject before status update, status history, or WORKFLOW audit writes.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- workflow 27/27,
+and openapi:check.
+
+Phase 2 is back at the mandatory PHASE-REVIEWER gate before Phase 3 planning.
 
 ## PHASE-2-REVIEW Repair Required
 

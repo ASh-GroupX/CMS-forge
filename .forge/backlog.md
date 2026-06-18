@@ -59,6 +59,8 @@ history from another project.
   - [x] F2-04A: Add complaint detail read model with status-history timeline
   - [x] F2-04B: Add internal/public comment service behavior with privacy and audit tests
   - [x] F2-04C: Add complaint detail/comment HTTP routes and OpenAPI
+- [x] REPAIR-PHASE-2-TRANSITION-BRANCH-SCOPE: Enforce target complaint branch scope before transitions
+- [x] REPAIR-PHASE-2-TRANSITION-ROLE-DENIAL-AUDIT: Audit transition-specific unauthorized role denials
 
 ## Phase 3 - SLA And Workflow Operations
 

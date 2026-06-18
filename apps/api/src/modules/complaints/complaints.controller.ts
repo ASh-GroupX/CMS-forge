@@ -94,12 +94,15 @@ export class ComplaintsController {
   @BranchScoped()
   async transition(
     @Param('id') id: string,
+    @Query('branchId') branchId: string | undefined,
     @Body() body: unknown,
     @Req() request: AuthenticatedRequest,
   ): Promise<ComplaintTransitionResponseDto> {
+    const transitionBody = parseComplaintTransitionBody(body);
+    await this.complaintsService.getDetail(id, { branchId: queueBranchId(branchId, request) });
     return {
       transition: await this.complaintsService.applyTransition(
-        toTransitionInput(id, parseComplaintTransitionBody(body), auditContext(request)),
+        toTransitionInput(id, transitionBody, auditContext(request)),
       ),
     };
   }

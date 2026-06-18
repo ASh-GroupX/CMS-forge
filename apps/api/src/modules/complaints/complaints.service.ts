@@ -65,9 +65,7 @@ export const WORKFLOW_TRANSITIONS: readonly WorkflowTransition[] = [
   transition(ComplaintStatus.REOPENED, ComplaintTransitionAction.ROUTE_AGAIN, ComplaintStatus.MANAGER_REVIEW, MANAGER_ROLES),
 ];
 
-function transition(fromStatus: ComplaintStatus, action: ComplaintTransitionAction, toStatus: ComplaintStatus, allowedRoles: readonly RoleCode[]): WorkflowTransition {
-  return { fromStatus, action, toStatus, allowedRoles };
-}
+function transition(fromStatus: ComplaintStatus, action: ComplaintTransitionAction, toStatus: ComplaintStatus, allowedRoles: readonly RoleCode[]): WorkflowTransition { return { fromStatus, action, toStatus, allowedRoles }; }
 
 @Injectable()
 export class ComplaintsService {
@@ -94,11 +92,7 @@ export class ComplaintsService {
         correlationId: input.correlationId ?? null,
       }, client);
       await this.auditService.record(complaintCreatedAudit(input, complaint), client);
-      return {
-        id: complaint.id,
-        referenceNumber: complaint.referenceNumber,
-        status: complaint.status,
-      };
+      return { id: complaint.id, referenceNumber: complaint.referenceNumber, status: complaint.status };
     });
   }
 
@@ -149,7 +143,15 @@ export class ComplaintsService {
   }
 
   async applyTransition(input: ApplyComplaintTransitionInput): Promise<ApplyComplaintTransitionResult> {
-    const decision = this.validateTransition(input);
+    let decision: ComplaintTransitionDecision;
+    try {
+      decision = this.validateTransition(input);
+    } catch (error) {
+      if (error instanceof AppException && error.code === 'RBAC_FORBIDDEN') {
+        await this.auditService.record({ eventType: 'SECURITY', action: 'workflow_role_forbidden', actorId: input.actorId ?? null, branchId: null, targetType: 'complaint', targetId: input.complaintId, correlationId: input.correlationId ?? null, ipAddress: input.ipAddress ?? null, userAgent: input.userAgent ?? null, metadata: { fromStatus: input.fromStatus, action: input.action, actorRole: input.actorRole, requestSource: input.requestSource } });
+      }
+      throw error;
+    }
 
     return this.complaintsRepository.transaction(async (client) => {
       const complaint = await this.complaintsRepository.updateStatus(
@@ -279,9 +281,7 @@ function incidentAtErrors(value: unknown) {
 
 function optionalText(value: string | null | undefined): string | null { return typeof value === 'string' && value.trim() ? value.trim() : null; }
 
-function invalidTransitionError(): AppException {
-  return new AppException('COMPLAINT_INVALID_TRANSITION', 'The requested action is not allowed for the current complaint state.', HttpStatus.CONFLICT);
-}
+function invalidTransitionError(): AppException { return new AppException('COMPLAINT_INVALID_TRANSITION', 'The requested action is not allowed for the current complaint state.', HttpStatus.CONFLICT); }
 
 function workflowAuditInput(
   input: ApplyComplaintTransitionInput,

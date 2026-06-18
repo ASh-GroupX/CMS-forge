@@ -1259,3 +1259,144 @@ tasks (notably the backend-owned complaint state machine).
 ### Required repair
 
 Write the smallest Phase 2 repair before planning Phase 3: enforce target complaint branch scope on `POST /complaints/:id/transitions` and add a workflow API test that fails if a scoped staff user can transition a complaint outside their authorized branch.
+
+## REPAIR-PHASE-2-TRANSITION-BRANCH-SCOPE - Enforce Target Complaint Branch Scope Before Transitions
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept pending Phase 2 PHASE-REVIEWER
+- Notes:
+  - The repair stayed inside the scoped controller/workflow-test files.
+  - `POST /complaints/:id/transitions` now verifies scoped target complaint detail before entering `applyTransition`, matching the branch-scope protection already used by detail/comment paths.
+  - Focused workflow tests prove out-of-scope complaint IDs reject before transition write and Admin can still transition without a branch filter.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- workflow 27/27, and openapi:check.
+  - Phase 2 still needs a fresh PHASE-REVIEWER decision before Phase 3 planning starts.
+
+## PHASE-2-REVIEW-2 - Complaint Core Acceptance Review After Branch-Scope Repair
+
+- Date: 2026-06-18
+- Reviewer tier: PHASE-REVIEWER (current Codex context; preferred vendor model not claimed)
+- Risk: High
+- Decision: **Repair Required**
+- Phase 3 may start: **No**
+
+### Verification labels (re-run by reviewer)
+
+- Passed: `corepack pnpm lint`
+- Passed: `corepack pnpm typecheck`
+- Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+- Passed: `corepack pnpm test:api -- workflow` (27/27)
+- Passed: `corepack pnpm openapi:check`
+
+### Blocking finding
+
+- Transition-specific role denial is not audited. `POST /complaints/:id/transitions`
+  allows staff roles through the route guard, then `ComplaintsService.validateTransition`
+  rejects disallowed role/action pairs with `RBAC_FORBIDDEN` before `applyTransition`
+  starts a transaction. That path writes no `SECURITY` audit event, while
+  `REQ-RBAC-001` AC5 requires unauthorized API calls to return 403 and create an
+  audit/security event, and `WORKFLOW-MATRIX-001` AC2 requires valid transitions by
+  unauthorized role to return 403 and write a security/audit event.
+
+### Scope review
+
+- The branch-scope repair is accepted as implemented: the transition route verifies
+  scoped target complaint detail before `applyTransition`, and tests prove hidden
+  complaint IDs reject before status update/history/audit while Admin can transition
+  without a branch filter.
+- Successful complaint creation and workflow transitions still write status history
+  and audit in the same transaction. Stale persisted status rejects before history
+  and WORKFLOW audit.
+- Queue/detail/comment paths derive branch scope from the server session or verify
+  scoped detail before delegation. Public comment reads filter to `PUBLIC`.
+- OpenAPI drift checks pass and Phase 2 routes are documented.
+- Phase 2 backlog now needs one repair entry before another PHASE-REVIEWER pass.
+
+### Required repair
+
+Write the smallest Phase 2 repair before planning Phase 3: audit workflow
+transition denials caused by unauthorized actor role, and add a workflow API test
+that fails if that `RBAC_FORBIDDEN` path does not write a safe `SECURITY` audit
+event before any status update, status history, or WORKFLOW audit.
+
+## REPAIR-PHASE-2-TRANSITION-ROLE-DENIAL-AUDIT - Audit Transition-Specific Unauthorized Role Denials
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept pending Phase 2 PHASE-REVIEWER
+- Notes:
+  - The repair stayed inside the scoped service/workflow-test files.
+  - Valid state/action transitions denied by actor role now write a `SECURITY` /
+    `workflow_role_forbidden` audit entry before throwing `RBAC_FORBIDDEN`.
+  - Invalid state/action denials remain `COMPLAINT_INVALID_TRANSITION` without a
+    security audit event.
+  - Denied-role tests prove no transaction starts before the audit/deny path returns.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- workflow 27/27,
+    and openapi:check.
+  - Phase 2 still needs a fresh PHASE-REVIEWER decision before Phase 3 planning starts.
+
+## PHASE-2-REVIEW-3 - Complaint Core Acceptance Review After Repairs
+
+- Date: 2026-06-18
+- Reviewer tier: PHASE-REVIEWER (current Codex context; preferred vendor model not claimed)
+- Risk: High
+- Decision: **Accept With Conditions**
+- Phase 3 may start: **Yes**
+
+### Verification labels (re-run by reviewer)
+
+- Passed: `corepack pnpm lint`
+- Passed: `corepack pnpm typecheck`
+- Passed: `corepack pnpm test` (20/20; coverage 92.01% lines / 81.01% branches / 94.52% funcs)
+- Passed: `corepack pnpm test:api -- workflow` (27/27)
+- Passed: `corepack pnpm openapi:check`
+
+### Findings
+
+- Builder honesty: **Honest.** The latest repair evidence reproduced exactly, and
+  prior failed/repair loops are preserved instead of overwritten.
+- Code quality: **Good.** The complaints module stays inside the generated module
+  boundary, exports only `ComplaintsService`, and passes the 300-line/source-boundary
+  lint gate.
+- Backend-owned workflow authority holds: `ComplaintsService` owns the explicit
+  workflow matrix; controllers only parse HTTP, derive context, verify scoped detail,
+  and delegate.
+- Server-session authority holds: staff routes use `SessionAuthGuard`, `RbacGuard`,
+  `@Roles(...)`, `@BranchScoped()`, and mutation routes use `CsrfGuard`. Transition
+  input ignores spoofed actor/role/source data and forces `STAFF_API`.
+- The branch-scope repair holds: `POST /complaints/:id/transitions` verifies target
+  complaint visibility through `getDetail(id, { branchId: queueBranchId(...) })`
+  before `applyTransition`; tests prove out-of-scope complaint IDs reject before
+  status update/history/audit and Admin can transition without a branch filter.
+- The role-denial repair holds: valid state/action transitions denied because of
+  actor role now write a safe `SECURITY` / `workflow_role_forbidden` audit event
+  before returning `RBAC_FORBIDDEN`, and still start no status transaction.
+- Same-transaction state changes hold: complaint creation writes complaint, initial
+  status history, and COMPLAINT audit in one transaction; valid transitions update
+  persisted status, write status history, and WORKFLOW audit in one transaction;
+  comment creation writes COMMENT audit in the same transaction.
+- Privacy boundaries hold for Phase 2: queue/detail DTOs are explicit, detail hides
+  missing or branch-hidden complaints as `COMPLAINT_NOT_FOUND`, public comment reads
+  filter to `PUBLIC`, and no portal route or portal-visible DTO exposes internal
+  comments, audit logs, DMS codes, staff PII, or unrelated complaints.
+- OpenAPI drift coverage holds: all Phase 2 routes and schemas are in the canonical
+  OpenAPI document and `openapi:check` passed.
+- Audit append-only discipline remains in place through `AuditService.record()` and
+  the `audit_logs_no_update_delete` migration trigger.
+
+### Conditions
+
+- Non-blocking: Phase 2 captures public staff comment timestamps. Before first-response
+  reports ship, Phase 3/Phase 7 must decide whether to compute first response from the
+  first public staff comment or materialize it into `Complaint.firstResponseAt`.
+- Non-blocking: Phase 3 must keep notification/SLA side effects after commit; Phase 2
+  intentionally enqueued no side effects.
+
+### Rationale
+
+Phase 2 delivered the complaint schema metadata, complaints module boundary, workflow
+matrix, transition persistence, HTTP transition route, creation, queue, detail,
+comments, branch-scope repair, and transition role-denial audit repair with reproduced
+proof. The two prior PHASE-REVIEWER blockers were repaired and rechecked. Remaining
+conditions are downstream reporting/SLA implementation choices, not blockers for
+starting Phase 3 planning.

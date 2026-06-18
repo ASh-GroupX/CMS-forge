@@ -236,20 +236,55 @@ test('workflow transition persistence rejects invalid transitions before transac
 });
 
 test('workflow transition persistence rejects unauthorized roles before transaction', async () => {
-  await assertNoTransaction({
+  const auditRecords: AuditRecordInput[] = [];
+  const serviceWithFailingRepository = new ComplaintsService({
+    transaction: async () => {
+      throw new Error('transaction should not start');
+    },
+  } as ComplaintsRepository, { record: async (input) => auditRecords.push(input) } as unknown as AuditService);
+
+  await assert.rejects(
+    serviceWithFailingRepository.applyTransition({
     complaintId: 'cmp_1',
     fromStatus: ComplaintStatus.SUBMITTED,
     action: ComplaintTransitionAction.ACCEPT_INTAKE,
     actorRole: RoleCode.CR_OFFICER,
+      actorId: 'usr_officer',
     requestSource: ComplaintTransitionRequestSource.STAFF_API,
-  }, 'RBAC_FORBIDDEN');
+      correlationId: 'req_denied',
+      ipAddress: '203.0.113.45',
+      userAgent: 'node:test',
+    }),
+    (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
+  assert.deepEqual(auditRecords, [{
+    eventType: 'SECURITY',
+    action: 'workflow_role_forbidden',
+    actorId: 'usr_officer',
+    branchId: null,
+    targetType: 'complaint',
+    targetId: 'cmp_1',
+    correlationId: 'req_denied',
+    ipAddress: '203.0.113.45',
+    userAgent: 'node:test',
+    metadata: {
+      fromStatus: ComplaintStatus.SUBMITTED,
+      action: ComplaintTransitionAction.ACCEPT_INTAKE,
+      actorRole: RoleCode.CR_OFFICER,
+      requestSource: ComplaintTransitionRequestSource.STAFF_API,
+    },
+  }]);
 });
 
 test('complaint transition route delegates with server principal role and audit context', async () => {
   const calls: unknown[] = [];
   const controller = new ComplaintsController({
+    getDetail: async (id, filter) => {
+      calls.push({ getDetail: { id, filter } });
+      return {};
+    },
     applyTransition: async (input) => {
-      calls.push(input);
+      calls.push({ applyTransition: input });
       return {
         complaintId: input.complaintId,
         fromStatus: input.fromStatus,
@@ -260,7 +295,7 @@ test('complaint transition route delegates with server principal role and audit 
     },
   } as ComplaintsService);
 
-  const response = await controller.transition('cmp_1', {
+  const response = await controller.transition('cmp_1', undefined, {
     fromStatus: ComplaintStatus.DRAFT,
     action: ComplaintTransitionAction.SUBMIT,
     actorRole: RoleCode.ADMIN,
@@ -276,7 +311,8 @@ test('complaint transition route delegates with server principal role and audit 
     actorRole: RoleCode.CR_OFFICER,
     toStatus: ComplaintStatus.SUBMITTED,
   });
-  assert.deepEqual(calls[0], {
+  assert.deepEqual(calls[0], { getDetail: { id: 'cmp_1', filter: { branchId: 'branch_main' } } });
+  assert.deepEqual(calls[1], { applyTransition: {
     complaintId: 'cmp_1',
     fromStatus: ComplaintStatus.DRAFT,
     action: ComplaintTransitionAction.SUBMIT,
@@ -287,14 +323,57 @@ test('complaint transition route delegates with server principal role and audit 
     correlationId: 'req_workflow',
     ipAddress: '203.0.113.44',
     userAgent: 'node:test',
-  });
+  } });
+});
+
+test('complaint transition route rejects out-of-scope complaint before transition write', async () => {
+  const calls: unknown[] = [];
+  const controller = new ComplaintsController({
+    getDetail: async (id, filter) => {
+      calls.push({ getDetail: { id, filter } });
+      throw new AppException('COMPLAINT_NOT_FOUND', 'Complaint not found', 404);
+    },
+    applyTransition: async () => {
+      throw new Error('transition should not be applied');
+    },
+  } as ComplaintsService);
+
+  await assert.rejects(
+    controller.transition('cmp_other_branch', undefined, {
+      fromStatus: ComplaintStatus.DRAFT,
+      action: ComplaintTransitionAction.SUBMIT,
+    }, request()),
+    (error: unknown) => error instanceof AppException && error.code === 'COMPLAINT_NOT_FOUND',
+  );
+  assert.deepEqual(calls, [{ getDetail: { id: 'cmp_other_branch', filter: { branchId: 'branch_main' } } }]);
+});
+
+test('complaint transition route lets admin transition without branch filter', async () => {
+  const calls: unknown[] = [];
+  const controller = new ComplaintsController({
+    getDetail: async (id, filter) => {
+      calls.push({ getDetail: { id, filter } });
+      return {};
+    },
+    applyTransition: async (input) => {
+      calls.push({ applyTransition: input });
+      return { complaintId: input.complaintId, fromStatus: input.fromStatus, action: input.action, actorRole: input.actorRole, toStatus: ComplaintStatus.SUBMITTED };
+    },
+  } as ComplaintsService);
+
+  await controller.transition('cmp_1', undefined, {
+    fromStatus: ComplaintStatus.DRAFT,
+    action: ComplaintTransitionAction.SUBMIT,
+  }, request(RoleCode.ADMIN));
+
+  assert.deepEqual(calls[0], { getDetail: { id: 'cmp_1', filter: { branchId: null } } });
 });
 
 test('complaint transition route rejects invalid request bodies', async () => {
   const controller = new ComplaintsController({} as ComplaintsService);
 
   await assert.rejects(
-    controller.transition('cmp_1', {
+    controller.transition('cmp_1', undefined, {
       fromStatus: 'bad_status',
       action: ComplaintTransitionAction.SUBMIT,
     }, request()),

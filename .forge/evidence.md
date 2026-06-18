@@ -2298,3 +2298,85 @@ Append build and verification evidence here. Do not delete failed evidence.
     staff PII, or unrelated complaints.
   - Trust boundaries are tested: Passed; workflow tests cover allowed comment route
     behavior, scoped access verification, invalid-body denial, and public-read privacy.
+
+## REPAIR-PHASE-2-TRANSITION-BRANCH-SCOPE - Enforce Target Complaint Branch Scope Before Transitions
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-RBAC-001
+  - RBAC-MATRIX-001
+  - ARCH-WORKFLOW-001
+  - WORKFLOW-MATRIX-001
+  - METHOD-AUDIT-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+- Evidence:
+  - `POST /complaints/:id/transitions` now parses the transition request body, derives the scoped branch from the server request/query path with `queueBranchId`, verifies the target complaint through `ComplaintsService.getDetail`, and only then delegates to `ComplaintsService.applyTransition`.
+  - Added workflow API coverage proving an out-of-scope complaint rejects with `COMPLAINT_NOT_FOUND` before `applyTransition` can run.
+  - Added workflow API coverage proving Admin can still transition without a branch filter.
+  - Existing transition behavior still derives actor role/ID and audit context from the server request principal and ignores spoofed body authority fields.
+  - No service transaction semantics, repository update logic, OpenAPI contract, Phase 3 SLA/jobs, UI, portal, attachment, notification, or integration behavior changed.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (27/27)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed; transition route derives actor role from `request.principal` and now verifies target complaint visibility through server-derived branch scope before applying a transition.
+  - Each state change writes status history and an audit entry in the same transaction; side effects enqueue after commit: Passed by unchanged `ComplaintsService.applyTransition` tests; scoped denial happens before transition write/history/audit. No side effects are enqueued in Phase 2.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed by scope; no credential fields are parsed, logged, or returned.
+  - Customer portal exposure rules hold: Passed by scope; no portal route or portal-visible DTO changed.
+  - Trust boundaries are tested: Passed; workflow tests cover allowed staff transition, out-of-scope complaint denial before write, query branch-scope denial audit, and Admin transition without branch filter.
+
+## REPAIR-PHASE-2-TRANSITION-ROLE-DENIAL-AUDIT - Audit Transition-Specific Unauthorized Role Denials
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-RBAC-001
+  - RBAC-MATRIX-001
+  - ARCH-WORKFLOW-001
+  - WORKFLOW-MATRIX-001
+  - METHOD-AUDIT-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+- Evidence:
+  - `ComplaintsService.applyTransition` now records a safe `SECURITY` /
+    `workflow_role_forbidden` audit event when workflow validation finds a valid
+    state/action pair but denies the actor role.
+  - Invalid state/action denials still return `COMPLAINT_INVALID_TRANSITION` and do
+    not create a security event.
+  - Denied-role transitions still reject before status update, status history, and
+    WORKFLOW audit transaction work.
+  - The workflow suite now asserts the denied-role audit includes actor, complaint
+    target, correlation/request metadata, and safe transition metadata.
+  - No controller contract, repository update semantics, OpenAPI, Phase 3 SLA/jobs,
+    UI, portal, attachment, notification, or integration behavior changed.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (27/27)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed;
+    transition HTTP route still derives actor role from `request.principal`, and the
+    service denial audit uses that server-supplied role context.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by unchanged successful
+    transition tests. The denied-role path makes no state change and writes a
+    SECURITY audit before any transaction. No side effects are enqueued.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope and metadata; only complaint ID, statuses/action, actor role,
+    request source, and request metadata are recorded.
+  - Customer portal exposure rules hold: Passed by scope; no portal route or
+    portal-visible DTO changed.
+  - Trust boundaries are tested: Passed; workflow tests cover allowed transition,
+    invalid transition, unauthorized-role denial with SECURITY audit, branch-scope
+    denial audit, and out-of-scope complaint denial before write.
