@@ -46,6 +46,22 @@ Use for:
 
 Do not use PLANNER for routine coding.
 
+## PHASE-REVIEWER
+
+Use only for phase-end acceptance gates after every task in a backlog phase is
+complete.
+
+Preferred model choices:
+- Opus 4.8 Max
+- GPT-5.5 Extra High
+
+Rules:
+- Use a fresh context or a different reviewer from the phase builders.
+- Review evidence, backlog status, trust notes, source changes, and all failed or
+  Not Run checks.
+- Do not implement feature work while reviewing; write a repair task if the phase
+  should not advance.
+
 ## Default Mapping
 
 | Work | Tier |
@@ -54,4 +70,4 @@ Do not use PLANNER for routine coding.
 | Normal feature | BUILDER-STANDARD |
 | Security/workflow/data | BUILDER-STRONG |
 | Planning/review | PLANNER |
-
+| Phase completion review | PHASE-REVIEWER |

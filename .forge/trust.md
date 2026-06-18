@@ -144,3 +144,93 @@ Append review decisions here.
   - Required verification commands and Prisma schema validation passed.
   - The schema now has first-class audit and complaint status history storage before workflow implementation.
   - Remaining risk: no migration was generated or applied in this task; this is acceptable for the draft step and should be handled before DB-dependent feature work.
+
+## FORGE-PHASE-REVIEW-001 - Phase Completion Review Gate
+
+- Date: 2026-06-18
+- Risk: Medium
+- Recommendation: Accept
+- Notes:
+  - Forge now has an explicit `Needs Phase Review` state and `PHASE-REVIEWER` tier.
+  - Phase completion review must use a fresh reviewer context with Opus 4.8 Max or GPT-5.5 Extra High.
+  - The current chain is intentionally paused at `PHASE-0-REVIEW` before Phase 1 starts.
+
+## PHASE-0-REVIEW - Phase 0 Acceptance Review
+
+- Date: 2026-06-18
+- Reviewer tier: PHASE-REVIEWER (Opus 4.8)
+- Risk: High
+- Decision: **Accept Phase** (with explicit carry-forward conditions)
+- Phase 1 may start: **Yes** — restored `next.md` to `F1-01`.
+
+### Method
+
+Independent verification, not log-trust. Re-ran every required proof command,
+inspected each Phase 0 artifact directly, validated the schema, and cross-checked
+all cited SRS requirement IDs against `docs/CMS_AUTO_SRS.md`.
+
+### Verification Labels (re-run by reviewer)
+
+- Passed: `corepack pnpm lint`
+- Passed: `corepack pnpm typecheck` (6 tsconfig projects)
+- Passed: `corepack pnpm test` (15/15; coverage 86.67% lines / 77.57% branch / 89.58% funcs — clears the 80/65/75 thresholds)
+- Passed: `corepack pnpm openapi:check`
+- Passed: `corepack pnpm build` (exit 0)
+- Passed: `prisma validate` on the full F0-08 schema
+- Passed: `rg` task-coverage check — all 9 Phase 0 tasks tracked in backlog/evidence/trust
+- Passed: all 12 spot-checked SRS requirement IDs exist in the SRS (no fabricated citations)
+
+### Key Findings
+
+- Builder honesty: **Honest.** Every "Passed" label reproduced. Gaps are
+  explicitly disclosed, never inflated.
+- Code quality: **Good.** Toolchain gates are real, not theater:
+  - `lint.mjs` enforces actual import boundaries (web↛api/db/prisma/provider SDKs,
+    api↛web, packages↛apps, cross-module private imports, TODO/FIXME).
+  - `pending-proof.mjs` honestly exits 1, so unimplemented gates (test:api, test:e2e,
+    test:web, test:visual, web:perf, test:performance, db:migrate:test, db:index:check,
+    security:check, ops:backup:check) cannot masquerade as passing.
+  - `openapi-check.mjs` enforces canonical OpenAPI 3.1.0 + ErrorEnvelope/ErrorBody/
+    FieldError with correlationId.
+  - `schema-check.mjs` runs in the test suite and guards 20 models plus the
+    audit/history non-negotiables against regression.
+- Data model (F0-08): coherent and security-conscious. OTP/session/survey/password
+  stored as hashes only; `Complaint.version` for optimistic concurrency; the exact
+  indexes ARCH §7 / NFR-SCALE-001 require; `Approval` records model parallel approvals;
+  `Comment.visibility` + `Attachment.customerVisible` enforce portal privacy;
+  `SlaEvent.idempotencyKey` prevents double-firing; `AuditLog` is append-only.
+- No scope leaks: `apps/web/src` has tokens/utils/liveness only (no components/routes);
+  `apps/api/src` has liveness only (generator output stayed in temp).
+
+### Carry-Forward Conditions (all already disclosed; bound to Phase 1)
+
+1. **Migration drift (must resolve in F1-01).** The committed migration
+   `20260618115340_init` reflects only the minimal F0-04 model. The current
+   `schema.prisma` is the full F0-08 model (20 models; User gains
+   passwordHash/lockedAt/lastLoginAt/departmentId; +13 tables). F1-01 needs
+   `User.passwordHash` and a session store, so it must generate a migration from the
+   F0-08 schema before/as its first step. This is correct Phase 0 behavior — F0-08
+   was a *draft* task — not a defect.
+2. **No NestJS runtime yet.** `apps/api` is a `node:http` liveness server; NestJS is
+   named throughout the architecture but is not yet a dependency, and the core kernel
+   (PrismaService, AuditService, errors/ExceptionFilter, RbacGuard, correlation
+   middleware) does not exist. F1-01 depends on this baseline. If bootstrap +
+   migration + auth exceeds the 1–5 file scope budget, the builder must escalate to
+   PLANNER to split it (e.g. a Nest-bootstrap + core-kernel task before auth).
+3. **Generator emits plain TS classes, not Nest decorators** (disclosed in F0-07).
+   Re-align the generator to the real Nest module shape when the golden CRUD exemplar
+   is built in F1-05.
+4. **`POSTGRES_HOST_AUTH_METHOD: trust`** is dev-only; must be parameterized before any
+   non-dev deployment. Not Phase 1 blocking.
+5. **Visual/a11y/perf gates** remain honest fail-loud until real screens exist (Phase 6).
+
+### Minor (non-blocking) doc nits
+
+- `docs/ARCHITECTURE.md` §7 cites backlog `F2-00` for the schema draft; the actual
+  task was `F0-08`. Stale cross-reference.
+- §2 shows an `infra/` directory for docker-compose, but the compose file lives at
+  repo root. Harmless drift.
+
+Rationale: Phase 0 ("Repository Foundation") delivered every planned task with honest,
+reproduced evidence. The remaining items are correctly-sequenced prerequisites for
+Phase 1, already disclosed in the build logs — not hidden gaps. Accepting.

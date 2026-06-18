@@ -26,6 +26,7 @@ If the task references requirements, also read `docs/CMS_AUTO_SRS.md`.
 - If `state.md` says `Ready to Build`, run BUILD.
 - If `state.md` says `Needs Verify`, run VERIFY.
 - If `state.md` says `Needs Review`, run REVIEW.
+- If `state.md` says `Needs Phase Review`, run PHASE REVIEW.
 - If `state.md` says `Blocked` or `Needs Repair`, run BUILD on the repair task.
 - If `next.md` says `Complete`, stop and report the final state.
 
@@ -64,7 +65,10 @@ If checks pass:
 - Append evidence to `.forge/evidence.md`.
 - Update `.forge/trust.md` with risk and recommendation.
 - Mark the task done in `.forge/backlog.md`.
-- Write the next task or set `next.md` to `Needs planning`.
+- If all tasks in the current backlog phase are done, stop phase advancement:
+  write a phase review task to `.forge/next.md` and set `.forge/state.md` to
+  `Needs Phase Review`.
+- Otherwise write the next task or set `next.md` to `Needs planning`.
 - Update `.forge/state.md`.
 
 If checks fail:
@@ -90,6 +94,48 @@ Output:
 
 Update `.forge/state.md` and `.forge/trust.md`.
 
+## PHASE REVIEW
+
+Use this when a backlog phase is complete before any task from the next phase
+starts.
+
+Required tier: `PHASE-REVIEWER`.
+
+Use one of:
+- Opus 4.8 Max
+- GPT-5.5 Extra High
+
+Inputs:
+- `.forge/backlog.md`
+- `.forge/evidence.md`
+- `.forge/trust.md`
+- `.forge/state.md`
+- `.forge/next.md`
+- `CLAUDE.md` / `AGENTS.md`
+- `docs/ARCHITECTURE.md`
+- `docs/CMS_AUTO_SRS.md` requirement IDs covered by the phase
+- source files changed during the phase
+
+Check:
+- Every task in the phase is checked done in `.forge/backlog.md`.
+- Evidence exists for every completed task and uses honest verification labels.
+- Required proof commands actually ran, or gaps are explicit and acceptable.
+- No failed, Not Run, or assumed checks hide a blocking acceptance risk.
+- SRS acceptance criteria, architecture rules, security, audit, RBAC, OpenAPI,
+  UI/UX, and test gates were not weakened.
+- The next phase is safe to start.
+
+Output one decision:
+- `Accept Phase`: append the review to `.forge/trust.md`, write the first task
+  from the next unfinished phase to `.forge/next.md`, and set state to
+  `Ready to Build`.
+- `Accept With Conditions`: same as accept, but record explicit non-blocking
+  conditions in `.forge/trust.md`.
+- `Repair Required`: write the smallest repair task to `.forge/next.md`, set
+  state to `Needs Repair`, and do not start the next phase.
+- `Redo Phase`: set state to `Ready to Plan` and write the replan scope to
+  `.forge/next.md`.
+
 ## REVIEW
 
 Use for high-risk or final acceptance decisions.
@@ -104,4 +150,3 @@ Do not edit these unless the user explicitly asks to change the protocol:
 - `.forge/forge.md`
 - `.forge/policy.md`
 - `.forge/models.md`
-

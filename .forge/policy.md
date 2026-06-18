@@ -8,6 +8,8 @@
 4. Do not claim a check passed unless it actually ran.
 5. Record assumptions and gaps.
 6. Keep the chain alive: update `next.md` and `state.md` before finishing.
+7. When a backlog phase is complete, stop and run `PHASE-REVIEWER` before the
+   next phase starts.
 
 ## CMS-Auto Rules
 
@@ -26,6 +28,8 @@
   accessibility, and frontend performance.
 - Prefer generator/template output or the golden reference module over
   inventing a new module shape.
+- Phase completion is not accepted by the builder. It requires a fresh
+  `PHASE-REVIEWER` pass using Opus 4.8 Max or GPT-5.5 Extra High.
 
 ## Verification Labels
 

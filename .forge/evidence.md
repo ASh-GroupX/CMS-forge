@@ -351,3 +351,22 @@ Append build and verification evidence here. Do not delete failed evidence.
 - Notes:
   - No destructive migration was run.
   - No API modules, routes, UI, business services, workflow logic, jobs, OpenAPI paths, or provider adapters were implemented.
+
+## FORGE-PHASE-REVIEW-001 - Phase Completion Review Gate
+
+- Date: 2026-06-18
+- Risk: Medium
+- Status: Passed
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - METHOD-TEST-001
+- Evidence:
+  - Added `PHASE-REVIEWER` to `.forge/models.md` with Opus 4.8 Max and GPT-5.5 Extra High as preferred phase-review models.
+  - Updated `.forge/forge.md` so completed backlog phases stop at `Needs Phase Review` before the next phase starts.
+  - Updated `.forge/policy.md` to make phase-end review mandatory and separate from builder acceptance.
+  - Converted the current state from Phase 1 build start to `PHASE-0-REVIEW`.
+- Verification:
+  - Passed: `rg -n "PHASE-REVIEWER|Needs Phase Review|PHASE REVIEW|Opus 4\\.8|GPT-5\\.5|PHASE-0-REVIEW|Phase completion review" .forge`
+- Notes:
+  - No application source code was changed.
+  - Phase 1 must not start until Phase 0 receives an explicit phase-review decision.
