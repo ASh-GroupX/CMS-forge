@@ -685,3 +685,14 @@ five required proof commands and confirmed file budgets.
   - Required checks passed: lint, typecheck, test 20/20, openapi:check.
   - No runtime API behavior, OpenAPI route, RBAC, audit, Prisma schema, migration, auth, or audit module change was added.
   - The remaining `F1-05C` scope is still too broad, so AUTO PHASE stops at `Ready to Plan` for a split before CRUD behavior.
+
+## F1-05C - Branch Read/List Service And Repository Behavior
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - The task stayed scoped to branch read/list service and repository behavior plus the `admin` API test-suite registration.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- admin 3/3, openapi:check.
+  - No public route, OpenAPI branch path, write behavior, audit entry, UI, schema, or migration was added.
+  - Next task should expose read-only HTTP routes with Admin RBAC and OpenAPI before branch write behavior.

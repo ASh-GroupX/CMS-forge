@@ -1,41 +1,39 @@
-# Next Task: PLAN-F1-05C - Split Branches Golden CRUD Behavior
+# Next Task: F1-05D - Branch Read/List HTTP Endpoints With Admin RBAC And OpenAPI
 
-Status: Ready to Plan
-Required model tier: PLANNER
+Status: Ready to Build
+Required model tier: BUILDER-STRONG
 Risk: High
 Phase: Phase 1 - Security Baseline
 
 ## Why This Exists
 
-`F1-05C - Branches golden CRUD endpoints, RBAC, audit, and pattern freeze` is too
-broad for one builder task. It likely touches controller, service, repository,
-DTOs, API tests, API suite registration, OpenAPI, app module wiring, audit
-behavior, RBAC, and pattern documentation.
+Branch read/list service behavior exists. Expose the read-only HTTP surface next,
+using Admin-only RBAC and the canonical OpenAPI contract, while leaving writes and
+audit-producing branch changes for later subtasks.
 
 ## Scope
 
-Planning only. Split `F1-05C` into ordered buildable tasks that each stay near
-1 to 5 files plus focused tests.
-
-Minimum split to consider:
-
-1. Branch read/list endpoint with Admin RBAC and OpenAPI.
-2. Branch create/update/deactivate service behavior with audit entries.
-3. Branch API tests and golden CRUD pattern documentation/freeze.
-
-Do not implement source code in this planning task.
+- Add read-only branches routes:
+  - `GET /branches`
+  - `GET /branches/:idOrCode`
+- Wire `BranchesModule` into the API app.
+- Protect both routes with `SessionAuthGuard`, `RbacGuard`, and Admin-only roles.
+- Keep controllers HTTP-only: validate/delegate/return service responses.
+- Add focused `test:api -- admin` coverage for Admin allowed and non-admin denied.
+- Document the read-only branch paths and response schemas in OpenAPI.
 
 ## Out Of Scope
 
-- Feature implementation.
-- Phase review.
-- Login rate limiting or CSRF (`F1-06`).
+- Branch create/update/deactivate behavior.
+- Branch write audit entries.
+- UI.
+- Database schema or migration changes.
+- Pattern-freeze documentation.
 
 ## Requirement IDs
 
 - REQ-ADMIN-001
 - METHOD-MODULAR-001
-- METHOD-AUDIT-001
 - METHOD-API-001
 - METHOD-TEST-001
 - NFR-MAINT-001
@@ -43,17 +41,28 @@ Do not implement source code in this planning task.
 
 ## Acceptance Criteria
 
-- `.forge/next.md` contains only the first buildable branches CRUD task.
-- `.forge/state.md` is `Ready to Build` after planning.
-- Backlog has small ordered branches CRUD subtasks under the `F1-05` umbrella.
-- The first build task includes exact verification commands and SRS IDs.
-- Scope stays near 1 to 5 files plus tests.
+- Admin staff can call branch list/get routes.
+- Non-admin staff are denied by the existing RBAC guard and denial audit behavior.
+- Branch responses use `BranchResponseDto` shape from the service.
+- Missing branches return a stable not-found-safe response.
+- OpenAPI includes both branch read paths and schemas.
+- Required checks pass and source files remain under the 300-line budget.
 
 ## Verification Commands
 
-- `rg -n "PLAN-F1-05C|F1-05C|F1-05D|Ready to Build|300" .forge/backlog.md .forge/next.md .forge/state.md`
+- `corepack pnpm lint`
+- `corepack pnpm typecheck`
+- `corepack pnpm test`
+- `corepack pnpm test:api -- admin`
+- `corepack pnpm openapi:check`
 
 ## Evidence To Record
 
-Append `PLAN-F1-05C - Split Branches Golden CRUD Behavior` to
-`.forge/evidence.md` with honest labels.
+Append `F1-05D - Branch Read/List HTTP Endpoints With Admin RBAC And OpenAPI`
+to `.forge/evidence.md` with honest labels and the security self-check.
+
+## Next After Completion
+
+If checks pass, mark `F1-05D` done, write `F1-05E - Branch Create/Update/
+Deactivate Service Behavior With Audit Entries` to `.forge/next.md`, and keep
+`.forge/state.md` as `Ready to Build`.

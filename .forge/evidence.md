@@ -1235,3 +1235,61 @@ Append build and verification evidence here. Do not delete failed evidence.
   - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed by scope; generated shell code contains no logging, response, secret, or provider behavior.
   - Customer portal exposure rules hold: Passed by separation; no portal route or portal-visible data was changed.
   - Trust boundaries are tested: Not applicable to behavior; generator and manifest lint tests cover the structural boundary only.
+
+## F1-05C - Branch Read/List Service And Repository Behavior
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-ADMIN-001
+  - METHOD-MODULAR-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+- Evidence:
+  - Added branch repository methods to list active branches and find one branch by id or code.
+  - Added branch service read/list methods that map Prisma branch rows into explicit `BranchResponseDto` objects.
+  - Registered the `admin` API test suite in `tools/api-test.mjs`.
+  - Added focused admin API tests for active-list repository query shape, id/code lookup query shape, explicit service response mapping, and null-safe missing lookup behavior.
+  - Updated construction-only generated branch specs to pass the repository's `PrismaService` constructor dependency.
+  - Added no controller routes, app wiring, OpenAPI paths, write behavior, audit entries, UI, schema, or migration.
+  - Kept touched source files under the 300-line budget; largest new test file is `apps/api/test/admin/branches-read.test.ts` at 85 lines.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- admin` (3/3)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (only CRLF warnings)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not applicable to runtime authorization; this task adds service/repository behavior only and no route.
+  - Each state change writes status history and an audit entry in the same transaction; side effects enqueue after commit: Not applicable; read-only branch behavior adds no state change or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed; service maps explicit branch fields only and does not log.
+  - Customer portal exposure rules hold: Passed by separation; no portal route or portal-visible data was changed.
+  - Trust boundaries are tested: Passed for this task boundary; admin API tests prove active-only list query, id/code lookup, explicit response mapping, and missing lookup behavior.
+
+## PLAN-F1-05C - Split Branches Golden CRUD Behavior
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: PLANNER
+- Requirement IDs:
+  - REQ-ADMIN-001
+  - METHOD-MODULAR-001
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+  - NFR-SEC-002
+- Evidence:
+  - Split the broad `F1-05C` branches golden CRUD task into small ordered subtasks: read/list service behavior, read/list HTTP/OpenAPI, write/audit behavior, and final endpoint/tests/pattern freeze.
+  - Queued only `F1-05C - Branch Read/List Service And Repository Behavior` in `.forge/next.md`.
+  - Set `.forge/state.md` to `Ready to Build`.
+  - Kept implementation deferred; no application source code was changed.
+- Verification:
+  - Passed: `rg -n "PLAN-F1-05C|F1-05C|F1-05D|Ready to Build|300" .forge/backlog.md .forge/next.md .forge/state.md`
+- Security Self-Check:
+  - Not Run: planning-only task; no runtime RBAC, branch-scope, state-change, audit, portal, or logging behavior was implemented.
