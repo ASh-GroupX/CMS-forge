@@ -26,7 +26,7 @@ history from another project.
 - [x] F1-01E1: Auth HTTP login/logout routes and module wiring
 - [x] F1-01E2: Auth audit entries for login success, login failure, and logout
 - [x] F1-01E3: Auth OpenAPI contract and final security proof (Verify Gate: required)
-- [ ] F1-02: RBAC and branch-scope enforcement
+- [x] F1-02: RBAC and branch-scope enforcement
 - [ ] F1-03: Audit log search/export and append-only enforcement
 - [ ] F1-04: Stable API error shape and correlation IDs
 - [ ] F1-05: Build golden CRUD reference module for branches or categories and freeze its pattern

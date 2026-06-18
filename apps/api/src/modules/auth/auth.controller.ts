@@ -1,5 +1,12 @@
-import { Body, Controller, Headers, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Post, Req, Res, UseGuards } from '@nestjs/common';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import {
+  BranchScoped,
+  RbacGuard,
+  Roles,
+  SessionAuthGuard,
+} from '../../core/auth.guard.js';
+import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { AuthService } from './auth.service.js';
 import type { AuthAuditContext } from './auth.service.js';
 import { LoginRequestDto } from './dto/login-request.dto.js';
@@ -52,6 +59,14 @@ export class AuthController {
 
     response.setHeader('Set-Cookie', expiredCookie);
     return { ok: true };
+  }
+
+  @Get('me')
+  @UseGuards(SessionAuthGuard, RbacGuard)
+  @Roles('ADMIN', 'BRANCH_MANAGER')
+  @BranchScoped()
+  me(@Req() request: AuthenticatedRequest): Record<string, unknown> {
+    return { user: request.principal };
   }
 }
 

@@ -412,6 +412,16 @@ Phase 1, already disclosed in the build logs — not hidden gaps. Accepting.
   - Required proof commands passed.
   - Because this task is marked `Verify Gate: required`, AUTO PHASE is paused at `Needs Verify` before Phase 1 continues to RBAC/branch scope.
 
+## F1-02 - RBAC and Branch-Scope Enforcement
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - The task stayed narrow: session guard, role/branch decorators and guard, `GET /auth/me`, OpenAPI contract update, and focused auth API tests.
+  - Required proof commands passed after recording and fixing the initial typecheck failures.
+  - `F1-03` is too broad as written, so AUTO PHASE stops at `Ready to Plan` for a split before audit search/export/append-only work.
+
 ## VERIFY-F1-01E - Auth Foundation Verify Gate
 
 - Date: 2026-06-18

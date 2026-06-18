@@ -1,8 +1,8 @@
 # Current State
 
-Status: Ready to Build
+Status: Ready to Plan
 Phase: Phase 1 - Security Baseline
-Next Task: F1-02 - RBAC and branch-scope enforcement
+Next Task: PLAN-F1-03 - Split Audit Search/Export And Append-Only Enforcement
 
 ## Phase 1 — Auth Foundation Verified (gate passed)
 

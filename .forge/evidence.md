@@ -941,3 +941,38 @@ Append build and verification evidence here. Do not delete failed evidence.
   - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed; tests cover safe login responses, failed-login audit metadata, token-hash storage, and logout audit not exposing raw tokens. OpenAPI response schemas expose only safe claims and expiry.
   - Customer portal exposure rules: Passed by separation; staff auth routes, sessions, audit entries, and OpenAPI schemas do not expose portal comments, audit, DMS codes, staff PII to portal users, or unrelated complaints.
   - Trust boundaries tested: Passed; `test:api -- auth` covers allowed login, denied credentials/inactive/locked/missing-hash users, session creation, session validation denial, logout, malformed login input, and auth audit events.
+
+## F1-02 - RBAC and Branch-Scope Enforcement
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-RBAC-001
+  - NFR-SEC-002
+  - ARCH-AUTH-001
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Added `SessionAuthGuard` that reads the staff-session cookie, validates it with `AuthService.validateStaffSession`, and attaches server-derived principal claims to the request.
+  - Added `@Roles(...)`, `@BranchScoped()`, and `RbacGuard`.
+  - `RbacGuard` reads role and branch from the attached server principal only, denies with `RBAC_FORBIDDEN` / `BRANCH_SCOPE_FORBIDDEN`, and writes `SECURITY` audit entries on deny.
+  - Added protected `GET /auth/me` as the narrow enforcement demonstration route.
+  - Added auth API tests for unauthenticated denial, allowed/denied role gate, allowed/denied branch gate, deny audit entries, and ignoring client-supplied role/branch headers.
+  - Added `GET /auth/me` to the canonical OpenAPI contract.
+  - Did not implement login rate limiting, CSRF, audit search/export, full error surface, golden CRUD, username login, password reset, lock flows, or UI.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Failed then passed: `corepack pnpm typecheck` initially failed on exact-optional audit metadata and widened audit event typing in `auth.guard.ts`; after narrowing those types, it passed.
+  - Passed: `corepack pnpm test` (19/19; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- auth` (18/18)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed; `SessionAuthGuard` attaches principal claims from `validateStaffSession`, and tests prove fake client role/branch headers do not grant access.
+  - Each state change writes status history and an audit entry in the same transaction; side effects enqueue after commit: Not Run for complaint workflow state changes; F1-02 adds no domain state transition. Denied role/branch access writes `SECURITY` audit entries.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed; guards do not log cookies/tokens, and `/auth/me` returns safe principal claims only.
+  - Customer portal exposure rules hold: Passed by separation; protected staff auth route exposes only the current staff principal and no portal comments, DMS codes, audit rows, or unrelated complaints.
+  - Trust boundaries are tested: Passed; `test:api -- auth` covers unauthenticated denial, allowed and denied role cases, and allowed and denied branch-scope cases.

@@ -87,6 +87,48 @@ const canonical = {
         },
       },
     },
+    '/auth/me': {
+      get: {
+        tags: ['Auth'],
+        operationId: 'authMe',
+        summary: 'Return the authenticated staff principal',
+        parameters: [
+          {
+            name: 'branchId',
+            in: 'query',
+            required: false,
+            schema: { type: 'string' },
+            description: 'Optional branch scope to authorize against the server session',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Authenticated staff principal',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/AuthMeResponse' },
+              },
+            },
+          },
+          401: {
+            description: 'Missing or invalid session',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorEnvelope' },
+              },
+            },
+          },
+          403: {
+            description: 'Role or branch scope denied',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorEnvelope' },
+              },
+            },
+          },
+        },
+      },
+    },
   },
   components: {
     schemas: {
@@ -161,6 +203,14 @@ const canonical = {
         },
         additionalProperties: false,
       },
+      AuthMeResponse: {
+        type: 'object',
+        required: ['user'],
+        properties: {
+          user: { $ref: '#/components/schemas/StaffAuthClaims' },
+        },
+        additionalProperties: false,
+      },
     },
   },
 };
@@ -197,13 +247,14 @@ export function checkOpenApiText(text) {
     }
   }
 
-  for (const path of ['/auth/login', '/auth/logout']) {
-    if (!document.paths?.[path]?.post) {
-      errors.push(`OpenAPI document missing ${path} post operation`);
+  for (const path of ['/auth/login', '/auth/logout', '/auth/me']) {
+    const method = path === '/auth/me' ? 'get' : 'post';
+    if (!document.paths?.[path]?.[method]) {
+      errors.push(`OpenAPI document missing ${path} ${method} operation`);
     }
   }
 
-  for (const schema of ['AuthLoginRequest', 'AuthLoginResponse', 'AuthLogoutResponse', 'StaffAuthClaims']) {
+  for (const schema of ['AuthLoginRequest', 'AuthLoginResponse', 'AuthLogoutResponse', 'AuthMeResponse', 'StaffAuthClaims']) {
     if (!document.components?.schemas?.[schema]) {
       errors.push(`OpenAPI document missing ${schema} schema`);
     }
