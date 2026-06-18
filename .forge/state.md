@@ -1,8 +1,30 @@
 # Current State
 
-Status: Needs Phase Review
-Phase: Phase 1 - Security Baseline
-Next Task: PHASE-1-REVIEW - Security Baseline Acceptance Gate
+Status: Ready to Plan
+Phase: Phase 2 - Complaint Core
+Next Task: PLAN-F2-01 - Plan Complaint Core And Scope The Complaint Schema/Migration
+
+## Phase 1 — Accepted (PHASE-1-REVIEW)
+
+PHASE-1-REVIEW decision: **Accept With Conditions** (PHASE-REVIEWER, Opus 4.8, 2026-06-18).
+All 23 Phase 1 tasks done with honest, independently-reproduced evidence. Full proof surface
+re-run green: lint, typecheck, test 20/20, test:api -- auth 21/21, -- admin 15/15,
+-- security 4/4, -- audit 8/8 + live append-only proof, openapi:check, build. NFR-SEC-001
+AC1/AC2/AC3/AC5 met; the MVP "Security baseline" gate is satisfied. Every Verify Gate was
+honored by an independent VERIFY. Full record in `.forge/trust.md` (PHASE-1-REVIEW). Phase 2
+is cleared to start; it opens with a planner pass.
+
+### Non-blocking conditions carried into later phases (see trust.md PHASE-1-REVIEW)
+
+1. `security:check` is still a fail-loud placeholder — wire it to the real security suites
+   before the MVP pilot sign-off gate (substance is proven by `test:api -- security/auth/admin/audit`).
+2. NFR-SEC-001 AC4 (prod HTTP→HTTPS at the gateway) + parameterizing `POSTGRES_HOST_AUTH_METHOD: trust`
+   are owed by the Phase 7 deployment runbook (F7-04).
+3. No full Nest bootstrap/e2e test yet (F1-06C added reflection-metadata guard tests + fixed the
+   branches DI graph). Add a bootstrap smoke test early in Phase 2.
+4. Per-module `PrismaService`/`AuditService` duplication — consider a shared `@Global()` core module
+   in Phase 2.
+5. Deferred auth features: username login, account-lock, password-reset land with their feature tasks.
 
 ## Phase 1 — CSRF Kernel Gate Passed (VERIFY-F1-06B, gate cleared)
 

@@ -877,3 +877,94 @@ Phase 1 `PHASE-REVIEWER` gate.
     test:api -- security 4/4, openapi:check.
   - All Phase 1 backlog tasks are now complete; Forge state is set to
     `Needs Phase Review` before Phase 2 can start.
+
+## PHASE-1-REVIEW - Security Baseline Acceptance Review
+
+- Date: 2026-06-18
+- Reviewer tier: PHASE-REVIEWER (Opus 4.8) — not a Phase 1 builder; performed the
+  VERIFY-F1-06B gate earlier this session, otherwise independent of the build work
+- Risk: High
+- Decision: **Accept With Conditions**
+- Phase 2 may start: **Yes** — opened with a planner pass (`PLAN-F2-01`, state `Ready to Plan`).
+
+### Method
+
+Independent verification, not log-trust. Confirmed all 23 Phase 1 tasks checked done in
+`backlog.md`; inspected the F1-06C source/test diff (commit `905f0ad`) directly; re-read the
+CSRF/rate-limit/auth/audit/branches/RBAC source and the focused tests; cross-checked the
+delivered behavior against `NFR-SEC-001` AC1–AC5, the MVP "Security baseline" gate, and
+`RBAC-MATRIX-001`; and re-ran the entire Phase 1 proof surface, including the live
+Docker-backed audit append-only proof and a full `build`.
+
+### Verification labels (re-run by reviewer)
+
+- Passed: `corepack pnpm lint`
+- Passed: `corepack pnpm typecheck` (6 tsconfig projects, clean)
+- Passed: `corepack pnpm test` (20/20; coverage 91.69% lines / 80.00% branch / 94.52% funcs — clears 80/65/75)
+- Passed: `corepack pnpm test:api -- auth` (21/21)
+- Passed: `corepack pnpm test:api -- admin` (15/15)
+- Passed: `corepack pnpm test:api -- security` (4/4)
+- Passed: `corepack pnpm test:api -- audit` (8/8 + live Docker append-only proof, exit 0)
+- Passed: `corepack pnpm openapi:check`
+- Passed: `corepack pnpm build` (exit 0)
+- Not Run (disclosed): `corepack pnpm security:check` — still a fail-loud pending aggregate; see condition 1.
+
+### Coverage and honesty
+
+- **All 23 Phase 1 tasks done** (F1-00A → F1-06C), each with an evidence entry using honest
+  labels. Every "Passed" I re-ran reproduced exactly; counts match (auth 21, admin 15,
+  security 4, audit 8 + proof, unit 20).
+- **Every Verify Gate was honored by an independent VERIFY:** F1-01E3 (VERIFY-F1-01E Accept),
+  F1-03A (VERIFY-F1-03A Repair → REPAIR-F1-03A → VERIFY-F1-03A-REPAIR Accept), F1-06B
+  (VERIFY-F1-06B Accept). The one RBAC over-permissive finding (audit view) was caught at a
+  gate and repaired, not waved through — evidence the gate discipline works.
+
+### SRS acceptance-criteria mapping (not weakened)
+
+- **NFR-SEC-001:** AC1 Argon2id (F1-01A/B) ✓; AC2 HttpOnly/Secure-in-prod/SameSite cookies
+  (F1-01C) ✓; AC3 login rate limit by account+IP (F1-06A) ✓; AC5 CSRF on session-auth
+  mutation routes — `POST /auth/logout` (F1-06B) and branch admin writes (F1-06C) ✓.
+  **AC4** (prod HTTP→HTTPS redirect *behind the deployment gateway*) is infra, not app code —
+  deferred to Phase 7 (F7-04) and **not** part of the "Security baseline" gate evidence list.
+- **MVP "Security baseline" gate** (SRS line 70: password hashing, session cookies, CSRF, rate
+  limit, RBAC tests) — all present and tested. Substance met.
+- **RBAC-MATRIX-001:** audit view + branch admin are Admin-only, fail-closed, with SECURITY
+  audit on deny (F1-03A repair, F1-02). ✓
+- **REQ-AUDIT-001:** login/logout/failure audit, Admin-only search/export, DB-level append-only
+  trigger proven live. ✓
+- **API-STANDARD-001:** stable error envelope + correlation IDs (F1-04); new stable codes
+  (`RATE_LIMITED` 429, `CSRF_INVALID` 403) documented in OpenAPI; drift-enforced. ✓
+- **Architecture:** backend-owned authority, boundary lint, golden CRUD `branches` frozen,
+  `MODULE.md` manifests, 300-line budget — all enforced and green.
+
+### Conditions (non-blocking; tracked, none block Phase 2 = Complaint Core)
+
+1. **`security:check` is a fail-loud placeholder.** It is the SRS-named proof command for the
+   security baseline (NFR-SEC-001 proof list; milestone matrix). The substance is proven by
+   `test:api -- security`/`-- auth`/`-- admin`/`-- audit`. Wire `security:check` to actually run
+   those suites (or alias them) before the MVP pilot sign-off gate. Must not ship as a fake pass.
+2. **NFR-SEC-001 AC4 (HTTPS redirect at the gateway)** is owed by the Phase 7 deployment runbook
+   (F7-04). Also parameterize `POSTGRES_HOST_AUTH_METHOD: trust` before any non-dev deploy.
+3. **No full Nest bootstrap/e2e test.** F1-06C added reflection-metadata tests (guard attachment
+   per route + module provider registration) and F1-06C fixed the branches DI graph, which
+   closes the worst of the prior gap — but no test boots the app and drives a request through the
+   guard chain. Add a small bootstrap smoke test early in Phase 2, where complaint mutations add
+   more guarded routes.
+4. **Per-module `PrismaService`/`AuditService` duplication.** Auth and Branches each provide their
+   own; with `BranchesModule` now importing `AuthModule`, providers overlap. Works for the
+   single-node MVP (each `PrismaClient` owns its pool) but is a structural smell — consider a
+   shared `@Global()` core module for `PrismaService`/`AuditService` during Phase 2 to avoid N
+   pools and divergent audit wiring.
+5. **Deferred auth features** (already disclosed): username login (REQ-AUTH-001 AC1) is email-only
+   until the users/admin model adds a username column; account-lock (AC5) and password-reset (AC6)
+   audit/flows land with those features.
+
+### Rationale
+
+Phase 1 ("Security Baseline") delivered every planned task with honest, independently-reproduced
+evidence; the auth/session/RBAC/branch-scope/audit/error kernel and the CSRF + rate-limit
+protections are real, tested at their trust boundaries (allowed + denied), and free of secret
+leakage. The open items are explicitly disclosed, correctly sequenced for later phases, and do not
+block Complaint Core. Accepting with conditions. Phase 2 opens with a PLANNER pass to reconcile the
+already-applied F0-08 complaint tables against the Phase 2 backlog headers and emit agentic build
+tasks (notably the backend-owned complaint state machine).
