@@ -1903,3 +1903,54 @@ Append build and verification evidence here. Do not delete failed evidence.
   - Trust boundaries are tested: Partial; service tests cover allowed transition,
     invalid transition, and unauthorized role denial, but no HTTP trust boundary exists
     until `F2-02C`.
+
+## REPAIR-F2-02B - Validate Persisted Complaint Status Before Transition Writes
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed pending independent VERIFY
+- Required model tier: BUILDER-STRONG
+- Verify Gate: required
+- Requirement IDs:
+  - ARCH-WORKFLOW-001
+  - WORKFLOW-MATRIX-001
+  - METHOD-AUDIT-001
+  - API-STANDARD-001
+  - REQ-COMPLAINT-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+- Evidence:
+  - Changed `ComplaintsRepository.updateStatus` to update only when both
+    `complaintId` and the expected persisted `fromStatus` match.
+  - `updateStatus` now returns `null` on stale/mismatched persisted status instead of
+    writing by `complaintId` alone.
+  - `ComplaintsService.applyTransition` rejects the stale/mismatch path with stable
+    `COMPLAINT_INVALID_TRANSITION` before writing status history or WORKFLOW audit.
+  - Kept invalid matrix inputs and unauthorized roles as pre-transaction denials.
+  - Added workflow proof that a stale persisted status starts the atomic transition
+    path, rejects with `COMPLAINT_INVALID_TRANSITION`, and writes no history or audit.
+  - No HTTP routes, OpenAPI paths, DTO request parsing, UI, jobs, notifications, SLA
+    scheduling, portal behavior, comments, attachments, or external side effects were
+    added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (7/7)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not Run
+    for HTTP/session boundary; no route exists. Role authority remains service input
+    and must be supplied from the server session in `F2-02C`.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed; successful workflow tests
+    assert complaint status update, status-history insert, and audit write receive the
+    same transaction client. Stale persisted status now rejects before history/audit.
+    No side effects are enqueued in this task.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope; no logging or secret fields were added.
+  - Customer portal exposure rules hold: Not Run; no portal API or portal-visible DTO
+    changed.
+  - Trust boundaries are tested: Partial; service tests cover allowed transition,
+    invalid transition, unauthorized role denial, and stale persisted-status denial.
+    HTTP trust boundary remains for `F2-02C`.

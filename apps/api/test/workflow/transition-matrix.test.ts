@@ -120,7 +120,13 @@ test('workflow transition persistence uses one transaction for status history an
   });
   assert.deepEqual(calls, [
     'transaction',
-    { updateStatus: { complaintId: 'cmp_1', toStatus: ComplaintStatus.SUBMITTED } },
+    {
+      updateStatus: {
+        complaintId: 'cmp_1',
+        fromStatus: ComplaintStatus.DRAFT,
+        toStatus: ComplaintStatus.SUBMITTED,
+      },
+    },
     {
       history: {
         complaintId: 'cmp_1',
@@ -156,6 +162,53 @@ test('workflow transition persistence uses one transaction for status history an
       },
     },
   }]);
+});
+
+test('workflow transition persistence rejects stale persisted status before history and audit', async () => {
+  const txClient = {};
+  const calls: unknown[] = [];
+  const serviceWithStaleStatus = new ComplaintsService({
+    transaction: async <T>(work: (client: never) => Promise<T>) => {
+      calls.push('transaction');
+      return work(txClient as never);
+    },
+    updateStatus: async (data, client) => {
+      assert.equal(client, txClient);
+      calls.push({ updateStatus: data });
+      return null;
+    },
+    createStatusHistory: async () => {
+      throw new Error('history should not be written');
+    },
+  } as ComplaintsRepository, {
+    record: async () => {
+      throw new Error('audit should not be written');
+    },
+  } as unknown as AuditService);
+
+  await assert.rejects(
+    serviceWithStaleStatus.applyTransition({
+      complaintId: 'cmp_1',
+      fromStatus: ComplaintStatus.DRAFT,
+      action: ComplaintTransitionAction.SUBMIT,
+      actorRole: RoleCode.CR_OFFICER,
+      requestSource: ComplaintTransitionRequestSource.STAFF_API,
+    }),
+    (error: unknown) =>
+      error instanceof AppException &&
+      error.code === 'COMPLAINT_INVALID_TRANSITION' &&
+      error.getStatus() === 409,
+  );
+  assert.deepEqual(calls, [
+    'transaction',
+    {
+      updateStatus: {
+        complaintId: 'cmp_1',
+        fromStatus: ComplaintStatus.DRAFT,
+        toStatus: ComplaintStatus.SUBMITTED,
+      },
+    },
+  ]);
 });
 
 test('workflow transition persistence rejects invalid transitions before transaction', async () => {

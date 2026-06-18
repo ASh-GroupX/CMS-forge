@@ -18,6 +18,7 @@ export type ComplaintStatusRecord = {
 
 export type UpdateComplaintStatusData = {
   complaintId: string;
+  fromStatus: ComplaintStatus;
   toStatus: ComplaintStatus;
 };
 
@@ -44,10 +45,18 @@ export class ComplaintsRepository {
   async updateStatus(
     data: UpdateComplaintStatusData,
     client: ComplaintTransitionClient = this.prisma,
-  ): Promise<ComplaintStatusRecord> {
-    return client.complaint.update({
-      where: { id: data.complaintId },
+  ): Promise<ComplaintStatusRecord | null> {
+    const update = await client.complaint.updateMany({
+      where: { id: data.complaintId, status: data.fromStatus },
       data: { status: data.toStatus },
+    });
+
+    if (update.count === 0) {
+      return null;
+    }
+
+    return client.complaint.findUniqueOrThrow({
+      where: { id: data.complaintId },
       select: {
         id: true,
         branchId: true,

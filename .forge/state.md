@@ -1,8 +1,20 @@
 # Current State
 
-Status: Needs Repair
+Status: Needs Verify
 Phase: Phase 2 - Complaint Core
-Next Task: REPAIR-F2-02B - Validate Persisted Complaint Status Before Transition Writes
+Next Task: VERIFY-F2-02B-REPAIR - Complaint Transition Persistence Repair Gate
+
+## REPAIR-F2-02B Built - Verify Gate
+
+`REPAIR-F2-02B` fixed the stale persisted-status gap found by `VERIFY-F2-02B`.
+Complaint transitions now update status only when the complaint's persisted
+current status matches the expected `fromStatus`; a mismatch rejects with stable
+`COMPLAINT_INVALID_TRANSITION` before status history or WORKFLOW audit is written.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- workflow 7/7, and
+openapi:check.
+
+AUTO PHASE stops here because `F2-02B` remains a `Verify Gate: required`.
 
 ## VERIFY-F2-02B Repair Required
 

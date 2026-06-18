@@ -1065,3 +1065,22 @@ tasks (notably the backend-owned complaint state machine).
     start a transaction.
   - Builder labels were honest, including the initial typecheck failure that was fixed
     before the builder marked the task pending VERIFY.
+
+## REPAIR-F2-02B - Validate Persisted Complaint Status Before Transition Writes
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept pending independent VERIFY
+- Notes:
+  - `ComplaintsRepository.updateStatus` now conditionally updates by `complaintId` and
+    expected persisted `fromStatus`, returning `null` when the row is stale or already
+    in another state.
+  - `ComplaintsService.applyTransition` maps that mismatch to stable
+    `COMPLAINT_INVALID_TRANSITION` before status history or WORKFLOW audit writes.
+  - The repair stayed inside the scoped service/repository/workflow-test files; no
+    route, OpenAPI, UI, job, SLA, portal, comment, attachment, or notification behavior
+    was added.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- workflow 7/7,
+    and openapi:check.
+  - Because this is still the `F2-02B` Verify Gate, AUTO PHASE stops at `Needs Verify`
+    before `F2-02C`.

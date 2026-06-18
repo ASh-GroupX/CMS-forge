@@ -162,11 +162,7 @@ export class ComplaintsService {
     );
 
     if (!transition) {
-      throw new AppException(
-        'COMPLAINT_INVALID_TRANSITION',
-        'The requested action is not allowed for the current complaint state.',
-        HttpStatus.CONFLICT,
-      );
+      throw invalidTransitionError();
     }
 
     if (!transition.allowedRoles.includes(input.actorRole)) {
@@ -186,9 +182,14 @@ export class ComplaintsService {
 
     return this.complaintsRepository.transaction(async (client) => {
       const complaint = await this.complaintsRepository.updateStatus(
-        { complaintId: input.complaintId, toStatus: decision.toStatus },
+        { complaintId: input.complaintId, fromStatus: input.fromStatus, toStatus: decision.toStatus },
         client,
       );
+
+      if (!complaint) {
+        throw invalidTransitionError();
+      }
+
       await this.complaintsRepository.createStatusHistory({
         complaintId: input.complaintId,
         fromStatus: input.fromStatus,
@@ -208,6 +209,14 @@ export class ComplaintsService {
       };
     });
   }
+}
+
+function invalidTransitionError(): AppException {
+  return new AppException(
+    'COMPLAINT_INVALID_TRANSITION',
+    'The requested action is not allowed for the current complaint state.',
+    HttpStatus.CONFLICT,
+  );
 }
 
 function workflowAuditInput(
