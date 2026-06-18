@@ -96,3 +96,21 @@ Append review decisions here.
   - Role codes and complaint states derived directly from SRS RBAC-MATRIX-001 and WORKFLOW-MATRIX-001 — no invented codes.
   - Remaining risk: `POSTGRES_HOST_AUTH_METHOD: trust` exposes local postgres without a password. Acceptable for dev; must not reach production. Flag for a future infra hardening task.
   - F0-08 will expand this minimal schema into the full coherent data model before Phase 2 feature migrations.
+
+## F0-05 - Frontend Design Tokens And Shared UI Component Foundation
+
+- Date: 2026-06-18
+- Risk: Low
+- Recommendation: Accept
+- Notes:
+  - Only design token constants, global CSS, and configuration files were added.
+  - All proof scripts successfully passed.
+
+## PLAN-F0-06 - Phase 0 Quality Gates
+
+- Date: 2026-06-18
+- Risk: Medium
+- Recommendation: Accept
+- Notes:
+  - The planned task tightens gates without adding heavyweight tooling before there is enough application code to justify it.
+  - UI, accessibility, and performance commands must remain honest fail-loud gates until real screens exist; they must not be reported as passed in F0-06.

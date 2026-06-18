@@ -205,3 +205,52 @@ Append build and verification evidence here. Do not delete failed evidence.
   - Prisma's Rust query engine (P1000) cannot authenticate against the postgres container through Docker Desktop's Windows port-forwarding layer. This is a known Docker Desktop on Windows networking edge case; it does not indicate a code defect. Migration and seed were executed inside the Docker network by mounting the database package into a `node:20-alpine` container on `cms-forge_default`.
   - `POSTGRES_HOST_AUTH_METHOD: trust` was added to docker-compose.yml for local dev ease; it is clearly marked "Never use in production."
   - F0-08 will expand this schema into the full coherent data model before Phase 2 feature migrations.
+
+## F0-05 - Frontend Design Tokens And Shared UI Component Foundation
+
+- Date: 2026-06-18
+- Risk: Low
+- Status: Passed
+- Requirement IDs:
+  - UI-DESIGN-001
+  - ARCH-UI-001
+  - CONTRACT-READINESS-001
+- Evidence:
+  - Added Tailwind CSS v3, PostCSS, Autoprefixer to `apps/web/package.json`.
+  - Added `tailwind.config.ts`, `postcss.config.js`, and `src/globals.css` to `apps/web`.
+  - Defined design tokens as CSS custom properties in `src/globals.css` and mapped them in `tailwind.config.ts` (colors, typography, spacing, radius, shadow, focus).
+  - Explicitly supported RTL/LTR layout in tokens via logical design considerations per `UI-DESIGN-001` (tokens are stable values).
+  - Installed `clsx`, `tailwind-merge`, `@radix-ui/react-slot`, `lucide-react`, and `class-variance-authority`.
+  - Created `apps/web/src/lib/utils.ts` exporting `cn()`.
+  - Created typed token map at `apps/web/src/lib/tokens.ts` exporting `designTokens` without adding page routes or React elements.
+- Verification:
+  - Passed: `corepack pnpm install --lockfile-only`
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test`
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `docker compose config --quiet` (exit 0)
+- Notes:
+  - No domain logic, auth, components, or screens were implemented as constrained by the task scope.
+
+## PLAN-F0-06 - Phase 0 Quality Gates
+
+- Date: 2026-06-18
+- Risk: Medium
+- Status: Passed
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - CONTRACT-READINESS-003
+  - ARCH-STACK-001
+  - ARCH-API-001
+  - METHOD-MODULAR-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+  - QA-UI-001
+  - UI-DESIGN-001
+- Evidence:
+  - Replaced `Needs planning` with a buildable `F0-06` task.
+  - Kept scope to existing Node-based quality scripts, OpenAPI scaffold drift, test coverage thresholds, and fail-loud UI/perf proof gates.
+  - Set `.forge/state.md` to `Ready to Build`.
+  - Deferred full ESLint, dependency-cruiser, Playwright, Lighthouse, and real visual/a11y/perf execution until there are modules or screens worth checking.

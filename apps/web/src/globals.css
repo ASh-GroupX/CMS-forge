@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-brand: 221 83% 53%;
+    --color-brand-foreground: 210 40% 98%;
+    
+    --color-neutral: 210 40% 96.1%;
+    --color-neutral-foreground: 222.2 47.4% 11.2%;
+
+    --color-success: 142.1 76.2% 36.3%;
+    --color-warning: 38 92% 50%;
+    --color-error: 346.8 77.2% 49.8%;
+    --color-info: 199 89% 48%;
+
+    --color-loading: 210 40% 96.1%;
+    --color-empty: 210 40% 96.1%;
+    --color-conflict: 38 92% 50%;
+
+    --radius-sm: 0.3rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+    --focus-ring: 221 83% 53%;
+    
+    --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  }
+}
