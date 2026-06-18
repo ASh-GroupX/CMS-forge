@@ -340,3 +340,44 @@ Phase 1, already disclosed in the build logs — not hidden gaps. Accepting.
   - The broad auth task is not agentic after F1-00B: module generation, hashing, sessions, audit, OpenAPI, and tests would create a large diff.
   - AUTO PHASE correctly stopped at `Ready to Plan` rather than starting an oversized security change.
   - The auth verify gate must stay on the final auth foundation subtask after planning.
+
+## F1-01A - Auth Data Foundation And API Test Harness
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - The task stayed foundation-only: seed hashes and `test:api -- auth` wiring.
+  - Required proof commands passed after regenerating the local Prisma client for the accepted F0-08 schema.
+  - The unknown-suite check fails loudly, so future `test:api -- <suite>` calls cannot silently pass.
+  - Remaining risk: hashes are only shape-tested here; real Argon2 verification is intentionally queued in `F1-01B`.
+
+## F1-01B - Auth Module Credential Verification With Argon2id And Generic Denial
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - The task stayed service-level and did not add routes, cookies, sessions, audit, OpenAPI, RBAC, or UI.
+  - Required proof commands passed; auth API tests cover allowed and denied credential behavior.
+  - Remaining risk: the accepted Prisma schema has no separate username column, so repository lookup is currently email-based despite the generic `identifier` naming. Add a username field only when the user/admin model task accepts that schema change.
+
+## F1-01C - Staff Session Persistence And Secure Cookie Issuance
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - The task stayed service-level and did not add HTTP routes, logout, validation middleware, audit, RBAC, OpenAPI, or UI.
+  - Required proof commands passed, and the staff session migration applied inside the Docker network.
+  - Session storage uses token hashes only; raw token exposure is limited to the HttpOnly cookie value.
+
+## F1-01D - Session Validation And Logout Invalidation
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - The task stayed service-level and did not add HTTP routes, audit, RBAC, OpenAPI, or UI.
+  - Required proof commands passed; auth API tests cover valid and denied session validation plus logout revocation.
+  - Remaining final auth work is still too broad for one builder task and should be replanned before implementation.

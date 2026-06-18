@@ -644,3 +644,154 @@ Append build and verification evidence here. Do not delete failed evidence.
 - Security Self-Check:
   - Not Run: planning-only task; no auth, RBAC, branch-scope, state-change, audit, portal, or logging behavior was implemented.
   - Planned gate: `F1-01E` remains `Verify Gate: required` before dependent Phase 1 work proceeds.
+
+## F1-01A - Auth Data Foundation And API Test Harness
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - ARCH-AUTH-001
+  - REQ-AUTH-001
+  - NFR-SEC-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added dev-only seeded staff `passwordHash` values using Argon2id-shaped hashes.
+  - Existing seeded staff users are backfilled by `upsert.update`, not only new creates.
+  - Replaced the pending `test:api` placeholder with a small API test runner.
+  - Added `apps/api/test/auth/password-hash.test.ts` proving staff seed hashes are present and no plaintext password field is seeded.
+  - Verified unknown API suites fail loudly.
+  - No auth route, session cookie, logout behavior, audit write, RBAC guard, OpenAPI path, or UI was implemented.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Failed then passed: `corepack pnpm typecheck` initially failed because the local Prisma client had not been regenerated for the F0-08 schema; `corepack pnpm --dir packages/database exec prisma generate --schema prisma/schema.prisma` fixed the local generated client, then typecheck passed.
+  - Passed: `corepack pnpm test` (18/18; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- auth` (1/1)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `corepack pnpm test:api -- missing-suite` failed as expected and was wrapped to verify fail-loud behavior.
+- Security Self-Check:
+  - Roles and branch scope from server session: Not Run; no session, RBAC, or branch-scope behavior implemented.
+  - State history and audit in same transaction: Not Run; no state-changing application behavior implemented.
+  - No passwords, OTPs, tokens, hashes, or provider secrets logged or returned: Passed by scope; no API response or logging behavior was added, and the test proves no plaintext password field is seeded.
+  - Customer portal exposure rules: Not Run; no portal API behavior implemented.
+  - Trust boundaries tested: Passed for this task's boundary; `test:api -- auth` verifies seeded auth data shape and fail-loud suite selection. Full allowed/denied login boundary is queued for `F1-01B`.
+
+## F1-01B - Auth Module Credential Verification With Argon2id And Generic Denial
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - ARCH-AUTH-001
+  - REQ-AUTH-001
+  - NFR-SEC-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added `argon2` to the API package.
+  - Added the `auth` module manifest plus minimal repository and service files.
+  - Implemented service-level credential verification with Argon2id and safe auth claims.
+  - Denies wrong passwords, inactive users, locked users, and users without a password hash.
+  - Added auth API tests for one allowed credential case and multiple denied cases.
+  - No login route, session cookie, logout behavior, audit write, OpenAPI path, RBAC guard, or UI was implemented.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (18/18; coverage thresholds cleared)
+  - Failed then passed: `corepack pnpm test:api -- auth` initially failed on syntax errors in the new test file; after bracket fixes it passed (3/3).
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope from server session: Passed for this task's scope; `AuthService.verifyCredentials` returns role and branch claims from the repository-loaded user record, not client input.
+  - State history and audit in same transaction: Not Run; no state-changing application behavior or audit writes implemented in this subtask.
+  - No passwords, OTPs, tokens, hashes, or provider secrets logged or returned: Passed; the service returns safe claims only and the API test asserts `passwordHash` is absent.
+  - Customer portal exposure rules: Not Run; no portal API behavior implemented.
+  - Trust boundaries tested: Passed; `test:api -- auth` covers one allowed credential case plus wrong password, inactive, locked, and missing-hash denial.
+
+## F1-01C - Staff Session Persistence And Secure Cookie Issuance
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - ARCH-AUTH-001
+  - REQ-AUTH-001
+  - NFR-SEC-001
+  - API-STANDARD-001
+  - ARCH-DATA-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added `StaffSession` to Prisma and migration `20260618150000_staff_sessions`.
+  - Extended auth repository and service with staff session creation.
+  - Session creation stores only a SHA-256 token hash, never the raw token.
+  - Session cookie serialization is HttpOnly, SameSite=Lax, Path=/, and Secure when production mode is requested.
+  - Added focused auth API tests for token hashing and cookie flags.
+  - No login route, logout behavior, request-session validation, audit write, RBAC guard, OpenAPI path, or UI was implemented.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (18/18; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- auth` (5/5)
+  - Passed: `corepack pnpm openapi:check`
+  - Failed then passed: `corepack pnpm --dir packages/database exec prisma validate --schema prisma/schema.prisma` failed without `DATABASE_URL`; passed with `DATABASE_URL=postgresql://cms_auto:cms_auto_dev@localhost:5432/cms_auto?schema=public`.
+  - Passed: `docker compose up -d postgres`
+  - Passed: `docker run --rm --network cms-forge_default -v "${PWD}:/workspace:ro" -w /workspace -e DATABASE_URL="postgresql://cms_auto:cms_auto_dev@postgres:5432/cms_auto?schema=public" node:20-bookworm-slim sh -lc "apt-get update >/dev/null && apt-get install -y openssl >/dev/null && npm exec --yes prisma@5.22.0 -- migrate deploy --schema packages/database/prisma/schema.prisma"`
+  - Passed: `docker compose exec -T postgres psql -U cms_auto -d cms_auto -c "select to_regclass('public.staff_sessions') as staff_sessions;"`
+- Security Self-Check:
+  - Roles and branch scope from server session: Not Run; session validation is queued for `F1-01D`.
+  - State history and audit in same transaction: Not Run; no audit writes implemented in this subtask.
+  - No passwords, OTPs, tokens, hashes, or provider secrets logged or returned: Passed; the raw session token is returned only in the HttpOnly cookie and only its hash is persisted.
+  - Customer portal exposure rules: Passed by separation; staff sessions use `staff_sessions`, not `portal_sessions`, and no portal API behavior was added.
+  - Trust boundaries tested: Passed for this task's boundary; `test:api -- auth` proves raw tokens are not stored and cookie security flags are set.
+
+## F1-01D - Session Validation And Logout Invalidation
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - ARCH-AUTH-001
+  - REQ-AUTH-001
+  - NFR-SEC-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+- Evidence:
+  - Extended auth repository with staff-session lookup by token hash and revocation by token hash.
+  - Extended auth service with session validation and logout invalidation.
+  - Valid sessions return safe server-derived claims only.
+  - Missing, unknown, expired, and revoked sessions are denied with stable generic auth errors.
+  - Logout invalidates by token hash and returns an expired HttpOnly staff-session cookie.
+  - No login/logout route, audit write, RBAC guard, OpenAPI path, or UI was implemented.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (18/18; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- auth` (8/8)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope from server session: Passed; `validateStaffSession` derives role and branch claims from the persisted session's user relation, not client input.
+  - State history and audit in same transaction: Not Run; no audit writes implemented in this subtask.
+  - No passwords, OTPs, tokens, hashes, or provider secrets logged or returned: Passed; validation returns safe claims only, and logout revokes by token hash.
+  - Customer portal exposure rules: Passed by separation; staff session validation uses `staff_sessions`, not portal tables, and no portal API behavior was added.
+  - Trust boundaries tested: Passed; `test:api -- auth` covers valid, missing, unknown, expired, revoked, and logout invalidation cases.
+
+## F1-01E - Auth Audit Entries, OpenAPI Contract, And Security Proof
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Not Run
+- Required model tier: BUILDER-STRONG
+- Evidence:
+  - AUTO PHASE stopped before implementation because the remaining final auth foundation task exceeds the Forge 1 to 5 file budget.
+  - Scope includes HTTP login/logout routes, DTOs, auth audit entries, OpenAPI contract wiring, and final security proof.
+  - Rewrote `.forge/next.md` to `PLAN-F1-01E - Split Final Auth Foundation Gate`.
+  - Set `.forge/state.md` to `Ready to Plan`, which is an AUTO PHASE stop condition.
+- Verification:
+  - Not Run: final auth foundation checks were not started because the task requires replanning.

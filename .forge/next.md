@@ -1,75 +1,68 @@
-# Next Task: F1-01A - Auth Data Foundation And API Test Harness
+# Next Task: PLAN-F1-01E - Split Final Auth Foundation Gate
 
-Status: Ready to Build
-Required model tier: BUILDER-STRONG
+Status: Ready to Plan
+Required model tier: PLANNER
 Risk: High
 
 ## Why This Exists
 
-The broad staff auth task was split before coding. Before login/session behavior
-is added, seeded staff users need usable Argon2id password hashes and
-`test:api -- auth` must become a real, focused proof path instead of a pending
-placeholder.
+`F1-01E - Auth audit entries, OpenAPI contract, and security proof (Verify Gate:
+required)` is still too large for one build task. It bundles HTTP login/logout
+routes, DTOs, auth audit writes, OpenAPI paths/schemas, final security proof, and
+the independent verify gate.
 
-This is a foundation task only. Do not add auth routes, cookies, sessions, audit
-writes, RBAC, frontend login UI, or OpenAPI auth paths here.
+Forge requires small tasks. Replan before coding the final auth foundation.
 
 ## Scope
 
-Implement the smallest auth data/test foundation:
+Split `F1-01E` into ordered buildable tasks that each stay near 1 to 5 files
+plus focused tests.
 
-1. Give the existing dev-only seeded staff users non-null Argon2id password hashes.
-2. Add a minimal API test runner so `corepack pnpm test:api -- auth` runs auth
-   API tests and unknown suites still fail loudly.
-3. Add one focused auth test proving the seeded staff password hashes are present,
-   Argon2id-shaped, and no plaintext password field is seeded.
+Minimum split to consider:
 
-Keep the change near 1 to 5 files plus tests. Do not generate the `auth` module
-yet unless the builder can prove the generated diff still fits this task.
+1. `F1-01E1` - auth controller/module and login/logout HTTP routes only, using
+   existing auth service methods.
+2. `F1-01E2` - auth audit entries for login success, login failure, and logout.
+3. `F1-01E3` - OpenAPI contract wiring and final auth security proof.
+
+Mark the final task that completes route, audit, OpenAPI, and proof as
+`Verify Gate: required`.
+
+Do not implement source code in this planning task.
 
 ## Requirement IDs
 
 - CONTRACT-READINESS-002
 - ARCH-AUTH-001
 - REQ-AUTH-001
+- REQ-AUDIT-001
 - NFR-SEC-001
+- METHOD-API-001
+- METHOD-AUDIT-001
 - METHOD-TEST-001
+- API-STANDARD-001
 
 ## Expected Files
 
-- `package.json`
-- `tools/api-test.mjs`
-- `apps/api/test/auth/password-hash.test.ts`
-- `packages/database/prisma/seed.ts`
-- `pnpm-lock.yaml` only if dependencies change
+- `.forge/backlog.md`
+- `.forge/next.md`
+- `.forge/state.md`
+- `.forge/evidence.md`
 
 ## Acceptance Criteria
 
-- Seeded staff users have non-null Argon2id password hashes.
-- Seed data still contains no plaintext password fields.
-- `corepack pnpm test:api -- auth` runs a real auth test instead of
-  `pending-proof.mjs`.
-- Unknown or missing API test suites fail loudly.
-- No login endpoint, session cookie, logout behavior, audit write, OpenAPI path,
-  RBAC guard, or UI is implemented in this task.
-- Evidence includes the High-risk security self-check from `.forge/policy.md`,
-  with non-applicable items labeled honestly.
+- The broad `F1-01E` backlog item is replaced with small ordered final-auth
+  subtasks.
+- `.forge/next.md` contains only the first buildable final-auth subtask.
+- `.forge/state.md` is `Ready to Build` after planning.
+- The final auth foundation task remains marked `Verify Gate: required`.
+- The first build task includes exact verification commands and SRS IDs.
 
 ## Verification Commands
 
-- `corepack pnpm lint`
-- `corepack pnpm typecheck`
-- `corepack pnpm test`
-- `corepack pnpm test:api -- auth`
-- `corepack pnpm openapi:check`
+- `rg -n "PLAN-F1-01E|F1-01E1|F1-01E2|Verify Gate|required|Ready to Build|300" .forge/backlog.md .forge/next.md .forge/state.md`
 
 ## Evidence To Record
 
-Append `F1-01A - Auth Data Foundation And API Test Harness` to
-`.forge/evidence.md` with honest labels and the security self-check.
-
-## Next After Completion
-
-If checks pass, write `F1-01B - Auth Module Credential Verification With
-Argon2id And Generic Denial` to `.forge/next.md` and keep `.forge/state.md` as
-`Ready to Build`.
+Append `PLAN-F1-01E - Split Final Auth Foundation Gate` to `.forge/evidence.md`
+with honest labels.

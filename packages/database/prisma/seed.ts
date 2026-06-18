@@ -6,6 +6,8 @@ import { PrismaClient, RoleCode, ComplaintStatus } from '@prisma/client';
 // Run: corepack pnpm db:seed
 
 const prisma = new PrismaClient();
+const DEV_STAFF_PASSWORD_HASH =
+  '$argon2id$v=19$m=65536,t=3,p=4$c2VlZC1hdXRoLWRldi1zYWx0$Ee8H+eXW8u5+8ZBASu1hC3K0c1GkCvh9V7D2Y5zWn1Y';
 
 async function main(): Promise<void> {
   // ── Branches ─────────────────────────────────────────────────────────────
@@ -51,43 +53,47 @@ async function main(): Promise<void> {
   await Promise.all([
     prisma.user.upsert({
       where: { email: 'admin@cms-auto.test' },
-      update: {},
+      update: { passwordHash: DEV_STAFF_PASSWORD_HASH },
       create: {
         email: 'admin@cms-auto.test',
         nameEn: 'System Admin',
         nameAr: 'مدير النظام',
+        passwordHash: DEV_STAFF_PASSWORD_HASH,
         roleId: adminRoleId,
       },
     }),
     prisma.user.upsert({
       where: { email: 'cr.manager@cms-auto.test' },
-      update: {},
+      update: { passwordHash: DEV_STAFF_PASSWORD_HASH },
       create: {
         email: 'cr.manager@cms-auto.test',
         nameEn: 'Layla Al-Farsi',
         nameAr: 'ليلى الفارسي',
+        passwordHash: DEV_STAFF_PASSWORD_HASH,
         roleId: crMgrRoleId,
         branchId: mainBranch.id,
       },
     }),
     prisma.user.upsert({
       where: { email: 'officer.main@cms-auto.test' },
-      update: {},
+      update: { passwordHash: DEV_STAFF_PASSWORD_HASH },
       create: {
         email: 'officer.main@cms-auto.test',
         nameEn: 'Omar Al-Khalidi',
         nameAr: 'عمر الخالدي',
+        passwordHash: DEV_STAFF_PASSWORD_HASH,
         roleId: crOffRoleId,
         branchId: mainBranch.id,
       },
     }),
     prisma.user.upsert({
       where: { email: 'branch.mgr.north@cms-auto.test' },
-      update: {},
+      update: { passwordHash: DEV_STAFF_PASSWORD_HASH },
       create: {
         email: 'branch.mgr.north@cms-auto.test',
         nameEn: 'Sara Al-Dosari',
         nameAr: 'سارة الدوسري',
+        passwordHash: DEV_STAFF_PASSWORD_HASH,
         roleId: brnMgrRoleId,
         branchId: northBranch.id,
       },

@@ -19,10 +19,10 @@ history from another project.
 
 - [x] F1-00A: Generate and apply the F0-08 Prisma migration
 - [x] F1-00B: Bootstrap NestJS API and minimal core kernel
-- [ ] F1-01A: Auth data foundation and API test harness
-- [ ] F1-01B: Auth module credential verification with Argon2id and generic denial
-- [ ] F1-01C: Staff session persistence and secure cookie issuance
-- [ ] F1-01D: Session validation and logout invalidation
+- [x] F1-01A: Auth data foundation and API test harness
+- [x] F1-01B: Auth module credential verification with Argon2id and generic denial
+- [x] F1-01C: Staff session persistence and secure cookie issuance
+- [x] F1-01D: Session validation and logout invalidation
 - [ ] F1-01E: Auth audit entries, OpenAPI contract, and security proof (Verify Gate: required)
 - [ ] F1-02: RBAC and branch-scope enforcement
 - [ ] F1-03: Audit log search/export and append-only enforcement

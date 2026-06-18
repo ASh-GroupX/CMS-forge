@@ -13,7 +13,7 @@
     "generate:module": "node tools/generate-module.mjs",
     "db:seed": "prisma db seed --schema packages/database/prisma/schema.prisma",
     "test": "node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=75 --test-coverage-branches=65 tools/*.test.mjs",
-    "test:api": "node tools/pending-proof.mjs test:api",
+    "test:api": "node tools/api-test.mjs",
     "test:e2e": "node tools/pending-proof.mjs test:e2e",
     "test:web": "node tools/pending-proof.mjs test:web",
     "test:visual": "node tools/pending-proof.mjs test:visual",

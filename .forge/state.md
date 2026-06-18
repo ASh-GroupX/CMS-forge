@@ -1,8 +1,8 @@
 # Current State
 
-Status: Ready to Build
+Status: Ready to Plan
 Phase: Phase 1 - Security Baseline
-Next Task: F1-01A - Auth Data Foundation And API Test Harness
+Next Task: PLAN-F1-01E - Split Final Auth Foundation Gate
 
 ## Phase 0 — Accepted
 
