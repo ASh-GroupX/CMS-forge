@@ -31,9 +31,10 @@ const canonical = {
         summary: 'Log in a staff user',
         requestBody: { required: true, ...json(ref('AuthLoginRequest')) },
         responses: {
-          200: ok('Staff session created', ref('AuthLoginResponse'), cookie('HttpOnly staff session cookie')),
+          200: ok('Staff session created', ref('AuthLoginResponse'), cookie('HttpOnly staff session cookie and readable CSRF cookie')),
           400: error('Invalid request body'),
           401: error('Invalid credentials'),
+          429: error('Rate limit exceeded (RATE_LIMITED)'),
         },
       },
     },
@@ -43,8 +44,9 @@ const canonical = {
         operationId: 'authLogout',
         summary: 'Log out the active staff session',
         responses: {
-          200: ok('Staff session invalidated', ref('AuthLogoutResponse'), cookie('Expired HttpOnly staff session cookie')),
+          200: ok('Staff session invalidated', ref('AuthLogoutResponse'), cookie('Expired staff session and CSRF cookies')),
           401: error('Invalid session'),
+          403: error('Invalid CSRF token (CSRF_INVALID)'),
         },
       },
     },

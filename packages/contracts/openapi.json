@@ -30,7 +30,7 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "HttpOnly staff session cookie"
+                "description": "HttpOnly staff session cookie and readable CSRF cookie"
               }
             },
             "content": {
@@ -60,6 +60,16 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "Rate limit exceeded (RATE_LIMITED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
           }
         }
       }
@@ -79,7 +89,7 @@
                 "schema": {
                   "type": "string"
                 },
-                "description": "Expired HttpOnly staff session cookie"
+                "description": "Expired staff session and CSRF cookies"
               }
             },
             "content": {
@@ -92,6 +102,16 @@
           },
           "401": {
             "description": "Invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token (CSRF_INVALID)",
             "content": {
               "application/json": {
                 "schema": {

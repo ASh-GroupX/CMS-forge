@@ -1455,3 +1455,112 @@ Append build and verification evidence here. Do not delete failed evidence.
     state-change, audit, portal, or logging behavior was implemented.
   - Planned gate: `F1-06B` is `Verify Gate: required` before `F1-06C` builds on the CSRF
     mechanism; the Phase 1 `PHASE-REVIEWER` gate follows `F1-06C`.
+
+## F1-06A - Login Rate Limiting (Account + IP)
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - NFR-SEC-001 (AC3)
+  - REQ-AUTH-001
+  - API-STANDARD-001
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+  - NFR-SEC-002
+- Evidence:
+  - Added `LoginRateLimitGuard` with documented constants: 5 attempts per 60 seconds
+    per server-observed IP key and, when present, submitted normalized account
+    identifier key.
+  - Wired the guard only to `POST /auth/login`; logout and me routes are unchanged.
+  - Registered an injectable in-memory fixed-window store behind `LOGIN_RATE_LIMIT_STORE`;
+    Redis/distributed storage is deferred by task scope for the single-node MVP.
+  - On over-limit login attempts, the guard throws stable `RATE_LIMITED` HTTP 429 and
+    writes a `SECURITY` / `rate_limit_triggered` audit entry through `AuditService`.
+  - Added the `security` API test suite and focused tests for one allowed under-limit
+    case and one denied over-limit case, including safe audit/error-body assertions.
+  - Documented the `429` login response in the canonical OpenAPI contract and
+    regenerated `packages/contracts/openapi.json`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- security` (2/2)
+  - Passed: `corepack pnpm test:api -- auth` (21/21)
+  - Passed: `corepack pnpm openapi:check`
+  - Not Run: `corepack pnpm security:check` remains a pending fail-loud aggregate by
+    explicit task scope; it is not reported as passed.
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not
+    applicable for pre-session login authorization; the guard derives throttle keys
+    from server-observed IP plus submitted identifier only, never client limit,
+    threshold, role, or branch fields.
+  - Each state change writes status history and an audit entry in the same transaction;
+    side effects enqueue after commit: Not applicable to rate-limit denial because no
+    domain/session state changes; `SECURITY` audit is a standalone append-only write,
+    consistent with existing denial paths.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed; `apps/api/test/security/rate-limit.test.ts` asserts the audit metadata and
+    rendered 429 body contain no password, token, or hash values.
+  - Customer portal exposure rules hold: Not applicable; no portal route or
+    portal-visible data changed.
+  - Trust boundaries are tested: Passed; `test:api -- security` covers under-limit
+    allow and over-limit deny with `RATE_LIMITED` 429 plus `rate_limit_triggered` audit.
+
+## F1-06B - CSRF Kernel Guard, Token Issuance, And Auth-Route Enforcement
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed pending independent VERIFY
+- Required model tier: BUILDER-STRONG
+- Verify Gate: required
+- Requirement IDs:
+  - NFR-SEC-001 (AC5)
+  - REQ-AUTH-001
+  - API-STANDARD-001
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+  - NFR-SEC-002
+- Evidence:
+  - Added `CsrfGuard` for session-authenticated mutation routes. It requires
+    `x-csrf-token` to match the readable `cms_csrf_token` cookie and uses
+    `timingSafeEqual` for equal-length comparisons.
+  - Successful login now sets both the existing HttpOnly staff session cookie and a
+    readable SameSite CSRF cookie; the login response body remains safe claims plus
+    expiry.
+  - Logout is guarded by `SessionAuthGuard` then `CsrfGuard`, revokes the staff session
+    through the existing same-transaction auth service path, and expires both cookies.
+  - CSRF denial returns stable `CSRF_INVALID` HTTP 403 and writes a `SECURITY` /
+    `csrf_rejected` audit entry with actor, branch, route, correlation ID, IP, user
+    agent, and a safe reason only.
+  - Added focused CSRF tests for one allowed match and one denied mismatch, plus updated
+    auth route tests for dual cookie issuance/expiry.
+  - Documented the CSRF cookie behavior and `CSRF_INVALID` logout response in the
+    canonical OpenAPI contract and regenerated `packages/contracts/openapi.json`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- security` (4/4)
+  - Passed: `corepack pnpm test:api -- auth` (21/21)
+  - Passed: `corepack pnpm openapi:check`
+  - Not Run: `corepack pnpm security:check` remains a pending fail-loud aggregate by
+    explicit task scope; it is not reported as passed.
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed;
+    logout uses `SessionAuthGuard`, and CSRF validation derives only from the
+    server-issued CSRF cookie plus `x-csrf-token`, never client role or branch fields.
+  - Each state change writes status history and an audit entry in the same transaction;
+    side effects enqueue after commit: Passed for logout by preserving the existing
+    same-transaction session revoke + AUTH logout audit path. CSRF denial is not a
+    domain/session state change; its `SECURITY` audit is a standalone append-only write.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed; `apps/api/test/security/csrf.test.ts` asserts the denial audit and rendered
+    403 body do not contain CSRF/session secret values, password text, or hashes.
+  - Customer portal exposure rules hold: Not applicable; no portal route or
+    portal-visible data changed.
+  - Trust boundaries are tested: Passed; `test:api -- security` covers matching CSRF
+    allow and mismatched CSRF deny with `CSRF_INVALID` 403 plus `csrf_rejected` audit.

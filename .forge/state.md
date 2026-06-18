@@ -1,8 +1,8 @@
 # Current State
 
-Status: Ready to Build
+Status: Needs Verify
 Phase: Phase 1 - Security Baseline
-Next Task: F1-06A - Login Rate Limiting (Account + IP)
+Next Task: VERIFY-F1-06B - CSRF Kernel Guard Verify Gate
 
 ## Phase 1 — F1-06 Split (PLAN-F1-06, 2026-06-18)
 

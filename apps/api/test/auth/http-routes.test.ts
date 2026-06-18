@@ -21,7 +21,10 @@ const user: StaffAuthClaims = {
   branchId: 'branch_main',
 };
 
-function response(): { headers: Record<string, string>; setHeader(name: string, value: string): void } {
+function response(): {
+  headers: Record<string, string | string[]>;
+  setHeader(name: string, value: string | string[]): void;
+} {
   return {
     headers: {},
     setHeader(name, value) {
@@ -102,7 +105,7 @@ function renderError(exception: unknown, req = guardRequest({ correlationId: 're
   return body;
 }
 
-test('login returns safe staff claims and sets an HttpOnly staff cookie', async () => {
+test('login returns safe staff claims and sets staff session and CSRF cookies', async () => {
   const res = response();
   const result = await controller({
     verifyCredentials: async (input) => {
@@ -124,7 +127,10 @@ test('login returns safe staff claims and sets an HttpOnly staff cookie', async 
     },
   }).login({ identifier: ' admin@cms-auto.test ', password: 'correct-password' }, request(), res);
 
-  assert.equal(res.headers['Set-Cookie'], 'cms_staff_session=raw-token; Path=/; HttpOnly; SameSite=Lax');
+  const cookies = res.headers['Set-Cookie'];
+  assert.ok(Array.isArray(cookies));
+  assert.equal(cookies[0], 'cms_staff_session=raw-token; Path=/; HttpOnly; SameSite=Lax');
+  assert.match(cookies[1] ?? '', /^cms_csrf_token=[A-Za-z0-9_-]+; Path=\/; SameSite=Lax; Max-Age=28800$/);
   assert.deepEqual(result, { user, expiresAt: '2026-06-18T20:00:00.000Z' });
   assert.equal(JSON.stringify(result).includes('passwordHash'), false);
   assert.equal(JSON.stringify(result).includes('raw-token'), false);
@@ -144,7 +150,7 @@ test('failed login stays generic', async () => {
   );
 });
 
-test('logout revokes the cookie token and returns an expired staff cookie', async () => {
+test('logout revokes the cookie token and expires staff session and CSRF cookies', async () => {
   const res = response();
   const result = await controller({
     logoutStaffSessionWithAudit: async (token, _secureCookie, _now, audit) => {
@@ -159,7 +165,10 @@ test('logout revokes the cookie token and returns an expired staff cookie', asyn
   }).logout('cms_staff_session=raw-token; other=value', request(), res);
 
   assert.deepEqual(result, { ok: true });
-  assert.equal(res.headers['Set-Cookie'], 'cms_staff_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
+  assert.deepEqual(res.headers['Set-Cookie'], [
+    'cms_staff_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
+    'cms_csrf_token=; Path=/; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT',
+  ]);
 });
 
 test('malformed login input returns the standard error envelope code', async () => {

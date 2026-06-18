@@ -733,3 +733,37 @@ five required proof commands and confirmed file budgets.
   - Required checks passed: lint, typecheck, test 20/20, test:api -- admin 11/11, openapi:check.
   - `tools/openapi-check.mjs` reached 295 lines after compacting the write-path additions; this is under the enforced budget but close enough that future OpenAPI expansion should likely be split or refactored.
   - The F1-05 golden CRUD umbrella is complete; remaining Phase 1 work is F1-06, which is broad enough to require PLANNER splitting before build.
+
+## F1-06A - Login Rate Limiting (Account + IP)
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - The task stayed scoped to login rate limiting, direct guard tests, API-suite
+    registration, and the login OpenAPI 429 contract.
+  - `POST /auth/login` is now limited by server-observed IP and submitted normalized
+    identifier using an injectable in-memory fixed-window store.
+  - Over-limit attempts return stable `RATE_LIMITED` HTTP 429 and write a safe
+    `SECURITY` / `rate_limit_triggered` audit entry.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- security 2/2,
+    test:api -- auth 21/21, openapi:check.
+  - Remaining accepted limitation: the store is process-local; Redis/distributed rate
+    limiting is deferred until deployment topology requires it.
+
+## F1-06B - CSRF Kernel Guard, Token Issuance, And Auth-Route Enforcement
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept pending independent VERIFY
+- Notes:
+  - The task stayed scoped to the CSRF kernel, auth login/logout cookie wiring, focused
+    security/auth tests, and canonical OpenAPI contract updates.
+  - Login issues a readable SameSite CSRF cookie alongside the HttpOnly staff session
+    cookie; logout now requires session auth plus matching CSRF cookie/header.
+  - CSRF denials return stable `CSRF_INVALID` HTTP 403 and write safe `SECURITY` /
+    `csrf_rejected` audit entries without token or cookie values.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- security 4/4,
+    test:api -- auth 21/21, openapi:check.
+  - Because this task is a verify gate, state is set to `Needs Verify` before F1-06C
+    can reuse the CSRF mechanism on branch admin mutation routes.

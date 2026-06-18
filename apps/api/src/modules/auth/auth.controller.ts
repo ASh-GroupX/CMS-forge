@@ -7,6 +7,13 @@ import {
   SessionAuthGuard,
 } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
+import {
+  createCsrfToken,
+  CsrfGuard,
+  serializeCsrfCookie,
+  serializeExpiredCsrfCookie,
+} from '../../core/csrf.guard.js';
+import { LoginRateLimitGuard } from '../../core/rate-limit.guard.js';
 import { AuthService } from './auth.service.js';
 import type { AuthAuditContext } from './auth.service.js';
 import { LoginRequestDto } from './dto/login-request.dto.js';
@@ -21,6 +28,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
+  @UseGuards(LoginRateLimitGuard)
   async login(
     @Body() body: unknown,
     @Req() request: AuthRequest,
@@ -28,15 +36,16 @@ export class AuthController {
   ): Promise<Record<string, unknown>> {
     const input = LoginRequestDto.from(body);
     const audit = auditContext(request);
+    const secureCookie = process.env.NODE_ENV === 'production';
     const user = await this.authService.verifyCredentials({ ...input, audit });
     const session = await this.authService.createStaffSession({
       userId: user.userId,
       branchId: user.branchId,
-      secureCookie: process.env.NODE_ENV === 'production',
+      secureCookie,
       audit,
     });
 
-    response.setHeader('Set-Cookie', session.cookie);
+    response.setHeader('Set-Cookie', [session.cookie, serializeCsrfCookie(createCsrfToken(), secureCookie)]);
 
     return {
       user,
@@ -45,19 +54,21 @@ export class AuthController {
   }
 
   @Post('logout')
+  @UseGuards(SessionAuthGuard, CsrfGuard)
   async logout(
     @Headers('cookie') cookieHeader: string | undefined,
     @Req() request: AuthRequest,
     @Res({ passthrough: true }) response: CookieResponse,
   ): Promise<{ ok: true }> {
+    const secureCookie = process.env.NODE_ENV === 'production';
     const expiredCookie = await this.authService.logoutStaffSessionWithAudit(
       readCookie(cookieHeader ?? '', STAFF_SESSION_COOKIE),
-      process.env.NODE_ENV === 'production',
+      secureCookie,
       new Date(),
       auditContext(request),
     );
 
-    response.setHeader('Set-Cookie', expiredCookie);
+    response.setHeader('Set-Cookie', [expiredCookie, serializeExpiredCsrfCookie(secureCookie)]);
     return { ok: true };
   }
 
