@@ -1,8 +1,19 @@
 # Current State
 
-Status: Needs Phase Review
-Phase: Phase 2 - Complaint Core
-Next Task: PHASE-2-REVIEW - Complaint Core Acceptance Review
+Status: Ready to Build
+Phase: Phase 2 - Complaint Core Repair
+Next Task: REPAIR-PHASE-2-TRANSITION-BRANCH-SCOPE - Enforce Target Complaint Branch Scope Before Transitions
+
+## PHASE-2-REVIEW Repair Required
+
+PHASE-2-REVIEW re-ran the required proof surface successfully: lint, typecheck,
+test 20/20, test:api -- workflow 25/25, and openapi:check.
+
+Decision: Repair Required. `POST /complaints/:id/transitions` uses guard metadata
+and the query `branchId`, but does not prove the target complaint belongs to that
+scoped branch before `ComplaintsService.applyTransition` updates status and writes
+workflow history/audit. Queue/detail/comment paths are scoped; transition must get
+the same target-complaint branch protection before Phase 3 starts.
 
 ## Phase 2 Build Complete - Needs Phase Review
 

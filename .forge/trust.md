@@ -1227,3 +1227,35 @@ tasks (notably the backend-owned complaint state machine).
     and openapi:check.
   - All Phase 2 backlog tasks are now complete; Forge state is set to
     `Needs Phase Review` before Phase 3 can be planned.
+
+## PHASE-2-REVIEW - Complaint Core Acceptance Review
+
+- Date: 2026-06-18
+- Reviewer tier: PHASE-REVIEWER (current Codex context; preferred vendor model not claimed)
+- Risk: High
+- Decision: **Repair Required**
+- Phase 3 may start: **No**
+
+### Verification labels (re-run by reviewer)
+
+- Passed: `corepack pnpm lint`
+- Passed: `corepack pnpm typecheck`
+- Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+- Passed: `corepack pnpm test:api -- workflow` (25/25)
+- Passed: `corepack pnpm openapi:check`
+
+### Blocking finding
+
+- `POST /complaints/:id/transitions` does not prove the target complaint is inside the caller's branch scope before applying the transition. `RbacGuard` only compares the `branchId` query parameter to the server session, and `ComplaintsRepository.updateStatus` updates by `{ id, status }` without a branch predicate. A non-admin staff user can pass their own scoped `branchId` query while naming another branch's complaint ID, then the service can update that complaint and write workflow history/audit. This violates `REQ-RBAC-001` authorized branch scope, `RBAC-MATRIX-001` scoped complaint actions, and `WORKFLOW-MATRIX-001` backend transition authority.
+
+### Scope review
+
+- Phase 2 backlog items F2-01A through F2-04C are checked done and have evidence/trust entries.
+- The F2-02B verify gate found the stale persisted-status issue, the repair was built, and the repair verify accepted it.
+- Complaint creation, queue, detail, and comment routes derive actor/branch authority from the server session or verify scoped detail before delegation.
+- The transition route has guard metadata and CSRF, but lacks the same target-complaint scope check used by detail/comment paths.
+- OpenAPI drift checks pass, and the source-file budget is respected.
+
+### Required repair
+
+Write the smallest Phase 2 repair before planning Phase 3: enforce target complaint branch scope on `POST /complaints/:id/transitions` and add a workflow API test that fails if a scoped staff user can transition a complaint outside their authorized branch.

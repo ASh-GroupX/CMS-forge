@@ -1,62 +1,50 @@
-# Phase Review Task: PHASE-2-REVIEW - Complaint Core Acceptance Review
+# Repair Task: REPAIR-PHASE-2-TRANSITION-BRANCH-SCOPE - Enforce Target Complaint Branch Scope Before Transitions
 
-Status: Needs Phase Review
-Required model tier: PHASE-REVIEWER
+Status: Ready to Build
+Required model tier: BUILDER-STRONG
 Risk: High
-Phase: Phase 2 - Complaint Core
+Phase: Phase 2 - Complaint Core Repair
 
 ## Why This Exists
 
-All Phase 2 backlog tasks are complete. A fresh PHASE-REVIEWER must decide whether
-Complaint Core is accepted before Forge may plan or build Phase 3.
+PHASE-2-REVIEW found that `POST /complaints/:id/transitions` checks the request
+`branchId` query against the server session, but does not verify that the target
+complaint ID belongs to that scoped branch before calling `applyTransition`.
+Phase 3 must not start until this branch-scope bypass is repaired.
 
-## Review Scope
+## Scope
 
-Review Phase 2 only:
+Fix only the complaint transition branch-scope path:
 
-- F2-01A through F2-04C source, tests, OpenAPI, migrations, and Forge records
-- `.forge/backlog.md`
-- `.forge/evidence.md`
-- `.forge/trust.md`
-- `.forge/state.md`
-- `.forge/next.md`
-- `AGENTS.md`
-- `docs/ARCHITECTURE.md`
-- `docs/CMS_AUTO_SRS.md` requirement IDs cited by Phase 2 evidence
+- `apps/api/src/modules/complaints/complaints.controller.ts`
+- focused workflow API test(s) under `apps/api/test/workflow/`
+- service/repository signatures only if needed for the smallest correct branch predicate
 
-Do not implement Phase 3 work during this review.
+Do not implement Phase 3 SLA/workflow operations.
 
-## Required Review Work
+## Acceptance Criteria
 
-- Re-run the Phase 2 proof surface and label results honestly:
-  - `corepack pnpm lint`
-  - `corepack pnpm typecheck`
-  - `corepack pnpm test`
-  - `corepack pnpm test:api -- workflow`
-  - `corepack pnpm openapi:check`
-- Confirm every Phase 2 backlog task has evidence and trust entries.
-- Inspect the complaint workflow, create, queue, detail, and comment paths for:
-  - backend-owned workflow authority
-  - server-session role and branch authority
-  - same-transaction status history/audit for state changes
-  - append-only audit discipline
-  - portal/public privacy boundaries
-  - OpenAPI drift coverage
-  - allowed and denied RBAC/branch-scope tests
-  - file-size and module-boundary compliance
-- Cross-check cited SRS requirement IDs against `docs/CMS_AUTO_SRS.md`.
+- Non-admin staff transitions derive branch authority from the server session or guarded query, never client body data.
+- A scoped staff user cannot transition a complaint outside their authorized branch.
+- The denial happens before status update, status history, or WORKFLOW audit writes.
+- Admin transition behavior remains valid.
+- Existing same-transaction status history/audit behavior remains unchanged for allowed transitions.
+- OpenAPI remains drift-free; update it only if the route contract changes.
 
-## Decision Output
+## Requirement IDs
 
-Write a Phase 2 review entry to `.forge/trust.md` and update `.forge/state.md`.
+- REQ-RBAC-001
+- RBAC-MATRIX-001
+- ARCH-WORKFLOW-001
+- WORKFLOW-MATRIX-001
+- METHOD-AUDIT-001
+- API-STANDARD-001
+- METHOD-TEST-001
 
-Allowed decisions:
+## Verification Commands
 
-- `Accept Phase`: Phase 3 may start; set state to `Ready to Plan` and write the
-  first Phase 3 planner task to `.forge/next.md`.
-- `Accept With Conditions`: Phase 3 may start with explicit non-blocking
-  carry-forward conditions; set state to `Ready to Plan` and write the first Phase 3
-  planner task to `.forge/next.md`.
-- `Repair Required`: set state to `Ready to Build` or `Ready to Plan` for the
-  smallest repair task and write that task to `.forge/next.md`.
-- `Redo Phase`: set state to `Blocked` with the reason and required human decision.
+- `corepack pnpm lint`
+- `corepack pnpm typecheck`
+- `corepack pnpm test`
+- `corepack pnpm test:api -- workflow`
+- `corepack pnpm openapi:check`
