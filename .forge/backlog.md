@@ -6,13 +6,14 @@ history from another project.
 ## Phase 0 - Repository Foundation
 
 - [x] F0-00: Agent rulebook and architecture blueprint (`CLAUDE.md`, `AGENTS.md`, `docs/ARCHITECTURE.md`)
-- [ ] F0-01: Create monorepo scaffold for web, api, database, shared contracts
+- [x] F0-01: Create monorepo scaffold for web, api, database, shared contracts
 - [ ] F0-02: Add lint, typecheck, test, build, and OpenAPI scripts
 - [ ] F0-03: Add Docker local stack for PostgreSQL, Redis, API, web
 - [ ] F0-04: Add seed data for branches, roles, users, categories, vehicles, complaints
 - [ ] F0-05: Add frontend design tokens and shared UI component foundation
 - [ ] F0-06: Add architecture rules, boundary lint, coverage gates, OpenAPI drift, visual/a11y/perf checks
 - [ ] F0-07: Add module generator template and designate golden CRUD reference module
+- [ ] F0-08: Draft coherent Prisma data model before feature migrations
 
 ## Phase 1 - Security Baseline
 
@@ -24,7 +25,6 @@ history from another project.
 
 ## Phase 2 - Complaint Core
 
-- [ ] F2-00: Draft coherent Prisma data model before feature migrations
 - [ ] F2-01: Complaint domain schema and migrations
 - [ ] F2-02: Backend complaint state machine
 - [ ] F2-03: Complaint creation and staff queues

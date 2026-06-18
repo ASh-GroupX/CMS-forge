@@ -45,3 +45,21 @@ Append review decisions here.
 - Recommendation: Accept
 - Notes:
   - This makes the Forge workflow less dependent on prose-only conventions.
+
+## PLAN-F0-01 - Scaffold Build Task
+
+- Date: 2026-06-18
+- Risk: Low
+- Recommendation: Accept
+- Notes:
+  - Planning is now aligned with the agreed order: rulebook, scaffold, data model, generator, golden CRUD, then feature modules.
+
+## F0-01 - Monorepo Scaffold And Toolchain Foundation
+
+- Date: 2026-06-18
+- Risk: Medium
+- Recommendation: Accept
+- Notes:
+  - The change stayed inside scaffold scope and avoided domain behavior.
+  - Required F0-01 verification commands ran and passed after installing dependencies.
+  - Pending proof scripts fail loudly instead of pretending API, visual, security, DB, backup, or performance coverage exists.
