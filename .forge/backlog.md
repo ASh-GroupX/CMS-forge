@@ -17,9 +17,11 @@ history from another project.
 
 ## Phase 1 - Security Baseline
 
-- [ ] F1-01: Staff auth with Argon2id and HttpOnly sessions
+- [ ] F1-00A: Generate and apply the F0-08 Prisma migration
+- [ ] F1-00B: Bootstrap NestJS API and minimal core kernel
+- [ ] F1-01: Staff auth with Argon2id and HttpOnly sessions (Verify Gate: required)
 - [ ] F1-02: RBAC and branch-scope enforcement
-- [ ] F1-03: Audit log foundation
+- [ ] F1-03: Audit log search/export and append-only enforcement
 - [ ] F1-04: Stable API error shape and correlation IDs
 - [ ] F1-05: Build golden CRUD reference module for branches or categories and freeze its pattern
 

@@ -496,3 +496,34 @@ Append build and verification evidence here. Do not delete failed evidence.
   - Velocity preserved: F1-00A migration and F1-00B Nest+kernel flow automatically;
     the single independent stop is after F1-01, before F1-02+ build on the auth base.
   - No application source code was changed. State remains `Ready to Plan` on `PLAN-F1-00`.
+
+## PLAN-F1-00 - Split Phase 1 Into Agentic Build Tasks
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: PLANNER
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - ARCH-STACK-001
+  - ARCH-DATA-001
+  - ARCH-AUTH-001
+  - REQ-AUTH-001
+  - REQ-RBAC-001
+  - REQ-AUDIT-001
+  - NFR-SEC-001
+  - METHOD-API-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Split the Phase 1 start into `F1-00A` migration, `F1-00B` NestJS/core kernel, and gated `F1-01` staff auth.
+  - Replaced `.forge/next.md` with the first buildable task only: `F1-00A`.
+  - Set `.forge/state.md` to `Ready to Build`.
+  - Kept implementation deferred; no application source code was changed.
+  - Marked `F1-01` in backlog with `Verify Gate: required`.
+- Verification:
+  - Passed: `rg -n "F1-00A|F1-00B|F1-01|300|Ready to Build" .forge/backlog.md .forge/next.md .forge/state.md`
+- Security Self-Check:
+  - Not Run: planning-only task; no auth, RBAC, branch-scope, state-change, audit, portal, or logging behavior was implemented.
+  - Planned gate: `F1-01` remains `Verify Gate: required` before dependent Phase 1 tasks proceed.

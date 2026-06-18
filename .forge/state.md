@@ -1,8 +1,8 @@
 # Current State
 
-Status: Ready to Plan
+Status: Ready to Build
 Phase: Phase 1 - Security Baseline
-Next Task: PLAN-F1-00 - Split Phase 1 Into Agentic Build Tasks
+Next Task: F1-00A - Generate And Apply The F0-08 Prisma Migration
 
 ## Phase 0 — Accepted
 
@@ -15,9 +15,9 @@ thresholds), openapi:check, build, prisma validate.
 
 ## Carry-forward conditions into Phase 1 (see trust.md PHASE-0-REVIEW)
 
-1. F1-01 must generate a Prisma migration from the F0-08 schema (committed migration
+1. F1-00A must generate a Prisma migration from the F0-08 schema (committed migration
    only covers the minimal F0-04 model). Run migrations inside the Docker network on Windows.
-2. No NestJS runtime yet — `apps/api` is a `node:http` liveness server. F1-01 must stand
+2. No NestJS runtime yet — `apps/api` is a `node:http` liveness server. F1-00B must stand
    up the Nest app + core kernel (prisma, errors, audit, correlation). Escalate to PLANNER
    to split if scope exceeds 1–5 files.
 3. Module generator emits plain TS classes, not Nest decorators — re-align at F1-05 golden CRUD.

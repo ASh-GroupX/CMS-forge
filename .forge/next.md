@@ -1,53 +1,72 @@
-# Next Task: PLAN-F1-00 - Split Phase 1 Into Agentic Build Tasks
+# Next Task: F1-00A - Generate And Apply The F0-08 Prisma Migration
 
-Status: Ready to Plan
-Required model tier: PLANNER
+Status: Ready to Build
+Required model tier: BUILDER-STRONG
 Risk: High
 
 ## Why This Exists
 
-`F1-01 - Staff Auth With Argon2id And HttpOnly Sessions` currently includes too
-much for one agentic build task: Prisma migration, NestJS bootstrap, shared core
-kernel, auth behavior, OpenAPI, and tests.
-
-Forge now requires small tasks and source files. Replan before coding.
+Phase 0 accepted the F0-08 Prisma schema draft, but the committed migration still
+only reflects the smaller F0-04 model. Phase 1 auth depends on the expanded user,
+session, audit, and related security tables existing in the database.
 
 ## Scope
 
-Split the current Phase 1 start into ordered, buildable tasks.
+Generate a committed Prisma migration from the current F0-08
+`packages/database/prisma/schema.prisma` and prove it applies through the Docker
+network on Windows.
 
-Minimum split:
+Keep the task to migration work only. Do not bootstrap NestJS, do not implement
+auth, and do not add routes, controllers, UI, RBAC guards, audit services, or
+business logic.
 
-1. `F1-00A` - generate/apply the Prisma migration from the F0-08 schema.
-2. `F1-00B` - bootstrap NestJS and the minimal core kernel.
-3. `F1-01` - staff auth only: login, logout, session validation, audit, OpenAPI,
-   and focused tests. Mark this task `Verify Gate: required` — it is the
-   auth/session/RBAC foundation the rest of Phase 1 builds on, so AUTO PHASE pauses
-   for an independent VERIFY here before F1-02+ proceed.
+If migration generation or proof needs more than 1 to 5 files plus focused test
+or script changes, stop and replan instead of expanding the diff.
 
-Keep each task near 1 to 5 files plus tests. If a task would create a source file
-over 300 lines, split it further.
+Any new app/package/tool source file must stay under 300 lines. Migration files,
+docs, generated files, and other canonical artifacts remain exceptions.
+
+## Requirement IDs
+
+- CONTRACT-READINESS-002
+- ARCH-STACK-001
+- ARCH-DATA-001
+- METHOD-TEST-001
 
 ## Expected Files
 
+- `packages/database/prisma/migrations/<timestamp>_f0_08_core_model/migration.sql`
+- `.forge/evidence.md`
+- `.forge/trust.md`
 - `.forge/backlog.md`
 - `.forge/next.md`
 - `.forge/state.md`
 
-Do not implement source code in this planning task.
-
 ## Acceptance Criteria
 
-- Phase 1 backlog starts with the smallest ordered tasks needed before auth.
-- `.forge/next.md` contains only the first buildable task.
-- `.forge/state.md` is `Ready to Build` after planning.
-- The first build task includes exact verification commands and SRS IDs.
+- A repeatable migration exists for the full F0-08 schema.
+- The migration applies inside the Docker network, not through the Windows
+  localhost Prisma path that is already known to fail with P1000.
+- Existing seed compatibility is preserved or any seed issue is recorded as a
+  repair task.
+- No application source code, auth behavior, routes, or UI are implemented.
+- Verification labels in `.forge/evidence.md` are honest.
 
 ## Verification Commands
 
-- `rg -n "F1-00A|F1-00B|F1-01|300|Ready to Build" .forge/backlog.md .forge/next.md .forge/state.md`
+- `corepack pnpm lint`
+- `corepack pnpm typecheck`
+- `corepack pnpm test`
+- `corepack pnpm openapi:check`
+- `corepack pnpm --filter @cms-auto/database exec prisma validate --schema prisma/schema.prisma`
+- `docker compose up -d postgres`
+- `docker run --rm --network cms-forge_default -v "${PWD}:/workspace:ro" -w /workspace -e DATABASE_URL="postgresql://cms_auto:cms_auto_dev@postgres:5432/cms_auto?schema=public" node:20-alpine sh -lc "npm exec --yes prisma@5.22.0 -- migrate deploy --schema packages/database/prisma/schema.prisma"`
 
 ## Evidence To Record
 
-Append `PLAN-F1-00 - Split Phase 1 Into Agentic Build Tasks` to
-`.forge/evidence.md` with honest labels.
+Append `F1-00A - Generate And Apply The F0-08 Prisma Migration` to
+`.forge/evidence.md` with honest labels and cited SRS IDs.
+
+If checks pass, mark `F1-00A` done in `.forge/backlog.md`, write `F1-00B` to
+`.forge/next.md`, update `.forge/trust.md`, and keep `.forge/state.md` at
+`Ready to Build`.
