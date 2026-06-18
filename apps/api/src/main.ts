@@ -1,24 +1,41 @@
-import { createServer } from 'node:http';
+import 'reflect-metadata';
+import { Controller, Get, Module } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import {
+  AppExceptionFilter,
+  PrismaService,
+  correlationMiddleware,
+} from './core/http-kernel.js';
 
-// Runtime plumbing only (F0-03). This is a liveness entrypoint so the API
-// container can boot inside the local Docker stack. It owns no domain behavior:
-// no modules, auth, workflow, or database access live here yet.
-const port = Number(process.env.PORT ?? 3000);
-const databaseUrl = process.env.DATABASE_URL ?? '';
-const redisUrl = process.env.REDIS_URL ?? '';
+@Controller()
+class HealthController {
+  @Get()
+  root(): Record<string, boolean | string> {
+    return this.health();
+  }
 
-const server = createServer((_req, res) => {
-  res.writeHead(200, { 'content-type': 'application/json' });
-  res.end(
-    JSON.stringify({
+  @Get('health')
+  health(): Record<string, boolean | string> {
+    return {
       status: 'ok',
       service: 'api',
-      databaseConfigured: databaseUrl.length > 0,
-      redisConfigured: redisUrl.length > 0,
-    }),
-  );
-});
+      databaseConfigured: Boolean(process.env.DATABASE_URL),
+      redisConfigured: Boolean(process.env.REDIS_URL),
+    };
+  }
+}
 
-server.listen(port, () => {
-  console.log(`api scaffold listening on ${port}`);
-});
+@Module({
+  controllers: [HealthController],
+  providers: [PrismaService],
+})
+class AppModule {}
+
+async function bootstrap(): Promise<void> {
+  const app = await NestFactory.create(AppModule);
+  app.use(correlationMiddleware);
+  app.useGlobalFilters(new AppExceptionFilter());
+  await app.listen(Number(process.env.PORT ?? 3000));
+}
+
+void bootstrap();

@@ -308,3 +308,35 @@ Phase 1, already disclosed in the build logs — not hidden gaps. Accepting.
   - Residual risk: the gate's value depends on the VERIFY being a genuinely fresh
     context/different model, not the same agent rubber-stamping itself. The protocol
     says so; enforcement is by discipline, not a hard check.
+
+## F1-00A - Generate And Apply The F0-08 Prisma Migration
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - The task stayed migration-only and did not implement application behavior.
+  - The generated migration was adjusted only to make required `updated_at` additions safe over existing seeded rows.
+  - Required static checks passed, and the migration applied through the Docker network.
+  - Remaining non-blocking tooling gap: the root `db:seed` script currently cannot find `prisma`; seed data preservation was verified by SQL instead.
+
+## F1-00B - Bootstrap NestJS API And Minimal Core Kernel
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - The task stayed on bootstrap/core plumbing and avoided auth/RBAC/audit/domain behavior.
+  - Required checks passed, and Docker runtime was smoke-tested through `/health`.
+  - The initial image packaging missed pnpm workspace runtime dependencies; fixed by running from `apps/api` and copying the workspace/app node_modules layout.
+  - The core error filter is intentionally minimal; F1-04 remains responsible for the full stable error-code surface.
+
+## F1-01 - Staff Auth With Argon2id And HttpOnly Sessions
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Replan
+- Notes:
+  - The broad auth task is not agentic after F1-00B: module generation, hashing, sessions, audit, OpenAPI, and tests would create a large diff.
+  - AUTO PHASE correctly stopped at `Ready to Plan` rather than starting an oversized security change.
+  - The auth verify gate must stay on the final auth foundation subtask after planning.

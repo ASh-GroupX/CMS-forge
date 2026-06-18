@@ -2,7 +2,7 @@
 
 Status: Ready to Build
 Phase: Phase 1 - Security Baseline
-Next Task: F1-00A - Generate And Apply The F0-08 Prisma Migration
+Next Task: F1-01A - Auth Data Foundation And API Test Harness
 
 ## Phase 0 — Accepted
 

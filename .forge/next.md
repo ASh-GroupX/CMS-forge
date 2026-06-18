@@ -1,4 +1,4 @@
-# Next Task: F1-00A - Generate And Apply The F0-08 Prisma Migration
+# Next Task: F1-01A - Auth Data Foundation And API Test Harness
 
 Status: Ready to Build
 Required model tier: BUILDER-STRONG
@@ -6,67 +6,70 @@ Risk: High
 
 ## Why This Exists
 
-Phase 0 accepted the F0-08 Prisma schema draft, but the committed migration still
-only reflects the smaller F0-04 model. Phase 1 auth depends on the expanded user,
-session, audit, and related security tables existing in the database.
+The broad staff auth task was split before coding. Before login/session behavior
+is added, seeded staff users need usable Argon2id password hashes and
+`test:api -- auth` must become a real, focused proof path instead of a pending
+placeholder.
+
+This is a foundation task only. Do not add auth routes, cookies, sessions, audit
+writes, RBAC, frontend login UI, or OpenAPI auth paths here.
 
 ## Scope
 
-Generate a committed Prisma migration from the current F0-08
-`packages/database/prisma/schema.prisma` and prove it applies through the Docker
-network on Windows.
+Implement the smallest auth data/test foundation:
 
-Keep the task to migration work only. Do not bootstrap NestJS, do not implement
-auth, and do not add routes, controllers, UI, RBAC guards, audit services, or
-business logic.
+1. Give the existing dev-only seeded staff users non-null Argon2id password hashes.
+2. Add a minimal API test runner so `corepack pnpm test:api -- auth` runs auth
+   API tests and unknown suites still fail loudly.
+3. Add one focused auth test proving the seeded staff password hashes are present,
+   Argon2id-shaped, and no plaintext password field is seeded.
 
-If migration generation or proof needs more than 1 to 5 files plus focused test
-or script changes, stop and replan instead of expanding the diff.
-
-Any new app/package/tool source file must stay under 300 lines. Migration files,
-docs, generated files, and other canonical artifacts remain exceptions.
+Keep the change near 1 to 5 files plus tests. Do not generate the `auth` module
+yet unless the builder can prove the generated diff still fits this task.
 
 ## Requirement IDs
 
 - CONTRACT-READINESS-002
-- ARCH-STACK-001
-- ARCH-DATA-001
+- ARCH-AUTH-001
+- REQ-AUTH-001
+- NFR-SEC-001
 - METHOD-TEST-001
 
 ## Expected Files
 
-- `packages/database/prisma/migrations/<timestamp>_f0_08_core_model/migration.sql`
-- `.forge/evidence.md`
-- `.forge/trust.md`
-- `.forge/backlog.md`
-- `.forge/next.md`
-- `.forge/state.md`
+- `package.json`
+- `tools/api-test.mjs`
+- `apps/api/test/auth/password-hash.test.ts`
+- `packages/database/prisma/seed.ts`
+- `pnpm-lock.yaml` only if dependencies change
 
 ## Acceptance Criteria
 
-- A repeatable migration exists for the full F0-08 schema.
-- The migration applies inside the Docker network, not through the Windows
-  localhost Prisma path that is already known to fail with P1000.
-- Existing seed compatibility is preserved or any seed issue is recorded as a
-  repair task.
-- No application source code, auth behavior, routes, or UI are implemented.
-- Verification labels in `.forge/evidence.md` are honest.
+- Seeded staff users have non-null Argon2id password hashes.
+- Seed data still contains no plaintext password fields.
+- `corepack pnpm test:api -- auth` runs a real auth test instead of
+  `pending-proof.mjs`.
+- Unknown or missing API test suites fail loudly.
+- No login endpoint, session cookie, logout behavior, audit write, OpenAPI path,
+  RBAC guard, or UI is implemented in this task.
+- Evidence includes the High-risk security self-check from `.forge/policy.md`,
+  with non-applicable items labeled honestly.
 
 ## Verification Commands
 
 - `corepack pnpm lint`
 - `corepack pnpm typecheck`
 - `corepack pnpm test`
+- `corepack pnpm test:api -- auth`
 - `corepack pnpm openapi:check`
-- `corepack pnpm --filter @cms-auto/database exec prisma validate --schema prisma/schema.prisma`
-- `docker compose up -d postgres`
-- `docker run --rm --network cms-forge_default -v "${PWD}:/workspace:ro" -w /workspace -e DATABASE_URL="postgresql://cms_auto:cms_auto_dev@postgres:5432/cms_auto?schema=public" node:20-alpine sh -lc "npm exec --yes prisma@5.22.0 -- migrate deploy --schema packages/database/prisma/schema.prisma"`
 
 ## Evidence To Record
 
-Append `F1-00A - Generate And Apply The F0-08 Prisma Migration` to
-`.forge/evidence.md` with honest labels and cited SRS IDs.
+Append `F1-01A - Auth Data Foundation And API Test Harness` to
+`.forge/evidence.md` with honest labels and the security self-check.
 
-If checks pass, mark `F1-00A` done in `.forge/backlog.md`, write `F1-00B` to
-`.forge/next.md`, update `.forge/trust.md`, and keep `.forge/state.md` at
+## Next After Completion
+
+If checks pass, write `F1-01B - Auth Module Credential Verification With
+Argon2id And Generic Denial` to `.forge/next.md` and keep `.forge/state.md` as
 `Ready to Build`.

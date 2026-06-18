@@ -527,3 +527,120 @@ Append build and verification evidence here. Do not delete failed evidence.
 - Security Self-Check:
   - Not Run: planning-only task; no auth, RBAC, branch-scope, state-change, audit, portal, or logging behavior was implemented.
   - Planned gate: `F1-01` remains `Verify Gate: required` before dependent Phase 1 tasks proceed.
+
+## F1-00A - Generate And Apply The F0-08 Prisma Migration
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - ARCH-STACK-001
+  - ARCH-DATA-001
+  - METHOD-TEST-001
+- Evidence:
+  - Generated migration `packages/database/prisma/migrations/20260618134424_f0_08_core_model/migration.sql` from the accepted F0-08 schema.
+  - Patched the generated SQL only to backfill required `updated_at` columns on existing seed tables before enforcing `NOT NULL`.
+  - Applied the migration inside the Docker network to the running PostgreSQL service.
+  - Verified the new F0-08 tables exist and existing seeded rows remain: 2 branches, 6 roles, 4 users, 5 categories, 2 customers, 2 vehicles, 3 complaints.
+  - No application source code, auth behavior, routes, RBAC guards, audit services, or UI were implemented.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (18/18; coverage thresholds cleared)
+  - Passed: `corepack pnpm openapi:check`
+  - Failed then passed with env: `corepack pnpm --filter @cms-auto/database exec prisma validate --schema prisma/schema.prisma` failed without `DATABASE_URL`; `corepack pnpm --dir packages/database exec prisma validate --schema prisma/schema.prisma` passed with `DATABASE_URL=postgresql://cms_auto:cms_auto_dev@localhost:5432/cms_auto?schema=public`.
+  - Passed: `docker compose up -d postgres`
+  - Failed: `node:20-alpine` Prisma container could not load the schema engine due missing OpenSSL runtime.
+  - Passed: `docker run --rm --network cms-forge_default -v "${PWD}:/workspace:ro" -w /workspace -e DATABASE_URL="postgresql://cms_auto:cms_auto_dev@postgres:5432/cms_auto?schema=public" node:20-bookworm-slim sh -lc "apt-get update >/dev/null && apt-get install -y openssl >/dev/null && npm exec --yes prisma@5.22.0 -- migrate deploy --schema packages/database/prisma/schema.prisma"`
+  - Failed: `corepack pnpm db:seed` did not run because the root script cannot find a root-level `prisma` binary.
+  - Passed: SQL row-count check confirmed seed data survived migration.
+- Security Self-Check:
+  - Roles and branch scope from server session: Not Run; no auth/RBAC behavior implemented.
+  - State history and audit in same transaction: Not Run; no state-changing application behavior implemented.
+  - No passwords, OTPs, tokens, hashes, or provider secrets logged or returned: Passed by scope; migration SQL contains no secret values and no logging behavior.
+  - Portal exposure rules: Not Run; no portal APIs implemented.
+  - Trust boundaries tested: Not Run; migration-only task has no request boundary.
+
+## F1-00B - Bootstrap NestJS API And Minimal Core Kernel
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - ARCH-STACK-001
+  - ARCH-AUTH-001
+  - ARCH-API-001
+  - API-STANDARD-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Replaced the raw `node:http` API scaffold with a NestJS bootstrap.
+  - Added minimal core plumbing for Prisma connection lifecycle, correlation ID propagation, and standard error envelope responses.
+  - Preserved liveness at `/` and `/health`.
+  - Updated API Docker build/runtime layout for pnpm workspace dependencies, Prisma client generation, and OpenSSL in Alpine.
+  - No auth endpoints, RBAC guards, audit table writes, complaint workflow, UI, or provider integrations were implemented.
+- Verification:
+  - Passed: `corepack pnpm install --lockfile-only`
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (18/18; coverage thresholds cleared)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `corepack pnpm build`
+  - Failed then fixed: initial `docker compose build api` produced an image that could not resolve `reflect-metadata` at runtime.
+  - Passed: rebuilt `docker compose build api`
+  - Passed: `docker compose up -d --force-recreate api`
+  - Passed: `Invoke-WebRequest http://localhost:3000/health` returned `{"status":"ok","service":"api","databaseConfigured":true,"redisConfigured":true}`.
+  - Passed: correlation smoke with `x-correlation-id: req_test` returned the same response header.
+  - Passed: `curl.exe -s -i -H "x-correlation-id: req_missing" http://localhost:3000/missing` returned a JSON error envelope with `correlationId`.
+- Security Self-Check:
+  - Roles and branch scope from server session: Not Run; no auth/RBAC behavior implemented.
+  - State history and audit in same transaction: Not Run; no state-changing application behavior implemented.
+  - No passwords, OTPs, tokens, hashes, or provider secrets logged or returned: Passed by scope; no credential handling was added.
+  - Portal exposure rules: Not Run; no portal APIs implemented.
+  - Trust boundaries tested: Not Run; no authenticated trust boundary exists yet.
+
+## F1-01 - Staff Auth With Argon2id And HttpOnly Sessions
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Not Run
+- Required model tier: BUILDER-STRONG
+- Evidence:
+  - AUTO PHASE stopped before implementation because the active `F1-01` task exceeds the Forge 1 to 5 file budget.
+  - Scope includes generated module shape, password hashing, session storage, cookies, audit writes, OpenAPI, and focused API tests.
+  - Rewrote `.forge/next.md` to `PLAN-F1-01 - Split Staff Auth Into Agentic Build Tasks`.
+  - Set `.forge/state.md` to `Ready to Plan`, which is an AUTO PHASE stop condition.
+- Verification:
+  - Not Run: auth implementation checks were not started because the task requires replanning.
+
+## PLAN-F1-01 - Split Staff Auth Into Agentic Build Tasks
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: PLANNER
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - ARCH-AUTH-001
+  - REQ-AUTH-001
+  - REQ-AUDIT-001
+  - NFR-SEC-001
+  - METHOD-API-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Replaced the single broad `F1-01` backlog item with five small auth foundation subtasks.
+  - Queued only `F1-01A - Auth Data Foundation And API Test Harness` in `.forge/next.md`.
+  - Set `.forge/state.md` to `Ready to Build`.
+  - Kept implementation deferred; no application source code was changed.
+  - Preserved the independent `Verify Gate: required` on final auth foundation task `F1-01E`.
+- Verification:
+  - Passed: `rg -n "PLAN-F1-01|F1-01A|F1-01B|Verify Gate|required|Ready to Build|300" .forge/backlog.md .forge/next.md .forge/state.md`
+- Security Self-Check:
+  - Not Run: planning-only task; no auth, RBAC, branch-scope, state-change, audit, portal, or logging behavior was implemented.
+  - Planned gate: `F1-01E` remains `Verify Gate: required` before dependent Phase 1 work proceeds.
