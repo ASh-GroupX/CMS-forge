@@ -11,7 +11,7 @@ history from another project.
 - [x] F0-03: Add Docker local stack for PostgreSQL, Redis, API, web
 - [x] F0-04: Add seed data for branches, roles, users, categories, vehicles, complaints
 - [x] F0-05: Add frontend design tokens and shared UI component foundation
-- [ ] F0-06: Add architecture rules, boundary lint, coverage gates, OpenAPI drift, visual/a11y/perf checks
+- [x] F0-06: Add architecture rules, boundary lint, coverage gates, OpenAPI drift, visual/a11y/perf checks
 - [ ] F0-07: Add module generator template and designate golden CRUD reference module
 - [ ] F0-08: Draft coherent Prisma data model before feature migrations
 

@@ -55,9 +55,15 @@ export function checkForbiddenImports(root = process.cwd()) {
     const imports = [...text.matchAll(/\bimport\s+(?:[^'"]+\s+from\s+)?['"]([^'"]+)['"]/g)].map(
       (match) => match[1],
     );
+    const moduleMatch = file.match(/^apps\/api\/src\/modules\/([^/]+)\//);
 
     for (const specifier of imports) {
-      if (file.startsWith('apps/web/') && /^(?:@cms-auto\/api|@cms-auto\/database|\.\.\/api|\.\.\/\.\.\/apps\/api)/.test(specifier)) {
+      if (
+        file.startsWith('apps/web/') &&
+        /^(?:@cms-auto\/api|@cms-auto\/database|@prisma\/client|prisma|aws-sdk|@aws-sdk\/|twilio|nodemailer|\.\.\/api|\.\.\/database|\.\.\/\.\.\/apps\/api|\.\.\/\.\.\/packages\/database)/.test(
+          specifier,
+        )
+      ) {
         errors.push(`${file}: web must not import ${specifier}`);
       }
 
@@ -68,15 +74,39 @@ export function checkForbiddenImports(root = process.cwd()) {
       if (file.startsWith('packages/') && /^(?:@cms-auto\/api|@cms-auto\/web|\.\.\/\.\.\/apps\/)/.test(specifier)) {
         errors.push(`${file}: packages must not import apps (${specifier})`);
       }
+
+      if (moduleMatch) {
+        const currentModule = moduleMatch[1];
+        const otherModule =
+          specifier.match(/^@cms-auto\/api\/src\/modules\/([^/]+)\/(.+)$/) ??
+          specifier.match(/^(?:\.\.\/)+([^/]+)\/(.+)$/);
+        if (otherModule && otherModule[1] !== currentModule && /(?:\.repository|^dto\/|\/dto\/|prisma)/.test(otherModule[2])) {
+          errors.push(`${file}: module must not import another module private API (${specifier})`);
+        }
+      }
     }
   }
 
   return errors;
 }
 
+export function checkForbiddenMarkers(root = process.cwd()) {
+  const checkedFiles = walk(root).filter(
+    (file) =>
+      /^(?:apps|packages)\//.test(file) &&
+      /\.(?:ts|tsx|js|mjs|css|prisma)$/.test(file) &&
+      !file.includes('/migrations/'),
+  );
+
+  return checkedFiles.flatMap((file) => {
+    const text = readFileSync(join(root, file), 'utf8');
+    return /\b(?:TODO|FIXME)\b/.test(text) ? [`${file}: TODO/FIXME markers are not allowed`] : [];
+  });
+}
+
 export function lint(root = process.cwd()) {
   checkScaffold(root);
-  const errors = [...checkJson(root), ...checkForbiddenImports(root)];
+  const errors = [...checkJson(root), ...checkForbiddenImports(root), ...checkForbiddenMarkers(root)];
 
   if (errors.length > 0) {
     throw new Error(errors.join('\n'));

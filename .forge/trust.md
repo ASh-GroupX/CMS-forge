@@ -114,3 +114,13 @@ Append review decisions here.
 - Notes:
   - The planned task tightens gates without adding heavyweight tooling before there is enough application code to justify it.
   - UI, accessibility, and performance commands must remain honest fail-loud gates until real screens exist; they must not be reported as passed in F0-06.
+
+## F0-06 - Phase 0 Quality Gates
+
+- Date: 2026-06-18
+- Risk: Medium
+- Recommendation: Accept
+- Notes:
+  - Required verification commands ran and passed.
+  - The implementation used existing Node tooling only, preserving the task's dependency discipline.
+  - Remaining risk: fail-loud UI/perf commands are not real visual, accessibility, or performance coverage yet; this is acceptable until MVP screens exist.

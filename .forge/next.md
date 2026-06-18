@@ -1,6 +1,6 @@
 # Next Task
 
-## F0-06 - Enforce Phase 0 Quality Gates
+## F0-07 - Module Generator Template And Golden CRUD Designation
 
 Status: Ready to Build
 Required model tier: BUILDER-STANDARD
@@ -9,47 +9,37 @@ Risk: Medium
 ## Requirement IDs
 
 - CONTRACT-READINESS-002
-- CONTRACT-READINESS-003
 - ARCH-STACK-001
-- ARCH-API-001
 - METHOD-MODULAR-001
 - METHOD-API-001
 - METHOD-TEST-001
 - NFR-MAINT-001
-- QA-UI-001
-- UI-DESIGN-001
 
 ## Scope
 
-Add the smallest real quality-gate foundation for the current scaffold:
+Add the smallest module generator foundation:
 
-1. Strengthen existing Node-based lint checks for architecture boundaries:
-   - web must not import api, database, Prisma, or provider SDKs
-   - api must not import web
-   - packages must not import apps
-   - future api modules must not import another module's repository, dto files, or Prisma internals
-   - no TODO/FIXME markers in app/package source paths
-2. Add a real coverage gate to the existing Node test command using Node's built-in test coverage thresholds.
-3. Split OpenAPI generation/check behavior enough that `openapi:check` catches committed contract drift for the scaffold contract.
-4. Keep visual, accessibility, and frontend performance proof commands honest: they may remain fail-loud pending gates while there are no real UI screens, but tests must prove they cannot silently pass.
+1. Add a dependency-free Node script that creates the canonical Nest module skeleton under `apps/api/src/modules/<module>/`.
+2. Generate only structure: module, controller, service, repository, DTO placeholders, and service/controller spec placeholders.
+3. Reject invalid module names and refuse to overwrite an existing module.
+4. Document that `branches` is the future golden CRUD reference, but do not implement CRUD behavior yet.
+5. Add one focused test proving the generator creates the expected files and refuses overwrite.
 
 ## Expected Files
 
 - `package.json`
-- `tools/lint.mjs`
-- `tools/lint.test.mjs`
-- `tools/openapi-check.mjs`
-- one small `tools/*.test.mjs` file if needed
+- `tools/generate-module.mjs`
+- `tools/generate-module.test.mjs`
+- `docs/ARCHITECTURE.md` only if needed to record the golden CRUD designation already stated there
 
-Do not add ESLint, dependency-cruiser, Playwright, Lighthouse, or new app/domain modules in this task. Those belong when there is enough code or UI to check.
+Do not add plop or another generator dependency. Do not create real domain modules, routes, database changes, CRUD logic, RBAC, audit, or OpenAPI paths in this task.
 
 ## Acceptance Criteria
 
-- `corepack pnpm test` enforces coverage thresholds with Node's built-in test runner.
-- `corepack pnpm lint` fails on the boundary violations listed above.
-- `corepack pnpm openapi:check` fails when the committed scaffold OpenAPI file is non-canonical or missing required baseline error schemas.
-- Pending proof commands for visual/a11y/perf stay fail-loud until real UI screens exist; do not report them as passed.
-- No business logic, routes, database migrations, UI screens, or provider integrations are added.
+- `corepack pnpm generate:module -- branches` creates the canonical skeleton in an empty workspace path.
+- The generator refuses invalid names and existing module directories.
+- Tests cover creation and overwrite rejection.
+- Existing lint, typecheck, test coverage, OpenAPI check, and build gates still pass.
 
 ## Verification Commands
 
@@ -61,5 +51,5 @@ Do not add ESLint, dependency-cruiser, Playwright, Lighthouse, or new app/domain
 
 ## Evidence To Record
 
-Append `F0-06 - Phase 0 Quality Gates` to `.forge/evidence.md` with honest Passed/Failed labels and cite the requirement IDs above.
-Update `.forge/trust.md`, mark `F0-06` done in `.forge/backlog.md` only if all verification commands pass, and write the next task before finishing.
+Append `F0-07 - Module Generator Template And Golden CRUD Designation` to `.forge/evidence.md` with honest Passed/Failed labels and cite the requirement IDs above.
+Update `.forge/trust.md`, mark `F0-07` done in `.forge/backlog.md` only if all verification commands pass, and write the next task before finishing.

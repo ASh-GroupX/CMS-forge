@@ -254,3 +254,35 @@ Append build and verification evidence here. Do not delete failed evidence.
   - Kept scope to existing Node-based quality scripts, OpenAPI scaffold drift, test coverage thresholds, and fail-loud UI/perf proof gates.
   - Set `.forge/state.md` to `Ready to Build`.
   - Deferred full ESLint, dependency-cruiser, Playwright, Lighthouse, and real visual/a11y/perf execution until there are modules or screens worth checking.
+
+## F0-06 - Phase 0 Quality Gates
+
+- Date: 2026-06-18
+- Risk: Medium
+- Status: Passed
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - CONTRACT-READINESS-003
+  - ARCH-STACK-001
+  - ARCH-API-001
+  - METHOD-MODULAR-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+  - QA-UI-001
+  - UI-DESIGN-001
+- Evidence:
+  - Strengthened `tools/lint.mjs` to reject frontend imports from API/database/Prisma/provider SDKs, API imports from web, package imports from apps, cross-module private repository/DTO imports, and TODO/FIXME markers in app/package source paths.
+  - Updated `corepack pnpm test` to use Node's built-in coverage thresholds.
+  - Added OpenAPI canonical scaffold generation/checking and baseline error schemas (`ErrorEnvelope`, `ErrorBody`, `FieldError`) to `packages/contracts/openapi.json`.
+  - Added tests for lint boundaries, OpenAPI drift/schema checks, and fail-loud pending proof commands.
+  - Kept Playwright/Lighthouse/full ESLint/dependency-cruiser deferred until real modules or screens exist.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (9 tests passed; coverage thresholds enforced at lines 80, functions 75, branches 65)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `corepack pnpm build`
+- Notes:
+  - Direct `test:visual`, `test:e2e -- accessibility`, and `web:perf` execution remains Not Run for this task; fail-loud behavior is covered by `tools/pending-proof.test.mjs` because no real UI screens exist yet.
+  - No business logic, routes, migrations, UI screens, or provider integrations were added.
