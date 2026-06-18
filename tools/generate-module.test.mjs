@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { checkModuleManifests } from './lint.mjs';
-import { generateModule, moduleFiles } from './generate-module.mjs';
+import { generateModule, moduleFiles, parseArgs } from './generate-module.mjs';
 
 test('generator creates the canonical module skeleton', () => {
   const root = mkdtempSync(join(tmpdir(), 'cms-auto-generator-'));
@@ -52,4 +52,8 @@ test('generator refuses to overwrite existing modules', () => {
   mkdirSync(join(root, 'apps/api/src/modules/branches'), { recursive: true });
 
   assert.throws(() => generateModule('branches', root), /Module already exists/);
+});
+
+test('generator parses module name without an explicit root', () => {
+  assert.equal(parseArgs(['branches']).moduleName, 'branches');
 });

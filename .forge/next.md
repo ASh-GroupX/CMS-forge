@@ -1,59 +1,59 @@
-# Next Task: F1-05B - Generate Branches Module Shell And Manifest
+# Next Task: PLAN-F1-05C - Split Branches Golden CRUD Behavior
 
-Status: Ready to Build
-Required model tier: BUILDER-STRONG
+Status: Ready to Plan
+Required model tier: PLANNER
 Risk: High
 Phase: Phase 1 - Security Baseline
 
 ## Why This Exists
 
-`F1-05A` made the module generator emit a NestJS skeleton. Create the real
-`branches` module from that generator before adding CRUD behavior, so the golden
-reference starts from the canonical shape.
+`F1-05C - Branches golden CRUD endpoints, RBAC, audit, and pattern freeze` is too
+broad for one builder task. It likely touches controller, service, repository,
+DTOs, API tests, API suite registration, OpenAPI, app module wiring, audit
+behavior, RBAC, and pattern documentation.
 
 ## Scope
 
-- Run the generator for `branches`.
-- Fill the generated `apps/api/src/modules/branches/MODULE.md` with the real
-  public surface, owned `branches` table, allowed dependencies, and SRS IDs.
-- Keep generated controller/service/repository/DTO/spec files behavior-free.
-- Do not import `BranchesModule` into the app yet unless the generated skeleton
-  requires it to typecheck.
+Planning only. Split `F1-05C` into ordered buildable tasks that each stay near
+1 to 5 files plus focused tests.
+
+Minimum split to consider:
+
+1. Branch read/list endpoint with Admin RBAC and OpenAPI.
+2. Branch create/update/deactivate service behavior with audit entries.
+3. Branch API tests and golden CRUD pattern documentation/freeze.
+
+Do not implement source code in this planning task.
 
 ## Out Of Scope
 
-- Branch CRUD endpoints.
-- RBAC guards or audit writes for branches.
-- OpenAPI route changes.
-- Database schema or migration changes.
-- Editing existing `auth` or `audit` modules.
+- Feature implementation.
+- Phase review.
+- Login rate limiting or CSRF (`F1-06`).
 
 ## Requirement IDs
 
-- METHOD-MODULAR-001
-- NFR-MAINT-001
-- METHOD-TEST-001
 - REQ-ADMIN-001
+- METHOD-MODULAR-001
+- METHOD-AUDIT-001
+- METHOD-API-001
+- METHOD-TEST-001
+- NFR-MAINT-001
+- NFR-SEC-002
 
 ## Acceptance Criteria
 
-- `apps/api/src/modules/branches` exists and was generated from the Nest-ready
-  generator.
-- `MODULE.md` is filled for the branches boundary and passes the manifest lint
-  gate.
-- Generated source remains under the 300-line budget.
-- No runtime API behavior changes.
-- Required checks pass.
+- `.forge/next.md` contains only the first buildable branches CRUD task.
+- `.forge/state.md` is `Ready to Build` after planning.
+- Backlog has small ordered branches CRUD subtasks under the `F1-05` umbrella.
+- The first build task includes exact verification commands and SRS IDs.
+- Scope stays near 1 to 5 files plus tests.
 
 ## Verification Commands
 
-- `corepack pnpm lint`
-- `corepack pnpm typecheck`
-- `corepack pnpm test`
-- `corepack pnpm openapi:check`
+- `rg -n "PLAN-F1-05C|F1-05C|F1-05D|Ready to Build|300" .forge/backlog.md .forge/next.md .forge/state.md`
 
 ## Evidence To Record
 
-Record the `.forge/policy.md` Security Self-Check because this is a High-risk
-Phase 1 foundation task. Keep the umbrella `F1-05` backlog item open until CRUD,
-RBAC, audit, and pattern-freeze evidence are complete.
+Append `PLAN-F1-05C - Split Branches Golden CRUD Behavior` to
+`.forge/evidence.md` with honest labels.

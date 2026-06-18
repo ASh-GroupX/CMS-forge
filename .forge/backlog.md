@@ -33,7 +33,7 @@ history from another project.
 - [x] F1-04: Stable API error shape and correlation IDs
 - [ ] F1-05: Build golden CRUD reference module for branches or categories and freeze its pattern
 - [x] F1-05A: Nest-ready module generator
-- [ ] F1-05B: Generate branches module shell and manifest
+- [x] F1-05B: Generate branches module shell and manifest
 - [ ] F1-05C: Branches golden CRUD endpoints, RBAC, audit, and pattern freeze
 - [ ] F1-06: Login rate limiting (account + IP) and CSRF protection for session-authenticated mutation routes (NFR-SEC-001 AC3, AC5; blocking at the MVP Security-baseline gate) — added by VERIFY-F1-01E
 

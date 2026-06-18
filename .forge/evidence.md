@@ -1203,3 +1203,35 @@ Append build and verification evidence here. Do not delete failed evidence.
   - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed by scope; generator output contains no logging, response, secret, or provider behavior.
   - Customer portal exposure rules hold: Passed by separation; no portal module, route, or portal-visible data was changed.
   - Trust boundaries are tested: Not applicable to behavior; generator tests prove the structural boundary and manifest gate for the future branches module.
+
+## F1-05B - Generate Branches Module Shell And Manifest
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - METHOD-MODULAR-001
+  - NFR-MAINT-001
+  - METHOD-TEST-001
+  - REQ-ADMIN-001
+- Evidence:
+  - Fixed `tools/generate-module.mjs` CLI parsing so `corepack pnpm generate:module -- branches` works without `--root`.
+  - Added a focused generator test for parsing a module name without an explicit root.
+  - Ran `corepack pnpm generate:module -- branches` to create `apps/api/src/modules/branches`.
+  - Filled `apps/api/src/modules/branches/MODULE.md` with the real public surface, owned `branches` table, allowed dependencies, and SRS IDs.
+  - Left generated controller, service, repository, DTOs, and specs behavior-free.
+  - Added no app module import, route behavior, OpenAPI path, RBAC guard, audit write, schema, or migration.
+  - Kept touched source files under the 300-line budget: `tools/generate-module.mjs` is 96 lines and `tools/generate-module.test.mjs` is 49 lines; generated branches source files are all under 20 lines.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage 91.06% lines / 79.73% branch / 94.37% funcs)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (only CRLF warnings)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not applicable; this task adds no runtime route or authorization behavior.
+  - Each state change writes status history and an audit entry in the same transaction; side effects enqueue after commit: Not applicable; no branch state change, domain mutation, or side effect was added.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed by scope; generated shell code contains no logging, response, secret, or provider behavior.
+  - Customer portal exposure rules hold: Passed by separation; no portal route or portal-visible data was changed.
+  - Trust boundaries are tested: Not applicable to behavior; generator and manifest lint tests cover the structural boundary only.

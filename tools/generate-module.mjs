@@ -81,11 +81,13 @@ export function generateModule(moduleName, root = process.cwd()) {
   return [...files.keys()].map((file) => `apps/api/src/modules/${moduleName}/${file}`);
 }
 
-function parseArgs(args) {
+export function parseArgs(args) {
   const normalized = args.filter((arg) => arg !== '--');
   const rootIndex = normalized.indexOf('--root');
   const root = rootIndex === -1 ? process.cwd() : normalized[rootIndex + 1];
-  const moduleName = normalized.find((arg, index) => arg !== '--root' && index !== rootIndex + 1);
+  const moduleName = normalized.find(
+    (arg, index) => arg !== '--root' && (rootIndex === -1 || index !== rootIndex + 1),
+  );
 
   if (!moduleName || !root) {
     throw new Error('Usage: corepack pnpm generate:module -- <module-name> [--root <path>]');

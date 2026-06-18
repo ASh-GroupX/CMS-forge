@@ -673,3 +673,15 @@ five required proof commands and confirmed file budgets.
   - Required checks passed: lint, typecheck, test 19/19, openapi:check.
   - No runtime API behavior, OpenAPI route, RBAC, audit, Prisma, auth, or audit module changes were added.
   - The `F1-05` umbrella remains open; next step is generating the real `branches` module shell before CRUD behavior.
+
+## F1-05B - Generate Branches Module Shell And Manifest
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - The task stayed on the generated branches shell and manifest. Generated files are behavior-free.
+  - A small generator CLI parser fix was required because both `corepack pnpm generate:module -- branches` and direct `node tools/generate-module.mjs branches` failed before the fix.
+  - Required checks passed: lint, typecheck, test 20/20, openapi:check.
+  - No runtime API behavior, OpenAPI route, RBAC, audit, Prisma schema, migration, auth, or audit module change was added.
+  - The remaining `F1-05C` scope is still too broad, so AUTO PHASE stops at `Ready to Plan` for a split before CRUD behavior.

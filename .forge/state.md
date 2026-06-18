@@ -1,8 +1,8 @@
 # Current State
 
-Status: Ready to Build
+Status: Ready to Plan
 Phase: Phase 1 - Security Baseline
-Next Task: F1-05B - Generate Branches Module Shell And Manifest
+Next Task: PLAN-F1-05C - Split Branches Golden CRUD Behavior
 
 ## Phase 1 — Auth Foundation Verified (gate passed)
 
@@ -75,4 +75,5 @@ thresholds), openapi:check, build, prisma validate.
 - F1-04 — stable API error envelope now supports optional validation field errors; auth/RBAC errors remain safe and correlation IDs propagate to headers and error bodies.
 - PLAN-F1-05 — split golden CRUD work; first build task is generator alignment before creating the `branches` exemplar.
 - F1-05A - generator now emits NestJS-shaped module skeletons with module/controller/service/repository decorators and manifest-valid `MODULE.md` files.
+- F1-05B - generated the real `branches` module shell and filled its `MODULE.md`; CRUD behavior remains unbuilt.
 - Known limitation: Prisma's Rust engine cannot connect through Docker Desktop's Windows port-forwarding (P1000); run DB ops inside the Docker network. Does not affect application code.
