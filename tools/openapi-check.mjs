@@ -8,7 +8,14 @@ const json = (schema) => ({ content: { 'application/json': { schema } } });
 const error = (description) => ({ description, ...json(ref('ErrorEnvelope')) });
 const ok = (description, schema, headers) => ({ description, ...(headers ? { headers } : {}), ...json(schema) });
 const cookie = (description) => ({ 'Set-Cookie': { schema: { type: 'string' }, description } });
+const attachment = (filename) => ({ 'Content-Disposition': { schema: { type: 'string' }, description: `attachment; filename="${filename}"` } });
 const param = (name, schema = { type: 'string' }) => ({ name, in: 'query', required: false, schema });
+const auditParams = [
+  param('eventType', { type: 'string', enum: eventTypes }),
+  ...['actorId', 'targetType', 'targetId', 'branchId', 'correlationId'].map((name) => param(name)),
+  param('from', { type: 'string', format: 'date-time' }),
+  param('to', { type: 'string', format: 'date-time' }),
+];
 
 const canonical = {
   openapi: '3.1.0',
@@ -57,10 +64,7 @@ const canonical = {
         operationId: 'auditLogSearch',
         summary: 'Search audit log entries',
         parameters: [
-          param('eventType', { type: 'string', enum: eventTypes }),
-          ...['actorId', 'targetType', 'targetId', 'branchId', 'correlationId'].map((name) => param(name)),
-          param('from', { type: 'string', format: 'date-time' }),
-          param('to', { type: 'string', format: 'date-time' }),
+          ...auditParams,
           param('page', { type: 'integer', minimum: 1 }),
           param('pageSize', { type: 'integer', minimum: 1, maximum: 100 }),
         ],
@@ -69,6 +73,20 @@ const canonical = {
           400: error('Invalid query'),
           401: error('Missing or invalid session'),
           403: error('Role or branch scope denied'),
+        },
+      },
+    },
+    '/audit/logs/export': {
+      get: {
+        tags: ['Audit'],
+        operationId: 'auditLogExport',
+        summary: 'Export audit log entries',
+        parameters: auditParams,
+        responses: {
+          200: ok('Audit log export file', ref('AuditLogExportResponse'), attachment('audit-logs.json')),
+          400: error('Invalid query'),
+          401: error('Missing or invalid session'),
+          403: error('Role denied'),
         },
       },
     },
@@ -137,6 +155,11 @@ const canonical = {
         page: { type: 'integer', minimum: 1 },
         pageSize: { type: 'integer', minimum: 1, maximum: 100 },
       }),
+      AuditLogExportResponse: object(['items', 'rowCount', 'rowLimit'], {
+        items: { type: 'array', items: ref('AuditLogEntry') },
+        rowCount: { type: 'integer', minimum: 0 },
+        rowLimit: { type: 'integer', minimum: 1 },
+      }),
     },
   },
 };
@@ -168,13 +191,13 @@ export function checkOpenApiText(text) {
     errors.push('OpenAPI document must include a paths object');
   }
 
-  for (const [path, method] of [['/auth/login', 'post'], ['/auth/logout', 'post'], ['/auth/me', 'get'], ['/audit/logs', 'get']]) {
+  for (const [path, method] of [['/auth/login', 'post'], ['/auth/logout', 'post'], ['/auth/me', 'get'], ['/audit/logs', 'get'], ['/audit/logs/export', 'get']]) {
     if (!document.paths?.[path]?.[method]) {
       errors.push(`OpenAPI document missing ${path} ${method} operation`);
     }
   }
 
-  for (const schema of ['ErrorEnvelope', 'ErrorBody', 'FieldError', 'AuthLoginRequest', 'AuthLoginResponse', 'AuthLogoutResponse', 'AuthMeResponse', 'StaffAuthClaims', 'AuditLogEntry', 'AuditLogSearchResponse']) {
+  for (const schema of ['ErrorEnvelope', 'ErrorBody', 'FieldError', 'AuthLoginRequest', 'AuthLoginResponse', 'AuthLogoutResponse', 'AuthMeResponse', 'StaffAuthClaims', 'AuditLogEntry', 'AuditLogSearchResponse', 'AuditLogExportResponse']) {
     if (!document.components?.schemas?.[schema]) {
       errors.push(`OpenAPI document missing ${schema} schema`);
     }

@@ -10,6 +10,7 @@ import { AppException } from '../../src/core/http-kernel.ts';
 import { AuditController } from '../../src/modules/audit/audit.controller.ts';
 import { AuditRepository } from '../../src/modules/audit/audit.repository.ts';
 import { AuditSearchService } from '../../src/modules/audit/audit.service.ts';
+import { MAX_EXPORT_ROWS } from '../../src/modules/audit/audit.service.ts';
 
 const admin: StaffPrincipal = {
   sessionId: 'ses_admin',
@@ -41,10 +42,14 @@ function request(principal: StaffPrincipal, url = '/audit/logs?branchId=branch_m
   };
 }
 
-function context(req: AuthenticatedRequest): ExecutionContext {
+function context(
+  req: AuthenticatedRequest,
+  handler: typeof AuditController.prototype.search | typeof AuditController.prototype.export =
+    AuditController.prototype.search,
+): ExecutionContext {
   return {
     switchToHttp: () => ({ getRequest: () => req }),
-    getHandler: () => AuditController.prototype.search,
+    getHandler: () => handler,
     getClass: () => AuditController,
   } as ExecutionContext;
 }
@@ -134,6 +139,22 @@ test('branch manager cannot search audit logs', async () => {
   assert.equal(auditRecords[0]?.action, 'rbac_forbidden');
 });
 
+test('branch manager cannot export audit logs', async () => {
+  const auditRecords: AuditRecordInput[] = [];
+  const guard = new RbacGuard(
+    new Reflector(),
+    { record: async (input) => auditRecords.push(input) } as AuditService,
+  );
+
+  await assert.rejects(
+    guard.canActivate(context(request(branchManager), AuditController.prototype.export)),
+    (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
+
+  assert.equal(auditRecords[0]?.eventType, 'SECURITY');
+  assert.equal(auditRecords[0]?.action, 'rbac_forbidden');
+});
+
 test('audit search service fails closed for non-admin direct calls', async () => {
   const repository = {
     search: async () => {
@@ -143,6 +164,79 @@ test('audit search service fails closed for non-admin direct calls', async () =>
 
   await assert.rejects(
     new AuditSearchService(repository).search({}, branchManager),
+    (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
+});
+
+test('admin can export capped redacted audit logs and writes export audit', async () => {
+  let receivedFilters: unknown;
+  let receivedPage: unknown;
+  const auditRecords: AuditRecordInput[] = [];
+  const headers: Record<string, string> = {};
+  const repository = {
+    search: async (filters, page) => {
+      receivedFilters = filters;
+      receivedPage = page;
+      return [{
+        id: 'aud_1',
+        eventType: 'SECURITY',
+        action: 'rbac_forbidden',
+        actorId: 'usr_branch',
+        branchId: 'branch_main',
+        targetType: 'api_route',
+        targetId: '/audit/logs',
+        correlationId: 'req_test',
+        ipAddress: '127.0.0.1',
+        userAgent: 'node:test',
+        metadata: { credentialSecret: 'nope', safe: 'ok' },
+        createdAt: new Date('2026-06-18T10:00:00.000Z'),
+      }];
+    },
+  } as AuditRepository;
+
+  const body = await new AuditController(new AuditSearchService(
+    repository,
+    { record: async (input) => auditRecords.push(input) } as AuditService,
+  )).export(
+    { eventType: 'SECURITY', branchId: 'branch_main', page: '10', pageSize: '1' },
+    request(admin, '/audit/logs/export?branchId=branch_main'),
+    { setHeader: (name, value) => { headers[name] = value; } },
+  );
+
+  assert.deepEqual(receivedFilters, { eventType: 'SECURITY', branchId: 'branch_main' });
+  assert.deepEqual(receivedPage, { page: 1, pageSize: MAX_EXPORT_ROWS });
+  assert.equal(headers['Content-Type'], 'application/json');
+  assert.equal(headers['Content-Disposition'], 'attachment; filename="audit-logs.json"');
+  assert.equal(body.includes('nope'), false);
+  assert.equal(body.includes('[REDACTED]'), true);
+  assert.equal(JSON.parse(body).rowLimit, MAX_EXPORT_ROWS);
+  assert.deepEqual(auditRecords, [{
+    eventType: 'REPORT',
+    action: 'audit_log_exported',
+    actorId: 'usr_admin',
+    branchId: 'branch_main',
+    targetType: 'audit_logs',
+    correlationId: 'req_test',
+    ipAddress: '127.0.0.1',
+    userAgent: 'node:test',
+    metadata: {
+      filters: { eventType: 'SECURITY', branchId: 'branch_main' },
+      rowCount: 1,
+      fileType: 'json',
+      rowLimit: MAX_EXPORT_ROWS,
+    },
+  }]);
+});
+
+test('audit export service fails closed for non-admin direct calls', async () => {
+  const repository = {
+    search: async () => {
+      return [];
+    },
+  } as AuditRepository;
+
+  await assert.rejects(
+    new AuditSearchService(repository).export({}, branchManager),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
 });

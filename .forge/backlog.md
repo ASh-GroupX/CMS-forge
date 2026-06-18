@@ -28,7 +28,7 @@ history from another project.
 - [x] F1-01E3: Auth OpenAPI contract and final security proof (Verify Gate: required)
 - [x] F1-02: RBAC and branch-scope enforcement
 - [x] F1-03A: Audit log search endpoint for authorized admins (Verify Gate: required)
-- [ ] F1-03B: Audit log export endpoint with configured limits and branch/role scope
+- [x] F1-03B: Audit log export endpoint with configured limits and branch/role scope
 - [ ] F1-03C: Audit append-only enforcement proof
 - [ ] F1-04: Stable API error shape and correlation IDs
 - [ ] F1-05: Build golden CRUD reference module for branches or categories and freeze its pattern

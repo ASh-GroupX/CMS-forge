@@ -627,3 +627,14 @@ five required proof commands and confirmed file budgets.
    owed by `F1-03C` — application-level writes remain create-only today.
 3. **Audit log export** (`RBAC-MATRIX-001`: Admin Yes, MGMT_READONLY "No by default")
    plus its scope-parity (`RBAC-MATRIX-001` AC2) is `F1-03B`, queued next.
+
+## F1-03B - Audit Log Export Endpoint With Limits And Scope
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - Export stayed narrow: Admin-only JSON attachment, shared search filters, `MAX_EXPORT_ROWS = 500`, safe redacted row mapping, export audit entry, focused audit API tests, and canonical OpenAPI update.
+  - Required checks passed: lint, typecheck, test 19/19, test:api -- audit 8/8, openapi:check.
+  - No configurable Management Read-Only audit permission was added; SRS says audit export is "No by default" for that role.
+  - No DB-level append-only enforcement was added; that is queued as `F1-03C`.

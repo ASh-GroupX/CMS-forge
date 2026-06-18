@@ -1072,3 +1072,41 @@ Append build and verification evidence here. Do not delete failed evidence.
   - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed; metadata redaction behavior is unchanged and remains tested.
   - Customer portal exposure rules hold: Passed by separation; this is still a staff-only guarded route and no portal behavior was added.
   - Trust boundaries are tested: Passed; `test:api -- audit` covers Admin allowed, Branch Manager denied, CR Officer denied, non-admin service direct denial, invalid query, and metadata redaction.
+
+## F1-03B - Audit Log Export Endpoint With Limits And Scope
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-AUDIT-001
+  - REQ-RBAC-001
+  - RBAC-MATRIX-001
+  - NFR-SEC-002
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Added `GET /audit/logs/export` guarded by `SessionAuthGuard`, `RbacGuard`, and `@Roles('ADMIN')`.
+  - Reused `parseAuditSearchQuery` and the audit repository filter path so export filters match audit search filters.
+  - Enforced a documented `MAX_EXPORT_ROWS = 500` cap; export uses page 1 with the cap, never an unbounded dump.
+  - Returned a JSON attachment with `Content-Type: application/json` and `Content-Disposition: attachment; filename="audit-logs.json"`.
+  - Reused explicit safe response mapping and metadata redaction for exported rows.
+  - Recorded the export action through `AuditService` as `REPORT/audit_log_exported` with actor, request context, applied filters, row count, file type, and row limit.
+  - Added focused audit API tests for admin export, Branch Manager export denial with `SECURITY` audit, non-admin service fail-closed behavior, row cap, redaction, response headers, and export audit metadata.
+  - Added `/audit/logs/export` and `AuditLogExportResponse` to the canonical OpenAPI contract and regenerated `packages/contracts/openapi.json`.
+  - Kept app/tool source files under the 300-line budget: audit service 208 lines, audit controller 47 lines, OpenAPI checker 213 lines.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (19/19; coverage 89.75% lines / 80.85% branch / 92.65% funcs)
+  - Passed: `corepack pnpm test:api -- audit` (8/8)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed; the export route uses `SessionAuthGuard` + `RbacGuard` with `@Roles('ADMIN')`, and `AuditSearchService.export` fails closed for non-admin principals. Tests cover Admin allowed and Branch Manager denied.
+  - Each state change writes status history and an audit entry in the same transaction; side effects enqueue after commit: Not applicable to complaint workflow state changes. This task adds read-only export plus a sensitive-action audit entry; no complaint state or side effect was added.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed; exported rows reuse metadata redaction and export audit metadata records only filters, row count, file type, and limit. Tests assert secret-like metadata is redacted.
+  - Customer portal exposure rules hold: Passed by separation; export is a staff-only Admin route and no portal API behavior was added.
+  - Trust boundaries are tested: Passed; `test:api -- audit` covers admin export allowed, Branch Manager export denied, direct service non-admin denial, row cap, redaction, response headers, and export audit entry.

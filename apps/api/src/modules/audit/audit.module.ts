@@ -25,8 +25,8 @@ import { AuditSearchService } from './audit.service.js';
     },
     {
       provide: AuditSearchService,
-      inject: [AuditRepository],
-      useFactory: (repository: AuditRepository) => new AuditSearchService(repository),
+      inject: [AuditRepository, AuditService],
+      useFactory: (repository: AuditRepository, audit: AuditService) => new AuditSearchService(repository, audit),
     },
     {
       provide: SESSION_AUTH_SERVICE,
