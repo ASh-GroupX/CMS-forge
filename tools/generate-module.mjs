@@ -32,6 +32,10 @@ export function moduleFiles(moduleName) {
 
   return new Map([
     [
+      'MODULE.md',
+      `# ${classBase} Module\n\n> Agent context manifest. Read this before editing the module. It defines the\n> module's boundary so you can work in a fresh context without scanning the tree.\n\n- Public surface: \`${classBase}Service\` — the only export other modules may import.\n- Owns tables: _none yet — list this module's Prisma tables here._\n- May depend on: \`core/*\` (prisma, errors, audit, rbac, correlation) and another\n  module's public service only — never its repository, \`dto/\`, or Prisma models.\n- SRS: _add the requirement IDs this module implements._\n`,
+    ],
+    [
       `${moduleName}.module.ts`,
       `import { ${classBase}Controller } from './${moduleName}.controller';\nimport { ${classBase}Repository } from './${moduleName}.repository';\nimport { ${classBase}Service } from './${moduleName}.service';\n\nexport class ${classBase}Module {\n  readonly controller = new ${classBase}Controller(new ${classBase}Service(new ${classBase}Repository()));\n}\n`,
     ],

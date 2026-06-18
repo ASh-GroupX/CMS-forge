@@ -3,7 +3,21 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { checkForbiddenImports, checkForbiddenMarkers } from './lint.mjs';
+import {
+  checkAgenticFileSize,
+  checkForbiddenImports,
+  checkForbiddenMarkers,
+  checkModuleManifests,
+} from './lint.mjs';
+
+const manifestBody = [
+  '# Auth Module',
+  '- Public surface: `AuthService`',
+  '- Owns tables: users, sessions',
+  '- May depend on: core/*',
+  '- SRS: ARCH-AUTH-001',
+  '',
+].join('\n');
 
 test('lint rejects frontend imports from api package', () => {
   const root = mkdtempSync(join(tmpdir(), 'cms-auto-lint-'));
@@ -48,4 +62,40 @@ test('lint rejects TODO and FIXME markers in app and package sources', () => {
   assert.deepEqual(checkForbiddenMarkers(root), [
     'packages/contracts/src/index.ts: TODO/FIXME markers are not allowed',
   ]);
+});
+
+test('lint rejects oversized source files', () => {
+  const root = mkdtempSync(join(tmpdir(), 'cms-auto-lint-'));
+  mkdirSync(join(root, 'apps/api/src/modules/auth'), { recursive: true });
+  writeFileSync(
+    join(root, 'apps/api/src/modules/auth/auth.service.ts'),
+    `${Array.from({ length: 301 }, (_, index) => `export const line${index} = ${index};`).join('\n')}\n`,
+  );
+
+  assert.deepEqual(checkAgenticFileSize(root), [
+    'apps/api/src/modules/auth/auth.service.ts: 301 lines exceeds agentic file budget (300)',
+  ]);
+});
+
+test('lint exempts test and dto files from the size budget', () => {
+  const root = mkdtempSync(join(tmpdir(), 'cms-auto-lint-'));
+  mkdirSync(join(root, 'apps/api/src/modules/auth/dto'), { recursive: true });
+  const longBody = `${Array.from({ length: 320 }, (_, index) => `export const line${index} = ${index};`).join('\n')}\n`;
+  writeFileSync(join(root, 'apps/api/src/modules/auth/auth.service.spec.ts'), longBody);
+  writeFileSync(join(root, 'apps/api/src/modules/auth/dto/create-auth.dto.ts'), longBody);
+
+  assert.deepEqual(checkAgenticFileSize(root), []);
+});
+
+test('lint requires a complete MODULE.md manifest in each module', () => {
+  const root = mkdtempSync(join(tmpdir(), 'cms-auto-lint-'));
+  mkdirSync(join(root, 'apps/api/src/modules/auth'), { recursive: true });
+  writeFileSync(join(root, 'apps/api/src/modules/auth/auth.service.ts'), 'export class AuthService {}\n');
+
+  assert.deepEqual(checkModuleManifests(root), [
+    'apps/api/src/modules/auth: missing MODULE.md agent context manifest',
+  ]);
+
+  writeFileSync(join(root, 'apps/api/src/modules/auth/MODULE.md'), manifestBody);
+  assert.deepEqual(checkModuleManifests(root), []);
 });

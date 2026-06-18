@@ -370,3 +370,129 @@ Append build and verification evidence here. Do not delete failed evidence.
 - Notes:
   - No application source code was changed.
   - Phase 1 must not start until Phase 0 receives an explicit phase-review decision.
+
+## FORGE-AGENTIC-ARCH-001 - Agentic Codebase Guardrails
+
+- Date: 2026-06-18
+- Risk: Medium
+- Status: Passed
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - METHOD-MODULAR-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+- Evidence:
+  - Added a 240-line source-file budget to `tools/lint.mjs` with explicit canonical exceptions.
+  - Added a focused lint test proving oversized source files fail.
+  - Updated `docs/ARCHITECTURE.md`, `CLAUDE.md`, `AGENTS.md`, `.forge/policy.md`, and `.forge/forge.md` with small-task/small-file rules.
+  - Converted the oversized Phase 1 auth build into `PLAN-F1-00` so Forge splits it before coding.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm test`
+- Notes:
+  - `packages/database/prisma/schema.prisma` remains a canonical exception. It is large but guarded by schema tests and should be edited by focused model block.
+  - No application feature code was implemented.
+
+## FORGE-AGENTIC-ARCH-002 - Recalibrated File Budget And Module Manifests
+
+- Date: 2026-06-18
+- Risk: Medium
+- Status: Passed
+- Requirement IDs:
+  - METHOD-MODULAR-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+- Evidence:
+  - Recalibrated the agentic file-size guard in `tools/lint.mjs`: budget 240 -> 300, and
+    exempted test files (`*.spec.*`, `*.test.*`) and DTO/type files (`*.dto.ts`). Line
+    count is a crude proxy; a hard 240 risked penalising thorough RBAC test files and
+    seed data, and pushing agents toward fragmenting cohesive units.
+  - Added `checkModuleManifests` to `tools/lint.mjs`: every `apps/api/src/modules/<m>/`
+    directory must contain a `MODULE.md` documenting Public surface, Owns tables, May
+    depend on, and SRS. Fails loud if missing or incomplete. No modules exist yet, so it
+    is inert on current code and activates the moment a module is generated.
+  - Updated `tools/generate-module.mjs` to emit `MODULE.md` as the first file of every
+    generated module, pre-filled with the four required fields and placeholders.
+  - Tests: updated the oversized-file test to 300; added a test proving test/DTO files
+    are exempt; added a test proving a module without/with a complete manifest fails/passes;
+    extended the generator test to assert generated output satisfies `checkModuleManifests`.
+  - Docs: updated `docs/ARCHITECTURE.md` (§3 skeleton + §14 budget/manifest rules),
+    `CLAUDE.md`, and `AGENTS.md` (kept byte-identical below the mirror notice).
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (18/18; was 16)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `corepack pnpm build`
+  - Passed: CLAUDE.md and AGENTS.md identical below the mirror-notice line (`diff`)
+- Notes:
+  - Builder/reviewer split: this refines FORGE-AGENTIC-ARCH-001 (GPT) rather than
+    reverting it. The task-split gate and `PLAN-F1-00` are kept untouched; only the
+    line-budget instrument was recalibrated and the manifest convention added.
+  - The manifest is the higher-leverage agentic move: it bounds the context an agent
+    must load to edit one module, which raw file-size limits do not.
+  - No application feature code, routes, migrations, or domain modules were added.
+  - State remains `Ready to Plan` on `PLAN-F1-00`; this change did not alter the queued task.
+  - Follow-up correction: active `.forge/forge.md`, `.forge/policy.md`, and
+    `.forge/next.md` were synced from stale 240-line wording to the implemented
+    300-line budget. Historical evidence entries were left unchanged.
+
+## FORGE-AUTO-PHASE-001 - Auto Phase Run Mode
+
+- Date: 2026-06-18
+- Risk: Medium
+- Status: Passed
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - METHOD-TEST-001
+- Evidence:
+  - Added `AUTO PHASE` to `.forge/forge.md` for explicit user-requested phase autopilot.
+  - Added policy language clarifying that auto phase may continue between successful
+    build tasks but must stop for PLANNER, blockers, verify/review, phase review,
+    failed checks, or scope-budget overflow.
+- Verification:
+  - Passed: `rg -n "AUTO PHASE|auto-run|autopilot|Ready to Plan|Needs Phase Review" .forge/forge.md .forge/policy.md`
+- Notes:
+  - No application source code was changed.
+  - Current state remains `Ready to Plan`; a strong builder should stop until
+    `PLAN-F1-00` is handled by PLANNER.
+
+## FORGE-AUTO-PHASE-002 - Verify Gate And Security Self-Check
+
+- Date: 2026-06-18
+- Risk: Medium
+- Status: Passed
+- Requirement IDs:
+  - METHOD-TEST-001
+  - ARCH-AUTH-001
+  - NFR-SEC-001
+- Evidence:
+  - Refined the AUTO PHASE design (FORGE-AUTO-PHASE-001, GPT) at the user's explicit
+    direction: Phase 1 is entirely High-risk security code, so unbounded autopilot
+    would defer all independent verification to phase-end. User chose "one checkpoint
+    after the foundation."
+  - Added a declarative `Verify Gate: required` marker. A successful gated task sets
+    `.forge/state.md` to `Needs Verify` (instead of `Ready to Build`), which pauses
+    AUTO PHASE for an independent VERIFY (fresh context / different model). The state
+    machine already stops on `Needs Verify`, so this composes without new machinery.
+  - `PLAN` now marks the auth/session/RBAC/audit foundation as a `Verify Gate`.
+    `PLAN-F1-00`'s task instructs the planner to mark `F1-01` as the gate.
+  - `BUILD` now routes a gated task to `Needs Verify`, and requires the `policy.md`
+    security self-check in evidence for every High/Critical task.
+  - `VERIFY` now closes the loop: on `Accept` it writes the next in-phase task and
+    sets `Ready to Build` (autopilot resumes); on `Repair`/`Redo` it sets `Needs
+    Repair` and escalates.
+  - Added a `Security Self-Check` section to `.forge/policy.md` (session-derived RBAC,
+    audit-in-transaction, no secrets logged/returned, portal exposure rules, allowed +
+    denied trust-boundary tests) and core rule 10 binding it.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm test` (18/18)
+  - Passed: `rg -n "Verify Gate|Security Self-Check|Needs Verify" .forge/forge.md .forge/policy.md .forge/next.md`
+- Notes:
+  - Protocol files (`forge.md`, `policy.md`) were edited because the user explicitly
+    requested this autonomy/safety change — within the "unless the user asks to change
+    the protocol" allowance.
+  - Velocity preserved: F1-00A migration and F1-00B Nest+kernel flow automatically;
+    the single independent stop is after F1-01, before F1-02+ build on the auth base.
+  - No application source code was changed. State remains `Ready to Plan` on `PLAN-F1-00`.

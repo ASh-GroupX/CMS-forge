@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { checkModuleManifests } from './lint.mjs';
 import { generateModule, moduleFiles } from './generate-module.mjs';
 
 test('generator creates the canonical module skeleton', () => {
@@ -10,6 +11,7 @@ test('generator creates the canonical module skeleton', () => {
   const files = generateModule('branches', root);
 
   assert.deepEqual(files, [
+    'apps/api/src/modules/branches/MODULE.md',
     'apps/api/src/modules/branches/branches.module.ts',
     'apps/api/src/modules/branches/branches.controller.ts',
     'apps/api/src/modules/branches/branches.service.ts',
@@ -24,6 +26,9 @@ test('generator creates the canonical module skeleton', () => {
   for (const file of files) {
     assert.equal(existsSync(join(root, file)), true);
   }
+
+  // The generated module must satisfy the manifest gate out of the box.
+  assert.deepEqual(checkModuleManifests(root), []);
 });
 
 test('generator refuses invalid names', () => {

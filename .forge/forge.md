@@ -6,6 +6,12 @@ Use this file as the only AI entrypoint:
 Read .forge/forge.md and follow it.
 ```
 
+For explicit phase autopilot:
+
+```text
+Read .forge/forge.md and follow AUTO PHASE for Phase N.
+```
+
 ## 1. Read First
 
 Read these files in order:
@@ -29,6 +35,8 @@ If the task references requirements, also read `docs/CMS_AUTO_SRS.md`.
 - If `state.md` says `Needs Phase Review`, run PHASE REVIEW.
 - If `state.md` says `Blocked` or `Needs Repair`, run BUILD on the repair task.
 - If `next.md` says `Complete`, stop and report the final state.
+- If the user explicitly asks to auto-run/autocomplete a phase, run AUTO PHASE
+  instead of stopping after each successful task.
 
 Before doing work, state the required model tier from `models.md`.
 
@@ -48,8 +56,13 @@ Output:
 - Write one buildable task to `.forge/next.md`.
 - Update `.forge/state.md` to `Ready to Build`.
 - Keep scope small: usually 1 to 5 files plus tests.
+- Keep app/package/tool source files under the 300-line agentic budget unless the
+  file is an explicit canonical exception.
 - Include exact verification commands.
 - Include requirement IDs from the SRS.
+- Mark the security foundation of the phase (the auth/session/RBAC/audit kernel) and
+  any task later tasks build directly on with `Verify Gate: required`. In AUTO PHASE
+  this pauses for an independent VERIFY before dependents are built.
 
 ## BUILD
 
@@ -57,15 +70,22 @@ Use this when `.forge/next.md` contains an implementation task.
 
 Rules:
 - Implement only the declared scope.
+- If the declared task is too large to stay near 1 to 5 files plus tests, stop:
+  rewrite `.forge/next.md` as a planning/splitting task and set
+  `.forge/state.md` to `Ready to Plan`.
 - Do not weaken tests or acceptance criteria.
 - Run every verification command that is available.
 - Use honest labels: `Passed`, `Failed`, `Not Run`, `Assumed`.
 
 If checks pass:
-- Append evidence to `.forge/evidence.md`.
+- Append evidence to `.forge/evidence.md`. For a High or Critical risk task, the
+  evidence must include the security self-check from `policy.md`.
 - Update `.forge/trust.md` with risk and recommendation.
 - Mark the task done in `.forge/backlog.md`.
-- If all tasks in the current backlog phase are done, stop phase advancement:
+- If the task is marked `Verify Gate: required`, set `.forge/state.md` to
+  `Needs Verify` and write the VERIFY task to `.forge/next.md`. Do not advance to
+  the next build task until VERIFY records `Accept`.
+- Else if all tasks in the current backlog phase are done, stop phase advancement:
   write a phase review task to `.forge/next.md` and set `.forge/state.md` to
   `Needs Phase Review`.
 - Otherwise write the next task or set `next.md` to `Needs planning`.
@@ -76,6 +96,35 @@ If checks fail:
 - Set `.forge/state.md` to `Blocked`.
 - Rewrite `.forge/next.md` as the smallest repair task.
 - Escalate model tier.
+
+## AUTO PHASE
+
+Use only when the user explicitly asks to finish a named phase without stopping
+between successful tasks.
+
+Rules:
+- Stay inside the named phase only.
+- Use the required tier for each task; for Phase 1 security work this is usually
+  `BUILDER-STRONG`.
+- Run the full BUILD loop for the current task, including proof commands,
+  evidence, trust notes, backlog updates, and next-task updates.
+- Every High or Critical risk task records the `policy.md` security self-check in
+  evidence before it may count as successful.
+- After a successful task, continue automatically if `.forge/state.md` is
+  `Ready to Build` and `.forge/next.md` is still in the same phase.
+
+Stop immediately when:
+- `.forge/state.md` becomes `Ready to Plan` (needs PLANNER).
+- `.forge/state.md` becomes `Blocked`, `Needs Verify`, `Needs Review`, or
+  `Needs Phase Review`.
+- A completed task was marked `Verify Gate: required`: the BUILD loop sets
+  `Needs Verify`, so autopilot pauses here for an independent VERIFY (fresh context
+  or different model) and resumes only after VERIFY records `Accept`.
+- The next task leaves the named phase.
+- Verification fails or the task would exceed the agentic scope budget.
+
+Never skip verification, evidence, backlog updates, a `Verify Gate`, or the
+phase-end `PHASE-REVIEWER` gate.
 
 ## VERIFY
 
@@ -92,7 +141,12 @@ Output:
 - Code quality: Good, Acceptable, or Poor
 - Recommendation: Accept, Repair, or Redo
 
-Update `.forge/state.md` and `.forge/trust.md`.
+Update `.forge/state.md` and `.forge/trust.md`. Then close the loop:
+- On `Accept`: write the next in-phase task to `.forge/next.md` and set
+  `.forge/state.md` to `Ready to Build` (AUTO PHASE resumes from here).
+- On `Repair` or `Redo`: set `.forge/state.md` to `Needs Repair`, write the
+  smallest repair task to `.forge/next.md`, and escalate tier. Autopilot stays
+  stopped until the repair is built and re-verified.
 
 ## PHASE REVIEW
 

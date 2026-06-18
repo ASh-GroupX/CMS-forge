@@ -1,8 +1,8 @@
 # Current State
 
-Status: Ready to Build
+Status: Ready to Plan
 Phase: Phase 1 - Security Baseline
-Next Task: F1-01 - Staff Auth With Argon2id And HttpOnly Sessions
+Next Task: PLAN-F1-00 - Split Phase 1 Into Agentic Build Tasks
 
 ## Phase 0 — Accepted
 

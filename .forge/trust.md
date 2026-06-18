@@ -155,6 +155,21 @@ Append review decisions here.
   - Phase completion review must use a fresh reviewer context with Opus 4.8 Max or GPT-5.5 Extra High.
   - The current chain is intentionally paused at `PHASE-0-REVIEW` before Phase 1 starts.
 
+## FORGE-AGENTIC-ARCH-001 - Agentic Codebase Guardrails
+
+- Date: 2026-06-18
+- Risk: Medium
+- Recommendation: Accept
+- Notes:
+  - Added a fail-fast lint guard for oversized app/package/tool source files.
+  - Large canonical artifacts remain allowed: Prisma schema, OpenAPI, migrations,
+    generated files, and docs.
+  - Current `schema.prisma` is not automatically bad at 521 lines; for Prisma it is
+    the canonical model. The risk is unmanaged context, so edits must stay focused
+    and schema tests must guard non-negotiables.
+  - Current Phase 1 entry is now a PLANNER task because the accepted F1-01 scope
+    bundled migration, Nest bootstrap, core kernel, and auth into one large diff.
+
 ## PHASE-0-REVIEW - Phase 0 Acceptance Review
 
 - Date: 2026-06-18
@@ -234,3 +249,62 @@ all cited SRS requirement IDs against `docs/CMS_AUTO_SRS.md`.
 Rationale: Phase 0 ("Repository Foundation") delivered every planned task with honest,
 reproduced evidence. The remaining items are correctly-sequenced prerequisites for
 Phase 1, already disclosed in the build logs — not hidden gaps. Accepting.
+
+## FORGE-AGENTIC-ARCH-002 - Recalibrated File Budget And Module Manifests
+
+- Date: 2026-06-18
+- Risk: Medium
+- Recommendation: Accept
+- Notes:
+  - Refines FORGE-AGENTIC-ARCH-001 at the user's direction; does not revert it. The
+    task-split gate and `PLAN-F1-00` stay intact.
+  - The hard 240-line fail was directionally right but a blunt instrument: it would
+    have first bitten thorough RBAC test files and the 208-line seed before ever
+    catching a bloated service, and a hard cap pressures agents to fragment cohesive
+    units. Recalibrated to 300 with test/DTO exemptions.
+  - Added the `MODULE.md` manifest convention + lint gate + generator emission. This is
+    the higher-leverage agentic move — it bounds the context needed to edit one module,
+    which file-size limits alone cannot.
+  - lint, typecheck, test (18/18), openapi:check, build all passed; CLAUDE.md/AGENTS.md
+    verified identical.
+  - Follow-up correction: active Forge wording now matches the implemented 300-line
+    budget; stale 240-line wording in `.forge/forge.md`, `.forge/policy.md`, and
+    `.forge/next.md` was updated.
+  - Remaining risk: the manifest gate is inert until the first module is generated; its
+    real value is proven when F1-01's `auth` module ships with a filled-in manifest.
+
+## FORGE-AUTO-PHASE-001 - Auto Phase Run Mode
+
+- Date: 2026-06-18
+- Risk: Medium
+- Recommendation: Accept
+- Notes:
+  - Adds an explicit autopilot path for a named phase while preserving Forge gates.
+  - Auto phase continues only across successful same-phase BUILD tasks.
+  - It stops for PLANNER, blockers, verify/review, phase review, failed checks, or
+    agentic scope overflow.
+  - Current Phase 1 still starts with `PLAN-F1-00`, so a strong builder should not
+    begin coding until PLANNER splits the work.
+
+## FORGE-AUTO-PHASE-002 - Verify Gate And Security Self-Check
+
+- Date: 2026-06-18
+- Risk: Medium
+- Recommendation: Accept
+- Notes:
+  - Refines FORGE-AUTO-PHASE-001 (GPT); does not revert it. The autopilot, its stop
+    conditions, and the phase-end PHASE-REVIEWER stay intact.
+  - Rationale: every Phase 1 task is High-risk (auth, RBAC, branch scope, audit, error
+    shape). Pure autopilot self-certifies each and defers all independent review to
+    phase-end, which contradicts policy "High/Critical work needs verification before
+    acceptance" and enlarges blast radius if the auth foundation is flawed.
+  - Fix is declarative and minimal: a `Verify Gate: required` marker on the foundation
+    task routes BUILD to `Needs Verify`, which the existing autopilot already halts on.
+    One independent VERIFY after F1-01, then hands-off flow resumes — exactly the
+    velocity/safety balance the user chose.
+  - Added a builder-side `Security Self-Check` on every High/Critical task so the
+    autopilot is only as fast as it is rigorous; it does not replace the gate or the
+    phase reviewer.
+  - Residual risk: the gate's value depends on the VERIFY being a genuinely fresh
+    context/different model, not the same agent rubber-stamping itself. The protocol
+    says so; enforcement is by discipline, not a hard check.

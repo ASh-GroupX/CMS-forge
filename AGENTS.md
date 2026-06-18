@@ -35,6 +35,8 @@ acceptance criteria, tests, security, audit, RBAC, branch scope, or portal priva
    error, audit, RBAC, or transaction mechanism.
 4. Controller = HTTP only. Service = business rules. Repository = this module's
    Prisma only. A module never imports another module's repository or models.
+5. Fill in the generated `MODULE.md` (public service, owned tables, allowed deps,
+   SRS IDs) — it is the module's agent context boundary and `lint` requires it.
 
 ## Verify (run, never assume)
 Run the proof commands named in your task. Typical: `lint`, `typecheck`, `test`,
@@ -46,6 +48,9 @@ Label honestly: `Passed` (ran + passed), `Failed`, `Not Run`, `Assumed`,
 
 ## Definition of Done
 - Inside `next.md` scope (usually 1–5 files + tests).
+- New app/package/tool source files stay under 300 lines; tests and `*.dto.ts` are
+  exempt, as are canonical artifacts (`schema.prisma`, OpenAPI, migrations, generated
+  files, docs). Don't split a cohesive unit just to dodge the budget.
 - Structure from generator/golden module; canonical patterns used.
 - Required tests pass and actually ran; trust boundaries + one allowed/one denied
   RBAC case covered.
@@ -56,3 +61,5 @@ Label honestly: `Passed` (ran + passed), `Failed`, `Not Run`, `Assumed`,
 ## Scope discipline
 Implement only the declared task. Record assumptions and gaps. If checks fail, set
 state `Blocked`, write the smallest repair task, escalate the model tier.
+If the task cannot stay near 1–5 files or would create a huge source file, stop
+and replan instead of building a large diff.

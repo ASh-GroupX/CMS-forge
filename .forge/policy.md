@@ -10,6 +10,12 @@
 6. Keep the chain alive: update `next.md` and `state.md` before finishing.
 7. When a backlog phase is complete, stop and run `PHASE-REVIEWER` before the
    next phase starts.
+8. Keep the codebase agentic: small files, small tasks, enforced boundaries.
+9. Auto phase mode may continue between successful build tasks, but it never
+   skips verification, evidence, planner stops, blockers, or phase review.
+10. High and Critical tasks record a security self-check before acceptance. The
+    security foundation of a phase is a `Verify Gate` that pauses auto phase for an
+    independent VERIFY before dependent tasks are built.
 
 ## CMS-Auto Rules
 
@@ -30,6 +36,11 @@
   inventing a new module shape.
 - Phase completion is not accepted by the builder. It requires a fresh
   `PHASE-REVIEWER` pass using Opus 4.8 Max or GPT-5.5 Extra High.
+- App/package/tool source files must stay under the 300-line agentic budget
+  unless they are explicit canonical exceptions: tests, DTOs, Prisma schema,
+  OpenAPI, migrations, generated files, or docs.
+- If a task cannot stay near 1 to 5 files plus tests, stop and replan instead of
+  building a large diff.
 
 ## Verification Labels
 
@@ -47,6 +58,22 @@
 - Critical: portal privacy leak, data loss, audit bypass, deployment blocker
 
 High and critical work needs verification or review before acceptance.
+
+## Security Self-Check
+
+Every High or Critical risk task records these in `.forge/evidence.md` before it
+counts as done, citing where each is enforced or tested:
+
+- Roles and branch scope come from the server session, never client input.
+- Each state change writes status history and an audit entry in the same
+  transaction; side effects enqueue after commit.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned.
+- Customer portal exposure rules hold: no internal comments, audit, DMS codes, or
+  staff PII reach the portal.
+- Trust boundaries are tested: at least one allowed and one denied case.
+
+A self-check is the minimum the builder proves on its own. It does not replace the
+independent VERIFY at a `Verify Gate` or the phase-end `PHASE-REVIEWER`.
 
 ## Testing Rules
 

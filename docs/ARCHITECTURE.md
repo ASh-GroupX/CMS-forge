@@ -71,6 +71,8 @@ set (from `METHOD-MODULAR-001` + the data dictionary): `auth`, `users`,
 
 ```
 apps/api/src/modules/<module>/
+  MODULE.md                   # agent context manifest: public surface, owned tables,
+                              #   allowed deps, SRS IDs — load this before editing
   <module>.module.ts          # Nest module wiring; exports the service only
   <module>.controller.ts      # HTTP only: validate, delegate, OpenAPI decorators
   <module>.service.ts         # business rules; the unit of authority
@@ -82,6 +84,11 @@ apps/api/src/modules/<module>/
   <module>.service.spec.ts    # unit tests (business rules)
   <module>.controller.spec.ts # API/integration tests (auth, validation, persistence)
 ```
+
+`MODULE.md` is the module's agent boundary: a fresh-context agent reads it to know
+the one public service, which tables the module owns, what it may depend on, and the
+SRS IDs it serves — without scanning the whole tree. The generator emits it and
+`lint` fails any module missing it or its required fields.
 
 Layer responsibilities — keep them strict:
 - **Controller**: HTTP shape, DTO validation, OpenAPI docs, calls the service. No
@@ -308,7 +315,31 @@ Consistency is enforced, not hoped for. CI and pre-commit run:
 
 ---
 
-## 14. Definition of Done (per module/task)
+## 14. Agentic codebase rules
+
+Fresh-context agents work best with small, boring files. Keep the code easy to
+scan before making it clever.
+
+- Default source-file budget: 300 lines. `lint` fails oversized app/package/tool
+  source files. Tests (`*.spec.ts`, `*.test.*`) and DTO/type files (`*.dto.ts`) are
+  exempt — padding them out is healthy, not a smell. Line count is a crude proxy;
+  the real target is a logic file that has outgrown a single agent context.
+- Every backend module carries a `MODULE.md` manifest (public surface, owned tables,
+  allowed deps, SRS IDs). The generator emits it; `lint` requires it. It is the unit
+  of agent context — prefer loading one module's manifest over reading the tree.
+- Default task budget: 1 to 5 files plus focused tests. If prerequisites make a
+  task bigger, stop and replan before coding.
+- Split by responsibility, not by abstraction: controller, service, repository,
+  DTO, test. No one-implementation interfaces or speculative factories. Splitting a
+  cohesive unit just to dodge the line budget is itself an anti-pattern.
+- Large canonical artifacts are exceptions, not a style: Prisma schema, OpenAPI,
+  migrations, generated files, and docs may be larger when they are the source of
+  truth.
+- `schema.prisma` is allowed to be large in Prisma 5.22. Edit it by focused model
+  block and protect changes with schema tests. Do not adopt preview multi-file
+  Prisma schemas unless a task explicitly accepts that tooling risk.
+
+## 15. Definition of Done (per module/task)
 
 A task is done when:
 - It stays within the `next.md` scope (usually 1–5 files + tests).
