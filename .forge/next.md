@@ -1,40 +1,48 @@
-# Verify Task: VERIFY-F2-02B - Complaint Transition Persistence Gate
+# Repair Task: REPAIR-F2-02B - Validate Persisted Complaint Status Before Transition Writes
 
-Status: Needs Verify
-Required model tier: independent VERIFY
+Status: Needs Repair
+Required model tier: BUILDER-STRONG
 Risk: High
 Phase: Phase 2 - Complaint Core
 
 ## Why This Exists
 
-`F2-02B` is a Verify Gate. `F2-02C` will build an HTTP transition route directly
-on top of this persistence path, so an independent VERIFY must inspect and rerun
-proof before AUTO PHASE continues.
+`VERIFY-F2-02B` found that `ComplaintsService.applyTransition` validates the
+caller-provided `fromStatus`, but the repository updates the complaint by
+`complaintId` only. A stale or mismatched persisted status could still produce a
+status-history row and WORKFLOW audit entry that do not match the real current
+state.
+
+`F2-02C` will build the HTTP transition route directly on this persistence path,
+so the persisted-state check belongs here before the gate can pass.
 
 ## Scope
 
-Review only. Do not implement new feature behavior unless the review result is
-Repair/Redo and a separate repair task is written.
-
-Inspect:
+Repair only:
 
 - `apps/api/src/modules/complaints/complaints.service.ts`
 - `apps/api/src/modules/complaints/complaints.repository.ts`
-- `apps/api/src/modules/complaints/complaints.module.ts`
-- generated complaints specs touched by the task
 - `apps/api/test/workflow/transition-matrix.test.ts`
-- `tools/api-test.mjs`
-- `.forge/evidence.md` and `.forge/trust.md` entries for F2-02B
+- generated complaint construction specs only if the service constructor or public
+  input shape changes
 
-## Verify Questions
+Do not add HTTP routes, OpenAPI paths, DTO request parsing, UI, jobs,
+notifications, SLA scheduling, portal behavior, comments, attachments, or external
+side effects.
 
-- Did the change stay inside F2-02B scope?
-- Does every valid persisted transition still use the F2-02A validator first?
-- Are complaint status update, status history insert, and WORKFLOW audit write in
-  one transaction?
-- Do invalid transitions and unauthorized roles avoid starting a transaction?
-- Are verification labels honest, including the initial typecheck failure?
-- Is there any route/OpenAPI/UI/job/notification/portal scope leak?
+## Requirements
+
+- `applyTransition` must not persist a transition based only on caller-provided
+  `fromStatus`.
+- Before writing complaint status, status history, or WORKFLOW audit, verify the
+  complaint's persisted current status atomically in the transition path.
+- If persisted status is stale or mismatched for the requested transition, reject
+  with `COMPLAINT_INVALID_TRANSITION` and write no status history or audit entry.
+- Preserve the existing pre-transaction denials for invalid matrix inputs and
+  unauthorized roles where the current input shape allows it.
+- Keep status update, status-history insert, and WORKFLOW audit write in one
+  transaction for successful transitions.
+- Keep the repair inside `F2-02B`; no route or OpenAPI behavior belongs here.
 
 ## Verification Commands
 
@@ -58,11 +66,7 @@ Run and label honestly:
 
 ## Output
 
-Append VERIFY-F2-02B to `.forge/trust.md` with:
+Append `REPAIR-F2-02B` to `.forge/evidence.md` and `.forge/trust.md`.
 
-- Builder honesty: Honest, Inflated, or Fabricated
-- Code quality: Good, Acceptable, or Poor
-- Recommendation: Accept, Repair, or Redo
-
-On Accept, queue `F2-02C - Add Complaint Transition HTTP Route, RBAC/Branch-Scope
-Tests, And OpenAPI` and set `.forge/state.md` to `Ready to Build`.
+If checks pass, keep the Verify Gate active: set `.forge/state.md` to
+`Needs Verify` and write a new `VERIFY-F2-02B-REPAIR` task to `.forge/next.md`.

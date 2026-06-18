@@ -1035,3 +1035,33 @@ tasks (notably the backend-owned complaint state machine).
     typecheck, test 20/20, test:api -- workflow 6/6, and openapi:check.
   - Because this task is a Verify Gate, AUTO PHASE stops at `Needs Verify` before
     `F2-02C` can add the HTTP route on top of this persistence path.
+
+## VERIFY-F2-02B - Complaint Transition Persistence Gate
+
+- Date: 2026-06-18
+- Required model tier: independent VERIFY
+- Builder honesty: Honest
+- Code quality: Acceptable
+- Recommendation: Repair
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (6/6)
+  - Passed: `corepack pnpm openapi:check`
+- Findings:
+  - Repair required: `ComplaintsService.applyTransition` validates the caller-provided
+    `fromStatus`, then `ComplaintsRepository.updateStatus` writes by `complaintId`
+    only. The persisted complaint's current status is never checked atomically before
+    the status/history/audit write path. Because `F2-02C` will build an HTTP route
+    directly on this persistence path, the gate should not accept until stale or
+    mismatched persisted status cannot create an invalid workflow history/audit pair.
+- Scope review:
+  - The task stayed inside service/repository/test wiring. No route, OpenAPI path, UI,
+    job, notification, SLA, portal, attachment, or comment behavior was added.
+  - Every valid transition still uses the F2-02A validator first.
+  - The existing workflow tests prove status update, status history, and WORKFLOW audit
+    use one transaction client, and invalid matrix/unauthorized-role inputs do not
+    start a transaction.
+  - Builder labels were honest, including the initial typecheck failure that was fixed
+    before the builder marked the task pending VERIFY.

@@ -1,8 +1,19 @@
 # Current State
 
-Status: Needs Verify
+Status: Needs Repair
 Phase: Phase 2 - Complaint Core
-Next Task: VERIFY-F2-02B - Complaint Transition Persistence Gate
+Next Task: REPAIR-F2-02B - Validate Persisted Complaint Status Before Transition Writes
+
+## VERIFY-F2-02B Repair Required
+
+Independent VERIFY re-ran all required proof commands successfully: lint,
+typecheck, test 20/20, test:api -- workflow 6/6, and openapi:check.
+
+Decision: Repair. `applyTransition` validates caller-provided `fromStatus`, but
+the persistence write updates by `complaintId` only and never atomically checks
+the complaint's persisted current status before writing status history and
+WORKFLOW audit. Because `F2-02C` builds the HTTP transition route directly on this
+path, repair `F2-02B` before continuing.
 
 ## F2-02B Built - Verify Gate
 
