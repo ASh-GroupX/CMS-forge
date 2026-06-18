@@ -286,3 +286,32 @@ Append build and verification evidence here. Do not delete failed evidence.
 - Notes:
   - Direct `test:visual`, `test:e2e -- accessibility`, and `web:perf` execution remains Not Run for this task; fail-loud behavior is covered by `tools/pending-proof.test.mjs` because no real UI screens exist yet.
   - No business logic, routes, migrations, UI screens, or provider integrations were added.
+
+## F0-07 - Module Generator Template And Golden CRUD Designation
+
+- Date: 2026-06-18
+- Risk: Medium
+- Status: Passed
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - ARCH-STACK-001
+  - METHOD-MODULAR-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+- Evidence:
+  - Added `corepack pnpm generate:module -- <name>` via dependency-free `tools/generate-module.mjs`.
+  - Generator creates the canonical API module skeleton under `apps/api/src/modules/<module>/`: module, controller, service, repository, DTOs, and service/controller specs.
+  - Generator rejects invalid module names and refuses to overwrite existing module directories.
+  - Tested generation in a temp workspace with `corepack pnpm generate:module -- branches --root <temp>`.
+  - Kept `branches` as the future golden CRUD reference already documented in `docs/ARCHITECTURE.md`; no CRUD behavior was implemented.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (12 tests passed; coverage thresholds enforced)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `corepack pnpm build`
+  - Passed: `corepack pnpm generate:module -- branches --root <temp>`
+- Notes:
+  - No real domain module was generated in the repository.
+  - No routes, migrations, RBAC, audit, OpenAPI paths, or business logic were added.
