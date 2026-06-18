@@ -1620,3 +1620,33 @@ Append build and verification evidence here. Do not delete failed evidence.
   - Trust boundaries are tested: Passed; `test:api -- admin` covers one allowed branch
     CSRF case and one denied branch CSRF case with `CSRF_INVALID` 403 plus
     `csrf_rejected` audit.
+
+## PLAN-F2-01 - Plan Complaint Core And Scope The Complaint Schema/Migration
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: PLANNER
+- Requirement IDs:
+  - REQ-COMPLAINT-001
+  - ARCH-WORKFLOW-001
+  - WORKFLOW-MATRIX-001
+  - ARCH-DATA-001
+  - METHOD-AUDIT-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+- Evidence:
+  - Reconciled the already-applied F0-08 complaint schema and migration against the Phase 2 SRS IDs.
+  - Existing schema already covers the core complaint table, unique `referenceNumber`, all required workflow states, branch/category/customer/vehicle relationships, severity/source/type, optimistic `version`, status indexes, comments, attachments, approvals, SLA policies/events, notifications, portal verification/session, compensation, and audit logs.
+  - Existing category hierarchy supports category/subcategory without a separate schema change.
+  - Existing complaint creation requirements that vary by request (`incidentAt`, customer phone/customer number, vehicle VIN only when vehicle-related, field-specific messages) should be enforced in DTO/service behavior, not by a broad schema rewrite.
+  - Found one required schema delta before workflow behavior: `complaint_status_history` has from/to status, actor, reason, timestamp, and correlation ID, but not transition action, actor role, or request source.
+  - Split Phase 2 broad headers into agentic backlog sub-items under `F2-01..F2-04`.
+  - Marked `F2-02B` as `Verify Gate: required` because complaint creation and queues depend on the persisted backend state-machine kernel.
+  - Queued exactly one build task: `F2-01A - Add Complaint Transition History Metadata Schema And Migration`.
+  - Did not change application source code.
+- Verification:
+  - Passed: `rg -n "PLAN-F2-01|F2-01A|F2-02B|Verify Gate: required|Ready to Build|transition provenance|actorRole|requestSource" .forge\backlog.md .forge\next.md .forge\state.md`
+- Notes:
+  - `db:migrate:test` remains a fail-loud placeholder and was not represented as passing.
+  - The shared `@Global()` core module carry-in was not queued; it is optional cleanup and should only happen if it removes more duplication than it adds.

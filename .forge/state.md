@@ -1,8 +1,20 @@
 # Current State
 
-Status: Ready to Plan
+Status: Ready to Build
 Phase: Phase 2 - Complaint Core
-Next Task: PLAN-F2-01 - Plan Complaint Core And Scope The Complaint Schema/Migration
+Next Task: F2-01A - Add Complaint Transition History Metadata Schema And Migration
+
+## Phase 2 - Planning Started (PLAN-F2-01)
+
+PLAN-F2-01 reconciled the already-applied F0-08 complaint schema against
+`REQ-COMPLAINT-001`, `ARCH-WORKFLOW-001`, `WORKFLOW-MATRIX-001`,
+`ARCH-DATA-001`, `METHOD-AUDIT-001`, and `API-STANDARD-001`.
+
+Result: the complaint-core tables already exist, but
+`complaint_status_history` needs transition provenance fields before the backend
+state-machine kernel is built. `F2-01A` is queued as the smallest buildable first
+task. The state-machine persistence task `F2-02B` remains `Verify Gate: required`
+because later complaint creation and queue behavior depend on it.
 
 ## Phase 1 — Accepted (PHASE-1-REVIEW)
 
