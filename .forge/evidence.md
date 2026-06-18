@@ -1650,3 +1650,52 @@ Append build and verification evidence here. Do not delete failed evidence.
 - Notes:
   - `db:migrate:test` remains a fail-loud placeholder and was not represented as passing.
   - The shared `@Global()` core module carry-in was not queued; it is optional cleanup and should only happen if it removes more duplication than it adds.
+
+## F1-06D - Shared Forge Security Baseline Pack
+
+- Date: 2026-06-18
+- Risk: Medium
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - CONTRACT-READINESS-003
+  - NFR-SEC-001
+  - REQ-RBAC-001
+  - RBAC-MATRIX-001
+  - METHOD-AUDIT-001
+  - API-STANDARD-001
+  - PORTAL-SEC-001
+  - METHOD-TEST-001
+- Evidence:
+  - Published a reusable Forge security-baseline pack outside this project at
+    `C:/Users/dryos/.agents/packs/forge-security-baseline`.
+  - Extracted mechanism and proof-test guidance only from accepted Phase 1 patterns:
+    server sessions, password hashing, login rate limiting, CSRF, RBAC/scope guards,
+    audit append-only behavior, OpenAPI/error checks, and portal/privacy boundaries.
+  - Kept project policy SRS-driven. The pack explicitly tells new projects to adapt
+    roles, RBAC matrix entries, audit event/action codes, and privacy allow/deny rules
+    from their own SRS instead of copying CMS-Auto policy.
+  - Included a small pack smoke test at
+    `C:/Users/dryos/.agents/packs/forge-security-baseline/checks/pack-smoke.test.mjs`.
+  - Did not add a shared runtime library, generator, workflow engine, permission DSL,
+    or project-local-only pack copy.
+- Verification:
+  - Passed: `node --test C:/Users/dryos/.agents/packs/forge-security-baseline/checks/pack-smoke.test.mjs` (3/3)
+  - Not Run: full project `lint`, `typecheck`, `test`, `openapi:check`; no application
+    source or project contract files were changed for this out-of-band pack extraction.
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed by
+    pack guidance; it requires new projects to derive role/scope from server sessions
+    and test client-supplied role/scope ignore behavior.
+  - Each state change writes status history and an audit entry in the same transaction;
+    side effects enqueue after commit: Passed by pack guidance for state-changing
+    services; no runtime behavior changed here.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by pack guidance and required tests for auth, CSRF, rate-limit, audit
+    redaction, and portal/privacy boundaries.
+  - Customer portal exposure rules hold: Passed by pack guidance requiring public DTO
+    allow-lists from each project SRS and tests excluding internal comments, audit
+    logs, staff PII, DMS/internal codes, OTPs, tokens, and credentials.
+  - Trust boundaries are tested: Passed by pack guidance; every adopted boundary must
+    have at least one allowed and one denied test.

@@ -4,6 +4,15 @@ Status: Ready to Build
 Phase: Phase 2 - Complaint Core
 Next Task: F2-01A - Add Complaint Transition History Metadata Schema And Migration
 
+## Out-of-Band Shared Pack Extracted (F1-06D)
+
+At user request, extracted the accepted Phase 1 security-baseline mechanism and
+proof-test guidance into a shared local agent pack:
+`C:/Users/dryos/.agents/packs/forge-security-baseline`.
+
+This did not move the Phase 2 cursor. The active next build task remains
+`F2-01A - Add Complaint Transition History Metadata Schema And Migration`.
+
 ## Phase 2 - Planning Started (PLAN-F2-01)
 
 PLAN-F2-01 reconciled the already-applied F0-08 complaint schema against
