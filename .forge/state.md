@@ -2,7 +2,7 @@
 
 Status: Ready to Build
 Phase: Phase 1 - Security Baseline
-Next Task: F1-03C - Audit Append-Only Enforcement Proof
+Next Task: F1-05B - Generate Branches Module Shell And Manifest
 
 ## Phase 1 — Auth Foundation Verified (gate passed)
 
@@ -71,4 +71,8 @@ thresholds), openapi:check, build, prisma validate.
 - REPAIR-F1-03A — audit search restricted to Admin-only; proof commands passed; queued independent repair VERIFY before `F1-03B`.
 - VERIFY-F1-03A-REPAIR — independent gate Accept (Honest/Good); `GET /audit/logs` confirmed Admin-only per RBAC-MATRIX-001 (Branch Manager denied + SECURITY-audited, service fails closed); filtering/clamp/redaction/OpenAPI intact; five proof commands re-run green. Audit search gate cleared.
 - F1-03B — Admin-only audit export added with row cap, redacted JSON attachment, export audit entry, OpenAPI contract, and focused audit tests.
+- F1-03C — DB-level trigger prevents audit log update/delete; `test:api -- audit` applies migrations in Docker and proves insert succeeds while update/delete fail.
+- F1-04 — stable API error envelope now supports optional validation field errors; auth/RBAC errors remain safe and correlation IDs propagate to headers and error bodies.
+- PLAN-F1-05 — split golden CRUD work; first build task is generator alignment before creating the `branches` exemplar.
+- F1-05A - generator now emits NestJS-shaped module skeletons with module/controller/service/repository decorators and manifest-valid `MODULE.md` files.
 - Known limitation: Prisma's Rust engine cannot connect through Docker Desktop's Windows port-forwarding (P1000); run DB ops inside the Docker network. Does not affect application code.

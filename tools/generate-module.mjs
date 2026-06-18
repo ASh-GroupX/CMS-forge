@@ -12,12 +12,8 @@ function pascalCase(value) {
 }
 
 function singular(value) {
-  if (value.endsWith('ches') || value.endsWith('shes')) {
-    return value.slice(0, -2);
-  }
-  if (value.endsWith('ies')) {
-    return `${value.slice(0, -3)}y`;
-  }
+  if (value.endsWith('ches') || value.endsWith('shes')) return value.slice(0, -2);
+  if (value.endsWith('ies')) return `${value.slice(0, -3)}y`;
   return value.endsWith('s') ? value.slice(0, -1) : value;
 }
 
@@ -29,47 +25,39 @@ export function moduleFiles(moduleName) {
   const classBase = pascalCase(moduleName);
   const dtoBase = pascalCase(singular(moduleName));
   const dtoFileBase = singular(moduleName);
+  const propertyBase = moduleName.replaceAll('-', '');
 
   return new Map([
     [
       'MODULE.md',
-      `# ${classBase} Module\n\n> Agent context manifest. Read this before editing the module. It defines the\n> module's boundary so you can work in a fresh context without scanning the tree.\n\n- Public surface: \`${classBase}Service\` — the only export other modules may import.\n- Owns tables: _none yet — list this module's Prisma tables here._\n- May depend on: \`core/*\` (prisma, errors, audit, rbac, correlation) and another\n  module's public service only — never its repository, \`dto/\`, or Prisma models.\n- SRS: _add the requirement IDs this module implements._\n`,
+      `# ${classBase} Module\n\n> Agent context manifest. Read this before editing the module. It defines the\n> module's boundary so you can work in a fresh context without scanning the tree.\n\n- Public surface: \`${classBase}Service\` - the only export other modules may import.\n- Owns tables: \`${moduleName}\` (verify before adding behavior).\n- May depend on: \`core/*\` (prisma, errors, audit, rbac, correlation) and another\n  module's public service only - never its repository, \`dto/\`, or Prisma models.\n- SRS: add the requirement IDs this module implements before building behavior.\n`,
     ],
     [
       `${moduleName}.module.ts`,
-      `import { ${classBase}Controller } from './${moduleName}.controller';\nimport { ${classBase}Repository } from './${moduleName}.repository';\nimport { ${classBase}Service } from './${moduleName}.service';\n\nexport class ${classBase}Module {\n  readonly controller = new ${classBase}Controller(new ${classBase}Service(new ${classBase}Repository()));\n}\n`,
+      `import { Module } from '@nestjs/common';\nimport { ${classBase}Controller } from './${moduleName}.controller.js';\nimport { ${classBase}Repository } from './${moduleName}.repository.js';\nimport { ${classBase}Service } from './${moduleName}.service.js';\n\n@Module({\n  controllers: [${classBase}Controller],\n  providers: [${classBase}Repository, ${classBase}Service],\n  exports: [${classBase}Service],\n})\nexport class ${classBase}Module {}\n`,
     ],
     [
       `${moduleName}.controller.ts`,
-      `import { ${classBase}Service } from './${moduleName}.service';\n\nexport class ${classBase}Controller {\n  constructor(private readonly ${moduleName.replaceAll('-', '')}Service: ${classBase}Service) {}\n}\n`,
+      `import { Controller } from '@nestjs/common';\nimport { ${classBase}Service } from './${moduleName}.service.js';\n\n@Controller('${moduleName}')\nexport class ${classBase}Controller {\n  constructor(private readonly ${propertyBase}Service: ${classBase}Service) {}\n}\n`,
     ],
     [
       `${moduleName}.service.ts`,
-      `import { ${classBase}Repository } from './${moduleName}.repository';\n\nexport class ${classBase}Service {\n  constructor(private readonly ${moduleName.replaceAll('-', '')}Repository: ${classBase}Repository) {}\n}\n`,
+      `import { Injectable } from '@nestjs/common';\nimport { ${classBase}Repository } from './${moduleName}.repository.js';\n\n@Injectable()\nexport class ${classBase}Service {\n  constructor(private readonly ${propertyBase}Repository: ${classBase}Repository) {}\n}\n`,
     ],
     [
       `${moduleName}.repository.ts`,
-      `export class ${classBase}Repository {}\n`,
+      `import { Injectable } from '@nestjs/common';\n\n@Injectable()\nexport class ${classBase}Repository {}\n`,
     ],
-    [
-      `dto/create-${dtoFileBase}.dto.ts`,
-      `export class Create${dtoBase}Dto {}\n`,
-    ],
-    [
-      `dto/update-${dtoFileBase}.dto.ts`,
-      `export class Update${dtoBase}Dto {}\n`,
-    ],
-    [
-      `dto/${dtoFileBase}-response.dto.ts`,
-      `export class ${dtoBase}ResponseDto {}\n`,
-    ],
+    [`dto/create-${dtoFileBase}.dto.ts`, `export class Create${dtoBase}Dto {}\n`],
+    [`dto/update-${dtoFileBase}.dto.ts`, `export class Update${dtoBase}Dto {}\n`],
+    [`dto/${dtoFileBase}-response.dto.ts`, `export class ${dtoBase}ResponseDto {}\n`],
     [
       `${moduleName}.service.spec.ts`,
-      `import assert from 'node:assert/strict';\nimport test from 'node:test';\nimport { ${classBase}Repository } from './${moduleName}.repository';\nimport { ${classBase}Service } from './${moduleName}.service';\n\ntest('${moduleName} service can be constructed', () => {\n  assert.ok(new ${classBase}Service(new ${classBase}Repository()));\n});\n`,
+      `import assert from 'node:assert/strict';\nimport test from 'node:test';\nimport { ${classBase}Repository } from './${moduleName}.repository.js';\nimport { ${classBase}Service } from './${moduleName}.service.js';\n\ntest('${moduleName} service can be constructed', () => {\n  assert.ok(new ${classBase}Service(new ${classBase}Repository()));\n});\n`,
     ],
     [
       `${moduleName}.controller.spec.ts`,
-      `import assert from 'node:assert/strict';\nimport test from 'node:test';\nimport { ${classBase}Controller } from './${moduleName}.controller';\nimport { ${classBase}Repository } from './${moduleName}.repository';\nimport { ${classBase}Service } from './${moduleName}.service';\n\ntest('${moduleName} controller can be constructed', () => {\n  assert.ok(new ${classBase}Controller(new ${classBase}Service(new ${classBase}Repository())));\n});\n`,
+      `import assert from 'node:assert/strict';\nimport test from 'node:test';\nimport { ${classBase}Controller } from './${moduleName}.controller.js';\nimport { ${classBase}Repository } from './${moduleName}.repository.js';\nimport { ${classBase}Service } from './${moduleName}.service.js';\n\ntest('${moduleName} controller can be constructed', () => {\n  assert.ok(new ${classBase}Controller(new ${classBase}Service(new ${classBase}Repository())));\n});\n`,
     ],
   ]);
 }

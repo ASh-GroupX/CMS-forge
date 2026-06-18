@@ -17,7 +17,14 @@ type ErrorBody = {
     code: string;
     message: string;
     correlationId: string;
+    fieldErrors?: FieldError[];
   };
+};
+
+export type FieldError = {
+  field: string;
+  code: string;
+  message: string;
 };
 
 type JsonResponse = {
@@ -33,6 +40,7 @@ export class AppException extends HttpException {
     readonly code: string,
     readonly safeMessage: string,
     status: HttpStatus = HttpStatus.BAD_REQUEST,
+    readonly fieldErrors: FieldError[] = [],
   ) {
     super({ code, message: safeMessage }, status);
   }
@@ -71,12 +79,18 @@ export class AppExceptionFilter implements ExceptionFilter {
     const status = isHttp ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
     const appError = exception instanceof AppException ? exception : undefined;
 
-    response.status(status).json({
+    const body: ErrorBody = {
       error: {
         code: appError?.code ?? 'INTERNAL_ERROR',
         message: appError?.safeMessage ?? 'Request failed',
         correlationId: request.correlationId ?? `req_${randomUUID()}`,
       },
-    });
+    };
+
+    if (appError?.fieldErrors.length) {
+      body.error.fieldErrors = appError.fieldErrors;
+    }
+
+    response.status(status).json(body);
   }
 }

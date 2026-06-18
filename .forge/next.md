@@ -1,4 +1,4 @@
-# Next Task: F1-03C - Audit Append-Only Enforcement Proof
+# Next Task: F1-05B - Generate Branches Module Shell And Manifest
 
 Status: Ready to Build
 Required model tier: BUILDER-STRONG
@@ -7,56 +7,53 @@ Phase: Phase 1 - Security Baseline
 
 ## Why This Exists
 
-Audit search and export now use application-level append-only writes and Admin-only
-read/export access. The remaining `F1-03` item is database-level proof that audit rows
-cannot be updated or deleted by ordinary application flows.
+`F1-05A` made the module generator emit a NestJS skeleton. Create the real
+`branches` module from that generator before adding CRUD behavior, so the golden
+reference starts from the canonical shape.
 
 ## Scope
 
-Add the smallest database-backed append-only enforcement proof for `audit_logs`.
-
-- Add a Prisma migration SQL guard that prevents `UPDATE` and `DELETE` on `audit_logs`
-  at the database level. Prefer a tiny Postgres trigger/function that raises an error
-  before update/delete; do not refactor the Prisma schema or audit service.
-- Add one focused proof in the existing audit API test suite or a small script-backed
-  check showing audit insert still works but update/delete is blocked.
-- Keep `AuditService.record` create-only; do not add update/delete APIs.
-- Stay inside 1-5 files plus focused tests.
+- Run the generator for `branches`.
+- Fill the generated `apps/api/src/modules/branches/MODULE.md` with the real
+  public surface, owned `branches` table, allowed dependencies, and SRS IDs.
+- Keep generated controller/service/repository/DTO/spec files behavior-free.
+- Do not import `BranchesModule` into the app yet unless the generated skeleton
+  requires it to typecheck.
 
 ## Out Of Scope
 
-- New audit search/export features.
-- Retention deletion/anonymization policy.
-- Management Read-Only configurable audit access.
-- General database hardening outside `audit_logs`.
+- Branch CRUD endpoints.
+- RBAC guards or audit writes for branches.
+- OpenAPI route changes.
+- Database schema or migration changes.
+- Editing existing `auth` or `audit` modules.
 
 ## Requirement IDs
 
-- REQ-AUDIT-001
-- ARCH-DATA-001
-- METHOD-AUDIT-001
+- METHOD-MODULAR-001
+- NFR-MAINT-001
 - METHOD-TEST-001
+- REQ-ADMIN-001
 
 ## Acceptance Criteria
 
-- Audit rows remain insertable through the existing append-only audit writer.
-- Database-level `UPDATE` and `DELETE` against `audit_logs` are rejected.
-- The proof command actually exercises the guard, not only static SQL inspection.
-- Required checks pass and source files remain under the 300-line budget.
+- `apps/api/src/modules/branches` exists and was generated from the Nest-ready
+  generator.
+- `MODULE.md` is filled for the branches boundary and passes the manifest lint
+  gate.
+- Generated source remains under the 300-line budget.
+- No runtime API behavior changes.
+- Required checks pass.
 
 ## Verification Commands
 
 - `corepack pnpm lint`
 - `corepack pnpm typecheck`
 - `corepack pnpm test`
-- `corepack pnpm test:api -- audit`
 - `corepack pnpm openapi:check`
-
-If a live database proof is needed, run it inside the Docker network as documented in
-`.forge/state.md`; do not claim it passed unless it actually ran.
 
 ## Evidence To Record
 
-This is a High-risk task: record the `policy.md` Security Self-Check in
-`.forge/evidence.md`, update `.forge/trust.md`, mark `F1-03C` done in
-`.forge/backlog.md`, and update `.forge/next.md` + `.forge/state.md` per BUILD rules.
+Record the `.forge/policy.md` Security Self-Check because this is a High-risk
+Phase 1 foundation task. Keep the umbrella `F1-05` backlog item open until CRUD,
+RBAC, audit, and pattern-freeze evidence are complete.

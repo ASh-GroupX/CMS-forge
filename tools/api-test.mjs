@@ -27,4 +27,15 @@ const result = spawnSync(process.execPath, ['--import', 'tsx', '--test', ...file
   stdio: 'inherit',
 });
 
-process.exit(result.status ?? 1);
+if (result.status !== 0) {
+  process.exit(result.status ?? 1);
+}
+
+if (suite === 'audit') {
+  const proof = spawnSync(process.execPath, ['tools/audit-append-only-proof.mjs'], {
+    stdio: 'inherit',
+  });
+  process.exit(proof.status ?? 1);
+}
+
+process.exit(0);

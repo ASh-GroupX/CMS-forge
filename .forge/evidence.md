@@ -1110,3 +1110,96 @@ Append build and verification evidence here. Do not delete failed evidence.
   - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed; exported rows reuse metadata redaction and export audit metadata records only filters, row count, file type, and limit. Tests assert secret-like metadata is redacted.
   - Customer portal exposure rules hold: Passed by separation; export is a staff-only Admin route and no portal API behavior was added.
   - Trust boundaries are tested: Passed; `test:api -- audit` covers admin export allowed, Branch Manager export denied, direct service non-admin denial, row cap, redaction, response headers, and export audit entry.
+
+## F1-03C - Audit Append-Only Enforcement Proof
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-AUDIT-001
+  - ARCH-DATA-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added Prisma migration `20260618193000_audit_logs_append_only` with a Postgres trigger that raises before `UPDATE` or `DELETE` on `audit_logs`.
+  - Added `tools/audit-append-only-proof.mjs`, which starts Postgres, applies migrations inside the Docker network, inserts a test audit row, and verifies both update and delete are blocked by the trigger.
+  - Wired the live proof into `corepack pnpm test:api -- audit` after the focused TypeScript audit tests pass.
+  - Kept `AuditService.record` create-only and added no update/delete APIs.
+  - Kept source files under the 300-line budget: `tools/audit-append-only-proof.mjs` is 83 lines and `tools/api-test.mjs` is 33 lines.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (19/19; coverage 89.75% lines / 80.85% branch / 92.65% funcs)
+  - Passed: `corepack pnpm test:api -- audit` (8/8 plus live Docker proof; migration applied, insert succeeded, update/delete blocked)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not applicable to this DB-level append-only proof; no route authorization behavior changed.
+  - Each state change writes status history and an audit entry in the same transaction; side effects enqueue after commit: Not applicable to complaint workflow state changes. This task protects audit rows from mutation after insert.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed; proof inserts only synthetic `append_only_probe` metadata-free audit data and logs no secrets.
+  - Customer portal exposure rules hold: Passed by separation; no portal API or response behavior changed.
+  - Trust boundaries are tested: Passed for this task boundary; the live proof exercises allowed insert and denied update/delete against the database.
+
+## F1-04 - Stable API Error Shape And Correlation IDs
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - API-STANDARD-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+  - NFR-SEC-002
+- Evidence:
+  - Extended `AppException` and `AppExceptionFilter` to render the stable envelope `{ error: { code, message, correlationId, fieldErrors? } }`.
+  - Added exported `FieldError` shape `{ field, code, message }`; the filter only includes `fieldErrors` when present.
+  - Preserved request correlation IDs in error bodies and response headers through the existing correlation middleware.
+  - Updated `LoginRequestDto` validation to emit safe field-level `VALIDATION_FAILED` details for malformed body, identifier, and password inputs.
+  - Added focused auth API tests proving validation field-error shape, auth/RBAC safe error envelopes, server-derived RBAC denial, and correlation header propagation.
+  - No OpenAPI schema change was needed; the canonical contract already contained `ErrorBody.fieldErrors` and `FieldError`.
+  - Kept source files under the 300-line budget: `http-kernel.ts` is 96 lines and `login-request.dto.ts` is 44 lines.
+- Verification:
+  - Passed: `corepack pnpm lint` (run before and after edits)
+  - Failed then passed: `corepack pnpm typecheck` initially failed on DTO property narrowing; after assigning narrowed local strings, it passed.
+  - Passed: `corepack pnpm test` (19/19; coverage 89.75% lines / 80.85% branch / 92.65% funcs)
+  - Passed: `corepack pnpm test:api -- auth` (21/21)
+  - Passed: `corepack pnpm test:api -- audit` (8/8 plus live Docker append-only proof; insert succeeded, update/delete blocked)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed; existing guard behavior unchanged and auth tests still cover server-derived principal allow plus client-header spoof denial.
+  - Each state change writes status history and an audit entry in the same transaction; side effects enqueue after commit: Not applicable to this error-envelope task; no complaint workflow state change or side effect was added.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed; validation messages only identify request fields and generic reasons, and auth errors remain generic.
+  - Customer portal exposure rules hold: Passed by separation; no portal route or portal-visible data was changed.
+  - Trust boundaries are tested: Passed; tests cover validation denial, auth/RBAC error envelopes, RBAC denied spoofed client role, branch-scope denial, and audit Admin allow/non-admin deny in the required audit suite.
+
+## F1-05A - Nest-Ready Module Generator
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - METHOD-MODULAR-001
+  - NFR-MAINT-001
+  - METHOD-TEST-001
+  - REQ-ADMIN-001
+- Evidence:
+  - Updated `tools/generate-module.mjs` so generated modules use NestJS `@Module`, `@Controller`, and `@Injectable` skeletons.
+  - Generated service and repository files remain behavior-free; no CRUD, guards, OpenAPI paths, or Prisma queries were added.
+  - Generated `MODULE.md` includes public surface, owned tables, allowed dependencies, and SRS fields and still passes the manifest lint gate.
+  - Updated `tools/generate-module.test.mjs` to prove the branches sample includes Nest decorators, service export wiring, and manifest content.
+  - Kept touched source files under the 300-line budget: `tools/generate-module.mjs` is 94 lines and `tools/generate-module.test.mjs` is 46 lines.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (19/19; coverage 89.96% lines / 80.85% branch / 92.65% funcs)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (only CRLF warnings)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not applicable; this task changes generator output only and adds no runtime route or authorization behavior.
+  - Each state change writes status history and an audit entry in the same transaction; side effects enqueue after commit: Not applicable; no domain state change or side effect was added.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed by scope; generator output contains no logging, response, secret, or provider behavior.
+  - Customer portal exposure rules hold: Passed by separation; no portal module, route, or portal-visible data was changed.
+  - Trust boundaries are tested: Not applicable to behavior; generator tests prove the structural boundary and manifest gate for the future branches module.

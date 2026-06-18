@@ -3,14 +3,14 @@ import { EventEmitter } from 'node:events';
 import test from 'node:test';
 import 'reflect-metadata';
 import { Reflector } from '@nestjs/core';
-import type { ExecutionContext } from '@nestjs/common';
+import type { ArgumentsHost, ExecutionContext } from '@nestjs/common';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
 import { RbacGuard, SessionAuthGuard } from '../../src/core/auth.guard.ts';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
-import { AppException } from '../../src/core/http-kernel.ts';
+import { AppException, AppExceptionFilter, correlationMiddleware } from '../../src/core/http-kernel.ts';
 import { AuthController } from '../../src/modules/auth/auth.controller.ts';
 import type { AuthService, StaffAuthClaims } from '../../src/modules/auth/auth.service.ts';
-import type { IncomingMessage } from 'node:http';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 
 const user: StaffAuthClaims = {
   userId: 'usr_test',
@@ -71,6 +71,35 @@ function context(req: AuthenticatedRequest): ExecutionContext {
     getHandler: () => AuthController.prototype.me,
     getClass: () => AuthController,
   } as ExecutionContext;
+}
+
+type ErrorEnvelope = {
+  error: {
+    code: string;
+    message: string;
+    correlationId: string;
+    fieldErrors?: { field: string; code: string; message: string }[];
+  };
+};
+
+function renderError(exception: unknown, req = guardRequest({ correlationId: 'req_error' })): ErrorEnvelope {
+  let body: ErrorEnvelope | undefined;
+  const host = {
+    switchToHttp: () => ({
+      getRequest: () => req,
+      getResponse: () => ({
+        status: () => ({
+          json: (payload: ErrorEnvelope) => {
+            body = payload;
+          },
+        }),
+      }),
+    }),
+  } as unknown as ArgumentsHost;
+
+  new AppExceptionFilter().catch(exception, host);
+  assert.ok(body);
+  return body;
 }
 
 test('login returns safe staff claims and sets an HttpOnly staff cookie', async () => {
@@ -139,8 +168,65 @@ test('malformed login input returns the standard error envelope code', async () 
     (error: unknown) =>
       error instanceof AppException &&
       error.code === 'VALIDATION_FAILED' &&
-      error.safeMessage === 'Invalid login request',
+      error.safeMessage === 'Invalid login request' &&
+      error.fieldErrors[0]?.field === 'identifier' &&
+      error.fieldErrors[0]?.code === 'REQUIRED',
   );
+});
+
+test('validation errors render safe field errors and the request correlation id', () => {
+  const body = renderError(
+    new AppException('VALIDATION_FAILED', 'Invalid login request', 400, [
+      { field: 'identifier', code: 'REQUIRED', message: 'Identifier is required.' },
+    ]),
+    guardRequest({ correlationId: 'req_validation' }),
+  );
+
+  assert.deepEqual(body, {
+    error: {
+      code: 'VALIDATION_FAILED',
+      message: 'Invalid login request',
+      correlationId: 'req_validation',
+      fieldErrors: [
+        { field: 'identifier', code: 'REQUIRED', message: 'Identifier is required.' },
+      ],
+    },
+  });
+});
+
+test('auth and RBAC errors render stable safe envelopes without field errors', () => {
+  for (const [code, status] of [
+    ['AUTH_INVALID_CREDENTIALS', 401],
+    ['RBAC_FORBIDDEN', 403],
+  ] as const) {
+    const body = renderError(new AppException(code, code === 'RBAC_FORBIDDEN' ? 'Forbidden' : 'Invalid credentials', status));
+
+    assert.equal(body.error.code, code);
+    assert.equal(body.error.correlationId, 'req_error');
+    assert.equal('fieldErrors' in body.error, false);
+  }
+});
+
+test('correlation middleware propagates the incoming correlation id to response headers', () => {
+  const req = Object.assign(new EventEmitter(), {
+    headers: { 'x-correlation-id': 'req_supplied' },
+  }) as IncomingMessage & { correlationId?: string };
+  const headers: Record<string, string | number | readonly string[]> = {};
+  const res = {
+    setHeader(name: string, value: string | number | readonly string[]) {
+      headers[name] = value;
+      return this;
+    },
+  } as ServerResponse;
+  let called = false;
+
+  correlationMiddleware(req, res, () => {
+    called = true;
+  });
+
+  assert.equal(called, true);
+  assert.equal(req.correlationId, 'req_supplied');
+  assert.equal(headers['x-correlation-id'], 'req_supplied');
 });
 
 test('session guard attaches server-derived principal and rejects missing cookies', async () => {

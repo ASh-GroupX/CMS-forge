@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -27,8 +27,20 @@ test('generator creates the canonical module skeleton', () => {
     assert.equal(existsSync(join(root, file)), true);
   }
 
-  // The generated module must satisfy the manifest gate out of the box.
   assert.deepEqual(checkModuleManifests(root), []);
+
+  const moduleText = readFileSync(join(root, 'apps/api/src/modules/branches/branches.module.ts'), 'utf8');
+  const controllerText = readFileSync(join(root, 'apps/api/src/modules/branches/branches.controller.ts'), 'utf8');
+  const serviceText = readFileSync(join(root, 'apps/api/src/modules/branches/branches.service.ts'), 'utf8');
+  const repositoryText = readFileSync(join(root, 'apps/api/src/modules/branches/branches.repository.ts'), 'utf8');
+  const manifestText = readFileSync(join(root, 'apps/api/src/modules/branches/MODULE.md'), 'utf8');
+
+  assert.match(moduleText, /@Module/);
+  assert.match(moduleText, /exports: \[BranchesService\]/);
+  assert.match(controllerText, /@Controller\('branches'\)/);
+  assert.match(serviceText, /@Injectable/);
+  assert.match(repositoryText, /@Injectable/);
+  assert.match(manifestText, /Owns tables: `branches`/);
 });
 
 test('generator refuses invalid names', () => {

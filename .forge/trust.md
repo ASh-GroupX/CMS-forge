@@ -638,3 +638,38 @@ five required proof commands and confirmed file budgets.
   - Required checks passed: lint, typecheck, test 19/19, test:api -- audit 8/8, openapi:check.
   - No configurable Management Read-Only audit permission was added; SRS says audit export is "No by default" for that role.
   - No DB-level append-only enforcement was added; that is queued as `F1-03C`.
+
+## F1-03C - Audit Append-Only Enforcement Proof
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - Added the smallest DB-level guard: one trigger/function migration blocks `UPDATE` and `DELETE` on `audit_logs`.
+  - `test:api -- audit` now includes a live Docker-backed proof that applies migrations, inserts an audit row, and verifies update/delete are rejected.
+  - Required checks passed: lint, typecheck, test 19/19, test:api -- audit 8/8 plus live proof, openapi:check.
+  - No audit service update/delete API or retention deletion policy was added.
+
+## F1-04 - Stable API Error Shape And Correlation IDs
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - The change stayed scoped to the existing HTTP kernel, login DTO validation, and focused auth tests.
+  - Runtime error responses now match the canonical envelope and include optional safe field errors only for validation-style failures.
+  - Auth/RBAC errors remain generic and stable; correlation IDs are propagated to response headers and error bodies.
+  - Required checks passed after a small DTO narrowing repair: lint, typecheck, test 19/19, test:api -- auth 21/21, test:api -- audit 8/8 plus live append-only proof, openapi:check.
+  - F1-05 should be split by a planner before build because the golden CRUD reference module is broader than the normal 1-5 file build budget.
+
+## F1-05A - Nest-Ready Module Generator
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - The task stayed scoped to `tools/generate-module.mjs` and `tools/generate-module.test.mjs`.
+  - The generator now emits NestJS-shaped module/controller/service/repository files and a manifest-valid `MODULE.md`.
+  - Required checks passed: lint, typecheck, test 19/19, openapi:check.
+  - No runtime API behavior, OpenAPI route, RBAC, audit, Prisma, auth, or audit module changes were added.
+  - The `F1-05` umbrella remains open; next step is generating the real `branches` module shell before CRUD behavior.
