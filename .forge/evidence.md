@@ -795,3 +795,35 @@ Append build and verification evidence here. Do not delete failed evidence.
   - Set `.forge/state.md` to `Ready to Plan`, which is an AUTO PHASE stop condition.
 - Verification:
   - Not Run: final auth foundation checks were not started because the task requires replanning.
+
+## PLAN-F1-01E - Split Final Auth Foundation Gate
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: PLANNER
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - ARCH-AUTH-001
+  - REQ-AUTH-001
+  - REQ-AUDIT-001
+  - NFR-SEC-001
+  - METHOD-API-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Replaced the broad `F1-01E` backlog item with three ordered final-auth subtasks:
+    route wiring, auth audit entries, and OpenAPI/final security proof.
+  - Queued only `F1-01E1 - Auth HTTP Login/Logout Routes` in `.forge/next.md`.
+  - Set `.forge/state.md` to `Ready to Build`.
+  - Kept implementation deferred; no application source code was changed.
+  - Preserved the independent `Verify Gate: required` on final auth foundation task
+    `F1-01E3`.
+- Verification:
+  - Passed: `rg -n "PLAN-F1-01E|F1-01E1|F1-01E2|Verify Gate|required|Ready to Build|300" .forge/backlog.md .forge/next.md .forge/state.md`
+- Security Self-Check:
+  - Not Run: planning-only task; no auth, RBAC, branch-scope, state-change, audit,
+    portal, or logging behavior was implemented.
+  - Planned gate: `F1-01E3` remains `Verify Gate: required` before dependent Phase 1
+    work proceeds.

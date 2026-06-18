@@ -1,34 +1,47 @@
-# Next Task: PLAN-F1-01E - Split Final Auth Foundation Gate
+# Next Task: F1-01E1 - Auth HTTP Login/Logout Routes
 
-Status: Ready to Plan
-Required model tier: PLANNER
+Status: Ready to Build
+Required model tier: BUILDER-STRONG
 Risk: High
+Phase: Phase 1 - Security Baseline
 
 ## Why This Exists
 
-`F1-01E - Auth audit entries, OpenAPI contract, and security proof (Verify Gate:
-required)` is still too large for one build task. It bundles HTTP login/logout
-routes, DTOs, auth audit writes, OpenAPI paths/schemas, final security proof, and
-the independent verify gate.
-
-Forge requires small tasks. Replan before coding the final auth foundation.
+The auth service can verify credentials, create staff sessions, validate sessions,
+and revoke sessions, but the API has no staff login/logout HTTP routes yet.
+Add only the route layer and Nest module wiring. Audit and OpenAPI are separate
+follow-up tasks so the final auth gate stays small.
 
 ## Scope
 
-Split `F1-01E` into ordered buildable tasks that each stay near 1 to 5 files
-plus focused tests.
+Implement staff auth HTTP route wiring only:
 
-Minimum split to consider:
+- Add `AuthModule` and `AuthController` for `POST /auth/login` and
+  `POST /auth/logout`.
+- Wire `AuthModule` into the existing Nest app.
+- Use existing `AuthService.verifyCredentials`, `createStaffSession`, and
+  `logoutStaffSession`; do not redesign credential or session behavior.
+- Validate malformed login bodies and return the standard error envelope.
+- Set the staff session `Set-Cookie` header on login and the expired cookie on
+  logout.
+- Return only safe staff claims and session expiry. Never return raw session
+  tokens, password hashes, OTPs, or credentials.
+- Add focused auth API tests for successful login cookie issuance, generic failed
+  login, logout expired cookie, and malformed input.
 
-1. `F1-01E1` - auth controller/module and login/logout HTTP routes only, using
-   existing auth service methods.
-2. `F1-01E2` - auth audit entries for login success, login failure, and logout.
-3. `F1-01E3` - OpenAPI contract wiring and final auth security proof.
+## Out Of Scope
 
-Mark the final task that completes route, audit, OpenAPI, and proof as
-`Verify Gate: required`.
+- Audit entries for login success, login failure, and logout. That is `F1-01E2`.
+- OpenAPI path/schema updates and final auth security proof. That is `F1-01E3`.
+- CSRF, rate limiting, password reset, RBAC guards, UI login page, or external SSO.
 
-Do not implement source code in this planning task.
+## Expected Application Files
+
+- `apps/api/src/main.ts`
+- `apps/api/src/modules/auth/auth.module.ts`
+- `apps/api/src/modules/auth/auth.controller.ts`
+- `apps/api/src/modules/auth/dto/login-request.dto.ts`
+- `apps/api/test/auth/http-routes.test.ts`
 
 ## Requirement IDs
 
@@ -42,27 +55,34 @@ Do not implement source code in this planning task.
 - METHOD-TEST-001
 - API-STANDARD-001
 
-## Expected Files
-
-- `.forge/backlog.md`
-- `.forge/next.md`
-- `.forge/state.md`
-- `.forge/evidence.md`
-
 ## Acceptance Criteria
 
-- The broad `F1-01E` backlog item is replaced with small ordered final-auth
-  subtasks.
-- `.forge/next.md` contains only the first buildable final-auth subtask.
-- `.forge/state.md` is `Ready to Build` after planning.
-- The final auth foundation task remains marked `Verify Gate: required`.
-- The first build task includes exact verification commands and SRS IDs.
+- `POST /auth/login` succeeds for a valid active staff user and sets an HttpOnly
+  staff session cookie.
+- Failed login returns a generic auth error and does not reveal whether identifier
+  or password failed.
+- `POST /auth/logout` invalidates the active session via the existing auth service
+  and returns an expired staff session cookie.
+- Malformed login input returns the standard error envelope.
+- Responses never include password hashes, raw session tokens, OTPs, or secrets.
+- New app/package/tool source files stay under the 300-line agentic budget.
+- The final auth foundation gate remains `F1-01E3`.
 
 ## Verification Commands
 
-- `rg -n "PLAN-F1-01E|F1-01E1|F1-01E2|Verify Gate|required|Ready to Build|300" .forge/backlog.md .forge/next.md .forge/state.md`
+- `corepack pnpm install --lockfile-only` (only if package dependencies change)
+- `corepack pnpm lint`
+- `corepack pnpm typecheck`
+- `corepack pnpm test`
+- `corepack pnpm test:api -- auth`
+- `corepack pnpm openapi:check`
 
 ## Evidence To Record
 
-Append `PLAN-F1-01E - Split Final Auth Foundation Gate` to `.forge/evidence.md`
-with honest labels.
+Append `F1-01E1 - Auth HTTP Login/Logout Routes` to `.forge/evidence.md` with
+honest labels and the High-risk security self-check from `.forge/policy.md`.
+
+## Next Step On Success
+
+Mark `F1-01E1` done in `.forge/backlog.md`, write `F1-01E2 - Auth Audit Entries`
+to `.forge/next.md`, and keep `.forge/state.md` as `Ready to Build`.

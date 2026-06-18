@@ -1,8 +1,8 @@
 # Current State
 
-Status: Ready to Plan
+Status: Ready to Build
 Phase: Phase 1 - Security Baseline
-Next Task: PLAN-F1-01E - Split Final Auth Foundation Gate
+Next Task: F1-01E1 - Auth HTTP Login/Logout Routes
 
 ## Phase 0 — Accepted
 
