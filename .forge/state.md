@@ -1,8 +1,99 @@
 # Current State
 
-Status: Ready to Build
+Status: Needs Phase Review
 Phase: Phase 2 - Complaint Core
-Next Task: F2-02C - Add Complaint Transition HTTP Route, RBAC/Branch-Scope Tests, And OpenAPI
+Next Task: PHASE-2-REVIEW - Complaint Core Acceptance Review
+
+## Phase 2 Build Complete - Needs Phase Review
+
+`F2-04C` added guarded staff HTTP comment routes and OpenAPI contract entries:
+`POST /complaints/:id/comments` and `GET /complaints/:id/comments/public`.
+The controller validates DTOs, derives actor and branch authority from the server
+session/guards, verifies scoped complaint access before delegating, and preserves
+public-comment privacy.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- workflow 25/25,
+and openapi:check.
+
+All Phase 2 backlog tasks are complete. AUTO PHASE stops here for the mandatory
+Phase 2 PHASE-REVIEWER gate.
+
+## F2-04B Built - AUTO PHASE Continuing
+
+`F2-04B` added complaint comment service behavior: blank comment validation, internal
+or public visibility, same-transaction COMMENT audit, and public-only comment reads.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- workflow 22/22,
+and openapi:check.
+
+AUTO PHASE remains in Phase 2 and continues with `F2-04C`.
+
+## F2-04A Built - AUTO PHASE Continuing
+
+`F2-04A` added branch-scoped complaint detail reads through `GET /complaints/:id`.
+Repository/service return explicit detail objects with status-history timeline and
+stable `COMPLAINT_NOT_FOUND` for missing or branch-hidden complaints.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- workflow 20/20,
+and openapi:check.
+
+AUTO PHASE remains in Phase 2 and continues with `F2-04B`.
+
+## F2-03C Built - AUTO PHASE Continuing
+
+`F2-03C` added branch-scoped staff queue reads through `GET /complaints`.
+Repository/service return explicit queue objects, and the controller derives queue
+branch scope from the guarded query target or the server principal for non-admin
+staff.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- workflow 18/18,
+and openapi:check.
+
+AUTO PHASE remains in Phase 2 and continues with `F2-04A`.
+
+## F2-03B Built - AUTO PHASE Continuing
+
+`F2-03B` added `POST /complaints` as a guarded staff complaint creation route. The
+controller validates the request body, requires a guarded `branchId` query target,
+ignores spoofed body branch/actor data, derives actor context from the server
+request principal, and delegates to `ComplaintsService.createInternal`.
+
+Required proof passed after one honest repair loop: `typecheck` initially failed
+because nullable context fields could be `undefined`; the create DTO mapper now
+normalizes them to `null`. Final proof passed: lint, typecheck, test 20/20,
+test:api -- workflow 16/16, and openapi:check.
+
+AUTO PHASE remains in Phase 2 and continues with `F2-03C`.
+
+## F2-03A Built - AUTO PHASE Continuing
+
+`F2-03A` added `ComplaintsService.createInternal` with required-field validation,
+VIN-required-when-vehicle-related validation, count-based deterministic reference
+generation, complaint persistence, initial submitted status history, and COMPLAINT
+audit in one transaction.
+
+Required proof passed after one honest repair loop: `typecheck` initially failed on
+Prisma relation input shape and nullable history actor role; the repository now
+upserts the minimal customer then creates the complaint by `customerId`, and creation
+history allows `actorRole: null`. Final proof passed: lint, typecheck, test 20/20,
+test:api -- workflow 13/13, and openapi:check.
+
+AUTO PHASE remains in Phase 2 and continues with `F2-03B`.
+
+## F2-02C Built - AUTO PHASE Continuing
+
+`F2-02C` added `POST /complaints/:id/transitions` as a guarded staff workflow route.
+The controller validates request shape, derives actor role/ID/audit context from the
+server request principal, forces `STAFF_API` request source, and delegates to
+`ComplaintsService.applyTransition`.
+
+Required proof passed after two honest repair loops: the first workflow run failed
+on a test expectation for existing branch-scope audit metadata, and the first lint
+run failed because `tools/openapi-check.mjs` exceeded the 300-line budget. Both were
+fixed. Final proof passed: lint, typecheck, test 20/20, test:api -- workflow 11/11,
+and openapi:check.
+
+AUTO PHASE remains in Phase 2 and continues with `F2-03A`.
 
 ## VERIFY-F2-02B-REPAIR Accepted
 

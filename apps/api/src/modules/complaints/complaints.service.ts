@@ -1,5 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  CommentVisibility,
+  ComplaintSeverity,
   ComplaintStatus,
   ComplaintTransitionAction,
   ComplaintTransitionRequestSource,
@@ -9,30 +11,29 @@ import { AuditService } from '../../core/audit.service.js';
 import type { AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import { ComplaintsRepository } from './complaints.repository.js';
+import type { ComplaintCommentRecord, ComplaintDetailRecord, ComplaintQueueRecord, ComplaintRecord, CreateComplaintData } from './complaints.repository.js';
+import type { ComplaintDetailDto, ComplaintQueueItemDto } from './dto/complaint-response.dto.js';
 
-export type ValidateComplaintTransitionInput = {
-  fromStatus: ComplaintStatus;
-  action: ComplaintTransitionAction;
-  actorRole: RoleCode;
-};
-
-export type ComplaintTransitionDecision = ValidateComplaintTransitionInput & {
-  toStatus: ComplaintStatus;
-};
-
+export type ValidateComplaintTransitionInput = { fromStatus: ComplaintStatus; action: ComplaintTransitionAction; actorRole: RoleCode };
+export type ComplaintTransitionDecision = ValidateComplaintTransitionInput & { toStatus: ComplaintStatus };
 export type ApplyComplaintTransitionInput = ValidateComplaintTransitionInput & {
-  complaintId: string;
-  actorId?: string | null;
-  requestSource: ComplaintTransitionRequestSource;
-  reason?: string | null;
-  correlationId?: string | null;
-  ipAddress?: string | null;
-  userAgent?: string | null;
+  complaintId: string; actorId?: string | null; requestSource: ComplaintTransitionRequestSource;
+  reason?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null;
+};
+export type ApplyComplaintTransitionResult = ComplaintTransitionDecision & { complaintId: string };
+
+export type CreateInternalComplaintInput = {
+  customerName: string; customerPhone?: string | null; customerNumber?: string | null; categoryId: string;
+  subcategoryId: string; description: string; incidentAt: Date | string; branchId: string; subject: string;
+  severity: ComplaintSeverity; vehicleRelated?: boolean; vehicleVin?: string | null; vehicleId?: string | null;
+  actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null;
 };
 
-export type ApplyComplaintTransitionResult = ComplaintTransitionDecision & {
-  complaintId: string;
-};
+export type ComplaintCreationResult = { id: string; referenceNumber: string; status: ComplaintStatus };
+
+export type ComplaintQueueFilter = { branchId?: string | null };
+export type CreateComplaintCommentInput = { complaintId: string; body: string; visibility: CommentVisibility; actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
+export type ComplaintCommentResult = { id: string; complaintId: string; body: string; visibility: CommentVisibility; authorId: string | null; createdAt: string };
 
 type WorkflowTransition = {
   fromStatus: ComplaintStatus;
@@ -45,109 +46,28 @@ const MANAGER_ROLES = [RoleCode.CR_MANAGER, RoleCode.ADMIN] as const;
 const BRANCH_MANAGER_ROLES = [RoleCode.BRANCH_MANAGER, RoleCode.CR_MANAGER, RoleCode.ADMIN] as const;
 
 export const WORKFLOW_TRANSITIONS: readonly WorkflowTransition[] = [
-  {
-    fromStatus: ComplaintStatus.DRAFT,
-    action: ComplaintTransitionAction.SUBMIT,
-    toStatus: ComplaintStatus.SUBMITTED,
-    allowedRoles: [RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.ADMIN, RoleCode.CUSTOMER_PORTAL],
-  },
-  {
-    fromStatus: ComplaintStatus.SUBMITTED,
-    action: ComplaintTransitionAction.ACCEPT_INTAKE,
-    toStatus: ComplaintStatus.MANAGER_REVIEW,
-    allowedRoles: MANAGER_ROLES,
-  },
-  {
-    fromStatus: ComplaintStatus.SUBMITTED,
-    action: ComplaintTransitionAction.REJECT_AS_INVALID,
-    toStatus: ComplaintStatus.REJECTED,
-    allowedRoles: MANAGER_ROLES,
-  },
-  {
-    fromStatus: ComplaintStatus.MANAGER_REVIEW,
-    action: ComplaintTransitionAction.APPROVE_AND_ROUTE,
-    toStatus: ComplaintStatus.BRANCH_REVIEW,
-    allowedRoles: MANAGER_ROLES,
-  },
-  {
-    fromStatus: ComplaintStatus.MANAGER_REVIEW,
-    action: ComplaintTransitionAction.SEND_BACK,
-    toStatus: ComplaintStatus.DRAFT,
-    allowedRoles: MANAGER_ROLES,
-  },
-  {
-    fromStatus: ComplaintStatus.MANAGER_REVIEW,
-    action: ComplaintTransitionAction.REJECT_AS_INVALID,
-    toStatus: ComplaintStatus.REJECTED,
-    allowedRoles: MANAGER_ROLES,
-  },
-  {
-    fromStatus: ComplaintStatus.BRANCH_REVIEW,
-    action: ComplaintTransitionAction.ASSIGN_INVESTIGATION,
-    toStatus: ComplaintStatus.IN_PROGRESS,
-    allowedRoles: BRANCH_MANAGER_ROLES,
-  },
-  {
-    fromStatus: ComplaintStatus.BRANCH_REVIEW,
-    action: ComplaintTransitionAction.RESOLVE_DIRECTLY,
-    toStatus: ComplaintStatus.RESOLVED,
-    allowedRoles: BRANCH_MANAGER_ROLES,
-  },
-  {
-    fromStatus: ComplaintStatus.BRANCH_REVIEW,
-    action: ComplaintTransitionAction.REJECT_AFTER_REVIEW,
-    toStatus: ComplaintStatus.REJECTED,
-    allowedRoles: BRANCH_MANAGER_ROLES,
-  },
-  {
-    fromStatus: ComplaintStatus.IN_PROGRESS,
-    action: ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE,
-    toStatus: ComplaintStatus.IN_PROGRESS,
-    allowedRoles: BRANCH_MANAGER_ROLES,
-  },
-  {
-    fromStatus: ComplaintStatus.IN_PROGRESS,
-    action: ComplaintTransitionAction.RESOLVE,
-    toStatus: ComplaintStatus.RESOLVED,
-    allowedRoles: BRANCH_MANAGER_ROLES,
-  },
-  {
-    fromStatus: ComplaintStatus.IN_PROGRESS,
-    action: ComplaintTransitionAction.REJECT_AFTER_INVESTIGATION,
-    toStatus: ComplaintStatus.REJECTED,
-    allowedRoles: BRANCH_MANAGER_ROLES,
-  },
-  {
-    fromStatus: ComplaintStatus.RESOLVED,
-    action: ComplaintTransitionAction.CLOSE,
-    toStatus: ComplaintStatus.CLOSED,
-    allowedRoles: BRANCH_MANAGER_ROLES,
-  },
-  {
-    fromStatus: ComplaintStatus.RESOLVED,
-    action: ComplaintTransitionAction.REJECT_RESOLUTION,
-    toStatus: ComplaintStatus.IN_PROGRESS,
-    allowedRoles: BRANCH_MANAGER_ROLES,
-  },
-  {
-    fromStatus: ComplaintStatus.CLOSED,
-    action: ComplaintTransitionAction.REOPEN,
-    toStatus: ComplaintStatus.REOPENED,
-    allowedRoles: MANAGER_ROLES,
-  },
-  {
-    fromStatus: ComplaintStatus.REJECTED,
-    action: ComplaintTransitionAction.REOPEN,
-    toStatus: ComplaintStatus.REOPENED,
-    allowedRoles: MANAGER_ROLES,
-  },
-  {
-    fromStatus: ComplaintStatus.REOPENED,
-    action: ComplaintTransitionAction.ROUTE_AGAIN,
-    toStatus: ComplaintStatus.MANAGER_REVIEW,
-    allowedRoles: MANAGER_ROLES,
-  },
+  transition(ComplaintStatus.DRAFT, ComplaintTransitionAction.SUBMIT, ComplaintStatus.SUBMITTED, [RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.ADMIN, RoleCode.CUSTOMER_PORTAL]),
+  transition(ComplaintStatus.SUBMITTED, ComplaintTransitionAction.ACCEPT_INTAKE, ComplaintStatus.MANAGER_REVIEW, MANAGER_ROLES),
+  transition(ComplaintStatus.SUBMITTED, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintStatus.REJECTED, MANAGER_ROLES),
+  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintStatus.BRANCH_REVIEW, MANAGER_ROLES),
+  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.SEND_BACK, ComplaintStatus.DRAFT, MANAGER_ROLES),
+  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintStatus.REJECTED, MANAGER_ROLES),
+  transition(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.ASSIGN_INVESTIGATION, ComplaintStatus.IN_PROGRESS, BRANCH_MANAGER_ROLES),
+  transition(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.RESOLVE_DIRECTLY, ComplaintStatus.RESOLVED, BRANCH_MANAGER_ROLES),
+  transition(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.REJECT_AFTER_REVIEW, ComplaintStatus.REJECTED, BRANCH_MANAGER_ROLES),
+  transition(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE, ComplaintStatus.IN_PROGRESS, BRANCH_MANAGER_ROLES),
+  transition(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.RESOLVE, ComplaintStatus.RESOLVED, BRANCH_MANAGER_ROLES),
+  transition(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.REJECT_AFTER_INVESTIGATION, ComplaintStatus.REJECTED, BRANCH_MANAGER_ROLES),
+  transition(ComplaintStatus.RESOLVED, ComplaintTransitionAction.CLOSE, ComplaintStatus.CLOSED, BRANCH_MANAGER_ROLES),
+  transition(ComplaintStatus.RESOLVED, ComplaintTransitionAction.REJECT_RESOLUTION, ComplaintStatus.IN_PROGRESS, BRANCH_MANAGER_ROLES),
+  transition(ComplaintStatus.CLOSED, ComplaintTransitionAction.REOPEN, ComplaintStatus.REOPENED, MANAGER_ROLES),
+  transition(ComplaintStatus.REJECTED, ComplaintTransitionAction.REOPEN, ComplaintStatus.REOPENED, MANAGER_ROLES),
+  transition(ComplaintStatus.REOPENED, ComplaintTransitionAction.ROUTE_AGAIN, ComplaintStatus.MANAGER_REVIEW, MANAGER_ROLES),
 ];
+
+function transition(fromStatus: ComplaintStatus, action: ComplaintTransitionAction, toStatus: ComplaintStatus, allowedRoles: readonly RoleCode[]): WorkflowTransition {
+  return { fromStatus, action, toStatus, allowedRoles };
+}
 
 @Injectable()
 export class ComplaintsService {
@@ -155,6 +75,57 @@ export class ComplaintsService {
     private readonly complaintsRepository: ComplaintsRepository,
     private readonly auditService: AuditService,
   ) {}
+
+  async createInternal(input: CreateInternalComplaintInput): Promise<ComplaintCreationResult> {
+    const data = createComplaintData(input);
+
+    return this.complaintsRepository.transaction(async (client) => {
+      const referenceNumber = await this.complaintsRepository.nextReferenceNumber(client);
+      const complaint = await this.complaintsRepository.create({ ...data, referenceNumber }, client);
+      await this.complaintsRepository.createStatusHistory({
+        complaintId: complaint.id,
+        fromStatus: null,
+        toStatus: complaint.status,
+        action: ComplaintTransitionAction.SUBMIT,
+        actorId: input.actorId ?? null,
+        actorRole: null,
+        requestSource: ComplaintTransitionRequestSource.STAFF_API,
+        reason: null,
+        correlationId: input.correlationId ?? null,
+      }, client);
+      await this.auditService.record(complaintCreatedAudit(input, complaint), client);
+      return {
+        id: complaint.id,
+        referenceNumber: complaint.referenceNumber,
+        status: complaint.status,
+      };
+    });
+  }
+
+  async listQueue(filter: ComplaintQueueFilter = {}): Promise<ComplaintQueueItemDto[]> {
+    return (await this.complaintsRepository.listQueue(filter)).map(queueItem);
+  }
+
+  async getDetail(id: string, filter: ComplaintQueueFilter = {}): Promise<ComplaintDetailDto> {
+    const complaint = await this.complaintsRepository.findDetail(id, filter);
+    if (!complaint) {
+      throw new AppException('COMPLAINT_NOT_FOUND', 'Complaint not found', HttpStatus.NOT_FOUND);
+    }
+    return detailItem(complaint);
+  }
+
+  async createComment(input: CreateComplaintCommentInput): Promise<ComplaintCommentResult> {
+    const body = nonEmpty(input.body, 'body');
+    return this.complaintsRepository.transaction(async (client) => {
+      const comment = await this.complaintsRepository.createComment({ complaintId: input.complaintId, authorId: input.actorId ?? null, body, visibility: input.visibility }, client);
+      await this.auditService.record(commentAudit(input, comment), client);
+      return commentItem(comment);
+    });
+  }
+
+  async listPublicComments(complaintId: string): Promise<ComplaintCommentResult[]> {
+    return (await this.complaintsRepository.listPublicComments(complaintId)).map(commentItem);
+  }
 
   validateTransition(input: ValidateComplaintTransitionInput): ComplaintTransitionDecision {
     const transition = WORKFLOW_TRANSITIONS.find(
@@ -211,12 +182,105 @@ export class ComplaintsService {
   }
 }
 
+function createComplaintData(input: CreateInternalComplaintInput): Omit<CreateComplaintData, 'referenceNumber'> {
+  const errors = [
+    ...requiredTextError(input.customerName, 'customerName'),
+    ...contactErrors(input),
+    ...requiredTextError(input.categoryId, 'categoryId'),
+    ...requiredTextError(input.subcategoryId, 'subcategoryId'),
+    ...requiredTextError(input.description, 'description'),
+    ...requiredTextError(input.branchId, 'branchId'),
+    ...requiredTextError(input.subject, 'subject'),
+    ...requiredEnumError(input.severity, ComplaintSeverity, 'severity'),
+    ...incidentAtErrors(input.incidentAt),
+    ...(input.vehicleRelated ? requiredTextError(input.vehicleVin, 'vehicleVin') : []),
+  ];
+
+  if (errors.length) {
+    throw new AppException('VALIDATION_FAILED', 'Invalid complaint request', HttpStatus.BAD_REQUEST, errors);
+  }
+
+  return {
+    status: ComplaintStatus.SUBMITTED, subject: input.subject.trim(), severity: input.severity,
+    branchId: input.branchId.trim(), categoryId: input.subcategoryId.trim(), customerName: input.customerName.trim(),
+    customerPhone: optionalText(input.customerPhone), customerNumber: optionalText(input.customerNumber),
+    vehicleId: optionalText(input.vehicleId), createdById: input.actorId ?? null,
+    descriptionEn: input.description.trim(), incidentAt: new Date(input.incidentAt),
+  };
+}
+
+function complaintCreatedAudit(input: CreateInternalComplaintInput, complaint: ComplaintRecord): AuditRecordInput {
+  return {
+    eventType: 'COMPLAINT', action: 'complaint_created', actorId: input.actorId ?? null,
+    branchId: complaint.branchId, targetType: 'complaint', targetId: complaint.id,
+    correlationId: input.correlationId ?? null,
+    ipAddress: input.ipAddress ?? null,
+    userAgent: input.userAgent ?? null,
+    metadata: { referenceNumber: complaint.referenceNumber, status: complaint.status, severity: complaint.severity },
+  };
+}
+
+function queueItem(complaint: ComplaintQueueRecord): ComplaintQueueItemDto {
+  return {
+    id: complaint.id, referenceNumber: complaint.referenceNumber, status: complaint.status,
+    severity: complaint.severity, subject: complaint.subject, branchId: complaint.branchId, ownerId: complaint.ownerId,
+    createdAt: complaint.createdAt.toISOString(),
+    updatedAt: complaint.updatedAt.toISOString(),
+  };
+}
+
+function detailItem(complaint: ComplaintDetailRecord): ComplaintDetailDto {
+  return { ...queueItem(complaint), description: complaint.descriptionEn, incidentAt: complaint.incidentAt?.toISOString() ?? null, statusHistory: complaint.statusHistory.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })) };
+}
+
+function commentItem(comment: ComplaintCommentRecord): ComplaintCommentResult {
+  return { ...comment, createdAt: comment.createdAt.toISOString() };
+}
+
+function commentAudit(input: CreateComplaintCommentInput, comment: ComplaintCommentRecord): AuditRecordInput {
+  return {
+    eventType: 'COMMENT', action: input.visibility === CommentVisibility.PUBLIC ? 'public_comment_created' : 'internal_comment_created',
+    actorId: input.actorId ?? null, branchId: null, targetType: 'complaint_comment', targetId: comment.id,
+    correlationId: input.correlationId ?? null, ipAddress: input.ipAddress ?? null, userAgent: input.userAgent ?? null,
+    metadata: { complaintId: input.complaintId, visibility: input.visibility },
+  };
+}
+
+function nonEmpty(value: string, field: string): string {
+  const text = value.trim();
+  if (!text) throw new AppException('VALIDATION_FAILED', 'Invalid complaint comment', HttpStatus.BAD_REQUEST, [{ field, code: 'REQUIRED', message: `${field} is required.` }]);
+  return text;
+}
+
+function requiredTextError(value: unknown, field: string) {
+  return typeof value === 'string' && value.trim()
+    ? []
+    : [{ field, code: 'REQUIRED', message: `${field} is required.` }];
+}
+
+function contactErrors(input: CreateInternalComplaintInput) {
+  return optionalText(input.customerPhone) || optionalText(input.customerNumber)
+    ? []
+    : [{ field: 'customerPhone', code: 'REQUIRED', message: 'customerPhone or customerNumber is required.' }];
+}
+
+function requiredEnumError<T extends Record<string, string>>(value: unknown, options: T, field: string) {
+  return typeof value === 'string' && Object.values(options).includes(value)
+    ? []
+    : [{ field, code: 'REQUIRED', message: `${field} is required.` }];
+}
+
+function incidentAtErrors(value: unknown) {
+  const date = value instanceof Date || typeof value === 'string' ? new Date(value) : null;
+  return date && !Number.isNaN(date.valueOf())
+    ? []
+    : [{ field: 'incidentAt', code: 'REQUIRED', message: 'incidentAt is required.' }];
+}
+
+function optionalText(value: string | null | undefined): string | null { return typeof value === 'string' && value.trim() ? value.trim() : null; }
+
 function invalidTransitionError(): AppException {
-  return new AppException(
-    'COMPLAINT_INVALID_TRANSITION',
-    'The requested action is not allowed for the current complaint state.',
-    HttpStatus.CONFLICT,
-  );
+  return new AppException('COMPLAINT_INVALID_TRANSITION', 'The requested action is not allowed for the current complaint state.', HttpStatus.CONFLICT);
 }
 
 function workflowAuditInput(
@@ -225,21 +289,11 @@ function workflowAuditInput(
   branchId: string,
 ): AuditRecordInput {
   return {
-    eventType: 'WORKFLOW',
-    action: `transition_${input.action.toLowerCase()}`,
-    actorId: input.actorId ?? null,
-    branchId,
-    targetType: 'complaint',
-    targetId: input.complaintId,
+    eventType: 'WORKFLOW', action: `transition_${input.action.toLowerCase()}`, actorId: input.actorId ?? null,
+    branchId, targetType: 'complaint', targetId: input.complaintId,
     correlationId: input.correlationId ?? null,
     ipAddress: input.ipAddress ?? null,
     userAgent: input.userAgent ?? null,
-    metadata: {
-      fromStatus: input.fromStatus,
-      toStatus,
-      action: input.action,
-      actorRole: input.actorRole,
-      requestSource: input.requestSource,
-    },
+    metadata: { fromStatus: input.fromStatus, toStatus, action: input.action, actorRole: input.actorRole, requestSource: input.requestSource },
   };
 }

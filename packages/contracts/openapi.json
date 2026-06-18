@@ -445,6 +445,442 @@
         }
       }
     },
+    "/complaints/{id}/transitions": {
+      "post": {
+        "tags": [
+          "Complaints"
+        ],
+        "operationId": "complaintTransitionCreate",
+        "summary": "Apply a staff complaint workflow transition",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComplaintTransitionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Complaint transition applied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintTransitionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role, branch scope, or CSRF denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Complaint transition not allowed (COMPLAINT_INVALID_TRANSITION)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/complaints/{id}": {
+      "get": {
+        "tags": [
+          "Complaints"
+        ],
+        "operationId": "complaintDetailGet",
+        "summary": "Get staff complaint detail",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complaint detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or branch scope denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Complaint not found (COMPLAINT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/complaints/{id}/comments": {
+      "post": {
+        "tags": [
+          "Complaints"
+        ],
+        "operationId": "complaintCommentCreate",
+        "summary": "Create a staff complaint comment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComplaintCommentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Comment created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintCommentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role, branch scope, or CSRF denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Complaint not found (COMPLAINT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/complaints/{id}/comments/public": {
+      "get": {
+        "tags": [
+          "Complaints"
+        ],
+        "operationId": "complaintPublicCommentList",
+        "summary": "List public complaint comments",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public comments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintPublicCommentsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or branch scope denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Complaint not found (COMPLAINT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/complaints": {
+      "get": {
+        "tags": [
+          "Complaints"
+        ],
+        "operationId": "complaintQueueList",
+        "summary": "List staff complaint queue items",
+        "parameters": [
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complaint queue items",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintQueueResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or branch scope denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Complaints"
+        ],
+        "operationId": "complaintCreate",
+        "summary": "Create a staff complaint",
+        "parameters": [
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComplaintCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Complaint created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintCreateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role, branch scope, or CSRF denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/audit/logs": {
       "get": {
         "tags": [
@@ -1026,6 +1462,595 @@
           "timezone": {
             "type": "string",
             "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintCreateRequest": {
+        "type": "object",
+        "required": [
+          "customerName",
+          "categoryId",
+          "subcategoryId",
+          "description",
+          "incidentAt",
+          "subject",
+          "severity"
+        ],
+        "properties": {
+          "customerName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "customerPhone": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "customerNumber": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "categoryId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "subcategoryId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "incidentAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "CRITICAL",
+              "HIGH",
+              "MEDIUM",
+              "LOW"
+            ]
+          },
+          "vehicleRelated": {
+            "type": "boolean"
+          },
+          "vehicleVin": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "vehicleId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintCreateResponse": {
+        "type": "object",
+        "required": [
+          "complaint"
+        ],
+        "properties": {
+          "complaint": {
+            "type": "object",
+            "required": [
+              "id",
+              "referenceNumber",
+              "status"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "referenceNumber": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "DRAFT",
+                  "SUBMITTED",
+                  "MANAGER_REVIEW",
+                  "BRANCH_REVIEW",
+                  "IN_PROGRESS",
+                  "RESOLVED",
+                  "CLOSED",
+                  "REOPENED",
+                  "REJECTED"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintQueueItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "referenceNumber",
+          "status",
+          "severity",
+          "subject",
+          "branchId",
+          "ownerId",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "referenceNumber": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "MANAGER_REVIEW",
+              "BRANCH_REVIEW",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED",
+              "REOPENED",
+              "REJECTED"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "CRITICAL",
+              "HIGH",
+              "MEDIUM",
+              "LOW"
+            ]
+          },
+          "subject": {
+            "type": "string"
+          },
+          "branchId": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintQueueResponse": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplaintQueueItem"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintStatusTimelineItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "fromStatus",
+          "toStatus",
+          "action",
+          "actorId",
+          "actorRole",
+          "requestSource",
+          "reason",
+          "correlationId",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "fromStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "MANAGER_REVIEW",
+              "BRANCH_REVIEW",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED",
+              "REOPENED",
+              "REJECTED",
+              null
+            ]
+          },
+          "toStatus": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "MANAGER_REVIEW",
+              "BRANCH_REVIEW",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED",
+              "REOPENED",
+              "REJECTED"
+            ]
+          },
+          "action": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "SUBMIT",
+              "ACCEPT_INTAKE",
+              "REJECT_AS_INVALID",
+              "APPROVE_AND_ROUTE",
+              "SEND_BACK",
+              "ASSIGN_INVESTIGATION",
+              "RESOLVE_DIRECTLY",
+              "REJECT_AFTER_REVIEW",
+              "ADD_INVESTIGATION_UPDATE",
+              "RESOLVE",
+              "REJECT_AFTER_INVESTIGATION",
+              "CLOSE",
+              "REJECT_RESOLUTION",
+              "REOPEN",
+              "ROUTE_AGAIN",
+              null
+            ]
+          },
+          "actorId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "actorRole": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "CR_OFFICER",
+              "CR_MANAGER",
+              "BRANCH_MANAGER",
+              "ADMIN",
+              "MGMT_READONLY",
+              "CUSTOMER_PORTAL",
+              null
+            ]
+          },
+          "requestSource": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "correlationId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintDetailResponse": {
+        "type": "object",
+        "required": [
+          "complaint"
+        ],
+        "properties": {
+          "complaint": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ComplaintQueueItem"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "description",
+                  "incidentAt",
+                  "statusHistory"
+                ],
+                "properties": {
+                  "description": {
+                    "type": "string"
+                  },
+                  "incidentAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "statusHistory": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ComplaintStatusTimelineItem"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintCommentRequest": {
+        "type": "object",
+        "required": [
+          "body",
+          "visibility"
+        ],
+        "properties": {
+          "body": {
+            "type": "string",
+            "minLength": 1
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "INTERNAL",
+              "PUBLIC"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintComment": {
+        "type": "object",
+        "required": [
+          "id",
+          "complaintId",
+          "authorId",
+          "body",
+          "visibility",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "complaintId": {
+            "type": "string"
+          },
+          "authorId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "body": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "INTERNAL",
+              "PUBLIC"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintCommentResponse": {
+        "type": "object",
+        "required": [
+          "comment"
+        ],
+        "properties": {
+          "comment": {
+            "$ref": "#/components/schemas/ComplaintComment"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintPublicCommentsResponse": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplaintComment"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintTransitionRequest": {
+        "type": "object",
+        "required": [
+          "fromStatus",
+          "action"
+        ],
+        "properties": {
+          "fromStatus": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "MANAGER_REVIEW",
+              "BRANCH_REVIEW",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED",
+              "REOPENED",
+              "REJECTED"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "SUBMIT",
+              "ACCEPT_INTAKE",
+              "REJECT_AS_INVALID",
+              "APPROVE_AND_ROUTE",
+              "SEND_BACK",
+              "ASSIGN_INVESTIGATION",
+              "RESOLVE_DIRECTLY",
+              "REJECT_AFTER_REVIEW",
+              "ADD_INVESTIGATION_UPDATE",
+              "RESOLVE",
+              "REJECT_AFTER_INVESTIGATION",
+              "CLOSE",
+              "REJECT_RESOLUTION",
+              "REOPEN",
+              "ROUTE_AGAIN"
+            ]
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintTransition": {
+        "type": "object",
+        "required": [
+          "complaintId",
+          "fromStatus",
+          "action",
+          "actorRole",
+          "toStatus"
+        ],
+        "properties": {
+          "complaintId": {
+            "type": "string"
+          },
+          "fromStatus": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "MANAGER_REVIEW",
+              "BRANCH_REVIEW",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED",
+              "REOPENED",
+              "REJECTED"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "SUBMIT",
+              "ACCEPT_INTAKE",
+              "REJECT_AS_INVALID",
+              "APPROVE_AND_ROUTE",
+              "SEND_BACK",
+              "ASSIGN_INVESTIGATION",
+              "RESOLVE_DIRECTLY",
+              "REJECT_AFTER_REVIEW",
+              "ADD_INVESTIGATION_UPDATE",
+              "RESOLVE",
+              "REJECT_AFTER_INVESTIGATION",
+              "CLOSE",
+              "REJECT_RESOLUTION",
+              "REOPEN",
+              "ROUTE_AGAIN"
+            ]
+          },
+          "actorRole": {
+            "type": "string",
+            "enum": [
+              "CR_OFFICER",
+              "CR_MANAGER",
+              "BRANCH_MANAGER",
+              "ADMIN",
+              "MGMT_READONLY",
+              "CUSTOMER_PORTAL"
+            ]
+          },
+          "toStatus": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "MANAGER_REVIEW",
+              "BRANCH_REVIEW",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED",
+              "REOPENED",
+              "REJECTED"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintTransitionResponse": {
+        "type": "object",
+        "required": [
+          "transition"
+        ],
+        "properties": {
+          "transition": {
+            "$ref": "#/components/schemas/ComplaintTransition"
           }
         },
         "additionalProperties": false

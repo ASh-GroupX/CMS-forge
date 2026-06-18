@@ -1954,3 +1954,347 @@ Append build and verification evidence here. Do not delete failed evidence.
   - Trust boundaries are tested: Partial; service tests cover allowed transition,
     invalid transition, unauthorized role denial, and stale persisted-status denial.
     HTTP trust boundary remains for `F2-02C`.
+
+## F2-02C - Add Complaint Transition HTTP Route, RBAC/Branch-Scope Tests, And OpenAPI
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - ARCH-WORKFLOW-001
+  - WORKFLOW-MATRIX-001
+  - METHOD-AUDIT-001
+  - API-STANDARD-001
+  - REQ-COMPLAINT-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+- Evidence:
+  - Added `POST /complaints/:id/transitions` on `ComplaintsController` with
+    `SessionAuthGuard`, `RbacGuard`, `CsrfGuard`, `@Roles(...)`, and
+    `@BranchScoped()`.
+  - Added `complaint-transition.dto.ts` parsing for `fromStatus`, `action`, and
+    optional `reason`; client-supplied actor/role/source fields are ignored.
+  - Controller derives actor ID, actor role, correlation ID, IP, and user agent from
+    the authenticated server request and forces `STAFF_API` request source before
+    delegating to `ComplaintsService.applyTransition`.
+  - Wired `AuthModule`, session auth provider, RBAC guard, and CSRF guard into
+    `ComplaintsModule`.
+  - Added workflow API tests for controller delegation, invalid request body,
+    guard/module wiring, allowed scoped staff access, and branch-scope denial audit.
+  - Added the complaint transition route, request schema, response schema, auth/error
+    responses, and canonical OpenAPI drift check coverage.
+  - No complaint creation, staff queues, jobs, notifications, SLA scheduling, portal
+    behavior, comments, attachments, DMS/external calls, UI, or unrelated workflow
+    actions were added.
+- Verification:
+  - Failed then Passed: `corepack pnpm test:api -- workflow`; first run failed because
+    the new test expected the wrong existing `deniedBranchId` audit metadata. Fixed
+    the expectation; final run passed 11/11.
+  - Failed then Passed: `corepack pnpm lint`; first run caught
+    `tools/openapi-check.mjs` over the 300-line budget after adding OpenAPI entries.
+    Compacted unchanged schema literals; final lint passed.
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed;
+    controller uses `request.principal.roleCode`/`userId`, ignores spoofed body
+    actor/role/source fields, and route uses `RbacGuard`/`@BranchScoped()`.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by reuse of
+    `ComplaintsService.applyTransition` from F2-02B; no side effects are enqueued.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope and tests; no credential fields are parsed or returned.
+  - Customer portal exposure rules hold: Passed by scope; the route is staff guarded
+    and no portal DTO/API behavior was added.
+  - Trust boundaries are tested: Passed; workflow tests cover an allowed scoped staff
+    transition route path and a denied branch-scope guard path with SECURITY audit.
+
+## F2-03A - Add Complaint Creation Service Behavior With Validation, Reference Generation, History, And Audit
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-COMPLAINT-001
+  - ARCH-WORKFLOW-001
+  - WORKFLOW-MATRIX-001
+  - METHOD-AUDIT-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+- Evidence:
+  - Added `ComplaintsService.createInternal` for staff complaint creation behavior.
+  - Added validation for customer name, phone or customer number, category,
+    subcategory, description, incident date, branch, subject, severity, and VIN when
+    `vehicleRelated` is true.
+  - Added deterministic local reference generation through
+    `ComplaintsRepository.nextReferenceNumber`.
+  - Added repository creation behavior that upserts a minimal customer required by
+    the current schema, then creates the complaint with initial `SUBMITTED` status.
+  - Added initial status history and `COMPLAINT`/`complaint_created` audit in the
+    same repository transaction.
+  - Added workflow tests proving validation denies before transaction and successful
+    creation writes complaint, status history, and audit with the same transaction
+    client.
+  - No HTTP creation route, OpenAPI creation path, staff queue, UI, job,
+    notification, SLA, portal, comment, attachment, DMS/external call, or
+    compensation behavior was added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Failed then Passed: `corepack pnpm typecheck`; first run caught Prisma mixed
+    relation input and nullable history actor-role type issues. Repaired by upserting
+    customer before complaint create and allowing null history actor role.
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (13/13)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not Run
+    at HTTP boundary; no route exists in F2-03A. The service does not accept actor
+    role and only accepts branch as complaint target data.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed; workflow tests assert
+    complaint create, initial status history, and COMPLAINT audit receive the same
+    transaction client. No side effects are enqueued.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope; no credential fields are parsed, logged, or returned.
+  - Customer portal exposure rules hold: Passed by scope; no portal route or
+    portal-visible DTO was added.
+  - Trust boundaries are tested: Partial; service validation covers denied input and
+    successful create behavior, while HTTP allowed/denied cases are queued for
+    `F2-03B`.
+- Assumptions and gaps:
+  - The current schema requires `Complaint.customerId`, but a customer module/service
+    is not built yet. F2-03A uses a minimal same-transaction customer upsert in the
+    complaints repository as the smallest working path; revisit when a customer
+    module exists.
+
+## F2-03B - Add Complaint Creation HTTP Route, OpenAPI, And Allowed/Denied API Tests
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-COMPLAINT-001
+  - ARCH-WORKFLOW-001
+  - METHOD-AUDIT-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+- Evidence:
+  - Added `POST /complaints` on `ComplaintsController` with `SessionAuthGuard`,
+    `RbacGuard`, `CsrfGuard`, `@Roles(...)`, and `@BranchScoped()`.
+  - Replaced the empty `create-complaint.dto.ts` with request parsing and mapping
+    into `ComplaintsService.createInternal`.
+  - Controller requires `branchId` query as the guarded target branch, ignores spoofed
+    body branch/actor fields, derives actor/audit context from the server request
+    principal, and delegates to the F2-03A service path.
+  - Added workflow API tests for allowed route delegation, stable missing-branch
+    validation, and branch-scope denial audit.
+  - Added the complaint creation route, request schema, response schema, auth/error
+    responses, and canonical OpenAPI drift check coverage.
+  - No staff queue, UI, job, notification, SLA, portal, comment, attachment,
+    DMS/external call, or compensation behavior was added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Failed then Passed: `corepack pnpm typecheck`; first run caught exact optional
+    property typing for nullable audit context fields. Repaired by normalizing
+    undefined context values to null.
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (16/16)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed;
+    the route uses session/RBAC/branch-scope guards, derives actor from
+    `request.principal`, ignores spoofed body branch/actor data, and tests allowed and
+    denied branch-scope behavior.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by delegation to
+    `ComplaintsService.createInternal`; F2-03A tests cover same-transaction
+    complaint/history/audit writes. No side effects are enqueued.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope; no credential fields are parsed or returned.
+  - Customer portal exposure rules hold: Passed by scope; route is staff guarded and
+    no portal DTO/API behavior was added.
+  - Trust boundaries are tested: Passed; workflow tests cover an allowed creation
+    route case and a denied branch-scope case with SECURITY audit.
+
+## F2-03C - Add Branch-Scoped Staff Complaint Queues
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-COMPLAINT-001
+  - ARCH-WORKFLOW-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+- Evidence:
+  - Added repository queue listing with branch filter and explicit selected fields.
+  - Added service mapping to explicit queue response objects with ISO timestamps.
+  - Added `GET /complaints` on `ComplaintsController` with session auth, RBAC, and
+    branch-scope guard metadata.
+  - Controller derives branch scope from guarded `branchId` query or server principal
+    for non-admin staff; Admin may omit branch or request a specific branch.
+  - Added workflow tests for branch-scoped queue service mapping and route branch
+    derivation.
+  - Added queue route and response schemas to canonical OpenAPI.
+  - No UI, job, notification, SLA, portal, comment, attachment, DMS/external call, or
+    compensation behavior was added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (18/18)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed;
+    the route uses session/RBAC/branch-scope guards and derives default non-admin
+    branch from `request.principal.branchId`.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Not applicable; queue read does
+    not change state.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by explicit queue DTO fields.
+  - Customer portal exposure rules hold: Passed by scope; queue route is staff
+    guarded and returns no portal data, audit logs, DMS codes, or staff PII.
+  - Trust boundaries are tested: Passed; prior creation route tests cover branch-scope
+    denial and queue tests cover branch-scope derivation.
+
+## F2-04A - Add Complaint Detail Read Model With Status-History Timeline
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-COMPLAINT-001
+  - ARCH-WORKFLOW-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+- Evidence:
+  - Added repository detail lookup filtered by complaint ID and optional branch.
+  - Added explicit detail DTO mapping with complaint core fields, description,
+    incident date, and status-history timeline.
+  - Added stable `COMPLAINT_NOT_FOUND` for missing or branch-hidden complaints.
+  - Added `GET /complaints/:id` with session auth, RBAC, and branch-scope guard
+    metadata.
+  - Added workflow tests for detail timeline shape, scoped not-found behavior, and
+    route branch derivation.
+  - Added detail route and response schemas to canonical OpenAPI.
+  - No comments, attachments, UI, job, notification, SLA, portal, DMS/external call,
+    or compensation behavior was added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (20/20)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed;
+    route uses session/RBAC/branch-scope guards and derives default non-admin branch
+    from `request.principal.branchId`.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Not applicable; detail read does
+    not change state.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by explicit detail DTO fields.
+  - Customer portal exposure rules hold: Passed by scope; staff detail route returns
+    no audit logs, portal data, DMS codes, or unrelated complaints.
+  - Trust boundaries are tested: Passed; workflow tests cover allowed detail lookup
+    and scoped not-found behavior.
+
+## F2-04B - Add Internal/Public Comment Service Behavior With Privacy And Audit Tests
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-COMPLAINT-001
+  - METHOD-AUDIT-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+- Evidence:
+  - Added repository comment create behavior and public-only comment listing.
+  - Added service behavior for blank-body validation, internal/public comment
+    creation, same-transaction COMMENT audit, and public-only comment reads.
+  - Added workflow tests proving blank comments reject, comment creation audits in the
+    same transaction, and public reads exclude internal comments.
+  - No HTTP comment route, OpenAPI comment path, UI, job, notification, SLA, portal,
+    attachment, DMS/external call, or compensation behavior was added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (22/22)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not Run
+    at HTTP boundary; no route exists in F2-04B. Service accepts actor ID but no
+    client role authority.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed for comment state change;
+    tests assert comment create and COMMENT audit use the same transaction client. No
+    side effects are enqueued.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope; no credential fields are parsed or returned.
+  - Customer portal exposure rules hold: Passed; public comment read behavior returns
+    only `PUBLIC` comments and excludes internal comments.
+  - Trust boundaries are tested: Partial; service validation/privacy are tested, while
+    HTTP allowed/denied cases are queued for `F2-04C`.
+
+## F2-04C - Add Complaint Detail/Comment HTTP Routes And OpenAPI
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-COMPLAINT-001
+  - METHOD-AUDIT-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+- Evidence:
+  - Added guarded staff comment routes to `ComplaintsController`:
+    `POST /complaints/:id/comments` and `GET /complaints/:id/comments/public`.
+  - Added complaint comment DTO parsing for body and `INTERNAL`/`PUBLIC`
+    visibility, with actor/audit context derived from the server request principal.
+  - Controller verifies scoped complaint access through the existing detail path
+    before creating or reading comments, then delegates to F2-04B service behavior.
+  - Public-comment reads continue to return only comments with `PUBLIC` visibility.
+  - Added workflow API tests for allowed comment route delegation, invalid comment
+    body denial before service write, and public comment route scope/privacy behavior.
+  - Added OpenAPI paths, request/response schemas, auth/error responses, and
+    canonical drift-check coverage for both comment routes.
+  - No UI, jobs, notifications, SLA scheduling, customer portal behavior,
+    attachments, DMS/external calls, or compensation behavior was added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (25/25)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed;
+    routes use session/RBAC/branch-scope guard metadata, derive actor from
+    `request.principal`, and verify scoped complaint access before delegation.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed for comment creation by
+    reuse of F2-04B `createComment`, whose tests prove comment create and COMMENT
+    audit share one transaction. No side effects are enqueued.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope; no credential fields are parsed or returned.
+  - Customer portal exposure rules hold: Passed; public-comment reads are filtered to
+    public comments only and do not expose internal comments, audit logs, DMS codes,
+    staff PII, or unrelated complaints.
+  - Trust boundaries are tested: Passed; workflow tests cover allowed comment route
+    behavior, scoped access verification, invalid-body denial, and public-read privacy.

@@ -1,69 +1,62 @@
-# Build Task: F2-02C - Add Complaint Transition HTTP Route, RBAC/Branch-Scope Tests, And OpenAPI
+# Phase Review Task: PHASE-2-REVIEW - Complaint Core Acceptance Review
 
-Status: Ready to Build
-Required model tier: BUILDER-STRONG
+Status: Needs Phase Review
+Required model tier: PHASE-REVIEWER
 Risk: High
 Phase: Phase 2 - Complaint Core
 
 ## Why This Exists
 
-`F2-02B` and `REPAIR-F2-02B` established the backend-owned complaint transition
-service path and cleared the independent verify gate. The next smallest task is to
-expose that path through an authenticated API route with server-session-derived
-role and branch-scope enforcement.
+All Phase 2 backlog tasks are complete. A fresh PHASE-REVIEWER must decide whether
+Complaint Core is accepted before Forge may plan or build Phase 3.
 
-## Scope
+## Review Scope
 
-Implement only:
+Review Phase 2 only:
 
-- `apps/api/src/modules/complaints/complaints.controller.ts`
-- complaint transition DTO/response files only if needed
-- `apps/api/src/modules/complaints/complaints.module.ts` only for required guard/provider wiring
-- focused API tests for complaint transition HTTP behavior
-- OpenAPI contract entries for the new route
+- F2-01A through F2-04C source, tests, OpenAPI, migrations, and Forge records
+- `.forge/backlog.md`
+- `.forge/evidence.md`
+- `.forge/trust.md`
+- `.forge/state.md`
+- `.forge/next.md`
+- `AGENTS.md`
+- `docs/ARCHITECTURE.md`
+- `docs/CMS_AUTO_SRS.md` requirement IDs cited by Phase 2 evidence
 
-Use the existing `ComplaintsService.applyTransition` path. Do not add complaint
-creation, staff queues, jobs, notifications, SLA scheduling, portal behavior,
-comments, attachments, DMS/external calls, UI, or unrelated workflow actions.
+Do not implement Phase 3 work during this review.
 
-## Requirements
+## Required Review Work
 
-- Add a staff API route for complaint transitions, using backend-owned workflow
-  authority. Suggested shape: `POST /complaints/:id/transitions`.
-- Controller must be HTTP-only: validate request DTO, read role/branch authority
-  from the server session/guards, and delegate to `ComplaintsService`.
-- Roles and branch scope must not come from client input.
-- Include at least one allowed API case and one denied RBAC or branch-scope case.
-- Invalid workflow requests must return stable `COMPLAINT_INVALID_TRANSITION`.
-- Successful transitions must use the existing same-transaction status/history/audit
-  service path; do not duplicate workflow logic in the controller.
-- Document the route, request, response, auth, and stable errors in OpenAPI.
+- Re-run the Phase 2 proof surface and label results honestly:
+  - `corepack pnpm lint`
+  - `corepack pnpm typecheck`
+  - `corepack pnpm test`
+  - `corepack pnpm test:api -- workflow`
+  - `corepack pnpm openapi:check`
+- Confirm every Phase 2 backlog task has evidence and trust entries.
+- Inspect the complaint workflow, create, queue, detail, and comment paths for:
+  - backend-owned workflow authority
+  - server-session role and branch authority
+  - same-transaction status history/audit for state changes
+  - append-only audit discipline
+  - portal/public privacy boundaries
+  - OpenAPI drift coverage
+  - allowed and denied RBAC/branch-scope tests
+  - file-size and module-boundary compliance
+- Cross-check cited SRS requirement IDs against `docs/CMS_AUTO_SRS.md`.
 
-## Verification Commands
+## Decision Output
 
-Run and label honestly:
+Write a Phase 2 review entry to `.forge/trust.md` and update `.forge/state.md`.
 
-- `corepack pnpm lint`
-- `corepack pnpm typecheck`
-- `corepack pnpm test`
-- `corepack pnpm test:api -- workflow`
-- `corepack pnpm openapi:check`
+Allowed decisions:
 
-## Requirement IDs
-
-- ARCH-WORKFLOW-001
-- WORKFLOW-MATRIX-001
-- METHOD-AUDIT-001
-- API-STANDARD-001
-- REQ-COMPLAINT-001
-- METHOD-TEST-001
-- NFR-MAINT-001
-
-## Output
-
-Append `F2-02C` to `.forge/evidence.md` and `.forge/trust.md`.
-
-If checks pass and more Phase 2 tasks remain, write the next in-phase task to
-`.forge/next.md` and set `.forge/state.md` to `Ready to Build`. If checks fail,
-set `.forge/state.md` to `Blocked`, write the smallest repair task, and escalate
-the model tier.
+- `Accept Phase`: Phase 3 may start; set state to `Ready to Plan` and write the
+  first Phase 3 planner task to `.forge/next.md`.
+- `Accept With Conditions`: Phase 3 may start with explicit non-blocking
+  carry-forward conditions; set state to `Ready to Plan` and write the first Phase 3
+  planner task to `.forge/next.md`.
+- `Repair Required`: set state to `Ready to Build` or `Ready to Plan` for the
+  smallest repair task and write that task to `.forge/next.md`.
+- `Redo Phase`: set state to `Blocked` with the reason and required human decision.

@@ -1115,3 +1115,115 @@ tasks (notably the backend-owned complaint state machine).
     audit in one transaction client.
   - Invalid matrix inputs and unauthorized roles still reject before starting a
     transaction.
+
+## F2-02C - Add Complaint Transition HTTP Route, RBAC/Branch-Scope Tests, And OpenAPI
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - Added the staff complaint transition route with session auth, RBAC, branch-scope,
+    and CSRF guard metadata, wired through `ComplaintsModule`.
+  - Controller remains HTTP-only: parses transition request body, derives actor role
+    and audit context from the server request principal, forces `STAFF_API`, and
+    delegates to `ComplaintsService.applyTransition`.
+  - OpenAPI documents the route, `branchId` branch-scope query parameter, request,
+    response, auth errors, and `COMPLAINT_INVALID_TRANSITION` conflict.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- workflow 11/11,
+    and openapi:check.
+  - Honest failed checks were repaired before acceptance: one workflow test
+    expectation and one lint file-budget violation in `tools/openapi-check.mjs`.
+
+## F2-03A - Add Complaint Creation Service Behavior With Validation, Reference Generation, History, And Audit
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - Added service/repository complaint creation behavior only; no HTTP creation
+    route, OpenAPI creation path, queue, UI, portal, SLA, notification, attachment,
+    or integration behavior was added.
+  - Creation validates required complaint fields and VIN when vehicle-related,
+    generates a deterministic count-based reference, creates the complaint as
+    `SUBMITTED`, writes initial status history, and records COMPLAINT audit in one
+    transaction.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- workflow 13/13,
+    and openapi:check.
+  - Honest typecheck failure was repaired before acceptance.
+  - Carry-forward: customer persistence is minimal because the schema requires a
+    customer relation before the customer module exists; revisit when customer
+    module ownership lands.
+
+## F2-03B - Add Complaint Creation HTTP Route, OpenAPI, And Allowed/Denied API Tests
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - Added guarded `POST /complaints` route and OpenAPI contract for staff complaint
+    creation.
+  - Controller remains HTTP-only: validates request body, requires guarded `branchId`
+    query, derives actor/audit context from the server request principal, ignores
+    spoofed body branch/actor fields, and delegates to `ComplaintsService.createInternal`.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- workflow 16/16,
+    and openapi:check.
+  - Honest typecheck failure was repaired before acceptance.
+
+## F2-03C - Add Branch-Scoped Staff Complaint Queues
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - Added guarded `GET /complaints` queue route, repository branch filtering, explicit
+    queue DTO mapping, tests, and OpenAPI contract.
+  - Queue output avoids Prisma model leakage and does not include portal data, audit
+    logs, DMS codes, or staff PII beyond owner ID.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- workflow 18/18,
+    and openapi:check.
+
+## F2-04A - Add Complaint Detail Read Model With Status-History Timeline
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - Added guarded `GET /complaints/:id` detail route, explicit detail DTO mapping,
+    status-history timeline, scoped `COMPLAINT_NOT_FOUND`, tests, and OpenAPI
+    contract.
+  - Detail output avoids Prisma model leakage and excludes audit logs, portal data,
+    DMS codes, and unrelated complaints.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- workflow 20/20,
+    and openapi:check.
+
+## F2-04B - Add Internal/Public Comment Service Behavior With Privacy And Audit Tests
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - Added comment create and public-only comment read behavior in service/repository
+    only; no HTTP route or OpenAPI path was added.
+  - Comment creation validates nonblank body and writes COMMENT audit in the same
+    transaction.
+  - Public comment reads filter to `PUBLIC` visibility, preserving internal comment
+    privacy for future portal/public surfaces.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- workflow 22/22,
+    and openapi:check.
+
+## F2-04C - Add Complaint Detail/Comment HTTP Routes And OpenAPI
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept pending Phase 2 PHASE-REVIEWER
+- Notes:
+  - Added guarded staff HTTP routes for comment creation and public-comment reads,
+    with canonical OpenAPI contract entries.
+  - Controller remains HTTP-only: validates the request DTO, derives actor/audit
+    context from the server request principal, verifies scoped complaint access, and
+    delegates to the F2-04B service behavior.
+  - Public comment reads preserve privacy by returning only `PUBLIC` comments.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- workflow 25/25,
+    and openapi:check.
+  - All Phase 2 backlog tasks are now complete; Forge state is set to
+    `Needs Phase Review` before Phase 3 can be planned.

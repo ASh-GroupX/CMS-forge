@@ -47,18 +47,18 @@ history from another project.
 - [x] F2-01: Complaint domain schema and migrations
   - [x] F2-01A: Add complaint transition history metadata schema and migration
   - [x] F2-01B: Generate complaints module shell and fill `MODULE.md`
-- [ ] F2-02: Backend complaint state machine
+- [x] F2-02: Backend complaint state machine
   - [x] F2-02A: Add workflow transition matrix validation with service tests
   - [x] F2-02B: Persist complaint transitions with status history and same-transaction audit (Verify Gate: required)
-  - [ ] F2-02C: Add complaint transition HTTP route, RBAC/branch-scope tests, and OpenAPI
-- [ ] F2-03: Complaint creation and staff queues
-  - [ ] F2-03A: Add complaint creation service behavior with validation, reference generation, history, and audit
-  - [ ] F2-03B: Add complaint creation HTTP route, OpenAPI, and allowed/denied API tests
-  - [ ] F2-03C: Add branch-scoped staff complaint queues
-- [ ] F2-04: Complaint detail timeline, comments, and history
-  - [ ] F2-04A: Add complaint detail read model with status-history timeline
-  - [ ] F2-04B: Add internal/public comment service behavior with privacy and audit tests
-  - [ ] F2-04C: Add complaint detail/comment HTTP routes and OpenAPI
+  - [x] F2-02C: Add complaint transition HTTP route, RBAC/branch-scope tests, and OpenAPI
+- [x] F2-03: Complaint creation and staff queues
+  - [x] F2-03A: Add complaint creation service behavior with validation, reference generation, history, and audit
+  - [x] F2-03B: Add complaint creation HTTP route, OpenAPI, and allowed/denied API tests
+  - [x] F2-03C: Add branch-scoped staff complaint queues
+- [x] F2-04: Complaint detail timeline, comments, and history
+  - [x] F2-04A: Add complaint detail read model with status-history timeline
+  - [x] F2-04B: Add internal/public comment service behavior with privacy and audit tests
+  - [x] F2-04C: Add complaint detail/comment HTTP routes and OpenAPI
 
 ## Phase 3 - SLA And Workflow Operations
 

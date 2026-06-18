@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import 'reflect-metadata';
+import { GUARDS_METADATA, MODULE_METADATA } from '@nestjs/common/constants';
+import { Reflector } from '@nestjs/core';
+import type { ExecutionContext } from '@nestjs/common';
 import {
   ComplaintStatus,
   ComplaintTransitionAction,
@@ -7,7 +11,17 @@ import {
   RoleCode,
 } from '@prisma/client';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
+import {
+  RbacGuard,
+  SESSION_AUTH_SERVICE,
+  SessionAuthGuard,
+} from '../../src/core/auth.guard.ts';
+import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
+import { CsrfGuard } from '../../src/core/csrf.guard.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
+import { AuthModule } from '../../src/modules/auth/auth.module.ts';
+import { ComplaintsController } from '../../src/modules/complaints/complaints.controller.ts';
+import { ComplaintsModule } from '../../src/modules/complaints/complaints.module.ts';
 import { ComplaintsRepository } from '../../src/modules/complaints/complaints.repository.ts';
 import { ComplaintsService } from '../../src/modules/complaints/complaints.service.ts';
 
@@ -231,6 +245,95 @@ test('workflow transition persistence rejects unauthorized roles before transact
   }, 'RBAC_FORBIDDEN');
 });
 
+test('complaint transition route delegates with server principal role and audit context', async () => {
+  const calls: unknown[] = [];
+  const controller = new ComplaintsController({
+    applyTransition: async (input) => {
+      calls.push(input);
+      return {
+        complaintId: input.complaintId,
+        fromStatus: input.fromStatus,
+        action: input.action,
+        actorRole: input.actorRole,
+        toStatus: ComplaintStatus.SUBMITTED,
+      };
+    },
+  } as ComplaintsService);
+
+  const response = await controller.transition('cmp_1', {
+    fromStatus: ComplaintStatus.DRAFT,
+    action: ComplaintTransitionAction.SUBMIT,
+    actorRole: RoleCode.ADMIN,
+    actorId: 'spoofed',
+    requestSource: ComplaintTransitionRequestSource.CUSTOMER_PORTAL,
+    reason: ' ready ',
+  }, request());
+
+  assert.deepEqual(response.transition, {
+    complaintId: 'cmp_1',
+    fromStatus: ComplaintStatus.DRAFT,
+    action: ComplaintTransitionAction.SUBMIT,
+    actorRole: RoleCode.CR_OFFICER,
+    toStatus: ComplaintStatus.SUBMITTED,
+  });
+  assert.deepEqual(calls[0], {
+    complaintId: 'cmp_1',
+    fromStatus: ComplaintStatus.DRAFT,
+    action: ComplaintTransitionAction.SUBMIT,
+    actorRole: RoleCode.CR_OFFICER,
+    actorId: 'usr_officer',
+    requestSource: ComplaintTransitionRequestSource.STAFF_API,
+    reason: 'ready',
+    correlationId: 'req_workflow',
+    ipAddress: '203.0.113.44',
+    userAgent: 'node:test',
+  });
+});
+
+test('complaint transition route rejects invalid request bodies', async () => {
+  const controller = new ComplaintsController({} as ComplaintsService);
+
+  await assert.rejects(
+    controller.transition('cmp_1', {
+      fromStatus: 'bad_status',
+      action: ComplaintTransitionAction.SUBMIT,
+    }, request()),
+    (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED',
+  );
+});
+
+test('complaint transition route uses auth, RBAC, branch-scope, and CSRF guards', () => {
+  assert.deepEqual(guardNames('transition'), ['SessionAuthGuard', 'RbacGuard', 'CsrfGuard']);
+
+  const imports = Reflect.getMetadata(MODULE_METADATA.IMPORTS, ComplaintsModule) as unknown[];
+  const providers = Reflect.getMetadata(MODULE_METADATA.PROVIDERS, ComplaintsModule) as unknown[];
+
+  assert.ok(imports.includes(AuthModule));
+  assert.ok(providers.includes(SessionAuthGuard));
+  assert.ok(providers.includes(RbacGuard));
+  assert.ok(providers.includes(CsrfGuard));
+  assert.equal(providers.some((provider) => providerObject(provider)?.provide === SESSION_AUTH_SERVICE), true);
+});
+
+test('complaint transition route allows scoped staff and audits branch-scope denials', async () => {
+  const auditRecords: AuditRecordInput[] = [];
+  const guard = new RbacGuard(
+    new Reflector(),
+    { record: async (input) => auditRecords.push(input) } as AuditService,
+  );
+
+  assert.equal(await guard.canActivate(context(request())), true);
+
+  await assert.rejects(
+    guard.canActivate(context(request(RoleCode.BRANCH_MANAGER, 'branch_other'))),
+    (error: unknown) => error instanceof AppException && error.code === 'BRANCH_SCOPE_FORBIDDEN',
+  );
+
+  assert.equal(auditRecords[0]?.eventType, 'SECURITY');
+  assert.equal(auditRecords[0]?.action, 'branch_scope_forbidden');
+  assert.deepEqual(auditRecords[0]?.metadata, { deniedBranchId: 'branch_other' });
+});
+
 async function assertNoTransaction(
   input: Parameters<ComplaintsService['applyTransition']>[0],
   code: string,
@@ -245,4 +348,43 @@ async function assertNoTransaction(
     serviceWithFailingRepository.applyTransition(input),
     (error: unknown) => error instanceof AppException && error.code === code,
   );
+}
+
+function request(roleCode = RoleCode.CR_OFFICER, branchId = 'branch_main'): AuthenticatedRequest {
+  return {
+    principal: principal(roleCode),
+    url: `/complaints/cmp_1/transitions?branchId=${branchId}`,
+    correlationId: 'req_workflow',
+    headers: { 'x-forwarded-for': '203.0.113.44, 10.0.0.1', 'user-agent': 'node:test' },
+    socket: { remoteAddress: '198.51.100.44' },
+  };
+}
+
+function principal(roleCode: RoleCode): StaffPrincipal {
+  return {
+    sessionId: 'ses_workflow',
+    userId: 'usr_officer',
+    email: 'officer@cms-auto.test',
+    nameEn: 'CR Officer',
+    nameAr: 'CR Officer',
+    roleCode,
+    branchId: 'branch_main',
+  };
+}
+
+function context(req: AuthenticatedRequest): ExecutionContext {
+  return {
+    switchToHttp: () => ({ getRequest: () => req }),
+    getHandler: () => ComplaintsController.prototype.transition,
+    getClass: () => ComplaintsController,
+  } as ExecutionContext;
+}
+
+function guardNames(handler: keyof ComplaintsController): string[] {
+  const guards = Reflect.getMetadata(GUARDS_METADATA, ComplaintsController.prototype[handler]) as Array<{ name: string }>;
+  return guards.map((guard) => guard.name);
+}
+
+function providerObject(provider: unknown): { provide?: unknown } | null {
+  return provider && typeof provider === 'object' ? provider as { provide?: unknown } : null;
 }
