@@ -1,8 +1,27 @@
 # Current State
 
-Status: Ready to Plan
+Status: Ready to Build
 Phase: Phase 1 - Security Baseline
-Next Task: PLAN-F1-06 - Split Login Rate Limiting And CSRF Protection
+Next Task: F1-06A - Login Rate Limiting (Account + IP)
+
+## Phase 1 — F1-06 Split (PLAN-F1-06, 2026-06-18)
+
+`F1-06` (login rate limiting + CSRF) was split into three ordered BUILDER-STRONG build
+tasks because the two protections touch different trust boundaries and the combined
+surface exceeds the 1–5 file budget:
+
+- `F1-06A` — login rate limiting by account + IP on `POST /auth/login` (NFR-SEC-001 AC3).
+  Queued now; self-contained, nothing builds on it.
+- `F1-06B` — CSRF kernel guard + token issuance + enforcement on auth mutation routes
+  (`POST /auth/logout`) (NFR-SEC-001 AC5). **Verify Gate: required** — `F1-06C` builds
+  directly on this CSRF mechanism, so AUTO PHASE pauses for an independent VERIFY here.
+- `F1-06C` — enforce the same CSRF guard on branch (admin) mutation routes + OpenAPI +
+  admin test fixups (NFR-SEC-001 AC5).
+
+CSRF mutation surface mapped to `POST /auth/logout`, `POST /branches`, `PATCH /branches/:id`,
+`POST /branches/:id/deactivate`. `POST /auth/login` is pre-session → covered by rate
+limiting (AC3), not CSRF (AC5). After `F1-06C`, all Phase 1 backlog tasks are done →
+`Needs Phase Review` before Phase 2.
 
 ## Phase 1 — Auth Foundation Verified (gate passed)
 

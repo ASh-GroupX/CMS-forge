@@ -1401,3 +1401,57 @@ Append build and verification evidence here. Do not delete failed evidence.
   - Passed: `rg -n "PLAN-F1-05C|F1-05C|F1-05D|Ready to Build|300" .forge/backlog.md .forge/next.md .forge/state.md`
 - Security Self-Check:
   - Not Run: planning-only task; no runtime RBAC, branch-scope, state-change, audit, portal, or logging behavior was implemented.
+
+## PLAN-F1-06 - Split Login Rate Limiting And CSRF Protection
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: PLANNER
+- Requirement IDs:
+  - NFR-SEC-001
+  - REQ-AUTH-001
+  - API-STANDARD-001
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+  - NFR-SEC-002
+- Evidence:
+  - Read `NFR-SEC-001` (AC3 login rate limiting by account + IP; AC5 CSRF on
+    session-authenticated mutation routes), the auth/session guards
+    (`apps/api/src/core/auth.guard.ts`), the auth and branches controllers, the auth
+    service/module wiring, the audit service, and the `tools/api-test.mjs` suite runner.
+  - Mapped the CSRF mutation-route surface to `POST /auth/logout`, `POST /branches`,
+    `PATCH /branches/:id`, and `POST /branches/:id/deactivate`. `POST /auth/login` is
+    pre-session, so it is covered by rate limiting (AC3), not CSRF (AC5).
+  - Split `F1-06` into three ordered BUILDER-STRONG build tasks: `F1-06A` login rate
+    limiting, `F1-06B` CSRF kernel guard + token issuance + auth-route enforcement, and
+    `F1-06C` CSRF enforcement on branch admin routes. Rate limiting goes first because it
+    is a single self-contained route guard with no cross-module reach; CSRF follows
+    because it adds a token mechanism + multi-route rollout, and is itself split so each
+    task stays near 1-5 files.
+  - Marked `F1-06B` `Verify Gate: required` because `F1-06C` builds directly on the CSRF
+    mechanism it establishes (same pattern as the F1-01E and F1-03A gates).
+  - Queued only `F1-06A - Login Rate Limiting (Account + IP)` in `.forge/next.md` with a
+    tight scope, exact verification commands, and the High-risk security self-check.
+  - Represented `F1-06B` and `F1-06C` in `.forge/backlog.md`; set `.forge/state.md` to
+    `Ready to Build`. No application source code was changed.
+- Decisions / assumptions recorded for the builder:
+  - SRS §23 (`API-STANDARD-001`) "Required Stable Error Codes" lists no rate-limit/CSRF
+    code, but AC1 allows stable codes that are documented in OpenAPI, and the SECURITY
+    audit-event table already names `rate_limit_triggered`. Build tasks add stable,
+    OpenAPI-documented codes following the existing convention (`RATE_LIMITED` -> HTTP
+    429; CSRF code -> HTTP 403) rather than inventing undocumented strings.
+  - Rate-limit store is in-memory behind a small interface for the single-node MVP;
+    distributed/Redis-backed limiting is deferred and must be recorded as an assumption.
+  - `security:check` stays a pending fail-loud proof; the real proof for these tasks is
+    `test:api -- security` plus lint/typecheck/test/openapi:check. Builders must not
+    report `security:check` as passed.
+- Verification:
+  - Passed: `rg -n "F1-06|NFR-SEC-001|Ready to Build|BUILDER-STRONG" .forge/backlog.md .forge/next.md .forge/state.md`
+- Security Self-Check:
+  - Not Run: planning-only task; no runtime auth, RBAC, branch-scope, rate-limit, CSRF,
+    state-change, audit, portal, or logging behavior was implemented.
+  - Planned gate: `F1-06B` is `Verify Gate: required` before `F1-06C` builds on the CSRF
+    mechanism; the Phase 1 `PHASE-REVIEWER` gate follows `F1-06C`.
