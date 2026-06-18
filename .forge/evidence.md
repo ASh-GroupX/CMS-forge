@@ -1037,3 +1037,38 @@ Append build and verification evidence here. Do not delete failed evidence.
   - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed; search maps explicit response fields and tests prove secret-like metadata keys are redacted.
   - Customer portal exposure rules hold: Passed by separation; this is a staff-only guarded route and no portal behavior or customer portal data exposure was added.
   - Trust boundaries are tested: Passed; `test:api -- audit` covers one allowed admin case, one denied role case, one denied branch case, and invalid input.
+
+## REPAIR-F1-03A - Restrict Audit Search To SRS-Allowed Roles
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-AUDIT-001
+  - REQ-RBAC-001
+  - RBAC-MATRIX-001
+  - NFR-SEC-002
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Restricted `GET /audit/logs` to `@Roles('ADMIN')`, matching `RBAC-MATRIX-001` where Branch Manager cannot view audit logs.
+  - Removed branch-manager audit search access from the HTTP route; configurable Management Read-Only audit access remains deferred until an explicit permission model exists.
+  - Made `AuditSearchService.search` fail closed with `RBAC_FORBIDDEN` for non-admin direct calls.
+  - Kept admin branch filtering, page-size clamping, explicit safe response fields, metadata redaction, and OpenAPI contract behavior intact.
+  - Updated focused audit API tests for Branch Manager denial with `SECURITY` audit, ordinary non-admin denial with `SECURITY` audit, and service-level non-admin fail-closed behavior.
+  - Kept app/tool source files under the 300-line agentic budget; audit service is 151 lines and audit controller is 22 lines.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (19/19; coverage 89.50% lines / 80.71% branch / 92.54% funcs)
+  - Passed: `corepack pnpm test:api -- audit` (5/5)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed; `SessionAuthGuard` still attaches server-derived principal claims and `RbacGuard` now allows only Admin for audit search. Tests cover denied Branch Manager and CR Officer cases.
+  - Each state change writes status history and an audit entry in the same transaction; side effects enqueue after commit: Not Run for workflow state changes; this repair only changes read-only audit search. Denied access writes `SECURITY` audit entries through the existing guard.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed; metadata redaction behavior is unchanged and remains tested.
+  - Customer portal exposure rules hold: Passed by separation; this is still a staff-only guarded route and no portal behavior was added.
+  - Trust boundaries are tested: Passed; `test:api -- audit` covers Admin allowed, Branch Manager denied, CR Officer denied, non-admin service direct denial, invalid query, and metadata redaction.

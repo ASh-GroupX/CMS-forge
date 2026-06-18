@@ -118,7 +118,7 @@ test('non-admin staff is denied and audited by the RBAC guard', async () => {
   assert.equal(auditRecords[0]?.action, 'rbac_forbidden');
 });
 
-test('branch manager cannot search another branch', async () => {
+test('branch manager cannot search audit logs', async () => {
   const auditRecords: AuditRecordInput[] = [];
   const guard = new RbacGuard(
     new Reflector(),
@@ -126,26 +126,25 @@ test('branch manager cannot search another branch', async () => {
   );
 
   await assert.rejects(
-    guard.canActivate(context(request(branchManager, '/audit/logs?branchId=branch_other'))),
-    (error: unknown) => error instanceof AppException && error.code === 'BRANCH_SCOPE_FORBIDDEN',
+    guard.canActivate(context(request(branchManager))),
+    (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
 
-  assert.deepEqual(auditRecords[0]?.metadata, { deniedBranchId: 'branch_other' });
+  assert.equal(auditRecords[0]?.eventType, 'SECURITY');
+  assert.equal(auditRecords[0]?.action, 'rbac_forbidden');
 });
 
-test('branch manager searches are scoped to their server-session branch', async () => {
-  let receivedFilters: unknown;
+test('audit search service fails closed for non-admin direct calls', async () => {
   const repository = {
-    search: async (filters) => {
-      receivedFilters = filters;
+    search: async () => {
       return [];
     },
   } as AuditRepository;
 
-  const result = await new AuditSearchService(repository).search({}, branchManager);
-
-  assert.deepEqual(receivedFilters, { branchId: 'branch_main' });
-  assert.deepEqual(result, { items: [], page: 1, pageSize: 25 });
+  await assert.rejects(
+    new AuditSearchService(repository).search({}, branchManager),
+    (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
 });
 
 test('invalid query values use the stable validation error code', async () => {

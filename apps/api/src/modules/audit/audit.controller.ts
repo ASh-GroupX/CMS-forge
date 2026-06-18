@@ -1,6 +1,5 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import {
-  BranchScoped,
   RbacGuard,
   Roles,
   SessionAuthGuard,
@@ -15,8 +14,7 @@ export class AuditController {
 
   @Get('logs')
   @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles('ADMIN', 'BRANCH_MANAGER')
-  @BranchScoped()
+  @Roles('ADMIN')
   async search(
     @Query() query: Record<string, unknown>,
     @Req() request: AuthenticatedRequest,

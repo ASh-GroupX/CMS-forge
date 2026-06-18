@@ -2,7 +2,7 @@
 
 Status: Needs Verify
 Phase: Phase 1 - Security Baseline
-Next Task: VERIFY-F1-03A - Audit Log Search Endpoint
+Next Task: VERIFY-F1-03A-REPAIR - Audit Search RBAC Repair
 
 ## Phase 1 — Auth Foundation Verified (gate passed)
 
@@ -67,4 +67,6 @@ thresholds), openapi:check, build, prisma validate.
 - F1-01E2 — append-only `AuditService`; AUTH login_success/login_failure/logout entries; audit-in-transaction for state changes.
 - F1-01E3 — auth OpenAPI contract (paths + safe schemas + Set-Cookie); `openapi:check` hardened against auth-path/schema removal.
 - VERIFY-F1-01E — independent gate Accept (Honest/Good); five proof commands re-run green; carry-forward security conditions recorded.
+- VERIFY-F1-03A — independent gate Repair (Honest/Acceptable); proof commands re-run green, but audit search currently allows Branch Manager despite `RBAC-MATRIX-001` marking audit-log view as Admin yes / Branch Manager no.
+- REPAIR-F1-03A — audit search restricted to Admin-only; proof commands passed; queued independent repair VERIFY before `F1-03B`.
 - Known limitation: Prisma's Rust engine cannot connect through Docker Desktop's Windows port-forwarding (P1000); run DB ops inside the Docker network. Does not affect application code.

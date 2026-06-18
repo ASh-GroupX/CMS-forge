@@ -52,18 +52,15 @@ export class AuditSearchService {
   constructor(private readonly repository: AuditRepository) {}
 
   async search(input: AuditSearchInput, principal: StaffPrincipal): Promise<AuditSearchResult> {
-    const page = clamp(input.page ?? 1, 1, Number.MAX_SAFE_INTEGER);
-    const pageSize = clamp(input.pageSize ?? DEFAULT_PAGE_SIZE, 1, MAX_PAGE_SIZE);
-    const branchId = principal.roleCode === 'ADMIN' ? input.branchId : principal.branchId;
-
-    if (principal.roleCode !== 'ADMIN' && input.branchId && input.branchId !== principal.branchId) {
-      throw new AppException('BRANCH_SCOPE_FORBIDDEN', 'Forbidden', 403);
+    if (principal.roleCode !== 'ADMIN') {
+      throw new AppException('RBAC_FORBIDDEN', 'Forbidden', 403);
     }
 
+    const page = clamp(input.page ?? 1, 1, Number.MAX_SAFE_INTEGER);
+    const pageSize = clamp(input.pageSize ?? DEFAULT_PAGE_SIZE, 1, MAX_PAGE_SIZE);
+
     const { page: _page, pageSize: _pageSize, ...filters } = input;
-    if (branchId) {
-      filters.branchId = branchId;
-    } else {
+    if (!filters.branchId) {
       delete filters.branchId;
     }
 

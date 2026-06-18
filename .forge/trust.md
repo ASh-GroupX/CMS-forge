@@ -515,3 +515,50 @@ SRS acceptance criteria, and probed the fail-loud guard.
   `tsx` via `test:api` and are not coverage-gated. The auth tests are real and thorough,
   but no coverage threshold enforces auth-service coverage yet (pre-existing Phase 0
   structural limitation, not introduced here).
+
+## VERIFY-F1-03A - Audit Log Search Verify Gate
+
+- Date: 2026-06-18
+- Reviewer tier: PLANNER (independent VERIFY, fresh context)
+- Risk: High
+- Builder honesty: **Honest**
+- Code quality: **Acceptable**
+- Recommendation: **Repair**
+
+### Method
+
+Read the Forge task, model rules, project policy, state, SRS requirement IDs, architecture,
+builder evidence, trust notes, audit module, guards, auth session code, OpenAPI generator,
+and focused audit tests. Re-ran every required proof command.
+
+### Verification labels (re-run by reviewer)
+
+- Passed: `corepack pnpm lint`
+- Passed: `corepack pnpm typecheck`
+- Passed: `corepack pnpm test` (19/19; coverage 89.50% lines / 80.71% branch / 92.54% funcs)
+- Passed: `corepack pnpm test:api -- audit` (5/5)
+- Passed: `corepack pnpm openapi:check`
+
+### Blocking finding
+
+- `GET /audit/logs` is too permissive for the current SRS RBAC matrix. `apps/api/src/modules/audit/audit.controller.ts` uses `@Roles('ADMIN', 'BRANCH_MANAGER')`, but `docs/CMS_AUTO_SRS.md` `RBAC-MATRIX-001` says `View audit log` is `No` for Branch Manager and `Yes` for Admin; Management Read-Only is only `Configurable`, and that permission model is not built yet. Because audit rows are sensitive (`NFR-SEC-002`), the endpoint must fail closed to Admin-only until configurable management audit permission exists.
+
+### Non-blocking checks
+
+- Scope otherwise stayed on audit search only; export and append-only DB enforcement remain deferred to `F1-03B` and `F1-03C`.
+- OpenAPI documents `/audit/logs` and `openapi:check` reproduced green.
+- Audit search maps explicit response fields and redacts secret-like metadata keys.
+- Existing guard path audits role/branch denials as `SECURITY`; repair should keep denied non-admin audit coverage.
+- Touched app/tool source files are under the 300-line budget; largest checked source file is `tools/openapi-check.mjs` at 190 lines.
+
+## REPAIR-F1-03A - Restrict Audit Search To SRS-Allowed Roles
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept pending independent repair VERIFY
+- Notes:
+  - The repair stayed inside the queued scope: audit search is now Admin-only until configurable management audit-view permission exists.
+  - `AuditSearchService.search` also fails closed for non-admin direct calls, so the service boundary is not looser than the HTTP guard.
+  - Focused tests now cover Admin allow, Branch Manager deny with `SECURITY` audit, CR Officer deny with `SECURITY` audit, non-admin direct service denial, invalid query, and metadata redaction.
+  - Required proof commands passed: lint, typecheck, test 19/19, test:api -- audit 5/5, openapi:check.
+  - Because `F1-03A` is a verify gate, state is set to `Needs Verify` before `F1-03B` can start.
