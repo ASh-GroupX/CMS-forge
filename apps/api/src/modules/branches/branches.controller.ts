@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
+import { CsrfGuard } from '../../core/csrf.guard.js';
 import { BranchesService } from './branches.service.js';
 import type { BranchResponseDto } from './dto/branch-response.dto.js';
 import { parseCreateBranchBody, parseUpdateBranchBody } from './dto/branch-write.dto.js';
@@ -24,7 +25,7 @@ export class BranchesController {
   }
 
   @Post()
-  @UseGuards(SessionAuthGuard, RbacGuard)
+  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
   @Roles('ADMIN')
   async create(
     @Body() body: unknown,
@@ -36,7 +37,7 @@ export class BranchesController {
   }
 
   @Patch(':id')
-  @UseGuards(SessionAuthGuard, RbacGuard)
+  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
   @Roles('ADMIN')
   async update(
     @Param('id') id: string,
@@ -49,7 +50,7 @@ export class BranchesController {
   }
 
   @Post(':id/deactivate')
-  @UseGuards(SessionAuthGuard, RbacGuard)
+  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
   @Roles('ADMIN')
   async deactivate(
     @Param('id') id: string,

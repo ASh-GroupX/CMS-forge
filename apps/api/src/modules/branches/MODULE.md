@@ -19,6 +19,8 @@ Agent context manifest. Read this before editing the module.
 - `core/http-kernel` for Prisma and stable errors.
 - `core/audit.service` for branch create/update/deactivate audit entries.
 - `core/auth.guard` for Admin-only RBAC on HTTP routes.
+- `core/csrf.guard` for CSRF enforcement on branch mutation routes.
+- `AuthService` through `AuthModule` for session validation guard wiring.
 - Other modules' public services only. Never import another module repository,
   DTO folder, or Prisma model type.
 

@@ -79,7 +79,7 @@ const canonical = {
         operationId: 'branchCreate',
         summary: 'Create a branch',
         requestBody: body(ref('BranchCreateRequest')),
-        responses: { 201: ok('Branch created', ref('BranchWriteResponse')), 400: error('Invalid request body'), 401: error('Missing or invalid session'), 403: error('Role denied') },
+        responses: { 201: ok('Branch created', ref('BranchWriteResponse')), 400: error('Invalid request body'), 401: error('Missing or invalid session'), 403: error('Role denied or invalid CSRF token (CSRF_INVALID)') },
       },
     },
     '/branches/{idOrCode}': {
@@ -100,7 +100,7 @@ const canonical = {
         summary: 'Update a branch',
         parameters: [pathParam('idOrCode')],
         requestBody: body(ref('BranchUpdateRequest')),
-        responses: { 200: ok('Branch updated', ref('BranchWriteResponse')), 400: error('Invalid request body'), 401: error('Missing or invalid session'), 403: error('Role denied') },
+        responses: { 200: ok('Branch updated', ref('BranchWriteResponse')), 400: error('Invalid request body'), 401: error('Missing or invalid session'), 403: error('Role denied or invalid CSRF token (CSRF_INVALID)') },
       },
     },
     '/branches/{id}/deactivate': {
@@ -109,7 +109,7 @@ const canonical = {
         operationId: 'branchDeactivate',
         summary: 'Deactivate a branch',
         parameters: [pathParam('id')],
-        responses: { 200: ok('Branch deactivated', ref('BranchWriteResponse')), 401: error('Missing or invalid session'), 403: error('Role denied') },
+        responses: { 200: ok('Branch deactivated', ref('BranchWriteResponse')), 401: error('Missing or invalid session'), 403: error('Role denied or invalid CSRF token (CSRF_INVALID)') },
       },
     },
     '/audit/logs': {

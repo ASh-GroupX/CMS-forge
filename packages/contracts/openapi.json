@@ -262,7 +262,7 @@
             }
           },
           "403": {
-            "description": "Role denied",
+            "description": "Role denied or invalid CSRF token (CSRF_INVALID)",
             "content": {
               "application/json": {
                 "schema": {
@@ -382,7 +382,7 @@
             }
           },
           "403": {
-            "description": "Role denied",
+            "description": "Role denied or invalid CSRF token (CSRF_INVALID)",
             "content": {
               "application/json": {
                 "schema": {
@@ -433,7 +433,7 @@
             }
           },
           "403": {
-            "description": "Role denied",
+            "description": "Role denied or invalid CSRF token (CSRF_INVALID)",
             "content": {
               "application/json": {
                 "schema": {

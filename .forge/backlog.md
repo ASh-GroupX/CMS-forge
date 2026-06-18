@@ -40,7 +40,7 @@ history from another project.
 - [x] F1-05F: Branch write HTTP endpoints, API tests, and golden CRUD pattern freeze
 - [x] F1-06A: Login rate limiting by account and IP on `POST /auth/login` (NFR-SEC-001 AC3) — split from F1-06 by PLAN-F1-06
 - [x] F1-06B: CSRF kernel guard, token issuance, and enforcement on auth mutation routes (`POST /auth/logout`) (NFR-SEC-001 AC5) (Verify Gate: required) — split from F1-06 by PLAN-F1-06
-- [ ] F1-06C: Enforce CSRF on branch admin mutation routes (`POST /branches`, `PATCH /branches/:id`, `POST /branches/:id/deactivate`) with OpenAPI and admin test fixups (NFR-SEC-001 AC5) — split from F1-06 by PLAN-F1-06
+- [x] F1-06C: Enforce CSRF on branch admin mutation routes (`POST /branches`, `PATCH /branches/:id`, `POST /branches/:id/deactivate`) with OpenAPI and admin test fixups (NFR-SEC-001 AC5) — split from F1-06 by PLAN-F1-06
 
 ## Phase 2 - Complaint Core
 

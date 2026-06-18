@@ -1564,3 +1564,59 @@ Append build and verification evidence here. Do not delete failed evidence.
     portal-visible data changed.
   - Trust boundaries are tested: Passed; `test:api -- security` covers matching CSRF
     allow and mismatched CSRF deny with `CSRF_INVALID` 403 plus `csrf_rejected` audit.
+
+## F1-06C - Enforce CSRF On Branch Admin Mutation Routes
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - NFR-SEC-001 (AC5)
+  - REQ-ADMIN-001
+  - API-STANDARD-001
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+  - NFR-SEC-002
+- Evidence:
+  - Reused the verified `CsrfGuard`; no second CSRF mechanism was added.
+  - Added `CsrfGuard` to branch mutation routes only: `POST /branches`,
+    `PATCH /branches/:id`, and `POST /branches/:id/deactivate`.
+  - Left branch read routes free of CSRF enforcement while preserving
+    `SessionAuthGuard`, `RbacGuard`, and Admin-only role metadata.
+  - Fixed `BranchesModule` guard DI by importing `AuthModule`, aliasing
+    `SESSION_AUTH_SERVICE` to exported `AuthService`, and registering
+    `SessionAuthGuard`, `RbacGuard`, and `CsrfGuard`.
+  - Updated `apps/api/src/modules/branches/MODULE.md` so the module manifest reflects
+    its CSRF guard and public `AuthService` dependencies.
+  - Added `apps/api/test/admin/branches-csrf.test.ts`, proving mutation guard
+    metadata, read-route non-CSRF metadata, module guard providers, one allowed
+    matching CSRF case, and one denied mismatched CSRF case with safe
+    `SECURITY` / `csrf_rejected` audit.
+  - Updated canonical OpenAPI branch mutation `403` descriptions to include
+    `CSRF_INVALID` and regenerated `packages/contracts/openapi.json`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- admin` (15/15)
+  - Passed: `corepack pnpm test:api -- security` (4/4)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `corepack pnpm lint` after the `MODULE.md` manifest update
+  - Not Run: `corepack pnpm security:check` remains a pending fail-loud aggregate by
+    explicit task scope; it is not reported as passed.
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed;
+    branch mutation routes still use `SessionAuthGuard`, `RbacGuard`, and `@Roles('ADMIN')`;
+    module wiring aliases session validation to server `AuthService`.
+  - CSRF validation derives only from the server-issued cookie + `x-csrf-token`: Passed;
+    branch mutation tests exercise the shared `CsrfGuard` using cookie/header matching.
+  - No passwords, OTPs, tokens, hashes, or cookie values are logged or returned: Passed;
+    branch CSRF denial test asserts audit/error output omits CSRF/session secret values,
+    password text, and hashes.
+  - Customer portal exposure rules hold: Not applicable; no portal route or
+    portal-visible data changed.
+  - Trust boundaries are tested: Passed; `test:api -- admin` covers one allowed branch
+    CSRF case and one denied branch CSRF case with `CSRF_INVALID` 403 plus
+    `csrf_rejected` audit.

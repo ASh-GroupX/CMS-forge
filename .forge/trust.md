@@ -859,3 +859,21 @@ required check.
 `F1-06B` verify gate cleared. Queued `F1-06C - Enforce CSRF On Branch Admin Mutation Routes`
 and set state to `Ready to Build`. After F1-06C, all Phase 1 backlog tasks are done → the
 Phase 1 `PHASE-REVIEWER` gate.
+
+## F1-06C - Enforce CSRF On Branch Admin Mutation Routes
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept pending Phase 1 PHASE-REVIEWER
+- Notes:
+  - The task stayed scoped to branch mutation CSRF enforcement, branch module guard DI,
+    focused admin tests, and canonical OpenAPI updates.
+  - `POST /branches`, `PATCH /branches/:id`, and `POST /branches/:id/deactivate` now
+    use `SessionAuthGuard`, `RbacGuard`, and `CsrfGuard`; branch reads remain
+    session/RBAC-only.
+  - `BranchesModule` now imports `AuthModule`, aliases `SESSION_AUTH_SERVICE` to
+    exported `AuthService`, and registers the guards it uses.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- admin 15/15,
+    test:api -- security 4/4, openapi:check.
+  - All Phase 1 backlog tasks are now complete; Forge state is set to
+    `Needs Phase Review` before Phase 2 can start.
