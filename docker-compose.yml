@@ -15,5 +15,35 @@ services:
     ports:
       - "6379:6379"
 
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: development
+      PORT: "3000"
+      # Dev-only connection strings, not secrets. They reuse the postgres
+      # service credentials declared above and the redis service host.
+      DATABASE_URL: postgres://cms_auto:cms_auto_dev@postgres:5432/cms_auto
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - redis
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      NODE_ENV: development
+      PORT: "4000"
+      API_URL: http://api:3000
+    ports:
+      - "4000:4000"
+    depends_on:
+      - api
+
 volumes:
   postgres-data:

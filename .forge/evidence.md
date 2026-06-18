@@ -107,3 +107,63 @@ Append build and verification evidence here. Do not delete failed evidence.
 - Notes:
   - Initial `corepack pnpm typecheck` failed before dependency installation because `--lockfile-only` does not create `node_modules`; after `corepack pnpm install`, the same command passed.
   - No domain behavior, auth logic, workflow logic, UI screens, module generator, or domain tables were added.
+
+## F0-02 - Real Toolchain Proof Scripts
+
+- Date: 2026-06-18
+- Risk: Medium
+- Status: Passed
+- Requirement IDs:
+  - CONTRACT-READINESS-001
+  - CONTRACT-READINESS-002
+  - ARCH-STACK-001
+  - ARCH-API-001
+  - METHOD-MODULAR-001
+  - METHOD-API-001
+  - UI-DESIGN-001
+- Evidence:
+  - Replaced the scaffold-only `lint` script with `tools/lint.mjs`.
+  - `lint` now verifies the scaffold contract, parses required JSON files, and enforces baseline import boundaries for web, api, and package code.
+  - Added a node:test coverage check proving frontend imports from `@cms-auto/api` are rejected.
+  - Kept pending proof scripts failing loudly so unimplemented API, E2E, visual, performance, DB, security, and backup checks cannot be reported as passed coverage.
+- Verification:
+  - Passed: `corepack pnpm install --lockfile-only`
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test`
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `corepack pnpm build`
+- Notes:
+  - No domain modules, UI screens, auth, workflow behavior, database tables, or generator files were added.
+
+## F0-03 - Docker Local Stack For API And Web
+
+- Date: 2026-06-18
+- Risk: Medium
+- Status: Passed
+- Requirement IDs:
+  - CONTRACT-READINESS-001
+  - CONTRACT-READINESS-002
+  - ARCH-STACK-001
+  - ARCH-API-001
+  - ARCH-DATA-001
+- Evidence:
+  - Added `apps/api/Dockerfile` (multi-stage: build tsc → runtime node:20-alpine).
+  - Added `apps/web/Dockerfile` (same pattern).
+  - Added `.dockerignore` excluding node_modules, dist, .next, coverage, .git, secrets, forge files.
+  - Extended `docker-compose.yml` with `api` (depends_on postgres, redis) and `web` (depends_on api) services.
+  - All service URLs and connection strings supplied via environment variables; no secrets hard-coded.
+  - Added `@types/node` to root devDependencies so the Node entrypoint files typecheck under strict mode.
+  - Added `"types": ["node"]` to `apps/api/tsconfig.json` and `apps/web/tsconfig.json`.
+  - Added `start` scripts to `apps/api/package.json` and `apps/web/package.json`.
+  - Liveness entrypoints (`apps/api/src/main.ts`, `apps/web/src/main.ts`) use only `node:http`; no domain behavior, auth, workflow, or database access.
+- Verification:
+  - Passed: `corepack pnpm install --lockfile-only`
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test`
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `docker compose config --quiet` (exit 0)
+- Notes:
+  - Docker image build (`docker compose build`) was not run to avoid a lengthy pull; config validation (compose config) confirmed all four services are correctly wired.
+  - No domain modules, UI screens, auth, workflow behavior, database tables, seed data, or module generator were added.

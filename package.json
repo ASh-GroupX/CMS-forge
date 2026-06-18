@@ -8,9 +8,9 @@
   },
   "scripts": {
     "build": "tsc -p apps/api/tsconfig.json && tsc -p apps/web/tsconfig.json && tsc -p packages/database/tsconfig.json && tsc -p packages/contracts/tsconfig.json && tsc -p packages/config/tsconfig.json",
-    "lint": "node tools/scaffold-check.mjs",
+    "lint": "node tools/lint.mjs",
     "typecheck": "tsc -p apps/api/tsconfig.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit && tsc -p packages/database/tsconfig.json --noEmit && tsc -p packages/contracts/tsconfig.json --noEmit && tsc -p packages/config/tsconfig.json --noEmit",
-    "test": "node --test tools/scaffold-check.test.mjs",
+    "test": "node --test tools/*.test.mjs",
     "test:api": "node tools/pending-proof.mjs test:api",
     "test:e2e": "node tools/pending-proof.mjs test:e2e",
     "test:web": "node tools/pending-proof.mjs test:web",
@@ -25,6 +25,7 @@
     "ops:backup:check": "node tools/pending-proof.mjs ops:backup:check"
   },
   "devDependencies": {
+    "@types/node": "^20.17.0",
     "typescript": "5.6.3"
   }
 }
