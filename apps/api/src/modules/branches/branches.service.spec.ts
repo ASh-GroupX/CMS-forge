@@ -4,5 +4,5 @@ import { BranchesRepository } from './branches.repository.js';
 import { BranchesService } from './branches.service.js';
 
 test('branches service can be constructed', () => {
-  assert.ok(new BranchesService(new BranchesRepository({} as never)));
+  assert.ok(new BranchesService(new BranchesRepository({} as never), {} as never));
 });

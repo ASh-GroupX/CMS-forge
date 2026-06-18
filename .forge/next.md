@@ -1,39 +1,38 @@
-# Next Task: F1-05D - Branch Read/List HTTP Endpoints With Admin RBAC And OpenAPI
+# Next Task: PLAN-F1-06 - Split Login Rate Limiting And CSRF Protection
 
-Status: Ready to Build
-Required model tier: BUILDER-STRONG
+Status: Ready to Plan
+Required model tier: PLANNER
 Risk: High
 Phase: Phase 1 - Security Baseline
 
 ## Why This Exists
 
-Branch read/list service behavior exists. Expose the read-only HTTP surface next,
-using Admin-only RBAC and the canonical OpenAPI contract, while leaving writes and
-audit-producing branch changes for later subtasks.
+`F1-06` combines login rate limiting and CSRF protection for
+session-authenticated mutation routes. Both are blocking Phase 1 security-baseline
+items from `VERIFY-F1-01E`, but they touch different trust boundaries and should be
+split before implementation.
 
 ## Scope
 
-- Add read-only branches routes:
-  - `GET /branches`
-  - `GET /branches/:idOrCode`
-- Wire `BranchesModule` into the API app.
-- Protect both routes with `SessionAuthGuard`, `RbacGuard`, and Admin-only roles.
-- Keep controllers HTTP-only: validate/delegate/return service responses.
-- Add focused `test:api -- admin` coverage for Admin allowed and non-admin denied.
-- Document the read-only branch paths and response schemas in OpenAPI.
+- Read `NFR-SEC-001` in `docs/CMS_AUTO_SRS.md`, the current auth/session guards,
+  and the mutation route surface.
+- Split F1-06 into small build tasks, likely rate limiting first and CSRF second,
+  unless the architecture points to a safer order.
+- Each planned build task must stay near 1-5 files plus tests and include exact
+  verification commands.
+- Preserve existing auth/session/RBAC behavior and evidence requirements.
 
 ## Out Of Scope
 
-- Branch create/update/deactivate behavior.
-- Branch write audit entries.
-- UI.
-- Database schema or migration changes.
-- Pattern-freeze documentation.
+- Implementing rate limiting or CSRF in the planning task.
+- Changing auth, branch, audit, or OpenAPI source code.
+- Starting Phase 2.
 
 ## Requirement IDs
 
-- REQ-ADMIN-001
-- METHOD-MODULAR-001
+- NFR-SEC-001
+- REQ-AUTH-001
+- METHOD-AUDIT-001
 - METHOD-API-001
 - METHOD-TEST-001
 - NFR-MAINT-001
@@ -41,28 +40,22 @@ audit-producing branch changes for later subtasks.
 
 ## Acceptance Criteria
 
-- Admin staff can call branch list/get routes.
-- Non-admin staff are denied by the existing RBAC guard and denial audit behavior.
-- Branch responses use `BranchResponseDto` shape from the service.
-- Missing branches return a stable not-found-safe response.
-- OpenAPI includes both branch read paths and schemas.
-- Required checks pass and source files remain under the 300-line budget.
+- `.forge/next.md` contains one buildable F1-06 task with BUILDER-STRONG tier.
+- `.forge/state.md` is set back to `Ready to Build`.
+- The planned task has a tight scope, exact verification commands, and security
+  self-check requirements.
+- Remaining F1-06 subtasks are represented in backlog or next-task notes.
 
 ## Verification Commands
 
-- `corepack pnpm lint`
-- `corepack pnpm typecheck`
-- `corepack pnpm test`
-- `corepack pnpm test:api -- admin`
-- `corepack pnpm openapi:check`
+- `rg -n "F1-06|NFR-SEC-001|Ready to Build|BUILDER-STRONG" .forge/backlog.md .forge/next.md .forge/state.md`
 
 ## Evidence To Record
 
-Append `F1-05D - Branch Read/List HTTP Endpoints With Admin RBAC And OpenAPI`
-to `.forge/evidence.md` with honest labels and the security self-check.
+Append `PLAN-F1-06 - Split Login Rate Limiting And CSRF Protection` to
+`.forge/evidence.md` with honest labels.
 
 ## Next After Completion
 
-If checks pass, mark `F1-05D` done, write `F1-05E - Branch Create/Update/
-Deactivate Service Behavior With Audit Entries` to `.forge/next.md`, and keep
-`.forge/state.md` as `Ready to Build`.
+After planning, AUTO PHASE may resume on the first F1-06 build task if state is
+`Ready to Build`.

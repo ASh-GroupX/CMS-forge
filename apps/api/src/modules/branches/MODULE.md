@@ -5,6 +5,10 @@ Agent context manifest. Read this before editing the module.
 ## Public surface
 
 - `BranchesService` is the only service exported by `BranchesModule`.
+- This module is the golden CRUD reference for Admin configuration modules:
+  controller = HTTP/auth/request parsing, service = validation/business rules,
+  repository = owned-table Prisma access, and mutation audit entries share the
+  write transaction.
 
 ## Owns tables
 
@@ -22,5 +26,7 @@ Agent context manifest. Read this before editing the module.
 
 - REQ-ADMIN-001
 - METHOD-MODULAR-001
+- METHOD-AUDIT-001
+- METHOD-API-001
 - NFR-MAINT-001
 - METHOD-TEST-001

@@ -5,11 +5,14 @@ const file = 'packages/contracts/openapi.json';
 const eventTypes = ['AUTH', 'USER_ADMIN', 'COMPLAINT', 'WORKFLOW', 'COMMENT', 'ATTACHMENT', 'SLA', 'NOTIFICATION', 'REPORT', 'CONFIG', 'SECURITY'];
 const ref = (name) => ({ $ref: `#/components/schemas/${name}` });
 const json = (schema) => ({ content: { 'application/json': { schema } } });
+const body = (schema) => ({ required: true, ...json(schema) });
 const error = (description) => ({ description, ...json(ref('ErrorEnvelope')) });
 const ok = (description, schema, headers) => ({ description, ...(headers ? { headers } : {}), ...json(schema) });
 const cookie = (description) => ({ 'Set-Cookie': { schema: { type: 'string' }, description } });
 const attachment = (filename) => ({ 'Content-Disposition': { schema: { type: 'string' }, description: `attachment; filename="${filename}"` } });
 const param = (name, schema = { type: 'string' }) => ({ name, in: 'query', required: false, schema });
+const pathParam = (name) => ({ name, in: 'path', required: true, schema: { type: 'string' } });
+const text = { type: 'string', minLength: 1 };
 const auditParams = [
   param('eventType', { type: 'string', enum: eventTypes }),
   ...['actorId', 'targetType', 'targetId', 'branchId', 'correlationId'].map((name) => param(name)),
@@ -56,6 +59,55 @@ const canonical = {
           401: error('Missing or invalid session'),
           403: error('Role or branch scope denied'),
         },
+      },
+    },
+    '/branches': {
+      get: {
+        tags: ['Branches'],
+        operationId: 'branchList',
+        summary: 'List active branches',
+        responses: {
+          200: ok('Active branches', ref('BranchListResponse')),
+          401: error('Missing or invalid session'),
+          403: error('Role denied'),
+        },
+      },
+      post: {
+        tags: ['Branches'],
+        operationId: 'branchCreate',
+        summary: 'Create a branch',
+        requestBody: body(ref('BranchCreateRequest')),
+        responses: { 201: ok('Branch created', ref('BranchWriteResponse')), 400: error('Invalid request body'), 401: error('Missing or invalid session'), 403: error('Role denied') },
+      },
+    },
+    '/branches/{idOrCode}': {
+      get: {
+        tags: ['Branches'],
+        operationId: 'branchGet',
+        summary: 'Get one branch by id or code',
+        parameters: [pathParam('idOrCode')],
+        responses: {
+          200: ok('Branch lookup result', ref('BranchGetResponse')),
+          401: error('Missing or invalid session'),
+          403: error('Role denied'),
+        },
+      },
+      patch: {
+        tags: ['Branches'],
+        operationId: 'branchUpdate',
+        summary: 'Update a branch',
+        parameters: [pathParam('idOrCode')],
+        requestBody: body(ref('BranchUpdateRequest')),
+        responses: { 200: ok('Branch updated', ref('BranchWriteResponse')), 400: error('Invalid request body'), 401: error('Missing or invalid session'), 403: error('Role denied') },
+      },
+    },
+    '/branches/{id}/deactivate': {
+      post: {
+        tags: ['Branches'],
+        operationId: 'branchDeactivate',
+        summary: 'Deactivate a branch',
+        parameters: [pathParam('id')],
+        responses: { 200: ok('Branch deactivated', ref('BranchWriteResponse')), 401: error('Missing or invalid session'), 403: error('Role denied') },
       },
     },
     '/audit/logs': {
@@ -123,6 +175,25 @@ const canonical = {
       }),
       AuthLogoutResponse: object(['ok'], { ok: { const: true } }),
       AuthMeResponse: object(['user'], { user: ref('StaffAuthClaims') }),
+      Branch: object(['id', 'code', 'nameEn', 'nameAr', 'timezone', 'isActive', 'createdAt', 'updatedAt'], {
+        id: { type: 'string' },
+        code: { type: 'string' },
+        nameEn: { type: 'string' },
+        nameAr: { type: 'string' },
+        timezone: { type: 'string' },
+        isActive: { type: 'boolean' },
+        createdAt: { type: 'string', format: 'date-time' },
+        updatedAt: { type: 'string', format: 'date-time' },
+      }),
+      BranchListResponse: object(['items'], {
+        items: { type: 'array', items: ref('Branch') },
+      }),
+      BranchGetResponse: object(['branch'], {
+        branch: { oneOf: [ref('Branch'), { type: 'null' }] },
+      }),
+      BranchWriteResponse: object(['branch'], { branch: ref('Branch') }),
+      BranchCreateRequest: object(['code', 'nameEn', 'nameAr'], { code: text, nameEn: text, nameAr: text, timezone: text }),
+      BranchUpdateRequest: object([], { code: text, nameEn: text, nameAr: text, timezone: text }),
       AuditLogEntry: object([
         'id',
         'eventType',
@@ -191,13 +262,13 @@ export function checkOpenApiText(text) {
     errors.push('OpenAPI document must include a paths object');
   }
 
-  for (const [path, method] of [['/auth/login', 'post'], ['/auth/logout', 'post'], ['/auth/me', 'get'], ['/audit/logs', 'get'], ['/audit/logs/export', 'get']]) {
+  for (const [path, method] of [['/auth/login', 'post'], ['/auth/logout', 'post'], ['/auth/me', 'get'], ['/branches', 'get'], ['/branches', 'post'], ['/branches/{idOrCode}', 'get'], ['/branches/{idOrCode}', 'patch'], ['/branches/{id}/deactivate', 'post'], ['/audit/logs', 'get'], ['/audit/logs/export', 'get']]) {
     if (!document.paths?.[path]?.[method]) {
       errors.push(`OpenAPI document missing ${path} ${method} operation`);
     }
   }
 
-  for (const schema of ['ErrorEnvelope', 'ErrorBody', 'FieldError', 'AuthLoginRequest', 'AuthLoginResponse', 'AuthLogoutResponse', 'AuthMeResponse', 'StaffAuthClaims', 'AuditLogEntry', 'AuditLogSearchResponse', 'AuditLogExportResponse']) {
+  for (const schema of ['ErrorEnvelope', 'ErrorBody', 'FieldError', 'AuthLoginRequest', 'AuthLoginResponse', 'AuthLogoutResponse', 'AuthMeResponse', 'StaffAuthClaims', 'Branch', 'BranchListResponse', 'BranchGetResponse', 'BranchWriteResponse', 'BranchCreateRequest', 'BranchUpdateRequest', 'AuditLogEntry', 'AuditLogSearchResponse', 'AuditLogExportResponse']) {
     if (!document.components?.schemas?.[schema]) {
       errors.push(`OpenAPI document missing ${schema} schema`);
     }

@@ -696,3 +696,40 @@ five required proof commands and confirmed file budgets.
   - Required checks passed: lint, typecheck, test 20/20, test:api -- admin 3/3, openapi:check.
   - No public route, OpenAPI branch path, write behavior, audit entry, UI, schema, or migration was added.
   - Next task should expose read-only HTTP routes with Admin RBAC and OpenAPI before branch write behavior.
+
+## F1-05D - Branch Read/List HTTP Endpoints With Admin RBAC And OpenAPI
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - The task stayed scoped to read-only branch routes, app wiring, Admin RBAC, OpenAPI, and focused admin API tests.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- admin 5/5, openapi:check.
+  - No branch write behavior, audit-producing branch mutation, UI, schema, migration, or pattern-freeze documentation was added.
+  - Missing branch lookup uses `{ branch: null }` rather than inventing a new branch-specific error code.
+
+## F1-05E - Branch Create/Update/Deactivate Service Behavior With Audit Entries
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - The task stayed scoped to service/repository write behavior and focused admin API tests.
+  - Branch create/update/deactivate writes now run through repository methods and return explicit safe DTOs.
+  - Branch deactivate is a soft update (`isActive: false`) and no delete behavior was added.
+  - Write audit entries are `CONFIG` events recorded with the same transaction client as the branch mutation; tests assert same-client use and changed-field metadata.
+  - Required checks passed after one honest type-narrowing repair: lint, typecheck, test 20/20, test:api -- admin 8/8, openapi:check.
+  - No branch write HTTP route, OpenAPI write path, UI, schema, migration, or pattern-freeze documentation was added.
+
+## F1-05F - Branch Write HTTP Endpoints, API Tests, And Golden CRUD Pattern Freeze
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - The task stayed scoped to branch write HTTP routes, request parsing, OpenAPI contract entries, admin API tests, and a narrow module-manifest golden-reference note.
+  - Branch write routes are Admin-only and pass server-derived audit context to the existing same-transaction service methods.
+  - Request parsing ignores client-supplied role/scope-like fields and validates only branch configuration fields.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- admin 11/11, openapi:check.
+  - `tools/openapi-check.mjs` reached 295 lines after compacting the write-path additions; this is under the enforced budget but close enough that future OpenAPI expansion should likely be split or refactored.
+  - The F1-05 golden CRUD umbrella is complete; remaining Phase 1 work is F1-06, which is broad enough to require PLANNER splitting before build.

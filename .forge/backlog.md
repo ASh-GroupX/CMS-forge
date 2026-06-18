@@ -31,13 +31,13 @@ history from another project.
 - [x] F1-03B: Audit log export endpoint with configured limits and branch/role scope
 - [x] F1-03C: Audit append-only enforcement proof
 - [x] F1-04: Stable API error shape and correlation IDs
-- [ ] F1-05: Build golden CRUD reference module for branches or categories and freeze its pattern
+- [x] F1-05: Build golden CRUD reference module for branches or categories and freeze its pattern
 - [x] F1-05A: Nest-ready module generator
 - [x] F1-05B: Generate branches module shell and manifest
 - [x] F1-05C: Branch read/list service and repository behavior
-- [ ] F1-05D: Branch read/list HTTP endpoints with Admin RBAC and OpenAPI
-- [ ] F1-05E: Branch create/update/deactivate service behavior with audit entries
-- [ ] F1-05F: Branch write HTTP endpoints, API tests, and golden CRUD pattern freeze
+- [x] F1-05D: Branch read/list HTTP endpoints with Admin RBAC and OpenAPI
+- [x] F1-05E: Branch create/update/deactivate service behavior with audit entries
+- [x] F1-05F: Branch write HTTP endpoints, API tests, and golden CRUD pattern freeze
 - [ ] F1-06: Login rate limiting (account + IP) and CSRF protection for session-authenticated mutation routes (NFR-SEC-001 AC3, AC5; blocking at the MVP Security-baseline gate) — added by VERIFY-F1-01E
 
 ## Phase 2 - Complaint Core

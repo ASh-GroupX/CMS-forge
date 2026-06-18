@@ -1270,6 +1270,114 @@ Append build and verification evidence here. Do not delete failed evidence.
   - Customer portal exposure rules hold: Passed by separation; no portal route or portal-visible data was changed.
   - Trust boundaries are tested: Passed for this task boundary; admin API tests prove active-only list query, id/code lookup, explicit response mapping, and missing lookup behavior.
 
+## F1-05D - Branch Read/List HTTP Endpoints With Admin RBAC And OpenAPI
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-ADMIN-001
+  - METHOD-MODULAR-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+  - NFR-SEC-002
+- Evidence:
+  - Added `GET /branches` and `GET /branches/:idOrCode` to `BranchesController`.
+  - Wired `BranchesModule` into the API app.
+  - Protected both read routes with `SessionAuthGuard`, `RbacGuard`, and `@Roles('ADMIN')`.
+  - Missing branch lookup returns stable `{ branch: null }` without inventing a new error code.
+  - Added focused `test:api -- admin` coverage for controller delegation, missing branch response, Admin allow, non-admin denial, and denial audit behavior.
+  - Added `/branches`, `/branches/{idOrCode}`, `Branch`, `BranchListResponse`, and `BranchGetResponse` to the canonical OpenAPI contract.
+  - Kept touched source files under the 300-line budget; `tools/openapi-check.mjs` is 255 lines and the largest admin test file is 143 lines.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- admin` (5/5)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (only CRLF warnings)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed; routes use existing session/RBAC guards and tests cover Admin allow plus Branch Manager denial.
+  - Each state change writes status history and an audit entry in the same transaction; side effects enqueue after commit: Not applicable; this task adds read-only routes and no branch state change.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed; branch responses use explicit DTO fields only and no logging was added.
+  - Customer portal exposure rules hold: Passed by separation; these are staff Admin routes and no portal route or portal-visible data changed.
+  - Trust boundaries are tested: Passed; `test:api -- admin` covers Admin allowed and non-admin denied with `SECURITY` audit.
+
+## F1-05E - Branch Create/Update/Deactivate Service Behavior With Audit Entries
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-ADMIN-001
+  - METHOD-MODULAR-001
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+  - NFR-SEC-002
+- Evidence:
+  - Added branch repository methods for create, update, deactivate, plus a Prisma transaction wrapper.
+  - Added branch service create/update/deactivate methods that validate minimal text fields, trim accepted values, and map results to explicit `BranchResponseDto` objects.
+  - Branch deactivate is soft behavior through `isActive: false`; no delete path was added.
+  - Each branch write records a `CONFIG` audit entry through `AuditService.record` using the same transaction client as the branch write.
+  - Added focused `test:api -- admin` coverage for create/update/deactivate behavior, validation failures, safe response mapping, audit metadata, and same-transaction audit/write client use.
+  - No branch write HTTP route, OpenAPI write path, UI, schema, or migration was added.
+  - Kept touched app source files under the 300-line budget: branch service is 137 lines, repository is 75 lines, module is 13 lines; tests are exempt.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Failed then Passed: `corepack pnpm typecheck` initially caught an exact-optional narrowing issue in `updateData`; after narrowing the local value explicitly, it passed.
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- admin` (8/8)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (only CRLF warnings)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not applicable to route authorization in this task; no public write route was added. Existing read-route RBAC tests still cover Admin allowed and Branch Manager denied.
+  - Each state change writes status history and an audit entry in the same transaction; side effects enqueue after commit: Passed for branch config state changes; create/update/deactivate branch writes and their `CONFIG` audit entries share the same Prisma transaction client. Complaint status history is not applicable, and no side effects were added.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed; audit metadata records changed branch field names only, and branch responses are explicit DTO fields.
+  - Customer portal exposure rules hold: Passed by separation; no portal route or portal-visible data was changed.
+  - Trust boundaries are tested: Passed; `test:api -- admin` still covers Admin read allowed and Branch Manager denied, and the new write tests cover validation denial plus safe write response mapping.
+
+## F1-05F - Branch Write HTTP Endpoints, API Tests, And Golden CRUD Pattern Freeze
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-ADMIN-001
+  - METHOD-MODULAR-001
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+  - NFR-SEC-002
+- Evidence:
+  - Added Admin-only branch write routes: `POST /branches`, `PATCH /branches/:id`, and `POST /branches/:id/deactivate`.
+  - Added `branch-write.dto.ts` request body parsers that accept only branch configuration fields, trim text values, and reject invalid/empty write bodies with `VALIDATION_FAILED`.
+  - Controller write routes derive audit context from `AuthenticatedRequest` server principal, correlation ID, IP, and user agent; no role or scope data is accepted from client bodies.
+  - Added OpenAPI write paths and `BranchCreateRequest`, `BranchUpdateRequest`, and `BranchWriteResponse` schemas; regenerated `packages/contracts/openapi.json`.
+  - Added focused `test:api -- admin` coverage for write route delegation, safe response envelopes, client body role-field ignore behavior, validation denial, Admin allow, and Branch Manager denial with `SECURITY` audit.
+  - Updated `apps/api/src/modules/branches/MODULE.md` to freeze `branches` as the golden CRUD reference pattern.
+  - Marked the F1-05 golden CRUD umbrella complete.
+  - Kept touched source files under the 300-line budget: branch controller is 75 lines, branch service is 137 lines, branch repository is 75 lines, and `tools/openapi-check.mjs` is 295 lines; DTOs/tests/docs are exempt.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- admin` (11/11)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (only CRLF warnings)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed; branch write routes use `SessionAuthGuard`, `RbacGuard`, and `@Roles('ADMIN')`; tests cover Admin allowed, Branch Manager denied, and client `roleCode` ignored in create body parsing.
+  - Each state change writes status history and an audit entry in the same transaction; side effects enqueue after commit: Passed for branch config state changes by F1-05E service tests; these HTTP routes call the same service write methods. Complaint status history is not applicable, and no side effects were added.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed; request parsers accept only branch text fields, responses use explicit branch DTO envelopes, and no logging was added.
+  - Customer portal exposure rules hold: Passed by separation; branch write routes are staff Admin-only and no portal route or portal-visible data changed.
+  - Trust boundaries are tested: Passed; `test:api -- admin` covers Admin read/write allowed paths, Branch Manager read/write denial with `SECURITY` audit, invalid write body denial, and safe response mapping.
+
 ## PLAN-F1-05C - Split Branches Golden CRUD Behavior
 
 - Date: 2026-06-18
