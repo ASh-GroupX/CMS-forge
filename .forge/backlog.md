@@ -44,12 +44,12 @@ history from another project.
 
 ## Phase 2 - Complaint Core
 
-- [ ] F2-01: Complaint domain schema and migrations
-  - [ ] F2-01A: Add complaint transition history metadata schema and migration
-  - [ ] F2-01B: Generate complaints module shell and fill `MODULE.md`
+- [x] F2-01: Complaint domain schema and migrations
+  - [x] F2-01A: Add complaint transition history metadata schema and migration
+  - [x] F2-01B: Generate complaints module shell and fill `MODULE.md`
 - [ ] F2-02: Backend complaint state machine
-  - [ ] F2-02A: Add workflow transition matrix validation with service tests
-  - [ ] F2-02B: Persist complaint transitions with status history and same-transaction audit (Verify Gate: required)
+  - [x] F2-02A: Add workflow transition matrix validation with service tests
+  - [x] F2-02B: Persist complaint transitions with status history and same-transaction audit (Verify Gate: required)
   - [ ] F2-02C: Add complaint transition HTTP route, RBAC/branch-scope tests, and OpenAPI
 - [ ] F2-03: Complaint creation and staff queues
   - [ ] F2-03A: Add complaint creation service behavior with validation, reference generation, history, and audit

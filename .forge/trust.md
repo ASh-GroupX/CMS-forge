@@ -968,3 +968,70 @@ leakage. The open items are explicitly disclosed, correctly sequenced for later 
 block Complaint Core. Accepting with conditions. Phase 2 opens with a PLANNER pass to reconcile the
 already-applied F0-08 complaint tables against the Phase 2 backlog headers and emit agentic build
 tasks (notably the backend-owned complaint state machine).
+
+## F2-01A - Complaint Transition History Metadata Schema And Migration
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - The task stayed migration/schema-only and did not add complaint behavior, routes,
+    OpenAPI paths, UI, jobs, notifications, or audit-log mutation changes.
+  - `ComplaintStatusHistory` now has enum-backed transition action storage plus actor
+    role and request source columns required before the workflow service records real
+    transition provenance.
+  - Schema guard tests now fail if the history metadata fields or transition enums are
+    removed.
+  - Required proof commands passed, including Prisma validation/generation and Docker
+    network `migrate deploy`.
+  - `db:migrate:test` remains a fail-loud placeholder and was not reported as passed.
+
+## F2-01B - Complaints Module Shell And Manifest
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - The task stayed shell-only: generated complaints module files plus a filled
+    `MODULE.md` boundary manifest.
+  - No complaint behavior, routes, repository queries, OpenAPI paths, schema,
+    migrations, UI, jobs, notifications, comments, attachments, or audit logic were
+    added.
+  - Required checks passed: lint, typecheck, test 20/20, and openapi:check.
+  - Generator behavior was not touched, so the optional temp-root generator proof was
+    correctly Not Run.
+
+## F2-02A - Workflow Transition Matrix Validation
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - The task stayed pure service-validation only: no persistence, routes, OpenAPI,
+    audit writes, jobs, notifications, or UI.
+  - `ComplaintsService` now owns the SRS workflow matrix and returns deterministic
+    target status decisions for allowed `(fromStatus, action, actorRole)` inputs.
+  - Focused workflow tests cover every SRS matrix transition plus invalid-transition
+    and unauthorized-role denials.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- workflow 3/3,
+    and openapi:check.
+
+## F2-02B - Persist Complaint Transitions With History And Audit
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept pending independent VERIFY
+- Notes:
+  - The task stayed service/repository/test-only: no routes, OpenAPI paths, UI, jobs,
+    comments, attachments, notifications, customer portal behavior, SLA scheduling, or
+    external side effects.
+  - Valid transitions now go through `validateTransition`, then update complaint
+    status, insert status history, and write a WORKFLOW audit entry in one repository
+    transaction.
+  - Focused workflow tests prove the update, history insert, and audit write share the
+    same transaction client, and that invalid/unauthorized transitions do not start a
+    transaction.
+  - Required checks passed after fixing stale generated constructor specs: lint,
+    typecheck, test 20/20, test:api -- workflow 6/6, and openapi:check.
+  - Because this task is a Verify Gate, AUTO PHASE stops at `Needs Verify` before
+    `F2-02C` can add the HTTP route on top of this persistence path.

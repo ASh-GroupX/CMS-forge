@@ -1699,3 +1699,207 @@ Append build and verification evidence here. Do not delete failed evidence.
     logs, staff PII, DMS/internal codes, OTPs, tokens, and credentials.
   - Trust boundaries are tested: Passed by pack guidance; every adopted boundary must
     have at least one allowed and one denied test.
+
+## F2-01A - Add Complaint Transition History Metadata Schema And Migration
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - ARCH-DATA-001
+  - ARCH-WORKFLOW-001
+  - WORKFLOW-MATRIX-001
+  - METHOD-AUDIT-001
+  - API-STANDARD-001
+  - REQ-COMPLAINT-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added stable `ComplaintTransitionAction` enum values matching the SRS workflow
+    matrix actions.
+  - Added `ComplaintTransitionRequestSource` for staff API, customer portal, system
+    job, and import-originated transition requests.
+  - Added `action`, `actorRole`, and `requestSource` storage to
+    `ComplaintStatusHistory` with snake_case column mapping for `actor_role` and
+    `request_source`.
+  - Added migration `20260618201000_transition_history_metadata` to create the new
+    enums and add nullable history metadata columns without mutating existing
+    complaint or audit data.
+  - Strengthened schema guard tests so removing transition metadata fields or enums
+    fails `corepack pnpm test`.
+  - No complaint services, routes, state-machine behavior, OpenAPI paths, UI, jobs,
+    notification logic, or audit append-only migration changes were added.
+- Verification:
+  - Failed then Passed: `corepack pnpm --dir packages/database exec prisma validate --schema prisma/schema.prisma`
+    initially failed because `DATABASE_URL` was unset in the shell; rerun with the
+    dev database URL passed.
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm --dir packages/database exec prisma validate --schema prisma/schema.prisma`
+  - Passed: `corepack pnpm --dir packages/database exec prisma generate --schema prisma/schema.prisma`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `docker compose up -d postgres`
+  - Passed: `docker run --rm --network cms-forge_default -v "${PWD}:/workspace:ro" -w /workspace -e DATABASE_URL="postgresql://cms_auto:cms_auto_dev@postgres:5432/cms_auto?schema=public" node:20-bookworm-slim sh -lc "apt-get update >/dev/null && apt-get install -y openssl >/dev/null && npm exec --yes prisma@5.22.0 -- migrate deploy --schema packages/database/prisma/schema.prisma"`
+  - Not Run: `db:migrate:test`; it remains a fail-loud placeholder and was not claimed
+    as passed.
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not Run;
+    migration-only task has no authenticated request boundary.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Not Run; this task adds storage
+    only. `F2-02B` must prove service behavior and remains a Verify Gate.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope; the migration contains only enum/column DDL and no secret data
+    or logging behavior.
+  - Customer portal exposure rules hold: Not Run; no portal API or portal-visible DTO
+    changed.
+  - Trust boundaries are tested: Not Run; no request boundary was added.
+
+## F2-01B - Generate Complaints Module Shell And Manifest
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - ARCH-WORKFLOW-001
+  - WORKFLOW-MATRIX-001
+  - METHOD-AUDIT-001
+  - REQ-COMPLAINT-001
+  - METHOD-MODULAR-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+- Evidence:
+  - Generated `apps/api/src/modules/complaints/` with the canonical module generator.
+  - Filled `apps/api/src/modules/complaints/MODULE.md` with public surface,
+    owned tables, allowed dependencies, related table boundaries, and SRS IDs.
+  - Kept the generated module behavior-free: no complaint routes, repository queries,
+    workflow logic, OpenAPI paths, schema, migrations, UI, jobs, comments,
+    attachments, notifications, or audit behavior were added.
+  - Did not touch the generator because it already produced a valid Nest-ready shell.
+- Verification:
+  - Passed: `corepack pnpm generate:module -- complaints`
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm openapi:check`
+  - Not Run: `corepack pnpm generate:module -- complaints --root <temp>`; generator
+    behavior was not changed in this task.
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not Run;
+    module-shell-only task has no request boundary.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Not Run; no complaint behavior
+    was implemented.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope; only behavior-free generated shell files and a manifest were
+    added.
+  - Customer portal exposure rules hold: Not Run; no portal API or portal-visible DTO
+    changed.
+  - Trust boundaries are tested: Not Run; no request boundary was added.
+
+## F2-02A - Workflow Transition Matrix Validation
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - ARCH-WORKFLOW-001
+  - WORKFLOW-MATRIX-001
+  - API-STANDARD-001
+  - REQ-COMPLAINT-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+- Evidence:
+  - Added a pure service-level workflow transition matrix in `ComplaintsService`.
+  - `validateTransition(fromStatus, action, actorRole)` returns the SRS target status
+    for allowed transitions.
+  - Invalid state/action pairs throw stable `COMPLAINT_INVALID_TRANSITION` with HTTP
+    409.
+  - Unauthorized roles throw stable `RBAC_FORBIDDEN` with HTTP 403.
+  - Registered a real `workflow` API test suite in `tools/api-test.mjs`.
+  - Added focused workflow tests covering all 17 SRS matrix transitions, one invalid
+    transition, and one unauthorized-role denial.
+  - No persistence, Prisma query, status-history write, audit write, HTTP route,
+    OpenAPI path, UI, job, notification, comment, attachment, or side effect was
+    added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (3/3)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not Run
+    for HTTP/session boundary; no route exists. The validator accepts an actor role
+    input that later route tasks must supply from the server session.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Not Run; no persistence or side
+    effects were implemented. `F2-02B` must prove this and remains a Verify Gate.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope; no logging or secret fields were added.
+  - Customer portal exposure rules hold: Not Run; no portal API or portal-visible DTO
+    changed.
+  - Trust boundaries are tested: Partial; pure validator tests cover allowed
+    transitions and denied roles, but no HTTP trust boundary exists yet.
+
+## F2-02B - Persist Complaint Transitions With History And Audit
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed pending independent VERIFY
+- Required model tier: BUILDER-STRONG
+- Verify Gate: required
+- Requirement IDs:
+  - ARCH-WORKFLOW-001
+  - WORKFLOW-MATRIX-001
+  - METHOD-AUDIT-001
+  - API-STANDARD-001
+  - REQ-COMPLAINT-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+- Evidence:
+  - Added `ComplaintsService.applyTransition`, which first uses the existing
+    `validateTransition` authority, then applies valid transitions in one
+    repository transaction.
+  - Added complaints repository methods for transaction execution, complaint status
+    update, and `complaint_status_history` insert.
+  - Added `AuditService.record` in the same transaction client as the complaint update
+    and status-history insert.
+  - Stored transition action, actor role, request source, reason, correlation ID, and
+    actor in status history.
+  - Added `WORKFLOW` audit metadata for from/to status, transition action, actor role,
+    and request source.
+  - Wired `PrismaService` and `AuditService` into `ComplaintsModule` for the new
+    service dependencies.
+  - Updated generated complaint construction specs to match the service/repository
+    dependencies.
+  - No HTTP routes, OpenAPI paths, DTO request parsing, UI, jobs, comments,
+    attachments, notifications, customer portal behavior, SLA scheduling, or external
+    side effects were added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Failed then Passed: `corepack pnpm typecheck` initially caught stale generated
+    constructor specs after the service dependency changed; after updating those
+    test stubs, it passed.
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (6/6)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not Run
+    for HTTP/session boundary; no route exists. Role authority is represented as
+    service input and must be supplied from the server session in `F2-02C`.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed; workflow tests assert the
+    complaint status update, status-history insert, and audit write all receive the
+    same transaction client, and denied paths do not start a transaction. No side
+    effects are enqueued in this task.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope; no logging or secret fields were added.
+  - Customer portal exposure rules hold: Not Run; no portal API or portal-visible DTO
+    changed.
+  - Trust boundaries are tested: Partial; service tests cover allowed transition,
+    invalid transition, and unauthorized role denial, but no HTTP trust boundary exists
+    until `F2-02C`.

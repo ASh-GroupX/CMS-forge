@@ -1,8 +1,18 @@
 # Current State
 
-Status: Ready to Build
+Status: Needs Verify
 Phase: Phase 2 - Complaint Core
-Next Task: F2-01A - Add Complaint Transition History Metadata Schema And Migration
+Next Task: VERIFY-F2-02B - Complaint Transition Persistence Gate
+
+## F2-02B Built - Verify Gate
+
+`F2-02B` added complaint transition persistence through the service/repository:
+valid transitions update complaint status, insert status history, and write a
+WORKFLOW audit entry in one transaction. `test:api -- workflow` now covers the
+matrix, invalid transitions, unauthorized roles, same-transaction persistence, and
+pre-transaction denials.
+
+AUTO PHASE stops here because `F2-02B` is marked `Verify Gate: required`.
 
 ## Out-of-Band Shared Pack Extracted (F1-06D)
 

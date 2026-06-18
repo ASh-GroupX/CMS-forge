@@ -48,6 +48,29 @@ export function checkSchemaText(text) {
     errors.push('Complaint must expose status history');
   }
 
+  const historyBlock = text.match(/model\s+ComplaintStatusHistory\s+{[\s\S]*?\n}/)?.[0] ?? '';
+  for (const [field, mappedColumn] of [
+    ['action', null],
+    ['actorRole', 'actor_role'],
+    ['requestSource', 'request_source'],
+  ]) {
+    if (!new RegExp(`\\b${field}\\b`).test(historyBlock)) {
+      errors.push(`ComplaintStatusHistory must include ${field}`);
+    }
+
+    if (mappedColumn && !historyBlock.includes(`@map("${mappedColumn}")`)) {
+      errors.push(`ComplaintStatusHistory.${field} must map to ${mappedColumn}`);
+    }
+  }
+
+  if (!/enum\s+ComplaintTransitionAction\s+{[\s\S]*SUBMIT[\s\S]*ROUTE_AGAIN/.test(text)) {
+    errors.push('ComplaintTransitionAction must include workflow matrix actions');
+  }
+
+  if (!/enum\s+ComplaintTransitionRequestSource\s+{[\s\S]*STAFF_API[\s\S]*CUSTOMER_PORTAL/.test(text)) {
+    errors.push('ComplaintTransitionRequestSource must include staff and portal sources');
+  }
+
   if (!/enum\s+AuditEventType\s+{[\s\S]*SECURITY/.test(text)) {
     errors.push('AuditEventType must include SECURITY');
   }
