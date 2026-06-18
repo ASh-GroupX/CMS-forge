@@ -84,10 +84,6 @@ export function checkScaffold(root = process.cwd()) {
     }
   }
 
-  if (/^model\s+/m.test(prisma)) {
-    errors.push('database scaffold must not define domain tables in F0-01');
-  }
-
   if (errors.length > 0) {
     throw new Error(errors.join('\n'));
   }

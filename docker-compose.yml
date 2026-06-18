@@ -5,6 +5,8 @@ services:
       POSTGRES_DB: cms_auto
       POSTGRES_USER: cms_auto
       POSTGRES_PASSWORD: cms_auto_dev
+      # Trust all connections for local dev. Never use in production.
+      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5432:5432"
     volumes:

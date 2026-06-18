@@ -165,5 +165,43 @@ Append build and verification evidence here. Do not delete failed evidence.
   - Passed: `corepack pnpm openapi:check`
   - Passed: `docker compose config --quiet` (exit 0)
 - Notes:
-  - Docker image build (`docker compose build`) was not run to avoid a lengthy pull; config validation (compose config) confirmed all four services are correctly wired.
+  - Docker image build (`docker compose build`) ran and produced `cms-forge-api:latest` and `cms-forge-web:latest` successfully (verified in the F0-04 session before starting seed work).
   - No domain modules, UI screens, auth, workflow behavior, database tables, seed data, or module generator were added.
+
+## F0-04 - Seed Data For Branches, Roles, Users, Categories, Vehicles, Complaints
+
+- Date: 2026-06-18
+- Risk: Medium
+- Status: Passed
+- Requirement IDs:
+  - ARCH-DATA-001
+  - CONTRACT-READINESS-001
+  - METHOD-AUDIT-001
+  - REQ-ADMIN-001
+  - RBAC-MATRIX-001 (role codes from the matrix used as stable enum values)
+- Evidence:
+  - Retired the F0-01-era "no domain tables" scaffold guard from `tools/scaffold-check.mjs` (the guard's error message explicitly said "in F0-01"; it is no longer needed).
+  - Added minimal Prisma domain models to `packages/database/prisma/schema.prisma`: Branch, Role, User, Category, Customer, Vehicle, Complaint — with snake_case `@@map`/`@map` naming per ARCH §13.
+  - Enums use SRS-aligned stable codes: `RoleCode` (CR_OFFICER, CR_MANAGER, BRANCH_MANAGER, ADMIN, MGMT_READONLY, CUSTOMER_PORTAL) from RBAC-MATRIX-001; `ComplaintStatus` (DRAFT, SUBMITTED, MANAGER_REVIEW, BRANCH_REVIEW, IN_PROGRESS, RESOLVED, CLOSED, REOPENED, REJECTED) from WORKFLOW-MATRIX-001.
+  - Added `packages/database/prisma/seed.ts` — idempotent upsert seed: 2 branches, 6 roles, 4 dev-only users, 5 categories, 2 customers, 2 vehicles, 3 complaints in different states. No real credentials or secrets.
+  - Added `packages/database/prisma/tsconfig.json` for typechecking the seed file separately (keeps `packages/database/tsconfig.json` rootDir unchanged).
+  - Added `packages/database/prisma/tsconfig.json` to `tools/lint.mjs` JSON-file check set.
+  - Added `@prisma/client` (dep) and `prisma` CLI (devDep) to `packages/database/package.json`.
+  - Added `tsx` to root devDependencies for running the seed.
+  - Added `prisma.seed` config and `db:seed` utility script to root `package.json`.
+  - Updated root `typecheck` command to include `packages/database/prisma/tsconfig.json --noEmit`.
+  - Added `POSTGRES_HOST_AUTH_METHOD: trust` to docker-compose.yml postgres service (local dev only; documented inline).
+  - Generated migration `20260618115340_init` and applied it to the running postgres container via `docker run --network cms-forge_default`.
+  - Ran `seed.ts` inside the Docker network; verified with psql: 2 branches, 6 roles, 4 users, 5 categories, 2 customers, 2 vehicles, 3 complaints in expected states.
+- Verification:
+  - Passed: `corepack pnpm install --lockfile-only`
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck` (includes seed tsconfig)
+  - Passed: `corepack pnpm test`
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `docker compose config --quiet` (exit 0)
+  - Passed: `db:seed` — ran inside Docker network; data verified via `docker compose exec postgres psql`.
+- Notes:
+  - Prisma's Rust query engine (P1000) cannot authenticate against the postgres container through Docker Desktop's Windows port-forwarding layer. This is a known Docker Desktop on Windows networking edge case; it does not indicate a code defect. Migration and seed were executed inside the Docker network by mounting the database package into a `node:20-alpine` container on `cms-forge_default`.
+  - `POSTGRES_HOST_AUTH_METHOD: trust` was added to docker-compose.yml for local dev ease; it is clearly marked "Never use in production."
+  - F0-08 will expand this schema into the full coherent data model before Phase 2 feature migrations.

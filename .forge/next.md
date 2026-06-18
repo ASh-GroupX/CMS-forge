@@ -1,39 +1,33 @@
-# Next Task: F0-04 - Seed Data For Branches, Roles, Users, Categories, Vehicles, Complaints
+# Next Task: F0-05 - Frontend Design Tokens And Shared UI Component Foundation
 
 ## Model Guidance
 
-- Tier: BUILDER-STRONG
-- Why: Seed data runs against the real Prisma schema + PostgreSQL; it requires the database package, realistic reference data, and must not leak credentials or bypass RBAC assumptions baked into later tests.
-- Escalate to: PLANNER if the Prisma schema is not ready or the seed scope conflicts with F0-08 (coherent data model).
-- Do not use: BUILDER-SMALL.
+- Tier: BUILDER-STANDARD
+- Why: This is an ordinary UI setup task — Tailwind config, shared CSS tokens, and placeholder shadcn/ui wiring. No auth, RBAC, or workflow logic involved.
+- Escalate to: BUILDER-STRONG if the token contract conflicts with RTL/LTR requirements from UI-DESIGN-001.
+- Do not use: BUILDER-SMALL (multiple files with interconnected config).
 
 ## Requirement IDs
 
-- ARCH-DATA-001
+- UI-DESIGN-001
+- ARCH-UI-001
 - CONTRACT-READINESS-001
-- METHOD-AUDIT-001
-- REQ-ADMIN-001
-- UI-DESIGN-001 (seed provides the realistic data for visual states)
 
 ## Task
 
-Add a database seed script that populates the local development stack with
-reference data: at least two branches, all system roles, an admin user per
-branch, sample categories, a few vehicle records, and two or three complaints
-in different states.
-
-Keep this as data plumbing only. Do not implement domain modules, business
-rules, workflow behavior, auth sessions, or RBAC enforcement.
+Add the shared design token foundation required by UI-DESIGN-001 to `apps/web`.
+This is a configuration-only task: tokens, Tailwind setup, and a minimal shared
+component entry point. Do not implement any UI screens, business logic, auth
+flows, or complaint workflow components.
 
 ## Scope
 
 Allowed files and directories:
 
-- `packages/database/**`
-- `apps/api/**` (only if the seed needs a prisma client entry point)
-- `package.json` (add `db:seed` script if missing)
+- `apps/web/**`
+- `packages/config/**` (shared Tailwind preset or Prettier config if needed)
+- `package.json`
 - `pnpm-lock.yaml`
-- `tools/**`
 
 Do not modify:
 
@@ -47,11 +41,13 @@ Do not modify:
 
 ## Implementation Requirements
 
-- Use `packages/database/prisma/seed.ts` or `seed.mjs`; run via `prisma db seed`.
-- Roles must match the stable codes in the SRS (ADMIN, CR_MANAGER, BRANCH_MANAGER, AGENT, CUSTOMER_SERVICE, VIEWER, PORTAL).
-- No real email addresses, real credentials, or production secrets in seed data.
-- Seed must be idempotent (upsert, not plain insert) so it can run more than once safely.
-- Connection string comes from `DATABASE_URL` env var only.
+- Add Tailwind CSS v3 with a shared preset in `packages/config` or inline in `apps/web/tailwind.config.ts`.
+- Define design tokens as CSS custom properties (or Tailwind extend values) covering: color palette (brand, neutral, status — success, warning, error, info), typography scale, spacing, border radius, shadow, focus ring, and state colors (loading, empty, error, conflict).
+- Tokens must support Arabic RTL and English LTR without layout changes (use logical CSS properties where applicable).
+- Add shadcn/ui and Radix UI as dependencies; wire up the `cn()` utility helper.
+- Add a minimal `packages/contracts/src/design-tokens.ts` or `apps/web/src/lib/tokens.ts` exporting the token map — this is not a UI component, just a typed constant map.
+- Do not add any page routes, UI screens, or navigation yet.
+- Verify the web scaffold still typechecks and lints after dependencies are added.
 
 ## Must Pass
 
@@ -64,11 +60,11 @@ Run and report honestly:
 - `corepack pnpm openapi:check`
 - `docker compose config --quiet`
 
-If the seed itself requires a live database, mark `db:seed` as `Needs Human Review` and explain how to run it manually.
-
 ## Exit Criteria
 
-- `packages/database/prisma/seed.ts` (or `.mjs`) exists and is idempotent.
-- `db:seed` script or Prisma seed config is wired in.
+- Tailwind CSS is configured with a shared token set.
+- shadcn/ui and Radix UI are installed; `cn()` helper is available.
+- Token map is exported from a typed module.
+- RTL/LTR token support is documented in comments or a brief note.
 - Baseline proof commands still pass.
 - `.forge/evidence.md`, `.forge/trust.md`, `.forge/backlog.md`, `.forge/state.md`, and `.forge/next.md` are updated before finishing.

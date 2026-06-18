@@ -6,3 +6,128 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// ---------------------------------------------------------------------------
+// Enums — stable codes independent of display language (ARCH-DATA-001, §13)
+// ---------------------------------------------------------------------------
+
+enum RoleCode {
+  CR_OFFICER
+  CR_MANAGER
+  BRANCH_MANAGER
+  ADMIN
+  MGMT_READONLY
+  CUSTOMER_PORTAL
+}
+
+enum ComplaintStatus {
+  DRAFT
+  SUBMITTED
+  MANAGER_REVIEW
+  BRANCH_REVIEW
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  REOPENED
+  REJECTED
+}
+
+// ---------------------------------------------------------------------------
+// Core tables — minimal shape for seed + Phase 1 auth baseline.
+// F0-08 will expand these into the full coherent schema before feature
+// migrations. All DB tables use snake_case (ARCH §13).
+// ---------------------------------------------------------------------------
+
+model Branch {
+  id         String      @id @default(cuid())
+  code       String      @unique
+  nameEn     String      @map("name_en")
+  nameAr     String      @map("name_ar")
+  isActive   Boolean     @default(true) @map("is_active")
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+  users      User[]
+  complaints Complaint[]
+
+  @@map("branches")
+}
+
+model Role {
+  id     String   @id @default(cuid())
+  code   RoleCode @unique
+  nameEn String   @map("name_en")
+  nameAr String   @map("name_ar")
+  users  User[]
+
+  @@map("roles")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  nameEn    String   @map("name_en")
+  nameAr    String   @map("name_ar")
+  roleId    String   @map("role_id")
+  branchId  String?  @map("branch_id")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  role      Role     @relation(fields: [roleId], references: [id])
+  branch    Branch?  @relation(fields: [branchId], references: [id])
+
+  @@map("users")
+}
+
+model Category {
+  id         String      @id @default(cuid())
+  code       String      @unique
+  nameEn     String      @map("name_en")
+  nameAr     String      @map("name_ar")
+  isActive   Boolean     @default(true) @map("is_active")
+  complaints Complaint[]
+
+  @@map("categories")
+}
+
+model Customer {
+  id         String      @id @default(cuid())
+  nameEn     String      @map("name_en")
+  nameAr     String      @map("name_ar")
+  phone      String      @unique
+  email      String?
+  complaints Complaint[]
+
+  @@map("customers")
+}
+
+model Vehicle {
+  id         String      @id @default(cuid())
+  vin        String      @unique
+  plate      String
+  makeEn     String      @map("make_en")
+  modelEn    String      @map("model_en")
+  year       Int
+  complaints Complaint[]
+
+  @@map("vehicles")
+}
+
+model Complaint {
+  id              String          @id @default(cuid())
+  referenceNumber String          @unique @map("reference_number")
+  status          ComplaintStatus @default(DRAFT)
+  branchId        String          @map("branch_id")
+  categoryId      String          @map("category_id")
+  customerId      String          @map("customer_id")
+  vehicleId       String?         @map("vehicle_id")
+  descriptionEn   String          @map("description_en")
+  descriptionAr   String?         @map("description_ar")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  branch          Branch          @relation(fields: [branchId], references: [id])
+  category        Category        @relation(fields: [categoryId], references: [id])
+  customer        Customer        @relation(fields: [customerId], references: [id])
+  vehicle         Vehicle?        @relation(fields: [vehicleId], references: [id])
+
+  @@map("complaints")
+}

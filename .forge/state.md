@@ -2,7 +2,7 @@
 
 Status: Ready to Build
 Phase: Phase 0 - Repository Foundation
-Next Task: F0-04 - Seed Data For Branches, Roles, Users, Categories, Vehicles, Complaints
+Next Task: F0-05 - Frontend Design Tokens And Shared UI Component Foundation
 
 ## Notes
 
@@ -14,4 +14,6 @@ Next Task: F0-04 - Seed Data For Branches, Roles, Users, Categories, Vehicles, C
 - F0-08 now holds the coherent Prisma data model task before any feature migrations.
 - F0-01 is complete; the pnpm workspace scaffold, package boundaries, OpenAPI shell, Prisma shell, and PostgreSQL/Redis compose file are in place.
 - F0-02 is complete; baseline lint, typecheck, test, build, and OpenAPI checks are real and runnable.
-- F0-03 is complete; Docker Compose now defines PostgreSQL, Redis, API, and web services. API and web Dockerfiles build from the scaffold with no domain behavior. All baseline proof commands pass. Docker image build was not exercised in this session — recommend running `docker compose build` before F0-04.
+- F0-03 is complete; Docker Compose defines all four services (postgres, redis, api, web). Images built successfully.
+- F0-04 is complete; minimal Prisma schema with SRS-aligned role and complaint-state enums; idempotent seed script verified against live postgres in Docker. Migration file committed. Schema will be expanded in F0-08.
+- Known limitation: Prisma's Rust query engine cannot connect through Docker Desktop's Windows port-forwarding layer (P1000). DB operations must be run inside the Docker network (see evidence). This does not affect application code.

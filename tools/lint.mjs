@@ -18,6 +18,7 @@ const jsonFiles = new Set([
   'packages/contracts/openapi.json',
   'packages/config/package.json',
   'packages/config/tsconfig.json',
+  'packages/database/prisma/tsconfig.json',
   'tsconfig.base.json',
 ]);
 

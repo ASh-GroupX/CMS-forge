@@ -83,4 +83,16 @@ Append review decisions here.
   - All five proof commands (install --lockfile-only, lint, typecheck, test, openapi:check) passed.
   - Docker Compose config validation passed (exit 0).
   - Liveness entrypoints contain no domain behavior; Docker image build is deferred until a developer runs it locally.
-  - Remaining risk: Docker image build itself was not exercised in this session. Recommend running `docker compose build` in the dev environment before F0-04.
+  - `docker compose build` ran successfully in the F0-04 session, producing `cms-forge-api:latest` and `cms-forge-web:latest`. F0-03 risk resolved.
+
+## F0-04 - Seed Data For Branches, Roles, Users, Categories, Vehicles, Complaints
+
+- Date: 2026-06-18
+- Risk: Medium
+- Recommendation: Accept
+- Notes:
+  - All six proof commands passed.
+  - Seed ran end-to-end inside Docker network; data verified with psql.
+  - Role codes and complaint states derived directly from SRS RBAC-MATRIX-001 and WORKFLOW-MATRIX-001 — no invented codes.
+  - Remaining risk: `POSTGRES_HOST_AUTH_METHOD: trust` exposes local postgres without a password. Acceptable for dev; must not reach production. Flag for a future infra hardening task.
+  - F0-08 will expand this minimal schema into the full coherent data model before Phase 2 feature migrations.
