@@ -2380,3 +2380,37 @@ Append build and verification evidence here. Do not delete failed evidence.
   - Trust boundaries are tested: Passed; workflow tests cover allowed transition,
     invalid transition, unauthorized-role denial with SECURITY audit, branch-scope
     denial audit, and out-of-scope complaint denial before write.
+
+## PLAN-F3-01 - Split SLA And Workflow Operations
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: PLANNER
+- Requirement IDs:
+  - REQ-SLA-001
+  - REQ-WORKFLOW-001
+  - REQ-WORKFLOW-002
+  - REQ-RESOLUTION-001
+  - REQ-NOTIFY-001
+  - SLA-CALENDAR-001
+  - ARCH-WORKFLOW-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Read `.forge/forge.md`, project policy/state/next/model files, backlog,
+    evidence, trust, AGENTS rules, architecture, and the SRS blocks cited by the
+    planner task.
+  - Confirmed `.forge/state.md` was `Ready to Plan`, so no code was implemented.
+  - Split Phase 3 backlog into focused SLA/workflow operation subtasks.
+  - Wrote `F3-01A` as the first build task: generate the `sla` module and add the
+    deterministic backend deadline calculator before jobs, warnings, escalation,
+    notifications, or reopen/reassignment recalculation.
+  - Marked `F3-01A` as `Verify Gate: required` because later Phase 3 work builds
+    directly on this SLA foundation.
+- Verification:
+  - Passed: `rg -n "F3-01A|Verify Gate: required|Ready to Build|test:api -- sla" .forge/next.md .forge/state.md .forge/backlog.md`
+- Notes:
+  - No application source code, schema, OpenAPI contract, jobs, routes, or UI were
+    changed during planning.

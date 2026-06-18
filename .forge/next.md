@@ -1,66 +1,77 @@
-# Planner Task: PLAN-F3-01 - Split SLA And Workflow Operations
+# Build Task: F3-01A - Generate SLA Module And Deadline Calculator
 
-Status: Ready to Plan
-Required model tier: PLANNER
+Status: Ready to Build
+Required model tier: BUILDER-STRONG
 Risk: High
 Phase: Phase 3 - SLA And Workflow Operations
+Verify Gate: required
 
 ## Why This Exists
 
-Phase 2 Complaint Core is accepted with non-blocking carry-forward conditions.
-Phase 3 spans SLA policy math, SLA jobs, escalation notification events, and
-additional workflow operations. Split it into the smallest buildable first task
-before coding.
+Phase 3 SLA jobs, breach escalation, and reopen/reassignment recalculation need
+one deterministic backend SLA calculator before any worker or notification code
+is safe to build. The Prisma schema already has `SlaPolicy` and `SlaEvent`; this
+task creates the `sla` module boundary and the first pure calculation behavior.
 
-## Planning Scope
+## Scope
 
-Plan only Phase 3:
+- Generate the `sla` module with `corepack pnpm generate:module -- sla`.
+- Fill `apps/api/src/modules/sla/MODULE.md` with the real boundary:
+  public `SlaService`, owns `sla_policies` and `sla_events`, may depend on
+  `core/http-kernel`, `core/audit.service`, and public module services only.
+- Add deterministic deadline calculation in `SlaService` for stored-policy input:
+  `severity`, `stage`, `durationMinutes`, `warningPercent`, `branchTimezone`,
+  `workingCalendarMode`, `enteredAt`, and optional `policyId`.
+- Support `WorkingCalendarMode.ALWAYS_ON` by calculating `dueAt` and `warningAt`
+  from `enteredAt`, duration, and warning percent on the backend.
+- Validate policy inputs fail closed with stable `SLA_POLICY_MISSING` errors for
+  missing/invalid duration, warning percent, stage, severity, branch timezone, or
+  unsupported calendar configuration.
+- Add a focused API test suite under `apps/api/test/sla/` and wire `sla` into
+  `tools/api-test.mjs`.
 
-- `F3-01`: SLA policy model and deterministic deadline calculation
-- `F3-02`: SLA warning and breach jobs
-- `F3-03`: Escalation notification events
-- `F3-04`: Reopen, send-back, resolve, and close workflows
+## Out Of Scope
 
-Do not implement code during this planner task.
+- No database repository reads or writes yet.
+- No SLA warning/breach jobs.
+- No notification, escalation, queue, or provider adapter behavior.
+- No HTTP routes, OpenAPI paths, admin UI, calendar admin screens, portal, reports,
+  or workflow transition changes.
+- No hardcoded production provider/template behavior.
 
-## Required Inputs
+## Requirement IDs
 
-- `.forge/project.md`
-- `.forge/policy.md`
-- `.forge/state.md`
-- `.forge/backlog.md`
-- `.forge/evidence.md`
-- `.forge/trust.md`
-- `AGENTS.md`
-- `docs/ARCHITECTURE.md`
-- `docs/CMS_AUTO_SRS.md`
+- REQ-SLA-001
+- SLA-CALENDAR-001
+- ARCH-WORKFLOW-001
+- METHOD-AUDIT-001
+- METHOD-TEST-001
+- API-STANDARD-001
 
-## Requirement IDs To Reconcile
+## Acceptance Criteria
 
-- `REQ-SLA-001`
-- `REQ-WORKFLOW-001`
-- `REQ-WORKFLOW-002`
-- `REQ-RESOLUTION-001`
-- `REQ-NOTIFY-001`
-- `SLA-CALENDAR-001`
-- `ARCH-WORKFLOW-001`
-- `METHOD-AUDIT-001`
-- `METHOD-TEST-001`
-- `API-STANDARD-001`
+- `SlaService` returns deterministic ISO-compatible `dueAt` and `warningAt` values
+  for `ALWAYS_ON` policies, including the default SLA durations:
+  Critical 120 minutes, High 480 minutes, Medium 1440 minutes, Low 4320 minutes.
+- Tests cover branch timezone validation and prove SLA calculation happens in API
+  code, not browser/client code.
+- Invalid or unsupported policy input returns `SLA_POLICY_MISSING`; no generic
+  thrown errors leak.
+- Generated module source files stay under the 300-line budget.
+- Evidence records the High-risk security self-check from `.forge/policy.md`,
+  including that no state change, audit bypass, side effect, portal exposure, or
+  secret logging was introduced.
 
-## Carry-Forward From Phase 2 Review
+## Verification Commands
 
-- First-response reporting: Phase 2 captures public staff comment timestamps.
-  Before reports depend on this KPI, decide whether to compute first response from
-  the first public staff comment or materialize it into `Complaint.firstResponseAt`.
-- No real notification/SLA side effects exist yet; Phase 3 must enqueue side
-  effects only after state commits.
+- `corepack pnpm lint`
+- `corepack pnpm typecheck`
+- `corepack pnpm test`
+- `corepack pnpm test:api -- sla`
+- `corepack pnpm openapi:check`
 
-## Output
+## Completion Notes
 
-- Write one buildable Phase 3 task to `.forge/next.md`.
-- Set `.forge/state.md` to `Ready to Build`.
-- Keep the task near 1 to 5 files plus focused tests.
-- Include exact verification commands and SRS requirement IDs.
-- Mark any Phase 3 security/workflow/SLA foundation that later Phase 3 tasks build
-  on as `Verify Gate: required`.
+If all checks pass, append evidence/trust for `F3-01A`, mark `F3-01A` done in
+`.forge/backlog.md`, and set `.forge/state.md` to `Needs Verify` because this is
+a Verify Gate for the Phase 3 SLA foundation.

@@ -1,8 +1,15 @@
 # Current State
 
-Status: Ready to Plan
+Status: Ready to Build
 Phase: Phase 3 - SLA And Workflow Operations
-Next Task: PLAN-F3-01 - Split SLA And Workflow Operations
+Next Task: F3-01A - Generate SLA Module And Deadline Calculator
+
+## PLAN-F3-01 Complete - Ready To Build
+
+PLAN-F3-01 split Phase 3 into buildable SLA/workflow operations work. The first
+task is the SLA module boundary plus deterministic backend deadline calculation,
+marked `Verify Gate: required` because warning jobs, breach jobs, escalation, and
+reopen/reassignment recalculation build directly on it.
 
 ## Phase 2 Accepted With Conditions - Ready To Plan Phase 3
 

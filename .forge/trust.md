@@ -1400,3 +1400,17 @@ comments, branch-scope repair, and transition role-denial audit repair with repr
 proof. The two prior PHASE-REVIEWER blockers were repaired and rechecked. Remaining
 conditions are downstream reporting/SLA implementation choices, not blockers for
 starting Phase 3 planning.
+
+## PLAN-F3-01 - Split SLA And Workflow Operations
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept
+- Notes:
+  - Planning stayed inside Phase 3 and did not implement code.
+  - The first task is deliberately the smallest useful SLA foundation: module
+    boundary plus pure backend deadline calculation.
+  - Jobs, breach escalation, notification events, routes, UI, calendar admin, and
+    workflow side effects are deferred until this calculation is built and verified.
+  - `F3-01A` is correctly marked `Verify Gate: required` because downstream SLA jobs
+    and escalation behavior depend on the same calculator.

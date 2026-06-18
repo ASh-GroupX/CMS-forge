@@ -65,9 +65,17 @@ history from another project.
 ## Phase 3 - SLA And Workflow Operations
 
 - [ ] F3-01: SLA policy model and deterministic deadline calculation
+  - [ ] F3-01A: Generate SLA module and deterministic deadline calculator (Verify Gate: required)
+  - [ ] F3-01B: Resolve active SLA policies by complaint severity, stage, and scope
+  - [ ] F3-01C: Record SLA deadline events when complaints enter SLA-governed states
 - [ ] F3-02: SLA warning and breach jobs
+  - [ ] F3-02A: Add idempotent SLA warning job at configured threshold
+  - [ ] F3-02B: Add idempotent SLA breach job and reportable breach event
 - [ ] F3-03: Escalation notification events
+  - [ ] F3-03A: Queue escalation notification events after SLA breach commit
 - [ ] F3-04: Reopen, send-back, resolve, and close workflows
+  - [ ] F3-04A: Enforce send-back/reopen reasons and resolution requirements
+  - [ ] F3-04B: Add closure/reopen side-effect scheduling without in-transaction side effects
 
 ## Phase 4 - Customer Portal
 
