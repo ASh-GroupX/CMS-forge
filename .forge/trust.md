@@ -3193,3 +3193,34 @@ Residual risk: this is a required customer-portal privacy gate. A fresh verifier
     `CRITICAL_COMPLAINT_QUIET_HOURS_BYPASS` in safe sent metadata.
   - Preferred-channel suppression and non-critical SMS quiet-hour suppression
     remain enforced before provider dispatch.
+
+## PHASE-5-REVIEW - Attachments And Notifications Acceptance Review After Repair
+
+- Date: 2026-06-19
+- Required model tier: PHASE-REVIEWER
+- Risk: High
+- Decision: Accept With Conditions
+- Builder honesty: Honest
+- Code quality: Good
+- Recommendation: Start Phase 6 with `F6-01A`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- attachments` (28/28)
+  - Passed: `corepack pnpm test:api -- integrations` (9/9)
+  - Passed: `corepack pnpm test:api -- notifications` (39/39)
+  - Passed: `corepack pnpm test:api -- surveys` (13/13)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `corepack pnpm prisma:validate`
+  - Passed: `git diff --check`
+- Findings:
+  - No remaining blocking Phase 5 acceptance gap found after the F5-06B repair.
+  - Critical SMS quiet-hour bypass uses persisted complaint severity and records
+    only the stable safe bypass reason.
+  - Preferred-channel suppression still denies before provider dispatch, and
+    non-critical SMS quiet-hour suppression remains covered.
+- Conditions:
+  - Phase 6 web checks are still fail-loud placeholders. The first Phase 6 task
+    must make `test:web -- shell` a real focused check before wider
+    visual/accessibility/performance proof lands in `F6-06`.

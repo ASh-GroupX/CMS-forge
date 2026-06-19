@@ -142,6 +142,7 @@ history from another project.
 ## Phase 6 - Staff UI
 
 - [ ] F6-01: Operational shell, navigation, RTL/LTR
+  - [ ] F6-01A: Bootstrap Next.js staff shell with localized RTL/LTR navigation
 - [ ] F6-02: Staff work queues
 - [ ] F6-03: Complaint create form
 - [ ] F6-04: Complaint detail workspace

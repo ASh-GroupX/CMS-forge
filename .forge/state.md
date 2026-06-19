@@ -1,8 +1,25 @@
 ﻿# Current State
 
-Status: Needs Phase Review
-Phase: Phase 5 - Attachments And Notifications
-Next Task: PHASE-5-REVIEW - Attachments And Notifications Acceptance Review
+Status: Ready to Build
+Phase: Phase 6 - Staff UI
+Next Task: F6-01A - Bootstrap Next.js Staff Shell With Localized RTL/LTR Navigation
+
+## Phase 5 Accepted With Conditions - Phase 6 Ready To Build
+
+PHASE-5-REVIEW re-ran the repaired Phase 5 proof surface on 2026-06-19: lint,
+typecheck, test 29/29, test:api -- attachments 28/28, test:api -- integrations
+9/9, test:api -- notifications 39/39, test:api -- surveys 13/13,
+openapi:check, prisma:validate, and git diff --check.
+
+Decision: Accept With Conditions. The F5-06B repair now satisfies
+`REQ-NOTIFY-002` AC3: critical complaint SMS notifications bypass quiet-hour
+suppression using persisted complaint severity and record the safe
+`CRITICAL_COMPLAINT_QUIET_HOURS_BYPASS` reason. Preferred-channel suppression
+and non-critical quiet-hour denial remain covered.
+
+Non-blocking condition for Phase 6: the web proof scripts are still fail-loud
+placeholders. `F6-01A` must make `test:web -- shell` real for the staff shell
+before broader visual/accessibility/performance gates land in `F6-06`.
 
 ## REPAIR-F5-06B-CRITICAL-QUIET-HOUR-BYPASS Built - Needs Phase Review
 
