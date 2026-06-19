@@ -1,58 +1,52 @@
-# Phase Review Task: PHASE-4-REVIEW - Customer Portal Acceptance Review
+# Build Task: F5-01A - Generate Attachments Module Boundary And Manifest
 
-Status: Needs Phase Review
-Required model tier: PHASE-REVIEWER
+Status: Ready to Build
+Required model tier: BUILDER-STRONG
 Risk: High
-Phase: Phase 4 - Customer Portal
+Phase: Phase 5 - Attachments And Notifications
 
 ## Scope
 
-Run the mandatory phase-end review for Phase 4 before any Phase 5 task starts.
-Use a fresh reviewer context/model per `.forge/forge.md`.
+Create the behavior-free backend `attachments` module boundary for Phase 5.
 
-Review the completed Phase 4 portal work:
-- F4-01 public complaint submission
-- F4-02 reference plus OTP verification and portal session tracking
-- F4-03 portal-safe public timeline and follow-up path
-- F4-04 explicit privacy regression tests
+Do:
+- Run the canonical module generator for `attachments`.
+- Fill `apps/api/src/modules/attachments/MODULE.md` with the real module boundary:
+  `AttachmentsService` as the public surface, `attachments` as the owned table,
+  and only allowed public-service dependencies.
+- Wire the module only as needed for the existing module reachability lint gate.
 
-## Inputs
+Do not add:
+- Upload/download routes
+- Object-storage adapter behavior
+- Malware scan behavior
+- Attachment OpenAPI paths
+- Attachment authorization rules
+- Portal or staff UI
+- Schema or migration changes
+- Provider calls or secrets
 
-- `.forge/backlog.md`
-- `.forge/evidence.md`
-- `.forge/trust.md`
-- `.forge/state.md`
-- `.forge/next.md`
-- `CLAUDE.md` / `AGENTS.md`
-- `docs/ARCHITECTURE.md`
-- `docs/CMS_AUTO_SRS.md`
-- Phase 4 changed source and test files
+## Requirement IDs
 
-## Review Checks
+- ARCH-FILES-001
+- REQ-FILES-001
+- REQ-PORTAL-001
+- REQ-PORTAL-002
+- METHOD-AUDIT-001
+- METHOD-API-001
+- METHOD-TEST-001
 
-- Every Phase 4 task is checked done or any unchecked parent item is explained by
-  completed child scope.
-- Evidence exists for every completed Phase 4 task and uses honest verification
-  labels.
-- Required proof commands actually ran, with no hidden failed, assumed, or
-  unrun checks.
-- Customer portal routes do not expose internal comments, audit logs, DMS codes,
-  staff PII, unrelated complaints, OTP values, OTP hashes, session tokens, or
-  session hashes.
-- Reference-only tracking is impossible; tracking and follow-up require verified
-  portal sessions.
-- Portal state-changing behavior keeps audit/security boundaries intact.
-- OpenAPI, architecture, SRS, lint, typecheck, and test gates were not weakened.
+## Verification Commands
 
-## Output
+- `corepack pnpm generate:module -- attachments`
+- `corepack pnpm lint`
+- `corepack pnpm typecheck`
+- `corepack pnpm test`
+- `corepack pnpm openapi:check`
 
-Append the PHASE-4-REVIEW decision to `.forge/trust.md`.
+## Acceptance
 
-On `Accept Phase` or `Accept With Conditions`, write the first Phase 5 task to
-`.forge/next.md` and set `.forge/state.md` to `Ready to Build`.
-
-On `Repair Required`, write the smallest repair task to `.forge/next.md`, set
-`.forge/state.md` to `Needs Repair`, and do not start Phase 5.
-
-On `Redo Phase`, set `.forge/state.md` to `Ready to Plan` and write the replan
-scope to `.forge/next.md`.
+- The attachments module exists in canonical generated shape.
+- `MODULE.md` is real OKF-style module context, not placeholder text.
+- The module boundary declares no behavior that is not implemented yet.
+- Existing lint, typecheck, root tests, and OpenAPI drift checks pass.

@@ -91,20 +91,21 @@ history from another project.
   - [x] F4-01B: Add portal complaint submission service path
   - [x] F4-01C: Add public submission HTTP route, OpenAPI, rate limit, and portal API tests (Verify Gate: required)
   - [x] REPAIR-F4-01C: Remove DMS customer number from public portal submission
-- [ ] F4-02: Portal tracking with reference plus OTP verification
+- [x] F4-02: Portal tracking with reference plus OTP verification
   - [x] F4-02A: Add portal OTP request persistence and notification queueing
   - [x] F4-02B: Add OTP verification and expiring portal session issuance (Verify Gate: required)
   - [x] REPAIR-F4-02B: Audit OTP verification failure outcomes
   - [x] F4-02C: Add verified portal tracking endpoint
-- [ ] F4-03: Portal-safe public timeline
+- [x] F4-03: Portal-safe public timeline
   - [x] F4-03A: Add portal-safe timeline read model
   - [x] F4-03B: Add portal follow-up path for non-closed complaints
-- [ ] F4-04: Portal privacy tests
+- [x] F4-04: Portal privacy tests
   - [x] F4-04A: Add explicit portal privacy regression tests
 
 ## Phase 5 - Attachments And Notifications
 
 - [ ] F5-01: Secure attachment upload/download
+  - [ ] F5-01A: Generate attachments module boundary and manifest
 - [ ] F5-02: Malware scan hook states
 - [ ] F5-03: Email adapter and in-memory provider
 - [ ] F5-04: SMS/WhatsApp-ready adapter interfaces

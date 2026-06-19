@@ -2522,3 +2522,54 @@ Residual risk: this is a required customer-portal privacy gate. A fresh verifier
   - Portal responses remain filtered away from internal comments, audit logs, DMS
     identifiers, staff PII, unrelated complaints, OTP data, and session secrets.
   - Follow-up input cannot force internal visibility or staff actor metadata.
+
+## PHASE-4-REVIEW - Customer Portal Acceptance Review
+
+- Date: 2026-06-19
+- Reviewer tier: PHASE-REVIEWER
+- Risk: High
+- Decision: **Accept With Conditions**
+- Phase 5 may start: **Yes**
+
+### Verification Labels (re-run by reviewer)
+
+- Passed: `corepack pnpm lint`
+- Passed: `corepack pnpm typecheck`
+- Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+- Passed: `corepack pnpm test:api -- portal` (5/5)
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23)
+- Passed: `corepack pnpm test:api -- workflow` (37/37)
+- Passed: `corepack pnpm test:api -- notifications` (6/6)
+- Passed: `corepack pnpm openapi:check`
+- Passed: `git diff --check`
+
+### Findings
+
+- Builder honesty: **Honest.** The required Phase 4 proof surface reproduced.
+- Code quality: **Good.** Portal routes derive authority from server-side request
+  context and portal sessions, not client role, actor, visibility, branch-scope,
+  or reference-only input.
+- Privacy boundary: **Accepted.** Portal submission, OTP request/verify, verified
+  tracking, timeline, and follow-up paths do not return internal comments, audit
+  logs, DMS codes, staff PII, unrelated complaints, OTP values/hashes, session
+  hashes, or session tokens except the newly issued portal token.
+- State/audit boundary: **Accepted.** Portal submission uses complaint creation
+  with initial status history plus COMPLAINT audit in one transaction; portal
+  follow-up writes PUBLIC comments through the complaints service with COMMENT
+  audit in the same transaction; OTP verification success/failure paths
+  SECURITY-audit safely.
+- OpenAPI: **Accepted.** All public portal routes are documented; portal schemas
+  have `additionalProperties: false` and do not expose DMS/customer-number,
+  actor, visibility, audit, or staff-only fields.
+
+### Conditions
+
+- Preferred L3 web/e2e portal proof remains unbuilt because the web app is still
+  a liveness scaffold. This is acceptable for Phase 4 API acceptance but must be
+  covered before MVP sign-off.
+- Customer-visible attachment submission/follow-up is still incomplete and
+  correctly moves to Phase 5 attachment work.
+- OTP provider delivery, Arabic/English templates, and real customer notification
+  dispatch remain Phase 5 notification work. The Phase 4 API/session/privacy
+  boundary is accepted; end-to-end customer verification is not complete until
+  that delivery path exists.

@@ -1,5 +1,26 @@
 # Current State
 
+Status: Ready to Build
+Phase: Phase 5 - Attachments And Notifications
+Next Task: F5-01A - Generate Attachments Module Boundary And Manifest
+
+## PHASE-4-REVIEW Accepted With Conditions - Phase 5 Ready To Build
+
+PHASE-4-REVIEW accepted the Phase 4 customer portal API/session/privacy boundary.
+Reviewer proof re-ran and passed: lint, typecheck, test 29/29, test:api --
+portal 5/5, test:api -- portal.tracking 23/23, test:api -- workflow 37/37,
+test:api -- notifications 6/6, openapi:check, and git diff --check.
+
+Conditions carried into later phases: preferred L3 web/e2e portal proof is still
+owed before MVP sign-off, customer-visible attachment submission/follow-up moves
+to Phase 5 attachment work, and real OTP delivery/templates/localized customer
+notification dispatch remain Phase 5 notification work.
+
+Phase 5 starts with the smallest safe attachment slice: `F5-01A`, a generated
+behavior-free `attachments` module boundary and real `MODULE.md`.
+
+## Previous State Before Phase 5
+
 Status: Needs Phase Review
 Phase: Phase 4 - Customer Portal
 Next Task: PHASE-4-REVIEW - Customer Portal Acceptance Review
