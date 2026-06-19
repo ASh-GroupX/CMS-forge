@@ -160,6 +160,8 @@ history from another project.
   - [x] F6-03B: Add localized complaint create form with category, severity, branch, incident date, subject, and description validation
   - [x] F6-03C: Add attachment upload panel with file-rule messages and scan-status display
   - [ ] F6-03D: Submit complaint through backend API with success, validation error, and preserved-input states
+    - [ ] F6-03D1: Add staff complaint create write-client with CSRF and validation-error mapping
+    - [ ] F6-03D2: Wire complaint create form submission with success, validation error, and preserved-input states
 - [ ] F6-04: Complaint detail workspace
   - [ ] F6-04A: Add complaint detail layout with facts, customer/vehicle data, current owner, SLA timer, timeline, and survey results
   - [ ] F6-04B: Add comments and public-update panels with visibility badges

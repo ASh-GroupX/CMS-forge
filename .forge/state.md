@@ -1,8 +1,18 @@
 # Current State
 
-Status: Ready to Plan
+Status: Ready to Build
 Phase: Phase 6 - Staff UI
-Next Task: PLAN-F6-03D-COMPLAINT-SUBMIT-SPLIT
+Next Task: F6-03D1-STAFF-COMPLAINT-CREATE-WRITE-CLIENT
+
+## PLAN-F6-03D-COMPLAINT-SUBMIT-SPLIT Complete - Write Client Slice Selected
+
+Required tier used: `PLANNER`. `F6-03D` was split because the original task
+crosses write-client behavior, CSRF, validation envelope mapping, preserved form
+state, and shell integration.
+
+Next build task: `F6-03D1` adds only the typed staff web write helper for
+`POST /complaints`, including CSRF header handling and validation-error mapping.
+`F6-03D2` wires the create form UI after the request contract is isolated.
 
 ## F6-03C Built - AUTO PHASE Stopped For Planning
 

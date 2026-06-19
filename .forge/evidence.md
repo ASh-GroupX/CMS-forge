@@ -5750,3 +5750,34 @@ Assumptions and gaps:
   - Trust boundaries are tested: Passed for this UI slice. Tests cover file
     rules, scan states, Arabic RTL labels, and absence of upload/file-read/
     storage behavior in the panel source.
+
+## PLAN-F6-03D-COMPLAINT-SUBMIT-SPLIT - Staff Complaint Submit Split
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: PLANNER
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-COMPLAINT-001
+  - REQ-RBAC-001
+  - API-STANDARD-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Read Forge protocol inputs, Phase 6 backlog, latest evidence/trust notes,
+    architecture rules, and the cited SRS sections.
+  - Confirmed existing backend `POST /complaints` requires session auth, RBAC,
+    branch scope, CSRF, a required `branchId` query parameter, and the standard
+    validation envelope.
+  - Split `F6-03D` into `F6-03D1` write-client behavior and `F6-03D2` create-form
+    UI wiring.
+  - Updated `.forge/next.md` with the next single buildable task and set
+    `.forge/state.md` to `Ready to Build`.
+  - Updated `.forge/backlog.md` with the two `F6-03D` subtasks.
+- Verification:
+  - Passed: `rg -n "Status:|Next Task:|F6-03D1|F6-03D2|PLAN-F6-03D" .forge/next.md .forge/state.md .forge/backlog.md .forge/evidence.md .forge/trust.md`
+  - Passed: `git diff --check -- .forge/next.md .forge/state.md .forge/backlog.md .forge/evidence.md .forge/trust.md` (line-ending warnings only)
+- Notes:
+  - No application source code was changed.

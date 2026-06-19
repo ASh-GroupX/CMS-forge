@@ -3525,3 +3525,21 @@ Residual risk: this is a required customer-portal privacy gate. A fresh verifier
   - Real complaint submission is wider than a single builder slice because it
     crosses write-client behavior, credentials/CSRF, validation mapping,
     preserved form state, and shell integration. Split `F6-03D` before building.
+
+## PLAN-F6-03D-COMPLAINT-SUBMIT-SPLIT - Staff Complaint Submit Split
+
+- Date: 2026-06-19
+- Required model tier: PLANNER
+- Risk: High
+- Recommendation: Continue with `F6-03D1`.
+- Notes:
+  - The first slice is deliberately only the staff web write helper for
+    `POST /complaints`.
+  - CSRF handling must copy only the readable `cms_csrf_token` cookie into the
+    `x-csrf-token` header; it must not expose or parse the HttpOnly session
+    cookie.
+  - UI form submission, preserved visible input states, and localized feedback
+    remain queued for `F6-03D2`.
+  - Attachments remain out of this split; upload behavior belongs to the later
+    attachment/detail slices that already own backend authorization and scan
+    state.

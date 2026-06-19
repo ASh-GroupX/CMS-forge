@@ -1,42 +1,67 @@
-# Plan Task: PLAN-F6-03D-COMPLAINT-SUBMIT-SPLIT
+# Build Task: F6-03D1-STAFF-COMPLAINT-CREATE-WRITE-CLIENT
 
-Status: Ready to Plan
-Required model tier: PLANNER
+Status: Ready to Build
+Required model tier: BUILDER-STRONG
 Risk: High
 Phase: Phase 6 - Staff UI
 
 ## Goal
 
-Split `F6-03D - Submit complaint through backend API with success, validation
-error, and preserved-input states` into small buildable Phase 6 tasks.
+Add the smallest staff web write-client slice for `POST /complaints` so the next
+UI task can submit the complaint create form without inventing request or error
+mapping inside React.
 
-## Why Planning Is Required
+## Scope
 
-The backlog item is broader than one safe builder slice. It crosses:
+- Extend `apps/web/src/lib/staff-complaints-api.ts` with a typed
+  `createStaffComplaint(...)` helper for the existing OpenAPI `POST /complaints`
+  contract.
+- Use a relative `/complaints?branchId=...` request, `credentials: "include"`,
+  JSON body, and `x-csrf-token` copied only from the readable
+  `cms_csrf_token` cookie.
+- Map successful responses to the existing safe result shape, including complaint
+  `id`, `referenceNumber`, and `status`.
+- Preserve validation field errors from the standard API envelope so the UI can
+  show field-level messages later.
+- Extend `apps/web/test/api-client/staff-complaints-api.test.ts` with focused
+  tests for success, branch query encoding, CSRF header behavior, validation
+  field-error mapping, network failure, and no client-supplied role/actor/
+  workflow authority.
 
-- frontend write-client behavior for `POST /complaints`;
-- cookie credentials and likely CSRF/session handling;
-- API validation envelope mapping into field errors;
-- preserved form input state after success/error;
-- integration with the existing render-only create/lookup/attachment surface;
-- focused web tests and possibly auth/API contract checks.
+## Out Of Scope
 
-## Planner Inputs
+- Do not wire the create form UI to submit yet.
+- Do not add attachment upload behavior, file reads, object URLs, or storage
+  URLs.
+- Do not add backend routes, API behavior, OpenAPI changes, generated clients, or
+  new dependencies.
+- Do not add role, actor, owner, branch-scope override, workflow, token, or
+  credential parameters beyond the required `branchId` query and CSRF header.
+- Do not read or expose the session cookie; only the readable CSRF cookie may be
+  parsed for the CSRF header.
 
-- `.forge/backlog.md`
-- `.forge/evidence.md`
-- `.forge/trust.md`
-- `docs/ARCHITECTURE.md`
-- `docs/CMS_AUTO_SRS.md`
-- Existing web files under `apps/web/src/app`
-- Existing complaint API/OpenAPI contract for `POST /complaints`
+## Acceptance Criteria
 
-## Planner Output
+- The helper sends the documented complaint create fields:
+  `customerName`, `customerPhone` or `customerNumber`, `categoryId`,
+  `subcategoryId`, `description`, `incidentAt`, `subject`, `severity`, and
+  optional vehicle fields.
+- The helper does not decide complaint state or authorization in the frontend.
+- API error mapping keeps `code`, `message`, `correlationId`, HTTP status, and
+  validation `fieldErrors` when present.
+- Missing CSRF cookie is handled by omitting the header and letting the backend
+  return the standard denial.
+- Tests prove the write helper uses cookie credentials and does not accept client
+  role/actor/workflow authority.
 
-- Write the next single buildable `F6-03D*` task to `.forge/next.md`.
-- Keep each task near 1-5 files plus tests.
-- Preserve Phase 6 scope and do not start Phase 7 work.
-- Set `.forge/state.md` to `Ready to Build`.
+## Verification Commands
+
+- `corepack pnpm lint`
+- `corepack pnpm typecheck`
+- `corepack pnpm test`
+- `corepack pnpm test:web -- api-client`
+- `corepack pnpm openapi:check`
+- `git diff --check`
 
 ## Requirement IDs
 
