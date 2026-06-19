@@ -2240,3 +2240,21 @@ starting Phase 3 planning.
   - Remove DMS customer-number input from the public portal DTO and OpenAPI schema,
     force portal submission to delegate with `customerNumber: null`, and update
     portal/workflow tests to prove the public boundary does not accept or forward it.
+
+## REPAIR-F4-01C - Remove DMS Customer Number From Public Portal Submission
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Needs independent repair VERIFY before Phase 4 continues.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20 after sandbox `spawn EPERM` rerun outside sandbox)
+  - Passed: `corepack pnpm test:api -- portal` (4/4 after sandbox `spawn EPERM` rerun outside sandbox)
+  - Passed: `corepack pnpm test:api -- workflow` (36/36 after sandbox `spawn EPERM` rerun outside sandbox)
+  - Passed: `corepack pnpm openapi:check`
+- Notes:
+  - Public portal submission no longer accepts or documents `customerNumber`.
+  - `PortalService.submitComplaint` now forces `customerNumber: null` before delegating to complaint creation.
+  - The remaining `customerNumber` contract is staff complaint creation only; public portal tests prove spoofed input is stripped.

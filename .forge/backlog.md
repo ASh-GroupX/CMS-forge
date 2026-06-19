@@ -86,7 +86,7 @@ history from another project.
   - [x] F4-01A: Generate portal module boundary and manifest
   - [x] F4-01B: Add portal complaint submission service path
   - [x] F4-01C: Add public submission HTTP route, OpenAPI, rate limit, and portal API tests (Verify Gate: required)
-  - [ ] REPAIR-F4-01C: Remove DMS customer number from public portal submission
+  - [x] REPAIR-F4-01C: Remove DMS customer number from public portal submission
 - [ ] F4-02: Portal tracking with reference plus OTP verification
   - [ ] F4-02A: Add portal OTP request persistence and notification queueing
   - [ ] F4-02B: Add OTP verification and expiring portal session issuance (Verify Gate: required)

@@ -1,8 +1,16 @@
 # Current State
 
-Status: Needs Repair
+Status: Needs Verify
 Phase: Phase 4 - Customer Portal
-Next Task: REPAIR-F4-01C - Remove DMS Customer Number From Public Portal Submission
+Next Task: VERIFY-F4-01C-REPAIR - Public Portal DMS Number Removal
+
+## REPAIR-F4-01C Built - Verify Gate
+
+`REPAIR-F4-01C` removed `customerNumber` from the public portal submission DTO and OpenAPI schema. `PortalService.submitComplaint` now forces `customerNumber: null` when delegating to complaint creation, while staff complaint creation remains unchanged. Tests prove spoofed public `customerNumber` is stripped at the controller boundary and nulled at the service delegate.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- portal 4/4, test:api -- workflow 36/36, and openapi:check. The test commands initially hit sandbox `spawn EPERM` and passed when rerun outside the sandbox.
+
+AUTO PHASE stops here because this repair returns to the `F4-01C` Verify Gate.
 
 ## VERIFY-F4-01C Repair Required
 

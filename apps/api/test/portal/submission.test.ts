@@ -35,6 +35,7 @@ test('portal submission route delegates parsed public request context', async ()
     customerName: ' Faisal Al-Otaibi ',
     branchId: ' branch_main ',
     actorId: 'spoofed',
+    customerNumber: 'DMS-SECRET',
   }, request());
 
   assert.deepEqual(response, {
@@ -49,6 +50,7 @@ test('portal submission route delegates parsed public request context', async ()
     userAgent: 'node:test',
   });
   assert.equal('actorId' in (calls[0] as Record<string, unknown>), false);
+  assert.equal('customerNumber' in (calls[0] as Record<string, unknown>), false);
 });
 
 test('portal submission route rejects invalid body before service call', async () => {
@@ -103,7 +105,6 @@ function validBody() {
   return {
     customerName: 'Faisal Al-Otaibi',
     customerPhone: '+966500000001',
-    customerNumber: null,
     categoryId: 'cat_parent',
     subcategoryId: 'cat_engine',
     description: 'Engine makes a knocking noise.',

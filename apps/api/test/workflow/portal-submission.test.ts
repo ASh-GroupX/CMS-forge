@@ -26,6 +26,7 @@ test('portal submission delegates to complaints public service as customer porta
   assert.deepEqual(calls[0], {
     ...validPortalInput(),
     actorId: null,
+    customerNumber: null,
     requestSource: ComplaintTransitionRequestSource.CUSTOMER_PORTAL,
   });
 });
@@ -39,7 +40,7 @@ test('portal submission rejects invalid complaint input before writes', async ()
   const service = new PortalService(complaintService);
 
   await assert.rejects(
-    service.submitComplaint({ ...validPortalInput(), customerName: ' ', customerPhone: null, customerNumber: null }),
+    service.submitComplaint({ ...validPortalInput(), customerName: ' ', customerPhone: null }),
     (error: unknown) =>
       error instanceof AppException &&
       error.code === 'VALIDATION_FAILED' &&
@@ -60,7 +61,6 @@ function validPortalInput() {
   return {
     customerName: 'Faisal Al-Otaibi',
     customerPhone: '+966500000001',
-    customerNumber: null,
     categoryId: 'cat_parent',
     subcategoryId: 'cat_engine',
     description: 'Engine makes a knocking noise.',

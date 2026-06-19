@@ -1658,13 +1658,6 @@
             "type": "string",
             "minLength": 1
           },
-          "customerNumber": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "minLength": 1
-          },
           "categoryId": {
             "type": "string",
             "minLength": 1

@@ -3,7 +3,7 @@ import { ComplaintTransitionRequestSource } from '@prisma/client';
 import { ComplaintsService } from '../complaints/complaints.service.js';
 import type { ComplaintCreationResult, CreateInternalComplaintInput } from '../complaints/complaints.service.js';
 
-export type SubmitPortalComplaintInput = Omit<CreateInternalComplaintInput, 'actorId' | 'requestSource'>;
+export type SubmitPortalComplaintInput = Omit<CreateInternalComplaintInput, 'actorId' | 'requestSource' | 'customerNumber'>;
 
 @Injectable()
 export class PortalService {
@@ -13,6 +13,7 @@ export class PortalService {
     return this.complaintsService.createInternal({
       ...input,
       actorId: null,
+      customerNumber: null,
       requestSource: ComplaintTransitionRequestSource.CUSTOMER_PORTAL,
     });
   }

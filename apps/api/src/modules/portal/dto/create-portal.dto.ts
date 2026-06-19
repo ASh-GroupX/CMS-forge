@@ -6,7 +6,6 @@ import type { SubmitPortalComplaintInput } from '../portal.service.js';
 export type PortalComplaintRequestDto = {
   customerName: string;
   customerPhone: string;
-  customerNumber?: string | null;
   categoryId: string;
   subcategoryId: string;
   description: string;
@@ -24,7 +23,6 @@ export function parsePortalComplaintBody(body: unknown): PortalComplaintRequestD
   return {
     customerName: requiredText(input.customerName, 'customerName'),
     customerPhone: requiredText(input.customerPhone, 'customerPhone'),
-    customerNumber: optionalText(input.customerNumber, 'customerNumber'),
     categoryId: requiredText(input.categoryId, 'categoryId'),
     subcategoryId: requiredText(input.subcategoryId, 'subcategoryId'),
     description: requiredText(input.description, 'description'),

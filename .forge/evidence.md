@@ -3202,3 +3202,38 @@ Append build and verification evidence here. Do not delete failed evidence.
     route delegation, invalid-body denial before service write, rate-limit guard
     attachment, and rate-limit denial/audit; workflow tests cover the underlying
     allowed portal service path and denied invalid input before transaction.
+
+## REPAIR-F4-01C - Remove DMS Customer Number From Public Portal Submission
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed - returns to Verify Gate
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-PORTAL-001
+  - PORTAL-SEC-001
+  - ARCH-WORKFLOW-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Removed `customerNumber` from the public `PortalComplaintRequestDto` type and parser.
+  - Changed `SubmitPortalComplaintInput` so public portal callers cannot provide `customerNumber`.
+  - `PortalService.submitComplaint` now explicitly delegates to complaint creation with `customerNumber: null` and `CUSTOMER_PORTAL` request source.
+  - Removed `customerNumber` from the OpenAPI `PortalComplaintRequest` schema and regenerated `packages/contracts/openapi.json`.
+  - Updated portal route tests to send spoofed `customerNumber: 'DMS-SECRET'` and prove it is not forwarded from the public controller boundary.
+  - Updated workflow portal service tests to prove the complaint service delegate receives `customerNumber: null`.
+  - Staff complaint creation remains unchanged and still supports `customerNumber` outside the public portal route.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (initial sandbox run failed with `spawn EPERM`; rerun outside sandbox passed 20/20 and coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- portal` (initial sandbox run failed with `spawn EPERM`; rerun outside sandbox passed 4/4)
+  - Passed: `corepack pnpm test:api -- workflow` (initial sandbox run failed with `spawn EPERM`; rerun outside sandbox passed 36/36)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed by scope; this public route has no staff role/branch authority, and the repair removes the DMS customer-code input from the public boundary.
+  - Each state change writes status history and an audit entry in the same transaction; side effects enqueue after commit: Passed. Portal submission still delegates to `ComplaintsService.createInternal`, and workflow tests prove complaint creation writes complaint, initial status history, and COMPLAINT audit in one transaction.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed. The repair adds no secret fields and keeps rate-limit audit metadata safe.
+  - Customer portal exposure rules hold: Passed. Public portal submission no longer accepts or documents DMS customer number/code; tests prove spoofed `customerNumber` is stripped and the service forwards `customerNumber: null`.
+  - Trust boundaries are tested: Passed. Portal tests cover allowed submission with spoofed DMS number stripped and invalid-body denial; workflow tests cover the allowed service delegate with `customerNumber: null` and invalid input denial before writes.
