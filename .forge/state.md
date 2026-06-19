@@ -2,7 +2,32 @@
 
 Status: Needs Verify
 Phase: Phase 3 - SLA And Workflow Operations
-Next Task: VERIFY-F3-02A-REPAIR - SLA Warning Job Repair Gate
+Next Task: VERIFY-F3-02B - SLA Breach Job Gate
+
+## F3-02B Built - Verify Gate
+
+`F3-02B` added backend SLA breach-job behavior. `SlaRepository` now reads
+backend-recorded `DEADLINE_SET` events for non-terminal complaints and writes one
+`SlaEventType.BREACH` event through the unique idempotency key with duplicate
+skipping. `SlaService.runBreachJob` creates breaches only when `dueAt <= now`,
+skips future deadlines and terminal `CLOSED`/`REJECTED` complaints, and returns
+honest scanned/created/skipped counts plus breach keys.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- sla 16/16, and
+openapi:check.
+
+AUTO PHASE stops here because `F3-02B` is marked `Verify Gate: required`.
+
+## VERIFY-F3-02A-REPAIR Accepted - Gate Cleared
+
+Independent VERIFY accepted `REPAIR-F3-02A`. `SlaRepository.createWarningEvent`
+uses `createMany` with `skipDuplicates` and reports whether a warning row was
+newly inserted. `SlaService.runWarningJob` counts duplicate warning retries as
+`skipped`, returns idempotency keys only for newly inserted warnings, and skips
+invalid stored policy duration or warning percent values before writing.
+
+Verification re-ran and passed: lint, typecheck, test 20/20, test:api -- sla
+13/13, and openapi:check. Phase 3 continues with `F3-02B`.
 
 ## REPAIR-F3-02A Built - Verify Gate
 

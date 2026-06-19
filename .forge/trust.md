@@ -1632,3 +1632,55 @@ starting Phase 3 planning.
     openapi:check.
   - Because this repairs the `F3-02A` Verify Gate, AUTO PHASE stops at `Needs Verify`
     before `F3-02B`.
+
+## VERIFY-F3-02A-REPAIR - SLA Warning Job Repair Gate
+
+- Date: 2026-06-19
+- Required model tier: independent VERIFY
+- Builder honesty: Honest
+- Code quality: Good
+- Recommendation: Accept
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- sla` (13/13)
+  - Passed: `corepack pnpm openapi:check`
+- Findings:
+  - No blocking findings.
+- Scope review:
+  - `SlaRepository.createWarningEvent` uses `createMany` with `skipDuplicates`
+    and returns `true` only when the warning idempotency key inserts a new row.
+  - `SlaService.runWarningJob` counts duplicate retries as `skipped`, not
+    `created`, and returns warning keys only for newly inserted warning events.
+  - Invalid stored policy duration and warning percent values are skipped before
+    any warning write.
+  - Focused SLA tests prove first-run creation, duplicate retry skip, invalid
+    stored policy skip, and not-due no-op behavior.
+  - No breach jobs, escalation, notification delivery, provider calls, queues,
+    workflow changes, routes, OpenAPI paths, UI, portal, schema changes, or
+    migrations were introduced.
+
+## F3-02B - SLA Breach Job Build
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Needs Verify
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- sla` (16/16)
+  - Passed: `corepack pnpm openapi:check`
+- Build assessment:
+  - Breach evaluation uses backend-recorded `DEADLINE_SET` events, not client input.
+  - Breach insertion uses `createMany` with `skipDuplicates`, so retries count as
+    skipped instead of newly created.
+  - Due breaches create reportable `SlaEventType.BREACH` rows; future deadlines and
+    terminal `CLOSED`/`REJECTED` complaints skip without writes.
+  - No escalation delivery, provider calls, queues, routes, OpenAPI paths, UI,
+    portal exposure, schema changes, or migrations were added.
+- Gate:
+  - `F3-02B` is marked `Verify Gate: required`; AUTO PHASE stops at `Needs Verify`
+    before `F3-03A`.

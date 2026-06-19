@@ -1,8 +1,8 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { ComplaintSeverity, SlaStage, WorkingCalendarMode } from '@prisma/client';
+import { ComplaintSeverity, ComplaintStatus, SlaStage, WorkingCalendarMode } from '@prisma/client';
 import { AppException } from '../../core/http-kernel.js';
 import { SlaRepository } from './sla.repository.js';
-import type { SlaDeadlineWarningRecord, SlaPolicyRecord } from './sla.repository.js';
+import type { SlaDeadlineBreachRecord, SlaDeadlineWarningRecord, SlaPolicyRecord } from './sla.repository.js';
 
 export const DEFAULT_SLA_DURATION_MINUTES: Record<ComplaintSeverity, number> = {
   [ComplaintSeverity.CRITICAL]: 120,
@@ -61,6 +61,8 @@ export type RunSlaWarningJobResult = {
   skipped: number;
   warningIdempotencyKeys: string[];
 };
+
+export type RunSlaBreachJobResult = { scanned: number; created: number; skipped: number; breachIdempotencyKeys: string[] };
 
 @Injectable()
 export class SlaService {
@@ -182,6 +184,35 @@ export class SlaService {
 
     return result;
   }
+
+  async runBreachJob(now: Date | string): Promise<RunSlaBreachJobResult> {
+    const nowDate = dateValue(now, 'now');
+    const deadlines = await this.slaRepository.findDeadlineEventsForBreach();
+    const result: RunSlaBreachJobResult = { scanned: deadlines.length, created: 0, skipped: 0, breachIdempotencyKeys: [] };
+
+    for (const deadline of deadlines) {
+      if (!deadline.dueAt || deadline.dueAt.getTime() > nowDate.getTime() || isTerminalComplaint(deadline)) {
+        result.skipped += 1;
+        continue;
+      }
+      const idempotencyKey = breachIdempotencyKey(deadline.idempotencyKey);
+      const created = await this.slaRepository.createBreachEvent({
+        complaintId: deadline.complaintId,
+        policyId: deadline.policyId,
+        stage: deadline.stage,
+        dueAt: deadline.dueAt,
+        idempotencyKey,
+      });
+      if (created) {
+        result.created += 1;
+        result.breachIdempotencyKeys.push(idempotencyKey);
+      } else {
+        result.skipped += 1;
+      }
+    }
+
+    return result;
+  }
 }
 
 function enumValue<T extends Record<string, string>>(value: unknown, options: T, field: string): T[keyof T] {
@@ -252,6 +283,8 @@ function warningIdempotencyKey(deadlineKey: string): string {
   return `sla:warning:${deadlineKey}`;
 }
 
+function breachIdempotencyKey(deadlineKey: string): string { return `sla:breach:${deadlineKey}`; }
+
 function isWarningDue(deadline: SlaDeadlineWarningRecord, now: Date): boolean {
   if (!deadline.dueAt || !deadline.policy) return false;
   if (!Number.isInteger(deadline.policy.durationMinutes) || deadline.policy.durationMinutes <= 0) return false;
@@ -260,3 +293,5 @@ function isWarningDue(deadline: SlaDeadlineWarningRecord, now: Date): boolean {
   const warningAt = deadline.dueAt.getTime() - Math.round(deadline.policy.durationMinutes * 60_000 * remainingPercent / 100);
   return warningAt <= now.getTime();
 }
+
+function isTerminalComplaint(deadline: SlaDeadlineBreachRecord): boolean { return deadline.complaint.status === ComplaintStatus.CLOSED || deadline.complaint.status === ComplaintStatus.REJECTED; }

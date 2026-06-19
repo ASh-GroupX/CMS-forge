@@ -2666,3 +2666,57 @@ Append build and verification evidence here. Do not delete failed evidence.
   - Trust boundaries are tested: Passed for this repair's boundary; SLA API tests
     cover new warning creation, duplicate retry skip, invalid stored policy skip,
     and not-due no-op behavior.
+
+## F3-02B - Add Idempotent SLA Breach Job And Reportable Breach Event
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-SLA-001
+  - SLA-CALENDAR-001
+  - ARCH-WORKFLOW-001
+  - REQ-NOTIFY-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Added `SlaRepository.findDeadlineEventsForBreach` to read backend-recorded
+    `DEADLINE_SET` events with non-null deadlines and non-terminal complaint status.
+  - Added `SlaRepository.createBreachEvent` using `createMany` with
+    `skipDuplicates`, so the unique breach idempotency key reports duplicate retries
+    as skipped.
+  - Added `SlaService.runBreachJob` to create one `SlaEventType.BREACH` event when
+    `dueAt <= now`, skip future deadlines, skip terminal complaint statuses
+    (`CLOSED`, `REJECTED`), and return scanned/created/skipped counts plus breach
+    idempotency keys.
+  - Breach keys derive from the recorded deadline event key as
+    `sla:breach:<deadlineKey>`, so retries do not duplicate breach events.
+  - Added focused SLA API coverage for first due breach creation, duplicate retry
+    skip, future deadline skip without write, terminal complaint skip without write,
+    and repository query/create shape.
+  - No escalation notification delivery, provider calls, queues, workflow changes,
+    routes, OpenAPI paths, UI, portal behavior, schema changes, migrations, secrets,
+    or external side effects were added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- sla` (16/16)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not
+    applicable at HTTP/session boundary; no route or role decision was added. The
+    job reads backend-owned SLA deadline events as its source of truth.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Not applicable to complaint
+    state; this task writes only SLA breach events and introduces no escalation
+    enqueueing or notification delivery.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope; the code persists and returns only SLA event metadata.
+  - Customer portal exposure rules hold: Passed by scope; no portal route or
+    portal-visible DTO was added.
+  - Trust boundaries are tested: Passed for this task's boundary; SLA API tests cover
+    due breach creation, duplicate retry idempotency, future-deadline skip, and
+    terminal-status skip before write.

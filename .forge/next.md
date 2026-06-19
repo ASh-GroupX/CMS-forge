@@ -1,4 +1,4 @@
-# Verify Task: VERIFY-F3-02A-REPAIR - SLA Warning Job Repair Gate
+# Verify Task: VERIFY-F3-02B - SLA Breach Job Gate
 
 Status: Needs Verify
 Required model tier: independent VERIFY
@@ -7,21 +7,26 @@ Phase: Phase 3 - SLA And Workflow Operations
 
 ## Why This Exists
 
-`REPAIR-F3-02A` fixes the `VERIFY-F3-02A` findings before `F3-02B` builds breach
-jobs on the same SLA job/idempotency pattern.
+`F3-02B` adds SLA breach-job behavior that `F3-03A` will build on to queue
+escalation notification events. This gate must verify the idempotent breach event
+pattern before escalation work starts.
 
 ## Verify Scope
 
-- Review the repair changes in:
+- Review the build changes in:
   - `apps/api/src/modules/sla/sla.repository.ts`
   - `apps/api/src/modules/sla/sla.service.ts`
   - `apps/api/test/sla/deadline-calculator.test.ts`
-- Confirm `created` counts only newly inserted warning events.
-- Confirm duplicate warning retries are reported as skipped.
-- Confirm invalid stored policy duration and warning percent values are skipped
-  without warning writes.
-- Confirm no breach jobs, escalation, notification delivery, provider calls, queues,
-  workflow changes, routes, OpenAPI paths, UI, portal, schema changes, or migrations
+- Confirm breach evaluation uses backend-recorded `DEADLINE_SET` events, not client
+  input.
+- Confirm breach events are created through the unique idempotency key with duplicate
+  skipping.
+- Confirm duplicate retries are reported as skipped, not newly created.
+- Confirm future deadlines skip without writes.
+- Confirm terminal complaint statuses available in the current schema skip without
+  writes.
+- Confirm no escalation notification delivery, provider calls, queues, workflow
+  changes, routes, OpenAPI paths, UI, portal behavior, schema changes, or migrations
   were introduced.
 - Confirm evidence labels are honest and the required commands actually ran.
 
@@ -51,6 +56,6 @@ Update `.forge/trust.md` with:
 - Code quality: Good, Acceptable, or Poor
 - Recommendation: Accept, Repair, or Redo
 
-On `Accept`, write `F3-02B` to `.forge/next.md` and set `.forge/state.md` to
+On `Accept`, write `F3-03A` to `.forge/next.md` and set `.forge/state.md` to
 `Ready to Build`. On `Repair` or `Redo`, write the smallest repair task and set
 `.forge/state.md` to `Needs Repair`.

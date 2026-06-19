@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import { ComplaintSeverity, SlaEventType, SlaStage } from '@prisma/client';
+import { ComplaintSeverity, ComplaintStatus, SlaEventType, SlaStage } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
 
 const slaPolicySelect = {
@@ -54,6 +54,17 @@ const slaDeadlineWarningSelect = {
 
 export type SlaDeadlineWarningRecord = Prisma.SlaEventGetPayload<{ select: typeof slaDeadlineWarningSelect }>;
 
+const slaDeadlineBreachSelect = {
+  complaintId: true,
+  policyId: true,
+  stage: true,
+  dueAt: true,
+  idempotencyKey: true,
+  complaint: { select: { status: true } },
+} satisfies Prisma.SlaEventSelect;
+
+export type SlaDeadlineBreachRecord = Prisma.SlaEventGetPayload<{ select: typeof slaDeadlineBreachSelect }>;
+
 @Injectable()
 export class SlaRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -85,6 +96,21 @@ export class SlaRepository {
   async createWarningEvent(data: CreateSlaDeadlineEventData): Promise<boolean> {
     const result = await this.prisma.slaEvent.createMany({
       data: { ...data, type: SlaEventType.WARNING },
+      skipDuplicates: true,
+    });
+    return result.count === 1;
+  }
+
+  async findDeadlineEventsForBreach(): Promise<SlaDeadlineBreachRecord[]> {
+    return this.prisma.slaEvent.findMany({
+      where: { type: SlaEventType.DEADLINE_SET, dueAt: { not: null }, complaint: { status: { notIn: [ComplaintStatus.CLOSED, ComplaintStatus.REJECTED] } } },
+      select: slaDeadlineBreachSelect,
+    });
+  }
+
+  async createBreachEvent(data: CreateSlaDeadlineEventData): Promise<boolean> {
+    const result = await this.prisma.slaEvent.createMany({
+      data: { ...data, type: SlaEventType.BREACH },
       skipDuplicates: true,
     });
     return result.count === 1;

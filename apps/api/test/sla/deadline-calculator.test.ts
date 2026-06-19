@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ComplaintSeverity, SlaEventType, SlaStage, WorkingCalendarMode } from '@prisma/client';
+import { ComplaintSeverity, ComplaintStatus, SlaEventType, SlaStage, WorkingCalendarMode } from '@prisma/client';
 import type { PrismaService } from '../../src/core/http-kernel.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
 import { SlaRepository } from '../../src/modules/sla/sla.repository.ts';
-import type { SlaDeadlineWarningRecord, SlaPolicyRecord } from '../../src/modules/sla/sla.repository.ts';
+import type { SlaDeadlineBreachRecord, SlaDeadlineWarningRecord, SlaPolicyRecord } from '../../src/modules/sla/sla.repository.ts';
 import { DEFAULT_SLA_DURATION_MINUTES, SlaService } from '../../src/modules/sla/sla.service.ts';
 
 const service = new SlaService({} as SlaRepository);
@@ -217,7 +217,7 @@ test('SLA repository upserts deadline events by deterministic idempotency key', 
   });
 });
 
-test('SLA repository reads deadline events and creates warning events idempotently', async () => {
+test('SLA repository reads deadline events and creates warning and breach events idempotently', async () => {
   const calls: unknown[] = [];
   const dueAt = new Date('2026-06-18T17:00:00.000Z');
   const repository = new SlaRepository({
@@ -240,6 +240,14 @@ test('SLA repository reads deadline events and creates warning events idempotent
     stage: SlaStage.INVESTIGATION,
     dueAt,
     idempotencyKey: 'warn_1',
+  }), true);
+  assert.deepEqual(await repository.findDeadlineEventsForBreach(), []);
+  assert.equal(await repository.createBreachEvent({
+    complaintId: 'cmp_1',
+    policyId: 'policy_1',
+    stage: SlaStage.INVESTIGATION,
+    dueAt,
+    idempotencyKey: 'breach_1',
   }), true);
 
   assert.deepEqual(calls[0], {
@@ -264,6 +272,36 @@ test('SLA repository reads deadline events and creates warning events idempotent
         dueAt,
         idempotencyKey: 'warn_1',
         type: SlaEventType.WARNING,
+      },
+      skipDuplicates: true,
+    },
+  });
+  assert.deepEqual(calls[2], {
+    findMany: {
+      where: {
+        type: SlaEventType.DEADLINE_SET,
+        dueAt: { not: null },
+        complaint: { status: { notIn: [ComplaintStatus.CLOSED, ComplaintStatus.REJECTED] } },
+      },
+      select: {
+        complaintId: true,
+        policyId: true,
+        stage: true,
+        dueAt: true,
+        idempotencyKey: true,
+        complaint: { select: { status: true } },
+      },
+    },
+  });
+  assert.deepEqual(calls[3], {
+    createMany: {
+      data: {
+        complaintId: 'cmp_1',
+        policyId: 'policy_1',
+        stage: SlaStage.INVESTIGATION,
+        dueAt,
+        idempotencyKey: 'breach_1',
+        type: SlaEventType.BREACH,
       },
       skipDuplicates: true,
     },
@@ -402,6 +440,71 @@ test('SLA warning job is a no-op when nothing is due', async () => {
   assert.equal(createCalled, false);
 });
 
+test('SLA breach job creates one reportable breach and skips duplicate retry', async () => {
+  const breaches = new Map<string, { complaintId: string; policyId: string | null; stage: SlaStage; dueAt: Date; idempotencyKey: string }>();
+  const runner = new SlaService({
+    findDeadlineEventsForBreach: async () => [deadlineBreach({ idempotencyKey: 'deadline_due' })],
+    createBreachEvent: async (event) => {
+      const existing = breaches.get(event.idempotencyKey);
+      if (existing) return false;
+      breaches.set(event.idempotencyKey, event);
+      return true;
+    },
+  } as SlaRepository);
+
+  assert.deepEqual(await runner.runBreachJob('2026-06-18T17:00:00.000Z'), {
+    scanned: 1,
+    created: 1,
+    skipped: 0,
+    breachIdempotencyKeys: ['sla:breach:deadline_due'],
+  });
+  assert.deepEqual(await runner.runBreachJob('2026-06-18T17:00:00.000Z'), {
+    scanned: 1,
+    created: 0,
+    skipped: 1,
+    breachIdempotencyKeys: [],
+  });
+  assert.equal(breaches.size, 1);
+});
+
+test('SLA breach job skips future deadlines without writing', async () => {
+  let createCalled = false;
+  const runner = new SlaService({
+    findDeadlineEventsForBreach: async () => [deadlineBreach({ idempotencyKey: 'future', dueAt: '2026-06-18T17:00:01.000Z' })],
+    createBreachEvent: async () => {
+      createCalled = true;
+      throw new Error('should not create breach');
+    },
+  } as unknown as SlaRepository);
+
+  assert.deepEqual(await runner.runBreachJob('2026-06-18T17:00:00.000Z'), {
+    scanned: 1,
+    created: 0,
+    skipped: 1,
+    breachIdempotencyKeys: [],
+  });
+  assert.equal(createCalled, false);
+});
+
+test('SLA breach job skips terminal complaint status without writing', async () => {
+  let createCalled = false;
+  const runner = new SlaService({
+    findDeadlineEventsForBreach: async () => [deadlineBreach({ complaint: { status: ComplaintStatus.CLOSED } })],
+    createBreachEvent: async () => {
+      createCalled = true;
+      throw new Error('should not create breach');
+    },
+  } as unknown as SlaRepository);
+
+  assert.deepEqual(await runner.runBreachJob('2026-06-18T17:00:00.000Z'), {
+    scanned: 1,
+    created: 0,
+    skipped: 1,
+    breachIdempotencyKeys: [],
+  });
+  assert.equal(createCalled, false);
+});
+
 function assertPolicyMissing(input: Parameters<SlaService['calculateDeadline']>[0], field: string): void {
   assert.throws(
     () => service.calculateDeadline(input),
@@ -448,6 +551,24 @@ function deadlineWarning(overrides: DeadlineWarningOverrides = {}): SlaDeadlineW
     dueAt: dueAt === null ? null : new Date(dueAt ?? '2026-06-18T17:00:00.000Z'),
     idempotencyKey: 'deadline_1',
     policy: selectedPolicy ?? { durationMinutes: 480, warningPercent: 80 },
+    ...rest,
+  };
+}
+
+type DeadlineBreachOverrides = Partial<Omit<SlaDeadlineBreachRecord, 'dueAt' | 'complaint'>> & {
+  dueAt?: Date | string | null;
+  complaint?: SlaDeadlineBreachRecord['complaint'];
+};
+
+function deadlineBreach(overrides: DeadlineBreachOverrides = {}): SlaDeadlineBreachRecord {
+  const { dueAt, complaint, ...rest } = overrides;
+  return {
+    complaintId: 'cmp_1',
+    policyId: 'policy_1',
+    stage: SlaStage.INVESTIGATION,
+    dueAt: dueAt === null ? null : new Date(dueAt ?? '2026-06-18T17:00:00.000Z'),
+    idempotencyKey: 'deadline_1',
+    complaint: complaint ?? { status: ComplaintStatus.IN_PROGRESS },
     ...rest,
   };
 }
