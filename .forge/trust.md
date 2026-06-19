@@ -2283,3 +2283,19 @@ starting Phase 3 planning.
   - No OTP/session/tracking/timeline/UI/schema/provider behavior was added by the repair.
 - Decision:
   - The repair clears the `F4-01C` Verify Gate. Continue Phase 4 with `F4-02A`.
+
+## F4-02A Builder Trust
+
+Risk: High. Recommendation: Continue to `F4-02B`.
+
+Builder evidence is acceptable for the scoped OTP request slice: required proof commands ran and passed, the new public route is documented in OpenAPI, portal tracking still returns only `{ ok: true }`, unknown or mismatched reference/phone requests use the stable `PORTAL_VERIFICATION_FAILED` error, and rate-limit auditing records only safe key types.
+
+Residual risk: the notification queue deliberately carries metadata only, not a plaintext OTP value, to satisfy the no-plaintext-write acceptance criterion while provider delivery/template behavior remains out of scope.
+
+## F4-02B Builder Trust
+
+Risk: High. Recommendation: Needs independent VERIFY before `F4-02C`.
+
+The scoped verification/session behavior is covered by the required proof surface and focused `portal.tracking` tests. Module boundaries hold: portal writes portal-owned verification/session rows, complaint matching remains through the complaints public service, and OpenAPI documents both public tracking OTP routes.
+
+Residual risk: this is a required customer-portal privacy gate. A fresh verifier should specifically inspect audit-in-transaction behavior, no OTP/session hash exposure, and whether the metadata-only notification decision from `F4-02A` is acceptable for the later delivery slice.

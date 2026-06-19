@@ -3237,3 +3237,56 @@ Append build and verification evidence here. Do not delete failed evidence.
   - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed. The repair adds no secret fields and keeps rate-limit audit metadata safe.
   - Customer portal exposure rules hold: Passed. Public portal submission no longer accepts or documents DMS customer number/code; tests prove spoofed `customerNumber` is stripped and the service forwards `customerNumber: null`.
   - Trust boundaries are tested: Passed. Portal tests cover allowed submission with spoofed DMS number stripped and invalid-body denial; workflow tests cover the allowed service delegate with `customerNumber: null` and invalid input denial before writes.
+
+## F4-02A Built - AUTO PHASE Continuing
+
+`F4-02A` added the public portal tracking OTP request boundary without allowing reference-only tracking reads. `POST /portal/tracking/otp` accepts only `referenceNumber` and `customerPhone` plus server-derived request context, rate-limits by IP, phone, and reference, resolves the complaint/customer match through `ComplaintsService.findPortalVerificationTarget`, writes a `portal_verifications` row through `PortalRepository`, and queues a notification through `NotificationsService` only after persistence succeeds.
+
+The OTP value is generated inside `PortalService.requestTrackingOtp` and immediately stored as a salted SHA-256 hash in `portal_verifications`. The notification queue payload contains only verification metadata (`verificationId`, `referenceNumber`, `expiresAt`) because provider delivery/templates are out of scope and this task forbids writing plaintext OTP values.
+
+Requirement IDs: REQ-PORTAL-002, PORTAL-SEC-001, REQ-NOTIFY-001, ARCH-WORKFLOW-001, METHOD-AUDIT-001, METHOD-TEST-001, API-STANDARD-001.
+
+Proof:
+- Passed: `corepack pnpm lint`
+- Passed: `corepack pnpm typecheck`
+- Passed: `corepack pnpm test` (20/20)
+- Passed: `corepack pnpm test:api -- portal.tracking` (6/6)
+- Passed: `corepack pnpm test:api -- notifications` (6/6)
+- Passed: `corepack pnpm openapi:check`
+- Passed: `git diff --check` (line-ending warnings only)
+
+Security self-check:
+- Roles and branch scope: no staff role or branch authority is accepted from the public route; the route accepts only portal-safe reference/phone input and returns no complaint details.
+- State changes and side effects: no complaint workflow state changes happen in this slice; the portal-owned verification row is persisted before `NotificationsService.queueInternal` is called, and denial paths do not persist or queue.
+- Secret handling: OTPs, hashes, tokens, credentials, and provider secrets are not returned or logged. Tests assert hash-only verification persistence and notification metadata without OTP/hash payload keys.
+- Portal exposure: DMS customer codes/customer numbers, internal comments, audit logs, staff PII, and unrelated complaints are not accepted or returned by the OTP request boundary.
+- Trust boundaries: `test:api -- portal.tracking` covers an allowed request, unknown/mismatched reference/phone denial, no notification queue on denial, rate-limit denial, and hash-only persistence.
+
+Assumptions and gaps:
+- The queued notification is a metadata request only; plaintext OTP delivery is deferred with provider/template work because this task explicitly excludes provider delivery and hardcoded templates.
+
+## F4-02B Built - Verify Gate
+
+`F4-02B` added OTP verification and expiring portal session issuance for the customer portal tracking flow. `POST /portal/tracking/otp/verify` accepts only `verificationId` and `otp` plus server-derived request context, verifies only pending and unexpired portal verification rows, compares OTPs against the stored salted hash with timing-safe comparison, increments failed attempts, marks expired rows, marks successful rows as verified, writes a hashed portal session token, and returns only the one-time session token plus expiration.
+
+Portal verification status updates, session creation, and SECURITY audit entries run inside `PortalRepository.transaction`. The response never includes complaint details, customer details, DMS customer codes, internal comments, audit logs, staff PII, OTP hashes, or stored session hashes.
+
+Requirement IDs: REQ-PORTAL-002, PORTAL-SEC-001, ARCH-WORKFLOW-001, METHOD-AUDIT-001, METHOD-TEST-001, API-STANDARD-001.
+
+Proof:
+- Passed: `corepack pnpm lint`
+- Passed: `corepack pnpm typecheck`
+- Passed: `corepack pnpm test` (20/20)
+- Passed: `corepack pnpm test:api -- portal.tracking` (12/12)
+- Passed: `corepack pnpm openapi:check`
+- Passed: `git diff --check` (line-ending warnings only)
+
+Security self-check:
+- Roles and branch scope: the public verification route accepts no staff role or branch authority from the client; it uses only a portal verification ID and OTP and returns no complaint data.
+- State changes and audit: failed attempt increments, expiration marking, successful verification marking, session creation, and corresponding SECURITY audit entries happen inside the portal repository transaction.
+- Secret handling: OTPs, OTP hashes, session hashes, provider secrets, and credentials are not returned or logged. The only returned token is the new portal session token; persistence stores only its SHA-256 hash.
+- Portal exposure: no internal comments, audit logs, DMS customer codes/customer numbers, staff PII, unrelated complaints, or complaint details are exposed by the request or verify routes.
+- Trust boundaries: `test:api -- portal.tracking` covers allowed verification, wrong OTP denial with attempt increment, expired verification denial, exhausted-attempt denial, hash-only session persistence, and route parsing that strips unsafe fields.
+
+Assumptions and gaps:
+- Portal session consumption for tracking reads remains out of scope and is queued for `F4-02C` after independent VERIFY accepts this gate.

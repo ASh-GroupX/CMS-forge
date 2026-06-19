@@ -86,6 +86,7 @@ export type ListComplaintQueueFilter = {
 };
 
 export type ComplaintCommentRecord = { id: string; complaintId: string; authorId: string | null; body: string; visibility: CommentVisibility; createdAt: Date };
+export type PortalVerificationTargetRecord = { complaintId: string; customerId: string; phone: string };
 export type CreateComplaintCommentData = { complaintId: string; authorId?: string | null; body: string; visibility: CommentVisibility };
 
 @Injectable()
@@ -172,6 +173,14 @@ export class ComplaintsRepository {
       orderBy: { createdAt: 'asc' },
       select: commentSelect,
     });
+  }
+
+  async findPortalVerificationTarget(referenceNumber: string, phone: string, client: ComplaintTransitionClient = this.prisma): Promise<PortalVerificationTargetRecord | null> {
+    const complaint = await client.complaint.findFirst({
+      where: { referenceNumber, customer: { phone } },
+      select: { id: true, customerId: true, customer: { select: { phone: true } } },
+    });
+    return complaint ? { complaintId: complaint.id, customerId: complaint.customerId, phone: complaint.customer.phone } : null;
   }
 
   async updateStatus(

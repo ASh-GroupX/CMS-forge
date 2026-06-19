@@ -5,7 +5,7 @@ import type { AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { ComplaintsRepository } from './complaints.repository.js';
-import type { ComplaintCommentRecord, ComplaintDetailRecord, ComplaintQueueRecord, ComplaintRecord, CreateComplaintData } from './complaints.repository.js';
+import type { ComplaintCommentRecord, ComplaintDetailRecord, ComplaintQueueRecord, ComplaintRecord, CreateComplaintData, PortalVerificationTargetRecord } from './complaints.repository.js';
 import type { ComplaintDetailDto, ComplaintQueueItemDto } from './dto/complaint-response.dto.js';
 
 export type ValidateComplaintTransitionInput = { fromStatus: ComplaintStatus; action: ComplaintTransitionAction; actorRole: RoleCode };
@@ -83,8 +83,10 @@ export class ComplaintsService {
     });
   }
 
-  async listQueue(filter: ComplaintQueueFilter = {}): Promise<ComplaintQueueItemDto[]> {
-    return (await this.complaintsRepository.listQueue(filter)).map(queueItem);
+  async listQueue(filter: ComplaintQueueFilter = {}): Promise<ComplaintQueueItemDto[]> { return (await this.complaintsRepository.listQueue(filter)).map(queueItem); }
+
+  async findPortalVerificationTarget(referenceNumber: string, customerPhone: string): Promise<PortalVerificationTargetRecord | null> {
+    return this.complaintsRepository.findPortalVerificationTarget(referenceNumber.trim(), customerPhone.trim());
   }
 
   async getDetail(id: string, filter: ComplaintQueueFilter = {}): Promise<ComplaintDetailDto> {
@@ -104,9 +106,7 @@ export class ComplaintsService {
     });
   }
 
-  async listPublicComments(complaintId: string): Promise<ComplaintCommentResult[]> {
-    return (await this.complaintsRepository.listPublicComments(complaintId)).map(commentItem);
-  }
+  async listPublicComments(complaintId: string): Promise<ComplaintCommentResult[]> { return (await this.complaintsRepository.listPublicComments(complaintId)).map(commentItem); }
 
   validateTransition(input: ValidateComplaintTransitionInput): ComplaintTransitionDecision {
     const transition = WORKFLOW_TRANSITIONS.find(

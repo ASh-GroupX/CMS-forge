@@ -88,8 +88,8 @@ history from another project.
   - [x] F4-01C: Add public submission HTTP route, OpenAPI, rate limit, and portal API tests (Verify Gate: required)
   - [x] REPAIR-F4-01C: Remove DMS customer number from public portal submission
 - [ ] F4-02: Portal tracking with reference plus OTP verification
-  - [ ] F4-02A: Add portal OTP request persistence and notification queueing
-  - [ ] F4-02B: Add OTP verification and expiring portal session issuance (Verify Gate: required)
+  - [x] F4-02A: Add portal OTP request persistence and notification queueing
+  - [x] F4-02B: Add OTP verification and expiring portal session issuance (Verify Gate: required)
   - [ ] F4-02C: Add verified portal tracking endpoint
 - [ ] F4-03: Portal-safe public timeline
   - [ ] F4-03A: Add portal-safe timeline read model

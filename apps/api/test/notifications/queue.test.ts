@@ -38,6 +38,30 @@ test('notifications service queues one internal in-app row', async () => {
   assert.equal(result.status, NotificationStatus.QUEUED);
 });
 
+test('notifications service accepts portal verification request metadata without secret payload keys', async () => {
+  const writes: unknown[] = [];
+  const service = new NotificationsService({
+    queueInternal: async (data) => {
+      writes.push(data);
+      return { id: 'notif_portal', ...data, channel: NotificationChannel.IN_APP, status: NotificationStatus.QUEUED };
+    },
+  } as NotificationsRepository);
+
+  await service.queueInternal({
+    complaintId: 'cmp_1',
+    templateCode: 'portal.verification.requested.internal',
+    locale: 'en',
+    payload: { verificationId: 'ver_1', referenceNumber: 'CMP-000010', expiresAt: '2026-06-19T10:05:00.000Z' },
+  });
+
+  assert.deepEqual(writes[0], {
+    complaintId: 'cmp_1',
+    recipientUserId: null,
+    templateCode: 'portal.verification.requested.internal',
+    locale: 'en',
+    payload: { verificationId: 'ver_1', referenceNumber: 'CMP-000010', expiresAt: '2026-06-19T10:05:00.000Z' },
+  });
+});
 test('notifications repository persists queued in-app rows only', async () => {
   const calls: unknown[] = [];
   const repository = new NotificationsRepository({

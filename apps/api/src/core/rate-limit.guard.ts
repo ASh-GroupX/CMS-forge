@@ -37,106 +37,70 @@ export class InMemoryLoginRateLimitStore implements LoginRateLimitStore {
 
 @Injectable()
 export class LoginRateLimitGuard implements CanActivate {
-  constructor(
-    @Inject(LOGIN_RATE_LIMIT_STORE)
-    private readonly store: LoginRateLimitStore,
-    private readonly auditService: AuditService,
-  ) {}
+  constructor(@Inject(LOGIN_RATE_LIMIT_STORE) private readonly store: LoginRateLimitStore, private readonly auditService: AuditService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<LoginRequest>();
-    const ipAddress = clientIp(request);
-    const keys = [`ip:${ipAddress ?? 'unknown'}`];
-    const identifier = submittedIdentifier(request.body);
-
-    if (identifier) {
-      keys.push(`account:${identifier}`);
-    }
-
-    const now = Date.now();
-    const exceeded = keys.some((key) => this.store.increment(key, now).count > LOGIN_RATE_LIMIT_ATTEMPTS);
-
-    if (!exceeded) {
-      return true;
-    }
-
-    await this.auditService.record({
-      eventType: 'SECURITY',
-      action: 'rate_limit_triggered',
-      targetType: 'auth_login',
-      correlationId: request.correlationId ?? headerValue(request.headers['x-correlation-id']),
-      ipAddress,
-      userAgent: headerValue(request.headers['user-agent']),
-      metadata: {
-        limit: LOGIN_RATE_LIMIT_ATTEMPTS,
-        windowSeconds: LOGIN_RATE_LIMIT_WINDOW_MS / 1000,
-        keyTypes: identifier ? ['ip', 'account'] : ['ip'],
-      },
-    });
-
-    throw new AppException('RATE_LIMITED', 'Too many login attempts', HttpStatus.TOO_MANY_REQUESTS);
+    const identifier = submittedText(request.body, 'identifier')?.toLowerCase() ?? null;
+    return enforceLimit(request, this.store, this.auditService, 'auth_login', 'Too many login attempts', identifier ? ['ip', 'account'] : ['ip'], identifier ? [`account:${identifier}`] : []);
   }
 }
 
 @Injectable()
 export class PortalSubmissionRateLimitGuard implements CanActivate {
-  constructor(
-    @Inject(LOGIN_RATE_LIMIT_STORE)
-    private readonly store: LoginRateLimitStore,
-    private readonly auditService: AuditService,
-  ) {}
+  constructor(@Inject(LOGIN_RATE_LIMIT_STORE) private readonly store: LoginRateLimitStore, private readonly auditService: AuditService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<LoginRequest>();
-    const ipAddress = clientIp(request);
-    const keys = [`ip:${ipAddress ?? 'unknown'}`];
-    const phone = submittedPhone(request.body);
-
-    if (phone) {
-      keys.push(`phone:${phone}`);
-    }
-
-    const now = Date.now();
-    const exceeded = keys.some((key) => this.store.increment(key, now).count > LOGIN_RATE_LIMIT_ATTEMPTS);
-
-    if (!exceeded) {
-      return true;
-    }
-
-    await this.auditService.record({
-      eventType: 'SECURITY',
-      action: 'rate_limit_triggered',
-      targetType: 'portal_submission',
-      correlationId: request.correlationId ?? headerValue(request.headers['x-correlation-id']),
-      ipAddress,
-      userAgent: headerValue(request.headers['user-agent']),
-      metadata: {
-        limit: LOGIN_RATE_LIMIT_ATTEMPTS,
-        windowSeconds: LOGIN_RATE_LIMIT_WINDOW_MS / 1000,
-        keyTypes: phone ? ['ip', 'phone'] : ['ip'],
-      },
-    });
-
-    throw new AppException('RATE_LIMITED', 'Too many portal submissions', HttpStatus.TOO_MANY_REQUESTS);
+    const phone = submittedText(request.body, 'customerPhone')?.toLowerCase() ?? null;
+    return enforceLimit(request, this.store, this.auditService, 'portal_submission', 'Too many portal submissions', phone ? ['ip', 'phone'] : ['ip'], phone ? [`phone:${phone}`] : []);
   }
 }
 
-function submittedIdentifier(body: unknown): string | null {
-  if (!body || typeof body !== 'object') {
-    return null;
-  }
+@Injectable()
+export class PortalTrackingOtpRateLimitGuard implements CanActivate {
+  constructor(@Inject(LOGIN_RATE_LIMIT_STORE) private readonly store: LoginRateLimitStore, private readonly auditService: AuditService) {}
 
-  const value = (body as { identifier?: unknown }).identifier;
-  return typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : null;
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest<LoginRequest>();
+    const phone = submittedText(request.body, 'customerPhone')?.toLowerCase() ?? null;
+    const reference = submittedText(request.body, 'referenceNumber')?.toLowerCase() ?? null;
+    const extraKeys = [...(phone ? [`phone:${phone}`] : []), ...(reference ? [`reference:${reference}`] : [])];
+    const keyTypes = ['ip', ...(phone ? ['phone'] : []), ...(reference ? ['reference'] : [])];
+    return enforceLimit(request, this.store, this.auditService, 'portal_tracking_otp', 'Too many portal tracking OTP attempts', keyTypes, extraKeys);
+  }
 }
 
-function submittedPhone(body: unknown): string | null {
-  if (!body || typeof body !== 'object') {
-    return null;
-  }
+async function enforceLimit(
+  request: LoginRequest,
+  store: LoginRateLimitStore,
+  auditService: AuditService,
+  targetType: string,
+  message: string,
+  keyTypes: string[],
+  extraKeys: string[],
+): Promise<boolean> {
+  const ipAddress = clientIp(request);
+  const keys = [`ip:${ipAddress ?? 'unknown'}`, ...extraKeys];
+  const now = Date.now();
+  if (!keys.some((key) => store.increment(key, now).count > LOGIN_RATE_LIMIT_ATTEMPTS)) return true;
 
-  const value = (body as { customerPhone?: unknown }).customerPhone;
-  return typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : null;
+  await auditService.record({
+    eventType: 'SECURITY',
+    action: 'rate_limit_triggered',
+    targetType,
+    correlationId: request.correlationId ?? headerValue(request.headers['x-correlation-id']),
+    ipAddress,
+    userAgent: headerValue(request.headers['user-agent']),
+    metadata: { limit: LOGIN_RATE_LIMIT_ATTEMPTS, windowSeconds: LOGIN_RATE_LIMIT_WINDOW_MS / 1000, keyTypes },
+  });
+  throw new AppException('RATE_LIMITED', message, HttpStatus.TOO_MANY_REQUESTS);
+}
+
+function submittedText(body: unknown, field: string): string | null {
+  if (!body || typeof body !== 'object') return null;
+  const value = (body as Record<string, unknown>)[field];
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function clientIp(request: LoginRequest): string | null {

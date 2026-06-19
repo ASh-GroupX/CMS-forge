@@ -1,8 +1,9 @@
 import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import type { IncomingMessage } from 'node:http';
-import { PortalSubmissionRateLimitGuard } from '../../core/rate-limit.guard.js';
+import { PortalSubmissionRateLimitGuard, PortalTrackingOtpRateLimitGuard } from '../../core/rate-limit.guard.js';
 import { parsePortalComplaintBody, toPortalComplaintInput } from './dto/create-portal.dto.js';
-import type { PortalComplaintResponseDto } from './dto/portal-response.dto.js';
+import { parsePortalTrackingOtpBody, parsePortalTrackingOtpVerifyBody, toPortalOtpInput, toPortalOtpVerifyInput } from './dto/portal-tracking.dto.js';
+import type { PortalComplaintResponseDto, PortalOtpRequestResponseDto, PortalSessionResponseDto } from './dto/portal-response.dto.js';
 import { PortalService } from './portal.service.js';
 
 @Controller('portal')
@@ -20,6 +21,23 @@ export class PortalController {
         toPortalComplaintInput(parsePortalComplaintBody(body), auditContext(request)),
       ),
     };
+  }
+
+  @Post('tracking/otp')
+  @UseGuards(PortalTrackingOtpRateLimitGuard)
+  async requestTrackingOtp(
+    @Body() body: unknown,
+    @Req() request: IncomingMessage & { correlationId?: string },
+  ): Promise<PortalOtpRequestResponseDto> {
+    return this.portalService.requestTrackingOtp(toPortalOtpInput(parsePortalTrackingOtpBody(body), auditContext(request)));
+  }
+
+  @Post('tracking/otp/verify')
+  async verifyTrackingOtp(
+    @Body() body: unknown,
+    @Req() request: IncomingMessage & { correlationId?: string },
+  ): Promise<PortalSessionResponseDto> {
+    return { session: await this.portalService.verifyTrackingOtp(toPortalOtpVerifyInput(parsePortalTrackingOtpVerifyBody(body), auditContext(request))) };
   }
 }
 

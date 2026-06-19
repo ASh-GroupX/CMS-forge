@@ -932,6 +932,98 @@
         }
       }
     },
+    "/portal/tracking/otp": {
+      "post": {
+        "tags": [
+          "Portal"
+        ],
+        "operationId": "portalTrackingOtpRequest",
+        "summary": "Request a public tracking verification challenge",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalOtpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Verification request accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalOtpRequestResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or unmatched verification request (PORTAL_VERIFICATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (RATE_LIMITED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portal/tracking/otp/verify": {
+      "post": {
+        "tags": [
+          "Portal"
+        ],
+        "operationId": "portalTrackingOtpVerify",
+        "summary": "Verify a public tracking challenge and issue a portal session",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalOtpVerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Portal session issued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalSessionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or failed verification request (PORTAL_VERIFICATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/audit/logs": {
       "get": {
         "tags": [
@@ -1707,6 +1799,81 @@
               "null"
             ],
             "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortalOtpRequest": {
+        "type": "object",
+        "required": [
+          "referenceNumber",
+          "customerPhone"
+        ],
+        "properties": {
+          "referenceNumber": {
+            "type": "string",
+            "minLength": 1
+          },
+          "customerPhone": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortalOtpRequestResponse": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "const": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortalOtpVerifyRequest": {
+        "type": "object",
+        "required": [
+          "verificationId",
+          "otp"
+        ],
+        "properties": {
+          "verificationId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "otp": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortalSessionResponse": {
+        "type": "object",
+        "required": [
+          "session"
+        ],
+        "properties": {
+          "session": {
+            "type": "object",
+            "required": [
+              "sessionToken",
+              "expiresAt"
+            ],
+            "properties": {
+              "sessionToken": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "additionalProperties": false
           }
         },
         "additionalProperties": false

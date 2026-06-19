@@ -1,5 +1,30 @@
 # Current State
 
+Status: Needs Verify
+Phase: Phase 4 - Customer Portal
+Next Task: VERIFY-F4-02B - Verify portal OTP session gate
+
+## F4-02B Built - Verify Gate
+
+`F4-02B` added `POST /portal/tracking/otp/verify`, pending/unexpired OTP verification, failed-attempt increments, expired-verification marking, successful verification marking, hashed portal session persistence, and a safe session response containing only the new portal session token and expiration.
+
+Portal verification state changes, session creation, and SECURITY audit entries run inside the portal repository transaction. No complaint details, DMS customer codes, internal comments, audit logs, staff PII, OTP hashes, or session hashes are returned.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- portal.tracking 12/12, and openapi:check.
+
+AUTO PHASE stops here because `F4-02B` is marked `Verify Gate: required` and needs independent VERIFY before `F4-02C`.
+
+## F4-02A Built - AUTO PHASE Continued
+
+`F4-02A` added `POST /portal/tracking/otp`, server-side portal tracking request parsing, IP/phone/reference rate limiting, complaint/customer matching through the complaints public service, portal-owned verification persistence with salted OTP hashes, and notification queueing after persistence. The public response is only `{ ok: true }`; denial uses `PORTAL_VERIFICATION_FAILED`; no complaint status, customer details, DMS codes, internal comments, audit logs, staff PII, plaintext OTPs, or OTP hashes are returned.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- portal.tracking 6/6, test:api -- notifications 6/6, and openapi:check.
+
+AUTO PHASE remained in Phase 4 and continued with verify-gated `F4-02B`.
+
+## Previous State Before F4-02A
+# Current State
+
 Status: Ready to Build
 Phase: Phase 4 - Customer Portal
 Next Task: F4-02A - Add portal OTP request persistence and notification queueing
@@ -638,7 +663,7 @@ state-machine kernel is built. `F2-01A` is queued as the smallest buildable firs
 task. The state-machine persistence task `F2-02B` remains `Verify Gate: required`
 because later complaint creation and queue behavior depend on it.
 
-## Phase 1 â€” Accepted (PHASE-1-REVIEW)
+## Phase 1 — Accepted (PHASE-1-REVIEW)
 
 PHASE-1-REVIEW decision: **Accept With Conditions** (PHASE-REVIEWER, Opus 4.8, 2026-06-18).
 All 23 Phase 1 tasks done with honest, independently-reproduced evidence. Full proof surface
@@ -650,17 +675,17 @@ is cleared to start; it opens with a planner pass.
 
 ### Non-blocking conditions carried into later phases (see trust.md PHASE-1-REVIEW)
 
-1. `security:check` is still a fail-loud placeholder â€” wire it to the real security suites
+1. `security:check` is still a fail-loud placeholder — wire it to the real security suites
    before the MVP pilot sign-off gate (substance is proven by `test:api -- security/auth/admin/audit`).
-2. NFR-SEC-001 AC4 (prod HTTPâ†’HTTPS at the gateway) + parameterizing `POSTGRES_HOST_AUTH_METHOD: trust`
+2. NFR-SEC-001 AC4 (prod HTTP?HTTPS at the gateway) + parameterizing `POSTGRES_HOST_AUTH_METHOD: trust`
    are owed by the Phase 7 deployment runbook (F7-04).
 3. No full Nest bootstrap/e2e test yet (F1-06C added reflection-metadata guard tests + fixed the
    branches DI graph). Add a bootstrap smoke test early in Phase 2.
-4. Per-module `PrismaService`/`AuditService` duplication â€” consider a shared `@Global()` core module
+4. Per-module `PrismaService`/`AuditService` duplication — consider a shared `@Global()` core module
    in Phase 2.
 5. Deferred auth features: username login, account-lock, password-reset land with their feature tasks.
 
-## Phase 1 â€” CSRF Kernel Gate Passed (VERIFY-F1-06B, gate cleared)
+## Phase 1 — CSRF Kernel Gate Passed (VERIFY-F1-06B, gate cleared)
 
 VERIFY-F1-06B decision: **Accept** (independent VERIFY, fresh context / Opus 4.8,
 2026-06-18). Builder honesty Honest, code quality Good. All six proof commands
@@ -670,7 +695,7 @@ test:api -- auth 21/21, openapi:check). CSRF kernel + auth-route enforcement con
 `POST /auth/login` issues a readable CSRF cookie but is not CSRF-gated (rate-limited
 instead); denial is stable `CSRF_INVALID` 403 with a safe `SECURITY`/`csrf_rejected`
 audit and no secret exposure; OpenAPI documents it drift-free. Full record in
-`.forge/trust.md` (VERIFY-F1-06B). The `Verify Gate` on `F1-06B` is cleared â€” AUTO PHASE
+`.forge/trust.md` (VERIFY-F1-06B). The `Verify Gate` on `F1-06B` is cleared — AUTO PHASE
 may resume from `F1-06C`.
 
 ### Carry-forward into F1-06C (see trust.md VERIFY-F1-06B observations)
@@ -683,35 +708,35 @@ may resume from `F1-06C`.
    unit-level). A small Nest bootstrap smoke test would close this; flag for the Phase 1
    PHASE-REVIEWER if not added in F1-06C.
 
-After `F1-06C`, all Phase 1 backlog tasks are done â†’ `Needs Phase Review` before Phase 2.
+After `F1-06C`, all Phase 1 backlog tasks are done ? `Needs Phase Review` before Phase 2.
 
-## Phase 1 â€” F1-06 Split (PLAN-F1-06, 2026-06-18)
+## Phase 1 — F1-06 Split (PLAN-F1-06, 2026-06-18)
 
 `F1-06` (login rate limiting + CSRF) was split into three ordered BUILDER-STRONG build
 tasks because the two protections touch different trust boundaries and the combined
-surface exceeds the 1â€“5 file budget:
+surface exceeds the 1–5 file budget:
 
-- `F1-06A` â€” login rate limiting by account + IP on `POST /auth/login` (NFR-SEC-001 AC3).
+- `F1-06A` — login rate limiting by account + IP on `POST /auth/login` (NFR-SEC-001 AC3).
   Queued now; self-contained, nothing builds on it.
-- `F1-06B` â€” CSRF kernel guard + token issuance + enforcement on auth mutation routes
-  (`POST /auth/logout`) (NFR-SEC-001 AC5). **Verify Gate: required** â€” `F1-06C` builds
+- `F1-06B` — CSRF kernel guard + token issuance + enforcement on auth mutation routes
+  (`POST /auth/logout`) (NFR-SEC-001 AC5). **Verify Gate: required** — `F1-06C` builds
   directly on this CSRF mechanism, so AUTO PHASE pauses for an independent VERIFY here.
-- `F1-06C` â€” enforce the same CSRF guard on branch (admin) mutation routes + OpenAPI +
+- `F1-06C` — enforce the same CSRF guard on branch (admin) mutation routes + OpenAPI +
   admin test fixups (NFR-SEC-001 AC5).
 
 CSRF mutation surface mapped to `POST /auth/logout`, `POST /branches`, `PATCH /branches/:id`,
-`POST /branches/:id/deactivate`. `POST /auth/login` is pre-session â†’ covered by rate
-limiting (AC3), not CSRF (AC5). After `F1-06C`, all Phase 1 backlog tasks are done â†’
+`POST /branches/:id/deactivate`. `POST /auth/login` is pre-session ? covered by rate
+limiting (AC3), not CSRF (AC5). After `F1-06C`, all Phase 1 backlog tasks are done ?
 `Needs Phase Review` before Phase 2.
 
-## Phase 1 â€” Auth Foundation Verified (gate passed)
+## Phase 1 — Auth Foundation Verified (gate passed)
 
 VERIFY-F1-01E decision: **Accept** (independent VERIFY, fresh context / Opus 4.8,
 2026-06-18). Builder honesty Honest, code quality Good. All five proof commands
 independently re-run green (lint, typecheck, test 19/19, test:api -- auth 15/15,
 openapi:check); change scope clean; no secret/token exposure, missing audit, or
 OpenAPI drift. Full record in `.forge/trust.md` (VERIFY-F1-01E). The `Verify Gate`
-on `F1-01E3` is cleared â€” AUTO PHASE may resume from `F1-02`.
+on `F1-01E3` is cleared — AUTO PHASE may resume from `F1-02`.
 
 ### Carry-forward conditions into the rest of Phase 1 (see trust.md VERIFY-F1-01E)
 
@@ -726,7 +751,7 @@ on `F1-01E3` is cleared â€” AUTO PHASE may resume from `F1-02`.
 4. Audit append-only is application-level only; DB-level UPDATE/DELETE revocation is
    F1-03's job.
 
-## Phase 0 â€” Accepted
+## Phase 0 — Accepted
 
 PHASE-0-REVIEW decision: **Accept Phase** (PHASE-REVIEWER, Opus 4.8, 2026-06-18).
 All nine Phase 0 tasks done with honest, independently-reproduced evidence. Full
@@ -739,41 +764,41 @@ thresholds), openapi:check, build, prisma validate.
 
 1. F1-00A must generate a Prisma migration from the F0-08 schema (committed migration
    only covers the minimal F0-04 model). Run migrations inside the Docker network on Windows.
-2. No NestJS runtime yet â€” `apps/api` is a `node:http` liveness server. F1-00B must stand
+2. No NestJS runtime yet — `apps/api` is a `node:http` liveness server. F1-00B must stand
    up the Nest app + core kernel (prisma, errors, audit, correlation). Escalate to PLANNER
-   to split if scope exceeds 1â€“5 files.
-3. Module generator emits plain TS classes, not Nest decorators â€” re-align at F1-05 golden CRUD.
+   to split if scope exceeds 1–5 files.
+3. Module generator emits plain TS classes, not Nest decorators — re-align at F1-05 golden CRUD.
 4. `POSTGRES_HOST_AUTH_METHOD: trust` is dev-only; parameterize before any non-dev deploy.
 5. Visual/a11y/perf gates stay honest fail-loud until Phase 6 screens exist.
 
 ## History
 
-- F0-00 â€” agent rulebook + architecture blueprint wired into Forge.
-- F0-01 â€” pnpm workspace scaffold, package boundaries, OpenAPI shell, Prisma shell, postgres/redis compose.
-- F0-02 â€” real lint/typecheck/test/build/OpenAPI gates.
-- F0-03 â€” Docker Compose all four services; images built.
-- F0-04 â€” minimal Prisma schema + SRS-aligned enums; idempotent seed verified against live postgres; init migration committed.
-- F0-05 â€” design tokens, Tailwind config, shadcn/ui foundation in apps/web.
-- F0-06 â€” boundary lint, coverage thresholds, OpenAPI scaffold drift, fail-loud UI/perf proofs.
-- F0-07 â€” dependency-free module generator; `branches` reserved as future golden CRUD.
-- F0-08 â€” coherent MVP data model: complaint history, audit, SLA, portal verification/session, comments, attachments, approvals, notifications, surveys, compensation.
-- F1-00A â€” generated + applied the F0-08 Prisma migration inside the Docker network; seed data preserved.
-- F1-00B â€” bootstrapped NestJS app + core kernel (Prisma lifecycle, correlation, error envelope); liveness preserved.
-- F1-01A â€” dev-only Argon2id staff seed hashes; real `test:api -- auth` runner replacing the placeholder.
-- F1-01B â€” service credential verification (Argon2id), generic denial of wrong/inactive/locked/missing-hash.
-- F1-01C â€” `StaffSession` model + migration; session creation stores only a SHA-256 token hash; HttpOnly/SameSite/Secure cookie.
-- F1-01D â€” session validation + logout invalidation by token hash; generic denial of missing/unknown/expired/revoked.
-- F1-01E1 â€” `AuthModule` + `POST /auth/login` and `/auth/logout` routes with DTO parsing.
-- F1-01E2 â€” append-only `AuditService`; AUTH login_success/login_failure/logout entries; audit-in-transaction for state changes.
-- F1-01E3 â€” auth OpenAPI contract (paths + safe schemas + Set-Cookie); `openapi:check` hardened against auth-path/schema removal.
-- VERIFY-F1-01E â€” independent gate Accept (Honest/Good); five proof commands re-run green; carry-forward security conditions recorded.
-- VERIFY-F1-03A â€” independent gate Repair (Honest/Acceptable); proof commands re-run green, but audit search currently allows Branch Manager despite `RBAC-MATRIX-001` marking audit-log view as Admin yes / Branch Manager no.
-- REPAIR-F1-03A â€” audit search restricted to Admin-only; proof commands passed; queued independent repair VERIFY before `F1-03B`.
-- VERIFY-F1-03A-REPAIR â€” independent gate Accept (Honest/Good); `GET /audit/logs` confirmed Admin-only per RBAC-MATRIX-001 (Branch Manager denied + SECURITY-audited, service fails closed); filtering/clamp/redaction/OpenAPI intact; five proof commands re-run green. Audit search gate cleared.
-- F1-03B â€” Admin-only audit export added with row cap, redacted JSON attachment, export audit entry, OpenAPI contract, and focused audit tests.
-- F1-03C â€” DB-level trigger prevents audit log update/delete; `test:api -- audit` applies migrations in Docker and proves insert succeeds while update/delete fail.
-- F1-04 â€” stable API error envelope now supports optional validation field errors; auth/RBAC errors remain safe and correlation IDs propagate to headers and error bodies.
-- PLAN-F1-05 â€” split golden CRUD work; first build task is generator alignment before creating the `branches` exemplar.
+- F0-00 — agent rulebook + architecture blueprint wired into Forge.
+- F0-01 — pnpm workspace scaffold, package boundaries, OpenAPI shell, Prisma shell, postgres/redis compose.
+- F0-02 — real lint/typecheck/test/build/OpenAPI gates.
+- F0-03 — Docker Compose all four services; images built.
+- F0-04 — minimal Prisma schema + SRS-aligned enums; idempotent seed verified against live postgres; init migration committed.
+- F0-05 — design tokens, Tailwind config, shadcn/ui foundation in apps/web.
+- F0-06 — boundary lint, coverage thresholds, OpenAPI scaffold drift, fail-loud UI/perf proofs.
+- F0-07 — dependency-free module generator; `branches` reserved as future golden CRUD.
+- F0-08 — coherent MVP data model: complaint history, audit, SLA, portal verification/session, comments, attachments, approvals, notifications, surveys, compensation.
+- F1-00A — generated + applied the F0-08 Prisma migration inside the Docker network; seed data preserved.
+- F1-00B — bootstrapped NestJS app + core kernel (Prisma lifecycle, correlation, error envelope); liveness preserved.
+- F1-01A — dev-only Argon2id staff seed hashes; real `test:api -- auth` runner replacing the placeholder.
+- F1-01B — service credential verification (Argon2id), generic denial of wrong/inactive/locked/missing-hash.
+- F1-01C — `StaffSession` model + migration; session creation stores only a SHA-256 token hash; HttpOnly/SameSite/Secure cookie.
+- F1-01D — session validation + logout invalidation by token hash; generic denial of missing/unknown/expired/revoked.
+- F1-01E1 — `AuthModule` + `POST /auth/login` and `/auth/logout` routes with DTO parsing.
+- F1-01E2 — append-only `AuditService`; AUTH login_success/login_failure/logout entries; audit-in-transaction for state changes.
+- F1-01E3 — auth OpenAPI contract (paths + safe schemas + Set-Cookie); `openapi:check` hardened against auth-path/schema removal.
+- VERIFY-F1-01E — independent gate Accept (Honest/Good); five proof commands re-run green; carry-forward security conditions recorded.
+- VERIFY-F1-03A — independent gate Repair (Honest/Acceptable); proof commands re-run green, but audit search currently allows Branch Manager despite `RBAC-MATRIX-001` marking audit-log view as Admin yes / Branch Manager no.
+- REPAIR-F1-03A — audit search restricted to Admin-only; proof commands passed; queued independent repair VERIFY before `F1-03B`.
+- VERIFY-F1-03A-REPAIR — independent gate Accept (Honest/Good); `GET /audit/logs` confirmed Admin-only per RBAC-MATRIX-001 (Branch Manager denied + SECURITY-audited, service fails closed); filtering/clamp/redaction/OpenAPI intact; five proof commands re-run green. Audit search gate cleared.
+- F1-03B — Admin-only audit export added with row cap, redacted JSON attachment, export audit entry, OpenAPI contract, and focused audit tests.
+- F1-03C — DB-level trigger prevents audit log update/delete; `test:api -- audit` applies migrations in Docker and proves insert succeeds while update/delete fail.
+- F1-04 — stable API error envelope now supports optional validation field errors; auth/RBAC errors remain safe and correlation IDs propagate to headers and error bodies.
+- PLAN-F1-05 — split golden CRUD work; first build task is generator alignment before creating the `branches` exemplar.
 - F1-05A - generator now emits NestJS-shaped module skeletons with module/controller/service/repository decorators and manifest-valid `MODULE.md` files.
 - F1-05B - generated the real `branches` module shell and filled its `MODULE.md`; CRUD behavior remains unbuilt.
 - F1-05C - added branch read/list service and repository behavior with a real `test:api -- admin` suite.
