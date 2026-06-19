@@ -82,10 +82,19 @@ history from another project.
 
 ## Phase 4 - Customer Portal
 
-- [ ] F4-01: Customer complaint submission
+- [x] F4-01: Customer complaint submission
+  - [x] F4-01A: Generate portal module boundary and manifest
+  - [x] F4-01B: Add portal complaint submission service path
+  - [x] F4-01C: Add public submission HTTP route, OpenAPI, rate limit, and portal API tests (Verify Gate: required)
 - [ ] F4-02: Portal tracking with reference plus OTP verification
+  - [ ] F4-02A: Add portal OTP request persistence and notification queueing
+  - [ ] F4-02B: Add OTP verification and expiring portal session issuance (Verify Gate: required)
+  - [ ] F4-02C: Add verified portal tracking endpoint
 - [ ] F4-03: Portal-safe public timeline
+  - [ ] F4-03A: Add portal-safe timeline read model
+  - [ ] F4-03B: Add portal follow-up path for non-closed complaints
 - [ ] F4-04: Portal privacy tests
+  - [ ] F4-04A: Add explicit portal privacy regression tests
 
 ## Phase 5 - Attachments And Notifications
 

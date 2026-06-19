@@ -25,7 +25,6 @@ const auditParams = [
   param('from', { type: 'string', format: 'date-time' }),
   param('to', { type: 'string', format: 'date-time' }),
 ];
-
 const canonical = {
   openapi: '3.1.0',
   info: { title: 'CMS-Auto API', version: '0.1.0' },
@@ -158,6 +157,7 @@ const canonical = {
         responses: { 201: ok('Complaint created', ref('ComplaintCreateResponse')), 400: error('Invalid request body'), 401: error('Missing or invalid session'), 403: error('Role, branch scope, or CSRF denied') },
       },
     },
+    '/portal/complaints': { post: { tags: ['Portal'], operationId: 'portalComplaintCreate', summary: 'Submit a public customer portal complaint', requestBody: body(ref('PortalComplaintRequest')), responses: { 201: ok('Complaint created', ref('ComplaintCreateResponse')), 400: error('Invalid request body'), 429: error('Rate limit exceeded (RATE_LIMITED)') } } },
     '/audit/logs': {
       get: {
         tags: ['Audit'],
@@ -225,6 +225,7 @@ const canonical = {
       BranchUpdateRequest: object([], { code: text, nameEn: text, nameAr: text, timezone: text }),
       ComplaintCreateRequest: object(['customerName', 'categoryId', 'subcategoryId', 'description', 'incidentAt', 'subject', 'severity'], { customerName: text, customerPhone: nullText, customerNumber: nullText, categoryId: text, subcategoryId: text, description: text, incidentAt: { type: 'string', format: 'date-time' }, subject: text, severity: { type: 'string', enum: complaintSeverities }, vehicleRelated: { type: 'boolean' }, vehicleVin: nullText, vehicleId: nullText }),
       ComplaintCreateResponse: object(['complaint'], { complaint: object(['id', 'referenceNumber', 'status'], { id: str, referenceNumber: str, status: { type: 'string', enum: complaintStatuses } }) }),
+      PortalComplaintRequest: object(['customerName', 'customerPhone', 'categoryId', 'subcategoryId', 'description', 'incidentAt', 'branchId', 'subject', 'severity'], { customerName: text, customerPhone: text, customerNumber: nullText, categoryId: text, subcategoryId: text, description: text, incidentAt: { type: 'string', format: 'date-time' }, branchId: text, subject: text, severity: { type: 'string', enum: complaintSeverities }, vehicleRelated: { type: 'boolean' }, vehicleVin: nullText, vehicleId: nullText }),
       ComplaintQueueItem: object(['id', 'referenceNumber', 'status', 'severity', 'subject', 'branchId', 'ownerId', 'createdAt', 'updatedAt'], { id: str, referenceNumber: str, status: { type: 'string', enum: complaintStatuses }, severity: { type: 'string', enum: complaintSeverities }, subject: str, branchId: str, ownerId: { type: ['string', 'null'] }, createdAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' } }),
       ComplaintQueueResponse: object(['items'], { items: { type: 'array', items: ref('ComplaintQueueItem') } }),
       ComplaintStatusTimelineItem: object(['id', 'fromStatus', 'toStatus', 'action', 'actorId', 'actorRole', 'requestSource', 'reason', 'correlationId', 'createdAt'], { id: str, fromStatus: { type: ['string', 'null'], enum: [...complaintStatuses, null] }, toStatus: { type: 'string', enum: complaintStatuses }, action: { type: ['string', 'null'], enum: [...complaintTransitionActions, null] }, actorId: { type: ['string', 'null'] }, actorRole: { type: ['string', 'null'], enum: [...roleCodes, null] }, requestSource: { type: ['string', 'null'] }, reason: { type: ['string', 'null'] }, correlationId: { type: ['string', 'null'] }, createdAt: { type: 'string', format: 'date-time' } }),
@@ -250,7 +251,6 @@ const canonical = {
 };
 
 function object(required, properties) { return { type: 'object', required, properties, additionalProperties: false }; }
-
 export const canonicalOpenApiText = () => `${JSON.stringify(canonical, null, 2)}\n`;
 
 export function checkOpenApiText(text) {
@@ -272,11 +272,11 @@ export function checkOpenApiText(text) {
     errors.push('OpenAPI document must include a paths object');
   }
 
-  for (const [path, method] of [['/auth/login', 'post'], ['/auth/logout', 'post'], ['/auth/me', 'get'], ['/branches', 'get'], ['/branches', 'post'], ['/branches/{idOrCode}', 'get'], ['/branches/{idOrCode}', 'patch'], ['/branches/{id}/deactivate', 'post'], ['/complaints', 'get'], ['/complaints', 'post'], ['/complaints/{id}', 'get'], ['/complaints/{id}/comments', 'post'], ['/complaints/{id}/comments/public', 'get'], ['/complaints/{id}/transitions', 'post'], ['/audit/logs', 'get'], ['/audit/logs/export', 'get']]) {
+  for (const [path, method] of [['/auth/login', 'post'], ['/auth/logout', 'post'], ['/auth/me', 'get'], ['/branches', 'get'], ['/branches', 'post'], ['/branches/{idOrCode}', 'get'], ['/branches/{idOrCode}', 'patch'], ['/branches/{id}/deactivate', 'post'], ['/complaints', 'get'], ['/complaints', 'post'], ['/complaints/{id}', 'get'], ['/complaints/{id}/comments', 'post'], ['/complaints/{id}/comments/public', 'get'], ['/complaints/{id}/transitions', 'post'], ['/portal/complaints', 'post'], ['/audit/logs', 'get'], ['/audit/logs/export', 'get']]) {
     if (!document.paths?.[path]?.[method]) errors.push(`OpenAPI document missing ${path} ${method} operation`);
   }
 
-  for (const schema of ['ErrorEnvelope', 'ErrorBody', 'FieldError', 'AuthLoginRequest', 'AuthLoginResponse', 'AuthLogoutResponse', 'AuthMeResponse', 'StaffAuthClaims', 'Branch', 'BranchListResponse', 'BranchGetResponse', 'BranchWriteResponse', 'BranchCreateRequest', 'BranchUpdateRequest', 'ComplaintCreateRequest', 'ComplaintCreateResponse', 'ComplaintQueueItem', 'ComplaintQueueResponse', 'ComplaintStatusTimelineItem', 'ComplaintDetailResponse', 'ComplaintCommentRequest', 'ComplaintComment', 'ComplaintCommentResponse', 'ComplaintPublicCommentsResponse', 'ComplaintTransitionRequest', 'ComplaintTransition', 'ComplaintTransitionResponse', 'AuditLogEntry', 'AuditLogSearchResponse', 'AuditLogExportResponse']) {
+  for (const schema of ['ErrorEnvelope', 'ErrorBody', 'FieldError', 'AuthLoginRequest', 'AuthLoginResponse', 'AuthLogoutResponse', 'AuthMeResponse', 'StaffAuthClaims', 'Branch', 'BranchListResponse', 'BranchGetResponse', 'BranchWriteResponse', 'BranchCreateRequest', 'BranchUpdateRequest', 'ComplaintCreateRequest', 'ComplaintCreateResponse', 'PortalComplaintRequest', 'ComplaintQueueItem', 'ComplaintQueueResponse', 'ComplaintStatusTimelineItem', 'ComplaintDetailResponse', 'ComplaintCommentRequest', 'ComplaintComment', 'ComplaintCommentResponse', 'ComplaintPublicCommentsResponse', 'ComplaintTransitionRequest', 'ComplaintTransition', 'ComplaintTransitionResponse', 'AuditLogEntry', 'AuditLogSearchResponse', 'AuditLogExportResponse']) {
     if (!document.components?.schemas?.[schema]) errors.push(`OpenAPI document missing ${schema} schema`);
   }
 

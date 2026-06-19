@@ -78,12 +78,64 @@ export class LoginRateLimitGuard implements CanActivate {
   }
 }
 
+@Injectable()
+export class PortalSubmissionRateLimitGuard implements CanActivate {
+  constructor(
+    @Inject(LOGIN_RATE_LIMIT_STORE)
+    private readonly store: LoginRateLimitStore,
+    private readonly auditService: AuditService,
+  ) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest<LoginRequest>();
+    const ipAddress = clientIp(request);
+    const keys = [`ip:${ipAddress ?? 'unknown'}`];
+    const phone = submittedPhone(request.body);
+
+    if (phone) {
+      keys.push(`phone:${phone}`);
+    }
+
+    const now = Date.now();
+    const exceeded = keys.some((key) => this.store.increment(key, now).count > LOGIN_RATE_LIMIT_ATTEMPTS);
+
+    if (!exceeded) {
+      return true;
+    }
+
+    await this.auditService.record({
+      eventType: 'SECURITY',
+      action: 'rate_limit_triggered',
+      targetType: 'portal_submission',
+      correlationId: request.correlationId ?? headerValue(request.headers['x-correlation-id']),
+      ipAddress,
+      userAgent: headerValue(request.headers['user-agent']),
+      metadata: {
+        limit: LOGIN_RATE_LIMIT_ATTEMPTS,
+        windowSeconds: LOGIN_RATE_LIMIT_WINDOW_MS / 1000,
+        keyTypes: phone ? ['ip', 'phone'] : ['ip'],
+      },
+    });
+
+    throw new AppException('RATE_LIMITED', 'Too many portal submissions', HttpStatus.TOO_MANY_REQUESTS);
+  }
+}
+
 function submittedIdentifier(body: unknown): string | null {
   if (!body || typeof body !== 'object') {
     return null;
   }
 
   const value = (body as { identifier?: unknown }).identifier;
+  return typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : null;
+}
+
+function submittedPhone(body: unknown): string | null {
+  if (!body || typeof body !== 'object') {
+    return null;
+  }
+
+  const value = (body as { customerPhone?: unknown }).customerPhone;
   return typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : null;
 }
 

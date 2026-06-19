@@ -3032,3 +3032,173 @@ Append build and verification evidence here. Do not delete failed evidence.
   - Trust boundaries are tested: Passed; workflow tests cover allowed close/reopen
     side effects and denied/no-op validation, stale status, and transaction failure
     paths.
+
+## F4-01A - Generate Portal Module Boundary And Manifest
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-PORTAL-001
+  - REQ-PORTAL-002
+  - PORTAL-SEC-001
+  - REQ-NOTIFY-001
+  - REQ-SURVEY-001
+  - ARCH-WORKFLOW-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+- Evidence:
+  - Ran the canonical module generator for `portal`.
+  - Added `apps/api/src/modules/portal/` with generated controller, service,
+    repository, DTO, module, and constructor smoke-test files.
+  - Replaced the generated `MODULE.md` with the real portal boundary:
+    `PortalService` is the only public surface; `portal_verifications` and
+    `portal_sessions` are owned tables; allowed dependencies are
+    `core/http-kernel`, `core/audit.service`, `core/rate-limit.guard`, and other
+    modules' public services only.
+  - Kept generated behavior files behavior-free. No public route, AppModule wiring,
+    complaint submission behavior, OTP generation/hash/verification/session,
+    notification delivery/template work, OpenAPI path, web UI, schema change, or
+    migration was added.
+- Verification:
+  - Passed: `corepack pnpm generate:module -- portal`
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope; no route, guard, role, or branch-scope decision was added.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope; no state
+    change or side effect was added.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope; no credential/OTP/token fields, logs, routes, or responses
+    were added.
+  - Customer portal exposure rules hold: Passed by scope; no customer data,
+    complaint status, internal comments, audit logs, DMS codes, staff PII,
+    portal-visible DTO, token, or public route was exposed.
+  - Trust boundaries are tested: Passed for this behavior-free boundary; lint
+    enforces the manifest and module-boundary rules, and the generated smoke tests
+    prove the inert controller/service can be constructed.
+
+## F4-01B - Add Portal Complaint Submission Service Path
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-PORTAL-001
+  - PORTAL-SEC-001
+  - ARCH-WORKFLOW-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+- Evidence:
+  - Imported `ComplaintsModule` into `PortalModule`.
+  - Injected only the complaints public service, `ComplaintsService`, into
+    `PortalService`; no complaint repository, DTO folder, Prisma model, route, or
+    AppModule wiring was imported by the portal service.
+  - Added `PortalService.submitComplaint`, which delegates to complaint creation
+    with `actorId: null` and `requestSource: CUSTOMER_PORTAL`.
+  - Added the smallest complaint-service support needed for portal submissions:
+    `CreateInternalComplaintInput.requestSource` can override the existing default
+    of `STAFF_API`, so portal-created status history records `CUSTOMER_PORTAL`.
+  - Added workflow-suite coverage for the allowed portal submission delegate path,
+    invalid portal input rejection before transaction/write, and `PortalModule`
+    importing `ComplaintsModule` while exporting only `PortalService`.
+  - Kept `complaints.service.ts` under the 300-line source budget at 298 lines.
+  - No public portal route, AppModule wiring, rate-limit guard wiring, controller
+    DTO parsing, OpenAPI path, web UI, E2E, OTP/session behavior, notification
+    provider/template work, schema change, migration, attachment, tracking read,
+    comment, or survey behavior was added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (36/36)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope; no route, guarded staff authority, role input, or branch-scope
+    decision was added. Portal submission records `actorId: null` and
+    `CUSTOMER_PORTAL` request source server-side.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed. Portal submission
+    delegates to `ComplaintsService.createInternal`, which writes complaint,
+    initial status history, and COMPLAINT audit inside one transaction. The new
+    test proves invalid portal input rejects before transaction/write.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope; no OTP/session/token/provider fields or logs were added.
+  - Customer portal exposure rules hold: Passed by scope; no public read route,
+    complaint detail/status tracking response, internal comments, audit logs, DMS
+    codes, staff PII, OTP value, token, or provider credential exposure was added.
+  - Trust boundaries are tested: Passed; tests cover allowed portal delegation,
+    denied invalid portal input before write, and module-boundary export/import
+    shape.
+
+## F4-01C - Add Public Submission HTTP Route, OpenAPI, Rate Limit, And Portal API Tests
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed - Verify Gate
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-PORTAL-001
+  - PORTAL-SEC-001
+  - ARCH-WORKFLOW-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Added `POST /portal/complaints` to `PortalController`.
+  - Added public portal submission parsing in `create-portal.dto.ts`; customer
+    phone and branch are required at the public boundary, and spoofed actor data is
+    ignored because the route maps only parsed public fields plus request context.
+  - Added `PortalSubmissionRateLimitGuard` using the existing in-memory rate-limit
+    store pattern. The guard limits by IP and customer phone when present and writes
+    a safe `SECURITY` / `rate_limit_triggered` audit with `targetType:
+    portal_submission`.
+  - Wired `PortalModule` into `main.ts` so the route is reachable.
+  - Updated OpenAPI canonical generation and regenerated `packages/contracts/openapi.json`
+    with `POST /portal/complaints` and `PortalComplaintRequest`.
+  - Added `test:api -- portal` support plus portal API tests for allowed route
+    delegation, invalid request rejection before service call, guard metadata, and
+    rate-limit denial/audit.
+  - Existing workflow tests still prove portal service submission delegates through
+    `ComplaintsService`, which writes complaint, initial status history, and
+    COMPLAINT audit in one transaction with `CUSTOMER_PORTAL` request source.
+  - No OTP generation, hashing, verification, portal sessions, tracking reads,
+    timeline, follow-up comments, attachments, survey behavior, notification
+    delivery/template work, web UI, E2E, schema change, migration, complaint detail
+    response, or unrelated complaint exposure was added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- portal` (4/4)
+  - Passed: `corepack pnpm test:api -- workflow` (36/36)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope for this unauthenticated public route. No staff role or branch
+    authority is accepted from the client; the route delegates public fields to the
+    portal service and records portal actor context server-side.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed. Portal route delegates
+    to `PortalService.submitComplaint`, which delegates to `ComplaintsService`
+    creation. Workflow tests prove that path writes complaint, status history, and
+    COMPLAINT audit in one transaction and rejects invalid input before writes.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed. The new route returns only `{ complaint: { id, referenceNumber,
+    status } }`; no OTP/session/token/provider fields exist in this slice, and
+    rate-limit audit metadata contains only limit/window/key types.
+  - Customer portal exposure rules hold: Passed. The new public route creates a
+    complaint and returns the creation result only; it does not expose tracking
+    details, internal comments, audit logs, DMS codes, staff PII, OTP values,
+    tokens, provider credentials, or unrelated complaints.
+  - Trust boundaries are tested: Passed. Portal API tests cover allowed submission
+    route delegation, invalid-body denial before service write, rate-limit guard
+    attachment, and rate-limit denial/audit; workflow tests cover the underlying
+    allowed portal service path and denied invalid input before transaction.

@@ -881,6 +881,57 @@
         }
       }
     },
+    "/portal/complaints": {
+      "post": {
+        "tags": [
+          "Portal"
+        ],
+        "operationId": "portalComplaintCreate",
+        "summary": "Submit a public customer portal complaint",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalComplaintRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Complaint created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintCreateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (RATE_LIMITED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/audit/logs": {
       "get": {
         "tags": [
@@ -1581,6 +1632,88 @@
               }
             },
             "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortalComplaintRequest": {
+        "type": "object",
+        "required": [
+          "customerName",
+          "customerPhone",
+          "categoryId",
+          "subcategoryId",
+          "description",
+          "incidentAt",
+          "branchId",
+          "subject",
+          "severity"
+        ],
+        "properties": {
+          "customerName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "customerPhone": {
+            "type": "string",
+            "minLength": 1
+          },
+          "customerNumber": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "categoryId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "subcategoryId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "incidentAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "branchId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "CRITICAL",
+              "HIGH",
+              "MEDIUM",
+              "LOW"
+            ]
+          },
+          "vehicleRelated": {
+            "type": "boolean"
+          },
+          "vehicleVin": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "vehicleId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
           }
         },
         "additionalProperties": false

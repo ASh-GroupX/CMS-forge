@@ -1,8 +1,58 @@
 # Current State
 
-Status: Ready to Plan
+Status: Needs Verify
 Phase: Phase 4 - Customer Portal
-Next Task: PLAN-F4-01 - Split Customer Portal Entry Work
+Next Task: VERIFY-F4-01C - Public Portal Submission Boundary
+
+## F4-01C Built - Verify Gate
+
+`F4-01C` added the first public portal boundary: `POST /portal/complaints`.
+The route parses public submission fields, derives request context from the server
+request, applies a portal-specific rate-limit guard, delegates to
+`PortalService.submitComplaint`, and documents the route in OpenAPI. Portal
+submission still reaches complaint creation through the complaints public service,
+which owns submitted status, initial status history, and COMPLAINT audit in one
+transaction.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- portal 4/4,
+test:api -- workflow 36/36, and openapi:check.
+
+AUTO PHASE stops here because `F4-01C` is marked `Verify Gate: required`.
+
+## F4-01B Built - AUTO PHASE Continuing
+
+`F4-01B` added the backend-only portal complaint submission service path.
+`PortalService` now delegates to the complaints public service with
+`CUSTOMER_PORTAL` request source, while complaint creation still owns the
+submitted status, initial status history, and COMPLAINT audit transaction.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- workflow 36/36,
+and openapi:check.
+
+AUTO PHASE remains in Phase 4 and continues with verify-gated `F4-01C`.
+
+## F4-01A Built - AUTO PHASE Continuing
+
+`F4-01A` generated the canonical `portal` module shell and filled the real module
+manifest. `PortalService` is now the module public surface, the module owns
+`portal_verifications` and `portal_sessions`, and no public routes, AppModule
+wiring, customer data exposure, complaint behavior, OTP/session behavior,
+OpenAPI paths, web UI, schema changes, migrations, or provider work were added.
+
+Required proof passed: generate:module, lint, typecheck, test 20/20, and
+openapi:check.
+
+AUTO PHASE remains in Phase 4 and continues with `F4-01B`.
+
+## PLAN-F4-01 Complete - Ready To Build
+
+PLAN-F4-01 split customer portal entry work into backend-first slices that keep
+submission, OTP verification, portal-safe timeline reads, follow-up behavior, and
+privacy regression tests separate.
+
+Phase 4 starts with `F4-01A`, a behavior-free generated `portal` module boundary
+and real `MODULE.md`. The first public portal privacy/security boundary is
+`F4-01C`, which is marked `Verify Gate: required`.
 
 ## PHASE-3-REVIEW Accepted With Conditions - Phase 4 Ready To Plan
 

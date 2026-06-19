@@ -8,6 +8,7 @@ import {
 import { AuditModule } from './modules/audit/audit.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { BranchesModule } from './modules/branches/branches.module.js';
+import { PortalModule } from './modules/portal/portal.module.js';
 
 @Controller()
 class HealthController {
@@ -28,7 +29,7 @@ class HealthController {
 }
 
 @Module({
-  imports: [AuthModule, AuditModule, BranchesModule],
+  imports: [AuthModule, AuditModule, BranchesModule, PortalModule],
   controllers: [HealthController],
 })
 class AppModule {}

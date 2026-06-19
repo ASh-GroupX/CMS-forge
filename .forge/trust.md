@@ -2103,3 +2103,103 @@ starting Phase 3 planning.
 - Next:
   - Start Phase 4 with `PLAN-F4-01`; the customer portal requires a PLANNER split
     before any public portal route, module, or UI build task starts.
+
+## PLAN-F4-01 - Split Customer Portal Entry Work
+
+- Date: 2026-06-19
+- Required model tier: PLANNER
+- Risk: High
+- Recommendation: Ready to Build
+- Plan:
+  - `F4-01A`: Generate the `portal` module boundary and real manifest.
+    - Verify: `corepack pnpm generate:module -- portal`; `corepack pnpm lint`; `corepack pnpm typecheck`; `corepack pnpm test`; `corepack pnpm openapi:check`.
+  - `F4-01B`: Add the portal complaint submission service path without a public route.
+    - Verify: `corepack pnpm lint`; `corepack pnpm typecheck`; `corepack pnpm test`; `corepack pnpm test:api -- workflow`; `corepack pnpm openapi:check`.
+  - `F4-01C`: Add the public submission route with OpenAPI, rate limiting, and portal API tests. `Verify Gate: required`.
+    - Verify: `corepack pnpm lint`; `corepack pnpm typecheck`; `corepack pnpm test`; `corepack pnpm test:api -- portal`; `corepack pnpm test:api -- workflow`; `corepack pnpm openapi:check`.
+  - `F4-02A`: Add portal OTP request persistence and acknowledgement/OTP notification queueing.
+    - Verify: `corepack pnpm lint`; `corepack pnpm typecheck`; `corepack pnpm test`; `corepack pnpm test:api -- portal.tracking`; `corepack pnpm test:api -- notifications`; `corepack pnpm openapi:check`.
+  - `F4-02B`: Add OTP verification and expiring portal session issuance. `Verify Gate: required`.
+    - Verify: `corepack pnpm lint`; `corepack pnpm typecheck`; `corepack pnpm test`; `corepack pnpm test:api -- portal.tracking`; `corepack pnpm test:api -- audit`; `corepack pnpm openapi:check`.
+  - `F4-02C`: Add the verified portal tracking endpoint.
+    - Verify: `corepack pnpm lint`; `corepack pnpm typecheck`; `corepack pnpm test`; `corepack pnpm test:api -- portal.tracking`; `corepack pnpm openapi:check`.
+  - `F4-03A`: Add the portal-safe timeline read model.
+    - Verify: `corepack pnpm lint`; `corepack pnpm typecheck`; `corepack pnpm test`; `corepack pnpm test:api -- portal.tracking`; `corepack pnpm openapi:check`.
+  - `F4-03B`: Add portal follow-up for non-closed complaints.
+    - Verify: `corepack pnpm lint`; `corepack pnpm typecheck`; `corepack pnpm test`; `corepack pnpm test:api -- portal.tracking`; `corepack pnpm test:api -- workflow`; `corepack pnpm openapi:check`.
+  - `F4-04A`: Add explicit portal privacy regression tests.
+    - Verify: `corepack pnpm lint`; `corepack pnpm typecheck`; `corepack pnpm test`; `corepack pnpm test:api -- portal`; `corepack pnpm test:api -- portal.tracking`; `corepack pnpm openapi:check`.
+- Gate:
+  - `F4-01C` is the first public portal privacy/security boundary because it exposes
+    unauthenticated customer submission. It must pause for independent VERIFY before
+    OTP/tracking work builds on it.
+  - `F4-02B` is also a `Verify Gate` because portal tracking depends on the session
+    and OTP boundary.
+- Notes:
+  - This split does not close the SRS preferred L3 web proof for portal submission
+    or tracking. The web app is still a liveness scaffold, so browser UI/E2E proof
+    remains required before MVP sign-off.
+  - Reference number alone remains insufficient for tracking; OTP verification and
+    portal sessions are separate from submission by design.
+
+## F4-01A - Generate Portal Module Boundary And Manifest
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Ready to continue Phase 4 AUTO PHASE with `F4-01B`.
+- Verification:
+  - Passed: `corepack pnpm generate:module -- portal`
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm openapi:check`
+- Notes:
+  - `portal` now has the canonical generated module shape and a real `MODULE.md`
+    boundary.
+  - No public route, portal-visible DTO, complaint data exposure, OTP/session
+    behavior, schema change, OpenAPI path, UI, provider call, or AppModule wiring
+    was added.
+  - Remaining risk moves to `F4-01B` and `F4-01C`, where behavior and the first
+    public portal boundary are introduced.
+
+## F4-01B - Add Portal Complaint Submission Service Path
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Continue Phase 4 AUTO PHASE with verify-gated `F4-01C`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (36/36)
+  - Passed: `corepack pnpm openapi:check`
+- Notes:
+  - Portal submission now has a backend-only service path through
+    `ComplaintsService`, with status history marked `CUSTOMER_PORTAL`.
+  - The path still has no public route, controller DTO parser, OpenAPI path, rate
+    limiting, OTP/session behavior, notification provider work, or UI.
+  - `F4-01C` is the first public portal boundary and remains the required
+    independent VERIFY gate.
+
+## F4-01C - Add Public Submission HTTP Route, OpenAPI, Rate Limit, And Portal API Tests
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Needs independent VERIFY before Phase 4 continues.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- portal` (4/4)
+  - Passed: `corepack pnpm test:api -- workflow` (36/36)
+  - Passed: `corepack pnpm openapi:check`
+- Notes:
+  - `POST /portal/complaints` is now a public create-only route with DTO parsing,
+    portal-specific rate limiting, OpenAPI coverage, and API tests.
+  - The route returns only the complaint creation result and still delegates
+    workflow/audit persistence to the complaints service.
+  - No OTP/session/tracking read has been added yet, so reference-number-only
+    tracking is still impossible by absence of any tracking route.

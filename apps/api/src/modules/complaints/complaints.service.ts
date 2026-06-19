@@ -21,7 +21,7 @@ export type CreateInternalComplaintInput = {
   customerName: string; customerPhone?: string | null; customerNumber?: string | null; categoryId: string;
   subcategoryId: string; description: string; incidentAt: Date | string; branchId: string; subject: string;
   severity: ComplaintSeverity; vehicleRelated?: boolean; vehicleVin?: string | null; vehicleId?: string | null;
-  actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null;
+  actorId?: string | null; requestSource?: ComplaintTransitionRequestSource; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null;
 };
 
 export type ComplaintCreationResult = { id: string; referenceNumber: string; status: ComplaintStatus };
@@ -74,7 +74,7 @@ export class ComplaintsService {
         action: ComplaintTransitionAction.SUBMIT,
         actorId: input.actorId ?? null,
         actorRole: null,
-        requestSource: ComplaintTransitionRequestSource.STAFF_API,
+        requestSource: input.requestSource ?? ComplaintTransitionRequestSource.STAFF_API,
         reason: null,
         correlationId: input.correlationId ?? null,
       }, client);
