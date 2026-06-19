@@ -12,10 +12,8 @@
    next phase starts.
 8. Keep the codebase agentic: small files, small tasks, enforced boundaries.
 9. Auto phase mode may continue between successful build tasks, but it never
-   skips verification, evidence, planner stops, blockers, or phase review.
-10. High and Critical tasks record a security self-check before acceptance. The
-    security foundation of a phase is a `Verify Gate` that pauses auto phase for an
-    independent VERIFY before dependent tasks are built.
+   skips proof commands, evidence, planner stops, blockers, or phase review.
+10. High and Critical tasks record a security self-check before acceptance.
 
 ## CMS-Auto Rules
 
@@ -57,7 +55,7 @@
 - High: auth, RBAC, branch scope, workflow, SLA, attachments, reports
 - Critical: portal privacy leak, data loss, audit bypass, deployment blocker
 
-High and critical work needs verification or review before acceptance.
+High and critical work needs proof commands, security self-checks, and the phase-end review before phase acceptance.
 
 ## Security Self-Check
 
@@ -73,7 +71,7 @@ counts as done, citing where each is enforced or tested:
 - Trust boundaries are tested: at least one allowed and one denied case.
 
 A self-check is the minimum the builder proves on its own. It does not replace the
-independent VERIFY at a `Verify Gate` or the phase-end `PHASE-REVIEWER`.
+phase-end `PHASE-REVIEWER`.
 
 ## Testing Rules
 

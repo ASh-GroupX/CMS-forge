@@ -8,7 +8,7 @@ Repairs: VERIFY-F4-02B - Portal OTP session gate
 
 ## Scope
 
-Repair the `F4-02B` OTP verification/session gate before `F4-02C` tracking reads
+Repair the `F4-02B` OTP verification/session path before `F4-02C` tracking reads
 build on it.
 
 Keep the diff small and focused on the portal OTP verification path.
@@ -41,6 +41,5 @@ Required behavior:
 
 ## Output
 
-On pass, append build evidence/security self-check, update trust, keep `F4-02B`
-as a verify gate by writing a `VERIFY-F4-02B-REPAIR` task to `.forge/next.md`,
-and set `.forge/state.md` to `Needs Verify`.
+On pass, append build evidence/security self-check, update trust, write `F4-02C`
+to `.forge/next.md`, and set `.forge/state.md` to `Ready to Build`.

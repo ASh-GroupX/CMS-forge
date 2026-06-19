@@ -3290,3 +3290,22 @@ Security self-check:
 
 Assumptions and gaps:
 - Portal session consumption for tracking reads remains out of scope and is queued for `F4-02C` after independent VERIFY accepts this gate.
+
+## FORGE-AUTO-PHASE-003 - Retire Per-Task Verify Gates
+
+- Date: 2026-06-19
+- Risk: Medium
+- Status: Passed
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - METHOD-TEST-001
+- Evidence:
+  - Removed active `Verify Gate: required` routing from `.forge/forge.md` PLAN, BUILD, and AUTO PHASE rules.
+  - Updated `.forge/policy.md` so High/Critical tasks still record a security self-check, but independent review happens at the phase-end `PHASE-REVIEWER` gate.
+  - Updated the active `REPAIR-F4-02B` task so a passing repair continues to `F4-02C` instead of writing another VERIFY task.
+  - Added a current-state note clarifying that the F4-02B repair remains valid, but per-task verify-gate stops are retired.
+- Verification:
+  - Passed: active protocol files have no `Verify Gate: required`, `independent VERIFY before`, `write the VERIFY task`, or `keep ... verify gate` wording.
+- Notes:
+  - Historical evidence, trust, backlog, and state entries still mention old verify gates as history.
+  - AUTO PHASE now stops for PLANNER, blockers, failed checks, scope overflow, leaving the phase, and phase-end review only.

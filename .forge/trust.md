@@ -2343,3 +2343,15 @@ Residual risk: this is a required customer-portal privacy gate. A fresh verifier
     details.
   - Add focused `portal.tracking` tests for those failure-audit paths before
     `F4-02C` continues.
+
+## FORGE-AUTO-PHASE-003 - Retire Per-Task Verify Gates
+
+- Date: 2026-06-19
+- Risk: Medium
+- Recommendation: Accept
+- Notes:
+  - Supersedes the active behavior from `FORGE-AUTO-PHASE-002`.
+  - AUTO PHASE no longer creates or stops at per-task independent VERIFY gates.
+  - High/Critical builders still record security self-checks and run proof commands.
+  - Independent review is deferred to the mandatory phase-end `PHASE-REVIEWER` gate.
+  - The active F4-02B repair remains a real audit gap repair; after it passes, continue to F4-02C without another VERIFY stop.

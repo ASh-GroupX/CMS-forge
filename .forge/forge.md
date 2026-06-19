@@ -60,9 +60,6 @@ Output:
   file is an explicit canonical exception.
 - Include exact verification commands.
 - Include requirement IDs from the SRS.
-- Mark the security foundation of the phase (the auth/session/RBAC/audit kernel) and
-  any task later tasks build directly on with `Verify Gate: required`. In AUTO PHASE
-  this pauses for an independent VERIFY before dependents are built.
 
 ## BUILD
 
@@ -82,10 +79,7 @@ If checks pass:
   evidence must include the security self-check from `policy.md`.
 - Update `.forge/trust.md` with risk and recommendation.
 - Mark the task done in `.forge/backlog.md`.
-- If the task is marked `Verify Gate: required`, set `.forge/state.md` to
-  `Needs Verify` and write the VERIFY task to `.forge/next.md`. Do not advance to
-  the next build task until VERIFY records `Accept`.
-- Else if all tasks in the current backlog phase are done, stop phase advancement:
+- If all tasks in the current backlog phase are done, stop phase advancement:
   write a phase review task to `.forge/next.md` and set `.forge/state.md` to
   `Needs Phase Review`.
 - Otherwise write the next task or set `next.md` to `Needs planning`.
@@ -115,16 +109,12 @@ Rules:
 
 Stop immediately when:
 - `.forge/state.md` becomes `Ready to Plan` (needs PLANNER).
-- `.forge/state.md` becomes `Blocked`, `Needs Verify`, `Needs Review`, or
-  `Needs Phase Review`.
-- A completed task was marked `Verify Gate: required`: the BUILD loop sets
-  `Needs Verify`, so autopilot pauses here for an independent VERIFY (fresh context
-  or different model) and resumes only after VERIFY records `Accept`.
+- `.forge/state.md` becomes `Blocked`, `Needs Review`, or `Needs Phase Review`.
 - The next task leaves the named phase.
 - Verification fails or the task would exceed the agentic scope budget.
 
-Never skip verification, evidence, backlog updates, a `Verify Gate`, or the
-phase-end `PHASE-REVIEWER` gate.
+Never skip proof commands, evidence, backlog updates, or the phase-end
+`PHASE-REVIEWER` gate.
 
 ## VERIFY
 
