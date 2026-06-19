@@ -32,6 +32,8 @@
   accessibility, and frontend performance.
 - Prefer generator/template output or the golden reference module over
   inventing a new module shape.
+- Module `MODULE.md` files are OKF-style markdown concept docs: YAML frontmatter
+  (`type: forge.module`, title, description, tags) plus the human-readable boundary.
 - Phase completion is not accepted by the builder. It requires a fresh
   `PHASE-REVIEWER` pass using Opus 4.8 Max or GPT-5.5 Extra High.
 - App/package/tool source files must stay under the 300-line agentic budget

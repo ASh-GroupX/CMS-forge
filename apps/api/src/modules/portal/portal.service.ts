@@ -12,8 +12,10 @@ import type { PortalVerificationChallengeRecord } from './portal.repository.js';
 export type SubmitPortalComplaintInput = Omit<CreateInternalComplaintInput, 'actorId' | 'requestSource' | 'customerNumber'>;
 export type RequestPortalOtpInput = { referenceNumber: string; customerPhone: string; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type VerifyPortalOtpInput = { verificationId: string; otp: string; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
+export type PortalTrackingInput = { sessionToken: string; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type PortalOtpRequestResult = { ok: true };
 export type PortalSessionResult = { sessionToken: string; expiresAt: string };
+export type PortalTrackingResult = { referenceNumber: string; status: string; createdAt: string; updatedAt: string; timeline: Array<{ fromStatus: string | null; toStatus: string; action: string | null; createdAt: string }> };
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const SESSION_TTL_MS = 30 * 60 * 1000;
@@ -65,7 +67,18 @@ export class PortalService {
     const verificationId = requiredText(input.verificationId);
     const otp = requiredText(input.otp);
     const verification = await this.portalRepository.findVerificationChallenge(verificationId);
-    if (!verification || verification.status !== 'PENDING' || verification.attempts >= MAX_OTP_ATTEMPTS) throw verificationFailed();
+    if (!verification) {
+      await this.auditService.record(portalUnknownAudit(verificationId, input, 'unknown_verification'));
+      throw verificationFailed();
+    }
+    if (verification.status !== 'PENDING') {
+      await this.auditService.record(portalAudit('portal_otp_failed', verification, input, { reason: 'not_pending', status: verification.status }));
+      throw verificationFailed();
+    }
+    if (verification.attempts >= MAX_OTP_ATTEMPTS) {
+      await this.auditService.record(portalAudit('portal_otp_failed', verification, input, { reason: 'attempts_exhausted', attempts: verification.attempts, status: verification.status }));
+      throw verificationFailed();
+    }
     if (verification.expiresAt.getTime() <= Date.now()) {
       await this.expireVerification(verification, input);
       throw verificationFailed();
@@ -84,6 +97,24 @@ export class PortalService {
       return created;
     });
     return { sessionToken, expiresAt: session.expiresAt.toISOString() };
+  }
+
+  async getTracking(input: PortalTrackingInput): Promise<PortalTrackingResult> {
+    const session = await this.portalRepository.findValidSession(hashSessionToken(requiredText(input.sessionToken)));
+    if (!session) throw verificationFailed();
+    try {
+      const complaint = await this.complaintsService.getDetail(session.complaintId);
+      return {
+        referenceNumber: complaint.referenceNumber,
+        status: complaint.status,
+        createdAt: complaint.createdAt,
+        updatedAt: complaint.updatedAt,
+        timeline: complaint.statusHistory.map(({ fromStatus, toStatus, action, createdAt }) => ({ fromStatus, toStatus, action, createdAt })),
+      };
+    } catch (error) {
+      if (error instanceof AppException && error.code === 'COMPLAINT_NOT_FOUND') throw verificationFailed();
+      throw error;
+    }
   }
 
   private async expireVerification(verification: PortalVerificationChallengeRecord, input: VerifyPortalOtpInput): Promise<void> {
@@ -141,5 +172,20 @@ function portalAudit(action: string, verification: PortalVerificationChallengeRe
     ipAddress: input.ipAddress ?? null,
     userAgent: input.userAgent ?? null,
     metadata: { complaintId: verification.complaintId, customerId: verification.customerId, ...metadata },
+  };
+}
+
+function portalUnknownAudit(verificationId: string, input: VerifyPortalOtpInput, reason: string) {
+  return {
+    eventType: 'SECURITY' as const,
+    action: 'portal_otp_failed',
+    actorId: null,
+    branchId: null,
+    targetType: 'portal_verification',
+    targetId: verificationId,
+    correlationId: input.correlationId ?? null,
+    ipAddress: input.ipAddress ?? null,
+    userAgent: input.userAgent ?? null,
+    metadata: { reason },
   };
 }

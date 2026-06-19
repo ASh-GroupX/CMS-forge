@@ -40,7 +40,10 @@ test('generator creates the canonical module skeleton', () => {
   assert.match(controllerText, /@Controller\('branches'\)/);
   assert.match(serviceText, /@Injectable/);
   assert.match(repositoryText, /@Injectable/);
-  assert.match(manifestText, /Owns tables: `branches`/);
+  assert.match(manifestText, /^---/);
+  assert.match(manifestText, /type: forge\.module/);
+  assert.match(manifestText, /title: Branches Module/);
+  assert.match(manifestText, /## Owns tables/);
 });
 
 test('generator refuses invalid names', () => {

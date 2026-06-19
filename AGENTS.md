@@ -35,8 +35,9 @@ acceptance criteria, tests, security, audit, RBAC, branch scope, or portal priva
    error, audit, RBAC, or transaction mechanism.
 4. Controller = HTTP only. Service = business rules. Repository = this module's
    Prisma only. A module never imports another module's repository or models.
-5. Fill in the generated `MODULE.md` (public service, owned tables, allowed deps,
-   SRS IDs) — it is the module's agent context boundary and `lint` requires it.
+5. Fill in the generated `MODULE.md` (OKF-style frontmatter, public service, owned
+   tables, allowed deps, SRS IDs) - it is the module's agent context boundary and
+   `lint` requires it.
 
 ## Verify (run, never assume)
 Run the proof commands named in your task. Typical: `lint`, `typecheck`, `test`,

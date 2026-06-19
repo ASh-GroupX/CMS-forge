@@ -1,3 +1,10 @@
+---
+type: forge.module
+title: Audit Module
+description: Agent context boundary for the audit backend module.
+tags: [backend, module, agent-context]
+---
+
 # Audit Module
 
 ## Public surface

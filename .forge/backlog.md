@@ -90,7 +90,8 @@ history from another project.
 - [ ] F4-02: Portal tracking with reference plus OTP verification
   - [x] F4-02A: Add portal OTP request persistence and notification queueing
   - [x] F4-02B: Add OTP verification and expiring portal session issuance (Verify Gate: required)
-  - [ ] F4-02C: Add verified portal tracking endpoint
+  - [x] REPAIR-F4-02B: Audit OTP verification failure outcomes
+  - [x] F4-02C: Add verified portal tracking endpoint
 - [ ] F4-03: Portal-safe public timeline
   - [ ] F4-03A: Add portal-safe timeline read model
   - [ ] F4-03B: Add portal follow-up path for non-closed complaints

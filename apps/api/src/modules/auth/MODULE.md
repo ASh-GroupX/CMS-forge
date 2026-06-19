@@ -1,3 +1,10 @@
+---
+type: forge.module
+title: Auth Module
+description: Agent context boundary for the auth backend module.
+tags: [backend, module, agent-context]
+---
+
 # Auth Module
 
 > Agent context manifest. Read this before editing the module.

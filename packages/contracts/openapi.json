@@ -932,6 +932,48 @@
         }
       }
     },
+    "/portal/tracking": {
+      "get": {
+        "tags": [
+          "Portal"
+        ],
+        "operationId": "portalTrackingGet",
+        "summary": "Get verified public complaint tracking status",
+        "parameters": [
+          {
+            "name": "x-portal-session",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Portal tracking status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalTrackingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or expired portal session (PORTAL_VERIFICATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/portal/tracking/otp": {
       "post": {
         "tags": [
@@ -1871,6 +1913,128 @@
               "expiresAt": {
                 "type": "string",
                 "format": "date-time"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortalTrackingResponse": {
+        "type": "object",
+        "required": [
+          "complaint"
+        ],
+        "properties": {
+          "complaint": {
+            "type": "object",
+            "required": [
+              "referenceNumber",
+              "status",
+              "createdAt",
+              "updatedAt",
+              "timeline"
+            ],
+            "properties": {
+              "referenceNumber": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "DRAFT",
+                  "SUBMITTED",
+                  "MANAGER_REVIEW",
+                  "BRANCH_REVIEW",
+                  "IN_PROGRESS",
+                  "RESOLVED",
+                  "CLOSED",
+                  "REOPENED",
+                  "REJECTED"
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "timeline": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "fromStatus",
+                    "toStatus",
+                    "action",
+                    "createdAt"
+                  ],
+                  "properties": {
+                    "fromStatus": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "DRAFT",
+                        "SUBMITTED",
+                        "MANAGER_REVIEW",
+                        "BRANCH_REVIEW",
+                        "IN_PROGRESS",
+                        "RESOLVED",
+                        "CLOSED",
+                        "REOPENED",
+                        "REJECTED",
+                        null
+                      ]
+                    },
+                    "toStatus": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "SUBMITTED",
+                        "MANAGER_REVIEW",
+                        "BRANCH_REVIEW",
+                        "IN_PROGRESS",
+                        "RESOLVED",
+                        "CLOSED",
+                        "REOPENED",
+                        "REJECTED"
+                      ]
+                    },
+                    "action": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "SUBMIT",
+                        "ACCEPT_INTAKE",
+                        "REJECT_AS_INVALID",
+                        "APPROVE_AND_ROUTE",
+                        "SEND_BACK",
+                        "ASSIGN_INVESTIGATION",
+                        "RESOLVE_DIRECTLY",
+                        "REJECT_AFTER_REVIEW",
+                        "ADD_INVESTIGATION_UPDATE",
+                        "RESOLVE",
+                        "REJECT_AFTER_INVESTIGATION",
+                        "CLOSE",
+                        "REJECT_RESOLUTION",
+                        "REOPEN",
+                        "ROUTE_AGAIN",
+                        null
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "additionalProperties": false
+                }
               }
             },
             "additionalProperties": false

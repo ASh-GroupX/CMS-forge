@@ -3,7 +3,7 @@ import test from 'node:test';
 import 'reflect-metadata';
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import type { ExecutionContext } from '@nestjs/common';
-import { PortalVerificationStatus } from '@prisma/client';
+import { ComplaintStatus, PortalVerificationStatus } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
@@ -239,6 +239,7 @@ test('portal tracking OTP verification denies expired verification and marks it 
 
 test('portal tracking OTP verification denies exhausted attempts before session issuance', async () => {
   let sessionCreated = false;
+  const audits: AuditRecordInput[] = [];
   const service = new PortalService(
     {} as never,
     {
@@ -246,14 +247,83 @@ test('portal tracking OTP verification denies exhausted attempts before session 
       createSession: async () => { sessionCreated = true; throw new Error('should not create session'); },
     } as never,
     {} as never,
-    { record: async () => undefined } as AuditService,
+    { record: async (input) => { audits.push(input); } } as AuditService,
   );
 
   await assert.rejects(
-    service.verifyTrackingOtp({ verificationId: 'ver_1', otp: '123456' }),
+    service.verifyTrackingOtp({ verificationId: 'ver_1', otp: '123456', correlationId: 'req_verify', ipAddress: '203.0.113.92' }),
     (error: unknown) => error instanceof AppException && error.code === 'PORTAL_VERIFICATION_FAILED',
   );
   assert.equal(sessionCreated, false);
+  assert.deepEqual(audits[0], {
+    eventType: 'SECURITY',
+    action: 'portal_otp_failed',
+    actorId: null,
+    branchId: null,
+    targetType: 'portal_verification',
+    targetId: 'ver_1',
+    correlationId: 'req_verify',
+    ipAddress: '203.0.113.92',
+    userAgent: null,
+    metadata: { complaintId: 'cmp_1', customerId: 'cus_1', reason: 'attempts_exhausted', attempts: 5, status: PortalVerificationStatus.PENDING },
+  });
+  assertSafePortalAudit(audits[0], '123456');
+});
+
+test('portal tracking OTP verification audits unknown verification denial safely', async () => {
+  const audits: AuditRecordInput[] = [];
+  const service = new PortalService(
+    {} as never,
+    { findVerificationChallenge: async () => null } as never,
+    {} as never,
+    { record: async (input) => { audits.push(input); } } as AuditService,
+  );
+
+  await assert.rejects(
+    service.verifyTrackingOtp({ verificationId: 'missing_ver', otp: '123456', correlationId: 'req_verify', ipAddress: '203.0.113.92' }),
+    (error: unknown) => error instanceof AppException && error.code === 'PORTAL_VERIFICATION_FAILED',
+  );
+  assert.deepEqual(audits[0], {
+    eventType: 'SECURITY',
+    action: 'portal_otp_failed',
+    actorId: null,
+    branchId: null,
+    targetType: 'portal_verification',
+    targetId: 'missing_ver',
+    correlationId: 'req_verify',
+    ipAddress: '203.0.113.92',
+    userAgent: null,
+    metadata: { reason: 'unknown_verification' },
+  });
+  assertSafePortalAudit(audits[0], '123456');
+});
+
+test('portal tracking OTP verification audits non-pending verification denial safely', async () => {
+  const audits: AuditRecordInput[] = [];
+  const service = new PortalService(
+    {} as never,
+    { findVerificationChallenge: async () => challenge({ status: PortalVerificationStatus.VERIFIED, otpHash: testOtpHash('123456') }) } as never,
+    {} as never,
+    { record: async (input) => { audits.push(input); } } as AuditService,
+  );
+
+  await assert.rejects(
+    service.verifyTrackingOtp({ verificationId: 'ver_1', otp: '123456', correlationId: 'req_verify', ipAddress: '203.0.113.92' }),
+    (error: unknown) => error instanceof AppException && error.code === 'PORTAL_VERIFICATION_FAILED',
+  );
+  assert.deepEqual(audits[0], {
+    eventType: 'SECURITY',
+    action: 'portal_otp_failed',
+    actorId: null,
+    branchId: null,
+    targetType: 'portal_verification',
+    targetId: 'ver_1',
+    correlationId: 'req_verify',
+    ipAddress: '203.0.113.92',
+    userAgent: null,
+    metadata: { complaintId: 'cmp_1', customerId: 'cus_1', reason: 'not_pending', status: PortalVerificationStatus.VERIFIED },
+  });
+  assertSafePortalAudit(audits[0], '123456');
 });
 
 test('portal repository creates session rows with hash-only token persistence', async () => {
@@ -275,6 +345,115 @@ test('portal repository creates session rows with hash-only token persistence', 
   });
 });
 
+test('portal tracking route delegates only portal session token and request context', async () => {
+  const calls: unknown[] = [];
+  const controller = new PortalController({
+    getTracking: async (input) => {
+      calls.push(input);
+      return { referenceNumber: 'CMP-000010', status: ComplaintStatus.SUBMITTED, createdAt: '2026-06-19T10:00:00.000Z', updatedAt: '2026-06-19T10:10:00.000Z', timeline: [] };
+    },
+  } as PortalService);
+
+  const response = await controller.getTracking(' portal_token ', request({ body: { referenceNumber: 'CMP-000010' } }));
+
+  assert.deepEqual(response, { complaint: { referenceNumber: 'CMP-000010', status: ComplaintStatus.SUBMITTED, createdAt: '2026-06-19T10:00:00.000Z', updatedAt: '2026-06-19T10:10:00.000Z', timeline: [] } });
+  assert.deepEqual(calls[0], { sessionToken: ' portal_token ', correlationId: 'req_portal_otp', ipAddress: '203.0.113.91', userAgent: 'node:test' });
+  assert.equal('referenceNumber' in (calls[0] as Record<string, unknown>), false);
+});
+
+test('portal tracking returns only portal-safe complaint fields for a valid session', async () => {
+  const lookups: string[] = [];
+  const service = new PortalService(
+    {
+      getDetail: async (id) => {
+        assert.equal(id, 'cmp_1');
+        return {
+          id,
+          referenceNumber: 'CMP-000010',
+          status: ComplaintStatus.IN_PROGRESS,
+          severity: 'HIGH',
+          subject: 'Internal staff subject',
+          branchId: 'branch_main',
+          ownerId: 'usr_staff',
+          createdAt: '2026-06-19T10:00:00.000Z',
+          updatedAt: '2026-06-19T10:10:00.000Z',
+          description: 'Customer description',
+          incidentAt: '2026-06-19T09:00:00.000Z',
+          statusHistory: [{
+            fromStatus: null,
+            toStatus: ComplaintStatus.SUBMITTED,
+            action: 'SUBMIT',
+            actorId: 'usr_staff',
+            actorRole: 'CR_OFFICER',
+            reason: 'internal note',
+            correlationId: 'req_internal',
+            createdAt: '2026-06-19T10:01:00.000Z',
+          }],
+        };
+      },
+    } as never,
+    {
+      findValidSession: async (sessionHash) => {
+        lookups.push(sessionHash);
+        return { id: 'ses_1', complaintId: 'cmp_1', customerId: 'cus_1', expiresAt: new Date('2026-06-19T10:30:00.000Z') };
+      },
+    } as never,
+    {} as never,
+    { record: async () => undefined } as AuditService,
+  );
+
+  const result = await service.getTracking({ sessionToken: 'portal_token' });
+
+  assert.match(lookups[0], /^sha256:[a-f0-9]{64}$/);
+  assert.deepEqual(result, {
+    referenceNumber: 'CMP-000010',
+    status: ComplaintStatus.IN_PROGRESS,
+    createdAt: '2026-06-19T10:00:00.000Z',
+    updatedAt: '2026-06-19T10:10:00.000Z',
+    timeline: [{ fromStatus: null, toStatus: ComplaintStatus.SUBMITTED, action: 'SUBMIT', createdAt: '2026-06-19T10:01:00.000Z' }],
+  });
+  assertPortalTrackingSafe(result);
+});
+
+test('portal tracking denies missing or invalid sessions before complaint lookup', async () => {
+  let complaintRead = false;
+  const service = new PortalService(
+    { getDetail: async () => { complaintRead = true; throw new Error('should not read complaint'); } } as never,
+    { findValidSession: async () => null } as never,
+    {} as never,
+    { record: async () => undefined } as AuditService,
+  );
+
+  await assert.rejects(
+    service.getTracking({ sessionToken: 'portal_token' }),
+    (error: unknown) => error instanceof AppException && error.code === 'PORTAL_VERIFICATION_FAILED',
+  );
+  await assert.rejects(
+    service.getTracking({ sessionToken: ' ' }),
+    (error: unknown) => error instanceof AppException && error.code === 'PORTAL_VERIFICATION_FAILED',
+  );
+  assert.equal(complaintRead, false);
+});
+
+test('portal repository validates sessions by hash without selecting stored hashes', async () => {
+  const calls: unknown[] = [];
+  const repository = new PortalRepository({
+    portalSession: {
+      findFirst: async (query: unknown) => {
+        calls.push(query);
+        return { id: 'ses_1', complaintId: 'cmp_1', customerId: 'cus_1', expiresAt: new Date('2026-06-19T10:30:00.000Z') };
+      },
+    },
+  } as never);
+
+  await repository.findValidSession('sha256:digest', new Date('2026-06-19T10:00:00.000Z'));
+
+  assert.deepEqual(calls[0], {
+    where: { sessionHash: 'sha256:digest', expiresAt: { gt: new Date('2026-06-19T10:00:00.000Z') } },
+    select: { id: true, complaintId: true, customerId: true, expiresAt: true },
+  });
+});
+
 function testOtpHash(otp: string): string {
   const salt = '0123456789abcdef0123456789abcdef';
   return `sha256:${salt}:${createHash('sha256').update(`${salt}:${otp}`).digest('hex')}`;
@@ -291,4 +470,23 @@ function challenge(overrides: Partial<{ otpHash: string; status: PortalVerificat
     expiresAt: new Date(Date.now() + 60_000),
     ...overrides,
   };
+}
+
+function assertSafePortalAudit(record: AuditRecordInput, otp: string): void {
+  const body = JSON.stringify(record);
+  assert.equal(body.includes(otp), false);
+  assert.equal(body.includes('otpHash'), false);
+  assert.equal(body.includes('sessionToken'), false);
+  assert.equal(body.includes('sessionHash'), false);
+  assert.equal(body.includes('DMS'), false);
+  assert.equal(body.includes('internalComments'), false);
+  assert.equal(body.includes('auditLogs'), false);
+  assert.equal(body.includes('staff'), false);
+}
+
+function assertPortalTrackingSafe(record: unknown): void {
+  const body = JSON.stringify(record);
+  for (const blocked of ['description', 'statusHistory', 'actorId', 'reason', 'ownerId', 'branchId', 'DMS', 'audit', 'sessionToken', 'sessionHash', 'otpHash']) {
+    assert.equal(body.includes(blocked), false);
+  }
 }

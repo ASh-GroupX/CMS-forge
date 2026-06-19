@@ -2355,3 +2355,83 @@ Residual risk: this is a required customer-portal privacy gate. A fresh verifier
   - High/Critical builders still record security self-checks and run proof commands.
   - Independent review is deferred to the mandatory phase-end `PHASE-REVIEWER` gate.
   - The active F4-02B repair remains a real audit gap repair; after it passes, continue to F4-02C without another VERIFY stop.
+
+## REPAIR-F4-02B - Audit OTP Verification Failure Outcomes
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Continue Phase 4 AUTO PHASE with `F4-02C`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- portal.tracking` (14/14)
+  - Passed: `corepack pnpm test:api -- audit` (8/8 plus append-only proof; initial run timed out, longer rerun passed)
+  - Passed: `corepack pnpm openapi:check`
+- Notes:
+  - The repair closes the unaudited early-denial gap for unknown verification IDs,
+    non-pending rows, and exhausted attempts.
+  - Mutating verification failure paths still audit inside the same transaction as
+    their portal verification mutation.
+  - No OpenAPI, schema, controller, complaint workflow, notification, provider, or
+    UI behavior changed.
+  - Residual risk moves to `F4-02C`, where the portal session must be consumed
+    without exposing reference-number-only tracking, internal comments, audit logs,
+    DMS codes, staff PII, or unrelated complaints.
+
+## F4-02C - Add Verified Portal Tracking Endpoint
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Continue Phase 4 AUTO PHASE with `F4-03A`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- portal.tracking` (18/18)
+  - Passed: `corepack pnpm openapi:check`
+- Notes:
+  - `GET /portal/tracking` is session-token gated through the `x-portal-session`
+    header; reference numbers are not accepted by the route.
+  - The portal-owned session lookup uses only a hashed submitted token and selects
+    no stored session hash.
+  - The response is intentionally small: reference number, status, createdAt, and
+    updatedAt only.
+  - Residual Phase 4 risk moves to timeline/follow-up work, where public timeline
+    filtering must avoid staff actors, internal reasons, audit logs, and internal
+    comments.
+
+## F4-03A - Portal-Safe Timeline Read Model
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Needs Repair.
+- Verification:
+  - Passed: `corepack pnpm test:api -- portal.tracking` (18/18)
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Failed: `corepack pnpm test` (19/20; generator manifest assertion mismatch)
+  - Passed: `corepack pnpm openapi:check`
+- Notes:
+  - The portal timeline code path itself passed the focused `portal.tracking`
+    suite, typecheck, lint, and OpenAPI check.
+  - Acceptance is blocked by a root test failure in the module generator proof:
+    existing dirty generator/lint changes moved generated `MODULE.md` to a
+    frontmatter/sectioned format, but `tools/generate-module.test.mjs` still
+    expects the older inline manifest text.
+  - Do not mark `F4-03A` done until that proof repair is made and the full required
+    proof surface passes.
+
+## FORGE-OKF-MODULE-CONTEXT-001 - OKF-Style Module Manifests
+
+- Date: 2026-06-19
+- Risk: Low
+- Recommendation: Accept
+- Notes:
+  - Moves Forge module context toward the OKF principle: portable markdown files with small queryable frontmatter, versioned beside the code.
+  - Keeps the mechanism lazy: no SDK, no service, no new dependency.
+  - Future agents can identify module context by `type: forge.module` and load one bounded knowledge file before editing.
+  - This is future-facing metadata only; it does not repair old SLA implementation issues.

@@ -1,9 +1,9 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Post, Req, UseGuards } from '@nestjs/common';
 import type { IncomingMessage } from 'node:http';
 import { PortalSubmissionRateLimitGuard, PortalTrackingOtpRateLimitGuard } from '../../core/rate-limit.guard.js';
 import { parsePortalComplaintBody, toPortalComplaintInput } from './dto/create-portal.dto.js';
 import { parsePortalTrackingOtpBody, parsePortalTrackingOtpVerifyBody, toPortalOtpInput, toPortalOtpVerifyInput } from './dto/portal-tracking.dto.js';
-import type { PortalComplaintResponseDto, PortalOtpRequestResponseDto, PortalSessionResponseDto } from './dto/portal-response.dto.js';
+import type { PortalComplaintResponseDto, PortalOtpRequestResponseDto, PortalSessionResponseDto, PortalTrackingResponseDto } from './dto/portal-response.dto.js';
 import { PortalService } from './portal.service.js';
 
 @Controller('portal')
@@ -38,6 +38,14 @@ export class PortalController {
     @Req() request: IncomingMessage & { correlationId?: string },
   ): Promise<PortalSessionResponseDto> {
     return { session: await this.portalService.verifyTrackingOtp(toPortalOtpVerifyInput(parsePortalTrackingOtpVerifyBody(body), auditContext(request))) };
+  }
+
+  @Get('tracking')
+  async getTracking(
+    @Headers('x-portal-session') sessionToken: string | undefined,
+    @Req() request: IncomingMessage & { correlationId?: string },
+  ): Promise<PortalTrackingResponseDto> {
+    return { complaint: await this.portalService.getTracking({ sessionToken: sessionToken ?? '', ...auditContext(request) }) };
   }
 }
 

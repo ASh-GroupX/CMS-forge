@@ -1,3 +1,10 @@
+---
+type: forge.module
+title: Portal Module
+description: Agent context boundary for the portal backend module.
+tags: [backend, module, agent-context]
+---
+
 # Portal Module
 
 Agent context manifest. Read this before editing the module.

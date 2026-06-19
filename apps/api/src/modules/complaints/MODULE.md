@@ -1,3 +1,10 @@
+---
+type: forge.module
+title: Complaints Module
+description: Agent context boundary for the complaints backend module.
+tags: [backend, module, agent-context]
+---
+
 # Complaints Module
 
 Agent context manifest. Read this before editing the module.

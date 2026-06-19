@@ -3309,3 +3309,180 @@ Assumptions and gaps:
 - Notes:
   - Historical evidence, trust, backlog, and state entries still mention old verify gates as history.
   - AUTO PHASE now stops for PLANNER, blockers, failed checks, scope overflow, leaving the phase, and phase-end review only.
+
+## REPAIR-F4-02B - Audit OTP Verification Failure Outcomes
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-PORTAL-002
+  - PORTAL-SEC-001
+  - ARCH-WORKFLOW-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - `PortalService.verifyTrackingOtp` now writes `SECURITY` / `portal_otp_failed`
+    audit records before returning `PORTAL_VERIFICATION_FAILED` for unknown
+    verification IDs, non-pending verification rows, and exhausted-attempt
+    pending rows.
+  - Unknown-ID audits include only request context, target type/id, and
+    `{ reason: "unknown_verification" }`; no complaint/customer details are added
+    when no verification row exists.
+  - Known-row early denials audit safe reason/status/attempt metadata through the
+    existing portal verification audit shape.
+  - Existing wrong-OTP, expired-verification, and successful-verification mutation
+    paths still keep the mutation and `SECURITY` audit entry inside the portal
+    repository transaction.
+  - Added focused `portal.tracking` tests for unknown ID, non-pending row, and
+    exhausted-attempt audit coverage plus safe metadata checks.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- portal.tracking` (14/14)
+  - Passed: `corepack pnpm test:api -- audit` (8/8 plus append-only proof)
+  - Passed: `corepack pnpm openapi:check`
+  - Failed then passed: initial `corepack pnpm test:api -- audit` timed out at
+    122s while the Docker migration proof was still installing/running; rerun
+    with a longer timeout passed.
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. The public verify route accepts no staff role or branch
+    authority and still parses only `verificationId` and `otp` plus server-derived
+    request context.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed. This repair adds audit
+    to non-mutating denial paths; existing failed-attempt, expiration, and success
+    mutations still audit inside the portal repository transaction. No complaint
+    workflow state change or side effect is added.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed. Tests assert failure audit records do not include OTP values,
+    `otpHash`, `sessionToken`, or `sessionHash`.
+  - Customer portal exposure rules hold: Passed. The verify response remains a
+    stable safe error on denial and still returns no complaint details, internal
+    comments, audit logs, DMS codes, staff PII, unrelated complaints, OTP hashes,
+    or session hashes.
+  - Trust boundaries are tested: Passed. `portal.tracking` covers allowed verify
+    success and denied wrong OTP, expired verification, exhausted attempts,
+    unknown verification ID, and non-pending verification row.
+
+## F4-02C - Add Verified Portal Tracking Endpoint
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-PORTAL-002
+  - PORTAL-SEC-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Added public `GET /portal/tracking`.
+  - The route accepts the portal session token only from `x-portal-session` plus
+    server-derived correlation/IP/user-agent context; reference numbers are not
+    accepted by the route.
+  - `PortalService.getTracking` hashes the submitted token and validates it
+    through a portal-owned `portal_sessions` lookup for a non-expired session.
+  - `PortalRepository.findValidSession` selects only session id, complaint id,
+    customer id, and expiration; it does not return the stored session hash.
+  - The verified read reuses the complaints public service and returns only public
+    reference number, status, created timestamp, and updated timestamp.
+  - Missing, invalid, expired, or stale sessions fail closed with
+    `PORTAL_VERIFICATION_FAILED`.
+  - OpenAPI now documents `GET /portal/tracking` and `PortalTrackingResponse`.
+  - Added focused `portal.tracking` tests for route input stripping, allowed
+    verified tracking, invalid/missing session denial before complaint lookup, and
+    hash-only session lookup.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- portal.tracking` (18/18)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This public portal read accepts no staff role or branch
+    authority; it derives access from the validated portal session.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task adds
+    a read-only portal tracking endpoint and no state changes or side effects.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed. The route returns no token or hash, and repository tests prove stored
+    session hashes are not selected.
+  - Customer portal exposure rules hold: Passed. The response contains only public
+    reference, public status, and timestamps; tests prove internal detail/timeline
+    fields are not returned.
+  - Trust boundaries are tested: Passed. `portal.tracking` covers allowed verified
+    tracking plus denied missing/invalid session access before complaint lookup.
+
+## F4-03A - Add Portal-Safe Timeline Read Model
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Failed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-PORTAL-002
+  - PORTAL-SEC-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Added portal-safe `timeline` mapping to the verified tracking response.
+  - Timeline mapping keeps only `fromStatus`, `toStatus`, `action`, and
+    `createdAt`.
+  - Updated OpenAPI canonical generation for `PortalTrackingResponse.timeline`.
+  - Updated focused `portal.tracking` tests to prove actor IDs, actor roles,
+    internal reasons, correlation IDs, and other internal fields are filtered.
+- Verification:
+  - Passed: `corepack pnpm test:api -- portal.tracking` (18/18)
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Failed: `corepack pnpm test` (19/20). Failure is in
+    `tools/generate-module.test.mjs`: generator output now uses the
+    frontmatter/sectioned `MODULE.md` format from existing dirty
+    `tools/generate-module.mjs` and `tools/lint.mjs` changes, while the test still
+    expects the older inline `Owns tables: \`branches\`` text.
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. Timeline access still depends on the portal session, not
+    client role/branch/reference input.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task is
+    read-only.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by code review and focused tests; timeline response returns no token or
+    hash fields.
+  - Customer portal exposure rules hold: Passed by focused tests; portal timeline
+    output strips actor IDs, actor roles, reasons, correlation IDs, descriptions,
+    comments, audit data, DMS data, and session/OTP fields.
+  - Trust boundaries are tested: Passed in `portal.tracking`; final acceptance is
+    blocked by the unrelated required root test failure above.
+
+## FORGE-OKF-MODULE-CONTEXT-001 - OKF-Style Module Manifests
+
+- Date: 2026-06-19
+- Risk: Low
+- Status: Passed
+- Requirement IDs:
+  - CONTRACT-READINESS-002
+  - METHOD-MODULAR-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+- Evidence:
+  - Updated `tools/generate-module.mjs` so future `MODULE.md` files are OKF-style markdown concept documents with YAML frontmatter: `type: forge.module`, title, description, and tags.
+  - Updated `tools/lint.mjs` to require OKF-style frontmatter plus the existing public surface, owned tables, dependency, and SRS sections.
+  - Added frontmatter to existing module manifests without changing module behavior.
+  - Documented the rule in `docs/ARCHITECTURE.md`, `AGENTS.md`, `CLAUDE.md`, and `.forge/policy.md`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm test` (20/20)
+- Notes:
+  - This applies the Open Knowledge Format idea as plain markdown + YAML frontmatter, not a new service or dependency.
+  - No old SLA code behavior was fixed in this task.

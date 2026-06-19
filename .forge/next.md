@@ -1,34 +1,24 @@
-# Repair Task: REPAIR-F4-02B - Audit OTP Verification Failure Outcomes
+# Repair Task: REPAIR-F4-03A-PROOF - Align Generator Manifest Test
 
-Status: Needs Repair
+Status: Blocked
 Required model tier: BUILDER-STRONG
-Risk: High
+Risk: Medium
 Phase: Phase 4 - Customer Portal
-Repairs: VERIFY-F4-02B - Portal OTP session gate
+Repairs: F4-03A - Add portal-safe timeline read model
 
 ## Scope
 
-Repair the `F4-02B` OTP verification/session path before `F4-02C` tracking reads
-build on it.
+Repair the required `corepack pnpm test` proof blocker before accepting `F4-03A`.
 
-Keep the diff small and focused on the portal OTP verification path.
+Keep the diff small and focused on the existing dirty generator-manifest proof
+mismatch.
 
 Required behavior:
-- `POST /portal/tracking/otp/verify` still accepts only `verificationId`, `otp`,
-  and server-derived request context.
-- Reference number alone still cannot retrieve complaint status/details.
-- Wrong OTP, expired verification, exhausted attempts, non-pending rows, and
-  unknown IDs fail closed with stable safe errors.
-- OTP success and every OTP verification failure path are SECURITY-audited without
-  logging or returning OTP values, OTP hashes, session tokens, session hashes,
-  DMS customer codes, internal comments, audit logs, staff PII, unrelated
-  complaints, or complaint details.
-- Failure paths that mutate portal verification status/attempts keep the mutation
-  and SECURITY audit entry in the same transaction.
-- Successful verification still marks the verification as verified, creates only a
-  hashed portal session row, and audits inside the same transaction.
-- Add focused `portal.tracking` tests for the previously unaudited failure paths
-  and safe metadata.
+- Do not change portal behavior unless a rerun exposes a portal-specific failure.
+- Align `tools/generate-module.test.mjs` with the current generated `MODULE.md`
+  frontmatter/sectioned format from `tools/generate-module.mjs`.
+- Preserve `checkModuleManifests` coverage for generated manifests.
+- Rerun the full `F4-03A` proof surface.
 
 ## Required Proof Commands
 
@@ -36,10 +26,10 @@ Required behavior:
 - `corepack pnpm typecheck`
 - `corepack pnpm test`
 - `corepack pnpm test:api -- portal.tracking`
-- `corepack pnpm test:api -- audit`
 - `corepack pnpm openapi:check`
 
 ## Output
 
-On pass, append build evidence/security self-check, update trust, write `F4-02C`
-to `.forge/next.md`, and set `.forge/state.md` to `Ready to Build`.
+On pass, append repair evidence, update trust, mark `F4-03A` done in
+`.forge/backlog.md`, write the next Phase 4 task to `.forge/next.md`, and set
+`.forge/state.md` to `Ready to Build`.

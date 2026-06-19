@@ -1,8 +1,54 @@
 # Current State
 
-Status: Needs Repair
+Status: Blocked
 Phase: Phase 4 - Customer Portal
-Next Task: REPAIR-F4-02B - Audit OTP verification failure outcomes
+Next Task: REPAIR-F4-03A-PROOF - Align generator manifest test
+
+## F4-03A Blocked - Proof Repair Required
+
+`F4-03A` added portal-safe timeline mapping to the verified tracking response and
+updated OpenAPI/tests for timeline filtering. The focused portal tracking suite
+passed 18/18, and lint/typecheck/openapi passed.
+
+AUTO PHASE stops because required `corepack pnpm test` failed 19/20 in
+`tools/generate-module.test.mjs`. The failure is a generator proof mismatch:
+existing dirty `tools/generate-module.mjs` and `tools/lint.mjs` changes generate
+frontmatter/sectioned `MODULE.md` manifests, while the generator test still
+expects the older inline `Owns tables: `branches`` text.
+
+The next task is the smallest proof repair: align the generator test with the
+current generator manifest format, then rerun the full F4-03A proof surface.
+
+## F4-02C Built - AUTO PHASE Continuing
+
+`F4-02C` added `GET /portal/tracking` as the first verified customer portal
+tracking read. The route accepts the portal session token only from the
+`x-portal-session` header plus server-derived request context. The service hashes
+the submitted token, validates a non-expired portal-owned session row, reuses the
+complaints public service, and returns only reference number, status, createdAt,
+and updatedAt. Reference-number-only tracking remains unavailable.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- portal.tracking
+18/18, openapi:check, and git diff --check with line-ending warnings only.
+
+AUTO PHASE remains in Phase 4 and continues with `F4-03A`.
+
+## REPAIR-F4-02B Built - AUTO PHASE Continuing
+
+`REPAIR-F4-02B` added SECURITY audit coverage for the previously unaudited OTP
+verification denials: unknown verification IDs, non-pending verification rows,
+and exhausted-attempt pending rows. Unknown-ID audits record only request context,
+target type/id, and safe reason metadata; known-row early denials record safe
+reason/status/attempt metadata. Mutating wrong-OTP, expired-verification, and
+successful-verification paths still keep portal writes and SECURITY audit entries
+inside the same transaction.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- portal.tracking
+14/14, test:api -- audit 8/8 plus append-only proof, and openapi:check. The first
+audit proof attempt timed out while Docker dependency setup was still running; a
+longer rerun passed.
+
+AUTO PHASE remains in Phase 4 and continues with `F4-02C`.
 
 ## VERIFY-F4-02B Repair Required
 

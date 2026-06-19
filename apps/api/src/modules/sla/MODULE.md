@@ -1,3 +1,10 @@
+---
+type: forge.module
+title: SLA Module
+description: Agent context boundary for the sla backend module.
+tags: [backend, module, agent-context]
+---
+
 # SLA Module
 
 Agent context manifest. Read this before editing the module.

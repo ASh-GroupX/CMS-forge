@@ -88,7 +88,9 @@ apps/api/src/modules/<module>/
 `MODULE.md` is the module's agent boundary: a fresh-context agent reads it to know
 the one public service, which tables the module owns, what it may depend on, and the
 SRS IDs it serves — without scanning the whole tree. The generator emits it and
-`lint` fails any module missing it or its required fields.
+`lint` fails any module missing it or its required fields. It is an OKF-style
+markdown concept document with YAML frontmatter (`type: forge.module`, title,
+description, tags) and a normal markdown body.
 
 Layer responsibilities — keep them strict:
 - **Controller**: HTTP shape, DTO validation, OpenAPI docs, calls the service. No

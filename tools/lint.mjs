@@ -14,6 +14,12 @@ const manifestRequiredFields = [
   ['May depend on', /may depend on/i],
   ['SRS', /\bSRS\b/i],
 ];
+const manifestFrontmatterFields = [
+  ['type', /^type:\s*forge\.module\b/m],
+  ['title', /^title:\s*.+/m],
+  ['description', /^description:\s*.+/m],
+  ['tags', /^tags:\s*\[.+\]/m],
+];
 const jsonFiles = new Set([
   'package.json',
   '.prettierrc',
@@ -166,6 +172,17 @@ export function checkModuleManifests(root = process.cwd()) {
       continue;
     }
     const text = readFileSync(join(root, manifest), 'utf8');
+    if (!text.startsWith('---\n')) {
+      errors.push(`${manifest}: missing OKF-style YAML frontmatter`);
+    } else {
+      const end = text.indexOf('\n---\n', 4);
+      const frontmatter = end === -1 ? '' : text.slice(4, end);
+      for (const [label, pattern] of manifestFrontmatterFields) {
+        if (!pattern.test(frontmatter)) {
+          errors.push(`${manifest}: frontmatter must include "${label}"`);
+        }
+      }
+    }
     for (const [label, pattern] of manifestRequiredFields) {
       if (!pattern.test(text)) {
         errors.push(`${manifest}: manifest must document "${label}"`);

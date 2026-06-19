@@ -1,3 +1,10 @@
+---
+type: forge.module
+title: Branches Module
+description: Agent context boundary for the branches backend module.
+tags: [backend, module, agent-context]
+---
+
 # Branches Module
 
 Agent context manifest. Read this before editing the module.

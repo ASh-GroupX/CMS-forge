@@ -1,3 +1,10 @@
+---
+type: forge.module
+title: Notifications Module
+description: Agent context boundary for the notifications backend module.
+tags: [backend, module, agent-context]
+---
+
 # Notifications Module
 
 Agent context manifest. Read this before editing the module.

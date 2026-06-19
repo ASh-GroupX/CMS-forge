@@ -11,6 +11,12 @@ import {
 } from './lint.mjs';
 
 const manifestBody = [
+  '---',
+  'type: forge.module',
+  'title: Auth Module',
+  'description: Agent context boundary for the auth module.',
+  'tags: [backend, module, agent-context]',
+  '---',
   '# Auth Module',
   '- Public surface: `AuthService`',
   '- Owns tables: users, sessions',
@@ -94,6 +100,11 @@ test('lint requires a complete MODULE.md manifest in each module', () => {
 
   assert.deepEqual(checkModuleManifests(root), [
     'apps/api/src/modules/auth: missing MODULE.md agent context manifest',
+  ]);
+
+  writeFileSync(join(root, 'apps/api/src/modules/auth/MODULE.md'), '# Auth Module\n- Public surface: `AuthService`\n- Owns tables: users\n- May depend on: core/*\n- SRS: ARCH-AUTH-001\n');
+  assert.deepEqual(checkModuleManifests(root), [
+    'apps/api/src/modules/auth/MODULE.md: missing OKF-style YAML frontmatter',
   ]);
 
   writeFileSync(join(root, 'apps/api/src/modules/auth/MODULE.md'), manifestBody);

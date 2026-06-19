@@ -30,7 +30,7 @@ export function moduleFiles(moduleName) {
   return new Map([
     [
       'MODULE.md',
-      `# ${classBase} Module\n\n> Agent context manifest. Read this before editing the module. It defines the\n> module's boundary so you can work in a fresh context without scanning the tree.\n\n- Public surface: \`${classBase}Service\` - the only export other modules may import.\n- Owns tables: \`${moduleName}\` (verify before adding behavior).\n- May depend on: \`core/*\` (prisma, errors, audit, rbac, correlation) and another\n  module's public service only - never its repository, \`dto/\`, or Prisma models.\n- SRS: add the requirement IDs this module implements before building behavior.\n`,
+      `---\ntype: forge.module\ntitle: ${classBase} Module\ndescription: Agent context boundary for the ${moduleName} backend module.\ntags: [backend, module, agent-context]\n---\n\n# ${classBase} Module\n\nAgent context manifest. Read this before editing the module. It defines the\nmodule's boundary so you can work in a fresh context without scanning the tree.\n\n## Public surface\n\n- \`${classBase}Service\` is the only export other modules may import.\n\n## Owns tables\n\n- \`${moduleName}\` (verify before adding behavior).\n\n## May depend on\n\n- \`core/*\` (prisma, errors, audit, rbac, correlation).\n- Other modules' public services only. Never import another module repository,\n  \`dto/\`, or Prisma model type.\n\n## SRS\n\n- Add the requirement IDs this module implements before building behavior.\n`,
     ],
     [
       `${moduleName}.module.ts`,

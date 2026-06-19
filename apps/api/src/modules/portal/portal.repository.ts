@@ -41,6 +41,7 @@ export type PortalSessionRecord = {
   lastSeenAt: Date;
   createdAt: Date;
 };
+export type PortalSessionLookupRecord = Pick<PortalSessionRecord, 'id' | 'complaintId' | 'customerId' | 'expiresAt'>;
 
 @Injectable()
 export class PortalRepository {
@@ -82,6 +83,13 @@ export class PortalRepository {
 
   async createSession(data: { complaintId: string; customerId: string; sessionHash: string; expiresAt: Date }, client: PortalClient = this.prisma): Promise<PortalSessionRecord> {
     return client.portalSession.create({ data, select: sessionSelect });
+  }
+
+  async findValidSession(sessionHash: string, now = new Date(), client: PortalClient = this.prisma): Promise<PortalSessionLookupRecord | null> {
+    return client.portalSession.findFirst({
+      where: { sessionHash, expiresAt: { gt: now } },
+      select: { id: true, complaintId: true, customerId: true, expiresAt: true },
+    });
   }
 }
 
