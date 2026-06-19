@@ -4609,3 +4609,458 @@ Assumptions and gaps:
     response shape was changed.
   - Trust boundaries are tested: Passed. `test:api -- notifications` covers
     locale resolution, fallback, denial, and unsafe payload boundaries.
+
+## F5-05C - Add Admin Notification Template Routes With RBAC And OpenAPI
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-NOTIFY-001
+  - LOCALIZATION-001
+  - API-STANDARD-001
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added Admin-only backend routes for listing, creating, updating,
+    activating, and deactivating notification templates.
+  - Mutation routes use server-session auth, Admin RBAC, and CSRF guards.
+  - Added repository/service methods for template list/create/update/activation
+    writes.
+  - Template writes validate code, channel, `en`/`ar` locale, subject/body,
+    positive version metadata, version note, and activation state before writes.
+  - Template create/update/activation writes `CONFIG` audit entries in the same
+    repository transaction; audit metadata records identifiers and changed field
+    names, not template body content or secrets.
+  - Added OpenAPI paths and schemas for every admin template route.
+  - Added focused notifications API coverage for allowed create/update, denied
+    non-admin access, validation failure before write, same-transaction audit,
+    and provider credential non-exposure.
+  - Added no Admin UI, dispatch behavior change, provider behavior, delivery
+    attempt log schema, preview endpoint, import, or export.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (26/26)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed. `NotificationsController` derives actor/audit context from
+    `AuthenticatedRequest`, and `RbacGuard` Admin metadata is covered by
+    `template-management.test.ts`.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed. Template mutations
+    are CONFIG changes and write audit records inside the same repository
+    transaction; no side effects are added.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. Responses expose explicit template
+    DTO fields only, and credential non-exposure is tested.
+  - Customer portal exposure rules hold: Passed by scope. No portal route or
+    response shape was changed.
+  - Trust boundaries are tested: Passed. `test:api -- notifications` covers
+    Admin allowed mutation behavior and non-admin denial.
+
+## F5-05D - Add Notification Delivery Attempt Log And Retry-Safe Status Updates
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-NOTIFY-001
+  - API-STANDARD-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added `notification_delivery_attempts` persistence with notification
+    relation, channel, terminal attempt status, provider, safe provider result,
+    failure reason, and attempted timestamp.
+  - Existing email/SMS/WhatsApp repository `mark*Sent` and `mark*Failed` methods
+    now write a delivery attempt and guarded terminal status update in one
+    Prisma transaction.
+  - Status updates still require `QUEUED`, so terminal rows are not overwritten
+    by stale attempts.
+  - Successful attempts store only safe provider result scalars
+    (`messageId`, `provider`, `accepted`); failed attempts store stable failure
+    codes only.
+  - Added schema-check coverage for the delivery attempt model.
+  - Added focused notifications API coverage for successful attempt log, failed
+    attempt log, stale terminal update skip, and provider credential
+    non-exposure.
+  - Added no provider behavior change, real provider call, provider credential,
+    Admin UI, OpenAPI route, retry scheduler, template preview/import/export, or
+    customer preference behavior.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (29/29)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `corepack pnpm prisma:validate`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no routes or authority decisions.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed. Notification
+    dispatch terminal status changes now write delivery attempts in the same
+    repository transaction, with no new side effects.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. Attempt records store safe provider
+    metadata or stable failure codes only, and non-exposure is tested.
+  - Customer portal exposure rules hold: Passed by scope. No portal route or
+    response shape was changed.
+  - Trust boundaries are tested: Passed. `test:api -- notifications` covers
+    retry-safe status guards, attempt persistence, and provider-secret
+    non-exposure.
+
+## F5-06A - Add Customer Notification Preference Schema And Service
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-NOTIFY-002
+  - LOCALIZATION-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added `customer_notification_preferences` persistence with one preference
+    row per customer, optional preferred channel, optional SMS quiet-hour start
+    and end times, optional timezone, and audit timestamps.
+  - Added notifications repository/service methods for reading and upserting
+    customer preferences.
+  - Missing preference rows return explicit safe defaults.
+  - Preference writes validate customer ID, preferred channel, quiet-hour
+    `HH:mm` values, and timezone format before writes.
+  - Added schema-check coverage for the preference model.
+  - Added focused notifications API coverage for preference upsert, default
+    read fallback, validation failure before write, repository upsert shape, and
+    provider credential non-exposure.
+  - Added no dispatch preference enforcement, quiet-hour suppression, UI, public
+    routes, OpenAPI routes, real provider calls, provider credentials, or
+    marketing subscription behavior.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (34/34)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `corepack pnpm prisma:validate`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added backend service methods only, no routes or
+    caller authority decisions.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. Preference
+    persistence is configuration data and no dispatch side effects were added.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. Preference DTOs expose explicit
+    fields only, and provider credential non-exposure is tested.
+  - Customer portal exposure rules hold: Passed by scope. No portal route or
+    response shape was changed.
+  - Trust boundaries are tested: Passed. `test:api -- notifications` covers
+    validation-before-write and safe default boundaries.
+
+## F5-06B - Enforce Quiet Hours And Channel Preference During Dispatch
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-NOTIFY-002
+  - API-STANDARD-001
+  - METHOD-TEST-001
+- Evidence:
+  - Queued provider dispatch now loads the notification complaint customer ID
+    and reads stored customer notification preferences before provider send.
+  - Preferred channel mismatches mark the queued notification failed with stable
+    `NOTIFICATION_CHANNEL_PREFERENCE_SKIPPED` before provider send.
+  - SMS quiet-hour windows are evaluated with the stored timezone and mark SMS
+    failed with stable `NOTIFICATION_QUIET_HOURS_SKIPPED` before provider send.
+  - Non-SMS channels are not suppressed by SMS quiet-hour windows.
+  - Missing preferences preserve existing dispatch behavior.
+  - Moved provider-message construction and dispatch preference policy into a
+    small notifications helper to keep source files under the line budget.
+  - Added focused notifications API coverage for preferred-channel skip, SMS
+    quiet-hour skip, allowed outside quiet hours, missing preference fallback,
+    and provider non-call before suppressed sends.
+  - Added no UI, public/customer preference routes, OpenAPI routes, real provider
+    calls, provider credentials, retry scheduler, critical-complaint bypass, or
+    marketing subscription behavior.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (37/37)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no routes or caller authority decisions.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by existing
+    notification repository behavior. Preference suppression uses the same
+    terminal mark-failed path that writes delivery attempt and status together.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. Suppression writes stable reason
+    codes only and provider non-call is tested.
+  - Customer portal exposure rules hold: Passed by scope. No portal route or
+    response shape was changed.
+  - Trust boundaries are tested: Passed. `test:api -- notifications` covers
+    preference and quiet-hour suppression before provider calls.
+
+## F5-07A - Generate Surveys Module Boundary And Manifest
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-NOTIFY-001
+  - REQ-SURVEY-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Generated canonical `surveys` backend module skeleton.
+  - Filled `apps/api/src/modules/surveys/MODULE.md` with real public surface,
+    owned `surveys` table, allowed dependencies, and SRS IDs.
+  - Wired `SurveysModule` into the API root module so module reachability lint
+    covers it.
+  - Added no survey scheduling behavior, portal survey submission route, staff
+    survey result read model, OpenAPI route, UI, notification dispatch behavior
+    change, schema change, or migration.
+- Verification:
+  - Passed: `corepack pnpm generate:module -- surveys`
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no routes or authority decisions.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added module boundary only and no state-changing behavior.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed by scope. No runtime response or
+    logging behavior was added.
+  - Customer portal exposure rules hold: Passed by scope. No portal route or
+    response shape was changed.
+  - Trust boundaries are tested: Passed by lint, typecheck, and generated module
+    construction tests for this boundary-only slice.
+
+## F5-07B - Schedule Survey Links From Closure Notification Events
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-SURVEY-001
+  - REQ-NOTIFY-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added survey repository/service behavior for scheduling pending survey links
+    by complaint/customer.
+  - Generated raw one-time survey tokens are hashed with SHA-256 before storage;
+    service responses do not expose `tokenHash`.
+  - Scheduling is idempotent for an existing pending complaint/customer survey
+    and does not requeue notifications.
+  - Customer notification queueing occurs only after survey persistence succeeds.
+  - Added `test:api -- surveys` suite and coverage for schedule creation,
+    idempotency, token hash non-exposure, notification queued after persistence,
+    and invalid input denial before write.
+  - Added no portal survey submission route, staff survey result read model,
+    OpenAPI route, UI, complaint state change, real provider call, provider
+    credential, or report integration.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- surveys` (4/4)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added service behavior only, no routes or caller
+    authority decisions.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed. Survey creation
+    persists before customer notification queueing; no complaint state change was
+    added.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. Stored survey token hashes are not
+    returned and non-exposure is tested.
+  - Customer portal exposure rules hold: Passed by scope. No portal route or
+    response shape was added.
+  - Trust boundaries are tested: Passed. `test:api -- surveys` covers invalid
+    input before write and token-hash non-exposure.
+
+## F5-07C - Add One-Time Expiring Portal Survey Submission API
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-SURVEY-001
+  - API-STANDARD-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added public `POST /portal/surveys` survey submission route.
+  - Added request parsing for one-time survey token, 1-5 rating, and optional
+    comment.
+  - Survey service verifies raw token hash against a pending survey, denies
+    expired tokens, and persists one submitted rating/comment through a guarded
+    pending-status update.
+  - Duplicate/stale submissions fail safely with `PORTAL_VERIFICATION_FAILED`.
+  - Added OpenAPI path and schemas for the portal survey route.
+  - Added focused `test:api -- surveys` coverage for successful submission,
+    expired/duplicate denial, request validation, response privacy, and OpenAPI
+    coverage.
+  - Added no staff survey result read model, staff/admin UI, customer portal UI,
+    complaint state change, notification dispatch behavior change, or report
+    integration.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- surveys` (8/8)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. The added route is a public token-verification portal route
+    and does not accept staff role/branch input.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. Survey
+    submission changes survey state only; no complaint state change or side
+    effect was added.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. Stored survey token hashes are not
+    returned and response privacy is tested.
+  - Customer portal exposure rules hold: Passed. Portal survey response exposes
+    only survey ID, rating, and submitted timestamp.
+  - Trust boundaries are tested: Passed. `test:api -- surveys` covers valid,
+    expired, duplicate, and invalid token/body boundaries.
+
+## F5-07D - Expose Submitted Survey Results To Authorized Staff Read Models
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-SURVEY-001
+  - API-STANDARD-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added survey repository/service read behavior for submitted surveys by
+    complaint.
+  - Added guarded staff `GET /complaints/:complaintId/surveys` read route with
+    server-session auth, RBAC, and branch-scope guard metadata.
+  - The route verifies scoped complaint detail through `ComplaintsService`
+    before reading survey results, so branch-hidden complaints deny before any
+    survey lookup.
+  - Staff response DTO exposes only survey id, complaint id, rating, optional
+    comment, and submitted timestamp.
+  - Pending/unsubmitted surveys are excluded by repository query constraints.
+  - Added OpenAPI path and schemas for submitted staff survey reads.
+  - Added focused `test:api -- surveys` coverage for allowed staff reads,
+    branch-hidden denial before survey read, pending exclusion, response
+    privacy, and OpenAPI coverage.
+  - Added no report aggregation, staff/admin UI, customer portal UI, staff survey
+    mutation route, complaint state change, or notification dispatch behavior
+    change.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- surveys` (13/13)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed. The staff route uses `SessionAuthGuard`, `RbacGuard`, and
+    `@BranchScoped()`, then derives branch scope from guarded request context.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This is a
+    read-only route and adds no state change or side effect.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. Staff DTOs omit survey token hashes,
+    customer IDs, provider data, audit logs, and unrelated records; response
+    privacy is tested.
+  - Customer portal exposure rules hold: Passed by scope. This task added no
+    customer portal read surface.
+  - Trust boundaries are tested: Passed. `test:api -- surveys` covers allowed
+    staff access, denial before survey lookup, pending exclusion, and contract
+    privacy.
+
+## REPAIR-F5-06B-CRITICAL-QUIET-HOUR-BYPASS - Honor Critical SMS Quiet-Hour Bypass
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-NOTIFY-002
+  - API-STANDARD-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+- Evidence:
+  - Queued notification reads now select server-side persisted complaint
+    severity with the complaint customer id.
+  - SMS quiet-hour suppression still fails non-critical complaints before
+    provider dispatch.
+  - Preferred-channel mismatch still fails before provider dispatch regardless
+    of complaint severity.
+  - Critical complaint SMS notifications bypass quiet-hour suppression and pass a
+    stable `CRITICAL_COMPLAINT_QUIET_HOURS_BYPASS` reason into sent delivery
+    metadata.
+  - Sent delivery attempt/status metadata records the safe bypass reason without
+    provider secrets or credentials.
+  - Added focused notification API coverage for critical quiet-hour bypass,
+    non-critical quiet-hour denial, preferred-channel denial, and repository
+    delivery-attempt metadata recording.
+  - Added no UI, customer preference routes, real provider calls, provider
+    credentials, retry scheduler, marketing subscription behavior, or Phase 6
+    work.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (39/39)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `corepack pnpm prisma:validate`
+  - Passed: `git diff --check` (line-ending warnings only)
+  - Note: an initial focused `test:api -- notifications` run failed on one
+    expected select shape after adding complaint severity; the expectation was
+    updated and the required suite passed 39/39.
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This repair adds no route or caller authority surface.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. No complaint
+    state change was added; notification delivery status and attempt rows remain
+    written in one repository transaction.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. The bypass metadata is a stable safe
+    reason string, and provider-secret non-exposure is covered by notification
+    tests.
+  - Customer portal exposure rules hold: Passed by scope. No portal route or
+    response shape was added.
+  - Trust boundaries are tested: Passed. Notification API tests cover critical
+    allowed bypass, non-critical quiet-hour denial, preferred-channel denial, and
+    delivery-attempt metadata recording.

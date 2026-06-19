@@ -19,11 +19,14 @@ Agent context manifest. Read this before editing the module.
 ## Owns tables
 
 - `notifications`
+- `notification_delivery_attempts`
 - `notification_templates`
+- `customer_notification_preferences`
 
 ## May depend on
 
 - `core/http-kernel` for `PrismaService` and later stable API errors.
+- `modules/auth` public service for admin route session guards.
 - `modules/integrations` public service for provider adapter dispatch.
 - Other modules' public services only. Never import another module repository,
   DTO folder, or Prisma model type.

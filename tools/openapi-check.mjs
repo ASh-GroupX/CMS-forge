@@ -4,19 +4,14 @@ const file = 'packages/contracts/openapi.json';
 const eventTypes = ['AUTH', 'USER_ADMIN', 'COMPLAINT', 'WORKFLOW', 'COMMENT', 'ATTACHMENT', 'SLA', 'NOTIFICATION', 'REPORT', 'CONFIG', 'SECURITY'];
 const complaintStatuses = ['DRAFT', 'SUBMITTED', 'MANAGER_REVIEW', 'BRANCH_REVIEW', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REOPENED', 'REJECTED'];
 const complaintTransitionActions = ['SUBMIT', 'ACCEPT_INTAKE', 'REJECT_AS_INVALID', 'APPROVE_AND_ROUTE', 'SEND_BACK', 'ASSIGN_INVESTIGATION', 'RESOLVE_DIRECTLY', 'REJECT_AFTER_REVIEW', 'ADD_INVESTIGATION_UPDATE', 'RESOLVE', 'REJECT_AFTER_INVESTIGATION', 'CLOSE', 'REJECT_RESOLUTION', 'REOPEN', 'ROUTE_AGAIN'];
-const complaintSeverities = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'], roleCodes = ['CR_OFFICER', 'CR_MANAGER', 'BRANCH_MANAGER', 'ADMIN', 'MGMT_READONLY', 'CUSTOMER_PORTAL'];
+const complaintSeverities = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'], roleCodes = ['CR_OFFICER', 'CR_MANAGER', 'BRANCH_MANAGER', 'ADMIN', 'MGMT_READONLY', 'CUSTOMER_PORTAL'], notificationChannels = ['EMAIL', 'SMS', 'WHATSAPP', 'IN_APP'];
 const ref = (name) => ({ $ref: `#/components/schemas/${name}` }), json = (schema) => ({ content: { 'application/json': { schema } } });
 const body = (schema) => ({ required: true, ...json(schema) }), error = (description) => ({ description, ...json(ref('ErrorEnvelope')) });
 const ok = (description, schema, headers) => ({ description, ...(headers ? { headers } : {}), ...json(schema) }), cookie = (description) => ({ 'Set-Cookie': { schema: { type: 'string' }, description } });
 const attachment = (filename) => ({ 'Content-Disposition': { schema: { type: 'string' }, description: `attachment; filename="${filename}"` } }), param = (name, schema = { type: 'string' }) => ({ name, in: 'query', required: false, schema });
 const pathParam = (name) => ({ name, in: 'path', required: true, schema: { type: 'string' } });
 const str = { type: 'string' }, text = { type: 'string', minLength: 1 }, nullText = { type: ['string', 'null'], minLength: 1 };
-const auditParams = [
-  param('eventType', { type: 'string', enum: eventTypes }),
-  ...['actorId', 'targetType', 'targetId', 'branchId', 'correlationId'].map((name) => param(name)),
-  param('from', { type: 'string', format: 'date-time' }),
-  param('to', { type: 'string', format: 'date-time' }),
-];
+const auditParams = [param('eventType', { type: 'string', enum: eventTypes }), ...['actorId', 'targetType', 'targetId', 'branchId', 'correlationId'].map((name) => param(name)), param('from', { type: 'string', format: 'date-time' }), param('to', { type: 'string', format: 'date-time' })];
 const canonical = {
   openapi: '3.1.0',
   info: { title: 'CMS-Auto API', version: '0.1.0' },
@@ -109,6 +104,13 @@ const canonical = {
         responses: { 200: ok('Branch deactivated', ref('BranchWriteResponse')), 401: error('Missing or invalid session'), 403: error('Role denied or invalid CSRF token (CSRF_INVALID)') },
       },
     },
+    '/notifications/templates': {
+      get: { tags: ['Notifications'], operationId: 'notificationTemplateList', summary: 'List notification templates', responses: { 200: ok('Notification templates', ref('NotificationTemplateListResponse')), 401: error('Missing or invalid session'), 403: error('Role denied') } },
+      post: { tags: ['Notifications'], operationId: 'notificationTemplateCreate', summary: 'Create notification template', requestBody: body(ref('NotificationTemplateCreateRequest')), responses: { 201: ok('Notification template created', ref('NotificationTemplateWriteResponse')), 400: error('Invalid request body'), 401: error('Missing or invalid session'), 403: error('Role denied or invalid CSRF token (CSRF_INVALID)') } },
+    },
+    '/notifications/templates/{id}': { patch: { tags: ['Notifications'], operationId: 'notificationTemplateUpdate', summary: 'Update notification template', parameters: [pathParam('id')], requestBody: body(ref('NotificationTemplateUpdateRequest')), responses: { 200: ok('Notification template updated', ref('NotificationTemplateWriteResponse')), 400: error('Invalid request body'), 401: error('Missing or invalid session'), 403: error('Role denied or invalid CSRF token (CSRF_INVALID)') } } },
+    '/notifications/templates/{id}/activate': { post: { tags: ['Notifications'], operationId: 'notificationTemplateActivate', summary: 'Activate notification template', parameters: [pathParam('id')], responses: { 200: ok('Notification template activated', ref('NotificationTemplateWriteResponse')), 401: error('Missing or invalid session'), 403: error('Role denied or invalid CSRF token (CSRF_INVALID)') } } },
+    '/notifications/templates/{id}/deactivate': { post: { tags: ['Notifications'], operationId: 'notificationTemplateDeactivate', summary: 'Deactivate notification template', parameters: [pathParam('id')], responses: { 200: ok('Notification template deactivated', ref('NotificationTemplateWriteResponse')), 401: error('Missing or invalid session'), 403: error('Role denied or invalid CSRF token (CSRF_INVALID)') } } },
     '/complaints/{id}/transitions': {
       post: {
         tags: ['Complaints'],
@@ -134,6 +136,7 @@ const canonical = {
     '/complaints/{id}/attachments': { post: { tags: ['Attachments'], operationId: 'complaintAttachmentUpload', summary: 'Upload a staff complaint attachment', parameters: [pathParam('id'), param('branchId')], requestBody: body(ref('AttachmentUploadRequest')), responses: { 201: ok('Attachment uploaded', ref('AttachmentUploadResponse')), 400: error('Invalid attachment request'), 401: error('Missing or invalid session'), 403: error('Role, branch scope, or CSRF denied'), 404: error('Complaint not found (COMPLAINT_NOT_FOUND)') } } },
     '/complaints/{id}/attachments/{attachmentId}/download': { get: { tags: ['Attachments'], operationId: 'complaintAttachmentDownloadPrepare', summary: 'Prepare a staff attachment download', parameters: [pathParam('id'), pathParam('attachmentId'), param('branchId')], responses: { 200: ok('Attachment download prepared', ref('AttachmentDownloadResponse')), 401: error('Missing or invalid session'), 403: error('Role or branch scope denied'), 404: error('Complaint or attachment not found') } } },
     '/complaints/{id}/comments/public': { get: { tags: ['Complaints'], operationId: 'complaintPublicCommentList', summary: 'List public complaint comments', parameters: [pathParam('id'), param('branchId')], responses: { 200: ok('Public comments', ref('ComplaintPublicCommentsResponse')), 401: error('Missing or invalid session'), 403: error('Role or branch scope denied'), 404: error('Complaint not found (COMPLAINT_NOT_FOUND)') } } },
+    '/complaints/{id}/surveys': { get: { tags: ['Surveys'], operationId: 'complaintSurveyList', summary: 'List submitted staff survey results', parameters: [pathParam('id'), param('branchId')], responses: { 200: ok('Submitted survey results', ref('StaffSurveyResultsResponse')), 401: error('Missing or invalid session'), 403: error('Role or branch scope denied'), 404: error('Complaint not found (COMPLAINT_NOT_FOUND)') } } },
     '/complaints': {
       get: {
         tags: ['Complaints'],
@@ -155,6 +158,7 @@ const canonical = {
     '/portal/tracking': { get: { tags: ['Portal'], operationId: 'portalTrackingGet', summary: 'Get verified public complaint tracking status', parameters: [{ name: 'x-portal-session', in: 'header', required: true, schema: { type: 'string', minLength: 1 } }], responses: { 200: ok('Portal tracking status', ref('PortalTrackingResponse')), 400: error('Invalid or expired portal session (PORTAL_VERIFICATION_FAILED)') } } },
     '/portal/tracking/follow-ups': { post: { tags: ['Portal'], operationId: 'portalTrackingFollowUpCreate', summary: 'Create a verified public customer follow-up', parameters: [{ name: 'x-portal-session', in: 'header', required: true, schema: { type: 'string', minLength: 1 } }], requestBody: body(ref('PortalFollowUpRequest')), responses: { 201: ok('Follow-up accepted', ref('PortalFollowUpResponse')), 400: error('Invalid request, expired session, or closed complaint (PORTAL_VERIFICATION_FAILED)') } } },
     '/portal/attachments': { post: { tags: ['Portal'], operationId: 'portalAttachmentUpload', summary: 'Upload a verified portal attachment', parameters: [{ name: 'x-portal-session', in: 'header', required: true, schema: { type: 'string', minLength: 1 } }], requestBody: body(ref('AttachmentUploadRequest')), responses: { 201: ok('Attachment uploaded', ref('AttachmentUploadResponse')), 400: error('Invalid request, expired session, terminal complaint, or invalid attachment (PORTAL_VERIFICATION_FAILED/VALIDATION_FAILED)') } } },
+    '/portal/surveys': { post: { tags: ['Portal'], operationId: 'portalSurveySubmit', summary: 'Submit a one-time customer satisfaction survey', requestBody: body(ref('PortalSurveySubmitRequest')), responses: { 201: ok('Survey submitted', ref('PortalSurveySubmitResponse')), 400: error('Invalid, expired, or already submitted survey token (PORTAL_VERIFICATION_FAILED/VALIDATION_FAILED)') } } },
     '/portal/tracking/otp': { post: { tags: ['Portal'], operationId: 'portalTrackingOtpRequest', summary: 'Request a public tracking verification challenge', requestBody: body(ref('PortalOtpRequest')), responses: { 201: ok('Verification request accepted', ref('PortalOtpRequestResponse')), 400: error('Invalid or unmatched verification request (PORTAL_VERIFICATION_FAILED)'), 429: error('Rate limit exceeded (RATE_LIMITED)') } } },
     '/portal/tracking/otp/verify': { post: { tags: ['Portal'], operationId: 'portalTrackingOtpVerify', summary: 'Verify a public tracking challenge and issue a portal session', requestBody: body(ref('PortalOtpVerifyRequest')), responses: { 201: ok('Portal session issued', ref('PortalSessionResponse')), 400: error('Invalid or failed verification request (PORTAL_VERIFICATION_FAILED)') } } },
     '/audit/logs': {
@@ -222,6 +226,11 @@ const canonical = {
       BranchWriteResponse: object(['branch'], { branch: ref('Branch') }),
       BranchCreateRequest: object(['code', 'nameEn', 'nameAr'], { code: text, nameEn: text, nameAr: text, timezone: text }),
       BranchUpdateRequest: object([], { code: text, nameEn: text, nameAr: text, timezone: text }),
+      NotificationTemplate: object(['id', 'code', 'channel', 'locale', 'body', 'version', 'isActive', 'createdAt', 'updatedAt'], { id: str, code: text, channel: { type: 'string', enum: notificationChannels }, locale: { type: 'string', enum: ['en', 'ar'] }, subject: { type: ['string', 'null'] }, body: text, version: { type: 'integer', minimum: 1 }, versionNote: { type: ['string', 'null'] }, isActive: { type: 'boolean' }, createdAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' } }),
+      NotificationTemplateListResponse: object(['items'], { items: { type: 'array', items: ref('NotificationTemplate') } }),
+      NotificationTemplateWriteResponse: object(['template'], { template: ref('NotificationTemplate') }),
+      NotificationTemplateCreateRequest: object(['code', 'channel', 'locale', 'body'], { code: text, channel: { type: 'string', enum: notificationChannels }, locale: { type: 'string', enum: ['en', 'ar'] }, subject: nullText, body: text, version: { type: 'integer', minimum: 1 }, versionNote: nullText, isActive: { type: 'boolean' } }),
+      NotificationTemplateUpdateRequest: object([], { code: text, channel: { type: 'string', enum: notificationChannels }, locale: { type: 'string', enum: ['en', 'ar'] }, subject: nullText, body: text, version: { type: 'integer', minimum: 1 }, versionNote: nullText, isActive: { type: 'boolean' } }),
       ComplaintCreateRequest: object(['customerName', 'categoryId', 'subcategoryId', 'description', 'incidentAt', 'subject', 'severity'], { customerName: text, customerPhone: nullText, customerNumber: nullText, categoryId: text, subcategoryId: text, description: text, incidentAt: { type: 'string', format: 'date-time' }, subject: text, severity: { type: 'string', enum: complaintSeverities }, vehicleRelated: { type: 'boolean' }, vehicleVin: nullText, vehicleId: nullText }),
       ComplaintCreateResponse: object(['complaint'], { complaint: object(['id', 'referenceNumber', 'status'], { id: str, referenceNumber: str, status: { type: 'string', enum: complaintStatuses } }) }),
       PortalComplaintRequest: object(['customerName', 'customerPhone', 'categoryId', 'subcategoryId', 'description', 'incidentAt', 'branchId', 'subject', 'severity'], { customerName: text, customerPhone: text, categoryId: text, subcategoryId: text, description: text, incidentAt: { type: 'string', format: 'date-time' }, branchId: text, subject: text, severity: { type: 'string', enum: complaintSeverities }, vehicleRelated: { type: 'boolean' }, vehicleVin: nullText, vehicleId: nullText }),
@@ -231,6 +240,10 @@ const canonical = {
       PortalSessionResponse: object(['session'], { session: object(['sessionToken', 'expiresAt'], { sessionToken: text, expiresAt: { type: 'string', format: 'date-time' } }) }),
       PortalTrackingResponse: object(['complaint'], { complaint: object(['referenceNumber', 'status', 'createdAt', 'updatedAt', 'timeline'], { referenceNumber: str, status: { type: 'string', enum: complaintStatuses }, createdAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' }, timeline: { type: 'array', items: object(['fromStatus', 'toStatus', 'action', 'createdAt'], { fromStatus: { type: ['string', 'null'], enum: [...complaintStatuses, null] }, toStatus: { type: 'string', enum: complaintStatuses }, action: { type: ['string', 'null'], enum: [...complaintTransitionActions, null] }, createdAt: { type: 'string', format: 'date-time' } }) } }) }),
       PortalFollowUpRequest: object(['body'], { body: text }), PortalFollowUpResponse: object(['ok'], { ok: { const: true } }),
+      PortalSurveySubmitRequest: object(['surveyToken', 'rating'], { surveyToken: text, rating: { type: 'integer', minimum: 1, maximum: 5 }, comment: nullText }),
+      PortalSurveySubmitResponse: object(['survey'], { survey: object(['id', 'rating', 'submittedAt'], { id: str, rating: { type: 'integer', minimum: 1, maximum: 5 }, submittedAt: { type: 'string', format: 'date-time' } }) }),
+      StaffSurveyResult: object(['id', 'complaintId', 'rating', 'submittedAt'], { id: str, complaintId: str, rating: { type: 'integer', minimum: 1, maximum: 5 }, comment: { type: ['string', 'null'] }, submittedAt: { type: 'string', format: 'date-time' } }),
+      StaffSurveyResultsResponse: object(['items'], { items: { type: 'array', items: ref('StaffSurveyResult') } }),
       ComplaintQueueItem: object(['id', 'referenceNumber', 'status', 'severity', 'subject', 'branchId', 'ownerId', 'createdAt', 'updatedAt'], { id: str, referenceNumber: str, status: { type: 'string', enum: complaintStatuses }, severity: { type: 'string', enum: complaintSeverities }, subject: str, branchId: str, ownerId: { type: ['string', 'null'] }, createdAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' } }),
       ComplaintQueueResponse: object(['items'], { items: { type: 'array', items: ref('ComplaintQueueItem') } }),
       ComplaintStatusTimelineItem: object(['id', 'fromStatus', 'toStatus', 'action', 'actorId', 'actorRole', 'requestSource', 'reason', 'correlationId', 'createdAt'], { id: str, fromStatus: { type: ['string', 'null'], enum: [...complaintStatuses, null] }, toStatus: { type: 'string', enum: complaintStatuses }, action: { type: ['string', 'null'], enum: [...complaintTransitionActions, null] }, actorId: { type: ['string', 'null'] }, actorRole: { type: ['string', 'null'], enum: [...roleCodes, null] }, requestSource: { type: ['string', 'null'] }, reason: { type: ['string', 'null'] }, correlationId: { type: ['string', 'null'] }, createdAt: { type: 'string', format: 'date-time' } }),
@@ -258,8 +271,7 @@ const canonical = {
     },
   },
 };
-function object(required, properties) { return { type: 'object', required, properties, additionalProperties: false }; }
-export const canonicalOpenApiText = () => `${JSON.stringify(canonical, null, 2)}\n`;
+function object(required, properties) { return { type: 'object', required, properties, additionalProperties: false }; } export const canonicalOpenApiText = () => `${JSON.stringify(canonical, null, 2)}\n`;
 export function checkOpenApiText(text) {
   let document;
   try {
@@ -268,33 +280,16 @@ export function checkOpenApiText(text) {
     return [`OpenAPI document must be valid JSON (${error.message})`];
   }
   const errors = [];
-  if (document.openapi !== '3.1.0') {
-    errors.push('OpenAPI document must use version 3.1.0');
-  }
-  if (document.info?.title !== 'CMS-Auto API' || typeof document.info.version !== 'string') {
-    errors.push('OpenAPI document must include CMS-Auto API info');
-  }
-  if (!document.paths || typeof document.paths !== 'object' || Array.isArray(document.paths)) {
-    errors.push('OpenAPI document must include a paths object');
-  }
-  for (const [path, method] of [['/auth/login', 'post'], ['/auth/logout', 'post'], ['/auth/me', 'get'], ['/branches', 'get'], ['/branches', 'post'], ['/branches/{idOrCode}', 'get'], ['/branches/{idOrCode}', 'patch'], ['/branches/{id}/deactivate', 'post'], ['/complaints', 'get'], ['/complaints', 'post'], ['/complaints/{id}', 'get'], ['/complaints/{id}/comments', 'post'], ['/complaints/{id}/attachments', 'post'], ['/complaints/{id}/attachments/{attachmentId}/download', 'get'], ['/complaints/{id}/comments/public', 'get'], ['/complaints/{id}/transitions', 'post'], ['/portal/complaints', 'post'], ['/portal/tracking', 'get'], ['/portal/tracking/follow-ups', 'post'], ['/portal/attachments', 'post'], ['/portal/tracking/otp', 'post'], ['/portal/tracking/otp/verify', 'post'], ['/audit/logs', 'get'], ['/audit/logs/export', 'get']]) {
+  if (document.openapi !== '3.1.0') errors.push('OpenAPI document must use version 3.1.0');
+  if (document.info?.title !== 'CMS-Auto API' || typeof document.info.version !== 'string') errors.push('OpenAPI document must include CMS-Auto API info');
+  if (!document.paths || typeof document.paths !== 'object' || Array.isArray(document.paths)) errors.push('OpenAPI document must include a paths object');
+  for (const [path, method] of [['/auth/login', 'post'], ['/auth/logout', 'post'], ['/auth/me', 'get'], ['/branches', 'get'], ['/branches', 'post'], ['/branches/{idOrCode}', 'get'], ['/branches/{idOrCode}', 'patch'], ['/branches/{id}/deactivate', 'post'], ['/notifications/templates', 'get'], ['/notifications/templates', 'post'], ['/notifications/templates/{id}', 'patch'], ['/notifications/templates/{id}/activate', 'post'], ['/notifications/templates/{id}/deactivate', 'post'], ['/complaints', 'get'], ['/complaints', 'post'], ['/complaints/{id}', 'get'], ['/complaints/{id}/comments', 'post'], ['/complaints/{id}/attachments', 'post'], ['/complaints/{id}/attachments/{attachmentId}/download', 'get'], ['/complaints/{id}/comments/public', 'get'], ['/complaints/{id}/surveys', 'get'], ['/complaints/{id}/transitions', 'post'], ['/portal/complaints', 'post'], ['/portal/tracking', 'get'], ['/portal/tracking/follow-ups', 'post'], ['/portal/attachments', 'post'], ['/portal/surveys', 'post'], ['/portal/tracking/otp', 'post'], ['/portal/tracking/otp/verify', 'post'], ['/audit/logs', 'get'], ['/audit/logs/export', 'get']]) {
     if (!document.paths?.[path]?.[method]) errors.push(`OpenAPI document missing ${path} ${method} operation`);
   }
-  for (const schema of ['ErrorEnvelope', 'ErrorBody', 'FieldError', 'AuthLoginRequest', 'AuthLoginResponse', 'AuthLogoutResponse', 'AuthMeResponse', 'StaffAuthClaims', 'Branch', 'BranchListResponse', 'BranchGetResponse', 'BranchWriteResponse', 'BranchCreateRequest', 'BranchUpdateRequest', 'ComplaintCreateRequest', 'ComplaintCreateResponse', 'PortalComplaintRequest', 'PortalOtpRequest', 'PortalOtpRequestResponse', 'PortalOtpVerifyRequest', 'PortalSessionResponse', 'PortalTrackingResponse', 'PortalFollowUpRequest', 'PortalFollowUpResponse', 'ComplaintQueueItem', 'ComplaintQueueResponse', 'ComplaintStatusTimelineItem', 'ComplaintDetailResponse', 'ComplaintCommentRequest', 'ComplaintComment', 'ComplaintCommentResponse', 'ComplaintPublicCommentsResponse', 'AttachmentUploadRequest', 'Attachment', 'AttachmentUploadResponse', 'AttachmentDownloadResponse', 'ComplaintTransitionRequest', 'ComplaintTransition', 'ComplaintTransitionResponse', 'AuditLogEntry', 'AuditLogSearchResponse', 'AuditLogExportResponse']) {
+  for (const schema of ['ErrorEnvelope', 'ErrorBody', 'FieldError', 'AuthLoginRequest', 'AuthLoginResponse', 'AuthLogoutResponse', 'AuthMeResponse', 'StaffAuthClaims', 'Branch', 'BranchListResponse', 'BranchGetResponse', 'BranchWriteResponse', 'BranchCreateRequest', 'BranchUpdateRequest', 'NotificationTemplate', 'NotificationTemplateListResponse', 'NotificationTemplateWriteResponse', 'NotificationTemplateCreateRequest', 'NotificationTemplateUpdateRequest', 'ComplaintCreateRequest', 'ComplaintCreateResponse', 'PortalComplaintRequest', 'PortalOtpRequest', 'PortalOtpRequestResponse', 'PortalOtpVerifyRequest', 'PortalSessionResponse', 'PortalTrackingResponse', 'PortalFollowUpRequest', 'PortalFollowUpResponse', 'PortalSurveySubmitRequest', 'PortalSurveySubmitResponse', 'StaffSurveyResult', 'StaffSurveyResultsResponse', 'ComplaintQueueItem', 'ComplaintQueueResponse', 'ComplaintStatusTimelineItem', 'ComplaintDetailResponse', 'ComplaintCommentRequest', 'ComplaintComment', 'ComplaintCommentResponse', 'ComplaintPublicCommentsResponse', 'AttachmentUploadRequest', 'Attachment', 'AttachmentUploadResponse', 'AttachmentDownloadResponse', 'ComplaintTransitionRequest', 'ComplaintTransition', 'ComplaintTransitionResponse', 'AuditLogEntry', 'AuditLogSearchResponse', 'AuditLogExportResponse']) {
     if (!document.components?.schemas?.[schema]) errors.push(`OpenAPI document missing ${schema} schema`);
   }
   if (text !== canonicalOpenApiText()) errors.push('OpenAPI document is not canonical; run corepack pnpm openapi:generate');
   return errors;
 }
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  if (process.argv.includes('--write')) {
-    writeFileSync(file, canonicalOpenApiText());
-    console.log('OpenAPI scaffold generated');
-  } else {
-    const errors = checkOpenApiText(readFileSync(file, 'utf8'));
-    if (errors.length > 0) {
-      throw new Error(errors.join('\n'));
-    }
-    console.log('OpenAPI scaffold check passed');
-  }
-}
+if (import.meta.url === pathToFileURL(process.argv[1]).href) { if (process.argv.includes('--write')) { writeFileSync(file, canonicalOpenApiText()); console.log('OpenAPI scaffold generated'); } else { const errors = checkOpenApiText(readFileSync(file, 'utf8')); if (errors.length > 0) throw new Error(errors.join('\n')); console.log('OpenAPI scaffold check passed'); } }

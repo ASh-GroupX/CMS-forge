@@ -18,7 +18,7 @@ test('notifications service queues one internal in-app row', async () => {
         status: NotificationStatus.QUEUED,
       };
     },
-  } as NotificationsRepository, {} as IntegrationsService);
+  } as NotificationsRepository, {} as IntegrationsService, {} as never);
 
   const result = await service.queueInternal({
     complaintId: 'cmp_1',
@@ -46,7 +46,7 @@ test('notifications service accepts portal verification request metadata without
       writes.push(data);
       return { id: 'notif_portal', ...data, channel: NotificationChannel.IN_APP, status: NotificationStatus.QUEUED };
     },
-  } as NotificationsRepository, {} as IntegrationsService);
+  } as NotificationsRepository, {} as IntegrationsService, {} as never);
 
   await service.queueInternal({
     complaintId: 'cmp_1',
@@ -114,6 +114,7 @@ test('notifications repository persists queued in-app rows only', async () => {
       providerResult: true,
       sentAt: true,
       failedAt: true,
+      complaint: { select: { customerId: true, severity: true } },
     },
   });
 });
@@ -125,7 +126,7 @@ test('notifications service denies blank template code before write', async () =
       writeCalled = true;
       throw new Error('should not write');
     },
-  } as unknown as NotificationsRepository, {} as IntegrationsService);
+  } as unknown as NotificationsRepository, {} as IntegrationsService, {} as never);
 
   await assert.rejects(
     service.queueInternal({ templateCode: ' ', payload: { breachId: 'breach_1' } }),
@@ -141,7 +142,7 @@ test('notifications service denies unsafe payload keys before write', async () =
       writeCalled = true;
       throw new Error('should not write');
     },
-  } as unknown as NotificationsRepository, {} as IntegrationsService);
+  } as unknown as NotificationsRepository, {} as IntegrationsService, {} as never);
 
   await assert.rejects(
     service.queueInternal({ templateCode: 'sla.breach.internal', payload: { providerSecret: 'hidden' } }),
@@ -161,7 +162,7 @@ test('notifications service denies non-plain payload objects before write', asyn
       writeCalled = true;
       throw new Error('should not write');
     },
-  } as unknown as NotificationsRepository, {} as IntegrationsService);
+  } as unknown as NotificationsRepository, {} as IntegrationsService, {} as never);
 
   for (const payload of [new Date('2026-06-19T00:00:00.000Z'), new Map(), new Set()]) {
     await assert.rejects(

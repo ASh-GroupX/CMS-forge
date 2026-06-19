@@ -1,8 +1,156 @@
 ﻿# Current State
 
-Status: Ready to Build
+Status: Needs Phase Review
 Phase: Phase 5 - Attachments And Notifications
-Next Task: F5-05C - Add Admin Notification Template Routes With RBAC And OpenAPI
+Next Task: PHASE-5-REVIEW - Attachments And Notifications Acceptance Review
+
+## REPAIR-F5-06B-CRITICAL-QUIET-HOUR-BYPASS Built - Needs Phase Review
+
+`REPAIR-F5-06B-CRITICAL-QUIET-HOUR-BYPASS` repaired notification quiet-hour
+behavior so queued SMS dispatch reads persisted complaint severity, preserves
+preferred-channel denial, preserves non-critical quiet-hour suppression, and lets
+critical complaint SMS bypass quiet hours with the safe
+`CRITICAL_COMPLAINT_QUIET_HOURS_BYPASS` delivery metadata reason.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- notifications
+39/39, openapi:check, prisma:validate, and git diff --check with line-ending
+warnings only.
+
+Phase 5 must return to the mandatory PHASE-REVIEWER gate before Phase 6 starts.
+
+## PHASE-5-REVIEW Repair Required
+
+PHASE-5-REVIEW independently re-ran the required proof surface on 2026-06-19:
+lint, typecheck, test 29/29, test:api -- attachments 28/28, test:api --
+integrations 9/9, test:api -- notifications 37/37, test:api -- surveys 13/13,
+openapi:check, prisma:validate, and git diff --check with line-ending warnings
+only.
+
+Decision: Repair Required. `REQ-NOTIFY-002` AC3 requires critical complaints to
+bypass quiet-hour suppression and record the reason. Current notification
+dispatch suppresses all SMS during quiet hours without reading persisted
+complaint severity, and `F5-06B` evidence explicitly says no critical-complaint
+bypass was added.
+
+Phase 6 must not start until the repair is built and re-reviewed.
+
+## Phase 5 Build Complete - Needs Phase Review
+
+`F5-07D` added guarded staff reads for submitted survey results at
+`GET /complaints/:complaintId/surveys`. The route verifies scoped complaint
+visibility before reading surveys, returns only submitted results, and exposes a
+privacy-limited staff response shape.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- surveys 13/13,
+openapi:check, and git diff --check with line-ending warnings only.
+
+All Phase 5 backlog tasks are complete. AUTO PHASE stops here for the mandatory
+Phase 5 PHASE-REVIEWER gate.
+
+## F5-07C Built - AUTO PHASE Continuing
+
+`F5-07C` added public `POST /portal/surveys` for one-time expiring survey token
+submission, with token-hash verification, 1-5 rating validation, duplicate
+denial, and OpenAPI coverage.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- surveys 8/8,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No staff survey result read model, staff/admin UI, customer portal UI, complaint
+state change, notification dispatch behavior change, or report integration was
+added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-07D`.
+
+## F5-07B Built - AUTO PHASE Continuing
+
+`F5-07B` added backend survey scheduling behavior for pending complaint/customer
+surveys, SHA-256 token-hash storage, idempotent pending survey reuse, and
+notification queueing after persistence.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- surveys 4/4,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No portal survey submission route, staff survey result read model, OpenAPI
+route, UI, complaint state change, real provider call, provider credential, or
+report integration was added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-07C`.
+
+## F5-07A Built - AUTO PHASE Continuing
+
+`F5-07A` generated the canonical surveys backend module, filled the real module
+manifest, and wired `SurveysModule` into the API root module.
+
+Required proof passed: generate:module, lint, typecheck, test 29/29,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No survey scheduling behavior, portal survey submission route, staff survey read
+model, OpenAPI route, UI, notification dispatch behavior change, schema change,
+or migration was added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-07B`.
+
+## F5-06B Built - AUTO PHASE Continuing
+
+`F5-06B` enforced stored customer preferred-channel and SMS quiet-hour
+preferences before provider dispatch. Suppressed sends use stable safe skip
+reasons through the existing retry-safe failed terminal path.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- notifications
+37/37, openapi:check, and git diff --check with line-ending warnings only.
+
+No UI, public/customer preference route, OpenAPI route, real provider call,
+provider credential, retry scheduler, critical-complaint bypass, or marketing
+subscription behavior was added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-07A`.
+
+## F5-06A Built - AUTO PHASE Continuing
+
+`F5-06A` added customer notification preference persistence and backend service
+methods for safe default reads and validated upserts.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- notifications
+34/34, openapi:check, prisma:validate, and git diff --check with line-ending
+warnings only.
+
+No dispatch preference enforcement, quiet-hour suppression, UI, public route,
+OpenAPI route, real provider call, provider credential, or marketing
+subscription behavior was added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-06B`.
+
+## F5-05D Built - AUTO PHASE Continuing
+
+`F5-05D` added notification delivery attempt persistence and made existing
+email/SMS/WhatsApp sent/failed repository updates write the attempt log and
+guarded terminal status update in one transaction.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- notifications
+29/29, openapi:check, prisma:validate, and git diff --check with line-ending
+warnings only.
+
+No provider behavior change, real provider call, provider credential, route,
+Admin UI, retry scheduler, template preview/import/export, or customer
+preference behavior was added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-06A`.
+
+## F5-05C Built - AUTO PHASE Continuing
+
+`F5-05C` added backend-only Admin notification template management routes for
+listing, creating, updating, activating, and deactivating templates. Mutation
+routes use server-session auth, Admin RBAC, CSRF, validation before writes, and
+same-transaction `CONFIG` audit entries. OpenAPI documents every new route.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- notifications
+26/26, openapi:check, and git diff --check with line-ending warnings only.
+
+No Admin UI, dispatch behavior change, provider behavior, delivery-attempt log
+schema, template preview endpoint, import, or export was added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-05D`.
 
 ## F5-05B Built - AUTO PHASE Paused At Wider Route Slice
 

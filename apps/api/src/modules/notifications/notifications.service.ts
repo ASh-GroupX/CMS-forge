@@ -1,13 +1,20 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { NotificationChannel } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
+import { AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import { IntegrationsService } from '../integrations/integrations.service.js';
-import type { EmailMessageInput } from '../integrations/email-provider.port.js';
-import type { SmsMessageInput } from '../integrations/sms-provider.port.js';
-import type { WhatsAppMessageInput } from '../integrations/whatsapp-provider.port.js';
 import { NotificationsRepository } from './notifications.repository.js';
-import type { NotificationRecord } from './notifications.repository.js';
+import type { NotificationDeliveryMetadata, NotificationRecord } from './notifications.repository.js';
+import { dispatchSkipReason, emailMessage, failureReason, quietHourBypassReason, smsMessage, whatsAppMessage } from './notification-dispatch.rules.js';
+import { preferenceData, preferenceDto } from './notification-preference.rules.js';
+import type { NotificationPreferenceDto, NotificationPreferenceInput } from './notification-preference.rules.js';
+import { createTemplateData, updateTemplateData } from './notification-template.rules.js';
+import type { NotificationTemplateCreateData, NotificationTemplateUpdateData } from './notification-template.rules.js';
+import { templateAudit } from './notification-template.audit.js';
+import type { NotificationTemplateAuditContext } from './notification-template.audit.js';
+import { notificationTemplateDto } from './dto/notification-response.dto.js';
+import type { NotificationTemplateResponseDto } from './dto/notification-response.dto.js';
 
 export type QueueInternalNotificationInput = {
   complaintId?: string | null;
@@ -45,7 +52,48 @@ export class NotificationsService {
   constructor(
     private readonly notificationsRepository: NotificationsRepository,
     private readonly integrationsService: IntegrationsService,
+    private readonly auditService: AuditService,
   ) {}
+
+  async listTemplates(): Promise<NotificationTemplateResponseDto[]> {
+    return (await this.notificationsRepository.listTemplates()).map(notificationTemplateDto);
+  }
+
+  async getCustomerPreference(customerId: string): Promise<NotificationPreferenceDto> {
+    return preferenceDto(customerId, await this.notificationsRepository.findCustomerPreference(requiredText(customerId, 'customerId')));
+  }
+
+  async upsertCustomerPreference(input: NotificationPreferenceInput): Promise<NotificationPreferenceDto> {
+    const data = preferenceData(input);
+    return preferenceDto(data.customerId, await this.notificationsRepository.upsertCustomerPreference(data));
+  }
+
+  async createTemplate(input: NotificationTemplateCreateData, audit: NotificationTemplateAuditContext = {}): Promise<NotificationTemplateResponseDto> {
+    const data = createTemplateData(input);
+    return this.notificationsRepository.transaction(async (client) => {
+      const template = await this.notificationsRepository.createTemplate(data, client);
+      await this.auditService.record(templateAudit('template_created', template, audit, data), client);
+      return notificationTemplateDto(template);
+    });
+  }
+
+  async updateTemplate(id: string, input: NotificationTemplateUpdateData, audit: NotificationTemplateAuditContext = {}): Promise<NotificationTemplateResponseDto> {
+    const data = updateTemplateData(input);
+    if (Object.keys(data).length === 0) throw invalidNotification('body');
+    return this.notificationsRepository.transaction(async (client) => {
+      const template = await this.notificationsRepository.updateTemplate(requiredText(id, 'id'), data, client);
+      await this.auditService.record(templateAudit('template_updated', template, audit, data), client);
+      return notificationTemplateDto(template);
+    });
+  }
+
+  async setTemplateActive(id: string, isActive: boolean, audit: NotificationTemplateAuditContext = {}): Promise<NotificationTemplateResponseDto> {
+    return this.notificationsRepository.transaction(async (client) => {
+      const template = await this.notificationsRepository.setTemplateActive(requiredText(id, 'id'), isActive, client);
+      await this.auditService.record(templateAudit(isActive ? 'template_activated' : 'template_deactivated', template, audit, { isActive }), client);
+      return notificationTemplateDto(template);
+    });
+  }
 
   async queueInternal(input: QueueInternalNotificationInput): Promise<NotificationRecord> {
     const templateCode = requiredText(input.templateCode, 'templateCode');
@@ -61,39 +109,42 @@ export class NotificationsService {
     });
   }
 
-  async dispatchQueuedEmail(limit = 25): Promise<DispatchEmailNotificationsResult> {
+  async dispatchQueuedEmail(limit = 25, now = new Date()): Promise<DispatchEmailNotificationsResult> {
     const queued = await this.notificationsRepository.findQueuedEmail(limit);
     return this.dispatchQueued(
       queued,
       emailMessage,
       (input) => this.integrationsService.sendEmail(input),
-      (id, sent) => this.notificationsRepository.markEmailSent(id, sent),
+      (id, sent, metadata) => this.notificationsRepository.markEmailSent(id, sent, metadata),
       (data) => this.notificationsRepository.markEmailFailed(data),
       'EMAIL_PROVIDER_FAILED',
+      now,
     );
   }
 
-  async dispatchQueuedSms(limit = 25): Promise<DispatchEmailNotificationsResult> {
+  async dispatchQueuedSms(limit = 25, now = new Date()): Promise<DispatchEmailNotificationsResult> {
     const queued = await this.notificationsRepository.findQueuedSms(limit);
     return this.dispatchQueued(
       queued,
       smsMessage,
       (input) => this.integrationsService.sendSms(input),
-      (id, sent) => this.notificationsRepository.markSmsSent(id, sent),
+      (id, sent, metadata) => this.notificationsRepository.markSmsSent(id, sent, metadata),
       (data) => this.notificationsRepository.markSmsFailed(data),
       'SMS_PROVIDER_FAILED',
+      now,
     );
   }
 
-  async dispatchQueuedWhatsApp(limit = 25): Promise<DispatchEmailNotificationsResult> {
+  async dispatchQueuedWhatsApp(limit = 25, now = new Date()): Promise<DispatchEmailNotificationsResult> {
     const queued = await this.notificationsRepository.findQueuedWhatsApp(limit);
     return this.dispatchQueued(
       queued,
       whatsAppMessage,
       (input) => this.integrationsService.sendWhatsApp(input),
-      (id, sent) => this.notificationsRepository.markWhatsAppSent(id, sent),
+      (id, sent, metadata) => this.notificationsRepository.markWhatsAppSent(id, sent, metadata),
       (data) => this.notificationsRepository.markWhatsAppFailed(data),
       'WHATSAPP_PROVIDER_FAILED',
+      now,
     );
   }
 
@@ -124,16 +175,23 @@ export class NotificationsService {
     queued: NotificationRecord[],
     buildMessage: (notification: NotificationRecord) => TInput,
     send: (input: TInput) => Promise<TResult>,
-    markSent: (id: string, result: TResult) => Promise<boolean>,
+    markSent: (id: string, result: TResult, metadata?: NotificationDeliveryMetadata) => Promise<boolean>,
     markFailed: (data: { id: string; failureReason: string }) => Promise<boolean>,
     providerFailureCode: string,
+    now: Date,
   ): Promise<DispatchEmailNotificationsResult> {
     const result: DispatchEmailNotificationsResult = { attempted: queued.length, sent: 0, failed: 0, skipped: 0 };
 
     for (const notification of queued) {
       try {
+        const { skipReason, metadata } = await this.dispatchDecision(notification, now);
+        if (skipReason) {
+          if (await markFailed({ id: notification.id, failureReason: skipReason })) result.failed += 1;
+          else result.skipped += 1;
+          continue;
+        }
         const sent = await send(buildMessage(notification));
-        if (await markSent(notification.id, sent)) result.sent += 1;
+        if (await markSent(notification.id, sent, metadata)) result.sent += 1;
         else result.skipped += 1;
       } catch (error) {
         if (await markFailed({ id: notification.id, failureReason: failureReason(error, providerFailureCode) })) result.failed += 1;
@@ -142,6 +200,14 @@ export class NotificationsService {
     }
 
     return result;
+  }
+
+  private async dispatchDecision(notification: NotificationRecord, now: Date): Promise<{ skipReason: string | null; metadata?: NotificationDeliveryMetadata }> {
+    const customerId = notification.complaint?.customerId;
+    const preference = customerId ? await this.notificationsRepository.findCustomerPreference(customerId) : null;
+    const bypassReason = quietHourBypassReason(notification, preference, now);
+    const decision = { skipReason: dispatchSkipReason(notification, preference, now) };
+    return bypassReason ? { ...decision, metadata: { quietHourBypassReason: bypassReason } } : decision;
   }
 }
 
@@ -182,39 +248,6 @@ function scalarAtPath(value: unknown, path: string): string {
   return ['string', 'number', 'boolean'].includes(typeof found) ? String(found) : '';
 }
 
-function emailMessage(notification: NotificationRecord): EmailMessageInput {
-  const payload = isPlainObject(notification.payload) ? notification.payload : {};
-  return {
-    to: payloadText(payload.to) ?? '',
-    subject: payloadText(payload.subject) || notification.templateCode,
-    textBody: payloadText(payload.textBody),
-    htmlBody: payloadText(payload.htmlBody),
-    payload,
-  };
-}
-
-function smsMessage(notification: NotificationRecord): SmsMessageInput {
-  const payload = isPlainObject(notification.payload) ? notification.payload : {};
-  return {
-    to: payloadText(payload.to) ?? '',
-    textBody: payloadText(payload.textBody) ?? '',
-    payload,
-  };
-}
-
-function whatsAppMessage(notification: NotificationRecord): WhatsAppMessageInput {
-  const payload = isPlainObject(notification.payload) ? notification.payload : {};
-  return {
-    to: payloadText(payload.to) ?? '',
-    textBody: payloadText(payload.textBody) ?? '',
-    payload,
-  };
-}
-
-function payloadText(value: unknown): string | null {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
 function isJson(value: unknown): value is Prisma.InputJsonValue {
   if (value === null || ['string', 'number', 'boolean'].includes(typeof value)) return true;
   if (Array.isArray(value)) return value.every(isJson);
@@ -235,9 +268,4 @@ function invalidNotification(field: string): AppException {
   return new AppException('VALIDATION_FAILED', 'Invalid notification request', HttpStatus.BAD_REQUEST, [
     { field, code: 'REQUIRED', message: `${field} is required or invalid.` },
   ]);
-}
-
-function failureReason(error: unknown, providerFailureCode: string): string {
-  if (error instanceof AppException) return error.code;
-  return providerFailureCode;
 }

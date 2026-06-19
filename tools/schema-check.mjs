@@ -18,7 +18,9 @@ export const requiredModels = [
   'SlaPolicy',
   'SlaEvent',
   'Notification',
+  'NotificationDeliveryAttempt',
   'NotificationTemplate',
+  'CustomerNotificationPreference',
   'Survey',
   'Compensation',
   'PortalVerification',
@@ -37,7 +39,9 @@ export function checkSchemaText(text) {
 
   for (const [model, table] of [
     ['ComplaintStatusHistory', 'complaint_status_history'],
+    ['NotificationDeliveryAttempt', 'notification_delivery_attempts'],
     ['NotificationTemplate', 'notification_templates'],
+    ['CustomerNotificationPreference', 'customer_notification_preferences'],
     ['AuditLog', 'audit_logs'],
   ]) {
     const block = text.match(new RegExp(`model\\s+${model}\\s+{[\\s\\S]*?\\n}`))?.[0] ?? '';
@@ -88,6 +92,14 @@ export function checkSchemaText(text) {
   }
   if (!templateBlock.includes('@@index([code, channel, locale, isActive])')) {
     errors.push('NotificationTemplate must index active template lookup');
+  }
+  const attemptBlock = text.match(/model\s+NotificationDeliveryAttempt\s+{[\s\S]*?\n}/)?.[0] ?? '';
+  for (const field of ['notificationId', 'channel', 'status', 'providerResult', 'failureReason', 'attemptedAt']) {
+    if (!new RegExp(`\\b${field}\\b`).test(attemptBlock)) errors.push(`NotificationDeliveryAttempt must include ${field}`);
+  }
+  const preferenceBlock = text.match(/model\s+CustomerNotificationPreference\s+{[\s\S]*?\n}/)?.[0] ?? '';
+  for (const field of ['customerId', 'preferredChannel', 'smsQuietStart', 'smsQuietEnd', 'timezone']) {
+    if (!new RegExp(`\\b${field}\\b`).test(preferenceBlock)) errors.push(`CustomerNotificationPreference must include ${field}`);
   }
 
   return errors;

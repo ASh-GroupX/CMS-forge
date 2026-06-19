@@ -2971,3 +2971,225 @@ Residual risk: this is a required customer-portal privacy gate. A fresh verifier
   - Missing templates and unsafe payload data fail safely.
   - No admin route, OpenAPI path, dispatch behavior change, provider behavior,
     delivery-attempt schema, mutation service, or UI was added.
+
+## F5-05C - Add Admin Notification Template Routes With RBAC And OpenAPI
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-05D`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (26/26)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Notification template management is backend-only and Admin-only.
+  - Mutations use CSRF and same-transaction CONFIG audit entries.
+  - Responses are explicit DTOs and do not expose provider credentials.
+  - No UI, dispatch behavior, provider behavior, delivery-attempt schema,
+    preview, import, or export behavior was added.
+
+## F5-05D - Add Notification Delivery Attempt Log And Retry-Safe Status Updates
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-06A`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (29/29)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `corepack pnpm prisma:validate`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Delivery attempts are persisted for email/SMS/WhatsApp provider send tries.
+  - Attempt logging and terminal sent/failed updates share one repository
+    transaction.
+  - Terminal status updates remain guarded by `QUEUED`, so stale attempts do not
+    overwrite already-terminal notifications.
+  - No provider behavior, route, UI, retry scheduler, or preference behavior was
+    added.
+
+## F5-06A - Add Customer Notification Preference Schema And Service
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-06B`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (34/34)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `corepack pnpm prisma:validate`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Customer notification preference persistence and service read/upsert behavior
+    now exist.
+  - Missing rows return explicit defaults.
+  - Dispatch preference enforcement and quiet-hour suppression remain unbuilt for
+    `F5-06B`.
+
+## F5-06B - Enforce Quiet Hours And Channel Preference During Dispatch
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-07A`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (37/37)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Preferred-channel and SMS quiet-hour suppression now happen before provider
+    calls.
+  - Suppressed sends use stable safe skip reasons through the existing failed
+    terminal path.
+  - Critical-complaint quiet-hour bypass is intentionally not added in this
+    slice, per `next.md`.
+
+## F5-07A - Generate Surveys Module Boundary And Manifest
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-07B`.
+- Verification:
+  - Passed: `corepack pnpm generate:module -- surveys`
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - `SurveysModule` now exists and is root-reachable.
+  - No survey behavior, route, schema, migration, UI, or dispatch change was
+    added.
+
+## F5-07B - Schedule Survey Links From Closure Notification Events
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-07C`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- surveys` (4/4)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Pending survey link scheduling exists with hashed token storage and
+    after-persistence notification queueing.
+  - Portal submission, staff reads, OpenAPI routes, and UI remain unbuilt for
+    later slices.
+
+## F5-07C - Add One-Time Expiring Portal Survey Submission API
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-07D`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- surveys` (8/8)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Portal survey submission is token-gated, one-time, and documented in
+    OpenAPI.
+  - Response shape is intentionally minimal and does not expose token hashes or
+    complaint internals.
+
+## F5-07D - Expose Submitted Survey Results To Authorized Staff Read Models
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; Phase 5 build is complete and AUTO PHASE must stop
+  for `PHASE-5-REVIEW`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- surveys` (13/13)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Submitted survey staff reads are backend-only and guarded by session auth,
+    RBAC, and branch-scope metadata.
+  - The controller checks scoped complaint visibility before reading survey
+    results, which keeps branch-hidden complaint IDs from becoming a survey data
+    oracle.
+  - Staff response shape is explicit and omits token hashes, customer IDs,
+    provider data, audit logs, and unrelated records.
+
+## PHASE-5-REVIEW - Attachments And Notifications Acceptance Review
+
+- Date: 2026-06-19
+- Required model tier: PHASE-REVIEWER
+- Risk: High
+- Decision: Repair Required
+- Builder honesty: Honest
+- Code quality: Acceptable
+- Recommendation: Repair `F5-06B` before Phase 6 starts.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- attachments` (28/28)
+  - Passed: `corepack pnpm test:api -- integrations` (9/9)
+  - Passed: `corepack pnpm test:api -- notifications` (37/37)
+  - Passed: `corepack pnpm test:api -- surveys` (13/13)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `corepack pnpm prisma:validate`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Findings:
+  - Blocking: `REQ-NOTIFY-002` AC3 is unmet. Critical complaints must be able to
+    bypass SMS quiet-hour suppression and record the reason, but current
+    dispatch suppresses every quiet-hour SMS without reading persisted complaint
+    severity. `F5-06B` evidence explicitly records that no critical-complaint
+    bypass was added.
+- Notes:
+  - Phase 5 backlog completion, attachments privacy/scan behavior, provider
+    adapter boundaries, template admin audit, delivery-attempt transactions,
+    survey token privacy, staff survey visibility, OpenAPI checks, and import
+    boundary checks did not show another blocking gap in this review.
+  - The review task listed `REQ-ATTACH-001`, but the SRS attachment IDs are
+    `ARCH-FILES-001` and `REQ-FILES-001`; Phase 5 attachment evidence and the
+    attachments module use the real SRS IDs.
+
+## REPAIR-F5-06B-CRITICAL-QUIET-HOUR-BYPASS - Honor Critical SMS Quiet-Hour Bypass
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; Phase 5 must return to the `PHASE-5-REVIEW` gate
+  before Phase 6 starts.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (39/39)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `corepack pnpm prisma:validate`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - The repair uses persisted complaint severity from the notification query,
+    not payload/client input.
+  - Critical SMS quiet-hour bypass records
+    `CRITICAL_COMPLAINT_QUIET_HOURS_BYPASS` in safe sent metadata.
+  - Preferred-channel suppression and non-critical SMS quiet-hour suppression
+    remain enforced before provider dispatch.

@@ -101,7 +101,7 @@ test('notifications template resolution exposes no provider credentials', async 
 });
 
 function templateService(repository: Partial<NotificationsRepository>): NotificationsService {
-  return new NotificationsService(repository as NotificationsRepository, {} as IntegrationsService);
+  return new NotificationsService(repository as NotificationsRepository, {} as IntegrationsService, {} as never);
 }
 
 function template(locale: string, body: string) {
@@ -113,5 +113,9 @@ function template(locale: string, body: string) {
     subject: body,
     body,
     version: 1,
+    versionNote: null,
+    isActive: true,
+    createdAt: new Date('2026-06-19T10:00:00.000Z'),
+    updatedAt: new Date('2026-06-19T10:00:00.000Z'),
   };
 }

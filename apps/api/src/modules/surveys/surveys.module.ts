@@ -1,23 +1,23 @@
 import { Module } from '@nestjs/common';
 import { AuditService } from '../../core/audit.service.js';
 import { RbacGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../core/auth.guard.js';
-import { CsrfGuard } from '../../core/csrf.guard.js';
 import { PrismaService } from '../../core/http-kernel.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { AuthService } from '../auth/auth.service.js';
-import { IntegrationsModule } from '../integrations/integrations.module.js';
-import { NotificationsController } from './notifications.controller.js';
-import { NotificationsRepository } from './notifications.repository.js';
-import { NotificationsService } from './notifications.service.js';
+import { ComplaintsModule } from '../complaints/complaints.module.js';
+import { NotificationsModule } from '../notifications/notifications.module.js';
+import { ComplaintSurveysController, SurveysController } from './surveys.controller.js';
+import { SurveysRepository } from './surveys.repository.js';
+import { SurveysService } from './surveys.service.js';
 
 @Module({
-  imports: [AuthModule, IntegrationsModule],
-  controllers: [NotificationsController],
+  imports: [AuthModule, ComplaintsModule, NotificationsModule],
+  controllers: [SurveysController, ComplaintSurveysController],
   providers: [
     PrismaService,
     AuditService,
-    NotificationsRepository,
-    NotificationsService,
+    SurveysRepository,
+    SurveysService,
     {
       provide: SESSION_AUTH_SERVICE,
       inject: [AuthService],
@@ -25,8 +25,7 @@ import { NotificationsService } from './notifications.service.js';
     },
     SessionAuthGuard,
     RbacGuard,
-    CsrfGuard,
   ],
-  exports: [NotificationsService],
+  exports: [SurveysService],
 })
-export class NotificationsModule {}
+export class SurveysModule {}

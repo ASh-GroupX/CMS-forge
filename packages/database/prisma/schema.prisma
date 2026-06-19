@@ -306,6 +306,7 @@ model Customer {
   surveys             Survey[]
   portalVerifications PortalVerification[]
   portalSessions      PortalSession[]
+  notificationPreference CustomerNotificationPreference?
 
   @@map("customers")
 }
@@ -513,10 +514,41 @@ model Notification {
   failedAt       DateTime?           @map("failed_at")
   complaint      Complaint?          @relation(fields: [complaintId], references: [id])
   recipientUser  User?               @relation("NotificationRecipient", fields: [recipientUserId], references: [id])
+  deliveryAttempts NotificationDeliveryAttempt[]
 
   @@index([complaintId])
   @@index([recipientUserId, status])
   @@map("notifications")
+}
+
+model NotificationDeliveryAttempt {
+  id             String              @id @default(cuid())
+  notificationId String              @map("notification_id")
+  channel        NotificationChannel
+  status         NotificationStatus
+  provider       String?
+  providerResult String?             @map("provider_result")
+  failureReason  String?             @map("failure_reason")
+  attemptedAt    DateTime            @default(now()) @map("attempted_at")
+  notification   Notification        @relation(fields: [notificationId], references: [id])
+
+  @@index([notificationId, attemptedAt])
+  @@index([status])
+  @@map("notification_delivery_attempts")
+}
+
+model CustomerNotificationPreference {
+  id                 String               @id @default(cuid())
+  customerId         String               @unique @map("customer_id")
+  preferredChannel   NotificationChannel? @map("preferred_channel")
+  smsQuietStart      String?              @map("sms_quiet_start")
+  smsQuietEnd        String?              @map("sms_quiet_end")
+  timezone           String?
+  createdAt          DateTime             @default(now()) @map("created_at")
+  updatedAt          DateTime             @updatedAt @map("updated_at")
+  customer           Customer             @relation(fields: [customerId], references: [id])
+
+  @@map("customer_notification_preferences")
 }
 
 model NotificationTemplate {
