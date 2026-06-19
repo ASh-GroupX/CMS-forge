@@ -76,9 +76,9 @@ history from another project.
   - [x] F3-03A1: Generate notifications module boundary and manifest
   - [x] F3-03A2: Add queued internal notification public service (Verify Gate: required)
   - [x] F3-03A3: Queue escalation notification events after SLA breach commit
-- [ ] F3-04: Reopen, send-back, resolve, and close workflows
+- [x] F3-04: Reopen, send-back, resolve, and close workflows
   - [x] F3-04A: Enforce send-back/reopen reasons and resolution requirements
-  - [ ] F3-04B: Add closure/reopen side-effect scheduling without in-transaction side effects
+  - [x] F3-04B: Add closure/reopen side-effect scheduling without in-transaction side effects
 
 ## Phase 4 - Customer Portal
 

@@ -3,6 +3,7 @@ import { CommentVisibility, ComplaintSeverity, ComplaintStatus, ComplaintTransit
 import { AuditService } from '../../core/audit.service.js';
 import type { AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { ComplaintsRepository } from './complaints.repository.js';
 import type { ComplaintCommentRecord, ComplaintDetailRecord, ComplaintQueueRecord, ComplaintRecord, CreateComplaintData } from './complaints.repository.js';
 import type { ComplaintDetailDto, ComplaintQueueItemDto } from './dto/complaint-response.dto.js';
@@ -58,7 +59,7 @@ function transition(fromStatus: ComplaintStatus, action: ComplaintTransitionActi
 
 @Injectable()
 export class ComplaintsService {
-  constructor(private readonly complaintsRepository: ComplaintsRepository, private readonly auditService: AuditService) {}
+  constructor(private readonly complaintsRepository: ComplaintsRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService) {}
 
   async createInternal(input: CreateInternalComplaintInput): Promise<ComplaintCreationResult> {
     const data = createComplaintData(input);
@@ -136,7 +137,7 @@ export class ComplaintsService {
 
     validateRequiredTransitionData(input);
 
-    return this.complaintsRepository.transaction(async (client) => {
+    const result = await this.complaintsRepository.transaction(async (client) => {
       const complaint = await this.complaintsRepository.updateStatus(
         { complaintId: input.complaintId, fromStatus: input.fromStatus, toStatus: decision.toStatus },
         client,
@@ -161,6 +162,8 @@ export class ComplaintsService {
 
       return { complaintId: complaint.id, ...decision };
     });
+    await queueWorkflowSideEffect(this.notificationsService, input, result.toStatus);
+    return result;
   }
 }
 
@@ -286,4 +289,10 @@ function workflowAuditInput(input: ApplyComplaintTransitionInput, toStatus: Comp
     userAgent: input.userAgent ?? null,
     metadata: { fromStatus: input.fromStatus, toStatus, action: input.action, actorRole: input.actorRole, requestSource: input.requestSource, resolutionType: input.resolutionType ?? null, resolutionSummary: input.resolutionSummary ?? null, customerCommunicationStatus: input.customerCommunicationStatus ?? null },
   };
+}
+
+async function queueWorkflowSideEffect(notificationsService: NotificationsService | undefined, input: ApplyComplaintTransitionInput, toStatus: ComplaintStatus): Promise<void> {
+  const templateCode = input.action === ComplaintTransitionAction.CLOSE ? 'survey.schedule.internal' : input.action === ComplaintTransitionAction.REOPEN ? 'workflow.reopened.internal' : null;
+  if (!templateCode || !notificationsService) return;
+  await notificationsService.queueInternal({ complaintId: input.complaintId, templateCode, payload: { complaintId: input.complaintId, fromStatus: input.fromStatus, toStatus, action: input.action, actorId: input.actorId ?? null, reason: input.reason ?? null, customerCommunicationStatus: input.customerCommunicationStatus ?? null } });
 }

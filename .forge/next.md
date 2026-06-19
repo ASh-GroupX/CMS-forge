@@ -1,4 +1,4 @@
-# Verify Task: VERIFY-F3-04A - Workflow Required Data Gate
+# Verify Task: VERIFY-F3-04B - Closure/Reopen Side-Effect Scheduling Gate
 
 Status: Needs Verify
 Required model tier: independent VERIFY
@@ -7,40 +7,33 @@ Phase: Phase 3 - SLA And Workflow Operations
 
 ## Why This Exists
 
-`F3-04A` changes complaint workflow validation before status/history/audit writes.
-Verify that required-data gaps fail closed before transactions, while valid
-transitions keep the same canonical workflow persistence behavior.
+`F3-04B` adds post-commit side-effect scheduling for close and reopen workflow
+transitions. Verify that queueing happens only after the status/history/audit
+transaction succeeds, and never on denied or failed transitions.
 
 ## Scope To Review
 
+- `apps/api/src/modules/complaints/complaints.module.ts`
 - `apps/api/src/modules/complaints/complaints.service.ts`
-- `apps/api/src/modules/complaints/dto/complaint-transition.dto.ts`
 - `apps/api/test/workflow/transition-matrix.test.ts`
-- `packages/contracts/openapi.json`
-- `tools/openapi-check.mjs`
 - `.forge/evidence.md`
 - `.forge/trust.md`
 
 ## Verify Requirements
 
-- Confirm missing or blank required transition data rejects with
-  `VALIDATION_FAILED` before repository transaction, status update, status history,
-  or WORKFLOW audit writes.
-- Confirm `reason` is required for `SEND_BACK`, `REOPEN`, `REJECT_AS_INVALID`,
-  `REJECT_AFTER_REVIEW`, `REJECT_AFTER_INVESTIGATION`, and `REJECT_RESOLUTION`.
-- Confirm `RESOLVE` and `RESOLVE_DIRECTLY` require `resolutionType`,
-  `resolutionSummary`, and backend-owned `actorId` from the server session.
-- Confirm `CLOSE` requires closure confirmation in `reason` and non-empty
-  `customerCommunicationStatus`.
-- Confirm valid required-data transitions still update status, insert status
-  history, and write WORKFLOW audit in the same transaction.
-- Confirm existing invalid-transition, unauthorized-role, stale-status, and
-  branch-scope denial behavior still passes.
-- Confirm OpenAPI documents the transition request fields and
-  `openapi:check` protects them.
-- Confirm no schema changes, migrations, comments, attachments, notifications, SLA
-  recalculation, survey scheduling, routes, UI, portal behavior, or provider calls
-  were added.
+- Confirm `ComplaintsModule` imports `NotificationsModule`.
+- Confirm `ComplaintsService` injects only `NotificationsService` from the
+  notifications module.
+- Confirm successful `CLOSE` queues `survey.schedule.internal` after the workflow
+  transaction writes status, status history, and WORKFLOW audit.
+- Confirm successful `REOPEN` queues `workflow.reopened.internal` after the
+  workflow transaction writes status, status history, and WORKFLOW audit.
+- Confirm side effects are not queued inside the complaint transaction.
+- Confirm validation failure, RBAC denial, branch-scope denial, stale persisted
+  status, and transaction failure do not queue side effects.
+- Confirm no notification repository/DTO/Prisma model, worker, provider, route,
+  schema, migration, survey module behavior, SLA recalculation, OpenAPI, UI,
+  portal, report, comment, or attachment work was added.
 
 ## Verification Commands
 
@@ -48,6 +41,7 @@ transitions keep the same canonical workflow persistence behavior.
 - `corepack pnpm typecheck`
 - `corepack pnpm test`
 - `corepack pnpm test:api -- workflow`
+- `corepack pnpm test:api -- notifications`
 - `corepack pnpm openapi:check`
 
 ## Expected Output
@@ -55,9 +49,10 @@ transitions keep the same canonical workflow persistence behavior.
 If accepted:
 
 - Append VERIFY evidence to `.forge/trust.md`.
-- Set `.forge/state.md` to `Ready to Build`.
-- Write `F3-04B - Add Closure/Reopen Side-Effect Scheduling Without In-Transaction Side Effects` to `.forge/next.md`.
-- Continue AUTO PHASE only after the gate is explicitly accepted.
+- Because Phase 3 backlog is complete, set `.forge/state.md` to
+  `Needs Phase Review`.
+- Write a Phase 3 review task to `.forge/next.md`.
+- Do not start Phase 4 until PHASE-REVIEWER accepts Phase 3.
 
 If repair is needed:
 

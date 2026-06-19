@@ -24,6 +24,7 @@ import { ComplaintsController } from '../../src/modules/complaints/complaints.co
 import { ComplaintsModule } from '../../src/modules/complaints/complaints.module.ts';
 import { ComplaintsRepository } from '../../src/modules/complaints/complaints.repository.ts';
 import { ComplaintsService } from '../../src/modules/complaints/complaints.service.ts';
+import { NotificationsModule } from '../../src/modules/notifications/notifications.module.ts';
 
 const noopAudit = { record: async () => undefined } as unknown as AuditService;
 const service = new ComplaintsService(new ComplaintsRepository({} as never), noopAudit);
@@ -212,6 +213,82 @@ test('workflow required data rejects before transaction', async () => {
   ]) {
     await assertNoTransaction(input, 'VALIDATION_FAILED');
   }
+});
+
+test('workflow close queues survey scheduling after transaction commit', async () => {
+  const calls: string[] = [];
+  const queued: unknown[] = [];
+  const serviceWithNotifications = transitionService(calls, queued);
+
+  await serviceWithNotifications.applyTransition(transitionInput(ComplaintStatus.RESOLVED, ComplaintTransitionAction.CLOSE, RoleCode.ADMIN, {
+    reason: 'confirmed closed',
+    customerCommunicationStatus: 'called',
+  }));
+
+  assert.deepEqual(calls, ['status', 'history', 'audit', 'commit', 'queue']);
+  assert.deepEqual(queued, [{
+    complaintId: 'cmp_1',
+    templateCode: 'survey.schedule.internal',
+    payload: {
+      complaintId: 'cmp_1',
+      fromStatus: ComplaintStatus.RESOLVED,
+      toStatus: ComplaintStatus.CLOSED,
+      action: ComplaintTransitionAction.CLOSE,
+      actorId: 'usr_1',
+      reason: 'confirmed closed',
+      customerCommunicationStatus: 'called',
+    },
+  }]);
+});
+
+test('workflow reopen queues internal notification after transaction commit', async () => {
+  const calls: string[] = [];
+  const queued: unknown[] = [];
+  const serviceWithNotifications = transitionService(calls, queued);
+
+  await serviceWithNotifications.applyTransition(transitionInput(ComplaintStatus.CLOSED, ComplaintTransitionAction.REOPEN, RoleCode.ADMIN, { reason: 'customer replied' }));
+
+  assert.deepEqual(calls, ['status', 'history', 'audit', 'commit', 'queue']);
+  assert.deepEqual(queued, [{
+    complaintId: 'cmp_1',
+    templateCode: 'workflow.reopened.internal',
+    payload: {
+      complaintId: 'cmp_1',
+      fromStatus: ComplaintStatus.CLOSED,
+      toStatus: ComplaintStatus.REOPENED,
+      action: ComplaintTransitionAction.REOPEN,
+      actorId: 'usr_1',
+      reason: 'customer replied',
+      customerCommunicationStatus: null,
+    },
+  }]);
+});
+
+test('workflow side effects do not queue on validation or stale status failure', async () => {
+  const queued: unknown[] = [];
+  await assertNoTransaction(transitionInput(ComplaintStatus.RESOLVED, ComplaintTransitionAction.CLOSE, RoleCode.ADMIN, { reason: 'confirmed' }), 'VALIDATION_FAILED', queued);
+
+  const serviceWithStaleStatus = transitionService([], queued, null);
+  await assert.rejects(
+    serviceWithStaleStatus.applyTransition(transitionInput(ComplaintStatus.CLOSED, ComplaintTransitionAction.REOPEN, RoleCode.ADMIN, { reason: 'customer replied' })),
+    (error: unknown) => error instanceof AppException && error.code === 'COMPLAINT_INVALID_TRANSITION',
+  );
+  assert.deepEqual(queued, []);
+});
+
+test('workflow side effects do not queue when transaction fails', async () => {
+  const queued: unknown[] = [];
+  const serviceWithFailingTransaction = new ComplaintsService({
+    transaction: async () => {
+      throw new Error('database failed');
+    },
+  } as ComplaintsRepository, noopAudit, notificationSink([], queued));
+
+  await assert.rejects(
+    serviceWithFailingTransaction.applyTransition(transitionInput(ComplaintStatus.CLOSED, ComplaintTransitionAction.REOPEN, RoleCode.ADMIN, { reason: 'customer replied' })),
+    /database failed/,
+  );
+  assert.deepEqual(queued, []);
 });
 
 test('workflow transition persistence rejects stale persisted status before history and audit', async () => {
@@ -424,6 +501,7 @@ test('complaint transition route uses auth, RBAC, branch-scope, and CSRF guards'
   const providers = Reflect.getMetadata(MODULE_METADATA.PROVIDERS, ComplaintsModule) as unknown[];
 
   assert.ok(imports.includes(AuthModule));
+  assert.ok(imports.includes(NotificationsModule));
   assert.ok(providers.includes(SessionAuthGuard));
   assert.ok(providers.includes(RbacGuard));
   assert.ok(providers.includes(CsrfGuard));
@@ -452,12 +530,13 @@ test('complaint transition route allows scoped staff and audits branch-scope den
 async function assertNoTransaction(
   input: Parameters<ComplaintsService['applyTransition']>[0],
   code: string,
+  queued: unknown[] = [],
 ): Promise<void> {
   const serviceWithFailingRepository = new ComplaintsService({
     transaction: async () => {
       throw new Error('transaction should not start');
     },
-  } as ComplaintsRepository, noopAudit);
+  } as ComplaintsRepository, noopAudit, notificationSink([], queued));
 
   await assert.rejects(
     serviceWithFailingRepository.applyTransition(input),
@@ -502,6 +581,31 @@ function guardNames(handler: keyof ComplaintsController): string[] {
 
 function providerObject(provider: unknown): { provide?: unknown } | null {
   return provider && typeof provider === 'object' ? provider as { provide?: unknown } : null;
+}
+
+function transitionService(calls: string[], queued: unknown[], updateResult: { id: string; branchId: string; status: ComplaintStatus } | null = { id: 'cmp_1', branchId: 'branch_main', status: ComplaintStatus.CLOSED }): ComplaintsService {
+  return new ComplaintsService({
+    transaction: async <T>(work: (client: never) => Promise<T>) => {
+      const result = await work({} as never);
+      calls.push('commit');
+      return result;
+    },
+    updateStatus: async (data) => {
+      calls.push('status');
+      return updateResult && { ...updateResult, status: data.toStatus };
+    },
+    createStatusHistory: async () => { calls.push('history'); },
+  } as ComplaintsRepository, { record: async () => { calls.push('audit'); } } as unknown as AuditService, notificationSink(calls, queued));
+}
+
+function notificationSink(calls: string[], queued: unknown[]) {
+  return {
+    queueInternal: async (input: unknown) => {
+      calls.push('queue');
+      queued.push(input);
+      return {};
+    },
+  } as never;
 }
 
 function transitionInput(fromStatus: ComplaintStatus, action: ComplaintTransitionAction, actorRole: RoleCode, extra: Partial<Parameters<ComplaintsService['applyTransition']>[0]> = {}): Parameters<ComplaintsService['applyTransition']>[0] {

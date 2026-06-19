@@ -1959,3 +1959,62 @@ starting Phase 3 planning.
 - Gate:
   - `F3-04A` is marked `Verify Gate: required`; AUTO PHASE stops at `Needs Verify`
     before `F3-04B`.
+
+## VERIFY-F3-04A - Workflow Required Data Gate
+
+- Date: 2026-06-19
+- Required model tier: independent VERIFY
+- Builder honesty: Honest
+- Code quality: Good
+- Recommendation: Accept
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (29/29)
+  - Passed: `corepack pnpm openapi:check`
+- Findings:
+  - No blocking findings.
+- Scope review:
+  - Required-data validation runs after matrix/RBAC checks and before repository
+    transactions, status updates, status history, or WORKFLOW audit writes.
+  - `reason` is required for send-back, reopen, and rejection actions; resolve
+    actions require `resolutionType`, `resolutionSummary`, and server-derived
+    `actorId`; close requires `reason` and `customerCommunicationStatus`.
+  - Valid required-data transitions still write status, history, and WORKFLOW audit
+    in the same transaction.
+  - OpenAPI documents the new transition request fields and `openapi:check`
+    protects them.
+  - No schema changes, migrations, comments, attachments, notifications, SLA
+    recalculation, survey scheduling, routes, UI, portal behavior, or provider calls
+    were added.
+- Decision:
+  - The `F3-04A` Verify Gate is cleared. Continue Phase 3 with `F3-04B`.
+
+## F3-04B - Closure/Reopen Side-Effect Scheduling Build
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Needs Verify
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (33/33)
+  - Passed: `corepack pnpm test:api -- notifications` (5/5)
+  - Passed: `corepack pnpm openapi:check`
+- Build assessment:
+  - `ComplaintsModule` imports `NotificationsModule`, and `ComplaintsService`
+    depends only on `NotificationsService`.
+  - `CLOSE` queues `survey.schedule.internal` after the workflow transaction
+    returns successfully.
+  - `REOPEN` queues `workflow.reopened.internal` after the workflow transaction
+    returns successfully.
+  - Validation failure, stale persisted status, and transaction failure do not queue
+    side effects.
+  - No schema changes, migrations, survey module behavior, SLA recalculation,
+    BullMQ workers, provider delivery, routes, OpenAPI changes, UI, portal behavior,
+    reports, comments, or attachments were added.
+- Gate:
+  - `F3-04B` is marked `Verify Gate: required`; AUTO PHASE stops at `Needs Verify`.

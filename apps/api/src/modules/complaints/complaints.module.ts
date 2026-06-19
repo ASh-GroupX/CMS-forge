@@ -5,12 +5,13 @@ import { CsrfGuard } from '../../core/csrf.guard.js';
 import { PrismaService } from '../../core/http-kernel.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { AuthService } from '../auth/auth.service.js';
+import { NotificationsModule } from '../notifications/notifications.module.js';
 import { ComplaintsController } from './complaints.controller.js';
 import { ComplaintsRepository } from './complaints.repository.js';
 import { ComplaintsService } from './complaints.service.js';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, NotificationsModule],
   controllers: [ComplaintsController],
   providers: [
     PrismaService,

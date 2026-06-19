@@ -2,7 +2,32 @@
 
 Status: Needs Verify
 Phase: Phase 3 - SLA And Workflow Operations
-Next Task: VERIFY-F3-04A - Workflow Required Data Gate
+Next Task: VERIFY-F3-04B - Closure/Reopen Side-Effect Scheduling Gate
+
+## F3-04B Built - Verify Gate
+
+`F3-04B` wired complaint close/reopen transitions to the notifications public
+service after the workflow transaction commits. `CLOSE` queues
+`survey.schedule.internal`, and `REOPEN` queues `workflow.reopened.internal`.
+
+The queue calls run only after status update, status history, and WORKFLOW audit
+complete inside the transaction. Validation failures, stale persisted status, and
+transaction failures do not queue side effects.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- workflow 33/33,
+test:api -- notifications 5/5, and openapi:check.
+
+AUTO PHASE stops here because `F3-04B` is marked `Verify Gate: required`.
+
+## VERIFY-F3-04A Accepted - Gate Cleared
+
+Independent VERIFY accepted `F3-04A`. Required workflow transition data now rejects
+with `VALIDATION_FAILED` before any repository transaction/write, while valid
+required-data transitions still write status, history, and WORKFLOW audit in the
+same transaction. OpenAPI documents the added transition request fields.
+
+Verification re-ran and passed: lint, typecheck, test 20/20, test:api -- workflow
+29/29, and openapi:check. Phase 3 continues with `F3-04B`.
 
 ## F3-04A Built - Verify Gate
 

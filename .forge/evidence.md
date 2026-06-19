@@ -2978,3 +2978,57 @@ Append build and verification evidence here. Do not delete failed evidence.
     with required data, missing-data denial before transaction, and the existing
     invalid-transition, unauthorized-role, stale-status, and branch-scope denial
     surface.
+
+## F3-04B - Add Closure/Reopen Side-Effect Scheduling Without In-Transaction Side Effects
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-RESOLUTION-001
+  - REQ-NOTIFY-001
+  - REQ-SURVEY-001
+  - ARCH-WORKFLOW-001
+  - WORKFLOW-MATRIX-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+- Evidence:
+  - Imported `NotificationsModule` into `ComplaintsModule`.
+  - Injected only `NotificationsService` into `ComplaintsService`; no notification
+    repository, DTO, Prisma model, worker, route, or provider code was imported.
+  - Added post-transaction queueing for `CLOSE` with template code
+    `survey.schedule.internal`.
+  - Added post-transaction queueing for `REOPEN` with template code
+    `workflow.reopened.internal`.
+  - Queue payloads use backend workflow context: complaint ID, from/to status,
+    action, actor ID, reason, and `customerCommunicationStatus`.
+  - Added focused workflow coverage proving close/reopen queue after commit and no
+    queue on validation failure, stale persisted status, or transaction failure.
+  - Kept `complaints.service.ts` under the 300-line source budget at 298 lines.
+  - No schema changes, migrations, survey module behavior, SLA recalculation,
+    BullMQ workers, provider delivery, new HTTP routes, OpenAPI changes, UI, portal
+    behavior, reports, comments, or attachments were added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (33/33)
+  - Passed: `corepack pnpm test:api -- notifications` (5/5)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed.
+    No route authority changed; close/reopen queue payload uses the existing
+    server-derived actor ID and workflow context.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed. Tests prove queueing
+    occurs after transaction commit and does not occur on validation, stale status,
+    or transaction failure.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope; no provider credentials or secret-bearing fields were added.
+  - Customer portal exposure rules hold: Passed by scope; no portal route,
+    portal-visible DTO, internal comments, audit logs, DMS codes, or staff PII
+    exposure was added.
+  - Trust boundaries are tested: Passed; workflow tests cover allowed close/reopen
+    side effects and denied/no-op validation, stale status, and transaction failure
+    paths.
