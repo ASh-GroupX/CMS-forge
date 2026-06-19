@@ -3,7 +3,7 @@ import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const suite = process.argv.slice(2).find((arg) => arg !== '--');
-const allowedSuites = new Set(['auth', 'audit', 'admin', 'security', 'workflow', 'sla', 'notifications', 'portal', 'portal.tracking']);
+const allowedSuites = new Set(['auth', 'audit', 'admin', 'security', 'workflow', 'sla', 'notifications', 'portal', 'portal.tracking', 'attachments']);
 
 if (!suite || !allowedSuites.has(suite)) {
   console.error(`Unknown API test suite: ${suite ?? '(missing)'}`);

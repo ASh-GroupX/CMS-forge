@@ -3654,3 +3654,153 @@ Assumptions and gaps:
   - Trust boundaries are tested: Passed. Coverage includes public submission
     sanitization, reference-only denial, verified tracking response filtering,
     and follow-up input sanitization.
+
+## F5-01A - Generate Attachments Module Boundary And Manifest
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - ARCH-FILES-001
+  - REQ-FILES-001
+  - REQ-PORTAL-001
+  - REQ-PORTAL-002
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Ran the canonical module generator for `attachments`.
+  - Filled `apps/api/src/modules/attachments/MODULE.md` with the real boundary:
+    `AttachmentsService` public surface, owned `attachments` table, SRS IDs, and
+    only public-service/core dependencies.
+  - Wired `AttachmentsModule` into the root `AppModule` so the existing module
+    reachability lint gate covers it.
+  - Added no upload/download routes, object-storage adapter behavior, malware
+    scan behavior, attachment OpenAPI paths, attachment authorization rules,
+    portal/staff UI, schema or migration changes, provider calls, or secrets.
+- Verification:
+  - Passed: `corepack pnpm generate:module -- attachments`
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no routes or authorization decisions; the
+    manifest declares future staff route enforcement through `core/auth.guard`.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no state changes or side effects.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. The generated shell has no runtime logging, provider calls,
+    routes, or responses.
+  - Customer portal exposure rules hold: Passed by scope. No customer-visible
+    attachment route or portal response was added.
+  - Trust boundaries are tested: Passed for this boundary-only slice by lint
+    reachability/manifest truth checks and generated construction tests. Upload
+    allowed/denied authorization cases are intentionally deferred to the first
+    attachment behavior task.
+
+## PLAN-F5-01B - Split Secure Attachment Behavior
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: PLANNER
+- Requirement IDs:
+  - ARCH-FILES-001
+  - REQ-FILES-001
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Split the next Phase 5 attachment work into `F5-01B`, a backend-only upload
+    metadata policy validation task.
+  - Kept storage adapters, persistence, upload/download routes, authorization,
+    audit writes, malware scan state, portal behavior, and UI out of the first
+    behavior slice.
+  - Required `test:api -- attachments` coverage is scoped to allowed
+    image/PDF/audio/video metadata and denied executable, oversize, and
+    mismatched metadata.
+- Verification:
+  - Not Run: planning-only task; no application code changed by this plan.
+
+## F5-01B - Add Attachment Upload Metadata Policy Validation
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - ARCH-FILES-001
+  - REQ-FILES-001
+  - METHOD-API-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added `AttachmentsService.validateUploadMetadata` as the first backend-only
+    attachment behavior.
+  - Enforced MVP defaults from `REQ-FILES-001` AC5: image/PDF metadata up to
+    10 MB, audio/video metadata up to 50 MB, and executable metadata blocked.
+  - Validates file name, extension, content type, and size together before any
+    storage or persistence behavior exists.
+  - Uses stable SRS error codes `ATTACHMENT_TYPE_BLOCKED` and
+    `ATTACHMENT_SIZE_EXCEEDED`.
+  - Added the `attachments` API test suite and focused policy coverage for
+    allowed image/PDF/audio/video metadata plus denied executable, oversize, and
+    mismatched extension/content-type metadata.
+  - Added no upload/download routes, object-storage adapter behavior, attachment
+    persistence, audit entries, malware scan state changes, portal/staff UI,
+    OpenAPI attachment paths, schema/migration changes, provider calls, or
+    secrets.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- attachments` (4/4)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no routes or authorization decisions.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    rejects metadata before storage/persistence and adds no state changes or
+    side effects.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. The policy method does no logging, provider calls, route
+    response shaping, or secret handling.
+  - Customer portal exposure rules hold: Passed by scope. No portal route or
+    customer-visible attachment response was added.
+  - Trust boundaries are tested: Passed. `test:api -- attachments` covers
+    allowed metadata and denied executable, oversize, and mismatched metadata.
+
+## PLAN-F5-PHASE - Plan Remaining Attachments And Notifications Phase
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: PLANNER
+- Requirement IDs:
+  - ARCH-FILES-001
+  - REQ-FILES-001
+  - ARCH-INTEGRATION-001
+  - REQ-NOTIFY-001
+  - REQ-NOTIFY-002
+  - REQ-SURVEY-001
+  - REQ-PORTAL-002
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Split the remaining Phase 5 backlog into small tasks for attachment storage,
+    metadata persistence/audit, staff and portal upload/download routes, malware
+    scan state, notification provider adapters, templates, delivery logging,
+    preferences/quiet hours, and survey link flow.
+  - Kept the next buildable task to `F5-01C` only, per Forge PLAN output rules.
+  - Added missing Phase 5 backlog parents for notification preferences/quiet
+    hours and survey link flow because `PLAN-M5` includes them.
+- Verification:
+  - Not Run: planning-only task; no application source behavior changed by this
+    plan.

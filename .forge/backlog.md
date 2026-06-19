@@ -105,11 +105,38 @@ history from another project.
 ## Phase 5 - Attachments And Notifications
 
 - [ ] F5-01: Secure attachment upload/download
-  - [ ] F5-01A: Generate attachments module boundary and manifest
+  - [x] F5-01A: Generate attachments module boundary and manifest
+  - [x] F5-01B: Add attachment upload metadata policy validation
+  - [ ] F5-01C: Add attachment storage port and in-memory adapter
+  - [ ] F5-01D: Persist attachment metadata with upload audit
+  - [ ] F5-01E: Add staff attachment upload route with RBAC, branch scope, and OpenAPI
+  - [ ] F5-01F: Add staff attachment download authorization and short-lived URL route
+  - [ ] F5-01G: Add portal attachment upload path for verified non-closed complaints
+  - [ ] F5-01H: Add portal attachment download/privacy regression coverage
 - [ ] F5-02: Malware scan hook states
+  - [ ] F5-02A: Add attachment scan status transition service
+  - [ ] F5-02B: Enforce scan status in attachment download behavior
 - [ ] F5-03: Email adapter and in-memory provider
+  - [ ] F5-03A: Generate integrations module boundary and manifest
+  - [ ] F5-03B: Add email provider adapter with in-memory test double
+  - [ ] F5-03C: Dispatch queued email notifications with failure status
 - [ ] F5-04: SMS/WhatsApp-ready adapter interfaces
+  - [ ] F5-04A: Add SMS provider adapter with in-memory test double
+  - [ ] F5-04B: Add WhatsApp provider adapter with in-memory test double
+  - [ ] F5-04C: Dispatch queued SMS/WhatsApp notifications with failure status
 - [ ] F5-05: Notification templates and delivery log
+  - [ ] F5-05A: Add notification template schema and migration
+  - [ ] F5-05B: Add Arabic/English notification template resolution service
+  - [ ] F5-05C: Add Admin notification template routes with RBAC and OpenAPI
+  - [ ] F5-05D: Add notification delivery attempt log and retry-safe status updates
+- [ ] F5-06: Notification preferences and quiet hours
+  - [ ] F5-06A: Add customer notification preference schema and service
+  - [ ] F5-06B: Enforce quiet hours and channel preference during dispatch
+- [ ] F5-07: Survey link flow
+  - [ ] F5-07A: Generate surveys module boundary and manifest
+  - [ ] F5-07B: Schedule survey links from closure notification events
+  - [ ] F5-07C: Add one-time expiring portal survey submission API
+  - [ ] F5-07D: Expose submitted survey results to authorized staff read models
 
 ## Phase 6 - Staff UI
 

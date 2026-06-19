@@ -7,23 +7,35 @@ tags: [backend, module, agent-context]
 
 # Attachments Module
 
-Agent context manifest. Read this before editing the module. It defines the
-module's boundary so you can work in a fresh context without scanning the tree.
+Agent context manifest. Read this before editing the module.
 
 ## Public surface
 
-- `AttachmentsService` is the only export other modules may import.
+- `AttachmentsService` is the only service exported by `AttachmentsModule`.
+- This module owns attachment metadata boundaries for complaint files. Upload,
+  download, object storage, malware scanning, authorization rules, OpenAPI paths,
+  and UI are added only by their scoped tasks.
 
 ## Owns tables
 
-- `attachments` (verify before adding behavior).
+- `attachments`
 
 ## May depend on
 
-- `core/*` (prisma, errors, audit, rbac, correlation).
+- `core/http-kernel` for `PrismaService`, stable API errors, and request context.
+- `core/audit.service` for future attachment access audit entries.
+- `core/auth.guard` for future staff route session/RBAC enforcement.
+- ComplaintsService through ComplaintsModule for complaint ownership and scope
+  checks when attachment behavior is added.
 - Other modules' public services only. Never import another module repository,
-  `dto/`, or Prisma model type.
+  DTO folder, or Prisma model type.
 
 ## SRS
 
-- Add the requirement IDs this module implements before building behavior.
+- ARCH-FILES-001
+- REQ-FILES-001
+- REQ-PORTAL-001
+- REQ-PORTAL-002
+- METHOD-AUDIT-001
+- METHOD-API-001
+- METHOD-TEST-001

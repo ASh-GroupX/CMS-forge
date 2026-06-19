@@ -2573,3 +2573,74 @@ Residual risk: this is a required customer-portal privacy gate. A fresh verifier
   dispatch remain Phase 5 notification work. The Phase 4 API/session/privacy
   boundary is accepted; end-to-end customer verification is not complete until
   that delivery path exists.
+
+## F5-01A - Generate Attachments Module Boundary And Manifest
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; stop AUTO PHASE at `Ready to Plan` because no next
+  Phase 5 build slice is currently scoped.
+- Verification:
+  - Passed: `corepack pnpm generate:module -- attachments`
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm openapi:check`
+- Notes:
+  - Created the canonical behavior-free `attachments` module and real
+    `MODULE.md` boundary.
+  - Root module wiring makes the new module reachable and covered by lint.
+  - No attachment runtime behavior, public route, storage adapter, scan hook,
+    schema/migration, authorization rule, UI, provider call, or secret was added.
+
+## PLAN-F5-01B - Split Secure Attachment Behavior
+
+- Date: 2026-06-19
+- Required model tier: PLANNER
+- Risk: High
+- Recommendation: Continue with `F5-01B`.
+- Notes:
+  - The next attachment slice is upload metadata policy validation only.
+  - This is the smallest useful prerequisite before storage, persistence,
+    authorization, audit, scan state, portal, or UI behavior.
+  - The task carries the SRS default limits up front: images/PDFs 10 MB,
+    audio/video 50 MB, executable files blocked.
+
+## F5-01B - Add Attachment Upload Metadata Policy Validation
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; stop AUTO PHASE at `Ready to Plan` for the next
+  attachment slice.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- attachments` (4/4)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Attachment metadata policy now blocks executable and mismatched metadata
+    before any storage or persistence path exists.
+  - The implementation stayed behavior-only in `AttachmentsService`; no routes,
+    OpenAPI paths, storage, DB writes, audit writes, scan state, UI, providers,
+    migrations, or secrets were added.
+
+## PLAN-F5-PHASE - Plan Remaining Attachments And Notifications Phase
+
+- Date: 2026-06-19
+- Required model tier: PLANNER
+- Risk: High
+- Recommendation: Continue with `F5-01C`.
+- Notes:
+  - Phase 5 is now split through secure attachment storage/upload/download,
+    malware scan states, provider adapters, templates, delivery logging,
+    notification preferences/quiet hours, and survey link flow.
+  - Added missing Phase 5 backlog parents for notification preferences/quiet
+    hours and surveys because `PLAN-M5` includes `REQ-NOTIFY-002` and
+    `REQ-SURVEY-001`.
+  - The next task is intentionally only the attachment storage port plus
+    in-memory adapter; routes, persistence, audit, scan, portal/UI, and real S3
+    provider work remain separate.

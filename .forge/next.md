@@ -1,4 +1,4 @@
-# Build Task: F5-01A - Generate Attachments Module Boundary And Manifest
+# Build Task: F5-01C - Add Attachment Storage Port And In-Memory Adapter
 
 Status: Ready to Build
 Required model tier: BUILDER-STRONG
@@ -7,46 +7,52 @@ Phase: Phase 5 - Attachments And Notifications
 
 ## Scope
 
-Create the behavior-free backend `attachments` module boundary for Phase 5.
+Add the backend attachment object-storage boundary needed before upload
+persistence and routes.
 
 Do:
-- Run the canonical module generator for `attachments`.
-- Fill `apps/api/src/modules/attachments/MODULE.md` with the real module boundary:
-  `AttachmentsService` as the public surface, `attachments` as the owned table,
-  and only allowed public-service dependencies.
-- Wire the module only as needed for the existing module reachability lint gate.
+- Add an attachment storage port owned by the attachments module.
+- Add an in-memory adapter/test double for local tests.
+- Wire the adapter into `AttachmentsModule` without provider credentials.
+- Add focused `test:api -- attachments` coverage for storing bytes, generating a
+  non-public download token/URL shape, missing object denial, and no provider
+  credential exposure.
 
 Do not add:
-- Upload/download routes
-- Object-storage adapter behavior
+- Upload or download HTTP routes
+- Attachment database persistence
+- Audit entries
 - Malware scan behavior
-- Attachment OpenAPI paths
-- Attachment authorization rules
 - Portal or staff UI
+- OpenAPI attachment paths
 - Schema or migration changes
-- Provider calls or secrets
+- Real S3 SDK/provider calls
+- Provider credentials or secrets
 
 ## Requirement IDs
 
 - ARCH-FILES-001
 - REQ-FILES-001
-- REQ-PORTAL-001
-- REQ-PORTAL-002
-- METHOD-AUDIT-001
+- ARCH-INTEGRATION-001
 - METHOD-API-001
+- METHOD-AUDIT-001
 - METHOD-TEST-001
 
 ## Verification Commands
 
-- `corepack pnpm generate:module -- attachments`
 - `corepack pnpm lint`
 - `corepack pnpm typecheck`
 - `corepack pnpm test`
+- `corepack pnpm test:api -- attachments`
 - `corepack pnpm openapi:check`
+- `git diff --check`
 
 ## Acceptance
 
-- The attachments module exists in canonical generated shape.
-- `MODULE.md` is real OKF-style module context, not placeholder text.
-- The module boundary declares no behavior that is not implemented yet.
-- Existing lint, typecheck, root tests, and OpenAPI drift checks pass.
+- Attachment object bytes can be stored through the module-owned storage port.
+- Retrieval/download preparation uses a non-public token or URL shape, not a
+  public unauthenticated attachment URL.
+- Missing storage objects fail with a stable safe error before route behavior
+  exists.
+- The implementation has no real provider call, secret, route, database write,
+  audit write, schema change, or UI change.

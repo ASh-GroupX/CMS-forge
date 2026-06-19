@@ -2,7 +2,75 @@
 
 Status: Ready to Build
 Phase: Phase 5 - Attachments And Notifications
-Next Task: F5-01A - Generate Attachments Module Boundary And Manifest
+Next Task: F5-01C - Add Attachment Storage Port And In-Memory Adapter
+
+## PLAN-F5-PHASE Complete - Ready To Build
+
+The rest of Phase 5 is now split into small backend-first tasks covering secure
+attachments, scan states, notification provider adapters, templates, delivery
+logging, preferences/quiet hours, and survey link flow.
+
+The next build task is `F5-01C`, which adds only the attachment storage port and
+in-memory adapter. Upload/download routes, database persistence, audit writes,
+scan behavior, portal/staff UI, OpenAPI attachment paths, schema migrations, real
+S3 provider calls, and provider secrets stay out of this slice.
+
+## Previous State Before PLAN-F5-PHASE
+
+Status: Ready to Plan
+Phase: Phase 5 - Attachments And Notifications
+Next Task: PLAN-F5-01C - Split Next Attachment Behavior
+
+## F5-01B Built - AUTO PHASE Stopped For Planning
+
+`F5-01B` added backend-only attachment upload metadata policy validation in
+`AttachmentsService`. It enforces image/PDF metadata up to 10 MB, audio/video
+metadata up to 50 MB, executable metadata blocked, and mismatched
+extension/content-type metadata denied before any storage or persistence path.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- attachments 4/4,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No upload/download routes, object-storage adapter behavior, attachment
+persistence, audit entries, malware scan state changes, portal/staff UI, OpenAPI
+attachment paths, schema/migration changes, provider calls, or secrets were
+added.
+
+AUTO PHASE stops here because the next attachment behavior slice needs a PLANNER
+split before BUILDER-STRONG continues.
+
+## PLAN-F5-01B Complete - Ready To Build
+
+PLAN-F5-01B split secure attachment behavior into a backend-only upload metadata
+policy slice before storage, persistence, routes, audit, scan state, portal, or UI.
+
+`F5-01B` will enforce the documented MVP defaults from `REQ-FILES-001` AC5:
+images and PDFs up to 10 MB, audio/video up to 50 MB, and executable files
+blocked. It will add focused `test:api -- attachments` coverage for allowed
+image/PDF/audio/video metadata and denied executable, oversize, and mismatched
+metadata.
+
+## Previous State Before PLAN-F5-01B
+
+Status: Ready to Plan
+Phase: Phase 5 - Attachments And Notifications
+Next Task: PLAN-F5-01B - Split Secure Attachment Behavior
+
+## F5-01A Built - AUTO PHASE Stopped For Planning
+
+`F5-01A` generated the canonical behavior-free `attachments` backend module,
+filled the real OKF-style module manifest, and wired `AttachmentsModule` into the
+root `AppModule` so module reachability lint covers it.
+
+No upload/download routes, object-storage adapter behavior, malware scan
+behavior, attachment OpenAPI paths, attachment authorization rules, portal/staff
+UI, schema or migration changes, provider calls, or secrets were added.
+
+Required proof passed: `corepack pnpm generate:module -- attachments`, lint,
+typecheck, test 29/29, and openapi:check.
+
+AUTO PHASE stops here because the next Phase 5 attachment behavior slice needs a
+PLANNER split before BUILDER-STRONG continues.
 
 ## PHASE-4-REVIEW Accepted With Conditions - Phase 5 Ready To Build
 
