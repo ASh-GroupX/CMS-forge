@@ -1,10 +1,10 @@
 # Current State
 
-Status: Ready to Build
+Status: Ready to Plan
 Phase: Phase 4 - Customer Portal
-Next Task: F4-01A - Generate Portal Module Boundary And Manifest
+Next Task: PLAN-F4-01 - Split Customer Portal Entry Work
 
-## PHASE-3-REVIEW Accepted With Conditions - Phase 4 Ready
+## PHASE-3-REVIEW Accepted With Conditions - Phase 4 Ready To Plan
 
 PHASE-3-REVIEW accepted Phase 3 with non-blocking carry-forward conditions for
 the broader notification, SLA escalation, and survey requirements that remain
@@ -14,9 +14,9 @@ Reviewer proof re-ran and passed: lint, typecheck, test 20/20, test:api -- sla
 16/16, test:api -- notifications 5/5, test:api -- workflow 33/33, and
 openapi:check.
 
-Phase 4 may start with `F4-01A`, the portal module boundary and manifest. This is
-marked `Verify Gate: required` because public portal behavior builds on this
-privacy boundary.
+Phase 4 must start with `PLAN-F4-01` because customer portal submission,
+tracking, OTP verification, and portal privacy need a PLANNER split before any
+build task starts.
 
 ## Previous State Before Phase 4
 

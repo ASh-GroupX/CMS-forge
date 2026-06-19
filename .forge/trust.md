@@ -2101,5 +2101,5 @@ starting Phase 3 planning.
     submission, expiry, and staff/report visibility remain future portal/survey or
     reporting work.
 - Next:
-  - Start Phase 4 with `F4-01A`, generating the `portal` module boundary and
-    manifest before any public portal route or UI is added.
+  - Start Phase 4 with `PLAN-F4-01`; the customer portal requires a PLANNER split
+    before any public portal route, module, or UI build task starts.

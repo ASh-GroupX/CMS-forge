@@ -1,61 +1,49 @@
-# Build Task: F4-01A - Generate Portal Module Boundary And Manifest
+# Plan Task: PLAN-F4-01 - Split Customer Portal Entry Work
 
-Status: Ready to Build
-Required model tier: BUILDER-STRONG
+Status: Ready to Plan
+Required model tier: PLANNER
 Risk: High
 Phase: Phase 4 - Customer Portal
-Verify Gate: required
 
 ## Why This Exists
 
-Phase 4 starts the customer portal. Build the module boundary first so public
-submission, tracking, OTP verification, and portal privacy behavior have a clear
-backend owner before routes or UI are added.
+Phase 4 has not been planned yet. Customer portal submission, tracking,
+verification, and privacy are high-risk public boundaries and must be split before
+any build task starts.
 
-## Scope
+## Inputs
 
-- Generate the `portal` module from the canonical module generator.
-- Fill `apps/api/src/modules/portal/MODULE.md` with the real module boundary:
-  public `PortalService`, owned portal verification/session tables, allowed deps,
-  and SRS IDs.
-- Keep this task behavior-free: no public routes, OpenAPI paths, complaint writes,
-  OTP/session behavior, rate limiting, CAPTCHA, notifications, attachments, UI, or
-  customer tracking response shapes.
+- `.forge/project.md`
+- `.forge/policy.md`
+- `.forge/state.md`
+- `.forge/backlog.md`
+- `.forge/evidence.md`
+- `.forge/trust.md`
+- `CLAUDE.md` / `AGENTS.md`
+- `docs/ARCHITECTURE.md`
+- `docs/CMS_AUTO_SRS.md` requirement IDs:
+  - REQ-PORTAL-001
+  - REQ-PORTAL-002
+  - PORTAL-SEC-001
+  - REQ-NOTIFY-001
+  - REQ-SURVEY-001
+  - ARCH-WORKFLOW-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
 
-## Requirement IDs
+## Planning Requirements
 
-- REQ-PORTAL-001
-- PORTAL-SEC-001
-- ARCH-WORKFLOW-001
-- METHOD-AUDIT-001
-- METHOD-TEST-001
-- API-STANDARD-001
-
-## Implementation Rules
-
-- Use `corepack pnpm generate:module -- portal`; do not hand-roll structure.
-- The portal module may depend on `core/http-kernel` and other modules' public
-  services only. It must not import another module's repository, DTO folder, or
-  Prisma model type.
-- Customer portal privacy is the trust boundary: no internal comments, audit logs,
-  DMS codes, staff PII, or unrelated complaints may be exposed by any future portal
-  API.
-- If adding real submission behavior is needed to make this task pass, stop and
-  replan instead of widening the diff.
-
-## Verification Commands
-
-- `corepack pnpm generate:module -- portal`
-- `corepack pnpm lint`
-- `corepack pnpm typecheck`
-- `corepack pnpm test`
-- `corepack pnpm openapi:check`
+- Split Phase 4 into buildable tasks inside the 1 to 5 file scope budget.
+- Start with the smallest safe customer-portal foundation task.
+- Mark the first public portal privacy/security boundary with
+  `Verify Gate: required`.
+- Keep public submission, OTP verification, portal-safe timeline, and privacy tests
+  as separate slices unless the SRS requires a tighter dependency.
+- Include exact verification commands for each planned build task.
+- Do not implement code during planning.
 
 ## Expected Output
 
-- Append evidence to `.forge/evidence.md`, including the High-risk security
-  self-check from `.forge/policy.md`.
-- Update `.forge/trust.md`.
-- Mark `F4-01A` done in `.forge/backlog.md`.
-- Because this is a `Verify Gate: required`, set `.forge/state.md` to
-  `Needs Verify` and write the independent VERIFY task to `.forge/next.md`.
+- Write one buildable Phase 4 task to `.forge/next.md`.
+- Update `.forge/state.md` to `Ready to Build`.
+- Record the planning decision in `.forge/trust.md`.
