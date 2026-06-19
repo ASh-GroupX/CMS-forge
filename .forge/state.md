@@ -1,8 +1,299 @@
 # Current State
 
-Status: Ready to Build
+Status: Needs Phase Review
 Phase: Phase 6 - Staff UI
-Next Task: F6-03D1-STAFF-COMPLAINT-CREATE-WRITE-CLIENT
+Next Task: PHASE-6-REVIEW
+
+## F6-07D Built - AUTO PHASE Stopped For Phase Review
+
+`F6-07D` strengthened `web:perf` with explicit staff dashboard and work-queue
+performance cases. Budgets now check deterministic server-render duration, HTML
+size, table-row count, responsive guard count, static script emission, image
+dimension safety, and required dashboard/queue surface signals.
+
+Required proof passed: lint, typecheck, test 31/31, test:web -- shell 88/88,
+test:visual across 16 previews, test:e2e -- accessibility across 11 previews,
+web:perf across 2 previews, openapi:check, and git diff --check with line-ending
+warnings only.
+
+No browser performance dependency, Lighthouse, UI behavior change, backend route,
+OpenAPI change, generated client, database migration, provider call, browser
+storage, or product dependency was added.
+
+All Phase 6 backlog items are complete. AUTO PHASE stops here for the mandatory
+Phase 6 PHASE-REVIEWER gate before Phase 7 can begin.
+
+## F6-07C Built - AUTO PHASE Continuing
+
+`F6-07C` expanded accessibility proof to 11 named staff-shell cases covering
+dashboard feedback, queue labels and alerts, create validation/network feedback,
+detail alert state, workflow dialog naming and controls, Admin feedback, reports
+denied feedback, and audit filters across English LTR and Arabic RTL. It also
+added global focus-visible and reduced-motion CSS.
+
+Required proof passed: lint, typecheck, test 31/31, test:web -- shell 88/88,
+test:visual across 16 previews, test:e2e -- accessibility across 11 previews,
+web:perf, openapi:check, and git diff --check with line-ending warnings only.
+
+No browser automation dependency, UI feature behavior, backend route, OpenAPI
+change, generated client, database migration, provider call, browser storage, or
+product dependency was added. AUTO PHASE continues with `F6-07D`.
+
+## F6-07B Built - AUTO PHASE Continuing
+
+`F6-07B` expanded the visual proof runner to 16 deterministic
+visual-regression cases: dashboard, work queue, complaint create, complaint
+detail, workflow modal, Admin surfaces, reports, and audit viewer, each in
+English LTR and Arabic RTL. Cases assert localized visual signals, table/form/
+dialog structure, responsive guard classes, direction, section count, and
+non-blank render output.
+
+Required proof passed: lint, typecheck, test 31/31, test:web -- shell 88/88,
+test:visual across 16 previews, test:e2e -- accessibility, web:perf,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No browser automation dependency, screenshot baseline files, UI behavior change,
+backend route, OpenAPI change, generated client, database migration, provider
+call, browser storage, or product dependency was added. AUTO PHASE continues
+with `F6-07C`.
+
+## F6-07A Built - AUTO PHASE Continuing
+
+`F6-07A` replaced fail-loud UI proof placeholders with a deterministic local web
+proof runner. `test:visual`, `test:e2e -- accessibility`, and `web:perf` now
+render English LTR and Arabic RTL staff shell previews and assert visual
+structure, accessibility smoke signals, and frontend performance smoke budgets.
+
+Required proof passed after two honest setup repairs: `test:visual` initially
+failed because the root tool resolved `react-dom` from the wrong package, and
+`test:e2e -- accessibility` initially failed because the button-type assertion
+rejected explicit `type="submit"`. Final proof passed: lint, typecheck, test
+31/31, test:web -- shell 88/88, test:visual, test:e2e -- accessibility,
+web:perf, openapi:check, and git diff --check with line-ending warnings only.
+
+No browser automation dependency, screenshot baselines, backend route, OpenAPI
+change, generated client, database migration, provider call, browser storage, or
+product feature behavior was added. AUTO PHASE continues with `F6-07B`.
+
+## F6-06B Built - AUTO PHASE Continuing
+
+`F6-06B` added localized render-only CSV and Excel export affordances to the
+reports dashboard. It shows row-limit, RBAC-filtered, and export-audit copy, plus
+ready and denied export preview states alongside the existing report state
+family.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- shell 88/88,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No report data fetch, CSV/Excel generation, Blob/object URL, download behavior,
+metric calculation, report detail navigation, backend route, OpenAPI change,
+generated client, browser storage, or new dependency was added. `F6-06` is
+complete; AUTO PHASE continues with `F6-07A`.
+
+## F6-06A Built - AUTO PHASE Continuing
+
+`F6-06A` added a localized render-only reports dashboard in the staff shell. It
+renders RPT-001 through RPT-017 placeholder entries with report names, audience
+text, category badges, API-pending status, management/admin visibility, staff
+hiding, and loading, empty, error, success, validation, and conflict states.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- shell 87/87,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No report data fetch, metric calculation, chart rendering, export file, report
+detail navigation, pagination, search, sort, backend route, OpenAPI change,
+generated client, browser storage, or new dependency was added.
+
+## F6-05F Built - AUTO PHASE Continuing
+
+`F6-05F` added a localized render-only in-app notification center in the staff
+shell. It renders unread/read notification regions with event badges, timestamps,
+scoped complaint-link affordance, mark-read affordance, and loading, empty, error,
+success, validation, and conflict states.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- shell 83/83,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No notification fetch, mark-read mutation, link navigation, pagination, search,
+sort, backend route, OpenAPI change, generated client, browser storage, or new
+dependency was added. `F6-05` is complete; AUTO PHASE continues with `F6-06A`.
+
+## F6-05E Built - AUTO PHASE Continuing
+
+`F6-05E` added a localized render-only Audit viewer screen in the staff shell. It
+renders actor, action, target, date, and correlation ID filters; safe placeholder
+rows with timestamp, actor, action, target, correlation ID, and event badges; an
+export affordance; and loading, empty, error, success, validation, and conflict
+states.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- shell 79/79,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No audit fetch, export file generation, pagination, search, sort, backend route,
+OpenAPI change, generated client, browser storage, or new dependency was added.
+
+## F6-05D Built - AUTO PHASE Continuing
+
+`F6-05D` added a localized render-only Admin notification template screen in the
+staff shell. It renders template table and preview regions with event triggers,
+channels, Arabic/English language labels, approved placeholder tokens,
+active/inactive badges, edit/activate/deactivate affordances, and loading, empty,
+error, success, validation, and conflict states.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- shell 75/75,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No Admin API fetch/mutation, template persistence, provider call, dispatch
+behavior, real template rendering engine, backend route, OpenAPI change,
+generated client, browser storage, or new dependency was added.
+
+## F6-05C Built - AUTO PHASE Continuing
+
+`F6-05C` added a localized render-only Admin categories, severities, and SLA
+policy screen in the staff shell. It renders category tree, severity values, and
+SLA policy table regions with active/inactive badges, scoped policy badges,
+warning threshold, deadline fields, create/edit/deactivate affordances, and
+loading, empty, error, success, validation, and conflict states. It also grouped
+Admin panels behind `AdminSurfaces` to keep the shell file inside the source
+budget and tightened the users/roles panel preview-state banner.
+
+Required proof passed after one honest typecheck repair: the first `typecheck`
+run found a stale Admin preview prop type after the wrapper change. Final proof
+passed: lint, typecheck, test 29/29, test:web -- shell 71/71, openapi:check, and
+git diff --check with line-ending warnings only.
+
+No Admin API fetch/mutation, category persistence, severity persistence, SLA
+deadline calculation, escalation logic, backend route, OpenAPI change, generated
+client, browser storage, or new dependency was added.
+
+## F6-05B Built - AUTO PHASE Continuing
+
+`F6-05B` added a localized render-only Admin users, roles, branch-scope, and
+password-reset UI contract in the staff shell. It renders a user table region,
+role and branch-scope badges, active/inactive state, create/edit/deactivate
+affordances, a generic password-reset affordance, and loading, empty, error,
+success, validation, and conflict states.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- shell 66/66,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No Admin API fetch/mutation, role assignment behavior, branch-scope persistence,
+password reset delivery, backend route, OpenAPI change, generated client, browser
+storage, or new dependency was added.
+
+## F6-05A Built - AUTO PHASE Continuing
+
+`F6-05A` added a localized render-only Admin branches/departments screen in the
+staff shell. It renders branch and department tables, active/inactive badges,
+create/edit/deactivate affordances, Admin-only preview visibility, and loading,
+empty, error, success, validation, and conflict states.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- shell 63/63,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No Admin API fetch/mutation, client RBAC decision, audit behavior, backend route,
+OpenAPI change, generated client, browser storage, or new dependency was added.
+
+## F6-04E Built - AUTO PHASE Continuing
+
+`F6-04E` added localized conflict recovery affordances to the complaint detail
+workflow conflict state and strengthened detail workspace English LTR / Arabic RTL
+proof across facts, comments, attachments, and workflow regions.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- shell 59/59,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No API call, latest-record fetch, diff/retry behavior, workflow status decision,
+backend route, OpenAPI change, generated client, browser storage, or new
+dependency was added. `F6-04` is complete; AUTO PHASE continues with `F6-05A`.
+
+## F6-04D Built - AUTO PHASE Continuing
+
+`F6-04D` added a localized render-only workflow action modal section inside the
+complaint detail workspace. It shows approve, send back, assign, investigate,
+resolve, close, reject, and reopen action affordances; required comment input;
+validation, loading, empty, error, success, and conflict preview states; and copy
+that keeps workflow authority with the backend.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- shell 57/57,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No transition API call, frontend status decision, owner/branch/SLA/audit decision,
+backend route, OpenAPI change, generated client, browser storage, or new
+dependency was added.
+
+## F6-04C Built - AUTO PHASE Continuing
+
+`F6-04C` added localized render-only attachment controls inside the complaint
+detail workspace. The panel shows upload and authorized-download affordances, safe
+file-rule text, pending/clean/rejected scan badges, and loading, empty, and error
+preview states.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- shell 53/53,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No file upload, file read, object URL, API fetch, download URL, backend route,
+OpenAPI change, generated client, provider call, browser storage, or new
+dependency was added.
+
+## F6-04B Built - AUTO PHASE Continuing
+
+`F6-04B` added localized render-only internal comments and public-update panels
+inside the complaint detail workspace. The panels show staff-only and
+customer-visible badges, safe placeholder author/time/visibility structure, and
+loading, empty, and error preview states.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- shell 49/49,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No comment fetch/create/edit/delete behavior, portal UI exposure, workflow action,
+attachment behavior, backend route, OpenAPI change, generated client, browser
+storage, or new dependency was added.
+
+## F6-04A Built - AUTO PHASE Continuing
+
+`F6-04A` added a localized render-only staff complaint detail workspace. It shows
+safe static regions for complaint facts, masked customer data, masked vehicle
+data, current owner, status, SLA timer, timeline, and submitted survey results,
+plus loading, empty, and error preview states.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- shell 47/47,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No detail API fetch, workflow action, comments behavior, attachment behavior, SLA
+calculation, survey API behavior, backend route, OpenAPI change, generated client,
+browser storage, or new dependency was added.
+
+## F6-03D2 Built - AUTO PHASE Continuing
+
+`F6-03D2` wired the staff complaint create form to the `createStaffComplaint(...)`
+write helper. The form now builds the documented backend request fields from
+`FormData`, calls the helper, preserves visible values across success and error
+states, renders returned reference/status success text, maps API field errors to
+matching form fields, and keeps network/generic errors safe and localized.
+
+Required proof passed after one honest typecheck repair: the first `typecheck`
+run failed on `exactOptionalPropertyTypes` for optional child-component props; the
+props were tightened and final proof passed: lint, typecheck, test 29/29,
+test:web -- shell 42/42, openapi:check, and git diff --check with line-ending
+warnings only.
+
+No attachment upload behavior, backend route, OpenAPI change, generated client,
+workflow decision, browser storage, session cookie access, or new dependency was
+added.
+
+## F6-03D1 Built - AUTO PHASE Continuing
+
+`F6-03D1` added the staff web write helper for `POST /complaints`. It sends a
+relative `/complaints?branchId=...` request with `credentials: "include"`, JSON
+body, the readable `cms_csrf_token` cookie copied to `x-csrf-token` when present,
+and no role/actor/workflow/credential authority in the request body.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- api-client 9/9,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No UI form wiring, attachment upload behavior, backend route, OpenAPI change,
+generated client, browser credential exposure, or new dependency was added.
 
 ## PLAN-F6-03D-COMPLAINT-SUBMIT-SPLIT Complete - Write Client Slice Selected
 

@@ -10,11 +10,15 @@ import {
 } from 'lucide-react';
 import React from 'react';
 import { resolveLocale, staffShellText, type Locale } from '../i18n/staff-shell';
+import { AdminSurfaces, type AdminPreviewState } from './admin-surfaces';
+import { ComplaintDetailWorkspace, type ComplaintCommentsPreviewState, type ComplaintDetailPreviewState, type ComplaintWorkflowPreviewState } from './complaint-detail-workspace';
 import { DashboardSummary, type DashboardPreviewState } from './dashboard-summary';
 import { CustomerVehicleLookup, type LookupPreviewState } from './customer-vehicle-lookup';
 import { ComplaintCreateForm, type CreateFormPreviewState } from './complaint-create-form';
 import { AttachmentUploadPanel, type AttachmentPreviewState } from './attachment-upload-panel';
+import { NotificationCenter, type NotificationPreviewState } from './notification-center';
 import { PasswordResetPanel, type ResetPreviewState } from './password-reset-panel';
+import { ReportsDashboard, type ReportsPreviewState } from './reports-dashboard';
 import { WorkQueue, type QueuePreviewState } from './work-queue';
 
 const navKeys = ['dashboard', 'queue', 'create', 'detail', 'admin', 'reports', 'audit', 'notifications'] as const;
@@ -33,16 +37,9 @@ const icons = {
 } as const;
 
 type SearchParams = {
-  auth?: string | string[];
-  attachment?: string | string[];
-  create?: string | string[];
-  dashboard?: string | string[];
-  locale?: string | string[];
-  lookup?: string | string[];
-  queue?: string | string[];
-  role?: string | string[];
-  reset?: string | string[];
-  session?: string | string[];
+  admin?: string | string[]; auth?: string | string[]; attachment?: string | string[]; comments?: string | string[]; create?: string | string[];
+  dashboard?: string | string[]; detail?: string | string[]; locale?: string | string[]; lookup?: string | string[]; notification?: string | string[];
+  queue?: string | string[]; reports?: string | string[]; role?: string | string[]; reset?: string | string[]; session?: string | string[]; workflow?: string | string[];
 };
 
 export default async function StaffShellPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
@@ -50,59 +47,51 @@ export default async function StaffShellPage({ searchParams }: { searchParams?: 
   const locale = resolveLocale(params?.locale);
   return (
     <StaffShell
+      adminState={oneOf<AdminPreviewState>(readParam(params?.admin), ['loading', 'empty', 'error', 'success', 'validation', 'conflict'])}
       authError={readParam(params?.auth) === 'error'}
       attachmentState={resolveAttachment(readParam(params?.attachment))}
+      commentsState={resolveDetail(readParam(params?.comments))}
       createState={resolveCreate(readParam(params?.create))}
       dashboardState={resolveDashboard(readParam(params?.dashboard))}
+      detailState={resolveDetail(readParam(params?.detail))}
       isSignedIn={readParam(params?.session) === 'signed-in'}
       locale={locale}
       lookupState={resolveLookup(readParam(params?.lookup))}
+      notificationState={oneOf<NotificationPreviewState>(readParam(params?.notification), ['loading', 'empty', 'error', 'success', 'validation', 'conflict'])}
       queueState={resolveQueue(readParam(params?.queue))}
+      reportsState={oneOf<ReportsPreviewState>(readParam(params?.reports), ['ready', 'loading', 'empty', 'error', 'success', 'validation', 'denied', 'conflict'])}
       resetState={resolveReset(readParam(params?.reset))}
       role={resolveRole(readParam(params?.role))}
+      workflowState={oneOf<ComplaintWorkflowPreviewState>(readParam(params?.workflow), ['loading', 'empty', 'error', 'success', 'conflict', 'validation'])}
     />
   );
 }
 
-function readParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
-}
+function readParam(value: string | string[] | undefined) { return Array.isArray(value) ? value[0] : value; }
 
 function resolveRole(value: string | undefined): RolePreview {
   return value === 'admin' || value === 'management' ? value : 'staff';
 }
 
 function resolveReset(value: string | undefined): ResetPreviewState | undefined {
-  return value === 'request' || value === 'requested' || value === 'token' || value === 'success' || value === 'invalid'
-    ? value
-    : undefined;
+  return oneOf(value, ['request', 'requested', 'token', 'success', 'invalid']);
 }
 
-function resolveDashboard(value: string | undefined): DashboardPreviewState | undefined {
-  return value === 'loading' || value === 'empty' || value === 'error' ? value : undefined;
-}
-
-function resolveQueue(value: string | undefined): QueuePreviewState | undefined {
-  return value === 'loading' || value === 'empty' || value === 'error' ? value : undefined;
-}
-
-function resolveLookup(value: string | undefined): LookupPreviewState | undefined {
-  return value === 'loading' || value === 'none' || value === 'error' ? value : undefined;
-}
+function resolveDashboard(value: string | undefined): DashboardPreviewState | undefined { return oneOf(value, ['loading', 'empty', 'error']); }
+function resolveQueue(value: string | undefined): QueuePreviewState | undefined { return oneOf(value, ['loading', 'empty', 'error']); }
+function resolveDetail(value: string | undefined): ComplaintDetailPreviewState | undefined { return oneOf(value, ['loading', 'empty', 'error']); }
+function resolveLookup(value: string | undefined): LookupPreviewState | undefined { return oneOf(value, ['loading', 'none', 'error']); }
 
 function resolveCreate(value: string | undefined): CreateFormPreviewState | undefined {
-  return value === 'validation' || value === 'success' || value === 'error' ? value : undefined;
+  return oneOf(value, ['validation', 'success', 'error', 'loading', 'network']);
 }
 
 function resolveAttachment(value: string | undefined): AttachmentPreviewState | undefined {
-  return value === 'loading' ||
-    value === 'empty' ||
-    value === 'error' ||
-    value === 'pending' ||
-    value === 'clean' ||
-    value === 'rejected'
-    ? value
-    : undefined;
+  return oneOf(value, ['loading', 'empty', 'error', 'pending', 'clean', 'rejected']);
+}
+
+function oneOf<T extends string>(value: string | undefined, values: readonly T[]): T | undefined {
+  return values.includes(value as T) ? (value as T) : undefined;
 }
 
 const roleNav: Record<RolePreview, readonly NavKey[]> = {
@@ -112,27 +101,39 @@ const roleNav: Record<RolePreview, readonly NavKey[]> = {
 };
 
 export function StaffShell({
+  adminState,
   authError = false,
   attachmentState,
+  commentsState,
   createState,
   dashboardState,
+  detailState,
   isSignedIn = false,
   locale,
   lookupState,
+  notificationState,
   queueState,
+  reportsState,
   resetState,
   role = 'staff',
+  workflowState,
 }: {
+  adminState?: AdminPreviewState | undefined;
   authError?: boolean;
   attachmentState?: AttachmentPreviewState | undefined;
+  commentsState?: ComplaintCommentsPreviewState | undefined;
   createState?: CreateFormPreviewState | undefined;
   dashboardState?: DashboardPreviewState | undefined;
+  detailState?: ComplaintDetailPreviewState | undefined;
   isSignedIn?: boolean;
   locale: Locale;
   lookupState?: LookupPreviewState | undefined;
+  notificationState?: NotificationPreviewState | undefined;
   queueState?: QueuePreviewState | undefined;
+  reportsState?: ReportsPreviewState | undefined;
   resetState?: ResetPreviewState | undefined;
   role?: RolePreview;
+  workflowState?: ComplaintWorkflowPreviewState | undefined;
 }) {
   const t = staffShellText[locale];
   const switchLocale = locale === 'ar' ? 'en' : 'ar';
@@ -189,7 +190,11 @@ export function StaffShell({
 
         <section className="grid content-start gap-4">
           <DashboardSummary locale={locale} role={role} state={dashboardState} />
+          <NotificationCenter locale={locale} state={notificationState} />
           <WorkQueue locale={locale} state={queueState} />
+          {role === 'staff' ? null : <ReportsDashboard locale={locale} state={reportsState} />}
+          <ComplaintDetailWorkspace attachmentState={attachmentState} commentsState={commentsState} locale={locale} state={detailState} workflowState={workflowState} />
+          {role === 'admin' ? <AdminSurfaces locale={locale} state={adminState} /> : null}
           <CustomerVehicleLookup locale={locale} state={lookupState} />
           <ComplaintCreateForm locale={locale} state={createState} />
           <AttachmentUploadPanel locale={locale} state={attachmentState} />

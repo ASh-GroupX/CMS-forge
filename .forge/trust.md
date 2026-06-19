@@ -3543,3 +3543,403 @@ Residual risk: this is a required customer-portal privacy gate. A fresh verifier
   - Attachments remain out of this split; upload behavior belongs to the later
     attachment/detail slices that already own backend authorization and scan
     state.
+
+## F6-03D1 - Add Staff Complaint Create Write Client With CSRF And Validation Mapping
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-03D2`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- api-client` (9/9)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - The write helper is intentionally thin: branch query, JSON body, cookie
+    credentials, readable CSRF cookie header, and standard result/error mapping.
+  - UI submission and localized preserved-input states remain queued for
+    `F6-03D2`.
+  - Backend remains the authority for role, branch scope, complaint status,
+    workflow, audit, and status history.
+
+## F6-03D2 - Wire Complaint Create Form Submission
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-04A`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Failed then Passed: `corepack pnpm typecheck`; initial failure was limited to
+    `exactOptionalPropertyTypes` on optional child-component props and was fixed.
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (42/42)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Complaint submission is now wired through the existing staff write helper;
+    React still does not decide workflow status, owner, branch scope, SLA, audit,
+    or queue placement.
+  - Field-error rendering is limited to matching visible create-form fields.
+  - Attachments remain render-only; upload behavior belongs to later authorized
+    attachment/detail tasks.
+
+## F6-04A - Add Complaint Detail Layout
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-04B`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (47/47)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Detail workspace remains render-only with safe masked placeholders.
+  - No client-side workflow, SLA, branch-scope, authorization, survey, comments,
+    or attachment behavior was added.
+  - Comments/public updates remain queued for `F6-04B`.
+
+## F6-04B - Add Comments And Public-Update Panels With Visibility Badges
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-04C`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (49/49)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Comments and public updates remain render-only with clear visibility badges.
+  - No comment authorization, visibility rule, audit history, first-response
+    reporting, or portal exposure was implemented in React.
+  - Attachment detail controls remain queued for `F6-04C`.
+
+## F6-04C - Add Detail Attachment Upload And Download Controls
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-04D`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (53/53)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Attachment controls remain render-only and explicitly defer backend
+    authorization, scan truth, upload/download, and audit behavior to the API.
+  - No direct file links, file reads, object URLs, provider calls, or browser
+    storage were added.
+  - Workflow action modal remains queued for `F6-04D`.
+
+## F6-04D - Add Workflow Action Modal
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-04E`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (57/57)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Workflow action UI remains render-only. Backend still owns allowed actions,
+    transitions, comments validation, status/history/audit, side effects, and
+    branch/RBAC checks.
+  - Conflict recovery is previewed as a safe state here; `F6-04E` adds focused
+    detail conflict/RTL proof before leaving the detail workspace slice.
+
+## F6-04E - Add Detail Conflict Recovery And RTL/LTR Proof
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; `F6-04` is complete and AUTO PHASE can continue with
+  `F6-05A`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (59/59)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Conflict recovery remains UI-only; no reload, diff, retry, or API behavior
+    was added.
+  - Detail workspace RTL/LTR proof now covers facts, comments, attachments, and
+    workflow regions together.
+
+## F6-05A - Add Admin Branches And Departments UI
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-05B`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (63/63)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Admin branches/departments UI remains render-only. Backend still owns Admin
+    RBAC, branch scope, validation, conflict truth, active/inactive persistence,
+    and audit logging.
+  - Users/roles/branch-scope Admin UI remains queued for `F6-05B`.
+
+## F6-05B - Add Admin Users Roles Branch Scope And Reset UI
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-05C`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (66/66)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Admin users/roles/reset UI remains render-only. Backend still owns Admin
+    RBAC, branch scope, role assignment, user persistence, reset-token creation,
+    delivery, validation, conflict truth, and audit logging.
+  - Categories/severity/SLA policy Admin UI remains queued for `F6-05C`.
+
+## F6-05C - Add Admin Categories Severity And SLA Policy UI
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-05D`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Failed then Passed: `corepack pnpm typecheck`; repaired stale Admin preview
+    prop type after grouping Admin panels.
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (71/71)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Admin categories/severity/SLA UI remains render-only. Backend still owns
+    Admin RBAC, category hierarchy truth, severity truth, SLA deadline
+    calculation, escalation routes, validation, conflict truth, persistence, and
+    audit logging.
+  - Notification template Admin UI remains queued for `F6-05D`.
+
+## F6-05D - Add Admin Notification Template UI
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-05E`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (75/75)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Admin notification template UI remains render-only. Backend still owns Admin
+    RBAC, template truth, placeholder validation, provider adapters, dispatch,
+    persistence, validation, conflict truth, and audit logging.
+  - Audit viewer Admin UI remains queued for `F6-05E`.
+
+## F6-05E - Add Audit Viewer UI
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-05F`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (79/79)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Audit viewer UI remains render-only. Backend still owns Admin RBAC, audit
+    visibility, redaction, row limits, append-only storage, export generation,
+    validation, conflict truth, and audit search truth.
+  - In-app notification center UI remains queued for `F6-05F`.
+
+## F6-05F - Add In-App Notification Center UI
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; `F6-05` is complete and AUTO PHASE can continue with
+  `F6-06A`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (83/83)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - In-app notification center UI remains render-only. Backend still owns
+    notification visibility, branch scope, read-state truth, complaint-link
+    authorization, delivery truth, validation, conflict truth, and persistence.
+  - Reports entry surfaces remain queued for `F6-06A`.
+
+## F6-06A - Add Reports Dashboard Placeholders
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-06B`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (87/87)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Reports dashboard remains render-only. Backend still owns report RBAC,
+    branch scope, report data, metric truth, row limits, export authorization,
+    and reconciliation against complaint records.
+  - Export affordance UI states remain queued for `F6-06B`.
+
+## F6-06B - Add Report Export Affordance UI
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; `F6-06` is complete and AUTO PHASE can continue with
+  `F6-07A`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (88/88)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Report export affordances remain render-only. Backend still owns export
+    authorization, row limits, RBAC filtering, export audit, report data,
+    metrics, branch scope, and generated files.
+  - No client-side CSV/Excel generation, Blob/object URL, download behavior,
+    API call, backend route, OpenAPI change, browser storage, or dependency was
+    added.
+
+## F6-07A - Replace Fail-Loud Web Proof Placeholders
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-07B`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (31/31; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (88/88)
+  - Failed then Passed: `corepack pnpm test:visual`; repaired root resolution
+    for `react-dom`.
+  - Failed then Passed: `corepack pnpm test:e2e -- accessibility`; repaired the
+    button assertion to allow explicit `type="submit"` and reject only missing
+    button types.
+  - Passed: `corepack pnpm web:perf`
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Visual, accessibility, and frontend performance proof commands are now real
+    deterministic local runners over English LTR and Arabic RTL staff shell
+    previews.
+  - This is a smoke foundation, not full screenshot-baseline coverage or deep
+    keyboard/focus/reduced-motion coverage; those remain queued for `F6-07B` and
+    `F6-07C`.
+  - Unrelated pending proof commands still fail loudly.
+
+## F6-07B - Add Visual Regression Coverage
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-07C`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (31/31; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (88/88)
+  - Passed: `corepack pnpm test:visual` (16 staff shell previews)
+  - Passed: `corepack pnpm test:e2e -- accessibility`
+  - Passed: `corepack pnpm web:perf`
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Visual proof now covers dashboard, queue, create, detail, workflow modal,
+    Admin surfaces, reports, and audit in both English and Arabic.
+  - This remains deterministic server-render proof, not browser screenshot
+    baselines. Browser-level screenshot infrastructure was explicitly out of
+    scope for this slice.
+  - Deep accessibility coverage remains queued for `F6-07C`.
+
+## F6-07C - Add Accessibility Coverage
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-07D`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (31/31; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (88/88)
+  - Passed: `corepack pnpm test:visual` (16 staff shell previews)
+  - Passed: `corepack pnpm test:e2e -- accessibility` (11 staff shell previews)
+  - Passed: `corepack pnpm web:perf`
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Accessibility proof now checks labels, named controls, feedback roles,
+    dialog naming, decorative icon hiding, global focus-visible styling, and
+    reduced-motion CSS.
+  - The proof remains deterministic render/source inspection, not full browser
+    keyboard automation.
+  - Frontend performance budget tuning and Phase 6 review handoff remain queued
+    for `F6-07D`.
+
+## F6-07D - Add Frontend Performance Budgets And Phase Review Task
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; Phase 6 is complete and AUTO PHASE must stop at
+  `PHASE-6-REVIEW`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (31/31; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (88/88)
+  - Passed: `corepack pnpm test:visual` (16 staff shell previews)
+  - Passed: `corepack pnpm test:e2e -- accessibility` (11 staff shell previews)
+  - Passed: `corepack pnpm web:perf` (2 staff shell previews)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - `web:perf` now has explicit deterministic staff dashboard and work-queue
+    budgets.
+  - Phase 6 remains unaccepted until a PHASE-REVIEWER performs the mandatory
+    independent review.
+  - Phase 7 must not start until that review clears.

@@ -5781,3 +5781,1076 @@ Assumptions and gaps:
   - Passed: `git diff --check -- .forge/next.md .forge/state.md .forge/backlog.md .forge/evidence.md .forge/trust.md` (line-ending warnings only)
 - Notes:
   - No application source code was changed.
+
+## F6-03D1 - Add Staff Complaint Create Write Client With CSRF And Validation Mapping
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-COMPLAINT-001
+  - REQ-RBAC-001
+  - API-STANDARD-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Extended `apps/web/src/lib/staff-complaints-api.ts` with typed
+    `createStaffComplaint(...)` for `POST /complaints`.
+  - The helper uses relative `/complaints?branchId=...`, URL-encodes the branch
+    query, sends `credentials: "include"`, posts JSON, and copies only the
+    readable `cms_csrf_token` cookie into `x-csrf-token`.
+  - Missing CSRF cookie omits the CSRF header and leaves backend denial to the
+    existing guarded route.
+  - Successful responses map to `{ complaint: { id, referenceNumber, status } }`.
+  - Standard API errors keep `code`, `message`, `correlationId`, HTTP status, and
+    validation `fieldErrors` when present.
+  - Extended `apps/web/test/api-client/staff-complaints-api.test.ts` from 4 to 9
+    tests covering success, branch query encoding, CSRF header behavior, missing
+    CSRF cookie behavior, validation field errors, network failure, and no
+    client-supplied role/actor/workflow/status/branch/token/credential authority.
+  - Added no UI wiring, attachment upload behavior, backend route, OpenAPI change,
+    generated client, browser credential exposure, or new dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- api-client` (9/9)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed. Tests prove the write helper sends only the required branch query and
+    no role/actor/workflow/status/branch authority in the JSON body.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by boundary. This web
+    helper does not change state locally; it delegates the create mutation to the
+    existing backend route that owns status history and audit.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. The helper reads only the non-HttpOnly CSRF cookie, does not
+    read the session cookie, does not log, and tests cover no token/credential
+    parameters in the request body.
+  - Customer portal exposure rules hold: Passed. The helper targets the staff
+    complaint route only and exposes no portal data, internal comments, audit,
+    DMS codes, staff PII, provider details, or storage URLs.
+  - Trust boundaries are tested: Passed. Allowed success and denied validation
+    error/network paths are covered, including missing CSRF-cookie behavior and
+    API field-error preservation.
+
+## F6-03D2 - Wire Complaint Create Form Submission
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-COMPLAINT-001
+  - REQ-RBAC-001
+  - API-STANDARD-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Converted `ComplaintCreateForm` into a client component that submits through
+    `createStaffComplaint(...)`.
+  - Added a small localized `staff-complaint-create` text file so the existing
+    staff shell dictionary stays under the 300-line source budget.
+  - The form now renders customer name, customer phone/customer number, category,
+    subcategory, severity, branch, incident date, subject, description,
+    vehicle-related, and vehicle VIN fields.
+  - Added `buildStaffComplaintCreateSubmission(...)` to map form data to the
+    backend request with date normalization, optional contact/vehicle fields, and
+    branch kept as the helper query input rather than JSON body authority.
+  - Success state displays the backend-returned reference number and status.
+  - Validation state maps standard API `fieldErrors` to matching visible fields.
+  - Network and generic API errors show safe localized messages and preserve
+    visible values.
+  - Extended `test:web -- shell` from 40 to 42 tests covering submit fields,
+    success, validation, loading/disabled submit, network error, Arabic RTL copy,
+    request-body mapping, no client authority fields, and no browser storage or
+    direct `fetch` in the form source.
+  - Added no attachment upload behavior, backend route, OpenAPI change, generated
+    client, workflow decision, browser storage, session cookie access, provider
+    details, portal data, or new dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Failed then Passed: `corepack pnpm typecheck`; initial failure was limited to
+    `exactOptionalPropertyTypes` on optional child-component props. Props were
+    tightened and the final run passed.
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (42/42)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed. The form sends no role/actor/workflow/status/owner authority; tests
+    prove the request body excludes role, actor, workflow, status, branch, token,
+    and credential fields.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by boundary. The UI
+    submits to the existing backend create route and does not mutate state
+    locally or enqueue side effects.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. The form does not read cookies, use browser storage, log
+    values, or accept token/credential fields.
+  - Customer portal exposure rules hold: Passed. The create form exposes no
+    portal data, internal comments, audit logs, DMS codes, staff PII, provider
+    details, or storage URLs.
+  - Trust boundaries are tested: Passed. Tests cover success, validation-error,
+    network-error, and request-mapping paths plus absence of direct browser
+    credential/storage behavior in the form source.
+
+## F6-04A - Add Complaint Detail Layout
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-WORKFLOW-001
+  - REQ-SLA-001
+  - REQ-SURVEY-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added `ComplaintDetailWorkspace` as a localized render-only detail region in
+    the staff shell.
+  - Added shared `staff-complaint-detail` i18n text for English LTR and Arabic
+    RTL labels without expanding the main shell dictionary past the line budget.
+  - The workspace renders stable regions for complaint facts, customer data,
+    vehicle data, current owner, status, SLA timer, timeline, and submitted
+    survey results.
+  - Added loading, empty, and error preview states through the existing query
+    preview pattern.
+  - Kept placeholders masked and safe: no real phone, email, DMS code, staff PII,
+    internal comment, audit log, portal data, provider detail, or storage URL.
+  - Extended `test:web -- shell` from 42 to 47 tests covering English labels,
+    Arabic RTL labels, responsive classes, loading/empty/error states,
+    privacy-safe placeholder content, and absence of API/browser-storage behavior
+    in the detail source.
+  - Added no detail API fetch, workflow action, comments behavior, attachment
+    behavior, SLA calculation, survey API behavior, backend route, OpenAPI change,
+    generated client, browser storage, or new dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (47/47)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This render-only layout adds no route call or caller
+    authority path.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no state change or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. This task added no credential fields, API calls, browser
+    storage, logging, provider surface, or token handling.
+  - Customer portal exposure rules hold: Passed. Tests assert the detail source
+    avoids portal data, internal comments, audit logs, DMS codes, real contact
+    details, provider details, and storage URLs.
+  - Trust boundaries are tested: Passed for this UI slice. Tests cover masked
+    placeholders, Arabic RTL labels, preview states, responsive structure, and no
+    API/storage behavior in the detail source.
+
+## F6-04B - Add Comments And Public-Update Panels With Visibility Badges
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-COMMENTS-001
+  - REQ-PORTAL-002
+  - METHOD-TEST-001
+- Evidence:
+  - Extended the complaint detail workspace with separate internal comments and
+    public update panels.
+  - Added localized staff-only and customer-visible visibility badges.
+  - Added safe placeholder author, timestamp, visibility, and body content for
+    both comment types.
+  - Added loading, empty, and error preview states for the comments area.
+  - Extended `test:web -- shell` from 47 to 49 tests covering visibility badges,
+    safe placeholders, comment preview states, Arabic labels, and no API/browser
+    storage behavior.
+  - Added no comment fetch/create/edit/delete behavior, portal UI exposure,
+    workflow action, attachment behavior, backend route, OpenAPI change,
+    generated client, browser storage, or new dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (49/49)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This render-only comments panel adds no route call or caller
+    authority path.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no comment mutation, state change, audit write, or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. This task added no credential fields, API calls, browser
+    storage, logging, provider surface, or token handling.
+  - Customer portal exposure rules hold: Passed. Public-update content is only a
+    staff-side placeholder panel; no portal UI/API exposure was added, and tests
+    assert no portal/audit/DMS/provider/storage leakage in the detail source.
+  - Trust boundaries are tested: Passed for this UI slice. Tests cover internal
+    versus public visibility badges, preview states, safe placeholders, Arabic
+    labels, and no API/storage behavior.
+
+## F6-04C - Add Detail Attachment Upload And Download Controls
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-FILES-001
+  - METHOD-TEST-001
+- Evidence:
+  - Extended the complaint detail workspace with localized attachment controls.
+  - Added upload and authorized-download affordances as UI-only controls.
+  - Added safe file-rule text that states backend authorization owns upload and
+    download access.
+  - Added pending, clean, and rejected scan status badges plus loading, empty, and
+    error preview states.
+  - Reused the existing `attachment` preview parameter instead of adding another
+    shell state.
+  - Extended `test:web -- shell` from 49 to 53 tests covering attachment actions,
+    scan states, preview states, Arabic labels, no file transfer behavior, and no
+    storage-link exposure.
+  - Added no file upload, file read, object URL, API fetch, download URL, backend
+    route, OpenAPI change, generated client, provider call, browser storage, or
+    new dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (53/53)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This render-only attachment panel adds no route call or
+    caller authority path.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no upload/download mutation, audit write, or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. This task added no credential fields, API calls, browser
+    storage, logging, provider surface, token handling, file reads, or object URLs.
+  - Customer portal exposure rules hold: Passed. The controls are staff-side
+    render-only placeholders and expose no portal data, audit logs, DMS codes,
+    provider details, or direct file/storage links.
+  - Trust boundaries are tested: Passed for this UI slice. Tests cover scan
+    states, safe placeholders, Arabic labels, and absence of upload/file-read/
+    object-URL/API/storage behavior.
+
+## F6-04D - Add Workflow Action Modal
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-WORKFLOW-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added a localized render-only workflow action modal section inside the
+    complaint detail workspace.
+  - Rendered action affordances for approve, send back, assign, investigate,
+    resolve, close, reject, and reopen.
+  - Added a required comment input surface with localized validation preview text.
+  - Added loading, empty, error, success, and optimistic conflict preview states.
+  - Added copy that keeps workflow action availability owned by backend policy.
+  - Extended `test:web -- shell` from 53 to 57 tests covering workflow action
+    labels, required comment validation, preview states, Arabic labels, and no
+    client-side transition authority in source.
+  - Added no transition API call, frontend status decision, owner/branch/SLA/audit
+    decision, backend route, OpenAPI change, generated client, browser storage, or
+    new dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (57/57)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This render-only workflow modal adds no route call or caller
+    authority path.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no workflow mutation, status update, audit write, or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. This task added no credential fields, API calls, browser
+    storage, logging, provider surface, or token handling.
+  - Customer portal exposure rules hold: Passed. This is staff-side render-only UI
+    and exposes no portal data, audit logs, DMS codes, provider details, or direct
+    file/storage links.
+  - Trust boundaries are tested: Passed for this UI slice. Tests cover action
+    labels, required comment validation, safe preview states, Arabic labels, and
+    absence of API/storage/client-transition behavior.
+
+## F6-04E - Add Detail Conflict Recovery And RTL/LTR Proof
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-WORKFLOW-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added localized conflict recovery affordances to the complaint detail workflow
+    conflict state: reload latest detail and retry after reload.
+  - Kept conflict recovery UI-only: no fetch, reload, diff, retry, or persistence
+    behavior was added.
+  - Added focused English LTR and Arabic RTL tests proving the detail workspace
+    renders facts, internal comments, attachments, and workflow regions together.
+  - Extended `test:web -- shell` from 57 to 59 tests covering conflict recovery
+    affordances, complete detail region RTL/LTR rendering, and no API/browser
+    storage/reload behavior in source.
+  - Added no API call, latest-record fetch, diff/retry behavior, workflow status
+    decision, backend route, OpenAPI change, generated client, browser storage, or
+    new dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (59/59)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This UI-only conflict recovery adds no route call or caller
+    authority path.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no workflow mutation, status update, audit write, or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. This task added no credential fields, API calls, browser
+    storage, logging, provider surface, or token handling.
+  - Customer portal exposure rules hold: Passed. The detail workspace remains
+    staff-side render-only UI and exposes no portal data, audit logs, DMS codes,
+    provider details, or direct file/storage links.
+  - Trust boundaries are tested: Passed for this UI slice. Tests cover conflict
+    recovery copy/actions, full detail RTL/LTR rendering, and absence of API/
+    storage/reload/client-transition behavior.
+
+## F6-05A - Add Admin Branches And Departments UI
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-ADMIN-001
+  - REQ-RBAC-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added a localized render-only Admin branches/departments screen to the staff
+    shell.
+  - Rendered branch and department table regions with active/inactive badges and
+    create/edit/deactivate affordances.
+  - Added loading, empty, error, success, validation, and conflict preview states.
+  - Admin screen renders only in the existing Admin role preview; backend RBAC
+    remains the real authority.
+  - Added `staff-admin-branches` i18n text for English LTR and Arabic RTL labels.
+  - Extended `test:web -- shell` from 59 to 63 tests covering Admin visibility,
+    CRUD affordances, preview states, Arabic labels, responsive table classes, and
+    no API/browser-storage/client-RBAC behavior in source.
+  - Added no Admin API fetch/mutation, client RBAC decision, audit behavior,
+    backend route, OpenAPI change, generated client, browser storage, or new
+    dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (63/63)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This render-only Admin preview adds no route call or caller
+    authority path; tests show it is hidden from the staff preview.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no Admin mutation, audit write, or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. This task added no credential fields, API calls, browser
+    storage, logging, provider surface, or token handling.
+  - Customer portal exposure rules hold: Passed. The Admin screen is staff-side
+    render-only UI and exposes no portal data, audit logs, DMS codes, provider
+    details, or unrelated complaint data.
+  - Trust boundaries are tested: Passed for this UI slice. Tests cover Admin-only
+    preview visibility, safe placeholder content, Arabic labels, preview states,
+    and absence of API/storage/client-RBAC behavior.
+
+## F6-05B - Add Admin Users Roles Branch Scope And Reset UI
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-ADMIN-001
+  - REQ-RBAC-001
+  - REQ-AUTH-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added a localized render-only Admin users, roles, branch-scope, and password
+    reset UI contract to the staff shell.
+  - Rendered a user table region with role badges, branch scope badges,
+    active/inactive state, create/edit/deactivate affordances, and a generic
+    password-reset affordance.
+  - Added loading, empty, error, success, validation, and conflict preview states.
+  - Kept Admin visibility as shell preview only; backend RBAC remains the real
+    authority for all user, role, branch-scope, and reset behavior.
+  - Added `staff-admin-users` i18n text for English LTR and Arabic RTL labels.
+  - Extended `test:web -- shell` from 63 to 66 tests covering Admin visibility,
+    role/scope/reset affordances, generic reset messaging, Arabic labels, and no
+    API/browser-storage/client-RBAC behavior in source.
+  - Added no Admin API fetch/mutation, role assignment behavior, branch-scope
+    persistence, password reset delivery, backend route, OpenAPI change,
+    generated client, browser storage, or new dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (66/66)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This render-only Admin preview adds no route call, reset
+    request, role assignment, or caller authority path.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no Admin mutation, password reset side effect, audit write, or
+    delivery enqueue.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. Reset UI uses generic messaging and exposes no token, API
+    response, provider detail, browser storage, or credential field.
+  - Customer portal exposure rules hold: Passed. The Admin screen is staff-side
+    render-only UI and exposes no portal data, audit logs, DMS codes, provider
+    details, staff PII, or unrelated complaint data.
+  - Trust boundaries are tested: Passed for this UI slice. Tests cover Admin-only
+    preview visibility, role/scope/reset labels, safe reset copy, Arabic labels,
+    and absence of API/storage/client-RBAC behavior.
+
+## F6-05C - Add Admin Categories Severity And SLA Policy UI
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-ADMIN-001
+  - REQ-RBAC-001
+  - REQ-COMPLAINT-001
+  - REQ-SLA-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added a localized render-only Admin categories, severity, and SLA policy UI
+    contract to the staff shell.
+  - Added an `AdminSurfaces` wrapper so the shell can keep Admin screens grouped
+    while staying under the 300-line source budget.
+  - Rendered category tree, severity values, and SLA policy table regions with
+    active/inactive badges, policy-scope badges, create/edit/deactivate
+    affordances, warning threshold, and deadline fields.
+  - Added explicit copy that SLA deadlines are calculated and enforced by the
+    backend.
+  - Added loading, empty, error, success, validation, and conflict preview states.
+  - Added `staff-admin-categories-sla` i18n text for English LTR and Arabic RTL
+    labels.
+  - Tightened the Admin users/roles panel to render the same preview-state banner
+    family that its completed contract requires.
+  - Extended `test:web -- shell` from 66 to 71 tests covering Admin-only
+    visibility, category/severity/SLA labels, validation and conflict states,
+    Arabic labels, no API/browser-storage/client-RBAC behavior, and no client SLA
+    calculation behavior.
+  - Added no Admin API fetch/mutation, category persistence, severity persistence,
+    SLA deadline calculation, escalation logic, backend route, OpenAPI change,
+    generated client, browser storage, or new dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Failed then Passed: `corepack pnpm typecheck`; the initial failure was a
+    stale `AdminBranchesPreviewState` prop type after moving Admin panels behind
+    `AdminSurfaces`. The type was updated to `AdminPreviewState` and final proof
+    passed.
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (71/71)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This render-only Admin preview adds no route call, caller
+    authority path, category mutation, or SLA policy mutation.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no Admin mutation, SLA escalation behavior, audit write, or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. This task added no credential fields, API calls, browser
+    storage, logging, provider surface, or token handling.
+  - Customer portal exposure rules hold: Passed. The Admin screen is staff-side
+    render-only UI and exposes no portal data, audit logs, DMS codes, provider
+    details, staff PII, or unrelated complaint data.
+  - Trust boundaries are tested: Passed for this UI slice. Tests cover Admin-only
+    preview visibility, localized labels/states, responsive table width, absence
+    of API/storage/client-RBAC behavior, and absence of client-side SLA deadline
+    calculation.
+
+## F6-05D - Add Admin Notification Template UI
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-ADMIN-001
+  - REQ-RBAC-001
+  - REQ-NOTIFY-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added a localized render-only Admin notification template UI contract to the
+    staff shell.
+  - Rendered template table and preview regions with event trigger, channels,
+    Arabic/English language labels, active/inactive badges, edit/activate/
+    deactivate affordances, and approved placeholder-token display.
+  - Added loading, empty, error, success, validation, and conflict preview states.
+  - Added `staff-admin-notification-templates` i18n text for English LTR and
+    Arabic RTL labels.
+  - Added safe copy that backend template services own placeholder validation and
+    delivery rules.
+  - Extended `test:web -- shell` from 71 to 75 tests covering Admin-only
+    visibility, channel/event/template labels, placeholder tokens, preview states,
+    Arabic labels, no API/browser-storage/client-RBAC behavior, and no provider
+    credential or delivery-log leakage in source.
+  - Added no Admin API fetch/mutation, template persistence, provider call,
+    dispatch behavior, real template rendering engine, backend route, OpenAPI
+    change, generated client, browser storage, or new dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (75/75)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This render-only Admin preview adds no route call, caller
+    authority path, template mutation, or dispatch path.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no Admin mutation, notification dispatch, audit write, or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. This task added no credential fields, API calls, browser
+    storage, provider surface, delivery log, or token handling.
+  - Customer portal exposure rules hold: Passed. The Admin screen is staff-side
+    render-only UI and exposes no portal data, audit logs, DMS codes, provider
+    details, staff PII, real contact details, or unrelated complaint data.
+  - Trust boundaries are tested: Passed for this UI slice. Tests cover Admin-only
+    preview visibility, localized labels/states, placeholder-token display,
+    absence of API/storage/client-RBAC behavior, and absence of provider
+    credential or delivery-log leakage.
+
+## F6-05E - Add Audit Viewer UI
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-AUDIT-001
+  - REQ-ADMIN-001
+  - REQ-RBAC-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added a localized render-only Audit viewer UI contract to the staff shell.
+  - Rendered filter controls for actor, action, target, date, and correlation ID.
+  - Rendered safe placeholder audit rows with timestamp, actor, action, target,
+    correlation ID, event badges, and an export affordance.
+  - Added loading, empty, error, success, validation, and conflict preview states.
+  - Added `staff-audit-viewer` i18n text for English LTR and Arabic RTL labels.
+  - Added safe copy that backend search owns redaction, configured limits, and
+    authorization.
+  - Extended `test:web -- shell` from 75 to 79 tests covering Admin-only
+    visibility, filters, export affordance, safe placeholder rows, preview states,
+    Arabic labels, no API/browser-storage/client-RBAC behavior, and no export or
+    credential leakage in source.
+  - Added no audit fetch, export file generation, pagination, search, sort,
+    backend route, OpenAPI change, generated client, browser storage, or new
+    dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (79/79)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This render-only audit preview adds no route call, caller
+    authority path, export request, or audit visibility decision.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no state mutation, audit write, export side effect, or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. This task added no credential fields, API calls, browser
+    storage, provider surface, delivery log, file export, or token handling.
+  - Customer portal exposure rules hold: Passed. The Audit viewer is staff-side
+    render-only UI and uses placeholder rows only; it exposes no portal data,
+    real audit data, DMS codes, provider details, staff PII, real contact details,
+    or unrelated complaint data.
+  - Trust boundaries are tested: Passed for this UI slice. Tests cover Admin-only
+    preview visibility, localized filters/states, safe placeholder rows, export
+    affordance, and absence of API/storage/client-RBAC/export/credential behavior.
+
+## F6-05F - Add In-App Notification Center UI
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-NOTIFY-001
+  - REQ-RBAC-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added a localized render-only in-app notification center to the staff shell.
+  - Rendered unread/read notification list regions with read/unread badges,
+    workflow/SLA event badges, timestamps, scoped complaint-link affordance, and
+    mark-read affordance.
+  - Added loading, empty, error, success, validation, and conflict preview states
+    through a dedicated `notification` query preview parameter.
+  - Added `staff-notification-center` i18n text for English LTR and Arabic RTL
+    labels.
+  - Added safe copy that complaint links remain scoped by backend authorization
+    and do not grant access.
+  - Extended `test:web -- shell` from 79 to 83 tests covering staff-visible
+    notification center rendering, unread/read states, scoped complaint-link and
+    mark-read affordances, preview states, Arabic labels, no API/browser-storage/
+    client-RBAC behavior, and no direct navigation or credential/provider leakage
+    in source.
+  - Added no notification fetch, mark-read mutation, link navigation, pagination,
+    search, sort, backend route, OpenAPI change, generated client, browser
+    storage, or new dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (83/83)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This render-only notification center adds no route call,
+    caller authority path, branch-scope decision, or link navigation.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no read-state mutation, notification dispatch, audit write, or side
+    effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. This task added no credential fields, API calls, browser
+    storage, provider surface, delivery log, direct navigation, or token handling.
+  - Customer portal exposure rules hold: Passed. The notification center is
+    staff-side render-only UI and uses scoped placeholders only; it exposes no
+    portal data, audit logs, DMS codes, provider details, staff PII, real contact
+    details, or cross-scope complaint data.
+  - Trust boundaries are tested: Passed for this UI slice. Tests cover localized
+    unread/read states, scoped-link and mark-read affordances, safe placeholders,
+    and absence of API/storage/navigation/client-RBAC/credential behavior.
+
+## F6-06A - Add Reports Dashboard Placeholders
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-REPORT-001
+  - REQ-RBAC-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added a localized render-only reports dashboard to the staff shell.
+  - Rendered RPT-001 through RPT-017 placeholder entries with safe report names,
+    audience text, category badges, and API-pending status.
+  - Reports dashboard is visible for management/admin role previews and hidden
+    from staff role preview.
+  - Added loading, empty, error, success, validation, and conflict preview states
+    through a dedicated `reports` query preview parameter.
+  - Added `staff-reports-dashboard` i18n text for English LTR and Arabic RTL
+    labels.
+  - Added safe copy that report data, metrics, filters, and exports remain
+    backend-scoped.
+  - Extended `test:web -- shell` from 83 to 87 tests covering full RPT-001
+    through RPT-017 coverage, management/admin visibility, staff hiding, pending
+    API status, preview states, Arabic labels, no API/browser-storage/client-RBAC
+    behavior, no chart/calculation/export-file behavior, and no DMS code or
+    credential leakage in source.
+  - Added no report data fetch, metric calculation, chart rendering, export file,
+    report detail navigation, pagination, search, sort, backend route, OpenAPI
+    change, generated client, browser storage, or new dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (87/87)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This render-only reports dashboard adds no route call,
+    caller authority path, branch-scope decision, or export path.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no report mutation, export behavior, audit write, or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. This task added no credential fields, API calls, browser
+    storage, provider surface, file export, or token handling.
+  - Customer portal exposure rules hold: Passed. The reports dashboard is
+    staff-side render-only UI and uses placeholder entries only; it exposes no
+    portal data, audit logs, DMS codes, provider details, staff PII, real contact
+    details, or cross-scope complaint data.
+  - Trust boundaries are tested: Passed for this UI slice. Tests cover role
+    preview visibility, full report ID coverage, localized states, safe
+    placeholders, and absence of API/storage/report-data/export-file behavior.
+
+## F6-06B - Add Report Export Affordance UI
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-REPORT-001
+  - REQ-RBAC-001
+  - API-STANDARD-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added localized render-only CSV and Excel export affordances to the reports
+    dashboard.
+  - Added row-limit, RBAC-filtered, and export-audit copy that keeps export
+    truth with backend services.
+  - Added export-specific ready and denied preview states while preserving the
+    existing loading, empty, error, success, validation, and conflict states.
+  - Added `reports=ready` and `reports=denied` preview query handling in the
+    staff shell.
+  - Extended `test:web -- shell` from 87 to 88 tests covering export controls,
+    row-limit/RBAC/audit copy, export preview states, Arabic labels, no API or
+    browser-storage behavior, and no client-side file generation/download path.
+  - Added no report data fetch, CSV/Excel generation, Blob/object URL, download,
+    metric calculation, report detail navigation, backend route, OpenAPI change,
+    generated client, browser storage, or new dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (88/88)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This render-only export preview adds no route call, caller
+    authority path, branch-scope decision, export authorization, or download
+    path.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no report mutation, export creation, audit write, file side effect, or
+    side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. This task added no credential fields, API calls, browser
+    storage, provider surface, file export, object URL, or token handling.
+  - Customer portal exposure rules hold: Passed. The reports dashboard is
+    staff-side render-only UI and uses placeholder entries only; it exposes no
+    portal data, audit logs, DMS codes, provider details, staff PII, real contact
+    details, or cross-scope complaint data.
+  - Trust boundaries are tested: Passed for this UI slice. Tests cover role
+    preview visibility, localized export states, row-limit/RBAC/audit copy, and
+    absence of API/storage/report-data/export-file/download behavior.
+
+## F6-07A - Replace Fail-Loud Web Proof Placeholders
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - QA-UI-001
+  - NFR-PERF-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added `tools/web-proof.mjs`, a deterministic local web proof runner that
+    renders the existing Next staff shell with `react-dom/server`.
+  - Wired `test:visual` to the new visual smoke mode.
+  - Wired `test:e2e -- accessibility` to the new accessibility smoke mode.
+  - Wired `web:perf` to the new frontend performance smoke mode.
+  - Kept `test:web -- shell` and `test:web -- api-client` on the existing focused
+    web test runner.
+  - Covered English LTR and Arabic RTL staff shell preview renders in every new
+    mode.
+  - Visual smoke checks guard against blank renders, missing direction, missing
+    core shell/report/export surfaces, missing major sections, and missing table
+    overflow/shared card styling.
+  - Accessibility smoke checks guard language/direction, named navigation,
+    labelled regions, form labels, focus-ring affordances, aria-hidden decorative
+    SVGs, explicit button types, and feedback roles.
+  - Performance smoke checks guard server render time, HTML size, table-row count,
+    unexpected script emission, and images without dimensions.
+  - Added `tools/web-proof.test.mjs` coverage for visual/accessibility/perf modes
+    and unknown-suite rejection.
+  - Updated `tools/pending-proof.test.mjs` so unrelated pending proof commands
+    still fail loudly.
+  - Added no browser automation dependency, screenshot baselines, backend route,
+    OpenAPI change, generated client, database migration, provider call, browser
+    storage, or product feature behavior.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (31/31; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (88/88)
+  - Failed then Passed: `corepack pnpm test:visual`; initial failure was root
+    tool module resolution for `react-dom`, fixed by resolving from
+    `apps/web/package.json`.
+  - Failed then Passed: `corepack pnpm test:e2e -- accessibility`; initial
+    failure was an over-strict button assertion that rejected explicit
+    `type="submit"`, fixed to reject only missing button types.
+  - Passed: `corepack pnpm web:perf`
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. The proof runner renders existing preview states only and
+    adds no route call, authority parameter, browser storage, or client RBAC
+    behavior.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no state mutation, audit write, export generation, or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. The runner renders static shell previews and does not read
+    cookies, storage, environment secrets, provider credentials, or tokens.
+  - Customer portal exposure rules hold: Passed by scope. The runner exercises
+    staff shell preview output only and adds no portal data, audit data, DMS code,
+    provider detail, real contact detail, or cross-scope complaint data.
+  - Trust boundaries are tested: Passed for this proof-surface slice. Tests prove
+    the new runner passes real visual/accessibility/performance smoke modes and
+    that unrelated pending proof commands still fail loudly.
+
+## F6-07B - Add Visual Regression Coverage
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - QA-UI-001
+  - METHOD-TEST-001
+- Evidence:
+  - Expanded `tools/web-proof.mjs` visual mode from two smoke renders to 16
+    deterministic visual-regression cases.
+  - Covered dashboard, work queue, complaint create, complaint detail, workflow
+    modal, Admin surfaces, reports, and audit viewer.
+  - Covered every visual-regression surface in English LTR and Arabic RTL.
+  - Each case asserts localized surface signals, important table/form/dialog
+    structure, responsive guard classes, page direction, major section count, and
+    non-blank render output.
+  - Visual failures now include the locale and surface name in the case label.
+  - Kept accessibility and performance modes on the two smoke previews from
+    `F6-07A`; deeper accessibility remains queued for `F6-07C`.
+  - Kept `tools/web-proof.mjs` at 180 lines, under the 300-line source budget.
+  - Added no browser automation dependency, screenshot baseline files, UI
+    behavior change, backend route, OpenAPI change, generated client, database
+    migration, provider call, browser storage, or product dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (31/31; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (88/88)
+  - Passed: `corepack pnpm test:visual` (16 staff shell previews)
+  - Passed: `corepack pnpm test:e2e -- accessibility`
+  - Passed: `corepack pnpm web:perf`
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. The visual cases render existing preview surfaces only and
+    add no route call, authority parameter, browser storage, or client RBAC
+    behavior.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no state mutation, audit write, export generation, or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. The runner renders static shell previews and does not read
+    cookies, storage, environment secrets, provider credentials, or tokens.
+  - Customer portal exposure rules hold: Passed by scope. The runner exercises
+    staff shell preview output only and adds no portal data, audit data, DMS code,
+    provider detail, real contact detail, or cross-scope complaint data.
+  - Trust boundaries are tested: Passed for this visual-proof slice. Tests cover
+    visual runner execution through `test:visual` plus unchanged shell,
+    accessibility, and performance proof commands.
+
+## F6-07C - Add Accessibility Coverage
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - QA-UI-001
+  - METHOD-TEST-001
+- Evidence:
+  - Expanded `tools/web-proof.mjs` accessibility mode from two smoke renders to
+    11 named staff-shell accessibility cases.
+  - Covered dashboard status/alert feedback, work-queue form labels and alerts,
+    complaint-create validation and network alerts, complaint-detail alert state,
+    workflow dialog naming and controls, Admin feedback, reports denied feedback,
+    and audit filters.
+  - Covered English LTR and Arabic RTL direction across the accessibility cases.
+  - Accessibility checks now assert language/direction, named navigation,
+    localized surface signals, labelled regions, form labels, focus affordances,
+    decorative SVG hiding, explicit button types, feedback roles, named dialogs,
+    and minimum named-control counts where relevant.
+  - Added global `:focus-visible` styling in `apps/web/src/globals.css` so all
+    keyboard-reachable controls have a focus affordance even where component
+    classes do not include focus utilities.
+  - Added global `prefers-reduced-motion: reduce` CSS that disables animation and
+    transition duration for reduced-motion users.
+  - Kept `tools/web-proof.mjs` at 227 lines, under the 300-line source budget.
+  - Added no browser automation dependency, UI feature behavior, backend route,
+    OpenAPI change, generated client, database migration, provider call, browser
+    storage, or product dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (31/31; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (88/88)
+  - Passed: `corepack pnpm test:visual` (16 staff shell previews)
+  - Passed: `corepack pnpm test:e2e -- accessibility` (11 staff shell previews)
+  - Passed: `corepack pnpm web:perf`
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. The accessibility cases render existing preview surfaces
+    only and add no route call, authority parameter, browser storage, or client
+    RBAC behavior.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no state mutation, audit write, export generation, or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. The runner renders static shell previews and does not read
+    cookies, storage, environment secrets, provider credentials, or tokens.
+  - Customer portal exposure rules hold: Passed by scope. The runner exercises
+    staff shell preview output only and adds no portal data, audit data, DMS code,
+    provider detail, real contact detail, or cross-scope complaint data.
+  - Trust boundaries are tested: Passed for this accessibility-proof slice. Tests
+    cover accessibility runner execution through `test:e2e -- accessibility`
+    plus unchanged visual, shell, and performance proof commands.
+
+## F6-07D - Add Frontend Performance Budgets And Phase Review Task
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-DESIGN-001
+  - QA-UI-001
+  - NFR-PERF-001
+  - METHOD-TEST-001
+- Evidence:
+  - Strengthened `tools/web-proof.mjs` performance mode with explicit staff
+    dashboard and staff work-queue performance cases.
+  - Added per-case performance budgets for deterministic server-render duration,
+    HTML size, table-row count, responsive guard count, static script emission,
+    and image dimension safety.
+  - The dashboard case asserts staff dashboard labels and SLA warning card
+    signals.
+  - The work-queue case asserts Arabic RTL queue title, search filter, and
+    pagination signals.
+  - Kept performance proof explicitly scoped to local deterministic render checks;
+    staging p95 browser/API performance remains a later operational concern.
+  - Kept `tools/web-proof.mjs` at 257 lines, under the 300-line source budget.
+  - Marked Phase 6 backlog items complete and wrote the mandatory Phase 6 review
+    gate in `.forge/next.md`.
+  - Set `.forge/state.md` to `Needs Phase Review` so AUTO PHASE stops before
+    Phase 7 implementation.
+  - Added no browser performance dependency, Lighthouse, UI behavior change,
+    backend route, OpenAPI change, generated client, database migration, provider
+    call, browser storage, or product dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (31/31; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (88/88)
+  - Passed: `corepack pnpm test:visual` (16 staff shell previews)
+  - Passed: `corepack pnpm test:e2e -- accessibility` (11 staff shell previews)
+  - Passed: `corepack pnpm web:perf` (2 staff shell previews)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. The performance cases render existing preview surfaces only
+    and add no route call, authority parameter, browser storage, or client RBAC
+    behavior.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no state mutation, audit write, export generation, or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. The runner renders static shell previews and does not read
+    cookies, storage, environment secrets, provider credentials, or tokens.
+  - Customer portal exposure rules hold: Passed by scope. The runner exercises
+    staff shell preview output only and adds no portal data, audit data, DMS code,
+    provider detail, real contact detail, or cross-scope complaint data.
+  - Trust boundaries are tested: Passed for this performance-proof slice. Tests
+    cover performance runner execution through `web:perf` plus unchanged visual,
+    accessibility, shell, lint, typecheck, test, and OpenAPI proof commands.
