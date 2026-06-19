@@ -3223,4 +3223,19 @@ Residual risk: this is a required customer-portal privacy gate. A fresh verifier
 - Conditions:
   - Phase 6 web checks are still fail-loud placeholders. The first Phase 6 task
     must make `test:web -- shell` a real focused check before wider
-    visual/accessibility/performance proof lands in `F6-06`.
+    visual/accessibility/performance proof lands in `F6-07`.
+
+## PLAN-F6-PHASE - Expand Staff UI Phase Plan
+
+- Date: 2026-06-19
+- Required model tier: PLANNER
+- Risk: High
+- Recommendation: Continue with `F6-01A`.
+- Notes:
+  - Expanded Phase 6 from broad buckets into a full sequence covering shell/auth,
+    queues, complaint create/detail, admin/audit/notification screens, reports
+    entry placeholders, and UI quality gates.
+  - `next.md` intentionally remains on the first buildable task only, per Forge
+    protocol.
+  - Reports APIs/exports remain Phase 7; Phase 6 only adds staff UI entry
+    surfaces and avoids client-side unbounded export behavior.

@@ -4,6 +4,15 @@ Status: Ready to Build
 Phase: Phase 6 - Staff UI
 Next Task: F6-01A - Bootstrap Next.js Staff Shell With Localized RTL/LTR Navigation
 
+## PLAN-F6-PHASE Expanded Full Staff UI Plan
+
+At user request, Phase 6 is now split beyond the first shell task. The backlog
+covers staff shell/auth entry, work queues, complaint create, complaint detail,
+admin/audit/notifications, reports entry placeholders, and UI quality gates.
+
+`F6-01A` remains the active next build task because Forge keeps `next.md` to one
+buildable task at a time.
+
 ## Phase 5 Accepted With Conditions - Phase 6 Ready To Build
 
 PHASE-5-REVIEW re-ran the repaired Phase 5 proof surface on 2026-06-19: lint,
@@ -19,7 +28,7 @@ and non-critical quiet-hour denial remain covered.
 
 Non-blocking condition for Phase 6: the web proof scripts are still fail-loud
 placeholders. `F6-01A` must make `test:web -- shell` real for the staff shell
-before broader visual/accessibility/performance gates land in `F6-06`.
+before broader visual/accessibility/performance gates land in `F6-07`.
 
 ## REPAIR-F5-06B-CRITICAL-QUIET-HOUR-BYPASS Built - Needs Phase Review
 

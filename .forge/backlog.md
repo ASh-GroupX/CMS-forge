@@ -141,13 +141,42 @@ history from another project.
 
 ## Phase 6 - Staff UI
 
-- [ ] F6-01: Operational shell, navigation, RTL/LTR
+- [ ] F6-01: Operational shell, auth entry, navigation, RTL/LTR
   - [ ] F6-01A: Bootstrap Next.js staff shell with localized RTL/LTR navigation
-- [ ] F6-02: Staff work queues
+  - [ ] F6-01B: Add staff login/logout UI with generic safe errors and session-aware shell states
+  - [ ] F6-01C: Add role-aware navigation visibility for staff/admin/management routes
+  - [ ] F6-01D: Add staff password-reset UI contract or stop for backend reset-route repair if endpoints are still absent
+- [ ] F6-02: Staff home dashboard and work queues
+  - [ ] F6-02A: Add minimal typed web API client/error mapping for staff complaint reads
+  - [ ] F6-02B: Add role-specific dashboard summary cards for open, overdue, SLA warning, closed, and average TAT
+  - [ ] F6-02C: Add complaint work queue table with filters, pagination, loading, empty, and error states
+  - [ ] F6-02D: Add queue responsive and RTL/LTR web tests at staff breakpoints
 - [ ] F6-03: Complaint create form
+  - [ ] F6-03A: Add customer/vehicle lookup panel with manual fallback UI
+  - [ ] F6-03B: Add localized complaint create form with category, severity, branch, incident date, subject, and description validation
+  - [ ] F6-03C: Add attachment upload panel with file-rule messages and scan-status display
+  - [ ] F6-03D: Submit complaint through backend API with success, validation error, and preserved-input states
 - [ ] F6-04: Complaint detail workspace
-- [ ] F6-05: Admin screens for users, roles, branches, categories, SLA
-- [ ] F6-06: UI quality gate: visual regression, accessibility, RTL/LTR, and frontend performance proof
+  - [ ] F6-04A: Add complaint detail layout with facts, customer/vehicle data, current owner, SLA timer, timeline, and survey results
+  - [ ] F6-04B: Add comments and public-update panels with visibility badges
+  - [ ] F6-04C: Add attachment upload/download controls using backend authorization and scan-status states
+  - [ ] F6-04D: Add workflow action modal for allowed backend transitions with required comments and validation
+  - [ ] F6-04E: Add optimistic-concurrency conflict recovery and detail workspace RTL/LTR tests
+- [ ] F6-05: Admin, audit, and notification screens
+  - [ ] F6-05A: Add Admin branches/departments screen using the golden CRUD UI pattern
+  - [ ] F6-05B: Add Admin users/roles/branch-scope screen and password-reset admin UI contract
+  - [ ] F6-05C: Add Admin categories/severity/SLA policy screens with localized validation states
+  - [ ] F6-05D: Add Admin notification template screen for Arabic/English templates, channels, preview, activate, and deactivate
+  - [ ] F6-05E: Add Audit viewer screen with filters, export affordance, and Admin-only visibility
+  - [ ] F6-05F: Add in-app notification center with read/unread states and scoped complaint links
+- [ ] F6-06: Staff reports entry surfaces
+  - [ ] F6-06A: Add reports dashboard navigation and placeholder states for RPT-001 through RPT-017 pending Phase 7 APIs
+  - [ ] F6-06B: Add export affordance UI states without client-side unbounded export behavior
+- [ ] F6-07: UI quality gate: visual regression, accessibility, RTL/LTR, and frontend performance proof
+  - [ ] F6-07A: Replace fail-loud web proof placeholders with real `test:web`, `test:visual`, accessibility, and performance runners
+  - [ ] F6-07B: Add visual regression coverage for dashboard, queue, create, detail, workflow modal, admin, reports, and audit in Arabic and English
+  - [ ] F6-07C: Add accessibility coverage for keyboard focus, labels, icon-button names, feedback announcements, and reduced motion
+  - [ ] F6-07D: Add frontend performance smoke budgets and write the Phase 6 review task
 
 ## Phase 7 - Reports, UAT, And Ops
 
