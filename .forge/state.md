@@ -1,8 +1,56 @@
 ﻿# Current State
 
-Status: Ready to Build
+Status: Ready to Plan
 Phase: Phase 6 - Staff UI
-Next Task: F6-01A - Bootstrap Next.js Staff Shell With Localized RTL/LTR Navigation
+Next Task: PLAN-F6-01D-PASSWORD-RESET-BACKEND-GAP
+
+## F6-01C Built - AUTO PHASE Stopped For Planning
+
+`F6-01C` added localized role preview labels and a small visual-only navigation
+allow-list for staff, admin, and management shell states. Staff role previews hide
+Admin-only surfaces and show a localized hidden-state message; Admin previews show
+the full placeholder navigation. This does not fetch roles, call APIs, grant
+access, or decide workflow authority.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- shell 8/8, and
+git diff --check with line-ending warnings only. Extra sanity proof passed:
+`corepack pnpm --filter @cms-auto/web build`.
+
+AUTO PHASE stops because the next backlog task, `F6-01D`, depends on password
+reset endpoints, and those are absent from OpenAPI and the auth module. The next
+step is a `PLANNER` task to split the backend prerequisite or explicitly defer
+UI-001A.
+
+## F6-01B Built - AUTO PHASE Continuing
+
+`F6-01B` extended the staff shell with a localized login panel, generic safe
+login failure message, signed-out/signed-in visual states, and a localized logout
+affordance placeholder. The UI uses query-string previews only for shell proof;
+it does not store tokens, call auth APIs, or decide authorization.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- shell 5/5, and
+git diff --check with line-ending warnings only. Extra sanity proof passed:
+`corepack pnpm --filter @cms-auto/web build`.
+
+No new auth backend behavior, API client calls, role-aware navigation, complaint
+data, workflow actions, forms beyond the login surface, uploads, reports, admin
+CRUD, visual runner, accessibility runner, or performance runner was added.
+
+## F6-01A Built - AUTO PHASE Continuing
+
+`F6-01A` replaced the web liveness-only runtime with a minimal Next.js App
+Router staff shell. The first screen now renders dense operational placeholder
+navigation for dashboard, work queue, complaint create/detail, admin, reports,
+audit, and notifications. Labels and direction come from the shared English/Arabic
+web dictionary, and unsupported locale input falls back to English/LTR.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- shell 3/3, and
+git diff --check with line-ending warnings only. Extra sanity proof passed:
+`corepack pnpm --filter @cms-auto/web build`.
+
+No API calls, login/session behavior, role-aware nav, complaint data, workflow
+actions, forms, uploads, admin CRUD, visual runner, accessibility runner, or
+performance runner was added.
 
 ## PLAN-F6-PHASE Expanded Full Staff UI Plan
 

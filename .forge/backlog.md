@@ -142,9 +142,9 @@ history from another project.
 ## Phase 6 - Staff UI
 
 - [ ] F6-01: Operational shell, auth entry, navigation, RTL/LTR
-  - [ ] F6-01A: Bootstrap Next.js staff shell with localized RTL/LTR navigation
-  - [ ] F6-01B: Add staff login/logout UI with generic safe errors and session-aware shell states
-  - [ ] F6-01C: Add role-aware navigation visibility for staff/admin/management routes
+  - [x] F6-01A: Bootstrap Next.js staff shell with localized RTL/LTR navigation
+  - [x] F6-01B: Add staff login/logout UI with generic safe errors and session-aware shell states
+  - [x] F6-01C: Add role-aware navigation visibility for staff/admin/management routes
   - [ ] F6-01D: Add staff password-reset UI contract or stop for backend reset-route repair if endpoints are still absent
 - [ ] F6-02: Staff home dashboard and work queues
   - [ ] F6-02A: Add minimal typed web API client/error mapping for staff complaint reads

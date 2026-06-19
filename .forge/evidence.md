@@ -5064,3 +5064,154 @@ Assumptions and gaps:
   - Trust boundaries are tested: Passed. Notification API tests cover critical
     allowed bypass, non-critical quiet-hour denial, preferred-channel denial, and
     delivery-attempt metadata recording.
+
+## F6-01A - Bootstrap Next.js Staff Shell With Localized RTL/LTR Navigation
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-LOCALIZATION-001
+  - METHOD-TEST-001
+- Evidence:
+  - Replaced the web liveness-only Node entrypoint with a minimal Next.js App
+    Router runtime using the existing Tailwind token foundation.
+  - Added a staff operations shell as the first screen, not a marketing page or
+    JSON liveness response.
+  - Added dense placeholder navigation entries for dashboard, work queue,
+    complaint create/detail, admin, reports, audit, and notifications.
+  - Kept staff shell display text in `apps/web/src/i18n/staff-shell.ts` with
+    English LTR and Arabic RTL labels.
+  - Added a real `tools/web-test.mjs` runner and focused shell tests for English
+    labels/direction, Arabic labels/direction, and unsupported locale fallback.
+  - Added no API calls, login/session behavior, role-aware navigation,
+    complaint data, workflow actions, forms, uploads, reports behavior, admin
+    CRUD, visual runner, accessibility runner, or performance runner.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (3/3)
+  - Passed: `git diff --check` (line-ending warnings only)
+  - Extra Passed: `corepack pnpm --filter @cms-auto/web build` (Next build
+    passed; warned only about a parent-user lockfile affecting root inference)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no role or branch decision path; the shell
+    exposes placeholders only and does not authorize actions in React.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no state change or side effect.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. This task added no credential
+    fields, API calls, logging, token storage, or provider surface.
+  - Customer portal exposure rules hold: Passed by scope. This task added no
+    customer portal route or response shape.
+  - Trust boundaries are tested: Passed for this UI slice. `test:web -- shell`
+    covers the accepted locale values (`en`, `ar`) and denial/fallback for an
+    unsupported locale input before direction/labels are rendered.
+
+## F6-01B - Add Staff Login/Logout UI With Safe Session-Aware Shell States
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-AUTH-001
+  - REQ-LOCALIZATION-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added localized staff login labels and controls to the first staff shell
+    surface.
+  - Added generic safe login failure text that does not identify wrong
+    identifier, wrong password, inactive account, or locked account causes.
+  - Added signed-out/signed-in visual shell states and a localized logout
+    affordance placeholder.
+  - Kept auth UI display text in the shared staff shell dictionary for English
+    LTR and Arabic RTL.
+  - Extended `test:web -- shell` to cover login labels, Arabic login labels,
+    generic error text, absence of locked/inactive leakage, and logout affordance.
+  - Added no backend auth behavior, API client call, token storage, localStorage
+    auth, role-aware navigation, complaint data, workflow action, upload,
+    reports behavior, admin CRUD, visual runner, accessibility runner, or
+    performance runner.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (5/5)
+  - Passed: `git diff --check` (line-ending warnings only)
+  - Extra Passed: `corepack pnpm --filter @cms-auto/web build` (Next build
+    passed; warned only about a parent-user lockfile affecting root inference)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no role or branch decision path; signed-in
+    state is a visual preview and does not authorize actions.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no state change or side effect.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. The form is UI-only, stores nothing,
+    logs nothing, and does not call an API.
+  - Customer portal exposure rules hold: Passed by scope. This task added no
+    customer portal route or response shape.
+  - Trust boundaries are tested: Passed for this UI slice. `test:web -- shell`
+    covers generic login failure messaging and proves locked/inactive causes are
+    not exposed in the rendered error state.
+
+## F6-01C - Add Role-Aware Navigation Visibility Placeholders
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-RBAC-001
+  - REQ-LOCALIZATION-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added localized role preview labels for staff, admin, and management shell
+    states.
+  - Added a tiny local navigation visibility allow-list for placeholders:
+    staff gets dashboard, queue, create, detail, and notifications; admin gets
+    all placeholder nav; management gets dashboard, queue, detail, reports,
+    audit, and notifications.
+  - Added a localized hidden-state message when Admin-only surfaces are hidden
+    from non-admin role previews.
+  - Kept visibility visual-only: no role fetching, API calls, route protection,
+    complaint state authority, or workflow decisions were added to React.
+  - Extended `test:web -- shell` to cover full Admin nav, Staff denial/hidden
+    Admin nav, and Arabic RTL hidden-state rendering.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (8/8)
+  - Passed: `git diff --check` (line-ending warnings only)
+  - Extra Passed: `corepack pnpm --filter @cms-auto/web build` (Next build
+    passed; warned only about a parent-user lockfile affecting root inference)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope with explicit limitation. This task adds only visual preview
+    states; it does not authorize routes or actions. Backend guards remain the
+    authority for real role/branch checks.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no state change or side effect.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. This task added no credential
+    handling, logging, API calls, token storage, or provider surface.
+  - Customer portal exposure rules hold: Passed by scope. This task added no
+    customer portal route or response shape.
+  - Trust boundaries are tested: Passed for this UI slice. `test:web -- shell`
+    covers one allowed role visibility case (Admin sees Admin nav) and one
+    denied/hidden case (Staff does not see Admin nav details and gets the hidden
+    state).

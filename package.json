@@ -7,7 +7,7 @@
     "node": ">=20.11.0"
   },
   "scripts": {
-    "build": "tsc -p apps/api/tsconfig.json && tsc -p apps/web/tsconfig.json && tsc -p packages/database/tsconfig.json && tsc -p packages/contracts/tsconfig.json && tsc -p packages/config/tsconfig.json",
+    "build": "tsc -p apps/api/tsconfig.json && pnpm --filter @cms-auto/web build && tsc -p packages/database/tsconfig.json && tsc -p packages/contracts/tsconfig.json && tsc -p packages/config/tsconfig.json",
     "lint": "node tools/lint.mjs",
     "typecheck": "tsc -p apps/api/tsconfig.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit && tsc -p packages/database/tsconfig.json --noEmit && tsc -p packages/database/prisma/tsconfig.json --noEmit && tsc -p packages/contracts/tsconfig.json --noEmit && tsc -p packages/config/tsconfig.json --noEmit",
     "generate:module": "node tools/generate-module.mjs",
@@ -16,7 +16,7 @@
     "test": "node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=75 --test-coverage-branches=65 tools/*.test.mjs",
     "test:api": "node tools/api-test.mjs",
     "test:e2e": "node tools/pending-proof.mjs test:e2e",
-    "test:web": "node tools/pending-proof.mjs test:web",
+    "test:web": "node tools/web-test.mjs",
     "test:visual": "node tools/pending-proof.mjs test:visual",
     "web:perf": "node tools/pending-proof.mjs web:perf",
     "test:performance": "node tools/pending-proof.mjs test:performance",

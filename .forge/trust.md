@@ -3239,3 +3239,60 @@ Residual risk: this is a required customer-portal privacy gate. A fresh verifier
     protocol.
   - Reports APIs/exports remain Phase 7; Phase 6 only adds staff UI entry
     surfaces and avoids client-side unbounded export behavior.
+
+## F6-01A - Bootstrap Next.js Staff Shell With Localized RTL/LTR Navigation
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-01B`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (3/3)
+  - Passed: `git diff --check` (line-ending warnings only)
+  - Extra Passed: `corepack pnpm --filter @cms-auto/web build`
+- Notes:
+  - The staff shell is placeholder-only and does not introduce frontend workflow
+    authority, role decisions, API calls, or session behavior.
+  - Locale handling is intentionally tiny: `en`, `ar`, and fallback-to-English
+    for unsupported input. Add richer negotiation only when routes need it.
+
+## F6-01B - Add Staff Login/Logout UI With Safe Session-Aware Shell States
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-01C`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (5/5)
+  - Passed: `git diff --check` (line-ending warnings only)
+  - Extra Passed: `corepack pnpm --filter @cms-auto/web build`
+- Notes:
+  - The auth entry is deliberately UI-only. Backend login/logout behavior,
+    session invalidation, lock/inactive denial, and audit already belong to the
+    API; this slice did not duplicate that authority in React.
+
+## F6-01C - Add Role-Aware Navigation Visibility Placeholders
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; stop AUTO PHASE for `PLAN-F6-01D-PASSWORD-RESET-BACKEND-GAP`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (8/8)
+  - Passed: `git diff --check` (line-ending warnings only)
+  - Extra Passed: `corepack pnpm --filter @cms-auto/web build`
+- Notes:
+  - Role-aware navigation is intentionally visual-only and tested as such. Real
+    permission enforcement remains in backend guards.
+  - Password reset backend routes are absent, so the next UI task should not be
+    built until a planner splits the backend prerequisite or explicitly defers
+    UI-001A.
