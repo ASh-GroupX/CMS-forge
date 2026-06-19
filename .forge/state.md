@@ -2,7 +2,66 @@
 
 Status: Needs Verify
 Phase: Phase 3 - SLA And Workflow Operations
-Next Task: VERIFY-F3-02B - SLA Breach Job Gate
+Next Task: VERIFY-F3-03A2 - Queued Internal Notification Service Gate
+
+## F3-03A2 Built - Verify Gate
+
+`F3-03A2` added the minimal notifications public service. `NotificationsService`
+now exposes `queueInternal` for backend callers, validates required fields and safe
+JSON payloads, rejects unsafe payload keys before writing, and delegates to
+`NotificationsRepository.queueInternal` to create owned `notifications` rows with
+`IN_APP` / `QUEUED`. The API test runner now supports the required
+`test:api -- notifications` suite.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- notifications 4/4,
+and openapi:check.
+
+AUTO PHASE stops here because `F3-03A2` is marked `Verify Gate: required`.
+
+## F3-03A1 Built - AUTO PHASE Continuing
+
+`F3-03A1` generated the canonical `notifications` module shell and filled the real
+module manifest. `NotificationsService` is now the module public surface, the
+module owns the existing `notifications` table, and no notification behavior,
+routes, OpenAPI paths, provider delivery, workers, schema changes, migrations, UI,
+portal behavior, templates, or SLA imports were added.
+
+Required proof passed: generate:module, lint, typecheck, test 20/20, and
+openapi:check.
+
+AUTO PHASE remains in Phase 3 and continues with `F3-03A2`.
+
+## PLAN-F3-03 Complete - Ready To Build
+
+PLAN-F3-03 split escalation notification queue work into boundary-safe tasks. The
+first task generates the `notifications` module shell and manifest. The next task
+will add a queued internal notification public service, marked `Verify Gate:
+required`, before SLA integration queues escalation notifications after new breach
+events.
+
+## F3-03A Build Stopped - Needs Planning Split
+
+AUTO PHASE stopped before editing source. `F3-03A` requires queueing notification
+rows after SLA breach commits, but the repository/service boundary is not safe yet:
+the existing `notifications` table has no `notifications` module or public service.
+Writing it directly from `SlaRepository` would violate the module rule that a
+repository writes only its own module's aggregate and cross-module work goes through
+another module's public service.
+
+Next step is a PLANNER split for the smallest Phase 3 path: first create a minimal
+notifications public service for queued internal notification rows, then add the SLA
+integration that calls it after newly committed breach events.
+
+## VERIFY-F3-02B Accepted - Gate Cleared
+
+Independent VERIFY accepted `F3-02B`. Breach evaluation reads backend-recorded
+`DEADLINE_SET` SLA events, creates `SlaEventType.BREACH` rows through the unique
+idempotency key with duplicate skipping, reports duplicate retries as skipped, and
+skips future deadlines plus terminal `CLOSED`/`REJECTED` complaint statuses without
+writing.
+
+Verification re-ran and passed: lint, typecheck, test 20/20, test:api -- sla
+16/16, and openapi:check. Phase 3 continues with `F3-03A`.
 
 ## F3-02B Built - Verify Gate
 

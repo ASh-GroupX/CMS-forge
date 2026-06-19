@@ -1684,3 +1684,114 @@ starting Phase 3 planning.
 - Gate:
   - `F3-02B` is marked `Verify Gate: required`; AUTO PHASE stops at `Needs Verify`
     before `F3-03A`.
+
+## F3-03A - Build Stop For Planning Split
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Ready to Plan
+- Reason:
+  - `F3-03A` needs queued notification persistence after SLA breach commits.
+  - The existing `notifications` table has no module/public service yet.
+  - Writing `notifications` rows directly from `SlaRepository` would violate the
+    architecture boundary that repositories write only their own module's aggregate
+    and cross-module work goes through public services.
+- Action:
+  - No source files were edited for `F3-03A`.
+  - `.forge/next.md` now requests `PLAN-F3-03` to split the work into a minimal
+    notifications public-service task and a later SLA integration task.
+
+## VERIFY-F3-02B - SLA Breach Job Gate
+
+- Date: 2026-06-19
+- Required model tier: independent VERIFY
+- Builder honesty: Honest
+- Code quality: Good
+- Recommendation: Accept
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- sla` (16/16)
+  - Passed: `corepack pnpm openapi:check`
+- Findings:
+  - No blocking findings.
+- Scope review:
+  - Breach evaluation reads backend-recorded `DEADLINE_SET` SLA events through
+    `SlaRepository.findDeadlineEventsForBreach`.
+  - Breach events are inserted as `SlaEventType.BREACH` via `createMany` with
+    `skipDuplicates`, so duplicate retries are reported as skipped.
+  - `SlaService.runBreachJob` creates only due breaches, skips future deadlines,
+    and skips terminal `CLOSED`/`REJECTED` complaint statuses without writing.
+  - Focused SLA tests cover first breach creation, duplicate retry skip, future
+    deadline skip, terminal-status skip, and repository query/create shape.
+  - No escalation notification delivery, provider calls, queues, workflow changes,
+    routes, OpenAPI paths, UI, portal behavior, schema changes, or migrations were
+    introduced.
+
+## PLAN-F3-03 - Split Escalation Notification Queue Work
+
+- Date: 2026-06-19
+- Required model tier: PLANNER
+- Risk: High
+- Recommendation: Ready to Build
+- Plan:
+  - Split `F3-03A` into three boundary-safe tasks:
+    - `F3-03A1`: generate the `notifications` module boundary and real manifest.
+    - `F3-03A2`: add a minimal queued internal notification public service.
+    - `F3-03A3`: wire SLA breach creation to call that public service only after a
+      new breach event is committed.
+  - `F3-03A2` is a `Verify Gate: required` because SLA integration builds directly
+    on its public service and notification idempotency semantics.
+- Reason:
+  - Writing `notifications` rows directly from `SlaRepository` would violate module
+    ownership. The split keeps cross-module work through a public service.
+
+## F3-03A1 - Notifications Module Boundary Build
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Ready to Build
+- Verification:
+  - Passed: `corepack pnpm generate:module -- notifications`
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm openapi:check`
+- Build assessment:
+  - Generated the canonical `notifications` module shell.
+  - Filled the real `MODULE.md` boundary with `NotificationsService`,
+    `notifications`, allowed `core/http-kernel` dependency, and SRS IDs.
+  - No notification persistence behavior, routes, OpenAPI paths, provider delivery,
+    BullMQ workers, SLA imports, schema changes, migrations, UI, portal behavior, or
+    templates were added.
+- Next:
+  - Continue Phase 3 with `F3-03A2`, the minimal queued internal notification public
+    service.
+
+## F3-03A2 - Queued Internal Notification Service Build
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Needs Verify
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (4/4)
+  - Passed: `corepack pnpm openapi:check`
+- Build assessment:
+  - `NotificationsService.queueInternal` is now the public service for queued
+    internal in-app notification rows.
+  - The service validates required fields and rejects unsafe payload keys before
+    repository writes.
+  - The repository writes only owned `notifications` rows with `IN_APP` and `QUEUED`;
+    provider delivery and sent/failed state stay out of scope.
+  - Added `notifications` to the API test runner suite list because this task's proof
+    command requires `test:api -- notifications`.
+- Gate:
+  - `F3-03A2` is marked `Verify Gate: required`; AUTO PHASE stops at `Needs Verify`
+    before `F3-03A3`.

@@ -2720,3 +2720,102 @@ Append build and verification evidence here. Do not delete failed evidence.
   - Trust boundaries are tested: Passed for this task's boundary; SLA API tests cover
     due breach creation, duplicate retry idempotency, future-deadline skip, and
     terminal-status skip before write.
+
+## F3-03A1 - Generate Notifications Module Boundary And Manifest
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-NOTIFY-001
+  - REQ-SLA-001
+  - SLA-CALENDAR-001
+  - ARCH-WORKFLOW-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Ran the canonical module generator for `notifications`.
+  - Added the generated `apps/api/src/modules/notifications/` module shell,
+    controller, service, repository, DTO stubs, and constructor smoke specs.
+  - Replaced the generated `MODULE.md` with the real notifications boundary:
+    `NotificationsService` public surface, `notifications` owned table, allowed
+    `core/http-kernel` dependency for `PrismaService`, and Phase 3 SRS IDs.
+  - No notification behavior, routes, OpenAPI paths, provider delivery, BullMQ
+    workers, SLA imports, schema changes, migrations, UI, portal behavior, or
+    notification templates were added.
+- Verification:
+  - Passed: `corepack pnpm generate:module -- notifications`
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not
+    applicable; no route, session, role, or branch-scope decision was added.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Not applicable; this task adds a
+    behavior-free module boundary and writes no state.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope; no logging, DTO response behavior, providers, or credentials
+    were added.
+  - Customer portal exposure rules hold: Passed by scope; no portal route or
+    portal-visible DTO was added.
+  - Trust boundaries are tested: Passed for this boundary task by `lint`, which
+    enforces module manifests and cross-module import rules; behavior-level
+    allowed/denied cases are deferred to `F3-03A2`.
+
+## F3-03A2 - Add Queued Internal Notification Public Service
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-NOTIFY-001
+  - REQ-SLA-001
+  - SLA-CALENDAR-001
+  - ARCH-WORKFLOW-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Added `NotificationsRepository.queueInternal` to create queued `IN_APP`
+    notification rows in the existing `notifications` table with explicit selected
+    response fields.
+  - Added `NotificationsService.queueInternal` as the module public service method.
+    It validates `templateCode`, defaults/validates `locale`, normalizes optional
+    `complaintId` and `recipientUserId`, validates JSON payloads, and denies unsafe
+    payload keys before writing.
+  - Registered `PrismaService` in `NotificationsModule`.
+  - Added `test:api -- notifications` support in the existing API test runner because
+    the task required that proof command.
+  - Added focused notifications API tests proving one valid queued in-app row,
+    repository persistence shape, blank template-code denial before write, and unsafe
+    payload key denial before write.
+  - No provider delivery, routes, OpenAPI paths, BullMQ workers, SLA imports, schema
+    changes, migrations, UI, portal behavior, template management, provider
+    credentials, sent/failed state, or provider results were added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (4/4)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not
+    applicable at HTTP/session boundary; no route, session, role, or branch-scope
+    decision was added. The public service accepts backend caller data only.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: This task queues notification
+    rows only and does not change complaint state. `F3-03A3` will call this service
+    only after a new breach commit.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed; unsafe payload keys matching password/token/otp/hash/secret/credential
+    are rejected before write, and provider fields are not accepted by the service.
+  - Customer portal exposure rules hold: Passed by scope; no portal route,
+    portal-visible DTO, internal comments, audit logs, DMS codes, or staff PII were
+    added.
+  - Trust boundaries are tested: Passed; notifications tests cover the allowed queued
+    in-app write and denied blank template/unsafe secret payload cases before write.

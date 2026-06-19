@@ -73,7 +73,9 @@ history from another project.
   - [x] REPAIR-F3-02A: Honest SLA warning job results and malformed policy skip
   - [x] F3-02B: Add idempotent SLA breach job and reportable breach event
 - [ ] F3-03: Escalation notification events
-  - [ ] F3-03A: Queue escalation notification events after SLA breach commit
+  - [x] F3-03A1: Generate notifications module boundary and manifest
+  - [x] F3-03A2: Add queued internal notification public service (Verify Gate: required)
+  - [ ] F3-03A3: Queue escalation notification events after SLA breach commit
 - [ ] F3-04: Reopen, send-back, resolve, and close workflows
   - [ ] F3-04A: Enforce send-back/reopen reasons and resolution requirements
   - [ ] F3-04B: Add closure/reopen side-effect scheduling without in-transaction side effects
