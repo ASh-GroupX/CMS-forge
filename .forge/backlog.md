@@ -69,7 +69,8 @@ history from another project.
   - [x] F3-01B: Resolve active SLA policies by complaint severity, stage, and scope
   - [x] F3-01C: Record SLA deadline events when complaints enter SLA-governed states
 - [ ] F3-02: SLA warning and breach jobs
-  - [ ] F3-02A: Add idempotent SLA warning job at configured threshold
+  - [x] F3-02A: Add idempotent SLA warning job at configured threshold
+  - [x] REPAIR-F3-02A: Honest SLA warning job results and malformed policy skip
   - [ ] F3-02B: Add idempotent SLA breach job and reportable breach event
 - [ ] F3-03: Escalation notification events
   - [ ] F3-03A: Queue escalation notification events after SLA breach commit

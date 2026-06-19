@@ -1,8 +1,47 @@
 # Current State
 
-Status: Ready to Build
+Status: Needs Verify
 Phase: Phase 3 - SLA And Workflow Operations
-Next Task: F3-02A - Add Idempotent SLA Warning Job At Configured Threshold
+Next Task: VERIFY-F3-02A-REPAIR - SLA Warning Job Repair Gate
+
+## REPAIR-F3-02A Built - Verify Gate
+
+`REPAIR-F3-02A` fixed the SLA warning-job verify findings. Warning-event creation
+now uses the unique idempotency key through `createMany` with duplicate skipping,
+so `runWarningJob` counts only newly inserted warnings as `created`; duplicate
+retries are `skipped`. The warning job now also skips invalid stored policy
+duration and warning percent values before writing.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- sla 13/13, and
+openapi:check.
+
+AUTO PHASE stops here because this repair returns to the `F3-02A` Verify Gate.
+
+## VERIFY-F3-02A Repair Required
+
+Independent VERIFY re-ran the required proof surface successfully: lint,
+typecheck, test 20/20, test:api -- sla 12/12, and openapi:check.
+
+Decision: Repair. `SlaService.runWarningJob` reports duplicate warning retries as
+newly created because it increments `created` after every idempotent warning upsert.
+The build evidence also claims malformed records are safely skipped, but the focused
+test only covers a null deadline and the job does not explicitly fail closed for
+invalid stored policy duration or warning percent values.
+
+Repair `F3-02A` before `F3-02B` builds breach-job behavior on this pattern.
+
+## F3-02A Built - Verify Gate
+
+`F3-02A` added backend SLA warning-job behavior. `SlaRepository` now reads recorded
+`DEADLINE_SET` events with stored policy duration/warning percent data and upserts
+one `SlaEventType.WARNING` event by deterministic warning idempotency key.
+`SlaService.runWarningJob` computes configured warning thresholds, skips malformed
+or not-due records, and returns scanned/created/skipped counts plus warning keys.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- sla 12/12, and
+openapi:check.
+
+AUTO PHASE stops here because `F3-02A` is marked `Verify Gate: required`.
 
 ## VERIFY-F3-01C Accepted - Gate Cleared
 

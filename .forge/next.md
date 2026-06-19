@@ -1,39 +1,29 @@
-# Build Task: F3-02A - Add Idempotent SLA Warning Job At Configured Threshold
+# Verify Task: VERIFY-F3-02A-REPAIR - SLA Warning Job Repair Gate
 
-Status: Ready to Build
-Required model tier: BUILDER-STRONG
+Status: Needs Verify
+Required model tier: independent VERIFY
 Risk: High
 Phase: Phase 3 - SLA And Workflow Operations
-Verify Gate: required
 
 ## Why This Exists
 
-`F3-01C` records durable deadline events. The next smallest useful job step is
-an idempotent warning job that finds deadline events whose warning threshold has
-passed and records one warning event per complaint/stage/policy.
+`REPAIR-F3-02A` fixes the `VERIFY-F3-02A` findings before `F3-02B` builds breach
+jobs on the same SLA job/idempotency pattern.
 
-## Scope
+## Verify Scope
 
-- Add SLA repository read behavior for due `DEADLINE_SET` events whose warning time
-  is at or before a supplied `now`.
-- Add service/job behavior that records a `WARNING_SENT` SLA event idempotently for
-  each due deadline event.
-- Derive warning idempotency keys from the deadline event key so retries do not
-  duplicate warnings.
-- Use existing stored policy duration/warning percent data; do not add schema.
-- Return a small result with scanned count, created/skipped warning count, and
-  warning idempotency keys.
-- Add focused `apps/api/test/sla/` coverage for due filtering, idempotent warning
-  creation, and no-op behavior when nothing is due.
-
-## Out Of Scope
-
-- No breach jobs or escalation.
-- No notification delivery, provider adapters, queues, Redis/BullMQ wiring, or
-  external side effects.
-- No workflow/complaints integration changes.
-- No HTTP routes, OpenAPI paths, admin UI, portal, reports, or calendar-hours math.
-- No schema changes or migrations.
+- Review the repair changes in:
+  - `apps/api/src/modules/sla/sla.repository.ts`
+  - `apps/api/src/modules/sla/sla.service.ts`
+  - `apps/api/test/sla/deadline-calculator.test.ts`
+- Confirm `created` counts only newly inserted warning events.
+- Confirm duplicate warning retries are reported as skipped.
+- Confirm invalid stored policy duration and warning percent values are skipped
+  without warning writes.
+- Confirm no breach jobs, escalation, notification delivery, provider calls, queues,
+  workflow changes, routes, OpenAPI paths, UI, portal, schema changes, or migrations
+  were introduced.
+- Confirm evidence labels are honest and the required commands actually ran.
 
 ## Requirement IDs
 
@@ -45,16 +35,6 @@ passed and records one warning event per complaint/stage/policy.
 - METHOD-TEST-001
 - API-STANDARD-001
 
-## Acceptance Criteria
-
-- Warning job behavior is backend-owned and uses recorded deadline events as source
-  of truth.
-- Re-running the job for the same due deadline events creates no duplicate warning
-  events.
-- No notification provider calls or side effects are introduced.
-- Missing or malformed deadline/policy data fails closed with stable SLA errors or
-  is safely skipped with test coverage.
-
 ## Verification Commands
 
 - `corepack pnpm lint`
@@ -63,8 +43,14 @@ passed and records one warning event per complaint/stage/policy.
 - `corepack pnpm test:api -- sla`
 - `corepack pnpm openapi:check`
 
-## Completion Notes
+## Expected Output
 
-If checks pass, append evidence/trust for `F3-02A`, mark `F3-02A` done in
-`.forge/backlog.md`, and set `.forge/state.md` to `Needs Verify` because this is
-the first reusable SLA job/idempotency pattern.
+Update `.forge/trust.md` with:
+
+- Builder honesty: Honest, Inflated, or Fabricated
+- Code quality: Good, Acceptable, or Poor
+- Recommendation: Accept, Repair, or Redo
+
+On `Accept`, write `F3-02B` to `.forge/next.md` and set `.forge/state.md` to
+`Ready to Build`. On `Repair` or `Redo`, write the smallest repair task and set
+`.forge/state.md` to `Needs Repair`.

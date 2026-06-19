@@ -1552,3 +1552,83 @@ starting Phase 3 planning.
   - No workflow integration, jobs, queues, notifications, routes, OpenAPI paths, UI,
     portal exposure, provider calls, schema changes, migrations, or external side
     effects were introduced.
+
+## F3-02A - Add Idempotent SLA Warning Job At Configured Threshold
+
+- Date: 2026-06-19
+- Risk: High
+- Recommendation: Accept pending independent VERIFY
+- Notes:
+  - The task stayed on backend SLA warning job behavior and did not add breach jobs,
+    escalation, workflow integration, routes, OpenAPI paths, UI, portal, queues,
+    notification delivery, provider calls, schema changes, or migrations.
+  - `SlaRepository.findDeadlineEventsForWarning` reads recorded `DEADLINE_SET` events
+    and selected policy duration/warning percent fields.
+  - `SlaRepository.createWarningEvent` writes existing `SlaEventType.WARNING` events
+    through an idempotent upsert keyed by the derived warning key.
+  - `SlaService.runWarningJob` computes configured warning thresholds from stored SLA
+    policy data, safely skips malformed/not-due records, and reports
+    scanned/created/skipped counts with warning idempotency keys.
+  - Focused SLA API tests cover repository read/upsert shape, due filtering,
+    duplicate retry idempotency, malformed data skip, and not-due no-op behavior.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- sla 12/12, and
+    openapi:check.
+  - Because this is a Verify Gate, AUTO PHASE stops at `Needs Verify` before
+    `F3-02B` adds breach jobs on top of the SLA job/idempotency pattern.
+
+## VERIFY-F3-02A - SLA Warning Job Gate
+
+- Date: 2026-06-19
+- Required model tier: independent VERIFY
+- Builder honesty: Inflated
+- Code quality: Acceptable
+- Recommendation: Repair
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- sla` (12/12)
+  - Passed: `corepack pnpm openapi:check`
+- Findings:
+  - `SlaService.runWarningJob` increments `created` after every due warning upsert,
+    even when the repository returns an existing warning for the same deterministic
+    idempotency key. A retry therefore reports another created warning, which inflates
+    the accepted `created/skipped` job result even though the write itself is
+    idempotent.
+  - The evidence says malformed records are safely skipped, but the implementation
+    only skips missing `dueAt` or policy relation data. Invalid stored policy values
+    such as non-positive `durationMinutes` or an out-of-range `warningPercent` are not
+    explicitly failed closed in the warning job, and focused tests do not cover them.
+- Scope review:
+  - The warning job does use recorded `DEADLINE_SET` events and stored policy
+    duration/warning percent fields as its source of truth.
+  - Warning write keys are derived from the deadline event key with
+    `sla:warning:<deadline-key>`, so duplicate database rows are prevented by the
+    unique idempotency key.
+  - No breach jobs, escalation, notification delivery, provider calls, queues,
+    workflow changes, routes, OpenAPI paths, UI, portal, schema changes, or migrations
+    were introduced.
+- Required repair:
+  - Make warning-job result counts honest for duplicate retries, and explicitly skip
+    invalid stored policy data with focused SLA tests before building `F3-02B`.
+
+## REPAIR-F3-02A - Honest SLA Warning Job Results And Malformed Policy Skip
+
+- Date: 2026-06-19
+- Risk: High
+- Recommendation: Accept pending independent repair VERIFY
+- Notes:
+  - The repair stayed inside the scoped SLA repository, service, and focused SLA tests.
+  - `SlaRepository.createWarningEvent` now uses the database unique idempotency key
+    with `createMany(..., skipDuplicates: true)` and reports whether a new row was
+    inserted.
+  - `SlaService.runWarningJob` now counts duplicate retries as skipped and only
+    returns keys for newly inserted warning events.
+  - The warning job explicitly skips invalid stored policy duration and warning
+    percent values before writing.
+  - Focused SLA API tests prove first-run create, duplicate retry skip, invalid policy
+    skip, and no-op behavior.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- sla 13/13, and
+    openapi:check.
+  - Because this repairs the `F3-02A` Verify Gate, AUTO PHASE stops at `Needs Verify`
+    before `F3-02B`.

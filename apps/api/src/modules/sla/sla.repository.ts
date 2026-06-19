@@ -38,6 +38,22 @@ export type CreateSlaDeadlineEventData = {
   idempotencyKey: string;
 };
 
+const slaDeadlineWarningSelect = {
+  complaintId: true,
+  policyId: true,
+  stage: true,
+  dueAt: true,
+  idempotencyKey: true,
+  policy: {
+    select: {
+      durationMinutes: true,
+      warningPercent: true,
+    },
+  },
+} satisfies Prisma.SlaEventSelect;
+
+export type SlaDeadlineWarningRecord = Prisma.SlaEventGetPayload<{ select: typeof slaDeadlineWarningSelect }>;
+
 @Injectable()
 export class SlaRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -57,5 +73,20 @@ export class SlaRepository {
       create: { ...data, type: SlaEventType.DEADLINE_SET },
       select: slaEventSelect,
     });
+  }
+
+  async findDeadlineEventsForWarning(): Promise<SlaDeadlineWarningRecord[]> {
+    return this.prisma.slaEvent.findMany({
+      where: { type: SlaEventType.DEADLINE_SET, dueAt: { not: null }, policy: { isNot: null } },
+      select: slaDeadlineWarningSelect,
+    });
+  }
+
+  async createWarningEvent(data: CreateSlaDeadlineEventData): Promise<boolean> {
+    const result = await this.prisma.slaEvent.createMany({
+      data: { ...data, type: SlaEventType.WARNING },
+      skipDuplicates: true,
+    });
+    return result.count === 1;
   }
 }

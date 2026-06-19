@@ -2562,3 +2562,107 @@ Append build and verification evidence here. Do not delete failed evidence.
     portal-visible DTO was added.
   - Trust boundaries are tested: Passed for this task's boundary; SLA API tests cover
     successful recording, duplicate retry, and missing-policy denial before write.
+
+## F3-02A - Add Idempotent SLA Warning Job At Configured Threshold
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-SLA-001
+  - SLA-CALENDAR-001
+  - ARCH-WORKFLOW-001
+  - REQ-NOTIFY-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Added `SlaRepository.findDeadlineEventsForWarning` to read stored
+    `DEADLINE_SET` events with non-null deadlines and linked policy duration/warning
+    percent data.
+  - Added `SlaRepository.createWarningEvent` to upsert one `SlaEventType.WARNING`
+    event by deterministic warning idempotency key.
+  - Added `SlaService.runWarningJob` to scan deadline events, compute the configured
+    warning threshold from stored `durationMinutes` and `warningPercent`, safely skip
+    missing/malformed data, and return scanned/created/skipped counts plus warning
+    idempotency keys.
+  - Warning keys derive from the recorded deadline event key as
+    `sla:warning:<deadlineKey>`, so retries do not duplicate warning events.
+  - Added SLA API coverage for warning-event repository query/upsert shape, due
+    filtering, duplicate retry idempotency, skipped malformed data, and no-op behavior
+    when no deadline warning is due.
+  - No breach jobs, escalation, notification provider calls, queues, workflow changes,
+    routes, OpenAPI paths, UI, portal, reports, calendar-hours math, schema changes,
+    migrations, provider credentials, or external side effects were added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- sla` (12/12)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not
+    applicable at HTTP/session boundary; no route or role decision was added. The job
+    reads backend-owned SLA deadline events as its source of truth.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Not applicable to complaint
+    state; this task writes only SLA warning events and introduces no side-effect
+    enqueueing or delivery.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope; the code persists and returns only SLA event metadata.
+  - Customer portal exposure rules hold: Passed by scope; no portal route or
+    portal-visible DTO was added.
+  - Trust boundaries are tested: Passed for this task's boundary; SLA API tests cover
+    due warning creation, duplicate retry idempotency, malformed deadline skip, and
+    not-due no-op behavior.
+
+## REPAIR-F3-02A - Honest SLA Warning Job Results And Malformed Policy Skip
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-SLA-001
+  - SLA-CALENDAR-001
+  - ARCH-WORKFLOW-001
+  - REQ-NOTIFY-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Replaced warning-event upsert result handling with `createMany` plus
+    `skipDuplicates`, returning `true` only when the unique idempotency key inserted
+    a new warning event.
+  - Updated `SlaService.runWarningJob` so duplicate warning retries increment
+    `skipped`, not `created`, and only newly inserted warnings appear in
+    `warningIdempotencyKeys`.
+  - Added explicit fail-closed warning-job checks for invalid stored policy data:
+    non-positive `durationMinutes` and out-of-range `warningPercent`.
+  - Added focused SLA API coverage proving first due run creates one warning,
+    duplicate retry creates zero additional warnings with honest counts, and invalid
+    stored policy values skip without writes.
+  - No breach jobs, escalation, notification delivery, provider calls, queues,
+    workflow changes, routes, OpenAPI paths, UI, portal, schema changes, or
+    migrations were added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- sla` (13/13)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not
+    applicable at HTTP/session boundary; no route or role decision was added.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Not applicable to complaint
+    state; this repair writes only SLA warning events through an idempotent insert
+    and introduces no side-effect enqueueing or delivery.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope; the code persists and returns only SLA event metadata.
+  - Customer portal exposure rules hold: Passed by scope; no portal route or
+    portal-visible DTO was added.
+  - Trust boundaries are tested: Passed for this repair's boundary; SLA API tests
+    cover new warning creation, duplicate retry skip, invalid stored policy skip,
+    and not-due no-op behavior.

@@ -2,7 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { ComplaintSeverity, SlaStage, WorkingCalendarMode } from '@prisma/client';
 import { AppException } from '../../core/http-kernel.js';
 import { SlaRepository } from './sla.repository.js';
-import type { SlaPolicyRecord } from './sla.repository.js';
+import type { SlaDeadlineWarningRecord, SlaPolicyRecord } from './sla.repository.js';
 
 export const DEFAULT_SLA_DURATION_MINUTES: Record<ComplaintSeverity, number> = {
   [ComplaintSeverity.CRITICAL]: 120,
@@ -53,6 +53,13 @@ export type SlaDeadlineEventResult = {
   stage: SlaStage;
   dueAt: string | null;
   idempotencyKey: string;
+};
+
+export type RunSlaWarningJobResult = {
+  scanned: number;
+  created: number;
+  skipped: number;
+  warningIdempotencyKeys: string[];
 };
 
 @Injectable()
@@ -146,6 +153,35 @@ export class SlaService {
       idempotencyKey: event.idempotencyKey,
     };
   }
+
+  async runWarningJob(now: Date | string): Promise<RunSlaWarningJobResult> {
+    const nowDate = dateValue(now, 'now');
+    const deadlines = await this.slaRepository.findDeadlineEventsForWarning();
+    const result: RunSlaWarningJobResult = { scanned: deadlines.length, created: 0, skipped: 0, warningIdempotencyKeys: [] };
+
+    for (const deadline of deadlines) {
+      if (!deadline.dueAt || !isWarningDue(deadline, nowDate)) {
+        result.skipped += 1;
+        continue;
+      }
+      const idempotencyKey = warningIdempotencyKey(deadline.idempotencyKey);
+      const created = await this.slaRepository.createWarningEvent({
+        complaintId: deadline.complaintId,
+        policyId: deadline.policyId,
+        stage: deadline.stage,
+        dueAt: deadline.dueAt,
+        idempotencyKey,
+      });
+      if (created) {
+        result.created += 1;
+        result.warningIdempotencyKeys.push(idempotencyKey);
+      } else {
+        result.skipped += 1;
+      }
+    }
+
+    return result;
+  }
 }
 
 function enumValue<T extends Record<string, string>>(value: unknown, options: T, field: string): T[keyof T] {
@@ -210,4 +246,17 @@ function specificity(policy: SlaPolicyRecord): number {
 
 function deadlineIdempotencyKey(complaintId: string, stage: SlaStage, policyId: string, enteredAt: string): string {
   return `sla:deadline:${complaintId}:${stage}:${policyId}:${enteredAt}`;
+}
+
+function warningIdempotencyKey(deadlineKey: string): string {
+  return `sla:warning:${deadlineKey}`;
+}
+
+function isWarningDue(deadline: SlaDeadlineWarningRecord, now: Date): boolean {
+  if (!deadline.dueAt || !deadline.policy) return false;
+  if (!Number.isInteger(deadline.policy.durationMinutes) || deadline.policy.durationMinutes <= 0) return false;
+  if (!Number.isInteger(deadline.policy.warningPercent) || deadline.policy.warningPercent <= 0 || deadline.policy.warningPercent > 100) return false;
+  const remainingPercent = 100 - deadline.policy.warningPercent;
+  const warningAt = deadline.dueAt.getTime() - Math.round(deadline.policy.durationMinutes * 60_000 * remainingPercent / 100);
+  return warningAt <= now.getTime();
 }
