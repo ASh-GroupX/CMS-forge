@@ -692,6 +692,172 @@
         }
       }
     },
+    "/complaints/{id}/attachments": {
+      "post": {
+        "tags": [
+          "Attachments"
+        ],
+        "operationId": "complaintAttachmentUpload",
+        "summary": "Upload a staff complaint attachment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttachmentUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Attachment uploaded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentUploadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid attachment request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role, branch scope, or CSRF denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Complaint not found (COMPLAINT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/complaints/{id}/attachments/{attachmentId}/download": {
+      "get": {
+        "tags": [
+          "Attachments"
+        ],
+        "operationId": "complaintAttachmentDownloadPrepare",
+        "summary": "Prepare a staff attachment download",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "attachmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Attachment download prepared",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentDownloadResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or branch scope denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Complaint or attachment not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/complaints/{id}/comments/public": {
       "get": {
         "tags": [
@@ -1015,6 +1181,58 @@
           },
           "400": {
             "description": "Invalid request, expired session, or closed complaint (PORTAL_VERIFICATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portal/attachments": {
+      "post": {
+        "tags": [
+          "Portal"
+        ],
+        "operationId": "portalAttachmentUpload",
+        "summary": "Upload a verified portal attachment",
+        "parameters": [
+          {
+            "name": "x-portal-session",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttachmentUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Attachment uploaded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentUploadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request, expired session, terminal complaint, or invalid attachment (PORTAL_VERIFICATION_FAILED/VALIDATION_FAILED)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2447,6 +2665,122 @@
             "items": {
               "$ref": "#/components/schemas/ComplaintComment"
             }
+          }
+        },
+        "additionalProperties": false
+      },
+      "AttachmentUploadRequest": {
+        "type": "object",
+        "required": [
+          "fileName",
+          "contentType",
+          "sizeBytes",
+          "contentBase64"
+        ],
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "contentType": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "contentBase64": {
+            "type": "string",
+            "minLength": 1
+          },
+          "customerVisible": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Attachment": {
+        "type": "object",
+        "required": [
+          "id",
+          "complaintId",
+          "fileName",
+          "contentType",
+          "sizeBytes",
+          "scanStatus",
+          "customerVisible"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "complaintId": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "scanStatus": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "CLEAN",
+              "REJECTED"
+            ]
+          },
+          "customerVisible": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AttachmentUploadResponse": {
+        "type": "object",
+        "required": [
+          "attachment"
+        ],
+        "properties": {
+          "attachment": {
+            "$ref": "#/components/schemas/Attachment"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AttachmentDownloadResponse": {
+        "type": "object",
+        "required": [
+          "download"
+        ],
+        "properties": {
+          "download": {
+            "type": "object",
+            "required": [
+              "attachmentId",
+              "token",
+              "expiresAt"
+            ],
+            "properties": {
+              "attachmentId": {
+                "type": "string"
+              },
+              "token": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "additionalProperties": false
           }
         },
         "additionalProperties": false

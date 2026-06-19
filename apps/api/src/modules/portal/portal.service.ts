@@ -14,6 +14,7 @@ export type RequestPortalOtpInput = { referenceNumber: string; customerPhone: st
 export type VerifyPortalOtpInput = { verificationId: string; otp: string; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type PortalTrackingInput = { sessionToken: string; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type PortalFollowUpInput = PortalTrackingInput & { body: string };
+export type PortalAttachmentUploadContext = { complaintId: string; customerId: string; branchId: string; status: string };
 export type PortalOtpRequestResult = { ok: true };
 export type PortalSessionResult = { sessionToken: string; expiresAt: string };
 export type PortalTrackingResult = { referenceNumber: string; status: string; createdAt: string; updatedAt: string; timeline: Array<{ fromStatus: string | null; toStatus: string; action: string | null; createdAt: string }> };
@@ -135,6 +136,16 @@ export class PortalService {
       userAgent: input.userAgent ?? null,
     });
     return { ok: true };
+  }
+
+  async resolveAttachmentUpload(input: PortalTrackingInput): Promise<PortalAttachmentUploadContext> {
+    const session = await this.requireSession(input.sessionToken);
+    const complaint = await this.complaintsService.getDetail(session.complaintId).catch((error: unknown) => {
+      if (error instanceof AppException && error.code === 'COMPLAINT_NOT_FOUND') throw verificationFailed();
+      throw error;
+    });
+    if (complaint.status === ComplaintStatus.CLOSED || complaint.status === ComplaintStatus.REJECTED) throw verificationFailed();
+    return { complaintId: session.complaintId, customerId: session.customerId, branchId: complaint.branchId, status: complaint.status };
   }
 
   private async expireVerification(verification: PortalVerificationChallengeRecord, input: VerifyPortalOtpInput): Promise<void> {

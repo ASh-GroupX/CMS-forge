@@ -3804,3 +3804,808 @@ Assumptions and gaps:
 - Verification:
   - Not Run: planning-only task; no application source behavior changed by this
     plan.
+
+## F5-01C - Add Attachment Storage Port And In-Memory Adapter
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - ARCH-FILES-001
+  - REQ-FILES-001
+  - ARCH-INTEGRATION-001
+  - METHOD-API-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added `ATTACHMENT_STORAGE` plus the module-owned `AttachmentStoragePort`
+    boundary and `InMemoryAttachmentStorage` test double.
+  - Wired the in-memory adapter into `AttachmentsModule` without provider
+    credentials, SDKs, environment reads, or real S3 calls.
+  - Added `AttachmentsService.storeObject` and `prepareDownload` so attachment
+    object behavior goes through the module service boundary.
+  - `prepareDownload` returns a backend-only `attdl_` token and expiry, with no
+    public unauthenticated URL field.
+  - Missing storage objects fail with stable safe `ATTACHMENT_NOT_FOUND`.
+  - Added focused `test:api -- attachments` coverage for byte storage,
+    non-public download token shape, missing object denial, and no provider
+    credential exposure.
+  - Added no upload/download HTTP routes, database persistence, audit entries,
+    malware scan behavior, portal/staff UI, OpenAPI attachment paths,
+    schema/migration changes, provider credentials, or real provider calls.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- attachments` (8/8)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no routes, client input authority, RBAC, or
+    branch-scope decisions.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    stores only in-memory object bytes for the adapter slice and adds no durable
+    state changes or side effects.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. The implementation has no logging,
+    no provider SDK, no environment reads, and no credential-bearing response.
+    The only token is the required non-public attachment download handle tested
+    by `test:api -- attachments`.
+  - Customer portal exposure rules hold: Passed by scope. No portal route,
+    customer-visible attachment response, internal comment, audit, DMS code, or
+    staff PII exposure was added.
+  - Trust boundaries are tested: Passed. `test:api -- attachments` covers an
+    allowed store/download-token path and denied missing-object path, plus
+    provider credential non-exposure.
+
+## F5-01D - Persist Attachment Metadata With Upload Audit
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - ARCH-FILES-001
+  - REQ-FILES-001
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added `AttachmentsRepository.createMetadata` for attachment table writes
+    owned by the attachments module.
+  - Added `AttachmentsService.createUpload`, which validates upload metadata,
+    stores object bytes through the storage port, then persists metadata and
+    writes an `ATTACHMENT` `attachment_uploaded` audit entry in the same
+    repository transaction.
+  - Invalid upload metadata rejects before storage, persistence, or audit.
+  - The persisted metadata uses the schema default `PENDING` scan status; no scan
+    transition behavior was added.
+  - Updated `AttachmentsModule` with `PrismaService`, `AuditService`, repository,
+    service, and the in-memory storage provider.
+  - Updated `MODULE.md` so the module boundary reflects the storage port and
+    metadata persistence now owned by this module.
+  - Added focused `test:api -- attachments` coverage for successful metadata
+    persistence plus same-transaction audit, invalid metadata pre-write denial,
+    and provider credential non-exposure.
+  - Added no upload/download HTTP routes, download authorization, malware scan
+    behavior beyond default status, portal/staff UI, OpenAPI attachment paths,
+    schema/migration changes, provider credentials, or real provider calls.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- attachments` (10/10)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no routes or authorization decisions; route
+    enforcement is queued for `F5-01E`.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed. Attachment metadata
+    persistence and `ATTACHMENT` upload audit are tested against the same
+    transaction client. No side effects were added.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. The implementation has no logging,
+    no provider SDK, no environment reads, and tests cover provider credential
+    non-exposure.
+  - Customer portal exposure rules hold: Passed by scope. No portal route,
+    customer-visible attachment response, internal comment, audit, DMS code, or
+    staff PII exposure was added.
+  - Trust boundaries are tested: Passed. `test:api -- attachments` covers the
+    allowed upload persistence/audit path and denied invalid metadata path before
+    storage, persistence, or audit.
+
+## F5-01E - Add Staff Attachment Upload Route With RBAC, Branch Scope, And OpenAPI
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - ARCH-FILES-001
+  - REQ-FILES-001
+  - REQ-RBAC-001
+  - NFR-SEC-002
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added `POST /complaints/:complaintId/attachments` as the first staff-only
+    attachment upload route.
+  - The route is guarded with staff session auth, RBAC, CSRF, and branch-scope
+    decorators.
+  - The controller derives actor, branch, correlation ID, IP, and user agent from
+    the server request and scoped complaint detail; spoofed actor/role/branch
+    body fields are ignored.
+  - The route verifies target complaint visibility through `ComplaintsService`
+    before upload persistence.
+  - Added explicit JSON/base64 request parsing and response DTOs that omit
+    internal storage keys.
+  - Added OpenAPI route and schemas for `AttachmentUploadRequest`,
+    `Attachment`, and `AttachmentUploadResponse`.
+  - Added focused `test:api -- attachments` coverage for allowed upload,
+    branch-hidden complaint denial, spoofed authority fields ignored, invalid
+    file metadata, and route RBAC allowed/denied behavior.
+  - Added no staff download route, portal route, malware scan transition, UI,
+    schema/migration change, provider credential, or real provider call.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- attachments` (14/14)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed. The route uses session/RBAC/branch-scope guards, derives actor from
+    `request.principal`, derives audit branch from scoped complaint detail, and
+    tests spoofed actor/role/branch body fields.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed. Upload persistence
+    still uses the `F5-01D` same-transaction metadata/audit path and adds no side
+    effects.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. No logging/provider code was added;
+    the upload response omits storage keys and credentials.
+  - Customer portal exposure rules hold: Passed by scope. No portal attachment
+    route or customer-visible read behavior was added.
+  - Trust boundaries are tested: Passed. `test:api -- attachments` covers
+    allowed upload, RBAC denied role, branch-hidden complaint denial, spoofed
+    authority fields ignored, and invalid metadata denial.
+
+## F5-01F - Add Staff Attachment Download Authorization And Short-Lived URL Route
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - ARCH-FILES-001
+  - REQ-FILES-001
+  - REQ-RBAC-001
+  - NFR-SEC-002
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added attachment metadata lookup and staff download-preparation service
+    behavior.
+  - Added `GET /complaints/:complaintId/attachments/:attachmentId/download`
+    guarded by staff session auth, RBAC, and branch scope.
+  - The route verifies scoped complaint visibility before token preparation, and
+    the service verifies the attachment belongs to the requested complaint.
+  - The response returns only `{ attachmentId, token, expiresAt }`; no public URL
+    or storage key is returned.
+  - Successful download preparation writes an `ATTACHMENT`
+    `attachment_download_prepared` audit entry with safe metadata.
+  - Missing storage objects surface stable `ATTACHMENT_NOT_FOUND`.
+  - Added OpenAPI route and `AttachmentDownloadResponse` schema.
+  - Added focused `test:api -- attachments` coverage for allowed download
+    preparation/audit, branch-hidden denial, missing storage object denial, and
+    no public URL/provider credential exposure.
+  - Added no portal route, malware scan transition/enforcement, UI,
+    schema/migration change, provider credential, or real provider call.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- attachments` (18/18)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed. The route uses staff session/RBAC/branch-scope guards and verifies
+    scoped complaint visibility before token preparation.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed. Download preparation
+    has no complaint state change; attachment access writes an `ATTACHMENT`
+    audit entry in the same logical operation and no side effects were added.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. No logging/provider code was added;
+    the response omits public URLs, storage keys, and credentials.
+  - Customer portal exposure rules hold: Passed by scope. No portal attachment
+    route or customer-visible read behavior was added.
+  - Trust boundaries are tested: Passed. `test:api -- attachments` covers
+    allowed download preparation, RBAC from `F5-01E`, branch-hidden complaint
+    denial, missing storage object denial, and no public URL/credential exposure.
+
+## F5-01G - Add Portal Attachment Upload Path For Verified Non-Closed Complaints
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - ARCH-FILES-001
+  - REQ-FILES-001
+  - REQ-PORTAL-002
+  - PORTAL-SEC-001
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added `PortalService.resolveAttachmentUpload` to resolve complaint/customer
+    authority from the verified portal session and deny closed/rejected
+    complaints.
+  - Added `POST /portal/attachments` in the attachments module. It accepts only
+    the `x-portal-session` header plus attachment body fields.
+  - Portal upload ignores body-supplied complaint/customer/actor/branch/visibility
+    authority, derives complaint/branch from the backend portal session path, and
+    forces `customerVisible: true`.
+  - The route reuses existing attachment metadata validation, storage port,
+    metadata persistence, and upload audit behavior.
+  - Added OpenAPI `POST /portal/attachments` using the existing attachment upload
+    request/response schemas.
+  - Added focused `test:api -- attachments` coverage for allowed verified portal
+    upload, invalid session denial, terminal complaint denial, spoofed authority
+    fields ignored, and invalid metadata denial before storage/persistence/audit.
+  - Added no portal attachment download route, malware scan transition, UI,
+    schema/migration change, provider credential, or real provider call.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- attachments` (22/22)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed. Portal upload uses the verified portal session path and ignores
+    client-supplied complaint/customer/actor/branch/visibility fields.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed. Portal upload reuses
+    the same attachment metadata plus `ATTACHMENT` audit transaction and adds no
+    side effects.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. No logging/provider code was added;
+    tests cover no provider credential exposure in attachment responses.
+  - Customer portal exposure rules hold: Passed. The route accepts only the
+    portal session header plus file body fields, returns only attachment metadata,
+    and does not expose internal comments, audit logs, DMS codes, staff PII, or
+    unrelated complaints.
+  - Trust boundaries are tested: Passed. `test:api -- attachments` covers
+    verified portal upload, invalid session denial, terminal complaint denial,
+    spoofed authority fields ignored, and invalid metadata denial.
+
+## F5-01H - Add Portal Attachment Download Privacy Regression Coverage
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - ARCH-FILES-001
+  - REQ-FILES-001
+  - REQ-PORTAL-002
+  - PORTAL-SEC-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added `test:api -- attachments` privacy regressions proving portal attachment
+    OpenAPI exposes upload only and no portal attachment download route/token
+    shape exists in this slice.
+  - Proved portal upload responses omit storage keys, download tokens, URLs, and
+    provider/internal fields.
+  - Proved staff download token behavior remains on the staff complaint route and
+    is not present in portal upload or portal tracking response shapes.
+  - Added no portal attachment download route, new attachment behavior, malware
+    scan transition, UI, schema/migration change, provider credential, or real
+    provider call.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- attachments` (24/24)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by regression. No new authority path was added; tests verify portal
+    response shapes do not expose staff download token behavior.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added tests only and no state changes or side effects.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. Tests prove portal attachment
+    response schemas exclude token/URL/provider credential fields.
+  - Customer portal exposure rules hold: Passed. Tests prove portal attachment
+    and tracking shapes do not expose download tokens, internal comments, audit
+    logs, DMS codes, staff PII, unrelated complaints, storage keys, or provider
+    credentials.
+  - Trust boundaries are tested: Passed. `test:api -- attachments` covers portal
+    no-download-route and public-safe response-shape regressions.
+
+## F5-02A - Add Attachment Scan Status Transition Service
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - ARCH-FILES-001
+  - REQ-FILES-001
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added repository/service behavior to transition attachment scan status from
+    `PENDING` to `CLEAN` or `REJECTED`.
+  - Clean/rejected attachments cannot be transitioned again by this service.
+  - Missing attachments return stable `ATTACHMENT_NOT_FOUND`.
+  - Invalid scan transitions return stable `ATTACHMENT_SCAN_INVALID_TRANSITION`
+    before database writes or audit.
+  - Successful scan status updates write an `ATTACHMENT` scan audit entry in the
+    same transaction as the status update.
+  - Added focused `test:api -- attachments` coverage for allowed clean/rejected
+    transitions, denied invalid transition, missing attachment denial, and
+    same-transaction audit.
+  - Added no scanner provider integration, async scan jobs, download enforcement,
+    routes, UI, schema/migration change, provider credential, or real provider
+    call.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- attachments` (27/27)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no route or client authority path.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed. Scan status update
+    and `ATTACHMENT` scan audit are tested against the same transaction client;
+    no side effects were added.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. No logging/provider code was added.
+  - Customer portal exposure rules hold: Passed by scope. No portal route or
+    customer-visible response shape was changed.
+  - Trust boundaries are tested: Passed. `test:api -- attachments` covers
+    allowed scan transitions plus invalid transition and missing attachment
+    denials before writes/audit.
+
+## F5-02B - Enforce Scan Status In Attachment Download Behavior
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - ARCH-FILES-001
+  - REQ-FILES-001
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Updated staff download preparation to allow download tokens only for `CLEAN`
+    attachments.
+  - `PENDING` and `REJECTED` attachments fail with stable
+    `ATTACHMENT_SCAN_UNAVAILABLE` before storage token generation or download
+    audit.
+  - Existing missing storage object denial remains stable and safe.
+  - Upload behavior remains unchanged; new uploads still persist with default
+    `PENDING` scan status.
+  - Added focused `test:api -- attachments` coverage for clean allowed download,
+    pending/rejected denied before token/audit, and missing object behavior.
+  - Added no scanner provider integration, async scan jobs, routes, UI,
+    schema/migration change, provider credential, or real provider call.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- attachments` (28/28)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed. Existing staff download route still derives authority from server
+    session/guarded complaint scope.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    blocks access before storage token generation/audit and adds no state
+    changes or side effects.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. No logging/provider code was added.
+  - Customer portal exposure rules hold: Passed by scope. No portal route or
+    customer-visible response shape was changed.
+  - Trust boundaries are tested: Passed. `test:api -- attachments` covers clean
+    allowed download plus pending/rejected denied before token/audit.
+
+## F5-03A - Generate Integrations Module Boundary And Manifest
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - ARCH-INTEGRATION-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Generated the canonical `integrations` backend module skeleton.
+  - Filled `MODULE.md` with a real provider-adapter boundary: public service,
+    no owned tables yet, allowed core dependencies, and SRS IDs.
+  - Wired `IntegrationsModule` into the root API module for module reachability
+    lint coverage.
+  - Added no email/SMS/WhatsApp provider behavior, SDKs, credentials,
+    notification dispatch behavior, routes, OpenAPI paths, schema/migration
+    changes, or UI.
+- Verification:
+  - Passed: `corepack pnpm generate:module -- integrations`
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no routes or authority decisions.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no state changes or side effects.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. No provider behavior, SDK,
+    credential, logging, or response path was added.
+  - Customer portal exposure rules hold: Passed by scope. No portal route or
+    response shape was changed.
+  - Trust boundaries are tested: Passed for this boundary-only slice by generator
+    construction tests, module reachability lint, and manifest truth checks.
+
+## F5-03B - Add Email Provider Adapter With In-Memory Test Double
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - ARCH-INTEGRATION-001
+  - REQ-NOTIFY-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added an integrations-owned email provider port and deterministic
+    in-memory provider test double.
+  - Wired the in-memory email provider into `IntegrationsModule` without any
+    provider SDK, credential, environment read, route, schema/migration change,
+    delivery log, or UI.
+  - Added `IntegrationsService.sendEmail()` as the module boundary for safe
+    email sends through the provider port.
+  - Rejected unsafe recipient, subject, missing body, and sensitive payload keys
+    before provider send.
+  - Added focused `test:api -- integrations` coverage for successful send,
+    unsafe recipient/payload rejection before send, stable result shape, and no
+    provider credential exposure.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- integrations` (3/3)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no routes or authority decisions.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no state changes or notification dispatch behavior.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. Sensitive payload keys are rejected
+    before provider send and provider results expose no credentials.
+  - Customer portal exposure rules hold: Passed by scope. No portal route or
+    response shape was changed.
+  - Trust boundaries are tested: Passed. `test:api -- integrations` covers
+    allowed provider send plus unsafe data denial before provider send.
+
+## F5-03C - Dispatch Queued Email Notifications With Failure Status
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - ARCH-INTEGRATION-001
+  - REQ-NOTIFY-001
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added queued email dispatch through `NotificationsService` using the
+    integrations module public email provider boundary.
+  - Added repository methods to find `EMAIL` + `QUEUED` notifications in queued
+    order and mark them `SENT` or `FAILED` only while still queued.
+  - Successful dispatch stores safe provider metadata: message id, provider, and
+    accepted recipients.
+  - Provider exceptions are persisted as stable `EMAIL_PROVIDER_FAILED` without
+    provider error detail or credentials.
+  - Unsafe email payload data is rejected by the integration boundary before
+    provider send and recorded as stable `VALIDATION_FAILED`.
+  - Delivered/failed notifications are skipped by repository selection and
+    compare-and-update status filters.
+  - Added focused `test:api -- notifications` coverage for successful dispatch,
+    provider failure status, idempotent terminal-row skip, unsafe payload
+    rejection before send, and no credential exposure.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (10/10)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no routes or client authority path.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope for this
+    notification status task. Notification status updates are single-row guarded
+    persistence operations; no complaint workflow state or audit-requiring
+    domain transition was added.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. Unsafe payload keys are rejected
+    before provider send and provider failure details are collapsed to stable
+    safe codes.
+  - Customer portal exposure rules hold: Passed by scope. No portal route or
+    response shape was changed.
+  - Trust boundaries are tested: Passed. `test:api -- notifications` covers the
+    successful path, provider failure, terminal-row skip, unsafe payload denial,
+    and credential non-exposure.
+
+## F5-04A - Add SMS Provider Adapter With In-Memory Test Double
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - ARCH-INTEGRATION-001
+  - REQ-NOTIFY-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added an integrations-owned SMS provider port and deterministic in-memory
+    provider test double.
+  - Wired the in-memory SMS provider into `IntegrationsModule` without provider
+    SDKs, credentials, environment reads, routes, schema/migration changes,
+    delivery logs, notification dispatch behavior, WhatsApp behavior, or UI.
+  - Added `IntegrationsService.sendSms()` as the module boundary for safe SMS
+    sends through the provider port.
+  - Rejected unsafe phone recipients and sensitive payload keys before provider
+    send.
+  - Added focused `test:api -- integrations` coverage for successful SMS send,
+    unsafe recipient/payload rejection before send, stable result shape, and no
+    provider credential exposure.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- integrations` (6/6)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no routes or authority decisions.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no state changes or notification dispatch behavior.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. Sensitive payload keys are rejected
+    before provider send and provider results expose no credentials.
+  - Customer portal exposure rules hold: Passed by scope. No portal route or
+    response shape was changed.
+  - Trust boundaries are tested: Passed. `test:api -- integrations` covers
+    allowed SMS provider send plus unsafe data denial before provider send.
+
+## F5-04B - Add WhatsApp Provider Adapter With In-Memory Test Double
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - ARCH-INTEGRATION-001
+  - REQ-NOTIFY-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added an integrations-owned WhatsApp provider port and deterministic
+    in-memory provider test double.
+  - Wired the in-memory WhatsApp provider into `IntegrationsModule` without
+    provider SDKs, credentials, environment reads, routes, schema/migration
+    changes, delivery logs, notification dispatch behavior, or UI.
+  - Added `IntegrationsService.sendWhatsApp()` as the module boundary for safe
+    WhatsApp sends through the provider port.
+  - Rejected unsafe phone recipients and sensitive payload keys before provider
+    send.
+  - Added focused `test:api -- integrations` coverage for successful WhatsApp
+    send, unsafe recipient/payload rejection before send, stable result shape,
+    and no provider credential exposure.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- integrations` (9/9)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no routes or authority decisions.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no state changes or notification dispatch behavior.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. Sensitive payload keys are rejected
+    before provider send and provider results expose no credentials.
+  - Customer portal exposure rules hold: Passed by scope. No portal route or
+    response shape was changed.
+  - Trust boundaries are tested: Passed. `test:api -- integrations` covers
+    allowed WhatsApp provider send plus unsafe data denial before provider send.
+
+## F5-04C - Dispatch Queued SMS/WhatsApp Notifications With Failure Status
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - ARCH-INTEGRATION-001
+  - REQ-NOTIFY-001
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added queued SMS and WhatsApp dispatch through `NotificationsService` using
+    the integrations module public provider boundaries.
+  - Added repository methods to find `SMS`/`WHATSAPP` + `QUEUED` notifications
+    in queued order and mark them `SENT` or `FAILED` only while still queued.
+  - Successful dispatch stores safe provider metadata: message id, provider, and
+    accepted recipients.
+  - Provider exceptions are persisted as stable `SMS_PROVIDER_FAILED` or
+    `WHATSAPP_PROVIDER_FAILED` without provider error detail or credentials.
+  - Unsafe SMS/WhatsApp payload data is rejected by the integration boundaries
+    before provider send and recorded as stable `VALIDATION_FAILED`.
+  - Delivered/failed SMS and WhatsApp notifications are skipped by repository
+    selection and compare-and-update status filters.
+  - Added focused `test:api -- notifications` coverage for SMS success/failure,
+    WhatsApp success/failure, terminal-row skip, unsafe payload rejection before
+    send, and no credential exposure.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (16/16)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no routes or client authority path.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope for this
+    notification status task. Notification status updates are single-row guarded
+    persistence operations; no complaint workflow state or audit-requiring
+    domain transition was added.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. Unsafe payload keys are rejected
+    before provider send and provider failure details are collapsed to stable
+    safe codes.
+  - Customer portal exposure rules hold: Passed by scope. No portal route or
+    response shape was changed.
+  - Trust boundaries are tested: Passed. `test:api -- notifications` covers the
+    successful paths, provider failures, terminal-row skip, unsafe payload
+    denial, and credential non-exposure.
+
+## F5-05A - Add Notification Template Schema And Migration
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-NOTIFY-001
+  - LOCALIZATION-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added Prisma `NotificationTemplate` with code, channel, locale,
+    subject/body content, version metadata, activation state, and audit
+    timestamps.
+  - Added migration `20260619170000_notification_templates` to create
+    `notification_templates`, version uniqueness, active-template partial
+    uniqueness, and lookup index.
+  - Added notifications manifest ownership for `notification_templates`.
+  - Added `prisma:validate` proof script via a Node wrapper that supplies a
+    local placeholder `DATABASE_URL` for static validation.
+  - Extended schema-check coverage to require the template model, table mapping,
+    required fields, version uniqueness, and active-template lookup index.
+  - Added no template resolution/rendering service, admin route, OpenAPI path,
+    dispatch behavior, provider behavior, delivery-attempt schema, or UI.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm prisma:validate`
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no routes or authority decisions.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added schema only and no state-changing service behavior.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. No runtime provider, logging, or
+    response behavior was added.
+  - Customer portal exposure rules hold: Passed by scope. No portal route or
+    response shape was changed.
+  - Trust boundaries are tested: Passed by schema-check and Prisma validation
+    coverage for the new persistence boundary.
+
+## F5-05B - Add Arabic/English Notification Template Resolution Service
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-NOTIFY-001
+  - LOCALIZATION-001
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added active-template lookup by code/channel/locale in the notifications
+    repository.
+  - Added backend-only `NotificationsService.resolveTemplate()` with validation
+    for template code, channel, `ar`/`en` locale, and safe payload data.
+  - Added deterministic fallback from requested Arabic locale to English when
+    the Arabic template is missing.
+  - Added simple placeholder rendering from safe scalar payload fields.
+  - Missing templates fail with stable `NOTIFICATION_TEMPLATE_NOT_FOUND`.
+  - Unsafe payload data fails before repository reads or rendering.
+  - Added focused `test:api -- notifications` coverage for Arabic resolution,
+    English fallback, missing-template denial, unsafe payload denial before read,
+    and credential non-exposure.
+  - Added no admin route, OpenAPI path, dispatch behavior change, provider
+    behavior, delivery-attempt schema, template mutation service, or UI.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (21/21)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no routes or authority decisions.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added read-only template resolution and no side effects.
+  - No passwords, OTPs, authentication tokens, credential hashes, or provider
+    secrets are logged or returned: Passed. Unsafe payload keys are rejected
+    before reads/rendering and credential non-exposure is tested.
+  - Customer portal exposure rules hold: Passed by scope. No portal route or
+    response shape was changed.
+  - Trust boundaries are tested: Passed. `test:api -- notifications` covers
+    locale resolution, fallback, denial, and unsafe payload boundaries.

@@ -107,26 +107,26 @@ history from another project.
 - [ ] F5-01: Secure attachment upload/download
   - [x] F5-01A: Generate attachments module boundary and manifest
   - [x] F5-01B: Add attachment upload metadata policy validation
-  - [ ] F5-01C: Add attachment storage port and in-memory adapter
-  - [ ] F5-01D: Persist attachment metadata with upload audit
-  - [ ] F5-01E: Add staff attachment upload route with RBAC, branch scope, and OpenAPI
-  - [ ] F5-01F: Add staff attachment download authorization and short-lived URL route
-  - [ ] F5-01G: Add portal attachment upload path for verified non-closed complaints
-  - [ ] F5-01H: Add portal attachment download/privacy regression coverage
+  - [x] F5-01C: Add attachment storage port and in-memory adapter
+  - [x] F5-01D: Persist attachment metadata with upload audit
+  - [x] F5-01E: Add staff attachment upload route with RBAC, branch scope, and OpenAPI
+  - [x] F5-01F: Add staff attachment download authorization and short-lived URL route
+  - [x] F5-01G: Add portal attachment upload path for verified non-closed complaints
+  - [x] F5-01H: Add portal attachment download/privacy regression coverage
 - [ ] F5-02: Malware scan hook states
-  - [ ] F5-02A: Add attachment scan status transition service
-  - [ ] F5-02B: Enforce scan status in attachment download behavior
-- [ ] F5-03: Email adapter and in-memory provider
-  - [ ] F5-03A: Generate integrations module boundary and manifest
-  - [ ] F5-03B: Add email provider adapter with in-memory test double
-  - [ ] F5-03C: Dispatch queued email notifications with failure status
-- [ ] F5-04: SMS/WhatsApp-ready adapter interfaces
-  - [ ] F5-04A: Add SMS provider adapter with in-memory test double
-  - [ ] F5-04B: Add WhatsApp provider adapter with in-memory test double
-  - [ ] F5-04C: Dispatch queued SMS/WhatsApp notifications with failure status
+  - [x] F5-02A: Add attachment scan status transition service
+  - [x] F5-02B: Enforce scan status in attachment download behavior
+- [x] F5-03: Email adapter and in-memory provider
+  - [x] F5-03A: Generate integrations module boundary and manifest
+  - [x] F5-03B: Add email provider adapter with in-memory test double
+  - [x] F5-03C: Dispatch queued email notifications with failure status
+- [x] F5-04: SMS/WhatsApp-ready adapter interfaces
+  - [x] F5-04A: Add SMS provider adapter with in-memory test double
+  - [x] F5-04B: Add WhatsApp provider adapter with in-memory test double
+  - [x] F5-04C: Dispatch queued SMS/WhatsApp notifications with failure status
 - [ ] F5-05: Notification templates and delivery log
-  - [ ] F5-05A: Add notification template schema and migration
-  - [ ] F5-05B: Add Arabic/English notification template resolution service
+  - [x] F5-05A: Add notification template schema and migration
+  - [x] F5-05B: Add Arabic/English notification template resolution service
   - [ ] F5-05C: Add Admin notification template routes with RBAC and OpenAPI
   - [ ] F5-05D: Add notification delivery attempt log and retry-safe status updates
 - [ ] F5-06: Notification preferences and quiet hours

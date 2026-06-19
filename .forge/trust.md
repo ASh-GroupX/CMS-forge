@@ -2644,3 +2644,330 @@ Residual risk: this is a required customer-portal privacy gate. A fresh verifier
   - The next task is intentionally only the attachment storage port plus
     in-memory adapter; routes, persistence, audit, scan, portal/UI, and real S3
     provider work remain separate.
+
+## F5-01C - Add Attachment Storage Port And In-Memory Adapter
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-01D`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- attachments` (8/8)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Attachment object storage now goes through a module-owned port wired to an
+    in-memory adapter.
+  - Download preparation returns only a non-public backend token shape and
+    denies missing storage keys with stable `ATTACHMENT_NOT_FOUND`.
+  - No routes, persistence, audit writes, malware scan state, UI, OpenAPI paths,
+    real provider calls, provider SDKs, or credentials were added.
+
+## F5-01D - Persist Attachment Metadata With Upload Audit
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-01E`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- attachments` (10/10)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Attachment upload service behavior now validates metadata, stores bytes
+    through the storage port, persists metadata, and writes `ATTACHMENT` audit in
+    one repository transaction.
+  - Invalid metadata is tested to stop before storage, database writes, or audit.
+  - No staff/portal routes, OpenAPI attachment paths, download behavior, scan
+    transitions, schema changes, real provider calls, or credentials were added.
+
+## F5-01E - Add Staff Attachment Upload Route With RBAC, Branch Scope, And OpenAPI
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-01F`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- attachments` (14/14)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Staff upload is exposed at `POST /complaints/{id}/attachments` with
+    session/RBAC/CSRF/branch-scope guards.
+  - The route verifies scoped complaint visibility before attachment persistence
+    and ignores spoofed actor/role/branch body fields.
+  - OpenAPI is updated and canonical. No download, portal, scan transition,
+    schema, UI, or real provider behavior was added.
+
+## F5-01F - Add Staff Attachment Download Authorization And Short-Lived URL Route
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-01G`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- attachments` (18/18)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Staff download preparation is exposed at
+    `GET /complaints/{id}/attachments/{attachmentId}/download`.
+  - The route verifies scoped complaint visibility and returns only a
+    short-lived backend token/expiry, not a public URL or storage key.
+  - Attachment access audit is written; no portal, scan transition, schema, UI,
+    or real provider behavior was added.
+
+## F5-01G - Add Portal Attachment Upload Path For Verified Non-Closed Complaints
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-01H`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- attachments` (22/22)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Portal upload is exposed at `POST /portal/attachments` and derives complaint
+    authority only from the verified portal session.
+  - Closed/rejected complaints are denied before upload, and portal uploads force
+    customer-visible metadata.
+  - No portal download, scan transition, schema, UI, or real provider behavior
+    was added.
+
+## F5-01H - Add Portal Attachment Download Privacy Regression Coverage
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-02A`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- attachments` (24/24)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Portal privacy regressions now prove there is no portal attachment download
+    route/token response yet.
+  - Portal attachment schemas exclude storage keys, download tokens, public URLs,
+    internal fields, DMS/staff data, and provider credential fields.
+  - No new behavior was added.
+
+## F5-02A - Add Attachment Scan Status Transition Service
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-02B`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- attachments` (27/27)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Attachment scan state can now move from `PENDING` to `CLEAN` or `REJECTED`
+    with same-transaction `ATTACHMENT` audit.
+  - Invalid transitions and missing attachments fail safely before writes/audit.
+  - No scanner provider, job, route, download enforcement, schema, UI, or real
+    provider behavior was added.
+
+## F5-02B - Enforce Scan Status In Attachment Download Behavior
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-03A`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- attachments` (28/28)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Staff download tokens are now prepared only for `CLEAN` attachments.
+  - `PENDING` and `REJECTED` attachments fail before token generation or audit.
+  - No scanner provider, job, route, schema, UI, or real provider behavior was
+    added.
+
+## F5-03A - Generate Integrations Module Boundary And Manifest
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-03B`.
+- Verification:
+  - Passed: `corepack pnpm generate:module -- integrations`
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - `IntegrationsModule` exists, has a real manifest, and is wired into the root
+    API module.
+  - No provider behavior, SDK, credential, route, schema, OpenAPI path, UI, or
+    notification dispatch behavior was added.
+
+## F5-03B - Add Email Provider Adapter With In-Memory Test Double
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-03C`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- integrations` (3/3)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Email sends now go through the integrations module-owned provider port and
+    deterministic in-memory provider.
+  - Unsafe recipient/payload data is rejected before provider send.
+  - No real provider SDK, credential, route, schema, OpenAPI path, UI, delivery
+    log, or notification dispatch behavior was added.
+
+## F5-03C - Dispatch Queued Email Notifications With Failure Status
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-04A`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (10/10)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Queued email notifications now dispatch through the integrations email
+    provider boundary.
+  - Sent/failed persistence is guarded so terminal rows are not resent.
+  - Provider failures and unsafe payload denials are recorded with stable safe
+    codes; provider error details and credentials are not exposed.
+  - No real provider SDK, credential, route, schema, OpenAPI path, retry
+    scheduler, delivery-attempt table, SMS/WhatsApp behavior, or UI was added.
+
+## F5-04A - Add SMS Provider Adapter With In-Memory Test Double
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-04B`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- integrations` (6/6)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - SMS sends now go through the integrations module-owned provider port and
+    deterministic in-memory provider.
+  - Unsafe recipient/payload data is rejected before provider send.
+  - No real provider SDK, credential, route, schema, OpenAPI path, UI, delivery
+    log, WhatsApp behavior, or notification dispatch behavior was added.
+
+## F5-04B - Add WhatsApp Provider Adapter With In-Memory Test Double
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-04C`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- integrations` (9/9)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - WhatsApp sends now go through the integrations module-owned provider port
+    and deterministic in-memory provider.
+  - Unsafe recipient/payload data is rejected before provider send.
+  - No real provider SDK, credential, route, schema, OpenAPI path, UI, delivery
+    log, or notification dispatch behavior was added.
+
+## F5-04C - Dispatch Queued SMS/WhatsApp Notifications With Failure Status
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-05A`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (16/16)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Queued SMS and WhatsApp notifications now dispatch through the integrations
+    provider boundaries.
+  - Sent/failed persistence is guarded so terminal rows are not resent.
+  - Provider failures and unsafe payload denials are recorded with stable safe
+    codes; provider error details and credentials are not exposed.
+  - No real provider SDK, credential, route, schema, OpenAPI path, retry
+    scheduler, delivery-attempt table, email dispatch change, or UI was added.
+
+## F5-05A - Add Notification Template Schema And Migration
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-05B`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm prisma:validate`
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Notification template persistence now exists in Prisma schema and migration
+    form with locale/channel support and active-template uniqueness.
+  - Notifications module manifest owns `notification_templates`.
+  - No rendering service, admin route, OpenAPI path, dispatch behavior, provider
+    behavior, delivery-attempt schema, or UI was added.
+
+## F5-05B - Add Arabic/English Notification Template Resolution Service
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F5-05C`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (21/21)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Active notification templates now resolve by code/channel/locale with
+    Arabic-to-English fallback and safe placeholder rendering.
+  - Missing templates and unsafe payload data fail safely.
+  - No admin route, OpenAPI path, dispatch behavior change, provider behavior,
+    delivery-attempt schema, mutation service, or UI was added.

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { NotificationChannel, NotificationStatus } from '@prisma/client';
 import { AppException } from '../../src/core/http-kernel.ts';
+import { IntegrationsService } from '../../src/modules/integrations/integrations.service.ts';
 import { NotificationsRepository } from '../../src/modules/notifications/notifications.repository.ts';
 import { NotificationsService } from '../../src/modules/notifications/notifications.service.ts';
 
@@ -17,7 +18,7 @@ test('notifications service queues one internal in-app row', async () => {
         status: NotificationStatus.QUEUED,
       };
     },
-  } as NotificationsRepository);
+  } as NotificationsRepository, {} as IntegrationsService);
 
   const result = await service.queueInternal({
     complaintId: 'cmp_1',
@@ -45,7 +46,7 @@ test('notifications service accepts portal verification request metadata without
       writes.push(data);
       return { id: 'notif_portal', ...data, channel: NotificationChannel.IN_APP, status: NotificationStatus.QUEUED };
     },
-  } as NotificationsRepository);
+  } as NotificationsRepository, {} as IntegrationsService);
 
   await service.queueInternal({
     complaintId: 'cmp_1',
@@ -109,6 +110,10 @@ test('notifications repository persists queued in-app rows only', async () => {
       templateCode: true,
       locale: true,
       payload: true,
+      provider: true,
+      providerResult: true,
+      sentAt: true,
+      failedAt: true,
     },
   });
 });
@@ -120,7 +125,7 @@ test('notifications service denies blank template code before write', async () =
       writeCalled = true;
       throw new Error('should not write');
     },
-  } as unknown as NotificationsRepository);
+  } as unknown as NotificationsRepository, {} as IntegrationsService);
 
   await assert.rejects(
     service.queueInternal({ templateCode: ' ', payload: { breachId: 'breach_1' } }),
@@ -136,7 +141,7 @@ test('notifications service denies unsafe payload keys before write', async () =
       writeCalled = true;
       throw new Error('should not write');
     },
-  } as unknown as NotificationsRepository);
+  } as unknown as NotificationsRepository, {} as IntegrationsService);
 
   await assert.rejects(
     service.queueInternal({ templateCode: 'sla.breach.internal', payload: { providerSecret: 'hidden' } }),
@@ -156,7 +161,7 @@ test('notifications service denies non-plain payload objects before write', asyn
       writeCalled = true;
       throw new Error('should not write');
     },
-  } as unknown as NotificationsRepository);
+  } as unknown as NotificationsRepository, {} as IntegrationsService);
 
   for (const payload of [new Date('2026-06-19T00:00:00.000Z'), new Map(), new Set()]) {
     await assert.rejects(

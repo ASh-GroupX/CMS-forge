@@ -1,4 +1,4 @@
-# Build Task: F5-01C - Add Attachment Storage Port And In-Memory Adapter
+# Build Task: F5-05C - Add Admin Notification Template Routes With RBAC And OpenAPI
 
 Status: Ready to Build
 Required model tier: BUILDER-STRONG
@@ -7,35 +7,38 @@ Phase: Phase 5 - Attachments And Notifications
 
 ## Scope
 
-Add the backend attachment object-storage boundary needed before upload
-persistence and routes.
+Add admin-only HTTP management for notification templates.
 
 Do:
-- Add an attachment storage port owned by the attachments module.
-- Add an in-memory adapter/test double for local tests.
-- Wire the adapter into `AttachmentsModule` without provider credentials.
-- Add focused `test:api -- attachments` coverage for storing bytes, generating a
-  non-public download token/URL shape, missing object denial, and no provider
-  credential exposure.
+- Add notifications repository/service methods for listing, creating, updating,
+  activating/deactivating notification templates.
+- Add admin-only routes guarded by server session, RBAC, and CSRF where
+  applicable.
+- Enforce Admin-only access; include one allowed and one denied API test.
+- Validate code, channel, locale, subject/body, version metadata, and activation
+  state before writes.
+- Write `CONFIG` audit entries for template create/update/activation changes in
+  the same transaction as each mutation.
+- Add OpenAPI paths/schemas for the admin template routes.
+- Add focused `test:api -- notifications` coverage for allowed create/update,
+  denied non-admin access, validation failure before write, audit write, and no
+  provider credential exposure.
 
 Do not add:
-- Upload or download HTTP routes
-- Attachment database persistence
-- Audit entries
-- Malware scan behavior
-- Portal or staff UI
-- OpenAPI attachment paths
-- Schema or migration changes
-- Real S3 SDK/provider calls
-- Provider credentials or secrets
+- Admin UI
+- Dispatch behavior changes
+- Provider behavior
+- Delivery attempt log schema
+- Template preview endpoint
+- Template import/export
 
 ## Requirement IDs
 
-- ARCH-FILES-001
-- REQ-FILES-001
-- ARCH-INTEGRATION-001
-- METHOD-API-001
+- REQ-NOTIFY-001
+- LOCALIZATION-001
+- API-STANDARD-001
 - METHOD-AUDIT-001
+- METHOD-API-001
 - METHOD-TEST-001
 
 ## Verification Commands
@@ -43,16 +46,16 @@ Do not add:
 - `corepack pnpm lint`
 - `corepack pnpm typecheck`
 - `corepack pnpm test`
-- `corepack pnpm test:api -- attachments`
+- `corepack pnpm test:api -- notifications`
 - `corepack pnpm openapi:check`
 - `git diff --check`
 
 ## Acceptance
 
-- Attachment object bytes can be stored through the module-owned storage port.
-- Retrieval/download preparation uses a non-public token or URL shape, not a
-  public unauthenticated attachment URL.
-- Missing storage objects fail with a stable safe error before route behavior
-  exists.
-- The implementation has no real provider call, secret, route, database write,
-  audit write, schema change, or UI change.
+- Admin can manage notification templates through documented backend routes.
+- Non-admin roles are denied.
+- Template mutations write same-transaction `CONFIG` audit entries.
+- Validation rejects unsafe or invalid template data before persistence.
+- OpenAPI documents every new route.
+- No UI, dispatch behavior, provider behavior, delivery-attempt schema, preview,
+  import, or export behavior is added.

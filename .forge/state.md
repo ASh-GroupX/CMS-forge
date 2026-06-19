@@ -1,3 +1,338 @@
+ï»¿# Current State
+
+Status: Ready to Build
+Phase: Phase 5 - Attachments And Notifications
+Next Task: F5-05C - Add Admin Notification Template Routes With RBAC And OpenAPI
+
+## F5-05B Built - AUTO PHASE Paused At Wider Route Slice
+
+`F5-05B` added backend-only active template resolution by code/channel/locale,
+Arabic-to-English fallback, safe scalar placeholder rendering, missing-template
+denial, and unsafe payload denial before repository reads or rendering.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- notifications
+21/21, openapi:check, and git diff --check with line-ending warnings only.
+
+No admin route, OpenAPI path, dispatch behavior change, provider behavior,
+delivery-attempt schema, mutation service, or UI was added.
+
+AUTO PHASE remains in Phase 5. The next task, `F5-05C`, is ready but intentionally
+left as the next build slice because it crosses service, controller/guards, DTOs,
+OpenAPI, audit transaction behavior, and API tests.
+# Current State
+
+Status: Ready to Build
+Phase: Phase 5 - Attachments And Notifications
+Next Task: F5-05B - Add Arabic/English Notification Template Resolution Service
+
+## F5-05A Built - AUTO PHASE Continuing
+
+`F5-05A` added notification template persistence with Prisma schema and SQL
+migration support for code, channel, locale, subject/body content, version
+metadata, activation state, audit timestamps, version uniqueness, active-template
+uniqueness, and lookup indexing.
+
+Required proof passed: lint, typecheck, test 29/29, prisma:validate,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No template rendering service, admin route, OpenAPI path, dispatch behavior,
+provider behavior, delivery-attempt schema, or UI was added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-05B`.
+# Current State
+
+Status: Ready to Build
+Phase: Phase 5 - Attachments And Notifications
+Next Task: F5-05A - Add Notification Template Schema And Migration
+
+## F5-04C Built - AUTO PHASE Continuing
+
+`F5-04C` added queued SMS and WhatsApp notification dispatch through the
+integrations provider boundaries. Rows are selected only when channel is
+`SMS`/`WHATSAPP` plus `QUEUED`, successful dispatch marks them `SENT` with safe
+provider metadata, and provider or validation failures mark them `FAILED` with
+stable safe reasons.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- notifications
+16/16, openapi:check, and git diff --check with line-ending warnings only.
+
+No real provider SDK/call, provider credential, route, OpenAPI path,
+schema/migration change, retry scheduler, delivery-attempt table, email dispatch
+change, or UI was added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-05A`.
+# Current State
+
+Status: Ready to Build
+Phase: Phase 5 - Attachments And Notifications
+Next Task: F5-04C - Dispatch Queued SMS/WhatsApp Notifications With Failure Status
+
+## F5-04B Built - AUTO PHASE Continuing
+
+`F5-04B` added the integrations-owned WhatsApp provider port, deterministic
+in-memory provider, and safe `IntegrationsService.sendWhatsApp()` boundary.
+Unsafe WhatsApp recipients and payload data are rejected before provider send,
+and provider results do not expose credentials.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- integrations
+9/9, openapi:check, and git diff --check with line-ending warnings only.
+
+No real provider SDK/call, provider credential, notification dispatch behavior,
+delivery log, route, OpenAPI path, schema/migration change, or UI was added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-04C`.
+# Current State
+
+Status: Ready to Build
+Phase: Phase 5 - Attachments And Notifications
+Next Task: F5-04B - Add WhatsApp Provider Adapter With In-Memory Test Double
+
+## F5-04A Built - AUTO PHASE Continuing
+
+`F5-04A` added the integrations-owned SMS provider port, deterministic
+in-memory provider, and safe `IntegrationsService.sendSms()` boundary. Unsafe
+SMS recipients and payload data are rejected before provider send, and provider
+results do not expose credentials.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- integrations
+6/6, openapi:check, and git diff --check with line-ending warnings only.
+
+No real provider SDK/call, provider credential, notification dispatch behavior,
+delivery log, route, OpenAPI path, schema/migration change, WhatsApp behavior,
+or UI was added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-04B`.
+# Current State
+
+Status: Ready to Build
+Phase: Phase 5 - Attachments And Notifications
+Next Task: F5-04A - Add SMS Provider Adapter With In-Memory Test Double
+
+## F5-03C Built - AUTO PHASE Continuing
+
+`F5-03C` added queued email notification dispatch through the integrations
+email provider boundary. Email rows are selected only when `EMAIL` + `QUEUED`,
+successful dispatch marks them `SENT` with safe provider metadata, and provider
+or validation failures mark them `FAILED` with stable safe reasons.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- notifications
+10/10, openapi:check, and git diff --check with line-ending warnings only.
+
+No real provider SDK/call, provider credential, route, OpenAPI path,
+schema/migration change, retry scheduler, delivery-attempt table,
+SMS/WhatsApp behavior, or UI was added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-04A`.
+# Current State
+
+Status: Ready to Build
+Phase: Phase 5 - Attachments And Notifications
+Next Task: F5-03C - Dispatch Queued Email Notifications With Failure Status
+
+## F5-03B Built - AUTO PHASE Continuing
+
+`F5-03B` added the integrations-owned email provider port, deterministic
+in-memory provider, and safe `IntegrationsService.sendEmail()` boundary.
+Unsafe recipient/payload data is rejected before provider send, and provider
+results do not expose credentials.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- integrations
+3/3, openapi:check, and git diff --check with line-ending warnings only.
+
+No real provider SDK/call, provider credential, notification dispatch behavior,
+delivery log, route, OpenAPI path, schema/migration change, SMS/WhatsApp
+behavior, retry scheduler, or UI was added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-03C`.
+# Current State
+
+Status: Ready to Build
+Phase: Phase 5 - Attachments And Notifications
+Next Task: F5-03B - Add Email Provider Adapter With In-Memory Test Double
+
+## F5-03A Built - AUTO PHASE Continuing
+
+`F5-03A` generated the canonical `integrations` backend module, filled the real
+provider-adapter `MODULE.md`, and wired `IntegrationsModule` into the root API
+module.
+
+Required proof passed: generate:module, lint, typecheck, test 29/29,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No provider behavior, SDK, credential, notification dispatch behavior, route,
+OpenAPI path, schema/migration change, or UI was added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-03B`.
+
+# Current State
+
+Status: Ready to Build
+Phase: Phase 5 - Attachments And Notifications
+Next Task: F5-03A - Generate Integrations Module Boundary And Manifest
+
+## F5-02B Built - AUTO PHASE Continuing
+
+`F5-02B` enforced scan status in staff attachment download preparation. Only
+`CLEAN` attachments can prepare download tokens; `PENDING` and `REJECTED`
+attachments fail before storage token generation or download audit.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- attachments
+28/28, openapi:check, and git diff --check with line-ending warnings only.
+
+No scanner provider integration, async scan jobs, routes, UI, schema/migration
+change, real provider call, provider SDK, or provider credential was added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-03A`.
+
+# Current State
+
+Status: Ready to Build
+Phase: Phase 5 - Attachments And Notifications
+Next Task: F5-02B - Enforce Scan Status In Attachment Download Behavior
+
+## F5-02A Built - AUTO PHASE Continuing
+
+`F5-02A` added backend-only attachment scan status transitions from `PENDING` to
+`CLEAN` or `REJECTED`, with invalid/missing denials and same-transaction
+`ATTACHMENT` scan audit.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- attachments
+27/27, openapi:check, and git diff --check with line-ending warnings only.
+
+No scanner provider integration, async scan jobs, download enforcement, routes,
+UI, schema/migration change, real provider call, provider SDK, or provider
+credential was added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-02B`.
+
+# Current State
+
+Status: Ready to Build
+Phase: Phase 5 - Attachments And Notifications
+Next Task: F5-02A - Add Attachment Scan Status Transition Service
+
+## F5-01H Built - AUTO PHASE Continuing
+
+`F5-01H` added portal attachment privacy regression coverage proving portal
+attachment upload/tracking response shapes do not expose download tokens, public
+URLs, storage keys, internal fields, DMS/staff data, or provider credentials, and
+that no portal attachment download route exists yet.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- attachments
+24/24, openapi:check, and git diff --check with line-ending warnings only.
+
+No new attachment behavior, portal download route, malware scan transition, UI,
+schema/migration change, real provider call, provider SDK, or provider credential
+was added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-02A`.
+
+# Current State
+
+Status: Ready to Build
+Phase: Phase 5 - Attachments And Notifications
+Next Task: F5-01H - Add Portal Attachment Download Privacy Regression Coverage
+
+## F5-01G Built - AUTO PHASE Continuing
+
+`F5-01G` added verified portal attachment upload at `POST /portal/attachments`,
+backend portal-session authority resolution, terminal complaint denial, forced
+customer-visible metadata, and OpenAPI portal upload coverage.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- attachments
+22/22, openapi:check, and git diff --check with line-ending warnings only.
+
+No portal attachment download route, malware scan transition, UI,
+schema/migration change, real provider call, provider SDK, or provider credential
+was added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-01H`.
+
+# Current State
+
+Status: Ready to Build
+Phase: Phase 5 - Attachments And Notifications
+Next Task: F5-01G - Add Portal Attachment Upload Path For Verified Non-Closed Complaints
+
+## F5-01F Built - AUTO PHASE Continuing
+
+`F5-01F` added staff attachment download preparation at
+`GET /complaints/:complaintId/attachments/:attachmentId/download`, scoped
+complaint visibility checks, attachment-to-complaint verification, safe download
+access audit, and OpenAPI download response schema.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- attachments
+18/18, openapi:check, and git diff --check with line-ending warnings only.
+
+No portal route, malware scan transition/enforcement, UI, schema/migration
+change, real provider call, provider SDK, or provider credential was added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-01G`.
+
+# Current State
+
+Status: Ready to Build
+Phase: Phase 5 - Attachments And Notifications
+Next Task: F5-01F - Add Staff Attachment Download Authorization And Short-Lived URL Route
+
+## F5-01E Built - AUTO PHASE Continuing
+
+`F5-01E` added the guarded staff upload route at
+`POST /complaints/:complaintId/attachments`, scoped complaint visibility checks,
+server-derived actor/branch/audit context, storage-key-free response DTOs, and
+OpenAPI attachment upload schemas.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- attachments
+14/14, openapi:check, and git diff --check with line-ending warnings only.
+
+No staff download route, portal route, malware scan transition, UI,
+schema/migration change, real provider call, provider SDK, or provider credential
+was added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-01F`.
+
+# Current State
+
+Status: Ready to Build
+Phase: Phase 5 - Attachments And Notifications
+Next Task: F5-01E - Add Staff Attachment Upload Route With RBAC, Branch Scope, And OpenAPI
+
+## F5-01D Built - AUTO PHASE Continuing
+
+`F5-01D` added attachment metadata persistence after storage succeeds and writes
+an `ATTACHMENT` upload audit entry in the same repository transaction.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- attachments
+10/10, openapi:check, and git diff --check with line-ending warnings only.
+
+No upload/download HTTP routes, download authorization, malware scan behavior
+beyond persisted default status, portal/staff UI, OpenAPI attachment paths,
+schema/migration changes, real provider calls, provider SDKs, or provider
+credentials were added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-01E`.
+
+# Current State
+
+Status: Ready to Build
+Phase: Phase 5 - Attachments And Notifications
+Next Task: F5-01D - Persist Attachment Metadata With Upload Audit
+
+## F5-01C Built - AUTO PHASE Continuing
+
+`F5-01C` added the module-owned attachment storage port and in-memory adapter,
+wired the adapter into `AttachmentsModule`, and exposed service methods for
+storing object bytes and preparing non-public backend download tokens.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- attachments 8/8,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No upload/download routes, database persistence, audit entries, malware scan
+behavior, portal/staff UI, OpenAPI attachment paths, schema/migration changes,
+real provider calls, provider SDKs, or provider credentials were added.
+
+AUTO PHASE remains in Phase 5 and continues with `F5-01D`.
+
 # Current State
 
 Status: Ready to Build
@@ -858,7 +1193,7 @@ state-machine kernel is built. `F2-01A` is queued as the smallest buildable firs
 task. The state-machine persistence task `F2-02B` remains `Verify Gate: required`
 because later complaint creation and queue behavior depend on it.
 
-## Phase 1 — Accepted (PHASE-1-REVIEW)
+## Phase 1 â€” Accepted (PHASE-1-REVIEW)
 
 PHASE-1-REVIEW decision: **Accept With Conditions** (PHASE-REVIEWER, Opus 4.8, 2026-06-18).
 All 23 Phase 1 tasks done with honest, independently-reproduced evidence. Full proof surface
@@ -870,17 +1205,17 @@ is cleared to start; it opens with a planner pass.
 
 ### Non-blocking conditions carried into later phases (see trust.md PHASE-1-REVIEW)
 
-1. `security:check` is still a fail-loud placeholder — wire it to the real security suites
+1. `security:check` is still a fail-loud placeholder â€” wire it to the real security suites
    before the MVP pilot sign-off gate (substance is proven by `test:api -- security/auth/admin/audit`).
 2. NFR-SEC-001 AC4 (prod HTTP?HTTPS at the gateway) + parameterizing `POSTGRES_HOST_AUTH_METHOD: trust`
    are owed by the Phase 7 deployment runbook (F7-04).
 3. No full Nest bootstrap/e2e test yet (F1-06C added reflection-metadata guard tests + fixed the
    branches DI graph). Add a bootstrap smoke test early in Phase 2.
-4. Per-module `PrismaService`/`AuditService` duplication — consider a shared `@Global()` core module
+4. Per-module `PrismaService`/`AuditService` duplication â€” consider a shared `@Global()` core module
    in Phase 2.
 5. Deferred auth features: username login, account-lock, password-reset land with their feature tasks.
 
-## Phase 1 — CSRF Kernel Gate Passed (VERIFY-F1-06B, gate cleared)
+## Phase 1 â€” CSRF Kernel Gate Passed (VERIFY-F1-06B, gate cleared)
 
 VERIFY-F1-06B decision: **Accept** (independent VERIFY, fresh context / Opus 4.8,
 2026-06-18). Builder honesty Honest, code quality Good. All six proof commands
@@ -890,7 +1225,7 @@ test:api -- auth 21/21, openapi:check). CSRF kernel + auth-route enforcement con
 `POST /auth/login` issues a readable CSRF cookie but is not CSRF-gated (rate-limited
 instead); denial is stable `CSRF_INVALID` 403 with a safe `SECURITY`/`csrf_rejected`
 audit and no secret exposure; OpenAPI documents it drift-free. Full record in
-`.forge/trust.md` (VERIFY-F1-06B). The `Verify Gate` on `F1-06B` is cleared — AUTO PHASE
+`.forge/trust.md` (VERIFY-F1-06B). The `Verify Gate` on `F1-06B` is cleared â€” AUTO PHASE
 may resume from `F1-06C`.
 
 ### Carry-forward into F1-06C (see trust.md VERIFY-F1-06B observations)
@@ -905,18 +1240,18 @@ may resume from `F1-06C`.
 
 After `F1-06C`, all Phase 1 backlog tasks are done ? `Needs Phase Review` before Phase 2.
 
-## Phase 1 — F1-06 Split (PLAN-F1-06, 2026-06-18)
+## Phase 1 â€” F1-06 Split (PLAN-F1-06, 2026-06-18)
 
 `F1-06` (login rate limiting + CSRF) was split into three ordered BUILDER-STRONG build
 tasks because the two protections touch different trust boundaries and the combined
-surface exceeds the 1–5 file budget:
+surface exceeds the 1â€“5 file budget:
 
-- `F1-06A` — login rate limiting by account + IP on `POST /auth/login` (NFR-SEC-001 AC3).
+- `F1-06A` â€” login rate limiting by account + IP on `POST /auth/login` (NFR-SEC-001 AC3).
   Queued now; self-contained, nothing builds on it.
-- `F1-06B` — CSRF kernel guard + token issuance + enforcement on auth mutation routes
-  (`POST /auth/logout`) (NFR-SEC-001 AC5). **Verify Gate: required** — `F1-06C` builds
+- `F1-06B` â€” CSRF kernel guard + token issuance + enforcement on auth mutation routes
+  (`POST /auth/logout`) (NFR-SEC-001 AC5). **Verify Gate: required** â€” `F1-06C` builds
   directly on this CSRF mechanism, so AUTO PHASE pauses for an independent VERIFY here.
-- `F1-06C` — enforce the same CSRF guard on branch (admin) mutation routes + OpenAPI +
+- `F1-06C` â€” enforce the same CSRF guard on branch (admin) mutation routes + OpenAPI +
   admin test fixups (NFR-SEC-001 AC5).
 
 CSRF mutation surface mapped to `POST /auth/logout`, `POST /branches`, `PATCH /branches/:id`,
@@ -924,14 +1259,14 @@ CSRF mutation surface mapped to `POST /auth/logout`, `POST /branches`, `PATCH /b
 limiting (AC3), not CSRF (AC5). After `F1-06C`, all Phase 1 backlog tasks are done ?
 `Needs Phase Review` before Phase 2.
 
-## Phase 1 — Auth Foundation Verified (gate passed)
+## Phase 1 â€” Auth Foundation Verified (gate passed)
 
 VERIFY-F1-01E decision: **Accept** (independent VERIFY, fresh context / Opus 4.8,
 2026-06-18). Builder honesty Honest, code quality Good. All five proof commands
 independently re-run green (lint, typecheck, test 19/19, test:api -- auth 15/15,
 openapi:check); change scope clean; no secret/token exposure, missing audit, or
 OpenAPI drift. Full record in `.forge/trust.md` (VERIFY-F1-01E). The `Verify Gate`
-on `F1-01E3` is cleared — AUTO PHASE may resume from `F1-02`.
+on `F1-01E3` is cleared â€” AUTO PHASE may resume from `F1-02`.
 
 ### Carry-forward conditions into the rest of Phase 1 (see trust.md VERIFY-F1-01E)
 
@@ -946,7 +1281,7 @@ on `F1-01E3` is cleared — AUTO PHASE may resume from `F1-02`.
 4. Audit append-only is application-level only; DB-level UPDATE/DELETE revocation is
    F1-03's job.
 
-## Phase 0 — Accepted
+## Phase 0 â€” Accepted
 
 PHASE-0-REVIEW decision: **Accept Phase** (PHASE-REVIEWER, Opus 4.8, 2026-06-18).
 All nine Phase 0 tasks done with honest, independently-reproduced evidence. Full
@@ -959,41 +1294,41 @@ thresholds), openapi:check, build, prisma validate.
 
 1. F1-00A must generate a Prisma migration from the F0-08 schema (committed migration
    only covers the minimal F0-04 model). Run migrations inside the Docker network on Windows.
-2. No NestJS runtime yet — `apps/api` is a `node:http` liveness server. F1-00B must stand
+2. No NestJS runtime yet â€” `apps/api` is a `node:http` liveness server. F1-00B must stand
    up the Nest app + core kernel (prisma, errors, audit, correlation). Escalate to PLANNER
-   to split if scope exceeds 1–5 files.
-3. Module generator emits plain TS classes, not Nest decorators — re-align at F1-05 golden CRUD.
+   to split if scope exceeds 1â€“5 files.
+3. Module generator emits plain TS classes, not Nest decorators â€” re-align at F1-05 golden CRUD.
 4. `POSTGRES_HOST_AUTH_METHOD: trust` is dev-only; parameterize before any non-dev deploy.
 5. Visual/a11y/perf gates stay honest fail-loud until Phase 6 screens exist.
 
 ## History
 
-- F0-00 — agent rulebook + architecture blueprint wired into Forge.
-- F0-01 — pnpm workspace scaffold, package boundaries, OpenAPI shell, Prisma shell, postgres/redis compose.
-- F0-02 — real lint/typecheck/test/build/OpenAPI gates.
-- F0-03 — Docker Compose all four services; images built.
-- F0-04 — minimal Prisma schema + SRS-aligned enums; idempotent seed verified against live postgres; init migration committed.
-- F0-05 — design tokens, Tailwind config, shadcn/ui foundation in apps/web.
-- F0-06 — boundary lint, coverage thresholds, OpenAPI scaffold drift, fail-loud UI/perf proofs.
-- F0-07 — dependency-free module generator; `branches` reserved as future golden CRUD.
-- F0-08 — coherent MVP data model: complaint history, audit, SLA, portal verification/session, comments, attachments, approvals, notifications, surveys, compensation.
-- F1-00A — generated + applied the F0-08 Prisma migration inside the Docker network; seed data preserved.
-- F1-00B — bootstrapped NestJS app + core kernel (Prisma lifecycle, correlation, error envelope); liveness preserved.
-- F1-01A — dev-only Argon2id staff seed hashes; real `test:api -- auth` runner replacing the placeholder.
-- F1-01B — service credential verification (Argon2id), generic denial of wrong/inactive/locked/missing-hash.
-- F1-01C — `StaffSession` model + migration; session creation stores only a SHA-256 token hash; HttpOnly/SameSite/Secure cookie.
-- F1-01D — session validation + logout invalidation by token hash; generic denial of missing/unknown/expired/revoked.
-- F1-01E1 — `AuthModule` + `POST /auth/login` and `/auth/logout` routes with DTO parsing.
-- F1-01E2 — append-only `AuditService`; AUTH login_success/login_failure/logout entries; audit-in-transaction for state changes.
-- F1-01E3 — auth OpenAPI contract (paths + safe schemas + Set-Cookie); `openapi:check` hardened against auth-path/schema removal.
-- VERIFY-F1-01E — independent gate Accept (Honest/Good); five proof commands re-run green; carry-forward security conditions recorded.
-- VERIFY-F1-03A — independent gate Repair (Honest/Acceptable); proof commands re-run green, but audit search currently allows Branch Manager despite `RBAC-MATRIX-001` marking audit-log view as Admin yes / Branch Manager no.
-- REPAIR-F1-03A — audit search restricted to Admin-only; proof commands passed; queued independent repair VERIFY before `F1-03B`.
-- VERIFY-F1-03A-REPAIR — independent gate Accept (Honest/Good); `GET /audit/logs` confirmed Admin-only per RBAC-MATRIX-001 (Branch Manager denied + SECURITY-audited, service fails closed); filtering/clamp/redaction/OpenAPI intact; five proof commands re-run green. Audit search gate cleared.
-- F1-03B — Admin-only audit export added with row cap, redacted JSON attachment, export audit entry, OpenAPI contract, and focused audit tests.
-- F1-03C — DB-level trigger prevents audit log update/delete; `test:api -- audit` applies migrations in Docker and proves insert succeeds while update/delete fail.
-- F1-04 — stable API error envelope now supports optional validation field errors; auth/RBAC errors remain safe and correlation IDs propagate to headers and error bodies.
-- PLAN-F1-05 — split golden CRUD work; first build task is generator alignment before creating the `branches` exemplar.
+- F0-00 â€” agent rulebook + architecture blueprint wired into Forge.
+- F0-01 â€” pnpm workspace scaffold, package boundaries, OpenAPI shell, Prisma shell, postgres/redis compose.
+- F0-02 â€” real lint/typecheck/test/build/OpenAPI gates.
+- F0-03 â€” Docker Compose all four services; images built.
+- F0-04 â€” minimal Prisma schema + SRS-aligned enums; idempotent seed verified against live postgres; init migration committed.
+- F0-05 â€” design tokens, Tailwind config, shadcn/ui foundation in apps/web.
+- F0-06 â€” boundary lint, coverage thresholds, OpenAPI scaffold drift, fail-loud UI/perf proofs.
+- F0-07 â€” dependency-free module generator; `branches` reserved as future golden CRUD.
+- F0-08 â€” coherent MVP data model: complaint history, audit, SLA, portal verification/session, comments, attachments, approvals, notifications, surveys, compensation.
+- F1-00A â€” generated + applied the F0-08 Prisma migration inside the Docker network; seed data preserved.
+- F1-00B â€” bootstrapped NestJS app + core kernel (Prisma lifecycle, correlation, error envelope); liveness preserved.
+- F1-01A â€” dev-only Argon2id staff seed hashes; real `test:api -- auth` runner replacing the placeholder.
+- F1-01B â€” service credential verification (Argon2id), generic denial of wrong/inactive/locked/missing-hash.
+- F1-01C â€” `StaffSession` model + migration; session creation stores only a SHA-256 token hash; HttpOnly/SameSite/Secure cookie.
+- F1-01D â€” session validation + logout invalidation by token hash; generic denial of missing/unknown/expired/revoked.
+- F1-01E1 â€” `AuthModule` + `POST /auth/login` and `/auth/logout` routes with DTO parsing.
+- F1-01E2 â€” append-only `AuditService`; AUTH login_success/login_failure/logout entries; audit-in-transaction for state changes.
+- F1-01E3 â€” auth OpenAPI contract (paths + safe schemas + Set-Cookie); `openapi:check` hardened against auth-path/schema removal.
+- VERIFY-F1-01E â€” independent gate Accept (Honest/Good); five proof commands re-run green; carry-forward security conditions recorded.
+- VERIFY-F1-03A â€” independent gate Repair (Honest/Acceptable); proof commands re-run green, but audit search currently allows Branch Manager despite `RBAC-MATRIX-001` marking audit-log view as Admin yes / Branch Manager no.
+- REPAIR-F1-03A â€” audit search restricted to Admin-only; proof commands passed; queued independent repair VERIFY before `F1-03B`.
+- VERIFY-F1-03A-REPAIR â€” independent gate Accept (Honest/Good); `GET /audit/logs` confirmed Admin-only per RBAC-MATRIX-001 (Branch Manager denied + SECURITY-audited, service fails closed); filtering/clamp/redaction/OpenAPI intact; five proof commands re-run green. Audit search gate cleared.
+- F1-03B â€” Admin-only audit export added with row cap, redacted JSON attachment, export audit entry, OpenAPI contract, and focused audit tests.
+- F1-03C â€” DB-level trigger prevents audit log update/delete; `test:api -- audit` applies migrations in Docker and proves insert succeeds while update/delete fail.
+- F1-04 â€” stable API error envelope now supports optional validation field errors; auth/RBAC errors remain safe and correlation IDs propagate to headers and error bodies.
+- PLAN-F1-05 â€” split golden CRUD work; first build task is generator alignment before creating the `branches` exemplar.
 - F1-05A - generator now emits NestJS-shaped module skeletons with module/controller/service/repository decorators and manifest-valid `MODULE.md` files.
 - F1-05B - generated the real `branches` module shell and filled its `MODULE.md`; CRUD behavior remains unbuilt.
 - F1-05C - added branch read/list service and repository behavior with a real `test:api -- admin` suite.
@@ -1001,4 +1336,3 @@ thresholds), openapi:check, build, prisma validate.
 - F1-05E - added branch create/update/deactivate service behavior with same-transaction CONFIG audit entries.
 - F1-05F - added Admin-only branch write endpoints, OpenAPI write contract entries, route tests, and froze `branches` as the golden CRUD reference.
 - Known limitation: Prisma's Rust engine cannot connect through Docker Desktop's Windows port-forwarding (P1000); run DB ops inside the Docker network. Does not affect application code.
-

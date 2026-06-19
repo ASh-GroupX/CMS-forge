@@ -18,6 +18,7 @@ export const requiredModels = [
   'SlaPolicy',
   'SlaEvent',
   'Notification',
+  'NotificationTemplate',
   'Survey',
   'Compensation',
   'PortalVerification',
@@ -36,6 +37,7 @@ export function checkSchemaText(text) {
 
   for (const [model, table] of [
     ['ComplaintStatusHistory', 'complaint_status_history'],
+    ['NotificationTemplate', 'notification_templates'],
     ['AuditLog', 'audit_logs'],
   ]) {
     const block = text.match(new RegExp(`model\\s+${model}\\s+{[\\s\\S]*?\\n}`))?.[0] ?? '';
@@ -73,6 +75,19 @@ export function checkSchemaText(text) {
 
   if (!/enum\s+AuditEventType\s+{[\s\S]*SECURITY/.test(text)) {
     errors.push('AuditEventType must include SECURITY');
+  }
+
+  const templateBlock = text.match(/model\s+NotificationTemplate\s+{[\s\S]*?\n}/)?.[0] ?? '';
+  for (const field of ['code', 'channel', 'locale', 'subject', 'body', 'version', 'isActive']) {
+    if (!new RegExp(`\\b${field}\\b`).test(templateBlock)) {
+      errors.push(`NotificationTemplate must include ${field}`);
+    }
+  }
+  if (!templateBlock.includes('@@unique([code, channel, locale, version])')) {
+    errors.push('NotificationTemplate must enforce version uniqueness');
+  }
+  if (!templateBlock.includes('@@index([code, channel, locale, isActive])')) {
+    errors.push('NotificationTemplate must index active template lookup');
   }
 
   return errors;

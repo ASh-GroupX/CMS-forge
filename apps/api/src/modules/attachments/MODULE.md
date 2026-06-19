@@ -12,9 +12,10 @@ Agent context manifest. Read this before editing the module.
 ## Public surface
 
 - `AttachmentsService` is the only service exported by `AttachmentsModule`.
-- This module owns attachment metadata boundaries for complaint files. Upload,
-  download, object storage, malware scanning, authorization rules, OpenAPI paths,
-  and UI are added only by their scoped tasks.
+- This module owns attachment metadata boundaries, the object-storage port, staff
+  complaint attachment upload/download preparation, and verified portal upload
+  for complaint files. Malware scanning, portal download, and UI are added only
+  by their scoped tasks.
 
 ## Owns tables
 
@@ -24,9 +25,13 @@ Agent context manifest. Read this before editing the module.
 
 - `core/http-kernel` for `PrismaService`, stable API errors, and request context.
 - `core/audit.service` for future attachment access audit entries.
-- `core/auth.guard` for future staff route session/RBAC enforcement.
+- `core/auth.guard` and `core/csrf.guard` for staff route session/RBAC/CSRF
+  enforcement.
+- `auth` for `AuthModule`/`AuthService` staff session validation wiring.
 - ComplaintsService through ComplaintsModule for complaint ownership and scope
-  checks when attachment behavior is added.
+  checks.
+- PortalService through PortalModule for verified customer portal session
+  attachment upload.
 - Other modules' public services only. Never import another module repository,
   DTO folder, or Prisma model type.
 
