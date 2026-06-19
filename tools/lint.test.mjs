@@ -9,6 +9,8 @@ import {
   checkForbiddenMarkers,
   checkModuleManifests,
 } from './lint.mjs';
+import { checkManifestTruth } from './manifest-truth-check.mjs';
+import { checkModuleWiring } from './wiring-check.mjs';
 
 const manifestBody = [
   '---',
@@ -109,4 +111,105 @@ test('lint requires a complete MODULE.md manifest in each module', () => {
 
   writeFileSync(join(root, 'apps/api/src/modules/auth/MODULE.md'), manifestBody);
   assert.deepEqual(checkModuleManifests(root), []);
+});
+
+function writeWiringFixture(root) {
+  mkdirSync(join(root, 'apps/api/src/modules/auth'), { recursive: true });
+  mkdirSync(join(root, 'apps/api/src/modules/sla'), { recursive: true });
+  writeFileSync(join(root, 'apps/api/src/modules/auth/auth.module.ts'), '@Module({})\nexport class AuthModule {}\n');
+  writeFileSync(join(root, 'apps/api/src/modules/sla/sla.module.ts'), '@Module({ imports: [] })\nexport class SlaModule {}\n');
+}
+
+test('module wiring gate flags a module missing from the AppModule graph', () => {
+  const root = mkdtempSync(join(tmpdir(), 'cms-auto-lint-'));
+  writeWiringFixture(root);
+  writeFileSync(join(root, 'apps/api/src/main.ts'), '@Module({ imports: [AuthModule] })\nclass AppModule {}\n');
+
+  assert.deepEqual(checkModuleWiring(root, new Set()), [
+    'apps/api/src/modules/sla: SlaModule is not wired into the AppModule graph (orphaned module, dead at runtime)',
+  ]);
+});
+
+test('module wiring gate passes when a module is reachable transitively', () => {
+  const root = mkdtempSync(join(tmpdir(), 'cms-auto-lint-'));
+  writeWiringFixture(root);
+  mkdirSync(join(root, 'apps/api/src/modules/portal'), { recursive: true });
+  writeFileSync(
+    join(root, 'apps/api/src/modules/portal/portal.module.ts'),
+    '@Module({ imports: [SlaModule] })\nexport class PortalModule {}\n',
+  );
+  writeFileSync(join(root, 'apps/api/src/main.ts'), '@Module({ imports: [AuthModule, PortalModule] })\nclass AppModule {}\n');
+
+  assert.deepEqual(checkModuleWiring(root, new Set()), []);
+});
+
+test('module wiring gate grandfathers known debt but flags it once wired', () => {
+  const root = mkdtempSync(join(tmpdir(), 'cms-auto-lint-'));
+  writeWiringFixture(root);
+  writeFileSync(join(root, 'apps/api/src/main.ts'), '@Module({ imports: [AuthModule] })\nclass AppModule {}\n');
+  assert.deepEqual(checkModuleWiring(root, new Set(['sla'])), []);
+
+  writeFileSync(join(root, 'apps/api/src/main.ts'), '@Module({ imports: [AuthModule, SlaModule] })\nclass AppModule {}\n');
+  assert.deepEqual(checkModuleWiring(root, new Set(['sla'])), [
+    'tools/wiring-check.mjs knownUnwiredModules: "sla" is wired now - remove it from the allowlist',
+  ]);
+});
+
+test('module wiring gate reports a missing AppModule composition root', () => {
+  const root = mkdtempSync(join(tmpdir(), 'cms-auto-lint-'));
+  mkdirSync(join(root, 'apps/api/src'), { recursive: true });
+  writeFileSync(join(root, 'apps/api/src/main.ts'), 'export const boundary = 1;\n');
+
+  assert.deepEqual(checkModuleWiring(root, new Set()), [
+    'apps/api/src/main.ts: no AppModule found to verify module wiring',
+  ]);
+});
+
+test('module wiring gate holds on the real repository with sla grandfathered', () => {
+  assert.deepEqual(checkModuleWiring(), []);
+});
+
+function writeManifestTruthFixture(root, manifestMayDepend = '', ownedTables = '- `users`') {
+  mkdirSync(join(root, 'apps/api/src/modules/auth'), { recursive: true });
+  mkdirSync(join(root, 'apps/api/src/modules/complaints'), { recursive: true });
+  mkdirSync(join(root, 'packages/database/prisma'), { recursive: true });
+  writeFileSync(join(root, 'packages/database/prisma/schema.prisma'), 'model User {\n  id String @id\n  @@map("users")\n}\n');
+  writeFileSync(join(root, 'apps/api/src/modules/auth/MODULE.md'), [
+    '---', 'type: forge.module', 'title: Auth Module', 'description: Auth.', 'tags: [backend]', '---',
+    '# Auth Module', '## Public surface', '- `AuthService`', '## Owns tables', ownedTables,
+    '## May depend on', manifestMayDepend || '- `core/http-kernel`', '## SRS', '- ARCH-AUTH-001', '',
+  ].join('\n'));
+  writeFileSync(join(root, 'apps/api/src/modules/complaints/MODULE.md'), manifestBody);
+}
+
+test('manifest truth gate flags undeclared cross-module imports', () => {
+  const root = mkdtempSync(join(tmpdir(), 'cms-auto-lint-'));
+  writeManifestTruthFixture(root);
+  writeFileSync(join(root, 'apps/api/src/modules/auth/auth.service.ts'), "import { ComplaintsService } from '../complaints/complaints.service.js';\n");
+
+  assert.deepEqual(checkManifestTruth(root), [
+    'apps/api/src/modules/auth/MODULE.md: May depend on must declare modules/complaints used by imports',
+  ]);
+});
+
+test('manifest truth gate accepts declared cross-module imports', () => {
+  const root = mkdtempSync(join(tmpdir(), 'cms-auto-lint-'));
+  writeManifestTruthFixture(root, '- `ComplaintsService` through `ComplaintsModule`');
+  writeFileSync(join(root, 'apps/api/src/modules/auth/auth.service.ts'), "import { ComplaintsService } from '../complaints/complaints.service.js';\n");
+
+  assert.deepEqual(checkManifestTruth(root), []);
+});
+
+test('manifest truth gate flags undeclared Prisma table usage', () => {
+  const root = mkdtempSync(join(tmpdir(), 'cms-auto-lint-'));
+  writeManifestTruthFixture(root, '', '- `branches`');
+  writeFileSync(join(root, 'apps/api/src/modules/auth/auth.repository.ts'), 'export class AuthRepository { constructor(private prisma) {} read() { return this.prisma.user.findMany(); } }\n');
+
+  assert.deepEqual(checkManifestTruth(root), [
+    'apps/api/src/modules/auth/MODULE.md: Owns tables must declare Prisma table "users" used by repository',
+  ]);
+});
+
+test('manifest truth gate holds on the real repository', () => {
+  assert.deepEqual(checkManifestTruth(), []);
 });

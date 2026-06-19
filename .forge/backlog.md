@@ -15,6 +15,10 @@ history from another project.
 - [x] F0-07: Add module generator template and designate golden CRUD reference module
 - [x] F0-08: Draft coherent Prisma data model before feature migrations
 
+## Forge Hardening
+
+- [x] FORGE-OKF-TRUTH-001: Add manifest truth gate (`MODULE.md` owned tables, allowed deps, and module wiring checked against code)
+
 ## Phase 1 - Security Baseline
 
 - [x] F1-00A: Generate and apply the F0-08 Prisma migration

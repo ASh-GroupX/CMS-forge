@@ -3486,3 +3486,45 @@ Assumptions and gaps:
 - Notes:
   - This applies the Open Knowledge Format idea as plain markdown + YAML frontmatter, not a new service or dependency.
   - No old SLA code behavior was fixed in this task.
+
+## FORGE-OKF-TRUTH-001 (wiring) - Module Wiring Truth Gate
+
+- Date: 2026-06-19
+- Risk: Low (CI/tooling hardening; no application or SLA behavior changed)
+- Status: Passed
+- Requirement IDs:
+  - METHOD-MODULAR-001
+  - NFR-MAINT-001
+  - CONTRACT-READINESS-002
+- Evidence:
+  - Added `tools/wiring-check.mjs` (`checkModuleWiring`) and wired it into `tools/lint.mjs`. Every `apps/api/src/modules/<name>/<name>.module.ts` must be reachable from the runtime `AppModule` graph in `apps/api/src/main.ts`. An orphaned module now fails lint - the exact failure a shape-only `MODULE.md` check cannot see (see VERIFY-F1-06B note + PHASE-1-REVIEW condition 3: no test boots Nest / proves wiring).
+  - Design pivot from the proposed boot test, justified by the repo as built: there is no scheduler (`@nestjs/schedule`/BullMQ) to introspect (SLA "jobs" are plain `SlaService` methods); `pnpm test` runs only `tools/*.test.mjs` (no Nest boot, providers need a DB); composition is fully static (plain `imports: [...]`, no forwardRef/dynamic modules), so static reachability equals the real runtime graph here. A boot-time job/route-registration check is recorded as a follow-up for when a scheduler or dynamic modules exist.
+  - Finding: `SlaModule` is the one orphan (imported by nobody). `ComplaintsModule`/`NotificationsModule` are reachable via `PortalModule`. Confirms the original SLA review; scope is narrower than feared.
+  - `sla` is grandfathered in a documented `knownUnwiredModules` ratchet that may only shrink. Build stays green, the debt is explicit, any NEW orphan fails, and a grandfathered module that becomes wired forces its own removal from the allowlist.
+- Verification:
+  - Passed: `corepack pnpm lint` (green with `sla` grandfathered; no other orphans)
+  - Passed: `corepack pnpm test` (25/25; was 20 - five new wiring tests: orphan flagged, transitive reachable passes, grandfather + ratchet, missing AppModule, real-repo holds. Coverage 92.29% lines / 83.09% branch / 95.29% funcs - clears 80/65/75; `wiring-check.mjs` 91.51% / 91.89% / 100%)
+- Notes:
+  - Remaining FORGE-OKF-TRUTH-001 scope (declared-dependency truth and owned-table truth vs real imports/Prisma usage) is not built here; both are statically checkable and queued as the next truth-gate steps.
+  - Open real-code follow-up (intentionally deferred per future-facing-only scope): wire `SlaModule` into the runtime (or its scheduler/runner) and remove it from the allowlist.
+
+## FORGE-OKF-TRUTH-001 (deps/tables) - Manifest Truth Gate Complete
+
+- Date: 2026-06-19
+- Risk: Medium
+- Status: Passed
+- Requirement IDs:
+  - METHOD-MODULAR-001
+  - METHOD-TEST-001
+  - NFR-MAINT-001
+- Evidence:
+  - Added `tools/manifest-truth-check.mjs` and wired it into `tools/lint.mjs`.
+  - `MODULE.md` now has static truth checks for cross-module imports: every module imported from `apps/api/src/modules/<other>` must be declared in the importing module's `May depend on` section.
+  - `MODULE.md` now has static truth checks for repository Prisma table usage: every Prisma table used by a module repository must be declared in the module manifest's table section.
+  - Updated auth, complaints, portal, and SLA manifests so existing module dependencies/tables are explicit instead of generic.
+  - This completes the tooling scope of `FORGE-OKF-TRUTH-001`: wiring truth, declared-dependency truth, and Prisma table truth are all enforced by lint.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm test` (29/29; added manifest truth tests for undeclared dependency failure, declared dependency pass, undeclared table failure, and real-repo hold)
+- Notes:
+  - No old SLA business behavior was fixed. SLA remains known runtime debt for scheduling/job execution.

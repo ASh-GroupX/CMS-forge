@@ -2,6 +2,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { checkScaffold } from './scaffold-check.mjs';
+import { checkManifestTruth } from './manifest-truth-check.mjs';
+import { checkModuleWiring } from './wiring-check.mjs';
 
 const ignoredDirs = new Set(['.git', '.next', 'coverage', 'dist', 'node_modules']);
 const maxAgenticFileLines = 300;
@@ -201,6 +203,8 @@ export function lint(root = process.cwd()) {
     ...checkForbiddenMarkers(root),
     ...checkAgenticFileSize(root),
     ...checkModuleManifests(root),
+    ...checkModuleWiring(root),
+    ...checkManifestTruth(root),
   ];
 
   if (errors.length > 0) {

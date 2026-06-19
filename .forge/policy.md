@@ -34,6 +34,8 @@
   inventing a new module shape.
 - Module `MODULE.md` files are OKF-style markdown concept docs: YAML frontmatter
   (`type: forge.module`, title, description, tags) plus the human-readable boundary.
+- A module manifest is not trusted by shape alone. Forge hardening must check
+  declared owned tables, allowed dependencies, and runtime wiring against code.
 - Phase completion is not accepted by the builder. It requires a fresh
   `PHASE-REVIEWER` pass using Opus 4.8 Max or GPT-5.5 Extra High.
 - App/package/tool source files must stay under the 300-line agentic budget

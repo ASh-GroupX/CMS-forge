@@ -2435,3 +2435,25 @@ Residual risk: this is a required customer-portal privacy gate. A fresh verifier
   - Keeps the mechanism lazy: no SDK, no service, no new dependency.
   - Future agents can identify module context by `type: forge.module` and load one bounded knowledge file before editing.
   - This is future-facing metadata only; it does not repair old SLA implementation issues.
+
+## FORGE-OKF-TRUTH-001 (wiring) - Module Wiring Truth Gate
+
+- Date: 2026-06-19
+- Risk: Low
+- Recommendation: Accept
+- Notes:
+  - Turns `MODULE.md` from shape-checked toward truth-checked: a module that exists and is tested but is imported by nobody now fails lint. This is the gate that catches the orphaned-module class the OKF frontmatter gate (FORGE-OKF-MODULE-CONTEXT-001) cannot.
+  - Closes the structural gap flagged since VERIFY-F1-01E and named in VERIFY-F1-06B and PHASE-1-REVIEW condition 3 (no test proved modules are wired into the runtime).
+  - Honest scope: this is the wiring third of the truth gate. Declared-dependency truth and owned-table truth are still owed; both are statically checkable next steps.
+  - Static reachability is the correct instrument for this codebase (fully static composition, no scheduler to introspect). When a scheduler or dynamic modules land, add a boot-time job/route-registration check - static analysis cannot prove those, and the SLA "job never scheduled" failure mode specifically needs runtime proof.
+  - `sla` is grandfathered as documented debt via a shrink-only ratchet, not silently tolerated; wiring SLA later is a separate real-code task.
+
+## FORGE-OKF-TRUTH-001 (deps/tables) - Manifest Truth Gate Complete
+
+- Date: 2026-06-19
+- Risk: Medium
+- Recommendation: Accept
+- Notes:
+  - The OKF-style manifests are now checked against code for the cheap, static facts: module reachability, cross-module imports, and repository Prisma table usage.
+  - This keeps Forge agentic without adding a knowledge service or parser dependency.
+  - Remaining runtime truth, such as scheduled job registration, should be a separate gate when the project introduces a scheduler/worker mechanism.

@@ -34,6 +34,8 @@ those modules exist: `comments`, `attachments`, `approvals`, `sla_events`,
 - `core/audit.service` for complaint creation and workflow audit entries.
 - `core/auth.guard` for server-session-derived roles and branch scope.
 - `core/csrf.guard` for session-authenticated mutation routes.
+- AuthService through AuthModule for session validation guard wiring.
+- NotificationsService through NotificationsModule for workflow notifications.
 - Other modules' public services only. Never import another module repository,
   DTO folder, or Prisma model type.
 

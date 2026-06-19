@@ -24,6 +24,7 @@ Agent context manifest. Read this before editing the module.
 
 - `core/http-kernel` for stable API errors.
 - `core/audit.service` for later SLA recalculation or policy-change audit entries.
+- `NotificationsService` through `NotificationsModule` for warning/breach notification queueing.
 - Other modules' public services only. Never import another module repository,
   DTO folder, or Prisma model type.
 
