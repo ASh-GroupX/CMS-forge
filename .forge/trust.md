@@ -1414,3 +1414,93 @@ starting Phase 3 planning.
     workflow side effects are deferred until this calculation is built and verified.
   - `F3-01A` is correctly marked `Verify Gate: required` because downstream SLA jobs
     and escalation behavior depend on the same calculator.
+
+## F3-01A - Generate SLA Module And Deadline Calculator
+
+- Date: 2026-06-18
+- Risk: High
+- Recommendation: Accept pending independent VERIFY
+- Notes:
+  - The task stayed on the SLA module boundary and pure backend calculation.
+  - `SlaService.calculateDeadline` validates stored-policy fields, supports only
+    `ALWAYS_ON`, returns deterministic ISO deadlines, and fails closed with
+    `SLA_POLICY_MISSING` for missing/invalid policy input.
+  - Focused SLA API tests cover default durations, warning threshold calculation,
+    valid branch timezone handling, invalid timezone denial, missing policy fields,
+    and unsupported calendar mode denial.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- sla 3/3, and
+    openapi:check.
+  - Because this is a Verify Gate, AUTO PHASE stops at `Needs Verify` before
+    `F3-01B` resolves active policies on top of this calculator.
+
+## VERIFY-F3-01A - SLA Module And Deadline Calculator Gate
+
+- Date: 2026-06-19
+- Required model tier: independent VERIFY
+- Builder honesty: Honest
+- Code quality: Good
+- Recommendation: Accept
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- sla` (3/3)
+  - Passed: `corepack pnpm openapi:check`
+- Findings:
+  - No blocking findings.
+- Scope review:
+  - The `sla` module was generated and its `MODULE.md` correctly defines
+    `SlaService`, `sla_policies`, `sla_events`, allowed dependencies, and SRS IDs.
+  - `SlaService.calculateDeadline` is pure backend code over stored-policy-shaped
+    input and returns deterministic ISO timestamps for `ALWAYS_ON` policies.
+  - Default SLA durations match `REQ-SLA-001`: Critical 120, High 480, Medium 1440,
+    and Low 4320 minutes.
+  - Missing or invalid policy fields, invalid timezone, and unsupported
+    `CALENDAR_HOURS` mode fail closed with `SLA_POLICY_MISSING`.
+  - No repository reads/writes, jobs, routes, OpenAPI paths, UI, portal exposure,
+    provider calls, or side effects were introduced.
+  - Residual expected scope: calendar-hours working-time math remains unbuilt and
+    should land only when a task provides the calendar configuration source.
+
+## F3-01B - Resolve Active SLA Policies By Complaint Severity, Stage, And Scope
+
+- Date: 2026-06-19
+- Risk: High
+- Recommendation: Accept pending independent VERIFY
+- Notes:
+  - The task stayed on stored SLA policy reads and backend resolver behavior.
+  - `SlaRepository.findActiveBySeverityAndStage` reads active policies only.
+  - `SlaService.resolvePolicy` applies nullable-or-equal scope matching, most-specific
+    override selection, and newest `updatedAt` tie-breaking.
+  - Focused SLA API tests cover repository filtering, global fallback, scoped
+    override, tie-breaker behavior, inactive-policy rejection, and missing-policy
+    denial.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- sla 6/6, and
+    openapi:check.
+  - Because this is a Verify Gate, AUTO PHASE stops at `Needs Verify` before
+    `F3-01C` records SLA deadline events on top of this resolver.
+
+## VERIFY-F3-01B - SLA Policy Resolution Gate
+
+- Date: 2026-06-19
+- Required model tier: independent VERIFY
+- Builder honesty: Honest
+- Code quality: Good
+- Recommendation: Accept
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- sla` (6/6)
+  - Passed: `corepack pnpm openapi:check`
+- Findings:
+  - No blocking findings.
+- Scope review:
+  - `SlaRepository.findActiveBySeverityAndStage` reads only active policies for the
+    requested severity and stage.
+  - `SlaService.resolvePolicy` uses stored policy records, nullable-or-equal scope
+    matching for branch, department, and category, most-specific selection, and
+    newest `updatedAt` tie-breaking.
+  - Inactive or missing policies fail closed with `SLA_POLICY_MISSING`.
+  - No repository writes, SLA events, jobs, queues, routes, OpenAPI paths, UI,
+    portal exposure, provider calls, workflow changes, or side effects were added.

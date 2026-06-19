@@ -2,6 +2,60 @@
 
 Status: Ready to Build
 Phase: Phase 3 - SLA And Workflow Operations
+Next Task: F3-01C - Record SLA Deadline Events When Complaints Enter SLA-Governed States
+
+## VERIFY-F3-01B Accepted - Gate Cleared
+
+Independent VERIFY accepted `F3-01B`. `SlaRepository.findActiveBySeverityAndStage`
+reads active policies only, `SlaService.resolvePolicy` uses stored policy records
+with nullable-or-equal branch/department/category scope matching, most-specific
+selection, and newest `updatedAt` tie-breaking. Inactive or missing policies fail
+closed with `SLA_POLICY_MISSING`.
+
+Verification re-ran and passed: lint, typecheck, test 20/20, test:api -- sla 6/6,
+and openapi:check. Phase 3 continues with `F3-01C`.
+
+## F3-01B Built - Verify Gate
+
+`F3-01B` added active stored-policy reads and backend SLA policy resolution by
+severity, stage, and optional branch/department/category scope. The resolver uses
+nullable-or-equal scope matching, most-specific policy selection, newest
+`updatedAt` tie-breaking, and stable `SLA_POLICY_MISSING` for inactive or missing
+matches.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- sla 6/6, and
+openapi:check.
+
+AUTO PHASE stops here because `F3-01B` is marked `Verify Gate: required`.
+
+## VERIFY-F3-01A Accepted - Gate Cleared
+
+Independent VERIFY accepted `F3-01A`. The generated `sla` module boundary is
+intact, `SlaService.calculateDeadline` is backend-owned and deterministic for
+stored `ALWAYS_ON` policy input, invalid or unsupported policy input fails closed
+with `SLA_POLICY_MISSING`, and no repository writes, jobs, routes, OpenAPI paths,
+UI, portal exposure, provider calls, or side effects were introduced.
+
+Verification re-ran and passed: lint, typecheck, test 20/20, test:api -- sla 3/3,
+and openapi:check. Phase 3 continues with `F3-01B`.
+
+## F3-01A Built - Verify Gate
+
+`F3-01A` generated the SLA module and added deterministic backend deadline
+calculation for stored `ALWAYS_ON` policy input. The calculator validates
+severity, stage, duration, warning percent, branch timezone, calendar mode, and
+entered timestamp, returns ISO `warningAt` and `dueAt`, and fails closed with
+`SLA_POLICY_MISSING` for invalid or unsupported policy input.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- sla 3/3, and
+openapi:check.
+
+AUTO PHASE stops here because `F3-01A` is marked `Verify Gate: required`.
+
+## Previous State Before F3-01A
+
+Status: Ready to Build
+Phase: Phase 3 - SLA And Workflow Operations
 Next Task: F3-01A - Generate SLA Module And Deadline Calculator
 
 ## PLAN-F3-01 Complete - Ready To Build
@@ -368,3 +422,4 @@ thresholds), openapi:check, build, prisma validate.
 - F1-05E - added branch create/update/deactivate service behavior with same-transaction CONFIG audit entries.
 - F1-05F - added Admin-only branch write endpoints, OpenAPI write contract entries, route tests, and froze `branches` as the golden CRUD reference.
 - Known limitation: Prisma's Rust engine cannot connect through Docker Desktop's Windows port-forwarding (P1000); run DB ops inside the Docker network. Does not affect application code.
+

@@ -2414,3 +2414,103 @@ Append build and verification evidence here. Do not delete failed evidence.
 - Notes:
   - No application source code, schema, OpenAPI contract, jobs, routes, or UI were
     changed during planning.
+
+## F3-01A - Generate SLA Module And Deadline Calculator
+
+- Date: 2026-06-18
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-SLA-001
+  - SLA-CALENDAR-001
+  - ARCH-WORKFLOW-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Ran `corepack pnpm generate:module -- sla` and kept the generated Nest module
+    boundary.
+  - Filled `apps/api/src/modules/sla/MODULE.md` with public `SlaService`, owned
+    `sla_policies` / `sla_events`, allowed dependencies, and SRS IDs.
+  - Added backend-only `SlaService.calculateDeadline` for stored-policy input:
+    severity, stage, duration, warning percent, branch timezone, calendar mode,
+    entered timestamp, and optional policy ID.
+  - Supported `WorkingCalendarMode.ALWAYS_ON` with deterministic ISO `warningAt`
+    and `dueAt` outputs, plus default duration constants for Critical 120, High
+    480, Medium 1440, and Low 4320 minutes.
+  - Invalid or missing policy fields and unsupported calendar mode fail closed with
+    stable `SLA_POLICY_MISSING`; no generic error leaks.
+  - Added `apps/api/test/sla/deadline-calculator.test.ts` and wired the `sla` suite
+    into `tools/api-test.mjs`.
+  - No repository reads/writes, jobs, notifications, routes, OpenAPI paths, UI,
+    portal, provider calls, or side effects were added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- sla` (3/3)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not
+    applicable; no HTTP route, role decision, or branch-scoped read/write was added.
+    The calculator accepts stored-policy data only.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Not applicable; no state change
+    or side effect was introduced.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope; the code parses only SLA policy fields and returns deadline
+    timestamps.
+  - Customer portal exposure rules hold: Passed by scope; no portal route or
+    portal-visible DTO was added.
+  - Trust boundaries are tested: Passed for this task's boundary; SLA API tests cover
+    accepted stored-policy calculation and denied invalid/unsupported policy input.
+
+## F3-01B - Resolve Active SLA Policies By Complaint Severity, Stage, And Scope
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-SLA-001
+  - SLA-CALENDAR-001
+  - ARCH-WORKFLOW-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Added `SlaRepository.findActiveBySeverityAndStage` to read only active stored
+    SLA policies for severity and stage.
+  - Added `SlaService.resolvePolicy` to select matching policies where scope fields
+    are null or equal to the requested `branchId`, `departmentId`, and `categoryId`.
+  - Resolver chooses the most specific matching policy by non-null scope count, then
+    uses newest `updatedAt` as the deterministic tie-breaker.
+  - Returned resolved-policy objects are suitable for `calculateDeadline` and do not
+    expose repository internals.
+  - Missing or unmatched policy input fails closed with stable `SLA_POLICY_MISSING`.
+  - Added SLA API coverage for active-policy repository filtering, global fallback,
+    scoped override, newest tie-breaker, inactive-policy rejection, and missing-policy
+    denial.
+  - No schema changes, repository writes, SLA events, jobs, queues, notifications,
+    routes, OpenAPI paths, UI, portal, reports, workflow changes, provider calls, or
+    side effects were added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- sla` (6/6)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not
+    applicable at HTTP/session boundary; no route or role decision was added. Policy
+    resolution accepts server-side scope IDs for stored-policy matching only.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Not applicable; this task adds
+    only reads and pure selection. No state change or side effect was introduced.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope; the code reads and returns SLA policy fields only.
+  - Customer portal exposure rules hold: Passed by scope; no portal route or
+    portal-visible DTO was added.
+  - Trust boundaries are tested: Passed for this task's boundary; SLA API tests cover
+    allowed global/scoped resolution and denied inactive or missing policy cases.
