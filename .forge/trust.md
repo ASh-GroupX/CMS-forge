@@ -1902,3 +1902,60 @@ starting Phase 3 planning.
 - Gate:
   - `F3-03A3` is marked `Verify Gate: required`; AUTO PHASE stops at `Needs Verify`
     before `F3-04A`.
+
+## VERIFY-F3-03A3 - SLA Escalation Notification Integration Gate
+
+- Date: 2026-06-19
+- Required model tier: independent VERIFY
+- Builder honesty: Honest
+- Code quality: Good
+- Recommendation: Accept
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- sla` (16/16)
+  - Passed: `corepack pnpm test:api -- notifications` (5/5)
+  - Passed: `corepack pnpm openapi:check`
+- Findings:
+  - No blocking findings.
+- Scope review:
+  - `SlaModule` imports `NotificationsModule`, and `SlaService` imports only the
+    notifications public service.
+  - `runBreachJob` queues one internal notification only when a breach insert is
+    newly created; duplicate retry, future deadline, and terminal complaint paths
+    skip without queueing.
+  - Notification payload contains backend-owned breach fields only: complaint ID,
+    policy ID, stage, due timestamp, and breach idempotency key.
+  - No provider delivery, template management, routes, OpenAPI paths, BullMQ
+    workers, schema changes, migrations, UI, portal behavior, reports, or direct
+    cross-module table writes were added.
+- Decision:
+  - The `F3-03A3` Verify Gate is cleared. Continue Phase 3 with `F3-04A`.
+
+## F3-04A - Workflow Required Data Build
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Needs Verify
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (29/29)
+  - Passed: `corepack pnpm openapi:check`
+- Build assessment:
+  - Required transition data is validated before repository transaction/write.
+  - Send-back, reopen, and rejection actions require `reason`; resolve actions
+    require `resolutionType`, `resolutionSummary`, and backend-owned `actorId`;
+    close requires `reason` and `customerCommunicationStatus`.
+  - Valid transitions with required data preserve same-transaction status,
+    history, and WORKFLOW audit behavior.
+  - Missing required data rejects with stable `VALIDATION_FAILED` before writes.
+  - No schema changes, migrations, comments, attachments, notifications, SLA
+    recalculation, survey scheduling, routes, UI, portal behavior, or provider calls
+    were added.
+- Gate:
+  - `F3-04A` is marked `Verify Gate: required`; AUTO PHASE stops at `Needs Verify`
+    before `F3-04B`.

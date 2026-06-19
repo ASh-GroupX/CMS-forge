@@ -1964,6 +1964,27 @@
               "null"
             ],
             "minLength": 1
+          },
+          "resolutionType": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "resolutionSummary": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "customerCommunicationStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
           }
         },
         "additionalProperties": false

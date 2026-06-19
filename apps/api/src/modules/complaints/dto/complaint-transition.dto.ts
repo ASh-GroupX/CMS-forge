@@ -11,6 +11,9 @@ export type ComplaintTransitionRequestDto = {
   fromStatus: ComplaintStatus;
   action: ComplaintTransitionAction;
   reason?: string | null;
+  resolutionType?: string | null;
+  resolutionSummary?: string | null;
+  customerCommunicationStatus?: string | null;
 };
 
 export type ComplaintTransitionResponseDto = {
@@ -20,10 +23,16 @@ export type ComplaintTransitionResponseDto = {
 export function parseComplaintTransitionBody(body: unknown): ComplaintTransitionRequestDto {
   const input = objectBody(body);
   const reason = optionalText(input.reason, 'reason');
+  const resolutionType = optionalText(input.resolutionType, 'resolutionType');
+  const resolutionSummary = optionalText(input.resolutionSummary, 'resolutionSummary');
+  const customerCommunicationStatus = optionalText(input.customerCommunicationStatus, 'customerCommunicationStatus');
   return {
     fromStatus: enumValue(input.fromStatus, ComplaintStatus, 'fromStatus'),
     action: enumValue(input.action, ComplaintTransitionAction, 'action'),
     ...(reason === undefined ? {} : { reason }),
+    ...(resolutionType === undefined ? {} : { resolutionType }),
+    ...(resolutionSummary === undefined ? {} : { resolutionSummary }),
+    ...(customerCommunicationStatus === undefined ? {} : { customerCommunicationStatus }),
   };
 }
 
@@ -46,6 +55,9 @@ export function toTransitionInput(
     actorId: context.actorId,
     requestSource: 'STAFF_API',
     reason: body.reason ?? null,
+    ...(body.resolutionType === undefined ? {} : { resolutionType: body.resolutionType }),
+    ...(body.resolutionSummary === undefined ? {} : { resolutionSummary: body.resolutionSummary }),
+    ...(body.customerCommunicationStatus === undefined ? {} : { customerCommunicationStatus: body.customerCommunicationStatus }),
     correlationId: context.correlationId,
     ipAddress: context.ipAddress,
     userAgent: context.userAgent,

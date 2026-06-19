@@ -1,12 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import {
-  CommentVisibility,
-  ComplaintSeverity,
-  ComplaintStatus,
-  ComplaintTransitionAction,
-  ComplaintTransitionRequestSource,
-  RoleCode,
-} from '@prisma/client';
+import { CommentVisibility, ComplaintSeverity, ComplaintStatus, ComplaintTransitionAction, ComplaintTransitionRequestSource, RoleCode } from '@prisma/client';
 import { AuditService } from '../../core/audit.service.js';
 import type { AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
@@ -18,7 +11,8 @@ export type ValidateComplaintTransitionInput = { fromStatus: ComplaintStatus; ac
 export type ComplaintTransitionDecision = ValidateComplaintTransitionInput & { toStatus: ComplaintStatus };
 export type ApplyComplaintTransitionInput = ValidateComplaintTransitionInput & {
   complaintId: string; actorId?: string | null; requestSource: ComplaintTransitionRequestSource;
-  reason?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null;
+  reason?: string | null; resolutionType?: string | null; resolutionSummary?: string | null; customerCommunicationStatus?: string | null;
+  correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null;
 };
 export type ApplyComplaintTransitionResult = ComplaintTransitionDecision & { complaintId: string };
 
@@ -35,12 +29,7 @@ export type ComplaintQueueFilter = { branchId?: string | null };
 export type CreateComplaintCommentInput = { complaintId: string; body: string; visibility: CommentVisibility; actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type ComplaintCommentResult = { id: string; complaintId: string; body: string; visibility: CommentVisibility; authorId: string | null; createdAt: string };
 
-type WorkflowTransition = {
-  fromStatus: ComplaintStatus;
-  action: ComplaintTransitionAction;
-  toStatus: ComplaintStatus;
-  allowedRoles: readonly RoleCode[];
-};
+type WorkflowTransition = { fromStatus: ComplaintStatus; action: ComplaintTransitionAction; toStatus: ComplaintStatus; allowedRoles: readonly RoleCode[] };
 
 const MANAGER_ROLES = [RoleCode.CR_MANAGER, RoleCode.ADMIN] as const;
 const BRANCH_MANAGER_ROLES = [RoleCode.BRANCH_MANAGER, RoleCode.CR_MANAGER, RoleCode.ADMIN] as const;
@@ -69,10 +58,7 @@ function transition(fromStatus: ComplaintStatus, action: ComplaintTransitionActi
 
 @Injectable()
 export class ComplaintsService {
-  constructor(
-    private readonly complaintsRepository: ComplaintsRepository,
-    private readonly auditService: AuditService,
-  ) {}
+  constructor(private readonly complaintsRepository: ComplaintsRepository, private readonly auditService: AuditService) {}
 
   async createInternal(input: CreateInternalComplaintInput): Promise<ComplaintCreationResult> {
     const data = createComplaintData(input);
@@ -134,12 +120,7 @@ export class ComplaintsService {
       throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
     }
 
-    return {
-      fromStatus: input.fromStatus,
-      action: input.action,
-      actorRole: input.actorRole,
-      toStatus: transition.toStatus,
-    };
+    return { fromStatus: input.fromStatus, action: input.action, actorRole: input.actorRole, toStatus: transition.toStatus };
   }
 
   async applyTransition(input: ApplyComplaintTransitionInput): Promise<ApplyComplaintTransitionResult> {
@@ -152,6 +133,8 @@ export class ComplaintsService {
       }
       throw error;
     }
+
+    validateRequiredTransitionData(input);
 
     return this.complaintsRepository.transaction(async (client) => {
       const complaint = await this.complaintsRepository.updateStatus(
@@ -176,10 +159,7 @@ export class ComplaintsService {
       }, client);
       await this.auditService.record(workflowAuditInput(input, decision.toStatus, complaint.branchId), client);
 
-      return {
-        complaintId: complaint.id,
-        ...decision,
-      };
+      return { complaintId: complaint.id, ...decision };
     });
   }
 }
@@ -283,17 +263,27 @@ function optionalText(value: string | null | undefined): string | null { return 
 
 function invalidTransitionError(): AppException { return new AppException('COMPLAINT_INVALID_TRANSITION', 'The requested action is not allowed for the current complaint state.', HttpStatus.CONFLICT); }
 
-function workflowAuditInput(
-  input: ApplyComplaintTransitionInput,
-  toStatus: ComplaintStatus,
-  branchId: string,
-): AuditRecordInput {
+const REASON_REQUIRED = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.SEND_BACK, ComplaintTransitionAction.REOPEN, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintTransitionAction.REJECT_AFTER_REVIEW, ComplaintTransitionAction.REJECT_AFTER_INVESTIGATION, ComplaintTransitionAction.REJECT_RESOLUTION]);
+const RESOLUTION_REQUIRED = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.RESOLVE, ComplaintTransitionAction.RESOLVE_DIRECTLY]);
+
+function validateRequiredTransitionData(input: ApplyComplaintTransitionInput): void {
+  const errors = [
+    ...(REASON_REQUIRED.has(input.action) || input.action === ComplaintTransitionAction.CLOSE ? requiredTextError(input.reason, 'reason') : []),
+    ...(RESOLUTION_REQUIRED.has(input.action) ? requiredTextError(input.resolutionType, 'resolutionType') : []),
+    ...(RESOLUTION_REQUIRED.has(input.action) ? requiredTextError(input.resolutionSummary, 'resolutionSummary') : []),
+    ...(RESOLUTION_REQUIRED.has(input.action) && !input.actorId ? [{ field: 'actorId', code: 'REQUIRED', message: 'actorId is required.' }] : []),
+    ...(input.action === ComplaintTransitionAction.CLOSE ? requiredTextError(input.customerCommunicationStatus, 'customerCommunicationStatus') : []),
+  ];
+  if (errors.length) throw new AppException('VALIDATION_FAILED', 'Invalid complaint transition request', HttpStatus.BAD_REQUEST, errors);
+}
+
+function workflowAuditInput(input: ApplyComplaintTransitionInput, toStatus: ComplaintStatus, branchId: string): AuditRecordInput {
   return {
     eventType: 'WORKFLOW', action: `transition_${input.action.toLowerCase()}`, actorId: input.actorId ?? null,
     branchId, targetType: 'complaint', targetId: input.complaintId,
     correlationId: input.correlationId ?? null,
     ipAddress: input.ipAddress ?? null,
     userAgent: input.userAgent ?? null,
-    metadata: { fromStatus: input.fromStatus, toStatus, action: input.action, actorRole: input.actorRole, requestSource: input.requestSource },
+    metadata: { fromStatus: input.fromStatus, toStatus, action: input.action, actorRole: input.actorRole, requestSource: input.requestSource, resolutionType: input.resolutionType ?? null, resolutionSummary: input.resolutionSummary ?? null, customerCommunicationStatus: input.customerCommunicationStatus ?? null },
   };
 }

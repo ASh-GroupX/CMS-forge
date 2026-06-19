@@ -2922,3 +2922,59 @@ Append build and verification evidence here. Do not delete failed evidence.
   - Trust boundaries are tested: Passed; SLA tests cover allowed queueing after a
     new breach and denied/no-op queueing for duplicate retry, future deadline, and
     terminal complaint skips.
+
+## F3-04A - Enforce Send-Back, Reopen, And Resolution Required Data
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-RESOLUTION-001
+  - ARCH-WORKFLOW-001
+  - WORKFLOW-MATRIX-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Added required-data validation in `ComplaintsService.applyTransition` after
+    matrix/RBAC checks and before the repository transaction.
+  - `SEND_BACK`, `REOPEN`, `REJECT_AS_INVALID`, `REJECT_AFTER_REVIEW`,
+    `REJECT_AFTER_INVESTIGATION`, and `REJECT_RESOLUTION` now require non-blank
+    `reason`.
+  - `RESOLVE` and `RESOLVE_DIRECTLY` now require non-blank `resolutionType`,
+    non-blank `resolutionSummary`, and backend-owned `actorId`.
+  - `CLOSE` now requires closure confirmation in `reason` plus non-blank
+    `customerCommunicationStatus`.
+  - Extended transition DTO parsing and OpenAPI schema/checks for the optional
+    required-by-action fields.
+  - Added focused workflow coverage proving valid required-data transitions still
+    write status/history/audit in one transaction and missing required data rejects
+    with `VALIDATION_FAILED` before transaction/write.
+  - Kept `complaints.service.ts` under the 300-line source budget at 289 lines.
+  - No schema changes, migrations, comments, attachments, notifications, SLA
+    recalculation, survey scheduling, routes, UI, portal behavior, or provider calls
+    were added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (29/29)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed.
+    No route authority changed; existing controller/session context remains the
+    source for actor role, branch scope, and actor ID.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed. Valid transitions still
+    write status, history, and WORKFLOW audit inside the existing transaction; new
+    validation rejects before that transaction and adds no side effects.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope; no credential/provider fields or secret sources were added.
+  - Customer portal exposure rules hold: Passed by scope; no portal route,
+    portal-visible DTO, internal comments, audit logs, DMS codes, or staff PII
+    exposure was added.
+  - Trust boundaries are tested: Passed; workflow tests cover allowed transitions
+    with required data, missing-data denial before transaction, and the existing
+    invalid-transition, unauthorized-role, stale-status, and branch-scope denial
+    surface.

@@ -2,7 +2,37 @@
 
 Status: Needs Verify
 Phase: Phase 3 - SLA And Workflow Operations
-Next Task: VERIFY-F3-03A3 - SLA Escalation Notification Integration Gate
+Next Task: VERIFY-F3-04A - Workflow Required Data Gate
+
+## F3-04A Built - Verify Gate
+
+`F3-04A` added backend validation for workflow transition required data before
+repository transactions, status updates, status history, or WORKFLOW audit writes.
+Send-back, reopen, and rejection actions require a reason; resolve actions require
+resolution type, resolution summary, and a backend-owned actor ID from the server
+session; close requires confirmation in `reason` plus
+`customerCommunicationStatus`.
+
+Valid required-data transitions still write status, history, and WORKFLOW audit in
+one transaction. Missing required data rejects with `VALIDATION_FAILED` before any
+transaction/write. The transition DTO and OpenAPI contract now document the
+optional required-by-action fields.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- workflow 29/29,
+and openapi:check.
+
+AUTO PHASE stops here because `F3-04A` is marked `Verify Gate: required`.
+
+## VERIFY-F3-03A3 Accepted - Gate Cleared
+
+Independent VERIFY accepted `F3-03A3`. SLA now depends on the notifications public
+service only, and `runBreachJob` queues one internal `sla.breach.internal`
+notification only after a newly inserted breach event. Duplicate retries, future
+deadlines, and terminal complaints skip without queueing.
+
+Verification re-ran and passed: lint, typecheck, test 20/20, test:api -- sla
+16/16, test:api -- notifications 5/5, and openapi:check. Phase 3 continues with
+`F3-04A`.
 
 ## F3-03A3 Built - Verify Gate
 

@@ -173,9 +173,45 @@ test('workflow transition persistence uses one transaction for status history an
         action: ComplaintTransitionAction.SUBMIT,
         actorRole: RoleCode.CR_OFFICER,
         requestSource: ComplaintTransitionRequestSource.STAFF_API,
+        resolutionType: null,
+        resolutionSummary: null,
+        customerCommunicationStatus: null,
       },
     },
   }]);
+});
+
+test('workflow required-data transitions persist with history and audit', async () => {
+  for (const input of [
+    transitionInput(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.SEND_BACK, RoleCode.ADMIN, { reason: 'missing details' }),
+    transitionInput(ComplaintStatus.CLOSED, ComplaintTransitionAction.REOPEN, RoleCode.ADMIN, { reason: 'customer replied' }),
+    transitionInput(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.RESOLVE, RoleCode.CR_MANAGER, { resolutionType: 'repair', resolutionSummary: 'fixed' }),
+    transitionInput(ComplaintStatus.RESOLVED, ComplaintTransitionAction.CLOSE, RoleCode.ADMIN, { reason: 'confirmed closed', customerCommunicationStatus: 'called' }),
+  ]) {
+    const calls: string[] = [];
+    const serviceWithPersistence = new ComplaintsService({
+      transaction: async <T>(work: (client: never) => Promise<T>) => work({} as never),
+      updateStatus: async (data) => {
+        calls.push('status');
+        return { id: data.complaintId, branchId: 'branch_main', status: data.toStatus };
+      },
+      createStatusHistory: async () => { calls.push('history'); },
+    } as ComplaintsRepository, { record: async () => { calls.push('audit'); } } as unknown as AuditService);
+    await serviceWithPersistence.applyTransition(input);
+    assert.deepEqual(calls, ['status', 'history', 'audit']);
+  }
+});
+
+test('workflow required data rejects before transaction', async () => {
+  for (const input of [
+    transitionInput(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.SEND_BACK, RoleCode.ADMIN),
+    transitionInput(ComplaintStatus.CLOSED, ComplaintTransitionAction.REOPEN, RoleCode.ADMIN),
+    transitionInput(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.RESOLVE, RoleCode.CR_MANAGER, { resolutionType: 'repair' }),
+    transitionInput(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.RESOLVE, RoleCode.CR_MANAGER, { resolutionType: 'repair', resolutionSummary: 'fixed', actorId: null }),
+    transitionInput(ComplaintStatus.RESOLVED, ComplaintTransitionAction.CLOSE, RoleCode.ADMIN, { reason: 'confirmed' }),
+  ]) {
+    await assertNoTransaction(input, 'VALIDATION_FAILED');
+  }
 });
 
 test('workflow transition persistence rejects stale persisted status before history and audit', async () => {
@@ -466,4 +502,8 @@ function guardNames(handler: keyof ComplaintsController): string[] {
 
 function providerObject(provider: unknown): { provide?: unknown } | null {
   return provider && typeof provider === 'object' ? provider as { provide?: unknown } : null;
+}
+
+function transitionInput(fromStatus: ComplaintStatus, action: ComplaintTransitionAction, actorRole: RoleCode, extra: Partial<Parameters<ComplaintsService['applyTransition']>[0]> = {}): Parameters<ComplaintsService['applyTransition']>[0] {
+  return { complaintId: 'cmp_1', fromStatus, action, actorRole, actorId: 'usr_1', requestSource: ComplaintTransitionRequestSource.STAFF_API, ...extra };
 }

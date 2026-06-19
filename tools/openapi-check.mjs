@@ -233,7 +233,7 @@ const canonical = {
       ComplaintComment: object(['id', 'complaintId', 'authorId', 'body', 'visibility', 'createdAt'], { id: str, complaintId: str, authorId: { type: ['string', 'null'] }, body: str, visibility: { type: 'string', enum: ['INTERNAL', 'PUBLIC'] }, createdAt: { type: 'string', format: 'date-time' } }),
       ComplaintCommentResponse: object(['comment'], { comment: ref('ComplaintComment') }),
       ComplaintPublicCommentsResponse: object(['items'], { items: { type: 'array', items: ref('ComplaintComment') } }),
-      ComplaintTransitionRequest: object(['fromStatus', 'action'], { fromStatus: { type: 'string', enum: complaintStatuses }, action: { type: 'string', enum: complaintTransitionActions }, reason: { type: ['string', 'null'], minLength: 1 } }),
+      ComplaintTransitionRequest: object(['fromStatus', 'action'], { fromStatus: { type: 'string', enum: complaintStatuses }, action: { type: 'string', enum: complaintTransitionActions }, reason: { type: ['string', 'null'], minLength: 1 }, resolutionType: { type: ['string', 'null'], minLength: 1 }, resolutionSummary: { type: ['string', 'null'], minLength: 1 }, customerCommunicationStatus: { type: ['string', 'null'], minLength: 1 } }),
       ComplaintTransition: object(['complaintId', 'fromStatus', 'action', 'actorRole', 'toStatus'], {
         complaintId: str,
         fromStatus: { type: 'string', enum: complaintStatuses },
