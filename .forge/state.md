@@ -1,8 +1,36 @@
 # Current State
 
-Status: Needs Verify
-Phase: Phase 3 - SLA And Workflow Operations
-Next Task: VERIFY-F3-04B - Closure/Reopen Side-Effect Scheduling Gate
+Status: Ready to Build
+Phase: Phase 4 - Customer Portal
+Next Task: F4-01A - Generate Portal Module Boundary And Manifest
+
+## PHASE-3-REVIEW Accepted With Conditions - Phase 4 Ready
+
+PHASE-3-REVIEW accepted Phase 3 with non-blocking carry-forward conditions for
+the broader notification, SLA escalation, and survey requirements that remain
+outside the completed Phase 3 slice.
+
+Reviewer proof re-ran and passed: lint, typecheck, test 20/20, test:api -- sla
+16/16, test:api -- notifications 5/5, test:api -- workflow 33/33, and
+openapi:check.
+
+Phase 4 may start with `F4-01A`, the portal module boundary and manifest. This is
+marked `Verify Gate: required` because public portal behavior builds on this
+privacy boundary.
+
+## Previous State Before Phase 4
+
+## VERIFY-F3-04B Accepted - Phase 3 Build Complete
+
+Independent VERIFY accepted `F3-04B`. Complaint close/reopen transitions now queue
+only through the notifications public service after the workflow transaction has
+successfully written status, status history, and WORKFLOW audit.
+
+Verification re-ran and passed: lint, typecheck, test 20/20, test:api -- workflow
+33/33, test:api -- notifications 5/5, and openapi:check.
+
+Phase 3 backlog is complete and now needs the mandatory PHASE-REVIEWER gate before
+Phase 4 starts.
 
 ## F3-04B Built - Verify Gate
 

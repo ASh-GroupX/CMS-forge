@@ -1,61 +1,61 @@
-# Verify Task: VERIFY-F3-04B - Closure/Reopen Side-Effect Scheduling Gate
+# Build Task: F4-01A - Generate Portal Module Boundary And Manifest
 
-Status: Needs Verify
-Required model tier: independent VERIFY
+Status: Ready to Build
+Required model tier: BUILDER-STRONG
 Risk: High
-Phase: Phase 3 - SLA And Workflow Operations
+Phase: Phase 4 - Customer Portal
+Verify Gate: required
 
 ## Why This Exists
 
-`F3-04B` adds post-commit side-effect scheduling for close and reopen workflow
-transitions. Verify that queueing happens only after the status/history/audit
-transaction succeeds, and never on denied or failed transitions.
+Phase 4 starts the customer portal. Build the module boundary first so public
+submission, tracking, OTP verification, and portal privacy behavior have a clear
+backend owner before routes or UI are added.
 
-## Scope To Review
+## Scope
 
-- `apps/api/src/modules/complaints/complaints.module.ts`
-- `apps/api/src/modules/complaints/complaints.service.ts`
-- `apps/api/test/workflow/transition-matrix.test.ts`
-- `.forge/evidence.md`
-- `.forge/trust.md`
+- Generate the `portal` module from the canonical module generator.
+- Fill `apps/api/src/modules/portal/MODULE.md` with the real module boundary:
+  public `PortalService`, owned portal verification/session tables, allowed deps,
+  and SRS IDs.
+- Keep this task behavior-free: no public routes, OpenAPI paths, complaint writes,
+  OTP/session behavior, rate limiting, CAPTCHA, notifications, attachments, UI, or
+  customer tracking response shapes.
 
-## Verify Requirements
+## Requirement IDs
 
-- Confirm `ComplaintsModule` imports `NotificationsModule`.
-- Confirm `ComplaintsService` injects only `NotificationsService` from the
-  notifications module.
-- Confirm successful `CLOSE` queues `survey.schedule.internal` after the workflow
-  transaction writes status, status history, and WORKFLOW audit.
-- Confirm successful `REOPEN` queues `workflow.reopened.internal` after the
-  workflow transaction writes status, status history, and WORKFLOW audit.
-- Confirm side effects are not queued inside the complaint transaction.
-- Confirm validation failure, RBAC denial, branch-scope denial, stale persisted
-  status, and transaction failure do not queue side effects.
-- Confirm no notification repository/DTO/Prisma model, worker, provider, route,
-  schema, migration, survey module behavior, SLA recalculation, OpenAPI, UI,
-  portal, report, comment, or attachment work was added.
+- REQ-PORTAL-001
+- PORTAL-SEC-001
+- ARCH-WORKFLOW-001
+- METHOD-AUDIT-001
+- METHOD-TEST-001
+- API-STANDARD-001
+
+## Implementation Rules
+
+- Use `corepack pnpm generate:module -- portal`; do not hand-roll structure.
+- The portal module may depend on `core/http-kernel` and other modules' public
+  services only. It must not import another module's repository, DTO folder, or
+  Prisma model type.
+- Customer portal privacy is the trust boundary: no internal comments, audit logs,
+  DMS codes, staff PII, or unrelated complaints may be exposed by any future portal
+  API.
+- If adding real submission behavior is needed to make this task pass, stop and
+  replan instead of widening the diff.
 
 ## Verification Commands
 
+- `corepack pnpm generate:module -- portal`
 - `corepack pnpm lint`
 - `corepack pnpm typecheck`
 - `corepack pnpm test`
-- `corepack pnpm test:api -- workflow`
-- `corepack pnpm test:api -- notifications`
 - `corepack pnpm openapi:check`
 
 ## Expected Output
 
-If accepted:
-
-- Append VERIFY evidence to `.forge/trust.md`.
-- Because Phase 3 backlog is complete, set `.forge/state.md` to
-  `Needs Phase Review`.
-- Write a Phase 3 review task to `.forge/next.md`.
-- Do not start Phase 4 until PHASE-REVIEWER accepts Phase 3.
-
-If repair is needed:
-
-- Set `.forge/state.md` to `Needs Repair`.
-- Write the smallest repair task to `.forge/next.md`.
-- Keep Phase 3 stopped until the repair passes its verify gate.
+- Append evidence to `.forge/evidence.md`, including the High-risk security
+  self-check from `.forge/policy.md`.
+- Update `.forge/trust.md`.
+- Mark `F4-01A` done in `.forge/backlog.md`.
+- Because this is a `Verify Gate: required`, set `.forge/state.md` to
+  `Needs Verify` and write the independent VERIFY task to `.forge/next.md`.

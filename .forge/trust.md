@@ -2018,3 +2018,88 @@ starting Phase 3 planning.
     reports, comments, or attachments were added.
 - Gate:
   - `F3-04B` is marked `Verify Gate: required`; AUTO PHASE stops at `Needs Verify`.
+
+## VERIFY-F3-04B - Closure/Reopen Side-Effect Scheduling Gate
+
+- Date: 2026-06-19
+- Required model tier: independent VERIFY
+- Builder honesty: Honest
+- Code quality: Good
+- Recommendation: Accept
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- workflow` (33/33)
+  - Passed: `corepack pnpm test:api -- notifications` (5/5)
+  - Passed: `corepack pnpm openapi:check`
+- Findings:
+  - No blocking findings.
+- Scope review:
+  - `ComplaintsModule` imports `NotificationsModule`.
+  - `ComplaintsService` imports and injects only the notifications public service,
+    `NotificationsService`; it does not import notification repository, DTO,
+    Prisma model, worker, provider, route, schema, migration, survey, SLA, UI,
+    portal, report, comment, or attachment behavior.
+  - Successful `CLOSE` writes status, status history, and WORKFLOW audit inside
+    the complaint transaction, then queues `survey.schedule.internal` after the
+    transaction returns.
+  - Successful `REOPEN` writes status, status history, and WORKFLOW audit inside
+    the complaint transaction, then queues `workflow.reopened.internal` after the
+    transaction returns.
+  - Validation failure, RBAC denial, branch-scope denial, stale persisted status,
+    and transaction failure do not reach post-commit queueing.
+- Decision:
+  - The `F3-04B` Verify Gate is cleared. Phase 3 backlog is complete; move to the
+    Phase 3 PHASE-REVIEWER gate before Phase 4 starts.
+
+## PHASE-3-REVIEW - SLA And Workflow Operations Acceptance Gate
+
+- Date: 2026-06-19
+- Reviewer tier: PHASE-REVIEWER (GPT-5 Codex)
+- Risk: High
+- Decision: **Accept With Conditions**
+- Phase 4 may start: **Yes**
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- sla` (16/16)
+  - Passed: `corepack pnpm test:api -- notifications` (5/5)
+  - Passed: `corepack pnpm test:api -- workflow` (33/33)
+  - Passed: `corepack pnpm openapi:check`
+- Findings:
+  - Builder honesty: Honest overall. `F3-02A` and `F3-03A2` had inflated claims
+    during their initial VERIFY gates, but each was repaired, independently
+    re-verified, and accepted before dependent work continued.
+  - Code quality: Good. Phase 3 stayed inside generated module boundaries:
+    `sla` and `complaints` depend on the notifications public service only, not
+    notification repositories, DTOs, Prisma models, workers, providers, routes, UI,
+    or portal code.
+  - Backlog status: every Phase 3 backlog item is checked done.
+  - Workflow integrity: successful transitions still write status, status history,
+    and WORKFLOW audit inside one transaction. Close/reopen side effects queue only
+    after the transaction returns, and tests cover validation, stale status, RBAC,
+    branch-scope, and transaction-failure no-queue paths.
+  - SLA integrity: deadline, warning, and breach jobs use backend-recorded SLA
+    events and deterministic idempotency keys. Duplicate retries report skipped,
+    future deadlines and terminal complaints do not write, and breach queueing
+    happens only after a newly inserted breach event.
+  - Notification boundary: queued internal notification rows reject blank template
+    codes, unsafe secret-bearing payload keys, and non-plain payload objects before
+    repository writes.
+- Non-blocking conditions:
+  - `REQ-SLA-001` is not fully closed by Phase 3. Warning events and breach queueing
+    exist, but current-owner warning notifications and configured escalation-level
+    routing still need explicit future work before MVP sign-off.
+  - `REQ-NOTIFY-001` is not fully closed by Phase 3. Phase 3 added queued internal
+    `IN_APP` rows only; customer acknowledgements/status updates, Admin-managed
+    Arabic/English templates, provider dispatch, and delivery logs remain Phase 5
+    work.
+  - `REQ-SURVEY-001` is not fully closed by Phase 3. Close queues
+    `survey.schedule.internal`; actual delayed survey links, one-response
+    submission, expiry, and staff/report visibility remain future portal/survey or
+    reporting work.
+- Next:
+  - Start Phase 4 with `F4-01A`, generating the `portal` module boundary and
+    manifest before any public portal route or UI is added.

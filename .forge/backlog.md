@@ -83,6 +83,7 @@ history from another project.
 ## Phase 4 - Customer Portal
 
 - [ ] F4-01: Customer complaint submission
+  - [ ] F4-01A: Generate portal module boundary and manifest
 - [ ] F4-02: Portal tracking with reference plus OTP verification
 - [ ] F4-03: Portal-safe public timeline
 - [ ] F4-04: Portal privacy tests
