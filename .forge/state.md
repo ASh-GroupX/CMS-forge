@@ -2,7 +2,91 @@
 
 Status: Ready to Build
 Phase: Phase 7 - Reports, UAT, And Ops
-Next Task: F7-01A - Generate Reports Module Boundary And Manifest
+Next Task: F7-02A - Branch-Scoped Complaint Search Service
+
+## F7-01F Built - AUTO PHASE Continuing To F7-02A
+
+`F7-01F` added bounded `GET /reports/export?format=csv|excel` export. CSV uses
+CSV serialization; `excel` uses honest Excel-compatible tabular TSV served as
+`reports.xls` without adding a dependency or faking XLSX. Exports reuse the
+filtered report read model, enforce the `MAX_REPORT_EXPORT_ROWS` limit before
+serialization, set attachment/row-count headers, and write a `REPORT` audit entry
+for successful exports.
+
+Required proof passed: `test:api -- reports` 7/7, lint, typecheck, test 31/31,
+openapi:check, and git diff --check with line-ending warnings only. F7-01 is now
+complete. AUTO PHASE is queued at F7-02A; this run stops here at the requested
+context budget.
+
+## F7-01E Built - AUTO PHASE Continuing
+
+`F7-01E` exposed `GET /reports/dashboard` and `GET /reports` with session auth,
+RBAC, branch-scope guard metadata, and canonical OpenAPI. The controller derives
+role and branch scope from the server request principal and delegates to
+`ReportsService`; branch filters cannot widen non-admin scope. `ReportsModule`
+now registers the existing auth/RBAC guard providers and declares `AuthModule` in
+its manifest.
+
+Required proof passed after one honest lint repair: the first lint run failed
+because `reports/MODULE.md` did not yet declare the new `AuthModule` dependency;
+the manifest was fixed. Final proof passed: `test:api -- reports` 6/6, lint,
+typecheck, test 31/31, openapi:check, and git diff --check with line-ending
+warnings only. No export behavior, schema/migration, frontend change, provider
+call, or private cross-module import was added.
+
+## F7-01D Built - AUTO PHASE Continuing
+
+`F7-01D` added a generic filtered operational report read model instead of 17
+duplicate methods. `ReportsService.filteredReport(...)` covers date range,
+branch, category, severity, and owner filters; it enforces scoped branch visibility
+before returning rows. `ComplaintsService.listForReports(...)` is the public
+source-module read method, backed by the complaints repository. Reports still do
+not import another module's repository, DTO folder, or Prisma model type.
+
+Required proof passed: `test:api -- reports` 4/4, lint, typecheck, test 31/31,
+openapi:check, and git diff --check with line-ending warnings only. No route,
+OpenAPI path, export behavior, schema/migration, frontend change, provider call,
+or private cross-module import was added.
+
+## F7-01C Built - AUTO PHASE Continuing
+
+`F7-01C` added `ReportsService.dashboardSummary(...)` with open, overdue,
+SLA-warning, closed, and average-TAT fields. The read model accepts role and
+branch scope as server-session context inputs, reads complaints through
+`ComplaintsService.listQueue(...)`, uses existing `SlaService` deadline helpers,
+and applies branch filtering before returning counts.
+
+Required proof passed: `test:api -- reports` 2/2, lint, typecheck, test 31/31,
+openapi:check, and git diff --check with line-ending warnings only. No HTTP
+route, OpenAPI path, export behavior, schema/migration, frontend change, provider
+call, or direct private cross-module import was added.
+
+## F7-01B Built - AUTO PHASE Continuing
+
+`F7-01B` chose the public-service reporting read boundary and wired
+`ReportsModule` to `ComplaintsModule`, `SlaModule`, and `SurveysModule`.
+`ReportsService` now depends only on those public services plus its own
+repository; the reports manifest declares those dependencies. No report query,
+route, OpenAPI path, schema, migration, RBAC/branch-scope guard, export behavior,
+frontend change, direct repository import, DTO import, or Prisma model type was
+added.
+
+Required proof passed after one honest lint repair: the first lint run failed
+because `SlaModule` became reachable through reports and the stale
+`knownUnwiredModules` allowlist still contained `sla`; the allowlist debt was
+removed. Final proof passed: lint, typecheck, test 31/31, openapi:check, and
+git diff --check with line-ending warnings only.
+
+## F7-01A Built - AUTO PHASE Continuing
+
+`F7-01A` generated the canonical behavior-free `reports` backend module shell,
+filled its `MODULE.md` boundary manifest with no owned tables yet, and wired
+`ReportsModule` into the inline API root module in `apps/api/src/main.ts`.
+
+Required proof passed: lint, typecheck, test 31/31, openapi:check, and
+git diff --check with line-ending warnings only. No report query, route handler,
+OpenAPI path, schema, migration, cross-module import, RBAC/branch-scope logic,
+export behavior, frontend change, or provider call was added.
 
 ## PLAN-F7-01 Complete - Phase 7 Decomposed, Ready To Build
 

@@ -85,6 +85,18 @@ export type ListComplaintQueueFilter = {
   branchId?: string | null;
 };
 
+export type ComplaintReportFilter = ListComplaintQueueFilter & {
+  dateFrom?: Date | string | null;
+  dateTo?: Date | string | null;
+  categoryId?: string | null;
+  severity?: ComplaintSeverity | null;
+  ownerId?: string | null;
+};
+
+export type ComplaintReportRecord = ComplaintQueueRecord & {
+  categoryId: string;
+};
+
 export type ComplaintCommentRecord = { id: string; complaintId: string; authorId: string | null; body: string; visibility: CommentVisibility; createdAt: Date };
 export type PortalVerificationTargetRecord = { complaintId: string; customerId: string; phone: string };
 export type CreateComplaintCommentData = { complaintId: string; authorId?: string | null; body: string; visibility: CommentVisibility };
@@ -139,6 +151,14 @@ export class ComplaintsRepository {
       where: filter.branchId ? { branchId: filter.branchId } : {},
       orderBy: [{ createdAt: 'desc' }, { referenceNumber: 'asc' }],
       select: { ...complaintSelect, ownerId: true, createdAt: true, updatedAt: true },
+    });
+  }
+
+  async listForReports(filter: ComplaintReportFilter = {}, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintReportRecord[]> {
+    return client.complaint.findMany({
+      where: reportWhere(filter),
+      orderBy: [{ createdAt: 'desc' }, { referenceNumber: 'asc' }],
+      select: { ...complaintSelect, ownerId: true, categoryId: true, createdAt: true, updatedAt: true },
     });
   }
 
@@ -235,3 +255,21 @@ const commentSelect = {
   visibility: true,
   createdAt: true,
 } satisfies Prisma.CommentSelect;
+
+function reportWhere(filter: ComplaintReportFilter): Prisma.ComplaintWhereInput {
+  return {
+    ...(filter.branchId ? { branchId: filter.branchId } : {}),
+    ...(filter.categoryId ? { categoryId: filter.categoryId } : {}),
+    ...(filter.severity ? { severity: filter.severity } : {}),
+    ...(filter.ownerId ? { ownerId: filter.ownerId } : {}),
+    ...dateRange(filter),
+  };
+}
+
+function dateRange(filter: ComplaintReportFilter): Pick<Prisma.ComplaintWhereInput, 'createdAt'> {
+  const range = {
+    ...(filter.dateFrom ? { gte: new Date(filter.dateFrom) } : {}),
+    ...(filter.dateTo ? { lte: new Date(filter.dateTo) } : {}),
+  };
+  return Object.keys(range).length ? { createdAt: range } : {};
+}

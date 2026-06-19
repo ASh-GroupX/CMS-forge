@@ -193,23 +193,23 @@ portal UI, then pre-pilot quality/ops/UAT/deploy. Each lettered subtask targets
 1-5 files plus tests and stays under the 300-line source budget; the SRS wins on
 any conflict. Carry-forward condition mapping is annotated inline.
 
-- [ ] F7-01: Operational reports, dashboards, and scoped exports (REQ-REPORT-001,
+- [x] F7-01: Operational reports, dashboards, and scoped exports (REQ-REPORT-001,
       RBAC-MATRIX-001, REQ-AUDIT-001)
-  - [ ] F7-01A: Generate `reports` backend module boundary + `MODULE.md`; wire
+  - [x] F7-01A: Generate `reports` backend module boundary + `MODULE.md`; wire
         `ReportsModule` into the API root module (behavior-free scaffold)
-  - [ ] F7-01B: Decide + implement cross-module reporting read access (declared
+  - [x] F7-01B: Decide + implement cross-module reporting read access (declared
         allowed deps on complaints/SLA/surveys public services or a read-only
         query model — must pass the manifest truth gate, never import another
         module's repository)
-  - [ ] F7-01C: Dashboard summary read model — open, overdue, SLA-warning, closed,
+  - [x] F7-01C: Dashboard summary read model — open, overdue, SLA-warning, closed,
         and average TAT — with role + branch-scope filtering (REQ-REPORT-001 AC1,
         AC4)
-  - [ ] F7-01D: Filtered report read models for the RPT-001..RPT-017 families with
+  - [x] F7-01D: Filtered report read models for the RPT-001..RPT-017 families with
         date/branch/category/severity/owner filters and role + branch scope
         (REQ-REPORT-001 AC2, AC4)
-  - [ ] F7-01E: Dashboard + report HTTP read routes with RBAC, branch scope, and
+  - [x] F7-01E: Dashboard + report HTTP read routes with RBAC, branch scope, and
         canonical OpenAPI (REQ-REPORT-001 AC1, AC2, AC4)
-  - [ ] F7-01F: Scoped CSV/Excel export route with configured row limit and a
+  - [x] F7-01F: Scoped CSV/Excel export route with configured row limit and a
         same-transaction export audit entry; no unbounded export (REQ-REPORT-001
         AC3, AC4; RBAC-MATRIX-001)
 - [ ] F7-02: Complaint search read model and API (REQ-SEARCH-001, NFR-PERF-001) —

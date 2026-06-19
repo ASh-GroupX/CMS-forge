@@ -5,7 +5,7 @@ import type { AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { ComplaintsRepository } from './complaints.repository.js';
-import type { ComplaintCommentRecord, ComplaintDetailRecord, ComplaintQueueRecord, ComplaintRecord, CreateComplaintData, PortalVerificationTargetRecord } from './complaints.repository.js';
+import type { ComplaintCommentRecord, ComplaintDetailRecord, ComplaintQueueRecord, ComplaintRecord, ComplaintReportFilter, ComplaintReportRecord, CreateComplaintData, PortalVerificationTargetRecord } from './complaints.repository.js';
 import type { ComplaintDetailDto, ComplaintQueueItemDto } from './dto/complaint-response.dto.js';
 
 export type ValidateComplaintTransitionInput = { fromStatus: ComplaintStatus; action: ComplaintTransitionAction; actorRole: RoleCode };
@@ -27,6 +27,7 @@ export type CreateInternalComplaintInput = {
 export type ComplaintCreationResult = { id: string; referenceNumber: string; status: ComplaintStatus };
 
 export type ComplaintQueueFilter = { branchId?: string | null };
+export type ComplaintReportRow = ComplaintQueueItemDto & { categoryId: string };
 export type CreateComplaintCommentInput = { complaintId: string; body: string; visibility: CommentVisibility; actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type ComplaintCommentResult = { id: string; complaintId: string; body: string; visibility: CommentVisibility; authorId: string | null; createdAt: string };
 
@@ -84,6 +85,8 @@ export class ComplaintsService {
   }
 
   async listQueue(filter: ComplaintQueueFilter = {}): Promise<ComplaintQueueItemDto[]> { return (await this.complaintsRepository.listQueue(filter)).map(queueItem); }
+
+  async listForReports(filter: ComplaintReportFilter = {}): Promise<ComplaintReportRow[]> { return (await this.complaintsRepository.listForReports(filter)).map(reportItem); }
 
   async findPortalVerificationTarget(referenceNumber: string, customerPhone: string): Promise<PortalVerificationTargetRecord | null> {
     return this.complaintsRepository.findPortalVerificationTarget(referenceNumber.trim(), customerPhone.trim());
@@ -214,13 +217,13 @@ function queueItem(complaint: ComplaintQueueRecord): ComplaintQueueItemDto {
   };
 }
 
+function reportItem(complaint: ComplaintReportRecord): ComplaintReportRow { return { ...queueItem(complaint), categoryId: complaint.categoryId }; }
+
 function detailItem(complaint: ComplaintDetailRecord): ComplaintDetailDto {
   return { ...queueItem(complaint), description: complaint.descriptionEn, incidentAt: complaint.incidentAt?.toISOString() ?? null, statusHistory: complaint.statusHistory.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })) };
 }
 
-function commentItem(comment: ComplaintCommentRecord): ComplaintCommentResult {
-  return { ...comment, createdAt: comment.createdAt.toISOString() };
-}
+function commentItem(comment: ComplaintCommentRecord): ComplaintCommentResult { return { ...comment, createdAt: comment.createdAt.toISOString() }; }
 
 function commentAudit(input: CreateComplaintCommentInput, comment: ComplaintCommentRecord): AuditRecordInput {
   return {
@@ -231,11 +234,7 @@ function commentAudit(input: CreateComplaintCommentInput, comment: ComplaintComm
   };
 }
 
-function nonEmpty(value: string, field: string): string {
-  const text = value.trim();
-  if (!text) throw new AppException('VALIDATION_FAILED', 'Invalid complaint comment', HttpStatus.BAD_REQUEST, [{ field, code: 'REQUIRED', message: `${field} is required.` }]);
-  return text;
-}
+function nonEmpty(value: string, field: string): string { const text = value.trim(); if (!text) throw new AppException('VALIDATION_FAILED', 'Invalid complaint comment', HttpStatus.BAD_REQUEST, [{ field, code: 'REQUIRED', message: `${field} is required.` }]); return text; }
 
 function requiredTextError(value: unknown, field: string) {
   return typeof value === 'string' && value.trim()

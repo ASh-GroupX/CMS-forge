@@ -11,6 +11,7 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { BranchesModule } from './modules/branches/branches.module.js';
 import { IntegrationsModule } from './modules/integrations/integrations.module.js';
 import { PortalModule } from './modules/portal/portal.module.js';
+import { ReportsModule } from './modules/reports/reports.module.js';
 import { SurveysModule } from './modules/surveys/surveys.module.js';
 
 @Controller()
@@ -32,7 +33,16 @@ class HealthController {
 }
 
 @Module({
-  imports: [AuthModule, AuditModule, BranchesModule, PortalModule, AttachmentsModule, IntegrationsModule, SurveysModule],
+  imports: [
+    AuthModule,
+    AuditModule,
+    BranchesModule,
+    PortalModule,
+    AttachmentsModule,
+    IntegrationsModule,
+    ReportsModule,
+    SurveysModule,
+  ],
   controllers: [HealthController],
 })
 class AppModule {}

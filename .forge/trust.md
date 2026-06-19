@@ -4090,3 +4090,109 @@ PLANNER pass to decompose reports/exports and to reconcile the portal UI screens
   - `REQ-SURVEY-001` is `should` (not `must`); survey UI (UI-020, F7-04C) and
     survey-in-reports may be deferred as a commercial exclusion if pilot scope
     requires, per UI-SCREEN-001 AC5.
+
+## F7-01A - Reports Module Scaffold
+
+- Date: 2026-06-19
+- Builder tier: BUILDER-STRONG (user-requested escalation from BUILDER-STANDARD)
+- Risk: Medium
+- Recommendation: Continue AUTO PHASE to F7-01B
+- Notes:
+  - Generated `apps/api/src/modules/reports/**` from the canonical module
+    generator.
+  - Filled `reports/MODULE.md` with public surface, no owned tables yet, minimal
+    allowed dependencies, and SRS IDs `REQ-REPORT-001` and
+    `METHOD-MODULAR-001`.
+  - Wired `ReportsModule` into the inline API root module in
+    `apps/api/src/main.ts` so the module wiring gate covers it.
+  - Added no report route, query, export, RBAC/branch-scope logic, OpenAPI path,
+    schema, migration, frontend behavior, provider call, or cross-module service
+    dependency.
+
+## F7-01B - Reporting Read Boundary
+
+- Date: 2026-06-19
+- Builder tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Continue AUTO PHASE to F7-01C
+- Notes:
+  - Chose public-service dependencies for reporting reads rather than a
+    read-only direct query model.
+  - Wired `ReportsModule` to `ComplaintsModule`, `SlaModule`, and `SurveysModule`
+    and injected only `ComplaintsService`, `SlaService`, and `SurveysService`
+    into `ReportsService`.
+  - Removed stale `sla` debt from `tools/wiring-check.mjs` because `SlaModule` is
+    now reachable through `ReportsModule`.
+  - Added no report query, route, OpenAPI path, schema, migration,
+    RBAC/branch-scope guard, export behavior, frontend change, direct repository
+    import, DTO import, Prisma model type, or provider call.
+
+## F7-01C - Dashboard Summary Read Model
+
+- Date: 2026-06-19
+- Builder tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Continue AUTO PHASE to F7-01D after scope check
+- Notes:
+  - Added `ReportsService.dashboardSummary(...)` with open complaints, overdue
+    complaints, SLA-warning complaints, closed complaints, and average TAT hours.
+  - Kept reports inside the F7-01B public-service boundary: complaints are read
+    through `ComplaintsService.listQueue(...)`; SLA deadlines use `SlaService`
+    public helpers.
+  - Added `test:api -- reports` and a dashboard summary suite proving an allowed
+    branch-scoped case and a hidden out-of-branch case.
+  - Added no controller route, OpenAPI path, export, schema/migration, frontend
+    change, provider call, or private cross-module repository/DTO/Prisma import.
+
+## F7-01D - Filtered Report Read Models
+
+- Date: 2026-06-19
+- Builder tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Continue AUTO PHASE to F7-01E after route scope check
+- Notes:
+  - Added one generic filtered report read model covering date range, branch,
+    category, severity, and owner filters instead of duplicating methods for each
+    report family.
+  - Added `ComplaintsService.listForReports(...)` as the public source-module
+    read method; reports still do not import the complaints repository, DTOs, or
+    Prisma model types.
+  - `test:api -- reports` now covers dashboard summary plus filtered allowed and
+    out-of-branch denied cases.
+  - Added no HTTP route, OpenAPI path, export behavior, schema/migration,
+    frontend change, provider call, or private cross-module import.
+
+## F7-01E - Report HTTP Read Routes
+
+- Date: 2026-06-19
+- Builder tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Continue AUTO PHASE to F7-01F only if export/audit stays within
+  the 1-5 file budget
+- Notes:
+  - Added guarded `GET /reports/dashboard` and `GET /reports` routes.
+  - Routes use existing `SessionAuthGuard`, `RbacGuard`, `@Roles`, and
+    `@BranchScoped`; role and branch scope are taken from the request principal.
+  - Added canonical OpenAPI paths/schemas and regenerated
+    `packages/contracts/openapi.json`.
+  - `test:api -- reports` now covers service summaries, filtered reports,
+    principal-derived route scope, and audited branch-scope denial.
+  - Added no export behavior, schema/migration, frontend change, provider call,
+    or private cross-module import.
+
+## F7-01F - Bounded Report Export With Audit
+
+- Date: 2026-06-19
+- Builder tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept F7-01 complete; continue AUTO PHASE with F7-02A in a
+  fresh context
+- Notes:
+  - Added bounded `GET /reports/export?format=csv|excel`.
+  - CSV is real CSV. `excel` is Excel-compatible tabular TSV served as
+    `reports.xls`; no fake XLSX and no new dependency.
+  - Export rows are clipped to `MAX_REPORT_EXPORT_ROWS` before serialization.
+  - Successful export writes a `REPORT` audit entry with format, row count, and
+    row limit metadata.
+  - `test:api -- reports` covers bounded export and audit in addition to the
+    read-route scope/denial tests.

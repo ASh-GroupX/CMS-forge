@@ -7,12 +7,7 @@ const rootModuleFile = `${apiSrc}/main.ts`;
 
 // Ratchet of documented runtime debt. It may only SHRINK: a NEW orphaned module must
 // fail this gate, never be added here. Remove an entry the moment its module is wired in.
-const knownUnwiredModules = new Set([
-  // SlaModule is imported by no module; its runWarningJob/runBreachJob are plain service
-  // methods with no scheduler or caller yet (SLA engineering review). Remove once SLA is
-  // wired into AppModule or its scheduler/runner and proven.
-  'sla',
-]);
+const knownUnwiredModules = new Set([]);
 
 function walkFiles(root, dir, acc) {
   for (const entry of readdirSync(join(root, dir), { withFileTypes: true })) {

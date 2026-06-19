@@ -6895,3 +6895,299 @@ Assumptions and gaps:
 - Decision: Accept With Conditions. Full reasoning, SRS mapping, and the five
   non-blocking carry-forward conditions are recorded in `.forge/trust.md` under
   `PHASE-6-REVIEW`. Phase 7 opens with `PLAN-F7-01` at state `Ready to Plan`.
+
+## F7-01A - Generate Reports Module Boundary And Manifest
+
+- Date: 2026-06-19
+- Phase: Phase 7 - Reports, UAT, And Ops
+- Required model tier: BUILDER-STRONG (user-requested escalation from the queued
+  BUILDER-STANDARD scaffold task)
+- Risk: Medium
+- Requirement IDs:
+  - REQ-REPORT-001
+  - METHOD-MODULAR-001
+- Evidence:
+  - Ran `corepack pnpm generate:module -- reports`; generator created the
+    canonical reports module files.
+  - Filled `apps/api/src/modules/reports/MODULE.md` with the real boundary:
+    `ReportsService` public surface, no owned tables yet, minimal allowed
+    dependencies, and the reporting/modularity SRS IDs.
+  - Added `ReportsModule` to the inline API root module imports in
+    `apps/api/src/main.ts`.
+  - Confirmed generated source files are under the 300-line budget and contain no
+    TODO/FIXME markers.
+  - Added no reporting behavior, route handler, OpenAPI path, DTO logic beyond
+    generator placeholders, RBAC/branch-scope wiring, cross-module service import,
+    Prisma query, schema change, migration, frontend change, export behavior, or
+    provider call.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (31/31; generator, wiring, manifest truth, and
+    OpenAPI scaffold checks included)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+
+## F7-01B - Decide And Wire Cross-Module Reporting Read Access
+
+- Date: 2026-06-19
+- Phase: Phase 7 - Reports, UAT, And Ops
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Requirement IDs:
+  - REQ-REPORT-001
+  - METHOD-MODULAR-001
+- Evidence:
+  - Chose declared public-service dependencies for the reports read boundary:
+    `ComplaintsService`, `SlaService`, and `SurveysService`.
+  - Updated `reports/MODULE.md` to declare those public-service dependencies.
+  - Imported `ComplaintsModule`, `SlaModule`, and `SurveysModule` in
+    `ReportsModule` and injected only their public services into
+    `ReportsService`.
+  - Updated generated reports construction specs to pass typed public-service
+    stubs.
+  - Removed stale `sla` from `tools/wiring-check.mjs` known-unwired debt because
+    `SlaModule` is now reachable through `ReportsModule`.
+  - Added no dashboard aggregate, report filter, route handler, OpenAPI path,
+    CSV/Excel export, export audit, RBAC/branch-scope guard, schema/migration,
+    frontend change, direct cross-module repository import, DTO import, Prisma
+    model type, provider call, or report query behavior.
+- Verification:
+  - Failed then repaired: first `corepack pnpm lint` failed because
+    `tools/wiring-check.mjs knownUnwiredModules` still allowed `sla` after
+    `SlaModule` became reachable.
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (31/31; wiring and manifest truth checks
+    included)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no report route, request parameter, guard
+    behavior, or client data source; later report routes must derive scope from
+    server-session guards.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no state change, audit write, export write, or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. This task added no logging, response body, provider call,
+    browser storage, or secret access.
+  - Customer portal exposure rules hold: Passed by scope. This task added no
+    portal route, portal response, customer-facing data read, internal comment
+    exposure, audit exposure, DMS code exposure, or staff PII exposure.
+  - Trust boundaries are tested: Passed for this boundary slice. `lint` and
+    `test` include manifest truth and module wiring gates proving reports uses
+    declared public services only and no private cross-module repository/DTO
+    import was added.
+
+## F7-01C - Dashboard Summary Read Model
+
+- Date: 2026-06-19
+- Phase: Phase 7 - Reports, UAT, And Ops
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Requirement IDs:
+  - REQ-REPORT-001 AC1
+  - REQ-REPORT-001 AC4
+  - METHOD-MODULAR-001
+- Evidence:
+  - Added `ReportsService.dashboardSummary(...)` returning
+    `openComplaints`, `overdueComplaints`, `slaWarningComplaints`,
+    `closedComplaints`, and `averageTatHours`.
+  - Kept reports inside the public-service read boundary: complaint data comes
+    from `ComplaintsService.listQueue(...)`; SLA warning/overdue calculations use
+    `SlaService.defaultDurationMinutes(...)` and `SlaService.calculateDeadline(...)`.
+  - Added `apps/api/test/reports/dashboard-summary.test.ts` and enabled
+    `test:api -- reports`.
+  - Tests cover one allowed branch-scoped dashboard summary and one hidden
+    out-of-branch case, plus Admin all-branch comparison.
+  - Added no HTTP route, OpenAPI path, CSV/Excel export, export audit,
+    schema/migration, frontend change, provider call, direct cross-module
+    repository import, DTO import, Prisma model type, or report controller
+    behavior.
+- Verification:
+  - Passed: `corepack pnpm test:api -- reports` (2/2)
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (31/31)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed for this service slice. `dashboardSummary(...)` accepts a typed scope
+    representing server-session context and has no HTTP route/query/body authority
+    source; the reports API route/guards are explicitly deferred to F7-01E.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added read-only summary behavior only and no state change, audit write,
+    export write, or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. The read model returns numeric counts only and added no
+    logging, credential access, provider call, or browser storage.
+  - Customer portal exposure rules hold: Passed by scope. This task added no
+    portal route/response and returns only aggregate numeric staff report data,
+    not internal comments, audit logs, DMS codes, staff PII, or unrelated portal
+    complaint details.
+  - Trust boundaries are tested: Passed. `test:api -- reports` covers an allowed
+    branch-scoped summary and proves hidden out-of-branch complaints are excluded;
+    `lint`/`test` also run manifest truth and wiring gates.
+
+## F7-01D - Filtered Report Read Models
+
+- Date: 2026-06-19
+- Phase: Phase 7 - Reports, UAT, And Ops
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Requirement IDs:
+  - REQ-REPORT-001 AC2
+  - REQ-REPORT-001 AC4
+  - METHOD-MODULAR-001
+- Evidence:
+  - Added `ReportsService.filteredReport(...)` with date range, branch, category,
+    severity, and owner filters.
+  - Added `ComplaintsService.listForReports(...)` and
+    `ComplaintsRepository.listForReports(...)` as the public source-module read
+    path needed for category/owner/date report filtering.
+  - Preserved the F7-01B boundary: reports imports `ComplaintsService` type only
+    from the complaints service file and never imports another module repository,
+    DTO folder, or Prisma model type.
+  - Tests prove filtered report success for Admin branch/category/severity/owner/
+    date filters and denial of out-of-branch rows for a scoped Branch Manager.
+  - Kept `apps/api/src/modules/complaints/complaints.service.ts` at 297 lines,
+    under the 300-line source budget.
+  - Added no HTTP route, OpenAPI path, CSV/Excel export, export audit,
+    schema/migration, frontend change, provider call, or report controller
+    behavior.
+- Verification:
+  - Passed: `corepack pnpm test:api -- reports` (4/4)
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (31/31)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed for this service slice. `filteredReport(...)` accepts typed
+    server-session scope plus filters; it has no HTTP route/query/body authority
+    source yet. F7-01E must derive these values from guards/session.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added read-only report behavior only and no state change, audit write, export
+    write, or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. The read model returns report rows without credentials and
+    added no logging, provider call, browser storage, or secret access.
+  - Customer portal exposure rules hold: Passed by scope. This task added no
+    portal route/response and no internal comments, audit logs, DMS codes, staff
+    PII, or portal complaint detail exposure.
+  - Trust boundaries are tested: Passed. `test:api -- reports` covers allowed
+    scoped filtering and denied out-of-branch filtering; `lint`/`test` also run
+    manifest truth and module wiring gates.
+
+## F7-01E - Report HTTP Read Routes With RBAC And OpenAPI
+
+- Date: 2026-06-19
+- Phase: Phase 7 - Reports, UAT, And Ops
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Requirement IDs:
+  - REQ-REPORT-001 AC1
+  - REQ-REPORT-001 AC2
+  - REQ-REPORT-001 AC4
+  - METHOD-API-001
+  - METHOD-MODULAR-001
+  - REQ-RBAC-001
+- Evidence:
+  - Added `GET /reports/dashboard` and `GET /reports` to `ReportsController`.
+  - Wired `ReportsModule` with `AuthModule`, `SessionAuthGuard`, `RbacGuard`, and
+    the existing `SESSION_AUTH_SERVICE` provider pattern.
+  - Routes derive role and branch scope from `request.principal`; query branch
+    filters are passed as filters and cannot widen non-admin scope.
+  - Updated `reports/MODULE.md` to declare the new `AuthModule` dependency.
+  - Added canonical OpenAPI paths/schemas and regenerated
+    `packages/contracts/openapi.json`.
+  - Tests cover principal-derived route scope and an audited branch-scope denial
+    through `RbacGuard`.
+  - Added no export behavior, schema/migration, frontend change, provider call,
+    direct cross-module repository import, DTO import, or Prisma model type.
+- Verification:
+  - Passed: `corepack pnpm test:api -- reports` (6/6)
+  - Failed then repaired: first `corepack pnpm lint` failed because
+    `reports/MODULE.md` did not declare the new `AuthModule` dependency.
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (31/31)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed. Reports routes derive `role` and scoped branch from
+    `request.principal`; `RbacGuard` enforces branch query mismatch before
+    controller execution, and tests cover principal-derived scope plus audited
+    branch-scope denial.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added read-only routes only and no state change, export write, side effect, or
+    audit-bearing mutation.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. Routes return report aggregates/rows only and added no
+    credential logging, secret access, provider call, or browser storage.
+  - Customer portal exposure rules hold: Passed by scope. This task added staff
+    report routes only and no portal route/response; it does not return internal
+    comments, audit logs, DMS codes, staff PII, or portal verification data.
+  - Trust boundaries are tested: Passed. `test:api -- reports` covers allowed
+    route scope derivation and audited branch-scope denial; `lint`/`test` also
+    run manifest truth, wiring, and OpenAPI gates.
+
+## F7-01F - Bounded Report Export With Audit
+
+- Date: 2026-06-19
+- Phase: Phase 7 - Reports, UAT, And Ops
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Requirement IDs:
+  - REQ-REPORT-001 AC3
+  - REQ-REPORT-001 AC4
+  - REQ-AUDIT-001
+  - METHOD-API-001
+  - METHOD-MODULAR-001
+  - REQ-RBAC-001
+- Evidence:
+  - Added `GET /reports/export?format=csv|excel` with existing session auth, RBAC,
+    and branch-scope guard patterns.
+  - Reused `ReportsService.filteredReport(...)` for all export filters and branch
+    scope.
+  - Added `MAX_REPORT_EXPORT_ROWS` and clips rows before serialization.
+  - CSV output is real CSV. `excel` output is honest Excel-compatible TSV served
+    as `reports.xls`; no XLSX claim and no new dependency.
+  - Successful export writes a `REPORT` audit entry with format, row count, and
+    row limit metadata.
+  - Updated canonical OpenAPI and regenerated `packages/contracts/openapi.json`.
+  - Added no schema/migration, frontend change, provider call, direct
+    cross-module repository import, DTO import, or Prisma model type.
+- Verification:
+  - Passed: `corepack pnpm test:api -- reports` (7/7)
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (31/31)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed. Export route uses the same guarded controller pattern as report reads;
+    branch scope comes from `request.principal`, and branch query mismatch is
+    denied by `RbacGuard`.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. Export is a
+    read plus an append-only `REPORT` audit entry; there is no domain state
+    change, status history, or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. Export serializes report rows only and added no secret
+    logging, provider calls, credential access, or browser storage.
+  - Customer portal exposure rules hold: Passed by scope. Export is a guarded
+    staff report route and does not return portal verification data, internal
+    comments, audit logs, DMS codes, or staff PII.
+  - Trust boundaries are tested: Passed. `test:api -- reports` covers row-limited
+    export audit plus the existing route branch-scope denial; `lint`/`test` also
+    run manifest truth, wiring, and OpenAPI gates.

@@ -1,87 +1,72 @@
-# Build Task: F7-01A - Generate Reports Module Boundary And Manifest
+# Build Task: F7-02A - Branch-Scoped Complaint Search Service
 
 Status: Ready to Build
-Required model tier: BUILDER-STANDARD
-(Escalate to BUILDER-STRONG for F7-01B onward, where reporting RBAC, branch
-scope, export limits, and export audit logic begin.)
-Risk: Medium (behavior-free scaffold for a High-risk reporting module)
+Required model tier: BUILDER-STRONG
+Risk: High (search must respect RBAC and branch scope)
 Phase: Phase 7 - Reports, UAT, And Ops
 
 ## Goal
 
-Create the canonical `reports` backend module shell and a real `MODULE.md`
-boundary manifest, and wire `ReportsModule` into the API root module so module
-reachability/manifest lint covers it. No reporting behavior in this task.
+Add the backend complaint search service/read model for REQ-SEARCH-001 with
+branch-scoped filtering. HTTP route and OpenAPI are F7-02B.
 
-## Why This First
+## Read First
 
-Phase 7's must-have is REQ-REPORT-001 (operational reports, dashboards, scoped
-exports). Every prior backend feature module was generated from the template
-before behavior (e.g. `integrations` F5-03A, `surveys` F5-07A). This task lays
-that foundation safely so F7-01B..F7-01F can add read models, routes, exports,
-and audit on a clean boundary.
+- `docs/CMS_AUTO_SRS.md` requirement `REQ-SEARCH-001`
+- Existing complaint queue/detail patterns in `apps/api/src/modules/complaints`
 
-## Scope (generate, then adjust only these)
+## Scope
 
-- `apps/api/src/modules/reports/**` (generated shell: module, controller,
-  service, repository)
-- `apps/api/src/modules/reports/MODULE.md` (filled-in OKF manifest)
-- The API root module file (add `ReportsModule` to its imports)
+- `apps/api/src/modules/complaints/complaints.service.ts`
+- `apps/api/src/modules/complaints/complaints.repository.ts`
+- `apps/api/test/workflow/complaint-create.test.ts` or a small search API suite
+- `tools/api-test.mjs` only if a new `search` suite is added
 
-## Steps
+## Required Filters
 
-1. Generate the module from the template — do not hand-roll structure:
-   `corepack pnpm generate:module -- reports`.
-2. Fill `MODULE.md` with the real boundary: `type: forge.module`, title,
-   description, tags; the public service; **owned tables: none yet** (reporting
-   reads other modules' data — the cross-module read-access decision is F7-01B,
-   so declare no owned domain tables here); allowed dependencies left minimal;
-   and the REQ-REPORT-001 requirement ID.
-3. Wire `ReportsModule` into the API root module (AppModule) imports so the
-   wiring gate and manifest truth gate cover it.
-4. Keep every generated source file under the 300-line budget and free of
-   TODO/FIXME markers.
+- reference number
+- customer identifier/name/phone where safely available
+- status
+- severity
+- owner
+- date range
 
-## Out Of Scope (do NOT add in this task)
+## Rules
 
-- Any report query, dashboard aggregate, filter, export, CSV/Excel, or audit
-  behavior (F7-01B..F7-01F).
-- Any HTTP route handler body, OpenAPI path, DTO logic, RBAC/branch-scope guard
-  wiring, cross-module service import, Prisma query, schema change, or migration.
-- Any frontend change.
+- No HTTP route yet; F7-02B owns controller/OpenAPI.
+- Branch scope is a service/repository input representing server-session scope.
+- Non-admin scoped users must not see out-of-branch complaints.
+- Prefer extending existing branch-scoped queue filtering rather than duplicating
+  a parallel query path.
+- No frontend change, schema/migration, provider call, or direct privacy leak.
 
-## Required Proof Commands (run all; label honestly)
+## Required Proof Commands
 
 - `corepack pnpm lint`
 - `corepack pnpm typecheck`
 - `corepack pnpm test`
+- `corepack pnpm test:api -- workflow`
 - `corepack pnpm openapi:check`
 - `git diff --check`
 
-(The generator's own behavior is covered by `tools/generate-module.test.mjs`
-inside `corepack pnpm test`. `openapi:check` must stay green because no route is
-added in this task.)
-
 ## Acceptance Criteria
 
-- `reports` module exists with the canonical generated structure and a complete,
-  lint-valid `MODULE.md`.
-- `ReportsModule` is reachable from the API root module; the wiring gate and
-  manifest truth gate pass.
-- No reporting behavior, route, OpenAPI path, schema, migration, cross-module
-  import, or frontend change was added.
-- All required proof commands ran and passed; evidence records honest labels.
+- Complaint search service/read model supports the required filters.
+- Tests cover one allowed scoped result and one hidden out-of-branch result.
+- No route, OpenAPI path, frontend change, schema/migration, provider call, or
+  portal privacy leak is added.
+- All required proof commands run and pass; evidence records honest labels and
+  the High-risk security self-check.
 
 ## Requirement IDs
 
-- REQ-REPORT-001 (operational reports and dashboards)
-- METHOD-MODULAR-001 / architecture §6 (generate or copy from the golden module;
-  module boundary manifest required)
+- REQ-SEARCH-001
+- REQ-RBAC-001
+- METHOD-MODULAR-001
 
 ## On Completion
 
 - Append evidence to `.forge/evidence.md` and a trust note to `.forge/trust.md`.
-- Mark F7-01A done in `.forge/backlog.md`.
-- Write F7-01B (cross-module reporting read access) to `.forge/next.md` at
-  `BUILDER-STRONG`, and set `.forge/state.md` to `Ready to Build` (AUTO PHASE may
-  continue within Phase 7).
+- Mark F7-02A done in `.forge/backlog.md`.
+- Write F7-02B (search HTTP route with pagination, RBAC, branch scope, and
+  OpenAPI) to `.forge/next.md` at `BUILDER-STRONG`.
