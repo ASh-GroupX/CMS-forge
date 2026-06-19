@@ -1,25 +1,34 @@
-# Verify Task: VERIFY-F4-02B - Verify Portal OTP Session Gate
+# Repair Task: REPAIR-F4-02B - Audit OTP Verification Failure Outcomes
 
-Status: Needs Verify
-Required model tier: BUILDER-STRONG or independent verifier
+Status: Needs Repair
+Required model tier: BUILDER-STRONG
 Risk: High
 Phase: Phase 4 - Customer Portal
-Verifies: F4-02B - Add OTP verification and expiring portal session issuance
+Repairs: VERIFY-F4-02B - Portal OTP session gate
 
-## Review Scope
+## Scope
 
-Verify the `F4-02B` build before any `F4-02C` tracking/detail reads build on it.
+Repair the `F4-02B` OTP verification/session gate before `F4-02C` tracking reads
+build on it.
 
-Check:
-- `POST /portal/tracking/otp/verify` accepts only portal-safe verification inputs and request context.
+Keep the diff small and focused on the portal OTP verification path.
+
+Required behavior:
+- `POST /portal/tracking/otp/verify` still accepts only `verificationId`, `otp`,
+  and server-derived request context.
 - Reference number alone still cannot retrieve complaint status/details.
-- Pending/unexpired OTP verification works and issues only a safe portal session token plus expiration.
-- Wrong OTP, expired verification, exhausted attempts, non-pending rows, and unknown IDs fail closed with stable safe errors.
-- Failed attempts increment and successful verification/session issuance do not expose OTP values, OTP hashes, session hashes, DMS customer codes, internal comments, audit logs, staff PII, unrelated complaints, or complaint details.
-- Portal verification status/session writes and SECURITY audit entries happen in the same transaction.
-- Module boundaries hold: portal writes portal-owned tables and reaches complaints only through the complaints public service.
-- OpenAPI documents the public request and verify routes.
-- Builder verification labels are honest and commands actually ran.
+- Wrong OTP, expired verification, exhausted attempts, non-pending rows, and
+  unknown IDs fail closed with stable safe errors.
+- OTP success and every OTP verification failure path are SECURITY-audited without
+  logging or returning OTP values, OTP hashes, session tokens, session hashes,
+  DMS customer codes, internal comments, audit logs, staff PII, unrelated
+  complaints, or complaint details.
+- Failure paths that mutate portal verification status/attempts keep the mutation
+  and SECURITY audit entry in the same transaction.
+- Successful verification still marks the verification as verified, creates only a
+  hashed portal session row, and audits inside the same transaction.
+- Add focused `portal.tracking` tests for the previously unaudited failure paths
+  and safe metadata.
 
 ## Required Proof Commands
 
@@ -27,12 +36,11 @@ Check:
 - `corepack pnpm typecheck`
 - `corepack pnpm test`
 - `corepack pnpm test:api -- portal.tracking`
+- `corepack pnpm test:api -- audit`
 - `corepack pnpm openapi:check`
 
 ## Output
 
-- Builder honesty: Honest, Inflated, or Fabricated
-- Code quality: Good, Acceptable, or Poor
-- Recommendation: Accept, Repair, or Redo
-
-On Accept, write `F4-02C - Add verified portal tracking endpoint` to `.forge/next.md` and set `.forge/state.md` to `Ready to Build` so AUTO PHASE can resume.
+On pass, append build evidence/security self-check, update trust, keep `F4-02B`
+as a verify gate by writing a `VERIFY-F4-02B-REPAIR` task to `.forge/next.md`,
+and set `.forge/state.md` to `Needs Verify`.

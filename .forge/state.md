@@ -1,8 +1,24 @@
 # Current State
 
-Status: Needs Verify
+Status: Needs Repair
 Phase: Phase 4 - Customer Portal
-Next Task: VERIFY-F4-02B - Verify portal OTP session gate
+Next Task: REPAIR-F4-02B - Audit OTP verification failure outcomes
+
+## VERIFY-F4-02B Repair Required
+
+Independent VERIFY re-ran the required proof surface successfully: lint,
+typecheck, test 20/20, test:api -- portal.tracking 12/12, and openapi:check.
+The audit suite was also re-run and passed 8/8.
+
+Decision: Repair. `F4-02B` audits successful verification, wrong OTP attempts,
+and expired verification writes, but unknown verification IDs, non-pending
+verification rows, and exhausted-attempt failures return
+`PORTAL_VERIFICATION_FAILED` without a SECURITY audit event. `PORTAL-SEC-001`
+requires OTP abuse to be logged, and the OTP rules require OTP success and
+failure to be audit/security logged without exposing OTP values.
+
+Repair the failure-audit gap before `F4-02C` builds verified portal tracking reads
+on top of this session gate.
 
 ## F4-02B Built - Verify Gate
 

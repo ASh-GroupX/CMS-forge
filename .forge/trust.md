@@ -2299,3 +2299,47 @@ Risk: High. Recommendation: Needs independent VERIFY before `F4-02C`.
 The scoped verification/session behavior is covered by the required proof surface and focused `portal.tracking` tests. Module boundaries hold: portal writes portal-owned verification/session rows, complaint matching remains through the complaints public service, and OpenAPI documents both public tracking OTP routes.
 
 Residual risk: this is a required customer-portal privacy gate. A fresh verifier should specifically inspect audit-in-transaction behavior, no OTP/session hash exposure, and whether the metadata-only notification decision from `F4-02A` is acceptable for the later delivery slice.
+
+## VERIFY-F4-02B - Portal OTP Session Gate
+
+- Date: 2026-06-19
+- Required model tier: independent VERIFY / BUILDER-STRONG
+- Builder honesty: Inflated
+- Code quality: Acceptable
+- Recommendation: Repair
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- portal.tracking` (12/12)
+  - Passed: `corepack pnpm test:api -- audit` (8/8 plus append-only proof)
+  - Passed: `corepack pnpm openapi:check`
+- Findings:
+  - `PortalService.verifyTrackingOtp` audits successful verification, wrong OTP
+    attempts, and expired verification writes, but unknown verification IDs,
+    non-pending verification rows, and exhausted-attempt failures return
+    `PORTAL_VERIFICATION_FAILED` without a SECURITY audit event.
+  - `PORTAL-SEC-001` requires OTP abuse to be logged, and its OTP rules require
+    OTP success and failure to be audit/security logged without exposing OTP
+    values.
+- Scope review:
+  - The verify route parses only `verificationId` and `otp`, adds server-derived
+    correlation/IP/user-agent context, and strips extra public fields.
+  - Reference-number-only tracking still cannot retrieve complaint status/details;
+    the tracking read endpoint is not built yet.
+  - Successful verification marks the verification row, creates a portal session
+    with only a SHA-256 session hash, and writes a SECURITY audit inside the portal
+    repository transaction.
+  - Wrong OTP increments attempts and audits in the same transaction; expired
+    verification marks expired and audits in the same transaction.
+  - OpenAPI documents the OTP request and verify routes, and the portal module
+    writes only `portal_verifications`/`portal_sessions` while reaching complaints
+    through `ComplaintsService`.
+- Required repair:
+  - Add SECURITY audit coverage for every OTP verification failure path, especially
+    unknown IDs, non-pending rows, and exhausted attempts, without logging OTP
+    values, OTP hashes, session tokens, session hashes, DMS customer codes,
+    internal comments, audit logs, staff PII, unrelated complaints, or complaint
+    details.
+  - Add focused `portal.tracking` tests for those failure-audit paths before
+    `F4-02C` continues.
