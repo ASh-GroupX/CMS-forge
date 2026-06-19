@@ -82,7 +82,7 @@ history from another project.
 
 ## Phase 4 - Customer Portal
 
-- [ ] F4-01: Customer complaint submission
+- [x] F4-01: Customer complaint submission
   - [x] F4-01A: Generate portal module boundary and manifest
   - [x] F4-01B: Add portal complaint submission service path
   - [x] F4-01C: Add public submission HTTP route, OpenAPI, rate limit, and portal API tests (Verify Gate: required)

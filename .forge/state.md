@@ -1,8 +1,20 @@
 # Current State
 
-Status: Needs Verify
+Status: Ready to Build
 Phase: Phase 4 - Customer Portal
-Next Task: VERIFY-F4-01C-REPAIR - Public Portal DMS Number Removal
+Next Task: F4-02A - Add portal OTP request persistence and notification queueing
+
+## VERIFY-F4-01C-REPAIR Accepted - Gate Cleared
+
+Independent VERIFY accepted `REPAIR-F4-01C`. The public portal request DTO/parser
+exclude `customerNumber`, `PortalService.submitComplaint` forces
+`customerNumber: null`, and OpenAPI omits `customerNumber` from
+`PortalComplaintRequest` while preserving staff `ComplaintCreateRequest`.
+
+Verification re-ran and passed: lint, typecheck, test 20/20 after sandbox
+`spawn EPERM` rerun outside sandbox, test:api -- portal 4/4 after sandbox
+`spawn EPERM` rerun outside sandbox, test:api -- workflow 36/36, and
+openapi:check. Phase 4 continues with `F4-02A`.
 
 ## REPAIR-F4-01C Built - Verify Gate
 

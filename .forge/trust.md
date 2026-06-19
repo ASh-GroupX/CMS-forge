@@ -2258,3 +2258,28 @@ starting Phase 3 planning.
   - Public portal submission no longer accepts or documents `customerNumber`.
   - `PortalService.submitComplaint` now forces `customerNumber: null` before delegating to complaint creation.
   - The remaining `customerNumber` contract is staff complaint creation only; public portal tests prove spoofed input is stripped.
+
+## VERIFY-F4-01C-REPAIR - Public Portal DMS Number Removal Gate
+
+- Date: 2026-06-19
+- Required model tier: independent VERIFY
+- Builder honesty: Honest
+- Code quality: Good
+- Recommendation: Accept
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (initial sandbox run failed with `spawn EPERM`; rerun outside sandbox passed 20/20 and coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- portal` (initial sandbox run failed with `spawn EPERM`; rerun outside sandbox passed 4/4)
+  - Passed: `corepack pnpm test:api -- workflow` (36/36)
+  - Passed: `corepack pnpm openapi:check`
+- Findings:
+  - No blocking findings.
+- Scope review:
+  - The public portal request DTO/parser exclude `customerNumber`.
+  - `PortalService.submitComplaint` forces `customerNumber: null` before delegating to complaint creation with `CUSTOMER_PORTAL` request source.
+  - `PortalComplaintRequest` omits `customerNumber`; staff `ComplaintCreateRequest` still contains `customerNumber` for staff-only complaint creation.
+  - Portal tests prove spoofed public `customerNumber: 'DMS-SECRET'` is stripped at the controller boundary, and workflow tests prove the service delegate receives `customerNumber: null`.
+  - No OTP/session/tracking/timeline/UI/schema/provider behavior was added by the repair.
+- Decision:
+  - The repair clears the `F4-01C` Verify Gate. Continue Phase 4 with `F4-02A`.
