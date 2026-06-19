@@ -42,6 +42,19 @@ export type ResolveSlaPolicyInput = {
 
 export type ResolvedSlaPolicy = Omit<SlaPolicyRecord, 'isActive' | 'updatedAt'>;
 
+export type RecordSlaDeadlineEventInput = ResolveSlaPolicyInput & {
+  complaintId: string;
+  enteredAt: Date | string;
+};
+
+export type SlaDeadlineEventResult = {
+  complaintId: string;
+  policyId: string | null;
+  stage: SlaStage;
+  dueAt: string | null;
+  idempotencyKey: string;
+};
+
 @Injectable()
 export class SlaService {
   constructor(private readonly slaRepository: SlaRepository) {}
@@ -103,6 +116,36 @@ export class SlaService {
   defaultDurationMinutes(severity: ComplaintSeverity): number {
     return DEFAULT_SLA_DURATION_MINUTES[enumValue(severity, ComplaintSeverity, 'severity')];
   }
+
+  async recordDeadlineEvent(input: RecordSlaDeadlineEventInput): Promise<SlaDeadlineEventResult> {
+    const policy = await this.resolvePolicy(input);
+    const deadline = this.calculateDeadline({
+      policyId: policy.id,
+      severity: policy.severity,
+      stage: policy.stage,
+      durationMinutes: policy.durationMinutes,
+      warningPercent: policy.warningPercent,
+      branchTimezone: policy.branchTimezone,
+      workingCalendarMode: policy.workingCalendarMode,
+      enteredAt: input.enteredAt,
+    });
+    const idempotencyKey = deadlineIdempotencyKey(input.complaintId, policy.stage, policy.id, deadline.enteredAt);
+    const event = await this.slaRepository.createDeadlineEvent({
+      complaintId: input.complaintId,
+      policyId: policy.id,
+      stage: policy.stage,
+      dueAt: new Date(deadline.dueAt),
+      idempotencyKey,
+    });
+
+    return {
+      complaintId: event.complaintId,
+      policyId: event.policyId,
+      stage: event.stage,
+      dueAt: event.dueAt?.toISOString() ?? null,
+      idempotencyKey: event.idempotencyKey,
+    };
+  }
 }
 
 function enumValue<T extends Record<string, string>>(value: unknown, options: T, field: string): T[keyof T] {
@@ -163,4 +206,8 @@ function matches(policyValue: string | null, requested: string | null | undefine
 
 function specificity(policy: SlaPolicyRecord): number {
   return Number(policy.branchId !== null) + Number(policy.departmentId !== null) + Number(policy.categoryId !== null);
+}
+
+function deadlineIdempotencyKey(complaintId: string, stage: SlaStage, policyId: string, enteredAt: string): string {
+  return `sla:deadline:${complaintId}:${stage}:${policyId}:${enteredAt}`;
 }

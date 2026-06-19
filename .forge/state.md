@@ -2,7 +2,32 @@
 
 Status: Ready to Build
 Phase: Phase 3 - SLA And Workflow Operations
-Next Task: F3-01C - Record SLA Deadline Events When Complaints Enter SLA-Governed States
+Next Task: F3-02A - Add Idempotent SLA Warning Job At Configured Threshold
+
+## VERIFY-F3-01C Accepted - Gate Cleared
+
+Independent VERIFY accepted `F3-01C`. `SlaRepository.createDeadlineEvent` persists
+`DEADLINE_SET` events through an idempotent upsert keyed by `idempotencyKey`.
+`SlaService.recordDeadlineEvent` resolves the active policy, calculates the due
+timestamp, derives a deterministic key from complaint ID, stage, policy ID, and
+entered timestamp, and writes one deadline event. Missing policy fails closed before
+event creation.
+
+Verification re-ran and passed: lint, typecheck, test 20/20, test:api -- sla 9/9,
+and openapi:check. Phase 3 continues with `F3-02A`.
+
+## F3-01C Built - Verify Gate
+
+`F3-01C` added backend SLA deadline-event recording. `SlaService.recordDeadlineEvent`
+resolves the active policy, calculates the due timestamp, derives a deterministic
+idempotency key from complaint ID, stage, policy ID, and entered timestamp, and
+persists one `DEADLINE_SET` event through `SlaRepository.createDeadlineEvent`.
+Duplicate retry requests use the same idempotency key.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- sla 9/9, and
+openapi:check.
+
+AUTO PHASE stops here because `F3-01C` is marked `Verify Gate: required`.
 
 ## VERIFY-F3-01B Accepted - Gate Cleared
 

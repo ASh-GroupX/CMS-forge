@@ -2514,3 +2514,51 @@ Append build and verification evidence here. Do not delete failed evidence.
     portal-visible DTO was added.
   - Trust boundaries are tested: Passed for this task's boundary; SLA API tests cover
     allowed global/scoped resolution and denied inactive or missing policy cases.
+
+## F3-01C - Record SLA Deadline Events When Complaints Enter SLA-Governed States
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-SLA-001
+  - SLA-CALENDAR-001
+  - ARCH-WORKFLOW-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Added `SlaRepository.createDeadlineEvent` to persist `DEADLINE_SET` SLA events
+    through an `idempotencyKey` upsert.
+  - Added `SlaService.recordDeadlineEvent` to resolve the active policy, calculate
+    the due timestamp, derive a deterministic idempotency key from complaint ID,
+    stage, policy ID, and entered timestamp, and write the deadline event.
+  - Returned stable deadline-event results with complaint ID, policy ID, stage,
+    `dueAt`, and idempotency key.
+  - Missing policy fails closed with `SLA_POLICY_MISSING` before event creation.
+  - Added SLA API coverage for repository upsert shape, successful event recording,
+    duplicate retry idempotency, and missing-policy denial with no create call.
+  - No workflow/complaints integration, warning/breach jobs, escalation,
+    notifications, queues, routes, OpenAPI paths, UI, portal, reports, calendar-hours
+    math, schema changes, migrations, provider calls, or external side effects were
+    added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- sla` (9/9)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not
+    applicable at HTTP/session boundary; no route or role decision was added.
+    `recordDeadlineEvent` accepts server-side complaint/stage/scope context only.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Not applicable to complaint
+    state; this task writes only SLA deadline events and enqueues no side effects.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed by scope; the code persists and returns only SLA event metadata.
+  - Customer portal exposure rules hold: Passed by scope; no portal route or
+    portal-visible DTO was added.
+  - Trust boundaries are tested: Passed for this task's boundary; SLA API tests cover
+    successful recording, duplicate retry, and missing-policy denial before write.

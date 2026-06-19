@@ -1504,3 +1504,51 @@ starting Phase 3 planning.
   - Inactive or missing policies fail closed with `SLA_POLICY_MISSING`.
   - No repository writes, SLA events, jobs, queues, routes, OpenAPI paths, UI,
     portal exposure, provider calls, workflow changes, or side effects were added.
+
+## F3-01C - Record SLA Deadline Events When Complaints Enter SLA-Governed States
+
+- Date: 2026-06-19
+- Risk: High
+- Recommendation: Accept pending independent VERIFY
+- Notes:
+  - The task stayed on SLA deadline-event persistence and did not integrate workflow
+    transitions, jobs, notifications, routes, UI, portal, or providers.
+  - `SlaRepository.createDeadlineEvent` uses a Prisma upsert on the unique
+    idempotency key and writes `SlaEventType.DEADLINE_SET`.
+  - `SlaService.recordDeadlineEvent` resolves the active policy, calculates due time,
+    derives a deterministic key from complaint/stage/policy/entered timestamp, and
+    returns stable event metadata.
+  - Focused SLA API tests cover successful recording, duplicate retry idempotency,
+    repository upsert shape, and missing-policy denial before create.
+  - Required checks passed: lint, typecheck, test 20/20, test:api -- sla 9/9, and
+    openapi:check.
+  - Because this is a Verify Gate, AUTO PHASE stops at `Needs Verify` before SLA
+    warning and breach jobs build on these deadline events.
+
+## VERIFY-F3-01C - SLA Deadline Event Recording Gate
+
+- Date: 2026-06-19
+- Required model tier: independent VERIFY
+- Builder honesty: Honest
+- Code quality: Good
+- Recommendation: Accept
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- sla` (9/9)
+  - Passed: `corepack pnpm openapi:check`
+- Findings:
+  - No blocking findings.
+- Scope review:
+  - `SlaRepository.createDeadlineEvent` writes `DEADLINE_SET` events through a Prisma
+    upsert on the unique `idempotencyKey`.
+  - `SlaService.recordDeadlineEvent` resolves the active policy, calculates the due
+    timestamp, derives a deterministic idempotency key, and writes one deadline
+    event.
+  - Duplicate requests for the same complaint/stage/policy/entered timestamp reuse
+    the same key and do not duplicate events.
+  - Missing policy returns `SLA_POLICY_MISSING` before event creation.
+  - No workflow integration, jobs, queues, notifications, routes, OpenAPI paths, UI,
+    portal exposure, provider calls, schema changes, migrations, or external side
+    effects were introduced.

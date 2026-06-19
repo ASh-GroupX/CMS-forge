@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ComplaintSeverity, SlaStage, WorkingCalendarMode } from '@prisma/client';
+import { ComplaintSeverity, SlaEventType, SlaStage, WorkingCalendarMode } from '@prisma/client';
 import type { PrismaService } from '../../src/core/http-kernel.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
 import { SlaRepository } from '../../src/modules/sla/sla.repository.ts';
@@ -163,6 +163,113 @@ test('SLA resolver ignores inactive policies and fails closed when none match', 
     missing.resolvePolicy({ severity: ComplaintSeverity.MEDIUM, stage: SlaStage.BRANCH_REVIEW, branchId: 'branch_1' }),
     (error: unknown) => error instanceof AppException && error.code === 'SLA_POLICY_MISSING',
   );
+});
+
+test('SLA repository upserts deadline events by deterministic idempotency key', async () => {
+  const calls: unknown[] = [];
+  const dueAt = new Date('2026-06-18T17:00:00.000Z');
+  const repository = new SlaRepository({
+    slaEvent: {
+      upsert: async (query: unknown) => {
+        calls.push(query);
+        return {
+          complaintId: 'cmp_1',
+          policyId: 'policy_1',
+          stage: SlaStage.INVESTIGATION,
+          dueAt,
+          idempotencyKey: 'idem_1',
+        };
+      },
+    },
+  } as PrismaService);
+
+  assert.deepEqual(await repository.createDeadlineEvent({
+    complaintId: 'cmp_1',
+    policyId: 'policy_1',
+    stage: SlaStage.INVESTIGATION,
+    dueAt,
+    idempotencyKey: 'idem_1',
+  }), {
+    complaintId: 'cmp_1',
+    policyId: 'policy_1',
+    stage: SlaStage.INVESTIGATION,
+    dueAt,
+    idempotencyKey: 'idem_1',
+  });
+  assert.deepEqual(calls[0], {
+    where: { idempotencyKey: 'idem_1' },
+    update: {},
+    create: {
+      complaintId: 'cmp_1',
+      policyId: 'policy_1',
+      stage: SlaStage.INVESTIGATION,
+      dueAt,
+      idempotencyKey: 'idem_1',
+      type: SlaEventType.DEADLINE_SET,
+    },
+    select: {
+      complaintId: true,
+      policyId: true,
+      stage: true,
+      dueAt: true,
+      idempotencyKey: true,
+    },
+  });
+});
+
+test('SLA service records deadline events idempotently', async () => {
+  const events = new Map<string, { complaintId: string; policyId: string | null; stage: SlaStage; dueAt: Date; idempotencyKey: string }>();
+  const repository = {
+    findActiveBySeverityAndStage: async () => [policy({ id: 'policy_1' })],
+    createDeadlineEvent: async (event) => {
+      const existing = events.get(event.idempotencyKey);
+      if (existing) return existing;
+      events.set(event.idempotencyKey, event);
+      return event;
+    },
+  } as SlaRepository;
+  const recorder = new SlaService(repository);
+  const input = {
+    complaintId: 'cmp_1',
+    severity: ComplaintSeverity.HIGH,
+    stage: SlaStage.INVESTIGATION,
+    enteredAt: '2026-06-18T09:00:00.000Z',
+  };
+
+  const first = await recorder.recordDeadlineEvent(input);
+  const second = await recorder.recordDeadlineEvent(input);
+
+  assert.deepEqual(first, {
+    complaintId: 'cmp_1',
+    policyId: 'policy_1',
+    stage: SlaStage.INVESTIGATION,
+    dueAt: '2026-06-18T17:00:00.000Z',
+    idempotencyKey: 'sla:deadline:cmp_1:INVESTIGATION:policy_1:2026-06-18T09:00:00.000Z',
+  });
+  assert.deepEqual(second, first);
+  assert.equal(events.size, 1);
+});
+
+test('SLA service does not create a deadline event when policy is missing', async () => {
+  let createCalled = false;
+  const recorder = new SlaService({
+    findActiveBySeverityAndStage: async () => [],
+    createDeadlineEvent: async () => {
+      createCalled = true;
+      throw new Error('should not create event');
+    },
+  } as unknown as SlaRepository);
+
+  await assert.rejects(
+    recorder.recordDeadlineEvent({
+      complaintId: 'cmp_missing',
+      severity: ComplaintSeverity.HIGH,
+      stage: SlaStage.INVESTIGATION,
+      enteredAt: '2026-06-18T09:00:00.000Z',
+    }),
+    (error: unknown) => error instanceof AppException && error.code === 'SLA_POLICY_MISSING',
+  );
+  assert.equal(createCalled, false);
 });
 
 function assertPolicyMissing(input: Parameters<SlaService['calculateDeadline']>[0], field: string): void {

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import { ComplaintSeverity, SlaStage } from '@prisma/client';
+import { ComplaintSeverity, SlaEventType, SlaStage } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
 
 const slaPolicySelect = {
@@ -20,6 +20,24 @@ const slaPolicySelect = {
 
 export type SlaPolicyRecord = Prisma.SlaPolicyGetPayload<{ select: typeof slaPolicySelect }>;
 
+const slaEventSelect = {
+  complaintId: true,
+  policyId: true,
+  stage: true,
+  dueAt: true,
+  idempotencyKey: true,
+} satisfies Prisma.SlaEventSelect;
+
+export type SlaDeadlineEventRecord = Prisma.SlaEventGetPayload<{ select: typeof slaEventSelect }>;
+
+export type CreateSlaDeadlineEventData = {
+  complaintId: string;
+  policyId: string | null;
+  stage: SlaStage;
+  dueAt: Date;
+  idempotencyKey: string;
+};
+
 @Injectable()
 export class SlaRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -29,6 +47,15 @@ export class SlaRepository {
       where: { severity, stage, isActive: true },
       orderBy: [{ updatedAt: 'desc' }],
       select: slaPolicySelect,
+    });
+  }
+
+  async createDeadlineEvent(data: CreateSlaDeadlineEventData): Promise<SlaDeadlineEventRecord> {
+    return this.prisma.slaEvent.upsert({
+      where: { idempotencyKey: data.idempotencyKey },
+      update: {},
+      create: { ...data, type: SlaEventType.DEADLINE_SET },
+      select: slaEventSelect,
     });
   }
 }

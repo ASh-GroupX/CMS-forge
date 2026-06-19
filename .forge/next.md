@@ -1,4 +1,4 @@
-# Build Task: F3-01C - Record SLA Deadline Events When Complaints Enter SLA-Governed States
+# Build Task: F3-02A - Add Idempotent SLA Warning Job At Configured Threshold
 
 Status: Ready to Build
 Required model tier: BUILDER-STRONG
@@ -8,30 +8,30 @@ Verify Gate: required
 
 ## Why This Exists
 
-`F3-01A` calculates deadlines and `F3-01B` resolves the stored policy. The next
-small step is to persist a deadline event so later warning and breach jobs have a
-durable, idempotent source of truth.
+`F3-01C` records durable deadline events. The next smallest useful job step is
+an idempotent warning job that finds deadline events whose warning threshold has
+passed and records one warning event per complaint/stage/policy.
 
 ## Scope
 
-- Add SLA repository behavior to create an `SlaEvent` deadline row.
-- Add `SlaService.recordDeadlineEvent` that accepts server-side complaint/stage
-  context, resolves the active policy, calculates `dueAt`, and writes one deadline
-  event.
-- Use a deterministic idempotency key derived from complaint ID, stage, policy ID,
-  and entered timestamp so retrying the same record request does not duplicate the
-  event.
-- Return a stable deadline-event result containing complaint ID, policy ID, stage,
-  `dueAt`, and idempotency key.
-- Fail closed with `SLA_POLICY_MISSING` when policy resolution or calculation fails.
-- Add focused `apps/api/test/sla/` coverage for successful event recording,
-  idempotent duplicate handling, and missing-policy denial.
+- Add SLA repository read behavior for due `DEADLINE_SET` events whose warning time
+  is at or before a supplied `now`.
+- Add service/job behavior that records a `WARNING_SENT` SLA event idempotently for
+  each due deadline event.
+- Derive warning idempotency keys from the deadline event key so retries do not
+  duplicate warnings.
+- Use existing stored policy duration/warning percent data; do not add schema.
+- Return a small result with scanned count, created/skipped warning count, and
+  warning idempotency keys.
+- Add focused `apps/api/test/sla/` coverage for due filtering, idempotent warning
+  creation, and no-op behavior when nothing is due.
 
 ## Out Of Scope
 
-- No workflow/complaints integration yet.
-- No warning or breach jobs.
-- No escalation, notifications, queues, provider calls, or external side effects.
+- No breach jobs or escalation.
+- No notification delivery, provider adapters, queues, Redis/BullMQ wiring, or
+  external side effects.
+- No workflow/complaints integration changes.
 - No HTTP routes, OpenAPI paths, admin UI, portal, reports, or calendar-hours math.
 - No schema changes or migrations.
 
@@ -40,17 +40,20 @@ durable, idempotent source of truth.
 - REQ-SLA-001
 - SLA-CALENDAR-001
 - ARCH-WORKFLOW-001
+- REQ-NOTIFY-001
 - METHOD-AUDIT-001
 - METHOD-TEST-001
 - API-STANDARD-001
 
 ## Acceptance Criteria
 
-- SLA deadline events are persisted by backend service/repository code only.
-- Duplicate record requests for the same complaint/stage/policy/entered timestamp
-  are idempotent.
-- Missing policy returns `SLA_POLICY_MISSING` and creates no event.
-- No jobs, notifications, routes, UI, portal exposure, or provider calls are added.
+- Warning job behavior is backend-owned and uses recorded deadline events as source
+  of truth.
+- Re-running the job for the same due deadline events creates no duplicate warning
+  events.
+- No notification provider calls or side effects are introduced.
+- Missing or malformed deadline/policy data fails closed with stable SLA errors or
+  is safely skipped with test coverage.
 
 ## Verification Commands
 
@@ -62,6 +65,6 @@ durable, idempotent source of truth.
 
 ## Completion Notes
 
-If checks pass, append evidence/trust for `F3-01C`, mark `F3-01C` done in
-`.forge/backlog.md`, and set `.forge/state.md` to `Needs Verify` because SLA
-warning and breach jobs build on these recorded deadline events.
+If checks pass, append evidence/trust for `F3-02A`, mark `F3-02A` done in
+`.forge/backlog.md`, and set `.forge/state.md` to `Needs Verify` because this is
+the first reusable SLA job/idempotency pattern.
