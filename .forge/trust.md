@@ -2203,3 +2203,40 @@ starting Phase 3 planning.
     workflow/audit persistence to the complaints service.
   - No OTP/session/tracking read has been added yet, so reference-number-only
     tracking is still impossible by absence of any tracking route.
+
+## VERIFY-F4-01C - Public Portal Submission Boundary
+
+- Date: 2026-06-19
+- Required model tier: independent VERIFY
+- Builder honesty: Inflated
+- Code quality: Acceptable
+- Recommendation: Repair
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- portal` (4/4)
+  - Passed: `corepack pnpm test:api -- workflow` (36/36)
+  - Passed: `corepack pnpm openapi:check`
+- Findings:
+  - `PortalComplaintRequest` and `create-portal.dto.ts` expose `customerNumber` at
+    the public portal boundary. That field flows into `ComplaintsService` as
+    `customerNumber` and `ComplaintsRepository` persists it to `Customer.dmsCode`.
+    `REQ-PORTAL-001` forbids staff-only fields exposed to customers, and
+    `PORTAL-SEC-001` says DMS customer code is not accessible in the customer
+    portal.
+- Scope review:
+  - `POST /portal/complaints` delegates through `PortalService.submitComplaint`.
+  - `PortalService` imports only `ComplaintsService`, not complaint repositories,
+    DTO folders, or Prisma model types.
+  - Invalid portal input rejects before service writes.
+  - Portal submission rate limiting records safe `SECURITY` audit metadata without
+    logging phone numbers, OTPs, tokens, hashes, or provider secrets.
+  - Complaint persistence still runs through `ComplaintsService.createInternal`,
+    which writes complaint, initial status history, and COMPLAINT audit in one
+    transaction.
+  - No OTP/session/tracking/timeline/UI/schema/provider behavior was added.
+- Required repair:
+  - Remove DMS customer-number input from the public portal DTO and OpenAPI schema,
+    force portal submission to delegate with `customerNumber: null`, and update
+    portal/workflow tests to prove the public boundary does not accept or forward it.

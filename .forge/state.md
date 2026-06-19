@@ -1,8 +1,21 @@
 # Current State
 
-Status: Needs Verify
+Status: Needs Repair
 Phase: Phase 4 - Customer Portal
-Next Task: VERIFY-F4-01C - Public Portal Submission Boundary
+Next Task: REPAIR-F4-01C - Remove DMS Customer Number From Public Portal Submission
+
+## VERIFY-F4-01C Repair Required
+
+Independent VERIFY re-ran the required proof surface successfully: lint,
+typecheck, test 20/20, test:api -- portal 4/4, test:api -- workflow 36/36, and
+openapi:check.
+
+Decision: Repair. `PortalComplaintRequest` and the public portal DTO include
+`customerNumber`, which maps to the DMS customer-code path in complaint creation.
+`REQ-PORTAL-001` forbids staff-only fields exposed to customers, and
+`PORTAL-SEC-001` marks DMS customer code as not accessible in the customer portal.
+Remove that field from the public portal boundary before OTP/tracking work builds
+on this route.
 
 ## F4-01C Built - Verify Gate
 
