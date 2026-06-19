@@ -2865,3 +2865,60 @@ Append build and verification evidence here. Do not delete failed evidence.
   - Trust boundaries are tested: Passed; notifications tests cover allowed queued
     in-app write, blank template denial, unsafe secret payload denial, and non-plain
     object denial before write.
+
+## F3-03A3 - Queue Escalation Notification Events After SLA Breach Commit
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-NOTIFY-001
+  - REQ-SLA-001
+  - SLA-CALENDAR-001
+  - ARCH-WORKFLOW-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Imported `NotificationsModule` into `SlaModule` so SLA depends on the
+    notifications public service boundary, not its repository, DTOs, Prisma models,
+    routes, workers, or provider code.
+  - Injected `NotificationsService` into `SlaService`.
+  - Updated `SlaService.runBreachJob` to call `NotificationsService.queueInternal`
+    only after `SlaRepository.createBreachEvent` reports a newly inserted breach.
+  - Queued notification payload uses backend-owned breach context only: complaint ID,
+    policy ID, stage, due timestamp, and breach idempotency key.
+  - Kept `recipientUserId` nullable; no staff routing query was invented.
+  - Added focused SLA API coverage proving a newly created breach queues one
+    internal notification, duplicate retry does not queue another notification,
+    and future/terminal skips still do not queue.
+  - No provider delivery, template management, HTTP routes, OpenAPI paths, BullMQ
+    workers, schema changes, migrations, UI, portal behavior, reports, or direct
+    writes to another module's table were added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- sla` (16/16)
+  - Passed: `corepack pnpm test:api -- notifications` (5/5)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not
+    applicable at HTTP/session boundary; no route, session, role, branch-scope
+    decision, or client authority was added. The job uses backend-recorded SLA
+    deadline/breach data.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: This task adds a side effect
+    only after a new breach event insert reports success. It does not change
+    complaint status, history, or audit behavior.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed; the payload includes only complaint ID, policy ID, stage, due timestamp,
+    and breach idempotency key. No provider fields or credentials are accepted or
+    written.
+  - Customer portal exposure rules hold: Passed by scope; no portal route,
+    portal-visible DTO, internal comments, audit logs, DMS codes, or staff PII were
+    added.
+  - Trust boundaries are tested: Passed; SLA tests cover allowed queueing after a
+    new breach and denied/no-op queueing for duplicate retry, future deadline, and
+    terminal complaint skips.

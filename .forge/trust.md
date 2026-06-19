@@ -1849,3 +1849,56 @@ starting Phase 3 planning.
 - Gate:
   - This repairs the `F3-03A2` Verify Gate; AUTO PHASE stops at `Needs Verify`
     before `F3-03A3`.
+
+## VERIFY-F3-03A2-REPAIR - Queued Internal Notification Service Repair Gate
+
+- Date: 2026-06-19
+- Required model tier: independent VERIFY
+- Builder honesty: Honest
+- Code quality: Good
+- Recommendation: Accept
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (5/5)
+  - Passed: `corepack pnpm openapi:check`
+- Findings:
+  - No blocking findings.
+- Scope review:
+  - `NotificationsService.safePayload` now allows JSON primitives, arrays, and
+    plain objects while rejecting non-plain payload objects such as `Date`, `Map`,
+    and `Set` before repository writes.
+  - Existing unsafe payload-key denial remains intact and rejects before repository
+    writes.
+  - No provider delivery, routes, OpenAPI paths, BullMQ workers, SLA imports,
+    schema changes, migrations, UI, portal behavior, or template management was
+    added.
+- Decision:
+  - The repair clears the `F3-03A2` Verify Gate. Continue Phase 3 with `F3-03A3`.
+
+## F3-03A3 - SLA Escalation Notification Integration Build
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Needs Verify
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- sla` (16/16)
+  - Passed: `corepack pnpm test:api -- notifications` (5/5)
+  - Passed: `corepack pnpm openapi:check`
+- Build assessment:
+  - `SlaModule` imports `NotificationsModule`, and `SlaService` depends on
+    `NotificationsService` only.
+  - `runBreachJob` queues an internal notification only after a new breach insert.
+  - Duplicate breach retries, future deadlines, and terminal complaints skip without
+    notification queueing.
+  - No provider delivery, template management, routes, OpenAPI paths, BullMQ
+    workers, schema changes, migrations, UI, portal behavior, reports, or direct
+    notification-table writes from SLA were added.
+- Gate:
+  - `F3-03A3` is marked `Verify Gate: required`; AUTO PHASE stops at `Needs Verify`
+    before `F3-04A`.

@@ -3,6 +3,7 @@ import test from 'node:test';
 import { ComplaintSeverity, ComplaintStatus, SlaEventType, SlaStage, WorkingCalendarMode } from '@prisma/client';
 import type { PrismaService } from '../../src/core/http-kernel.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
+import { NotificationsService } from '../../src/modules/notifications/notifications.service.ts';
 import { SlaRepository } from '../../src/modules/sla/sla.repository.ts';
 import type { SlaDeadlineBreachRecord, SlaDeadlineWarningRecord, SlaPolicyRecord } from '../../src/modules/sla/sla.repository.ts';
 import { DEFAULT_SLA_DURATION_MINUTES, SlaService } from '../../src/modules/sla/sla.service.ts';
@@ -442,6 +443,7 @@ test('SLA warning job is a no-op when nothing is due', async () => {
 
 test('SLA breach job creates one reportable breach and skips duplicate retry', async () => {
   const breaches = new Map<string, { complaintId: string; policyId: string | null; stage: SlaStage; dueAt: Date; idempotencyKey: string }>();
+  const notifications: unknown[] = [];
   const runner = new SlaService({
     findDeadlineEventsForBreach: async () => [deadlineBreach({ idempotencyKey: 'deadline_due' })],
     createBreachEvent: async (event) => {
@@ -450,7 +452,12 @@ test('SLA breach job creates one reportable breach and skips duplicate retry', a
       breaches.set(event.idempotencyKey, event);
       return true;
     },
-  } as SlaRepository);
+  } as SlaRepository, {
+    queueInternal: async (input) => {
+      notifications.push(input);
+      return {} as never;
+    },
+  } as NotificationsService);
 
   assert.deepEqual(await runner.runBreachJob('2026-06-18T17:00:00.000Z'), {
     scanned: 1,
@@ -465,6 +472,18 @@ test('SLA breach job creates one reportable breach and skips duplicate retry', a
     breachIdempotencyKeys: [],
   });
   assert.equal(breaches.size, 1);
+  assert.deepEqual(notifications, [{
+    complaintId: 'cmp_1',
+    templateCode: 'sla.breach.internal',
+    locale: 'en',
+    payload: {
+      complaintId: 'cmp_1',
+      policyId: 'policy_1',
+      stage: SlaStage.INVESTIGATION,
+      dueAt: '2026-06-18T17:00:00.000Z',
+      breachIdempotencyKey: 'sla:breach:deadline_due',
+    },
+  }]);
 });
 
 test('SLA breach job skips future deadlines without writing', async () => {
@@ -475,7 +494,7 @@ test('SLA breach job skips future deadlines without writing', async () => {
       createCalled = true;
       throw new Error('should not create breach');
     },
-  } as unknown as SlaRepository);
+  } as unknown as SlaRepository, throwingNotifications());
 
   assert.deepEqual(await runner.runBreachJob('2026-06-18T17:00:00.000Z'), {
     scanned: 1,
@@ -494,7 +513,7 @@ test('SLA breach job skips terminal complaint status without writing', async () 
       createCalled = true;
       throw new Error('should not create breach');
     },
-  } as unknown as SlaRepository);
+  } as unknown as SlaRepository, throwingNotifications());
 
   assert.deepEqual(await runner.runBreachJob('2026-06-18T17:00:00.000Z'), {
     scanned: 1,
@@ -571,4 +590,12 @@ function deadlineBreach(overrides: DeadlineBreachOverrides = {}): SlaDeadlineBre
     complaint: complaint ?? { status: ComplaintStatus.IN_PROGRESS },
     ...rest,
   };
+}
+
+function throwingNotifications(): NotificationsService {
+  return {
+    queueInternal: async () => {
+      throw new Error('should not queue notification');
+    },
+  } as NotificationsService;
 }

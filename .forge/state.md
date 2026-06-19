@@ -2,7 +2,30 @@
 
 Status: Needs Verify
 Phase: Phase 3 - SLA And Workflow Operations
-Next Task: VERIFY-F3-03A2-REPAIR - Queued Internal Notification Service Repair Gate
+Next Task: VERIFY-F3-03A3 - SLA Escalation Notification Integration Gate
+
+## F3-03A3 Built - Verify Gate
+
+`F3-03A3` wired SLA breach creation to the notifications public service boundary.
+`SlaModule` imports `NotificationsModule`, and `SlaService.runBreachJob` now queues
+one internal `sla.breach.internal` notification only after a newly inserted breach
+event. Duplicate retries, future deadlines, and terminal `CLOSED`/`REJECTED`
+complaints do not queue notifications.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- sla 16/16,
+test:api -- notifications 5/5, and openapi:check.
+
+AUTO PHASE stops here because `F3-03A3` is marked `Verify Gate: required`.
+
+## VERIFY-F3-03A2-REPAIR Accepted - Gate Cleared
+
+Independent VERIFY accepted `REPAIR-F3-03A2`. `NotificationsService.safePayload`
+now allows JSON primitives, arrays, and plain objects, rejects non-plain payload
+objects such as `Date`, `Map`, and `Set` before repository writes, and preserves
+unsafe payload-key denial.
+
+Verification re-ran and passed: lint, typecheck, test 20/20, test:api --
+notifications 5/5, and openapi:check. Phase 3 continues with `F3-03A3`.
 
 ## REPAIR-F3-03A2 Built - Verify Gate
 

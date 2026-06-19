@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { ComplaintSeverity, ComplaintStatus, SlaStage, WorkingCalendarMode } from '@prisma/client';
 import { AppException } from '../../core/http-kernel.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { SlaRepository } from './sla.repository.js';
 import type { SlaDeadlineBreachRecord, SlaDeadlineWarningRecord, SlaPolicyRecord } from './sla.repository.js';
 
@@ -11,16 +12,7 @@ export const DEFAULT_SLA_DURATION_MINUTES: Record<ComplaintSeverity, number> = {
   [ComplaintSeverity.LOW]: 4320,
 };
 
-export type CalculateSlaDeadlineInput = {
-  policyId?: string | null;
-  severity?: ComplaintSeverity;
-  stage?: SlaStage;
-  durationMinutes?: number;
-  warningPercent?: number;
-  branchTimezone?: string;
-  workingCalendarMode?: WorkingCalendarMode;
-  enteredAt?: Date | string;
-};
+export type CalculateSlaDeadlineInput = { policyId?: string | null; severity?: ComplaintSeverity; stage?: SlaStage; durationMinutes?: number; warningPercent?: number; branchTimezone?: string; workingCalendarMode?: WorkingCalendarMode; enteredAt?: Date | string };
 
 export type SlaDeadline = {
   policyId: string | null;
@@ -32,41 +24,21 @@ export type SlaDeadline = {
   dueAt: string;
 };
 
-export type ResolveSlaPolicyInput = {
-  severity?: ComplaintSeverity;
-  stage?: SlaStage;
-  branchId?: string | null;
-  departmentId?: string | null;
-  categoryId?: string | null;
-};
+export type ResolveSlaPolicyInput = { severity?: ComplaintSeverity; stage?: SlaStage; branchId?: string | null; departmentId?: string | null; categoryId?: string | null };
 
 export type ResolvedSlaPolicy = Omit<SlaPolicyRecord, 'isActive' | 'updatedAt'>;
 
-export type RecordSlaDeadlineEventInput = ResolveSlaPolicyInput & {
-  complaintId: string;
-  enteredAt: Date | string;
-};
+export type RecordSlaDeadlineEventInput = ResolveSlaPolicyInput & { complaintId: string; enteredAt: Date | string };
 
-export type SlaDeadlineEventResult = {
-  complaintId: string;
-  policyId: string | null;
-  stage: SlaStage;
-  dueAt: string | null;
-  idempotencyKey: string;
-};
+export type SlaDeadlineEventResult = { complaintId: string; policyId: string | null; stage: SlaStage; dueAt: string | null; idempotencyKey: string };
 
-export type RunSlaWarningJobResult = {
-  scanned: number;
-  created: number;
-  skipped: number;
-  warningIdempotencyKeys: string[];
-};
+export type RunSlaWarningJobResult = { scanned: number; created: number; skipped: number; warningIdempotencyKeys: string[] };
 
 export type RunSlaBreachJobResult = { scanned: number; created: number; skipped: number; breachIdempotencyKeys: string[] };
 
 @Injectable()
 export class SlaService {
-  constructor(private readonly slaRepository: SlaRepository) {}
+  constructor(private readonly slaRepository: SlaRepository, private readonly notificationsService?: NotificationsService) {}
 
   async resolvePolicy(input: ResolveSlaPolicyInput): Promise<ResolvedSlaPolicy> {
     const severity = enumValue(input.severity, ComplaintSeverity, 'severity');
@@ -206,6 +178,12 @@ export class SlaService {
       if (created) {
         result.created += 1;
         result.breachIdempotencyKeys.push(idempotencyKey);
+        await this.notificationsService?.queueInternal({
+          complaintId: deadline.complaintId,
+          templateCode: 'sla.breach.internal',
+          locale: 'en',
+          payload: { complaintId: deadline.complaintId, policyId: deadline.policyId, stage: deadline.stage, dueAt: deadline.dueAt.toISOString(), breachIdempotencyKey: idempotencyKey },
+        });
       } else {
         result.skipped += 1;
       }
