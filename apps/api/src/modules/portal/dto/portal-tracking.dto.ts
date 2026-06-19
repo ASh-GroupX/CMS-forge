@@ -12,6 +12,10 @@ export type PortalTrackingOtpVerifyDto = {
   otp: string;
 };
 
+export type PortalFollowUpDto = {
+  body: string;
+};
+
 export function parsePortalTrackingOtpBody(body: unknown): PortalTrackingOtpRequestDto {
   const input = objectBody(body);
   return {
@@ -26,6 +30,10 @@ export function parsePortalTrackingOtpVerifyBody(body: unknown): PortalTrackingO
     verificationId: requiredText(input.verificationId, 'verificationId'),
     otp: requiredText(input.otp, 'otp'),
   };
+}
+
+export function parsePortalFollowUpBody(body: unknown): PortalFollowUpDto {
+  return { body: requiredText(objectBody(body).body, 'body') };
 }
 
 export function toPortalOtpInput(

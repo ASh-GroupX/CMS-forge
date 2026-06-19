@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { ComplaintTransitionRequestSource } from '@prisma/client';
+import { CommentVisibility, ComplaintStatus, ComplaintTransitionRequestSource } from '@prisma/client';
 import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
@@ -7,15 +7,17 @@ import { ComplaintsService } from '../complaints/complaints.service.js';
 import type { ComplaintCreationResult, CreateInternalComplaintInput } from '../complaints/complaints.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PortalRepository } from './portal.repository.js';
-import type { PortalVerificationChallengeRecord } from './portal.repository.js';
+import type { PortalSessionLookupRecord, PortalVerificationChallengeRecord } from './portal.repository.js';
 
 export type SubmitPortalComplaintInput = Omit<CreateInternalComplaintInput, 'actorId' | 'requestSource' | 'customerNumber'>;
 export type RequestPortalOtpInput = { referenceNumber: string; customerPhone: string; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type VerifyPortalOtpInput = { verificationId: string; otp: string; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type PortalTrackingInput = { sessionToken: string; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
+export type PortalFollowUpInput = PortalTrackingInput & { body: string };
 export type PortalOtpRequestResult = { ok: true };
 export type PortalSessionResult = { sessionToken: string; expiresAt: string };
 export type PortalTrackingResult = { referenceNumber: string; status: string; createdAt: string; updatedAt: string; timeline: Array<{ fromStatus: string | null; toStatus: string; action: string | null; createdAt: string }> };
+export type PortalFollowUpResult = { ok: true };
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const SESSION_TTL_MS = 30 * 60 * 1000;
@@ -100,8 +102,7 @@ export class PortalService {
   }
 
   async getTracking(input: PortalTrackingInput): Promise<PortalTrackingResult> {
-    const session = await this.portalRepository.findValidSession(hashSessionToken(requiredText(input.sessionToken)));
-    if (!session) throw verificationFailed();
+    const session = await this.requireSession(input.sessionToken);
     try {
       const complaint = await this.complaintsService.getDetail(session.complaintId);
       return {
@@ -117,6 +118,25 @@ export class PortalService {
     }
   }
 
+  async submitFollowUp(input: PortalFollowUpInput): Promise<PortalFollowUpResult> {
+    const session = await this.requireSession(input.sessionToken);
+    const complaint = await this.complaintsService.getDetail(session.complaintId).catch((error: unknown) => {
+      if (error instanceof AppException && error.code === 'COMPLAINT_NOT_FOUND') throw verificationFailed();
+      throw error;
+    });
+    if (complaint.status === ComplaintStatus.CLOSED || complaint.status === ComplaintStatus.REJECTED) throw verificationFailed();
+    await this.complaintsService.createComment({
+      complaintId: session.complaintId,
+      body: requiredText(input.body),
+      visibility: CommentVisibility.PUBLIC,
+      actorId: null,
+      correlationId: input.correlationId ?? null,
+      ipAddress: input.ipAddress ?? null,
+      userAgent: input.userAgent ?? null,
+    });
+    return { ok: true };
+  }
+
   private async expireVerification(verification: PortalVerificationChallengeRecord, input: VerifyPortalOtpInput): Promise<void> {
     await this.portalRepository.transaction(async (client) => {
       const result = await this.portalRepository.markExpired(verification.id, client);
@@ -129,6 +149,12 @@ export class PortalService {
       const result = await this.portalRepository.recordFailedAttempt(verification.id, verification.attempts + 1 >= MAX_OTP_ATTEMPTS, client);
       await this.auditService.record(portalAudit('portal_otp_failed', verification, input, { status: result.status, attempts: result.attempts }), client);
     });
+  }
+
+  private async requireSession(sessionToken: string): Promise<PortalSessionLookupRecord> {
+    const session = await this.portalRepository.findValidSession(hashSessionToken(requiredText(sessionToken)));
+    if (!session) throw verificationFailed();
+    return session;
   }
 }
 

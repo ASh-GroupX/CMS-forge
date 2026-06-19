@@ -2,8 +2,8 @@ import { Body, Controller, Get, Headers, Post, Req, UseGuards } from '@nestjs/co
 import type { IncomingMessage } from 'node:http';
 import { PortalSubmissionRateLimitGuard, PortalTrackingOtpRateLimitGuard } from '../../core/rate-limit.guard.js';
 import { parsePortalComplaintBody, toPortalComplaintInput } from './dto/create-portal.dto.js';
-import { parsePortalTrackingOtpBody, parsePortalTrackingOtpVerifyBody, toPortalOtpInput, toPortalOtpVerifyInput } from './dto/portal-tracking.dto.js';
-import type { PortalComplaintResponseDto, PortalOtpRequestResponseDto, PortalSessionResponseDto, PortalTrackingResponseDto } from './dto/portal-response.dto.js';
+import { parsePortalFollowUpBody, parsePortalTrackingOtpBody, parsePortalTrackingOtpVerifyBody, toPortalOtpInput, toPortalOtpVerifyInput } from './dto/portal-tracking.dto.js';
+import type { PortalComplaintResponseDto, PortalFollowUpResponseDto, PortalOtpRequestResponseDto, PortalSessionResponseDto, PortalTrackingResponseDto } from './dto/portal-response.dto.js';
 import { PortalService } from './portal.service.js';
 
 @Controller('portal')
@@ -46,6 +46,15 @@ export class PortalController {
     @Req() request: IncomingMessage & { correlationId?: string },
   ): Promise<PortalTrackingResponseDto> {
     return { complaint: await this.portalService.getTracking({ sessionToken: sessionToken ?? '', ...auditContext(request) }) };
+  }
+
+  @Post('tracking/follow-ups')
+  async submitFollowUp(
+    @Headers('x-portal-session') sessionToken: string | undefined,
+    @Body() body: unknown,
+    @Req() request: IncomingMessage & { correlationId?: string },
+  ): Promise<PortalFollowUpResponseDto> {
+    return this.portalService.submitFollowUp({ sessionToken: sessionToken ?? '', ...parsePortalFollowUpBody(body), ...auditContext(request) });
   }
 }
 

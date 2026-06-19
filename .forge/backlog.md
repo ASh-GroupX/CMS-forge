@@ -97,10 +97,10 @@ history from another project.
   - [x] REPAIR-F4-02B: Audit OTP verification failure outcomes
   - [x] F4-02C: Add verified portal tracking endpoint
 - [ ] F4-03: Portal-safe public timeline
-  - [ ] F4-03A: Add portal-safe timeline read model
-  - [ ] F4-03B: Add portal follow-up path for non-closed complaints
+  - [x] F4-03A: Add portal-safe timeline read model
+  - [x] F4-03B: Add portal follow-up path for non-closed complaints
 - [ ] F4-04: Portal privacy tests
-  - [ ] F4-04A: Add explicit portal privacy regression tests
+  - [x] F4-04A: Add explicit portal privacy regression tests
 
 ## Phase 5 - Attachments And Notifications
 

@@ -53,6 +53,29 @@ test('portal submission route delegates parsed public request context', async ()
   assert.equal('customerNumber' in (calls[0] as Record<string, unknown>), false);
 });
 
+test('portal privacy regression strips DMS customer identifiers from public submission', async () => {
+  const calls: unknown[] = [];
+  const controller = new PortalController({
+    submitComplaint: async (input) => {
+      calls.push(input);
+      return { id: 'cmp_portal', referenceNumber: 'CMP-000010', status: ComplaintStatus.SUBMITTED };
+    },
+  } as PortalService);
+
+  await controller.submitComplaint({
+    ...validBody(),
+    customerNumber: 'DMS-SECRET',
+    customerCode: 'DMS-CODE-SECRET',
+    dmsCustomerCode: 'DMS-CUSTOMER-SECRET',
+  }, request());
+
+  const input = calls[0] as Record<string, unknown>;
+  assert.equal('customerNumber' in input, false);
+  assert.equal('customerCode' in input, false);
+  assert.equal('dmsCustomerCode' in input, false);
+  assert.equal(JSON.stringify(input).includes('DMS-'), false);
+});
+
 test('portal submission route rejects invalid body before service call', async () => {
   let called = false;
   const controller = new PortalController({

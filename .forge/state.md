@@ -1,8 +1,52 @@
 # Current State
 
-Status: Blocked
+Status: Needs Phase Review
 Phase: Phase 4 - Customer Portal
-Next Task: REPAIR-F4-03A-PROOF - Align generator manifest test
+Next Task: PHASE-4-REVIEW - Customer Portal Acceptance Review
+
+## Phase 4 Build Complete - Needs Phase Review
+
+`F4-04A` added explicit privacy regressions across the customer portal submission,
+OTP/session, tracking, timeline, and follow-up API slices. The tests prove public
+submission strips DMS customer identifiers, reference-number-only tracking and
+follow-up input are rejected, portal tracking excludes internal comments, audit
+logs, DMS codes, staff PII, unrelated complaints, OTP data, and session secrets,
+and follow-up input cannot force internal visibility or staff actor metadata.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- portal 5/5,
+test:api -- portal.tracking 23/23, openapi:check, and git diff --check with
+line-ending warnings only.
+
+AUTO PHASE stops here. Phase 4 now needs the mandatory `PHASE-REVIEWER` gate
+before Phase 5 can start.
+
+## F4-03B Built - AUTO PHASE Continuing
+
+`F4-03B` added `POST /portal/tracking/follow-ups` for verified customer follow-up
+messages. The route accepts only the portal session header, public body text, and
+server-derived request context. The service validates the hashed portal session,
+rejects `CLOSED` and `REJECTED` complaints, and delegates the write to
+`ComplaintsService.createComment` with `PUBLIC` visibility and `actorId: null`.
+The response is only `{ ok: true }`.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- portal.tracking
+22/22, test:api -- workflow 37/37, openapi:check, and git diff --check with
+line-ending warnings only.
+
+AUTO PHASE remains in Phase 4 and continues with `F4-04A`.
+
+## REPAIR-F4-03A-PROOF Accepted - AUTO PHASE Ready To Continue
+
+The `F4-03A` proof blocker is cleared. The required repair proof surface passed:
+lint, typecheck, test 29/29, test:api -- portal.tracking 18/18, openapi:check,
+and git diff --check.
+
+No portal behavior changes were needed during this repair. `F4-03A` remains
+accepted: verified tracking is session-gated and its timeline returns only
+public-safe status movement fields (`fromStatus`, `toStatus`, `action`, and
+`createdAt`).
+
+Phase 4 continues with `F4-03B`.
 
 ## F4-03A Blocked - Proof Repair Required
 

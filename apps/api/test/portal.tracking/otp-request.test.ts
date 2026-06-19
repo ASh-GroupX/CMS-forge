@@ -361,6 +361,37 @@ test('portal tracking route delegates only portal session token and request cont
   assert.equal('referenceNumber' in (calls[0] as Record<string, unknown>), false);
 });
 
+test('portal privacy regression rejects reference-only tracking and follow-up route input', async () => {
+  const calls: unknown[] = [];
+  const controller = new PortalController({
+    getTracking: async (input) => {
+      calls.push(input);
+      throw verificationFailed();
+    },
+    submitFollowUp: async (input) => {
+      calls.push(input);
+      throw verificationFailed();
+    },
+  } as PortalService);
+
+  await assert.rejects(
+    controller.getTracking(undefined, request({ body: { referenceNumber: 'CMP-000010' } })),
+    (error: unknown) => error instanceof AppException && error.code === 'PORTAL_VERIFICATION_FAILED',
+  );
+  await assert.rejects(
+    controller.submitFollowUp(undefined, { referenceNumber: 'CMP-000010', body: 'Customer update' }, request()),
+    (error: unknown) => error instanceof AppException && error.code === 'PORTAL_VERIFICATION_FAILED',
+  );
+
+  assert.deepEqual(calls, [
+    { sessionToken: '', correlationId: 'req_portal_otp', ipAddress: '203.0.113.91', userAgent: 'node:test' },
+    { sessionToken: '', body: 'Customer update', correlationId: 'req_portal_otp', ipAddress: '203.0.113.91', userAgent: 'node:test' },
+  ]);
+  for (const call of calls) {
+    assert.equal('referenceNumber' in (call as Record<string, unknown>), false);
+  }
+});
+
 test('portal tracking returns only portal-safe complaint fields for a valid session', async () => {
   const lookups: string[] = [];
   const service = new PortalService(
@@ -389,6 +420,15 @@ test('portal tracking returns only portal-safe complaint fields for a valid sess
             correlationId: 'req_internal',
             createdAt: '2026-06-19T10:01:00.000Z',
           }],
+          internalComments: [{ body: 'staff only note', author: { email: 'staff@example.test' } }],
+          auditLogs: [{ action: 'internal', actorId: 'usr_staff' }],
+          dmsCustomerCode: 'DMS-CUSTOMER-SECRET',
+          staffEmail: 'staff@example.test',
+          unrelatedComplaints: [{ referenceNumber: 'CMP-000011' }],
+          otp: '123456',
+          otpHash: 'sha256:secret',
+          sessionToken: 'portal_token',
+          sessionHash: 'sha256:session',
         };
       },
     } as never,
@@ -454,6 +494,88 @@ test('portal repository validates sessions by hash without selecting stored hash
   });
 });
 
+test('portal follow-up route delegates only portal session token, body, and request context', async () => {
+  const calls: unknown[] = [];
+  const controller = new PortalController({
+    submitFollowUp: async (input) => {
+      calls.push(input);
+      return { ok: true };
+    },
+  } as PortalService);
+
+  const response = await controller.submitFollowUp(' portal_token ', { body: ' Customer update ', referenceNumber: 'CMP-000010', visibility: 'INTERNAL', actorId: 'usr_staff', authorId: 'usr_staff', staffEmail: 'staff@example.test' }, request());
+
+  assert.deepEqual(response, { ok: true });
+  assert.deepEqual(Object.keys(response), ['ok']);
+  assert.deepEqual(calls[0], { sessionToken: ' portal_token ', body: 'Customer update', correlationId: 'req_portal_otp', ipAddress: '203.0.113.91', userAgent: 'node:test' });
+  assert.equal('referenceNumber' in (calls[0] as Record<string, unknown>), false);
+  assert.equal('visibility' in (calls[0] as Record<string, unknown>), false);
+  assert.equal('actorId' in (calls[0] as Record<string, unknown>), false);
+  assert.equal('authorId' in (calls[0] as Record<string, unknown>), false);
+  assert.equal('staffEmail' in (calls[0] as Record<string, unknown>), false);
+});
+
+test('portal follow-up writes a public comment only for a valid non-closed session complaint', async () => {
+  const comments: unknown[] = [];
+  const service = new PortalService(
+    {
+      getDetail: async () => ({ referenceNumber: 'CMP-000010', status: ComplaintStatus.IN_PROGRESS, createdAt: '2026-06-19T10:00:00.000Z', updatedAt: '2026-06-19T10:10:00.000Z', statusHistory: [] }),
+      createComment: async (input) => {
+        comments.push(input);
+        return { id: 'cmt_1', complaintId: input.complaintId, body: input.body, visibility: input.visibility, authorId: input.actorId ?? null, createdAt: '2026-06-19T10:20:00.000Z' };
+      },
+    } as never,
+    { findValidSession: async () => ({ id: 'ses_1', complaintId: 'cmp_1', customerId: 'cus_1', expiresAt: new Date('2026-06-19T10:30:00.000Z') }) } as never,
+    {} as never,
+    { record: async () => undefined } as AuditService,
+  );
+
+  assert.deepEqual(await service.submitFollowUp({ sessionToken: 'portal_token', body: ' Customer update ', correlationId: 'req_follow', ipAddress: '203.0.113.93' }), { ok: true });
+  assert.deepEqual(comments[0], { complaintId: 'cmp_1', body: 'Customer update', visibility: 'PUBLIC', actorId: null, correlationId: 'req_follow', ipAddress: '203.0.113.93', userAgent: null });
+});
+
+test('portal follow-up denies invalid sessions before complaint or comment access', async () => {
+  let complaintRead = false;
+  let commentWritten = false;
+  const service = new PortalService(
+    {
+      getDetail: async () => { complaintRead = true; throw new Error('should not read complaint'); },
+      createComment: async () => { commentWritten = true; throw new Error('should not write comment'); },
+    } as never,
+    { findValidSession: async () => null } as never,
+    {} as never,
+    { record: async () => undefined } as AuditService,
+  );
+
+  await assert.rejects(
+    service.submitFollowUp({ sessionToken: 'portal_token', body: 'Customer update' }),
+    (error: unknown) => error instanceof AppException && error.code === 'PORTAL_VERIFICATION_FAILED',
+  );
+  assert.equal(complaintRead, false);
+  assert.equal(commentWritten, false);
+});
+
+test('portal follow-up denies closed or rejected complaints before comment write', async () => {
+  for (const status of [ComplaintStatus.CLOSED, ComplaintStatus.REJECTED]) {
+    let commentWritten = false;
+    const service = new PortalService(
+      {
+        getDetail: async () => ({ referenceNumber: 'CMP-000010', status, createdAt: '2026-06-19T10:00:00.000Z', updatedAt: '2026-06-19T10:10:00.000Z', statusHistory: [] }),
+        createComment: async () => { commentWritten = true; throw new Error('should not write comment'); },
+      } as never,
+      { findValidSession: async () => ({ id: 'ses_1', complaintId: 'cmp_1', customerId: 'cus_1', expiresAt: new Date('2026-06-19T10:30:00.000Z') }) } as never,
+      {} as never,
+      { record: async () => undefined } as AuditService,
+    );
+
+    await assert.rejects(
+      service.submitFollowUp({ sessionToken: 'portal_token', body: 'Customer update' }),
+      (error: unknown) => error instanceof AppException && error.code === 'PORTAL_VERIFICATION_FAILED',
+    );
+    assert.equal(commentWritten, false);
+  }
+});
+
 function testOtpHash(otp: string): string {
   const salt = '0123456789abcdef0123456789abcdef';
   return `sha256:${salt}:${createHash('sha256').update(`${salt}:${otp}`).digest('hex')}`;
@@ -486,7 +608,11 @@ function assertSafePortalAudit(record: AuditRecordInput, otp: string): void {
 
 function assertPortalTrackingSafe(record: unknown): void {
   const body = JSON.stringify(record);
-  for (const blocked of ['description', 'statusHistory', 'actorId', 'reason', 'ownerId', 'branchId', 'DMS', 'audit', 'sessionToken', 'sessionHash', 'otpHash']) {
+  for (const blocked of ['description', 'statusHistory', 'actorId', 'reason', 'ownerId', 'branchId', 'DMS', 'audit', 'internalComments', 'staff@example.test', 'unrelatedComplaints', 'CMP-000011', 'sessionToken', 'sessionHash', 'otpHash', '123456']) {
     assert.equal(body.includes(blocked), false);
   }
+}
+
+function verificationFailed(): AppException {
+  return new AppException('PORTAL_VERIFICATION_FAILED', 'Portal verification failed', 400);
 }

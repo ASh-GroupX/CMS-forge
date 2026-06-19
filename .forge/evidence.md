@@ -3465,6 +3465,80 @@ Assumptions and gaps:
   - Trust boundaries are tested: Passed in `portal.tracking`; final acceptance is
     blocked by the unrelated required root test failure above.
 
+## REPAIR-F4-03A-PROOF - Align Generator Manifest Test
+
+- Date: 2026-06-19
+- Risk: Medium
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Repairs:
+  - F4-03A - Add portal-safe timeline read model
+- Evidence:
+  - The generator manifest proof blocker is cleared. `tools/generate-module.test.mjs`
+    now matches the current generated `MODULE.md` frontmatter/sectioned format.
+  - No portal behavior changes were needed during this repair.
+  - `F4-03A` remains the accepted Phase 4 behavior: verified tracking includes a
+    portal-safe timeline with only `fromStatus`, `toStatus`, `action`, and
+    `createdAt`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- portal.tracking` (18/18)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check`
+
+## F4-03B - Add Portal Follow-Up Path For Non-Closed Complaints
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-PORTAL-002
+  - PORTAL-SEC-001
+  - ARCH-WORKFLOW-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Added `POST /portal/tracking/follow-ups`.
+  - The route accepts only `x-portal-session`, a public `body`, and server-derived
+    request context; reference numbers and client-supplied visibility are ignored.
+  - `PortalService.submitFollowUp` validates the portal session by hash through
+    `PortalRepository.findValidSession`, reads the complaint through
+    `ComplaintsService.getDetail`, rejects `CLOSED` and `REJECTED`, and writes the
+    follow-up through `ComplaintsService.createComment` with `PUBLIC` visibility
+    and `actorId: null`.
+  - The public response is only `{ ok: true }`.
+  - OpenAPI documents the follow-up route and its request/response schemas.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- portal.tracking` (22/22)
+  - Passed: `corepack pnpm test:api -- workflow` (37/37)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. Portal follow-up accepts no staff role or branch authority;
+    access comes from the verified portal session.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed. Follow-up comments are
+    written through `ComplaintsService.createComment`, and workflow tests prove the
+    public comment plus COMMENT audit share the same transaction.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed. The route returns `{ ok: true }`; tests prove session hashes are not
+    selected and no session token/hash or OTP fields are returned.
+  - Customer portal exposure rules hold: Passed. The route never returns internal
+    comments, audit logs, DMS codes, staff PII, unrelated complaints, OTP values,
+    OTP hashes, session tokens, or session hashes.
+  - Trust boundaries are tested: Passed. `portal.tracking` covers allowed follow-up,
+    invalid-session denial before reads/writes, and closed/rejected denial before
+    comment writes; workflow covers same-transaction public comment audit safety.
+
+
 ## FORGE-OKF-MODULE-CONTEXT-001 - OKF-Style Module Manifests
 
 - Date: 2026-06-19
@@ -3528,3 +3602,55 @@ Assumptions and gaps:
   - Passed: `corepack pnpm test` (29/29; added manifest truth tests for undeclared dependency failure, declared dependency pass, undeclared table failure, and real-repo hold)
 - Notes:
   - No old SLA business behavior was fixed. SLA remains known runtime debt for scheduling/job execution.
+
+## F4-04A - Add Explicit Portal Privacy Regression Tests
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-PORTAL-001
+  - REQ-PORTAL-002
+  - PORTAL-SEC-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Added an explicit public submission regression proving DMS customer identifiers
+    (`customerNumber`, `customerCode`, and `dmsCustomerCode`) are stripped before
+    the portal service receives input.
+  - Added a reference-only tracking/follow-up regression proving route input with
+    a reference number but no `x-portal-session` is denied and the reference
+    number is not delegated.
+  - Strengthened portal tracking response privacy coverage with unsafe source
+    fields for internal comments, audit logs, DMS codes, staff email, unrelated
+    complaints, OTP values, OTP hashes, session tokens, and session hashes.
+  - Strengthened follow-up route privacy coverage proving client input cannot
+    force internal visibility or staff actor metadata, and the response remains
+    only `{ ok: true }`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- portal` (5/5)
+  - Passed: `corepack pnpm test:api -- portal.tracking` (23/23)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed. The privacy regressions prove public portal routes ignore actor,
+    staff, visibility, and DMS identity fields supplied by the client.
+  - Every state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added regression tests only; the covered follow-up write still delegates to
+    the already-proven complaints transaction path.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. Tracking tests inject OTP/session/hash fields into source
+    data and prove the portal response excludes them.
+  - Customer portal exposure rules hold: Passed. Tests prove portal tracking and
+    follow-up responses do not expose internal comments, audit logs, DMS customer
+    codes, staff PII, unrelated complaints, OTP values, OTP hashes, session
+    tokens, or session hashes.
+  - Trust boundaries are tested: Passed. Coverage includes public submission
+    sanitization, reference-only denial, verified tracking response filtering,
+    and follow-up input sanitization.

@@ -358,6 +358,43 @@ test('public comment reads exclude internal comments', async () => {
   }]);
 });
 
+test('customer portal public follow-up comment audits safely in the complaint transaction', async () => {
+  const txClient = {};
+  const auditRecords: Array<{ input: AuditRecordInput; client: unknown }> = [];
+  const service = new ComplaintsService({
+    transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
+    createComment: async (data, client) => {
+      assert.equal(client, txClient);
+      assert.deepEqual(data, { complaintId: 'cmp_1', authorId: null, body: 'Customer update', visibility: CommentVisibility.PUBLIC });
+      return { id: 'cmt_portal', complaintId: data.complaintId, authorId: null, body: data.body, visibility: data.visibility, createdAt: new Date('2026-06-18T11:20:00.000Z') };
+    },
+  } as ComplaintsRepository, {
+    record: async (input, client) => auditRecords.push({ input, client }),
+  } as unknown as AuditService);
+
+  assert.deepEqual(await service.createComment({
+    complaintId: 'cmp_1',
+    body: ' Customer update ',
+    visibility: CommentVisibility.PUBLIC,
+    actorId: null,
+    correlationId: 'req_portal_follow',
+    ipAddress: '203.0.113.88',
+    userAgent: 'node:test',
+  }), {
+    id: 'cmt_portal',
+    complaintId: 'cmp_1',
+    authorId: null,
+    body: 'Customer update',
+    visibility: CommentVisibility.PUBLIC,
+    createdAt: '2026-06-18T11:20:00.000Z',
+  });
+  assert.equal(auditRecords[0]?.client, txClient);
+  assert.equal(auditRecords[0]?.input.eventType, 'COMMENT');
+  assert.equal(auditRecords[0]?.input.action, 'public_comment_created');
+  assert.equal(auditRecords[0]?.input.actorId, null);
+  assert.deepEqual(auditRecords[0]?.input.metadata, { complaintId: 'cmp_1', visibility: CommentVisibility.PUBLIC });
+});
+
 test('complaint comment route verifies scoped detail then delegates creation', async () => {
   const calls: unknown[] = [];
   const controller = new ComplaintsController({

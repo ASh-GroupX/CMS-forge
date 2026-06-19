@@ -974,6 +974,58 @@
         }
       }
     },
+    "/portal/tracking/follow-ups": {
+      "post": {
+        "tags": [
+          "Portal"
+        ],
+        "operationId": "portalTrackingFollowUpCreate",
+        "summary": "Create a verified public customer follow-up",
+        "parameters": [
+          {
+            "name": "x-portal-session",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalFollowUpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Follow-up accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalFollowUpResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request, expired session, or closed complaint (PORTAL_VERIFICATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/portal/tracking/otp": {
       "post": {
         "tags": [
@@ -2038,6 +2090,31 @@
               }
             },
             "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortalFollowUpRequest": {
+        "type": "object",
+        "required": [
+          "body"
+        ],
+        "properties": {
+          "body": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortalFollowUpResponse": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "const": true
           }
         },
         "additionalProperties": false

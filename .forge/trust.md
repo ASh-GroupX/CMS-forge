@@ -2425,6 +2425,48 @@ Residual risk: this is a required customer-portal privacy gate. A fresh verifier
   - Do not mark `F4-03A` done until that proof repair is made and the full required
     proof surface passes.
 
+## REPAIR-F4-03A-PROOF - Align Generator Manifest Test
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: Medium
+- Recommendation: Accept `F4-03A`; continue Phase 4 with `F4-03B`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- portal.tracking` (18/18)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check`
+- Notes:
+  - The root proof blocker is cleared. The generator manifest test now aligns with
+    the current frontmatter/sectioned manifest format.
+  - No additional portal behavior change was required for the repair.
+  - `F4-03A` is acceptable: verified tracking remains session-gated and returns
+    only public status movement fields in the timeline.
+
+## F4-03B - Add Portal Follow-Up Path For Non-Closed Complaints
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Continue Phase 4 AUTO PHASE with `F4-04A`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- portal.tracking` (22/22)
+  - Passed: `corepack pnpm test:api -- workflow` (37/37)
+  - Passed: `corepack pnpm openapi:check`
+- Notes:
+  - Portal follow-up is session-gated and does not accept a reference number,
+    client visibility, role, branch, or actor input.
+  - Follow-up writes reuse the complaints public service and keep COMMENT audit
+    inside the complaints transaction.
+  - Closed and rejected complaints fail closed before comment writes.
+  - Remaining Phase 4 work is explicit portal privacy regression coverage before
+    the phase review gate.
+
 ## FORGE-OKF-MODULE-CONTEXT-001 - OKF-Style Module Manifests
 
 - Date: 2026-06-19
@@ -2457,3 +2499,26 @@ Residual risk: this is a required customer-portal privacy gate. A fresh verifier
   - The OKF-style manifests are now checked against code for the cheap, static facts: module reachability, cross-module imports, and repository Prisma table usage.
   - This keeps Forge agentic without adding a knowledge service or parser dependency.
   - Remaining runtime truth, such as scheduled job registration, should be a separate gate when the project introduces a scheduler/worker mechanism.
+
+## F4-04A - Add Explicit Portal Privacy Regression Tests
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Phase 4 build work is complete; stop AUTO PHASE at mandatory `PHASE-REVIEWER`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- portal` (5/5)
+  - Passed: `corepack pnpm test:api -- portal.tracking` (23/23)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Added explicit privacy regressions across Phase 4 portal submission,
+    OTP/session/tracking, timeline, and follow-up behavior.
+  - Reference-number-only tracking and follow-up input remains rejected because
+    routes delegate only the portal session token and safe request context.
+  - Portal responses remain filtered away from internal comments, audit logs, DMS
+    identifiers, staff PII, unrelated complaints, OTP data, and session secrets.
+  - Follow-up input cannot force internal visibility or staff actor metadata.
