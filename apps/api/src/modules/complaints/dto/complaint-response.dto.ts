@@ -16,6 +16,19 @@ export type ComplaintQueueResponseDto = {
   items: ComplaintQueueItemDto[];
 };
 
+export type ComplaintSearchItemDto = ComplaintQueueItemDto & {
+  categoryId: string;
+  customerName: string;
+  customerPhone: string;
+  customerIdentifier: string | null;
+};
+
+export type ComplaintSearchResponseDto = {
+  items: ComplaintSearchItemDto[];
+  limit: number;
+  offset: number;
+};
+
 export type ComplaintStatusTimelineItemDto = {
   id: string;
   fromStatus: ComplaintStatus | null;

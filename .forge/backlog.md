@@ -212,12 +212,12 @@ any conflict. Carry-forward condition mapping is annotated inline.
   - [x] F7-01F: Scoped CSV/Excel export route with configured row limit and a
         same-transaction export audit entry; no unbounded export (REQ-REPORT-001
         AC3, AC4; RBAC-MATRIX-001)
-- [ ] F7-02: Complaint search read model and API (REQ-SEARCH-001, NFR-PERF-001) —
+- [x] F7-02: Complaint search read model and API (REQ-SEARCH-001, NFR-PERF-001) —
       builder reads REQ-SEARCH-001 first; may extend existing branch-scoped queue
       filtering rather than duplicate it
-  - [ ] F7-02A: Branch-scoped complaint search service (reference, customer,
+  - [x] F7-02A: Branch-scoped complaint search service (reference, customer,
         status, severity, owner, date-range) with RBAC + branch scope
-  - [ ] F7-02B: Search HTTP route with pagination, RBAC, branch scope, and OpenAPI
+  - [x] F7-02B: Search HTTP route with pagination, RBAC, branch scope, and OpenAPI
         (`test:api -- search`)
 - [ ] F7-03: Real session-bound staff UI data wiring (REQ-RBAC-001, UI-SCREEN-001
       AC2/AC3; **PHASE-6 carry-forward condition 1**)

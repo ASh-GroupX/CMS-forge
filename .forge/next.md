@@ -1,72 +1,45 @@
-# Build Task: F7-02A - Branch-Scoped Complaint Search Service
+# Plan Task: PLAN-F7-03A - Split Real Session-Bound Staff UI Data Wiring
 
-Status: Ready to Build
-Required model tier: BUILDER-STRONG
-Risk: High (search must respect RBAC and branch scope)
+Status: Ready to Plan
+Required model tier: PLANNER
+Risk: High (web authority must come from server session, not preview query params)
 Phase: Phase 7 - Reports, UAT, And Ops
 
 ## Goal
 
-Add the backend complaint search service/read model for REQ-SEARCH-001 with
-branch-scoped filtering. HTTP route and OpenAPI are F7-02B.
+Split F7-03A into the smallest buildable task(s) for real staff login and
+session-bound web data wiring.
 
-## Read First
+## Why Planning Is Required
 
-- `docs/CMS_AUTO_SRS.md` requirement `REQ-SEARCH-001`
-- Existing complaint queue/detail patterns in `apps/api/src/modules/complaints`
+The backlog item spans multiple authority boundaries: staff login UI/API calls,
+server component cookie forwarding, `/auth/me` principal resolution, and removal
+of `?role=` as an authority source before real data wiring. Building it as one
+task is likely to exceed the 1-5 file budget and risks weakening RBAC/branch
+scope.
 
-## Scope
+## Inputs
 
-- `apps/api/src/modules/complaints/complaints.service.ts`
-- `apps/api/src/modules/complaints/complaints.repository.ts`
-- `apps/api/test/workflow/complaint-create.test.ts` or a small search API suite
-- `tools/api-test.mjs` only if a new `search` suite is added
+- `.forge/backlog.md` Phase 7 F7-03
+- `.forge/trust.md` PHASE-6 carry-forward condition 1
+- `docs/CMS_AUTO_SRS.md` requirements:
+  - REQ-RBAC-001
+  - UI-SCREEN-001
+  - REQ-AUTH-001
+- Existing web staff shell and API client code under `apps/web/src`
+- Existing auth routes and `/auth/me` backend contract
 
-## Required Filters
+## Output
 
-- reference number
-- customer identifier/name/phone where safely available
-- status
-- severity
-- owner
-- date range
+- Write the first buildable F7-03A subtask to `.forge/next.md`.
+- Keep scope near 1-5 files plus tests.
+- Include exact proof commands.
+- Set `.forge/state.md` to `Ready to Build`.
 
-## Rules
+## Guardrails
 
-- No HTTP route yet; F7-02B owns controller/OpenAPI.
-- Branch scope is a service/repository input representing server-session scope.
-- Non-admin scoped users must not see out-of-branch complaints.
-- Prefer extending existing branch-scoped queue filtering rather than duplicating
-  a parallel query path.
-- No frontend change, schema/migration, provider call, or direct privacy leak.
-
-## Required Proof Commands
-
-- `corepack pnpm lint`
-- `corepack pnpm typecheck`
-- `corepack pnpm test`
-- `corepack pnpm test:api -- workflow`
-- `corepack pnpm openapi:check`
-- `git diff --check`
-
-## Acceptance Criteria
-
-- Complaint search service/read model supports the required filters.
-- Tests cover one allowed scoped result and one hidden out-of-branch result.
-- No route, OpenAPI path, frontend change, schema/migration, provider call, or
-  portal privacy leak is added.
-- All required proof commands run and pass; evidence records honest labels and
-  the High-risk security self-check.
-
-## Requirement IDs
-
-- REQ-SEARCH-001
-- REQ-RBAC-001
-- METHOD-MODULAR-001
-
-## On Completion
-
-- Append evidence to `.forge/evidence.md` and a trust note to `.forge/trust.md`.
-- Mark F7-02A done in `.forge/backlog.md`.
-- Write F7-02B (search HTTP route with pagination, RBAC, branch scope, and
-  OpenAPI) to `.forge/next.md` at `BUILDER-STRONG`.
+- No frontend authority from `?role=` for real data.
+- Roles and branch scope must come from the server session.
+- Do not wire real complaint/report data until the session principal source is
+  safe.
+- No browser token storage.

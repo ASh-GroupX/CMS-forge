@@ -1,13 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type {
-  CommentVisibility,
-  ComplaintSeverity,
-  ComplaintStatus,
-  ComplaintTransitionAction,
-  ComplaintTransitionRequestSource,
-  Prisma,
-  RoleCode,
-} from '@prisma/client';
+import type { CommentVisibility, ComplaintSeverity, ComplaintStatus, ComplaintTransitionAction, ComplaintTransitionRequestSource, Prisma, RoleCode } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
 
 type ComplaintTransitionClient = Pick<Prisma.TransactionClient, 'complaint' | 'complaintStatusHistory' | 'customer' | 'comment'>;
@@ -88,6 +80,9 @@ export type ListComplaintQueueFilter = {
 export type ComplaintReportFilter = ListComplaintQueueFilter & {
   dateFrom?: Date | string | null;
   dateTo?: Date | string | null;
+  referenceNumber?: string | null;
+  customer?: string | null;
+  status?: ComplaintStatus | null;
   categoryId?: string | null;
   severity?: ComplaintSeverity | null;
   ownerId?: string | null;
@@ -95,6 +90,12 @@ export type ComplaintReportFilter = ListComplaintQueueFilter & {
 
 export type ComplaintReportRecord = ComplaintQueueRecord & {
   categoryId: string;
+};
+
+export type ComplaintSearchRecord = ComplaintReportRecord & {
+  customerName: string;
+  customerPhone: string;
+  customerIdentifier: string | null;
 };
 
 export type ComplaintCommentRecord = { id: string; complaintId: string; authorId: string | null; body: string; visibility: CommentVisibility; createdAt: Date };
@@ -154,12 +155,28 @@ export class ComplaintsRepository {
     });
   }
 
-  async listForReports(filter: ComplaintReportFilter = {}, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintReportRecord[]> {
+  async listForReports(filter: ComplaintReportFilter = {}, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintSearchRecord[]> {
     return client.complaint.findMany({
       where: reportWhere(filter),
       orderBy: [{ createdAt: 'desc' }, { referenceNumber: 'asc' }],
-      select: { ...complaintSelect, ownerId: true, categoryId: true, createdAt: true, updatedAt: true },
-    });
+      select: {
+        ...complaintSelect,
+        ownerId: true,
+        categoryId: true,
+        createdAt: true,
+        updatedAt: true,
+        customer: { select: { nameEn: true, phone: true, dmsCode: true } },
+      },
+    }).then((items) => items.map(({ customer, ...item }) => ({
+      ...item,
+      customerName: customer.nameEn,
+      customerPhone: customer.phone,
+      customerIdentifier: customer.dmsCode,
+    })));
+  }
+
+  async search(filter: ComplaintReportFilter = {}, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintSearchRecord[]> {
+    return this.listForReports(filter, client);
   }
 
   async findDetail(id: string, filter: ListComplaintQueueFilter = {}, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintDetailRecord | null> {
@@ -259,11 +276,18 @@ const commentSelect = {
 function reportWhere(filter: ComplaintReportFilter): Prisma.ComplaintWhereInput {
   return {
     ...(filter.branchId ? { branchId: filter.branchId } : {}),
+    ...(filter.referenceNumber ? { referenceNumber: { contains: filter.referenceNumber, mode: 'insensitive' } } : {}),
+    ...(filter.customer ? { customer: { OR: customerSearch(filter.customer) } } : {}),
+    ...(filter.status ? { status: filter.status } : {}),
     ...(filter.categoryId ? { categoryId: filter.categoryId } : {}),
     ...(filter.severity ? { severity: filter.severity } : {}),
     ...(filter.ownerId ? { ownerId: filter.ownerId } : {}),
     ...dateRange(filter),
   };
+}
+
+function customerSearch(value: string): Prisma.CustomerWhereInput[] {
+  return ['nameEn', 'nameAr', 'phone', 'dmsCode'].map((field) => ({ [field]: { contains: value, mode: 'insensitive' } }));
 }
 
 function dateRange(filter: ComplaintReportFilter): Pick<Prisma.ComplaintWhereInput, 'createdAt'> {

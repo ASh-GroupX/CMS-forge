@@ -26,6 +26,10 @@ Read these files in order:
 
 If the task references requirements, also read `docs/CMS_AUTO_SRS.md`.
 
+`state.md` is a short current-state snapshot - read it whole, but it must stay
+small. `evidence.md` and `trust.md` are append-only logs: read only the latest /
+active-phase entries, never the whole file. Older history lives in `.forge/archive/`.
+
 ## 2. Decide Phase
 
 - If `state.md` says `Ready to Plan`, run PLAN.
@@ -50,7 +54,8 @@ Inputs:
 - `docs/CMS_AUTO_SRS.md`
 - `docs/ARCHITECTURE.md`
 - `CLAUDE.md` / `AGENTS.md`
-- latest `.forge/evidence.md` and `.forge/trust.md`
+- latest (active-phase) entries of `.forge/evidence.md` and `.forge/trust.md` -
+  never load the whole log; older history is in `.forge/archive/`
 
 Output:
 - Write one buildable task to `.forge/next.md`.
@@ -83,7 +88,9 @@ If checks pass:
   write a phase review task to `.forge/next.md` and set `.forge/state.md` to
   `Needs Phase Review`.
 - Otherwise write the next task or set `next.md` to `Needs planning`.
-- Update `.forge/state.md`.
+- Replace `.forge/state.md` with a short current-state snapshot - overwrite it, do
+  not append task narrative (per-task detail goes in `evidence.md`). When
+  `evidence.md`/`trust.md` outgrow a phase, rotate older phases into `.forge/archive/`.
 
 If checks fail:
 - Append failed evidence.

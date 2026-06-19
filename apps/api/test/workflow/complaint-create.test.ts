@@ -17,7 +17,7 @@ import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.g
 import { AppException } from '../../src/core/http-kernel.ts';
 import { ComplaintsController } from '../../src/modules/complaints/complaints.controller.ts';
 import { ComplaintsRepository } from '../../src/modules/complaints/complaints.repository.ts';
-import type { ComplaintDetailRecord, ComplaintQueueRecord } from '../../src/modules/complaints/complaints.repository.ts';
+import type { ComplaintDetailRecord, ComplaintQueueRecord, ComplaintSearchRecord } from '../../src/modules/complaints/complaints.repository.ts';
 import { ComplaintsService } from '../../src/modules/complaints/complaints.service.ts';
 
 test('complaint creation validates required fields before transaction', async () => {
@@ -228,6 +228,58 @@ test('complaint queue service returns explicit branch-scoped response objects', 
     createdAt: '2026-06-18T09:00:00.000Z',
     updatedAt: '2026-06-18T10:00:00.000Z',
   }]);
+});
+
+test('complaint search service maps required filters into safe branch-scoped rows', async () => {
+  const calls: unknown[] = [];
+  const service = new ComplaintsService({
+    search: async (filter) => {
+      calls.push(filter);
+      return [searchRecord('cmp_1', 'branch_main')];
+    },
+  } as ComplaintsRepository, { record: async () => undefined } as unknown as AuditService);
+
+  const rows = await service.search({
+    branchId: 'branch_main',
+    referenceNumber: 'CMP-000001',
+    customer: 'Faisal',
+    status: ComplaintStatus.SUBMITTED,
+    severity: ComplaintSeverity.HIGH,
+    ownerId: 'usr_owner',
+    dateFrom: '2026-06-18T00:00:00.000Z',
+    dateTo: '2026-06-19T00:00:00.000Z',
+  });
+
+  assert.deepEqual(calls[0], {
+    branchId: 'branch_main',
+    referenceNumber: 'CMP-000001',
+    customer: 'Faisal',
+    status: ComplaintStatus.SUBMITTED,
+    severity: ComplaintSeverity.HIGH,
+    ownerId: 'usr_owner',
+    dateFrom: '2026-06-18T00:00:00.000Z',
+    dateTo: '2026-06-19T00:00:00.000Z',
+  });
+  assert.deepEqual(rows, [{
+    ...validQueueItem(),
+    categoryId: 'cat_engine',
+    ownerId: 'usr_owner',
+    customerName: 'Faisal Al-Otaibi',
+    customerPhone: '+966500000001',
+    customerIdentifier: 'CUST-001',
+  }]);
+});
+
+test('complaint search service hides out-of-branch rows when branch scope is supplied', async () => {
+  const records = [
+    searchRecord('cmp_allowed', 'branch_main'),
+    searchRecord('cmp_hidden', 'branch_other'),
+  ];
+  const service = new ComplaintsService({
+    search: async (filter) => records.filter((record) => !filter.branchId || record.branchId === filter.branchId),
+  } as ComplaintsRepository, { record: async () => undefined } as unknown as AuditService);
+
+  assert.deepEqual((await service.search({ branchId: 'branch_main' })).map((row) => row.id), ['cmp_allowed']);
 });
 
 test('complaint queue route derives branch scope from query or server principal', async () => {
@@ -517,6 +569,24 @@ const detailRecord: ComplaintDetailRecord = {
     createdAt: new Date('2026-06-18T09:01:00.000Z'),
   }],
 };
+
+function searchRecord(id: string, branchId: string): ComplaintSearchRecord {
+  return {
+    id,
+    referenceNumber: id === 'cmp_1' ? 'CMP-000001' : id,
+    status: ComplaintStatus.SUBMITTED,
+    severity: ComplaintSeverity.HIGH,
+    subject: 'Engine noise',
+    branchId,
+    ownerId: 'usr_owner',
+    categoryId: 'cat_engine',
+    customerName: 'Faisal Al-Otaibi',
+    customerPhone: '+966500000001',
+    customerIdentifier: 'CUST-001',
+    createdAt: new Date('2026-06-18T09:00:00.000Z'),
+    updatedAt: new Date('2026-06-18T10:00:00.000Z'),
+  };
+}
 
 function validQueueItem() {
   return {

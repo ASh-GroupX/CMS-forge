@@ -14,6 +14,9 @@
 9. Auto phase mode may continue between successful build tasks, but it never
    skips proof commands, evidence, planner stops, blockers, or phase review.
 10. High and Critical tasks record a security self-check before acceptance.
+11. Context hygiene: `state.md` is a small snapshot - replace it each run, never
+    append. `evidence.md` and `trust.md` are append-only logs; read only the latest
+    entries and rotate older phases into `.forge/archive/`.
 
 ## CMS-Auto Rules
 

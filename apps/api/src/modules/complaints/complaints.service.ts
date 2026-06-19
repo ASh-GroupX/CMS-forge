@@ -5,7 +5,7 @@ import type { AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { ComplaintsRepository } from './complaints.repository.js';
-import type { ComplaintCommentRecord, ComplaintDetailRecord, ComplaintQueueRecord, ComplaintRecord, ComplaintReportFilter, ComplaintReportRecord, CreateComplaintData, PortalVerificationTargetRecord } from './complaints.repository.js';
+import type { ComplaintCommentRecord, ComplaintDetailRecord, ComplaintQueueRecord, ComplaintRecord, ComplaintReportFilter, ComplaintReportRecord, ComplaintSearchRecord, CreateComplaintData, PortalVerificationTargetRecord } from './complaints.repository.js';
 import type { ComplaintDetailDto, ComplaintQueueItemDto } from './dto/complaint-response.dto.js';
 
 export type ValidateComplaintTransitionInput = { fromStatus: ComplaintStatus; action: ComplaintTransitionAction; actorRole: RoleCode };
@@ -28,6 +28,8 @@ export type ComplaintCreationResult = { id: string; referenceNumber: string; sta
 
 export type ComplaintQueueFilter = { branchId?: string | null };
 export type ComplaintReportRow = ComplaintQueueItemDto & { categoryId: string };
+export type ComplaintSearchInput = ComplaintReportFilter;
+export type ComplaintSearchRow = ComplaintReportRow & { customerName: string; customerPhone: string; customerIdentifier: string | null };
 export type CreateComplaintCommentInput = { complaintId: string; body: string; visibility: CommentVisibility; actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type ComplaintCommentResult = { id: string; complaintId: string; body: string; visibility: CommentVisibility; authorId: string | null; createdAt: string };
 
@@ -87,6 +89,8 @@ export class ComplaintsService {
   async listQueue(filter: ComplaintQueueFilter = {}): Promise<ComplaintQueueItemDto[]> { return (await this.complaintsRepository.listQueue(filter)).map(queueItem); }
 
   async listForReports(filter: ComplaintReportFilter = {}): Promise<ComplaintReportRow[]> { return (await this.complaintsRepository.listForReports(filter)).map(reportItem); }
+
+  async search(input: ComplaintSearchInput = {}): Promise<ComplaintSearchRow[]> { return (await this.complaintsRepository.search(input)).map(searchItem); }
 
   async findPortalVerificationTarget(referenceNumber: string, customerPhone: string): Promise<PortalVerificationTargetRecord | null> {
     return this.complaintsRepository.findPortalVerificationTarget(referenceNumber.trim(), customerPhone.trim());
@@ -209,15 +213,14 @@ function complaintCreatedAudit(input: CreateInternalComplaintInput, complaint: C
 }
 
 function queueItem(complaint: ComplaintQueueRecord): ComplaintQueueItemDto {
-  return {
-    id: complaint.id, referenceNumber: complaint.referenceNumber, status: complaint.status,
-    severity: complaint.severity, subject: complaint.subject, branchId: complaint.branchId, ownerId: complaint.ownerId,
-    createdAt: complaint.createdAt.toISOString(),
-    updatedAt: complaint.updatedAt.toISOString(),
-  };
+  return { id: complaint.id, referenceNumber: complaint.referenceNumber, status: complaint.status, severity: complaint.severity, subject: complaint.subject, branchId: complaint.branchId, ownerId: complaint.ownerId, createdAt: complaint.createdAt.toISOString(), updatedAt: complaint.updatedAt.toISOString() };
 }
 
 function reportItem(complaint: ComplaintReportRecord): ComplaintReportRow { return { ...queueItem(complaint), categoryId: complaint.categoryId }; }
+
+function searchItem(complaint: ComplaintSearchRecord): ComplaintSearchRow {
+  return { ...reportItem(complaint), customerName: complaint.customerName, customerPhone: complaint.customerPhone, customerIdentifier: complaint.customerIdentifier };
+}
 
 function detailItem(complaint: ComplaintDetailRecord): ComplaintDetailDto {
   return { ...queueItem(complaint), description: complaint.descriptionEn, incidentAt: complaint.incidentAt?.toISOString() ?? null, statusHistory: complaint.statusHistory.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })) };
