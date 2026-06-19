@@ -1,8 +1,19 @@
 ﻿# Current State
 
-Status: Ready to Plan
+Status: Ready to Build
 Phase: Phase 6 - Staff UI
-Next Task: PLAN-F6-01D-PASSWORD-RESET-BACKEND-GAP
+Next Task: F6-01D1 - Add Backend Password Reset Request Token Foundation
+
+## PLAN-F6-01D-PASSWORD-RESET-BACKEND-GAP Complete - Backend Reset Path Selected
+
+Required tier used: `PLANNER`. `REQ-AUTH-001` AC6 and `UI-SCREEN-001` mark staff
+password reset as MVP/must, so UI-001A is not deferred without an explicit
+commercial exclusion.
+
+The backend prerequisite is split before returning to the UI contract:
+`F6-01D1` adds reset-request token persistence and generic service behavior,
+`F6-01D2` adds consume/reset behavior, `F6-01D3` adds HTTP routes/OpenAPI, and
+`F6-01D4` adds the staff password-reset UI contract.
 
 ## F6-01C Built - AUTO PHASE Stopped For Planning
 

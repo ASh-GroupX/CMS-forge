@@ -3296,3 +3296,22 @@ Residual risk: this is a required customer-portal privacy gate. A fresh verifier
   - Password reset backend routes are absent, so the next UI task should not be
     built until a planner splits the backend prerequisite or explicitly defers
     UI-001A.
+
+## PLAN-F6-01D-PASSWORD-RESET-BACKEND-GAP - Backend Reset Path Selected
+
+- Date: 2026-06-19
+- Required model tier: PLANNER
+- Risk: High
+- Recommendation: Continue with `F6-01D1`.
+- Decision:
+  - Do not defer UI-001A: `REQ-AUTH-001` AC6 and `UI-SCREEN-001` make staff
+    password reset an MVP/must requirement.
+  - Split the missing backend prerequisite into small slices before building the
+    UI contract: reset request token foundation, consume/reset behavior,
+    HTTP/OpenAPI routes, then the staff UI contract.
+- Notes:
+  - `auth.service.ts` is already close to the 300-line source budget; the
+    builder should keep the first slice narrow and use a small internal helper
+    or replan rather than exceed the agentic budget.
+  - `F6-01D1` intentionally does not add public routes, OpenAPI paths, provider
+    delivery, browser token storage, or UI.

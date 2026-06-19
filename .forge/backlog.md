@@ -145,7 +145,11 @@ history from another project.
   - [x] F6-01A: Bootstrap Next.js staff shell with localized RTL/LTR navigation
   - [x] F6-01B: Add staff login/logout UI with generic safe errors and session-aware shell states
   - [x] F6-01C: Add role-aware navigation visibility for staff/admin/management routes
-  - [ ] F6-01D: Add staff password-reset UI contract or stop for backend reset-route repair if endpoints are still absent
+  - [ ] F6-01D: Staff password reset flow
+    - [ ] F6-01D1: Add backend password-reset request token persistence and generic service result
+    - [ ] F6-01D2: Add backend password-reset consume behavior with expiry, single-use enforcement, password update, and audit
+    - [ ] F6-01D3: Add password-reset request/consume HTTP routes with OpenAPI and auth API tests
+    - [ ] F6-01D4: Add staff password-reset UI contract
 - [ ] F6-02: Staff home dashboard and work queues
   - [ ] F6-02A: Add minimal typed web API client/error mapping for staff complaint reads
   - [ ] F6-02B: Add role-specific dashboard summary cards for open, overdue, SLA warning, closed, and average TAT
