@@ -186,23 +186,79 @@ history from another project.
 
 ## Phase 7 - Reports, UAT, And Ops
 
-Phase 6 was accepted with conditions by PHASE-6-REVIEW (2026-06-19). The items
-below marked "(PHASE-6 carry-forward)" track conditions that must be sequenced by
-`PLAN-F7-01` or, where applicable, recorded as an explicit commercial exclusion
-per `UI-SCREEN-001` AC5. See `.forge/trust.md` → `PHASE-6-REVIEW`.
+Decomposed by `PLAN-F7-01` (2026-06-19) from SRS milestone `PLAN-M6` plus the
+homeless `PLAN-M5` portal UI screens and the five PHASE-6-REVIEW carry-forward
+conditions. Order is backend-first, then real session-bound UI wiring, then
+portal UI, then pre-pilot quality/ops/UAT/deploy. Each lettered subtask targets
+1-5 files plus tests and stays under the 300-line source budget; the SRS wins on
+any conflict. Carry-forward condition mapping is annotated inline.
 
-- [ ] F7-01: Operational dashboards and scoped exports (RBAC + branch-scope;
-      first real staff-UI data wiring must take role/branch from server session,
-      not the `?role=` preview param — PHASE-6 carry-forward condition 1)
-- [ ] F7-02: OpenAPI contract generation and drift check
-- [ ] F7-03: UAT scripts with realistic automotive complaint data
-- [ ] F7-04: Deployment and operations runbook
-- [ ] F7-05: Customer portal UI — UI-018 submission, UI-019 tracking, UI-020
-      survey (MVP/`must`, currently homeless; portal backend already exists)
-      (PHASE-6 carry-forward condition 4)
-- [ ] F7-06: Pre-pilot UI quality debt — real axe/keyboard/contrast accessibility
-      proof (L3) and the `destructive confirmation` UI state
-      (PHASE-6 carry-forward conditions 2 and 3)
-- [ ] F7-07: Wire `security:check` to the real security/auth/admin/audit suites
-      before pilot sign-off (carried from PHASE-1; PHASE-6 carry-forward
-      condition 5)
+- [ ] F7-01: Operational reports, dashboards, and scoped exports (REQ-REPORT-001,
+      RBAC-MATRIX-001, REQ-AUDIT-001)
+  - [ ] F7-01A: Generate `reports` backend module boundary + `MODULE.md`; wire
+        `ReportsModule` into the API root module (behavior-free scaffold)
+  - [ ] F7-01B: Decide + implement cross-module reporting read access (declared
+        allowed deps on complaints/SLA/surveys public services or a read-only
+        query model — must pass the manifest truth gate, never import another
+        module's repository)
+  - [ ] F7-01C: Dashboard summary read model — open, overdue, SLA-warning, closed,
+        and average TAT — with role + branch-scope filtering (REQ-REPORT-001 AC1,
+        AC4)
+  - [ ] F7-01D: Filtered report read models for the RPT-001..RPT-017 families with
+        date/branch/category/severity/owner filters and role + branch scope
+        (REQ-REPORT-001 AC2, AC4)
+  - [ ] F7-01E: Dashboard + report HTTP read routes with RBAC, branch scope, and
+        canonical OpenAPI (REQ-REPORT-001 AC1, AC2, AC4)
+  - [ ] F7-01F: Scoped CSV/Excel export route with configured row limit and a
+        same-transaction export audit entry; no unbounded export (REQ-REPORT-001
+        AC3, AC4; RBAC-MATRIX-001)
+- [ ] F7-02: Complaint search read model and API (REQ-SEARCH-001, NFR-PERF-001) —
+      builder reads REQ-SEARCH-001 first; may extend existing branch-scoped queue
+      filtering rather than duplicate it
+  - [ ] F7-02A: Branch-scoped complaint search service (reference, customer,
+        status, severity, owner, date-range) with RBAC + branch scope
+  - [ ] F7-02B: Search HTTP route with pagination, RBAC, branch scope, and OpenAPI
+        (`test:api -- search`)
+- [ ] F7-03: Real session-bound staff UI data wiring (REQ-RBAC-001, UI-SCREEN-001
+      AC2/AC3; **PHASE-6 carry-forward condition 1**)
+  - [ ] F7-03A: Real staff login + session-aware web data layer — call
+        `POST /auth/login`, forward the HttpOnly session cookie from server
+        components, resolve role/branch from `/auth/me`; the `?role=` query param
+        must no longer be an authority source (split further if oversized)
+  - [ ] F7-03B: Wire staff dashboard summary cards to the real dashboard read
+  - [ ] F7-03C: Wire reports dashboard + export affordance to the real report
+        reads and export route
+  - [ ] F7-03D: Wire work queue + complaint detail reads to real branch-scoped data
+- [ ] F7-04: Customer portal UI — homeless MVP/`must` screens; portal backend
+      already exists (REQ-PORTAL-001, REQ-PORTAL-002, REQ-SURVEY-001,
+      UI-DESIGN-001; **PHASE-6 carry-forward condition 4**). If any screen is cut,
+      record an explicit commercial exclusion per UI-SCREEN-001 AC5.
+  - [ ] F7-04A: Portal submission UI (UI-018) — localized RTL/LTR form, attachment
+        upload, reference-number result; no internal data exposed
+  - [ ] F7-04B: Portal tracking UI (UI-019) — reference + verification, public
+        status timeline, follow-up when allowed; no internal comments/audit/DMS/
+        staff PII
+  - [ ] F7-04C: Survey UI (UI-020) — one-time expiring link, 1-5 rating, optional
+        comment, used/expired handling
+- [ ] F7-05: Pre-pilot UI quality debt (QA-UI-001, UI-DESIGN-001; **PHASE-6
+      carry-forward conditions 2 and 3**)
+  - [ ] F7-05A: Real accessibility proof — keyboard traversal, focus visibility,
+        and WCAG contrast (axe/browser) beyond the static render checks
+  - [ ] F7-05B: `destructive confirmation` UI state + proof for deactivate, reject,
+        and close affordances
+- [ ] F7-06: OpenAPI contract finalization and Swagger UI (ARCH-API-001; original
+      "F7-02 OpenAPI contract generation and drift check") — confirm every
+      public/staff route is documented and `openapi:check` drift-enforced
+- [ ] F7-07: Operations and observability hardening (NFR-AVAIL-001, NFR-OBS-001,
+      NFR-DATA-001, NFR-PERF-001)
+  - [ ] F7-07A: Make `ops:backup:check` a real backup/health check (replace the
+        fail-loud placeholder)
+  - [ ] F7-07B: Make `test:performance` a real performance baseline (replace the
+        fail-loud placeholder)
+  - [ ] F7-07C: Wire `security:check` to the real security/auth/admin/audit suites
+        (**PHASE-6 carry-forward condition 5**; carried from PHASE-1)
+- [ ] F7-08: UAT scripts with realistic automotive complaint data (UI-SCREEN-001
+      AC1) — UAT checklist covering every MVP screen and the L4 seeded dataset
+- [ ] F7-09: Deployment and operations runbook (NFR-SEC-001 AC4) — HTTPS redirect
+      at the gateway and parameterizing `POSTGRES_HOST_AUTH_METHOD` off `trust`
+      before any non-dev deploy

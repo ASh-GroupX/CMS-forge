@@ -4065,3 +4065,28 @@ perf/contrast "before pilot") or are forward-planning gaps (homeless portal UI,
 preview-role→session-role) that do not weaken Phase 6's delivered scope and do
 not block opening Phase 7. Accepting with conditions. Phase 7 opens with a
 PLANNER pass to decompose reports/exports and to reconcile the portal UI screens.
+
+## PLAN-F7-01 - Phase 7 Decomposition
+
+- Date: 2026-06-19
+- Reviewer tier: PLANNER
+- Risk: Medium (planning only; no implementation code changed)
+- Recommendation: Accept
+- Notes:
+  - Decomposed Phase 7 from SRS `PLAN-M6` + the homeless `PLAN-M5` portal UI
+    screens + the five PHASE-6-REVIEW carry-forward conditions into ordered,
+    1-5-file build tasks (`F7-01..F7-09` with subtasks) in `.forge/backlog.md`.
+  - Order is backend-first (reports/search) → real session-bound UI wiring →
+    portal UI → pre-pilot quality/ops/UAT/deploy. Each carry-forward condition is
+    mapped to a concrete task (1→F7-03A, 2/3→F7-05, 4→F7-04, 5→F7-07C).
+  - First build task `F7-01A` is behavior-free `reports` module generation
+    (BUILDER-STANDARD); reporting RBAC/branch-scope/export/audit logic starts at
+    `F7-01B` (BUILDER-STRONG). No report query bypassing RBAC and no unbounded
+    export are allowed (REQ-REPORT-001 forbidden list).
+  - Open design decision flagged for `F7-01B`: how the reports module reads
+    cross-module data without importing another module's repository (declared
+    allowed deps on public services vs. a read-only query model) so it still
+    passes the manifest truth gate.
+  - `REQ-SURVEY-001` is `should` (not `must`); survey UI (UI-020, F7-04C) and
+    survey-in-reports may be deferred as a commercial exclusion if pilot scope
+    requires, per UI-SCREEN-001 AC5.

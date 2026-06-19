@@ -1,8 +1,40 @@
 # Current State
 
-Status: Ready to Plan
+Status: Ready to Build
 Phase: Phase 7 - Reports, UAT, And Ops
-Next Task: PLAN-F7-01 - Decompose Phase 7 And Reconcile Portal UI Screens
+Next Task: F7-01A - Generate Reports Module Boundary And Manifest
+
+## PLAN-F7-01 Complete - Phase 7 Decomposed, Ready To Build
+
+Required tier used: `PLANNER`. PLAN-F7-01 decomposed Phase 7 from SRS milestone
+`PLAN-M6` (reporting, audit, search, performance, operations, pilot hardening)
+plus the homeless `PLAN-M5` customer portal UI screens and the five
+PHASE-6-REVIEW carry-forward conditions. The full ordered breakdown is in
+`.forge/backlog.md` under Phase 7 (F7-01..F7-09 with lettered subtasks).
+
+Plan shape (backend-first → real session-bound UI wiring → portal UI → pre-pilot
+quality/ops/UAT/deploy):
+
+- F7-01 Reports/dashboards/scoped exports (REQ-REPORT-001) — generate module,
+  cross-module read access, dashboard + filtered report read models, RBAC +
+  branch-scoped routes, bounded CSV/Excel export with export audit.
+- F7-02 Complaint search API (REQ-SEARCH-001).
+- F7-03 Real session-bound staff UI data wiring — resolves carry-forward
+  condition 1: role/branch from the server session via `/auth/me`, retiring
+  `?role=` as an authority source.
+- F7-04 Customer portal UI UI-018/019/020 — resolves condition 4 (or explicit
+  commercial exclusion per UI-SCREEN-001 AC5).
+- F7-05 Pre-pilot UI quality debt — real a11y/contrast (condition 2) and
+  destructive-confirmation state (condition 3).
+- F7-06 OpenAPI finalization; F7-07 ops hardening (`ops:backup:check`,
+  `test:performance`, and `security:check` — condition 5 — made real);
+  F7-08 UAT scripts/L4 data; F7-09 deployment runbook (NFR-SEC-001 AC4).
+
+First buildable task: `F7-01A` (BUILDER-STANDARD) generates only the behavior-free
+`reports` module shell + manifest and wires it into the root module. Reporting
+RBAC, branch scope, export limits, and export audit begin at `F7-01B`
+(BUILDER-STRONG). All Phase 7 build tasks stay within the 1-5 file / 300-line
+agentic budget; SRS numbered requirements win over convenience.
 
 ## PHASE-6-REVIEW Accepted With Conditions - Phase 7 Ready To Plan
 

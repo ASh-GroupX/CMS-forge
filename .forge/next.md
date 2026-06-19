@@ -1,71 +1,87 @@
-# Planning Task: PLAN-F7-01
+# Build Task: F7-01A - Generate Reports Module Boundary And Manifest
 
-Status: Ready to Plan
-Required model tier: PLANNER
-Risk: High
+Status: Ready to Build
+Required model tier: BUILDER-STANDARD
+(Escalate to BUILDER-STRONG for F7-01B onward, where reporting RBAC, branch
+scope, export limits, and export audit logic begin.)
+Risk: Medium (behavior-free scaffold for a High-risk reporting module)
 Phase: Phase 7 - Reports, UAT, And Ops
-
-## Why This Is A Planning Task
-
-PHASE-6-REVIEW accepted Phase 6 with conditions and opened Phase 7. Phase 7 must
-not start as a direct build because:
-
-- `F7-01` (operational dashboards + scoped exports) is far broader than the 1-5
-  file agentic budget and crosses backend report queries, RBAC/branch-scope
-  filtering, export limits/audit, OpenAPI, and the first real staff-UI data
-  wiring.
-- PHASE-6-REVIEW found MVP/`must` customer portal UI screens with no backlog home
-  (condition 4). The plan must place or explicitly exclude them before more build
-  work proceeds.
 
 ## Goal
 
-Produce the Phase 7 task breakdown and write the first buildable task to
-`.forge/next.md`. Keep every build task near 1-5 files plus tests and under the
-300-line source budget.
+Create the canonical `reports` backend module shell and a real `MODULE.md`
+boundary manifest, and wire `ReportsModule` into the API root module so module
+reachability/manifest lint covers it. No reporting behavior in this task.
 
-## Inputs
+## Why This First
 
-- `.forge/project.md`, `.forge/policy.md`, `.forge/backlog.md`
-- `.forge/trust.md` → `PHASE-6-REVIEW` conditions (carry-forward items 1-5)
-- `docs/ARCHITECTURE.md`
-- `docs/CMS_AUTO_SRS.md` requirement IDs: `REQ-REPORT-001`, `RBAC-MATRIX-001`,
-  `REQ-RBAC-001`, `REQ-AUDIT-001`, `UI-SCREEN-001` (UI-015..UI-020),
-  `UI-DESIGN-001`, `QA-UI-001`, `NFR-PERF-001`, `API-STANDARD-001`,
-  `METHOD-TEST-001`, plus the deployment/UAT requirement IDs for F7-03/F7-04.
+Phase 7's must-have is REQ-REPORT-001 (operational reports, dashboards, scoped
+exports). Every prior backend feature module was generated from the template
+before behavior (e.g. `integrations` F5-03A, `surveys` F5-07A). This task lays
+that foundation safely so F7-01B..F7-01F can add read models, routes, exports,
+and audit on a clean boundary.
 
-## Required Planning Decisions
+## Scope (generate, then adjust only these)
 
-1. **Portal UI screens (condition 4).** Decide where UI-018 (portal submission),
-   UI-019 (portal tracking), and UI-020 (survey) UI are built, or record an
-   explicit commercial exclusion per `UI-SCREEN-001` AC5. The portal backend
-   (Phase 4) already exists; only the customer-facing UI is missing. If included,
-   split them into small per-screen tasks with localized RTL/LTR states and the
-   portal privacy rules (no internal comments/audit/DMS/staff PII).
-2. **Real data wiring + session authority (condition 1).** Any task that wires a
-   staff surface (dashboard, queue, detail, admin, reports) to real backend data
-   must take role and branch scope from the server session, not the `?role=`
-   preview query param. Make this an explicit acceptance criterion on the first
-   data-wiring task.
-3. **Reports/exports (`F7-01`).** Split backend report read models +
-   RBAC/branch-scoped filters + bounded export + export audit from the UI wiring.
-   Reports/exports must respect RBAC and branch scope (`RBAC-MATRIX-001`).
-4. **Pre-pilot UI quality debt (conditions 2, 3).** Schedule real
-   axe/keyboard/contrast accessibility proof and the `destructive confirmation`
-   UI state before pilot sign-off.
-5. **`security:check` (condition 5).** Schedule wiring `security:check` to the
-   real security/auth/admin/audit suites (or aliasing them) before pilot; it must
-   not ship as a fake pass.
+- `apps/api/src/modules/reports/**` (generated shell: module, controller,
+  service, repository)
+- `apps/api/src/modules/reports/MODULE.md` (filled-in OKF manifest)
+- The API root module file (add `ReportsModule` to its imports)
 
-## Output Of This Task
+## Steps
 
-- Update `.forge/backlog.md` Phase 7 with the decomposed, ordered tasks (including
-  the portal UI decision from item 1).
-- Write exactly one buildable task to `.forge/next.md` with explicit verification
-  commands and SRS requirement IDs.
-- Set `.forge/state.md` to `Ready to Build`.
+1. Generate the module from the template — do not hand-roll structure:
+   `corepack pnpm generate:module -- reports`.
+2. Fill `MODULE.md` with the real boundary: `type: forge.module`, title,
+   description, tags; the public service; **owned tables: none yet** (reporting
+   reads other modules' data — the cross-module read-access decision is F7-01B,
+   so declare no owned domain tables here); allowed dependencies left minimal;
+   and the REQ-REPORT-001 requirement ID.
+3. Wire `ReportsModule` into the API root module (AppModule) imports so the
+   wiring gate and manifest truth gate cover it.
+4. Keep every generated source file under the 300-line budget and free of
+   TODO/FIXME markers.
 
-## Scope Discipline
+## Out Of Scope (do NOT add in this task)
 
-This is planning only. Do not implement feature code. If a proposed task cannot
-stay near 1-5 files plus tests, split it further before writing it to `next.md`.
+- Any report query, dashboard aggregate, filter, export, CSV/Excel, or audit
+  behavior (F7-01B..F7-01F).
+- Any HTTP route handler body, OpenAPI path, DTO logic, RBAC/branch-scope guard
+  wiring, cross-module service import, Prisma query, schema change, or migration.
+- Any frontend change.
+
+## Required Proof Commands (run all; label honestly)
+
+- `corepack pnpm lint`
+- `corepack pnpm typecheck`
+- `corepack pnpm test`
+- `corepack pnpm openapi:check`
+- `git diff --check`
+
+(The generator's own behavior is covered by `tools/generate-module.test.mjs`
+inside `corepack pnpm test`. `openapi:check` must stay green because no route is
+added in this task.)
+
+## Acceptance Criteria
+
+- `reports` module exists with the canonical generated structure and a complete,
+  lint-valid `MODULE.md`.
+- `ReportsModule` is reachable from the API root module; the wiring gate and
+  manifest truth gate pass.
+- No reporting behavior, route, OpenAPI path, schema, migration, cross-module
+  import, or frontend change was added.
+- All required proof commands ran and passed; evidence records honest labels.
+
+## Requirement IDs
+
+- REQ-REPORT-001 (operational reports and dashboards)
+- METHOD-MODULAR-001 / architecture §6 (generate or copy from the golden module;
+  module boundary manifest required)
+
+## On Completion
+
+- Append evidence to `.forge/evidence.md` and a trust note to `.forge/trust.md`.
+- Mark F7-01A done in `.forge/backlog.md`.
+- Write F7-01B (cross-module reporting read access) to `.forge/next.md` at
+  `BUILDER-STRONG`, and set `.forge/state.md` to `Ready to Build` (AUTO PHASE may
+  continue within Phase 7).
