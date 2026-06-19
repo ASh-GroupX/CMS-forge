@@ -6854,3 +6854,44 @@ Assumptions and gaps:
   - Trust boundaries are tested: Passed for this performance-proof slice. Tests
     cover performance runner execution through `web:perf` plus unchanged visual,
     accessibility, shell, lint, typecheck, test, and OpenAPI proof commands.
+
+## PHASE-6-REVIEW - Staff UI Acceptance Review
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed (Accept With Conditions)
+- Required model tier: PHASE-REVIEWER (Opus 4.8, fresh context)
+- Requirement IDs reviewed:
+  - UI-SCREEN-001, UI-DESIGN-001, QA-UI-001, METHOD-TEST-001, NFR-PERF-001
+  - REQ-AUTH-001, REQ-RBAC-001, REQ-COMPLAINT-001, REQ-WORKFLOW-001,
+    REQ-FILES-001, REQ-ADMIN-001, REQ-AUDIT-001, REQ-NOTIFY-001, REQ-REPORT-001
+- Evidence:
+  - Re-ran every required Phase 6 proof command independently rather than trusting
+    the builder logs; all reproduced green with counts matching evidence exactly.
+  - Re-ran the Phase 6 backend auth suite (`test:api -- auth`, 32/32) to cover the
+    password-reset prerequisite that landed inside Phase 6 (F6-01D1..D3).
+  - Inspected `tools/web-proof.mjs`, `tools/web-test.mjs`,
+    `apps/web/src/lib/staff-complaints-api.ts`, `apps/web/src/app/page.tsx`,
+    `complaint-create-form.tsx`, and `complaint-detail-workspace.tsx` directly.
+  - Confirmed the create form is the only backend-wired surface and carries no
+    client role/actor/workflow/credential authority; the workflow modal and
+    attachment/detail controls are inert render-only placeholders.
+  - Confirmed browser-storage discipline (no token storage; only the required CSRF
+    cookie read), no secret logging, and an auth-only API-side diff (no scope leak).
+  - Confirmed all Phase 6 backlog items are checked done with honest evidence.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (31/31; coverage 93.78% lines / 86.14% branch /
+    92.47% funcs)
+  - Passed: `corepack pnpm test:web -- shell` (88/88)
+  - Passed: `corepack pnpm test:web -- api-client` (9/9)
+  - Passed: `corepack pnpm test:visual` (16 staff shell previews)
+  - Passed: `corepack pnpm test:e2e -- accessibility` (11 staff shell previews)
+  - Passed: `corepack pnpm web:perf` (2 staff shell previews)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `corepack pnpm test:api -- auth` (32/32)
+  - Passed: `git diff --check` (clean; line-ending warnings only)
+- Decision: Accept With Conditions. Full reasoning, SRS mapping, and the five
+  non-blocking carry-forward conditions are recorded in `.forge/trust.md` under
+  `PHASE-6-REVIEW`. Phase 7 opens with `PLAN-F7-01` at state `Ready to Plan`.

@@ -186,7 +186,23 @@ history from another project.
 
 ## Phase 7 - Reports, UAT, And Ops
 
-- [ ] F7-01: Operational dashboards and scoped exports
+Phase 6 was accepted with conditions by PHASE-6-REVIEW (2026-06-19). The items
+below marked "(PHASE-6 carry-forward)" track conditions that must be sequenced by
+`PLAN-F7-01` or, where applicable, recorded as an explicit commercial exclusion
+per `UI-SCREEN-001` AC5. See `.forge/trust.md` → `PHASE-6-REVIEW`.
+
+- [ ] F7-01: Operational dashboards and scoped exports (RBAC + branch-scope;
+      first real staff-UI data wiring must take role/branch from server session,
+      not the `?role=` preview param — PHASE-6 carry-forward condition 1)
 - [ ] F7-02: OpenAPI contract generation and drift check
 - [ ] F7-03: UAT scripts with realistic automotive complaint data
 - [ ] F7-04: Deployment and operations runbook
+- [ ] F7-05: Customer portal UI — UI-018 submission, UI-019 tracking, UI-020
+      survey (MVP/`must`, currently homeless; portal backend already exists)
+      (PHASE-6 carry-forward condition 4)
+- [ ] F7-06: Pre-pilot UI quality debt — real axe/keyboard/contrast accessibility
+      proof (L3) and the `destructive confirmation` UI state
+      (PHASE-6 carry-forward conditions 2 and 3)
+- [ ] F7-07: Wire `security:check` to the real security/auth/admin/audit suites
+      before pilot sign-off (carried from PHASE-1; PHASE-6 carry-forward
+      condition 5)

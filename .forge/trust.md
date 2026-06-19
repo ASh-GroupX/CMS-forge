@@ -3943,3 +3943,125 @@ Residual risk: this is a required customer-portal privacy gate. A fresh verifier
   - Phase 6 remains unaccepted until a PHASE-REVIEWER performs the mandatory
     independent review.
   - Phase 7 must not start until that review clears.
+
+## PHASE-6-REVIEW - Staff UI Acceptance Review
+
+- Date: 2026-06-19
+- Reviewer tier: PHASE-REVIEWER (Opus 4.8) — fresh review context, independent of
+  the Phase 6 builders.
+- Risk: High
+- Decision: **Accept With Conditions**
+- Phase 7 may start: **Yes** — opened with a planner pass (`PLAN-F7-01`, state
+  `Ready to Plan`), mirroring how Phase 1 review opened Phase 2.
+
+### Method
+
+Independent verification, not log-trust. Re-ran the entire Phase 6 web proof
+surface plus the Phase 6 backend auth suite; read the proof runner, the test
+runner, the staff web API client, the shell entry point, the complaint create
+form (the only wired surface), and the complaint detail/workflow/attachment
+components directly; checked the API-side diff scope and browser-storage
+discipline; and cross-checked the delivered behavior against the cited SRS IDs.
+
+### Verification labels (re-run by reviewer)
+
+- Passed: `corepack pnpm lint`
+- Passed: `corepack pnpm typecheck` (6 tsconfig projects, clean)
+- Passed: `corepack pnpm test` (31/31; coverage 93.78% lines / 86.14% branch /
+  92.47% funcs — clears 80/65/75)
+- Passed: `corepack pnpm test:web -- shell` (88/88)
+- Passed: `corepack pnpm test:web -- api-client` (9/9)
+- Passed: `corepack pnpm test:visual` (16 staff shell previews)
+- Passed: `corepack pnpm test:e2e -- accessibility` (11 staff shell previews)
+- Passed: `corepack pnpm web:perf` (2 staff shell previews)
+- Passed: `corepack pnpm openapi:check`
+- Passed: `git diff --check` (clean; line-ending warnings only)
+- Passed (extra, not in the required list): `corepack pnpm test:api -- auth`
+  (32/32) — covers the Phase 6 password-reset backend (F6-01D1..D3).
+
+### Coverage and honesty
+
+- **All Phase 6 backlog tasks done** (F6-01A → F6-07D), each with an evidence
+  entry using honest labels. Every count I re-ran reproduced exactly (31, 88, 9,
+  16, 11, 2 previews; auth 32). **Builder honesty: Honest.**
+- **Trust boundaries hold.** The create form is the only surface wired to the
+  backend; it delegates to `createStaffComplaint` (relative `/complaints?branchId`,
+  `credentials: 'include'`, double-submit CSRF header) and carries no role / actor
+  / workflow / credential authority in the body. The workflow modal, attachment
+  controls, and detail panels are inert `type="button"` placeholders that decide
+  no transition and perform no fetch or file I/O; tests assert "source does not
+  decide transitions" and "do not transfer or expose files".
+- **No client authority / storage leaks.** No `localStorage`/`sessionStorage`/
+  token storage; the only `document.cookie` use is the required CSRF cookie read.
+  No `console.*` secret logging, no `dangerouslySetInnerHTML`.
+- **Privacy safe.** Staff surfaces render localized safe placeholders only; tests
+  assert no PII / portal / DMS data in queue, detail, and comments.
+- **API-side scope clean.** The only backend change in the Phase 6 range is the
+  disclosed auth password-reset prerequisite (DTO, service, repo, controller,
+  tokens, tests). No other module/route added.
+- **UI proof is honest about what it is.** `tools/web-proof.mjs` renders the real
+  `StaffShellPage` via `renderToStaticMarkup` and asserts structure, direction,
+  localized strings, responsive classes, ARIA labels/roles, focus-visible +
+  reduced-motion CSS, render time, and HTML size. It is a genuine deterministic
+  L2 render proof — not theater — and evidence consistently discloses that
+  browser automation, screenshots, and staging p95 are deferred.
+
+### SRS acceptance-criteria mapping (not weakened)
+
+- **UI-DESIGN-001:** minimum proof is **L2** (met by automated render
+  assertions); preferred L3 (browser) is deferred and disclosed. All four named
+  commands are wired (`test:e2e -- ui-smoke`/`-- accessibility`, `test:visual`,
+  `web:perf`). Tokens/shared components (AC1/AC2), required states, RTL/LTR, and
+  reduced-motion are present.
+- **QA-UI-001:** visual (8 staff surfaces × en/ar), accessibility (focus, labels,
+  icon-button names, RTL/LTR), states (loading/empty/error/success/conflict/
+  validation), and perf budgets (dashboard+queue) are covered for the staff
+  screens. See conditions 2 and 3 for the gaps.
+- **UI-SCREEN-001:** staff screens UI-001..UI-017 + UI-014A are represented as
+  localized render-only contracts. Hidden actions are not yet backed by real data,
+  so AC3 ("hidden UI actions still protected by backend") is not yet exercised
+  client-side. See condition 1 (preview role) and condition 4 (portal screens).
+- **REQ-AUTH-001 AC6 / UI-001A:** staff password reset is real backend + UI
+  contract; auth suite 32/32.
+
+### Conditions (non-blocking for starting Phase 7; must be tracked)
+
+1. **Preview role/branch must become server-session role/branch before any real
+   data is wired.** The shell selects role and all surface states from
+   client-controlled query params (`?role=`, `?dashboard=`, ...). This is safe
+   today only because no surface (except create) is backed by real data, so there
+   is nothing to leak. When Phase 7 wires reports/dashboards/admin data, role and
+   branch scope MUST come from the server session, and the query-param preview
+   switch MUST NOT become the authority source (CLAUDE.md non-negotiable;
+   UI-SCREEN-001 AC2/AC3, REQ-RBAC-001).
+2. **Accessibility contrast and true keyboard/browser checks are not yet proven.**
+   The static runner cannot verify WCAG contrast, real focus traversal, or
+   `prefers-reduced-motion` behavior in a browser (UI-DESIGN-001 AC4). A real
+   axe/Playwright pass is owed before pilot sign-off; preferred L3 remains open.
+3. **`destructive confirmation` UI state (QA-UI-001 / UI-DESIGN-001 Required UI
+   States) is not yet covered.** Deactivate/reject/close affordances render
+   without a confirmation/undo pattern or a proof case. Add it when those actions
+   are wired.
+4. **Customer portal UI screens UI-018 (submission), UI-019 (tracking), and
+   UI-020 (survey) are MVP/`must` but have no backlog home.** Phase 4 delivered
+   the portal *backend* only; Phase 6 is staff-only; Phase 7 as written
+   (dashboards/exports, OpenAPI, UAT, ops) does not include them. UI-DESIGN-001
+   AC3 also requires visual coverage of portal submission/tracking, which cannot
+   exist until those screens do. Tracked as new backlog items under Phase 7; the
+   `PLAN-F7-01` planner must sequence them or record an explicit commercial
+   exclusion per UI-SCREEN-001 AC5.
+5. **`security:check` is still a fail-loud placeholder** (carried from PHASE-1).
+   Wire it to the real suites before MVP pilot sign-off; must not ship as a fake
+   pass.
+
+### Rationale
+
+Phase 6 ("Staff UI") delivered every planned task with honest, independently
+reproduced evidence; trust boundaries are clean (no client-side workflow or RBAC
+authority, no token storage, no privacy leaks), and the proof runners are real
+L2 render checks rather than theater. The open items are either explicitly
+deferred by the SRS itself (L3/browser preferred-not-required, p95 "in staging",
+perf/contrast "before pilot") or are forward-planning gaps (homeless portal UI,
+preview-role→session-role) that do not weaken Phase 6's delivered scope and do
+not block opening Phase 7. Accepting with conditions. Phase 7 opens with a
+PLANNER pass to decompose reports/exports and to reconcile the portal UI screens.

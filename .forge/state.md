@@ -1,8 +1,40 @@
 # Current State
 
-Status: Needs Phase Review
-Phase: Phase 6 - Staff UI
-Next Task: PHASE-6-REVIEW
+Status: Ready to Plan
+Phase: Phase 7 - Reports, UAT, And Ops
+Next Task: PLAN-F7-01 - Decompose Phase 7 And Reconcile Portal UI Screens
+
+## PHASE-6-REVIEW Accepted With Conditions - Phase 7 Ready To Plan
+
+PHASE-6-REVIEW independently re-ran the full Phase 6 proof surface on 2026-06-19
+(fresh PHASE-REVIEWER context, not log-trust): lint, typecheck, test 31/31
+(coverage 93.78% lines / 86.14% branch / 92.47% funcs), test:web -- shell 88/88,
+test:web -- api-client 9/9, test:visual 16, test:e2e -- accessibility 11,
+web:perf 2, openapi:check, git diff --check, and the Phase 6 backend
+test:api -- auth 32/32. All counts reproduced the builder evidence exactly.
+
+Decision: **Accept With Conditions**. Phase 6 delivered every staff-UI task with
+honest evidence and clean trust boundaries — the create form is the only
+backend-wired surface (delegates to `createStaffComplaint` with credentials +
+CSRF and no client authority fields), the workflow modal and detail/attachment
+controls are inert render-only placeholders that decide no transition and move no
+files, there is no browser token storage or secret logging, and the proof runner
+is a real deterministic L2 render check, not theater.
+
+Five non-blocking conditions are tracked in `.forge/trust.md` under
+`PHASE-6-REVIEW`:
+1. Preview role/branch (`?role=`) must become server-session-derived before any
+   real data is wired in Phase 7.
+2. Contrast + real keyboard/browser accessibility (L3) owed before pilot.
+3. `destructive confirmation` UI state not yet covered.
+4. Customer portal UI screens UI-018/UI-019/UI-020 are MVP/must but homeless —
+   added to the backlog under Phase 7 for the planner to sequence or exclude.
+5. `security:check` is still a fail-loud placeholder.
+
+Phase 7 opens with a PLANNER pass (`PLAN-F7-01`) rather than direct build, because
+F7-01 (operational dashboards + scoped exports) is broader than the 1–5 file
+budget and the planner must also reconcile the portal UI screens. Phase 7
+implementation must not begin until the planner writes the first buildable task.
 
 ## F6-07D Built - AUTO PHASE Stopped For Phase Review
 
