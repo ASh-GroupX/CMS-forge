@@ -10,6 +10,12 @@ import {
 } from 'lucide-react';
 import React from 'react';
 import { resolveLocale, staffShellText, type Locale } from '../i18n/staff-shell';
+import { DashboardSummary, type DashboardPreviewState } from './dashboard-summary';
+import { CustomerVehicleLookup, type LookupPreviewState } from './customer-vehicle-lookup';
+import { ComplaintCreateForm, type CreateFormPreviewState } from './complaint-create-form';
+import { AttachmentUploadPanel, type AttachmentPreviewState } from './attachment-upload-panel';
+import { PasswordResetPanel, type ResetPreviewState } from './password-reset-panel';
+import { WorkQueue, type QueuePreviewState } from './work-queue';
 
 const navKeys = ['dashboard', 'queue', 'create', 'detail', 'admin', 'reports', 'audit', 'notifications'] as const;
 type NavKey = (typeof navKeys)[number];
@@ -28,8 +34,14 @@ const icons = {
 
 type SearchParams = {
   auth?: string | string[];
+  attachment?: string | string[];
+  create?: string | string[];
+  dashboard?: string | string[];
   locale?: string | string[];
+  lookup?: string | string[];
+  queue?: string | string[];
   role?: string | string[];
+  reset?: string | string[];
   session?: string | string[];
 };
 
@@ -39,8 +51,14 @@ export default async function StaffShellPage({ searchParams }: { searchParams?: 
   return (
     <StaffShell
       authError={readParam(params?.auth) === 'error'}
+      attachmentState={resolveAttachment(readParam(params?.attachment))}
+      createState={resolveCreate(readParam(params?.create))}
+      dashboardState={resolveDashboard(readParam(params?.dashboard))}
       isSignedIn={readParam(params?.session) === 'signed-in'}
       locale={locale}
+      lookupState={resolveLookup(readParam(params?.lookup))}
+      queueState={resolveQueue(readParam(params?.queue))}
+      resetState={resolveReset(readParam(params?.reset))}
       role={resolveRole(readParam(params?.role))}
     />
   );
@@ -54,6 +72,39 @@ function resolveRole(value: string | undefined): RolePreview {
   return value === 'admin' || value === 'management' ? value : 'staff';
 }
 
+function resolveReset(value: string | undefined): ResetPreviewState | undefined {
+  return value === 'request' || value === 'requested' || value === 'token' || value === 'success' || value === 'invalid'
+    ? value
+    : undefined;
+}
+
+function resolveDashboard(value: string | undefined): DashboardPreviewState | undefined {
+  return value === 'loading' || value === 'empty' || value === 'error' ? value : undefined;
+}
+
+function resolveQueue(value: string | undefined): QueuePreviewState | undefined {
+  return value === 'loading' || value === 'empty' || value === 'error' ? value : undefined;
+}
+
+function resolveLookup(value: string | undefined): LookupPreviewState | undefined {
+  return value === 'loading' || value === 'none' || value === 'error' ? value : undefined;
+}
+
+function resolveCreate(value: string | undefined): CreateFormPreviewState | undefined {
+  return value === 'validation' || value === 'success' || value === 'error' ? value : undefined;
+}
+
+function resolveAttachment(value: string | undefined): AttachmentPreviewState | undefined {
+  return value === 'loading' ||
+    value === 'empty' ||
+    value === 'error' ||
+    value === 'pending' ||
+    value === 'clean' ||
+    value === 'rejected'
+    ? value
+    : undefined;
+}
+
 const roleNav: Record<RolePreview, readonly NavKey[]> = {
   staff: ['dashboard', 'queue', 'create', 'detail', 'notifications'],
   admin: navKeys,
@@ -62,13 +113,25 @@ const roleNav: Record<RolePreview, readonly NavKey[]> = {
 
 export function StaffShell({
   authError = false,
+  attachmentState,
+  createState,
+  dashboardState,
   isSignedIn = false,
   locale,
+  lookupState,
+  queueState,
+  resetState,
   role = 'staff',
 }: {
   authError?: boolean;
+  attachmentState?: AttachmentPreviewState | undefined;
+  createState?: CreateFormPreviewState | undefined;
+  dashboardState?: DashboardPreviewState | undefined;
   isSignedIn?: boolean;
   locale: Locale;
+  lookupState?: LookupPreviewState | undefined;
+  queueState?: QueuePreviewState | undefined;
+  resetState?: ResetPreviewState | undefined;
   role?: RolePreview;
 }) {
   const t = staffShellText[locale];
@@ -96,7 +159,7 @@ export function StaffShell({
               {t.switchTarget}
             </a>
           </div>
-          <AuthPanel authError={authError} isSignedIn={isSignedIn} locale={locale} />
+          <AuthPanel authError={authError} isSignedIn={isSignedIn} locale={locale} resetState={resetState} />
           <RolePanel locale={locale} role={role} />
           <nav className="grid gap-1" aria-label={t.title}>
             {visibleNav.map((key) => {
@@ -125,31 +188,11 @@ export function StaffShell({
         </aside>
 
         <section className="grid content-start gap-4">
-          <div className="grid gap-3 md:grid-cols-4">
-            {[
-              [t.open, '18'],
-              [t.warnings, '6'],
-              [t.overdue, '2'],
-              [t.nextAction, '9'],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-                <p className="text-sm text-slate-600">{label}</p>
-                <p className="mt-2 text-3xl font-semibold tracking-normal">{value}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="rounded-md border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-200 p-4">
-              <h2 className="text-lg font-semibold tracking-normal">{t.queueTitle}</h2>
-              <p className="mt-1 text-sm text-slate-600">{t.queueStatus}</p>
-            </div>
-            <div className="grid grid-cols-[1fr_auto_auto] gap-3 p-4 text-sm font-semibold text-slate-600">
-              <span>{t.nav.detail[0]}</span>
-              <span>{t.warnings}</span>
-              <span>{t.nextAction}</span>
-            </div>
-          </div>
+          <DashboardSummary locale={locale} role={role} state={dashboardState} />
+          <WorkQueue locale={locale} state={queueState} />
+          <CustomerVehicleLookup locale={locale} state={lookupState} />
+          <ComplaintCreateForm locale={locale} state={createState} />
+          <AttachmentUploadPanel locale={locale} state={attachmentState} />
         </section>
       </div>
     </main>
@@ -180,7 +223,17 @@ function RolePanel({ locale, role }: { locale: Locale; role: RolePreview }) {
   );
 }
 
-function AuthPanel({ authError, isSignedIn, locale }: { authError: boolean; isSignedIn: boolean; locale: Locale }) {
+function AuthPanel({
+  authError,
+  isSignedIn,
+  locale,
+  resetState,
+}: {
+  authError: boolean;
+  isSignedIn: boolean;
+  locale: Locale;
+  resetState?: ResetPreviewState | undefined;
+}) {
   const t = staffShellText[locale];
   const previewQuery = `?locale=${locale}`;
 
@@ -232,6 +285,7 @@ function AuthPanel({ authError, isSignedIn, locale }: { authError: boolean; isSi
           {t.auth.previewError}
         </a>
       </div>
+      <PasswordResetPanel locale={locale} state={resetState} />
     </section>
   );
 }

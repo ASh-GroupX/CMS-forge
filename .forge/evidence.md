@@ -5215,3 +5215,538 @@ Assumptions and gaps:
     covers one allowed role visibility case (Admin sees Admin nav) and one
     denied/hidden case (Staff does not see Admin nav details and gets the hidden
     state).
+
+## F6-01D1 - Add Backend Password Reset Request Token Foundation
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-AUTH-001
+  - UI-SCREEN-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added `StaffPasswordResetToken` database model in `schema.prisma` with user relation, token hash only, expiresAt timestamp, consumedAt timestamp, and query indexes on `userId` and `expiresAt`.
+  - Added migration `20260619195741_add_staff_password_reset_tokens` to create the new table, indexes, and foreign keys.
+  - Updated `auth/MODULE.md` manifest to include ownership of `staff_password_reset_tokens` table.
+  - Implemented `createPasswordResetToken` in `AuthRepository` for persisting the reset tokens.
+  - Implemented `requestPasswordReset` in `AuthService`. It normalizes email identifiers, returns generic `{ ok: true }` responses to prevent user-existence oracle timing/data leak, stores only token hashes, sets a 15-minute time-limited expiry, and audits requests via same-transaction AUTH audit.
+  - Created new test file `apps/api/test/auth/password-reset-request.test.ts` to assert correct behavior, hash-only persistence, generic responses, and secure transaction audit logging.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29)
+  - Passed: `corepack pnpm test:api -- auth` (24/24, with 3 new password reset request tests)
+  - Passed: `corepack pnpm prisma:validate`
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+  - Extra Passed: `corepack pnpm --filter @cms-auto/web build`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Passed by scope. This task added no HTTP endpoints or authorization routes yet.
+  - Each state change writes status history and an audit entry in the same transaction; side effects enqueue after commit: Passed. Storing reset token and recording the `AUTH` / `password_reset_request` audit entry are executed inside the same transaction hook client.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned: Passed. The audit log only records safe action/user data, and the unit tests assert that raw tokens, token hashes, and user password hashes are completely absent from both the persisted logs and serializations.
+  - Customer portal exposure rules hold: Passed by scope. This is a staff-backend-only feature.
+  - Trust boundaries are tested: Passed. Tested the allowed path (active user reset generates token hash and writes audit) and denied paths (missing, inactive, or locked users receive generic responses with zero database token writes or audits).
+
+## F6-01D2 - Add Backend Password Reset Consume/Reset Behavior
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-AUTH-001
+  - UI-SCREEN-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added `AuthService.consumePasswordReset` for hash-only reset token lookup,
+    expiry/consumed/not-found denial, weak-password validation, fresh Argon2id
+    password hashing, same-transaction consume/update/audit behavior, and generic
+    invalid-token result.
+  - Updated repository consume behavior to mark the token with `consumedAt` only
+    when it is still unconsumed before updating the user password hash.
+  - Extracted auth token/cookie hashing helpers to keep `auth.service.ts` under
+    the 300-line source budget.
+  - Added focused auth API tests for successful consume, consumed/expired/missing
+    generic denial, weak password before persistence, and no credential material
+    in audit.
+  - Added no HTTP routes, OpenAPI paths, email/SMS delivery, frontend UI,
+    browser token storage, or admin reset UI.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- auth` (27/27)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no HTTP route or caller authorization
+    surface; it only added service/repository behavior.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed. Password hash update,
+    reset-token consumed mark, and `AUTH` / `password_reset_complete` audit write
+    share one repository transaction.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. Tests assert the raw token, token hash, plaintext new
+    password, old hash, and new hash are absent from audit output.
+  - Customer portal exposure rules hold: Passed by scope. This is a
+    staff-backend-only auth behavior.
+  - Trust boundaries are tested: Passed. Tests cover valid consume, consumed
+    token denial, expired token denial, missing token denial, and weak password
+    denial before persistence.
+
+## F6-01D3 - Add Password Reset HTTP Routes And OpenAPI
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-AUTH-001
+  - API-STANDARD-001
+  - METHOD-AUDIT-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added password reset request and consume DTO parsing with standard
+    `VALIDATION_FAILED` field errors.
+  - Added public pre-session auth controller routes for
+    `POST /auth/password-reset/request` and
+    `POST /auth/password-reset/consume`.
+  - Request route passes audit context into `AuthService.requestPasswordReset`
+    and returns only generic `{ ok: true }`, even when the service returns an
+    internal raw token for future delivery wiring.
+  - Consume route passes audit context into `AuthService.consumePasswordReset`
+    and returns only generic `{ ok: boolean }` for valid and invalid tokens.
+  - Updated canonical OpenAPI generation/checking and regenerated
+    `packages/contracts/openapi.json` with both reset routes and safe schemas.
+  - Added focused auth route tests for generic request behavior, consume
+    success, invalid-token consume, validation errors, and OpenAPI no-credential
+    examples.
+  - Added no email/SMS delivery, frontend UI, browser token storage, admin reset
+    UI, session-only guards, or CSRF requirement for these pre-session routes.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- auth` (32/32)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. These are public pre-session recovery routes and accept no
+    role or branch authority from the client.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed through the auth
+    service behavior built in `F6-01D1` and `F6-01D2`. Routes only validate and
+    pass request audit context into the service.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. Route and OpenAPI tests assert raw tokens, token hashes,
+    plaintext passwords, and credential hashes are not exposed in responses or
+    contract examples.
+  - Customer portal exposure rules hold: Passed by scope. This task added no
+    customer portal route or response shape.
+  - Trust boundaries are tested: Passed. Auth route tests cover generic request,
+    allowed consume, invalid-token consume, validation denial, and OpenAPI
+    privacy.
+
+## F6-01D4 - Add Staff Password-Reset UI Contract
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-AUTH-001
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-LOCALIZATION-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added a small render-only staff password-reset panel for forgot-password
+    request entry, reset-token entry, request form, token/new-password form,
+    request success, reset success, and generic invalid/expired token states.
+  - Added localized English and Arabic reset labels/messages to the shared staff
+    shell dictionary.
+  - Kept reset UI inside the signed-out shell and did not add API calls, a
+    frontend API client layer, email/SMS delivery, browser token storage, or
+    Admin reset UI.
+  - Replaced brittle mojibake-literal Arabic shell tests with dictionary-backed
+    Arabic assertions while preserving RTL label coverage.
+  - Extended `test:web -- shell` from 8 to 14 tests covering reset entry points,
+    generic safe request messaging, token/new-password fields, generic result
+    states, Arabic RTL reset labels, and no browser token storage in source.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Failed then Passed: `corepack pnpm typecheck` initially failed on
+    `exactOptionalPropertyTypes` for the optional reset preview state; final run
+    passed after widening the preview prop types to accept explicit `undefined`.
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (14/14)
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no authorization or complaint authority in
+    React; it only renders pre-session reset UI states.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This
+    render-only UI adds no state change or side effect; backend reset audit
+    remains owned by the auth service.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. The UI does not call APIs, does not render token values
+    back into the page, and tests assert no localStorage, sessionStorage, or
+    cookie token storage code exists in the reset UI source.
+  - Customer portal exposure rules hold: Passed by scope. This task added no
+    customer portal route or response shape.
+  - Trust boundaries are tested: Passed for this UI slice. Tests cover generic
+    request messaging, generic invalid/expired-token messaging, token field
+    presence without a value, Arabic RTL labels, and absence of browser storage.
+
+## F6-02A - Add Minimal Typed Web API Client/Error Mapping For Staff Complaint Reads
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-COMPLAINT-001
+  - REQ-RBAC-001
+  - API-STANDARD-001
+  - METHOD-API-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added `apps/web/src/lib/staff-complaints-api.ts` with explicit
+    TypeScript types for complaint queue items, complaint detail, status
+    history items, and safe staff API result/error shapes.
+  - Added `listStaffComplaints()` for relative `GET /complaints` reads with
+    cookie credentials and no caller-supplied role/branch/workflow authority.
+  - Added `getStaffComplaint()` for relative encoded `GET /complaints/{id}`
+    reads with cookie credentials and no branch query spoofing.
+  - Mapped API error envelopes into a safe UI error shape preserving status,
+    code, message, and correlation ID.
+  - Mapped network failures to a stable safe `NETWORK_ERROR` without leaking
+    thrown exception details.
+  - Extended the web test runner with an `api-client` suite and added focused
+    client tests for success mapping, path construction, error-envelope mapping,
+    and network failure mapping.
+  - Added no dashboard rendering, queue rendering, filters, workflow actions,
+    client-side authorization decisions, token storage, generated client, or new
+    dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- api-client` (4/4)
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed. Client helpers expose no role, branch, actor, or workflow authority
+    parameters; tests assert complaint detail paths omit branch/role query
+    spoofing.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added read-only web helpers and no state change or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. Helpers use cookie credentials, do not accept token
+    parameters, do not use browser storage, and tests assert safe network-error
+    mapping.
+  - Customer portal exposure rules hold: Passed by scope. This task added no
+    customer portal route, portal client, or response shape.
+  - Trust boundaries are tested: Passed. Web client tests cover allowed success
+    reads, denied API-envelope mapping, network denial mapping, and no
+    branch/role query spoofing in path construction.
+
+## F6-02B - Add Role-Specific Dashboard Summary Cards
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-LOCALIZATION-001
+  - REQ-RBAC-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added a small `DashboardSummary` component with role-specific visual card
+    sets for staff, admin, and management preview states.
+  - Added localized English and Arabic dashboard summary labels for open
+    complaints, overdue complaints, SLA warnings, closed complaints, and average
+    TAT.
+  - Added previewable loading, empty, and error dashboard summary states.
+  - Replaced the old placeholder summary counters in the staff shell with the
+    new localized component.
+  - Extended `test:web -- shell` from 14 to 19 tests covering staff/admin/
+    management cards, Arabic RTL labels, and loading/empty/error states.
+  - Added no API calls, queue table, filters, detail workspace, workflow
+    actions, client-side permission decisions, or new dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (19/19)
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed with explicit limitation. Role preview only changes visible placeholder
+    dashboard cards and does not authorize routes or actions.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This
+    render-only UI adds no state change or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. This task added no credential fields, API calls, token
+    storage, logging, or provider surface.
+  - Customer portal exposure rules hold: Passed by scope. This task added no
+    customer portal route or response shape.
+  - Trust boundaries are tested: Passed for this UI slice. Tests cover role
+    preview differences, Arabic RTL labels, and safe loading/empty/error states;
+    no backend authority is moved into React.
+
+## F6-02C - Add Complaint Work Queue Table With Filters And States
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-LOCALIZATION-001
+  - REQ-RBAC-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added a localized `WorkQueue` component with filter controls for status,
+    branch, severity, SLA state, and search.
+  - Added localized work queue table headers for reference, status, severity,
+    owner, branch, SLA state, updated, and next action.
+  - Added a pagination affordance that makes no claim of real data paging.
+  - Added previewable queue loading, empty, and error states.
+  - Rendered only safe static operational placeholder rows with no customer PII,
+    internal comments, audit logs, or portal data.
+  - Extended `test:web -- shell` from 19 to 23 tests covering queue
+    headers/filters, pagination, Arabic RTL labels, safe sample rows, and queue
+    loading/empty/error states.
+  - Added no API calls, real filter/pagination behavior, detail workspace,
+    workflow action controls, client-side authorization decisions, or new
+    dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (23/23)
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This task added no route call or authorization behavior in
+    React; filters are inert UI contract controls.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This
+    render-only UI adds no state change or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. This task added no credential fields, API calls, token
+    storage, logging, or provider surface.
+  - Customer portal exposure rules hold: Passed. Tests assert sample rows avoid
+    customer PII, internal comments, audit logs, and portal data.
+  - Trust boundaries are tested: Passed for this UI slice. Tests cover safe
+    queue states, Arabic RTL labels, filter/header presence, and non-sensitive
+    sample row content.
+
+## F6-02D - Add Queue Responsive And RTL/LTR Web Tests
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-LOCALIZATION-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added shell tests proving responsive class coverage for the staff shell
+    layout, dashboard card grid, queue filter grid, queue overflow container,
+    and queue table minimum width.
+  - Added shell tests proving English LTR and Arabic RTL render dashboard and
+    queue labels together.
+  - Did not add Playwright, screenshots, visual regression, accessibility
+    runner, performance runner, API calls, client-side authorization decisions,
+    new UI surfaces, or new dependencies.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (25/25)
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This test-focused task added no caller authority path and
+    no client-side authorization decisions.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no state change or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. This task added no credential fields, API calls, token
+    storage, logging, or provider surface.
+  - Customer portal exposure rules hold: Passed by scope. This task added no
+    customer portal route, response shape, or UI.
+  - Trust boundaries are tested: Passed for the current lightweight UI proof.
+    Tests cover responsive class presence and bilingual RTL/LTR rendering
+    without moving backend authority into React.
+
+## F6-03A - Add Customer/Vehicle Lookup Panel With Manual Fallback UI
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-COMPLAINT-001
+  - REQ-LOCALIZATION-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added a localized `CustomerVehicleLookup` panel with phone, customer code,
+    customer name, VIN, and plate search fields.
+  - Added safe local/DMS source badges and placeholder result text without real
+    customer PII or DMS codes.
+  - Added a manual fallback panel and previewable loading, no-match, and error
+    lookup states.
+  - Extended `test:web -- shell` from 25 to 30 tests covering lookup fields,
+    source badges, manual fallback, Arabic RTL labels, state messages, no API
+    calls/browser storage in source, and safe sample content.
+  - Added no DMS, CRM, backend lookup API calls, complaint submission behavior,
+    full complaint create form, browser storage, real customer PII, DMS code,
+    audit log, portal data, or new dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Failed then Passed: `corepack pnpm test:web -- shell`; initial run failed
+    because an older broad queue privacy assertion also matched the new
+    legitimate VIN field label. The assertion was narrowed to queue source
+    sample rows and the final run passed (30/30).
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This render-only lookup UI adds no route call or caller
+    authority path.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no state change or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. This task added no credential fields, API calls, token
+    storage, logging, or provider surface.
+  - Customer portal exposure rules hold: Passed. Tests assert the lookup sample
+    avoids email addresses, phone-number-shaped values, DMS codes, and portal
+    data.
+  - Trust boundaries are tested: Passed for this UI slice. Tests cover safe
+    source badges, manual fallback, lookup state messages, Arabic RTL labels,
+    and no API/storage behavior in the lookup source.
+
+## F6-03B - Add Localized Complaint Create Form With Validation States
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-COMPLAINT-001
+  - REQ-LOCALIZATION-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added a localized `ComplaintCreateForm` component with category, severity,
+    branch, incident date, subject, and description fields.
+  - Added field-level validation preview messages for required fields and
+    VIN-required-when-vehicle-related copy.
+  - Added success and error preview states that preserve visible safe sample
+    input values without submitting.
+  - Kept create-form display text in the shared staff shell dictionary and
+    removed unused legacy shell strings to keep the dictionary under the
+    300-line source budget.
+  - Extended `test:web -- shell` from 30 to 35 tests covering form labels,
+    validation messages, preserved input states, Arabic RTL labels, and no
+    submission/browser storage behavior in source.
+  - Added no API calls, attachments, workflow actions, complaint detail UI,
+    browser storage, customer PII, internal comments, audit logs, DMS codes,
+    portal data, or new dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Failed then Passed: `corepack pnpm test:web -- shell`; one run failed before
+    unused dictionary strings were removed for the lint budget, and one run
+    failed because an older reset-token privacy assertion scanned the whole page
+    after preserved create-form values were added. Final run passed (35/35).
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This render-only form adds no route call or caller authority
+    path.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no state change or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. This task added no credential fields, API calls, token
+    storage, logging, or provider surface.
+  - Customer portal exposure rules hold: Passed. The form uses safe sample
+    operational text only and adds no portal data or customer PII.
+  - Trust boundaries are tested: Passed for this UI slice. Tests cover
+    field-level validation states, preserved input states, Arabic RTL labels,
+    and no API submission or browser storage behavior.
+
+## F6-03C - Add Attachment Upload Panel With File Rules And Scan Status
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - UI-SCREEN-001
+  - UI-DESIGN-001
+  - REQ-FILES-001
+  - REQ-LOCALIZATION-001
+  - METHOD-TEST-001
+- Evidence:
+  - Added a localized `AttachmentUploadPanel` with a file input, file-rule
+    messages, selected-file placeholder text, and scan status display.
+  - Added shared attachment i18n text in `apps/web/src/i18n/staff-attachments.ts`
+    to keep the main staff shell dictionary under the source-line budget.
+  - Added scan status states for pending, clean, and rejected.
+  - Added loading, empty, and error attachment panel states.
+  - Extended `test:web -- shell` from 35 to 40 tests covering file rules, scan
+    statuses, Arabic RTL labels, safe placeholder content, and no upload,
+    file-read, object-URL, browser storage, or external URL behavior in source.
+  - Added no attachment API calls, file reads, object URLs, complaint submission
+    behavior, customer PII, internal comments, audit logs, DMS codes, portal
+    data, provider details, storage URLs, or new dependency.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (40/40)
+  - Passed: `git diff --check` (line-ending warnings only)
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input:
+    Passed by scope. This render-only attachment panel adds no route call or
+    caller authority path.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: Passed by scope. This task
+    added no state change, file persistence, or side effect.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+    returned: Passed. This task added no credential fields, API calls, token
+    storage, logging, provider surface, file reads, object URLs, or storage URLs.
+  - Customer portal exposure rules hold: Passed. The panel uses safe placeholder
+    file text only and exposes no portal data, customer PII, or storage URLs.
+  - Trust boundaries are tested: Passed for this UI slice. Tests cover file
+    rules, scan states, Arabic RTL labels, and absence of upload/file-read/
+    storage behavior in the panel source.

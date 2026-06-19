@@ -3,7 +3,7 @@ import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const suite = process.argv.slice(2).find((arg) => arg !== '--') ?? 'shell';
-const allowedSuites = new Set(['shell']);
+const allowedSuites = new Set(['shell', 'api-client']);
 
 if (!allowedSuites.has(suite)) {
   console.error(`Unknown web test suite: ${suite}`);

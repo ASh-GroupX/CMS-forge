@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import 'reflect-metadata';
 import { Reflector } from '@nestjs/core';
@@ -171,6 +172,51 @@ test('logout revokes the cookie token and expires staff session and CSRF cookies
   ]);
 });
 
+test('password reset request route returns generic ok and never exposes raw token', async () => {
+  const result = await controller({
+    requestPasswordReset: async (identifier, audit) => {
+      assert.equal(identifier, 'admin@cms-auto.test');
+      assert.deepEqual(audit, {
+        correlationId: 'req_test',
+        ipAddress: '127.0.0.1',
+        userAgent: 'node:test',
+      });
+      return { ok: true, rawToken: 'raw-reset-token' };
+    },
+  }).requestPasswordReset({ identifier: ' admin@cms-auto.test ' }, request());
+
+  assert.deepEqual(result, { ok: true });
+  assert.equal(JSON.stringify(result).includes('raw-reset-token'), false);
+});
+
+test('password reset consume route returns service result without exposing token or password', async () => {
+  const result = await controller({
+    consumePasswordReset: async (input) => {
+      assert.equal(input.token, 'reset-token');
+      assert.equal(input.newPassword, 'new-valid-password');
+      assert.deepEqual(input.audit, {
+        correlationId: 'req_test',
+        ipAddress: '127.0.0.1',
+        userAgent: 'node:test',
+      });
+      return { ok: true };
+    },
+  }).consumePasswordReset({ token: ' reset-token ', newPassword: 'new-valid-password' }, request());
+
+  assert.deepEqual(result, { ok: true });
+  const responseJson = JSON.stringify(result);
+  assert.equal(responseJson.includes('reset-token'), false);
+  assert.equal(responseJson.includes('new-valid-password'), false);
+});
+
+test('password reset consume route keeps invalid token result generic', async () => {
+  const result = await controller({
+    consumePasswordReset: async () => ({ ok: false }),
+  }).consumePasswordReset({ token: 'bad-token', newPassword: 'new-valid-password' }, request());
+
+  assert.deepEqual(result, { ok: false });
+});
+
 test('malformed login input returns the standard error envelope code', async () => {
   await assert.rejects(
     controller({}).login({ identifier: '', password: 'secret' }, request(), response()),
@@ -181,6 +227,35 @@ test('malformed login input returns the standard error envelope code', async () 
       error.fieldErrors[0]?.field === 'identifier' &&
       error.fieldErrors[0]?.code === 'REQUIRED',
   );
+});
+
+test('malformed password reset input returns standard validation errors', async () => {
+  await assert.rejects(
+    controller({}).consumePasswordReset({ token: '', newPassword: 'short' }, request()),
+    (error: unknown) =>
+      error instanceof AppException &&
+      error.code === 'VALIDATION_FAILED' &&
+      error.safeMessage === 'Invalid password reset request' &&
+      error.fieldErrors.some((field) => field.field === 'token') &&
+      error.fieldErrors.some((field) => field.field === 'newPassword'),
+  );
+});
+
+test('OpenAPI documents password reset routes without credential examples', () => {
+  const spec = JSON.parse(readFileSync('packages/contracts/openapi.json', 'utf8')) as {
+    paths: Record<string, unknown>;
+    components: { schemas: Record<string, unknown> };
+  };
+
+  assert.ok(spec.paths['/auth/password-reset/request']);
+  assert.ok(spec.paths['/auth/password-reset/consume']);
+  assert.ok(spec.components.schemas.AuthPasswordResetRequest);
+  assert.ok(spec.components.schemas.AuthPasswordResetConsumeRequest);
+  const resetSpecJson = JSON.stringify({
+    request: spec.paths['/auth/password-reset/request'],
+    consume: spec.paths['/auth/password-reset/consume'],
+  });
+  assert.equal(/raw-reset-token|tokenHash|passwordHash|\$argon2id/.test(resetSpecJson), false);
 });
 
 test('validation errors render safe field errors and the request correlation id', () => {

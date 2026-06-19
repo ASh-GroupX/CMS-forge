@@ -19,6 +19,20 @@ export type CreateStaffSessionInput = {
   expiresAt: Date;
 };
 
+export type CreatePasswordResetTokenInput = {
+  userId: string;
+  tokenHash: string;
+  expiresAt: Date;
+};
+
+export type PasswordResetTokenRecord = {
+  id: string;
+  userId: string;
+  expiresAt: Date;
+  consumedAt: Date | null;
+  user: Pick<StaffAuthRecord, 'id' | 'branchId' | 'isActive' | 'lockedAt'>;
+};
+
 export type StaffSessionRecord = {
   id: string;
   expiresAt: Date;
@@ -58,6 +72,48 @@ export class AuthRepository {
       data: input,
       select: { id: true },
     });
+  }
+
+  async createPasswordResetToken(
+    input: CreatePasswordResetTokenInput,
+    client: Pick<PrismaService, 'staffPasswordResetToken'> = this.prisma,
+  ): Promise<{ id: string }> {
+    return client.staffPasswordResetToken.create({
+      data: input,
+      select: { id: true },
+    });
+  }
+
+  async findPasswordResetTokenByHash(tokenHash: string): Promise<PasswordResetTokenRecord | null> {
+    return this.prisma.staffPasswordResetToken.findUnique({
+      where: { tokenHash },
+      select: {
+        id: true,
+        userId: true,
+        expiresAt: true,
+        consumedAt: true,
+        user: { select: { id: true, branchId: true, isActive: true, lockedAt: true } },
+      },
+    });
+  }
+
+  async consumePasswordResetToken(
+    tokenId: string,
+    userId: string,
+    newPasswordHash: string,
+    now: Date,
+    client: Pick<PrismaService, 'staffPasswordResetToken' | 'user'> = this.prisma,
+  ): Promise<boolean> {
+    const consumed = await client.staffPasswordResetToken.updateMany({
+      where: { id: tokenId, consumedAt: null },
+        data: { consumedAt: now },
+    });
+    if (consumed.count !== 1) return false;
+    await client.user.update({
+      where: { id: userId },
+      data: { passwordHash: newPasswordHash },
+    });
+    return true;
   }
 
   async findStaffSessionByTokenHash(tokenHash: string): Promise<StaffSessionRecord | null> {

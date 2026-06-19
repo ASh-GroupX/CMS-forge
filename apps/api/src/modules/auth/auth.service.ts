@@ -1,25 +1,33 @@
 import { HttpStatus } from '@nestjs/common';
 import argon2 from 'argon2';
-import { createHash, randomBytes } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import { AuditService } from '../../core/audit.service.js';
 import type { AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import { AuthRepository } from './auth.repository.js';
 import type { StaffAuthRecord } from './auth.repository.js';
-
-const STAFF_SESSION_COOKIE = 'cms_staff_session';
-const STAFF_SESSION_TTL_SECONDS = 60 * 60 * 8;
+import {
+  STAFF_SESSION_TTL_SECONDS,
+  hashPasswordResetToken,
+  hashStaffSessionToken,
+  serializeExpiredStaffSessionCookie,
+  serializeStaffSessionCookie,
+} from './auth.tokens.js';
+export { hashPasswordResetToken, hashStaffSessionToken } from './auth.tokens.js';
 
 type AuthStore = Pick<
   AuthRepository,
-  'findStaffByIdentifier' | 'createStaffSession' | 'findStaffSessionByTokenHash' | 'revokeStaffSession'
+  | 'findStaffByIdentifier'
+  | 'createStaffSession'
+  | 'findStaffSessionByTokenHash'
+  | 'revokeStaffSession'
+  | 'createPasswordResetToken'
+  | 'findPasswordResetTokenByHash'
+  | 'consumePasswordResetToken'
 > &
   Partial<Pick<AuthRepository, 'transaction'>>;
 
-export type AuthAuditContext = Pick<
-  AuditRecordInput,
-  'correlationId' | 'ipAddress' | 'userAgent'
->;
+export type AuthAuditContext = Pick<AuditRecordInput, 'correlationId' | 'ipAddress' | 'userAgent'>;
 
 export type VerifyCredentialsInput = {
   identifier: string;
@@ -44,20 +52,14 @@ export type CreateStaffSessionInput = {
   audit?: AuthAuditContext;
 };
 
-export type StaffSessionCookie = {
-  cookie: string;
-  expiresAt: Date;
-};
+export type StaffSessionCookie = { cookie: string; expiresAt: Date };
 
-export type StaffSessionClaims = StaffAuthClaims & {
-  sessionId: string;
-};
+export type StaffSessionClaims = StaffAuthClaims & { sessionId: string };
+
+export type ConsumePasswordResetInput = { token: string; newPassword: string; now?: Date; audit?: AuthAuditContext };
 
 export class AuthService {
-  constructor(
-    private readonly authRepository: AuthStore & Pick<AuthRepository, 'transaction'>,
-    private readonly auditService?: AuditService,
-  ) {}
+  constructor(private readonly authRepository: AuthStore & Pick<AuthRepository, 'transaction'>, private readonly auditService?: AuditService) {}
 
   async verifyCredentials(input: VerifyCredentialsInput): Promise<StaffAuthClaims> {
     try {
@@ -197,6 +199,74 @@ export class AuthService {
     return serializeExpiredStaffSessionCookie(secureCookie);
   }
 
+  async requestPasswordReset(identifier: string, audit?: AuthAuditContext): Promise<{ ok: true; rawToken?: string }> {
+    const email = identifier.trim().toLowerCase();
+    const user = email ? await this.authRepository.findStaffByIdentifier(email) : null;
+
+    if (!user || !user.isActive || user.lockedAt) {
+      return { ok: true };
+    }
+
+    const rawToken = randomBytes(32).toString('base64url');
+    const tokenHash = hashPasswordResetToken(rawToken);
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    const tokenInput = { userId: user.id, tokenHash, expiresAt };
+
+    if (audit && this.auditService && this.authRepository.transaction) {
+      await this.authRepository.transaction(async (client) => {
+        await this.authRepository.createPasswordResetToken(tokenInput, client);
+        await this.recordAuthAudit(
+          {
+            action: 'password_reset_request',
+            actorId: user.id,
+            branchId: user.branchId ?? null,
+            targetType: 'user',
+            targetId: user.id,
+            ...audit,
+          },
+          client,
+        );
+      });
+    } else {
+      await this.authRepository.createPasswordResetToken(tokenInput);
+    }
+
+    return { ok: true, rawToken };
+  }
+
+  async consumePasswordReset(input: ConsumePasswordResetInput): Promise<{ ok: boolean }> {
+    validatePasswordStrength(input.newPassword);
+    const now = input.now ?? new Date();
+    const tokenHash = input.token.trim() ? hashPasswordResetToken(input.token) : '';
+    const token = tokenHash ? await this.authRepository.findPasswordResetTokenByHash(tokenHash) : null;
+
+    if (!token || token.consumedAt || token.expiresAt <= now || !token.user.isActive || token.user.lockedAt) {
+      return { ok: false };
+    }
+
+    const newPasswordHash = await argon2.hash(input.newPassword, { type: argon2.argon2id });
+    let consumed = false;
+
+    await this.authRepository.transaction(async (client) => {
+      consumed = await this.authRepository.consumePasswordResetToken(token.id, token.userId, newPasswordHash, now, client);
+      if (!consumed) return;
+      await this.recordAuthAudit(
+        {
+          action: 'password_reset_complete',
+          actorId: token.userId,
+          branchId: token.user.branchId ?? null,
+          targetType: 'user',
+          targetId: token.userId,
+          ...input.audit,
+        },
+        client,
+      );
+    });
+
+    return { ok: consumed };
+  }
+
   private async recordAuthAudit(
     input: Omit<AuditRecordInput, 'eventType'>,
     client?: Parameters<AuditService['record']>[1],
@@ -209,40 +279,10 @@ function authDenied(code: 'AUTH_INVALID_CREDENTIALS' | 'AUTH_LOCKED_OR_INACTIVE'
   return new AppException(code, 'Invalid credentials', HttpStatus.UNAUTHORIZED);
 }
 
-export function hashStaffSessionToken(token: string): string {
-  return createHash('sha256').update(token).digest('base64url');
-}
-
-function serializeStaffSessionCookie(token: string, expiresAt: Date, secure: boolean): string {
-  const parts = [
-    `${STAFF_SESSION_COOKIE}=${token}`,
-    'Path=/',
-    'HttpOnly',
-    'SameSite=Lax',
-    `Max-Age=${STAFF_SESSION_TTL_SECONDS}`,
-    `Expires=${expiresAt.toUTCString()}`,
-  ];
-
-  if (secure) {
-    parts.push('Secure');
+function validatePasswordStrength(password: string): void {
+  if (password.length < 12) {
+    throw new AppException('VALIDATION_FAILED', 'Invalid password reset request', HttpStatus.BAD_REQUEST, [
+      { field: 'newPassword', code: 'MIN_LENGTH', message: 'Password must be at least 12 characters.' },
+    ]);
   }
-
-  return parts.join('; ');
-}
-
-function serializeExpiredStaffSessionCookie(secure: boolean): string {
-  const parts = [
-    `${STAFF_SESSION_COOKIE}=`,
-    'Path=/',
-    'HttpOnly',
-    'SameSite=Lax',
-    'Max-Age=0',
-    'Expires=Thu, 01 Jan 1970 00:00:00 GMT',
-  ];
-
-  if (secure) {
-    parts.push('Secure');
-  }
-
-  return parts.join('; ');
 }

@@ -17,6 +17,8 @@ Agent context manifest. Read this before editing the module.
 
 - `users`
 - `staff_sessions`
+- `staff_password_reset_tokens`
+
 
 ## May depend on
 

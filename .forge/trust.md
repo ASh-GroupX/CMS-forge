@@ -3315,3 +3315,213 @@ Residual risk: this is a required customer-portal privacy gate. A fresh verifier
     or replan rather than exceed the agentic budget.
   - `F6-01D1` intentionally does not add public routes, OpenAPI paths, provider
     delivery, browser token storage, or UI.
+
+## F6-01D1 - Add Backend Password Reset Request Token Foundation
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-01D2`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- auth` (24/24)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `corepack pnpm prisma:validate`
+  - Passed: `git diff --check` (line-ending warnings only)
+  - Extra Passed: `corepack pnpm --filter @cms-auto/web build`
+- Notes:
+  - Storing reset tokens and auditing are performed inside the same transaction hook client, preventing database/audit drift.
+  - Return shape is generic for active/inactive/missing/locked users, completely preventing user-existence oracle or timing data leaks.
+  - Raw tokens, hashes, and user credential information are verified to never reach audit logs or metadata records.
+
+## F6-01D2 - Add Backend Password Reset Consume/Reset Behavior
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-01D3`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- auth` (27/27)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Token consume is guarded by `consumedAt: null` at update time before the
+    password hash update, so already-consumed tokens cannot update passwords.
+  - Invalid token cases return the same service result and write no audit.
+
+## F6-01D3 - Add Password Reset HTTP Routes And OpenAPI
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-01D4`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- auth` (32/32)
+  - Passed: `corepack pnpm openapi:check`
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Reset request and consume are documented public pre-session routes.
+  - Request behavior remains generic and strips internal raw-token material from
+    the HTTP response.
+  - Consume behavior returns only the service-level generic result; password
+    update, token consume, and audit remain owned by the auth service.
+  - No frontend UI, delivery adapter, browser token storage, CSRF/session guard,
+    or admin reset UI was added.
+
+## F6-01D4 - Add Staff Password-Reset UI Contract
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-02A`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Failed then Passed: `corepack pnpm typecheck` after fixing the optional
+    reset preview prop type under `exactOptionalPropertyTypes`.
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (14/14)
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Password-reset UI is intentionally render-only and localized.
+  - The panel exposes request/token entry states and safe result messages without
+    adding API calls, a browser token store, delivery behavior, or Admin reset UI.
+  - `F6-01` is complete; the next slice should start the staff read-client
+    foundation before dashboard and queue rendering.
+
+## F6-02A - Add Minimal Typed Web API Client/Error Mapping For Staff Complaint Reads
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-02B`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- api-client` (4/4)
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - The web client foundation is intentionally tiny and hand-written because no
+    generated contracts client exists yet.
+  - Helpers rely on cookie credentials and backend guard authority; they expose
+    no branch, role, actor, workflow, token, or credential parameters.
+  - Dashboard and queue rendering remain unbuilt for the next slices.
+
+## F6-02B - Add Role-Specific Dashboard Summary Cards
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-02C`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (19/19)
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Dashboard cards are localized and role-specific only as a visual preview.
+  - No API calls or client-side authorization decisions were added; backend
+    guards remain the authority.
+  - Queue table rendering remains unbuilt for `F6-02C`.
+
+## F6-02C - Add Complaint Work Queue Table With Filters And States
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-02D`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (23/23)
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - The queue is still a UI contract preview, not live data.
+  - Filters and pagination are present as affordances only; no API calls or
+    client-side permission decisions were added.
+  - Sample rows intentionally avoid customer PII, internal comments, audit logs,
+    and portal data.
+
+## F6-02D - Add Queue Responsive And RTL/LTR Web Tests
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-03A`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (25/25)
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - This is deliberately lightweight SSR proof, not a substitute for the real
+    Playwright visual/a11y/perf gates scheduled in `F6-07`.
+  - `F6-02` is complete and remains UI-only except for the tiny read-client
+    helper from `F6-02A`.
+
+## F6-03A - Add Customer/Vehicle Lookup Panel With Manual Fallback UI
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-03B`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Failed then Passed: `corepack pnpm test:web -- shell` after narrowing a
+    pre-existing broad queue privacy assertion to the queue sample source.
+    Final run passed 30/30.
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Lookup UI is render-only and safe-placeholder-only.
+  - No lookup API, DMS/CRM call, browser storage, complaint submission behavior,
+    real customer PII, DMS code, audit log, or portal data was added.
+
+## F6-03B - Add Localized Complaint Create Form With Validation States
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; AUTO PHASE can continue with `F6-03C`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Failed then Passed: `corepack pnpm test:web -- shell`; final run passed
+    35/35 after narrowing stale broad assertions and keeping the dictionary
+    under the lint budget.
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Create form is still render-only. It preserves safe sample values in preview
+    states but does not submit, store, attach, or call APIs.
+  - Attachment upload is intentionally left for `F6-03C`.
+
+## F6-03C - Add Attachment Upload Panel With File Rules And Scan Status
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Accept; stop AUTO PHASE for `PLAN-F6-03D-COMPLAINT-SUBMIT-SPLIT`.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (29/29; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:web -- shell` (40/40)
+  - Passed: `git diff --check` (line-ending warnings only)
+- Notes:
+  - Attachment panel is render-only and safe-placeholder-only.
+  - Real complaint submission is wider than a single builder slice because it
+    crosses write-client behavior, credentials/CSRF, validation mapping,
+    preserved form state, and shell integration. Split `F6-03D` before building.

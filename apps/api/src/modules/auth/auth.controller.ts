@@ -17,6 +17,7 @@ import { LoginRateLimitGuard } from '../../core/rate-limit.guard.js';
 import { AuthService } from './auth.service.js';
 import type { AuthAuditContext } from './auth.service.js';
 import { LoginRequestDto } from './dto/login-request.dto.js';
+import { PasswordResetConsumeDto, PasswordResetRequestDto } from './dto/password-reset.dto.js';
 
 const STAFF_SESSION_COOKIE = 'cms_staff_session';
 
@@ -70,6 +71,23 @@ export class AuthController {
 
     response.setHeader('Set-Cookie', [expiredCookie, serializeExpiredCsrfCookie(secureCookie)]);
     return { ok: true };
+  }
+
+  @Post('password-reset/request')
+  async requestPasswordReset(@Body() body: unknown, @Req() request: AuthRequest): Promise<{ ok: true }> {
+    const input = PasswordResetRequestDto.from(body);
+    await this.authService.requestPasswordReset(input.identifier, auditContext(request));
+    return { ok: true };
+  }
+
+  @Post('password-reset/consume')
+  async consumePasswordReset(@Body() body: unknown, @Req() request: AuthRequest): Promise<{ ok: boolean }> {
+    const input = PasswordResetConsumeDto.from(body);
+    return this.authService.consumePasswordReset({
+      token: input.token,
+      newPassword: input.newPassword,
+      audit: auditContext(request),
+    });
   }
 
   @Get('me')

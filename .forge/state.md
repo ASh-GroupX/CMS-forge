@@ -1,8 +1,189 @@
-﻿# Current State
+# Current State
 
-Status: Ready to Build
+Status: Ready to Plan
 Phase: Phase 6 - Staff UI
-Next Task: F6-01D1 - Add Backend Password Reset Request Token Foundation
+Next Task: PLAN-F6-03D-COMPLAINT-SUBMIT-SPLIT
+
+## F6-03C Built - AUTO PHASE Stopped For Planning
+
+`F6-03C` added a localized render-only attachment upload panel to the complaint
+create surface. It includes file-rule messages, a file input control,
+placeholder selected-file text, scan-status states for pending/clean/rejected,
+and loading/empty/error panel states in English and Arabic. It does not read
+files, create object URLs, upload, persist content, or expose storage URLs.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- shell 40/40,
+and git diff --check with line-ending warnings only.
+
+AUTO PHASE stops here because the next backlog item, `F6-03D`, would introduce
+real complaint submission through the backend API. That crosses frontend API
+client write behavior, server-session credentials, CSRF/session handling,
+validation envelope mapping, preserved form state, and shell integration. The
+next step is a `PLANNER` split before coding.
+
+## F6-03B Built - AUTO PHASE Continuing
+
+`F6-03B` added the localized render-only complaint create form contract after
+the customer/vehicle lookup panel. It includes category, severity, branch,
+incident date, subject, and description fields; field-level validation preview
+messages; VIN-required-when-vehicle-related copy; and success/error preview
+states that preserve visible safe sample input.
+
+Required proof passed after two honest test-scope repairs: the first focused
+shell run failed because the dictionary exceeded the 300-line budget, fixed by
+removing unused legacy shell strings; the next focused run failed because an old
+password-reset assertion scanned the whole page after create-form preserved
+values were added, fixed by narrowing it to the reset component source. Final
+proof passed: lint, typecheck, test 29/29, test:web -- shell 35/35, and git
+diff --check with line-ending warnings only.
+
+No API call, attachment UI, workflow action, complaint detail UI, browser
+storage, customer PII, internal comment, audit log, DMS code, portal data, or
+new dependency was added.
+
+## F6-03A Built - AUTO PHASE Continuing
+
+`F6-03A` added a localized render-only customer/vehicle lookup panel to the
+staff shell. It includes phone, customer code, name, VIN, and plate search
+fields, safe local/DMS source badges, safe placeholder result text, manual
+fallback affordance, and previewable loading, no-match, and error states.
+
+Required proof passed after one honest test-scope repair: initial
+`test:web -- shell` failed because an older broad queue privacy assertion also
+matched the new legitimate VIN field label; the assertion was narrowed to the
+queue component source. Final proof passed: lint, typecheck, test 29/29,
+test:web -- shell 30/30, and git diff --check with line-ending warnings only.
+
+No DMS/CRM/backend API call, complaint submission behavior, full create form,
+browser storage, real customer PII, DMS code, audit log, portal data, or new
+dependency was added.
+
+## F6-02D Built - AUTO PHASE Continuing
+
+`F6-02D` added focused shell tests proving the staff shell, dashboard card grid,
+queue filter grid, and queue table container expose responsive classes for the
+current lightweight web proof level. It also proves English LTR and Arabic RTL
+render dashboard and queue labels together. No browser automation was added
+because visual/a11y/performance runners remain scheduled for `F6-07`.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- shell 25/25,
+and git diff --check with line-ending warnings only.
+
+`F6-02` is now complete. No API calls, new UI surfaces, client-side permission
+decisions, browser automation, visual runner, accessibility runner, performance
+runner, or new dependency was added.
+
+## F6-02C Built - AUTO PHASE Continuing
+
+`F6-02C` replaced the remaining queue placeholder with a localized complaint
+work queue table contract. The shell now renders queue filters, localized table
+headers, a safe static sample row set, pagination affordance, and previewable
+loading, empty, and error queue states in English and Arabic. This remains
+visual-only and does not call APIs or perform real filtering/pagination.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- shell 23/23,
+and git diff --check with line-ending warnings only.
+
+No API calls, real filtering/pagination behavior, detail workspace, workflow
+actions, client-side permission decisions, customer PII, internal comments,
+audit logs, portal data, or new dependencies were added.
+
+## F6-02B Built - AUTO PHASE Continuing
+
+`F6-02B` replaced the placeholder summary counters with localized, role-specific
+dashboard summary cards for staff, admin, and management preview states. The
+cards cover open, overdue, SLA warning, closed, and average TAT views where
+appropriate for the role preview, plus previewable loading, empty, and error
+states. This remains visual-only and does not call APIs or grant authority.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- shell 19/19,
+and git diff --check with line-ending warnings only.
+
+No API calls, queue table, filters, detail workspace, workflow actions,
+client-side permission decisions, or new dependencies were added.
+
+## F6-02A Built - AUTO PHASE Continuing
+
+`F6-02A` added a minimal typed web client helper for staff complaint queue and
+detail reads. The helper uses relative `GET /complaints` and
+`GET /complaints/{id}` paths, cookie credentials, explicit web-facing response
+types, safe API/network error mapping, and correlation ID preservation. It does
+not accept role, branch, workflow, token, or credential parameters and does not
+call APIs from the existing shell.
+
+Required proof passed: lint, typecheck, test 29/29, test:web -- api-client 4/4,
+and git diff --check with line-ending warnings only.
+
+No dashboard rendering, queue rendering, filters, workflow actions, client-side
+authorization decisions, token storage, generated client, or new dependency was
+added.
+
+## F6-01D4 Built - AUTO PHASE Continuing
+
+`F6-01D4` added the localized staff password-reset UI contract to the existing
+staff shell. The signed-out shell now exposes forgot-password and reset-token
+entry points, request and token forms, generic request success text, generic
+invalid/expired-token text, and reset success text in English and Arabic. The
+UI remains render-only: no API calls, frontend API client layer, delivery
+adapter, browser token storage, or Admin reset UI was added.
+
+Required proof passed after one honest repair: initial typecheck failed on
+`exactOptionalPropertyTypes` for the optional preview state; the prop types were
+tightened and the final proof passed: lint, typecheck, test 29/29,
+test:web -- shell 14/14, and git diff --check with line-ending warnings only.
+
+`F6-01` and `F6-01D` are now complete. AUTO PHASE remains in Phase 6 and
+continues with `F6-02A`.
+
+## F6-01D3 Built - AUTO PHASE Continuing
+
+`F6-01D3` exposed password reset request and consume behavior through public
+pre-session auth routes. The request route returns only generic `{ ok: true }`
+even if the service returns a raw token for internal delivery wiring, and the
+consume route returns the service's generic `{ ok: boolean }` result. DTO
+validation uses the standard validation envelope, audit context is passed from
+the request, and OpenAPI documents both routes without credential examples.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- auth 32/32,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No email/SMS delivery, frontend UI, browser token storage, admin reset UI,
+session-only guard, or CSRF requirement was added to these pre-session routes.
+
+## F6-01D2 Built - AUTO PHASE Continuing
+
+`F6-01D2` added backend password-reset consume behavior in the auth service and
+repository. Valid unconsumed, non-expired reset tokens now update the staff
+password hash with fresh Argon2id, mark the token consumed, and write an `AUTH` /
+`password_reset_complete` audit entry in the same transaction. Missing, expired,
+and consumed tokens return the same generic denial; weak passwords fail
+validation before token lookup or persistence.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- auth 27/27,
+openapi:check, and git diff --check with line-ending warnings only.
+
+No HTTP routes, OpenAPI paths, email/SMS delivery, frontend UI, browser token
+storage, or admin reset UI was added.
+
+## F6-01D1 Built - AUTO PHASE Continuing
+
+`F6-01D1` added the password reset token foundation inside the auth module.
+Added `StaffPasswordResetToken` Prisma model (user relation, hash-only storage,
+15-minute expiry, consumed timestamp, and query indexes), SQL migration, updated
+auth module manifest, `createPasswordResetToken` repository method, and
+`requestPasswordReset` service behavior. The service normalizes identifiers,
+returns generic `{ ok: true }` for all user states (missing/inactive/locked/active)
+to prevent user-existence oracle, stores only SHA-256 token hashes, and writes a
+same-transaction `AUTH` / `password_reset_request` audit entry for active users.
+
+Required proof passed: lint, typecheck, test 29/29, test:api -- auth 24/24,
+prisma:validate, openapi:check, and git diff --check with line-ending warnings only.
+Extra sanity proof passed: `corepack pnpm --filter @cms-auto/web build`.
+
+No HTTP routes, OpenAPI paths, email/SMS delivery, browser token storage, admin
+reset UI, consume/reset behavior, or password-change logic was added.
+
+
 
 ## PLAN-F6-01D-PASSWORD-RESET-BACKEND-GAP Complete - Backend Reset Path Selected
 
