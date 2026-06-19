@@ -1795,3 +1795,57 @@ starting Phase 3 planning.
 - Gate:
   - `F3-03A2` is marked `Verify Gate: required`; AUTO PHASE stops at `Needs Verify`
     before `F3-03A3`.
+
+## VERIFY-F3-03A2 - Queued Internal Notification Service Gate
+
+- Date: 2026-06-19
+- Required model tier: independent VERIFY
+- Builder honesty: Inflated
+- Code quality: Acceptable
+- Recommendation: Repair
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (4/4)
+  - Passed: `corepack pnpm openapi:check`
+- Findings:
+  - `NotificationsService.safePayload` claims to validate JSON payloads, but any
+    non-plain object with no enumerable values passes `isJson`. Examples include
+    `new Date()`, `new Map()`, and `new Set()`. Those are not JSON payload values
+    and should reject before repository writes, especially because `F3-03A3` will
+    make this method the cross-module notification queue boundary.
+- Scope review:
+  - `NotificationsService` remains the public surface, and the notifications module
+    does not import another module repository or DTO.
+  - `NotificationsRepository.queueInternal` writes owned `notifications` rows only
+    with `IN_APP` / `QUEUED`.
+  - Provider delivery, provider credentials/results, sent/failed state, routes,
+    OpenAPI paths, BullMQ workers, SLA imports, schema changes, migrations, UI,
+    portal behavior, and template management were not added.
+- Required repair:
+  - Tighten payload validation to allow JSON primitives, arrays, and plain objects
+    only; reject non-plain objects before write and add a focused notifications API
+    test for that denial.
+
+## REPAIR-F3-03A2 - Reject Non-Plain Notification Payload Objects
+
+- Date: 2026-06-19
+- Required model tier: BUILDER-STRONG
+- Risk: High
+- Recommendation: Needs Verify
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (5/5)
+  - Passed: `corepack pnpm openapi:check`
+- Build assessment:
+  - `NotificationsService.safePayload` now accepts only JSON primitives, arrays, and
+    plain objects.
+  - Non-plain payload objects such as `Date`, `Map`, and `Set` reject before
+    repository writes.
+  - Existing unsafe payload-key denial remains intact.
+- Gate:
+  - This repairs the `F3-03A2` Verify Gate; AUTO PHASE stops at `Needs Verify`
+    before `F3-03A3`.

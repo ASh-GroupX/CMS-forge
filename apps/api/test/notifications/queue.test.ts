@@ -124,3 +124,21 @@ test('notifications service denies unsafe payload keys before write', async () =
   );
   assert.equal(writeCalled, false);
 });
+
+test('notifications service denies non-plain payload objects before write', async () => {
+  let writeCalled = false;
+  const service = new NotificationsService({
+    queueInternal: async () => {
+      writeCalled = true;
+      throw new Error('should not write');
+    },
+  } as unknown as NotificationsRepository);
+
+  for (const payload of [new Date('2026-06-19T00:00:00.000Z'), new Map(), new Set()]) {
+    await assert.rejects(
+      service.queueInternal({ templateCode: 'sla.breach.internal', payload }),
+      (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED',
+    );
+  }
+  assert.equal(writeCalled, false);
+});

@@ -2819,3 +2819,49 @@ Append build and verification evidence here. Do not delete failed evidence.
     added.
   - Trust boundaries are tested: Passed; notifications tests cover the allowed queued
     in-app write and denied blank template/unsafe secret payload cases before write.
+
+## REPAIR-F3-03A2 - Reject Non-Plain Notification Payload Objects
+
+- Date: 2026-06-19
+- Risk: High
+- Status: Passed
+- Required model tier: BUILDER-STRONG
+- Requirement IDs:
+  - REQ-NOTIFY-001
+  - REQ-SLA-001
+  - SLA-CALENDAR-001
+  - ARCH-WORKFLOW-001
+  - METHOD-AUDIT-001
+  - METHOD-TEST-001
+  - API-STANDARD-001
+- Evidence:
+  - Tightened `NotificationsService` payload validation so JSON primitives, arrays,
+    and plain objects are allowed, while non-plain objects are rejected before
+    repository writes.
+  - Kept unsafe payload-key denial intact.
+  - Added focused notifications API coverage proving `Date`, `Map`, and `Set`
+    payloads reject before write.
+  - No provider delivery, routes, OpenAPI paths, BullMQ workers, SLA imports, schema
+    changes, migrations, UI, portal behavior, or template management was added.
+- Verification:
+  - Passed: `corepack pnpm lint`
+  - Passed: `corepack pnpm typecheck`
+  - Passed: `corepack pnpm test` (20/20; coverage thresholds cleared)
+  - Passed: `corepack pnpm test:api -- notifications` (5/5)
+  - Passed: `corepack pnpm openapi:check`
+- Security Self-Check:
+  - Roles and branch scope come from the server session, never client input: Not
+    applicable at HTTP/session boundary; no route, session, role, or branch-scope
+    decision was added.
+  - Each state change writes status history and an audit entry in the same
+    transaction; side effects enqueue after commit: This repair only tightens
+    notification payload validation and writes no complaint state.
+  - No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+    Passed; unsafe payload-key denial remains and non-plain payload objects now
+    reject before write.
+  - Customer portal exposure rules hold: Passed by scope; no portal route,
+    portal-visible DTO, internal comments, audit logs, DMS codes, or staff PII were
+    added.
+  - Trust boundaries are tested: Passed; notifications tests cover allowed queued
+    in-app write, blank template denial, unsafe secret payload denial, and non-plain
+    object denial before write.

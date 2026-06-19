@@ -50,13 +50,17 @@ function safePayload(value: unknown): Prisma.InputJsonValue {
 function isJson(value: unknown): value is Prisma.InputJsonValue {
   if (value === null || ['string', 'number', 'boolean'].includes(typeof value)) return true;
   if (Array.isArray(value)) return value.every(isJson);
-  return typeof value === 'object' && Object.values(value as Record<string, unknown>).every(isJson);
+  return isPlainObject(value) && Object.values(value).every(isJson);
 }
 
 function hasBlockedKey(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
   if (Array.isArray(value)) return value.some(hasBlockedKey);
   return Object.entries(value).some(([key, child]) => blockedPayloadKey.test(key) || hasBlockedKey(child));
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && Object.getPrototypeOf(value) === Object.prototype;
 }
 
 function invalidNotification(field: string): AppException {

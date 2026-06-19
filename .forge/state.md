@@ -2,7 +2,29 @@
 
 Status: Needs Verify
 Phase: Phase 3 - SLA And Workflow Operations
-Next Task: VERIFY-F3-03A2 - Queued Internal Notification Service Gate
+Next Task: VERIFY-F3-03A2-REPAIR - Queued Internal Notification Service Repair Gate
+
+## REPAIR-F3-03A2 Built - Verify Gate
+
+`REPAIR-F3-03A2` tightened notification payload validation. `NotificationsService`
+now allows JSON primitives, arrays, and plain objects, and rejects non-plain payload
+objects such as `Date`, `Map`, and `Set` before repository writes. Existing unsafe
+payload-key denial remains intact.
+
+Required proof passed: lint, typecheck, test 20/20, test:api -- notifications 5/5,
+and openapi:check.
+
+AUTO PHASE stops here because this repair returns to the `F3-03A2` Verify Gate.
+
+## VERIFY-F3-03A2 Repair Required
+
+Independent VERIFY re-ran the required proof surface successfully: lint,
+typecheck, test 20/20, test:api -- notifications 4/4, and openapi:check.
+
+Decision: Repair. `NotificationsService.safePayload` accepts non-plain objects such
+as `Date`, `Map`, and `Set` as JSON-safe because they have no enumerable values.
+Repair payload validation before `F3-03A3` builds SLA integration on this public
+service boundary.
 
 ## F3-03A2 Built - Verify Gate
 

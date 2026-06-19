@@ -1,4 +1,4 @@
-# Verify Task: VERIFY-F3-03A2 - Queued Internal Notification Service Gate
+# Verify Task: VERIFY-F3-03A2-REPAIR - Queued Internal Notification Service Repair Gate
 
 Status: Needs Verify
 Required model tier: independent VERIFY
@@ -7,29 +7,20 @@ Phase: Phase 3 - SLA And Workflow Operations
 
 ## Why This Exists
 
-`F3-03A2` creates the notifications public service that `F3-03A3` will call from
-SLA breach processing. Verify the service boundary and safe queue semantics before
-SLA imports and uses it.
+`REPAIR-F3-03A2` fixes the payload-validation gap found by `VERIFY-F3-03A2`
+before `F3-03A3` builds SLA integration on the notifications public service.
 
 ## Verify Scope
 
-- Review the build changes in:
-  - `apps/api/src/modules/notifications/MODULE.md`
-  - `apps/api/src/modules/notifications/notifications.module.ts`
-  - `apps/api/src/modules/notifications/notifications.repository.ts`
+- Review the repair changes in:
   - `apps/api/src/modules/notifications/notifications.service.ts`
-  - `apps/api/src/modules/notifications/notifications.controller.spec.ts`
-  - `apps/api/src/modules/notifications/notifications.service.spec.ts`
   - `apps/api/test/notifications/queue.test.ts`
-  - `tools/api-test.mjs`
-- Confirm `NotificationsService` remains the public surface and no other module
-  repository is imported.
-- Confirm queued internal notifications persist as `IN_APP` / `QUEUED` rows only.
-- Confirm provider delivery, provider credentials/results, sent/failed state, routes,
-  OpenAPI paths, BullMQ workers, SLA imports, schema changes, migrations, UI, portal
-  behavior, and template management were not added.
-- Confirm validation denies blank template codes and unsafe payload keys before
-  writing.
+- Confirm payload validation allows JSON primitives, arrays, and plain objects.
+- Confirm non-plain payload objects such as `Date`, `Map`, and `Set` reject before
+  repository writes.
+- Confirm unsafe payload-key denial still rejects before repository writes.
+- Confirm no provider delivery, routes, OpenAPI paths, BullMQ workers, SLA imports,
+  schema changes, migrations, UI, portal behavior, or template management was added.
 - Confirm evidence labels are honest and the required commands actually ran.
 
 ## Requirement IDs
