@@ -1,9 +1,9 @@
 # Current State
 
-Status: Ready to Plan
+Status: Ready to Build
 Phase: Phase 9 - Production Readiness (Pilot on Hostinger)
-Next Task: PLAN-P9-03 - Split shadcn adoption
-Model Tier: PLANNER
+Next Task: P9-03A - Initialize shadcn/ui config
+Model Tier: BUILDER-STANDARD
 
 ## How to use this file
 
@@ -17,10 +17,14 @@ Prior state history is in .forge/archive/state-archive.md.
   passes.
 - P9-02 passed: `corepack pnpm lint` now includes an Arabic i18n mojibake and
   Arabic-codepoint gate.
-- AUTO PHASE stopped before P9-03 because shadcn adoption is too large for one
-  1-5 file build task and needs planning/splitting.
+- PLAN-P9-03 split shadcn adoption into P9-03A..P9-03F so each build stays near
+  1-5 files plus focused proof.
+- NEXT: P9-03A initializes shadcn/ui config only; primitives and redesign work
+  follow in later tasks.
 
 ## Open carry-forward / known debt
 
-- PLAN-P9-03 must split shadcn initialization, base primitives, token/theme work,
-  tooling, and screenshot/vision-review setup into small build tasks.
+- P9-03B..P9-03F finish shadcn primitives, token alignment, a11y/tailwind
+  tooling, and screenshot/vision-review setup.
+- P9-04 still plans/builds one approved golden screen before broad screen
+  refactors.
