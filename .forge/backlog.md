@@ -345,12 +345,23 @@ UI finish (fixes the "preview shell / I don't like the app" problem; hard go-liv
       `@axe-core/playwright`) with minimal wired checks
 - [x] P9-03F: Add screenshot/vision-review workflow scaffolding for the golden
       screen work; no screen redesign yet
-- [ ] P9-04: PLAN - build ONE golden screen first (shadcn + tokens + all states + RTL +
-      a11y) to a bar you approve via visual review, freeze it, then split the
-      screen-by-screen refactor that replicates it: remove preview/dev scaffolding (Role
-      preview, Preview links, "placeholder" content), wire real data (kill hardcoded
-      values), one screen group per task, each with a human/vision visual-review gate
-      (not snapshot-only)
+- [ ] P9-04A: Build the work queue as the golden screen (shadcn primitives, real
+      typed API rows only, loading/empty/error/success/conflict states, EN/AR visual
+      review gate)
+- [ ] P9-04B: Golden-screen review/repair gate before copying the pattern to other
+      screens
+- [ ] P9-04C: Refactor staff shell, login/reset, dashboard, and notification center;
+      remove preview role/scaffold copy and keep backend-owned role/scope behavior
+- [ ] P9-04D: Refactor intake group: customer/vehicle lookup, complaint create, and
+      attachment upload panels with real API boundaries and all states
+- [ ] P9-04E: Refactor complaint workspace group: complaint detail, workflow modal,
+      comments/public updates, and attachment status/download controls
+- [ ] P9-04F: Refactor admin configuration group: users/roles, branches/departments,
+      categories/severity, SLA policies, and notification templates
+- [ ] P9-04G: Refactor reports/export and audit viewer with scoped data/export
+      messaging and visual review gates
+- [ ] P9-04H: Refactor customer portal submission, tracking, and survey screens with
+      mobile EN/AR visual review gates and portal privacy proof
 - [ ] P9-05: Re-baseline visual regression after the redesign lands
 
 Real email (only live integration in the pilot):

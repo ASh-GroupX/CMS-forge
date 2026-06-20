@@ -148,6 +148,27 @@ Status: Passed through P9-02
 - AUTO PHASE stopped at `PLAN-P9-03` because shadcn adoption must be split before
   build work.
 
+## PLAN-P9-04 - Golden Screen Split
+
+Date: 2026-06-20
+Risk: Medium
+Status: Passed
+Requirements: UI-DESIGN-001 AC1, UI-DESIGN-001 AC2, UI-DESIGN-001 AC3, UI-DESIGN-001 AC4, UI-DESIGN-001 AC5, UI-DESIGN-001 AC6, UI-SCREEN-001
+
+Evidence:
+- Ran `corepack pnpm web:visual-review`; artifacts were written under
+  `coverage/web-visual-review`.
+- Reviewed the generated visual artifact index and the work queue artifact.
+- Selected the complaint work queue (`UI-003`) as the golden screen because it is
+  the central operational surface and covers filters, table density, status and
+  SLA badges, pagination, loading/empty/error/success/conflict state treatment,
+  responsive overflow, and RTL/LTR layout.
+- Split the remaining screen refactor work into P9-04B..P9-04H so no builder has
+  to refactor the full app shell in one pass.
+
+Verification:
+- Passed: `corepack pnpm web:visual-review`.
+
 ## P9-03A - Initialize Shadcn Config
 
 Date: 2026-06-20
