@@ -1005,3 +1005,14 @@ P9-08D is complete: deployed pilot smoke/UAT checklist and Phase 9 handoff stop
 conditions are documented. Lint and root tool tests passed. P9-08 is complete.
 Do not start Phase Review yet: P9-06C/P9-06 and real P9-OPS deployment/UAT
 proof remain open human/environment gates.
+
+## P9 Readiness Clarification Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Ready For Provisioning
+
+User clarified no VPS exists and wants the repo ready. The codebase is ready for
+VPS provisioning based on completed P9-07/P9-08 artifacts and checks. This is
+not production proof: SMTP arrival, deployed health, backup restore,
+object-storage smoke, and pilot UAT remain future human/environment gates.

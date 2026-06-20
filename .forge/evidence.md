@@ -3148,3 +3148,24 @@ Status: Passed through P9-02
 - P9-08 is complete.
 - Phase 9 is not complete: P9-06C/P9-06 and real P9-OPS gates still require
   human/environment proof.
+
+## P9 Readiness Clarification - No VPS Yet
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Ready for provisioning / not production-proven
+- Builder tier: BUILDER-STRONG
+- SRS IDs: NFR-SEC-001, NFR-AVAIL-001, NFR-OBS-001, NFR-DATA-001
+
+### Decision
+
+- User clarified there is no VPS and wants the repository to be ready.
+- The repository is now documented as a VPS-ready deployment package.
+- Phase 9 remains blocked only on future human/environment proof, not on any
+  known local build task.
+
+### Verification
+
+- Assumed from prior passed P9-07/P9-08 proof commands in this evidence log.
+- Not Run in this clarification step: real VPS deploy, backup restore,
+  object-storage smoke, SMTP mailbox arrival, and pilot UAT because no VPS exists.

@@ -8,6 +8,10 @@ Principle (same discipline as the rest of the project): "production-ready" means
 **proven on the real environment**, not green locally. Each item below has a gate that
 must be *executed*, not assumed. Label honestly: Passed / Failed / Not Run.
 
+Current repository status: **VPS-ready deployment package**. The code and
+runbooks are ready for provisioning, but there is no live VPS yet, so deployed
+production readiness remains unproven.
+
 ---
 
 ## 0. Target topology

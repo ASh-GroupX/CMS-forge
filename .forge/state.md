@@ -2,7 +2,7 @@
 
 Status: Blocked
 Phase: Phase 9 - Production Readiness (Pilot on Hostinger)
-Next Task: BLOCKED-P9-HUMAN-GATES - Real environment proof
+Next Task: READY-P9-VPS-PROVISIONING - Deployment package ready, waiting for provisioning
 Model Tier: HUMAN
 
 ## How to use this file
@@ -14,15 +14,19 @@ Prior state history is in .forge/archive/state-archive.md.
 
 - Phase 9 in progress. P9-06C-HUMAN was explicitly skipped by the user and
   remains a production-readiness carry-forward, not a pass.
-- P9-07 and P9-08 are complete.
+- P9-07 and P9-08 are complete. The repo is ready for VPS provisioning: compose,
+  Caddy, env template, config check, deploy runbook, backup runbook, and pilot
+  smoke/UAT checklist are present.
 - P9-06C/P9-06 remain incomplete because the live SMTP arrival proof was skipped
-  by user instruction and still needs real mailbox confirmation.
-- P9-OPS remains incomplete because real VPS deployment, backup restore,
-  object-storage smoke, and pilot UAT require the Hostinger environment.
+  by user instruction and still needs real mailbox confirmation when a sender
+  exists.
+- P9-OPS remains incomplete because no VPS exists yet; real deployment, backup
+  restore, object-storage smoke, and pilot UAT require that environment.
 
 ## Next
 
-- Human must run the real environment proof gates in
+- When a VPS/domain/sender are provisioned, human must run the real environment
+  proof gates in
   `docs/operations/hostinger-first-deploy.md`,
   `docs/operations/backup.md`, and `docs/operations/pilot-smoke-uat.md`.
 

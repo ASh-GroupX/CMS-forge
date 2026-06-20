@@ -1,4 +1,4 @@
-# BLOCKED-P9-HUMAN-GATES Real Environment Proof
+# READY-P9-VPS-PROVISIONING Deployment Package Ready
 
 Status: Blocked
 Required model tier: HUMAN
@@ -8,12 +8,13 @@ Risk: High
 ## Context
 
 P9-07 and P9-08 are complete. P9-06C-HUMAN was explicitly skipped by the user
-only to continue buildable Forge work. Phase 9 cannot honestly complete or enter
-phase review until real environment proof is recorded.
+only to continue buildable Forge work. There is no VPS yet, so the repository is
+deployment-ready but not production-proven. Phase 9 cannot honestly complete or
+enter phase review until a real environment exists and proof is recorded.
 
 ## Scope
 
-Human action required:
+Human action required when a VPS/domain/sender exist:
 
 1. Provide real `.env.production` on the VPS and run
    `corepack pnpm prod:config:check -- --env-file .env.production`.
@@ -27,6 +28,9 @@ Human action required:
 
 ## Acceptance
 
+- The repository stays ready for provisioning: production compose, Caddy,
+  `.env.production.example`, config checks, first-deploy runbook, backup runbook,
+  and pilot smoke/UAT checklist are present.
 - Non-secret proof metadata is appended to `.forge/evidence.md`.
 - P9-06C and P9-06 are checked complete only after real email arrival proof.
 - P9-OPS items are checked complete only after real VPS/deploy/UAT proof.

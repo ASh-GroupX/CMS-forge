@@ -1,7 +1,8 @@
 # Pilot Smoke And UAT Checklist
 
-Use this checklist after the Hostinger stack is deployed with real
-`.env.production` values. It records non-secret proof only.
+Use this checklist after a Hostinger VPS exists and the stack is deployed with
+real `.env.production` values. Until then, the repository can be deployment-ready
+but not production-proven. It records non-secret proof only.
 
 ## Preflight Gates
 
