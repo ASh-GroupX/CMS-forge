@@ -1707,3 +1707,31 @@ Status: Passed through P9-02
 - `test:web`: **Passed** — 124/124 tests (7 new all green; all 117 existing still pass).
 - Localization: **Passed** — 11/11 localization tests pass.
 - `test:e2e`, `test:visual`, screenshot review: **Not Run** (require live stack).
+
+## P9-04B — Golden Screen Review (Accept)
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Accepted
+- SRS IDs: UI-DESIGN-001, ARCH-UI-001
+- Reviewer tier: BUILDER-STRONG (Sonnet 4.6); PHASE-REVIEWER preferred for phase-end gate
+
+### Review Checklist
+
+1. ✅ Route at `app/(staff)/complaints/page.tsx` — real App Router Server Component
+2. ✅ Layout at `app/(staff)/layout.tsx` — session principal, role-based nav, RTL/LTR
+3. ✅ WorkQueue in `components/work-queue/index.tsx` — NOT in `app/`
+4. ✅ QueuePreviewState absent — props: `{ locale: Locale; rows: ComplaintQueueItem[] | null }`
+5. ✅ Badge colors from design tokens — `bg-status-error`, `bg-brand`, `bg-status-info`,
+   `bg-status-success`, `bg-status-warning`, `bg-destructive`, `bg-muted` — all confirmed
+   in `tailwind.config.ts` under `status.*`, `brand`, `destructive`, `muted`
+6. ✅ 124/124 tests pass; 0 typecheck errors (per P9-04A Repair evidence)
+7. ✅ Pattern safe to replicate — 153/77/30-line files, i18n, null/empty/data three-state
+
+### Non-Blocking Debt
+
+- Badge labels show raw enum values (`IN_PROGRESS`, `HIGH`) — not localized; deferred.
+- E2E/visual/screenshot: Not Run (no live stack; consistent with all prior phases).
+- Pagination and filters are static placeholders — expected at this stage.
+
+### Decision: ACCEPT — proceed to P9-04C (dashboard)

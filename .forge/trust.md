@@ -548,6 +548,21 @@ the required shell, E2E, accessibility, visual, visual-review, perf, lint, and
 typecheck gates. Stop AUTO PHASE at P9-04B so the golden screen is accepted or
 repaired before the pattern is copied to other screens.
 
+## P9-04B Review Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Decision: Accept
+Reviewer tier: BUILDER-STRONG (Sonnet 4.6)
+
+The golden screen pattern from P9-04A Repair is accepted. All 7 checklist items
+pass: real App Router route at `(staff)/complaints/page.tsx`, layout at
+`(staff)/layout.tsx`, WorkQueue in `components/work-queue/` (not `app/`),
+QueuePreviewState absent, badge colors exclusively from design tokens, 124/124
+tests + clean typecheck, and files at 153/77/30 lines each.
+Non-blocking debt: badge labels are raw enum values (not localized), E2E/visual
+not run (no live stack). Pattern is safe to replicate to P9-04C..H.
+
 ## P9-04A Repair Builder Trust Note
 
 Date: 2026-06-20

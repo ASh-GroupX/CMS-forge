@@ -1,42 +1,86 @@
-# P9-04B Golden Screen Review — Accept or Repair the Real Route + Colored Badges
+# P9-04C-1 Dashboard Screen — Golden Pattern Replication
 
-Status: Needs Review
-Required model tier: PHASE-REVIEWER
+Status: Ready to Build
+Required model tier: BUILDER-STANDARD
 Phase: Phase 9 - Production Readiness (Pilot on Hostinger)
 Risk: Medium
 
-## What to review
+## Context
 
-The P9-04A repair delivered three new files:
+P9-04B accepted the golden pattern: real App Router route in `app/(staff)/`,
+component in `components/`, no QueuePreviewState, colored badges from design
+tokens, null/empty/data three-state, i18n'd. This task replicates that pattern
+to the dashboard screen.
 
-1. **`src/app/(staff)/complaints/page.tsx`** — real App Router Server Component
-   route. Fetches `getStaffQueueItems` (session cookie forwarded). Renders `WorkQueue`.
-   No QueuePreviewState prop. No searchParams preview switching. Accepts optional
-   `cookieHeader`/`fetchImpl` for testability.
+P9-04C in the backlog covers "staff shell, login/reset, dashboard, and
+notification center." The staff shell layout is already done (`app/(staff)/layout.tsx`
+from P9-04A Repair). This task handles the dashboard only. Login/reset and
+notification center follow as P9-04C-2 and P9-04C-3.
 
-2. **`src/app/(staff)/layout.tsx`** — staff route-group layout. Reads locale from
-   `x-cms-locale` header (set by middleware). Fetches session principal for role-based
-   nav. Renders sidebar + children. No workflow authority.
+## Scope (3 files + test update)
 
-3. **`src/components/work-queue/index.tsx`** — clean WorkQueue component.
-   `rows: ComplaintQueueItem[] | null` drives the three data states (null=error,
-   []=empty, [...]= table). Colored Badge pills via design tokens. Row hover. Branded
-   action link. No hardcoded strings; all i18n.
+1. **`src/components/dashboard-summary/index.tsx`** (NEW)
+   - Extract from `src/app/dashboard-summary.tsx`.
+   - Props: `{ locale: Locale; data: StaffDashboardSummary | null }`.
+     `null` = error state; typed object = success state; add empty/zero state
+     (all counts are 0).
+   - Use shadcn `Card`, `CardHeader`, `CardContent`, `CardTitle`.
+   - Metric cards: open, overdue, SLA warning, closed, average TAT.
+   - Loading state: `Skeleton` placeholder cards (4 cards).
+   - Error state: `role="alert"` paragraph.
+   - All strings from `staffShellText[locale].dashboard` (add keys if missing).
+   - No hardcoded colors; use design tokens (`text-status-error` for overdue,
+     `text-status-warning` for SLA warning, `text-brand` for average TAT).
+   - No role/branch authority in the component.
+   - Under 200 lines.
 
-Plus: `src/i18n/staff-shell.ts` gained `unassigned` key (EN+AR); test file gained 7
-new tests for the route.
+2. **`src/app/(staff)/dashboard/page.tsx`** (NEW)
+   - Same pattern as `app/(staff)/complaints/page.tsx`.
+   - Server Component; accepts optional `cookieHeader`/`fetchImpl` for tests.
+   - Calls `getStaffDashboardSummary(apiInput)` (already exists in
+     `src/lib/staff-dashboard-api.ts`).
+   - Renders `<DashboardSummary locale={locale} data={data} />`.
+   - Under 35 lines.
 
-## Check
+3. **`src/i18n/staff-shell.ts`** — add `dashboard` keys if the component
+   needs strings not already present (check first; add only what is missing).
 
-1. Does the new route live at `app/(staff)/complaints/page.tsx` (real App Router path)?
-2. Does the layout live at `app/(staff)/layout.tsx`?
-3. Is WorkQueue in `components/work-queue/` (not `app/`)?
-4. Is QueuePreviewState absent from the new WorkQueue?
-5. Are badge colors from design tokens (not ad-hoc hex/rgb)?
-6. Do all 124 tests pass? Is typecheck clean?
-7. Is the pattern safe to replicate to P9-04C..H?
+4. **`test/shell/shell.test.ts`** — add tests for `DashboardPage`:
+   - Import `DashboardPage` from `app/(staff)/dashboard/page`.
+   - EN labels test (`cookieHeader: ''` — avoids `next/headers` import).
+   - AR RTL test (`cookieHeader: ''`).
+   - Success state: mock `fetchImpl` returning `StaffDashboardSummary` → check
+     metric values rendered.
+   - Empty/zero state: all-zero response → check zero counts display.
+   - Error state: 403 response → `role="alert"` paragraph.
+   - Source safety: `readFileSync('apps/web/src/components/dashboard-summary/index.tsx')`
+     → no `QueuePreviewState`, no hardcoded email/secrets.
 
-## Exit
+## Do NOT touch
 
-- **Accept**: write the first P9-04C task and set state to `Ready to Build`.
-- **Repair**: write the smallest repair and set state to `Needs Repair`.
+- `src/app/dashboard-summary.tsx` — keep the legacy file; delete it only after
+  all screens replicated and legacy shell retired.
+- `src/app/page.tsx` — legacy single-page shell; do not touch.
+- Any backend module.
+
+## Verification commands
+
+```
+corepack pnpm typecheck
+corepack pnpm lint
+corepack pnpm test:web -- shell
+corepack pnpm test:web -- localization
+```
+
+All must pass. Honest labels only.
+
+## SRS IDs
+
+UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+## After this task
+
+Write P9-04C-2 (login/reset panel → `components/password-reset/` +
+`app/(staff)/auth/reset/page.tsx`) or if the login form does not need a new
+route (it lives at `/login` which is outside the staff route group), scope that
+task to the notification center instead. Check the existing routes first.
