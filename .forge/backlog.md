@@ -332,18 +332,18 @@ UI finish (fixes the "preview shell / I don't like the app" problem; hard go-liv
       `staff-notification-center.ts`, `staff-reports-dashboard.ts`)
 - [x] P9-02: Anti-mojibake + Arabic-locale lint gate (fails on Ø/Ù-class mojibake;
       asserts Arabic strings are real Arabic-range codepoints) - lands AFTER P9-01
-- [ ] P9-03A: Initialize shadcn/ui config with the shadcn CLI; no primitives or
+- [x] P9-03A: Initialize shadcn/ui config with the shadcn CLI; no primitives or
       screen refactor yet
-- [ ] P9-03B: Add action/form primitives with the shadcn CLI (`button`, `input`,
+- [x] P9-03B: Add action/form primitives with the shadcn CLI (`button`, `input`,
       `label`, `textarea`, `select`, `badge`)
-- [ ] P9-03C: Add layout/feedback primitives with the shadcn CLI (`card`,
+- [x] P9-03C: Add layout/feedback primitives with the shadcn CLI (`card`,
       `table`, `dialog`, `tabs`, `skeleton`, `sonner`/toast)
-- [ ] P9-03D: Align Tailwind/CSS tokens with shadcn variables while preserving
+- [x] P9-03D: Align Tailwind/CSS tokens with shadcn variables while preserving
       existing semantic tokens and RTL/LTR proof
-- [ ] P9-03E: Add the frontend a11y/tailwind proof tooling required for the
+- [x] P9-03E: Add the frontend a11y/tailwind proof tooling required for the
       redesign tasks (`eslint-plugin-jsx-a11y`, `prettier-plugin-tailwindcss`,
       `@axe-core/playwright`) with minimal wired checks
-- [ ] P9-03F: Add screenshot/vision-review workflow scaffolding for the golden
+- [x] P9-03F: Add screenshot/vision-review workflow scaffolding for the golden
       screen work; no screen redesign yet
 - [ ] P9-04: PLAN - build ONE golden screen first (shadcn + tokens + all states + RTL +
       a11y) to a bar you approve via visual review, freeze it, then split the

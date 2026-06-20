@@ -1,60 +1,49 @@
-# Build Task: P9-03A - Initialize Shadcn Config
+# Plan Task: P9-04 - Plan One Golden Screen And Screen Refactor Split
 
-Status: Ready to Build
-Required model tier: BUILDER-STANDARD
+Status: Ready to Plan
+Required model tier: PLANNER
 Phase: Phase 9 - Production Readiness (Pilot on Hostinger)
 Risk: Medium
-Requirements: UI-DESIGN-001 AC1, UI-DESIGN-001 AC2
+Requirements: UI-DESIGN-001 AC1, UI-DESIGN-001 AC2, UI-DESIGN-001 AC3, UI-DESIGN-001 AC4, UI-DESIGN-001 AC5, UI-DESIGN-001 AC6, UI-SCREEN-001
 
 ## Goal
 
-Create the shadcn/ui project contract with the shadcn CLI so later tasks can add
-primitives without hand-rolling component structure.
+Plan the golden-screen redesign workflow before refactoring screens. Build one
+approved golden screen first, then split the remaining screen refactors into
+small build tasks.
 
-## Scope
+## Planning Inputs
 
-Expected files: 1-5.
+- `.forge/backlog.md`
+- `.forge/evidence.md` latest Phase 9 entries
+- `.forge/trust.md` latest Phase 9 entries
+- `docs/ARCHITECTURE.md` section 8
+- `docs/CMS_AUTO_SRS.md` `UI-DESIGN-001` and `UI-SCREEN-001`
+- current `apps/web/src/app` screens
+- generated shadcn primitives under `apps/web/src/components/ui`
+- `coverage/web-visual-review/index.html` from `corepack pnpm web:visual-review`
 
-Allowed:
-- `apps/web/components.json`
-- `apps/web/package.json` if the CLI updates dependencies
-- `pnpm-lock.yaml` if dependencies change
-- `apps/web/tailwind.config.ts` if the CLI updates paths/theme hooks
-- `apps/web/src/globals.css` if the CLI updates CSS variable hooks
+## Output
 
-Do not add `apps/web/src/components/ui/*` in this task. Do not refactor screens.
-`apps/web/src/lib/utils.ts` already exists; keep it unless the CLI requires a
-conflict repair.
-
-## Build Steps
-
-- From `apps/web`, run the shadcn init command non-interactively:
-  `corepack pnpm dlx shadcn@latest init --yes`.
-- Keep the generated config pointed at:
-  - CSS: `src/globals.css`
-  - Tailwind config: `tailwind.config.ts`
-  - components alias: `@/components`
-  - UI alias: `@/components/ui`
-  - utils alias: `@/lib/utils`
+- Choose one golden screen candidate and write the first build task only.
+- Split later screen refactors into backlog-sized tasks, each with visual review,
+  RTL/LTR, accessibility, and real-data/no-placeholder acceptance.
+- Keep each build task near 1-5 files plus focused tests where possible.
+- Do not start broad screen refactors during planning.
 
 ## Acceptance
 
-- `apps/web/components.json` exists and uses the existing Next.js/Tailwind app
-  paths.
-- No shadcn primitive files are added yet.
-- Existing web smoke, accessibility, lint, and typecheck still pass.
-- No business/workflow authority moves into React.
+- `.forge/next.md` contains the first buildable P9-04 golden-screen task.
+- `.forge/state.md` is `Ready to Build`.
+- The plan explicitly preserves backend authority, real typed API clients, Arabic
+  RTL / English LTR, required UI states, accessibility, and visual review gates.
 
 ## Proof Commands
 
-- `corepack pnpm test:e2e -- ui-smoke`
-- `corepack pnpm test:e2e -- accessibility`
-- `corepack pnpm lint`
-- `corepack pnpm typecheck`
+- `corepack pnpm web:visual-review`
+- planner review of the latest visual artifacts
 
 ## On Success
 
-- Append evidence for P9-03A only.
-- Mark P9-03A done in `.forge/backlog.md`.
-- Write P9-03B as the next task.
+- Append planning evidence for P9-04.
 - Replace `.forge/state.md` with a short `Ready to Build` snapshot.

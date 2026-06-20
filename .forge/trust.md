@@ -469,3 +469,69 @@ P9-02 is complete: web i18n files now have a lint-enforced mojibake marker check
 and an Arabic-codepoint check for `ar:` locale blocks, with tool tests proving
 the failure cases. Stop AUTO PHASE for planning because P9-03 shadcn adoption is
 larger than the 1-5 file build budget and should be split before implementation.
+
+## P9-03A Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-03A is complete: `apps/web/components.json` now gives the shadcn CLI the
+project contract for the existing Next/Tailwind app paths, with no primitive
+files or screen refactors added. The current CLI could not auto-detect this
+minimal Next app, so the config was added manually using the official
+`components.json` schema after the requested init command was attempted.
+Continue to P9-03B for the first action/form primitives.
+
+## P9-03B Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-03B is complete: shadcn generated the action/form primitive batch, dependencies
+were updated through pnpm, and `@/*` now resolves to `apps/web/src/*` so generated
+imports typecheck. No screens were refactored. Continue to P9-03C for the
+layout/feedback primitive batch.
+
+## P9-03C Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-03C is complete: shadcn generated the layout/feedback primitive batch and the
+strict typecheck issue in the generated `sonner` wrapper was repaired. No screens
+were refactored. Continue to P9-03D to align Tailwind/CSS tokens with the class
+names used by the generated primitives.
+
+## P9-03D Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-03D is complete: generated shadcn class names now have Tailwind/CSS token
+aliases, while existing project semantic tokens remain intact and RTL/LTR proof
+passes. Continue to P9-03E for the required frontend a11y/Tailwind tooling.
+
+## P9-03E Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-03E is complete: the required frontend proof packages are installed and lint
+now proves they resolve. No broad lint/prettier migration was introduced.
+Continue to P9-03F for screenshot/vision-review workflow scaffolding.
+
+## P9-03F Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Needs Planning
+
+P9-03F is complete: the visual-review scaffold now writes ignored HTML artifacts
+for the existing EN/AR visual cases and the existing visual/accessibility/static
+gates still pass. P9-03 split adoption is complete. Stop AUTO PHASE at P9-04
+because the next step is explicit planning before any golden-screen refactor.

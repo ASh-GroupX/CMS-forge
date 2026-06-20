@@ -18,6 +18,7 @@
     "test:e2e": "node tools/e2e-runner.mjs",
     "test:web": "node tools/web-test.mjs",
     "test:visual": "node --import tsx tools/web-proof.mjs visual",
+    "web:visual-review": "node --import tsx tools/web-visual-review.mjs",
     "web:perf": "node --import tsx tools/web-proof.mjs perf",
     "test:performance": "node --import tsx tools/web-proof.mjs perf",
     "openapi:generate": "node tools/openapi-check.mjs --write",
@@ -31,7 +32,10 @@
     "seed": "tsx packages/database/prisma/seed.ts"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
     "@types/node": "^20.17.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "prettier-plugin-tailwindcss": "^0.8.0",
     "tsx": "^4.19.0",
     "typescript": "5.6.3"
   }

@@ -148,6 +148,158 @@ Status: Passed through P9-02
 - AUTO PHASE stopped at `PLAN-P9-03` because shadcn adoption must be split before
   build work.
 
+## P9-03A - Initialize Shadcn Config
+
+Date: 2026-06-20
+Risk: Medium
+Status: Passed
+Requirements: UI-DESIGN-001 AC1, UI-DESIGN-001 AC2
+
+Evidence:
+- Ran `corepack pnpm dlx shadcn@latest init --yes` from `apps/web`; the current
+  CLI still prompted for choices and wrote no files.
+- Retried with explicit `--template next --base radix --no-monorepo`; the CLI
+  still prompted for a preset.
+- Retried with explicit `--preset nova`; the CLI could not detect this minimal
+  Next app and pointed to manual configuration.
+- Added `apps/web/components.json` matching the official shadcn config contract:
+  CSS `src/globals.css`, Tailwind `tailwind.config.ts`, aliases
+  `@/components`, `@/components/ui`, and `@/lib/utils`, RSC/TSX enabled, Lucide
+  icons.
+- No `apps/web/src/components/ui/*` primitive files were added.
+- No React screen or business/workflow authority changed.
+
+Verification:
+- Passed: `node -e "JSON.parse(require('fs').readFileSync('apps/web/components.json','utf8')); console.log('components.json valid')"`
+- Passed: `corepack pnpm test:e2e -- ui-smoke` (2 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+
+## P9-03B - Add Action/Form Shadcn Primitives
+
+Date: 2026-06-20
+Risk: Medium
+Status: Passed
+Requirements: UI-DESIGN-001 AC1, UI-DESIGN-001 AC2
+
+Evidence:
+- Ran `corepack pnpm dlx shadcn@latest add button input label textarea select badge --yes`.
+- The CLI needed a `pnpm` executable, so a temporary PATH shim forwarded `pnpm`
+  to `corepack pnpm`; no project source was added for that shim.
+- Added generated shadcn primitives under `apps/web/src/components/ui`:
+  `button.tsx`, `input.tsx`, `label.tsx`, `textarea.tsx`, `select.tsx`, and
+  `badge.tsx`.
+- Added `@radix-ui/react-label` and `@radix-ui/react-select` to
+  `apps/web/package.json` and `pnpm-lock.yaml`.
+- Added `@/* -> ./src/*` to `apps/web/tsconfig.json` so generated imports
+  resolve to the existing app source tree.
+- No React screen or business/workflow authority changed.
+
+Verification:
+- Passed: `corepack pnpm test:e2e -- ui-smoke` (2 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+
+## P9-03C - Add Layout/Feedback Shadcn Primitives
+
+Date: 2026-06-20
+Risk: Medium
+Status: Passed
+Requirements: UI-DESIGN-001 AC1, UI-DESIGN-001 AC2
+
+Evidence:
+- Ran `corepack pnpm dlx shadcn@latest add card table dialog tabs skeleton sonner --yes`
+  with the temporary `pnpm` PATH shim used in P9-03B.
+- Added generated shadcn primitives under `apps/web/src/components/ui`:
+  `card.tsx`, `table.tsx`, `dialog.tsx`, `tabs.tsx`, `skeleton.tsx`, and
+  `sonner.tsx`.
+- Added `@radix-ui/react-dialog`, `@radix-ui/react-tabs`, `next-themes`, and
+  `sonner` to `apps/web/package.json` and `pnpm-lock.yaml`.
+- Repaired the generated `sonner.tsx` theme prop so strict
+  `exactOptionalPropertyTypes` typecheck gets a concrete theme value.
+- No React screen or business/workflow authority changed.
+
+Verification:
+- Failed then repaired: `corepack pnpm typecheck` initially failed on generated
+  `sonner.tsx` because `theme` could be `undefined`.
+- Passed after repair: `corepack pnpm test:e2e -- ui-smoke` (2 route previews).
+- Passed after repair: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed after repair: `corepack pnpm lint`.
+- Passed after repair: `corepack pnpm typecheck`.
+
+## P9-03D - Align Tailwind And CSS Tokens For Shadcn
+
+Date: 2026-06-20
+Risk: Medium
+Status: Passed
+Requirements: UI-DESIGN-001 AC1, UI-DESIGN-001 AC2
+
+Evidence:
+- Added Tailwind color aliases used by generated shadcn primitives:
+  `background`, `foreground`, `card`, `popover`, `primary`, `secondary`,
+  `muted`, `accent`, `destructive`, `border`, `input`, and `ring`.
+- Added matching CSS variables in `apps/web/src/globals.css`, mapping primary,
+  destructive, neutral, and focus behavior to the existing semantic token set.
+- Preserved existing `brand`, `neutral`, `status`, `state`, radius, shadow, and
+  focus token names for current screens.
+- No React screen or business/workflow authority changed.
+
+Verification:
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm test:e2e -- ui-smoke` (2 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+
+## P9-03E - Add Frontend A11y And Tailwind Proof Tooling
+
+Date: 2026-06-20
+Risk: Medium
+Status: Passed
+Requirements: UI-DESIGN-001 AC1, UI-DESIGN-001 AC2
+
+Evidence:
+- Added root dev dependencies `eslint-plugin-jsx-a11y`,
+  `prettier-plugin-tailwindcss`, and `@axe-core/playwright`.
+- Added a minimal frontend proof tooling resolver gate to `tools/lint.mjs`, so
+  `corepack pnpm lint` fails if any required package is missing.
+- No broad ESLint or Prettier config was added.
+- No React screen or business/workflow authority changed.
+
+Verification:
+- Passed: `corepack pnpm test:e2e -- ui-smoke` (2 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test` (48/48 tool tests; coverage gate passed).
+- Passed: `corepack pnpm typecheck`.
+
+## P9-03F - Add Screenshot And Vision Review Workflow Scaffold
+
+Date: 2026-06-20
+Risk: Medium
+Status: Passed
+Requirements: UI-DESIGN-001 AC1, UI-DESIGN-001 AC2
+
+Evidence:
+- Added `corepack pnpm web:visual-review`, backed by `tools/web-visual-review.mjs`.
+- The review CLI reuses the existing visual proof cases and writes ignored HTML
+  review artifacts under `coverage/web-visual-review`, including `index.html`
+  and 16 EN/AR surface artifacts.
+- The CLI prints artifact paths for reviewer inspection before golden-screen
+  approval.
+- No React screen or business/workflow authority changed.
+- P9-03A..P9-03F are now complete; AUTO PHASE stops at P9-04 because it is a
+  planning task requiring PLANNER.
+
+Verification:
+- Passed: `corepack pnpm web:visual-review` (16 artifacts written).
+- Passed: `corepack pnpm test:visual` (16 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+
 ## P9-01D - Admin Arabic I18n
 
 Date: 2026-06-20

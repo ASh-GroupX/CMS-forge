@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { checkScaffold } from './scaffold-check.mjs';
@@ -10,6 +11,8 @@ import { checkI18nArabicText } from './i18n-lint.mjs';
 const ignoredDirs = new Set(['.git', '.next', 'coverage', 'dist', 'node_modules']);
 const maxAgenticFileLines = 300;
 const agenticFileSizeExemptions = new Set(['packages/database/prisma/schema.prisma']);
+const require = createRequire(import.meta.url);
+const frontendProofPackages = ['@axe-core/playwright', 'eslint-plugin-jsx-a11y', 'prettier-plugin-tailwindcss'];
 // Each backend module ships an agent context manifest so a fresh-context agent can
 // load only that module's boundary. These fields must be documented in it.
 const manifestRequiredFields = [
@@ -124,6 +127,17 @@ export function checkForbiddenMarkers(root = process.cwd()) {
   });
 }
 
+export function checkFrontendProofTooling() {
+  return frontendProofPackages.flatMap((packageName) => {
+    try {
+      require.resolve(packageName);
+      return [];
+    } catch {
+      return [`frontend proof package is not installed: ${packageName}`];
+    }
+  });
+}
+
 // Line count is a crude proxy for complexity, so the budget is generous and tests
 // and DTO/type files are exempt: padding them out is healthy, not a smell. The goal
 // is catching a logic file that has grown past what an agent can hold in context.
@@ -203,6 +217,7 @@ export function lint(root = process.cwd()) {
     ...checkJson(root),
     ...checkForbiddenImports(root),
     ...checkForbiddenMarkers(root),
+    ...checkFrontendProofTooling(),
     ...checkAgenticFileSize(root),
     ...checkModuleManifests(root),
     ...checkModuleWiring(root),
