@@ -12,6 +12,11 @@ Current repository status: **VPS-ready deployment package**. The code and
 runbooks are ready for provisioning, but there is no live VPS yet, so deployed
 production readiness remains unproven.
 
+> **DEFERRED (local-first).** Per user direction, this whole production track — VPS,
+> SMTP, Hostinger deploy, ops — is **parked**. The deployment package stays in the
+> repo for later. The current goal is finishing the software **locally** (Phase 10).
+> Revisit this document when you decide to deploy.
+
 ---
 
 ## 0. Target topology

@@ -414,30 +414,63 @@ Ops (human-owned; tracked in `docs/PRODUCTION_READINESS.md` section B, not build
 - [ ] P9-OPS: O-01..O-09 - provision VPS, domain + TLS, secrets, R2 bucket, email
       sender, backups, hardening, then deploy + pilot UAT
 
-## Phase 10 - Dealership Accountability Layer (design target; not started)
+## Phase 10 - Dealership Accountability Layer (ACTIVE - local-first)
 
 Design: `docs/PRODUCT_DESIGN.md`. Reframes the product from "complaint app" to a
 work-accountability system (Task / Case / Deal). Reuses the existing complaint /
 assignment / SLA / audit / notification code and the Phase-8 worker - does NOT
-rewrite. Same Forge discipline: each task gets an executed proof. `PLAN-P10`
-decomposes these into 1-5 file tasks before any build.
+rewrite. **PRODUCTION DEPLOY IS DEFERRED** (no VPS / SMTP / Hostinger); each task
+gets an EXECUTED proof on the LOCAL Docker stack. `PLAN-P10` decomposes these into
+1-5 file tasks before any build. The Phase 9 production package (compose.prod, Caddy,
+runbooks; P9-06 SMTP, P9-OPS, READY-P9-VPS) stays in the repo, PARKED for later.
 
-- [ ] P10-01: Task atom (owner, assignee, dueAt, nextAction, status, proof, links) +
-      Employee Today screen (due today / overdue / waiting-on-me / escalated)
-- [ ] P10-02: Manager Control Room (late / stuck / overloaded / blocking; promises at
-      risk) from derived task/event queries
-- [ ] P10-03: Next-Action invariant (no open work without {what, who, when}) +
-      escalation ladder on the Phase-8 worker (reminder -> team leader -> branch
-      manager -> high-severity alert) + daily digest
-- [ ] P10-04: Deal object with stage gates (Lead..Post-delivery) + Deal Handoff Board
-- [ ] P10-05: Reframe Complaint as Case(type=customer_complaint); customer/vehicle as
-      links; keep the existing lifecycle / SLA / audit
-- [ ] P10-06: Customer Promise Tracker (promise = dated task; kept-on-time %)
-- [ ] P10-07: KPI dashboard derived from the event timeline (fair; team + trend)
-- [ ] P10-08: Root cause / corrective action (CAPA) + repeat detection
-- [ ] P10-09: Confidential employee cases (participant ACL + HR-only visibility +
-      appeal); ACL primitives land in P10-01
-- [ ] P10-OPS: Capture channels later - email-to-task, then WhatsApp / mobile (deferred)
+Scope frozen: Task / Case / Deal only. No AI, BPMN/workflow-builder, mobile app,
+WhatsApp, or HR platform. Production deploy deferred. Umbrella tasks (marked) are
+PLAN-split into 1-5 file sub-tasks before build, like F1-05 was.
+
+- [ ] P10-01 (umbrella): Task atom + next-action invariant + quick-add + Employee
+      Today. Model: title, owner, assignee, dueAt, status (Open/InProgress/Waiting/
+      Done), nextAction {what, who, when}, polymorphic links[] (entityType+entityId:
+      customer/vehicle/complaint/deal/employee), participant/visibility +
+      confidentialityLevel primitives. ENFORCE the invariant from the start (no open
+      task without a next action). 10-second quick-add capture. Employee Today: due
+      today / overdue / assigned / waiting-on-me / escalated. Proof: own-task allow +
+      unrelated deny, AR/EN, API + web tests.
+- [ ] P10-02: Manager Control Room - overdue-by-employee, due-today, stuck, workload,
+      escalated, branch/team filters; derived queries. Proof: scoped team view,
+      employee denied, no cross-branch leak.
+- [ ] P10-03: Reminder + escalation engine on the Phase-8 worker - due-soon reminder,
+      overdue -> team leader -> branch manager, high-priority immediate, daily employee
+      digest, manager overdue rollup. Proof: deterministic + idempotent job tests;
+      notifications queued after commit. (Runtime proof needs the local stack.)
+- [ ] P10-04 (umbrella): Deal object with stage gates (Lead -> Booking -> Payment ->
+      Finance -> Insurance -> Registration -> PDI -> Delivery -> Post-delivery) + Deal
+      Handoff Board (deals by stage, stuck, current holder, delay age). Each stage:
+      owner, due, blocker, generated tasks, timeline. Proof: handoff creates tasks,
+      manager sees stuck deals, scoped access.
+- [ ] P10-05: Customer Promise Tracker - every promise = a dated task linked to
+      customer/deal/case; KPI promise-kept-on-time %; overdue promises surface in Today
+      + Control Room.
+- [ ] P10-06 (umbrella): Complaint -> Case reframe - Complaint becomes
+      Case(type=customer_complaint); case lifecycle/tasks/timeline/links; customer/
+      vehicle as related entities (not mandatory root). Proof: existing complaint flows
+      still work, case can exist without vehicle, backend-owned workflow authority intact.
+- [ ] P10-07: KPI dashboard DERIVED from the event timeline (not counters) - on-time %,
+      overdue, avg delay, promise-kept %, reopened, escalations, stuck-deals-by-dept,
+      first-response/resolution time. No raw closed-count leaderboard. Proof: RBAC/
+      branch-scoped; numbers derive from events.
+- [ ] P10-08: CAPA / root cause - root cause, responsible dept, corrective + preventive
+      action, due date, effectiveness check, repeat-issue flag.
+- [ ] P10-09 (umbrella; Risk Critical; AFTER Task/Case stable): Confidential employee
+      cases - HR-only visibility, complainant, accused/related, witnesses, investigator,
+      restricted notes, appeal, conflict-of-interest guard. Proof: accused denied by
+      default, unauthorized manager denied, audit exists, no private-note leak.
+- [ ] P10-10: Local UAT seed + demo flow - seed dealership data (sales/finance/
+      registration/manager, customers, vehicles, deals, overdue tasks, a stuck deal, a
+      complaint, an internal task); prove end-to-end locally: employee sees today,
+      manager sees late/stuck, deal moves through handoff, overdue escalates, KPI moves
+      from the timeline. (Needs the local stack.)
+- [ ] P10-OPS (deferred): capture channels - email-to-task, then WhatsApp / mobile.
   - [ ] O-01: Provision Hostinger Ubuntu VPS and install Docker + Compose
   - [ ] O-02: Point domain A-record to VPS and confirm Caddy TLS issuance
   - [ ] O-03: Configure Postgres off `trust`, persistent volume, pg_dump cron, and tested restore

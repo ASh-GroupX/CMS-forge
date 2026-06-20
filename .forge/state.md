@@ -1,9 +1,9 @@
 # Current State
 
-Status: Blocked
-Phase: Phase 9 - Production Readiness (Pilot on Hostinger)
-Next Task: READY-P9-VPS-PROVISIONING - Deployment package ready, waiting for provisioning
-Model Tier: HUMAN
+Status: Ready to Build
+Phase: Phase 10 - Dealership Accountability Layer (local-first)
+Next Task: P10-01A - Task domain model + next-action invariant (unit-provable, no full stack)
+Model Tier: BUILDER-STRONG
 
 ## How to use this file
 
@@ -12,35 +12,24 @@ Prior state history is in .forge/archive/state-archive.md.
 
 ## Snapshot
 
-- Phase 9 in progress. P9-06C-HUMAN was explicitly skipped by the user and
-  remains a production-readiness carry-forward, not a pass.
-- P9-07 and P9-08 are complete. The repo is ready for VPS provisioning: compose,
-  Caddy, env template, config check, deploy runbook, backup runbook, and pilot
-  smoke/UAT checklist are present.
-- P9-06C/P9-06 remain incomplete because the live SMTP arrival proof was skipped
-  by user instruction and still needs real mailbox confirmation when a sender
-  exists.
-- P9-OPS remains incomplete because no VPS exists yet; real deployment, backup
-  restore, object-storage smoke, and pilot UAT require that environment.
-- Local web runtime repairs are verified and the web app is listening on
-  `http://localhost:4000`, but this workstation cannot run the full stack until
-  Docker Desktop/Redis/Postgres credentials are available and C: has enough free
-  disk for stable Docker/dev cache writes.
+- Phase 10 (full) is planned in backlog.md: P10-01..P10-10 + P10-OPS, scope frozen
+  (Task/Case/Deal only; no AI/BPMN/mobile/WhatsApp/HR-platform; production deferred).
+- Refinements baked in: next-action invariant lives INSIDE the Task atom (the spine,
+  not a later bolt-on); links[] polymorphic from the start; 10-second quick-add is a
+  P10-01 requirement; P10-01/04/06/09 are umbrellas that PLAN-split before build.
+- Building local-first. Logic-heavy foundation (Task model + invariant + KPI queries)
+  is unit-provable WITHOUT the running stack; runtime proofs (escalation jobs P10-03,
+  deal handoff P10-04, UAT demo P10-10) block until the stack is up.
+- NOW: P10-01A builds the Task model + next-action invariant + service tests - no
+  stack needed, so it proceeds while the environment is fixed.
 
-## Next
+## Local prerequisite (HUMAN - gates runtime proofs, not P10-01A)
 
-- When a VPS/domain/sender are provisioned, human must run the real environment
-  proof gates in
-  `docs/operations/hostinger-first-deploy.md`,
-  `docs/operations/backup.md`, and `docs/operations/pilot-smoke-uat.md`.
+The local stack is down: Docker daemon, Redis :6379, Postgres dev creds, and
+critically low C: free space. Free disk + start Docker + fix DB creds before tasks
+that need runtime/web proof (P10-01C/D screens, P10-03 jobs, P10-04 deal, P10-10 UAT).
 
 ## Open carry-forward / known debt
 
-- P9-06C and P9-06 remain incomplete until real staging email arrival is proven;
-  this is intentionally skipped only to continue later Phase 9 build tasks.
-- SMS/WhatsApp/DMS remain mocked/disabled for the pilot.
-- Badge labels show raw enum values (`IN_PROGRESS`, `HIGH`) - not localized;
-  deferred.
-- Full local end-to-end login/mutation proof is blocked by missing Docker daemon,
-  Redis not listening on port 6379, local Postgres rejecting the dev credentials,
-  and critically low C: free space.
+- Production deploy parked. SMS/WhatsApp/DMS mocked. Badge enum localization folds
+  into the P10 Employee Today / Control Room UI.

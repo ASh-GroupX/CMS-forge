@@ -1,51 +1,38 @@
-# READY-P9-VPS-PROVISIONING Deployment Package Ready
+# Build Task: P10-01A - Task domain model + next-action invariant (no full stack needed)
 
-Status: Blocked
-Required model tier: HUMAN
-Phase: Phase 9 - Production Readiness (Pilot on Hostinger)
-Risk: High
+Status: Ready to Build
+Required model tier: BUILDER-STRONG
+Phase: Phase 10 - Dealership Accountability Layer (local-first)
+Risk: High (the new core domain object; the next-action invariant is the product spine)
 
-## Context
+## Why this first
 
-P9-07 and P9-08 are complete. P9-06C-HUMAN was explicitly skipped by the user
-only to continue buildable Forge work. There is no VPS yet, so the repository is
-deployment-ready but not production-proven. Phase 9 cannot honestly complete or
-enter phase review until a real environment exists and proof is recorded.
+P10-01 (Task atom + quick-add + Employee Today) is an umbrella. This sub-task is the
+part that needs NO running stack, so it proceeds while the local Docker/Postgres/Redis
+stack is being fixed. Quick-add API, the Employee Today screen, and runtime proof come
+in P10-01B..D.
 
-## Scope
+## Scope (~1-5 source files + tests; Prisma model/migration exempt from the budget)
 
-Human action required when a VPS/domain/sender exist:
+- Generate a `tasks` module via the generator (do not hand-roll); fill MODULE.md.
+- Task domain: title, owner, assignee, dueAt, status (Open/InProgress/Waiting/Done),
+  nextAction {what, who, when}, polymorphic links[] (entityType + entityId for
+  customer/vehicle/complaint/deal/employee), participant/visibility +
+  confidentialityLevel primitives (so confidential cases are not a retrofit later).
+- ENFORCE the next-action invariant in the service: an Open/InProgress/Waiting task
+  MUST have a nextAction; Done/closed may clear it. Reject violations with the
+  canonical AppException + a stable error code; write the change to audit in the same
+  transaction. Reuse the existing assignment/audit patterns - do NOT rebuild them.
 
-1. Provide real `.env.production` on the VPS and run
-   `corepack pnpm prod:config:check -- --env-file .env.production`.
-2. Deploy on Hostinger with
-   `docker compose --env-file .env.production -f docker-compose.prod.yml up -d`.
-3. Prove HTTPS/web/API/worker/migrate health from the deployed domain.
-4. Run and record backup creation plus one restore test.
-5. Prove one S3/R2 attachment upload/download smoke.
-6. Run `corepack pnpm smtp:proof` and confirm mailbox arrival outside spam.
-7. Run the pilot smoke/UAT checklist with real staff users.
+## Proof (no full stack required)
 
-## Acceptance
+- corepack pnpm lint, typecheck, test
+- Service/unit tests for the invariant: open-without-next-action rejected; status->Done
+  clears it; audit recorded same-tx; allowed vs denied participant access.
+- prisma validate on the new model; openapi:check if any route is added (keep minimal).
+- Label any runtime/integration/web proof `Not Run` - deferred until the local stack is up.
 
-- The repository stays ready for provisioning: production compose, Caddy,
-  `.env.production.example`, config checks, first-deploy runbook, backup runbook,
-  and pilot smoke/UAT checklist are present.
-- Non-secret proof metadata is appended to `.forge/evidence.md`.
-- P9-06C and P9-06 are checked complete only after real email arrival proof.
-- P9-OPS items are checked complete only after real VPS/deploy/UAT proof.
-- Phase 9 review starts only after these human gates are complete.
+## Exit
 
-## SRS IDs
-
-NFR-SEC-001, NFR-AVAIL-001, NFR-OBS-001, NFR-DATA-001
-
-## Proof Commands / Runbooks
-
-- `corepack pnpm prod:config:check -- --env-file .env.production`
-- `docker compose --env-file .env.production -f docker-compose.prod.yml config`
-- `docker compose --env-file .env.production -f docker-compose.prod.yml up -d`
-- `corepack pnpm smtp:proof`
-- `docs/operations/hostinger-first-deploy.md`
-- `docs/operations/backup.md`
-- `docs/operations/pilot-smoke-uat.md`
+- Write P10-01B (10-second quick-add capture API) to next.md, or PLAN the rest of P10-01.
+- Replace state.md (do not append).
