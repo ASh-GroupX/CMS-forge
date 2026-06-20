@@ -1719,6 +1719,57 @@
         }
       }
     },
+    "/reports/kpis": {
+      "get": {
+        "tags": [
+          "Reports"
+        ],
+        "operationId": "reportKpisGet",
+        "summary": "Get scoped dealership KPI summary",
+        "parameters": [
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "KPI summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportKpiResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or branch scope denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/reports": {
       "get": {
         "tags": [
@@ -5377,6 +5428,66 @@
             "items": {
               "$ref": "#/components/schemas/DealHolderBucket"
             }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReportKpiSummary": {
+        "type": "object",
+        "required": [
+          "onTimeCompletionPercent",
+          "activeOverdueCount",
+          "averageDelayHours",
+          "customerPromiseKeptPercent",
+          "reopenedCount",
+          "escalationCount",
+          "averageFirstResponseHours",
+          "averageResolutionHours"
+        ],
+        "properties": {
+          "onTimeCompletionPercent": {
+            "type": "number",
+            "minimum": 0
+          },
+          "activeOverdueCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "averageDelayHours": {
+            "type": "number",
+            "minimum": 0
+          },
+          "customerPromiseKeptPercent": {
+            "type": "number",
+            "minimum": 0
+          },
+          "reopenedCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "escalationCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "averageFirstResponseHours": {
+            "type": "number",
+            "minimum": 0
+          },
+          "averageResolutionHours": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReportKpiResponse": {
+        "type": "object",
+        "required": [
+          "kpis"
+        ],
+        "properties": {
+          "kpis": {
+            "$ref": "#/components/schemas/ReportKpiSummary"
           }
         },
         "additionalProperties": false

@@ -469,23 +469,23 @@ PLAN-split into 1-5 file sub-tasks before build, like F1-05 was.
   - [x] P10-06C: Regression - existing complaint flows pass; case-without-vehicle
         works; backend-owned workflow authority intact.
 - [ ] P10-07: KPI dashboard DERIVED from the event timeline (not counters).
-  - [ ] P10-07A: KPI read model from events (on-time%, overdue, avg delay,
+  - [x] P10-07A: KPI read model from events (on-time%, overdue, avg delay,
         promise-kept%, reopened, escalations, stuck-by-dept, first-response/resolution)
         + RBAC/scope + API tests; no raw closed-count leaderboard.
-    - [ ] P10-07A1: Task/promise KPI formulas from task status-history events:
+    - [x] P10-07A1: Task/promise KPI formulas from task status-history events:
           on-time%, active overdue count, avg delay, and customer-promise-kept%.
           Pure backend helper + focused tests; no route yet.
-    - [ ] P10-07A2: Wire task/promise KPI rows into `ReportsService` with manager
+    - [x] P10-07A2: Wire task/promise KPI rows into `ReportsService` with manager
           role + branch scope; keep metrics derived from task rows/history.
-    - [ ] P10-07A3: Complaint/case KPI formulas for reopened, escalation,
+    - [x] P10-07A3: Complaint/case KPI formulas for reopened, escalation,
           first-response, and resolution timing from complaint/case/SLA events.
-    - [ ] P10-07A4: Add the scoped KPI HTTP route + OpenAPI + API tests covering
+    - [x] P10-07A4: Add the scoped KPI HTTP route + OpenAPI + API tests covering
           allowed manager/admin access, denied employee access, and no cross-branch leak.
   - [ ] P10-07B `[stack]`: KPI dashboard screen + web test.
-- [ ] P10-08: CAPA / root cause.
-  - [ ] P10-08A: CAPA model (root cause, responsible dept, corrective + preventive
+- [x] P10-08: CAPA / root cause.
+  - [x] P10-08A: CAPA model (root cause, responsible dept, corrective + preventive
         action, due, effectiveness check, repeat flag) + service tests.
-  - [ ] P10-08B: Repeat-issue detection + CAPA surfaced in case detail + tests.
+  - [x] P10-08B: Repeat-issue detection + CAPA surfaced in case detail + tests.
 - [ ] P10-09 (umbrella; Risk Critical; AFTER Task/Case stable): Confidential employee cases.
   - [ ] P10-09A: Participant ACL + confidentiality enforced at the service/query layer
         (accused denied by default, conflict-of-interest guard) + denial audit + tests.

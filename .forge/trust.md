@@ -1182,3 +1182,80 @@ the additive Case schema/module present, invalid transitions are denied before
 writes, and transition actor authority remains server-principal owned. Focused
 cases tests, workflow API suite, OpenAPI check, lint, typecheck, root tests, and
 diff whitespace check passed. Continue to P10-07A for event-derived KPI reads.
+
+## P10-07A1 Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P10-07A1 is complete: the reports module now has a pure task/promise KPI helper
+that derives completion from task DONE status-history events, counts active
+overdue tasks from current row status, computes average delay, and returns zero
+for empty denominators without exposing an individual closed-count leaderboard.
+Focused KPI tests, reports API suite, typecheck, OpenAPI check, lint, root
+tests, and diff whitespace check passed. Continue to P10-07A2.
+
+## P10-07A2 Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P10-07A2 is complete: `ReportsService` now exposes task/promise KPI values from
+a read-only reports query over task rows and status-history DONE events, with
+manager branch scope and admin all-branch behavior covered by focused tests.
+The service still exposes only aggregate KPI numbers and no closed-count
+leaderboard. Focused KPI tests, reports API suite, typecheck, OpenAPI check,
+lint, root tests, and diff whitespace check passed. Continue to P10-07A3.
+
+## P10-07A3 Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P10-07A3 is complete: reports KPI helpers now derive reopened, escalation,
+first-response, and resolution timing from workflow/SLA timeline events, return
+zero for empty denominators, and expose only aggregate KPI numbers. Focused KPI
+tests, reports API suite, typecheck, OpenAPI check, lint, root tests, and diff
+whitespace check passed. Continue to P10-07A4.
+
+## P10-07A4 Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P10-07A4 is complete: `GET /reports/kpis` exposes aggregate-only KPI values from
+event-derived task/promise and complaint/case helpers, with manager/admin RBAC,
+server-principal branch scope, cross-branch denial/audit, and OpenAPI contract
+coverage. Focused KPI tests, reports API suite, typecheck, OpenAPI check, lint,
+root tests, and diff whitespace check passed. P10-07A is complete; continue to
+P10-08A.
+
+## P10-08A Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P10-08A is complete: CAPA accountability is modeled as case-owned
+`capa_actions` with root cause, responsible department, corrective/preventive
+actions, due date, effectiveness check, and repeat flag. `CasesService` can
+create/read CAPA actions with required-field validation. Prisma validate first
+failed because `DATABASE_URL` was unset, then passed with the local fallback URL;
+Prisma generate, focused cases tests, typecheck, OpenAPI check, lint, root tests,
+and diff whitespace check passed. Continue to P10-08B.
+
+## P10-08B Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P10-08B is complete: case timeline/detail now includes CAPA actions and a
+backend repeat signal from customer-linked matching CAPA root cause or explicit
+repeat flag. Focused cases tests cover CAPA visibility plus repeat and
+non-repeat behavior. Typecheck, OpenAPI check, lint, root tests, and diff
+whitespace check passed. P10-08 is complete; continue to P10-09A.

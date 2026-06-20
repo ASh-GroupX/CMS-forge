@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import 'reflect-metadata';
 import { Reflector } from '@nestjs/core';
@@ -11,6 +12,7 @@ import { AppException } from '../../src/core/http-kernel.ts';
 import { ReportsController } from '../../src/modules/reports/reports.controller.ts';
 import { ReportsRepository } from '../../src/modules/reports/reports.repository.js';
 import { ReportsService } from '../../src/modules/reports/reports.service.js';
+import type { ReportsKpiSummary } from '../../src/modules/reports/reports.service.js';
 import type { ComplaintsService } from '../../src/modules/complaints/complaints.service.js';
 import type { SlaService } from '../../src/modules/sla/sla.service.js';
 import type { SurveysService } from '../../src/modules/surveys/surveys.service.js';
@@ -79,6 +81,38 @@ test('reports route derives role and branch scope from the request principal', a
   assert.deepEqual(calls[0], { role: RoleCode.BRANCH_MANAGER, branchId: 'branch-a' });
 });
 
+test('reports KPI route derives scope from the principal and returns aggregate values only', async () => {
+  const calls: unknown[] = [];
+  const controller = new ReportsController({
+    kpiSummary: async (input: unknown) => {
+      calls.push(input);
+      return kpiSummary;
+    },
+  } as ReportsService);
+
+  const result = await controller.kpis('branch-b', request(branchManager, '/reports/kpis?branchId=branch-b'));
+
+  assert.deepEqual(calls[0], { role: RoleCode.BRANCH_MANAGER, branchId: 'branch-a' });
+  assert.deepEqual(result, { kpis: kpiSummary });
+  assert.equal('closedCountLeaderboard' in result.kpis, false);
+});
+
+test('reports KPI route allows manager and admin roles', async () => {
+  const guard = new RbacGuard(new Reflector(), { record: async () => undefined } as AuditService);
+
+  assert.equal(await guard.canActivate(context(request(branchManager, '/reports/kpis'), ReportsController.prototype.kpis)), true);
+  assert.equal(await guard.canActivate(context(request(admin, '/reports/kpis'), ReportsController.prototype.kpis)), true);
+});
+
+test('reports KPI route denies ordinary employees', async () => {
+  const guard = new RbacGuard(new Reflector(), { record: async () => undefined } as AuditService);
+
+  await assert.rejects(
+    guard.canActivate(context(request(employee, '/reports/kpis'), ReportsController.prototype.kpis)),
+    (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
+});
+
 test('reports route branch-scope denial is audited by the RBAC guard', async () => {
   const auditRecords: AuditRecordInput[] = [];
   const guard = new RbacGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
@@ -89,6 +123,26 @@ test('reports route branch-scope denial is audited by the RBAC guard', async () 
   );
   assert.equal(auditRecords[0]?.action, 'branch_scope_forbidden');
   assert.deepEqual(auditRecords[0]?.metadata, { deniedBranchId: 'branch-b' });
+});
+
+test('reports KPI route cross-branch request is denied and audited', async () => {
+  const auditRecords: AuditRecordInput[] = [];
+  const guard = new RbacGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
+
+  await assert.rejects(
+    guard.canActivate(context(request(branchManager, '/reports/kpis?branchId=branch-b'), ReportsController.prototype.kpis)),
+    (error: unknown) => error instanceof AppException && error.code === 'BRANCH_SCOPE_FORBIDDEN',
+  );
+  assert.equal(auditRecords[0]?.action, 'branch_scope_forbidden');
+  assert.deepEqual(auditRecords[0]?.metadata, { deniedBranchId: 'branch-b' });
+});
+
+test('reports KPI OpenAPI documents aggregate-only response', () => {
+  const openapi = JSON.parse(readFileSync('packages/contracts/openapi.json', 'utf8'));
+
+  assert.ok(openapi.paths['/reports/kpis']?.get);
+  assert.equal(JSON.stringify(openapi.components.schemas.ReportKpiResponse).includes('closedCount'), false);
+  assert.equal(JSON.stringify(openapi.components.schemas.ReportKpiSummary).includes('leaderboard'), false);
 });
 
 test('report export is row-limited and writes REPORT audit', async () => {
@@ -192,6 +246,20 @@ const branchManager: StaffPrincipal = {
   branchId: 'branch-a',
 };
 
+const admin: StaffPrincipal = { ...branchManager, userId: 'usr_admin', roleCode: RoleCode.ADMIN, branchId: null };
+const employee: StaffPrincipal = { ...branchManager, userId: 'usr_employee', roleCode: RoleCode.CR_OFFICER };
+
+const kpiSummary = {
+  onTimeCompletionPercent: 100,
+  activeOverdueCount: 1,
+  averageDelayHours: 0,
+  customerPromiseKeptPercent: 100,
+  reopenedCount: 0,
+  escalationCount: 0,
+  averageFirstResponseHours: 1,
+  averageResolutionHours: 2,
+} satisfies ReportsKpiSummary;
+
 function request(principal: StaffPrincipal, url: string): AuthenticatedRequest {
   return {
     principal,
@@ -202,7 +270,10 @@ function request(principal: StaffPrincipal, url: string): AuthenticatedRequest {
   };
 }
 
-function context(req: AuthenticatedRequest, handler: typeof ReportsController.prototype.dashboard | typeof ReportsController.prototype.filteredReport): ExecutionContext {
+function context(
+  req: AuthenticatedRequest,
+  handler: typeof ReportsController.prototype.dashboard | typeof ReportsController.prototype.kpis | typeof ReportsController.prototype.filteredReport,
+): ExecutionContext {
   return {
     switchToHttp: () => ({ getRequest: () => req }),
     getHandler: () => handler,

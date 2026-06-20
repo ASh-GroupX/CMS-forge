@@ -3,7 +3,7 @@ import test from 'node:test';
 import { CaseLinkEntityType, CaseType, ComplaintStatus, TaskLinkEntityType } from '@prisma/client';
 import { AppException } from '../../core/http-kernel.js';
 import { CasesRepository } from './cases.repository.js';
-import type { CaseRecord, CreateCaseData } from './cases.repository.js';
+import type { CapaActionRecord, CaseRecord, CreateCapaActionData, CreateCaseData } from './cases.repository.js';
 import { CasesService } from './cases.service.js';
 
 test('case draft accepts customer link without requiring a vehicle', async () => {
@@ -52,6 +52,7 @@ test('case timeline returns metadata links and task link shape', async () => {
       id: 'case_1',
       links: [{ entityType: CaseLinkEntityType.COMPLAINT, entityId: 'complaint_1', createdAt: new Date('2026-06-20T09:00:00.000Z') }],
     }),
+    countRepeatCustomerRootCause: async () => 0,
   } as unknown as CasesRepository);
 
   const result = await service.timeline('case_1');
@@ -59,6 +60,8 @@ test('case timeline returns metadata links and task link shape', async () => {
   assert.equal(result.case.id, 'case_1');
   assert.deepEqual(result.taskLink, { entityType: TaskLinkEntityType.CASE, entityId: 'case_1' });
   assert.deepEqual(result.events.map((event) => event.type), ['CASE_CREATED', 'CASE_LINKED']);
+  assert.deepEqual(result.capaActions, []);
+  assert.deepEqual(result.repeatIssue, { isRepeat: false, rootCauses: [] });
 });
 
 test('task link for case rejects blank ids', () => {
@@ -68,6 +71,87 @@ test('task link for case rejects blank ids', () => {
     () => service.taskLinkForCase(' '),
     (error) => error instanceof AppException && error.code === 'VALIDATION_FAILED',
   );
+});
+
+test('case CAPA action validates and returns accountability fields', async () => {
+  let captured: CreateCapaActionData | undefined;
+  const service = new CasesService({
+    createCapaAction: async (data: CreateCapaActionData) => {
+      captured = data;
+      return capaRecord(data);
+    },
+  } as unknown as CasesRepository);
+
+  const result = await service.createCapaAction({
+    caseId: 'case_1',
+    rootCause: 'Late parts confirmation',
+    responsibleDepartmentId: 'dept_service',
+    correctiveAction: 'Call customer before 10 AM',
+    preventiveAction: 'Daily parts delay review',
+    dueAt: '2026-06-25T09:00:00.000Z',
+    effectivenessCheck: 'Review repeat delays after 30 days',
+    repeatFlag: true,
+  });
+
+  assert.equal(captured?.rootCause, 'Late parts confirmation');
+  assert.equal(captured?.dueAt.toISOString(), '2026-06-25T09:00:00.000Z');
+  assert.equal(result.responsibleDepartmentId, 'dept_service');
+  assert.equal(result.repeatFlag, true);
+  assert.equal(result.effectivenessCheck, 'Review repeat delays after 30 days');
+});
+
+test('case CAPA action rejects missing required accountability fields and can be read', async () => {
+  const service = new CasesService({
+    createCapaAction: async (data: CreateCapaActionData) => capaRecord(data),
+    listCapaActions: async () => [capaRecord()],
+  } as unknown as CasesRepository);
+
+  await assert.rejects(
+    service.createCapaAction({
+      caseId: 'case_1',
+      rootCause: ' ',
+      responsibleDepartmentId: 'dept_service',
+      correctiveAction: 'Call customer',
+      preventiveAction: 'Daily review',
+      dueAt: '2026-06-25T09:00:00.000Z',
+    }),
+    (error) => error instanceof AppException && error.code === 'VALIDATION_FAILED',
+  );
+
+  assert.deepEqual((await service.listCapaActions('case_1')).map((item) => item.id), ['capa_1']);
+});
+
+test('case timeline surfaces CAPA actions and repeat customer root cause signal', async () => {
+  let repeatInput: unknown;
+  const service = new CasesService({
+    findById: async () => caseRecord({
+      links: [{ entityType: CaseLinkEntityType.CUSTOMER, entityId: 'customer_1', createdAt: new Date('2026-06-20T08:00:00.000Z') }],
+      capaActions: [capaRecord({ rootCause: 'Late parts confirmation' })],
+    }),
+    countRepeatCustomerRootCause: async (input: unknown) => {
+      repeatInput = input;
+      return 1;
+    },
+  } as unknown as CasesRepository);
+
+  const result = await service.timeline('case_1');
+
+  assert.deepEqual(repeatInput, { caseId: 'case_1', customerIds: ['customer_1'], rootCauses: ['Late parts confirmation'] });
+  assert.equal(result.capaActions[0]?.rootCause, 'Late parts confirmation');
+  assert.deepEqual(result.repeatIssue, { isRepeat: true, rootCauses: ['Late parts confirmation'] });
+  assert.ok(result.events.some((event) => event.type === 'CAPA_ACTION_CREATED' && event.capaActionId === 'capa_1'));
+});
+
+test('case timeline marks non-repeat when customer root cause is unique', async () => {
+  const service = new CasesService({
+    findById: async () => caseRecord({
+      links: [{ entityType: CaseLinkEntityType.CUSTOMER, entityId: 'customer_1', createdAt: new Date('2026-06-20T08:00:00.000Z') }],
+      capaActions: [capaRecord({ rootCause: 'Unique delivery issue' })],
+    }),
+    countRepeatCustomerRootCause: async () => 0,
+  } as unknown as CasesRepository);
+
+  assert.deepEqual((await service.timeline('case_1')).repeatIssue, { isRepeat: false, rootCauses: ['Unique delivery issue'] });
 });
 
 function caseRecord(overrides: Partial<CaseRecord> & { links?: CaseRecord['links'] } = {}): CaseRecord {
@@ -84,10 +168,29 @@ function caseRecord(overrides: Partial<CaseRecord> & { links?: CaseRecord['links
     createdAt: now,
     updatedAt: now,
     links: [{ entityType: CaseLinkEntityType.CUSTOMER, entityId: 'customer_1', createdAt: now }],
+    capaActions: [],
     ...overrides,
   };
 }
 
 function withCreatedAt(links: CreateCaseData['links']): CaseRecord['links'] {
   return links.map((link) => ({ ...link, createdAt: new Date('2026-06-20T08:00:00.000Z') }));
+}
+
+function capaRecord(overrides: Partial<CapaActionRecord> & Partial<CreateCapaActionData> = {}): CapaActionRecord {
+  const now = new Date('2026-06-20T08:00:00.000Z');
+  return {
+    id: 'capa_1',
+    caseId: 'case_1',
+    rootCause: 'Late parts confirmation',
+    responsibleDepartmentId: 'dept_service',
+    correctiveAction: 'Call customer before 10 AM',
+    preventiveAction: 'Daily parts delay review',
+    dueAt: new Date('2026-06-25T09:00:00.000Z'),
+    effectivenessCheck: null,
+    repeatFlag: false,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
 }

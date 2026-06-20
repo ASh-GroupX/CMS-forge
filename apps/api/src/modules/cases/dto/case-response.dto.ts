@@ -19,11 +19,31 @@ export class CaseResponseDto {
   updatedAt!: string;
 }
 
+export type CapaActionDto = {
+  id: string;
+  caseId: string;
+  rootCause: string;
+  responsibleDepartmentId: string;
+  correctiveAction: string;
+  preventiveAction: string;
+  dueAt: string;
+  effectivenessCheck: string | null;
+  repeatFlag: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CaseRepeatIssueDto = {
+  isRepeat: boolean;
+  rootCauses: string[];
+};
+
 export type CaseTimelineEventDto = {
-  type: 'CASE_CREATED' | 'CASE_LINKED';
+  type: 'CASE_CREATED' | 'CASE_LINKED' | 'CAPA_ACTION_CREATED';
   occurredAt: string;
   entityType?: CaseLinkEntityType;
   entityId?: string;
+  capaActionId?: string;
 };
 
 export type TaskCaseLinkDto = {
@@ -34,5 +54,7 @@ export type TaskCaseLinkDto = {
 export type CaseTimelineResponseDto = {
   case: CaseResponseDto;
   taskLink: TaskCaseLinkDto;
+  capaActions: CapaActionDto[];
+  repeatIssue: CaseRepeatIssueDto;
   events: CaseTimelineEventDto[];
 };

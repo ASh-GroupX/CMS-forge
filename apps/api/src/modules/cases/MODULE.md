@@ -19,6 +19,7 @@ module's boundary so you can work in a fresh context without scanning the tree.
 
 - `cases`
 - `case_links`
+- `capa_actions`
 
 ## May depend on
 

@@ -4031,3 +4031,289 @@ Status: Passed through P9-02
 - Trust boundaries tested: workflow suite covers invalid transition denial,
   server-owned transition authority, branch-scope denial/audit, and the existing
   allowed workflow transition paths.
+
+## P10-07A1 Task/Promise KPI Formulas From Task Events
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-REPORT-001, REQ-RBAC-001, NFR-SEC-002, METHOD-MODULAR-001,
+  METHOD-API-001, METHOD-TEST-001
+
+### Changes
+
+1. Added a pure reports-side task/promise KPI helper.
+2. Derived on-time completion percent, active overdue count, average delay
+   hours, and customer-promise kept percent from task rows plus DONE
+   status-history events.
+3. Added focused tests proving event-derived completion, late/on-time math,
+   active overdue handling, empty denominator zeroes, and no closed-count
+   leaderboard surface.
+
+### Verification
+
+- Passed: `node --import tsx --test apps/api/test/reports/kpi-read-model.test.ts`
+  (4/4).
+- Passed: `corepack pnpm test:api -- reports` (11/11).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test` (58/58).
+- Passed: `git diff --check`.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: no HTTP route
+  or service authority was added; P10-07A2/A4 will wire manager/admin scoped
+  reads.
+- State change history + audit in same transaction: not applicable; this is a
+  read-only helper and introduces no state changes.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: the helper has no logging and returns only numeric aggregate KPIs.
+- Customer portal exposure rules: no portal route, comments, audit rows, DMS
+  codes, staff PII, or customer-facing surface was added.
+- Trust boundaries tested: no new trust boundary exists in this pure helper;
+  focused tests prove no individual closed-count leaderboard is exposed, and
+  existing reports RBAC/branch-scope route tests still pass.
+
+## P10-07A2 Task/Promise KPI ReportsService Wiring
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-REPORT-001, REQ-RBAC-001, NFR-SEC-002, METHOD-MODULAR-001,
+  METHOD-API-001, METHOD-TEST-001
+
+### Changes
+
+1. Added a read-only reports repository query for task KPI rows and task
+   status-history events.
+2. Wired `ReportsService.taskPromiseKpis` to derive task/promise KPIs through
+   the P10-07A1 helper.
+3. Documented the reports module's read-only `tasks` / `task_status_history`
+   reporting boundary.
+4. Added tests proving branch-manager scope, admin all-branch behavior,
+   event-derived completion, and no individual closed-count leaderboard output.
+
+### Verification
+
+- Passed: `node --import tsx --test apps/api/test/reports/kpi-read-model.test.ts`
+  (6/6).
+- Passed: `corepack pnpm test:api -- reports` (13/13).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test` (58/58).
+- Passed: `git diff --check`; only CRLF normalization warnings were printed.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input:
+  `ReportsService.taskPromiseKpis` accepts the server-side report scope and the
+  focused tests prove branch-manager reads pass `branch-a` while admin reads pass
+  all-branch scope (`null`); no client-owned task filter was added.
+- State change history + audit in same transaction: not applicable; this is a
+  read-only service method and repository query with no state changes.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: the service returns only numeric aggregate KPI values and adds no
+  logging.
+- Customer portal exposure rules: no portal route or customer-facing surface was
+  added, and the read model does not expose internal comments, audit rows, DMS
+  codes, or staff PII.
+- Trust boundaries tested: focused tests cover scoped manager branch reads and
+  admin all-branch reads; existing reports route RBAC/branch-scope denial and
+  audit tests still pass.
+
+## P10-07A3 Complaint/Case KPI Formulas From Timeline Events
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-REPORT-001, REQ-RBAC-001, NFR-SEC-002, METHOD-MODULAR-001,
+  METHOD-API-001, METHOD-TEST-001
+
+### Changes
+
+1. Added pure reports-side complaint/case KPI formulas for reopened count,
+   escalation count, average first-response hours, and average resolution hours.
+2. Derived reopened/resolution/first-response values from workflow timeline
+   events and escalations from SLA breach events.
+3. Added focused tests for reopened, escalation, first-response, resolution,
+   empty denominators, and no closed-count leaderboard output.
+
+### Verification
+
+- Passed: `node --import tsx --test apps/api/test/reports/kpi-read-model.test.ts`
+  (8/8).
+- Passed: `corepack pnpm test:api -- reports` (15/15).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test` (58/58).
+- Passed: `git diff --check`; only CRLF normalization warnings were printed.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: no HTTP route
+  or service authority was added in this formula-only slice; P10-07A4 wires the
+  scoped route.
+- State change history + audit in same transaction: not applicable; this is a
+  pure read helper with no state changes.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: the helper has no logging and returns only numeric aggregate KPIs.
+- Customer portal exposure rules: no portal route or customer-facing surface was
+  added, and no internal comments, audit rows, DMS codes, or staff PII are
+  exposed.
+- Trust boundaries tested: no new external trust boundary exists in this pure
+  helper; focused tests prove aggregate output only, and existing reports
+  RBAC/branch-scope tests still pass.
+
+## P10-07A4 Scoped KPI HTTP Route And API Proof
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-REPORT-001, REQ-RBAC-001, NFR-SEC-002, METHOD-MODULAR-001,
+  METHOD-API-001, METHOD-TEST-001
+
+### Changes
+
+1. Added `GET /reports/kpis` for aggregate task/promise and complaint/case KPI
+   values.
+2. Wired `ReportsService.kpiSummary` through read-only reports repository rows
+   and the event-derived KPI helpers.
+3. Added read-only reports module boundary documentation for task, complaint,
+   case, and SLA KPI source tables.
+4. Updated the canonical OpenAPI contract and committed contract JSON for the
+   aggregate-only KPI response.
+5. Added API proof for manager/admin allow, employee deny, cross-branch
+   denial/audit, server-principal scope derivation, and no closed-count
+   leaderboard response fields.
+
+### Verification
+
+- Passed: `node --import tsx --test apps/api/test/reports/kpi-read-model.test.ts`
+  (9/9).
+- Passed: `corepack pnpm test:api -- reports` (21/21).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test` (58/58).
+- Passed: `git diff --check`; only CRLF normalization warnings were printed.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: the KPI
+  controller derives role/branch from the authenticated request principal, and
+  tests prove manager branch scope ignores a spoofed query branch while admin is
+  allowed.
+- State change history + audit in same transaction: not applicable; this is a
+  read-only route and repository query. Existing RBAC denial audit behavior is
+  covered for cross-branch denial.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: the route returns only numeric aggregate KPI values and adds no
+  logging.
+- Customer portal exposure rules: no portal route or customer-facing surface was
+  added; KPI responses contain no internal comments, audit rows, DMS codes,
+  staff PII, or customer identifiers.
+- Trust boundaries tested: reports API tests cover allowed manager/admin access,
+  employee denial, cross-branch denial/audit, server-principal scope derivation,
+  and aggregate-only OpenAPI/response shape.
+
+## P10-08A CAPA Model And Service Tests
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally / live migration apply deferred
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-REPORT-001, REQ-RBAC-001, NFR-SEC-002, METHOD-MODULAR-001,
+  METHOD-API-001, METHOD-TEST-001
+
+### Changes
+
+1. Added `CapaAction` persistence linked to `Case` and responsible
+   `Department`, with root cause, corrective action, preventive action, due
+   date, effectiveness check, and repeat flag fields.
+2. Added SQL migration `20260620170000_capa_model`.
+3. Added case-owned CAPA create/read service behavior with focused validation
+   tests.
+4. Declared `capa_actions` in the cases module boundary.
+
+### Verification
+
+- Failed then reran with required local env: `corepack pnpm --dir packages/database exec prisma validate --schema prisma/schema.prisma`
+  initially failed because `DATABASE_URL` was unset.
+- Passed: `$env:DATABASE_URL='postgresql://cms:cms@localhost:5432/cms_auto'; corepack pnpm --dir packages/database exec prisma validate --schema prisma/schema.prisma`.
+- Passed: `$env:DATABASE_URL='postgresql://cms:cms@localhost:5432/cms_auto'; corepack pnpm --dir packages/database exec prisma generate --schema prisma/schema.prisma`.
+- Passed: `node --import tsx --test apps/api/src/modules/cases/cases.service.spec.ts`
+  (6/6).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test` (58/58).
+- Passed: `git diff --check`; only CRLF normalization warnings were printed.
+- Not Run: live DB migration apply remains deferred until local stack repair.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: no public route
+  was added; CAPA behavior is service-level only and future route wiring must
+  derive scope from server principal.
+- State change history + audit in same transaction: no public state-changing
+  route was introduced in this slice, so route-level audit is not yet required.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: CAPA service returns only case/CAPA accountability fields and adds
+  no logging.
+- Customer portal exposure rules: no portal route or customer-facing CAPA
+  surface was added.
+- Trust boundaries tested: focused tests cover required CAPA accountability
+  field validation and read shape; route-level allowed/denied RBAC proof is
+  deferred until a public CAPA route exists.
+
+## P10-08B Repeat Issue Detection And CAPA In Case Detail
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally / live migration apply deferred
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-REPORT-001, REQ-RBAC-001, NFR-SEC-002, METHOD-MODULAR-001,
+  METHOD-API-001, METHOD-TEST-001
+
+### Changes
+
+1. Surfaced CAPA actions in the case timeline/detail response.
+2. Added a backend repeat issue signal based on current case customer links plus
+   matching CAPA root cause on another case, with `repeatFlag` also treated as a
+   repeat signal.
+3. Added focused cases tests for CAPA timeline visibility and one repeat / one
+   non-repeat case.
+
+### Verification
+
+- Passed: `node --import tsx --test apps/api/src/modules/cases/cases.service.spec.ts`
+  (8/8).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test` (58/58).
+- Passed: `git diff --check`; only CRLF normalization warnings were printed.
+- Not Run: live DB migration apply remains deferred until local stack repair.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: no public route
+  was added; repeat detection and CAPA timeline data remain service-level.
+- State change history + audit in same transaction: no public state-changing
+  route was introduced in this slice.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: timeline additions expose only CAPA accountability fields and repeat
+  aggregate signal, with no logging.
+- Customer portal exposure rules: no portal route or customer-facing CAPA/repeat
+  surface was added.
+- Trust boundaries tested: focused tests cover CAPA visibility and repeat versus
+  non-repeat behavior. Route-level RBAC proof remains deferred until a public
+  CAPA/case-detail route exposes the new fields.

@@ -264,6 +264,7 @@ model Department {
   users       User[]
   complaints  Complaint[]
   slaPolicies SlaPolicy[]
+  capaActions CapaAction[]
 
   @@index([branchId])
   @@map("departments")
@@ -841,6 +842,7 @@ model Case {
   branch        Branch          @relation(fields: [branchId], references: [id])
   owner         User?           @relation("CaseOwner", fields: [ownerId], references: [id])
   links         CaseLink[]
+  capaActions   CapaAction[]
 
   @@index([type, status])
   @@index([branchId, status])
@@ -860,6 +862,27 @@ model CaseLink {
   @@unique([caseId, entityType, entityId])
   @@index([entityType, entityId])
   @@map("case_links")
+}
+
+model CapaAction {
+  id                      String     @id @default(cuid())
+  caseId                  String     @map("case_id")
+  rootCause               String     @map("root_cause")
+  responsibleDepartmentId String     @map("responsible_department_id")
+  correctiveAction        String     @map("corrective_action")
+  preventiveAction        String     @map("preventive_action")
+  dueAt                   DateTime   @map("due_at")
+  effectivenessCheck      String?    @map("effectiveness_check")
+  repeatFlag              Boolean    @default(false) @map("repeat_flag")
+  createdAt               DateTime   @default(now()) @map("created_at")
+  updatedAt               DateTime   @updatedAt @map("updated_at")
+  case                    Case       @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  responsibleDepartment   Department @relation(fields: [responsibleDepartmentId], references: [id])
+
+  @@index([caseId])
+  @@index([responsibleDepartmentId])
+  @@index([dueAt])
+  @@map("capa_actions")
 }
 
 model AuditLog {

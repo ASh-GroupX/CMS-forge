@@ -4,7 +4,7 @@ import { BranchScoped, RbacGuard, Roles, SessionAuthGuard } from '../../core/aut
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { AppException } from '../../core/http-kernel.js';
 import { ReportsService } from './reports.service.js';
-import type { DashboardSummary, FilteredReportRow, ReportExportFormat } from './reports.service.js';
+import type { DashboardSummary, FilteredReportRow, ReportExportFormat, ReportsKpiSummary } from './reports.service.js';
 
 type ExportResponse = { setHeader(name: string, value: string): void };
 
@@ -18,6 +18,14 @@ export class ReportsController {
   @BranchScoped()
   async dashboard(@Query('branchId') branchId: string | undefined, @Req() request: AuthenticatedRequest): Promise<{ summary: DashboardSummary }> {
     return { summary: await this.reportsService.dashboardSummary({ role: requestRole(request), branchId: scopedBranchId(branchId, request) }) };
+  }
+
+  @Get('kpis')
+  @UseGuards(SessionAuthGuard, RbacGuard)
+  @Roles(RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @BranchScoped()
+  async kpis(@Query('branchId') branchId: string | undefined, @Req() request: AuthenticatedRequest): Promise<{ kpis: ReportsKpiSummary }> {
+    return { kpis: await this.reportsService.kpiSummary({ role: requestRole(request), branchId: scopedBranchId(branchId, request) }) };
   }
 
   @Get()

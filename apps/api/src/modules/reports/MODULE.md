@@ -18,12 +18,17 @@ Agent context manifest. Read this before editing the module.
 
 ## Owns tables
 
-- None yet. Reporting reads other modules' data; F7-01B decides the declared
-  cross-module read boundary before any query behavior is added.
+- None as write owner.
+- Read-only reporting boundary: `tasks` and `task_status_history` may be read
+  to derive event-based KPI aggregates. Reports must not write these tables.
+- Read-only reporting boundary: `complaints`, `complaint_status_history`,
+  `sla_events`, and `cases` may be read to derive complaint/case KPI aggregates.
+  Reports must not write these tables.
 
 ## May depend on
 
 - `core/*` for shared backend kernel services when behavior is added.
+- `core/http-kernel` for `PrismaService` in read-only report repositories.
 - `AuthService` through `AuthModule` for session validation guard wiring.
 - `ComplaintsService` through `ComplaintsModule` for complaint reporting reads.
 - `SlaService` through `SlaModule` for SLA warning and overdue reporting reads.

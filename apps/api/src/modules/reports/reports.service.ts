@@ -5,6 +5,8 @@ import { ComplaintsService } from '../complaints/complaints.service.js';
 import type { ComplaintReportRow } from '../complaints/complaints.service.js';
 import { SlaService } from '../sla/sla.service.js';
 import { SurveysService } from '../surveys/surveys.service.js';
+import { complaintCaseKpis as deriveComplaintCaseKpis, taskPromiseKpis as deriveTaskPromiseKpis } from './reports.kpi.js';
+import type { ComplaintCaseKpis, TaskPromiseKpis } from './reports.kpi.js';
 import { ReportsRepository } from './reports.repository.js';
 
 export type DashboardReportScope = {
@@ -34,6 +36,7 @@ export type FilteredReportRow = ComplaintReportRow;
 export type ReportExportFormat = 'csv' | 'excel';
 export type ReportExportAudit = { actorId?: string | null; branchId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type ReportExportResult = { fileName: string; contentType: string; body: string; rowCount: number; rowLimit: number };
+export type ReportsKpiSummary = TaskPromiseKpis & ComplaintCaseKpis;
 
 type DashboardComplaint = {
   branchId: string;
@@ -114,6 +117,24 @@ export class ReportsService {
       ownerId: input.ownerId ?? null,
     });
     return branchFilter(rows, branchId);
+  }
+
+  async taskPromiseKpis(scope: DashboardReportScope): Promise<TaskPromiseKpis> {
+    const rows = await this.reportsRepository.listTaskKpiRows(scopedBranchId(scope));
+    return deriveTaskPromiseKpis(rows.tasks, rows.events, dateValue(scope.now ?? new Date()));
+  }
+
+  async kpiSummary(scope: DashboardReportScope): Promise<ReportsKpiSummary> {
+    const branchId = scopedBranchId(scope);
+    const now = dateValue(scope.now ?? new Date());
+    const [taskRows, complaintCaseRows] = await Promise.all([
+      this.reportsRepository.listTaskKpiRows(branchId),
+      this.reportsRepository.listComplaintCaseKpiRows(branchId),
+    ]);
+    return {
+      ...deriveTaskPromiseKpis(taskRows.tasks, taskRows.events, now),
+      ...deriveComplaintCaseKpis(complaintCaseRows.records, complaintCaseRows.statusEvents, complaintCaseRows.slaEvents),
+    };
   }
 
   async exportReport(input: FilteredReportInput & { format: ReportExportFormat; rowLimit?: number }, audit: ReportExportAudit = {}): Promise<ReportExportResult> {
