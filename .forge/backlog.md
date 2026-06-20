@@ -436,40 +436,58 @@ PLAN-split into 1-5 file sub-tasks before build, like F1-05 was.
       task without a next action). 10-second quick-add capture. Employee Today: due
       today / overdue / assigned / waiting-on-me / escalated. Proof: own-task allow +
       unrelated deny, AR/EN, API + web tests.
+  - [x] P10-01A: Task domain model + next-action invariant + unit proof.
+  - [x] P10-01B: 10-second quick-add capture API.
+  - [x] P10-01C: Employee Today query/service API.
+  - [ ] P10-01D: Employee Today screen and runtime proof.
 - [ ] P10-02: Manager Control Room - overdue-by-employee, due-today, stuck, workload,
-      escalated, branch/team filters; derived queries. Proof: scoped team view,
-      employee denied, no cross-branch leak.
-- [ ] P10-03: Reminder + escalation engine on the Phase-8 worker - due-soon reminder,
-      overdue -> team leader -> branch manager, high-priority immediate, daily employee
-      digest, manager overdue rollup. Proof: deterministic + idempotent job tests;
-      notifications queued after commit. (Runtime proof needs the local stack.)
-- [ ] P10-04 (umbrella): Deal object with stage gates (Lead -> Booking -> Payment ->
-      Finance -> Insurance -> Registration -> PDI -> Delivery -> Post-delivery) + Deal
-      Handoff Board (deals by stage, stuck, current holder, delay age). Each stage:
-      owner, due, blocker, generated tasks, timeline. Proof: handoff creates tasks,
-      manager sees stuck deals, scoped access.
-- [ ] P10-05: Customer Promise Tracker - every promise = a dated task linked to
-      customer/deal/case; KPI promise-kept-on-time %; overdue promises surface in Today
-      + Control Room.
-- [ ] P10-06 (umbrella): Complaint -> Case reframe - Complaint becomes
-      Case(type=customer_complaint); case lifecycle/tasks/timeline/links; customer/
-      vehicle as related entities (not mandatory root). Proof: existing complaint flows
-      still work, case can exist without vehicle, backend-owned workflow authority intact.
-- [ ] P10-07: KPI dashboard DERIVED from the event timeline (not counters) - on-time %,
-      overdue, avg delay, promise-kept %, reopened, escalations, stuck-deals-by-dept,
-      first-response/resolution time. No raw closed-count leaderboard. Proof: RBAC/
-      branch-scoped; numbers derive from events.
-- [ ] P10-08: CAPA / root cause - root cause, responsible dept, corrective + preventive
-      action, due date, effectiveness check, repeat-issue flag.
-- [ ] P10-09 (umbrella; Risk Critical; AFTER Task/Case stable): Confidential employee
-      cases - HR-only visibility, complainant, accused/related, witnesses, investigator,
-      restricted notes, appeal, conflict-of-interest guard. Proof: accused denied by
-      default, unauthorized manager denied, audit exists, no private-note leak.
-- [ ] P10-10: Local UAT seed + demo flow - seed dealership data (sales/finance/
-      registration/manager, customers, vehicles, deals, overdue tasks, a stuck deal, a
-      complaint, an internal task); prove end-to-end locally: employee sees today,
-      manager sees late/stuck, deal moves through handoff, overdue escalates, KPI moves
-      from the timeline. (Needs the local stack.)
+      escalated, branch/team filters.
+  - [ ] P10-02A: Manager rollup read model + derived queries + RBAC/branch scope +
+        API tests (employee denied, no cross-branch leak).
+  - [ ] P10-02B `[stack]`: Manager Control Room screen + team/branch filters + web test.
+- [ ] P10-03: Reminder + escalation engine on the Phase-8 worker.
+  - [ ] P10-03A: Escalation policy + due-date scan (due-soon/overdue selection) -
+        pure logic, idempotent, unit tests.
+  - [ ] P10-03B `[stack]`: Wire the scan into the BullMQ worker (reminder -> team
+        leader -> branch manager -> high-priority) + daily employee digest + manager
+        rollup; notify after commit.
+- [ ] P10-04 (umbrella): Deal object + stage gates (Lead..Post-delivery) + Handoff Board.
+  - [ ] P10-04A: Deal model + stage gates + per-stage owner/due/blocker + transition
+        rules + service tests.
+  - [ ] P10-04B: Stage transitions generate the right tasks + audit + tests.
+  - [ ] P10-04C: Deal Handoff Board read model (by stage, stuck, current holder, delay
+        age) + RBAC + API tests.
+  - [ ] P10-04D `[stack]`: Deal Handoff Board screen + web test.
+- [ ] P10-05: Customer Promise Tracker.
+  - [ ] P10-05A: Promise flag on tasks linked to customer/deal/case +
+        promise-kept-on-time computed from events + service tests.
+  - [ ] P10-05B: Surface overdue promises in Employee Today + Control Room + the KPI.
+- [ ] P10-06 (umbrella): Complaint -> Case reframe (keep existing flows working).
+  - [ ] P10-06A: Generalize Complaint into Case(type=customer_complaint) - schema +
+        migration; customer/vehicle become links, not mandatory root.
+  - [ ] P10-06B: Case tasks + case timeline + case links + tests.
+  - [ ] P10-06C: Regression - existing complaint flows pass; case-without-vehicle
+        works; backend-owned workflow authority intact.
+- [ ] P10-07: KPI dashboard DERIVED from the event timeline (not counters).
+  - [ ] P10-07A: KPI read model from events (on-time%, overdue, avg delay,
+        promise-kept%, reopened, escalations, stuck-by-dept, first-response/resolution)
+        + RBAC/scope + API tests; no raw closed-count leaderboard.
+  - [ ] P10-07B `[stack]`: KPI dashboard screen + web test.
+- [ ] P10-08: CAPA / root cause.
+  - [ ] P10-08A: CAPA model (root cause, responsible dept, corrective + preventive
+        action, due, effectiveness check, repeat flag) + service tests.
+  - [ ] P10-08B: Repeat-issue detection + CAPA surfaced in case detail + tests.
+- [ ] P10-09 (umbrella; Risk Critical; AFTER Task/Case stable): Confidential employee cases.
+  - [ ] P10-09A: Participant ACL + confidentiality enforced at the service/query layer
+        (accused denied by default, conflict-of-interest guard) + denial audit + tests.
+  - [ ] P10-09B: Employee-grievance case type + confidential lifecycle (HR review ->
+        investigation -> decision -> closed -> appealed) + restricted notes + tests.
+  - [ ] P10-09C `[stack]`: Confidential HR-only screens + redaction + privacy regression tests.
+- [ ] P10-10: Local UAT seed + demo (proves the whole thing).
+  - [ ] P10-10A: Dealership seed - employees/roles, customers, vehicles, deals,
+        overdue tasks, a stuck deal, a complaint, an internal task.
+  - [ ] P10-10B `[stack]`: End-to-end local proof - employee sees today -> manager sees
+        late/stuck -> deal handoff -> overdue escalates -> KPI moves from the timeline.
 - [ ] P10-OPS (deferred): capture channels - email-to-task, then WhatsApp / mobile.
   - [ ] O-01: Provision Hostinger Ubuntu VPS and install Docker + Compose
   - [ ] O-02: Point domain A-record to VPS and confirm Caddy TLS issuance

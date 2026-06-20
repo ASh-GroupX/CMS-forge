@@ -2,7 +2,7 @@
 
 Status: Ready to Build
 Phase: Phase 10 - Dealership Accountability Layer (local-first)
-Next Task: P10-01A - Task domain model + next-action invariant (unit-provable, no full stack)
+Next Task: P10-02A - Manager Control Room read model (no-stack; skip past the blocked screen)
 Model Tier: BUILDER-STRONG
 
 ## How to use this file
@@ -12,24 +12,27 @@ Prior state history is in .forge/archive/state-archive.md.
 
 ## Snapshot
 
-- Phase 10 (full) is planned in backlog.md: P10-01..P10-10 + P10-OPS, scope frozen
-  (Task/Case/Deal only; no AI/BPMN/mobile/WhatsApp/HR-platform; production deferred).
-- Refinements baked in: next-action invariant lives INSIDE the Task atom (the spine,
-  not a later bolt-on); links[] polymorphic from the start; 10-second quick-add is a
-  P10-01 requirement; P10-01/04/06/09 are umbrellas that PLAN-split before build.
-- Building local-first. Logic-heavy foundation (Task model + invariant + KPI queries)
-  is unit-provable WITHOUT the running stack; runtime proofs (escalation jobs P10-03,
-  deal handoff P10-04, UAT demo P10-10) block until the stack is up.
-- NOW: P10-01A builds the Task model + next-action invariant + service tests - no
-  stack needed, so it proceeds while the environment is fixed.
+- Full Phase 10 is decomposed in backlog.md (P10-01..P10-10 + P10-OPS); every screen/
+  worker-runtime/UAT sub-task is tagged [stack].
+- Done: P10-01A (Task model + invariant), P10-01B (quick-add API), P10-01C (Today
+  query API) - unit/API-proven, no stack needed.
+- KEY: do NOT stall on P10-01D (Employee Today screen needs the stack). Build the whole
+  NO-STACK backend track now, then batch all [stack] screens + worker runtime + UAT
+  once the local stack is fixed.
+- No-stack queue (buildable now, in order): P10-02A (manager rollup) -> P10-03A
+  (escalation policy/scan logic) -> P10-04A/B/C (deal model/transitions/board read) ->
+  P10-05A/B (promise) -> P10-06A/B/C (Complaint->Case reframe) -> P10-07A (KPI read
+  model) -> P10-08A/B (CAPA) -> P10-09A/B (confidential ACL + grievance lifecycle).
+- Deferred to stack repair [stack]: P10-01D, P10-02B, P10-03B, P10-04D, P10-07B,
+  P10-09C, P10-10B (P10-10A seed is buildable now).
 
-## Local prerequisite (HUMAN - gates runtime proofs, not P10-01A)
+## Local prerequisite (HUMAN - gates the [stack] tasks only)
 
-The local stack is down: Docker daemon, Redis :6379, Postgres dev creds, and
-critically low C: free space. Free disk + start Docker + fix DB creds before tasks
-that need runtime/web proof (P10-01C/D screens, P10-03 jobs, P10-04 deal, P10-10 UAT).
+Local stack down: Docker, Redis :6379, Postgres dev creds, critically low C: disk.
+Free disk + start Docker + fix DB creds before the [stack] batch. The no-stack backend
+track does NOT need it.
 
 ## Open carry-forward / known debt
 
-- Production deploy parked. SMS/WhatsApp/DMS mocked. Badge enum localization folds
-  into the P10 Employee Today / Control Room UI.
+- Production deploy parked. SMS/WhatsApp/DMS mocked. Runtime DB migration apply + live
+  task API proof are Not Run until the stack is fixed.

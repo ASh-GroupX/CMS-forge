@@ -159,6 +159,40 @@ enum PortalVerificationStatus {
   EXPIRED
 }
 
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING
+  DONE
+}
+
+enum TaskLinkEntityType {
+  CUSTOMER
+  VEHICLE
+  COMPLAINT
+  DEAL
+  EMPLOYEE
+}
+
+enum TaskParticipantRole {
+  OWNER
+  ASSIGNEE
+  PARTICIPANT
+  WATCHER
+}
+
+enum TaskVisibility {
+  PARTICIPANTS
+  BRANCH
+  MANAGEMENT
+}
+
+enum TaskConfidentialityLevel {
+  NORMAL
+  CONFIDENTIAL
+  RESTRICTED
+}
+
 enum AuditEventType {
   AUTH
   USER_ADMIN
@@ -171,6 +205,7 @@ enum AuditEventType {
   REPORT
   CONFIG
   SECURITY
+  TASK
 }
 
 model Branch {
@@ -253,6 +288,11 @@ model User {
   staffSessions              StaffSession[]
   passwordResetTokens        StaffPasswordResetToken[]
   auditLogs                  AuditLog[]               @relation("AuditActor")
+  ownedTasks                 Task[]                   @relation("TaskOwner")
+  assignedTasks              Task[]                   @relation("TaskAssignee")
+  taskNextActions            Task[]                   @relation("TaskNextActionWho")
+  taskParticipants           TaskParticipant[]
+  taskStatusHistory          TaskStatusHistory[]
 
   @@index([roleId])
   @@index([branchId])
@@ -663,6 +703,77 @@ model PortalSession {
   @@index([complaintId])
   @@index([customerId])
   @@map("portal_sessions")
+}
+
+model Task {
+  id                     String                   @id @default(cuid())
+  title                  String
+  ownerId                String                   @map("owner_id")
+  assigneeId             String                   @map("assignee_id")
+  dueAt                  DateTime                 @map("due_at")
+  status                 TaskStatus               @default(OPEN)
+  nextActionWhat         String?                  @map("next_action_what")
+  nextActionWhoId        String?                  @map("next_action_who_id")
+  nextActionWhen         DateTime?                @map("next_action_when")
+  visibility             TaskVisibility           @default(PARTICIPANTS)
+  confidentialityLevel   TaskConfidentialityLevel @default(NORMAL) @map("confidentiality_level")
+  createdAt              DateTime                 @default(now()) @map("created_at")
+  updatedAt              DateTime                 @updatedAt @map("updated_at")
+  owner                  User                     @relation("TaskOwner", fields: [ownerId], references: [id])
+  assignee               User                     @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  nextActionWho          User?                    @relation("TaskNextActionWho", fields: [nextActionWhoId], references: [id])
+  links                  TaskLink[]
+  participants           TaskParticipant[]
+  statusHistory          TaskStatusHistory[]
+
+  @@index([status, dueAt])
+  @@index([ownerId])
+  @@index([assigneeId])
+  @@index([nextActionWhoId])
+  @@map("tasks")
+}
+
+model TaskLink {
+  id          String             @id @default(cuid())
+  taskId      String             @map("task_id")
+  entityType  TaskLinkEntityType @map("entity_type")
+  entityId    String             @map("entity_id")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  task        Task               @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, entityType, entityId])
+  @@index([entityType, entityId])
+  @@map("task_links")
+}
+
+model TaskParticipant {
+  id        String              @id @default(cuid())
+  taskId    String              @map("task_id")
+  userId    String              @map("user_id")
+  role      TaskParticipantRole @default(PARTICIPANT)
+  createdAt DateTime            @default(now()) @map("created_at")
+  task      Task                @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User                @relation(fields: [userId], references: [id])
+
+  @@unique([taskId, userId])
+  @@index([userId])
+  @@map("task_participants")
+}
+
+model TaskStatusHistory {
+  id            String      @id @default(cuid())
+  taskId        String      @map("task_id")
+  fromStatus    TaskStatus? @map("from_status")
+  toStatus      TaskStatus  @map("to_status")
+  actorId       String?     @map("actor_id")
+  correlationId String?     @map("correlation_id")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  task          Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actor         User?       @relation(fields: [actorId], references: [id])
+
+  @@index([taskId, createdAt])
+  @@index([actorId])
+  @@map("task_status_history")
 }
 
 model AuditLog {

@@ -3206,6 +3206,158 @@ Status: Passed through P9-02
 - Phase 9 remains blocked on the missing VPS/provisioning proof gates recorded
   in `.forge/state.md`.
 
+## P10-01A Task Domain Model + Next-Action Invariant
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally / runtime stack proof deferred
+- Builder tier: BUILDER-STRONG
+- SRS IDs: ARCH-UI-001, UI-DESIGN-001, UI-SCREEN-001, METHOD-MODULAR-001,
+  METHOD-AUDIT-001, METHOD-TEST-001, NFR-MAINT-001
+
+### Changes
+
+1. Generated `apps/api/src/modules/tasks` with the module generator and filled
+   `MODULE.md`.
+2. Added Prisma task atom tables/enums plus migration:
+   `tasks`, `task_links`, `task_participants`, and `task_status_history`.
+3. Implemented `TasksService` next-action invariant:
+   `OPEN` / `IN_PROGRESS` / `WAITING` require `{ what, whoId, when }`; `DONE`
+   clears it.
+4. Task creation/status changes write status history and task audit in the same
+   repository transaction.
+5. Added participant visibility read guard proof: own/participant access allowed,
+   unrelated user denied.
+
+### Verification
+
+- Passed: `corepack pnpm --filter @cms-auto/database generate`.
+- Passed: `node --import tsx --test apps/api/src/modules/tasks/tasks.service.spec.ts`
+  (4/4).
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test` (58/58).
+- Passed: `corepack pnpm prisma:validate`.
+- Passed: `corepack pnpm openapi:check`.
+- Not Run: live API mutation, local DB migration apply, runtime integration proof,
+  Employee Today UI/web proof. The local stack remains blocked by the Docker /
+  Redis / Postgres / disk-space issues carried in `state.md`.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: P10-01A adds no
+  public route. The service-level participant read guard takes actor identity as
+  trusted caller context; P10-01B must derive it from the server session.
+- State change history + audit in same transaction: `TasksService.create` and
+  `TasksService.updateStatus` call `createStatusHistory` and `AuditService.record`
+  inside `TasksRepository.transaction`; the status-update unit test asserts both
+  receive the transaction client.
+- No secrets logged or returned: task audit metadata contains status fields only;
+  no passwords, OTPs, tokens, hashes, or provider secrets are included.
+- Customer portal exposure rules: no portal route or public task exposure was
+  added in this task.
+- Trust boundaries tested: `tasks.service.spec.ts` covers participant allow and
+  unrelated-user deny with `RBAC_FORBIDDEN`.
+
+## P10-01B Quick-Add Capture API
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally / runtime stack proof deferred
+- Builder tier: BUILDER-STRONG
+- SRS IDs: ARCH-UI-001, UI-DESIGN-001, UI-SCREEN-001, METHOD-MODULAR-001,
+  METHOD-AUDIT-001, METHOD-API-001, METHOD-TEST-001, NFR-MAINT-001
+
+### Changes
+
+1. Added `POST /tasks/quick-add` on `TasksController` with staff session, RBAC,
+   and CSRF guards.
+2. Added quick-add body parsing in `create-task.dto.ts`; the request accepts
+   `title`, `what`, `whoId`, `when`, and optional due date, links, participants,
+   visibility, and confidentiality.
+3. The controller derives `ownerId` and audit actor from `request.principal`,
+   rejects client-owned `ownerId` / `assigneeId` / `status` / `nextAction`, and
+   delegates invariant/audit/history logic to `TasksService.create`.
+4. Updated the canonical OpenAPI contract and regenerated `packages/contracts`.
+
+### Verification
+
+- Passed: `node --import tsx --test apps/api/src/modules/tasks/tasks.controller.spec.ts`
+  (2/2).
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test` (58/58).
+- Passed: `corepack pnpm openapi:check`.
+- Not Run: live API mutation and browser/web proof. The local stack remains
+  blocked by the Docker / Redis / Postgres / disk-space issues carried in
+  `state.md`.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: the route is
+  guarded by `SessionAuthGuard` + `RbacGuard`; `ownerId` comes from
+  `request.principal.userId`, and client-owned authority fields are rejected in
+  the parser and tested.
+- State change history + audit in same transaction: quick-add delegates to
+  `TasksService.create`, already proven in P10-01A to write task status history
+  and audit in the repository transaction.
+- No secrets logged or returned: request parser and controller pass task fields
+  only; no passwords, OTPs, tokens, hashes, or provider secrets are included in
+  audit metadata or response.
+- Customer portal exposure rules: no portal route or public task exposure was
+  added.
+- Trust boundaries tested: `tasks.controller.spec.ts` proves session-derived
+  owner/audit actor and rejection of a client-supplied `ownerId`.
+
+## P10-01C Employee Today Query/Service API
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally / runtime and web proof deferred
+- Builder tier: BUILDER-STRONG
+- SRS IDs: ARCH-UI-001, UI-DESIGN-001, UI-SCREEN-001, METHOD-MODULAR-001,
+  METHOD-API-001, METHOD-TEST-001, NFR-MAINT-001
+
+### Changes
+
+1. Added `TasksRepository.listEmployeeToday`, scoped to visible non-DONE tasks:
+   owner, assignee, next-action user, or explicit participant.
+2. Added `TasksService.employeeToday`, bucketing visible tasks into due today,
+   overdue, assigned to me, and waiting on me.
+3. Added `GET /tasks/today`, deriving the employee identity from
+   `request.principal.userId` and accepting no client `userId`.
+4. Updated the canonical OpenAPI contract and regenerated `packages/contracts`.
+
+### Verification
+
+- Passed: `node --import tsx --test apps/api/src/modules/tasks/tasks.service.spec.ts`
+  (5/5).
+- Passed: `node --import tsx --test apps/api/src/modules/tasks/tasks.controller.spec.ts`
+  (4/4).
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test` (58/58).
+- Passed: `corepack pnpm openapi:check`.
+- Not Run: live API query and Employee Today web proof. The local stack remains
+  blocked by the Docker / Redis / Postgres / disk-space issues carried in
+  `state.md`.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: `GET /tasks/today`
+  is guarded by `SessionAuthGuard` + `RbacGuard`; actor identity comes from
+  `request.principal.userId`, and the controller test covers missing principal
+  rejection.
+- State change history + audit in same transaction: not applicable; P10-01C is
+  read-only and adds no state change.
+- No secrets logged or returned: the route returns task DTOs only and writes no
+  logs/audit entries.
+- Customer portal exposure rules: no portal route or public task exposure was
+  added.
+- Trust boundaries tested: service proof checks the repository is queried with
+  the actor id and buckets only returned visible tasks; controller proof checks
+  session-derived identity and missing-principal denial.
+
 ## Local Web Functionality Repair
 
 - Date: 2026-06-20

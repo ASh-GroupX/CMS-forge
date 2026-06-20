@@ -2577,6 +2577,118 @@
           }
         }
       }
+    },
+    "/tasks/quick-add": {
+      "post": {
+        "tags": [
+          "Tasks"
+        ],
+        "operationId": "taskQuickAddCreate",
+        "summary": "Capture a quick staff task",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskQuickAddRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Task captured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskQuickAddResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied or invalid CSRF token (CSRF_INVALID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Task next action required (TASK_NEXT_ACTION_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/today": {
+      "get": {
+        "tags": [
+          "Tasks"
+        ],
+        "operationId": "taskEmployeeTodayList",
+        "summary": "List the current staff user task buckets for today",
+        "responses": {
+          "200": {
+            "description": "Employee task buckets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmployeeTodayResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4670,6 +4782,254 @@
           "rowLimit": {
             "type": "integer",
             "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "TaskLink": {
+        "type": "object",
+        "required": [
+          "entityType",
+          "entityId"
+        ],
+        "properties": {
+          "entityType": {
+            "type": "string",
+            "enum": [
+              "CUSTOMER",
+              "VEHICLE",
+              "COMPLAINT",
+              "DEAL",
+              "EMPLOYEE"
+            ]
+          },
+          "entityId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "TaskNextAction": {
+        "type": "object",
+        "required": [
+          "what",
+          "whoId",
+          "when"
+        ],
+        "properties": {
+          "what": {
+            "type": "string",
+            "minLength": 1
+          },
+          "whoId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "when": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Task": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "ownerId",
+          "assigneeId",
+          "dueAt",
+          "status",
+          "nextAction",
+          "visibility",
+          "confidentialityLevel",
+          "links",
+          "participantUserIds",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": "string"
+          },
+          "assigneeId": {
+            "type": "string"
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "IN_PROGRESS",
+              "WAITING",
+              "DONE"
+            ]
+          },
+          "nextAction": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TaskNextAction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "PARTICIPANTS",
+              "BRANCH",
+              "MANAGEMENT"
+            ]
+          },
+          "confidentialityLevel": {
+            "type": "string",
+            "enum": [
+              "NORMAL",
+              "CONFIDENTIAL",
+              "RESTRICTED"
+            ]
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskLink"
+            }
+          },
+          "participantUserIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TaskQuickAddRequest": {
+        "type": "object",
+        "required": [
+          "title",
+          "what",
+          "whoId",
+          "when"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "what": {
+            "type": "string",
+            "minLength": 1
+          },
+          "whoId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "when": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskLink"
+            }
+          },
+          "participantUserIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "PARTICIPANTS",
+              "BRANCH",
+              "MANAGEMENT"
+            ]
+          },
+          "confidentialityLevel": {
+            "type": "string",
+            "enum": [
+              "NORMAL",
+              "CONFIDENTIAL",
+              "RESTRICTED"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "TaskQuickAddResponse": {
+        "type": "object",
+        "required": [
+          "task"
+        ],
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/Task"
+          }
+        },
+        "additionalProperties": false
+      },
+      "EmployeeTodayResponse": {
+        "type": "object",
+        "required": [
+          "dueToday",
+          "overdue",
+          "assignedToMe",
+          "waitingOnMe"
+        ],
+        "properties": {
+          "dueToday": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Task"
+            }
+          },
+          "overdue": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Task"
+            }
+          },
+          "assignedToMe": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Task"
+            }
+          },
+          "waitingOnMe": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Task"
+            }
           }
         },
         "additionalProperties": false

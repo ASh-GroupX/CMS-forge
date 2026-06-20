@@ -13,6 +13,7 @@ import { IntegrationsModule } from './modules/integrations/integrations.module.j
 import { PortalModule } from './modules/portal/portal.module.js';
 import { ReportsModule } from './modules/reports/reports.module.js';
 import { SurveysModule } from './modules/surveys/surveys.module.js';
+import { TasksModule } from './modules/tasks/tasks.module.js';
 
 @Controller()
 class HealthController {
@@ -42,6 +43,7 @@ class HealthController {
     IntegrationsModule,
     ReportsModule,
     SurveysModule,
+    TasksModule,
   ],
   controllers: [HealthController],
 })

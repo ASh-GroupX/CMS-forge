@@ -1016,3 +1016,43 @@ User clarified no VPS exists and wants the repo ready. The codebase is ready for
 VPS provisioning based on completed P9-07/P9-08 artifacts and checks. This is
 not production proof: SMTP arrival, deployed health, backup restore,
 object-storage smoke, and pilot UAT remain future human/environment gates.
+
+## P10-01A Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P10-01A is complete: the generated `tasks` module owns the task atom, links,
+participants, status history, and next-action invariant. Active task states
+cannot persist without `{what, who, when}` through the service; `DONE` clears the
+next action; status history and audit are written in the same transaction.
+Required static/unit/schema/OpenAPI proof passed. Runtime DB/API/web proof stays
+deferred until the local Docker/Postgres/Redis/disk-space blocker is fixed.
+Continue to P10-01B for the session-derived quick-add API.
+
+## P10-01B Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P10-01B is complete: `POST /tasks/quick-add` is staff-session guarded, rejects
+client-owned authority fields, derives owner/audit actor from the server
+principal, and reuses `TasksService.create` for invariant/history/audit. Focused
+controller proof plus lint, typecheck, root tests, and OpenAPI check passed.
+Runtime mutation proof remains deferred until the local stack is fixed.
+Continue to P10-01C for the Employee Today query/service API.
+
+## P10-01C Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Stop For Planning / Environment
+
+P10-01C is complete: `GET /tasks/today` derives actor identity from the staff
+session, the repository query is participant-scoped, and service buckets cover
+due today, overdue, assigned, and waiting-on-me. Focused service/controller proof
+plus lint, typecheck, root tests, and OpenAPI check passed. Stop AUTO PHASE at
+the P10-01D screen because UI completion requires runtime/web proof and the
+local Docker/Postgres/Redis/disk-space blocker is still open.
