@@ -29,7 +29,7 @@ function buildVisualCases(locale) {
   const base = { locale, role: 'admin', session: 'signed-in' };
   return [
     visualCase('dashboard', locale, { ...base }, [t.dashboard.title, t.dashboard.cards.open[0], t.dashboard.cards.averageTat[0]], ['md:grid-cols-3', 'xl:grid-cols-5']),
-    visualCase('work queue', locale, { ...base, queue: 'empty' }, [t.workQueue.title, t.workQueue.filters.status, t.workQueue.pagination.page], ['md:grid-cols-5', 'overflow-x-auto']),
+    visualCase('work queue', locale, { ...base, queue: 'success' }, [t.workQueue.title, t.workQueue.states.success, t.workQueue.pagination.page], ['md:grid-cols-5', 'overflow-x-auto']),
     visualCase('complaint create', locale, { ...base, create: 'validation' }, [t.createForm.title, t.createForm.fields.category, t.createForm.validation.vinRequired], ['md:grid-cols-2', 'md:col-span-2']),
     visualCase('complaint detail', locale, { ...base, attachment: 'clean' }, [detail.title, detail.sections.customer, detail.sections.timeline, detail.sections.attachments], ['xl:grid-cols-[1.1fr_0.9fr]', 'md:grid-cols-2']),
     visualCase('workflow modal', locale, { ...base, workflow: 'validation' }, [detail.sections.workflow, detail.workflow.actions[0], detail.workflow.validation], ['role="dialog"', 'xl:col-span-2']),
@@ -50,7 +50,7 @@ function buildAccessibilityCases() {
     accessibilityCase('dashboard status', 'en', { ...enBase, dashboard: 'loading' }, [staffShellText.en.dashboard.title, staffShellText.en.dashboard.states.loading]),
     accessibilityCase('dashboard alert', 'ar', { ...arBase, dashboard: 'error' }, [staffShellText.ar.dashboard.title, staffShellText.ar.dashboard.states.error]),
     accessibilityCase('queue form labels', 'en', { ...enBase, queue: 'empty' }, [staffShellText.en.workQueue.title, staffShellText.en.workQueue.filters.search], { minButtons: 3 }),
-    accessibilityCase('queue alert', 'ar', { ...arBase, queue: 'error' }, [staffShellText.ar.workQueue.title, staffShellText.ar.workQueue.states.error]),
+    accessibilityCase('queue alert', 'ar', { ...arBase, queue: 'conflict' }, [staffShellText.ar.workQueue.title, staffShellText.ar.workQueue.states.conflict]),
     accessibilityCase('create validation', 'en', { ...enBase, create: 'validation' }, [staffShellText.en.createForm.title, staffShellText.en.createForm.validation.vinRequired], { minButtons: 5 }),
     accessibilityCase('create network alert', 'ar', { ...arBase, create: 'network' }, [staffShellText.ar.createForm.title]),
     accessibilityCase('detail alert', 'en', { ...enBase, detail: 'error' }, [complaintDetailText.en.title, complaintDetailText.en.states.error]),

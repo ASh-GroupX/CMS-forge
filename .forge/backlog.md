@@ -345,7 +345,7 @@ UI finish (fixes the "preview shell / I don't like the app" problem; hard go-liv
       `@axe-core/playwright`) with minimal wired checks
 - [x] P9-03F: Add screenshot/vision-review workflow scaffolding for the golden
       screen work; no screen redesign yet
-- [ ] P9-04A: Build the work queue as the golden screen (shadcn primitives, real
+- [x] P9-04A: Build the work queue as the golden screen (shadcn primitives, real
       typed API rows only, loading/empty/error/success/conflict states, EN/AR visual
       review gate)
 - [ ] P9-04B: Golden-screen review/repair gate before copying the pattern to other

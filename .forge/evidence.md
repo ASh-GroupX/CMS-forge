@@ -148,6 +148,56 @@ Status: Passed through P9-02
 - AUTO PHASE stopped at `PLAN-P9-03` because shadcn adoption must be split before
   build work.
 
+## P9-04A - Work Queue Golden Screen
+
+Date: 2026-06-20
+Risk: Medium
+Status: Passed
+Requirements: UI-DESIGN-001 AC1, UI-DESIGN-001 AC2, UI-DESIGN-001 AC3, UI-DESIGN-001 AC4, UI-DESIGN-001 AC5, UI-DESIGN-001 AC6, UI-SCREEN-001 AC1, UI-SCREEN-001 AC2, UI-SCREEN-001 AC3
+
+Evidence:
+- Rebuilt `apps/web/src/app/work-queue.tsx` with generated shadcn primitives:
+  `Card`, `Table`, `Button`, `Input`, `Label`, `Select`, `Badge`, and
+  `Skeleton`.
+- Removed hardcoded fallback complaint rows. Work queue table rows now render only
+  from `ComplaintQueueItem[]` passed through the existing typed staff queue read.
+- Backend authority stayed server-owned: the component does not read role, branch
+  scope, workflow state, query params, cookies, storage, or `fetch`.
+- Added localized production-safe work queue copy, success/conflict states, and
+  neutral SLA copy until the backend exposes a queue SLA field.
+- Added shell tests for no fallback rows, real API rows through forwarded session
+  cookies, API-denied empty rendering, and loading/empty/error/success/conflict
+  feedback roles.
+- Repaired the generated `Skeleton` primitive's missing React import and added the
+  root `@/*` path mapping so the same shadcn imports resolve in the TSX proof
+  runners.
+- Updated EN/AR visual and accessibility proof cases for the golden work queue,
+  including success and conflict states.
+- Visual review result: Passed. `web:visual-review` wrote
+  `coverage/web-visual-review/en-work-queue-visual-regression.html` and
+  `coverage/web-visual-review/ar-work-queue-visual-regression.html`; I also
+  rendered the actual Next app on port 3100 and inspected EN/AR Chrome
+  screenshots for layout, overflow, and RTL/LTR direction. The dev server was
+  stopped after inspection.
+
+Verification:
+- Failed then repaired: `corepack pnpm test:web -- shell` initially failed after
+  the new loading state exercised the generated `Skeleton` primitive without a
+  React import, and after an over-broad source assertion matched shadcn `@/*`
+  imports. Repaired with the primitive import and narrower assertions.
+- Failed then repaired: `corepack pnpm test:e2e -- ui-smoke` and
+  `corepack pnpm test:e2e -- accessibility` initially failed because the root TSX
+  runner could not resolve `@/*` shadcn imports. Repaired with root
+  `tsconfig.json` path mapping.
+- Passed: `corepack pnpm test:web -- shell` (117/117).
+- Passed: `corepack pnpm test:e2e -- ui-smoke` (2 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (16 route previews).
+- Passed: `corepack pnpm web:visual-review`.
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+
 ## PLAN-P9-04 - Golden Screen Split
 
 Date: 2026-06-20

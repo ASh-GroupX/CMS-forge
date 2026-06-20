@@ -386,6 +386,10 @@ function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' }, status });
 }
 
+function workQueueHtml(html: string): string {
+  return html.match(/aria-label="Work queue"[\s\S]*?aria-label="Complaint detail"/)?.[0] ?? '';
+}
+
 function principal(overrides: { roleCode?: string; branchId?: string | null } = {}) {
   return {
     sessionId: 'ses_test',
@@ -598,13 +602,13 @@ test('work queue renders localized headers filters and pagination', async () => 
   assert.match(html, /Next/);
 });
 
-test('work queue sample rows avoid customer PII and portal data', async () => {
+test('work queue source has no fallback complaint rows or private data paths', async () => {
   const source = readFileSync('apps/web/src/app/work-queue.tsx', 'utf8');
 
-  assert.match(source, /CMP-2026-001/);
-  assert.doesNotMatch(source, /@/);
+  assert.doesNotMatch(source, /CMP-2026-/);
+  assert.doesNotMatch(source, /[\w.-]+@[\w.-]+/);
   assert.doesNotMatch(source, /\b\+?\d{10,}\b/);
-  assert.doesNotMatch(source, /VIN|audit|internal comment|portal/i);
+  assert.doesNotMatch(source, /VIN|audit|internal comment|portal|document\.cookie|localStorage|sessionStorage|fetch\(/i);
 });
 
 test('Arabic work queue keeps RTL localized labels', async () => {
@@ -616,15 +620,23 @@ test('Arabic work queue keeps RTL localized labels', async () => {
   assert.ok(html.includes(staffShellText.ar.workQueue.pagination.page));
 });
 
-test('work queue preview states render loading empty and error messages', async () => {
+test('work queue preview states render loading empty error success and conflict messages', async () => {
   const loading = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ queue: 'loading' }) }));
   const empty = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ queue: 'empty' }) }));
   const error = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ queue: 'error' }) }));
+  const success = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ queue: 'success' }) }));
+  const conflict = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ queue: 'conflict' }) }));
 
   assert.match(loading, /Loading work queue\./);
+  assert.match(loading, /role="status"/);
   assert.match(empty, /No complaints match the current filters\./);
+  assert.match(empty, /role="status"/);
   assert.match(error, /Work queue could not be loaded\. Try again\./);
   assert.match(error, /role="alert"/);
+  assert.match(success, /Work queue refreshed\./);
+  assert.match(success, /role="status"/);
+  assert.match(conflict, /Queue data changed\. Reload before continuing\./);
+  assert.match(conflict, /role="alert"/);
 });
 
 test('work queue renders real complaint rows through the session cookie', async () => {
@@ -666,6 +678,7 @@ test('work queue renders real complaint rows through the session cookie', async 
     cookie: 'cms_staff_session=raw-session',
   });
   assert.match(html, /CMP-QUEUE-001/);
+  assert.match(html, /Engine noise/);
   assert.match(html, /IN_PROGRESS/);
   assert.match(html, /HIGH/);
   assert.match(html, /usr_owner/);
@@ -674,7 +687,7 @@ test('work queue renders real complaint rows through the session cookie', async 
   assert.doesNotMatch(html, /@|\+?\d{10,}/);
 });
 
-test('work queue keeps preview rows when backend denies queue read', async () => {
+test('work queue renders empty state when backend denies queue read', async () => {
   const fetchImpl: typeof fetch = async (input) => {
     if (String(input).endsWith('/auth/me')) return jsonResponse({ user: principal({ roleCode: 'CR_OFFICER' }) });
     return jsonResponse({ error: { code: 'RBAC_FORBIDDEN' } }, 403);
@@ -687,7 +700,9 @@ test('work queue keeps preview rows when backend denies queue read', async () =>
     }),
   );
 
-  assert.match(html, /CMP-2026-001/);
+  assert.match(html, /No complaints match the current filters\./);
+  assert.match(html, /role="status"/);
+  assert.doesNotMatch(workQueueHtml(html), /CMP-2026-/);
   assert.doesNotMatch(html, /CMP-QUEUE-001/);
 });
 

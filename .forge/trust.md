@@ -535,3 +535,15 @@ P9-03F is complete: the visual-review scaffold now writes ignored HTML artifacts
 for the existing EN/AR visual cases and the existing visual/accessibility/static
 gates still pass. P9-03 split adoption is complete. Stop AUTO PHASE at P9-04
 because the next step is explicit planning before any golden-screen refactor.
+
+## P9-04A Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Needs Review
+
+P9-04A is complete: the work queue now uses shadcn primitives, renders only real
+typed queue rows, proves loading/empty/error/success/conflict states, and passed
+the required shell, E2E, accessibility, visual, visual-review, perf, lint, and
+typecheck gates. Stop AUTO PHASE at P9-04B so the golden screen is accepted or
+repaired before the pattern is copied to other screens.

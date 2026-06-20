@@ -1,9 +1,9 @@
 # Current State
 
-Status: Ready to Build
+Status: Needs Review
 Phase: Phase 9 - Production Readiness (Pilot on Hostinger)
-Next Task: P9-04A - Work queue golden screen
-Model Tier: BUILDER-STANDARD
+Next Task: P9-04B - Golden screen review gate
+Model Tier: PHASE-REVIEWER
 
 ## How to use this file
 
@@ -12,20 +12,19 @@ Prior state history is in .forge/archive/state-archive.md.
 
 ## Snapshot
 
-- P9-01A..P9-01E passed: all Arabic i18n bundles are verified as real Arabic
-  Unicode, root `html` resolves `lang`/`dir` from locale, and RTL/LTR proof
-  passes.
-- P9-02 passed: `corepack pnpm lint` now includes an Arabic i18n mojibake and
-  Arabic-codepoint gate.
-- P9-03A..P9-03F passed: shadcn config, primitives, token aliases, frontend proof
-  packages, and visual-review artifact generation are in place.
-- PLAN-P9-04 selected the work queue as the golden screen because it exercises the
-  highest-value operational UI patterns in a small component.
-- NEXT: P9-04A builds the work queue golden screen and stops for review/repair
-  before any broad screen refactor.
+- P9-04A passed: the work queue now uses shadcn primitives, removes fallback
+  complaint rows, renders only typed staff queue API rows, and covers loading,
+  empty, error, success, and conflict states.
+- Required P9-04A proof commands passed: `test:web -- shell`, `test:e2e --
+  ui-smoke`, `test:e2e -- accessibility`, `test:visual`,
+  `web:visual-review`, `web:perf`, `lint`, and `typecheck`.
+- EN/AR visual-review artifacts were generated and actual Next app screenshots
+  were inspected for the work queue layout, overflow, and RTL/LTR direction.
+- AUTO PHASE is stopped at P9-04B for golden-screen review before copying the
+  pattern to other screens.
 
 ## Open carry-forward / known debt
 
-- P9-04B gates golden-screen approval or repair.
-- P9-04C..P9-04H apply the accepted pattern to the remaining staff, admin,
-  reports/audit, and portal screen groups.
+- P9-04B must accept or repair the golden screen before P9-04C starts.
+- Queue SLA state is neutral copy until the backend exposes a typed SLA field on
+  the queue item.

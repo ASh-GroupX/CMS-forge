@@ -59,7 +59,7 @@ export const staffShellText = {
     },
     workQueue: {
       title: 'Work queue',
-      status: 'UI contract preview: API wiring lands in the queue integration task.',
+      status: 'Branch-scoped complaints loaded from the staff API session.',
       filters: {
         status: 'Status',
         branch: 'Branch',
@@ -73,7 +73,10 @@ export const staffShellText = {
         loading: 'Loading work queue.',
         empty: 'No complaints match the current filters.',
         error: 'Work queue could not be loaded. Try again.',
+        success: 'Work queue refreshed.', conflict: 'Queue data changed. Reload before continuing.',
       },
+      sla: { backendScoped: 'Backend scoped' },
+      actions: { open: 'Open detail' },
       pagination: {
         page: 'Page 1 of 1',
         previous: 'Previous',
@@ -200,7 +203,7 @@ export const staffShellText = {
     },
     workQueue: {
       title: 'قائمة العمل',
-      status: 'معاينة عقد الواجهة: ربط واجهة البرمجة يأتي في مهمة تكامل القائمة.',
+      status: 'شكاوى ضمن النطاق محملة من جلسة واجهة الموظفين.',
       filters: {
         status: 'الحالة',
         branch: 'الفرع',
@@ -214,7 +217,10 @@ export const staffShellText = {
         loading: 'جاري تحميل قائمة العمل.',
         empty: 'لا توجد شكاوى تطابق المرشحات الحالية.',
         error: 'تعذر تحميل قائمة العمل. حاول مرة أخرى.',
+        success: 'تم تحديث قائمة العمل.', conflict: 'تغيرت بيانات القائمة. أعد التحميل قبل المتابعة.',
       },
+      sla: { backendScoped: 'ضمن نطاق الخادم' },
+      actions: { open: 'فتح التفاصيل' },
       pagination: {
         page: 'الصفحة 1 من 1',
         previous: 'السابق',
