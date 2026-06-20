@@ -8,6 +8,8 @@ import {
   Inbox,
   Search,
 } from 'lucide-react';
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 import React from 'react';
 import { resolveLocale, staffShellText, type Locale } from '../i18n/staff-shell';
 import { getStaffDashboardSummary } from '../lib/staff-dashboard-api';
@@ -24,7 +26,9 @@ import { AttachmentUploadPanel, type AttachmentPreviewState } from './attachment
 import { NotificationCenter, type NotificationPreviewState } from './notification-center';
 import { type ResetPreviewState } from './password-reset-panel';
 import { ReportsDashboard, type ReportsPreviewState } from './reports-dashboard';
+import { StaffAuthLanding } from './staff-auth-landing';
 import { AuthPanel, RolePanel, roleNav, type RolePreview } from './staff-shell-panels';
+import { StaffTopBar } from './staff-top-bar';
 import { WorkQueue, type QueuePreviewState } from './work-queue';
 
 const navKeys = ['dashboard', 'queue', 'create', 'detail', 'admin', 'reports', 'audit', 'notifications'] as const;
@@ -44,7 +48,7 @@ const icons = {
 type SearchParams = {
   admin?: string | string[]; auth?: string | string[]; attachment?: string | string[]; comments?: string | string[]; create?: string | string[];
   dashboard?: string | string[]; detail?: string | string[]; locale?: string | string[]; lookup?: string | string[]; notification?: string | string[];
-  complaintId?: string | string[]; queue?: string | string[]; reports?: string | string[]; role?: string | string[]; reset?: string | string[]; session?: string | string[]; workflow?: string | string[];
+  complaintId?: string | string[]; preview?: string | string[]; queue?: string | string[]; reports?: string | string[]; role?: string | string[]; reset?: string | string[]; session?: string | string[]; workflow?: string | string[];
 };
 
 export default async function StaffShellPage({
@@ -57,19 +61,24 @@ export default async function StaffShellPage({
   searchParams?: Promise<SearchParams>;
 }) {
   const params = await searchParams;
+  const locale = resolveLocale(params?.locale);
   const apiInput = {
     ...(cookieHeader === undefined ? {} : { cookieHeader }),
     ...(fetchImpl === undefined ? {} : { fetchImpl }),
   };
   const complaintId = readParam(params?.complaintId);
-  const [principal, dashboardSummary, reportRows, queueRows, complaintDetail] = await Promise.all([
-    getStaffSessionPrincipal(apiInput),
+  const principal = await getStaffSessionPrincipal(apiInput);
+  if (await isNextRequest() && !hasPreviewParam(params)) {
+    if (principal) redirect(withLocale('/dashboard', locale));
+    return <StaffAuthLanding authError={readParam(params?.auth) === 'error'} locale={locale} resetState={resolveReset(readParam(params?.reset))} />;
+  }
+
+  const [dashboardSummary, reportRows, queueRows, complaintDetail] = await Promise.all([
     getStaffDashboardSummary(apiInput),
     getStaffReportRows(apiInput),
     getStaffQueueItems(apiInput),
     getStaffComplaintDetail({ ...apiInput, ...(complaintId === undefined ? {} : { complaintId }) }),
   ]);
-  const locale = resolveLocale(params?.locale);
   return (
     <StaffShell
       adminState={oneOf<AdminPreviewState>(readParam(params?.admin), ['loading', 'empty', 'error', 'success', 'validation', 'conflict'])}
@@ -97,6 +106,38 @@ export default async function StaffShellPage({
 }
 
 function readParam(value: string | string[] | undefined) { return Array.isArray(value) ? value[0] : value; }
+
+async function isNextRequest(): Promise<boolean> {
+  try {
+    await headers();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function hasPreviewParam(params: SearchParams | undefined): boolean {
+  if (!params) return false;
+  return Object.entries(params).some(([key, value]) => key !== 'locale' && value !== undefined);
+}
+
+function withLocale(path: string, locale: Locale): string {
+  return `${path}?locale=${encodeURIComponent(locale)}`;
+}
+
+function navHref(key: NavKey, locale: Locale): string {
+  const routes: Record<NavKey, string> = {
+    dashboard: '/dashboard',
+    queue: '/complaints',
+    create: '/complaints/new',
+    detail: '/complaints',
+    admin: '/admin',
+    reports: '/reports',
+    audit: '/audit',
+    notifications: '/notifications',
+  };
+  return withLocale(routes[key], locale);
+}
 
 function resolveRole(value: string | undefined): RolePreview {
   return value === 'admin' || value === 'management' ? value : 'staff';
@@ -173,29 +214,32 @@ export function StaffShell({
   workflowState?: ComplaintWorkflowPreviewState | undefined;
 }) {
   const t = staffShellText[locale];
-  const switchLocale = locale === 'ar' ? 'en' : 'ar';
   const visibleNav = roleNav[role] as readonly NavKey[];
 
   return (
-    <main lang={t.lang} dir={t.dir} className="min-h-screen bg-neutral p-4 text-neutral-foreground md:p-6">
-      <div className="grid min-h-[calc(100vh-2rem)] grid-cols-1 gap-4 md:min-h-[calc(100vh-3rem)] lg:grid-cols-[18rem_1fr]">
-        <aside className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
+    <main lang={t.lang} dir={t.dir} className="min-h-screen bg-background text-foreground">
+      <StaffTopBar
+        languageHref={`?locale=${locale === 'ar' ? 'en' : 'ar'}`}
+        signedIn={isSignedIn ? t.auth.signedIn : t.auth.signedOut}
+        subtitle={t.subtitle}
+        switchLabel={t.switchLabel}
+        switchTarget={t.switchTarget}
+        themeDark={t.theme.dark}
+        themeLabel={t.theme.label}
+        themeLight={t.theme.light}
+        title={t.title}
+      />
+      <div className="grid min-h-[calc(100vh-4.5rem)] grid-cols-1 gap-4 p-4 md:p-6 lg:grid-cols-[18rem_1fr]">
+        <aside className="rounded-md border border-border bg-card p-3 shadow-sm lg:sticky lg:top-20 lg:self-start">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">{t.subtitle}</p>
+              <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">{t.subtitle}</p>
               <h1 className="text-2xl font-semibold tracking-normal">{t.title}</h1>
-              <p className="mt-1 text-sm text-slate-600">{t.branch}</p>
-              <p className="mt-2 inline-flex rounded-sm bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
+              <p className="mt-1 text-sm text-muted-foreground">{t.branch}</p>
+              <p className="mt-2 inline-flex rounded-sm bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
                 {isSignedIn ? t.auth.signedIn : t.auth.signedOut}
               </p>
             </div>
-            <a
-              className="rounded-sm border border-slate-300 px-2 py-1 text-sm font-medium hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand"
-              href={`/?locale=${switchLocale}`}
-              aria-label={t.switchLabel}
-            >
-              {t.switchTarget}
-            </a>
           </div>
           <AuthPanel authError={authError} isSignedIn={isSignedIn} locale={locale} resetState={resetState} />
           <RolePanel locale={locale} role={role} />
@@ -206,20 +250,20 @@ export function StaffShell({
               return (
                 <a
                   key={key}
-                  href="#"
-                  className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-start hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand"
+                  href={navHref(key, locale)}
+                  className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-start hover:bg-accent focus:outline-none focus:ring-2 focus:ring-brand"
                 >
                   <Icon className="mt-1 size-4 text-brand" aria-hidden="true" />
                   <span>
                     <span className="block text-sm font-semibold">{label}</span>
-                    <span className="block text-xs text-slate-600">{description}</span>
+                    <span className="block text-xs text-muted-foreground">{description}</span>
                   </span>
                 </a>
               );
             })}
           </nav>
           {visibleNav.includes('admin') ? null : (
-            <p className="mt-3 rounded-sm bg-slate-100 px-2 py-2 text-xs font-semibold text-slate-600">
+            <p className="mt-3 rounded-sm bg-muted px-2 py-2 text-xs font-semibold text-muted-foreground">
               {t.role.adminHidden}
             </p>
           )}

@@ -1,9 +1,11 @@
 import { Bell, ClipboardList, FilePlus2, FolderCog, Gauge, History, Inbox, Search } from 'lucide-react';
 import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 import React from 'react';
 import type { ReactNode } from 'react';
 import { resolveLocale, staffShellText } from '../../i18n/staff-shell';
 import { getStaffSessionPrincipal } from '../../lib/staff-session-api';
+import { StaffTopBar } from '../staff-top-bar';
 
 const NAV_ITEMS = [
   { key: 'dashboard' as const, Icon: Gauge, href: '/dashboard' },
@@ -28,25 +30,40 @@ const ROLE_NAV: Record<string, readonly NavKey[]> = {
 const STAFF_NAV: readonly NavKey[] = ['dashboard', 'queue', 'create', 'detail', 'notifications'];
 
 export default async function StaffLayout({ children }: { children: ReactNode }) {
-  const locale = resolveLocale((await headers()).get('x-cms-locale') ?? undefined);
+  const requestHeaders = await headers();
+  const locale = resolveLocale(requestHeaders.get('x-cms-locale') ?? undefined);
   const t = staffShellText[locale];
   const principal = await getStaffSessionPrincipal();
+  if (shouldRedirectStaffRoute(Boolean(principal), requestHeaders.get('x-cms-pathname') ?? '')) {
+    redirect(`/?locale=${locale}`);
+  }
   const allowedNav = principal ? (ROLE_NAV[principal.roleCode] ?? STAFF_NAV) : STAFF_NAV;
   const visibleItems = NAV_ITEMS.filter(({ key }) => (allowedNav as readonly string[]).includes(key));
 
   return (
     <div
-      className="min-h-screen bg-neutral p-4 text-neutral-foreground md:p-6"
+      className="min-h-screen bg-background text-foreground"
       dir={t.dir}
       lang={t.lang}
     >
-      <div className="grid min-h-[calc(100vh-2rem)] grid-cols-1 gap-4 md:min-h-[calc(100vh-3rem)] lg:grid-cols-[18rem_1fr]">
-        <aside className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
+      <StaffTopBar
+        languageHref={`?locale=${locale === 'ar' ? 'en' : 'ar'}`}
+        signedIn={principal ? t.auth.signedIn : t.auth.signedOut}
+        subtitle={t.subtitle}
+        switchLabel={t.switchLabel}
+        switchTarget={t.switchTarget}
+        themeDark={t.theme.dark}
+        themeLabel={t.theme.label}
+        themeLight={t.theme.light}
+        title={t.title}
+      />
+      <div className="grid min-h-[calc(100vh-4.5rem)] grid-cols-1 gap-4 p-4 md:p-6 lg:grid-cols-[18rem_1fr]">
+        <aside className="rounded-md border border-border bg-card p-3 shadow-sm lg:sticky lg:top-20 lg:self-start">
           <div className="mb-4">
-            <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">{t.subtitle}</p>
+            <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">{t.subtitle}</p>
             <h1 className="text-2xl font-semibold tracking-normal">{t.title}</h1>
-            <p className="mt-1 text-sm text-slate-600">{t.branch}</p>
-            <p className="mt-2 inline-flex rounded-sm bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
+            <p className="mt-1 text-sm text-muted-foreground">{t.branch}</p>
+            <p className="mt-2 inline-flex rounded-sm bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
               {principal ? t.auth.signedIn : t.auth.signedOut}
             </p>
           </div>
@@ -55,14 +72,14 @@ export default async function StaffLayout({ children }: { children: ReactNode })
               const [label, description] = t.nav[key];
               return (
                 <a
-                  className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-start hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand"
-                  href={href}
+                  className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-start hover:bg-accent focus:outline-none focus:ring-2 focus:ring-brand"
+                  href={`${href}?locale=${locale}`}
                   key={key}
                 >
                   <Icon aria-hidden="true" className="mt-1 size-4 text-brand" />
                   <span>
                     <span className="block text-sm font-semibold">{label}</span>
-                    <span className="block text-xs text-slate-600">{description}</span>
+                    <span className="block text-xs text-muted-foreground">{description}</span>
                   </span>
                 </a>
               );
@@ -73,4 +90,8 @@ export default async function StaffLayout({ children }: { children: ReactNode })
       </div>
     </div>
   );
+}
+
+export function shouldRedirectStaffRoute(hasPrincipal: boolean, pathname: string): boolean {
+  return !hasPrincipal && !pathname.startsWith('/auth/reset');
 }

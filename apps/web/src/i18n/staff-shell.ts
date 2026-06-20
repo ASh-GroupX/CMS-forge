@@ -8,11 +8,11 @@ export function resolveLocale(value: string | string[] | undefined): Locale {
 
 export const staffShellText = {
   en: {
-    lang: 'en',
-    dir: 'ltr',
+    lang: 'en', dir: 'ltr',
     localeName: 'English',
     switchLabel: 'Switch language',
     switchTarget: 'العربية',
+    theme: { label: 'Toggle theme', light: 'Light mode', dark: 'Dark mode' },
     title: 'Staff Operations',
     subtitle: 'Complaint control room',
     branch: 'All authorized branches',
@@ -153,11 +153,11 @@ export const staffShellText = {
     },
   },
   ar: {
-    lang: 'ar',
-    dir: 'rtl',
+    lang: 'ar', dir: 'rtl',
     localeName: 'العربية',
     switchLabel: 'تبديل اللغة',
     switchTarget: 'English',
+    theme: { label: 'تبديل المظهر', light: 'الوضع الفاتح', dark: 'الوضع الداكن' },
     title: 'عمليات الموظفين',
     subtitle: 'غرفة متابعة الشكاوى',
     branch: 'كل الفروع المصرح بها',

@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { buildStaffComplaintCreateSubmission } from '../../src/app/complaint-create-form';
 import StaffShellPage from '../../src/app/page';
 import DashboardPage from '../../src/app/(staff)/dashboard/page';
+import { shouldRedirectStaffRoute } from '../../src/app/(staff)/layout';
 import ComplaintsPage from '../../src/app/(staff)/complaints/page';
 import NewComplaintPage from '../../src/app/(staff)/complaints/new/page';
 import ComplaintDetailPage from '../../src/app/(staff)/complaints/[id]/page';
@@ -51,6 +52,24 @@ test('staff shell renders English LTR operational navigation', async () => {
   assert.match(html, /Reports/);
   assert.match(html, /Audit/);
   assert.match(html, /Notifications/);
+});
+
+test('staff shell renders app top bar controls', async () => {
+  const html = renderToStaticMarkup(
+    await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en', role: 'admin', session: 'signed-in' }) }),
+  );
+
+  assert.match(html, /aria-label="Switch language"/);
+  assert.match(html, /href="\?locale=ar"/);
+  assert.match(html, /aria-label="Toggle theme"/);
+  assert.match(html, /aria-pressed="false"/);
+});
+
+test('staff routes require a session except password reset', () => {
+  assert.equal(shouldRedirectStaffRoute(false, '/dashboard'), true);
+  assert.equal(shouldRedirectStaffRoute(false, '/complaints/new'), true);
+  assert.equal(shouldRedirectStaffRoute(false, '/auth/reset'), false);
+  assert.equal(shouldRedirectStaffRoute(true, '/complaints/new'), false);
 });
 
 test('staff shell renders Arabic RTL labels', async () => {

@@ -413,6 +413,31 @@ Production deploy artifacts (Hostinger VPS):
 Ops (human-owned; tracked in `docs/PRODUCTION_READINESS.md` section B, not build tasks):
 - [ ] P9-OPS: O-01..O-09 - provision VPS, domain + TLS, secrets, R2 bucket, email
       sender, backups, hardening, then deploy + pilot UAT
+
+## Phase 10 - Dealership Accountability Layer (design target; not started)
+
+Design: `docs/PRODUCT_DESIGN.md`. Reframes the product from "complaint app" to a
+work-accountability system (Task / Case / Deal). Reuses the existing complaint /
+assignment / SLA / audit / notification code and the Phase-8 worker - does NOT
+rewrite. Same Forge discipline: each task gets an executed proof. `PLAN-P10`
+decomposes these into 1-5 file tasks before any build.
+
+- [ ] P10-01: Task atom (owner, assignee, dueAt, nextAction, status, proof, links) +
+      Employee Today screen (due today / overdue / waiting-on-me / escalated)
+- [ ] P10-02: Manager Control Room (late / stuck / overloaded / blocking; promises at
+      risk) from derived task/event queries
+- [ ] P10-03: Next-Action invariant (no open work without {what, who, when}) +
+      escalation ladder on the Phase-8 worker (reminder -> team leader -> branch
+      manager -> high-severity alert) + daily digest
+- [ ] P10-04: Deal object with stage gates (Lead..Post-delivery) + Deal Handoff Board
+- [ ] P10-05: Reframe Complaint as Case(type=customer_complaint); customer/vehicle as
+      links; keep the existing lifecycle / SLA / audit
+- [ ] P10-06: Customer Promise Tracker (promise = dated task; kept-on-time %)
+- [ ] P10-07: KPI dashboard derived from the event timeline (fair; team + trend)
+- [ ] P10-08: Root cause / corrective action (CAPA) + repeat detection
+- [ ] P10-09: Confidential employee cases (participant ACL + HR-only visibility +
+      appeal); ACL primitives land in P10-01
+- [ ] P10-OPS: Capture channels later - email-to-task, then WhatsApp / mobile (deferred)
   - [ ] O-01: Provision Hostinger Ubuntu VPS and install Docker + Compose
   - [ ] O-02: Point domain A-record to VPS and confirm Caddy TLS issuance
   - [ ] O-03: Configure Postgres off `trust`, persistent volume, pg_dump cron, and tested restore

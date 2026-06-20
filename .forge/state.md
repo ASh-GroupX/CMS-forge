@@ -22,6 +22,10 @@ Prior state history is in .forge/archive/state-archive.md.
   exists.
 - P9-OPS remains incomplete because no VPS exists yet; real deployment, backup
   restore, object-storage smoke, and pilot UAT require that environment.
+- Local web runtime repairs are verified and the web app is listening on
+  `http://localhost:4000`, but this workstation cannot run the full stack until
+  Docker Desktop/Redis/Postgres credentials are available and C: has enough free
+  disk for stable Docker/dev cache writes.
 
 ## Next
 
@@ -37,3 +41,6 @@ Prior state history is in .forge/archive/state-archive.md.
 - SMS/WhatsApp/DMS remain mocked/disabled for the pilot.
 - Badge labels show raw enum values (`IN_PROGRESS`, `HIGH`) - not localized;
   deferred.
+- Full local end-to-end login/mutation proof is blocked by missing Docker daemon,
+  Redis not listening on port 6379, local Postgres rejecting the dev credentials,
+  and critically low C: free space.

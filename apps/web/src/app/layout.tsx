@@ -8,6 +8,7 @@ import '../globals.css';
 export const metadata: Metadata = {
   title: 'CMS-Auto Staff',
   description: 'Staff complaint management shell',
+  icons: { icon: '/favicon.svg' },
 };
 
 export const rootLocaleHeader = 'x-cms-locale';
@@ -20,12 +21,21 @@ export function rootDirection(locale: Locale) {
   return staffShellText[locale].dir;
 }
 
+const themeScript = `
+try {
+  document.documentElement.classList.toggle('dark', localStorage.getItem('cms-theme') === 'dark');
+} catch {}
+`;
+
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const locale = resolveRootLocale((await headers()).get(rootLocaleHeader));
 
   return (
-    <html lang={locale} dir={rootDirection(locale)}>
-      <body>{children}</body>
+    <html lang={locale} dir={rootDirection(locale)} suppressHydrationWarning>
+      <body>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        {children}
+      </body>
     </html>
   );
 }

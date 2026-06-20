@@ -3169,3 +3169,209 @@ Status: Passed through P9-02
 - Assumed from prior passed P9-07/P9-08 proof commands in this evidence log.
 - Not Run in this clarification step: real VPS deploy, backup restore,
   object-storage smoke, SMTP mailbox arrival, and pilot UAT because no VPS exists.
+
+## Local Web Root Usability Hotfix
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-STRONG
+- SRS IDs: ARCH-UI-001, UI-DESIGN-001, QA-UI-001, UI-SCREEN-001
+
+### Changes
+
+1. `apps/web/src/app/page.tsx` and `apps/web/src/app/staff-auth-landing.tsx`
+   - runtime `/` now renders a lightweight staff auth landing unless a real
+   session exists, while direct preview rendering remains available for
+   tests/proof tooling.
+2. `apps/web/src/app/page.tsx` - proof shell sidebar links now point to real
+   staff routes instead of `href="#"`.
+3. `apps/web/src/app/staff-shell-panels.tsx` - the signed-in preview shortcut
+   now opens the routed dashboard instead of adding preview query state to `/`.
+4. `apps/web/next.config.mjs` - pins the Turbopack root to the repo to avoid
+   wrong workspace-root inference during local dev startup.
+
+### Verification
+
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test:web -- shell` (160/160).
+- Passed: `Invoke-WebRequest http://localhost:4000/?locale=ar` returned clean
+  Arabic login HTML with no `href="#"` and no mojibake marker.
+- Passed: `Invoke-WebRequest http://localhost:4000/dashboard?locale=ar`
+  returned clean Arabic dashboard HTML with no `href="#"` and no mojibake marker.
+
+### Notes
+
+- Phase 9 remains blocked on the missing VPS/provisioning proof gates recorded
+  in `.forge/state.md`.
+
+## Local Web Functionality Repair
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed locally / backend runtime still environment-blocked
+- Builder tier: BUILDER-STRONG
+- SRS IDs: ARCH-UI-001, UI-DESIGN-001, QA-UI-001, UI-SCREEN-001, REQ-REPORT-001
+
+### Changes
+
+1. `apps/web/src/components/ui/button.tsx` - explicit `type="button"` controls
+   without a handler now render disabled unless the caller intentionally provides
+   a handler, link child, or disabled state. This prevents render-only prototype
+   controls from looking like working actions.
+2. `apps/web/test/shell/button.test.tsx` - added shell proof that inert action
+   buttons are disabled while submit buttons and link-backed buttons stay active.
+3. `apps/web/src/app/(staff)/reports/export/route.ts` - added a Next route for
+   `/reports/export?format=csv|excel` that forwards the staff cookie to the API,
+   passes through file headers, rejects unsupported formats, and returns a safe
+   502 when the API is unavailable.
+4. `apps/web/test/api-client/report-export-route.test.ts` - added API-client
+   proof for export proxying and invalid-format rejection.
+
+### Verification
+
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test:web -- shell` (162/162).
+- Passed: `corepack pnpm test:web -- api-client` (11/11).
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `node --import tsx tools/web-proof.mjs accessibility` (17 route previews).
+- Passed: `node --import tsx tools/web-proof.mjs perf` (2 route previews).
+- Passed: `corepack pnpm test:e2e -- ui-smoke` (2 route previews).
+- Passed: local dev server started at `http://localhost:4000`.
+- Passed: `curl.exe http://localhost:4000/?locale=ar` returned 200, no mojibake
+  markers, and no `href="#"`.
+- Passed: `curl.exe http://localhost:4000/dashboard?locale=ar` returned 200, no
+  mojibake markers, and no `href="#"`.
+- Passed: `curl.exe "http://localhost:4000/?locale=ar&preview=1&session=signed-in&role=admin"`
+  returned 200, no mojibake markers, no `href="#"`, and 57 disabled render-only
+  action controls.
+- Passed: `curl.exe "http://localhost:4000/reports/export?format=pdf"` returned
+  400 instead of a missing route.
+- Passed with expected backend-down behavior:
+  `curl.exe "http://localhost:4000/reports/export?format=csv"` returned 502
+  because the API service is not running.
+
+### Environment Blockers
+
+- Not Run as passed: live backend mutation/export smoke. Docker Desktop is not
+  reachable, the API is not listening on port 3000, Redis is not listening on
+  port 6379, and local Postgres rejects the configured development credentials.
+- Local dev reliability issue found: the C: drive was full, causing Next/Turbopack
+  ENOSPC cache-write failures. Generated `.next`, coverage, and temporary dev-log
+  artifacts were removed; about 350 MB remained free after cleanup and about
+  220 MB remained after restarting and smoking the dev server.
+- Phase 9 remains blocked on the missing VPS/provisioning proof gates recorded
+  in `.forge/state.md`.
+
+## Local Staff Shell UX Repair
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed locally / backend runtime still environment-blocked
+- Builder tier: BUILDER-STRONG
+- SRS IDs: ARCH-UI-001, UI-DESIGN-001, QA-UI-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/app/staff-top-bar.tsx` - added a shared staff app top bar with
+   route-relative language switching and a persisted light/dark theme toggle.
+2. `apps/web/src/app/(staff)/layout.tsx`, `apps/web/src/app/page.tsx`, and
+   `apps/web/src/app/staff-auth-landing.tsx` - wired the top bar into real staff
+   routes, the preview shell, and the sign-in landing. Staff nav links now keep
+   the active locale query.
+3. `apps/web/src/globals.css` and `apps/web/src/app/layout.tsx` - added dark-mode
+   tokens, a pre-paint theme bootstrap script, and small compatibility overrides
+   for existing slate/white classes so current screens theme without a full
+   component rewrite.
+4. `apps/web/src/app/staff-shell-panels.tsx` - moved auth/role shell panels to
+   token-based colors for dark-mode compatibility.
+5. `apps/web/public/favicon.svg` and root metadata - added a favicon to remove
+   the visible dev-overlay console issue from `/favicon.ico` 404s.
+6. `apps/web/test/shell/shell.test.ts` - added proof that the staff shell renders
+   app top-bar language and theme controls.
+
+### Verification
+
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test:web -- shell` (163/163).
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `node --import tsx tools/web-proof.mjs accessibility` (17 route previews).
+- Passed: `node --import tsx tools/web-proof.mjs perf` (2 route previews).
+- Passed: Playwright opened `http://localhost:4000/dashboard?locale=en`,
+  clicked the theme toggle, and the fresh snapshot showed the toggle pressed with
+  "Light mode" as the next action.
+- Passed: Playwright clicked the language control and stayed on
+  `http://localhost:4000/dashboard?locale=ar`.
+- Passed: Playwright reload after favicon addition showed no favicon 404; only
+  normal React dev/HMR console messages remained.
+
+### Notes
+
+- The in-app browser connector failed before attach with its sandbox metadata
+  error, so verification used the existing Playwright CLI skill and repo proof
+  commands instead.
+- C: remains critically low on free space after local dev and browser proof. The
+  app is still listening on port 4000, but the machine needs disk space freed for
+  stable dev-server work.
+- Phase 9 remains blocked on the missing VPS/provisioning proof gates recorded
+  in `.forge/state.md`.
+
+## Local Staff Runtime Guard Repair
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed locally / full-stack runtime still environment-blocked
+- Builder tier: BUILDER-STRONG
+- SRS IDs: ARCH-UI-001, UI-DESIGN-001, QA-UI-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/app/layout.tsx` and `apps/web/src/globals.css` - added the
+   root `suppressHydrationWarning` guard for the pre-paint theme class and native
+   `color-scheme` support for light/dark form controls.
+2. `apps/web/src/middleware.ts` and `apps/web/src/app/(staff)/layout.tsx` -
+   passed the request pathname into the staff layout and redirected signed-out
+   staff routes back to the auth landing while keeping password reset accessible.
+3. `apps/web/src/app/staff-shell-panels.tsx` - changed the signed-in preview link
+   to the explicit root preview query instead of a now-guarded staff route.
+4. `apps/web/test/shell/shell.test.ts` and
+   `apps/web/test/localization/staff-shell-localization.test.ts` - added/updated
+   regression proof for the staff route guard, app top bar controls, and root
+   hydration guard.
+
+### Verification
+
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test:web -- shell` (164/164).
+- Passed: `corepack pnpm test:web -- api-client` (11/11).
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: Playwright opened `http://localhost:4000/dashboard?locale=ar` and was
+  redirected to `http://localhost:4000/?locale=ar` with zero console errors or
+  warnings.
+- Passed: Playwright toggled the theme to dark, reloaded with
+  `localStorage.cms-theme=dark`, and no hydration mismatch appeared.
+- Passed: Playwright opened `http://localhost:4000/complaints/new?locale=en` and
+  was redirected to `http://localhost:4000/?locale=en`; the signed-out page did
+  not render the create-complaint form.
+
+### Environment Blockers
+
+- Failed/Blocked: full API startup. Docker Desktop is not reachable, Redis is
+  not listening on port 6379, no local Redis CLI/server is installed, and the
+  listening Postgres service on port 5432 rejects the configured
+  `cms_auto/cms_auto_dev` development credentials.
+- Failed/Blocked: safe compose bring-up on this workstation. The C: drive had
+  only about 335 MB free before restarting Next and about 233 MB free after the
+  dev server rebuilt cache, which is not enough for stable Docker/full-stack
+  operation.
+- Not Run as passed: live staff login, complaint mutation, workflow mutation,
+  worker job, and API-backed export smoke. These require the API, Postgres, and
+  Redis to be running with the project credentials.
+- Phase 9 remains blocked on the missing VPS/provisioning proof gates recorded
+  in `.forge/state.md`.

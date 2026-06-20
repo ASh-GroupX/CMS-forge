@@ -55,7 +55,7 @@ test('root locale bridge resolves html language and direction', () => {
   assert.equal(resolveRequestLocale(new URL('https://cms.test/?locale=fr')), 'en');
   assert.match(layoutSource, /rootLocaleHeader = 'x-cms-locale'/);
   assert.match(middlewareSource, /rootLocaleHeader = 'x-cms-locale'/);
-  assert.match(layoutSource, /<html lang=\{locale\} dir=\{rootDirection\(locale\)\}>/);
+  assert.match(layoutSource, /<html lang=\{locale\} dir=\{rootDirection\(locale\)\} suppressHydrationWarning>/);
   assert.match(layoutSource, /return staffShellText\[locale\]\.dir;/);
 });
 

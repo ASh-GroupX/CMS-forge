@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { resolveLocale, type Locale } from './i18n/staff-shell';
 
 const rootLocaleHeader = 'x-cms-locale';
+const pathnameHeader = 'x-cms-pathname';
 
 export function resolveRequestLocale(url: URL): Locale {
   return resolveLocale(url.searchParams.get('locale') ?? undefined);
@@ -10,6 +11,7 @@ export function resolveRequestLocale(url: URL): Locale {
 export function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(rootLocaleHeader, resolveRequestLocale(request.nextUrl));
+  requestHeaders.set(pathnameHeader, request.nextUrl.pathname);
   return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
