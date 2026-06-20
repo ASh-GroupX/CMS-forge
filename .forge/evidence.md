@@ -1837,3 +1837,114 @@ Status: Passed through P9-02
   branch authority changed.
 - P9-04C is complete. AUTO PHASE stopped at `Ready to Plan` because P9-04D must
   be split before build work.
+
+## P9-04D-1 - Customer/Vehicle Lookup Route Extraction
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-STRONG (user requested)
+- SRS IDs: UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/components/customer-vehicle-lookup/index.tsx` (NEW) - render-only
+   lookup component using existing shadcn primitives, i18n strings, RTL/LTR dir,
+   source badges, manual fallback, and loading/no-match/error roles.
+2. `apps/web/src/app/(staff)/complaints/new/page.tsx` (NEW) - real staff App
+   Router route resolving locale and optional lookup preview state.
+3. `apps/web/src/app/customer-vehicle-lookup.tsx` - legacy compatibility
+   re-export to keep the old shell import working.
+4. `apps/web/test/shell/shell.test.ts` - added route coverage and moved source
+   safety assertion to the new component path.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (139/139 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+- Passed: `corepack pnpm test:visual` (16 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+
+### Notes
+
+- No backend lookup route, fake API client, fetch path, browser storage, cookie
+  access, provider call, role authority, branch authority, or workflow/state
+  authority was added to the component.
+- Complaint create and attachment panels were left unchanged for P9-04D-2 and
+  P9-04D-3.
+
+## P9-04D-2 - Complaint Create Form Route Extraction
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-STRONG (user requested)
+- SRS IDs: UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/components/complaint-create-form/index.tsx` (NEW) - extracted
+   the staff complaint create UI and request builder into `components/`, using
+   existing shadcn primitives and preserving submit/preview states.
+2. `apps/web/src/app/complaint-create-form.tsx` - legacy compatibility
+   re-export to keep the old shell import and tests working.
+3. `apps/web/src/app/(staff)/complaints/new/page.tsx` - now renders lookup plus
+   complaint create form and resolves optional `lookup`/`create` preview states.
+4. `apps/web/test/shell/shell.test.ts` - added combined route coverage and moved
+   complaint create source safety assertions to the new component path.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (142/142 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+- Passed: `corepack pnpm test:visual` (16 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+
+### Notes
+
+- The request builder still trims form values and excludes role, actor,
+  workflow, status, branch-scope, session, token, and credential fields from the
+  complaint body.
+- Attachment upload was left unchanged for P9-04D-3.
+
+## P9-04D-3 - Attachment Upload Panel Route Extraction
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-STRONG (user requested)
+- SRS IDs: UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/components/attachment-upload-panel/index.tsx` (NEW) - extracted
+   the render-only attachment panel into `components/`, using existing shadcn
+   primitives and preserving file rules, scan states, loading, empty, error, and
+   reject confirmation UI.
+2. `apps/web/src/app/attachment-upload-panel.tsx` - legacy compatibility
+   re-export to keep the old shell import working.
+3. `apps/web/src/app/(staff)/complaints/new/page.tsx` - now renders lookup,
+   complaint create, and attachment upload with optional preview states.
+4. `apps/web/test/shell/shell.test.ts` - added intake route attachment coverage
+   and moved attachment source safety assertions to the new component path.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (144/144 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+- Passed: `corepack pnpm test:visual` (16 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+
+### Notes
+
+- No upload transport, backend attachment API, file read, object URL, browser
+  storage, cookie access, provider call, role authority, branch authority, or
+  workflow/state authority was added.
+- P9-04D is complete. AUTO PHASE stopped at `Ready to Plan` because P9-04E is a
+  multi-screen workspace group and must be split before build work.

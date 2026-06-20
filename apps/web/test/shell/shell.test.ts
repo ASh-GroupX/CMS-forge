@@ -6,6 +6,7 @@ import { buildStaffComplaintCreateSubmission } from '../../src/app/complaint-cre
 import StaffShellPage from '../../src/app/page';
 import DashboardPage from '../../src/app/(staff)/dashboard/page';
 import ComplaintsPage from '../../src/app/(staff)/complaints/page';
+import NewComplaintPage from '../../src/app/(staff)/complaints/new/page';
 import PasswordResetPage from '../../src/app/(staff)/auth/reset/page';
 import NotificationsPage from '../../src/app/(staff)/notifications/page';
 import PortalSubmissionPage from '../../src/app/portal/page';
@@ -1570,10 +1571,55 @@ test('customer vehicle lookup preview states render loading no-match and error m
   assert.match(error, /role="alert"/);
 });
 
+test('complaint new route renders English customer vehicle lookup panel', async () => {
+  const html = renderToStaticMarkup(
+    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'en' }) }),
+  );
+
+  assert.match(html, /Customer and vehicle lookup/);
+  assert.match(html, /Phone/);
+  assert.match(html, /Customer code/);
+  assert.match(html, /Customer name/);
+  assert.match(html, /VIN/);
+  assert.match(html, /Plate number/);
+  assert.match(html, /Local source/);
+  assert.match(html, /DMS source/);
+  assert.match(html, /Manual fallback/);
+  assert.match(html, /Continue manually/);
+});
+
+test('complaint new route keeps Arabic RTL lookup labels', async () => {
+  const html = renderToStaticMarkup(
+    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'ar', lookup: 'none' }) }),
+  );
+
+  assert.match(html, /dir="rtl"/);
+  assert.ok(html.includes(staffShellText.ar.lookup.title));
+  assert.ok(html.includes(staffShellText.ar.lookup.fields.plate));
+  assert.ok(html.includes(staffShellText.ar.lookup.states.none));
+});
+
+test('complaint new route renders lookup loading and error roles', async () => {
+  const loading = renderToStaticMarkup(
+    await NewComplaintPage({ searchParams: Promise.resolve({ lookup: 'loading' }) }),
+  );
+  const error = renderToStaticMarkup(
+    await NewComplaintPage({ searchParams: Promise.resolve({ lookup: 'error' }) }),
+  );
+
+  assert.match(loading, /Searching customer and vehicle records\./);
+  assert.match(loading, /role="status"/);
+  assert.match(error, /Lookup could not be completed\. Continue manually or try again\./);
+  assert.match(error, /role="alert"/);
+});
+
 test('customer vehicle lookup source does not use APIs or browser storage', () => {
-  const source = readFileSync('apps/web/src/app/customer-vehicle-lookup.tsx', 'utf8');
+  const source = readFileSync('apps/web/src/components/customer-vehicle-lookup/index.tsx', 'utf8');
+  const wrapper = readFileSync('apps/web/src/app/customer-vehicle-lookup.tsx', 'utf8');
 
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie/);
+  assert.doesNotMatch(source, /roleCode|principal|branchScope|actorId|ownerId|workflow|password|otp|token|secret|provider/i);
+  assert.match(wrapper, /components\/customer-vehicle-lookup/);
 });
 
 test('complaint create form renders required complaint fields', async () => {
@@ -1644,6 +1690,58 @@ test('Arabic complaint create form keeps RTL localized labels', async () => {
   assert.ok(html.includes(staffShellText.ar.createForm.validation.required));
 });
 
+test('complaint new route renders lookup and complaint create form together', async () => {
+  const html = renderToStaticMarkup(
+    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'en', create: 'validation' }) }),
+  );
+
+  assert.match(html, /Customer and vehicle lookup/);
+  assert.match(html, /Create complaint/);
+  assert.match(html, /Customer name/);
+  assert.match(html, /Customer phone/);
+  assert.match(html, /Customer number/);
+  assert.match(html, /Category/);
+  assert.match(html, /Subcategory/);
+  assert.match(html, /Severity/);
+  assert.match(html, /Branch/);
+  assert.match(html, /Incident date/);
+  assert.match(html, /Subject/);
+  assert.match(html, /Description/);
+  assert.match(html, /Vehicle-related complaint/);
+  assert.match(html, /Vehicle VIN/);
+  assert.match(html, /This field is required\./);
+});
+
+test('complaint new route keeps Arabic RTL complaint create labels', async () => {
+  const html = renderToStaticMarkup(
+    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'ar', create: 'validation' }) }),
+  );
+
+  assert.match(html, /dir="rtl"/);
+  assert.ok(html.includes(staffShellText.ar.createForm.title));
+  assert.ok(html.includes(complaintCreateText.ar.fields.customerName));
+  assert.ok(html.includes(staffShellText.ar.createForm.validation.required));
+});
+
+test('complaint new route renders create success loading and network states', async () => {
+  const success = renderToStaticMarkup(
+    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'en', create: 'success' }) }),
+  );
+  const loading = renderToStaticMarkup(
+    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'en', create: 'loading' }) }),
+  );
+  const network = renderToStaticMarkup(
+    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'en', create: 'network' }) }),
+  );
+
+  assert.match(success, /Complaint created/);
+  assert.match(success, /role="status"/);
+  assert.match(loading, /Submitting complaint\./);
+  assert.match(loading, /role="status"/);
+  assert.match(network, /Unable to reach server\. Try again\./);
+  assert.match(network, /role="alert"/);
+});
+
 test('complaint create form builds the backend request without client authority fields', () => {
   const formData = new FormData();
   formData.set('customerName', ' Faisal Al-Otaibi ');
@@ -1687,11 +1785,13 @@ test('complaint create form builds the backend request without client authority 
 });
 
 test('complaint create form source submits only through the staff write helper', () => {
-  const source = readFileSync('apps/web/src/app/complaint-create-form.tsx', 'utf8');
+  const source = readFileSync('apps/web/src/components/complaint-create-form/index.tsx', 'utf8');
+  const wrapper = readFileSync('apps/web/src/app/complaint-create-form.tsx', 'utf8');
 
   assert.match(source, /createStaffComplaint/);
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie/);
   assert.doesNotMatch(source, /roleId|actorId|workflow|ownerId|session|token|credentials/);
+  assert.match(wrapper, /components\/complaint-create-form/);
 });
 
 test('attachment panel renders upload controls and file rules', async () => {
@@ -1742,10 +1842,46 @@ test('Arabic attachment panel keeps RTL localized labels', async () => {
   assert.ok(html.includes(attachmentText.ar.scan.clean));
 });
 
+test('complaint new route renders attachment panel and states', async () => {
+  const base = renderToStaticMarkup(
+    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'en', attachment: 'clean' }) }),
+  );
+  const loading = renderToStaticMarkup(
+    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'en', attachment: 'loading' }) }),
+  );
+  const error = renderToStaticMarkup(
+    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'en', attachment: 'error' }) }),
+  );
+
+  assert.match(base, /Customer and vehicle lookup/);
+  assert.match(base, /Create complaint/);
+  assert.match(base, /Attachments/);
+  assert.match(base, /type="file"/);
+  assert.match(base, /Scan clean/);
+  assert.match(loading, /Preparing attachment panel\./);
+  assert.match(loading, /role="status"/);
+  assert.match(error, /Attachment panel could not be prepared\./);
+  assert.match(error, /role="alert"/);
+});
+
+test('complaint new route keeps Arabic RTL attachment labels', async () => {
+  const html = renderToStaticMarkup(
+    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'ar', attachment: 'rejected' }) }),
+  );
+
+  assert.match(html, /dir="rtl"/);
+  assert.ok(html.includes(attachmentText.ar.title));
+  assert.ok(html.includes(attachmentText.ar.scan.rejected));
+  assert.ok(html.includes(confirmationText.ar.attachmentReject.title));
+});
+
 test('attachment panel source does not upload read or expose file URLs', () => {
-  const source = readFileSync('apps/web/src/app/attachment-upload-panel.tsx', 'utf8');
+  const source = readFileSync('apps/web/src/components/attachment-upload-panel/index.tsx', 'utf8');
+  const wrapper = readFileSync('apps/web/src/app/attachment-upload-panel.tsx', 'utf8');
 
   assert.doesNotMatch(source, /fetch\(|FileReader|createObjectURL|localStorage|sessionStorage|document\.cookie|https?:\/\//);
+  assert.doesNotMatch(source, /roleCode|principal|branchScope|actorId|ownerId|workflow|password|otp|token|secret|provider/i);
+  assert.match(wrapper, /components\/attachment-upload-panel/);
 });
 
 // ---- (staff)/complaints route: golden screen ----

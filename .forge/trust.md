@@ -617,3 +617,42 @@ render-only component, while the legacy shell import remains compatible.
 Required typecheck, lint, shell, and localization proof commands all passed.
 P9-04C is complete. Stop AUTO PHASE at `Ready to Plan` because P9-04D is a
 multi-screen intake group and must be split before build work.
+
+## P9-04D-1 Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-04D-1 is complete: customer/vehicle lookup now has a real
+`(staff)/complaints/new` route and a `components/customer-vehicle-lookup/`
+render-only component, while the legacy shell import remains compatible.
+Required typecheck, lint, shell, localization, visual, and accessibility proof
+commands all passed. Continue to P9-04D-2 for complaint create form route and
+component extraction.
+
+## P9-04D-2 Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-04D-2 is complete: complaint create now lives in
+`components/complaint-create-form/`, the legacy shell import remains compatible,
+and `(staff)/complaints/new` renders lookup plus create form. Required
+typecheck, lint, shell, localization, visual, and accessibility proof commands
+all passed. Continue to P9-04D-3 for attachment upload panel extraction.
+
+## P9-04D-3 Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Needs Planning
+
+P9-04D-3 is complete: attachment upload now lives in
+`components/attachment-upload-panel/`, the legacy shell import remains
+compatible, and `(staff)/complaints/new` renders the full intake group. Required
+typecheck, lint, shell, localization, visual, and accessibility proof commands
+all passed. P9-04D is complete. Stop AUTO PHASE at `Ready to Plan` because
+P9-04E is a multi-screen complaint workspace group and must be split before
+build work.

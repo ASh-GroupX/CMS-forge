@@ -355,11 +355,11 @@ UI finish (fixes the "preview shell / I don't like the app" problem; hard go-liv
   - [x] P9-04C-1: Dashboard screen real App Router route + component in components/
   - [x] P9-04C-2: Password reset screen real App Router route + component in components/
   - [x] P9-04C-3: Notification center real App Router route + component in components/
-- [ ] P9-04D: Refactor intake group: customer/vehicle lookup, complaint create, and
+- [x] P9-04D: Refactor intake group: customer/vehicle lookup, complaint create, and
       attachment upload panels with real API boundaries and all states
-  - [ ] P9-04D-1: Customer/vehicle lookup real route + component extraction
-  - [ ] P9-04D-2: Complaint create form real route + component extraction
-  - [ ] P9-04D-3: Attachment upload panel real route + component extraction
+  - [x] P9-04D-1: Customer/vehicle lookup real route + component extraction
+  - [x] P9-04D-2: Complaint create form real route + component extraction
+  - [x] P9-04D-3: Attachment upload panel real route + component extraction
 - [ ] P9-04E: Refactor complaint workspace group: complaint detail, workflow modal,
       comments/public updates, and attachment status/download controls
 - [ ] P9-04F: Refactor admin configuration group: users/roles, branches/departments,
