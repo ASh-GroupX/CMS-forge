@@ -362,6 +362,10 @@ UI finish (fixes the "preview shell / I don't like the app" problem; hard go-liv
   - [x] P9-04D-3: Attachment upload panel real route + component extraction
 - [ ] P9-04E: Refactor complaint workspace group: complaint detail, workflow modal,
       comments/public updates, and attachment status/download controls
+  - [ ] P9-04E-1: Complaint detail workspace real route + component extraction
+  - [ ] P9-04E-2: Comments/public updates panel extraction
+  - [ ] P9-04E-3: Attachment status/download controls extraction
+  - [ ] P9-04E-4: Workflow action modal extraction
 - [ ] P9-04F: Refactor admin configuration group: users/roles, branches/departments,
       categories/severity, SLA policies, and notification templates
 - [ ] P9-04G: Refactor reports/export and audit viewer with scoped data/export
