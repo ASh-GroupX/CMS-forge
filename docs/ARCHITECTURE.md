@@ -244,6 +244,20 @@ calls the API. Contract drift fails CI (`ARCH-API-001` AC3).
 - Accessibility is mandatory (WCAG 2.1 AA): keyboard reachable, visible focus,
   labels, icon-button names, `prefers-reduced-motion`.
 
+**Frontend structure (`app/` is routes, not a dumping ground — mirror §3's discipline):**
+- `app/` holds **route segments only** — one route per screen: `app/(staff)/dashboard`,
+  `…/complaints` (queue), `…/complaints/[id]` (detail), `…/complaints/new`, `…/admin/*`,
+  `…/reports`, `…/audit`, `…/notifications`; `app/portal/*` for the portal. **No single
+  mega-page that switches screens via `searchParams`.**
+- Feature components live in `components/<feature>/`; primitives in `components/ui/`
+  (shadcn). `lib/` = typed API clients + utils; `i18n/` = dictionaries; `hooks/` = shared.
+- Server Components fetch data (forwarding the session cookie); Client Components handle
+  interactivity. **No `PreviewState` props or `searchParams`-driven preview shells in
+  production components** — render loading/empty/error from real data; keep state demos
+  in the visual-test fixtures, not the component API.
+- (Recommended, not a blocker) `next-intl` for locale routing + RTL over hand-rolled
+  dictionaries.
+
 **UI build workflow (use the tools — never hand-roll):**
 - Generate components with the **shadcn/ui CLI** (`npx shadcn add …`). Never hand-write
   cards, buttons, inputs, tables, dialogs, badges, or toasts. Adapt shadcn **blocks** as

@@ -1,33 +1,39 @@
-# Review Task: P9-04B - Golden Screen Review Gate
+# Repair Task: P9-04A repair - Golden screen must fix STRUCTURE and LOOK
 
-Status: Needs Review
-Required model tier: PHASE-REVIEWER
+Status: Needs Repair
+Required model tier: BUILDER-STRONG
 Phase: Phase 9 - Production Readiness (Pilot on Hostinger)
-Risk: Medium
-Requirements: UI-DESIGN-001 AC1, UI-DESIGN-001 AC2, UI-DESIGN-001 AC3, UI-DESIGN-001 AC4, UI-DESIGN-001 AC5, UI-DESIGN-001 AC6, UI-SCREEN-001 AC1, UI-SCREEN-001 AC2, UI-SCREEN-001 AC3
+Risk: Medium (this screen is the structural + visual reference every other screen copies)
 
-## Goal
+## P9-04B golden-screen review decision: REPAIR
 
-Review P9-04A before the work queue pattern is copied to other screens.
+The work queue is clean and correct, but it is not yet a true golden screen on two axes:
+1. STRUCTURE: it lives in the single-page `searchParams` / `PreviewState` shell, not a
+   real App Router route. Replicating that across 7 screen groups spreads a bad
+   architecture. See docs/ARCHITECTURE.md section 8 "Frontend structure".
+2. LOOK: severity / SLA-state / status are plain text with no semantic color and weak
+   hierarchy - it reads "functional," not "operational dashboard."
 
-## Inputs
+## Scope (the golden screen must be exemplary in BOTH; if > ~5 files, stop and PLAN-split)
 
-- `.forge/evidence.md` entry `P9-04A - Work Queue Golden Screen`
-- `.forge/trust.md` entry `P9-04A Builder Trust Note`
-- `coverage/web-visual-review/en-work-queue-visual-regression.html`
-- `coverage/web-visual-review/ar-work-queue-visual-regression.html`
-- P9-04A source changes
+- Move the queue to a REAL route under a staff route group, e.g.
+  `app/(staff)/complaints/page.tsx`, with a shared staff `app/(staff)/layout.tsx` (nav shell).
+- Move `WorkQueue` into `components/work-queue/`; DROP the `QueuePreviewState` prop and the
+  `searchParams` preview switching for this screen - render loading / empty / error from the
+  real `getStaffQueueItems` data path (Server Component fetch, session cookie forwarded).
+- Visual polish with shadcn primitives: severity, SLA-state, and status as colored `Badge`
+  pills (High=red, Medium=amber/neutral; Warning=amber, Overdue=red, On track=green),
+  row hover, denser table spacing, clearer header/toolbar hierarchy.
+- Keep backend authority: no role / branch / workflow / owner / state decided in React.
 
-## Review Checks
+## Proof
 
-- The work queue is acceptable as the redesign golden screen.
-- No fallback complaint rows remain in `work-queue.tsx`.
-- Rows render only from the typed staff queue API data path.
-- Loading, empty, error, success, and conflict states have correct accessible feedback roles.
-- EN/AR RTL/LTR layout is acceptable, including horizontal table overflow.
-- Backend authority remains intact: no role, branch scope, workflow, owner, or state authority is derived in React.
+- lint, typecheck, test:web, test:e2e -- ui-smoke, test:e2e -- accessibility, test:visual
+- Render the real Next route, screenshot EN + AR, inspect: real data (no fallback rows),
+  RTL correct, badges colored, the route actually works. Save to web-visual-review.
 
-## Output
+## Exit
 
-- Accept: write P9-04C to `.forge/next.md`, set `.forge/state.md` to `Ready to Build`.
-- Repair: write the smallest P9-04A repair task to `.forge/next.md`, set `.forge/state.md` to `Needs Repair`.
+- Re-enter P9-04B golden-screen review with the route + components/ structure + badges.
+- Once accepted, P9-04C..H replicate THIS structure and look (per ARCHITECTURE section 8).
+- Replace state.md (do not append).
