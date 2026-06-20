@@ -1,34 +1,60 @@
-# Blocked Task: Restore Local Stack For Phase 10 Stack Tasks
+# Build Task: P10-01D - Employee Today Screen And Runtime Proof
 
-Status: Blocked
+Status: Ready to Build
 Required model tier: BUILDER-STRONG
 Phase: Phase 10 - Dealership Accountability Layer (local-first)
-Risk: High (runtime proof blocked)
+Risk: Medium
 
-## Blocker
+## Context
 
-The remaining Phase 10 tasks are `[stack]` tasks:
+The local stack blocker is repaired enough to resume `[stack]` Phase 10 work.
+Production remains deferred. Use the local runtime only.
 
-- P10-01D Employee Today screen/runtime proof
-- P10-02B Manager Control Room screen/web test
-- P10-03B worker reminder/escalation wiring
-- P10-04D Deal Handoff Board screen/web test
-- P10-07B KPI dashboard screen/web test
-- P10-09C confidential HR-only screens/privacy regression
-- P10-10B end-to-end local proof
+Current local stack:
 
-Local stack prerequisite is unresolved: Docker/Postgres/Redis are down or not
-usable, dev DB creds need repair, and C: disk is critically low.
+- Docker compose project: `cms-forge-local`
+- Postgres container: `cms-forge-local-postgres-1`
+- Redis container: `cms-forge-local-redis-1`
+- Host `DATABASE_URL`: `postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto`
+- Host `REDIS_URL`: `redis://localhost:6379`
+- API: `http://localhost:3000`
+- Web: `http://localhost:4000`
 
-## Smallest Repair
+Host port `5432` is occupied by the Windows PostgreSQL service, so use `5433`
+for host-side Prisma/API work unless that service is later stopped.
 
-Human repair:
+## Scope
 
-1. Free enough C: disk for Docker/Postgres/runtime artifacts.
-2. Start Docker Desktop and the project Postgres/Redis stack.
-3. Fix local Postgres dev credentials so Prisma can authenticate.
-4. Run migrations and `corepack pnpm db:seed`.
+Build the Employee Today staff screen against the existing P10-01C API/read model.
+Keep this as the smallest useful slice:
 
-## Resume
+1. Staff route/screen for Employee Today.
+2. Typed web API client call for the Employee Today read model if it does not
+   already exist.
+3. Render due today, overdue, assigned to me, waiting on me, and escalated task
+   sections from real API data.
+4. Preserve Arabic RTL / English LTR labels and loading / empty / error states.
+5. Add focused web/runtime proof.
 
-After repair, resume AUTO PHASE at the first remaining `[stack]` Phase 10 task.
+## Guardrails
+
+- Do not add workflow builders, AI, WhatsApp, mobile app, or new design systems.
+- Do not invent business/workflow authority in React. The API owns task visibility.
+- Reuse the existing staff shell, design tokens, and shadcn/Radix primitives.
+- Keep the task to 1-5 files plus focused tests. If it grows, stop and replan.
+
+## Acceptance
+
+- Employee Today screen shows only tasks visible to the signed-in employee.
+- Empty/error/loading states are safe and localized.
+- Arabic and English render without mojibake.
+- Runtime smoke against the local API/web passes.
+- Evidence records exactly what ran.
+
+## Proof Commands
+
+- `$env:DATABASE_URL='postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto'; corepack pnpm db:seed`
+- `corepack pnpm lint`
+- `corepack pnpm typecheck`
+- `corepack pnpm test:web -- shell`
+- Browser/runtime smoke at `http://localhost:4000`

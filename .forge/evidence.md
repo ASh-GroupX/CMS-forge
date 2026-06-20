@@ -4466,3 +4466,51 @@ Status: Passed through P9-02
   added; confidential seed rows use backend ACL primitives only.
 - Trust boundaries tested: focused seed test proves confidential task/case ACL
   markers, including accused participant intent, are present in the seed.
+
+## Local Stack Repair For Phase 10 Stack Tasks
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: ARCH-STACK-001, ARCH-DATA-001, METHOD-TEST-001
+
+### Changes
+
+1. Freed local C: disk from under 100 MB to about 21 GB by deleting generated
+   build/package/temp caches only.
+2. Restarted Docker Desktop and confirmed the Docker engine is reachable.
+3. Started local project Postgres and Redis with compose project
+   `cms-forge-local`. Host Postgres uses port 5433 because the Windows
+   PostgreSQL service still owns 5432.
+4. Applied all Prisma migrations to
+   `postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto`.
+5. Fixed `db:seed` workspace scripts so the root command delegates to
+   `packages/database`, where Prisma is actually installed.
+6. Seeded Phase 10 dealership demo data through the documented root command.
+7. Recompiled and started the API on port 3000, then started the web app on port
+   4000 against that API.
+
+### Verification
+
+- Passed: `docker version` after Docker Desktop restart.
+- Passed: `docker exec cms-forge-local-postgres-1 pg_isready -U cms_auto -d cms_auto`.
+- Passed: `docker exec cms-forge-local-redis-1 redis-cli ping`.
+- Passed: `$env:DATABASE_URL='postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto'; corepack pnpm --dir packages/database exec prisma validate --schema prisma/schema.prisma`.
+- Passed: `$env:DATABASE_URL='postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto'; corepack pnpm --dir packages/database exec prisma generate --schema prisma/schema.prisma`.
+- Passed: `$env:DATABASE_URL='postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto'; corepack pnpm --dir packages/database exec prisma migrate deploy --schema prisma/schema.prisma`.
+- Passed: `$env:DATABASE_URL='postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto'; corepack pnpm --dir packages/database exec prisma migrate status --schema prisma/schema.prisma`.
+- Passed: `$env:DATABASE_URL='postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto'; corepack pnpm db:seed`.
+- Passed: `corepack pnpm exec tsc -p apps/api/tsconfig.json`.
+- Passed: `Invoke-WebRequest http://localhost:3000/health` returned 200 with
+  database and Redis configured.
+- Passed: `Invoke-WebRequest http://localhost:4000/?locale=en` returned 200.
+
+### Notes
+
+- Windows service `postgresql-x64-16` could not be stopped from this shell and
+  still owns host port 5432. The Docker database is intentionally exposed on
+  host port 5433 for Forge/runtime proof.
+- Dev seed users intentionally have no documented plaintext password in the
+  seed; login proof should use the intended auth/reset path or add an explicit
+  dev credential task if product owners want one.
