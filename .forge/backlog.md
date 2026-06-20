@@ -350,8 +350,11 @@ UI finish (fixes the "preview shell / I don't like the app" problem; hard go-liv
       review gate)
 - [x] P9-04B: Golden-screen review/repair gate before copying the pattern to other
       screens
-- [ ] P9-04C: Refactor staff shell, login/reset, dashboard, and notification center;
+- [x] P9-04C: Refactor staff shell, login/reset, dashboard, and notification center;
       remove preview role/scaffold copy and keep backend-owned role/scope behavior
+  - [x] P9-04C-1: Dashboard screen real App Router route + component in components/
+  - [x] P9-04C-2: Password reset screen real App Router route + component in components/
+  - [x] P9-04C-3: Notification center real App Router route + component in components/
 - [ ] P9-04D: Refactor intake group: customer/vehicle lookup, complaint create, and
       attachment upload panels with real API boundaries and all states
 - [ ] P9-04E: Refactor complaint workspace group: complaint detail, workflow modal,

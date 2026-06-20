@@ -581,3 +581,39 @@ The repair is complete. The work queue is now:
 - Passes typecheck (0 errors), lint, 124/124 web tests, 11/11 localization tests.
 - E2E, visual, and screenshot checks require live stack (Not Run in this env).
 - Recommend P9-04B golden-screen review before spreading pattern to P9-04C..H.
+
+## P9-04C-1 Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-04C-1 is complete: the dashboard now has a real `(staff)/dashboard` route and
+a `components/dashboard-summary/` render-only component using the accepted
+golden pattern. Required typecheck, lint, shell, and localization proof commands
+all passed. Continue to P9-04C-2 for password reset route extraction.
+
+## P9-04C-2 Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-04C-2 is complete: password reset now has a real
+`(staff)/auth/reset` route and a `components/password-reset/` render-only
+component, while the legacy shell import remains compatible. Required
+typecheck, lint, shell, and localization proof commands all passed. Continue to
+P9-04C-3 for notification center route extraction.
+
+## P9-04C-3 Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Needs Planning
+
+P9-04C-3 is complete: notification center now has a real
+`(staff)/notifications` route and a `components/notification-center/`
+render-only component, while the legacy shell import remains compatible.
+Required typecheck, lint, shell, and localization proof commands all passed.
+P9-04C is complete. Stop AUTO PHASE at `Ready to Plan` because P9-04D is a
+multi-screen intake group and must be split before build work.

@@ -1735,3 +1735,105 @@ Status: Passed through P9-02
 - Pagination and filters are static placeholders — expected at this stage.
 
 ### Decision: ACCEPT — proceed to P9-04C (dashboard)
+
+## P9-04C-1 - Dashboard Screen Golden Pattern Replication
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-STRONG (user requested)
+- SRS IDs: UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/components/dashboard-summary/index.tsx` (NEW) - render-only
+   dashboard summary component using shadcn `Card` and `Skeleton`, real
+   `StaffDashboardSummary | null` data, null/error, zero/empty, success, and
+   loading helper states.
+2. `apps/web/src/app/(staff)/dashboard/page.tsx` (NEW) - real App Router staff
+   dashboard route forwarding optional `cookieHeader`/`fetchImpl` to
+   `getStaffDashboardSummary`.
+3. `apps/web/test/shell/shell.test.ts` - added DashboardPage EN, AR RTL,
+   success, empty, error, API-call, and source-safety coverage.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (130/130 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+
+### Notes
+
+- No backend module changed.
+- No role or branch authority added to the component; authority remains in the
+  server session/API helper path.
+- `src/app/dashboard-summary.tsx` and `src/app/page.tsx` were left unchanged for
+  legacy shell compatibility.
+
+## P9-04C-2 - Password Reset Screen Golden Pattern Replication
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-STRONG
+- SRS IDs: UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/components/password-reset/index.tsx` (NEW) - render-only
+   password reset component using shadcn `Card`, `Button`, `Input`, and `Label`,
+   preserving safe request/token/success/invalid states and autocomplete behavior.
+2. `apps/web/src/app/(staff)/auth/reset/page.tsx` (NEW) - real staff reset route
+   resolving locale and reset state.
+3. `apps/web/src/app/password-reset-panel.tsx` - legacy compatibility wrapper
+   re-exporting the new component/type.
+4. `apps/web/test/shell/shell.test.ts` - added PasswordResetPage route coverage
+   and moved source safety checks to the new component path.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (133/133 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+
+### Notes
+
+- No backend auth route or action changed.
+- No reset token persistence, browser storage, role authority, or branch authority
+  was added to the UI.
+
+## P9-04C-3 - Notification Center Screen Golden Pattern Replication
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-STRONG
+- SRS IDs: UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/components/notification-center/index.tsx` (NEW) - render-only
+   notification center component using shadcn `Card`, `Badge`, and `Button`,
+   preserving loading, empty, error, success, validation, and conflict states.
+2. `apps/web/src/app/(staff)/notifications/page.tsx` (NEW) - real staff
+   notifications route resolving locale and notification state.
+3. `apps/web/src/app/notification-center.tsx` - legacy compatibility wrapper
+   re-exporting the new component/type.
+4. `apps/web/test/shell/shell.test.ts` - added NotificationsPage route coverage
+   and moved source safety checks to the new component path.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (136/136 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+
+### Notes
+
+- No backend notification module, delivery adapter, provider, role authority, or
+  branch authority changed.
+- P9-04C is complete. AUTO PHASE stopped at `Ready to Plan` because P9-04D must
+  be split before build work.

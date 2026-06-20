@@ -4,7 +4,10 @@ import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { buildStaffComplaintCreateSubmission } from '../../src/app/complaint-create-form';
 import StaffShellPage from '../../src/app/page';
+import DashboardPage from '../../src/app/(staff)/dashboard/page';
 import ComplaintsPage from '../../src/app/(staff)/complaints/page';
+import PasswordResetPage from '../../src/app/(staff)/auth/reset/page';
+import NotificationsPage from '../../src/app/(staff)/notifications/page';
 import PortalSubmissionPage from '../../src/app/portal/page';
 import PortalSurveyPage from '../../src/app/portal/survey/page';
 import PortalTrackingPage from '../../src/app/portal/track/page';
@@ -431,7 +434,7 @@ test('password reset token state renders token and new-password inputs', async (
   const html = renderToStaticMarkup(
     await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en', reset: 'token' }) }),
   );
-  const source = readFileSync('apps/web/src/app/password-reset-panel.tsx', 'utf8');
+  const source = readFileSync('apps/web/src/components/password-reset/index.tsx', 'utf8');
 
   assert.match(html, /name="resetToken"/);
   assert.match(html, /name="newPassword"/);
@@ -467,11 +470,54 @@ test('Arabic password reset UI keeps RTL localized labels', async () => {
 
 test('password reset UI source does not use browser token storage', () => {
   const pageSource = readFileSync('apps/web/src/app/page.tsx', 'utf8');
-  const resetSource = readFileSync('apps/web/src/app/password-reset-panel.tsx', 'utf8');
+  const resetSource = readFileSync('apps/web/src/components/password-reset/index.tsx', 'utf8');
   const actionsSource = readFileSync('apps/web/src/lib/staff-auth-actions.ts', 'utf8');
   const source = `${pageSource}\n${resetSource}\n${actionsSource}`;
 
   assert.doesNotMatch(source, /localStorage|sessionStorage|document\.cookie/);
+});
+
+test('password reset route renders English request and token states', async () => {
+  const request = renderToStaticMarkup(
+    await PasswordResetPage({ searchParams: Promise.resolve({ locale: 'en', reset: 'request' }) }),
+  );
+  const token = renderToStaticMarkup(
+    await PasswordResetPage({ searchParams: Promise.resolve({ locale: 'en', reset: 'token' }) }),
+  );
+
+  assert.match(request, /Password reset/);
+  assert.match(request, /name="resetIdentifier"/);
+  assert.match(request, /autoComplete="username"/);
+  assert.match(token, /name="resetToken"/);
+  assert.match(token, /autoComplete="off"/);
+  assert.match(token, /name="newPassword"/);
+  assert.match(token, /autoComplete="new-password"/);
+});
+
+test('password reset route keeps safe success and invalid states', async () => {
+  const success = renderToStaticMarkup(
+    await PasswordResetPage({ searchParams: Promise.resolve({ locale: 'en', reset: 'success' }) }),
+  );
+  const invalid = renderToStaticMarkup(
+    await PasswordResetPage({ searchParams: Promise.resolve({ locale: 'en', reset: 'invalid' }) }),
+  );
+
+  assert.match(success, /Password reset complete\. Sign in with the new password\./);
+  assert.match(success, /role="status"/);
+  assert.match(invalid, /Reset link is invalid or expired\. Request a new reset link\./);
+  assert.match(invalid, /role="alert"/);
+  assert.doesNotMatch(invalid, /consumed|used|inactive|locked/i);
+});
+
+test('password reset route keeps Arabic RTL localized labels', async () => {
+  const html = renderToStaticMarkup(
+    await PasswordResetPage({ searchParams: Promise.resolve({ locale: 'ar', reset: 'token' }) }),
+  );
+
+  assert.match(html, /dir="rtl"/);
+  assert.ok(html.includes(staffShellText.ar.reset.title));
+  assert.ok(html.includes(staffShellText.ar.reset.token));
+  assert.ok(html.includes(staffShellText.ar.reset.newPassword));
 });
 
 test('staff dashboard summary shows staff role cards only', async () => {
@@ -1263,8 +1309,8 @@ test('notification center renders for staff with unread read and scoped complain
   assert.match(html, /Notifications/);
   assert.match(html, /Unread/);
   assert.match(html, /Read/);
-  assert.match(html, /Workflow update placeholder/);
-  assert.match(html, /SLA warning placeholder/);
+  assert.match(html, /Workflow/);
+  assert.match(html, /SLA/);
   assert.match(html, /CMP-SCOPED-001/);
   assert.match(html, /Open scoped complaint/);
   assert.match(html, /Mark read/);
@@ -1297,10 +1343,56 @@ test('Arabic notification center keeps RTL localized labels', async () => {
 });
 
 test('notification center source is render-only and scoped-link safe', () => {
-  const source = readFileSync('apps/web/src/app/notification-center.tsx', 'utf8');
+  const source = readFileSync('apps/web/src/components/notification-center/index.tsx', 'utf8');
 
   assert.match(source, /xl:grid-cols-2/);
-  assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie|router\.push|window\.location|branchScope|roleCode|password|otp|token|secret|provider|portal|DMS|@|\b\+?\d{10,}\b/i);
+  assert.doesNotMatch(source, /[\w.-]+@[\w.-]+/);
+  assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie|router\.push|window\.location|branchScope|roleCode|password|otp|token|secret|provider|portal|DMS|\b\+?\d{10,}\b/i);
+});
+
+test('notifications route renders English notification center labels', async () => {
+  const html = renderToStaticMarkup(
+    await NotificationsPage({ searchParams: Promise.resolve({ locale: 'en' }) }),
+  );
+
+  assert.match(html, /Notifications/);
+  assert.match(html, /Unread/);
+  assert.match(html, /Read/);
+  assert.match(html, /Open scoped complaint/);
+  assert.match(html, /Complaint links stay scoped by the backend/);
+});
+
+test('notifications route renders Arabic RTL labels', async () => {
+  const html = renderToStaticMarkup(
+    await NotificationsPage({ searchParams: Promise.resolve({ locale: 'ar', notification: 'validation' }) }),
+  );
+
+  assert.match(html, /dir="rtl"/);
+  assert.ok(html.includes(notificationCenterText.ar.title));
+  assert.ok(html.includes(notificationCenterText.ar.labels.markRead));
+  assert.ok(html.includes(notificationCenterText.ar.states.validation));
+});
+
+test('notifications route renders loading empty error and conflict states', async () => {
+  const loading = renderToStaticMarkup(
+    await NotificationsPage({ searchParams: Promise.resolve({ notification: 'loading' }) }),
+  );
+  const empty = renderToStaticMarkup(
+    await NotificationsPage({ searchParams: Promise.resolve({ notification: 'empty' }) }),
+  );
+  const error = renderToStaticMarkup(
+    await NotificationsPage({ searchParams: Promise.resolve({ notification: 'error' }) }),
+  );
+  const conflict = renderToStaticMarkup(
+    await NotificationsPage({ searchParams: Promise.resolve({ notification: 'conflict' }) }),
+  );
+
+  assert.match(loading, /Loading notifications\./);
+  assert.match(loading, /role="status"/);
+  assert.match(empty, /No notifications are available\./);
+  assert.match(error, /Notifications could not be loaded\. Try again\./);
+  assert.match(error, /role="alert"/);
+  assert.match(conflict, /Notification changed by someone else\. Reload before retrying\./);
 });
 
 test('reports dashboard renders RPT-001 through RPT-017 for report-capable roles only', async () => {
@@ -1805,4 +1897,108 @@ test('complaints route renders real rows through the session cookie', async () =
   assert.match(html, /branch_route/);
   assert.match(html, /2026-06-20/);
   assert.match(html, /bg-status-warning/);
+});
+
+// ---- (staff)/dashboard route ----
+
+test('dashboard route renders English summary labels', async () => {
+  const html = renderToStaticMarkup(
+    await DashboardPage({ cookieHeader: '', searchParams: Promise.resolve({ locale: 'en' }) }),
+  );
+
+  assert.match(html, /Dashboard summary/);
+  assert.match(html, /Open complaints/);
+  assert.match(html, /SLA warnings/);
+  assert.match(html, /Overdue complaints/);
+  assert.match(html, /Closed complaints/);
+  assert.match(html, /Average TAT/);
+});
+
+test('dashboard route renders Arabic RTL summary labels', async () => {
+  const html = renderToStaticMarkup(
+    await DashboardPage({ cookieHeader: '', searchParams: Promise.resolve({ locale: 'ar' }) }),
+  );
+
+  assert.match(html, /dir="rtl"/);
+  assert.ok(html.includes(staffShellText.ar.dashboard.title));
+  assert.ok(html.includes(staffShellText.ar.dashboard.cards.open[0]));
+  assert.ok(html.includes(staffShellText.ar.dashboard.cards.averageTat[0]));
+});
+
+test('dashboard route renders real metric values through the session cookie', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({
+      summary: {
+        openComplaints: 42,
+        overdueComplaints: 7,
+        slaWarningComplaints: 9,
+        closedComplaints: 30,
+        averageTatHours: 36,
+      },
+    });
+  };
+  const html = renderToStaticMarkup(
+    await DashboardPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  const dashboardCall = calls.find((call) => String(call.input).endsWith('/reports/dashboard'));
+  assert.ok(dashboardCall);
+  assert.deepEqual(dashboardCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+  assert.doesNotMatch(String(dashboardCall.input), /role|actor|branchId/i);
+  assert.match(html, />42</);
+  assert.match(html, />7</);
+  assert.match(html, />9</);
+  assert.match(html, />30</);
+  assert.match(html, />1.5</);
+});
+
+test('dashboard route renders empty zero state from all-zero metrics', async () => {
+  const fetchImpl: typeof fetch = async () => jsonResponse({
+    summary: {
+      openComplaints: 0,
+      overdueComplaints: 0,
+      slaWarningComplaints: 0,
+      closedComplaints: 0,
+      averageTatHours: 0,
+    },
+  });
+  const html = renderToStaticMarkup(
+    await DashboardPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  assert.match(html, /No dashboard summary is available yet\./);
+  assert.match(html, /role="status"/);
+  assert.equal(html.match(/>0</g)?.length, 5);
+});
+
+test('dashboard route renders error state when backend denies summary access', async () => {
+  const fetchImpl: typeof fetch = async () => new Response('', { status: 403 });
+  const html = renderToStaticMarkup(
+    await DashboardPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  assert.match(html, /Dashboard summary could not be loaded\. Try again\./);
+  assert.match(html, /role="alert"/);
+});
+
+test('dashboard summary component source has no preview state or private data paths', () => {
+  const source = readFileSync('apps/web/src/components/dashboard-summary/index.tsx', 'utf8');
+
+  assert.doesNotMatch(source, /QueuePreviewState|PreviewState/);
+  assert.doesNotMatch(source, /[\w.-]+@[\w.-]+/);
+  assert.doesNotMatch(source, /password|otp|token|secret|credentials|document\.cookie|localStorage|sessionStorage|fetch\(/i);
 });
