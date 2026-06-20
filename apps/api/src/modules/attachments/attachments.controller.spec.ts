@@ -5,5 +5,5 @@ import { AttachmentsRepository } from './attachments.repository.js';
 import { AttachmentsService } from './attachments.service.js';
 
 test('attachments controller can be constructed', () => {
-  assert.ok(new AttachmentsController(new AttachmentsService(new AttachmentsRepository()), {} as never));
+  assert.ok(new AttachmentsController(new AttachmentsService(new AttachmentsRepository({} as never), {} as never, {} as never), {} as never));
 });

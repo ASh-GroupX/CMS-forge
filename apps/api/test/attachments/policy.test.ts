@@ -9,6 +9,7 @@ import type { AuditRecordInput, AuditService } from '../../src/core/audit.servic
 import { RbacGuard } from '../../src/core/auth.guard.ts';
 import type { AuthenticatedRequest } from '../../src/core/auth.guard.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
+import { InMemoryAttachmentStorage } from '../../src/modules/attachments/attachment-storage.port.ts';
 import type { AttachmentStoragePort } from '../../src/modules/attachments/attachment-storage.port.ts';
 import { AttachmentsController, PortalAttachmentsController } from '../../src/modules/attachments/attachments.controller.ts';
 import { AttachmentsRepository } from '../../src/modules/attachments/attachments.repository.ts';
@@ -17,7 +18,11 @@ import type { AttachmentUploadResult } from '../../src/modules/attachments/attac
 import { ComplaintsService } from '../../src/modules/complaints/complaints.service.ts';
 import { PortalService } from '../../src/modules/portal/portal.service.ts';
 
-const service = new AttachmentsService(new AttachmentsRepository());
+const service = new AttachmentsService(
+  new AttachmentsRepository({} as never),
+  { record: async () => undefined } as unknown as AuditService,
+  new InMemoryAttachmentStorage(),
+);
 
 test('attachment policy accepts allowed image, PDF, audio, and video metadata within limits', () => {
   assert.equal(service.validateUploadMetadata({ fileName: 'photo.JPG', contentType: 'image/jpeg', sizeBytes: mb(10) }).kind, 'image');

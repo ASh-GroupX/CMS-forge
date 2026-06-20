@@ -7,7 +7,7 @@ import { IntegrationsService } from '../../src/modules/integrations/integrations
 
 test('integrations email provider sends through the module-owned port', async () => {
   const provider = new InMemoryEmailProvider();
-  const service = new IntegrationsService(new IntegrationsRepository(), provider);
+  const service = new IntegrationsService(new IntegrationsRepository(), provider, {} as never, {} as never);
 
   const result = await service.sendEmail({
     to: 'customer@example.com',
@@ -27,7 +27,7 @@ test('integrations email provider sends through the module-owned port', async ()
 
 test('integrations email provider rejects unsafe recipient and payload data before send', async () => {
   const provider = new InMemoryEmailProvider();
-  const service = new IntegrationsService(new IntegrationsRepository(), provider);
+  const service = new IntegrationsService(new IntegrationsRepository(), provider, {} as never, {} as never);
 
   await assert.rejects(
     service.sendEmail({ to: 'bad\n@example.com', subject: 'Update', textBody: 'Body' }),
@@ -42,7 +42,7 @@ test('integrations email provider rejects unsafe recipient and payload data befo
 
 test('integrations email provider result exposes no provider credentials', async () => {
   process.env.EMAIL_PROVIDER_SECRET = 'do-not-return';
-  const service = new IntegrationsService(new IntegrationsRepository(), new InMemoryEmailProvider());
+  const service = new IntegrationsService(new IntegrationsRepository(), new InMemoryEmailProvider(), {} as never, {} as never);
 
   const result = await service.sendEmail({ to: 'customer@example.com', subject: 'Update', textBody: 'Body' });
   const response = JSON.stringify(result);

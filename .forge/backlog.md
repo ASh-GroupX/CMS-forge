@@ -301,11 +301,11 @@ only unit/static green.
 - [x] F8-04: Drive attachment scan - a scan worker/route transitions
       `PENDING->CLEAN/REJECTED`; remove `transitionScanStatus` from ratchet; e2e
       proof: an uploaded file becomes downloadable only after it is marked CLEAN
-- [ ] F8-05: Real S3-compatible storage adapter for `AttachmentStoragePort` (durable
+- [x] F8-05: Real S3-compatible storage adapter for `AttachmentStoragePort` (durable
       put + short-lived signed download URL), wired for non-test config; the
       in-memory adapter stays as the test double
-- [ ] F8-06: End-to-end smoke proof (`test:e2e`) - boot app + worker against the
+- [x] F8-06: End-to-end smoke proof (`test:e2e`) - boot app + worker against the
       Docker stack and assert the three behaviors above actually run; the phase L4 gate
-- [ ] F8-07: Remove default-parameter DI fallbacks (e.g. `= {} as PrismaService`,
+- [x] F8-07: Remove default-parameter DI fallbacks (e.g. `= {} as PrismaService`,
       `= new InMemoryAttachmentStorage()`) so a missing provider fails loudly at boot
       instead of silently falling back; tests pass deps explicitly

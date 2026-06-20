@@ -321,3 +321,41 @@ call sites. Do not mark F8-05 complete yet. The required Docker proof is blocked
 because Docker Desktop failed during image export with an input/output error and
 then reported `Docker Desktop is unable to start`. Restore the Docker daemon and
 rerun the S3-backed proof before continuing to F8-06.
+
+## REPAIR-F8-05-DOCKER-RUNTIME Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+F8-05 is complete after runtime repair: Docker Desktop recovered once disposable
+C: drive caches were cleared, the S3-backed MinIO/API/worker stack built and
+started, and the executed proof uploaded an attachment, blocked pending download,
+processed `attachments.scan` to `CLEAN`, wrote attachment audit rows, and
+returned a short-lived `minio:9000` signed URL without logging secrets. Continue
+to F8-06 for the end-to-end smoke gate.
+
+## F8-06 Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+F8-06 is complete: `test:e2e` now runs the existing web UI smoke and the Docker
+runtime smoke. The runtime gate boots/reuses API, worker, Redis, Postgres, and
+MinIO; proves SLA warning/breach plus escalation notification, notification
+dispatch outcomes, and S3-backed attachment scan/download behavior; and avoids
+printing secrets or signed URLs. Continue to F8-07 to remove DI fallback debt.
+
+## F8-07 Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Needs Phase Review
+
+F8-07 is complete: production constructors no longer hide missing Nest providers
+behind default object, service, storage, or in-memory provider fallbacks. Tests
+that touched this surface now pass explicit fakes/adapters, static checks pass,
+and the Docker runtime smoke still boots API plus worker and proves the Phase 8
+runtime behaviors. Phase 8 backlog is complete; stop AUTO PHASE at
+`PHASE-8-REVIEW`.

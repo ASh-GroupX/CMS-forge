@@ -15,7 +15,7 @@
     "prisma:validate": "node tools/prisma-validate.mjs",
     "test": "node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=75 --test-coverage-branches=65 tools/*.test.mjs",
     "test:api": "node tools/api-test.mjs",
-    "test:e2e": "node --import tsx tools/web-proof.mjs",
+    "test:e2e": "node tools/e2e-runner.mjs",
     "test:web": "node tools/web-test.mjs",
     "test:visual": "node --import tsx tools/web-proof.mjs visual",
     "web:perf": "node --import tsx tools/web-proof.mjs perf",

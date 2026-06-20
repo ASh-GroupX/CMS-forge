@@ -1,9 +1,9 @@
 # Current State
 
-Status: Blocked
+Status: Needs Phase Review
 Phase: Phase 8 - Operational Completion (pre-pilot blockers)
-Next Task: REPAIR-F8-05-DOCKER-RUNTIME - Restore Docker and finish S3 proof
-Model Tier: BUILDER-STRONG
+Next Task: PHASE-8-REVIEW - Operational Completion Acceptance Review
+Model Tier: PHASE-REVIEWER
 
 ## How to use this file
 
@@ -12,7 +12,7 @@ Prior state history is in .forge/archive/state-archive.md.
 
 ## Snapshot
 
-- Phases 0-7 accepted; MVP backlog complete, all gates green, coverage ~90%.
+- Phases 0-7 accepted; MVP backlog complete.
 - DONE: F8-00 job-runtime gate.
 - DONE: F8-01 BullMQ runner foundation.
 - DONE: F8-02 SLA runtime driver with Docker proof
@@ -21,19 +21,21 @@ Prior state history is in .forge/archive/state-archive.md.
   `CMP-F8-03-1781935914331`.
 - DONE: F8-04 attachment scan runtime driver with Docker proof
   `CMP-F8-04-1781936722607`.
-- IN PROGRESS / BLOCKED: F8-05 S3-compatible attachment storage. Source changes
-  and static/unit gates pass, but the mandatory Docker proof is not complete.
-- BLOCKER: Docker Desktop failed during `docker compose up -d --build minio api
-  redis worker` with `failed to create temp dir ... input/output error`; follow-up
-  Docker commands return `Docker Desktop is unable to start`.
+- DONE: F8-05 S3-compatible attachment storage with Docker/MinIO proof
+  `f8-05-1781939981667`.
+- DONE: F8-06 end-to-end Docker runtime smoke proof
+  `f8-06-1781940941106`.
+- DONE: F8-07 removed production default-parameter DI fallbacks; final runtime
+  smoke proof `f8-06-1781941348125`.
+- NEXT: mandatory `PHASE-8-REVIEW` before any next-phase or post-phase work.
 
 ## Note on verification
 
-F8-05 must not be marked complete until Docker is restored and the MinIO-backed
-API upload/scan/download proof runs to completion.
+AUTO PHASE stops here. Phase 8 requires a fresh PHASE-REVIEWER pass over backlog,
+evidence, trust notes, architecture/SRS fit, and proof commands before further
+work starts.
 
 ## Open carry-forward / known debt
 
-- F8-05 Docker proof pending because local Docker runtime is unavailable.
-- F8-06 end-to-end smoke remains pending.
-- Default-parameter DI fallbacks mask missing providers (F8-07).
+- None recorded for Phase 8 builder scope. Any residual conditions must be set by
+  `PHASE-8-REVIEW`.

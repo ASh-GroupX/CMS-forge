@@ -7,7 +7,7 @@ import { InMemorySmsProvider } from '../../src/modules/integrations/sms-provider
 
 test('integrations sms provider sends through the module-owned port', async () => {
   const provider = new InMemorySmsProvider();
-  const service = new IntegrationsService(new IntegrationsRepository(), undefined, provider);
+  const service = new IntegrationsService(new IntegrationsRepository(), {} as never, provider, {} as never);
 
   const result = await service.sendSms({
     to: '+201001112222',
@@ -26,7 +26,7 @@ test('integrations sms provider sends through the module-owned port', async () =
 
 test('integrations sms provider rejects unsafe recipient and payload data before send', async () => {
   const provider = new InMemorySmsProvider();
-  const service = new IntegrationsService(new IntegrationsRepository(), undefined, provider);
+  const service = new IntegrationsService(new IntegrationsRepository(), {} as never, provider, {} as never);
 
   await assert.rejects(
     service.sendSms({ to: '01001112222', textBody: 'Body' }),
@@ -41,7 +41,7 @@ test('integrations sms provider rejects unsafe recipient and payload data before
 
 test('integrations sms provider result exposes no provider credentials', async () => {
   process.env.SMS_PROVIDER_SECRET = 'do-not-return';
-  const service = new IntegrationsService(new IntegrationsRepository(), undefined, new InMemorySmsProvider());
+  const service = new IntegrationsService(new IntegrationsRepository(), {} as never, new InMemorySmsProvider(), {} as never);
 
   const result = await service.sendSms({ to: '+201001112222', textBody: 'Body' });
   const response = JSON.stringify(result);

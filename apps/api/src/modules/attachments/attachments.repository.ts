@@ -36,7 +36,7 @@ export type UpdateAttachmentScanStatusData = {
 
 @Injectable()
 export class AttachmentsRepository {
-  constructor(private readonly prisma: PrismaService = {} as PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async transaction<T>(work: (client: Prisma.TransactionClient) => Promise<T>): Promise<T> {
     return this.prisma.$transaction(work as (client: Prisma.TransactionClient) => Promise<T>);

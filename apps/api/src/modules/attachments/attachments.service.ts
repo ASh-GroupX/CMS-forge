@@ -2,7 +2,7 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { AuditService } from '../../core/audit.service.js';
 import type { AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
-import { ATTACHMENT_STORAGE, InMemoryAttachmentStorage } from './attachment-storage.port.js';
+import { ATTACHMENT_STORAGE } from './attachment-storage.port.js';
 import type { AttachmentDownloadToken, AttachmentStoragePort, AttachmentStoredObject, AttachmentStorageObjectInput } from './attachment-storage.port.js';
 import { AttachmentsRepository } from './attachments.repository.js';
 import type { AttachmentRecord } from './attachments.repository.js';
@@ -74,8 +74,8 @@ export type TransitionAttachmentScanInput = {
 export class AttachmentsService {
   constructor(
     private readonly attachmentsRepository: AttachmentsRepository,
-    private readonly auditService: AuditService = new AuditService({} as never),
-    @Inject(ATTACHMENT_STORAGE) private readonly storage: AttachmentStoragePort = new InMemoryAttachmentStorage(),
+    private readonly auditService: AuditService,
+    @Inject(ATTACHMENT_STORAGE) private readonly storage: AttachmentStoragePort,
   ) {}
 
   validateUploadMetadata(input: AttachmentUploadMetadata): AttachmentUploadPolicy {

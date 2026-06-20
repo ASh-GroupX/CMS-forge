@@ -1040,3 +1040,167 @@ Security self-check:
 - Portal exposure: no portal download route or portal response shape changed.
 - Trust boundary status: unit proof covers the S3 adapter surface, but the
   mandatory Docker proof is not complete because Docker Desktop is unavailable.
+
+## REPAIR-F8-05-DOCKER-RUNTIME - Restore Docker And Finish S3 Proof
+
+Date: 2026-06-20
+Risk: High
+Status: Passed
+Requirements: ARCH-FILES-001, REQ-FILES-001, NFR-DATA-001, NFR-OBS-001
+
+Evidence:
+- Restored Docker Desktop by freeing disposable user/package caches on `C:` and
+  restarting Docker Desktop/WSL. No Docker volumes were deleted.
+- Confirmed the Docker daemon recovered on `desktop-linux`.
+- Re-ran the required S3-backed compose stack with MinIO, API, Redis, worker, and
+  the S3 attachment environment from `docker-compose.yml`.
+- Docker proof created/used bucket `cms-auto-attachments`, created a throwaway
+  local proof staff user because this Docker database had empty seed password
+  hashes, logged in through `POST /auth/login`, uploaded an allowed PDF
+  attachment through the staff API, confirmed pending download returned 409,
+  enqueued `attachments.scan`, and verified the authorized download token points
+  at `minio:9000` for the S3 bucket without logging the token.
+- Proof id: `f8-05-1781939981667`; complaint: `CMP-SEED-001`; attachment:
+  `cmqm121ww0009fvw1a332jyq6`.
+- Worker log showed `attachments.scan` returning `{"attachmentId":"cmqm121ww0009fvw1a332jyq6","scanStatus":"CLEAN"}`.
+- DB proof found the attachment as `CLEAN` with `content_type=application/pdf`.
+- DB proof found audit rows for `attachment_uploaded`, `attachment_scan_clean`,
+  and `attachment_download_prepared` with correlation id
+  `f8-05-1781939981667`.
+
+Verification:
+- Passed: `docker version`.
+- Passed: `docker system df`.
+- Passed: `docker compose ps`.
+- Passed: `docker compose up -d --build minio api redis worker` with S3
+  attachment environment variables.
+- Passed: inline Docker proof script run inside the API container for bucket
+  create/use, API login, API upload, pending-download denial, worker scan mark,
+  S3 object listing, and signed URL backend verification.
+
+Security self-check:
+- Roles and branch scope: proof logged in through the real staff API and used
+  existing session/RBAC/branch-scope guards for upload and download. The direct
+  DB write was limited to creating a local throwaway proof staff user because the
+  local Docker seed users had empty password hashes.
+- State changes and audit: upload metadata, scan transition, and download audit
+  rows were written by the existing attachment service/repository paths. Worker
+  only invoked `AttachmentsService.transitionScanStatus`.
+- Secrets: proof password, cookies, CSRF value, S3 credentials, signed URL, and
+  download token were not written to evidence. Output recorded only proof IDs,
+  status, token host, and bucket match.
+- Portal exposure: no portal route or response shape changed; proof used staff
+  routes only.
+- Trust boundary proof: pending attachment download returned 409 before scan;
+  after the worker marked the attachment `CLEAN`, the same authorized staff route
+  returned a short-lived S3-backed download token.
+
+## F8-06 - End-to-End Smoke Proof
+
+Date: 2026-06-20
+Risk: High
+Status: Passed
+Requirements: ARCH-STACK-001, ARCH-FILES-001, REQ-FILES-001, NFR-OBS-001
+
+Evidence:
+- Added `tools/runtime-smoke.mjs`, which starts/reuses the Docker stack with
+  MinIO, API, Redis, worker, and Postgres using S3 attachment storage.
+- Added `tools/e2e-runner.mjs` and wired `corepack pnpm test:e2e` so the default
+  E2E gate runs the existing web UI smoke plus the Docker runtime smoke.
+- Preserved existing web E2E modes: `test:e2e -- accessibility` still routes to
+  the web accessibility proof.
+- Runtime smoke creates deterministic proof data inside the API container,
+  including a throwaway proof staff user, SLA policy/deadline, queued
+  notifications, and an S3 bucket if needed.
+- Runtime smoke logs in through the real API, uploads an allowed attachment,
+  verifies pending download is denied, enqueues `attachments.scan`, waits for
+  `CLEAN`, and confirms the signed URL host is `minio:9000` without printing the
+  signed URL.
+- Runtime smoke enqueues SLA warning/breach jobs and verifies warning, breach,
+  and escalation notification records exist.
+- Runtime smoke enqueues email/SMS/WhatsApp dispatch jobs and verifies expected
+  outcomes: email `SENT`, SMS `FAILED` by quiet-hours rules, WhatsApp `SENT`.
+- Final default E2E proof id: `f8-06-1781940941106`; complaint:
+  `CMP-F8-06-1781940941106`; attachment: `cmqm1mm6q00074puf0et37llf`.
+
+Verification:
+- Failed then repaired: `corepack pnpm test:e2e -- runtime-smoke` initially timed
+  out on a Windows shell-based readiness probe, then failed on BullMQ job ids
+  containing `:`. Repaired with a direct `curl` health check and hyphenated job
+  ids.
+- Failed then repaired: `corepack pnpm lint` caught
+  `tools/runtime-smoke.mjs` at 301 lines. Repaired by compacting the embedded
+  import block; final file is 290 lines.
+- Passed: `corepack pnpm test:e2e -- runtime-smoke`
+  (`f8-06-1781940861695`).
+- Passed: `corepack pnpm test:e2e` (`web ui-smoke` plus runtime proof
+  `f8-06-1781940941106`).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test` (46/46 tool tests; coverage gate passed).
+
+Security self-check:
+- Roles and branch scope: attachment proof logs in through the real staff API and
+  uses existing session/RBAC/branch-scope guards. Direct DB writes are limited to
+  deterministic local proof setup inside the Docker database.
+- State changes and audit: SLA warning/breach, notification dispatch,
+  attachment upload, scan transition, and download preparation are executed by
+  existing services/workers. The smoke script does not add business writes
+  outside setup data.
+- Secrets: proof password, cookies, CSRF value, S3 credentials, signed URL, and
+  download token are not printed. Output records proof IDs, statuses, and token
+  host only.
+- Portal exposure: no portal route or public response shape changed.
+- Trust boundary proof: pending attachment download is denied before scan; after
+  worker scan marks the attachment `CLEAN`, the same authorized staff route
+  returns an S3-backed short-lived token.
+
+## F8-07 - Remove Default-Parameter DI Fallbacks
+
+Date: 2026-06-20
+Risk: High
+Status: Passed
+Requirements: ARCH-STACK-001, NFR-OBS-001
+
+Evidence:
+- Removed production constructor default fallbacks from
+  `AttachmentsRepository`, `AttachmentsService`, and `IntegrationsService`.
+- `AttachmentsRepository` now requires a real `PrismaService` provider instead
+  of `{} as PrismaService`.
+- `AttachmentsService` now requires explicit `AuditService` and
+  `ATTACHMENT_STORAGE` providers instead of constructing an audit fallback or
+  in-memory storage fallback.
+- `IntegrationsService` now requires explicit email, SMS, and WhatsApp provider
+  tokens instead of constructing in-memory provider fallbacks.
+- Updated construction smoke specs and affected attachment/integration tests to
+  pass explicit test doubles or in-memory test adapters.
+- Phase 8 backlog is complete; `.forge/next.md` is now the mandatory
+  `PHASE-8-REVIEW` task and `.forge/state.md` is `Needs Phase Review`.
+
+Verification:
+- Passed with caveat: `rg -n "= \\{\\} as|= new InMemory|= new .*Provider|= new .*Service" apps packages`.
+  The broad command still reports existing explicit test fixture construction
+  under `apps/api/test`; no production source match remains.
+- Passed: `rg -n "= \\{\\} as|= new InMemory|= new .*Provider|= new .*Service" apps/api/src packages`
+  returned no matches.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test` (46/46 tool tests; coverage gate passed).
+- Passed: `corepack pnpm test:e2e -- runtime-smoke` with proof id
+  `f8-06-1781941348125`; attachment `cmqm1vc9x00076m1ic61w3epq` reached
+  `CLEAN`, pending download was blocked, token host was `minio:9000`, SLA
+  warning/breach/escalation proof passed, and notification outcomes were email
+  `SENT`, SMS `FAILED`, WhatsApp `SENT`.
+
+Security self-check:
+- Roles and branch scope: no RBAC or branch-scope logic changed. Runtime smoke
+  booted the API/worker and used real staff API upload/download guards.
+- State changes and audit: no state-transition or audit-write logic changed.
+  Runtime smoke still exercised attachment upload, scan, download preparation,
+  SLA jobs, and notification dispatch through existing services.
+- Secrets: no proof password, cookies, CSRF value, S3 credentials, signed URL, or
+  download token were written to evidence.
+- Provider wiring: missing production DI providers now fail loudly at Nest
+  construction instead of falling back to silent default objects/providers.
+  Runtime smoke proves current module wiring supplies the required providers.

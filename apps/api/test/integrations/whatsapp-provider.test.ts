@@ -7,7 +7,7 @@ import { InMemoryWhatsAppProvider } from '../../src/modules/integrations/whatsap
 
 test('integrations whatsapp provider sends through the module-owned port', async () => {
   const provider = new InMemoryWhatsAppProvider();
-  const service = new IntegrationsService(new IntegrationsRepository(), undefined, undefined, provider);
+  const service = new IntegrationsService(new IntegrationsRepository(), {} as never, {} as never, provider);
 
   const result = await service.sendWhatsApp({
     to: '+201001112222',
@@ -26,7 +26,7 @@ test('integrations whatsapp provider sends through the module-owned port', async
 
 test('integrations whatsapp provider rejects unsafe recipient and payload data before send', async () => {
   const provider = new InMemoryWhatsAppProvider();
-  const service = new IntegrationsService(new IntegrationsRepository(), undefined, undefined, provider);
+  const service = new IntegrationsService(new IntegrationsRepository(), {} as never, {} as never, provider);
 
   await assert.rejects(
     service.sendWhatsApp({ to: '01001112222', textBody: 'Body' }),
@@ -41,7 +41,7 @@ test('integrations whatsapp provider rejects unsafe recipient and payload data b
 
 test('integrations whatsapp provider result exposes no provider credentials', async () => {
   process.env.WHATSAPP_PROVIDER_SECRET = 'do-not-return';
-  const service = new IntegrationsService(new IntegrationsRepository(), undefined, undefined, new InMemoryWhatsAppProvider());
+  const service = new IntegrationsService(new IntegrationsRepository(), {} as never, {} as never, new InMemoryWhatsAppProvider());
 
   const result = await service.sendWhatsApp({ to: '+201001112222', textBody: 'Body' });
   const response = JSON.stringify(result);

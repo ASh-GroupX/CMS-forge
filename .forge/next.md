@@ -1,58 +1,43 @@
-# Build Task: REPAIR-F8-05-DOCKER-RUNTIME - Restore Docker And Finish S3 Proof
+# Phase Review Task: PHASE-8-REVIEW - Operational Completion Acceptance Review
 
-Status: Blocked
-Required model tier: BUILDER-STRONG
-Risk: High (F8-05 cannot be accepted without executed Docker proof)
+Status: Needs Phase Review
+Required model tier: PHASE-REVIEWER
+Risk: High
 Phase: Phase 8 - Operational Completion
-
-## Blocker
-
-Docker Desktop's `desktop-linux` daemon is unavailable. The F8-05 Docker proof
-attempt failed during image export with:
-
-`failed to create temp dir: mkdir /var/lib/desktop-containerd/daemon/tmpmounts/...: input/output error`
-
-Follow-up commands returned:
-
-`Docker Desktop is unable to start`
 
 ## Scope
 
-Do not add new F8-05 feature code unless the rerun exposes a code defect.
-Restore the local Docker runtime, then finish the exact S3-backed proof for the
-already implemented adapter.
+Review Phase 8 end to end before any next-phase or post-phase work starts.
+Validate that the operational runtime now actually runs: background jobs are
+driven, durable attachment storage is wired, the E2E runtime smoke gate exists,
+and missing DI providers fail loudly.
 
 ## Acceptance criteria
 
-- AC1 [must] `docker version`, `docker system df`, and `docker compose ps` work
-  against the `desktop-linux` context.
-- AC2 [must] `docker compose up -d --build minio api redis worker` succeeds with
-  S3 attachment environment variables.
-- AC3 [must] Docker proof creates/uses the MinIO bucket, logs in through the API,
-  uploads an allowed attachment, marks it CLEAN, and verifies the download token
-  points at the S3-compatible backend.
-- AC4 [must] If proof passes, mark F8-05 complete in backlog/evidence/trust,
-  replace state.md, and continue to F8-06.
+- AC1 [must] Every Phase 8 backlog item is checked done and has evidence.
+- AC2 [must] Evidence uses honest verification labels and includes executed
+  Docker/runtime proofs, not only static or unit checks.
+- AC3 [must] No SRS, architecture, RBAC, audit, portal privacy, OpenAPI, or
+  security boundary was weakened by Phase 8 changes.
+- AC4 [must] Required proof commands are rerun or any gap is explicitly recorded
+  as blocking or acceptable.
+- AC5 [must] Output one PHASE REVIEW decision: `Accept Phase`,
+  `Accept With Conditions`, `Repair Required`, or `Redo Phase`.
 
-## Proof commands
+## Suggested proof surface
 
-- `docker version`
-- `docker system df`
-- `docker compose ps`
-- `docker compose up -d --build minio api redis worker` with:
-  - `ATTACHMENT_STORAGE_DRIVER=s3`
-  - `ATTACHMENT_S3_ENDPOINT=http://minio:9000`
-  - `ATTACHMENT_S3_REGION=us-east-1`
-  - `ATTACHMENT_S3_BUCKET=cms-auto-attachments`
-  - `ATTACHMENT_S3_ACCESS_KEY_ID` / `ATTACHMENT_S3_SECRET_ACCESS_KEY` set to the
-    local MinIO dev values from `docker-compose.yml`
-- Docker proof script for bucket create, API upload, scan mark, and signed URL
-  verification.
+- Review `.forge/backlog.md`, `.forge/evidence.md`, `.forge/trust.md`,
+  `.forge/state.md`, `.forge/next.md`, `AGENTS.md`, `docs/ARCHITECTURE.md`, and
+  relevant Phase 8 source changes.
+- `corepack pnpm lint`
+- `corepack pnpm typecheck`
+- `corepack pnpm test`
+- `corepack pnpm test:e2e`
 
 ## Guardrails
 
-- Do not claim F8-05 passed on static/unit proof alone.
-- Do not log S3 secrets, cookies, CSRF values, signed URLs, or download tokens in
-  evidence.
-- If Docker remains unavailable, leave state `Blocked` and request human runtime
-  repair.
+- Do not start new build work during the review.
+- If repair is required, write the smallest repair task to `.forge/next.md` and
+  set state `Needs Repair`.
+- If accepted, write the next legitimate post-phase task and set state according
+  to the PHASE REVIEW protocol.
