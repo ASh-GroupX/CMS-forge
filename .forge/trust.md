@@ -271,3 +271,53 @@ processes an enqueued smoke job through the noop processor. The job-runtime
 ratchet remains at 6 by design because this task added no business job calls.
 Continue to F8-02 to drive the SLA warning and breach jobs and remove those two
 ratchet entries.
+
+## F8-02 Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+F8-02 is complete: the worker now schedules and dispatches SLA warning/breach
+jobs through the public `SlaService`, and Docker proof created a warning, breach,
+and internal escalation notification for `CMP-F8-02-1781935059473`. The runtime
+ratchet shrank from 6 to 4. Continue to F8-03 for notification dispatch.
+
+## F8-03 Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+F8-03 is complete: the worker now schedules and dispatches queued email, SMS, and
+WhatsApp notifications through the public `NotificationsService`. Docker proof
+sent email and WhatsApp rows through the in-memory provider and marked a
+non-critical SMS as failed through the existing quiet-hours rule. The runtime
+ratchet shrank from 4 to 1. Continue to F8-04 for attachment scan runtime.
+
+## F8-04 Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+F8-04 is complete: the worker now processes explicit attachment scan jobs through
+the public `AttachmentsService`, and the job-runtime ratchet is empty. Docker
+proof used the real staff attachment upload/download routes: download was blocked
+while scan status was `PENDING`, the worker marked the attachment `CLEAN` with an
+audit row, and the same authorized download path returned a short-lived token.
+Continue to F8-05 for durable S3-compatible attachment storage.
+
+## F8-05 Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Blocked
+
+F8-05 code is partially built and static/unit proof passes: the S3-compatible
+adapter is behind `AttachmentStoragePort`, config validation is secret-safe, and
+the module selects storage by environment without changing controller/service
+call sites. Do not mark F8-05 complete yet. The required Docker proof is blocked
+because Docker Desktop failed during image export with an input/output error and
+then reported `Docker Desktop is unable to start`. Restore the Docker daemon and
+rerun the S3-backed proof before continuing to F8-06.

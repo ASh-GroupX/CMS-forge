@@ -7,7 +7,7 @@ import { AuthModule } from '../auth/auth.module.js';
 import { AuthService } from '../auth/auth.service.js';
 import { ComplaintsModule } from '../complaints/complaints.module.js';
 import { PortalModule } from '../portal/portal.module.js';
-import { ATTACHMENT_STORAGE, InMemoryAttachmentStorage } from './attachment-storage.port.js';
+import { ATTACHMENT_STORAGE, attachmentStorageFromEnv } from './attachment-storage.port.js';
 import { AttachmentsController, PortalAttachmentsController } from './attachments.controller.js';
 import { AttachmentsRepository } from './attachments.repository.js';
 import { AttachmentsService } from './attachments.service.js';
@@ -20,7 +20,7 @@ import { AttachmentsService } from './attachments.service.js';
     AuditService,
     AttachmentsRepository,
     AttachmentsService,
-    { provide: ATTACHMENT_STORAGE, useClass: InMemoryAttachmentStorage },
+    { provide: ATTACHMENT_STORAGE, useFactory: () => attachmentStorageFromEnv() },
     {
       provide: SESSION_AUTH_SERVICE,
       inject: [AuthService],

@@ -800,3 +800,243 @@ Security self-check:
 - Trust boundary proof: accepted Redis URLs are covered by the registry test and
   Docker runtime proof; non-Redis URLs are rejected by unit test before any queue
   is created.
+
+## F8-02 - Drive SLA Jobs From Worker
+
+Date: 2026-06-20
+Risk: High
+Status: Passed
+Requirements: SLA-CALENDAR-001, NFR-OBS-001, ARCH-STACK-001
+
+Evidence:
+- Updated `apps/api/src/worker/index.ts` so the `sla` queue dispatches
+  `sla.warning` to `SlaService.runWarningJob(new Date())` and `sla.breach` to
+  `SlaService.runBreachJob(new Date())`.
+- Added BullMQ repeatable schedulers for both SLA job names with
+  `SLA_JOB_INTERVAL_MS` defaulting to 60000 ms.
+- Kept `notifications` and `attachments-scan` queues as noops for F8-03/F8-04.
+- Updated `tools/job-runtime-check.mjs` so `runWarningJob` and `runBreachJob`
+  were removed from `knownUndrivenJobs`; ratchet is now 4.
+- Added `apps/api/test/worker/sla-runner.test.ts` covering warning dispatch,
+  breach dispatch, noop behavior for non-SLA queues, and interval scheduling.
+
+Verification:
+- Passed: `node --import tsx --test apps/api/test/worker/sla-runner.test.ts`
+  (4/4).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test` (46/46 tool tests; coverage gate passed).
+- Passed: `docker compose up -d --build redis worker`.
+- Passed: worker logs showed repeatable jobs firing:
+  `sla job received name=sla.warning id=repeat:sla.warning:...` and
+  `sla job received name=sla.breach id=repeat:sla.breach:...`.
+- Passed: Docker proof created `CMP-F8-02-1781935059473`, then enqueued
+  `f8-02-warning-1781935059473` and `f8-02-breach-1781935059473`.
+- Passed: proof query found:
+  warning `sla:warning:f8-02-deadline-1781935059473`,
+  breach `sla:breach:f8-02-deadline-1781935059473`, and notification
+  `cmqly4joz0007rwteiazp0fbk`.
+- Passed: worker logs showed the proof jobs creating exactly one new warning and
+  one new breach for that deadline key.
+
+Security self-check:
+- Roles and branch scope: no client/RBAC surface was added; worker uses backend
+  `SlaService` only and imports no private repository/DTO/Prisma API.
+- State changes and audit: this task invokes the existing SLA service methods;
+  warning/breach idempotency and escalation notification behavior remain owned
+  by `SlaService`/`SlaRepository`. No duplicate state-change logic was added.
+- Secrets: worker logs queue/job/result ids only; no `REDIS_URL`, provider
+  credentials, passwords, OTPs, tokens, hashes, or payload secrets are logged.
+- Portal exposure: no portal route or public response shape changed.
+- Trust boundary proof: unit test proves only explicit SLA job names call SLA
+  methods, non-SLA queues stay noop, and invalid scheduler intervals fail.
+
+## F8-03 - Drive Notification Dispatch From Worker
+
+Date: 2026-06-20
+Risk: High
+Status: Passed
+Requirements: ARCH-STACK-001, NFR-OBS-001
+
+Evidence:
+- Updated `apps/api/src/worker/index.ts` so the `notifications` queue dispatches
+  `notifications.email`, `notifications.sms`, and `notifications.whatsapp`
+  through `NotificationsService.dispatchQueuedEmail`,
+  `NotificationsService.dispatchQueuedSms`, and
+  `NotificationsService.dispatchQueuedWhatsApp`.
+- Added BullMQ repeatable schedulers for the three notification job names with
+  `NOTIFICATION_JOB_INTERVAL_MS` defaulting to 60000 ms.
+- Kept provider delivery, quiet-hours, channel preference, retry-safe status
+  writes, and delivery attempt logging inside the existing notifications module.
+- Updated `tools/job-runtime-check.mjs` so the three notification dispatch
+  methods were removed from `knownUndrivenJobs`; ratchet is now 1.
+- Added `apps/api/test/worker/notification-runner.test.ts` covering email, SMS,
+  WhatsApp, interval scheduling, and invalid interval handling with fake service
+  dependencies.
+
+Verification:
+- Passed: `node --import tsx --test apps/api/test/worker/notification-runner.test.ts`
+  (3/3).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test` (46/46 tool tests; coverage gate passed).
+- Passed: `docker compose up -d --build redis worker`.
+- Environment repair for Docker proof: the local compose Postgres volume was
+  missing existing Phase 5 notification migrations. `prisma migrate deploy`
+  failed with an opaque schema-engine error, so the existing migration SQL files
+  were applied through `psql` before proof. No source migration was changed.
+- Passed: Docker proof created `CMP-F8-03-1781935914331`, queued one email, one
+  SMS, and one WhatsApp notification, then enqueued
+  `f8-03-email-1781935914331`, `f8-03-sms-1781935914331`, and
+  `f8-03-whatsapp-1781935914331`.
+- Passed: proof query found email `cmqlymv9b0007ab3a29vg17sc` as `SENT` with
+  provider `in-memory`, SMS `cmqlymv9g0009ab3avp6dt5ot` as `FAILED` with
+  `NOTIFICATION_QUIET_HOURS_SKIPPED`, and WhatsApp
+  `cmqlymv9g000aab3awmz85lm6` as `SENT` with provider `in-memory`.
+- Passed: delivery attempt rows matched those outcomes, including the quiet-hour
+  SMS failure reason.
+- Passed: worker logs showed the proof jobs returning
+  `{"attempted":1,"sent":1,"failed":0,"skipped":0}` for email,
+  `{"attempted":1,"sent":0,"failed":1,"skipped":0}` for SMS, and
+  `{"attempted":1,"sent":1,"failed":0,"skipped":0}` for WhatsApp.
+
+Security self-check:
+- Roles and branch scope: no client/RBAC surface was added; worker uses backend
+  `NotificationsService` only and imports no notification repository, DTO, or
+  Prisma model API.
+- State changes and audit: delivery status transitions and delivery attempt
+  records remain inside the notifications repository/service transaction path;
+  the worker only selects the public dispatch entrypoint by explicit job name.
+- Secrets: worker logs queue/job/result counts only; no `REDIS_URL`, provider
+  credentials, passwords, OTPs, tokens, hashes, or payload secrets are logged.
+- Portal exposure: no portal route or public response shape changed.
+- Trust boundary proof: unit test proves each explicit notification job name
+  calls only the matching public service method, and Docker proof proves quiet
+  hours are enforced by the existing notification rules rather than worker logic.
+
+## F8-04 - Drive Attachment Scan From Worker
+
+Date: 2026-06-20
+Risk: High
+Status: Passed
+Requirements: ARCH-FILES-001, REQ-FILES-001, METHOD-AUDIT-001, ARCH-STACK-001, NFR-OBS-001
+
+Evidence:
+- Updated `apps/api/src/worker/index.ts` so the `attachments-scan` queue handles
+  explicit `attachments.scan` jobs and calls only
+  `AttachmentsService.transitionScanStatus`.
+- Added scan payload validation for attachment id, target status, and
+  correlation id. Invalid scan payloads fail loudly before the service is called.
+- Kept download authorization, scan-state availability checks, and audit writes
+  inside the existing attachment service/controller path.
+- Sanitized attachment scan worker logging to `{ attachmentId, scanStatus }` so
+  storage keys and filenames are not logged.
+- Tightened worker routing so unknown job names remain noops without resolving
+  queue-specific services.
+- Updated `tools/job-runtime-check.mjs` so `transitionScanStatus` was removed
+  from `knownUndrivenJobs`; ratchet is now empty.
+- Added `apps/api/test/worker/attachment-scan-runner.test.ts` covering CLEAN,
+  REJECTED, invalid payload handling, sanitized logging, and noop routing.
+- Added a thin root `tsconfig.json` and shared decorator compiler settings in
+  `tsconfig.base.json` so the direct `node --import tsx` worker proof command
+  can load Nest-decorated API source files.
+
+Verification:
+- Failed then repaired: the first direct worker test run failed because `tsx`
+  could not load Nest parameter decorators without a root `tsconfig.json`.
+- Passed: `node --import tsx --test apps/api/test/worker/attachment-scan-runner.test.ts`
+  (4/4).
+- Passed: existing direct worker regression tests:
+  `node --import tsx --test apps/api/test/worker/sla-runner.test.ts apps/api/test/worker/notification-runner.test.ts apps/api/test/worker/queue.test.ts`
+  (11/11).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test` (46/46 tool tests; coverage gate passed).
+- Failed then repaired: `docker compose up -d --build api redis worker` timed
+  out client-side before recreating API/worker. Repaired with
+  `docker compose build api` and
+  `docker compose up -d --force-recreate api worker redis`.
+- Failed then repaired: the first Docker proof script asserted the old flat error
+  shape; the API correctly returned HTTP 409 with nested
+  `error.code=ATTACHMENT_SCAN_UNAVAILABLE`.
+- Passed: Docker proof created `CMP-F8-04-1781936722607`, logged in through the
+  real API, uploaded attachment `cmqlz473o000hl2jigav3b4ed` through
+  `POST /complaints/:id/attachments`, and confirmed the initial
+  `GET /download` returned HTTP 409 `ATTACHMENT_SCAN_UNAVAILABLE`.
+- Passed: Docker proof enqueued `f8-04-scan-1781936722607`; the worker processed
+  `attachments.scan` and returned
+  `{"attachmentId":"cmqlz473o000hl2jigav3b4ed","scanStatus":"CLEAN"}`.
+- Passed: proof query found the attachment as `CLEAN` and an
+  `attachment_scan_clean` audit row with correlation id
+  `f8-04-corr-1781936722607`.
+- Passed: the same authorized `GET /download` route returned HTTP 200 and a
+  short-lived download token after the scan completed.
+
+Security self-check:
+- Roles and branch scope: the Docker proof used real login/session cookies and
+  the existing staff attachment routes. The worker did not accept role or branch
+  authority from the client; branch id was audit context for the system scan job.
+- State changes and audit: scan status transition and `attachment_scan_clean`
+  audit write remain in `AttachmentsService.transitionScanStatus` in the same
+  transaction. The worker contains no repository or Prisma write logic.
+- Secrets: proof credentials, cookies, CSRF values, and download token values
+  were not logged. Worker logs attachment id and scan status only.
+- Portal exposure: no portal download route or portal response shape changed.
+- Trust boundary proof: Docker proof verified pending attachments are blocked by
+  the existing download path until the worker invokes the public scan transition
+  service and the attachment becomes `CLEAN`.
+
+## F8-05 - Add Durable S3-Compatible Attachment Storage
+
+Date: 2026-06-20
+Risk: High
+Status: Blocked
+Requirements: ARCH-FILES-001, REQ-FILES-001, NFR-DATA-001, NFR-OBS-001
+
+Evidence:
+- Added `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` to
+  `apps/api/package.json`; updated `pnpm-lock.yaml`.
+- Added `S3AttachmentStorage` behind the existing `AttachmentStoragePort` in
+  `apps/api/src/modules/attachments/attachment-storage.port.ts`.
+- Added environment-driven adapter selection:
+  `ATTACHMENT_STORAGE_DRIVER=memory|s3`; development/test without S3 config uses
+  the in-memory double, while production defaults to S3 and incomplete S3 config
+  fails loudly.
+- Updated `apps/api/src/modules/attachments/attachments.module.ts` to provide
+  storage through `attachmentStorageFromEnv()` without changing controller or
+  service call sites.
+- Added a local MinIO service and S3 attachment environment knobs to
+  `docker-compose.yml` for executed proof.
+- Added `apps/api/test/attachments/storage-adapter.test.ts` covering memory
+  fallback, production S3 config validation, S3 put, signed URL generation, TTL,
+  and secret-safe validation errors.
+
+Verification:
+- Passed: `node --import tsx --test apps/api/test/attachments/storage-adapter.test.ts`
+  (4/4).
+- Passed: `corepack pnpm exec tsc -p apps/api/tsconfig.json --noEmit`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test` (46/46 tool tests; coverage gate passed).
+- Passed: `git diff --check`.
+- Failed / Blocked: attempted
+  `docker compose up -d --build minio api redis worker` with S3 attachment
+  environment. Build reached image export and MinIO pull, then Docker Desktop
+  failed with `failed to create temp dir ... input/output error`.
+- Failed / Blocked: follow-up Docker checks (`docker system df`,
+  `docker compose ps`, `docker version`) returned
+  `Docker Desktop is unable to start`. The `desktop-linux` daemon is unavailable,
+  so the required executed Docker S3 proof cannot run in this session.
+
+Security self-check:
+- Roles and branch scope: API upload/download call sites remain unchanged and
+  still use existing session/RBAC/branch-scope guards.
+- State changes and audit: attachment metadata persistence, scan-state checks,
+  and audit writes remain in the existing service/repository paths; the storage
+  adapter only stores object bytes and issues signed URLs.
+- Secrets: adapter validation errors name missing/invalid config keys but do not
+  echo access key or secret values. No cookies, CSRF values, signed URLs,
+  provider secrets, or object bytes were logged to evidence.
+- Portal exposure: no portal download route or portal response shape changed.
+- Trust boundary status: unit proof covers the S3 adapter surface, but the
+  mandatory Docker proof is not complete because Docker Desktop is unavailable.

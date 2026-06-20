@@ -18,6 +18,18 @@ services:
     ports:
       - "6379:6379"
 
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-cms_auto_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-cms_auto_minio_dev}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
   api:
     build:
       context: .
@@ -29,6 +41,14 @@ services:
       # service credentials declared above and the redis service host.
       DATABASE_URL: postgres://cms_auto:cms_auto_dev@postgres:5432/cms_auto
       REDIS_URL: redis://redis:6379
+      ATTACHMENT_STORAGE_DRIVER: ${ATTACHMENT_STORAGE_DRIVER:-memory}
+      ATTACHMENT_S3_ENDPOINT: ${ATTACHMENT_S3_ENDPOINT:-}
+      ATTACHMENT_S3_REGION: ${ATTACHMENT_S3_REGION:-}
+      ATTACHMENT_S3_BUCKET: ${ATTACHMENT_S3_BUCKET:-}
+      ATTACHMENT_S3_ACCESS_KEY_ID: ${ATTACHMENT_S3_ACCESS_KEY_ID:-}
+      ATTACHMENT_S3_SECRET_ACCESS_KEY: ${ATTACHMENT_S3_SECRET_ACCESS_KEY:-}
+      ATTACHMENT_S3_FORCE_PATH_STYLE: ${ATTACHMENT_S3_FORCE_PATH_STYLE:-true}
+      ATTACHMENT_DOWNLOAD_TTL_SECONDS: ${ATTACHMENT_DOWNLOAD_TTL_SECONDS:-300}
     ports:
       - "3000:3000"
     depends_on:
@@ -44,6 +64,14 @@ services:
       NODE_ENV: development
       DATABASE_URL: postgres://cms_auto:cms_auto_dev@postgres:5432/cms_auto
       REDIS_URL: redis://redis:6379
+      ATTACHMENT_STORAGE_DRIVER: ${ATTACHMENT_STORAGE_DRIVER:-memory}
+      ATTACHMENT_S3_ENDPOINT: ${ATTACHMENT_S3_ENDPOINT:-}
+      ATTACHMENT_S3_REGION: ${ATTACHMENT_S3_REGION:-}
+      ATTACHMENT_S3_BUCKET: ${ATTACHMENT_S3_BUCKET:-}
+      ATTACHMENT_S3_ACCESS_KEY_ID: ${ATTACHMENT_S3_ACCESS_KEY_ID:-}
+      ATTACHMENT_S3_SECRET_ACCESS_KEY: ${ATTACHMENT_S3_SECRET_ACCESS_KEY:-}
+      ATTACHMENT_S3_FORCE_PATH_STYLE: ${ATTACHMENT_S3_FORCE_PATH_STYLE:-true}
+      ATTACHMENT_DOWNLOAD_TTL_SECONDS: ${ATTACHMENT_DOWNLOAD_TTL_SECONDS:-300}
     depends_on:
       - postgres
       - redis
@@ -63,3 +91,4 @@ services:
 
 volumes:
   postgres-data:
+  minio-data:

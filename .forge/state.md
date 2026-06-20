@@ -1,8 +1,8 @@
 # Current State
 
-Status: Ready to Build
+Status: Blocked
 Phase: Phase 8 - Operational Completion (pre-pilot blockers)
-Next Task: F8-02 - Drive SLA warning/breach jobs from the BullMQ worker
+Next Task: REPAIR-F8-05-DOCKER-RUNTIME - Restore Docker and finish S3 proof
 Model Tier: BUILDER-STRONG
 
 ## How to use this file
@@ -13,24 +13,27 @@ Prior state history is in .forge/archive/state-archive.md.
 ## Snapshot
 
 - Phases 0-7 accepted; MVP backlog complete, all gates green, coverage ~90%.
-- Phase 8 is active because async jobs existed but had no runtime driver.
-- DONE: F8-00 job-runtime gate. `lint` fails on undriven background jobs, with 6
-  current jobs grandfathered in a shrink-only ratchet.
-- DONE: F8-01 BullMQ runner foundation. Worker boots a Nest application context,
-  connects to Redis for `sla`, `notifications`, and `attachments-scan`, and
-  processed Docker smoke job `f8-01-smoke-1781934277758`.
-- NEXT: F8-02 drives `SlaService.runWarningJob` and `runBreachJob` from the
-  worker and removes those two entries from the ratchet after executed proof.
-- THEN: F8-03 notification dispatch, F8-04 attachment scan, F8-05 S3 storage,
-  F8-06 end-to-end smoke, F8-07 remove default-parameter DI fallbacks.
+- DONE: F8-00 job-runtime gate.
+- DONE: F8-01 BullMQ runner foundation.
+- DONE: F8-02 SLA runtime driver with Docker proof
+  `CMP-F8-02-1781935059473`.
+- DONE: F8-03 notification runtime driver with Docker proof
+  `CMP-F8-03-1781935914331`.
+- DONE: F8-04 attachment scan runtime driver with Docker proof
+  `CMP-F8-04-1781936722607`.
+- IN PROGRESS / BLOCKED: F8-05 S3-compatible attachment storage. Source changes
+  and static/unit gates pass, but the mandatory Docker proof is not complete.
+- BLOCKER: Docker Desktop failed during `docker compose up -d --build minio api
+  redis worker` with `failed to create temp dir ... input/output error`; follow-up
+  Docker commands return `Docker Desktop is unable to start`.
 
 ## Note on verification
 
-F8-02+ require executed Docker proof. Do not mark them done on typecheck/lint
-alone.
+F8-05 must not be marked complete until Docker is restored and the MinIO-backed
+API upload/scan/download proof runs to completion.
 
 ## Open carry-forward / known debt
 
-- job-runtime ratchet is still 6 and must reach empty by end of Phase 8.
-- Attachment storage in-memory; not durable (F8-05).
+- F8-05 Docker proof pending because local Docker runtime is unavailable.
+- F8-06 end-to-end smoke remains pending.
 - Default-parameter DI fallbacks mask missing providers (F8-07).

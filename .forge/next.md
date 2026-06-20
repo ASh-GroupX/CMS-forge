@@ -1,54 +1,58 @@
-# Build Task: F8-02 - Drive SLA Jobs From Worker
+# Build Task: REPAIR-F8-05-DOCKER-RUNTIME - Restore Docker And Finish S3 Proof
 
-Status: Ready to Build
+Status: Blocked
 Required model tier: BUILDER-STRONG
-Risk: High (SLA workflow runtime + escalation notification path)
+Risk: High (F8-05 cannot be accepted without executed Docker proof)
 Phase: Phase 8 - Operational Completion
+
+## Blocker
+
+Docker Desktop's `desktop-linux` daemon is unavailable. The F8-05 Docker proof
+attempt failed during image export with:
+
+`failed to create temp dir: mkdir /var/lib/desktop-containerd/daemon/tmpmounts/...: input/output error`
+
+Follow-up commands returned:
+
+`Docker Desktop is unable to start`
 
 ## Scope
 
-Wire only the SLA queue. Do not touch notification dispatch or attachment scan
-yet.
-
-Target files:
-- `apps/api/src/worker/index.ts` - replace the `sla` noop path with calls to the
-  public `SlaService.runWarningJob(new Date())` and
-  `SlaService.runBreachJob(new Date())` for explicit SLA job names. Keep
-  `notifications` and `attachments-scan` noop.
-- `apps/api/src/worker/queue.ts` - only if a tiny helper is needed for repeatable
-  SLA enqueueing.
-- `tools/job-runtime-check.mjs` - remove `runWarningJob` and `runBreachJob` from
-  `knownUndrivenJobs` after the worker actually calls them.
-- `apps/api/test/worker/sla-runner.test.ts` - focused unit proof with a fake
-  `SlaService`; no live Redis.
+Do not add new F8-05 feature code unless the rerun exposes a code defect.
+Restore the local Docker runtime, then finish the exact S3-backed proof for the
+already implemented adapter.
 
 ## Acceptance criteria
 
-- AC1 [must] Worker invokes only the public `SlaService`; no repository, DTO,
-  Prisma, or cross-module private imports.
-- AC2 [must] Warning and breach jobs are idempotent by using the existing
-  `SlaService` methods; no duplicate event logic is reimplemented in the worker.
-- AC3 [must] `tools/job-runtime-check.mjs` ratchet shrinks from 6 to 4.
-- AC4 [must] Unit proof covers both warning and breach worker dispatch with fake
-  service dependencies.
-- AC5 [must] EXECUTED Docker proof: worker processes SLA warning and breach jobs
-  against the stack; a seeded overdue complaint creates a warning, then a breach
-  and internal escalation notification.
+- AC1 [must] `docker version`, `docker system df`, and `docker compose ps` work
+  against the `desktop-linux` context.
+- AC2 [must] `docker compose up -d --build minio api redis worker` succeeds with
+  S3 attachment environment variables.
+- AC3 [must] Docker proof creates/uses the MinIO bucket, logs in through the API,
+  uploads an allowed attachment, marks it CLEAN, and verifies the download token
+  points at the S3-compatible backend.
+- AC4 [must] If proof passes, mark F8-05 complete in backlog/evidence/trust,
+  replace state.md, and continue to F8-06.
 
 ## Proof commands
 
-- `corepack pnpm typecheck`
-- `corepack pnpm lint`
-- `corepack pnpm test`
-- `node --import tsx --test apps/api/test/worker/sla-runner.test.ts`
-- `docker compose up -d redis worker`
-- Docker proof command(s) to enqueue SLA warning/breach smoke jobs and capture
-  worker logs plus resulting warning/breach/notification records.
+- `docker version`
+- `docker system df`
+- `docker compose ps`
+- `docker compose up -d --build minio api redis worker` with:
+  - `ATTACHMENT_STORAGE_DRIVER=s3`
+  - `ATTACHMENT_S3_ENDPOINT=http://minio:9000`
+  - `ATTACHMENT_S3_REGION=us-east-1`
+  - `ATTACHMENT_S3_BUCKET=cms-auto-attachments`
+  - `ATTACHMENT_S3_ACCESS_KEY_ID` / `ATTACHMENT_S3_SECRET_ACCESS_KEY` set to the
+    local MinIO dev values from `docker-compose.yml`
+- Docker proof script for bucket create, API upload, scan mark, and signed URL
+  verification.
 
 ## Guardrails
 
-- No notification dispatch draining; that is F8-03.
-- No attachment scan state transition driver; that is F8-04.
-- Do not mark done without Docker proof. If seeded DB proof cannot stay small,
-  stop and replan F8-02 instead of making a large diff.
-- Update evidence/trust; REPLACE state.md (do not append).
+- Do not claim F8-05 passed on static/unit proof alone.
+- Do not log S3 secrets, cookies, CSRF values, signed URLs, or download tokens in
+  evidence.
+- If Docker remains unavailable, leave state `Blocked` and request human runtime
+  repair.

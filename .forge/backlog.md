@@ -292,13 +292,13 @@ only unit/static green.
 - [x] F8-01: Background runner foundation - pick scheduler/worker (BullMQ on the
       existing Redis, or `@nestjs/schedule`), add the dependency, and a worker
       entrypoint beside `main.ts` that boots the DI graph (no business logic yet)
-- [ ] F8-02: Drive SLA jobs - runner invokes `runWarningJob`/`runBreachJob`
+- [x] F8-02: Drive SLA jobs - runner invokes `runWarningJob`/`runBreachJob`
       idempotently on an interval; remove them from the ratchet; e2e proof: a seeded
       overdue complaint produces a warning, then a breach + escalation notification
-- [ ] F8-03: Drive notification dispatch - runner drains `dispatchQueuedEmail/Sms/
+- [x] F8-03: Drive notification dispatch - runner drains `dispatchQueuedEmail/Sms/
       WhatsApp`; remove from ratchet; e2e proof: a queued notification reaches the
       provider with delivered status and respects quiet hours
-- [ ] F8-04: Drive attachment scan - a scan worker/route transitions
+- [x] F8-04: Drive attachment scan - a scan worker/route transitions
       `PENDING->CLEAN/REJECTED`; remove `transitionScanStatus` from ratchet; e2e
       proof: an uploaded file becomes downloadable only after it is marked CLEAN
 - [ ] F8-05: Real S3-compatible storage adapter for `AttachmentStoragePort` (durable

@@ -22,14 +22,7 @@ const backgroundJobs = [
 // only SHRINK. A NEW orphaned job must fail this gate, never be added here. Remove an
 // entry the moment a runner (under apps/api/src/worker, a *.runner.ts/*.scheduler.ts
 // file, or an ops route) actually invokes the job. Keyed as "<file>:<method>".
-const knownUndrivenJobs = new Set([
-  'sla.service.ts:runWarningJob',
-  'sla.service.ts:runBreachJob',
-  'notifications.service.ts:dispatchQueuedEmail',
-  'notifications.service.ts:dispatchQueuedSms',
-  'notifications.service.ts:dispatchQueuedWhatsApp',
-  'attachments.service.ts:transitionScanStatus',
-]);
+const knownUndrivenJobs = new Set();
 
 function walkTs(root, dir, acc) {
   if (!existsSync(join(root, dir))) {
