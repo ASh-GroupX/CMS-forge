@@ -65,6 +65,172 @@ Verification:
 - Passed: `corepack pnpm openapi:check`.
 - Passed: `corepack pnpm typecheck`.
 
+## P9-02 - Anti-Mojibake Arabic Locale Lint Gate
+
+Date: 2026-06-20
+Risk: Medium
+Status: Passed
+Requirements: REQ-LOCALIZATION-001 AC1, REQ-LOCALIZATION-001 AC2, UI-DESIGN-001 AC3, UI-DESIGN-001 AC4
+
+Evidence:
+- Added `tools/i18n-lint.mjs` to scan `apps/web/src/i18n/*.ts` for U+00C3,
+  U+00C2, U+00D8, U+00D9, and U+FFFD mojibake markers.
+- The same gate checks each `ar:` locale block contains Arabic-range Unicode code
+  points.
+- Wired the i18n gate into `tools/lint.mjs`, so `corepack pnpm lint` fails on
+  Arabic mojibake before pilot.
+- Added `tools/i18n-lint.test.mjs` to prove the gate accepts current clean i18n,
+  rejects mojibake, and rejects an Arabic block without Arabic code points.
+- No business or workflow authority moved into React.
+
+Verification:
+- Passed: `corepack pnpm test:web -- localization`.
+- Passed: `corepack pnpm lint`.
+- Failed then repaired: `corepack pnpm test` initially caught a test fixture that
+  wrote literal Unicode escapes instead of marker characters, then caught the
+  `ar:` matcher only handling multiline object properties. Both were repaired.
+- Passed: `corepack pnpm test` (48/48 tool tests; coverage gate passed).
+- Passed: `corepack pnpm typecheck`.
+
+## P9-01E - Remaining Staff Arabic I18n
+
+Date: 2026-06-20
+Risk: Medium
+Status: Passed
+Requirements: REQ-LOCALIZATION-001 AC1, REQ-LOCALIZATION-001 AC2, UI-DESIGN-001 AC3, UI-DESIGN-001 AC4
+
+Evidence:
+- Confirmed `apps/web/src/i18n/staff-audit-viewer.ts`,
+  `apps/web/src/i18n/staff-notification-center.ts`, and
+  `apps/web/src/i18n/staff-reports-dashboard.ts` already contain real Arabic
+  Unicode code points and no U+00C3, U+00C2, U+00D8, U+00D9, or U+FFFD markers.
+- Extended `apps/web/test/localization/staff-shell-localization.test.ts` to cover
+  audit viewer, notification center, and reports dashboard Arabic text bundles.
+- Verified audit, notification, and reports surfaces render Arabic RTL and
+  English LTR through the existing staff shell.
+- Verified reports export copy still states RBAC-filtered backend scope.
+- No permission, branch-scope, business, or workflow authority moved into React.
+
+Verification:
+- Passed: `corepack pnpm test:web -- localization`.
+- Passed: `corepack pnpm test:e2e -- ui-smoke`.
+- Passed: `corepack pnpm test:e2e -- accessibility`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+
+## Phase 9 Active Evidence Index
+
+Date: 2026-06-20
+Status: Passed through P9-02
+
+- P9-01A: Passed `corepack pnpm test:web -- localization`,
+  `corepack pnpm test:e2e -- ui-smoke`,
+  `corepack pnpm test:e2e -- accessibility`, `corepack pnpm lint`, and
+  `corepack pnpm typecheck`.
+- P9-01B: Passed `corepack pnpm test:web -- localization`,
+  `corepack pnpm test:e2e -- accessibility`, `corepack pnpm lint`, and
+  `corepack pnpm typecheck`.
+- P9-01C: Passed `corepack pnpm test:web -- localization`,
+  `corepack pnpm test:e2e -- ui-smoke`,
+  `corepack pnpm test:e2e -- accessibility`, `corepack pnpm lint`, and
+  `corepack pnpm typecheck`.
+- P9-01D: Passed `corepack pnpm test:web -- localization`,
+  `corepack pnpm test:e2e -- ui-smoke`,
+  `corepack pnpm test:e2e -- accessibility`, `corepack pnpm lint`, and
+  `corepack pnpm typecheck`.
+- P9-01E: Passed `corepack pnpm test:web -- localization`,
+  `corepack pnpm test:e2e -- ui-smoke`,
+  `corepack pnpm test:e2e -- accessibility`, `corepack pnpm lint`, and
+  `corepack pnpm typecheck`.
+- P9-02: Passed `corepack pnpm test:web -- localization`,
+  `corepack pnpm lint`, `corepack pnpm test` (48/48 tool tests; coverage gate
+  passed), and `corepack pnpm typecheck`.
+- AUTO PHASE stopped at `PLAN-P9-03` because shadcn adoption must be split before
+  build work.
+
+## P9-01D - Admin Arabic I18n
+
+Date: 2026-06-20
+Risk: Medium
+Status: Passed
+Requirements: REQ-LOCALIZATION-001 AC1, REQ-LOCALIZATION-001 AC2, UI-DESIGN-001 AC3, UI-DESIGN-001 AC4
+
+Evidence:
+- Repaired CP1252 mojibake in `apps/web/src/i18n/staff-admin-branches.ts`.
+- Confirmed `apps/web/src/i18n/staff-admin-categories-sla.ts`,
+  `apps/web/src/i18n/staff-admin-users.ts`, and
+  `apps/web/src/i18n/staff-admin-notification-templates.ts` already contain real
+  Arabic Unicode code points and no U+00C3, U+00C2, U+00D8, U+00D9, or U+FFFD
+  markers.
+- Extended `apps/web/test/localization/staff-shell-localization.test.ts` to cover
+  branch/department, category/SLA, users/roles, and notification template admin
+  Arabic text bundles.
+- Verified admin surfaces render Arabic RTL and English LTR through the existing
+  staff shell.
+- No RBAC/admin authority moved into React.
+
+Verification:
+- Passed: `corepack pnpm test:web -- localization`.
+- Passed: `corepack pnpm test:e2e -- ui-smoke`.
+- Passed: `corepack pnpm test:e2e -- accessibility`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+
+## P9-01C - Complaint And Attachment Arabic I18n
+
+Date: 2026-06-20
+Risk: Medium
+Status: Passed
+Requirements: REQ-LOCALIZATION-001 AC1, REQ-LOCALIZATION-001 AC2, UI-DESIGN-001 AC3, UI-DESIGN-001 AC4
+
+Evidence:
+- Repaired CP1252 mojibake in
+  `apps/web/src/i18n/staff-complaint-create.ts` and
+  `apps/web/src/i18n/staff-complaint-detail.ts`.
+- Confirmed `apps/web/src/i18n/staff-confirmations.ts` and
+  `apps/web/src/i18n/staff-attachments.ts` already contain real Arabic Unicode
+  code points and no U+00C3, U+00C2, U+00D8, U+00D9, or U+FFFD markers.
+- Extended `apps/web/test/localization/staff-shell-localization.test.ts` to cover
+  complaint create, complaint detail, confirmation, and attachment Arabic text.
+- Verified the staff shell renders complaint and attachment surfaces in Arabic
+  RTL and English LTR.
+- Confirmation copy remains explicit for close/reject workflow actions.
+- No business or workflow authority moved into React.
+
+Verification:
+- Passed: `corepack pnpm test:web -- localization`.
+- Passed: `corepack pnpm test:e2e -- ui-smoke`.
+- Passed: `corepack pnpm test:e2e -- accessibility`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+
+## P9-01B - Portal Arabic I18n
+
+Date: 2026-06-20
+Risk: Medium
+Status: Passed
+Requirements: REQ-LOCALIZATION-001 AC1, REQ-LOCALIZATION-001 AC2, UI-DESIGN-001 AC3, UI-DESIGN-001 AC4
+
+Evidence:
+- Confirmed `apps/web/src/i18n/portal-submission.ts`,
+  `apps/web/src/i18n/portal-tracking.ts`, and
+  `apps/web/src/i18n/portal-survey.ts` already contain real Arabic Unicode code
+  points and no U+00C3, U+00C2, U+00D8, U+00D9, or U+FFFD mojibake markers.
+- Extended `apps/web/test/localization/staff-shell-localization.test.ts` to cover
+  portal submission, tracking, and survey Arabic strings plus English
+  language-switch targets.
+- Verified portal submission, tracking, and survey render Arabic RTL and English
+  LTR.
+- Verified portal tracking copy still requires verification before showing
+  complaint status.
+- No business or workflow authority moved into React.
+
+Verification:
+- Passed: `corepack pnpm test:web -- localization`.
+- Passed: `corepack pnpm test:e2e -- accessibility`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+
 Security self-check:
 - Roles and branch scope come from the server session, never client input:
   `SessionAuthGuard` populates `request.principal` from the HttpOnly
@@ -1204,3 +1370,61 @@ Security self-check:
 - Provider wiring: missing production DI providers now fail loudly at Nest
   construction instead of falling back to silent default objects/providers.
   Runtime smoke proves current module wiring supplies the required providers.
+
+## P9-01A - Staff Shell Arabic And Root Direction
+
+Date: 2026-06-20
+Risk: Medium
+Status: Passed
+Requirements: REQ-LOCALIZATION-001 AC1, REQ-LOCALIZATION-001 AC2, UI-DESIGN-001 AC3, UI-DESIGN-001 AC4
+
+Evidence:
+- Confirmed `apps/web/src/i18n/staff-shell.ts` already contains real Arabic
+  Unicode code points and no U+00C3, U+00C2, U+00D8, U+00D9, or U+FFFD mojibake
+  markers.
+- Added `apps/web/test/localization/staff-shell-localization.test.ts` to lock the
+  staff shell Arabic strings, English language-switch target, Arabic RTL render,
+  English LTR render, and root locale bridge behavior.
+- Added `localization` to `tools/web-test.mjs`.
+- Updated `apps/web/src/app/layout.tsx` to set root `<html lang dir>` from the
+  resolved locale.
+- Added `apps/web/src/middleware.ts` to bridge the URL `locale` query parameter
+  into the root layout through `x-cms-locale`.
+- No business or workflow authority moved into React.
+
+Verification:
+- Passed: `corepack pnpm test:web -- localization`.
+- Passed: `corepack pnpm test:e2e -- ui-smoke`.
+- Passed: `corepack pnpm test:e2e -- accessibility`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+
+## Phase 9 Active Evidence Index
+
+Date: 2026-06-20
+Status: Passed through P9-02
+
+- P9-01A: Passed `corepack pnpm test:web -- localization`,
+  `corepack pnpm test:e2e -- ui-smoke`,
+  `corepack pnpm test:e2e -- accessibility`, `corepack pnpm lint`, and
+  `corepack pnpm typecheck`.
+- P9-01B: Passed `corepack pnpm test:web -- localization`,
+  `corepack pnpm test:e2e -- accessibility`, `corepack pnpm lint`, and
+  `corepack pnpm typecheck`.
+- P9-01C: Passed `corepack pnpm test:web -- localization`,
+  `corepack pnpm test:e2e -- ui-smoke`,
+  `corepack pnpm test:e2e -- accessibility`, `corepack pnpm lint`, and
+  `corepack pnpm typecheck`.
+- P9-01D: Passed `corepack pnpm test:web -- localization`,
+  `corepack pnpm test:e2e -- ui-smoke`,
+  `corepack pnpm test:e2e -- accessibility`, `corepack pnpm lint`, and
+  `corepack pnpm typecheck`.
+- P9-01E: Passed `corepack pnpm test:web -- localization`,
+  `corepack pnpm test:e2e -- ui-smoke`,
+  `corepack pnpm test:e2e -- accessibility`, `corepack pnpm lint`, and
+  `corepack pnpm typecheck`.
+- P9-02: Passed `corepack pnpm test:web -- localization`,
+  `corepack pnpm lint`, `corepack pnpm test` (48/48 tool tests; coverage gate
+  passed), and `corepack pnpm typecheck`.
+- AUTO PHASE stopped at `PLAN-P9-03` because shadcn adoption must be split before
+  build work.

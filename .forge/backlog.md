@@ -319,18 +319,18 @@ Phase 9 is the remaining "real product on real infra" work. Phase DoD: proven on
 real/staging environment, not green locally.
 
 UI finish (fixes the "preview shell / I don't like the app" problem; hard go-live gate):
-- [ ] P9-01A: Fix the staff shell Arabic i18n (`staff-shell.ts`) and wire root
+- [x] P9-01A: Fix the staff shell Arabic i18n (`staff-shell.ts`) and wire root
       `lang`/`dir` from locale in `apps/web/src/app/layout.tsx`
-- [ ] P9-01B: Fix portal Arabic i18n (`portal-submission.ts`,
+- [x] P9-01B: Fix portal Arabic i18n (`portal-submission.ts`,
       `portal-tracking.ts`, `portal-survey.ts`)
-- [ ] P9-01C: Fix complaint and attachment Arabic i18n (`staff-complaint-create.ts`,
+- [x] P9-01C: Fix complaint and attachment Arabic i18n (`staff-complaint-create.ts`,
       `staff-complaint-detail.ts`, `staff-confirmations.ts`, `staff-attachments.ts`)
-- [ ] P9-01D: Fix admin Arabic i18n (`staff-admin-branches.ts`,
+- [x] P9-01D: Fix admin Arabic i18n (`staff-admin-branches.ts`,
       `staff-admin-categories-sla.ts`, `staff-admin-users.ts`,
       `staff-admin-notification-templates.ts`)
-- [ ] P9-01E: Fix remaining staff Arabic i18n (`staff-audit-viewer.ts`,
+- [x] P9-01E: Fix remaining staff Arabic i18n (`staff-audit-viewer.ts`,
       `staff-notification-center.ts`, `staff-reports-dashboard.ts`)
-- [ ] P9-02: Anti-mojibake + Arabic-locale lint gate (fails on Ø/Ù-class mojibake;
+- [x] P9-02: Anti-mojibake + Arabic-locale lint gate (fails on Ø/Ù-class mojibake;
       asserts Arabic strings are real Arabic-range codepoints) - lands AFTER P9-01
 - [ ] P9-03: Adopt shadcn/ui via the shadcn CLI (`npx shadcn init` + `add`), never
       hand-rolled - base primitives (button, card, input, select, table, badge, dialog,

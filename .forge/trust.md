@@ -401,3 +401,71 @@ Final verification:
 
 Recommendation: Phase 8 complete. No next unfinished phase is declared in the
 current backlog; mark the Forge chain complete.
+
+## P9-01A Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-01A is complete: staff shell Arabic text is verified as real Arabic Unicode,
+the English switch target is no longer at risk of mojibake, the staff shell
+renders Arabic RTL and English LTR, and the root document now receives
+`lang`/`dir` from the locale query bridge. Continue to P9-01B for portal Arabic
+i18n cleanup.
+
+## P9-01B Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-01B is complete: portal submission, tracking, and survey Arabic text is
+verified as real Arabic Unicode, all three portal pages still render Arabic RTL
+and English LTR, and the tracking privacy copy still requires verification
+before status exposure. Continue to P9-01C for complaint and attachment Arabic
+i18n cleanup.
+
+## P9-01C Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-01C is complete: complaint create/detail mojibake was mechanically repaired,
+confirmation and attachment bundles were verified clean, and localization tests
+now cover the complaint and attachment Arabic surfaces with RTL/LTR rendering.
+Continue to P9-01D for admin Arabic i18n cleanup.
+
+## P9-01D Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-01D is complete: admin branch/department mojibake was mechanically repaired,
+the other admin bundles were verified clean, and localization tests now cover
+admin Arabic text plus RTL/LTR rendering. Continue to P9-01E for the remaining
+staff Arabic bundles.
+
+## P9-01E Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-01E is complete: the remaining staff audit, notification, and reports bundles
+were verified clean, localization tests now cover all P9-01 i18n bundles, and
+RTL/LTR proof still passes. Continue to P9-02 to turn the mojibake check into a
+lint gate.
+
+## P9-02 Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Needs Planning
+
+P9-02 is complete: web i18n files now have a lint-enforced mojibake marker check
+and an Arabic-codepoint check for `ar:` locale blocks, with tool tests proving
+the failure cases. Stop AUTO PHASE for planning because P9-03 shadcn adoption is
+larger than the 1-5 file build budget and should be split before implementation.

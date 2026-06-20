@@ -5,6 +5,7 @@ import { checkScaffold } from './scaffold-check.mjs';
 import { checkManifestTruth } from './manifest-truth-check.mjs';
 import { checkModuleWiring } from './wiring-check.mjs';
 import { checkJobRuntime } from './job-runtime-check.mjs';
+import { checkI18nArabicText } from './i18n-lint.mjs';
 
 const ignoredDirs = new Set(['.git', '.next', 'coverage', 'dist', 'node_modules']);
 const maxAgenticFileLines = 300;
@@ -207,6 +208,7 @@ export function lint(root = process.cwd()) {
     ...checkModuleWiring(root),
     ...checkManifestTruth(root),
     ...checkJobRuntime(root),
+    ...checkI18nArabicText(root),
   ];
 
   if (errors.length > 0) {
