@@ -289,7 +289,7 @@ only unit/static green.
 - [x] F8-00: Job-runtime gate (`FORGE-JOB-RUNTIME-001`) - `lint` fails when a
       background-job entrypoint has no runtime driver; current undriven jobs are
       grandfathered in a shrink-only ratchet so they are tracked and must be wired
-- [ ] F8-01: Background runner foundation - pick scheduler/worker (BullMQ on the
+- [x] F8-01: Background runner foundation - pick scheduler/worker (BullMQ on the
       existing Redis, or `@nestjs/schedule`), add the dependency, and a worker
       entrypoint beside `main.ts` that boots the DI graph (no business logic yet)
 - [ ] F8-02: Drive SLA jobs - runner invokes `runWarningJob`/`runBreachJob`

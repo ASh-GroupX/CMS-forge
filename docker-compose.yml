@@ -35,6 +35,19 @@ services:
       - postgres
       - redis
 
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: ["node", "dist/worker/index.js"]
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://cms_auto:cms_auto_dev@postgres:5432/cms_auto
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+
   web:
     build:
       context: .

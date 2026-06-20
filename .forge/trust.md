@@ -258,3 +258,16 @@ Final verification:
 
 Recommendation: Phase 7 complete. No next unfinished phase is declared in the
 current backlog; mark the forge goal complete.
+
+## F8-01 Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+F8-01 is complete: BullMQ is installed, the worker process boots the Nest DI
+context beside the API, connects to Redis for all three phase queues, and
+processes an enqueued smoke job through the noop processor. The job-runtime
+ratchet remains at 6 by design because this task added no business job calls.
+Continue to F8-02 to drive the SLA warning and breach jobs and remove those two
+ratchet entries.

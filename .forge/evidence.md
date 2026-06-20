@@ -752,3 +752,51 @@ Security self-check:
   the canonical payload moved to JSON storage to satisfy the source budget.
 - No secrets, OTPs, tokens, passwords, provider credentials, audit internals, or
   staff PII were added to public UI or proof artifacts.
+
+## F8-01 - Background Runner Foundation (BullMQ)
+
+Date: 2026-06-20
+Risk: High
+Status: Passed
+Requirements: ARCH-STACK-001, SLA-CALENDAR-001, NFR-OBS-001
+
+Evidence:
+- Added `bullmq` to `apps/api/package.json` and updated `pnpm-lock.yaml`.
+- Added `apps/api/src/worker/queue.ts` with REDIS_URL parsing, the queue registry
+  for `sla`, `notifications`, and `attachments-scan`, a typed enqueue helper, and
+  registry close helper.
+- Added `apps/api/src/worker/index.ts` as a second Nest application context
+  process. It boots the relevant DI graph, starts one noop BullMQ worker per
+  queue, logs queue connection, logs received smoke jobs, and shuts down cleanly.
+- Added a `worker` service to `docker-compose.yml` using the existing API image
+  with `node dist/worker/index.js` against the same Postgres and Redis services.
+- Added `apps/api/test/worker/queue.test.ts` covering registry creation,
+  enqueue routing, registry close, and rejected non-Redis URLs without live Redis.
+- Left the job-runtime ratchet at 6; this task added no SLA, notification, or
+  attachment business job calls.
+
+Verification:
+- Passed: `node --import tsx --test apps/api/test/worker/queue.test.ts` (4/4).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test` (46/46 tool tests; coverage gate passed).
+- Passed: `docker compose up -d redis worker`; image built, Redis/Postgres/worker
+  were running.
+- Passed: Docker worker log showed queue connections for `attachments-scan`,
+  `sla`, and `notifications`, then `worker ready queues=sla,notifications,attachments-scan`.
+- Passed: enqueued a smoke job inside the worker image with
+  `node --input-type=module -e ...`; output was `enqueued f8-01-smoke-1781934277758`.
+- Passed: Docker worker log showed
+  `test job received queue=notifications name=worker.smoke id=f8-01-smoke-1781934277758`.
+
+Security self-check:
+- Roles and branch scope: no client/RBAC surface was added; existing HTTP guards
+  still own session-derived role and branch scope.
+- State changes and audit: no domain state change or business job logic was
+  added. F8-02 must prove SLA state/audit behavior when it starts invoking jobs.
+- Secrets: `REDIS_URL` is parsed from environment and never logged; worker logs
+  queue name, job name, and job id only.
+- Portal exposure: no portal route or portal data shape changed.
+- Trust boundary proof: accepted Redis URLs are covered by the registry test and
+  Docker runtime proof; non-Redis URLs are rejected by unit test before any queue
+  is created.
