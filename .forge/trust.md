@@ -359,3 +359,45 @@ that touched this surface now pass explicit fakes/adapters, static checks pass,
 and the Docker runtime smoke still boots API plus worker and proves the Phase 8
 runtime behaviors. Phase 8 backlog is complete; stop AUTO PHASE at
 `PHASE-8-REVIEW`.
+
+## PHASE-8-REVIEW - Operational Completion Acceptance Review
+
+Date: 2026-06-20
+Risk: High
+Decision: Accept Phase
+Reviewer tier: PHASE-REVIEWER
+
+Phase 8 is accepted. The review verified that F8-00 through F8-07 are checked
+done, have task evidence, and include executed runtime/Docker proof for the
+worker, SLA jobs, notification dispatch, attachment scan, S3-compatible storage,
+the default E2E runtime gate, and missing-provider DI failure behavior.
+
+Review findings:
+- Accepted: job-runtime lint has an empty undriven-job ratchet, and the worker
+  invokes the public `SlaService`, `NotificationsService`, and
+  `AttachmentsService` entrypoints instead of importing repositories or Prisma
+  models directly.
+- Accepted: attachment storage is behind `AttachmentStoragePort`; production
+  defaults to S3, local/test can use the in-memory double, signed URLs are
+  short-lived, and upload/download/scan audit paths stay in the existing service
+  boundary.
+- Accepted: no Phase 8 source file exceeds the 300-line agentic source budget.
+- Accepted: no production default constructor fallback remains under
+  `apps/api/src` or `packages`.
+- Accepted: no SRS, architecture, RBAC, audit, portal privacy, OpenAPI, or
+  security boundary weakening was found in the reviewed Phase 8 diff.
+
+Final verification:
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test` (46/46 tool tests; coverage gate passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm test:e2e` with runtime proof
+  `f8-06-1781941797776`.
+- Passed: `corepack pnpm test:e2e -- runtime-smoke` with runtime proof
+  `f8-06-1781941820290`.
+- Passed: `rg -n "= \\{\\} as|= new InMemory|= new .*Provider|= new .*Service" apps/api/src packages`
+  returned no production matches.
+
+Recommendation: Phase 8 complete. No next unfinished phase is declared in the
+current backlog; mark the Forge chain complete.
