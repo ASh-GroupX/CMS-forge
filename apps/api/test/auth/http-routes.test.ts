@@ -6,7 +6,7 @@ import 'reflect-metadata';
 import { Reflector } from '@nestjs/core';
 import type { ArgumentsHost, ExecutionContext } from '@nestjs/common';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
-import { RbacGuard, SessionAuthGuard } from '../../src/core/auth.guard.ts';
+import { BranchScoped, RbacGuard, Roles, SessionAuthGuard } from '../../src/core/auth.guard.ts';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
 import { AppException, AppExceptionFilter, correlationMiddleware } from '../../src/core/http-kernel.ts';
 import { AuthController } from '../../src/modules/auth/auth.controller.ts';
@@ -75,6 +75,24 @@ function context(req: AuthenticatedRequest): ExecutionContext {
     getHandler: () => AuthController.prototype.me,
     getClass: () => AuthController,
   } as ExecutionContext;
+}
+
+class GuardedController {
+  @Roles('ADMIN', 'BRANCH_MANAGER')
+  @BranchScoped()
+  guarded(): void {}
+}
+
+function guardedContext(req: AuthenticatedRequest): ExecutionContext {
+  return {
+    switchToHttp: () => ({ getRequest: () => req }),
+    getHandler: () => GuardedController.prototype.guarded,
+    getClass: () => GuardedController,
+  } as ExecutionContext;
+}
+
+function guardNames(method: keyof AuthController): string[] {
+  return (Reflect.getMetadata('__guards__', AuthController.prototype[method]) ?? []).map((guard: { name?: string }) => guard.name);
 }
 
 type ErrorEnvelope = {
@@ -217,6 +235,19 @@ test('password reset consume route keeps invalid token result generic', async ()
   assert.deepEqual(result, { ok: false });
 });
 
+test('auth me returns the server session principal for any staff role', () => {
+  const staffPrincipal = { ...principal, roleCode: 'CR_OFFICER' };
+  const result = controller({}).me(guardRequest({ principal: staffPrincipal }));
+
+  assert.deepEqual(result, { user: staffPrincipal });
+  assert.equal(JSON.stringify(result).includes('raw-token'), false);
+  assert.equal(JSON.stringify(result).includes('passwordHash'), false);
+});
+
+test('auth me uses session auth only; RBAC belongs on protected resource routes', () => {
+  assert.deepEqual(guardNames('me'), ['SessionAuthGuard']);
+});
+
 test('malformed login input returns the standard error envelope code', async () => {
   await assert.rejects(
     controller({}).login({ identifier: '', password: 'secret' }, request(), response()),
@@ -338,10 +369,10 @@ test('rbac guard allows and denies roles using only the server principal', async
     { record: async (input) => auditRecords.push(input) } as AuditService,
   );
 
-  assert.equal(await guard.canActivate(context(guardRequest({ principal }))), true);
+  assert.equal(await guard.canActivate(guardedContext(guardRequest({ principal }))), true);
 
   await assert.rejects(
-    guard.canActivate(context(guardRequest({
+    guard.canActivate(guardedContext(guardRequest({
       principal: { ...principal, roleCode: 'CR_OFFICER' },
       headers: { 'x-role-code': 'ADMIN' },
     }))),
@@ -359,10 +390,10 @@ test('branch scope guard allows matching branch and denies mismatched branch', a
   );
   const branchManager = { ...principal, roleCode: 'BRANCH_MANAGER' };
 
-  assert.equal(await guard.canActivate(context(guardRequest({ principal: branchManager }))), true);
+  assert.equal(await guard.canActivate(guardedContext(guardRequest({ principal: branchManager }))), true);
 
   await assert.rejects(
-    guard.canActivate(context(guardRequest({
+    guard.canActivate(guardedContext(guardRequest({
       principal: branchManager,
       url: '/auth/me?branchId=branch_other',
       headers: { 'x-branch-id': 'branch_main' },

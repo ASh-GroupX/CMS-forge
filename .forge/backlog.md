@@ -219,46 +219,56 @@ any conflict. Carry-forward condition mapping is annotated inline.
         status, severity, owner, date-range) with RBAC + branch scope
   - [x] F7-02B: Search HTTP route with pagination, RBAC, branch scope, and OpenAPI
         (`test:api -- search`)
-- [ ] F7-03: Real session-bound staff UI data wiring (REQ-RBAC-001, UI-SCREEN-001
+- [x] F7-03: Real session-bound staff UI data wiring (REQ-RBAC-001, UI-SCREEN-001
       AC2/AC3; **PHASE-6 carry-forward condition 1**)
-  - [ ] F7-03A: Real staff login + session-aware web data layer — call
+  - [x] F7-03A: Real staff login + session-aware web data layer — call
         `POST /auth/login`, forward the HttpOnly session cookie from server
         components, resolve role/branch from `/auth/me`; the `?role=` query param
         must no longer be an authority source (split further if oversized)
-  - [ ] F7-03B: Wire staff dashboard summary cards to the real dashboard read
-  - [ ] F7-03C: Wire reports dashboard + export affordance to the real report
+    - [x] F7-03A1: Make `GET /auth/me` a session-principal endpoint for any
+          authenticated staff role
+    - [x] F7-03A2: Resolve the staff shell role from `/auth/me` by forwarding the
+          HttpOnly session cookie from the server component; keep preview params
+          non-authoritative
+    - [x] F7-03A3: Add staff login/logout form actions that call the auth API and
+          apply HttpOnly session cookie changes server-side
+  - [x] F7-03B: Wire staff dashboard summary cards to the real dashboard read
+  - [x] F7-03C: Wire reports dashboard + export affordance to the real report
         reads and export route
-  - [ ] F7-03D: Wire work queue + complaint detail reads to real branch-scoped data
-- [ ] F7-04: Customer portal UI — homeless MVP/`must` screens; portal backend
+  - [x] F7-03D: Wire work queue + complaint detail reads to real branch-scoped data
+    - [x] F7-03D1: Wire work queue rows to the real `GET /complaints` read
+    - [x] F7-03D2: Wire complaint detail workspace to the real
+          `GET /complaints/{id}` read
+- [x] F7-04: Customer portal UI — homeless MVP/`must` screens; portal backend
       already exists (REQ-PORTAL-001, REQ-PORTAL-002, REQ-SURVEY-001,
       UI-DESIGN-001; **PHASE-6 carry-forward condition 4**). If any screen is cut,
       record an explicit commercial exclusion per UI-SCREEN-001 AC5.
-  - [ ] F7-04A: Portal submission UI (UI-018) — localized RTL/LTR form, attachment
+  - [x] F7-04A: Portal submission UI (UI-018) — localized RTL/LTR form, attachment
         upload, reference-number result; no internal data exposed
-  - [ ] F7-04B: Portal tracking UI (UI-019) — reference + verification, public
+  - [x] F7-04B: Portal tracking UI (UI-019) — reference + verification, public
         status timeline, follow-up when allowed; no internal comments/audit/DMS/
         staff PII
-  - [ ] F7-04C: Survey UI (UI-020) — one-time expiring link, 1-5 rating, optional
+  - [x] F7-04C: Survey UI (UI-020) — one-time expiring link, 1-5 rating, optional
         comment, used/expired handling
-- [ ] F7-05: Pre-pilot UI quality debt (QA-UI-001, UI-DESIGN-001; **PHASE-6
+- [x] F7-05: Pre-pilot UI quality debt (QA-UI-001, UI-DESIGN-001; **PHASE-6
       carry-forward conditions 2 and 3**)
-  - [ ] F7-05A: Real accessibility proof — keyboard traversal, focus visibility,
+  - [x] F7-05A: Real accessibility proof — keyboard traversal, focus visibility,
         and WCAG contrast (axe/browser) beyond the static render checks
-  - [ ] F7-05B: `destructive confirmation` UI state + proof for deactivate, reject,
+  - [x] F7-05B: `destructive confirmation` UI state + proof for deactivate, reject,
         and close affordances
-- [ ] F7-06: OpenAPI contract finalization and Swagger UI (ARCH-API-001; original
+- [x] F7-06: OpenAPI contract finalization and Swagger UI (ARCH-API-001; original
       "F7-02 OpenAPI contract generation and drift check") — confirm every
       public/staff route is documented and `openapi:check` drift-enforced
-- [ ] F7-07: Operations and observability hardening (NFR-AVAIL-001, NFR-OBS-001,
+- [x] F7-07: Operations and observability hardening (NFR-AVAIL-001, NFR-OBS-001,
       NFR-DATA-001, NFR-PERF-001)
-  - [ ] F7-07A: Make `ops:backup:check` a real backup/health check (replace the
+  - [x] F7-07A: Make `ops:backup:check` a real backup/health check (replace the
         fail-loud placeholder)
-  - [ ] F7-07B: Make `test:performance` a real performance baseline (replace the
+  - [x] F7-07B: Make `test:performance` a real performance baseline (replace the
         fail-loud placeholder)
-  - [ ] F7-07C: Wire `security:check` to the real security/auth/admin/audit suites
+  - [x] F7-07C: Wire `security:check` to the real security/auth/admin/audit suites
         (**PHASE-6 carry-forward condition 5**; carried from PHASE-1)
-- [ ] F7-08: UAT scripts with realistic automotive complaint data (UI-SCREEN-001
+- [x] F7-08: UAT scripts with realistic automotive complaint data (UI-SCREEN-001
       AC1) — UAT checklist covering every MVP screen and the L4 seeded dataset
-- [ ] F7-09: Deployment and operations runbook (NFR-SEC-001 AC4) — HTTPS redirect
+- [x] F7-09: Deployment and operations runbook (NFR-SEC-001 AC4) — HTTPS redirect
       at the gateway and parameterizing `POSTGRES_HOST_AUTH_METHOD` off `trust`
       before any non-dev deploy

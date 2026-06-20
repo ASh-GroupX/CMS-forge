@@ -1,5 +1,6 @@
 import React from 'react';
 import { staffShellText, type Locale } from '../i18n/staff-shell';
+import type { StaffDashboardSummary } from '../lib/staff-dashboard-api';
 
 type RolePreview = 'staff' | 'admin' | 'management';
 export type DashboardPreviewState = 'loading' | 'empty' | 'error';
@@ -24,12 +25,15 @@ export function DashboardSummary({
   locale,
   role,
   state,
+  summary,
 }: {
   locale: Locale;
   role: RolePreview;
   state?: DashboardPreviewState | undefined;
+  summary?: StaffDashboardSummary | undefined;
 }) {
   const t = staffShellText[locale].dashboard;
+  const cardValues = summary ? valuesFromSummary(summary) : values;
 
   if (state) {
     return (
@@ -49,11 +53,21 @@ export function DashboardSummary({
         return (
           <div key={key} className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-sm font-medium text-slate-600">{label}</p>
-            <p className="mt-2 text-3xl font-semibold tracking-normal">{values[key]}</p>
+            <p className="mt-2 text-3xl font-semibold tracking-normal">{cardValues[key]}</p>
             <p className="mt-1 text-xs text-slate-500">{description}</p>
           </div>
         );
       })}
     </section>
   );
+}
+
+function valuesFromSummary(summary: StaffDashboardSummary): Record<SummaryKey, string> {
+  return {
+    open: String(summary.openComplaints),
+    overdue: String(summary.overdueComplaints),
+    warnings: String(summary.slaWarningComplaints),
+    closed: String(summary.closedComplaints),
+    averageTat: `${Math.round((summary.averageTatHours / 24) * 10) / 10}d`,
+  };
 }

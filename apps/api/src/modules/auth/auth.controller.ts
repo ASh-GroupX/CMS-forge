@@ -1,9 +1,6 @@
 import { Body, Controller, Get, Headers, Post, Req, Res, UseGuards } from '@nestjs/common';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
-  BranchScoped,
-  RbacGuard,
-  Roles,
   SessionAuthGuard,
 } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
@@ -91,9 +88,7 @@ export class AuthController {
   }
 
   @Get('me')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles('ADMIN', 'BRANCH_MANAGER')
-  @BranchScoped()
+  @UseGuards(SessionAuthGuard)
   me(@Req() request: AuthenticatedRequest): Record<string, unknown> {
     return { user: request.principal };
   }

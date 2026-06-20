@@ -1,6 +1,8 @@
 import React from 'react';
 import { complaintDetailText } from '../i18n/staff-complaint-detail';
+import { confirmationText } from '../i18n/staff-confirmations';
 import type { Locale } from '../i18n/staff-shell';
+import type { StaffComplaintDetailView } from '../lib/staff-detail-api';
 
 export type ComplaintDetailPreviewState = 'loading' | 'empty' | 'error';
 export type ComplaintCommentsPreviewState = 'loading' | 'empty' | 'error';
@@ -10,17 +12,21 @@ export type ComplaintWorkflowPreviewState = 'loading' | 'empty' | 'error' | 'suc
 export function ComplaintDetailWorkspace({
   attachmentState,
   commentsState,
+  detail,
   locale,
   state,
   workflowState,
 }: {
   attachmentState?: ComplaintAttachmentPreviewState | undefined;
   commentsState?: ComplaintCommentsPreviewState | undefined;
+  detail?: StaffComplaintDetailView | undefined;
   locale: Locale;
   state?: ComplaintDetailPreviewState | undefined;
   workflowState?: ComplaintWorkflowPreviewState | undefined;
 }) {
   const t = complaintDetailText[locale];
+  const values = detail ? detailValues(detail, t.values) : t.values;
+  const timeline = detail ? detail.timeline : t.timeline;
 
   return (
     <section className="rounded-md border border-slate-200 bg-white shadow-sm" aria-label={t.title}>
@@ -36,14 +42,14 @@ export function ComplaintDetailWorkspace({
         <div className="grid gap-3 p-4 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="grid gap-3 md:grid-cols-2">
             <DetailPanel title={t.sections.facts} rows={[
-              [t.labels.reference, t.values.reference],
-              [t.labels.status, t.values.status],
-              [t.labels.severity, t.values.severity],
-              [t.labels.category, t.values.category],
+              [t.labels.reference, values.reference],
+              [t.labels.status, values.status],
+              [t.labels.severity, values.severity],
+              [t.labels.category, values.category],
             ]} />
             <DetailPanel title={t.sections.ownership} rows={[
-              [t.labels.owner, t.values.owner],
-              [t.labels.sla, t.values.sla],
+              [t.labels.owner, values.owner],
+              [t.labels.sla, values.sla],
             ]} />
             <DetailPanel title={t.sections.customer} rows={[
               [t.labels.customer, t.values.customer],
@@ -58,7 +64,7 @@ export function ComplaintDetailWorkspace({
             <section className="rounded-md border border-slate-200 bg-slate-50 p-3" aria-label={t.sections.timeline}>
               <h3 className="text-sm font-semibold">{t.sections.timeline}</h3>
               <ol className="mt-3 grid gap-2 text-sm text-slate-700">
-                {t.timeline.map((item) => (
+                {timeline.map((item) => (
                   <li className="rounded-sm border border-slate-200 bg-white px-3 py-2" key={item}>
                     {item}
                   </li>
@@ -77,6 +83,18 @@ export function ComplaintDetailWorkspace({
       )}
     </section>
   );
+}
+
+function detailValues(detail: StaffComplaintDetailView, fallback: typeof complaintDetailText.en.values): typeof complaintDetailText.en.values {
+  return {
+    ...fallback,
+    reference: detail.reference,
+    status: detail.status,
+    severity: detail.severity,
+    category: detail.subject,
+    owner: detail.assignee ?? fallback.owner,
+    sla: detail.branch,
+  };
 }
 
 function DetailPanel({ rows, title }: { rows: readonly (readonly [string, string])[]; title: string }) {
@@ -141,6 +159,7 @@ function AttachmentControls({ attachmentState, locale }: { attachmentState?: Com
 
 function WorkflowActionModal({ locale, workflowState }: { locale: Locale; workflowState?: ComplaintWorkflowPreviewState | undefined }) {
   const t = complaintDetailText[locale];
+  const confirm = confirmationText[locale].workflowCloseReject;
   const message =
     workflowState && workflowState !== 'validation' ? t.workflow.states[workflowState] : workflowState === 'validation' ? t.workflow.validation : null;
 
@@ -181,6 +200,17 @@ function WorkflowActionModal({ locale, workflowState }: { locale: Locale; workfl
             <textarea className="min-h-20 rounded-sm border border-slate-300 px-2 py-2" />
             {workflowState === 'validation' ? <span className="text-xs font-semibold text-red-700">{t.workflow.validation}</span> : null}
           </label>
+          {workflowState === 'validation' ? (
+            <section className="mt-3 rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900" role="alert" aria-label={confirm.title}>
+              <p className="font-semibold">{confirm.title}</p>
+              <p className="mt-1">{confirm.body}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button className="rounded-sm border border-red-300 bg-white px-3 py-2 text-sm font-semibold" type="button">{confirm.confirmClose}</button>
+                <button className="rounded-sm border border-red-300 bg-white px-3 py-2 text-sm font-semibold" type="button">{confirm.confirmReject}</button>
+                <button className="rounded-sm border border-slate-300 bg-white px-3 py-2 text-sm font-semibold" type="button">{confirm.cancel}</button>
+              </div>
+            </section>
+          ) : null}
         </>
       )}
     </section>

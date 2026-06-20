@@ -1,9 +1,21 @@
 import React from 'react';
 import { staffShellText, type Locale } from '../i18n/staff-shell';
+import type { ComplaintQueueItem } from '../lib/staff-complaints-api';
 
 export type QueuePreviewState = 'loading' | 'empty' | 'error';
 
-const rows = [
+type QueueRow = {
+  reference: string;
+  status: string;
+  severity: string;
+  owner: string;
+  branch: string;
+  sla: string;
+  updated: string;
+  action: string;
+};
+
+const rows: QueueRow[] = [
   {
     reference: 'CMP-2026-001',
     status: 'Submitted',
@@ -26,8 +38,17 @@ const rows = [
   },
 ] as const;
 
-export function WorkQueue({ locale, state }: { locale: Locale; state?: QueuePreviewState | undefined }) {
+export function WorkQueue({
+  locale,
+  rows: realRows,
+  state,
+}: {
+  locale: Locale;
+  rows?: ComplaintQueueItem[] | undefined;
+  state?: QueuePreviewState | undefined;
+}) {
   const t = staffShellText[locale].workQueue;
+  const queueRows = realRows?.map(queueRow) ?? rows;
 
   return (
     <section className="rounded-md border border-slate-200 bg-white shadow-sm" aria-label={t.title}>
@@ -66,7 +87,7 @@ export function WorkQueue({ locale, state }: { locale: Locale; state?: QueuePrev
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {queueRows.map((row) => (
                 <tr className="border-b border-slate-100" key={row.reference}>
                   {Object.values(row).map((value) => (
                     <td className="px-3 py-2 text-slate-700" key={`${row.reference}-${value}`}>
@@ -92,4 +113,17 @@ export function WorkQueue({ locale, state }: { locale: Locale; state?: QueuePrev
       </div>
     </section>
   );
+}
+
+function queueRow(row: ComplaintQueueItem): QueueRow {
+  return {
+    reference: row.referenceNumber,
+    status: row.status,
+    severity: row.severity,
+    owner: row.ownerId ?? 'Unassigned',
+    branch: row.branchId,
+    sla: 'Backend scoped',
+    updated: row.updatedAt.slice(0, 10),
+    action: 'Open detail',
+  };
 }

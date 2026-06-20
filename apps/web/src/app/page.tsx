@@ -10,6 +10,11 @@ import {
 } from 'lucide-react';
 import React from 'react';
 import { resolveLocale, staffShellText, type Locale } from '../i18n/staff-shell';
+import { getStaffDashboardSummary } from '../lib/staff-dashboard-api';
+import { getStaffComplaintDetail } from '../lib/staff-detail-api';
+import { getStaffReportRows } from '../lib/staff-reports-api';
+import { getStaffQueueItems } from '../lib/staff-queue-api';
+import { getStaffSessionPrincipal } from '../lib/staff-session-api';
 import { AdminSurfaces, type AdminPreviewState } from './admin-surfaces';
 import { ComplaintDetailWorkspace, type ComplaintCommentsPreviewState, type ComplaintDetailPreviewState, type ComplaintWorkflowPreviewState } from './complaint-detail-workspace';
 import { DashboardSummary, type DashboardPreviewState } from './dashboard-summary';
@@ -17,13 +22,13 @@ import { CustomerVehicleLookup, type LookupPreviewState } from './customer-vehic
 import { ComplaintCreateForm, type CreateFormPreviewState } from './complaint-create-form';
 import { AttachmentUploadPanel, type AttachmentPreviewState } from './attachment-upload-panel';
 import { NotificationCenter, type NotificationPreviewState } from './notification-center';
-import { PasswordResetPanel, type ResetPreviewState } from './password-reset-panel';
+import { type ResetPreviewState } from './password-reset-panel';
 import { ReportsDashboard, type ReportsPreviewState } from './reports-dashboard';
+import { AuthPanel, RolePanel, roleNav, type RolePreview } from './staff-shell-panels';
 import { WorkQueue, type QueuePreviewState } from './work-queue';
 
 const navKeys = ['dashboard', 'queue', 'create', 'detail', 'admin', 'reports', 'audit', 'notifications'] as const;
 type NavKey = (typeof navKeys)[number];
-type RolePreview = 'staff' | 'admin' | 'management';
 
 const icons = {
   dashboard: Gauge,
@@ -39,11 +44,31 @@ const icons = {
 type SearchParams = {
   admin?: string | string[]; auth?: string | string[]; attachment?: string | string[]; comments?: string | string[]; create?: string | string[];
   dashboard?: string | string[]; detail?: string | string[]; locale?: string | string[]; lookup?: string | string[]; notification?: string | string[];
-  queue?: string | string[]; reports?: string | string[]; role?: string | string[]; reset?: string | string[]; session?: string | string[]; workflow?: string | string[];
+  complaintId?: string | string[]; queue?: string | string[]; reports?: string | string[]; role?: string | string[]; reset?: string | string[]; session?: string | string[]; workflow?: string | string[];
 };
 
-export default async function StaffShellPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
+export default async function StaffShellPage({
+  cookieHeader,
+  fetchImpl,
+  searchParams,
+}: {
+  cookieHeader?: string;
+  fetchImpl?: typeof fetch;
+  searchParams?: Promise<SearchParams>;
+}) {
   const params = await searchParams;
+  const apiInput = {
+    ...(cookieHeader === undefined ? {} : { cookieHeader }),
+    ...(fetchImpl === undefined ? {} : { fetchImpl }),
+  };
+  const complaintId = readParam(params?.complaintId);
+  const [principal, dashboardSummary, reportRows, queueRows, complaintDetail] = await Promise.all([
+    getStaffSessionPrincipal(apiInput),
+    getStaffDashboardSummary(apiInput),
+    getStaffReportRows(apiInput),
+    getStaffQueueItems(apiInput),
+    getStaffComplaintDetail({ ...apiInput, ...(complaintId === undefined ? {} : { complaintId }) }),
+  ]);
   const locale = resolveLocale(params?.locale);
   return (
     <StaffShell
@@ -53,15 +78,19 @@ export default async function StaffShellPage({ searchParams }: { searchParams?: 
       commentsState={resolveDetail(readParam(params?.comments))}
       createState={resolveCreate(readParam(params?.create))}
       dashboardState={resolveDashboard(readParam(params?.dashboard))}
+      dashboardSummary={dashboardSummary ?? undefined}
       detailState={resolveDetail(readParam(params?.detail))}
-      isSignedIn={readParam(params?.session) === 'signed-in'}
+      complaintDetail={complaintDetail ?? undefined}
+      isSignedIn={Boolean(principal) || readParam(params?.session) === 'signed-in'}
       locale={locale}
       lookupState={resolveLookup(readParam(params?.lookup))}
       notificationState={oneOf<NotificationPreviewState>(readParam(params?.notification), ['loading', 'empty', 'error', 'success', 'validation', 'conflict'])}
       queueState={resolveQueue(readParam(params?.queue))}
+      queueRows={queueRows ?? undefined}
       reportsState={oneOf<ReportsPreviewState>(readParam(params?.reports), ['ready', 'loading', 'empty', 'error', 'success', 'validation', 'denied', 'conflict'])}
+      reportRows={reportRows ?? undefined}
       resetState={resolveReset(readParam(params?.reset))}
-      role={resolveRole(readParam(params?.role))}
+      role={principal ? roleFromPrincipal(principal.roleCode) : resolveRole(readParam(params?.role))}
       workflowState={oneOf<ComplaintWorkflowPreviewState>(readParam(params?.workflow), ['loading', 'empty', 'error', 'success', 'conflict', 'validation'])}
     />
   );
@@ -71,6 +100,12 @@ function readParam(value: string | string[] | undefined) { return Array.isArray(
 
 function resolveRole(value: string | undefined): RolePreview {
   return value === 'admin' || value === 'management' ? value : 'staff';
+}
+
+function roleFromPrincipal(roleCode: string): RolePreview {
+  if (roleCode === 'ADMIN') return 'admin';
+  if (roleCode === 'CR_MANAGER' || roleCode === 'BRANCH_MANAGER' || roleCode === 'MGMT_READONLY') return 'management';
+  return 'staff';
 }
 
 function resolveReset(value: string | undefined): ResetPreviewState | undefined {
@@ -94,26 +129,24 @@ function oneOf<T extends string>(value: string | undefined, values: readonly T[]
   return values.includes(value as T) ? (value as T) : undefined;
 }
 
-const roleNav: Record<RolePreview, readonly NavKey[]> = {
-  staff: ['dashboard', 'queue', 'create', 'detail', 'notifications'],
-  admin: navKeys,
-  management: ['dashboard', 'queue', 'detail', 'reports', 'audit', 'notifications'],
-};
-
 export function StaffShell({
   adminState,
   authError = false,
   attachmentState,
   commentsState,
+  complaintDetail,
   createState,
   dashboardState,
+  dashboardSummary,
   detailState,
   isSignedIn = false,
   locale,
   lookupState,
   notificationState,
   queueState,
+  queueRows,
   reportsState,
+  reportRows,
   resetState,
   role = 'staff',
   workflowState,
@@ -122,22 +155,26 @@ export function StaffShell({
   authError?: boolean;
   attachmentState?: AttachmentPreviewState | undefined;
   commentsState?: ComplaintCommentsPreviewState | undefined;
+  complaintDetail?: import('../lib/staff-detail-api').StaffComplaintDetailView | undefined;
   createState?: CreateFormPreviewState | undefined;
   dashboardState?: DashboardPreviewState | undefined;
+  dashboardSummary?: import('../lib/staff-dashboard-api').StaffDashboardSummary | undefined;
   detailState?: ComplaintDetailPreviewState | undefined;
   isSignedIn?: boolean;
   locale: Locale;
   lookupState?: LookupPreviewState | undefined;
   notificationState?: NotificationPreviewState | undefined;
   queueState?: QueuePreviewState | undefined;
+  queueRows?: import('../lib/staff-complaints-api').ComplaintQueueItem[] | undefined;
   reportsState?: ReportsPreviewState | undefined;
+  reportRows?: import('../lib/staff-reports-api').StaffReportRow[] | undefined;
   resetState?: ResetPreviewState | undefined;
   role?: RolePreview;
   workflowState?: ComplaintWorkflowPreviewState | undefined;
 }) {
   const t = staffShellText[locale];
   const switchLocale = locale === 'ar' ? 'en' : 'ar';
-  const visibleNav = roleNav[role];
+  const visibleNav = roleNav[role] as readonly NavKey[];
 
   return (
     <main lang={t.lang} dir={t.dir} className="min-h-screen bg-neutral p-4 text-neutral-foreground md:p-6">
@@ -189,11 +226,11 @@ export function StaffShell({
         </aside>
 
         <section className="grid content-start gap-4">
-          <DashboardSummary locale={locale} role={role} state={dashboardState} />
+          <DashboardSummary locale={locale} role={role} state={dashboardState} summary={dashboardSummary ?? undefined} />
           <NotificationCenter locale={locale} state={notificationState} />
-          <WorkQueue locale={locale} state={queueState} />
-          {role === 'staff' ? null : <ReportsDashboard locale={locale} state={reportsState} />}
-          <ComplaintDetailWorkspace attachmentState={attachmentState} commentsState={commentsState} locale={locale} state={detailState} workflowState={workflowState} />
+          <WorkQueue locale={locale} rows={queueRows} state={queueState} />
+          {role === 'staff' ? null : <ReportsDashboard locale={locale} rows={reportRows} state={reportsState} />}
+          <ComplaintDetailWorkspace attachmentState={attachmentState} commentsState={commentsState} detail={complaintDetail} locale={locale} state={detailState} workflowState={workflowState} />
           {role === 'admin' ? <AdminSurfaces locale={locale} state={adminState} /> : null}
           <CustomerVehicleLookup locale={locale} state={lookupState} />
           <ComplaintCreateForm locale={locale} state={createState} />
@@ -201,96 +238,5 @@ export function StaffShell({
         </section>
       </div>
     </main>
-  );
-}
-
-function RolePanel({ locale, role }: { locale: Locale; role: RolePreview }) {
-  const t = staffShellText[locale];
-  const roles: RolePreview[] = ['staff', 'admin', 'management'];
-
-  return (
-    <section className="mb-4 rounded-md border border-slate-200 bg-slate-50 p-3" aria-label={t.role.label}>
-      <p className="text-xs font-semibold text-slate-600">{t.role.label}</p>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {roles.map((candidate) => (
-          <a
-            className={`rounded-sm border px-2 py-1 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand ${
-              candidate === role ? 'border-brand bg-brand text-brand-foreground' : 'border-slate-300 bg-white text-slate-700'
-            }`}
-            href={`?locale=${locale}&session=signed-in&role=${candidate}`}
-            key={candidate}
-          >
-            {t.role[candidate]}
-          </a>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function AuthPanel({
-  authError,
-  isSignedIn,
-  locale,
-  resetState,
-}: {
-  authError: boolean;
-  isSignedIn: boolean;
-  locale: Locale;
-  resetState?: ResetPreviewState | undefined;
-}) {
-  const t = staffShellText[locale];
-  const previewQuery = `?locale=${locale}`;
-
-  if (isSignedIn) {
-    return (
-      <section className="mb-4 rounded-md border border-slate-200 bg-slate-50 p-3" aria-label={t.auth.signedIn}>
-        <p className="text-sm font-semibold">{t.auth.signedIn}</p>
-        <a
-          className="mt-3 inline-flex rounded-sm border border-slate-300 px-3 py-2 text-sm font-semibold hover:bg-white focus:outline-none focus:ring-2 focus:ring-brand"
-          href={previewQuery}
-        >
-          {t.auth.logout}
-        </a>
-      </section>
-    );
-  }
-
-  return (
-    <section className="mb-4 rounded-md border border-slate-200 bg-slate-50 p-3" aria-label={t.auth.loginTitle}>
-      <h2 className="text-sm font-semibold">{t.auth.loginTitle}</h2>
-      {authError ? (
-        <p className="mt-2 rounded-sm border border-red-200 bg-red-50 px-2 py-1 text-sm text-red-800" role="alert">
-          {t.auth.genericError}
-        </p>
-      ) : null}
-      <form className="mt-3 grid gap-2">
-        <label className="grid gap-1 text-sm font-medium">
-          {t.auth.identifier}
-          <input className="rounded-sm border border-slate-300 px-3 py-2" name="identifier" autoComplete="username" />
-        </label>
-        <label className="grid gap-1 text-sm font-medium">
-          {t.auth.password}
-          <input
-            className="rounded-sm border border-slate-300 px-3 py-2"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-          />
-        </label>
-        <button className="rounded-sm bg-brand px-3 py-2 text-sm font-semibold text-brand-foreground" type="button">
-          {t.auth.submit}
-        </button>
-      </form>
-      <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
-        <a className="text-brand underline" href={`${previewQuery}&session=signed-in`}>
-          {t.auth.previewSignedIn}
-        </a>
-        <a className="text-brand underline" href={`${previewQuery}&auth=error`}>
-          {t.auth.previewError}
-        </a>
-      </div>
-      <PasswordResetPanel locale={locale} state={resetState} />
-    </section>
   );
 }

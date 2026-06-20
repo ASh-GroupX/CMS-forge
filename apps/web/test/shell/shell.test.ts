@@ -4,6 +4,9 @@ import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { buildStaffComplaintCreateSubmission } from '../../src/app/complaint-create-form';
 import StaffShellPage from '../../src/app/page';
+import PortalSubmissionPage from '../../src/app/portal/page';
+import PortalSurveyPage from '../../src/app/portal/survey/page';
+import PortalTrackingPage from '../../src/app/portal/track/page';
 import { adminBranchesText } from '../../src/i18n/staff-admin-branches';
 import { adminCategoriesSlaText } from '../../src/i18n/staff-admin-categories-sla';
 import { adminNotificationTemplatesText } from '../../src/i18n/staff-admin-notification-templates';
@@ -12,7 +15,11 @@ import { auditViewerText } from '../../src/i18n/staff-audit-viewer';
 import { attachmentText } from '../../src/i18n/staff-attachments';
 import { complaintDetailText } from '../../src/i18n/staff-complaint-detail';
 import { complaintCreateText } from '../../src/i18n/staff-complaint-create';
+import { confirmationText } from '../../src/i18n/staff-confirmations';
 import { notificationCenterText } from '../../src/i18n/staff-notification-center';
+import { portalSubmissionText } from '../../src/i18n/portal-submission';
+import { portalSurveyText } from '../../src/i18n/portal-survey';
+import { portalTrackingText } from '../../src/i18n/portal-tracking';
 import { reportsDashboardText } from '../../src/i18n/staff-reports-dashboard';
 import { staffShellText } from '../../src/i18n/staff-shell';
 
@@ -71,6 +78,7 @@ test('staff shell renders signed-in preview with logout affordance', async () =>
 
   assert.match(html, /Signed in/);
   assert.match(html, /Log out/);
+  assert.match(html, /type="submit"/);
   assert.doesNotMatch(html, /Staff sign in/);
 });
 
@@ -94,6 +102,60 @@ test('admin role preview shows admin-only navigation', async () => {
   assert.doesNotMatch(html, /Admin-only surfaces hidden/);
 });
 
+test('staff shell resolves signed-in authority from auth me session principal', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ user: principal({ roleCode: 'ADMIN', branchId: null }) });
+  };
+  const html = renderToStaticMarkup(
+    await StaffShellPage({
+      cookieHeader: 'cms_staff_session=raw-session; other=value',
+      fetchImpl,
+      searchParams: Promise.resolve({ role: 'staff', session: 'signed-in' }),
+    }),
+  );
+
+  assert.equal(String(calls[0]?.input), 'http://localhost:3000/auth/me');
+  assert.deepEqual(calls[0]?.init?.headers, {
+    Accept: 'application/json',
+    cookie: 'cms_staff_session=raw-session; other=value',
+  });
+  assert.equal(calls[0]?.init?.cache, 'no-store');
+  assert.match(html, /Admin/);
+  assert.match(html, /Users, branches, categories/);
+  assert.doesNotMatch(html, /Admin-only surfaces hidden/);
+});
+
+test('staff shell ignores role query when a real session principal is present', async () => {
+  const fetchImpl: typeof fetch = async () => jsonResponse({ user: principal({ roleCode: 'CR_OFFICER' }) });
+  const html = renderToStaticMarkup(
+    await StaffShellPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ role: 'admin', session: 'signed-in' }),
+    }),
+  );
+
+  assert.match(html, /Admin-only surfaces hidden/);
+  assert.doesNotMatch(html, /Users, branches, categories/);
+  assert.doesNotMatch(html, /Reports dashboard/);
+});
+
+test('staff shell does not call auth me without a staff session cookie', async () => {
+  let calls = 0;
+  const fetchImpl: typeof fetch = async () => {
+    calls += 1;
+    return jsonResponse({});
+  };
+  const html = renderToStaticMarkup(
+    await StaffShellPage({ cookieHeader: 'other=value', fetchImpl, searchParams: Promise.resolve({ locale: 'en' }) }),
+  );
+
+  assert.equal(calls, 0);
+  assert.match(html, /Signed out/);
+});
+
 test('Arabic role preview keeps RTL direction and localized hidden state', async () => {
   const html = renderToStaticMarkup(
     await StaffShellPage({ searchParams: Promise.resolve({ locale: 'ar', session: 'signed-in', role: 'staff' }) }),
@@ -104,12 +166,248 @@ test('Arabic role preview keeps RTL direction and localized hidden state', async
   assert.ok(html.includes(staffShellText.ar.role.adminHidden));
 });
 
+test('portal submission renders English responsive complaint form', async () => {
+  const html = renderToStaticMarkup(await PortalSubmissionPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
+
+  assert.match(html, /dir="ltr"/);
+  assert.match(html, /Customer complaint portal/);
+  assert.match(html, /Customer name/);
+  assert.match(html, /Customer phone/);
+  assert.match(html, /Branch/);
+  assert.match(html, /Category/);
+  assert.match(html, /Subcategory/);
+  assert.match(html, /Severity/);
+  assert.match(html, /Incident date/);
+  assert.match(html, /Subject/);
+  assert.match(html, /Description/);
+  assert.match(html, /Vehicle VIN/);
+  assert.match(html, /type="file"/);
+  assert.match(html, /PDF, PNG, or JPG only/);
+  assert.match(html, /Submit complaint/);
+  assert.doesNotMatch(html, /audit|DMS|staff PII|internal comments/i);
+});
+
+test('portal submission keeps Arabic RTL localized labels', async () => {
+  const html = renderToStaticMarkup(
+    await PortalSubmissionPage({ searchParams: Promise.resolve({ locale: 'ar', state: 'validation' }) }),
+  );
+
+  assert.match(html, /dir="rtl"/);
+  assert.ok(html.includes(portalSubmissionText.ar.title));
+  assert.ok(html.includes(portalSubmissionText.ar.fields.customerName));
+  assert.ok(html.includes(portalSubmissionText.ar.fields.attachment));
+  assert.ok(html.includes(portalSubmissionText.ar.validation.required));
+});
+
+test('portal submission renders safe success reference result', async () => {
+  const html = renderToStaticMarkup(
+    await PortalSubmissionPage({
+      searchParams: Promise.resolve({ locale: 'en', state: 'success', reference: 'CMP-PORTAL-001' }),
+    }),
+  );
+
+  assert.match(html, /Complaint submitted/);
+  assert.match(html, /Reference number: CMP-PORTAL-001/);
+  assert.match(html, /role="status"/);
+  assert.doesNotMatch(html, /\+966500000001|SEEDDEMO00001|audit|DMS|staff PII/i);
+});
+
+test('portal submission renders loading validation and error states', async () => {
+  const loading = renderToStaticMarkup(
+    await PortalSubmissionPage({ searchParams: Promise.resolve({ locale: 'en', state: 'loading' }) }),
+  );
+  const validation = renderToStaticMarkup(
+    await PortalSubmissionPage({ searchParams: Promise.resolve({ locale: 'en', state: 'validation' }) }),
+  );
+  const error = renderToStaticMarkup(
+    await PortalSubmissionPage({ searchParams: Promise.resolve({ locale: 'en', state: 'error' }) }),
+  );
+
+  assert.match(loading, /Submitting complaint\./);
+  assert.match(loading, /disabled=""/);
+  assert.match(validation, /Review the highlighted fields\./);
+  assert.match(validation, /This field is required\./);
+  assert.match(error, /Complaint could not be submitted\. Review the details and try again\./);
+  assert.match(error, /role="alert"/);
+});
+
+test('portal submission source is public and render-only', () => {
+  const source = readFileSync('apps/web/src/app/portal/page.tsx', 'utf8');
+
+  assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie|createObjectURL|Blob|download/);
+  assert.doesNotMatch(source, /roleCode|principal|branchScope|actorId|ownerId|workflow|password|otp|token|secret|provider/);
+  assert.doesNotMatch(source, /audit|DMS|staff PII|internal comments/i);
+});
+
+test('portal tracking starts with verification gate and no status timeline', async () => {
+  const html = renderToStaticMarkup(await PortalTrackingPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
+
+  assert.match(html, /dir="ltr"/);
+  assert.match(html, /Track a complaint/);
+  assert.match(html, /Reference number/);
+  assert.match(html, /Customer phone/);
+  assert.match(html, /Verification code/);
+  assert.match(html, /Verification is required before complaint status is shown\./);
+  assert.doesNotMatch(html, /Public timeline/);
+  assert.doesNotMatch(html, /IN_PROGRESS/);
+});
+
+test('portal tracking keeps Arabic RTL localized labels', async () => {
+  const html = renderToStaticMarkup(
+    await PortalTrackingPage({ searchParams: Promise.resolve({ locale: 'ar', state: 'requested' }) }),
+  );
+
+  assert.match(html, /dir="rtl"/);
+  assert.ok(html.includes(portalTrackingText.ar.title));
+  assert.ok(html.includes(portalTrackingText.ar.sections.request));
+  assert.ok(html.includes(portalTrackingText.ar.fields.code));
+  assert.ok(html.includes(portalTrackingText.ar.states.requested));
+});
+
+test('portal tracking renders verified public status timeline only after verification', async () => {
+  const html = renderToStaticMarkup(
+    await PortalTrackingPage({
+      searchParams: Promise.resolve({ locale: 'en', state: 'verified', reference: 'CMP-TRACK-001' }),
+    }),
+  );
+
+  assert.match(html, /Verification complete\./);
+  assert.match(html, /Reference number/);
+  assert.match(html, /CMP-TRACK-001/);
+  assert.match(html, /Public timeline/);
+  assert.match(html, /SUBMITTED - 2026-06-19/);
+  assert.match(html, /IN_PROGRESS - 2026-06-19/);
+  assert.doesNotMatch(html, /\+966500000001|audit|DMS|staff PII|internal/i);
+});
+
+test('portal tracking renders invalid expired error and follow-up states', async () => {
+  const invalid = renderToStaticMarkup(
+    await PortalTrackingPage({ searchParams: Promise.resolve({ locale: 'en', state: 'invalid' }) }),
+  );
+  const expired = renderToStaticMarkup(
+    await PortalTrackingPage({ searchParams: Promise.resolve({ locale: 'en', state: 'expired' }) }),
+  );
+  const error = renderToStaticMarkup(
+    await PortalTrackingPage({ searchParams: Promise.resolve({ locale: 'en', state: 'error' }) }),
+  );
+  const followup = renderToStaticMarkup(
+    await PortalTrackingPage({ searchParams: Promise.resolve({ locale: 'en', state: 'followup' }) }),
+  );
+
+  assert.match(invalid, /Verification failed\. Check the reference and code, then try again\./);
+  assert.match(expired, /Verification expired\. Request a new code\./);
+  assert.match(error, /Tracking could not be loaded\. Try again\./);
+  assert.match(error, /role="alert"/);
+  assert.match(followup, /Follow-up received\./);
+  assert.match(followup, /Add follow-up/);
+  assert.match(followup, /Please add the missing service invoice\./);
+});
+
+test('portal tracking source does not render secrets or private data paths', () => {
+  const source = readFileSync('apps/web/src/app/portal/track/page.tsx', 'utf8');
+
+  assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie|createObjectURL|Blob|download/);
+  assert.doesNotMatch(source, /sessionToken|verificationId|roleCode|principal|branchScope|actorId|ownerId|workflow|password|secret|provider/);
+  assert.doesNotMatch(source, /audit|DMS|staff PII|internal comments|unrelated/i);
+});
+
+test('portal survey renders bounded accessible rating controls', async () => {
+  const html = renderToStaticMarkup(await PortalSurveyPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
+
+  assert.match(html, /dir="ltr"/);
+  assert.match(html, /Customer satisfaction survey/);
+  assert.match(html, /This survey link can be used once/);
+  assert.equal(html.match(/type="radio"/g)?.length, 5);
+  assert.match(html, /aria-label="1 - Very dissatisfied"/);
+  assert.match(html, /aria-label="5 - Very satisfied"/);
+  assert.match(html, /Optional comment/);
+  assert.match(html, /Submit survey/);
+});
+
+test('portal survey keeps Arabic RTL localized labels', async () => {
+  const html = renderToStaticMarkup(
+    await PortalSurveyPage({ searchParams: Promise.resolve({ locale: 'ar', state: 'validation' }) }),
+  );
+
+  assert.match(html, /dir="rtl"/);
+  assert.ok(html.includes(portalSurveyText.ar.title));
+  assert.ok(html.includes(portalSurveyText.ar.fields.rating));
+  assert.ok(html.includes(portalSurveyText.ar.ratingLabels[4]));
+  assert.ok(html.includes(portalSurveyText.ar.states.validation));
+});
+
+test('portal survey renders success without preserving comment details', async () => {
+  const html = renderToStaticMarkup(
+    await PortalSurveyPage({ searchParams: Promise.resolve({ locale: 'en', state: 'success' }) }),
+  );
+
+  assert.match(html, /Survey submitted\. Thank you for your feedback\./);
+  assert.match(html, /role="status"/);
+  assert.doesNotMatch(html, /The issue was resolved clearly|audit|DMS|staff PII/i);
+});
+
+test('portal survey used and expired states prevent resubmission', async () => {
+  const used = renderToStaticMarkup(await PortalSurveyPage({ searchParams: Promise.resolve({ locale: 'en', state: 'used' }) }));
+  const expired = renderToStaticMarkup(
+    await PortalSurveyPage({ searchParams: Promise.resolve({ locale: 'en', state: 'expired' }) }),
+  );
+
+  assert.match(used, /This survey link has already been used\./);
+  assert.match(expired, /This survey link has expired\./);
+  assert.doesNotMatch(used, /Submit survey/);
+  assert.doesNotMatch(expired, /Submit survey/);
+});
+
+test('portal survey renders validation loading and error states', async () => {
+  const validation = renderToStaticMarkup(
+    await PortalSurveyPage({ searchParams: Promise.resolve({ locale: 'en', state: 'validation' }) }),
+  );
+  const loading = renderToStaticMarkup(
+    await PortalSurveyPage({ searchParams: Promise.resolve({ locale: 'en', state: 'loading' }) }),
+  );
+  const error = renderToStaticMarkup(await PortalSurveyPage({ searchParams: Promise.resolve({ locale: 'en', state: 'error' }) }));
+
+  assert.match(validation, /Choose a rating from 1 to 5\./);
+  assert.match(loading, /Submitting survey\./);
+  assert.match(loading, /disabled=""/);
+  assert.match(error, /Survey could not be submitted\. Try again\./);
+  assert.match(error, /role="alert"/);
+});
+
+test('portal survey source does not render tokens or private data paths', () => {
+  const source = readFileSync('apps/web/src/app/portal/survey/page.tsx', 'utf8');
+
+  assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie|createObjectURL|Blob|download/);
+  assert.doesNotMatch(source, /token|session|verification|roleCode|principal|branchScope|actorId|ownerId|workflow|password|secret|provider/i);
+  assert.doesNotMatch(source, /audit|DMS|staff PII|internal comments|unrelated/i);
+});
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' }, status });
+}
+
+function principal(overrides: { roleCode?: string; branchId?: string | null } = {}) {
+  return {
+    sessionId: 'ses_test',
+    userId: 'usr_test',
+    email: 'staff@cms-auto.test',
+    nameEn: 'Staff User',
+    nameAr: 'موظف',
+    roleCode: overrides.roleCode ?? 'CR_OFFICER',
+    branchId: overrides.branchId ?? 'branch_main',
+  };
+}
+
 test('staff shell exposes password reset entry points', async () => {
   const html = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
+  const source = readFileSync('apps/web/src/app/staff-shell-panels.tsx', 'utf8');
 
   assert.match(html, /Password reset/);
   assert.match(html, /Forgot password\?/);
   assert.match(html, /Use reset token/);
+  assert.match(source, /action=\{loginStaffAction\}/);
+  assert.match(source, /action=\{logoutStaffAction\}/);
+  assert.doesNotMatch(source, /type="button"/);
 });
 
 test('password reset request state uses generic safe messaging', async () => {
@@ -165,7 +463,8 @@ test('Arabic password reset UI keeps RTL localized labels', async () => {
 test('password reset UI source does not use browser token storage', () => {
   const pageSource = readFileSync('apps/web/src/app/page.tsx', 'utf8');
   const resetSource = readFileSync('apps/web/src/app/password-reset-panel.tsx', 'utf8');
-  const source = `${pageSource}\n${resetSource}`;
+  const actionsSource = readFileSync('apps/web/src/lib/staff-auth-actions.ts', 'utf8');
+  const source = `${pageSource}\n${resetSource}\n${actionsSource}`;
 
   assert.doesNotMatch(source, /localStorage|sessionStorage|document\.cookie/);
 });
@@ -229,6 +528,60 @@ test('dashboard summary preview states render loading empty and error messages',
   assert.match(error, /role="alert"/);
 });
 
+test('dashboard summary renders real backend values through the session cookie', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith('/auth/me')) return jsonResponse({ user: principal({ roleCode: 'ADMIN', branchId: null }) });
+    return jsonResponse({
+      summary: {
+        openComplaints: 42,
+        overdueComplaints: 7,
+        slaWarningComplaints: 9,
+        closedComplaints: 30,
+        averageTatHours: 36,
+      },
+    });
+  };
+  const html = renderToStaticMarkup(
+    await StaffShellPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ role: 'staff', session: 'signed-in' }),
+    }),
+  );
+
+  const dashboardCall = calls.find((call) => String(call.input).endsWith('/reports/dashboard'));
+  assert.ok(dashboardCall);
+  assert.deepEqual(dashboardCall.init?.headers, {
+    Accept: 'application/json',
+    cookie: 'cms_staff_session=raw-session',
+  });
+  assert.match(html, />42</);
+  assert.match(html, />7</);
+  assert.match(html, />9</);
+  assert.match(html, />30</);
+  assert.match(html, />1.5d</);
+  assert.doesNotMatch(html, />18</);
+});
+
+test('dashboard summary keeps preview fallback when backend denies the session', async () => {
+  const fetchImpl: typeof fetch = async (input) => {
+    if (String(input).endsWith('/auth/me')) return jsonResponse({ user: principal({ roleCode: 'CR_OFFICER' }) });
+    return jsonResponse({ error: { code: 'RBAC_FORBIDDEN' } }, 403);
+  };
+  const html = renderToStaticMarkup(
+    await StaffShellPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ role: 'staff', session: 'signed-in' }),
+    }),
+  );
+
+  assert.match(html, />18</);
+  assert.doesNotMatch(html, />42</);
+});
+
 test('work queue renders localized headers filters and pagination', async () => {
   const html = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
 
@@ -272,6 +625,70 @@ test('work queue preview states render loading empty and error messages', async 
   assert.match(empty, /No complaints match the current filters\./);
   assert.match(error, /Work queue could not be loaded\. Try again\./);
   assert.match(error, /role="alert"/);
+});
+
+test('work queue renders real complaint rows through the session cookie', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith('/auth/me')) return jsonResponse({ user: principal({ roleCode: 'CR_OFFICER' }) });
+    if (String(input).endsWith('/complaints')) {
+      return jsonResponse({
+        items: [{
+          id: 'cmp_real_1',
+          referenceNumber: 'CMP-QUEUE-001',
+          status: 'IN_PROGRESS',
+          severity: 'HIGH',
+          subject: 'Engine noise',
+          branchId: 'branch_main',
+          ownerId: 'usr_owner',
+          createdAt: '2026-06-18T00:00:00.000Z',
+          updatedAt: '2026-06-19T09:30:00.000Z',
+        }],
+      });
+    }
+    return jsonResponse({ error: { code: 'RBAC_FORBIDDEN' } }, 403);
+  };
+  const html = renderToStaticMarkup(
+    await StaffShellPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ role: 'admin', session: 'signed-in' }),
+    }),
+  );
+
+  const queueCall = calls.find((call) => String(call.input).endsWith('/complaints'));
+  assert.ok(queueCall);
+  assert.equal(String(queueCall.input), 'http://localhost:3000/complaints');
+  assert.doesNotMatch(String(queueCall.input), /role|actor|workflow|branchId/i);
+  assert.deepEqual(queueCall.init?.headers, {
+    Accept: 'application/json',
+    cookie: 'cms_staff_session=raw-session',
+  });
+  assert.match(html, /CMP-QUEUE-001/);
+  assert.match(html, /IN_PROGRESS/);
+  assert.match(html, /HIGH/);
+  assert.match(html, /usr_owner/);
+  assert.match(html, /branch_main/);
+  assert.match(html, /2026-06-19/);
+  assert.doesNotMatch(html, /@|\+?\d{10,}/);
+});
+
+test('work queue keeps preview rows when backend denies queue read', async () => {
+  const fetchImpl: typeof fetch = async (input) => {
+    if (String(input).endsWith('/auth/me')) return jsonResponse({ user: principal({ roleCode: 'CR_OFFICER' }) });
+    return jsonResponse({ error: { code: 'RBAC_FORBIDDEN' } }, 403);
+  };
+  const html = renderToStaticMarkup(
+    await StaffShellPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ role: 'staff', session: 'signed-in' }),
+    }),
+  );
+
+  assert.match(html, /CMP-2026-001/);
+  assert.doesNotMatch(html, /CMP-QUEUE-001/);
 });
 
 test('staff shell keeps responsive layout classes for dashboard and queue', async () => {
@@ -345,6 +762,77 @@ test('complaint detail workspace preview states render loading empty and error m
   assert.match(error, /role="alert"/);
 });
 
+test('complaint detail renders real backend facts through the session cookie', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith('/auth/me')) return jsonResponse({ user: principal({ roleCode: 'CR_OFFICER' }) });
+    if (String(input).endsWith('/complaints/cmp%2Fdetail')) {
+      return jsonResponse({
+        complaint: {
+          id: 'cmp/detail',
+          referenceNumber: 'CMP-DETAIL-001',
+          status: 'IN_PROGRESS',
+          severity: 'HIGH',
+          subject: 'Engine noise',
+          branchId: 'branch_main',
+          ownerId: 'usr_owner',
+          createdAt: '2026-06-18T00:00:00.000Z',
+          updatedAt: '2026-06-19T09:30:00.000Z',
+          description: 'Scoped complaint detail.',
+          incidentAt: '2026-06-17T00:00:00.000Z',
+          statusHistory: [
+            { id: 'h1', fromStatus: null, toStatus: 'SUBMITTED', action: 'SUBMIT', actorId: 'usr_staff', actorRole: 'CR_OFFICER', requestSource: 'STAFF', reason: null, correlationId: null, createdAt: '2026-06-18T00:00:00.000Z' },
+            { id: 'h2', fromStatus: 'SUBMITTED', toStatus: 'IN_PROGRESS', action: 'ASSIGN_INVESTIGATION', actorId: 'usr_mgr', actorRole: 'BRANCH_MANAGER', requestSource: 'STAFF', reason: null, correlationId: null, createdAt: '2026-06-19T00:00:00.000Z' },
+          ],
+        },
+      });
+    }
+    return jsonResponse({ error: { code: 'RBAC_FORBIDDEN' } }, 403);
+  };
+  const html = renderToStaticMarkup(
+    await StaffShellPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ complaintId: 'cmp/detail', role: 'admin', session: 'signed-in' }),
+    }),
+  );
+
+  const detailCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail'));
+  assert.ok(detailCall);
+  assert.equal(String(detailCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail');
+  assert.doesNotMatch(String(detailCall.input), /role|actor|workflow|branchId/i);
+  assert.deepEqual(detailCall.init?.headers, {
+    Accept: 'application/json',
+    cookie: 'cms_staff_session=raw-session',
+  });
+  assert.match(html, /CMP-DETAIL-001/);
+  assert.match(html, /IN_PROGRESS/);
+  assert.match(html, /HIGH/);
+  assert.match(html, /Engine noise/);
+  assert.match(html, /branch_main/);
+  assert.match(html, /SUBMITTED - 2026-06-18/);
+  assert.match(html, /IN_PROGRESS - 2026-06-19/);
+  assert.doesNotMatch(html, /usr_mgr|usr_staff/);
+});
+
+test('complaint detail keeps preview fallback when backend denies detail read', async () => {
+  const fetchImpl: typeof fetch = async (input) => {
+    if (String(input).endsWith('/auth/me')) return jsonResponse({ user: principal({ roleCode: 'CR_OFFICER' }) });
+    return jsonResponse({ error: { code: 'BRANCH_SCOPE_FORBIDDEN' } }, 403);
+  };
+  const html = renderToStaticMarkup(
+    await StaffShellPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ complaintId: 'cmp_denied', role: 'staff', session: 'signed-in' }),
+    }),
+  );
+
+  assert.match(html, /CMP-2026-001/);
+  assert.doesNotMatch(html, /CMP-DETAIL-001/);
+});
+
 test('complaint detail workspace keeps responsive detail layout classes', async () => {
   const html = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
 
@@ -400,6 +888,15 @@ test('complaint detail attachment controls render actions and scan states', asyn
   assert.match(rejected, /Scan rejected/);
 });
 
+test('attachment rejection requires confirmation UI', async () => {
+  const html = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en', attachment: 'rejected' }) }));
+
+  assert.ok(html.includes(confirmationText.en.attachmentReject.title));
+  assert.ok(html.includes(confirmationText.en.attachmentReject.body));
+  assert.ok(html.includes(confirmationText.en.attachmentReject.confirm));
+  assert.match(html, /role="alert"/);
+});
+
 test('complaint detail attachment preview states render loading empty and error messages', async () => {
   const loading = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ attachment: 'loading' }) }));
   const empty = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ attachment: 'empty' }) }));
@@ -440,6 +937,16 @@ test('complaint detail workflow modal renders actions and required comment valid
   assert.match(html, /role="alert"/);
 });
 
+test('complaint detail workflow requires close and reject confirmation UI', async () => {
+  const html = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en', workflow: 'validation' }) }));
+
+  assert.ok(html.includes(confirmationText.en.workflowCloseReject.title));
+  assert.ok(html.includes(confirmationText.en.workflowCloseReject.body));
+  assert.ok(html.includes(confirmationText.en.workflowCloseReject.confirmClose));
+  assert.ok(html.includes(confirmationText.en.workflowCloseReject.confirmReject));
+  assert.match(html, /role="alert"/);
+});
+
 test('complaint detail workflow preview states render safely', async () => {
   const loading = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ workflow: 'loading' }) }));
   const empty = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ workflow: 'empty' }) }));
@@ -470,6 +977,7 @@ test('complaint detail workflow source does not decide transitions', () => {
 
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie/);
   assert.doesNotMatch(source, /applyTransition|fromStatus|toStatus|nextStatus|currentState|ownerId|branchScope|roleCode/);
+  assert.doesNotMatch(source, /PATCH|DELETE|POST|createObjectURL|Blob/);
 });
 
 test('English and Arabic render complete detail workspace regions together', async () => {
@@ -506,6 +1014,8 @@ test('admin branches departments screen renders only for admin preview', async (
   assert.match(admin, /Create/);
   assert.match(admin, /Edit/);
   assert.match(admin, /Deactivate/);
+  assert.ok(admin.includes(confirmationText.en.deactivate.title));
+  assert.ok(admin.includes(confirmationText.en.deactivate.confirm));
   assert.match(admin, /Active/);
   assert.match(admin, /Inactive/);
   assert.doesNotMatch(staff, /Branches and departments/);
@@ -538,11 +1048,13 @@ test('Arabic admin branches departments keeps RTL localized labels', async () =>
 
 test('admin branches departments source is render-only and privacy-safe', () => {
   const source = readFileSync('apps/web/src/app/admin-branches-departments.tsx', 'utf8');
+  const surfaces = readFileSync('apps/web/src/app/admin-surfaces.tsx', 'utf8');
 
   assert.match(source, /xl:grid-cols-2/);
   assert.match(source, /min-w-\[34rem\]/);
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie/);
   assert.doesNotMatch(source, /roleCode|principal|branchScope|audit|portal|DMS|@|\b\+?\d{10,}\b/i);
+  assert.doesNotMatch(surfaces, /fetch\(|localStorage|sessionStorage|document\.cookie|mutation|PATCH|DELETE|POST/);
 });
 
 test('admin users roles screen renders only for admin preview with reset affordance', async () => {
@@ -816,9 +1328,75 @@ test('reports dashboard renders export affordance without file generation', asyn
   assert.match(html, /Report export/);
   assert.match(html, /CSV/);
   assert.match(html, /Excel/);
+  assert.match(html, /href="\/reports\/export\?format=csv"/);
+  assert.match(html, /href="\/reports\/export\?format=excel"/);
   assert.match(html, /Exports use backend configured row limits\./);
   assert.match(html, /Export data is RBAC-filtered with the same report scope\./);
   assert.match(html, /Successful exports are audit logged by the backend\./);
+});
+
+test('reports dashboard renders real scoped rows from the backend read', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith('/auth/me')) return jsonResponse({ user: principal({ roleCode: 'ADMIN', branchId: null }) });
+    if (String(input).endsWith('/reports/dashboard')) {
+      return jsonResponse({ summary: { openComplaints: 1, overdueComplaints: 0, slaWarningComplaints: 0, closedComplaints: 0, averageTatHours: 0 } });
+    }
+    return jsonResponse({
+      items: [{
+        id: 'r1',
+        referenceNumber: 'CMP-REAL-001',
+        branchId: 'branch_main',
+        categoryId: 'cat_engine',
+        status: 'IN_PROGRESS',
+        severity: 'HIGH',
+        subject: 'Engine noise',
+        ownerId: 'usr_owner',
+        createdAt: '2026-06-19T00:00:00.000Z',
+        updatedAt: '2026-06-19T01:00:00.000Z',
+      }],
+    });
+  };
+  const html = renderToStaticMarkup(
+    await StaffShellPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ role: 'staff', session: 'signed-in' }),
+    }),
+  );
+
+  const reportsCall = calls.find((call) => String(call.input).endsWith('/reports'));
+  assert.ok(reportsCall);
+  assert.equal(String(reportsCall.input), 'http://localhost:3000/reports');
+  assert.doesNotMatch(String(reportsCall.input), /role|actor|branchId/i);
+  assert.deepEqual(reportsCall.init?.headers, {
+    Accept: 'application/json',
+    cookie: 'cms_staff_session=raw-session',
+  });
+  assert.match(html, /CMP-REAL-001 - Engine noise/);
+  assert.match(html, /branch_main \/ usr_owner/);
+  assert.match(html, /cat_engine/);
+  assert.match(html, /IN_PROGRESS/);
+  assert.doesNotMatch(html, /RPT-017/);
+});
+
+test('reports dashboard keeps catalog fallback when backend denies report rows', async () => {
+  const fetchImpl: typeof fetch = async (input) => {
+    if (String(input).endsWith('/auth/me')) return jsonResponse({ user: principal({ roleCode: 'ADMIN', branchId: null }) });
+    if (String(input).endsWith('/reports/dashboard')) return jsonResponse({ summary: { openComplaints: 0, overdueComplaints: 0, slaWarningComplaints: 0, closedComplaints: 0, averageTatHours: 0 } });
+    return jsonResponse({ error: { code: 'RBAC_FORBIDDEN' } }, 403);
+  };
+  const html = renderToStaticMarkup(
+    await StaffShellPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ role: 'management', session: 'signed-in' }),
+    }),
+  );
+
+  assert.match(html, /RPT-017/);
+  assert.doesNotMatch(html, /CMP-REAL-001/);
 });
 
 test('Arabic reports dashboard keeps RTL localized labels', async () => {

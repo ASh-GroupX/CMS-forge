@@ -1,6 +1,7 @@
 import React from 'react';
 import { reportsDashboardText } from '../i18n/staff-reports-dashboard';
 import type { Locale } from '../i18n/staff-shell';
+import type { StaffReportRow } from '../lib/staff-reports-api';
 
 export type ReportsPreviewState = 'ready' | 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'denied' | 'conflict';
 
@@ -24,8 +25,17 @@ const reports = [
   ['RPT-017', 'Audit activity report', 'Admin', 'admin'],
 ] as const;
 
-export function ReportsDashboard({ locale, state }: { locale: Locale; state?: ReportsPreviewState | undefined }) {
+export function ReportsDashboard({
+  locale,
+  rows,
+  state,
+}: {
+  locale: Locale;
+  rows?: StaffReportRow[] | undefined;
+  state?: ReportsPreviewState | undefined;
+}) {
   const t = reportsDashboardText[locale];
+  const realRows = rows?.slice(0, 17);
   return (
     <section className="rounded-md border border-slate-200 bg-white shadow-sm" aria-label={t.title}>
       <div className="border-b border-slate-200 p-4">
@@ -38,8 +48,8 @@ export function ReportsDashboard({ locale, state }: { locale: Locale; state?: Re
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-semibold">{t.export.title}</h3>
             <div className="flex flex-wrap gap-2">
-              <button className="rounded-sm border border-slate-300 bg-white px-3 py-2 text-xs font-semibold" type="button">{t.export.csv}</button>
-              <button className="rounded-sm border border-slate-300 bg-white px-3 py-2 text-xs font-semibold" type="button">{t.export.excel}</button>
+              <a className="rounded-sm border border-slate-300 bg-white px-3 py-2 text-xs font-semibold" href="/reports/export?format=csv">{t.export.csv}</a>
+              <a className="rounded-sm border border-slate-300 bg-white px-3 py-2 text-xs font-semibold" href="/reports/export?format=excel">{t.export.excel}</a>
             </div>
           </div>
           <ul className="mt-3 grid gap-1 text-sm text-slate-700 md:grid-cols-3">
@@ -53,14 +63,23 @@ export function ReportsDashboard({ locale, state }: { locale: Locale; state?: Re
             <tr>{t.headers.map((header) => <th className="border-b border-slate-200 px-3 py-2 text-start" key={header}>{header}</th>)}</tr>
           </thead>
           <tbody>
-            {reports.map(([id, name, audience, category]) => (
-              <tr className="border-b border-slate-100" key={id}>
-                <td className="px-3 py-2 font-semibold">{id} - {name}</td>
-                <td className="px-3 py-2">{audience}</td>
-                <td className="px-3 py-2"><Badge>{t.badges[category]}</Badge></td>
-                <td className="px-3 py-2"><Badge>{t.badges.pending}</Badge></td>
-              </tr>
-            ))}
+            {realRows
+              ? realRows.map((row) => (
+                  <tr className="border-b border-slate-100" key={row.id}>
+                    <td className="px-3 py-2 font-semibold">{row.referenceNumber} - {row.subject}</td>
+                    <td className="px-3 py-2">{row.branchId}{row.ownerId ? ` / ${row.ownerId}` : ''}</td>
+                    <td className="px-3 py-2"><Badge>{row.categoryId}</Badge></td>
+                    <td className="px-3 py-2"><Badge>{row.status}</Badge></td>
+                  </tr>
+                ))
+              : reports.map(([id, name, audience, category]) => (
+                  <tr className="border-b border-slate-100" key={id}>
+                    <td className="px-3 py-2 font-semibold">{id} - {name}</td>
+                    <td className="px-3 py-2">{audience}</td>
+                    <td className="px-3 py-2"><Badge>{t.badges[category]}</Badge></td>
+                    <td className="px-3 py-2"><Badge>{t.badges.pending}</Badge></td>
+                  </tr>
+                ))}
           </tbody>
         </table>
         <p className="mt-3 rounded-sm border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{t.safeNote}</p>

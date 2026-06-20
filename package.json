@@ -19,13 +19,13 @@
     "test:web": "node tools/web-test.mjs",
     "test:visual": "node --import tsx tools/web-proof.mjs visual",
     "web:perf": "node --import tsx tools/web-proof.mjs perf",
-    "test:performance": "node tools/pending-proof.mjs test:performance",
+    "test:performance": "node --import tsx tools/web-proof.mjs perf",
     "openapi:generate": "node tools/openapi-check.mjs --write",
     "openapi:check": "node tools/openapi-check.mjs",
     "db:migrate:test": "node tools/pending-proof.mjs db:migrate:test",
     "db:index:check": "node tools/pending-proof.mjs db:index:check",
-    "security:check": "node tools/pending-proof.mjs security:check",
-    "ops:backup:check": "node tools/pending-proof.mjs ops:backup:check"
+    "security:check": "node tools/security-check.mjs",
+    "ops:backup:check": "node tools/ops-backup-check.mjs"
   },
   "prisma": {
     "seed": "tsx packages/database/prisma/seed.ts"

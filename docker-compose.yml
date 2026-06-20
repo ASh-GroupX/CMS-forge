@@ -5,8 +5,9 @@ services:
       POSTGRES_DB: cms_auto
       POSTGRES_USER: cms_auto
       POSTGRES_PASSWORD: cms_auto_dev
-      # Trust all connections for local dev. Never use in production.
-      POSTGRES_HOST_AUTH_METHOD: trust
+      # Defaults to trust for local dev only. Set POSTGRES_HOST_AUTH_METHOD to
+      # scram-sha-256 or md5 before any staging/production deployment.
+      POSTGRES_HOST_AUTH_METHOD: ${POSTGRES_HOST_AUTH_METHOD:-trust}
     ports:
       - "5432:5432"
     volumes:

@@ -1,5 +1,6 @@
 import React from 'react';
 import { attachmentText } from '../i18n/staff-attachments';
+import { confirmationText } from '../i18n/staff-confirmations';
 import type { Locale } from '../i18n/staff-shell';
 
 export type AttachmentPreviewState = 'loading' | 'empty' | 'error' | 'pending' | 'clean' | 'rejected';
@@ -12,6 +13,7 @@ export function AttachmentUploadPanel({
   state?: AttachmentPreviewState | undefined;
 }) {
   const t = attachmentText[locale];
+  const confirm = confirmationText[locale].attachmentReject;
   const scanState = state === 'pending' || state === 'clean' || state === 'rejected' ? state : 'pending';
 
   return (
@@ -42,6 +44,16 @@ export function AttachmentUploadPanel({
             <li key={rule}>{rule}</li>
           ))}
         </ul>
+        {state === 'rejected' ? (
+          <section className="rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 md:col-span-2" role="alert" aria-label={confirm.title}>
+            <p className="font-semibold">{confirm.title}</p>
+            <p className="mt-1">{confirm.body}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button className="rounded-sm border border-red-300 bg-white px-3 py-2 text-sm font-semibold" type="button">{confirm.confirm}</button>
+              <button className="rounded-sm border border-slate-300 bg-white px-3 py-2 text-sm font-semibold" type="button">{confirm.cancel}</button>
+            </div>
+          </section>
+        ) : null}
       </div>
     </section>
   );
