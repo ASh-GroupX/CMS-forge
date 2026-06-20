@@ -15,6 +15,31 @@ labels.
 
 ---
 
+## F8-00 - Job-Runtime Gate (FORGE-JOB-RUNTIME-001)
+
+- Date: 2026-06-20
+- Risk: Low (CI/tooling; no application behavior changed)
+- Status: Passed
+- Requirement IDs: METHOD-TEST-001, NFR-MAINT-001, CONTRACT-READINESS-002
+- Evidence:
+  - Added `tools/job-runtime-check.mjs`, wired into `tools/lint.mjs`. `lint` now fails
+    when a registered background-job entrypoint has no runtime caller (scheduler /
+    worker / ops route); test-file callers do not count as drivers.
+  - The 6 current undriven jobs (sla.runWarningJob/runBreachJob,
+    notifications.dispatchQueuedEmail/Sms/WhatsApp, attachments.transitionScanStatus)
+    are grandfathered in a shrink-only `knownUndrivenJobs` ratchet. A grandfathered job
+    that gains a driver fails the gate until removed, so F8-02..04 cannot be marked
+    done without actually wiring the job.
+  - Wrote the Phase 8 backlog (F8-00..F8-07); phase DoD = executed end-to-end proof.
+- Verification:
+  - Passed: `corepack pnpm lint` (6 jobs grandfathered; green)
+  - Passed: `corepack pnpm test` (46/46; job-runtime-check.mjs 88% line / 84% branch /
+    100% func; new tests: orphan flagged, worker-driven passes, test-callers ignored +
+    ratchet-removal forced, real-repo holds)
+- Notes:
+  - Enforcement only - this does NOT make the jobs run. F8-01..06 build the runner /
+    S3 / e2e that fix runtime; this gate guarantees they get wired and cannot recur.
+
 (active-phase evidence appends below)
 
 ## F7-03A1 - Make `/auth/me` A Session Principal Endpoint

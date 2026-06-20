@@ -12,6 +12,20 @@ Append review decisions (VERIFY / PHASE REVIEW) here, newest at the bottom.
 
 ---
 
+## F8-00 - Job-Runtime Gate (FORGE-JOB-RUNTIME-001)
+
+- Date: 2026-06-20
+- Risk: Low
+- Recommendation: Accept
+- Notes:
+  - Closes the blind spot behind the whole async-layer leak: static/unit gates prove
+    structure, never runtime actuation. This gate asserts every background job has a
+    real driver and ratchets the 6 current orphans so Phase 8 must wire them.
+  - Honest scope: enforcement, not the fix. The behavioral fix (runner, S3, e2e) is
+    F8-01..06 and needs the Docker stack to prove end-to-end.
+  - The registry is explicit (6 jobs); add survey-link scheduling when its entrypoint
+    is wired so it is gated too.
+
 (active-phase review decisions append below)
 
 ## F7-03A1 Builder Trust Note

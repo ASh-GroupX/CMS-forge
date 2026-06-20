@@ -272,3 +272,40 @@ any conflict. Carry-forward condition mapping is annotated inline.
 - [x] F7-09: Deployment and operations runbook (NFR-SEC-001 AC4) — HTTPS redirect
       at the gateway and parameterizing `POSTGRES_HOST_AUTH_METHOD` off `trust`
       before any non-dev deploy
+
+## Phase 8 - Operational Completion (pre-pilot blockers)
+
+The async/background layer is built and unit-tested but has no runtime driver: SLA
+warning/breach/escalation jobs, notification dispatch, attachment scan transitions,
+and survey scheduling are never invoked by any scheduler, queue, or ops route; and
+attachment storage is in-memory only. Every gate is green because they verify
+structure, not runtime behavior. Phase 8 makes the system actually run and adds the
+missing runtime gate so this class cannot recur.
+
+Definition of Done for this phase: "it actually runs." Each task's acceptance
+requires an EXECUTED end-to-end proof (boot + drive against the Docker stack), not
+only unit/static green.
+
+- [x] F8-00: Job-runtime gate (`FORGE-JOB-RUNTIME-001`) - `lint` fails when a
+      background-job entrypoint has no runtime driver; current undriven jobs are
+      grandfathered in a shrink-only ratchet so they are tracked and must be wired
+- [ ] F8-01: Background runner foundation - pick scheduler/worker (BullMQ on the
+      existing Redis, or `@nestjs/schedule`), add the dependency, and a worker
+      entrypoint beside `main.ts` that boots the DI graph (no business logic yet)
+- [ ] F8-02: Drive SLA jobs - runner invokes `runWarningJob`/`runBreachJob`
+      idempotently on an interval; remove them from the ratchet; e2e proof: a seeded
+      overdue complaint produces a warning, then a breach + escalation notification
+- [ ] F8-03: Drive notification dispatch - runner drains `dispatchQueuedEmail/Sms/
+      WhatsApp`; remove from ratchet; e2e proof: a queued notification reaches the
+      provider with delivered status and respects quiet hours
+- [ ] F8-04: Drive attachment scan - a scan worker/route transitions
+      `PENDING->CLEAN/REJECTED`; remove `transitionScanStatus` from ratchet; e2e
+      proof: an uploaded file becomes downloadable only after it is marked CLEAN
+- [ ] F8-05: Real S3-compatible storage adapter for `AttachmentStoragePort` (durable
+      put + short-lived signed download URL), wired for non-test config; the
+      in-memory adapter stays as the test double
+- [ ] F8-06: End-to-end smoke proof (`test:e2e`) - boot app + worker against the
+      Docker stack and assert the three behaviors above actually run; the phase L4 gate
+- [ ] F8-07: Remove default-parameter DI fallbacks (e.g. `= {} as PrismaService`,
+      `= new InMemoryAttachmentStorage()`) so a missing provider fails loudly at boot
+      instead of silently falling back; tests pass deps explicitly

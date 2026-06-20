@@ -11,6 +11,7 @@ import {
 } from './lint.mjs';
 import { checkManifestTruth } from './manifest-truth-check.mjs';
 import { checkModuleWiring } from './wiring-check.mjs';
+import { checkJobRuntime } from './job-runtime-check.mjs';
 
 const manifestBody = [
   '---',
@@ -212,4 +213,47 @@ test('manifest truth gate flags undeclared Prisma table usage', () => {
 
 test('manifest truth gate holds on the real repository', () => {
   assert.deepEqual(checkManifestTruth(), []);
+});
+
+function writeJobFixture(root) {
+  mkdirSync(join(root, 'apps/api/src/modules/sla'), { recursive: true });
+  writeFileSync(join(root, 'apps/api/src/modules/sla/sla.service.ts'), 'export class SlaService { async runWarningJob() { return; } }\n');
+}
+const slaJob = [{ file: 'modules/sla/sla.service.ts', method: 'runWarningJob' }];
+
+test('job runtime gate flags a background job with no runtime driver', () => {
+  const root = mkdtempSync(join(tmpdir(), 'cms-auto-lint-'));
+  writeJobFixture(root);
+
+  assert.deepEqual(checkJobRuntime(root, new Set(), slaJob), [
+    'apps/api/src/modules/sla/sla.service.ts: background job runWarningJob() has no runtime driver - it never runs (add a scheduler/worker/ops caller)',
+  ]);
+});
+
+test('job runtime gate passes when a worker drives the job', () => {
+  const root = mkdtempSync(join(tmpdir(), 'cms-auto-lint-'));
+  writeJobFixture(root);
+  mkdirSync(join(root, 'apps/api/src/worker'), { recursive: true });
+  writeFileSync(join(root, 'apps/api/src/worker/runner.ts'), 'export const tick = (sla) => sla.runWarningJob();\n');
+
+  assert.deepEqual(checkJobRuntime(root, new Set(), slaJob), []);
+});
+
+test('job runtime gate ignores test callers and forces ratchet removal once driven', () => {
+  const root = mkdtempSync(join(tmpdir(), 'cms-auto-lint-'));
+  writeJobFixture(root);
+  // a test calling the job does NOT make it driven
+  writeFileSync(join(root, 'apps/api/src/modules/sla/sla.service.spec.ts'), 'new SlaService().runWarningJob();\n');
+  assert.deepEqual(checkJobRuntime(root, new Set(['sla.service.ts:runWarningJob']), slaJob), []);
+
+  // once a real driver exists, the grandfathered entry must be removed
+  mkdirSync(join(root, 'apps/api/src/worker'), { recursive: true });
+  writeFileSync(join(root, 'apps/api/src/worker/runner.ts'), 'export const tick = (sla) => sla.runWarningJob();\n');
+  assert.deepEqual(checkJobRuntime(root, new Set(['sla.service.ts:runWarningJob']), slaJob), [
+    'tools/job-runtime-check.mjs knownUndrivenJobs: "sla.service.ts:runWarningJob" has a driver now - remove it from the allowlist',
+  ]);
+});
+
+test('job runtime gate holds on the real repository with current jobs grandfathered', () => {
+  assert.deepEqual(checkJobRuntime(), []);
 });
