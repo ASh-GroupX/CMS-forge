@@ -244,6 +244,17 @@ calls the API. Contract drift fails CI (`ARCH-API-001` AC3).
 - Accessibility is mandatory (WCAG 2.1 AA): keyboard reachable, visible focus,
   labels, icon-button names, `prefers-reduced-motion`.
 
+**UI build workflow (use the tools — never hand-roll):**
+- Generate components with the **shadcn/ui CLI** (`npx shadcn add …`). Never hand-write
+  cards, buttons, inputs, tables, dialogs, badges, or toasts. Adapt shadcn **blocks** as
+  references; `apps/web/src/components/ui` must exist.
+- Plugins: `prettier-plugin-tailwindcss`, `eslint-plugin-jsx-a11y`, `lucide-react`,
+  `cva`/`tailwind-variants`; `@axe-core/playwright` + Lighthouse back the a11y/perf gates.
+- **See your output**: render, screenshot (Playwright), look at it, and match it to the
+  frozen **golden screen**/reference before "done". UI generated as text and never
+  rendered is not done. Snapshots prevent regression; they do not judge quality — the
+  screenshot review is a human/vision step.
+
 ---
 
 ## 9. Testing (`METHOD-TEST-001`)

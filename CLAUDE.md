@@ -39,6 +39,16 @@ acceptance criteria, tests, security, audit, RBAC, branch scope, or portal priva
    tables, allowed deps, SRS IDs) - it is the module's agent context boundary and
    `lint` requires it.
 
+## UI work (use the tools — never hand-roll)
+1. Generate components with the **shadcn/ui CLI** (`npx shadcn add …`) — never hand-write
+   cards, buttons, inputs, tables, dialogs, badges, or toasts. Adapt shadcn **blocks** as
+   references.
+2. Use the design tokens (no ad-hoc colors). Every screen ships loading / empty / error /
+   success / conflict states; RTL via logical properties; a11y labels + visible focus.
+3. Wire the real typed API client — no placeholder text, no hardcoded data.
+4. **See your output**: render the screen, screenshot it (Playwright), look at it, and
+   match it to the golden screen before "done". UI built blind is not done.
+
 ## Verify (run, never assume)
 Run the proof commands named in your task. Typical: `lint`, `typecheck`, `test`,
 `test:api -- <suite>`, `openapi:check`, and for UI `test:visual` / `test:e2e --

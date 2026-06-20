@@ -30,6 +30,9 @@
 - Arabic RTL and English LTR are acceptance criteria, not polish.
 - UI-DESIGN-001 is mandatory: use the shared design system, prove loading,
   empty, error, success, conflict, accessibility, RTL/LTR, and visual states.
+- UI tooling is mandatory: build components with the shadcn/ui CLI (never hand-roll
+  primitives), use the design tokens, and render + screenshot + self-review each screen
+  against the golden screen before a UI task is done. UI built blind is not done.
 - Architectural consistency must be enforced by checks where possible:
   boundaries, coverage, OpenAPI drift, strict typecheck, lint, visual,
   accessibility, and frontend performance.

@@ -323,12 +323,17 @@ UI finish (fixes the "preview shell / I don't like the app" problem; hard go-liv
       per-locale `lang`/`dir` RTL in `apps/web/src/app/layout.tsx`
 - [ ] P9-02: Anti-mojibake + Arabic-locale lint gate (fails on Ø/Ù-class mojibake;
       asserts Arabic strings are real Arabic-range codepoints) - lands AFTER P9-01
-- [ ] P9-03: Adopt shadcn/ui foundation - install + generate base primitives
-      (button, card, input, select, table, badge, dialog, tabs, toast) + token theme
-- [ ] P9-04: PLAN - split the screen-by-screen shadcn refactor: remove preview/dev
-      scaffolding (Role preview, Preview links, "placeholder" content), wire real data
-      (kill hardcoded values), one screen group per task, each with a visual-review gate
-      (human or vision model in the loop, not snapshot-only)
+- [ ] P9-03: Adopt shadcn/ui via the shadcn CLI (`npx shadcn init` + `add`), never
+      hand-rolled - base primitives (button, card, input, select, table, badge, dialog,
+      tabs, toast) + token theme + a11y/tailwind plugins (`eslint-plugin-jsx-a11y`,
+      `prettier-plugin-tailwindcss`, `@axe-core/playwright`). Stand up the Playwright
+      screenshot + vision self-review loop the redesign tasks use
+- [ ] P9-04: PLAN - build ONE golden screen first (shadcn + tokens + all states + RTL +
+      a11y) to a bar you approve via visual review, freeze it, then split the
+      screen-by-screen refactor that replicates it: remove preview/dev scaffolding (Role
+      preview, Preview links, "placeholder" content), wire real data (kill hardcoded
+      values), one screen group per task, each with a human/vision visual-review gate
+      (not snapshot-only)
 - [ ] P9-05: Re-baseline visual regression after the redesign lands
 
 Real email (only live integration in the pilot):
