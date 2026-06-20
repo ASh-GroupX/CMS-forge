@@ -1,9 +1,9 @@
 # Current State
 
-Status: Ready to Build
+Status: Ready to Plan
 Phase: Phase 9 - Production Readiness (Pilot on Hostinger)
-Next Task: P9-04E-1 - Complaint detail workspace real route + component extraction
-Model Tier: BUILDER-STANDARD
+Next Task: PLAN-P9-04F - Split admin configuration group
+Model Tier: PLANNER
 
 ## How to use this file
 
@@ -12,24 +12,20 @@ Prior state history is in .forge/archive/state-archive.md.
 
 ## Snapshot
 
-- Phase 9 in progress. P9-04D is complete.
-- PLAN-P9-04E split the oversized complaint workspace group into four build
-  tasks: detail route/workspace extraction, comments/public updates, attachment
-  controls, and workflow modal.
-- The next build task is P9-04E-1, covering only the real
-  `(staff)/complaints/[id]` route plus `components/complaint-detail-workspace/`.
-- Workflow mutation, comment write, and attachment upload/download wiring remain
-  out of scope for P9-04E-1.
+- Phase 9 in progress. P9-04E is complete.
+- Complaint detail now has a real `(staff)/complaints/[id]` route plus extracted
+  detail workspace, comments panel, attachment controls, and workflow modal.
+- Required proof commands passed for P9-04E-1 through P9-04E-4.
+- AUTO PHASE stopped because P9-04F is a multi-screen admin configuration group
+  and must be split before build work.
 
 ## Next
 
-- Build P9-04E-1 exactly as scoped in `.forge/next.md`.
+- Run PLAN-P9-04F exactly as scoped in `.forge/next.md`.
 
 ## Open carry-forward / known debt
 
 - Old `src/app/*` screen components remain legacy wrappers until retired
   screen-by-screen.
-- Comments/public updates, attachment controls, and workflow modal still need
-  their focused P9-04E follow-up extractions.
 - Badge labels show raw enum values (`IN_PROGRESS`, `HIGH`) - not localized;
   deferred.

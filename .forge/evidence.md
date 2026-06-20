@@ -1948,3 +1948,148 @@ Status: Passed through P9-02
   workflow/state authority was added.
 - P9-04D is complete. AUTO PHASE stopped at `Ready to Plan` because P9-04E is a
   multi-screen workspace group and must be split before build work.
+
+## P9-04E-1 - Complaint Detail Workspace Route Extraction
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-STRONG (user requested)
+- SRS IDs: UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/components/complaint-detail-workspace/index.tsx` (NEW) -
+   extracted the render-only complaint detail workspace into `components/`,
+   using existing shadcn primitives for the outer card, badges, buttons, labels,
+   and textarea while preserving detail, comments, attachments, workflow, and
+   preview states.
+2. `apps/web/src/app/(staff)/complaints/[id]/page.tsx` (NEW) - added the real
+   staff complaint detail route resolving locale, preview states, and route id,
+   then reading detail through `getStaffComplaintDetail`.
+3. `apps/web/src/app/complaint-detail-workspace.tsx` - legacy compatibility
+   re-export to keep the old shell import working.
+4. `apps/web/test/shell/shell.test.ts` - added route coverage and moved detail
+   workspace source safety assertions to the new component path.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (145/145 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+- Passed: `corepack pnpm test:visual` (16 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+
+### Notes
+
+- The route forwards only the complaint route id and server session cookie to
+  `getStaffComplaintDetail`; it does not pass role, actor, workflow, branch
+  scope, owner, token, credential, or client-selected authority fields.
+- No workflow mutation, comment write, attachment upload/download transport,
+  backend route, or OpenAPI change was added.
+
+## P9-04E-2 - Comments/Public Updates Panel Extraction
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-STRONG (user requested)
+- SRS IDs: UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/components/complaint-comments-panel/index.tsx` (NEW) -
+   extracted the render-only internal comments/public updates panel using the
+   existing shadcn badge primitive and existing complaint detail i18n strings.
+2. `apps/web/src/components/complaint-detail-workspace/index.tsx` - now composes
+   `ComplaintCommentsPanel` and no longer owns the comments/public updates
+   renderer.
+3. `apps/web/test/shell/shell.test.ts` - added a focused source safety assertion
+   for the extracted comments panel.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (146/146 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+- Passed: `corepack pnpm test:visual` (16 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+
+### Notes
+
+- No comment write, edit history wiring, backend route, OpenAPI change,
+  attachment control, workflow modal, fetch path, browser storage, cookie access,
+  provider/storage URL, portal data exposure, or staff PII was added.
+
+## P9-04E-3 - Attachment Status/Download Controls Extraction
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-STRONG (user requested)
+- SRS IDs: UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/components/complaint-attachment-controls/index.tsx` (NEW) -
+   extracted the render-only complaint attachment controls using existing
+   shadcn badge and button primitives and existing complaint detail i18n strings.
+2. `apps/web/src/components/complaint-detail-workspace/index.tsx` - now composes
+   `ComplaintAttachmentControls` and no longer owns attachment control UI.
+3. `apps/web/test/shell/shell.test.ts` - moved the attachment source safety
+   assertion to the extracted component path.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (146/146 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+- Passed: `corepack pnpm test:visual` (16 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+
+### Notes
+
+- No upload/download wiring, file read, object URL, backend route, OpenAPI
+  change, comment write, workflow modal change, fetch path, browser storage,
+  cookie access, provider/storage URL, portal data exposure, or staff PII was
+  added.
+
+## P9-04E-4 - Workflow Action Modal Extraction
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-STRONG (user requested)
+- SRS IDs: UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/components/complaint-workflow-modal/index.tsx` (NEW) -
+   extracted the render-only workflow action modal using existing shadcn button,
+   label, and textarea primitives plus existing complaint detail and confirmation
+   i18n strings.
+2. `apps/web/src/components/complaint-detail-workspace/index.tsx` - now composes
+   `ComplaintWorkflowModal` and no longer owns workflow modal UI.
+3. `apps/web/test/shell/shell.test.ts` - moved workflow authority and conflict
+   recovery source assertions to the extracted modal path.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (146/146 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+- Passed: `corepack pnpm test:visual` (16 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+
+### Notes
+
+- No workflow mutation wiring, transition logic, backend route, OpenAPI change,
+  comment write, attachment upload/download wiring, fetch path, browser storage,
+  cookie access, provider/storage URL, portal data exposure, or staff PII was
+  added.
+- P9-04E is complete. AUTO PHASE stopped at `Ready to Plan` because P9-04F is a
+  multi-screen admin configuration group and must be split before build work.

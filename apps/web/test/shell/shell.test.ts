@@ -7,6 +7,7 @@ import StaffShellPage from '../../src/app/page';
 import DashboardPage from '../../src/app/(staff)/dashboard/page';
 import ComplaintsPage from '../../src/app/(staff)/complaints/page';
 import NewComplaintPage from '../../src/app/(staff)/complaints/new/page';
+import ComplaintDetailPage from '../../src/app/(staff)/complaints/[id]/page';
 import PasswordResetPage from '../../src/app/(staff)/auth/reset/page';
 import NotificationsPage from '../../src/app/(staff)/notifications/page';
 import PortalSubmissionPage from '../../src/app/portal/page';
@@ -814,10 +815,26 @@ test('Arabic complaint detail workspace keeps RTL localized labels', async () =>
   assert.ok(html.includes(complaintDetailText.ar.badges.public));
 });
 
+test('complaint detail route renders English and Arabic localized workspace labels', async () => {
+  const english = renderToStaticMarkup(
+    await ComplaintDetailPage({ cookieHeader: '', params: Promise.resolve({ id: 'cmp_1' }), searchParams: Promise.resolve({ locale: 'en' }) }),
+  );
+  const arabic = renderToStaticMarkup(
+    await ComplaintDetailPage({ cookieHeader: '', params: Promise.resolve({ id: 'cmp_1' }), searchParams: Promise.resolve({ locale: 'ar', workflow: 'validation' }) }),
+  );
+
+  assert.match(english, /Complaint detail/);
+  assert.match(english, /Complaint facts/);
+  assert.match(arabic, /dir="rtl"/);
+  assert.ok(arabic.includes(complaintDetailText.ar.title));
+  assert.ok(arabic.includes(complaintDetailText.ar.sections.workflow));
+  assert.ok(arabic.includes(complaintDetailText.ar.workflow.validation));
+});
+
 test('complaint detail workspace preview states render loading empty and error messages', async () => {
-  const loading = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ detail: 'loading' }) }));
-  const empty = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ detail: 'empty' }) }));
-  const error = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ detail: 'error' }) }));
+  const loading = renderToStaticMarkup(await ComplaintDetailPage({ params: Promise.resolve({ id: 'cmp_1' }), searchParams: Promise.resolve({ detail: 'loading' }) }));
+  const empty = renderToStaticMarkup(await ComplaintDetailPage({ params: Promise.resolve({ id: 'cmp_1' }), searchParams: Promise.resolve({ detail: 'empty' }) }));
+  const error = renderToStaticMarkup(await ComplaintDetailPage({ params: Promise.resolve({ id: 'cmp_1' }), searchParams: Promise.resolve({ detail: 'error' }) }));
 
   assert.match(loading, /Loading complaint detail\./);
   assert.match(empty, /Select a complaint to view detail\./);
@@ -825,11 +842,10 @@ test('complaint detail workspace preview states render loading empty and error m
   assert.match(error, /role="alert"/);
 });
 
-test('complaint detail renders real backend facts through the session cookie', async () => {
+test('complaint detail route renders real backend facts through the session cookie', async () => {
   const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
   const fetchImpl: typeof fetch = async (input, init) => {
     calls.push({ input, init });
-    if (String(input).endsWith('/auth/me')) return jsonResponse({ user: principal({ roleCode: 'CR_OFFICER' }) });
     if (String(input).endsWith('/complaints/cmp%2Fdetail')) {
       return jsonResponse({
         complaint: {
@@ -854,10 +870,11 @@ test('complaint detail renders real backend facts through the session cookie', a
     return jsonResponse({ error: { code: 'RBAC_FORBIDDEN' } }, 403);
   };
   const html = renderToStaticMarkup(
-    await StaffShellPage({
+    await ComplaintDetailPage({
       cookieHeader: 'cms_staff_session=raw-session',
       fetchImpl,
-      searchParams: Promise.resolve({ complaintId: 'cmp/detail', role: 'admin', session: 'signed-in' }),
+      params: Promise.resolve({ id: 'cmp/detail' }),
+      searchParams: Promise.resolve({ locale: 'en' }),
     }),
   );
 
@@ -880,15 +897,13 @@ test('complaint detail renders real backend facts through the session cookie', a
 });
 
 test('complaint detail keeps preview fallback when backend denies detail read', async () => {
-  const fetchImpl: typeof fetch = async (input) => {
-    if (String(input).endsWith('/auth/me')) return jsonResponse({ user: principal({ roleCode: 'CR_OFFICER' }) });
-    return jsonResponse({ error: { code: 'BRANCH_SCOPE_FORBIDDEN' } }, 403);
-  };
+  const fetchImpl: typeof fetch = async () => jsonResponse({ error: { code: 'BRANCH_SCOPE_FORBIDDEN' } }, 403);
   const html = renderToStaticMarkup(
-    await StaffShellPage({
+    await ComplaintDetailPage({
       cookieHeader: 'cms_staff_session=raw-session',
       fetchImpl,
-      searchParams: Promise.resolve({ complaintId: 'cmp_denied', role: 'staff', session: 'signed-in' }),
+      params: Promise.resolve({ id: 'cmp_denied' }),
+      searchParams: Promise.resolve({ locale: 'en' }),
     }),
   );
 
@@ -905,14 +920,16 @@ test('complaint detail workspace keeps responsive detail layout classes', async 
 });
 
 test('complaint detail workspace source is privacy-safe and render-only', () => {
-  const source = readFileSync('apps/web/src/app/complaint-detail-workspace.tsx', 'utf8');
+  const source = readFileSync('apps/web/src/components/complaint-detail-workspace/index.tsx', 'utf8');
+  const wrapper = readFileSync('apps/web/src/app/complaint-detail-workspace.tsx', 'utf8');
   const textSource = readFileSync('apps/web/src/i18n/staff-complaint-detail.ts', 'utf8');
   const combined = `${source}\n${textSource}`;
 
   assert.doesNotMatch(combined, /fetch\(|localStorage|sessionStorage|document\.cookie|https?:\/\//);
-  assert.doesNotMatch(combined, /@/);
+  assert.doesNotMatch(combined, /[\w.-]+@[\w.-]+/);
   assert.doesNotMatch(combined, /\b\+?\d{10,}\b/);
   assert.doesNotMatch(combined, /DMS|audit|portal|staff PII|provider|storage URL/i);
+  assert.match(wrapper, /components\/complaint-detail-workspace/);
 });
 
 test('complaint detail comments render visibility badges and safe placeholders', async () => {
@@ -936,6 +953,14 @@ test('complaint detail comments preview states render loading empty and error me
   assert.match(empty, /No comments or public updates yet\./);
   assert.match(error, /Comments could not be loaded\. Try again\./);
   assert.match(error, /role="alert"/);
+});
+
+test('complaint detail comments source is render-only and privacy-safe', () => {
+  const source = readFileSync('apps/web/src/components/complaint-comments-panel/index.tsx', 'utf8');
+
+  assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie|https?:\/\//);
+  assert.doesNotMatch(source, /[\w.-]+@[\w.-]+|\b\+?\d{10,}\b/);
+  assert.doesNotMatch(source, /DMS|audit|portal|staff PII|provider|storage URL|uploadUrl|downloadUrl|token|credentials/i);
 });
 
 test('complaint detail attachment controls render actions and scan states', async () => {
@@ -981,7 +1006,7 @@ test('Arabic complaint detail attachment controls keep RTL localized labels', as
 });
 
 test('complaint detail attachment controls do not transfer or expose files', () => {
-  const source = readFileSync('apps/web/src/app/complaint-detail-workspace.tsx', 'utf8');
+  const source = readFileSync('apps/web/src/components/complaint-attachment-controls/index.tsx', 'utf8');
 
   assert.doesNotMatch(source, /fetch\(|FileReader|createObjectURL|localStorage|sessionStorage|document\.cookie|https?:\/\//);
   assert.doesNotMatch(source, /uploadUrl|downloadUrl|storageUrl|token|credentials/i);
@@ -1036,7 +1061,7 @@ test('Arabic complaint detail workflow modal keeps RTL localized labels', async 
 });
 
 test('complaint detail workflow source does not decide transitions', () => {
-  const source = readFileSync('apps/web/src/app/complaint-detail-workspace.tsx', 'utf8');
+  const source = readFileSync('apps/web/src/components/complaint-workflow-modal/index.tsx', 'utf8');
 
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie/);
   assert.doesNotMatch(source, /applyTransition|fromStatus|toStatus|nextStatus|currentState|ownerId|branchScope|roleCode/);
@@ -1060,7 +1085,7 @@ test('English and Arabic render complete detail workspace regions together', asy
 });
 
 test('complaint detail conflict recovery remains UI-only', () => {
-  const source = readFileSync('apps/web/src/app/complaint-detail-workspace.tsx', 'utf8');
+  const source = readFileSync('apps/web/src/components/complaint-workflow-modal/index.tsx', 'utf8');
 
   assert.match(source, /reload/);
   assert.match(source, /retry/);

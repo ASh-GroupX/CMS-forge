@@ -656,3 +656,53 @@ typecheck, lint, shell, localization, visual, and accessibility proof commands
 all passed. P9-04D is complete. Stop AUTO PHASE at `Ready to Plan` because
 P9-04E is a multi-screen complaint workspace group and must be split before
 build work.
+
+## P9-04E-1 Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-04E-1 is complete: complaint detail now has a real
+`(staff)/complaints/[id]` route and a
+`components/complaint-detail-workspace/` render-only component, while the
+legacy shell import remains compatible. Required typecheck, lint, shell,
+localization, visual, and accessibility proof commands all passed. Continue to
+P9-04E-2 for comments/public updates extraction.
+
+## P9-04E-2 Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-04E-2 is complete: comments/public updates now live in
+`components/complaint-comments-panel/`, and the detail workspace composes that
+render-only panel. Required typecheck, lint, shell, localization, visual, and
+accessibility proof commands all passed. Continue to P9-04E-3 for attachment
+status/download controls extraction.
+
+## P9-04E-3 Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-04E-3 is complete: attachment status/download controls now live in
+`components/complaint-attachment-controls/`, and the detail workspace composes
+that render-only panel. Required typecheck, lint, shell, localization, visual,
+and accessibility proof commands all passed. Continue to P9-04E-4 for workflow
+action modal extraction.
+
+## P9-04E-4 Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Needs Planning
+
+P9-04E-4 is complete: workflow action modal UI now lives in
+`components/complaint-workflow-modal/`, and the detail workspace composes that
+render-only modal. Required typecheck, lint, shell, localization, visual, and
+accessibility proof commands all passed. P9-04E is complete. Stop AUTO PHASE at
+`Ready to Plan` because P9-04F is a multi-screen admin configuration group and
+must be split before build work.
