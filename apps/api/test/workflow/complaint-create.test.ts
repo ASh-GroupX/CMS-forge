@@ -209,6 +209,64 @@ test('complaint creation route audits branch-scope denials', async () => {
   assert.equal(auditRecords[0]?.action, 'branch_scope_forbidden');
 });
 
+test('complaint workflow rejects invalid transitions before repository writes', async () => {
+  const service = new ComplaintsService({
+    transaction: async () => {
+      throw new Error('transaction should not start');
+    },
+  } as ComplaintsRepository, { record: async () => undefined } as unknown as AuditService);
+
+  await assert.rejects(
+    service.applyTransition({
+      complaintId: 'cmp_1',
+      fromStatus: ComplaintStatus.SUBMITTED,
+      action: ComplaintTransitionAction.CLOSE,
+      actorRole: RoleCode.CR_OFFICER,
+      actorId: 'usr_officer',
+      requestSource: ComplaintTransitionRequestSource.STAFF_API,
+      correlationId: 'req_invalid_transition',
+    }),
+    (error: unknown) => error instanceof AppException && error.code === 'COMPLAINT_INVALID_TRANSITION',
+  );
+});
+
+test('complaint transition route uses server role instead of client-owned authority', async () => {
+  const calls: unknown[] = [];
+  const controller = new ComplaintsController({
+    getDetail: async (id, filter) => {
+      calls.push({ method: 'getDetail', id, filter });
+      return { ...validQueueItem(), description: 'Engine noise', incidentAt: null, statusHistory: [] };
+    },
+    applyTransition: async (input) => {
+      calls.push({ method: 'applyTransition', input });
+      return { complaintId: input.complaintId, fromStatus: input.fromStatus, action: input.action, actorRole: input.actorRole, toStatus: ComplaintStatus.MANAGER_REVIEW };
+    },
+  } as ComplaintsService);
+
+  await controller.transition('cmp_1', undefined, {
+    fromStatus: ComplaintStatus.SUBMITTED,
+    action: ComplaintTransitionAction.ACCEPT_INTAKE,
+    actorRole: RoleCode.ADMIN,
+    actorId: 'spoofed',
+  }, request(RoleCode.CR_MANAGER));
+
+  assert.deepEqual(calls[1], {
+    method: 'applyTransition',
+    input: {
+      complaintId: 'cmp_1',
+      fromStatus: ComplaintStatus.SUBMITTED,
+      action: ComplaintTransitionAction.ACCEPT_INTAKE,
+      actorRole: RoleCode.CR_MANAGER,
+      actorId: 'usr_officer',
+      requestSource: ComplaintTransitionRequestSource.STAFF_API,
+      reason: null,
+      correlationId: 'req_create_route',
+      ipAddress: '203.0.113.66',
+      userAgent: 'node:test',
+    },
+  });
+});
+
 test('complaint queue service returns explicit branch-scoped response objects', async () => {
   const service = new ComplaintsService({
     listQueue: async (filter) => {

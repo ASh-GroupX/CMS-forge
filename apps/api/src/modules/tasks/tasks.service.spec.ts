@@ -8,11 +8,12 @@ import {
   TaskVisibility,
 } from '@prisma/client';
 import { AppException } from '../../core/http-kernel.js';
+import { promiseKeptOnTime } from './tasks.promise.js';
 import { TasksService } from './tasks.service.js';
 import type { CreateTaskStatusHistoryData, TasksRepository, TaskRecord, UpdateTaskStatusData } from './tasks.repository.js';
 
 test('open task without next action is rejected', async () => {
-  const service = new TasksService({} as TasksRepository, {} as never);
+  const service = new TasksService(txOnlyRepository(), {} as never);
 
   await assert.rejects(
     service.create({
@@ -99,6 +100,7 @@ test('employee today buckets only tasks visible to the actor', async () => {
       return [
         taskRecord({ id: 'due_today', assigneeId: 'user_owner', dueAt: new Date('2026-06-20T15:00:00.000Z') }),
         taskRecord({ id: 'overdue', assigneeId: 'user_owner', dueAt: new Date('2026-06-19T15:00:00.000Z') }),
+        taskRecord({ id: 'promise_late', assigneeId: 'user_owner', dueAt: new Date('2026-06-20T10:00:00.000Z'), isCustomerPromise: true }),
         taskRecord({ id: 'waiting', assigneeId: 'user_other', nextActionWhoId: 'user_owner', dueAt: new Date('2026-06-20T16:00:00.000Z') }),
       ];
     },
@@ -108,10 +110,76 @@ test('employee today buckets only tasks visible to the actor', async () => {
   const result = await service.employeeToday('user_owner', new Date('2026-06-20T12:00:00.000Z'));
 
   assert.equal(queriedUserId, 'user_owner');
-  assert.deepEqual(result.dueToday.map((task) => task.id), ['due_today', 'waiting']);
+  assert.deepEqual(result.dueToday.map((task) => task.id), ['due_today', 'promise_late', 'waiting']);
   assert.deepEqual(result.overdue.map((task) => task.id), ['overdue']);
-  assert.deepEqual(result.assignedToMe.map((task) => task.id), ['due_today', 'overdue']);
+  assert.deepEqual(result.overduePromises.map((task) => task.id), ['promise_late']);
+  assert.deepEqual(result.assignedToMe.map((task) => task.id), ['due_today', 'overdue', 'promise_late']);
   assert.deepEqual(result.waitingOnMe.map((task) => task.id), ['waiting']);
+});
+
+test('manager control room derives scoped rollup counts from active tasks', async () => {
+  let scopedBranch: string | null | undefined;
+  const repository = {
+    listManagerRollup: async (branchId: string | null) => {
+      scopedBranch = branchId;
+      return [
+        taskRecord({ id: 'overdue_a', assigneeId: 'user_a', dueAt: new Date('2026-06-19T15:00:00.000Z') }),
+        taskRecord({ id: 'promise_late', assigneeId: 'user_b', dueAt: new Date('2026-06-20T10:00:00.000Z'), isCustomerPromise: true }),
+        taskRecord({ id: 'due_today', assigneeId: 'user_b', dueAt: new Date('2026-06-20T16:00:00.000Z') }),
+        taskRecord({ id: 'stuck', assigneeId: 'user_a', nextActionWhen: new Date('2026-06-20T08:00:00.000Z'), updatedAt: new Date('2026-06-16T08:00:00.000Z') }),
+      ];
+    },
+  } as unknown as TasksRepository;
+  const service = new TasksService(repository, {} as never);
+
+  const result = await service.managerControlRoom({ roleCode: 'BRANCH_MANAGER', branchId: 'branch_1' }, new Date('2026-06-20T12:00:00.000Z'));
+
+  assert.equal(scopedBranch, 'branch_1');
+  assert.deepEqual(result.overdueByEmployee, [{ assigneeId: 'user_a', count: 1 }]);
+  assert.deepEqual(result.dueToday.map((task) => task.id), ['promise_late', 'due_today']);
+  assert.deepEqual(result.overduePromises.map((task) => task.id), ['promise_late']);
+  assert.deepEqual(result.workloadByAssignee, [{ assigneeId: 'user_a', count: 2 }, { assigneeId: 'user_b', count: 2 }]);
+  assert.deepEqual(result.stuck.map((task) => [task.id, task.stuckReasons]), [['stuck', ['NEXT_ACTION_OVERDUE', 'NO_MOVEMENT']]]);
+  assert.deepEqual(result.escalated.map((task) => task.id), ['overdue_a', 'promise_late', 'due_today', 'stuck']);
+  assert.deepEqual(result.promiseKpi, { openPromiseCount: 1, overduePromiseCount: 1 });
+});
+
+test('ordinary employee is denied manager control room access in service', async () => {
+  const service = new TasksService({ listManagerRollup: async () => [] } as unknown as TasksRepository, {} as never);
+
+  await assert.rejects(
+    service.managerControlRoom({ roleCode: 'CR_OFFICER', branchId: 'branch_1' }),
+    (error) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
+});
+
+test('customer promise task requires a customer, complaint, or deal link', async () => {
+  const service = new TasksService(txOnlyRepository(), {} as never);
+
+  await assert.rejects(
+    service.create({
+      title: 'Deliver car',
+      ownerId: 'user_owner',
+      assigneeId: 'user_assignee',
+      dueAt: '2026-06-21T09:00:00.000Z',
+      nextAction: { what: 'Deliver car', whoId: 'user_assignee', when: '2026-06-21T09:00:00.000Z' },
+      isCustomerPromise: true,
+    }),
+    (error) => error instanceof AppException && error.code === 'TASK_PROMISE_LINK_REQUIRED',
+  );
+});
+
+test('promise kept on time derives from task status history', () => {
+  assert.equal(promiseKeptOnTime(
+    { isCustomerPromise: true, dueAt: new Date('2026-06-21T09:00:00.000Z') },
+    [{ toStatus: TaskStatus.DONE, createdAt: new Date('2026-06-21T08:59:00.000Z') }],
+  ), true);
+  assert.equal(promiseKeptOnTime(
+    { isCustomerPromise: true, dueAt: new Date('2026-06-21T09:00:00.000Z') },
+    [{ toStatus: TaskStatus.DONE, createdAt: new Date('2026-06-21T09:01:00.000Z') }],
+  ), false);
+  assert.equal(promiseKeptOnTime({ isCustomerPromise: true, dueAt: new Date('2026-06-21T09:00:00.000Z') }, []), false);
+  assert.equal(promiseKeptOnTime({ isCustomerPromise: false, dueAt: new Date('2026-06-21T09:00:00.000Z') }, []), null);
 });
 
 function taskRecord(overrides: Partial<TaskRecord> = {}): TaskRecord {
@@ -126,6 +194,7 @@ function taskRecord(overrides: Partial<TaskRecord> = {}): TaskRecord {
     nextActionWhat: 'Call customer',
     nextActionWhoId: 'user_assignee',
     nextActionWhen: new Date('2026-06-21T08:30:00.000Z'),
+    isCustomerPromise: false,
     visibility: TaskVisibility.PARTICIPANTS,
     confidentialityLevel: TaskConfidentialityLevel.NORMAL,
     createdAt: now,
@@ -134,4 +203,8 @@ function taskRecord(overrides: Partial<TaskRecord> = {}): TaskRecord {
     participants: [],
     ...overrides,
   };
+}
+
+function txOnlyRepository(): TasksRepository {
+  return { transaction: async <T>(work: (client: never) => Promise<T>) => work({} as never) } as unknown as TasksRepository;
 }

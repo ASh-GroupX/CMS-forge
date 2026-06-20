@@ -1056,3 +1056,129 @@ due today, overdue, assigned, and waiting-on-me. Focused service/controller proo
 plus lint, typecheck, root tests, and OpenAPI check passed. Stop AUTO PHASE at
 the P10-01D screen because UI completion requires runtime/web proof and the
 local Docker/Postgres/Redis/disk-space blocker is still open.
+
+## P10-02A Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P10-02A is complete: `GET /tasks/manager-rollup` is manager/admin session
+guarded, derives branch scope only from the server principal, and computes
+overdue-by-employee, due-today, stuck, and workload-by-assignee from active task
+rows without counters. Employee denial, cross-branch denial/audit, scoped
+rollup, lint, typecheck, root tests, task API suite, and OpenAPI check passed.
+Escalated remains an empty read bucket until P10-03A adds escalation policy and
+due-date scan logic. Continue to P10-03A.
+
+## P10-03A Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P10-03A is complete: task escalation selection is pure, idempotent, and
+deterministic over task due dates / next-action dates, with due-soon, immediate
+team-leader overdue, branch-manager, and high-priority thresholds. Manager
+rollup now fills `escalated` from this selector without worker side effects.
+Task API suite, focused tasks tests, lint, typecheck, root tests, and OpenAPI
+check passed. Continue to P10-04A for the Deal model + stage gates.
+
+## P10-04A Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P10-04A is complete: `deals` is generated and wired, Prisma now has a minimal
+Deal model/stage enum/migration, and `DealsService` owns pure one-step stage
+gate authority with holder/due/blocker validation. Prisma validate, deal API
+suite, focused deal tests, lint, typecheck, root tests, and OpenAPI check
+passed. Continue to P10-04B to persist transitions, generate the right tasks,
+and audit in the same transaction.
+
+## P10-04B Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P10-04B is complete: persisted deal stage advancement now uses one Prisma
+transaction for the deal update, WORKFLOW audit, and next-holder task creation
+through the public `TasksService.createInTransaction` path. Focused deal tests,
+`test:api -- deals`, typecheck, lint, Prisma validate, root tests, and OpenAPI
+check passed. Continue to P10-04C for the scoped Deal Handoff Board read model.
+
+## P10-04C Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P10-04C is complete: `GET /deals/handoff-board` is manager/admin session
+guarded, derives branch scope only from the server principal, and computes
+stage buckets, stuck deals, delay age, and holder workload from scoped deal rows
+without counters. Deal API suite, focused deal tests, typecheck, OpenAPI check,
+lint, Prisma validate, and root tests passed. Continue to P10-05A for task
+promise tracking.
+
+## P10-05A Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P10-05A is complete: task promises are now a persisted flag, promise tasks must
+be linked to a customer, complaint/case-compatible record, or deal, and
+promise-kept-on-time is derived from task status history instead of counters.
+Task API suite, focused tasks tests, typecheck, OpenAPI check, lint, Prisma
+validate, and root tests passed. Continue to P10-05B to surface overdue
+promises in Employee Today, Manager Control Room, and the KPI read model.
+
+## P10-05B Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P10-05B is complete: Employee Today and Manager Control Room now expose overdue
+customer promises from scoped active task rows, and Manager Control Room includes
+a derived promise KPI count without stored counters. Focused tasks tests, task
+API suite, typecheck, OpenAPI check, lint, root tests, and diff whitespace check
+passed. Continue to P10-06A for the first Complaint-to-Case schema step.
+
+## P10-06A Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P10-06A is complete: the schema now has additive `Case` and `CaseLink` models
+with branch/owner/status/subject/description fields and polymorphic links, plus
+a SQL migration and schema gate coverage. Prisma validate, focused schema tests,
+typecheck, OpenAPI check, lint, root tests, and diff whitespace check passed.
+Existing Complaint tables and APIs were not rewritten. Continue to P10-06B.
+
+## P10-06B Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P10-06B is complete: the generated `cases` module is wired, service behavior can
+create draft cases with validated links, return a timeline-shaped read model,
+and provide a `CASE` task-link DTO. Prisma generate/validate, focused cases
+tests, OpenAPI check, typecheck, lint, root tests, and diff whitespace check
+passed after a test fixture shape fix. Continue to P10-06C regression proof.
+
+## P10-06C Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P10-06C is complete: existing complaint workflow/API proof still passes with
+the additive Case schema/module present, invalid transitions are denied before
+writes, and transition actor authority remains server-principal owned. Focused
+cases tests, workflow API suite, OpenAPI check, lint, typecheck, root tests, and
+diff whitespace check passed. Continue to P10-07A for event-derived KPI reads.

@@ -2689,6 +2689,88 @@
           }
         }
       }
+    },
+    "/tasks/manager-rollup": {
+      "get": {
+        "tags": [
+          "Tasks"
+        ],
+        "operationId": "taskManagerRollupList",
+        "summary": "List manager control room task rollups for the current session scope",
+        "responses": {
+          "200": {
+            "description": "Manager task rollups",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagerControlRoomResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied or branch scope denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deals/handoff-board": {
+      "get": {
+        "tags": [
+          "Deals"
+        ],
+        "operationId": "dealHandoffBoardList",
+        "summary": "List scoped deal handoff board buckets",
+        "responses": {
+          "200": {
+            "description": "Deal handoff board",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DealHandoffBoardResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied or branch scope denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4843,6 +4925,7 @@
           "dueAt",
           "status",
           "nextAction",
+          "isCustomerPromise",
           "visibility",
           "confidentialityLevel",
           "links",
@@ -4885,6 +4968,9 @@
                 "type": "null"
               }
             ]
+          },
+          "isCustomerPromise": {
+            "type": "boolean"
           },
           "visibility": {
             "type": "string",
@@ -5003,6 +5089,7 @@
         "required": [
           "dueToday",
           "overdue",
+          "overduePromises",
           "assignedToMe",
           "waitingOnMe"
         ],
@@ -5019,6 +5106,12 @@
               "$ref": "#/components/schemas/Task"
             }
           },
+          "overduePromises": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Task"
+            }
+          },
           "assignedToMe": {
             "type": "array",
             "items": {
@@ -5029,6 +5122,260 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Task"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ManagerRollupCount": {
+        "type": "object",
+        "required": [
+          "assigneeId",
+          "count"
+        ],
+        "properties": {
+          "assigneeId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "PromiseKpi": {
+        "type": "object",
+        "required": [
+          "openPromiseCount",
+          "overduePromiseCount"
+        ],
+        "properties": {
+          "openPromiseCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "overduePromiseCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "ManagerStuckTask": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Task"
+          },
+          {
+            "type": "object",
+            "required": [
+              "stuckReasons"
+            ],
+            "properties": {
+              "stuckReasons": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "NEXT_ACTION_OVERDUE",
+                    "NO_MOVEMENT"
+                  ]
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "ManagerControlRoomResponse": {
+        "type": "object",
+        "required": [
+          "overdueByEmployee",
+          "dueToday",
+          "overduePromises",
+          "stuck",
+          "workloadByAssignee",
+          "escalated",
+          "promiseKpi"
+        ],
+        "properties": {
+          "overdueByEmployee": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManagerRollupCount"
+            }
+          },
+          "dueToday": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Task"
+            }
+          },
+          "overduePromises": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Task"
+            }
+          },
+          "stuck": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManagerStuckTask"
+            }
+          },
+          "workloadByAssignee": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManagerRollupCount"
+            }
+          },
+          "escalated": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Task"
+            }
+          },
+          "promiseKpi": {
+            "$ref": "#/components/schemas/PromiseKpi"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DealBoardItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "branchId",
+          "ownerId",
+          "currentHolderId",
+          "stage",
+          "stageDueAt",
+          "blocker",
+          "delayAgeMinutes",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "branchId": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": "string"
+          },
+          "currentHolderId": {
+            "type": "string"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "LEAD",
+              "QUALIFIED",
+              "TEST_DRIVE",
+              "QUOTE",
+              "FINANCE",
+              "DELIVERY",
+              "POST_DELIVERY"
+            ]
+          },
+          "stageDueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "blocker": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "delayAgeMinutes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DealStageBucket": {
+        "type": "object",
+        "required": [
+          "stage",
+          "count",
+          "deals"
+        ],
+        "properties": {
+          "stage": {
+            "$ref": "#/components/schemas/DealBoardItem/properties/stage"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "deals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DealBoardItem"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "DealHolderBucket": {
+        "type": "object",
+        "required": [
+          "currentHolderId",
+          "count"
+        ],
+        "properties": {
+          "currentHolderId": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "DealHandoffBoardResponse": {
+        "type": "object",
+        "required": [
+          "byStage",
+          "stuck",
+          "currentHolder"
+        ],
+        "properties": {
+          "byStage": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DealStageBucket"
+            }
+          },
+          "stuck": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DealBoardItem"
+            }
+          },
+          "currentHolder": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DealHolderBucket"
             }
           }
         },

@@ -19,6 +19,7 @@ export class TaskResponseDto {
   dueAt!: string;
   status!: TaskStatus;
   nextAction!: TaskNextActionDto | null;
+  isCustomerPromise!: boolean;
   visibility!: TaskVisibility;
   confidentialityLevel!: TaskConfidentialityLevel;
   links!: TaskLinkDto[];
@@ -30,6 +31,29 @@ export class TaskResponseDto {
 export type EmployeeTodayResponseDto = {
   dueToday: TaskResponseDto[];
   overdue: TaskResponseDto[];
+  overduePromises: TaskResponseDto[];
   assignedToMe: TaskResponseDto[];
   waitingOnMe: TaskResponseDto[];
+};
+
+export type ManagerRollupCountDto = {
+  assigneeId: string;
+  count: number;
+};
+
+export type ManagerStuckTaskDto = TaskResponseDto & {
+  stuckReasons: ('NEXT_ACTION_OVERDUE' | 'NO_MOVEMENT')[];
+};
+
+export type ManagerControlRoomResponseDto = {
+  overdueByEmployee: ManagerRollupCountDto[];
+  dueToday: TaskResponseDto[];
+  overduePromises: TaskResponseDto[];
+  stuck: ManagerStuckTaskDto[];
+  workloadByAssignee: ManagerRollupCountDto[];
+  escalated: TaskResponseDto[];
+  promiseKpi: {
+    openPromiseCount: number;
+    overduePromiseCount: number;
+  };
 };

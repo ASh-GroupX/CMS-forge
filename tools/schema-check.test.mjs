@@ -8,7 +8,7 @@ test('current prisma schema includes the required core data model', () => {
 
 test('schema check accepts the current core model draft', () => {
   const text = requiredModels
-    .filter((model) => !['Complaint', 'ComplaintStatusHistory', 'NotificationDeliveryAttempt', 'NotificationTemplate', 'CustomerNotificationPreference', 'AuditLog'].includes(model))
+    .filter((model) => !['Complaint', 'ComplaintStatusHistory', 'NotificationDeliveryAttempt', 'NotificationTemplate', 'CustomerNotificationPreference', 'Case', 'CaseLink', 'AuditLog'].includes(model))
     .map((model) => `model ${model} {\n  id String @id\n}`)
     .join('\n\n');
   const complaint = 'model Complaint {\n  id String @id\n  statusHistory ComplaintStatusHistory[]\n}';
@@ -55,12 +55,33 @@ test('schema check accepts the current core model draft', () => {
 
   @@map("customer_notification_preferences")
 }`;
+  const caseModel = `model Case {
+  id String @id
+  type CaseType
+  status ComplaintStatus
+  branchId String
+  ownerId String?
+  subject String
+  descriptionEn String
+  links CaseLink[]
+
+  @@map("cases")
+}`;
+  const caseLink = `model CaseLink {
+  id String @id
+  caseId String
+  entityType CaseLinkEntityType
+  entityId String
+
+  @@unique([caseId, entityType, entityId])
+  @@map("case_links")
+}`;
   const audit = 'model AuditLog {\n  id String @id\n\n  @@map("audit_logs")\n}';
   const actionEnum = 'enum ComplaintTransitionAction {\n  SUBMIT\n  ROUTE_AGAIN\n}';
   const requestSourceEnum = 'enum ComplaintTransitionRequestSource {\n  STAFF_API\n  CUSTOMER_PORTAL\n}';
   const auditEnum = 'enum AuditEventType {\n  SECURITY\n}';
 
-  assert.deepEqual(checkSchemaText(`${text}\n${complaint}\n${history}\n${template}\n${attempt}\n${preference}\n${audit}\n${actionEnum}\n${requestSourceEnum}\n${auditEnum}`), []);
+  assert.deepEqual(checkSchemaText(`${text}\n${complaint}\n${history}\n${template}\n${attempt}\n${preference}\n${caseModel}\n${caseLink}\n${audit}\n${actionEnum}\n${requestSourceEnum}\n${auditEnum}`), []);
 });
 
 test('schema check rejects missing complaint history and audit storage', () => {
@@ -70,6 +91,8 @@ test('schema check rejects missing complaint history and audit storage', () => {
     'NotificationDeliveryAttempt must map to notification_delivery_attempts',
     'NotificationTemplate must map to notification_templates',
     'CustomerNotificationPreference must map to customer_notification_preferences',
+    'Case must map to cases',
+    'CaseLink must map to case_links',
     'AuditLog must map to audit_logs',
     'Complaint must expose status history',
     'ComplaintStatusHistory must include action',
@@ -80,6 +103,17 @@ test('schema check rejects missing complaint history and audit storage', () => {
     'ComplaintTransitionAction must include workflow matrix actions',
     'ComplaintTransitionRequestSource must include staff and portal sources',
     'AuditEventType must include SECURITY',
+    'Case must include type',
+    'Case must include status',
+    'Case must include branchId',
+    'Case must include ownerId',
+    'Case must include subject',
+    'Case must include descriptionEn',
+    'Case must include links',
+    'CaseLink must include caseId',
+    'CaseLink must include entityType',
+    'CaseLink must include entityId',
+    'CaseLink must enforce unique linked entities per case',
     'NotificationTemplate must include code',
     'NotificationTemplate must include channel',
     'NotificationTemplate must include locale',

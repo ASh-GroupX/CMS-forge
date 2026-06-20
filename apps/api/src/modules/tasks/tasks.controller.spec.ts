@@ -65,18 +65,18 @@ test('today derives employee identity from the staff session', async () => {
   const controller = new TasksController({
     employeeToday: async (actorId: string) => {
       capturedActor = actorId;
-      return { dueToday: [], overdue: [], assignedToMe: [], waitingOnMe: [] };
+      return { dueToday: [], overdue: [], overduePromises: [], assignedToMe: [], waitingOnMe: [] };
     },
   } as unknown as TasksService);
 
   const result = await controller.today(request());
 
   assert.equal(capturedActor, 'user_owner');
-  assert.deepEqual(result, { dueToday: [], overdue: [], assignedToMe: [], waitingOnMe: [] });
+  assert.deepEqual(result, { dueToday: [], overdue: [], overduePromises: [], assignedToMe: [], waitingOnMe: [] });
 });
 
 test('today rejects missing principal instead of accepting client identity', async () => {
-  const controller = new TasksController({ employeeToday: async () => ({ dueToday: [], overdue: [], assignedToMe: [], waitingOnMe: [] }) } as unknown as TasksService);
+  const controller = new TasksController({ employeeToday: async () => ({ dueToday: [], overdue: [], overduePromises: [], assignedToMe: [], waitingOnMe: [] }) } as unknown as TasksService);
 
   await assert.rejects(
     controller.today({ headers: {} } as AuthenticatedRequest),
@@ -84,7 +84,22 @@ test('today rejects missing principal instead of accepting client identity', asy
   );
 });
 
-function request(): AuthenticatedRequest {
+test('manager rollup derives role and branch from the staff session', async () => {
+  let capturedScope: unknown;
+  const controller = new TasksController({
+    managerControlRoom: async (scope: unknown) => {
+      capturedScope = scope;
+      return { overdueByEmployee: [], dueToday: [], overduePromises: [], stuck: [], workloadByAssignee: [], escalated: [], promiseKpi: { openPromiseCount: 0, overduePromiseCount: 0 } };
+    },
+  } as unknown as TasksService);
+
+  const result = await controller.managerRollup(request('BRANCH_MANAGER'));
+
+  assert.deepEqual(capturedScope, { roleCode: 'BRANCH_MANAGER', branchId: 'branch_1' });
+  assert.deepEqual(result, { overdueByEmployee: [], dueToday: [], overduePromises: [], stuck: [], workloadByAssignee: [], escalated: [], promiseKpi: { openPromiseCount: 0, overduePromiseCount: 0 } });
+});
+
+function request(roleCode = 'CR_OFFICER'): AuthenticatedRequest {
   return {
     headers: { 'x-correlation-id': 'req_test', 'user-agent': 'node-test' },
     correlationId: 'req_test',
@@ -94,7 +109,7 @@ function request(): AuthenticatedRequest {
       email: 'owner@example.test',
       nameEn: 'Owner',
       nameAr: 'Owner',
-      roleCode: 'CR_OFFICER',
+      roleCode,
       branchId: 'branch_1',
     },
   };
@@ -113,6 +128,7 @@ function taskResponse() {
       whoId: 'user_assignee',
       when: '2026-06-21T09:00:00.000Z',
     },
+    isCustomerPromise: false,
     visibility: TaskVisibility.PARTICIPANTS,
     confidentialityLevel: TaskConfidentialityLevel.NORMAL,
     links: [],

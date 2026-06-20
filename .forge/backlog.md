@@ -442,36 +442,45 @@ PLAN-split into 1-5 file sub-tasks before build, like F1-05 was.
   - [ ] P10-01D: Employee Today screen and runtime proof.
 - [ ] P10-02: Manager Control Room - overdue-by-employee, due-today, stuck, workload,
       escalated, branch/team filters.
-  - [ ] P10-02A: Manager rollup read model + derived queries + RBAC/branch scope +
+  - [x] P10-02A: Manager rollup read model + derived queries + RBAC/branch scope +
         API tests (employee denied, no cross-branch leak).
   - [ ] P10-02B `[stack]`: Manager Control Room screen + team/branch filters + web test.
 - [ ] P10-03: Reminder + escalation engine on the Phase-8 worker.
-  - [ ] P10-03A: Escalation policy + due-date scan (due-soon/overdue selection) -
+  - [x] P10-03A: Escalation policy + due-date scan (due-soon/overdue selection) -
         pure logic, idempotent, unit tests.
   - [ ] P10-03B `[stack]`: Wire the scan into the BullMQ worker (reminder -> team
         leader -> branch manager -> high-priority) + daily employee digest + manager
         rollup; notify after commit.
 - [ ] P10-04 (umbrella): Deal object + stage gates (Lead..Post-delivery) + Handoff Board.
-  - [ ] P10-04A: Deal model + stage gates + per-stage owner/due/blocker + transition
+  - [x] P10-04A: Deal model + stage gates + per-stage owner/due/blocker + transition
         rules + service tests.
-  - [ ] P10-04B: Stage transitions generate the right tasks + audit + tests.
-  - [ ] P10-04C: Deal Handoff Board read model (by stage, stuck, current holder, delay
+  - [x] P10-04B: Stage transitions generate the right tasks + audit + tests.
+  - [x] P10-04C: Deal Handoff Board read model (by stage, stuck, current holder, delay
         age) + RBAC + API tests.
   - [ ] P10-04D `[stack]`: Deal Handoff Board screen + web test.
 - [ ] P10-05: Customer Promise Tracker.
-  - [ ] P10-05A: Promise flag on tasks linked to customer/deal/case +
+  - [x] P10-05A: Promise flag on tasks linked to customer/deal/case +
         promise-kept-on-time computed from events + service tests.
-  - [ ] P10-05B: Surface overdue promises in Employee Today + Control Room + the KPI.
+  - [x] P10-05B: Surface overdue promises in Employee Today + Control Room + the KPI.
 - [ ] P10-06 (umbrella): Complaint -> Case reframe (keep existing flows working).
-  - [ ] P10-06A: Generalize Complaint into Case(type=customer_complaint) - schema +
+  - [x] P10-06A: Generalize Complaint into Case(type=customer_complaint) - schema +
         migration; customer/vehicle become links, not mandatory root.
-  - [ ] P10-06B: Case tasks + case timeline + case links + tests.
-  - [ ] P10-06C: Regression - existing complaint flows pass; case-without-vehicle
+  - [x] P10-06B: Case tasks + case timeline + case links + tests.
+  - [x] P10-06C: Regression - existing complaint flows pass; case-without-vehicle
         works; backend-owned workflow authority intact.
 - [ ] P10-07: KPI dashboard DERIVED from the event timeline (not counters).
   - [ ] P10-07A: KPI read model from events (on-time%, overdue, avg delay,
         promise-kept%, reopened, escalations, stuck-by-dept, first-response/resolution)
         + RBAC/scope + API tests; no raw closed-count leaderboard.
+    - [ ] P10-07A1: Task/promise KPI formulas from task status-history events:
+          on-time%, active overdue count, avg delay, and customer-promise-kept%.
+          Pure backend helper + focused tests; no route yet.
+    - [ ] P10-07A2: Wire task/promise KPI rows into `ReportsService` with manager
+          role + branch scope; keep metrics derived from task rows/history.
+    - [ ] P10-07A3: Complaint/case KPI formulas for reopened, escalation,
+          first-response, and resolution timing from complaint/case/SLA events.
+    - [ ] P10-07A4: Add the scoped KPI HTTP route + OpenAPI + API tests covering
+          allowed manager/admin access, denied employee access, and no cross-branch leak.
   - [ ] P10-07B `[stack]`: KPI dashboard screen + web test.
 - [ ] P10-08: CAPA / root cause.
   - [ ] P10-08A: CAPA model (root cause, responsible dept, corrective + preventive

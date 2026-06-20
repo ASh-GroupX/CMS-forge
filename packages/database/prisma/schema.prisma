@@ -170,6 +170,7 @@ enum TaskLinkEntityType {
   CUSTOMER
   VEHICLE
   COMPLAINT
+  CASE
   DEAL
   EMPLOYEE
 }
@@ -191,6 +192,28 @@ enum TaskConfidentialityLevel {
   NORMAL
   CONFIDENTIAL
   RESTRICTED
+}
+
+enum DealStage {
+  LEAD
+  QUALIFIED
+  TEST_DRIVE
+  QUOTE
+  FINANCE
+  DELIVERY
+  POST_DELIVERY
+}
+
+enum CaseType {
+  CUSTOMER_COMPLAINT
+}
+
+enum CaseLinkEntityType {
+  CUSTOMER
+  VEHICLE
+  COMPLAINT
+  DEAL
+  EMPLOYEE
 }
 
 enum AuditEventType {
@@ -222,6 +245,8 @@ model Branch {
   complaints     Complaint[]
   slaPolicies    SlaPolicy[]
   auditLogs      AuditLog[]
+  deals          Deal[]
+  cases          Case[]
 
   @@map("branches")
 }
@@ -293,6 +318,9 @@ model User {
   taskNextActions            Task[]                   @relation("TaskNextActionWho")
   taskParticipants           TaskParticipant[]
   taskStatusHistory          TaskStatusHistory[]
+  ownedDeals                 Deal[]                   @relation("DealOwner")
+  currentDealHandoffs        Deal[]                   @relation("DealCurrentHolder")
+  ownedCases                 Case[]                   @relation("CaseOwner")
 
   @@index([roleId])
   @@index([branchId])
@@ -715,6 +743,7 @@ model Task {
   nextActionWhat         String?                  @map("next_action_what")
   nextActionWhoId        String?                  @map("next_action_who_id")
   nextActionWhen         DateTime?                @map("next_action_when")
+  isCustomerPromise      Boolean                  @default(false) @map("is_customer_promise")
   visibility             TaskVisibility           @default(PARTICIPANTS)
   confidentialityLevel   TaskConfidentialityLevel @default(NORMAL) @map("confidentiality_level")
   createdAt              DateTime                 @default(now()) @map("created_at")
@@ -774,6 +803,63 @@ model TaskStatusHistory {
   @@index([taskId, createdAt])
   @@index([actorId])
   @@map("task_status_history")
+}
+
+model Deal {
+  id              String    @id @default(cuid())
+  title           String
+  branchId        String    @map("branch_id")
+  ownerId         String    @map("owner_id")
+  currentHolderId String    @map("current_holder_id")
+  stage           DealStage @default(LEAD)
+  stageDueAt      DateTime  @map("stage_due_at")
+  blocker         String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  branch          Branch    @relation(fields: [branchId], references: [id])
+  owner           User      @relation("DealOwner", fields: [ownerId], references: [id])
+  currentHolder   User      @relation("DealCurrentHolder", fields: [currentHolderId], references: [id])
+
+  @@index([branchId, stage])
+  @@index([ownerId])
+  @@index([currentHolderId])
+  @@index([stageDueAt])
+  @@map("deals")
+}
+
+model Case {
+  id            String          @id @default(cuid())
+  type          CaseType        @default(CUSTOMER_COMPLAINT)
+  status        ComplaintStatus @default(DRAFT)
+  branchId      String          @map("branch_id")
+  ownerId       String?         @map("owner_id")
+  subject       String
+  descriptionEn String          @map("description_en")
+  descriptionAr String?         @map("description_ar")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+  branch        Branch          @relation(fields: [branchId], references: [id])
+  owner         User?           @relation("CaseOwner", fields: [ownerId], references: [id])
+  links         CaseLink[]
+
+  @@index([type, status])
+  @@index([branchId, status])
+  @@index([ownerId])
+  @@index([createdAt])
+  @@map("cases")
+}
+
+model CaseLink {
+  id         String             @id @default(cuid())
+  caseId     String             @map("case_id")
+  entityType CaseLinkEntityType @map("entity_type")
+  entityId   String             @map("entity_id")
+  createdAt  DateTime           @default(now()) @map("created_at")
+  case       Case               @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@unique([caseId, entityType, entityId])
+  @@index([entityType, entityId])
+  @@map("case_links")
 }
 
 model AuditLog {

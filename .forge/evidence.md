@@ -3527,3 +3527,507 @@ Status: Passed through P9-02
   Redis to be running with the project credentials.
 - Phase 9 remains blocked on the missing VPS/provisioning proof gates recorded
   in `.forge/state.md`.
+
+## P10-02A Manager Control Room Read Model
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally / runtime and web proof deferred
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, NFR-SEC-002, REQ-REPORT-001, REQ-SEARCH-001,
+  METHOD-MODULAR-001, METHOD-API-001, METHOD-TEST-001, UI-SCREEN-001
+
+### Changes
+
+1. Added `GET /tasks/manager-rollup`, guarded by staff session, manager/admin
+   RBAC, and branch-scope metadata.
+2. Added `TasksService.managerControlRoom`, deriving overdue-by-employee,
+   due-today, stuck, and workload-by-assignee from active task rows only.
+3. Added `TasksRepository.listManagerRollup`, scoped through owner/assignee/
+   next-action user branch membership; no stored counters or schema change.
+4. Added OpenAPI schemas for the manager control room response and registered
+   `test:api -- tasks`.
+
+### Verification
+
+- Passed: `node --import tsx --test apps/api/src/modules/tasks/tasks.service.spec.ts`
+  (7/7).
+- Passed: `node --import tsx --test apps/api/src/modules/tasks/tasks.controller.spec.ts`
+  (5/5).
+- Passed: `node --import tsx --test apps/api/src/modules/tasks/tasks.service.spec.ts apps/api/src/modules/tasks/tasks.controller.spec.ts`
+  (12/12).
+- Passed: `corepack pnpm test:api -- tasks` (4/4).
+- Passed: `corepack pnpm lint`.
+- Failed then fixed: first `corepack pnpm typecheck` failed on a narrow enum
+  allow-list inference in `tasks.service.ts`; after changing it to a `Set<string>`,
+  the command passed.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test` (58/58).
+- Passed: `corepack pnpm openapi:check`.
+- Not Run: live API runtime proof, manager screen proof, and web/runtime proof.
+  The local stack remains deferred per Phase 10 state.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: the controller
+  passes only `request.principal.roleCode` and `request.principal.branchId` into
+  the service; API tests cover session-derived scope, employee denial, and
+  cross-branch query denial through `RbacGuard`.
+- State change history + audit in same transaction: not applicable; P10-02A is
+  read-only and adds no state change.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  the route returns task rollup DTOs only and writes no logs on allowed reads.
+- Customer portal exposure rules: no portal route or public task exposure was
+  added.
+- Trust boundaries tested: `test:api -- tasks` covers manager allowed, employee
+  denied, cross-branch denied/audited, and derived counts from task rows.
+
+## P10-03A Escalation Policy + Due-Date Scan Logic
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally / worker runtime deferred
+- Builder tier: BUILDER-STRONG
+- SRS IDs: SLA-CALENDAR-001, REQ-RBAC-001, NFR-SEC-002, REQ-REPORT-001,
+  METHOD-MODULAR-001, METHOD-API-001, METHOD-TEST-001
+
+### Changes
+
+1. Added `tasks.escalation.ts`, a pure selector for due-soon and overdue task
+   escalation candidates from task due dates and next-action dates.
+2. Added deterministic default thresholds: due soon within 24h, team-leader
+   overdue immediately, branch-manager after 24h, high-priority after 72h.
+3. Wired Manager Control Room `escalated` to the pure selector, keeping the read
+   path deterministic and leaving worker event persistence for P10-03B.
+4. Added task API suite proof for due-soon, overdue, completed-task ignore, and
+   idempotent/stable selection.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- tasks` (8/8).
+- Passed: `node --import tsx --test apps/api/src/modules/tasks/tasks.service.spec.ts apps/api/src/modules/tasks/tasks.controller.spec.ts`
+  (12/12).
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test` (58/58).
+- Passed: `corepack pnpm openapi:check`.
+- Not Run: BullMQ worker wiring, notification dispatch, live runtime scan, and
+  web proof. These are P10-03B `[stack]` work and remain deferred until local
+  Docker/Postgres/Redis/disk blockers are fixed.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: no new API
+  surface was added; the existing manager rollup still derives scope from
+  `request.principal` and its tests still cover employee/cross-branch denial.
+- State change history + audit in same transaction: not applicable; P10-03A is
+  pure read/selection logic with no persisted state change.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  the selector returns task IDs, levels, trigger timestamps, and overdue minutes
+  only.
+- Customer portal exposure rules: no portal route or public task exposure was
+  added.
+- Trust boundaries tested: `test:api -- tasks` still covers manager allowed,
+  employee denied, and cross-branch denied/audited; selector tests cover the
+  pure due-date behavior.
+
+## P10-04A Deal Model + Stage Gates
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally / runtime and web proof deferred
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, NFR-SEC-002, REQ-REPORT-001, METHOD-MODULAR-001,
+  METHOD-API-001, METHOD-TEST-001, NFR-MAINT-001
+
+### Changes
+
+1. Generated the `deals` module skeleton and filled in the module boundary.
+2. Added Prisma `DealStage` and `Deal` model with branch, owner/current holder,
+   stage, due, and blocker fields plus indexes and migration.
+3. Added minimal backend stage-gate authority: create a validated deal record,
+   advance exactly one stage, reject skipped transitions, reject active blockers,
+   and validate next holder/due date.
+4. Wired `DealsModule` into the API module graph and registered `test:api --
+   deals`.
+
+### Verification
+
+- Passed: `corepack pnpm prisma:validate`.
+- Passed: `node --import tsx --test apps/api/src/modules/deals/deals.service.spec.ts apps/api/src/modules/deals/deals.controller.spec.ts`
+  (4/4).
+- Passed: `corepack pnpm test:api -- deals` (3/3).
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Failed then fixed environment: `corepack pnpm test` had all 58 subtests pass
+  but failed coverage report generation while C: had about 27 MB free. Cleared
+  generated `apps/web/.next` and `cms-auto-*` temp dirs, then reran.
+- Passed: `corepack pnpm test` (58/58) after freeing generated cache space.
+- Passed: `corepack pnpm openapi:check`.
+- Not Run: live DB migration apply, runtime API proof, Deal Board UI, and web
+  proof. These stay deferred until local stack repair.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: no new HTTP
+  API surface was added in P10-04A; persisted Deal model carries `branchId` for
+  P10-04B/P10-04C scoped APIs.
+- State change history + audit in same transaction: not applicable yet; P10-04A
+  only adds pure stage-gate authority and schema. P10-04B is explicitly scoped
+  to persisted transitions, generated tasks, and audit.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  deal service returns only deal IDs, branch/holder IDs, stage, due, blocker,
+  and timestamps.
+- Customer portal exposure rules: no portal route or public deal exposure was
+  added.
+- Trust boundaries tested: deal tests cover allowed transition, denied skipped
+  transition, active blocker denial, and due/holder validation.
+
+## P10-04B Deal Stage Transitions Generate Tasks + Audit
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally / runtime and web proof deferred
+- Builder tier: BUILDER-STRONG
+- SRS IDs: METHOD-AUDIT-001, REQ-RBAC-001, NFR-SEC-002, REQ-REPORT-001,
+  METHOD-MODULAR-001, METHOD-API-001, METHOD-TEST-001
+
+### Changes
+
+1. Added transaction-aware `TasksService.createInTransaction` so Deal flows can
+   create next-holder tasks without writing task tables directly.
+2. Added `DealsRepository` persistence for deal create/update inside Prisma
+   transactions.
+3. Added `DealsService.createPersisted` and `advanceStagePersisted`: valid
+   one-step stage transition, deal update, workflow audit, and next-holder task
+   creation run through the same transaction client.
+4. Wired `DealsModule` to `TasksModule`, `AuditService`, and `PrismaService`.
+
+### Verification
+
+- Passed: `node --import tsx --test apps/api/src/modules/deals/deals.service.spec.ts apps/api/src/modules/deals/deals.controller.spec.ts`
+  (5/5).
+- Passed: `corepack pnpm test:api -- deals` (4/4).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm prisma:validate`.
+- Passed: `corepack pnpm test` (58/58).
+- Passed: `corepack pnpm openapi:check`.
+- Not Run: live DB migration apply, runtime API proof, Deal Board UI, and web
+  proof. These stay deferred until local stack repair.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: no new HTTP
+  API surface was added; persisted Deal rows carry `branchId` for scoped APIs in
+  P10-04C.
+- State change history + audit in same transaction: `advanceStagePersisted`
+  updates the Deal, writes workflow audit, and creates the next-holder task via
+  `TasksService.createInTransaction` with the same transaction client; service
+  and API-suite tests assert the shared client.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  audit metadata contains only stage codes; task creation uses deal ID/stage and
+  holder IDs.
+- Customer portal exposure rules: no portal route or public deal exposure was
+  added.
+- Trust boundaries tested: deal tests cover allowed transition, invalid
+  transition denial, blocker denial, and transaction-client sharing for deal,
+  audit, and task.
+
+## P10-04C Deal Handoff Board Read Model
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally / web proof deferred
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, NFR-SEC-002, REQ-REPORT-001, METHOD-MODULAR-001,
+  METHOD-API-001, METHOD-TEST-001, UI-SCREEN-001
+
+### Changes
+
+1. Added `GET /deals/handoff-board`, guarded by staff session, manager/admin
+   RBAC, and branch-scope metadata.
+2. Added `DealsRepository.listHandoffBoard`, scoped directly by `deal.branchId`.
+3. Added `DealsService.handoffBoard`, deriving by-stage buckets, stuck deals,
+   delay age, and current-holder workload from deal rows only.
+4. Added OpenAPI schemas for the Deal Handoff Board response.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- deals` (7/7).
+- Passed: `node --import tsx --test apps/api/src/modules/deals/deals.service.spec.ts apps/api/src/modules/deals/deals.controller.spec.ts`
+  (8/8).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm prisma:validate`.
+- Passed: `corepack pnpm test` (58/58).
+- Not Run: Deal Handoff Board screen/web/runtime proof. This is P10-04D
+  `[stack]` and remains deferred until local stack repair.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: the controller
+  passes only `request.principal.roleCode` and `request.principal.branchId` to
+  the service; API tests cover manager allowed, ordinary employee denied, and
+  cross-branch query denial/audit through `RbacGuard`.
+- State change history + audit in same transaction: not applicable; P10-04C is
+  read-only and adds no state change.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  the board returns deal IDs, branch/holder IDs, stage/due/blocker, delay, and
+  timestamps only.
+- Customer portal exposure rules: no portal route or public deal exposure was
+  added.
+- Trust boundaries tested: `test:api -- deals` covers scoped manager board,
+  employee denial, cross-branch denial/audit, and derived stuck/current-holder
+  data from deal rows.
+
+## P10-05A Promise Flag On Linked Tasks + Service Proof
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally / runtime and web proof deferred
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, NFR-SEC-002, REQ-REPORT-001, METHOD-MODULAR-001,
+  METHOD-API-001, METHOD-TEST-001
+
+### Changes
+
+1. Added `Task.isCustomerPromise` with a Prisma migration and regenerated the
+   Prisma client.
+2. Added promise validation requiring customer-, complaint-, or deal-linked
+   promise tasks; unlinked promises fail before persistence.
+3. Added `promiseKeptOnTime` service logic deriving promise performance from
+   task status-history events instead of stored counters.
+4. Wired the promise flag through task repository selects, DTOs, responses, and
+   canonical OpenAPI.
+
+### Verification
+
+- Passed: `corepack pnpm --dir packages/database exec prisma generate --schema prisma/schema.prisma`.
+- Passed: `corepack pnpm test:api -- tasks` (10/10).
+- Passed: `node --import tsx --test apps/api/src/modules/tasks/tasks.service.spec.ts apps/api/src/modules/tasks/tasks.controller.spec.ts`
+  (14/14).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm prisma:validate`.
+- Passed: `corepack pnpm test` (58/58).
+- Not Run: live DB migration apply, runtime API proof, and web proof. These
+  remain deferred until local stack repair.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: no new HTTP
+  route was added; existing task routes still derive authority through the
+  guarded controller/service path.
+- State change history + audit in same transaction: promise task creation uses
+  the existing task create transaction path, including audit; status-derived
+  promise performance is read-only.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  only the boolean promise flag and derived on-time result are exposed.
+- Customer portal exposure rules: no portal route or public task exposure was
+  added.
+- Trust boundaries tested: task API and service tests cover linked promise
+  acceptance, unlinked promise denial, and on-time/late/missing completion
+  derivation from task/status-history data.
+
+## P10-05B Surface Overdue Promises In Today + Control Room + KPI
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally / runtime and web proof deferred
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, NFR-SEC-002, REQ-REPORT-001, METHOD-MODULAR-001,
+  METHOD-API-001, METHOD-TEST-001
+
+### Changes
+
+1. Added `overduePromises` to Employee Today, derived from visible active task
+   rows where `isCustomerPromise` is true and `dueAt` is before `now`.
+2. Added `overduePromises` to Manager Control Room using the already branch-
+   scoped manager task set.
+3. Added `promiseKpi` to Manager Control Room with open promise and overdue
+   promise counts derived from the same scoped rows; no counters were stored.
+4. Updated task DTOs, focused tests, API-suite tests, and canonical OpenAPI.
+
+### Verification
+
+- Passed: `node --import tsx --test apps/api/src/modules/tasks/tasks.service.spec.ts apps/api/src/modules/tasks/tasks.controller.spec.ts`
+  (14/14).
+- Passed: `corepack pnpm test:api -- tasks` (10/10).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test` (58/58).
+- Passed: `git diff --check`; only CRLF normalization warnings were printed.
+- Not Run: live runtime API proof and web proof. These remain deferred until
+  local stack repair.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: no new route
+  was added; Today still derives actor ID from `request.principal`, and Manager
+  Control Room still derives role/branch from the server principal.
+- State change history + audit in same transaction: not applicable; P10-05B is
+  read-only and adds no state changes.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  the new fields expose only task DTOs already visible through the same scoped
+  reads and aggregate promise counts.
+- Customer portal exposure rules: no portal route or public task exposure was
+  added.
+- Trust boundaries tested: task API suite covers manager allowed, ordinary
+  employee denied, cross-branch denied/audited, and overdue promise surfacing
+  from scoped task rows; focused service tests cover Employee Today and Control
+  Room derived promise buckets.
+
+## P10-06A Generalize Complaint Into Case Schema + Migration
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally / runtime and web proof deferred
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, NFR-SEC-002, REQ-REPORT-001, METHOD-MODULAR-001,
+  METHOD-API-001, METHOD-TEST-001, NFR-MAINT-001
+
+### Changes
+
+1. Added additive Prisma `Case` and `CaseLink` models with `CaseType`, link
+   entity types, branch, owner, status, subject, descriptions, timestamps, and
+   indexes.
+2. Added a SQL migration creating `cases` and `case_links` plus enum types,
+   foreign keys, uniqueness, and lookup indexes.
+3. Extended the schema proof gate so Case and CaseLink remain part of the core
+   model contract.
+4. Left the existing Complaint model, complaint APIs, and workflow tables
+   untouched for P10-06C regression.
+
+### Verification
+
+- Passed: `corepack pnpm prisma:validate`.
+- Failed then fixed: `node --test tools/schema-check.test.mjs` initially failed
+  because the negative-test expected error ordering did not match the new Case
+  checks; after aligning the assertion order, it passed (3/3).
+- Passed: `node --test tools/schema-check.test.mjs` (3/3).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test` (58/58).
+- Passed: `git diff --check`; only CRLF normalization warnings were printed.
+- Not Run: live DB migration apply, runtime API proof, and web proof. These
+  remain deferred until local stack repair.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: no new route
+  or service authority was added; Case rows include `branchId` for future
+  server-scoped reads and writes.
+- State change history + audit in same transaction: not applicable; P10-06A is
+  schema-only and adds no application state-change path.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  no runtime logging or API exposure was added.
+- Customer portal exposure rules: no portal route or public Case exposure was
+  added.
+- Trust boundaries tested: schema proof covers the new Case/CaseLink boundary;
+  existing root tests and OpenAPI drift checks still pass with current complaint
+  routes unchanged.
+
+## P10-06B Case Tasks + Timeline + Links Service Tests
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally / runtime and web proof deferred
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, NFR-SEC-002, REQ-REPORT-001, METHOD-MODULAR-001,
+  METHOD-API-001, METHOD-TEST-001, NFR-MAINT-001
+
+### Changes
+
+1. Generated the `cases` module boundary and wired `CasesModule` into the API
+   module graph.
+2. Added `CasesRepository` persistence for `cases` and `case_links`.
+3. Added `CasesService.createDraft`, `timeline`, and `taskLinkForCase` with
+   validated links and a task-link DTO using `TaskLinkEntityType.CASE`.
+4. Added `CASE` to task links and allowed case-linked promise tasks.
+
+### Verification
+
+- Passed: `corepack pnpm --dir packages/database exec prisma generate --schema prisma/schema.prisma`.
+- Passed: `node --import tsx --test apps/api/src/modules/cases/cases.service.spec.ts apps/api/src/modules/cases/cases.controller.spec.ts`
+  (5/5).
+- Passed: `corepack pnpm prisma:validate`.
+- Passed: `corepack pnpm openapi:check`.
+- Failed then fixed: `corepack pnpm typecheck` initially failed because a test
+  fixture returned selected case links without `createdAt`; the fixture now
+  matches the repository select shape.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test` (58/58).
+- Passed: `git diff --check`; only CRLF normalization warnings were printed.
+- Not Run: live DB migration apply, runtime API proof, and web proof. These
+  remain deferred until local stack repair.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: no HTTP route
+  was added; service inputs require server-provided branch/owner values in
+  future guarded call sites, and Case rows carry `branchId`.
+- State change history + audit in same transaction: P10-06B adds draft service
+  behavior only and no public mutation route yet; P10-06C must decide the
+  persisted audit/timeline pattern before exposing writes.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  the service returns only case metadata, links, timestamps, and a task-link DTO.
+- Customer portal exposure rules: no portal route or public Case exposure was
+  added.
+- Trust boundaries tested: focused cases tests cover case-without-vehicle,
+  empty/invalid link denial, timeline shape, and task/case link validation.
+
+## P10-06C Complaint Regression + Case-Without-Vehicle Authority Proof
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally / runtime and web proof deferred
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, NFR-SEC-002, METHOD-AUDIT-001, METHOD-MODULAR-001,
+  METHOD-API-001, METHOD-TEST-001, ARCH-WORKFLOW-001
+
+### Changes
+
+1. Added workflow API-suite regression coverage proving invalid complaint
+   transitions are rejected before repository writes.
+2. Added controller regression coverage proving transition actor role/actor ID
+   are derived from the server principal, not client-owned body fields.
+3. Re-ran the focused cases service proof for case-without-vehicle, link
+   validation, timeline shape, and task/case link DTO behavior.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- workflow` (41/41).
+- Passed: `node --import tsx --test apps/api/src/modules/cases/cases.service.spec.ts apps/api/src/modules/cases/cases.controller.spec.ts`
+  (5/5).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm lint`.
+- Failed then fixed: `corepack pnpm typecheck` initially failed on an
+  over-narrowed redundant case spec assertion; after removing it, typecheck
+  passed.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test` (58/58).
+- Passed: `git diff --check`; only CRLF normalization warnings were printed.
+- Not Run: live DB migration apply, runtime API proof, and web proof. These
+  remain deferred until local stack repair.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: the new
+  transition route regression proves spoofed `actorRole`/`actorId` body fields
+  are ignored and server principal role/actor are passed to the service.
+- State change history + audit in same transaction: existing workflow API-suite
+  tests still pass, including transition status-history and audit in the same
+  transaction.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  tests add no logging or API exposure.
+- Customer portal exposure rules: existing workflow/portal complaint tests still
+  pass; no new portal Case exposure was added.
+- Trust boundaries tested: workflow suite covers invalid transition denial,
+  server-owned transition authority, branch-scope denial/audit, and the existing
+  allowed workflow transition paths.

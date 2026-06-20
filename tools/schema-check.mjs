@@ -25,6 +25,8 @@ export const requiredModels = [
   'Compensation',
   'PortalVerification',
   'PortalSession',
+  'Case',
+  'CaseLink',
   'AuditLog',
 ];
 
@@ -42,6 +44,8 @@ export function checkSchemaText(text) {
     ['NotificationDeliveryAttempt', 'notification_delivery_attempts'],
     ['NotificationTemplate', 'notification_templates'],
     ['CustomerNotificationPreference', 'customer_notification_preferences'],
+    ['Case', 'cases'],
+    ['CaseLink', 'case_links'],
     ['AuditLog', 'audit_logs'],
   ]) {
     const block = text.match(new RegExp(`model\\s+${model}\\s+{[\\s\\S]*?\\n}`))?.[0] ?? '';
@@ -79,6 +83,18 @@ export function checkSchemaText(text) {
 
   if (!/enum\s+AuditEventType\s+{[\s\S]*SECURITY/.test(text)) {
     errors.push('AuditEventType must include SECURITY');
+  }
+
+  const caseBlock = text.match(/model\s+Case\s+{[\s\S]*?\n}/)?.[0] ?? '';
+  for (const field of ['type', 'status', 'branchId', 'ownerId', 'subject', 'descriptionEn', 'links']) {
+    if (!new RegExp(`\\b${field}\\b`).test(caseBlock)) errors.push(`Case must include ${field}`);
+  }
+  const caseLinkBlock = text.match(/model\s+CaseLink\s+{[\s\S]*?\n}/)?.[0] ?? '';
+  for (const field of ['caseId', 'entityType', 'entityId']) {
+    if (!new RegExp(`\\b${field}\\b`).test(caseLinkBlock)) errors.push(`CaseLink must include ${field}`);
+  }
+  if (!caseLinkBlock.includes('@@unique([caseId, entityType, entityId])')) {
+    errors.push('CaseLink must enforce unique linked entities per case');
   }
 
   const templateBlock = text.match(/model\s+NotificationTemplate\s+{[\s\S]*?\n}/)?.[0] ?? '';

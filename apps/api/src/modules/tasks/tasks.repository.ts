@@ -12,6 +12,7 @@ const taskSelect = {
   nextActionWhat: true,
   nextActionWhoId: true,
   nextActionWhen: true,
+  isCustomerPromise: true,
   visibility: true,
   confidentialityLevel: true,
   createdAt: true,
@@ -32,6 +33,7 @@ export type CreateTaskData = {
   nextActionWhat?: string | null;
   nextActionWhoId?: string | null;
   nextActionWhen?: Date | null;
+  isCustomerPromise?: boolean;
   visibility: TaskVisibility;
   confidentialityLevel: TaskConfidentialityLevel;
   links: { entityType: TaskLinkEntityType; entityId: string }[];
@@ -69,6 +71,7 @@ export class TasksRepository {
       status: data.status,
       nextActionWhat: data.nextActionWhat ?? null,
       nextActionWhen: data.nextActionWhen ?? null,
+      isCustomerPromise: data.isCustomerPromise ?? false,
       visibility: data.visibility,
       confidentialityLevel: data.confidentialityLevel,
       owner: { connect: { id: data.ownerId } },
@@ -99,6 +102,19 @@ export class TasksRepository {
       where: {
         status: { not: 'DONE' },
         OR: [{ ownerId: userId }, { assigneeId: userId }, { nextActionWhoId: userId }, { participants: { some: { userId } } }],
+      },
+      orderBy: [{ dueAt: 'asc' }, { createdAt: 'asc' }],
+      select: taskSelect,
+    });
+  }
+
+  async listManagerRollup(branchId: string | null): Promise<TaskRecord[]> {
+    return this.prisma.task.findMany({
+      where: {
+        status: { not: 'DONE' },
+        ...(branchId
+          ? { OR: [{ owner: { branchId } }, { assignee: { branchId } }, { nextActionWho: { branchId } }] }
+          : {}),
       },
       orderBy: [{ dueAt: 'asc' }, { createdAt: 'asc' }],
       select: taskSelect,

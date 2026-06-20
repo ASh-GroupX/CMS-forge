@@ -1,12 +1,12 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { RoleCode } from '@prisma/client';
-import { RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
-import type { AuthenticatedRequest } from '../../core/auth.guard.js';
+import { BranchScoped, RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
+import type { AuthenticatedRequest, StaffPrincipal } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { AppException } from '../../core/http-kernel.js';
 import type { QuickAddTaskResponseDto } from './dto/create-task.dto.js';
 import { parseQuickAddTaskBody, toQuickAddTaskInput } from './dto/create-task.dto.js';
-import type { EmployeeTodayResponseDto } from './dto/task-response.dto.js';
+import type { EmployeeTodayResponseDto, ManagerControlRoomResponseDto } from './dto/task-response.dto.js';
 import { TasksService } from './tasks.service.js';
 
 @Controller('tasks')
@@ -29,12 +29,25 @@ export class TasksController {
   async today(@Req() request: AuthenticatedRequest): Promise<EmployeeTodayResponseDto> {
     return this.tasksService.employeeToday(principalUserId(request));
   }
+
+  @Get('manager-rollup')
+  @UseGuards(SessionAuthGuard, RbacGuard)
+  @Roles(RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN, RoleCode.MGMT_READONLY)
+  @BranchScoped()
+  async managerRollup(@Req() request: AuthenticatedRequest): Promise<ManagerControlRoomResponseDto> {
+    const principal = requirePrincipal(request);
+    return this.tasksService.managerControlRoom({ roleCode: principal.roleCode, branchId: principal.branchId });
+  }
 }
 
 function principalUserId(request: AuthenticatedRequest): string {
+  return requirePrincipal(request).userId;
+}
+
+function requirePrincipal(request: AuthenticatedRequest): StaffPrincipal {
   const userId = request.principal?.userId;
   if (!userId) throw new AppException('AUTH_INVALID_CREDENTIALS', 'Invalid credentials', 401);
-  return userId;
+  return request.principal!;
 }
 
 function auditContext(request: AuthenticatedRequest) {
