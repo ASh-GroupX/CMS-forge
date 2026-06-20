@@ -4317,3 +4317,152 @@ Status: Passed through P9-02
 - Trust boundaries tested: focused tests cover CAPA visibility and repeat versus
   non-repeat behavior. Route-level RBAC proof remains deferred until a public
   CAPA/case-detail route exposes the new fields.
+
+## P10-09A Participant ACL And Confidential Case Read Enforcement
+
+- Date: 2026-06-20
+- Risk: Critical
+- Status: Passed locally / live migration apply deferred
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, NFR-SEC-002, METHOD-MODULAR-001, METHOD-API-001,
+  METHOD-TEST-001
+
+### Changes
+
+1. Added case confidentiality and participant ACL primitives, including accused
+   participant role, to Prisma and the cases module boundary.
+2. Wired case repository create/read selections for confidentiality and
+   participants.
+3. Added `CasesService.timelineForActor` to enforce confidential case reads at
+   the service/query boundary.
+4. Denied accused/conflicted users before role/owner allows and wrote SECURITY
+   audit records for denied confidential reads.
+5. Added focused tests for one allowed confidential participant path and one
+   denied accused/audited path.
+
+### Verification
+
+- Failed then reran after required local Prisma client generation:
+  `node --import tsx --test apps/api/src/modules/cases/cases.service.spec.ts`
+  initially failed because the generated Prisma client did not yet include the
+  new case ACL enums.
+- Passed: `$env:DATABASE_URL='postgresql://cms:cms@localhost:5432/cms_auto'; corepack pnpm --dir packages/database exec prisma validate --schema prisma/schema.prisma`.
+- Passed: `$env:DATABASE_URL='postgresql://cms:cms@localhost:5432/cms_auto'; corepack pnpm --dir packages/database exec prisma generate --schema prisma/schema.prisma`.
+- Passed: `node --import tsx --test apps/api/src/modules/cases/cases.service.spec.ts`
+  (10/10).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test` (58/58).
+- Passed: `git diff --check`; only CRLF normalization warnings were printed.
+- Not Run: live DB migration apply remains deferred until local stack repair.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: no HTTP route
+  was added; the new actor-aware case read method requires a server-supplied
+  actor and enforces admin, branch, owner, and participant checks in the backend.
+- State change history + audit in same transaction: no state change was added;
+  denied confidential reads write SECURITY audit entries before throwing.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: denial audit metadata contains only reason and case branch id.
+- Customer portal exposure rules: no portal route or customer-facing case
+  surface was added; confidential case data remains backend-only.
+- Trust boundaries tested: focused tests cover an allowed confidential
+  participant read and an accused/conflicted denial with SECURITY audit.
+
+## P10-09B Employee-Grievance Case Type And Confidential Lifecycle
+
+- Date: 2026-06-20
+- Risk: Critical
+- Status: Passed locally / live migration apply deferred
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, NFR-SEC-002, METHOD-MODULAR-001, METHOD-API-001,
+  METHOD-TEST-001
+
+### Changes
+
+1. Added `EMPLOYEE_GRIEVANCE` case type with confidential lifecycle statuses.
+2. Added restricted case notes and case lifecycle history persistence.
+3. Added `CasesService.createEmployeeGrievance` with confidential HR-review
+   defaults.
+4. Added confidential lifecycle transition validation with lifecycle history and
+   WORKFLOW audit written in the same repository transaction.
+5. Added restricted-note visibility only through the actor-aware confidential
+   timeline read path.
+6. Split case ACL/lifecycle policy helpers out of the service to keep source
+   files under the agentic size budget.
+
+### Verification
+
+- Passed: `$env:DATABASE_URL='postgresql://cms:cms@localhost:5432/cms_auto'; corepack pnpm --dir packages/database exec prisma validate --schema prisma/schema.prisma`.
+- Passed: `$env:DATABASE_URL='postgresql://cms:cms@localhost:5432/cms_auto'; corepack pnpm --dir packages/database exec prisma generate --schema prisma/schema.prisma`.
+- Passed: `node --import tsx --test apps/api/src/modules/cases/cases.service.spec.ts`
+  (13/13).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test` (58/58).
+- Passed: `git diff --check`; only CRLF normalization warnings were printed.
+- Not Run: live DB migration apply remains deferred until local stack repair.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: no HTTP route
+  was added; employee-grievance reads and lifecycle updates require the
+  server-supplied actor and reuse the backend participant/conflict ACL.
+- State change history + audit in same transaction: confidential lifecycle
+  transitions write `case_lifecycle_history` and a WORKFLOW audit record inside
+  the same repository transaction.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: restricted-note reads return only note body/author/timestamp to
+  authorized actors, and audit metadata contains lifecycle status codes only.
+- Customer portal exposure rules: no portal route or customer-facing surface was
+  added; restricted notes are omitted from the old non-actor timeline path.
+- Trust boundaries tested: focused tests cover allowed restricted-note access,
+  accused/conflicted denial with SECURITY audit, and invalid lifecycle rejection.
+
+## P10-10A Dealership Seed Data
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed locally / live seed run deferred
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, NFR-SEC-002, METHOD-MODULAR-001, METHOD-TEST-001
+
+### Changes
+
+1. Extended the dev seed with Phase 10 dealership demo rows: two deals, one
+   stuck deal, overdue promise/internal tasks, and a confidential employee case.
+2. Linked seeded vehicles to customers for realistic automotive demo data.
+3. Seeded confidential task/case ACL participants, including accused denial
+   intent on the employee grievance case.
+4. Split Phase 10 seed rows into `phase10-seed.ts` to keep seed source files
+   under the 300-line budget.
+5. Added a focused static seed-shape test for demo data and confidential ACL
+   intent without requiring a live database.
+
+### Verification
+
+- Passed: `node --import tsx --test apps/api/test/seed/dealership-seed.test.ts`
+  (1/1).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test` (58/58).
+- Passed: `git diff --check`; only CRLF normalization warnings were printed.
+- Not Run: live `db:seed` remains deferred until local stack repair.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: seed data adds
+  role/user rows only; no route or client-trusted authorization was added.
+- State change history + audit in same transaction: not applicable to static
+  seed-shape proof; no runtime state-changing service behavior was added.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: the seed keeps the existing dev-only Argon2id-shaped hash constant
+  and adds no plaintext password or provider secret.
+- Customer portal exposure rules: no portal route or customer-facing surface was
+  added; confidential seed rows use backend ACL primitives only.
+- Trust boundaries tested: focused seed test proves confidential task/case ACL
+  markers, including accused participant intent, are present in the seed.

@@ -206,6 +206,27 @@ enum DealStage {
 
 enum CaseType {
   CUSTOMER_COMPLAINT
+  EMPLOYEE_GRIEVANCE
+}
+
+enum CaseConfidentialityLevel {
+  NORMAL
+  CONFIDENTIAL
+}
+
+enum CaseLifecycleStatus {
+  DRAFT
+  HR_REVIEW
+  INVESTIGATION
+  DECISION
+  CLOSED
+  APPEALED
+}
+
+enum CaseParticipantRole {
+  OWNER
+  PARTICIPANT
+  ACCUSED
 }
 
 enum CaseLinkEntityType {
@@ -322,6 +343,8 @@ model User {
   ownedDeals                 Deal[]                   @relation("DealOwner")
   currentDealHandoffs        Deal[]                   @relation("DealCurrentHolder")
   ownedCases                 Case[]                   @relation("CaseOwner")
+  caseParticipants           CaseParticipant[]
+  caseRestrictedNotes        CaseRestrictedNote[]      @relation("CaseRestrictedNoteAuthor")
 
   @@index([roleId])
   @@index([branchId])
@@ -829,22 +852,28 @@ model Deal {
 }
 
 model Case {
-  id            String          @id @default(cuid())
-  type          CaseType        @default(CUSTOMER_COMPLAINT)
-  status        ComplaintStatus @default(DRAFT)
-  branchId      String          @map("branch_id")
-  ownerId       String?         @map("owner_id")
-  subject       String
-  descriptionEn String          @map("description_en")
-  descriptionAr String?         @map("description_ar")
-  createdAt     DateTime        @default(now()) @map("created_at")
-  updatedAt     DateTime        @updatedAt @map("updated_at")
-  branch        Branch          @relation(fields: [branchId], references: [id])
-  owner         User?           @relation("CaseOwner", fields: [ownerId], references: [id])
-  links         CaseLink[]
-  capaActions   CapaAction[]
+  id                   String                   @id @default(cuid())
+  type                 CaseType                 @default(CUSTOMER_COMPLAINT)
+  status               ComplaintStatus          @default(DRAFT)
+  lifecycleStatus      CaseLifecycleStatus      @default(DRAFT) @map("lifecycle_status")
+  confidentialityLevel CaseConfidentialityLevel @default(NORMAL) @map("confidentiality_level")
+  branchId             String                   @map("branch_id")
+  ownerId              String?                  @map("owner_id")
+  subject              String
+  descriptionEn        String                   @map("description_en")
+  descriptionAr        String?                  @map("description_ar")
+  createdAt            DateTime                 @default(now()) @map("created_at")
+  updatedAt            DateTime                 @updatedAt @map("updated_at")
+  branch               Branch                   @relation(fields: [branchId], references: [id])
+  owner                User?                    @relation("CaseOwner", fields: [ownerId], references: [id])
+  links                CaseLink[]
+  participants         CaseParticipant[]
+  restrictedNotes      CaseRestrictedNote[]
+  lifecycleHistory     CaseLifecycleHistory[]
+  capaActions          CapaAction[]
 
   @@index([type, status])
+  @@index([confidentialityLevel])
   @@index([branchId, status])
   @@index([ownerId])
   @@index([createdAt])
@@ -862,6 +891,49 @@ model CaseLink {
   @@unique([caseId, entityType, entityId])
   @@index([entityType, entityId])
   @@map("case_links")
+}
+
+model CaseParticipant {
+  id        String              @id @default(cuid())
+  caseId    String              @map("case_id")
+  userId    String              @map("user_id")
+  role      CaseParticipantRole @default(PARTICIPANT)
+  createdAt DateTime            @default(now()) @map("created_at")
+  case      Case                @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  user      User                @relation(fields: [userId], references: [id])
+
+  @@unique([caseId, userId])
+  @@index([userId])
+  @@index([role])
+  @@map("case_participants")
+}
+
+model CaseRestrictedNote {
+  id        String   @id @default(cuid())
+  caseId    String   @map("case_id")
+  authorId  String?  @map("author_id")
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+  case      Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  author    User?    @relation("CaseRestrictedNoteAuthor", fields: [authorId], references: [id])
+
+  @@index([caseId, createdAt])
+  @@index([authorId])
+  @@map("case_restricted_notes")
+}
+
+model CaseLifecycleHistory {
+  id            String               @id @default(cuid())
+  caseId        String               @map("case_id")
+  fromStatus    CaseLifecycleStatus? @map("from_status")
+  toStatus      CaseLifecycleStatus  @map("to_status")
+  actorId       String?              @map("actor_id")
+  correlationId String?              @map("correlation_id")
+  createdAt     DateTime             @default(now()) @map("created_at")
+  case          Case                 @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId, createdAt])
+  @@map("case_lifecycle_history")
 }
 
 model CapaAction {

@@ -1259,3 +1259,46 @@ backend repeat signal from customer-linked matching CAPA root cause or explicit
 repeat flag. Focused cases tests cover CAPA visibility plus repeat and
 non-repeat behavior. Typecheck, OpenAPI check, lint, root tests, and diff
 whitespace check passed. P10-08 is complete; continue to P10-09A.
+
+## P10-09A Builder Trust Note
+
+Date: 2026-06-20
+Risk: Critical
+Recommendation: Continue
+
+P10-09A is complete: confidential case reads now have case-owned ACL primitives,
+service-level `timelineForActor` enforcement, accused/conflicted default denial,
+and SECURITY audit records for denied confidential reads. Focused cases tests
+cover one allowed participant path and one denied accused/audited path. Prisma
+validate/generate, focused cases tests, typecheck, OpenAPI check, lint, root
+tests, and diff whitespace check passed; live migration apply remains deferred
+until local stack repair. Continue to P10-09B.
+
+## P10-09B Builder Trust Note
+
+Date: 2026-06-20
+Risk: Critical
+Recommendation: Continue
+
+P10-09B is complete: employee-grievance cases now default to confidential
+HR-review lifecycle, restricted notes are only returned through the actor-aware
+confidential read path, and confidential lifecycle updates validate transitions
+while writing lifecycle history plus WORKFLOW audit in one transaction. Focused
+cases tests, Prisma validate/generate, typecheck, OpenAPI check, lint, root
+tests, and diff whitespace check passed; live migration apply remains deferred
+until local stack repair. P10-09C remains stack-gated, so continue to the next
+buildable no-stack Phase 10 task, P10-10A.
+
+## P10-10A Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Blocked on stack repair
+
+P10-10A is complete: the dev seed now includes deterministic Phase 10 demo rows
+for employees/roles, customers/vehicles, deals, an overdue promise task, a stuck
+deal, a complaint link, and a confidential employee grievance case with ACL
+participants. The focused static seed test, typecheck, OpenAPI check, lint, root
+tests, and diff whitespace check passed. Live `db:seed` was not run because the
+remaining Phase 10 tasks are stack-gated and the local stack prerequisite is
+still unresolved.

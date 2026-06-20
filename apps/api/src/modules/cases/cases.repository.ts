@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { CaseLinkEntityType } from '@prisma/client';
-import type { CaseType, ComplaintStatus, Prisma } from '@prisma/client';
+import type { CaseConfidentialityLevel, CaseLifecycleStatus, CaseParticipantRole, CaseType, ComplaintStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
 
 const capaSelect = {
@@ -21,6 +21,8 @@ const caseSelect = {
   id: true,
   type: true,
   status: true,
+  lifecycleStatus: true,
+  confidentialityLevel: true,
   branchId: true,
   ownerId: true,
   subject: true,
@@ -29,23 +31,36 @@ const caseSelect = {
   createdAt: true,
   updatedAt: true,
   links: { select: { entityType: true, entityId: true, createdAt: true } },
+  participants: { select: { userId: true, role: true } },
+  restrictedNotes: { select: { id: true, authorId: true, body: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
   capaActions: { select: capaSelect, orderBy: [{ dueAt: 'asc' }, { createdAt: 'asc' }] },
 } satisfies Prisma.CaseSelect;
 
 export type CaseRecord = Prisma.CaseGetPayload<{ select: typeof caseSelect }>;
-type CaseClient = Pick<Prisma.TransactionClient, 'case'>;
+type CaseClient = Pick<Prisma.TransactionClient, 'case' | 'caseLifecycleHistory'>;
 export type CapaActionRecord = Prisma.CapaActionGetPayload<{ select: typeof capaSelect }>;
 type CapaClient = Pick<Prisma.TransactionClient, 'capaAction'>;
 
 export type CreateCaseData = {
   type: CaseType;
   status: ComplaintStatus;
+  lifecycleStatus: CaseLifecycleStatus;
+  confidentialityLevel: CaseConfidentialityLevel;
   branchId: string;
   ownerId?: string | null;
   subject: string;
   descriptionEn: string;
   descriptionAr?: string | null;
   links: { entityType: CaseLinkEntityType; entityId: string }[];
+  participants: { userId: string; role: CaseParticipantRole }[];
+};
+
+export type UpdateCaseLifecycleData = {
+  id: string;
+  fromStatus: CaseLifecycleStatus;
+  toStatus: CaseLifecycleStatus;
+  actorId?: string | null;
+  correlationId?: string | null;
 };
 
 export type CreateCapaActionData = {
@@ -63,24 +78,55 @@ export type CreateCapaActionData = {
 export class CasesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async transaction<T>(work: (client: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    return this.prisma.$transaction(work);
+  }
+
   async create(data: CreateCaseData, client: CaseClient = this.prisma): Promise<CaseRecord> {
+    const createData: Prisma.CaseCreateInput = {
+      type: data.type,
+      status: data.status,
+      lifecycleStatus: data.lifecycleStatus,
+      subject: data.subject,
+      descriptionEn: data.descriptionEn,
+      descriptionAr: data.descriptionAr ?? null,
+      confidentialityLevel: data.confidentialityLevel,
+      branch: { connect: { id: data.branchId } },
+      links: { create: data.links },
+    };
+    if (data.ownerId) createData.owner = { connect: { id: data.ownerId } };
+    if (data.participants.length) createData.participants = { create: data.participants };
+
     return client.case.create({
-      data: {
-        type: data.type,
-        status: data.status,
-        subject: data.subject,
-        descriptionEn: data.descriptionEn,
-        descriptionAr: data.descriptionAr ?? null,
-        branch: { connect: { id: data.branchId } },
-        ...(data.ownerId ? { owner: { connect: { id: data.ownerId } } } : {}),
-        links: { create: data.links },
-      },
+      data: createData,
       select: caseSelect,
     });
   }
 
   async findById(id: string): Promise<CaseRecord | null> {
     return this.prisma.case.findUnique({ where: { id }, select: caseSelect });
+  }
+
+  async findByIdInTransaction(id: string, client: CaseClient): Promise<CaseRecord | null> {
+    return client.case.findUnique({ where: { id }, select: caseSelect });
+  }
+
+  async updateLifecycleStatus(data: UpdateCaseLifecycleData, client: CaseClient): Promise<CaseRecord> {
+    const updated = await client.case.update({
+      where: { id: data.id },
+      data: { lifecycleStatus: data.toStatus },
+      select: caseSelect,
+    });
+    await client.caseLifecycleHistory.create({
+      data: {
+        caseId: data.id,
+        fromStatus: data.fromStatus,
+        toStatus: data.toStatus,
+        actorId: data.actorId ?? null,
+        correlationId: data.correlationId ?? null,
+      },
+    });
+    return updated;
   }
 
   async createCapaAction(data: CreateCapaActionData, client: CapaClient = this.prisma): Promise<CapaActionRecord> {

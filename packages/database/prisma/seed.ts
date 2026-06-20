@@ -1,4 +1,5 @@
-import { PrismaClient, RoleCode, ComplaintStatus } from '@prisma/client';
+import { ComplaintStatus, PrismaClient, RoleCode } from '@prisma/client';
+import { seedPhase10DealershipDemo } from './phase10-seed.js';
 
 // Dev-only seed (F0-04). All upserts are idempotent — safe to run repeatedly.
 // No real credentials, production secrets, or real customer data.
@@ -50,7 +51,7 @@ async function main(): Promise<void> {
   const crOffRoleId  = roleMap.get(RoleCode.CR_OFFICER)!;
   const brnMgrRoleId = roleMap.get(RoleCode.BRANCH_MANAGER)!;
 
-  await Promise.all([
+  const [adminUser, crManager, officerMain, branchMgrNorth] = await Promise.all([
     prisma.user.upsert({
       where: { email: 'admin@cms-auto.test' },
       update: { passwordHash: DEV_STAFF_PASSWORD_HASH },
@@ -146,18 +147,18 @@ async function main(): Promise<void> {
   const [vehicle1, vehicle2] = await Promise.all([
     prisma.vehicle.upsert({
       where: { vin: 'SEEDDEMO00001' },
-      update: {},
-      create: { vin: 'SEEDDEMO00001', plate: 'ABC-1234', makeEn: 'Toyota', modelEn: 'Camry', year: 2022 },
+      update: { customerId: customerA.id },
+      create: { vin: 'SEEDDEMO00001', plate: 'ABC-1234', makeEn: 'Toyota', modelEn: 'Camry', year: 2022, customerId: customerA.id },
     }),
     prisma.vehicle.upsert({
       where: { vin: 'SEEDDEMO00002' },
-      update: {},
-      create: { vin: 'SEEDDEMO00002', plate: 'XYZ-5678', makeEn: 'Hyundai', modelEn: 'Sonata', year: 2023 },
+      update: { customerId: customerB.id },
+      create: { vin: 'SEEDDEMO00002', plate: 'XYZ-5678', makeEn: 'Hyundai', modelEn: 'Sonata', year: 2023, customerId: customerB.id },
     }),
   ]);
 
   // ── Complaints in different states ────────────────────────────────────────
-  await Promise.all([
+  const [complaint1] = await Promise.all([
     prisma.complaint.upsert({
       where: { referenceNumber: 'CMP-SEED-001' },
       update: {},
@@ -201,7 +202,18 @@ async function main(): Promise<void> {
     }),
   ]);
 
-  console.log('Seed complete: 2 branches, 6 roles, 4 users, 5 categories, 2 customers, 2 vehicles, 3 complaints.');
+  await seedPhase10DealershipDemo(prisma, {
+    mainBranch,
+    northBranch,
+    adminUser,
+    crManager,
+    officerMain,
+    branchMgrNorth,
+    customerA,
+    complaint1,
+  });
+
+  console.log('Seed complete: 2 branches, 6 roles, 4 users, 5 categories, 2 customers, 2 vehicles, 3 complaints, 2 deals, 2 tasks, 1 confidential case.');
 }
 
 main()

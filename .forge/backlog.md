@@ -487,13 +487,13 @@ PLAN-split into 1-5 file sub-tasks before build, like F1-05 was.
         action, due, effectiveness check, repeat flag) + service tests.
   - [x] P10-08B: Repeat-issue detection + CAPA surfaced in case detail + tests.
 - [ ] P10-09 (umbrella; Risk Critical; AFTER Task/Case stable): Confidential employee cases.
-  - [ ] P10-09A: Participant ACL + confidentiality enforced at the service/query layer
+  - [x] P10-09A: Participant ACL + confidentiality enforced at the service/query layer
         (accused denied by default, conflict-of-interest guard) + denial audit + tests.
-  - [ ] P10-09B: Employee-grievance case type + confidential lifecycle (HR review ->
+  - [x] P10-09B: Employee-grievance case type + confidential lifecycle (HR review ->
         investigation -> decision -> closed -> appealed) + restricted notes + tests.
   - [ ] P10-09C `[stack]`: Confidential HR-only screens + redaction + privacy regression tests.
 - [ ] P10-10: Local UAT seed + demo (proves the whole thing).
-  - [ ] P10-10A: Dealership seed - employees/roles, customers, vehicles, deals,
+  - [x] P10-10A: Dealership seed - employees/roles, customers, vehicles, deals,
         overdue tasks, a stuck deal, a complaint, an internal task.
   - [ ] P10-10B `[stack]`: End-to-end local proof - employee sees today -> manager sees
         late/stuck -> deal handoff -> overdue escalates -> KPI moves from the timeline.
