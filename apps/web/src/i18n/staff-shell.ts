@@ -77,6 +77,7 @@ export const staffShellText = {
       },
       sla: { backendScoped: 'Backend scoped' },
       actions: { open: 'Open detail' },
+      unassigned: 'Unassigned',
       pagination: {
         page: 'Page 1 of 1',
         previous: 'Previous',
@@ -221,6 +222,7 @@ export const staffShellText = {
       },
       sla: { backendScoped: 'ضمن نطاق الخادم' },
       actions: { open: 'فتح التفاصيل' },
+      unassigned: 'غير مُكلَّف',
       pagination: {
         page: 'الصفحة 1 من 1',
         previous: 'السابق',

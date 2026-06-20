@@ -4,6 +4,7 @@ import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { buildStaffComplaintCreateSubmission } from '../../src/app/complaint-create-form';
 import StaffShellPage from '../../src/app/page';
+import ComplaintsPage from '../../src/app/(staff)/complaints/page';
 import PortalSubmissionPage from '../../src/app/portal/page';
 import PortalSurveyPage from '../../src/app/portal/survey/page';
 import PortalTrackingPage from '../../src/app/portal/track/page';
@@ -1653,4 +1654,155 @@ test('attachment panel source does not upload read or expose file URLs', () => {
   const source = readFileSync('apps/web/src/app/attachment-upload-panel.tsx', 'utf8');
 
   assert.doesNotMatch(source, /fetch\(|FileReader|createObjectURL|localStorage|sessionStorage|document\.cookie|https?:\/\//);
+});
+
+// ---- (staff)/complaints route: golden screen ----
+
+test('work queue component source has no hardcoded data no PreviewState and no private paths', () => {
+  const source = readFileSync('apps/web/src/components/work-queue/index.tsx', 'utf8');
+
+  assert.doesNotMatch(source, /CMP-2026-/);
+  assert.doesNotMatch(source, /[\w.-]+@[\w.-]+/);
+  assert.doesNotMatch(source, /\b\+?\d{10,}\b/);
+  assert.doesNotMatch(source, /VIN|audit|internal comment|portal|document\.cookie|localStorage|sessionStorage|fetch\(/i);
+  assert.doesNotMatch(source, /QueuePreviewState|PreviewState/);
+});
+
+test('complaints route renders English work queue filters and pagination', async () => {
+  const html = renderToStaticMarkup(
+    await ComplaintsPage({ cookieHeader: '', searchParams: Promise.resolve({ locale: 'en' }) }),
+  );
+
+  assert.match(html, /Work queue/);
+  assert.match(html, /Branch-scoped complaints/);
+  assert.match(html, /Status/);
+  assert.match(html, /Severity/);
+  assert.match(html, /SLA state/);
+  assert.match(html, /Search/);
+  assert.match(html, /Page 1 of 1/);
+  assert.match(html, /Previous/);
+  assert.match(html, /Next/);
+});
+
+test('complaints route renders Arabic RTL work queue labels', async () => {
+  const html = renderToStaticMarkup(
+    await ComplaintsPage({ cookieHeader: '', searchParams: Promise.resolve({ locale: 'ar' }) }),
+  );
+
+  assert.ok(html.includes(staffShellText.ar.workQueue.title));
+  assert.ok(html.includes(staffShellText.ar.workQueue.filters.severity));
+  assert.ok(html.includes(staffShellText.ar.workQueue.pagination.page));
+});
+
+test('complaints route renders colored severity and status badges for real rows', async () => {
+  const fetchImpl: typeof fetch = async (input) => {
+    if (String(input).endsWith('/complaints')) {
+      return jsonResponse({
+        items: [{
+          id: 'cmp_badge_1',
+          referenceNumber: 'CMP-BADGE-001',
+          status: 'IN_PROGRESS',
+          severity: 'HIGH',
+          subject: 'Engine noise badge test',
+          branchId: 'branch_main',
+          ownerId: null,
+          createdAt: '2026-06-20T00:00:00.000Z',
+          updatedAt: '2026-06-20T00:00:00.000Z',
+        }],
+      });
+    }
+    return jsonResponse({});
+  };
+  const html = renderToStaticMarkup(
+    await ComplaintsPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  assert.match(html, /CMP-BADGE-001/);
+  assert.match(html, /Engine noise badge test/);
+  assert.match(html, /bg-status-error/);
+  assert.match(html, /bg-brand/);
+  assert.match(html, /Unassigned/);
+  assert.match(html, /branch_main/);
+  assert.match(html, /2026-06-20/);
+  assert.match(html, /Open detail/);
+  assert.doesNotMatch(html, /QueuePreviewState/);
+});
+
+test('complaints route renders empty state when backend returns no items', async () => {
+  const fetchImpl: typeof fetch = async (input) => {
+    if (String(input).endsWith('/complaints')) return jsonResponse({ items: [] });
+    return jsonResponse({});
+  };
+  const html = renderToStaticMarkup(
+    await ComplaintsPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  assert.match(html, /No complaints match the current filters\./);
+  assert.match(html, /role="status"/);
+  assert.doesNotMatch(html, /CMP-BADGE-001/);
+});
+
+test('complaints route renders error state when backend denies queue access', async () => {
+  const fetchImpl: typeof fetch = async () => new Response('', { status: 403 });
+  const html = renderToStaticMarkup(
+    await ComplaintsPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  assert.match(html, /Work queue could not be loaded\. Try again\./);
+  assert.match(html, /role="alert"/);
+});
+
+test('complaints route renders real rows through the session cookie', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith('/complaints')) {
+      return jsonResponse({
+        items: [{
+          id: 'cmp_route_1',
+          referenceNumber: 'CMP-ROUTE-001',
+          status: 'SUBMITTED',
+          severity: 'MEDIUM',
+          subject: 'Route test complaint',
+          branchId: 'branch_route',
+          ownerId: 'usr_route',
+          createdAt: '2026-06-20T00:00:00.000Z',
+          updatedAt: '2026-06-20T10:00:00.000Z',
+        }],
+      });
+    }
+    return jsonResponse({});
+  };
+  const html = renderToStaticMarkup(
+    await ComplaintsPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  const queueCall = calls.find((c) => String(c.input).endsWith('/complaints'));
+  assert.ok(queueCall);
+  assert.deepEqual(queueCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+  assert.doesNotMatch(String(queueCall.input), /role|actor|branchId/i);
+  assert.match(html, /CMP-ROUTE-001/);
+  assert.match(html, /Route test complaint/);
+  assert.match(html, /SUBMITTED/);
+  assert.match(html, /MEDIUM/);
+  assert.match(html, /usr_route/);
+  assert.match(html, /branch_route/);
+  assert.match(html, /2026-06-20/);
+  assert.match(html, /bg-status-warning/);
 });

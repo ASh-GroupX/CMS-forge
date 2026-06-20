@@ -536,7 +536,7 @@ for the existing EN/AR visual cases and the existing visual/accessibility/static
 gates still pass. P9-03 split adoption is complete. Stop AUTO PHASE at P9-04
 because the next step is explicit planning before any golden-screen refactor.
 
-## P9-04A Builder Trust Note
+## P9-04A Builder Trust Note (original)
 
 Date: 2026-06-20
 Risk: Medium
@@ -547,3 +547,22 @@ typed queue rows, proves loading/empty/error/success/conflict states, and passed
 the required shell, E2E, accessibility, visual, visual-review, perf, lint, and
 typecheck gates. Stop AUTO PHASE at P9-04B so the golden screen is accepted or
 repaired before the pattern is copied to other screens.
+
+## P9-04A Repair Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Needs Review (P9-04B)
+
+The repair is complete. The work queue is now:
+- STRUCTURE: a real App Router route at `app/(staff)/complaints/page.tsx` inside the
+  `(staff)` route group, with a shared `app/(staff)/layout.tsx` staff nav shell.
+- COMPONENT: moved to `components/work-queue/index.tsx`; QueuePreviewState prop dropped;
+  `rows: ComplaintQueueItem[] | null` drives the three real data states (error/empty/table).
+- LOOK: colored Badge pills using design tokens for severity (HIGH=status-error red,
+  CRITICAL=destructive, MEDIUM=status-warning amber, LOW=outline) and status
+  (IN_PROGRESS=brand, SUBMITTED=status-info, RESOLVED=status-success, CLOSED=muted, REJECTED=destructive);
+  row hover; denser table spacing; branded action link.
+- Passes typecheck (0 errors), lint, 124/124 web tests, 11/11 localization tests.
+- E2E, visual, and screenshot checks require live stack (Not Run in this env).
+- Recommend P9-04B golden-screen review before spreading pattern to P9-04C..H.

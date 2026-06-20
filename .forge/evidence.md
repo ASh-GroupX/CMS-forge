@@ -148,6 +148,34 @@ Status: Passed through P9-02
 - AUTO PHASE stopped at `PLAN-P9-03` because shadcn adoption must be split before
   build work.
 
+## P9-04A Repair — Golden screen: real route + components/ + colored badges
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Built
+- SRS IDs: UI-DESIGN-001, ARCH-UI-001
+
+### Changes
+
+1. `src/i18n/staff-shell.ts` — added `unassigned` key (EN/AR) to workQueue; no existing keys changed.
+2. `src/components/work-queue/index.tsx` (NEW) — clean WorkQueue without QueuePreviewState;
+   `rows: ComplaintQueueItem[] | null` drives empty/error; colored Badges via design tokens
+   (severity: HIGH=status-error, CRITICAL=destructive, MEDIUM=status-warning; status:
+   IN_PROGRESS=brand, SUBMITTED=status-info, RESOLVED=status-success, etc.); row hover; branded action link.
+3. `src/app/(staff)/layout.tsx` (NEW) — App Router staff route-group layout; locale from
+   `x-cms-locale` header; session principal for role-nav; two-column shell (sidebar + children).
+4. `src/app/(staff)/complaints/page.tsx` (NEW) — real Server Component route; locale from
+   searchParams; calls `getStaffQueueItems`; renders WorkQueue. No preview-state props.
+5. `test/shell/shell.test.ts` — added ComplaintsPage import + 7 new tests.
+
+### Verification
+
+- `typecheck`: **Passed** — `npx tsc -p apps/web/tsconfig.json --noEmit` clean (0 errors).
+- `lint`: **Passed** — `node tools/lint.mjs` → "Lint passed".
+- `test:web`: **Passed** — 124/124 tests (7 new all green; all 117 existing still pass).
+- Localization: **Passed** — 11/11 localization tests pass.
+- `test:e2e`, `test:visual`, screenshot review: **Not Run** (require live stack).
+
 ## P9-04A - Work Queue Golden Screen
 
 Date: 2026-06-20
@@ -1651,3 +1679,31 @@ Status: Passed through P9-02
   passed), and `corepack pnpm typecheck`.
 - AUTO PHASE stopped at `PLAN-P9-03` because shadcn adoption must be split before
   build work.
+
+## P9-04A Repair — Golden screen: real route + components/ + colored badges
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Built
+- SRS IDs: UI-DESIGN-001, ARCH-UI-001
+
+### Changes
+
+1. `src/i18n/staff-shell.ts` — added `unassigned` key (EN/AR) to workQueue; no existing keys changed.
+2. `src/components/work-queue/index.tsx` (NEW) — clean WorkQueue without QueuePreviewState;
+   `rows: ComplaintQueueItem[] | null` drives empty/error; colored Badges via design tokens
+   (severity: HIGH=status-error, CRITICAL=destructive, MEDIUM=status-warning; status:
+   IN_PROGRESS=brand, SUBMITTED=status-info, RESOLVED=status-success, etc.); row hover; branded action link.
+3. `src/app/(staff)/layout.tsx` (NEW) — App Router staff route-group layout; locale from
+   `x-cms-locale` header; session principal for role-nav; two-column shell (sidebar + children).
+4. `src/app/(staff)/complaints/page.tsx` (NEW) — real Server Component route; locale from
+   searchParams; calls `getStaffQueueItems`; renders WorkQueue. No preview-state props.
+5. `test/shell/shell.test.ts` — added ComplaintsPage import + 7 new tests.
+
+### Verification
+
+- `typecheck`: **Passed** — `npx tsc -p apps/web/tsconfig.json --noEmit` clean (0 errors).
+- `lint`: **Passed** — `node tools/lint.mjs` → "Lint passed".
+- `test:web`: **Passed** — 124/124 tests (7 new all green; all 117 existing still pass).
+- Localization: **Passed** — 11/11 localization tests pass.
+- `test:e2e`, `test:visual`, screenshot review: **Not Run** (require live stack).

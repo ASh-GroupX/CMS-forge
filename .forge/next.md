@@ -1,39 +1,42 @@
-# Repair Task: P9-04A repair - Golden screen must fix STRUCTURE and LOOK
+# P9-04B Golden Screen Review — Accept or Repair the Real Route + Colored Badges
 
-Status: Needs Repair
-Required model tier: BUILDER-STRONG
+Status: Needs Review
+Required model tier: PHASE-REVIEWER
 Phase: Phase 9 - Production Readiness (Pilot on Hostinger)
-Risk: Medium (this screen is the structural + visual reference every other screen copies)
+Risk: Medium
 
-## P9-04B golden-screen review decision: REPAIR
+## What to review
 
-The work queue is clean and correct, but it is not yet a true golden screen on two axes:
-1. STRUCTURE: it lives in the single-page `searchParams` / `PreviewState` shell, not a
-   real App Router route. Replicating that across 7 screen groups spreads a bad
-   architecture. See docs/ARCHITECTURE.md section 8 "Frontend structure".
-2. LOOK: severity / SLA-state / status are plain text with no semantic color and weak
-   hierarchy - it reads "functional," not "operational dashboard."
+The P9-04A repair delivered three new files:
 
-## Scope (the golden screen must be exemplary in BOTH; if > ~5 files, stop and PLAN-split)
+1. **`src/app/(staff)/complaints/page.tsx`** — real App Router Server Component
+   route. Fetches `getStaffQueueItems` (session cookie forwarded). Renders `WorkQueue`.
+   No QueuePreviewState prop. No searchParams preview switching. Accepts optional
+   `cookieHeader`/`fetchImpl` for testability.
 
-- Move the queue to a REAL route under a staff route group, e.g.
-  `app/(staff)/complaints/page.tsx`, with a shared staff `app/(staff)/layout.tsx` (nav shell).
-- Move `WorkQueue` into `components/work-queue/`; DROP the `QueuePreviewState` prop and the
-  `searchParams` preview switching for this screen - render loading / empty / error from the
-  real `getStaffQueueItems` data path (Server Component fetch, session cookie forwarded).
-- Visual polish with shadcn primitives: severity, SLA-state, and status as colored `Badge`
-  pills (High=red, Medium=amber/neutral; Warning=amber, Overdue=red, On track=green),
-  row hover, denser table spacing, clearer header/toolbar hierarchy.
-- Keep backend authority: no role / branch / workflow / owner / state decided in React.
+2. **`src/app/(staff)/layout.tsx`** — staff route-group layout. Reads locale from
+   `x-cms-locale` header (set by middleware). Fetches session principal for role-based
+   nav. Renders sidebar + children. No workflow authority.
 
-## Proof
+3. **`src/components/work-queue/index.tsx`** — clean WorkQueue component.
+   `rows: ComplaintQueueItem[] | null` drives the three data states (null=error,
+   []=empty, [...]= table). Colored Badge pills via design tokens. Row hover. Branded
+   action link. No hardcoded strings; all i18n.
 
-- lint, typecheck, test:web, test:e2e -- ui-smoke, test:e2e -- accessibility, test:visual
-- Render the real Next route, screenshot EN + AR, inspect: real data (no fallback rows),
-  RTL correct, badges colored, the route actually works. Save to web-visual-review.
+Plus: `src/i18n/staff-shell.ts` gained `unassigned` key (EN+AR); test file gained 7
+new tests for the route.
+
+## Check
+
+1. Does the new route live at `app/(staff)/complaints/page.tsx` (real App Router path)?
+2. Does the layout live at `app/(staff)/layout.tsx`?
+3. Is WorkQueue in `components/work-queue/` (not `app/`)?
+4. Is QueuePreviewState absent from the new WorkQueue?
+5. Are badge colors from design tokens (not ad-hoc hex/rgb)?
+6. Do all 124 tests pass? Is typecheck clean?
+7. Is the pattern safe to replicate to P9-04C..H?
 
 ## Exit
 
-- Re-enter P9-04B golden-screen review with the route + components/ structure + badges.
-- Once accepted, P9-04C..H replicate THIS structure and look (per ARCHITECTURE section 8).
-- Replace state.md (do not append).
+- **Accept**: write the first P9-04C task and set state to `Ready to Build`.
+- **Repair**: write the smallest repair and set state to `Needs Repair`.
