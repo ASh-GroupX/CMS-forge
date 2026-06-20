@@ -8,8 +8,15 @@ import DashboardPage from '../../src/app/(staff)/dashboard/page';
 import ComplaintsPage from '../../src/app/(staff)/complaints/page';
 import NewComplaintPage from '../../src/app/(staff)/complaints/new/page';
 import ComplaintDetailPage from '../../src/app/(staff)/complaints/[id]/page';
+import AuditPage from '../../src/app/(staff)/audit/page';
+import AdminPage from '../../src/app/(staff)/admin/page';
+import AdminBranchesPage from '../../src/app/(staff)/admin/branches/page';
+import AdminCategoriesPage from '../../src/app/(staff)/admin/categories/page';
+import AdminNotificationTemplatesPage from '../../src/app/(staff)/admin/notification-templates/page';
+import AdminUsersPage from '../../src/app/(staff)/admin/users/page';
 import PasswordResetPage from '../../src/app/(staff)/auth/reset/page';
 import NotificationsPage from '../../src/app/(staff)/notifications/page';
+import ReportsPage from '../../src/app/(staff)/reports/page';
 import PortalSubmissionPage from '../../src/app/portal/page';
 import PortalSurveyPage from '../../src/app/portal/survey/page';
 import PortalTrackingPage from '../../src/app/portal/track/page';
@@ -238,7 +245,7 @@ test('portal submission renders loading validation and error states', async () =
 });
 
 test('portal submission source is public and render-only', () => {
-  const source = readFileSync('apps/web/src/app/portal/page.tsx', 'utf8');
+  const source = readFileSync('apps/web/src/components/portal-submission/index.tsx', 'utf8');
 
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie|createObjectURL|Blob|download/);
   assert.doesNotMatch(source, /roleCode|principal|branchScope|actorId|ownerId|workflow|password|otp|token|secret|provider/);
@@ -310,7 +317,7 @@ test('portal tracking renders invalid expired error and follow-up states', async
 });
 
 test('portal tracking source does not render secrets or private data paths', () => {
-  const source = readFileSync('apps/web/src/app/portal/track/page.tsx', 'utf8');
+  const source = readFileSync('apps/web/src/components/portal-tracking/index.tsx', 'utf8');
 
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie|createObjectURL|Blob|download/);
   assert.doesNotMatch(source, /sessionToken|verificationId|roleCode|principal|branchScope|actorId|ownerId|workflow|password|secret|provider/);
@@ -381,7 +388,7 @@ test('portal survey renders validation loading and error states', async () => {
 });
 
 test('portal survey source does not render tokens or private data paths', () => {
-  const source = readFileSync('apps/web/src/app/portal/survey/page.tsx', 'utf8');
+  const source = readFileSync('apps/web/src/components/portal-survey/index.tsx', 'utf8');
 
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie|createObjectURL|Blob|download/);
   assert.doesNotMatch(source, /token|session|verification|roleCode|principal|branchScope|actorId|ownerId|workflow|password|secret|provider/i);
@@ -1134,15 +1141,74 @@ test('Arabic admin branches departments keeps RTL localized labels', async () =>
   assert.ok(html.includes(adminBranchesText.ar.actions.create));
 });
 
+test('admin overview route renders English and Arabic admin configuration labels', async () => {
+  const english = renderToStaticMarkup(await AdminPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
+  const arabic = renderToStaticMarkup(await AdminPage({ searchParams: Promise.resolve({ locale: 'ar', admin: 'validation' }) }));
+
+  assert.match(english, /dir="ltr"/);
+  assert.ok(english.includes(confirmationText.en.deactivate.title));
+  assert.match(english, /Branches and departments/);
+  assert.match(english, /Users, roles, and branch scope/);
+  assert.match(english, /Categories, severities, and SLA policies/);
+  assert.match(english, /Notification templates/);
+  assert.doesNotMatch(english, /Audit viewer/);
+  assert.match(arabic, /dir="rtl"/);
+  assert.ok(arabic.includes(confirmationText.ar.deactivate.title));
+  assert.ok(arabic.includes(adminBranchesText.ar.title));
+  assert.ok(arabic.includes(adminUsersText.ar.title));
+  assert.ok(arabic.includes(adminCategoriesSlaText.ar.title));
+  assert.ok(arabic.includes(adminNotificationTemplatesText.ar.title));
+});
+
+test('admin overview route renders shared deactivate confirmation safely', async () => {
+  const html = renderToStaticMarkup(await AdminPage({ searchParams: Promise.resolve({ locale: 'en', admin: 'conflict' }) }));
+
+  assert.match(html, /role="alert"/);
+  assert.ok(html.includes(confirmationText.en.deactivate.confirm));
+  assert.ok(html.includes(confirmationText.en.deactivate.cancel));
+  assert.match(html, /Record changed by someone else\. Reload before retrying\./);
+  assert.match(html, /Template changed by someone else\. Reload before retrying\./);
+});
+
+test('admin branches route renders English and Arabic labels', async () => {
+  const english = renderToStaticMarkup(await AdminBranchesPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
+  const arabic = renderToStaticMarkup(await AdminBranchesPage({ searchParams: Promise.resolve({ locale: 'ar' }) }));
+
+  assert.match(english, /dir="ltr"/);
+  assert.match(english, /Branches and departments/);
+  assert.match(english, /Departments/);
+  assert.match(arabic, /dir="rtl"/);
+  assert.ok(arabic.includes(adminBranchesText.ar.title));
+  assert.ok(arabic.includes(adminBranchesText.ar.sections.departments));
+});
+
+test('admin branches route renders preview states safely', async () => {
+  const validation = renderToStaticMarkup(
+    await AdminBranchesPage({ searchParams: Promise.resolve({ locale: 'en', admin: 'validation' }) }),
+  );
+  const conflict = renderToStaticMarkup(
+    await AdminBranchesPage({ searchParams: Promise.resolve({ locale: 'en', admin: 'conflict' }) }),
+  );
+
+  assert.match(validation, /Review the highlighted fields\./);
+  assert.match(validation, /role="alert"/);
+  assert.match(conflict, /Record changed by someone else\. Reload before retrying\./);
+  assert.match(conflict, /role="alert"/);
+});
+
 test('admin branches departments source is render-only and privacy-safe', () => {
-  const source = readFileSync('apps/web/src/app/admin-branches-departments.tsx', 'utf8');
-  const surfaces = readFileSync('apps/web/src/app/admin-surfaces.tsx', 'utf8');
+  const source = readFileSync('apps/web/src/components/admin-branches-departments/index.tsx', 'utf8');
+  const wrapper = readFileSync('apps/web/src/app/admin-branches-departments.tsx', 'utf8');
+  const surfaces = readFileSync('apps/web/src/components/admin-surfaces/index.tsx', 'utf8');
+  const surfacesWrapper = readFileSync('apps/web/src/app/admin-surfaces.tsx', 'utf8');
 
   assert.match(source, /xl:grid-cols-2/);
   assert.match(source, /min-w-\[34rem\]/);
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie/);
   assert.doesNotMatch(source, /roleCode|principal|branchScope|audit|portal|DMS|@|\b\+?\d{10,}\b/i);
+  assert.match(wrapper, /components\/admin-branches-departments/);
   assert.doesNotMatch(surfaces, /fetch\(|localStorage|sessionStorage|document\.cookie|mutation|PATCH|DELETE|POST/);
+  assert.match(surfacesWrapper, /components\/admin-surfaces/);
 });
 
 test('admin users roles screen renders only for admin preview with reset affordance', async () => {
@@ -1178,12 +1244,40 @@ test('Arabic admin users roles keeps RTL localized labels', async () => {
   assert.ok(html.includes(adminUsersText.ar.actions.reset));
 });
 
+test('admin users route renders English and Arabic labels', async () => {
+  const english = renderToStaticMarkup(await AdminUsersPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
+  const arabic = renderToStaticMarkup(await AdminUsersPage({ searchParams: Promise.resolve({ locale: 'ar' }) }));
+
+  assert.match(english, /dir="ltr"/);
+  assert.match(english, /Users, roles, and branch scope/);
+  assert.match(english, /Send reset/);
+  assert.match(arabic, /dir="rtl"/);
+  assert.ok(arabic.includes(adminUsersText.ar.title));
+  assert.ok(arabic.includes(adminUsersText.ar.actions.reset));
+});
+
+test('admin users route renders preview states safely', async () => {
+  const loading = renderToStaticMarkup(
+    await AdminUsersPage({ searchParams: Promise.resolve({ locale: 'en', admin: 'loading' }) }),
+  );
+  const validation = renderToStaticMarkup(
+    await AdminUsersPage({ searchParams: Promise.resolve({ locale: 'en', admin: 'validation' }) }),
+  );
+
+  assert.match(loading, /Loading users and roles\./);
+  assert.match(loading, /role="status"/);
+  assert.match(validation, /Review the user role and branch scope fields\./);
+  assert.match(validation, /role="alert"/);
+});
+
 test('admin users roles source is render-only and reset-safe', () => {
-  const source = readFileSync('apps/web/src/app/admin-users-roles.tsx', 'utf8');
+  const source = readFileSync('apps/web/src/components/admin-users-roles/index.tsx', 'utf8');
+  const wrapper = readFileSync('apps/web/src/app/admin-users-roles.tsx', 'utf8');
 
   assert.match(source, /min-w-\[50rem\]/);
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie/);
   assert.doesNotMatch(source, /password|resetToken|token|otp|hash|roleCode|principal|branchScope|audit|portal|DMS|@|\b\+?\d{10,}\b/i);
+  assert.match(wrapper, /components\/admin-users-roles/);
 });
 
 test('admin categories severity SLA screen renders only for admin preview', async () => {
@@ -1225,11 +1319,40 @@ test('Arabic admin categories severity SLA keeps RTL localized labels', async ()
   assert.ok(html.includes(adminCategoriesSlaText.ar.states.validation));
 });
 
+test('admin categories route renders English and Arabic labels', async () => {
+  const english = renderToStaticMarkup(await AdminCategoriesPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
+  const arabic = renderToStaticMarkup(await AdminCategoriesPage({ searchParams: Promise.resolve({ locale: 'ar' }) }));
+
+  assert.match(english, /dir="ltr"/);
+  assert.match(english, /Categories, severities, and SLA policies/);
+  assert.match(english, /SLA policies/);
+  assert.match(english, /SLA deadlines are calculated and enforced by the backend\./);
+  assert.match(arabic, /dir="rtl"/);
+  assert.ok(arabic.includes(adminCategoriesSlaText.ar.title));
+  assert.ok(arabic.includes(adminCategoriesSlaText.ar.sections.sla));
+});
+
+test('admin categories route renders preview states safely', async () => {
+  const error = renderToStaticMarkup(
+    await AdminCategoriesPage({ searchParams: Promise.resolve({ locale: 'en', admin: 'error' }) }),
+  );
+  const validation = renderToStaticMarkup(
+    await AdminCategoriesPage({ searchParams: Promise.resolve({ locale: 'en', admin: 'validation' }) }),
+  );
+
+  assert.match(error, /Admin settings could not be loaded\. Try again\./);
+  assert.match(error, /role="alert"/);
+  assert.match(validation, /Review category hierarchy, severity value, and SLA duration fields\./);
+  assert.match(validation, /role="alert"/);
+});
+
 test('admin categories severity SLA source is render-only and does not calculate SLA truth', () => {
-  const source = readFileSync('apps/web/src/app/admin-categories-sla.tsx', 'utf8');
+  const source = readFileSync('apps/web/src/components/admin-categories-sla/index.tsx', 'utf8');
+  const wrapper = readFileSync('apps/web/src/app/admin-categories-sla.tsx', 'utf8');
 
   assert.match(source, /min-w-\[54rem\]/);
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie|Date\.now|setInterval|deadlineAt|escalate|audit|principal|roleCode|portal|DMS|@|\b\+?\d{10,}\b/i);
+  assert.match(wrapper, /components\/admin-categories-sla/);
 });
 
 test('admin notification templates screen renders only for admin preview', async () => {
@@ -1274,11 +1397,40 @@ test('Arabic admin notification templates keeps RTL localized labels', async () 
   assert.ok(html.includes(adminNotificationTemplatesText.ar.states.validation));
 });
 
+test('admin notification templates route renders English and Arabic labels', async () => {
+  const english = renderToStaticMarkup(await AdminNotificationTemplatesPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
+  const arabic = renderToStaticMarkup(await AdminNotificationTemplatesPage({ searchParams: Promise.resolve({ locale: 'ar' }) }));
+
+  assert.match(english, /dir="ltr"/);
+  assert.match(english, /Notification templates/);
+  assert.match(english, /Template preview/);
+  assert.match(english, /\{\{referenceNumber\}\}/);
+  assert.match(arabic, /dir="rtl"/);
+  assert.ok(arabic.includes(adminNotificationTemplatesText.ar.title));
+  assert.ok(arabic.includes(adminNotificationTemplatesText.ar.previewTitle));
+});
+
+test('admin notification templates route renders preview states safely', async () => {
+  const error = renderToStaticMarkup(
+    await AdminNotificationTemplatesPage({ searchParams: Promise.resolve({ locale: 'en', admin: 'error' }) }),
+  );
+  const conflict = renderToStaticMarkup(
+    await AdminNotificationTemplatesPage({ searchParams: Promise.resolve({ locale: 'en', admin: 'conflict' }) }),
+  );
+
+  assert.match(error, /Notification templates could not be loaded\. Try again\./);
+  assert.match(error, /role="alert"/);
+  assert.match(conflict, /Template changed by someone else\. Reload before retrying\./);
+  assert.match(conflict, /role="alert"/);
+});
+
 test('admin notification templates source is render-only and placeholder-safe', () => {
-  const source = readFileSync('apps/web/src/app/admin-notification-templates.tsx', 'utf8');
+  const source = readFileSync('apps/web/src/components/admin-notification-templates/index.tsx', 'utf8');
+  const wrapper = readFileSync('apps/web/src/app/admin-notification-templates.tsx', 'utf8');
 
   assert.match(source, /min-w-\[48rem\]/);
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie|send[A-Z]|provider|credential|secret|apiKey|token|audit|deliveryLog|portal|DMS|https?:\/\/|@|\b\+?\d{10,}\b/i);
+  assert.match(wrapper, /components\/admin-notification-templates/);
 });
 
 test('audit viewer renders only for admin preview with filters and export affordance', async () => {
@@ -1322,11 +1474,37 @@ test('Arabic audit viewer keeps RTL localized labels', async () => {
   assert.ok(html.includes(auditViewerText.ar.states.validation));
 });
 
+test('audit route renders English and Arabic audit labels', async () => {
+  const english = renderToStaticMarkup(await AuditPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
+  const arabic = renderToStaticMarkup(await AuditPage({ searchParams: Promise.resolve({ locale: 'ar', admin: 'validation' }) }));
+
+  assert.match(english, /dir="ltr"/);
+  assert.match(english, /Audit viewer/);
+  assert.match(english, /Export results/);
+  assert.match(english, /Correlation ID/);
+  assert.match(arabic, /dir="rtl"/);
+  assert.ok(arabic.includes(auditViewerText.ar.title));
+  assert.ok(arabic.includes(auditViewerText.ar.filters.export));
+  assert.ok(arabic.includes(auditViewerText.ar.states.validation));
+});
+
+test('audit route renders preview states safely', async () => {
+  const success = renderToStaticMarkup(await AuditPage({ searchParams: Promise.resolve({ locale: 'en', admin: 'success' }) }));
+  const conflict = renderToStaticMarkup(await AuditPage({ searchParams: Promise.resolve({ locale: 'en', admin: 'conflict' }) }));
+
+  assert.match(success, /Audit export request prepared\./);
+  assert.match(success, /role="status"/);
+  assert.match(conflict, /Audit query changed\. Reload before exporting\./);
+  assert.match(conflict, /role="alert"/);
+});
+
 test('audit viewer source is render-only and uses safe placeholders', () => {
-  const source = readFileSync('apps/web/src/app/audit-viewer.tsx', 'utf8');
+  const source = readFileSync('apps/web/src/components/audit-viewer/index.tsx', 'utf8');
+  const wrapper = readFileSync('apps/web/src/app/audit-viewer.tsx', 'utf8');
 
   assert.match(source, /min-w-\[58rem\]/);
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie|createObjectURL|Blob|download|password|otp|token|secret|provider|portal|DMS|@|\b\+?\d{10,}\b/i);
+  assert.match(wrapper, /components\/audit-viewer/);
 });
 
 test('notification center renders for staff with unread read and scoped complaint affordances', async () => {
@@ -1543,12 +1721,68 @@ test('Arabic reports dashboard keeps RTL localized labels', async () => {
   assert.ok(html.includes(reportsDashboardText.ar.states.validation));
 });
 
+test('reports route renders English and Arabic report labels', async () => {
+  const english = renderToStaticMarkup(await ReportsPage({ cookieHeader: '', searchParams: Promise.resolve({ locale: 'en' }) }));
+  const arabic = renderToStaticMarkup(
+    await ReportsPage({ cookieHeader: '', searchParams: Promise.resolve({ locale: 'ar', reports: 'validation' }) }),
+  );
+
+  assert.match(english, /dir="ltr"/);
+  assert.match(english, /Reports dashboard/);
+  assert.match(english, /Report export/);
+  assert.match(english, /RPT-017/);
+  assert.match(arabic, /dir="rtl"/);
+  assert.ok(arabic.includes(reportsDashboardText.ar.title));
+  assert.ok(arabic.includes(reportsDashboardText.ar.export.title));
+  assert.ok(arabic.includes(reportsDashboardText.ar.states.validation));
+});
+
+test('reports route renders real scoped rows through the session cookie', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({
+      items: [{
+        id: 'rpt_route_1',
+        referenceNumber: 'CMP-RPT-ROUTE-001',
+        branchId: 'branch_report',
+        categoryId: 'cat_report',
+        status: 'IN_PROGRESS',
+        severity: 'HIGH',
+        subject: 'Route report row',
+        ownerId: 'usr_report',
+        createdAt: '2026-06-20T00:00:00.000Z',
+        updatedAt: '2026-06-20T10:00:00.000Z',
+      }],
+    });
+  };
+  const html = renderToStaticMarkup(
+    await ReportsPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  const reportsCall = calls.find((call) => String(call.input).endsWith('/reports'));
+  assert.ok(reportsCall);
+  assert.deepEqual(reportsCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+  assert.doesNotMatch(String(reportsCall.input), /role|actor|branchId|owner|token|credential/i);
+  assert.match(html, /CMP-RPT-ROUTE-001 - Route report row/);
+  assert.match(html, /branch_report \/ usr_report/);
+  assert.match(html, /cat_report/);
+  assert.match(html, /IN_PROGRESS/);
+  assert.doesNotMatch(html, /RPT-017/);
+});
+
 test('reports dashboard source is render-only and placeholder-safe', () => {
-  const source = readFileSync('apps/web/src/app/reports-dashboard.tsx', 'utf8');
+  const source = readFileSync('apps/web/src/components/reports-dashboard/index.tsx', 'utf8');
+  const wrapper = readFileSync('apps/web/src/app/reports-dashboard.tsx', 'utf8');
 
   assert.match(source, /RPT-017/);
   assert.match(source, /min-w-\[56rem\]/);
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie|Chart|canvas|createObjectURL|Blob|download|branchScope|roleCode|customerPhone|password|otp|token|secret|provider|portal|DMS-[A-Z0-9]+|@|\b\+?\d{10,}\b/i);
+  assert.match(wrapper, /components\/reports-dashboard/);
 });
 
 test('customer vehicle lookup renders search fields and manual fallback', async () => {

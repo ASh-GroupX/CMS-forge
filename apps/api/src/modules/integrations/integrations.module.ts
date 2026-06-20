@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import { EMAIL_PROVIDER, InMemoryEmailProvider } from './email-provider.port.js';
+import { emailProviderFromEnv } from './email-provider.factory.js';
+import { EMAIL_PROVIDER } from './email-provider.port.js';
 import { IntegrationsController } from './integrations.controller.js';
 import { IntegrationsRepository } from './integrations.repository.js';
 import { IntegrationsService } from './integrations.service.js';
@@ -11,7 +12,7 @@ import { InMemoryWhatsAppProvider, WHATSAPP_PROVIDER } from './whatsapp-provider
   providers: [
     IntegrationsRepository,
     IntegrationsService,
-    { provide: EMAIL_PROVIDER, useClass: InMemoryEmailProvider },
+    { provide: EMAIL_PROVIDER, useFactory: () => emailProviderFromEnv() },
     { provide: SMS_PROVIDER, useClass: InMemorySmsProvider },
     { provide: WHATSAPP_PROVIDER, useClass: InMemoryWhatsAppProvider },
   ],

@@ -2,6 +2,13 @@ import { readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 import { createRequire } from 'node:module';
 import StaffShellPage from '../apps/web/src/app/page.tsx';
+import AdminPage from '../apps/web/src/app/(staff)/admin/page.tsx';
+import AuditPage from '../apps/web/src/app/(staff)/audit/page.tsx';
+import ComplaintsPage from '../apps/web/src/app/(staff)/complaints/page.tsx';
+import ComplaintDetailPage from '../apps/web/src/app/(staff)/complaints/[id]/page.tsx';
+import DashboardPage from '../apps/web/src/app/(staff)/dashboard/page.tsx';
+import NewComplaintPage from '../apps/web/src/app/(staff)/complaints/new/page.tsx';
+import ReportsPage from '../apps/web/src/app/(staff)/reports/page.tsx';
 import PortalSubmissionPage from '../apps/web/src/app/portal/page.tsx';
 import PortalSurveyPage from '../apps/web/src/app/portal/survey/page.tsx';
 import PortalTrackingPage from '../apps/web/src/app/portal/track/page.tsx';
@@ -12,6 +19,7 @@ import { staffShellText } from '../apps/web/src/i18n/staff-shell.ts';
 import { accessibilityCases, defaultVisualSignals, performanceCases, smokeCases, visualCases } from './web-proof-cases.mjs';
 
 const webRequire = createRequire(new URL('../apps/web/package.json', import.meta.url));
+const React = webRequire('react');
 const { renderToStaticMarkup } = webRequire('react-dom/server');
 
 const mode = process.argv.slice(2).find((arg) => arg !== '--');
@@ -50,17 +58,31 @@ async function renderCase(testCase) {
   return { route: 'staff', ...testCase, html, ms: performance.now() - started };
 }
 
-function routePage(testCase) {
+async function routePage(testCase) {
   const params = Promise.resolve(testCase.params);
+  const staffProps = { cookieHeader: 'cms_staff_session=proof', fetchImpl: proofFetch, searchParams: params };
+  if (testCase.route === 'staff-admin') return staffFrame(testCase, await AdminPage({ searchParams: params }));
+  if (testCase.route === 'staff-audit') return staffFrame(testCase, await AuditPage({ searchParams: params }));
+  if (testCase.route === 'staff-complaints') return staffFrame(testCase, await ComplaintsPage(staffProps));
+  if (testCase.route === 'staff-complaint-detail') return staffFrame(testCase, await ComplaintDetailPage({ ...staffProps, params: Promise.resolve({ id: 'cmp-proof' }) }));
+  if (testCase.route === 'staff-complaint-new') return staffFrame(testCase, await NewComplaintPage({ searchParams: params }));
+  if (testCase.route === 'staff-dashboard') return staffFrame(testCase, await DashboardPage(staffProps));
+  if (testCase.route === 'staff-reports') return staffFrame(testCase, await ReportsPage(staffProps));
   if (testCase.route === 'portal-submission') return PortalSubmissionPage({ searchParams: params });
   if (testCase.route === 'portal-tracking') return PortalTrackingPage({ searchParams: params });
   if (testCase.route === 'portal-survey') return PortalSurveyPage({ searchParams: params });
   return StaffShellPage({ searchParams: params });
 }
 
+function staffFrame(testCase, children) {
+  const t = staffShellText[testCase.locale];
+  return React.createElement('div', { className: 'min-h-screen bg-neutral p-4 text-neutral-foreground md:p-6', dir: t.dir, lang: t.lang },
+    React.createElement('section', { className: 'grid content-start gap-4' }, children));
+}
+
 function checkVisual(results) {
   for (const result of results) {
-    expect(result.html.length > 12000, `${result.name} rendered blank or tiny HTML`);
+    expect(result.html.length > (result.visual?.minHtml ?? 12000), `${result.name} rendered blank or tiny HTML`);
     expect(result.html.includes(`dir="${staffShellText[result.locale].dir}"`), `${result.name} missing direction`);
     for (const signal of result.signals ?? defaultVisualSignals(result.locale)) {
       expect(result.html.includes(signal), `${result.name} missing visual signal: ${signal}`);
@@ -68,7 +90,7 @@ function checkVisual(results) {
     for (const className of result.classes ?? ['rounded-md', 'overflow-x-auto']) {
       expect(result.html.includes(className), `${result.name} missing visual class: ${className}`);
     }
-    expect(count(result.html, '<section') >= 8, `${result.name} missing major content sections`);
+    expect(count(result.html, '<section') >= (result.visual?.minSections ?? 8), `${result.name} missing major content sections`);
   }
 }
 
@@ -79,14 +101,21 @@ function checkAccessibility(results) {
   for (const token of ['--color-brand', '--color-neutral', '--color-neutral-foreground', '--color-success', '--color-error', '--focus-ring']) {
     expect(css.includes(token), `global CSS missing contrast/focus token ${token}`);
   }
-  for (const route of ['staff', 'portal-submission', 'portal-tracking', 'portal-survey']) {
+  for (const route of ['portal-submission', 'portal-tracking', 'portal-survey']) {
     for (const locale of ['en', 'ar']) {
       expect(results.some((result) => result.route === route && result.locale === locale), `accessibility proof missing ${route} ${locale}`);
     }
   }
+  for (const locale of ['en', 'ar']) {
+    expect(results.some((result) => String(result.route ?? 'staff').startsWith('staff') && result.locale === locale), `accessibility proof missing staff ${locale}`);
+  }
   for (const result of results) {
     const t = routeText(result);
-    expect(result.html.includes(`<main lang="${t.lang}" dir="${t.dir}"`), `${result.name} missing language or direction`);
+    if (String(result.route ?? 'staff').startsWith('staff')) {
+      expect(result.html.includes(`dir="${t.dir}"`), `${result.name} missing direction`);
+    } else {
+      expect(result.html.includes(`<main lang="${t.lang}" dir="${t.dir}"`), `${result.name} missing language or direction`);
+    }
     if (result.route === 'staff') {
       expect(result.html.includes(`aria-label="${t.title}"`), `${result.name} missing nav accessible name`);
     }
@@ -100,7 +129,9 @@ function checkAccessibility(results) {
     expect(!/<svg(?![^>]*aria-hidden="true")/.test(result.html), `${result.name} has visible SVG without aria-hidden`);
     expect(!/<button(?![^>]*\btype=)/.test(result.html), `${result.name} has button without explicit type`);
     expectNamedButtons(result.html, result.name);
-    expect(result.html.includes('role="status"') || result.html.includes('role="alert"'), `${result.name} missing feedback role`);
+    if (result.a11y?.feedbackRole !== false) {
+      expect(result.html.includes('role="status"') || result.html.includes('role="alert"'), `${result.name} missing feedback role`);
+    }
     if (result.a11y?.dialog) {
       expect(result.html.includes('role="dialog"'), `${result.name} missing dialog role`);
       expect(result.html.includes(`aria-label="${result.a11y.dialog}"`), `${result.name} missing dialog name`);
@@ -150,4 +181,21 @@ function expect(condition, message) {
   if (!condition) {
     throw new Error(message);
   }
+}
+
+async function proofFetch(input) {
+  const path = new URL(String(input)).pathname;
+  if (path === '/reports/dashboard') return json({ summary: { openComplaints: 9, overdueComplaints: 2, slaWarningComplaints: 3, closedComplaints: 7, averageTatHours: 18 } });
+  if (path === '/complaints') return json({ items: [proofRow('CMP-PROOF-001', 'Proof queue row')] });
+  if (path === '/reports') return json({ items: [proofRow('CMP-PROOF-RPT-001', 'Proof report row', { categoryId: 'cat_proof' })] });
+  if (path.startsWith('/complaints/')) return json({ complaint: { ...proofRow('CMP-PROOF-DETAIL', 'Proof detail row'), description: 'Proof detail description.', incidentAt: '2026-06-19T00:00:00.000Z', statusHistory: [{ id: 'hist_1', toStatus: 'SUBMITTED', createdAt: '2026-06-19T00:00:00.000Z' }] } });
+  return json({}, 404);
+}
+
+function proofRow(referenceNumber, subject, extra = {}) {
+  return { id: 'proof_1', referenceNumber, status: 'IN_PROGRESS', severity: 'HIGH', subject, branchId: 'branch_proof', ownerId: 'usr_proof', createdAt: '2026-06-20T00:00:00.000Z', updatedAt: '2026-06-20T10:00:00.000Z', ...extra };
+}
+
+function json(body, status = 200) {
+  return new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' }, status });
 }

@@ -706,3 +706,302 @@ render-only modal. Required typecheck, lint, shell, localization, visual, and
 accessibility proof commands all passed. P9-04E is complete. Stop AUTO PHASE at
 `Ready to Plan` because P9-04F is a multi-screen admin configuration group and
 must be split before build work.
+
+## P9-04F-1 Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-04F-1 is complete: admin branches/departments now has a real
+`(staff)/admin/branches` route and a
+`components/admin-branches-departments/` render-only component using existing
+shadcn primitives, while the legacy shell import remains compatible. Required
+typecheck, lint, shell, localization, visual, and accessibility proof commands
+all passed. Continue to P9-04F-2 for admin users/roles route and component
+extraction.
+
+## P9-04F-2 Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-04F-2 is complete: admin users/roles now has a real
+`(staff)/admin/users` route and a `components/admin-users-roles/` render-only
+component using existing shadcn primitives, while the legacy shell import
+remains compatible. Required typecheck, lint, shell, localization, visual, and
+accessibility proof commands all passed. Continue to P9-04F-3 for admin
+categories/severity/SLA route and component extraction.
+
+## P9-04F-3 Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-04F-3 is complete: admin categories/severity/SLA now has a real
+`(staff)/admin/categories` route and a `components/admin-categories-sla/`
+render-only component using existing shadcn primitives, while the legacy shell
+import remains compatible. Required typecheck, lint, shell, localization,
+visual, and accessibility proof commands all passed. Continue to P9-04F-4 for
+admin notification templates route and component extraction.
+
+## P9-04F-4 Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-04F-4 is complete: admin notification templates now has a real
+`(staff)/admin/notification-templates` route and a
+`components/admin-notification-templates/` render-only component using existing
+shadcn primitives, while the legacy shell import remains compatible. Required
+typecheck, lint, shell, localization, visual, and accessibility proof commands
+all passed. Continue to P9-04F-5 for admin overview route and shared deactivate
+confirmation cleanup.
+
+## P9-04F-5 Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-04F-5 is complete: admin configuration now has a real `(staff)/admin` route
+and a `components/admin-surfaces/` render-only overview component using existing
+shadcn primitives for the shared deactivate confirmation. Required typecheck,
+lint, shell, localization, visual, and accessibility proof commands all passed.
+P9-04F is complete. Continue to P9-04G-1 for reports/export route and component
+extraction.
+
+## P9-04G-1 Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P9-04G-1 is complete: reports/export now has a real `(staff)/reports` route and
+a `components/reports-dashboard/` render-only component using existing shadcn
+primitives. The route forwards only the server session cookie to the existing
+reports read helper; route tests cover cookie forwarding and no client-selected
+authority fields. Required typecheck, lint, shell, localization, visual, and
+accessibility proof commands all passed. Continue to P9-04G-2 for audit viewer
+route and component extraction.
+
+## P9-04G-2 Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P9-04G-2 is complete: audit viewer now has a real `(staff)/audit` route and a
+`components/audit-viewer/` render-only component using existing shadcn
+primitives. Required typecheck, lint, shell, localization, visual, and
+accessibility proof commands all passed. P9-04G is complete. Continue to
+P9-04H-1 for portal submission component extraction and mobile EN/AR proof.
+
+## P9-04H-1 Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P9-04H-1 is complete: portal submission now has a
+`components/portal-submission/` render-only component using existing shadcn
+primitives, while `app/portal/page.tsx` remains the public route for locale,
+state, and safe reference parsing. Required typecheck, lint, shell,
+localization, visual, and accessibility proof commands all passed. Continue to
+P9-04H-2 for portal tracking component extraction and privacy proof.
+
+## P9-04H-2 Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P9-04H-2 is complete: portal tracking now has a
+`components/portal-tracking/` render-only component using existing shadcn
+primitives, while `app/portal/track/page.tsx` remains the public route for
+locale, state, and safe reference parsing. Required typecheck, lint, shell,
+localization, visual, and accessibility proof commands all passed. Continue to
+P9-04H-3 for portal survey component extraction and one-time/expired state
+proof.
+
+## P9-04H-3 Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P9-04H-3 is complete: portal survey now has a
+`components/portal-survey/` render-only component using existing shadcn
+primitives, while `app/portal/survey/page.tsx` remains the public route for
+locale and state parsing. Required typecheck, lint, shell, localization,
+visual, and accessibility proof commands all passed. P9-04H is complete.
+Continue to P9-05A for staff visual/accessibility re-baselining.
+
+## P9-05A Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-05A is complete: staff visual/accessibility proof cases now render rebuilt
+staff routes directly with deterministic proof data for server-data pages, and
+the visual-review artifact generator uses the same route rendering. Required
+typecheck, lint, shell, localization, visual, accessibility, and visual-review
+commands all passed. Continue to P9-05B for portal mobile visual-review
+artifacts in EN/AR.
+
+## P9-05B Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-05B is complete: visual proof now includes EN/AR mobile portal submission,
+tracking, and survey cases, and `web:visual-review` writes fixed-width mobile
+portal artifacts alongside the staff route artifacts. Required typecheck, lint,
+shell, localization, visual, accessibility, and visual-review commands all
+passed. Continue to P9-05C for the final UI perf/visual/accessibility gate and
+phase evidence.
+
+## P9-05C Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-05C is complete: the final UI gate passed after the staff and portal
+re-baselines, including typecheck, lint, shell, localization, 22-preview visual
+proof, 17-preview accessibility proof, 22 visual-review artifacts, and web perf.
+P9-05 is complete. Continue to P9-06A for the SMTP email provider adapter.
+
+## P9-06A Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P9-06A is complete: SMTP email is represented as a backend adapter behind the
+existing email provider port, with safe config validation, injected transport
+test doubles, and secret-safe failure behavior. Required typecheck, lint,
+notifications, integrations, and root tool tests passed. Continue to P9-06B to
+wire env-driven provider selection while keeping dev/test in-memory.
+
+## P9-06B Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P9-06B is complete: email provider selection is now backend env-driven, dev/test
+default to in-memory, production defaults to fail-closed SMTP config validation,
+and SMTP transport creation is isolated behind the provider adapter boundary.
+Required typecheck, lint, integrations, notifications, and root tool tests
+passed. Continue to P9-06C for staging SMTP arrival proof and non-secret ops
+notes.
+
+## P9-06C Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Blocked
+
+P9-06C has the repeatable proof script, secret-safe output tests, and non-secret
+operations runbook, and the required static/API/tool proof commands pass. The
+actual staging arrival gate is blocked because this environment has no
+`SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `SMTP_USER`, `SMTP_PASSWORD`, or
+`SMTP_PROOF_TO`. Do not mark P9-06 complete until a human supplies staging SMTP
+configuration, runs `corepack pnpm smtp:proof`, and confirms mailbox arrival
+outside spam.
+
+## P9-06C-HUMAN Skip Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue With Carry-forward
+
+User explicitly requested skipping the SMTP arrival blocker and continuing
+Forge. This is not acceptance of P9-06C or P9-06. The live staging email arrival
+proof remains a production-readiness gap that must be closed before pilot
+go-live.
+
+## P9-07A Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P9-07A is complete: production deploy artifacts now define the Hostinger pilot
+Compose stack, Caddy auto-TLS proxy, and placeholder-only `.env.production`
+template. Typecheck, lint, root tool tests, and Docker Compose config validation
+passed. Continue to P9-07B for migrate-on-deploy and healthcheck/restart proof
+gates.
+
+## P9-07B Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P9-07B is complete: the production compose stack now has a one-shot Prisma
+`migrate deploy` service before API startup, runtime Prisma schema availability,
+and healthcheck/restart assertions for the pilot services. Required typecheck,
+lint, root tool tests, and Docker Compose config validation passed. Continue to
+P9-07C for production security/storage/email config checks.
+
+## P9-07C Builder Trust Note
+
+Date: 2026-06-20
+Risk: High
+Recommendation: Continue
+
+P9-07C is complete: `prod:config:check` now validates production security,
+SMTP, and S3 attachment-storage posture, rejects placeholders in strict mode,
+and allows `.env.production.example` only with explicit placeholder mode.
+Required typecheck, lint, root tool tests, config check, and Docker Compose
+config validation passed. P9-07 is complete. Continue to P9-08A.
+
+## P9-08A Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-08A is complete: the Hostinger first-deploy runbook now gives non-secret
+commands for VPS setup, `.env.production`, preflight validation, first compose
+deploy, smoke checks, and the skipped SMTP arrival gate. Lint and root tool
+tests passed. Continue to P9-08B.
+
+## P9-08B Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-08B is complete: backup/restore and object-storage operations now include
+non-secret command shapes, restore-test expectations, R2/S3-compatible storage
+controls, and safe evidence metadata. Lint and root tool tests passed. Continue
+to P9-08C.
+
+## P9-08C Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Continue
+
+P9-08C is complete: the first-deploy runbook now covers SSH hardening,
+fail2ban, unattended upgrades, secret-file permissions, DNS/TLS checks, and
+safe evidence metadata. Lint and root tool tests passed. Continue to P9-08D.
+
+## P9-08D Builder Trust Note
+
+Date: 2026-06-20
+Risk: Medium
+Recommendation: Blocked On Human Gates
+
+P9-08D is complete: deployed pilot smoke/UAT checklist and Phase 9 handoff stop
+conditions are documented. Lint and root tool tests passed. P9-08 is complete.
+Do not start Phase Review yet: P9-06C/P9-06 and real P9-OPS deployment/UAT
+proof remain open human/environment gates.

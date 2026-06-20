@@ -25,5 +25,6 @@ RUN apk add --no-cache openssl
 COPY --from=build /app/node_modules /app/node_modules
 COPY --from=build /app/apps/api/node_modules ./node_modules
 COPY --from=build /app/apps/api/dist ./dist
+COPY --from=build /app/packages/database/prisma /app/packages/database/prisma
 EXPOSE 3000
 CMD ["node", "dist/main.js"]

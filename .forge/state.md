@@ -1,9 +1,9 @@
 # Current State
 
-Status: Ready to Build
+Status: Blocked
 Phase: Phase 9 - Production Readiness (Pilot on Hostinger)
-Next Task: P9-04F-1 - Admin branches/departments real route + component extraction
-Model Tier: BUILDER-STANDARD
+Next Task: BLOCKED-P9-HUMAN-GATES - Real environment proof
+Model Tier: HUMAN
 
 ## How to use this file
 
@@ -12,28 +12,24 @@ Prior state history is in .forge/archive/state-archive.md.
 
 ## Snapshot
 
-- Phase 9 in progress. P9-04E is complete.
-- PLAN-P9-FULL expanded the rest of Phase 9:
-  1. P9-04F admin configuration screens.
-  2. P9-04G reports/export and audit viewer.
-  3. P9-04H customer portal screens.
-  4. P9-05 final visual/accessibility/perf re-baseline.
-  5. P9-06 real SMTP email adapter and staging arrival proof.
-  6. P9-07 Hostinger production deploy artifacts.
-  7. P9-08 deploy/backup/hardening/UAT runbooks.
-  8. P9-OPS human-owned VPS/domain/secrets/pilot actions.
-- The next build task is P9-04F-1, covering only the Admin branches/departments
-  route + component extraction.
+- Phase 9 in progress. P9-06C-HUMAN was explicitly skipped by the user and
+  remains a production-readiness carry-forward, not a pass.
+- P9-07 and P9-08 are complete.
+- P9-06C/P9-06 remain incomplete because the live SMTP arrival proof was skipped
+  by user instruction and still needs real mailbox confirmation.
+- P9-OPS remains incomplete because real VPS deployment, backup restore,
+  object-storage smoke, and pilot UAT require the Hostinger environment.
 
 ## Next
 
-- Build P9-04F-1 exactly as scoped in `.forge/next.md`.
+- Human must run the real environment proof gates in
+  `docs/operations/hostinger-first-deploy.md`,
+  `docs/operations/backup.md`, and `docs/operations/pilot-smoke-uat.md`.
 
 ## Open carry-forward / known debt
 
-- Old `src/app/*` screen components remain legacy wrappers until retired
-  screen-by-screen.
-- P9-04F users/roles, categories/SLA, notification templates, and admin overview
-  remain separate follow-up tasks.
+- P9-06C and P9-06 remain incomplete until real staging email arrival is proven;
+  this is intentionally skipped only to continue later Phase 9 build tasks.
+- SMS/WhatsApp/DMS remain mocked/disabled for the pilot.
 - Badge labels show raw enum values (`IN_PROGRESS`, `HIGH`) - not localized;
   deferred.

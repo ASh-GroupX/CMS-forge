@@ -21,6 +21,8 @@
     "web:visual-review": "node --import tsx tools/web-visual-review.mjs",
     "web:perf": "node --import tsx tools/web-proof.mjs perf",
     "test:performance": "node --import tsx tools/web-proof.mjs perf",
+    "smtp:proof": "node --import tsx tools/smtp-arrival-proof.mjs",
+    "prod:config:check": "node tools/prod-config-check.mjs",
     "openapi:generate": "node tools/openapi-check.mjs --write",
     "openapi:check": "node tools/openapi-check.mjs",
     "db:migrate:test": "node tools/pending-proof.mjs db:migrate:test",

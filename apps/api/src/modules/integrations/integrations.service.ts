@@ -17,14 +17,17 @@ export class IntegrationsService {
   ) {}
 
   async sendEmail(input: EmailMessageInput): Promise<EmailSendResult> {
-    return this.emailProvider.send(validateEmailMessage(input));
+    const message = validateEmailMessage(input);
+    return this.emailProvider.send(message);
   }
 
   async sendSms(input: SmsMessageInput): Promise<SmsSendResult> {
-    return this.smsProvider.send(validateSmsMessage(input));
+    const message = validateSmsMessage(input);
+    return this.smsProvider.send(message);
   }
 
   async sendWhatsApp(input: WhatsAppMessageInput): Promise<WhatsAppSendResult> {
-    return this.whatsAppProvider.send(validateWhatsAppMessage(input));
+    const message = validateWhatsAppMessage(input);
+    return this.whatsAppProvider.send(message);
   }
 }

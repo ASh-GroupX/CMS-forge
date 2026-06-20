@@ -2093,3 +2093,1058 @@ Status: Passed through P9-02
   added.
 - P9-04E is complete. AUTO PHASE stopped at `Ready to Plan` because P9-04F is a
   multi-screen admin configuration group and must be split before build work.
+
+## P9-04F-1 - Admin Branches/Departments Route Extraction
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-STRONG (user requested)
+- SRS IDs: REQ-ADMIN-001, UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/components/admin-branches-departments/index.tsx` (NEW) -
+   extracted the render-only branches/departments admin screen and switched the
+   screen shell, tables, buttons, and badges to existing shadcn primitives.
+2. `apps/web/src/app/(staff)/admin/branches/page.tsx` (NEW) - added the real
+   staff admin route resolving locale and optional admin preview state.
+3. `apps/web/src/app/admin-branches-departments.tsx` - legacy compatibility
+   re-export to keep the old shell import working.
+4. `apps/web/test/shell/shell.test.ts` - added route EN/AR and state coverage,
+   and moved source-safety assertions to the extracted component path.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (148/148 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+- Passed: `corepack pnpm test:visual` (16 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+
+### Notes
+
+- No backend admin route, OpenAPI change, user/role screen, category/SLA screen,
+  notification-template screen, reports, audit viewer, fetch path, browser
+  storage, cookie access, provider call, role/actor/session authority, audit
+  mutation, hard delete, or backend-owned master-data decision was added.
+
+## P9-04F-2 - Admin Users/Roles Route Extraction
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-STRONG (user requested)
+- SRS IDs: REQ-ADMIN-001, UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/components/admin-users-roles/index.tsx` (NEW) - extracted the
+   render-only users/roles admin screen and switched the screen shell, table,
+   buttons, and badges to existing shadcn primitives.
+2. `apps/web/src/app/(staff)/admin/users/page.tsx` (NEW) - added the real staff
+   admin users route resolving locale and optional admin preview state.
+3. `apps/web/src/app/admin-users-roles.tsx` - legacy compatibility re-export to
+   keep the old shell import working.
+4. `apps/web/test/shell/shell.test.ts` - added route EN/AR and state coverage,
+   and moved source-safety assertions to the extracted component path.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (150/150 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+- Passed: `corepack pnpm test:visual` (16 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+
+### Notes
+
+- No backend admin route, OpenAPI change, branches/departments screen,
+  category/SLA screen, notification-template screen, reports, audit viewer,
+  fetch path, browser storage, cookie access, provider call, role/actor/session
+  authority, audit mutation, hard delete, backend password reset authority, or
+  backend-owned user/role decision was added.
+
+## P9-04F-3 - Admin Categories/Severity/SLA Route Extraction
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-STRONG (user requested)
+- SRS IDs: REQ-ADMIN-001, UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/components/admin-categories-sla/index.tsx` (NEW) - extracted
+   the render-only categories/severity/SLA admin screen and switched the screen
+   shell, tables, buttons, and badges to existing shadcn primitives.
+2. `apps/web/src/app/(staff)/admin/categories/page.tsx` (NEW) - added the real
+   staff admin categories route resolving locale and optional admin preview
+   state.
+3. `apps/web/src/app/admin-categories-sla.tsx` - legacy compatibility re-export
+   to keep the old shell import working.
+4. `apps/web/test/shell/shell.test.ts` - added route EN/AR and state coverage,
+   and moved source-safety assertions to the extracted component path.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (152/152 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+- Passed: `corepack pnpm test:visual` (16 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+
+### Notes
+
+- No backend admin route, OpenAPI change, branches/departments screen,
+  users/roles screen, notification-template screen, reports, audit viewer,
+  fetch path, browser storage, cookie access, provider call, role/actor/session
+  authority, audit mutation, hard delete, SLA calculation truth, or
+  backend-owned category/SLA decision was added.
+
+## P9-04F-4 - Admin Notification Templates Route Extraction
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-STRONG (user requested)
+- SRS IDs: REQ-ADMIN-001, UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/components/admin-notification-templates/index.tsx` (NEW) -
+   extracted the render-only notification templates admin screen and switched
+   the screen shell, table, buttons, and badges to existing shadcn primitives.
+2. `apps/web/src/app/(staff)/admin/notification-templates/page.tsx` (NEW) -
+   added the real staff admin notification templates route resolving locale and
+   optional admin preview state.
+3. `apps/web/src/app/admin-notification-templates.tsx` - legacy compatibility
+   re-export to keep the old shell import working.
+4. `apps/web/test/shell/shell.test.ts` - added route EN/AR and state coverage,
+   and moved source-safety assertions to the extracted component path.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (154/154 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+- Passed: `corepack pnpm test:visual` (16 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+
+### Notes
+
+- No backend admin route, OpenAPI change, branches/departments screen,
+  users/roles screen, category/SLA screen, reports, audit viewer, fetch path,
+  browser storage, cookie access, provider call, role/actor/session authority,
+  audit mutation, hard delete, notification dispatch, or backend-owned template
+  decision was added.
+
+## P9-04F-5 - Admin Overview Route And Deactivate Confirmation Cleanup
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-STRONG (user requested)
+- SRS IDs: REQ-ADMIN-001, UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/components/admin-surfaces/index.tsx` (NEW) - extracted the
+   render-only admin configuration overview surfaces and switched the shared
+   deactivate confirmation to existing shadcn card/button primitives.
+2. `apps/web/src/app/(staff)/admin/page.tsx` (NEW) - added the real staff admin
+   overview route resolving locale and optional admin preview state.
+3. `apps/web/src/app/admin-surfaces.tsx` - legacy compatibility wrapper now
+   composes the extracted admin configuration surfaces and keeps the old audit
+   viewer behavior until P9-04G.
+4. `apps/web/test/shell/shell.test.ts` - added route EN/AR and confirmation
+   coverage, and moved source-safety assertions to the extracted component path.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (156/156 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+- Passed: `corepack pnpm test:visual` (16 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+
+### Notes
+
+- No backend admin route, OpenAPI change, reports route extraction, audit viewer
+  extraction, customer portal change, fetch path, browser storage, cookie
+  access, provider call, role/actor/session authority, audit mutation, hard
+  delete, or backend-owned admin decision was added.
+- P9-04F is complete. AUTO PHASE continues to P9-04G-1.
+
+## P9-04G-1 - Reports/Export Route Extraction
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-REPORT-001, UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/components/reports-dashboard/index.tsx` (NEW) - extracted the
+   render-only reports/export dashboard and switched the screen shell, table,
+   buttons, and badges to existing shadcn primitives.
+2. `apps/web/src/app/(staff)/reports/page.tsx` (NEW) - added the real staff
+   reports route resolving locale and optional reports preview state, then
+   reading report rows through `getStaffReportRows`.
+3. `apps/web/src/app/reports-dashboard.tsx` - legacy compatibility re-export to
+   keep the old shell import working.
+4. `apps/web/test/shell/shell.test.ts` - added route EN/AR coverage, session
+   cookie forwarding coverage, and moved source-safety assertions to the
+   extracted component path.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (158/158 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+- Passed: `corepack pnpm test:visual` (16 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input:
+  `apps/web/src/app/(staff)/reports/page.tsx` forwards only the server session
+  cookie to `getStaffReportRows`; `apps/web/test/shell/shell.test.ts` asserts
+  no role, actor, branch, owner, token, or credential is passed in the route URL.
+- Each state change writes status history and an audit entry in the same
+  transaction; side effects enqueue after commit: not applicable. This task adds
+  no state change, mutation, backend route, export execution, or side effect.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: source-safety assertions cover the extracted reports component; no
+  secret-bearing field or provider path was added.
+- Customer portal exposure rules hold: not applicable. This task does not touch
+  portal code and the reports component source guard rejects portal/DMS/private
+  paths.
+- Trust boundaries are tested: allowed report-row rendering through a staff
+  session cookie is covered by `reports route renders real scoped rows through
+  the session cookie`; denied/fallback behavior remains covered by `reports
+  dashboard keeps catalog fallback when backend denies report rows`; staff role
+  visibility remains covered by `reports dashboard renders RPT-001 through
+  RPT-017 for report-capable roles only`.
+
+### Notes
+
+- No backend reports route, OpenAPI change, audit viewer, admin screen, portal
+  change, browser storage, direct cookie read in React, unbounded file
+  generation/download, provider call, audit mutation, hard delete, report-scope
+  decision, or export authority was added.
+
+## P9-04G-2 - Audit Viewer Route Extraction
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-AUDIT-001, UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/components/audit-viewer/index.tsx` (NEW) - extracted the
+   render-only audit viewer and switched the screen shell, form controls, table,
+   buttons, and badges to existing shadcn primitives.
+2. `apps/web/src/app/(staff)/audit/page.tsx` (NEW) - added the real staff audit
+   route resolving locale and optional audit preview state.
+3. `apps/web/src/app/audit-viewer.tsx` - legacy compatibility re-export to keep
+   the old shell import working.
+4. `apps/web/test/shell/shell.test.ts` - added route EN/AR and state coverage,
+   and moved source-safety assertions to the extracted component path.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (160/160 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+- Passed: `corepack pnpm test:visual` (16 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input: not
+  changed. This task adds no audit API call or role/scope parameter, and audit
+  access remains Admin-only in the staff shell tests.
+- Each state change writes status history and an audit entry in the same
+  transaction; side effects enqueue after commit: not applicable. This task adds
+  no state change, mutation, backend route, export execution, or side effect.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: source-safety assertions cover the extracted audit component and no
+  secret-bearing field or provider path was added.
+- Customer portal exposure rules hold: not applicable. This task does not touch
+  portal code and the audit component source guard rejects portal/DMS/private
+  paths.
+- Trust boundaries are tested: Admin-only visibility remains covered by `audit
+  viewer renders only for admin preview with filters and export affordance`;
+  route rendering/state coverage is covered by `audit route renders English and
+  Arabic audit labels` and `audit route renders preview states safely`.
+
+### Notes
+
+- No backend audit route, OpenAPI change, reports screen, admin screen, portal
+  change, direct fetch, browser storage, cookie access, blob/object URL/download
+  generation, provider call, audit mutation, hard delete, redaction decision,
+  role/actor/session authority, or backend-owned audit search/export decision
+  was added.
+- P9-04G is complete. AUTO PHASE continues to P9-04H-1.
+
+## P9-04H-1 - Portal Submission Component Extraction
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-PORTAL-001, UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/components/portal-submission/index.tsx` (NEW) - extracted the
+   render-only portal complaint submission screen and switched the screen shell,
+   form fields, buttons, and cards to existing shadcn primitives.
+2. `apps/web/src/app/portal/page.tsx` - kept the public portal route responsible
+   for locale, preview state, and safe reference parsing, then rendered the
+   extracted component.
+3. `apps/web/test/shell/shell.test.ts` - moved portal submission source-safety
+   assertions to the extracted component path while keeping existing route
+   coverage.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (160/160 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+- Passed: `corepack pnpm test:visual` (16 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input: not
+  applicable. This public render-only route passes no role, branch, actor,
+  owner, or session authority fields.
+- Each state change writes status history and an audit entry in the same
+  transaction; side effects enqueue after commit: not applicable. This task adds
+  no mutation, backend route, state change, or side effect.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: source-safety assertions cover the extracted portal submission
+  component and no secret-bearing field, storage path, or provider path was
+  added.
+- Customer portal exposure rules hold: the component source-safety assertion
+  rejects private portal data paths; the success state renders only the safe
+  public reference passed by the route.
+- Trust boundaries are tested: English/Arabic route rendering, validation,
+  loading/error/success states, and the public render-only source guard are
+  covered by the portal submission shell tests.
+
+### Notes
+
+- No backend portal route, OpenAPI contract, portal tracking screen, portal
+  survey screen, staff route, reports screen, audit viewer, direct fetch,
+  browser storage, cookie access, object URL/file read/download, provider call,
+  backend-owned portal decision, or unrelated portal data exposure was added.
+
+## P9-04H-2 - Portal Tracking Component Extraction
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-PORTAL-002, UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/components/portal-tracking/index.tsx` (NEW) - extracted the
+   render-only portal tracking screen and switched the screen shell, forms,
+   buttons, inputs, status badge, and cards to existing shadcn primitives.
+2. `apps/web/src/app/portal/track/page.tsx` - kept the public route responsible
+   for locale, preview state, and safe reference parsing, then rendered the
+   extracted component.
+3. `apps/web/test/shell/shell.test.ts` - moved portal tracking source-safety
+   assertions to the extracted component path while keeping tracking route
+   coverage.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (160/160 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+- Passed: `corepack pnpm test:visual` (16 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input: not
+  applicable. This public render-only route passes no role, branch, actor,
+  owner, or session authority fields.
+- Each state change writes status history and an audit entry in the same
+  transaction; side effects enqueue after commit: not applicable. This task adds
+  no mutation, backend route, state change, or side effect.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: source-safety assertions cover the extracted tracking component and
+  no secret-bearing field, storage path, or provider path was added.
+- Customer portal exposure rules hold: the unverified view renders no status
+  timeline, the verified preview renders only public status/timeline fields, and
+  the source guard rejects private portal paths.
+- Trust boundaries are tested: the shell suite covers the verification gate with
+  no timeline before verified state, verified public timeline rendering,
+  invalid/expired/error states, follow-up state, Arabic RTL labels, and the
+  render-only source guard.
+
+### Notes
+
+- No backend portal route, OpenAPI contract, portal submission screen, portal
+  survey screen, staff route, reports screen, audit viewer, direct fetch,
+  browser storage, cookie access, object URL/file read/download, provider call,
+  backend-owned portal decision, or private portal data exposure was added.
+
+## P9-04H-3 - Portal Survey Component Extraction
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-SURVEY-001, UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `apps/web/src/components/portal-survey/index.tsx` (NEW) - extracted the
+   render-only portal survey screen and switched the screen shell, rating
+   controls, textarea, buttons, and cards to existing shadcn primitives.
+2. `apps/web/src/app/portal/survey/page.tsx` - kept the public route responsible
+   for locale and preview state parsing, then rendered the extracted component.
+3. `apps/web/test/shell/shell.test.ts` - moved portal survey source-safety
+   assertions to the extracted component path while keeping survey route
+   coverage.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (160/160 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+- Passed: `corepack pnpm test:visual` (16 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input: not
+  applicable. This public render-only route passes no role, branch, actor,
+  owner, or session authority fields.
+- Each state change writes status history and an audit entry in the same
+  transaction; side effects enqueue after commit: not applicable. This task adds
+  no mutation, backend route, state change, or side effect.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: source-safety assertions cover the extracted survey component and no
+  secret-bearing field, storage path, or provider path was added.
+- Customer portal exposure rules hold: used and expired states render no
+  submission form, success state does not preserve the sample comment, and the
+  source guard rejects private portal paths.
+- Trust boundaries are tested: the shell suite covers bounded rating controls,
+  success without comment preservation, used/expired no-resubmission states,
+  validation/loading/error states, Arabic RTL labels, and the render-only source
+  guard.
+
+### Notes
+
+- No backend portal route, OpenAPI contract, portal submission screen, portal
+  tracking screen, staff route, reports screen, audit viewer, direct fetch,
+  browser storage, cookie access, object URL/file read/download, provider call,
+  backend-owned survey decision, or private portal data exposure was added.
+- P9-04H is complete. AUTO PHASE continues to P9-05A.
+
+## P9-05A - Staff Route Visual/Accessibility Re-Baseline
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-STRONG
+- SRS IDs: UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `tools/web-proof-cases.mjs` - re-pointed staff visual/accessibility cases at
+   rebuilt staff routes for dashboard, work queue, complaint intake, complaint
+   detail/workflow, admin overview, reports, and audit.
+2. `tools/web-proof.mjs` - added deterministic proof data and route rendering for
+   staff server-data pages, with a direction-aware staff proof frame.
+3. `tools/web-visual-review.mjs` - mirrored the same real staff route rendering
+   for HTML review artifacts.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (160/160 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+- Passed: `corepack pnpm test:visual` (16 route previews, now staff route
+  previews for rebuilt staff surfaces).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm web:visual-review` (16 staff route artifacts written to
+  `coverage/web-visual-review`).
+
+### Notes
+
+- The proof data uses an in-tool fake fetch and `cms_staff_session=proof`; no
+  live network call, app UI behavior, backend route, OpenAPI contract, auth/RBAC
+  logic, portal screen, SMTP/deploy artifact, or production config was changed.
+- Tool file sizes remain under the 300-line source budget:
+  `tools/web-proof.mjs` 180 lines, `tools/web-visual-review.mjs` 111 lines, and
+  `tools/web-proof-cases.mjs` 78 lines.
+
+## P9-05B - Portal Mobile Visual-Review Re-Baseline
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-PORTAL-001, REQ-PORTAL-002, REQ-SURVEY-001, UI-DESIGN-001,
+  UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Changes
+
+1. `tools/web-proof-cases.mjs` - added EN/AR mobile portal visual cases for
+   portal submission, tracking, and survey routes.
+2. `tools/web-visual-review.mjs` - added a fixed-width review frame for cases
+   that declare a mobile viewport.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (160/160 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm web:visual-review` (22 artifacts written to
+  `coverage/web-visual-review`, including EN/AR mobile artifacts for portal
+  submission, tracking, and survey).
+
+### Notes
+
+- Portal mobile review cases cover route content, direction, state messaging,
+  and form/control signals. No portal UI behavior, backend portal route, OpenAPI
+  contract, auth/session logic, reports, audit, SMTP, deployment artifact, or
+  production config was changed.
+
+## P9-05C - Final UI Gate And Phase Evidence
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-STRONG
+- SRS IDs: UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001, NFR-PERF-001
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (160/160 tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 tests).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm web:visual-review` (22 staff/portal artifacts written
+  to `coverage/web-visual-review`).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+
+### Notes
+
+- P9-05 is complete. Staff visual/accessibility proof now renders rebuilt staff
+  routes with deterministic proof data, and portal mobile review artifacts cover
+  submission, tracking, and survey in English and Arabic.
+- Tool file sizes remain under the 300-line source budget:
+  `tools/web-proof.mjs` 180 lines, `tools/web-visual-review.mjs` 113 lines, and
+  `tools/web-proof-cases.mjs` 89 lines.
+- No app UI behavior, backend route, OpenAPI contract, SMTP, deployment
+  artifact, production config, or portal privacy logic was changed by P9-05C.
+- AUTO PHASE continues to P9-06A.
+
+## P9-06A - SMTP Email Provider Adapter
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-NOTIFY-001, NFR-SEC-001, NFR-OBS-001
+
+### Changes
+
+1. `apps/api/src/modules/integrations/email-provider.port.ts` - added SMTP
+   email provider types, safe config validation, an injected-transport SMTP
+   adapter, and secret-safe provider failure handling. The existing in-memory
+   email provider remains unchanged and still returns `provider: 'in-memory'`.
+2. `apps/api/src/modules/integrations/integrations.service.ts` - made email,
+   SMS, and WhatsApp validation explicit before provider property access, so
+   unsafe payloads fail before any provider lookup or send call.
+3. `apps/api/test/integrations/email-provider.test.ts` - added adapter tests for
+   injected transport send, invalid SMTP config, and secret-safe transport
+   rejection.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Failed then repaired: `corepack pnpm test:api -- notifications` initially
+  exposed that SMS/WhatsApp validation could be bypassed by provider property
+  access when a provider was absent. Repaired by validating into a local message
+  before provider access in `IntegrationsService`.
+- Passed after repair: `corepack pnpm test:api -- notifications` (39/39 tests).
+- Passed: `corepack pnpm test:api -- integrations` (12/12 tests; extra focused
+  proof for the new adapter).
+- Passed: `corepack pnpm test` (48/48 tool tests; coverage gate passed).
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input: not
+  applicable. This task adds no route, session, role, branch, or frontend input
+  authority.
+- Every state change writes status history and audit in the same transaction;
+  side effects enqueue after commit: not applicable. This task adds no mutation,
+  notification queue write, audit write, or dispatch scheduler.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: the SMTP adapter never logs transport errors, returns only
+  `messageId/provider/accepted`, and tests assert the configured secret value is
+  absent from validation and provider-failure errors. No `.env` file was
+  changed.
+- Customer portal privacy holds: not applicable. This task does not touch portal
+  routes or response data.
+- External systems go through backend adapters with a test double: the SMTP path
+  is behind `EmailProviderPort` and uses an injected `SmtpEmailTransport` test
+  double; production selection remains unwired until P9-06B.
+
+### Notes
+
+- No live SMTP credentials, provider SDK dependency, production provider
+  selection, real email send, frontend code, OpenAPI route, SMS provider,
+  WhatsApp provider, or DMS provider was added.
+- Source file sizes remain under the 300-line budget:
+  `email-provider.port.ts` 161 lines and `integrations.service.ts` 33 lines.
+- AUTO PHASE continues to P9-06B.
+
+## P9-06B - Env-Driven Email Provider Selection
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-NOTIFY-001, NFR-SEC-001, NFR-OBS-001
+
+### Changes
+
+1. `apps/api/src/modules/integrations/email-provider.factory.ts` (NEW) - added
+   backend-only email provider selection from environment, defaulting non-prod
+   to in-memory and selecting SMTP only through validated config. SMTP transport
+   creation is wrapped behind `SmtpEmailTransport`.
+2. `apps/api/src/modules/integrations/integrations.module.ts` - changed the
+   email provider binding to `emailProviderFromEnv()`. SMS and WhatsApp
+   in-memory bindings are unchanged.
+3. `apps/api/package.json` and `pnpm-lock.yaml` - added `nodemailer` for the
+   real SMTP transport factory and `@types/nodemailer` for strict typecheck.
+4. `apps/api/test/integrations/email-provider.test.ts` - added env-selection
+   tests for non-prod in-memory default, SMTP selection through a test double,
+   and safe fail-closed production config validation.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:api -- integrations` (15/15 tests).
+- Passed: `corepack pnpm test:api -- notifications` (39/39 tests).
+- Passed: `corepack pnpm test` (48/48 tool tests; coverage gate passed).
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input: not
+  applicable. This task adds no route, session, role, branch, or frontend input
+  authority.
+- Every state change writes status history and audit in the same transaction;
+  side effects enqueue after commit: not applicable. This task adds no mutation,
+  notification queue write, audit write, or dispatch scheduler.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: env parsing does not log values, invalid config errors use safe field
+  names, tests assert configured secret values are absent from errors, and no
+  real `.env` file was changed.
+- Customer portal privacy holds: not applicable. This task does not touch portal
+  routes or response data.
+- External systems go through backend adapters with a test double: nodemailer is
+  wrapped by `nodemailerSmtpTransport`; tests inject their own
+  `SmtpEmailTransport` and do not send live mail.
+
+### Notes
+
+- No real SMTP send, staging credential, frontend code, OpenAPI route, SMS
+  provider, WhatsApp provider, or DMS provider was added.
+- Source file sizes remain under the 300-line budget:
+  `email-provider.factory.ts` 80 lines, `email-provider.port.ts` 161 lines,
+  `integrations.module.ts` 21 lines, and `integrations.service.ts` 33 lines.
+- AUTO PHASE continues to P9-06C.
+
+## P9-06C - Staging SMTP Arrival Proof And Ops Notes
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Blocked
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-NOTIFY-001, NFR-SEC-001, NFR-OBS-001
+
+### Changes
+
+1. `tools/smtp-arrival-proof.mjs` (NEW) - added `corepack pnpm smtp:proof`,
+   which sends one message through the backend SMTP provider path and prints only
+   secret-safe proof metadata.
+2. `tools/smtp-arrival-proof.test.mjs` (NEW) - added tests for recipient
+   redaction, injected-provider proof sending, secret-safe failure output, and
+   CLI missing-env behavior.
+3. `docs/operations/smtp-arrival-proof.md` (NEW) - added non-secret operations
+   notes for required SMTP env vars, sender SPF/DKIM/DMARC checks, proof command
+   execution, and arrival evidence capture.
+4. `docs/PRODUCTION_READINESS.md` - linked the SMTP arrival proof runbook from
+   the P-04 real email adapter workstream.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:api -- integrations` (15/15 tests).
+- Passed: `corepack pnpm test:api -- notifications` (39/39 tests).
+- Failed then repaired: `corepack pnpm test` initially failed because the proof
+  script imported API TypeScript at module load while the root tool test runner
+  does not use `tsx`. Repaired by lazy-loading the backend factory only when the
+  CLI uses the real provider path.
+- Passed after repair: `corepack pnpm test` (52/52 tool tests; coverage gate
+  passed).
+- Blocked: `corepack pnpm smtp:proof` failed safely because no staging SMTP
+  environment variables are present in this shell:
+  `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `SMTP_USER`, `SMTP_PASSWORD`, and
+  `SMTP_PROOF_TO` all reported `Present = False`.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input: not
+  applicable. This task adds no route, session, role, branch, or frontend input
+  authority.
+- Every state change writes status history and audit in the same transaction;
+  side effects enqueue after commit: not applicable. This proof sends one email
+  only when explicitly run with staging SMTP env vars; it adds no database
+  mutation or notification queue write.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: the proof script catches failures with a generic safe message, tests
+  assert secret values are absent, and the runbook forbids committing `.env`
+  values or raw provider logs.
+- Customer portal privacy holds: not applicable. This task does not touch portal
+  routes or response data.
+- External systems go through backend adapters with a test double: the proof CLI
+  lazy-loads `emailProviderFromEnv()` and therefore uses the same SMTP adapter
+  path; tests inject a provider double and do not send live mail.
+
+### Blocker
+
+- Human action required: choose/configure a staging email sender, set
+  `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `SMTP_USER`, `SMTP_PASSWORD`, and
+  `SMTP_PROOF_TO` in a non-committed environment, run `corepack pnpm smtp:proof`,
+  then confirm the message arrives in the mailbox and is not spam. Until that
+  arrival is proven, P9-06C and P9-06 remain incomplete.
+
+### Notes
+
+- Source file sizes remain under the 300-line budget:
+  `tools/smtp-arrival-proof.mjs` 71 lines and
+  `tools/smtp-arrival-proof.test.mjs` 70 lines.
+
+## P9-06C-HUMAN - Explicitly Skipped By User
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Skipped / Carry-forward
+- Builder tier: HUMAN
+- SRS IDs: REQ-NOTIFY-001, NFR-SEC-001, NFR-OBS-001
+
+### Decision
+
+- The user explicitly asked to skip the live staging SMTP arrival blocker and
+  continue Forge work.
+- P9-06C-HUMAN, P9-06C, and P9-06 remain incomplete. The skipped proof is a
+  production-readiness carry-forward, not a pass.
+
+### Verification
+
+- Failed / Blocked: `corepack pnpm smtp:proof` failed safely because the shell
+  still lacks `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `SMTP_USER`,
+  `SMTP_PASSWORD`, and `SMTP_PROOF_TO`.
+
+## P9-07A - Production Compose, Caddyfile, And Env Example
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed
+- Builder tier: BUILDER-STRONG
+- SRS IDs: NFR-SEC-001, NFR-AVAIL-001, NFR-OBS-001, NFR-DATA-001
+
+### Changes
+
+1. `docker-compose.prod.yml` (NEW) - added the Hostinger pilot stack with
+   Caddy, web, API, worker, Postgres, Redis, private internal networking,
+   restart policies, service healthchecks, SMTP email, and S3 attachment
+   storage.
+2. `Caddyfile` (NEW) - added auto-TLS site config with compression, security
+   headers, `/api/*` proxying to the API, and all other traffic to the web app.
+3. `.env.production.example` (NEW) - added non-secret placeholder values for
+   domain, ACME email, Postgres, Redis, S3 attachment storage, SMTP, and worker
+   intervals.
+4. `tools/prod-deploy-artifacts.test.mjs` (NEW) - added a minimal root tool test
+   that proves the required services exist and dev trust/default secrets are not
+   present in the production artifacts.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test -- prod-deploy-artifacts` (54/54 root tool tests;
+  coverage gate passed).
+- Failed then repaired: `docker compose --env-file .env.production.example -f
+  docker-compose.prod.yml config` initially failed because the compose file
+  required a real `.env.production` file. Repaired by using explicit
+  environment interpolation, so local validation can use the example file and
+  the VPS can use `--env-file .env.production`.
+- Passed after repair: `docker compose --env-file .env.production.example -f
+  docker-compose.prod.yml config`.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input: not
+  applicable. This task adds deployment artifacts only and no route or UI
+  authority.
+- Every state change writes status history and audit in the same transaction;
+  side effects enqueue after commit: not applicable. This task adds no domain
+  mutation.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: `.env.production.example` uses placeholders only, and the test
+  asserts dev defaults/trust are absent from production artifacts.
+- Customer portal privacy holds: not applicable. This task does not touch portal
+  response data.
+- Trust boundaries are tested: production artifacts keep API/database/Redis on
+  an internal network, expose only Caddy ports 80/443, and the tool test covers
+  absence of dev trust/default secret posture.
+
+### Notes
+
+- The skipped SMTP arrival proof remains a carry-forward production gate.
+- No real `.env.production` file was created.
+
+## P9-07B - Migrate-On-Deploy And Healthcheck Proof Gates
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed
+- Builder tier: BUILDER-STRONG
+- SRS IDs: NFR-SEC-001, NFR-AVAIL-001, NFR-OBS-001, NFR-DATA-001
+
+### Changes
+
+1. `docker-compose.prod.yml` - added a one-shot `migrate` service that runs
+   `prisma migrate deploy` before API startup, made API depend on successful
+   migration completion, and added healthchecks for Caddy, web, worker, API,
+   Postgres, and Redis.
+2. `apps/api/Dockerfile` - copied the Prisma schema into the runtime image so
+   the production migrate service can run from the same API image.
+3. `Caddyfile` - added an internal `:8080 /health` endpoint for the Caddy
+   container healthcheck.
+4. `tools/prod-deploy-artifacts.test.mjs` - extended artifact proof to assert
+   migration gating, restart policies, and healthchecks.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test -- prod-deploy-artifacts` (55/55 root tool tests;
+  coverage gate passed).
+- Passed: `docker compose --env-file .env.production.example -f
+  docker-compose.prod.yml config`.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input: not
+  applicable. This task adds deployment startup gates only.
+- Every state change writes status history and audit in the same transaction;
+  side effects enqueue after commit: not applicable. Database migrations are
+  schema changes, not complaint workflow state changes.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: no real `.env.production` was created, and the compose proof used
+  placeholder-only `.env.production.example`.
+- Customer portal privacy holds: not applicable. This task does not touch portal
+  routes or response data.
+- Trust boundaries are tested: artifact tests assert production services use
+  health/startup gates and avoid dev trust/default secret posture.
+
+### Notes
+
+- The migrate service validates configuration but was not run against a real VPS
+  database in this task.
+
+## P9-07C - Production Security, Storage, And Email Config Checks
+
+- Date: 2026-06-20
+- Risk: High
+- Status: Passed
+- Builder tier: BUILDER-STRONG
+- SRS IDs: NFR-SEC-001, NFR-AVAIL-001, NFR-OBS-001, NFR-DATA-001
+
+### Changes
+
+1. `tools/prod-config-check.mjs` (NEW) - added a strict production config check
+   for required deployment variables, placeholder/default secret rejection, SMTP
+   email driver posture, and S3-compatible attachment storage posture.
+2. `tools/prod-config-check.test.mjs` (NEW) - covered real production-style
+   values, example-file placeholder mode, and rejection of dev storage/email
+   drivers.
+3. `package.json` - added `prod:config:check`.
+
+### Verification
+
+- Passed: `corepack pnpm prod:config:check -- --env-file
+  .env.production.example --allow-placeholders`.
+- Passed: `corepack pnpm test -- prod-config-check` (58/58 root tool tests;
+  coverage gate passed).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `docker compose --env-file .env.production.example -f
+  docker-compose.prod.yml config`.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input: not
+  applicable. This task adds deployment config validation only.
+- Every state change writes status history and audit in the same transaction;
+  side effects enqueue after commit: not applicable. This task adds no domain
+  mutation.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: the checker prints variable names only on failure and tests use fake
+  values/placeholders only.
+- Customer portal privacy holds: not applicable. This task does not touch portal
+  routes or response data.
+- Trust boundaries are tested: strict config tests reject placeholder/default
+  production values and dev email/storage drivers.
+
+### Notes
+
+- P9-07 is complete.
+- P9-06C remains skipped carry-forward and is not complete.
+
+## P9-08A - Hostinger VPS Setup And First Deploy Runbook
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-SMALL
+- SRS IDs: NFR-SEC-001, NFR-AVAIL-001, NFR-OBS-001, NFR-DATA-001
+
+### Changes
+
+1. `docs/operations/hostinger-first-deploy.md` (NEW) - added a non-secret
+   Hostinger first-deploy runbook covering Ubuntu/Docker setup, firewall ports,
+   `.env.production` creation, preflight checks, first deploy, smoke checks, and
+   the required carry-forward SMTP arrival proof.
+2. `docs/PRODUCTION_READINESS.md` - linked the first-deploy runbook from the
+   production deploy artifacts workstream.
+
+### Verification
+
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test -- prod-config-check` (58/58 root tool tests;
+  coverage gate passed).
+
+### Notes
+
+- No secrets or real VPS values were added.
+- The skipped SMTP arrival proof remains a carry-forward production gate.
+
+## P9-08B - Backup/Restore And Object-Storage Operations Runbook
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-SMALL
+- SRS IDs: NFR-SEC-001, NFR-AVAIL-001, NFR-OBS-001, NFR-DATA-001
+
+### Changes
+
+1. `docs/operations/backup.md` - added Hostinger backup command shape, restore
+   test command shape, Cloudflare R2/S3-compatible object storage operations,
+   smoke checks, and non-secret evidence metadata.
+2. `docs/PRODUCTION_READINESS.md` - linked `docs/operations/backup.md` from the
+   object storage operations item.
+
+### Verification
+
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test -- prod-config-check` (58/58 root tool tests;
+  coverage gate passed).
+
+### Notes
+
+- No secrets, bucket keys, backup URLs, signed URLs, or real `.env.production`
+  values were added.
+
+## P9-08C - VPS Hardening, Secrets, Domain, And TLS Runbook
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-SMALL
+- SRS IDs: NFR-SEC-001, NFR-AVAIL-001, NFR-OBS-001, NFR-DATA-001
+
+### Changes
+
+1. `docs/operations/hostinger-first-deploy.md` - added SSH key-only hardening,
+   root/password login disablement, fail2ban, unattended upgrades,
+   `.env.production` permissions, DNS checks, Caddy TLS checks, and safe
+   evidence metadata.
+
+### Verification
+
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test -- prod-config-check` (58/58 root tool tests;
+  coverage gate passed).
+
+### Notes
+
+- No secrets, SSH keys, IP addresses, or real `.env.production` values were
+  added.
+
+## P9-08D - Pilot Smoke/UAT Checklist And Phase 9 Handoff
+
+- Date: 2026-06-20
+- Risk: Medium
+- Status: Passed
+- Builder tier: BUILDER-SMALL
+- SRS IDs: NFR-SEC-001, NFR-AVAIL-001, NFR-OBS-001, NFR-DATA-001
+
+### Changes
+
+1. `docs/operations/pilot-smoke-uat.md` (NEW) - added deployed pilot preflight,
+   staff smoke, portal smoke, runtime smoke, safe evidence metadata, and Phase 9
+   handoff stop conditions.
+2. `docs/PRODUCTION_READINESS.md` - linked the pilot smoke/UAT checklist from
+   the real UAT/pilot ops item.
+
+### Verification
+
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test -- prod-config-check` (58/58 root tool tests;
+  coverage gate passed).
+
+### Notes
+
+- P9-08 is complete.
+- Phase 9 is not complete: P9-06C/P9-06 and real P9-OPS gates still require
+  human/environment proof.

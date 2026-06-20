@@ -45,10 +45,12 @@ Node services) running Docker Compose:
 - [ ] **P-04 Real email adapter** — SMTP via nodemailer (Hostinger SMTP or a free
       transactional service) replacing the email test double; SMS/WhatsApp/DMS remain
       config-disabled mocks. Gate: a real email sends and arrives (not spam) from staging.
+      Runbook: `docs/operations/smtp-arrival-proof.md`.
 - [ ] **P-05 Production deploy artifacts** — `docker-compose.prod.yml`, `Caddyfile`,
       `.env.production.example`, migrate-on-deploy step, healthchecks + restart policies,
       `Secure` cookies and HTTPS redirect on. Gate: `docker compose -f ...prod up` brings
-      the full stack up cleanly on the VPS.
+      the full stack up cleanly on the VPS. Runbook:
+      `docs/operations/hostinger-first-deploy.md`.
 - [ ] **P-06 Anti-mojibake + locale gate** — `lint` fails on `Ø`/`Ù`-class mojibake in
       source/i18n and asserts Arabic strings are real Arabic-range codepoints (stops the
       encoding bug recurring). Gate: lint catches a planted mojibake string.
@@ -60,14 +62,14 @@ Node services) running Docker Compose:
 - [ ] **O-03** Postgres OFF `trust` auth — real password; persistent volume; `pg_dump`
       cron backup to **offsite** (R2), and a **restore actually tested** once.
 - [ ] **O-04** Object storage account: create the **Cloudflare R2** bucket + keys (or
-      stand up MinIO). [decision — see below]
+      stand up MinIO). [decision — see below] Runbook: `docs/operations/backup.md`.
 - [ ] **O-05** Email: pick the sender (Hostinger SMTP or a free service) and set
       SPF/DKIM on the sending domain so mail isn't flagged as spam.
 - [ ] **O-06** Set production secrets in the VPS `.env` (DB, Redis, R2, SMTP, session keys).
 - [ ] **O-07** Basic VPS hardening: `ufw` firewall, SSH keys only, `fail2ban`, automatic
       security updates.
 - [ ] **O-08** Run the deploy + a smoke pass; then a small **real UAT/pilot** with a couple
-      of branches and real staff users.
+      of branches and real staff users. Checklist: `docs/operations/pilot-smoke-uat.md`.
 - [ ] **O-09** (lower urgency for pilot) Approve a data-retention / privacy stance for
       customer PII before scaling beyond the pilot.
 
