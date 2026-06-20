@@ -1,39 +1,57 @@
-# Plan Task: PLAN-P9 - Sequence Phase 9 Production Readiness
+# Build Task: P9-01A - Staff Shell Arabic And Root Direction
 
-Status: Ready to Plan
-Required model tier: PLANNER
+Status: Ready to Build
+Required model tier: BUILDER-STANDARD
 Phase: Phase 9 - Production Readiness (Pilot on Hostinger)
+Risk: Medium
+Requirements: REQ-LOCALIZATION-001 AC1, REQ-LOCALIZATION-001 AC2, UI-DESIGN-001 AC3, UI-DESIGN-001 AC4
 
 ## Goal
 
-Turn docs/PRODUCTION_READINESS.md + the Phase 9 backlog into the first buildable task,
-in the correct order. Each task: 1-5 files with an EXECUTED proof, not static green.
+Fix the first visible locale bug without making a huge i18n diff:
 
-## Inputs
+- Rewrite corrupted Arabic strings in `apps/web/src/i18n/staff-shell.ts` as valid
+  UTF-8 Arabic.
+- Wire `apps/web/src/app/layout.tsx` so the root `<html>` uses `lang="ar" dir="rtl"`
+  for Arabic locale and `lang="en" dir="ltr"` otherwise. If layout needs the current
+  URL locale, add the smallest request-header bridge in `apps/web/src/middleware.ts`.
+- Add a focused localization test. Prefer a new
+  `apps/web/test/localization/staff-shell-localization.test.ts` suite and extend
+  `tools/web-test.mjs` to allow `localization`.
 
-- docs/PRODUCTION_READINESS.md (the program + go-live gates + open decisions)
-- .forge/backlog.md Phase 9
-- docs/CMS_AUTO_SRS.md: REQ-LOCALIZATION-001, UI-DESIGN-001, REQ-NOTIFY-001,
-  NFR-SEC-001 (AC4 HTTPS), NFR-AVAIL-001 (backup/restore)
-- apps/web/src/i18n/* (corrupted Arabic), apps/web/src/app/layout.tsx (lang=en, no dir),
-  apps/web (no components/ui - shadcn never adopted), apps/web/src/app/*.tsx (preview
-  scaffolding + hardcoded data)
+## Scope
 
-## Output
+Expected files: 4-5.
 
-- Write the first buildable Phase 9 task to .forge/next.md: P9-01 - fix the corrupted
-  Arabic i18n + wire per-locale lang/dir RTL in layout.tsx (the concrete bug, highest
-  visible payoff, no VPS needed). Keep it 1-5 files + a test.
-- Set .forge/state.md to Ready to Build.
+Allowed:
+- `apps/web/src/i18n/staff-shell.ts`
+- `apps/web/src/app/layout.tsx`
+- `apps/web/src/middleware.ts` only if needed for root locale
+- `apps/web/test/localization/staff-shell-localization.test.ts`
+- `tools/web-test.mjs`
 
-## Guardrails / order
+Do not edit the other i18n files in this task. P9-01B..P9-01E cover them.
 
-- UI quality is judgment-heavy: snapshot gates only prevent regression, they do not
-  create quality. The shadcn refactor (P9-04) must use a human/vision review gate, not
-  visual snapshots alone - plan it that way.
-- P9-02 (mojibake gate) lands AFTER P9-01 (the fix), or it fails on existing corruption.
-- Email/deploy tasks (P9-06..08) need the Docker/staging stack for their proof; do not
-  mark done on static green.
-- Two open decisions feed P9-06..08: object storage (Cloudflare R2 vs MinIO) and email
-  sender (Hostinger SMTP vs Brevo). See docs/PRODUCTION_READINESS.md.
-- Replace state.md (do not append).
+## Acceptance
+
+- Staff shell Arabic text contains real Arabic Unicode characters and no mojibake
+  markers such as U+00C3, U+00C2, U+00D8, U+00D9, or U+FFFD.
+- The English language switch target displays real Arabic text, not mojibake.
+- Rendered staff shell keeps `dir="rtl"` for Arabic and `dir="ltr"` for English.
+- Root document locale helper/layout covers Arabic RTL and English LTR.
+- No business/workflow authority moves into React.
+
+## Proof Commands
+
+- `corepack pnpm test:web -- localization`
+- `corepack pnpm test:e2e -- ui-smoke`
+- `corepack pnpm test:e2e -- accessibility`
+- `corepack pnpm lint`
+- `corepack pnpm typecheck`
+
+## On Success
+
+- Append evidence for P9-01A only.
+- Mark P9-01A done in `.forge/backlog.md`.
+- Write P9-01B as the next task; do not start P9-02 until P9-01A..P9-01E are done.
+- Replace `.forge/state.md` with a short `Ready to Build` snapshot.
