@@ -368,23 +368,55 @@ UI finish (fixes the "preview shell / I don't like the app" problem; hard go-liv
   - [x] P9-04E-4: Workflow action modal extraction
 - [ ] P9-04F: Refactor admin configuration group: users/roles, branches/departments,
       categories/severity, SLA policies, and notification templates
+  - [ ] P9-04F-1: Admin branches/departments real route + component extraction
+  - [ ] P9-04F-2: Admin users/roles real route + component extraction
+  - [ ] P9-04F-3: Admin categories/severity/SLA policies real route + component extraction
+  - [ ] P9-04F-4: Admin notification templates real route + component extraction
+  - [ ] P9-04F-5: Admin configuration overview route and shared deactivate confirmation cleanup
 - [ ] P9-04G: Refactor reports/export and audit viewer with scoped data/export
       messaging and visual review gates
+  - [ ] P9-04G-1: Reports/export real route + component extraction with scoped export messaging
+  - [ ] P9-04G-2: Audit viewer real route + component extraction with Admin-only scoped messaging
 - [ ] P9-04H: Refactor customer portal submission, tracking, and survey screens with
       mobile EN/AR visual review gates and portal privacy proof
+  - [ ] P9-04H-1: Portal submission component extraction with mobile EN/AR proof
+  - [ ] P9-04H-2: Portal tracking component extraction with privacy proof
+  - [ ] P9-04H-3: Portal survey component extraction with one-time/expired states
 - [ ] P9-05: Re-baseline visual regression after the redesign lands
+  - [ ] P9-05A: Re-baseline staff visual/accessibility cases for rebuilt Phase 9 routes
+  - [ ] P9-05B: Re-baseline portal mobile visual-review artifacts in EN/AR
+  - [ ] P9-05C: Run final UI perf/visual/accessibility gate and write phase evidence
 
 Real email (only live integration in the pilot):
 - [ ] P9-06: Real SMTP email adapter (nodemailer), config-driven (mock in dev/test,
       SMTP in prod); SMS/WhatsApp/DMS remain config-disabled mocks. Proof: an email
       actually sends/arrives from staging
+  - [ ] P9-06A: Add SMTP email provider adapter with safe config validation and tests
+  - [ ] P9-06B: Wire env-driven email provider selection; dev/test stay in-memory
+  - [ ] P9-06C: Staging SMTP arrival proof and non-secret operations notes
 
 Production deploy artifacts (Hostinger VPS):
 - [ ] P9-07: `docker-compose.prod.yml` (web/api/worker/postgres/redis) + `Caddyfile`
       (auto-TLS) + `.env.production.example` + healthchecks/restart + migrate-on-deploy
+  - [ ] P9-07A: Add production compose, Caddyfile, and `.env.production.example`
+  - [ ] P9-07B: Add migrate-on-deploy and healthcheck/restart proof gates
+  - [ ] P9-07C: Add production security/storage/email config checks
 - [ ] P9-08: Hostinger deploy runbook - VPS setup, R2 (or MinIO) config, pg_dump backup
       cron + tested restore, ufw/fail2ban/SSH-key hardening
+  - [ ] P9-08A: Hostinger VPS setup and first deploy runbook
+  - [ ] P9-08B: Backup/restore and object-storage operations runbook
+  - [ ] P9-08C: VPS hardening, secrets, domain, and TLS runbook
+  - [ ] P9-08D: Pilot smoke/UAT checklist and Phase 9 review handoff
 
 Ops (human-owned; tracked in `docs/PRODUCTION_READINESS.md` section B, not build tasks):
 - [ ] P9-OPS: O-01..O-09 - provision VPS, domain + TLS, secrets, R2 bucket, email
       sender, backups, hardening, then deploy + pilot UAT
+  - [ ] O-01: Provision Hostinger Ubuntu VPS and install Docker + Compose
+  - [ ] O-02: Point domain A-record to VPS and confirm Caddy TLS issuance
+  - [ ] O-03: Configure Postgres off `trust`, persistent volume, pg_dump cron, and tested restore
+  - [ ] O-04: Create Cloudflare R2 bucket + keys or approve MinIO fallback
+  - [ ] O-05: Choose email sender and configure SPF/DKIM
+  - [ ] O-06: Set production secrets in VPS `.env` with restricted permissions
+  - [ ] O-07: Apply VPS hardening: ufw, SSH keys only, fail2ban, security updates
+  - [ ] O-08: Run deployed smoke pass and pilot UAT with real staff users
+  - [ ] O-09: Approve pilot data-retention/privacy stance before scaling

@@ -1,43 +1,60 @@
-# PLAN-P9-04F Split Admin Configuration Group
+# P9-04F-1 Admin Branches/Departments Route Extraction
 
-Status: Ready to Plan
-Required model tier: PLANNER
+Status: Ready to Build
+Required model tier: BUILDER-STANDARD
 Phase: Phase 9 - Production Readiness (Pilot on Hostinger)
 Risk: Medium
 
 ## Context
 
-P9-04E is complete. The next backlog item is P9-04F:
+PLAN-P9-FULL expanded the remaining Phase 9 backlog from P9-04F through P9-08.
+P9-04F is the next unfinished workstream and is too large as a group, so this
+first slice covers only the Admin branches/departments screen.
 
-`Refactor admin configuration group: users/roles, branches/departments,
-categories/severity, SLA policies, and notification templates`
+Follow the accepted P9-04 route + component pattern:
 
-This is too large for one builder task and must be split before implementation.
+- real App Router route under `apps/web/src/app/(staff)/...`
+- screen component under `apps/web/src/components/.../index.tsx`
+- legacy `apps/web/src/app/*.tsx` wrapper retained for the old shell
+- focused shell tests and existing visual/accessibility gates
 
 ## Scope
 
-Plan only:
+Implement only:
 
-1. Split P9-04F into buildable tasks, each near 1 to 5 files plus focused tests.
-2. Keep each slice inside Phase 9 and preserve the accepted P9-04 route +
-   component extraction pattern.
-3. Include exact verification commands and SRS IDs for each first build task.
-4. Write the first P9-04F build task to `.forge/next.md` and set
-   `.forge/state.md` to `Ready to Build`.
+1. Add a real route at `apps/web/src/app/(staff)/admin/branches/page.tsx` that
+   resolves locale and optional admin preview state, then renders the branches/
+   departments admin component.
+2. Move `AdminBranchesDepartments` into
+   `apps/web/src/components/admin-branches-departments/index.tsx`.
+3. Use existing shadcn/ui primitives and design tokens where the current component
+   hand-rolls cards, tables, badges, and buttons. Do not add new primitives unless
+   an existing shadcn component is missing.
+4. Keep `apps/web/src/app/admin-branches-departments.tsx` as a compatibility
+   wrapper/re-export until the old shell is retired.
+5. Update `apps/web/test/shell/shell.test.ts` with focused route coverage and move
+   source-safety assertions to the new component path.
 
 ## Acceptance
 
-- No code changes.
-- P9-04F is split enough that the first builder task can stay small.
-- The first task preserves backend-owned authority, admin RBAC, OpenAPI
-  boundaries, i18n, visual, and accessibility proof requirements.
+- The new `(staff)/admin/branches` route renders English and Arabic RTL labels.
+- Branch and department tables keep loading, empty, error, success, validation,
+  and conflict states already covered by the admin shell tests.
+- The UI remains render-only: no `fetch`, browser storage, cookie access, role/
+  actor/session authority, provider calls, audit mutation, hard delete, or
+  backend-owned master-data decisions in React.
+- No backend admin route, OpenAPI contract, user/role screen, category/SLA screen,
+  notification-template screen, reports, or audit viewer changes in this task.
 
-## Required Inputs
+## SRS IDs
 
-- `.forge/project.md`
-- `.forge/policy.md`
-- `.forge/state.md`
-- `.forge/backlog.md`
-- latest active-phase entries of `.forge/evidence.md` and `.forge/trust.md`
-- `docs/ARCHITECTURE.md`
-- `docs/CMS_AUTO_SRS.md` requirement IDs for the selected admin UI slice
+REQ-ADMIN-001, UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+## Required Proof Commands
+
+- `corepack pnpm typecheck`
+- `corepack pnpm lint`
+- `corepack pnpm test:web -- shell`
+- `corepack pnpm test:web -- localization`
+- `corepack pnpm test:visual`
+- `corepack pnpm test:e2e -- accessibility`
