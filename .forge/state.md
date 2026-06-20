@@ -1,9 +1,9 @@
 # Current State
 
-Status: Complete
-Phase: Phase 8 - Operational Completion accepted
-Next Task: Complete
-Model Tier: None
+Status: Ready to Plan
+Phase: Phase 9 - Production Readiness (Pilot on Hostinger)
+Next Task: PLAN-P9 - Sequence Phase 9 (emit P9-01 Arabic encoding + RTL as first build)
+Model Tier: PLANNER
 
 ## How to use this file
 
@@ -12,22 +12,22 @@ Prior state history is in .forge/archive/state-archive.md.
 
 ## Snapshot
 
-- Phases 0-7 were previously accepted.
-- PHASE-8-REVIEW accepted Phase 8 on 2026-06-20.
-- DONE: F8-00 job-runtime gate.
-- DONE: F8-01 BullMQ runner foundation.
-- DONE: F8-02 SLA runtime driver.
-- DONE: F8-03 notification runtime driver.
-- DONE: F8-04 attachment scan runtime driver.
-- DONE: F8-05 S3-compatible attachment storage with Docker/MinIO proof.
-- DONE: F8-06 default E2E runtime smoke gate.
-- DONE: F8-07 production default-parameter DI fallback removal.
-- Final review proof passed: `corepack pnpm lint`, `corepack pnpm typecheck`,
-  `corepack pnpm test`, `corepack pnpm openapi:check`, `corepack pnpm test:e2e`,
-  and `corepack pnpm test:e2e -- runtime-smoke`.
-- Latest runtime proof IDs: `f8-06-1781941797776` and
-  `f8-06-1781941820290`.
+- Phases 0-8 accepted. Phase 8 closed the async runtime (BullMQ runner drives SLA /
+  notification / scan jobs; ratchet empty) and the S3-compatible storage adapter.
+- Phase 9 = production readiness for a real pilot on a Hostinger VPS, email-only
+  (SMS/WhatsApp/DMS stay mocked). Plan: docs/PRODUCTION_READINESS.md.
+- Biggest remaining gap is the UI: it is still a preview shell - dev scaffolding
+  (Role preview, Preview links), placeholder content, hardcoded data, corrupted
+  Arabic (mojibake on disk), no RTL, and shadcn/ui was never adopted.
+- NEXT: PLAN-P9 -> emit P9-01 (fix Arabic encoding + lang/dir RTL) as the first build.
+
+## Open decisions (feed P9-06..08)
+
+- Object storage: Cloudflare R2 (recommended) vs self-hosted MinIO.
+- Email sender: Hostinger SMTP vs Brevo.
 
 ## Open carry-forward / known debt
 
-- None recorded by PHASE-8-REVIEW.
+- UI is preview-grade; P9-01..05 finish it (shadcn refactor needs human/vision review).
+- Live email is the only real integration this pilot (P9-06).
+- VPS provisioning, TLS, secrets, backups, hardening are human-owned (P9-OPS).

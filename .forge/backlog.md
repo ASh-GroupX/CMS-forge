@@ -309,3 +309,39 @@ only unit/static green.
 - [x] F8-07: Remove default-parameter DI fallbacks (e.g. `= {} as PrismaService`,
       `= new InMemoryAttachmentStorage()`) so a missing provider fails loudly at boot
       instead of silently falling back; tests pass deps explicitly
+
+## Phase 9 - Production Readiness (Pilot on Hostinger)
+
+Source plan: `docs/PRODUCTION_READINESS.md`. Target: real pilot on a Hostinger VPS,
+email-only (SMS/WhatsApp/DMS stay mocked; manual DMS fallback already works). Phase 8
+already closed the async runtime and the S3-compatible storage adapter (F8-05), so
+Phase 9 is the remaining "real product on real infra" work. Phase DoD: proven on the
+real/staging environment, not green locally.
+
+UI finish (fixes the "preview shell / I don't like the app" problem; hard go-live gate):
+- [ ] P9-01: Fix corrupted Arabic i18n (rewrite `ar` blocks as valid UTF-8) + wire
+      per-locale `lang`/`dir` RTL in `apps/web/src/app/layout.tsx`
+- [ ] P9-02: Anti-mojibake + Arabic-locale lint gate (fails on Ø/Ù-class mojibake;
+      asserts Arabic strings are real Arabic-range codepoints) - lands AFTER P9-01
+- [ ] P9-03: Adopt shadcn/ui foundation - install + generate base primitives
+      (button, card, input, select, table, badge, dialog, tabs, toast) + token theme
+- [ ] P9-04: PLAN - split the screen-by-screen shadcn refactor: remove preview/dev
+      scaffolding (Role preview, Preview links, "placeholder" content), wire real data
+      (kill hardcoded values), one screen group per task, each with a visual-review gate
+      (human or vision model in the loop, not snapshot-only)
+- [ ] P9-05: Re-baseline visual regression after the redesign lands
+
+Real email (only live integration in the pilot):
+- [ ] P9-06: Real SMTP email adapter (nodemailer), config-driven (mock in dev/test,
+      SMTP in prod); SMS/WhatsApp/DMS remain config-disabled mocks. Proof: an email
+      actually sends/arrives from staging
+
+Production deploy artifacts (Hostinger VPS):
+- [ ] P9-07: `docker-compose.prod.yml` (web/api/worker/postgres/redis) + `Caddyfile`
+      (auto-TLS) + `.env.production.example` + healthchecks/restart + migrate-on-deploy
+- [ ] P9-08: Hostinger deploy runbook - VPS setup, R2 (or MinIO) config, pg_dump backup
+      cron + tested restore, ufw/fail2ban/SSH-key hardening
+
+Ops (human-owned; tracked in `docs/PRODUCTION_READINESS.md` section B, not build tasks):
+- [ ] P9-OPS: O-01..O-09 - provision VPS, domain + TLS, secrets, R2 bucket, email
+      sender, backups, hardening, then deploy + pilot UAT
