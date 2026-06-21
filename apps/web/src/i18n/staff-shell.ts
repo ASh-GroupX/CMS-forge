@@ -8,9 +8,7 @@ export const staffShellText = {
     switchLabel: 'Switch language',
     switchTarget: 'العربية',
     theme: { label: 'Toggle theme', light: 'Light mode', dark: 'Dark mode' },
-    title: 'Staff Operations',
-    subtitle: 'Complaint control room',
-    branch: 'All authorized branches',
+    title: 'Staff Operations', subtitle: 'Complaint control room', branch: 'All authorized branches',
     auth: {
       signedOut: 'Signed out',
       signedIn: 'Signed in',
@@ -139,6 +137,7 @@ export const staffShellText = {
     nav: {
       today: ['Employee Today', 'Due, overdue, and waiting tasks'],
       manager: ['Manager Control Room', 'Team overdue, stuck, and promise work'],
+      handoff: ['Deal Handoff Board', 'Stage gates, holders, and blockers'],
       dashboard: ['Dashboard', 'SLA and volume overview'],
       queue: ['Work queue', 'Filtered complaint list'],
       create: ['Create complaint', 'New intake placeholder'],
@@ -286,6 +285,7 @@ export const staffShellText = {
     nav: {
       today: ['مهامي اليوم', 'المهام المستحقة والمتأخرة والعالقة'],
       manager: ['غرفة تحكم المدير', 'المهام المتأخرة والعالقة ووعود العملاء'],
+      handoff: ['لوحة تسليم الصفقات', 'المراحل والمسؤولون والعوائق'],
       dashboard: ['لوحة التحكم', 'ملخص SLA والحجم'],
       queue: ['قائمة العمل', 'قائمة شكاوى قابلة للتصفية'],
       create: ['إنشاء شكوى', 'مدخل إنشاء مؤقت'],

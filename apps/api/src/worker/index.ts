@@ -14,6 +14,7 @@ import { TasksModule } from '../modules/tasks/tasks.module.js';
 import { TasksService } from '../modules/tasks/tasks.service.js';
 import { selectTaskEscalations } from '../modules/tasks/tasks.escalation.js';
 import { redisConnectionFromUrl, workerQueueNames, type WorkerJobPayload, type WorkerQueueName } from './queue.js';
+import { runTaskNotificationBatchJob } from './task-notification-batches.js';
 
 @Module({
   imports: [SlaModule, NotificationsModule, AttachmentsModule, TasksModule],
@@ -26,6 +27,7 @@ export const notificationEmailJobName = 'notifications.email';
 export const notificationSmsJobName = 'notifications.sms';
 export const notificationWhatsAppJobName = 'notifications.whatsapp';
 export const taskEscalationJobName = 'tasks.escalation.scan';
+export const taskNotificationBatchJobName = 'tasks.notification.batch';
 export const attachmentScanJobName = 'attachments.scan';
 
 type WorkerJob = { id?: string | number; name: string; data?: WorkerJobPayload };
@@ -89,6 +91,11 @@ export async function processWorkerJob(
       logger.log(`task escalation job received name=${job.name} id=${job.id ?? 'unknown'} result=${JSON.stringify(result)}`);
       return result;
     }
+    if (job.name === taskNotificationBatchJobName) {
+      const result = await runTaskNotificationBatchJob(app.get(TasksService), app.get(NotificationsService), new Date());
+      logger.log(`task notification batch job received name=${job.name} id=${job.id ?? 'unknown'} result=${JSON.stringify(result)}`);
+      return result;
+    }
     if (job.name !== notificationEmailJobName && job.name !== notificationSmsJobName && job.name !== notificationWhatsAppJobName) return logNoopJob(queueName, job, logger);
     const result = await runNotificationJob(app.get(NotificationsService), job.name, new Date());
     logger.log(`notification job received name=${job.name} id=${job.id ?? 'unknown'} result=${JSON.stringify(result)}`);
@@ -129,6 +136,7 @@ export async function scheduleNotificationJobs(
   await queue.upsertJobScheduler(notificationSmsJobName, { every: everyMs }, { name: notificationSmsJobName, data: {} });
   await queue.upsertJobScheduler(notificationWhatsAppJobName, { every: everyMs }, { name: notificationWhatsAppJobName, data: {} });
   await queue.upsertJobScheduler(taskEscalationJobName, { every: everyMs }, { name: taskEscalationJobName, data: {} });
+  await queue.upsertJobScheduler(taskNotificationBatchJobName, { every: everyMs }, { name: taskNotificationBatchJobName, data: {} });
 }
 
 async function runSlaJob(slaService: SlaRunner, jobName: string, now: Date): Promise<unknown> {

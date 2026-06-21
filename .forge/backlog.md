@@ -445,32 +445,32 @@ PLAN-split into 1-5 file sub-tasks before build, like F1-05 was.
   - [x] P10-02A: Manager rollup read model + derived queries + RBAC/branch scope +
         API tests (employee denied, no cross-branch leak).
   - [x] P10-02B `[stack]`: Manager Control Room screen + team/branch filters + web test.
-- [ ] P10-03: Reminder + escalation engine on the Phase-8 worker.
+- [x] P10-03: Reminder + escalation engine on the Phase-8 worker.
   - [x] P10-03A: Escalation policy + due-date scan (due-soon/overdue selection) -
         pure logic, idempotent, unit tests.
   - [x] P10-03B `[stack]`: Wire the scan into the BullMQ worker (reminder -> team
         leader -> branch manager -> high-priority); notify idempotently through
         the existing notification service.
-  - [ ] P10-03C: Add the missing digest/rollup notification contract for daily
+  - [x] P10-03C: Add the missing digest/rollup notification contract for daily
         employee digest and manager rollup batching, then wire it into the worker.
-- [ ] P10-04 (umbrella): Deal object + stage gates (Lead..Post-delivery) + Handoff Board.
+- [x] P10-04 (umbrella): Deal object + stage gates (Lead..Post-delivery) + Handoff Board.
   - [x] P10-04A: Deal model + stage gates + per-stage owner/due/blocker + transition
         rules + service tests.
   - [x] P10-04B: Stage transitions generate the right tasks + audit + tests.
   - [x] P10-04C: Deal Handoff Board read model (by stage, stuck, current holder, delay
         age) + RBAC + API tests.
-  - [ ] P10-04D `[stack]`: Deal Handoff Board screen + web test.
-- [ ] P10-05: Customer Promise Tracker.
+  - [x] P10-04D `[stack]`: Deal Handoff Board screen + web test.
+- [x] P10-05: Customer Promise Tracker.
   - [x] P10-05A: Promise flag on tasks linked to customer/deal/case +
         promise-kept-on-time computed from events + service tests.
   - [x] P10-05B: Surface overdue promises in Employee Today + Control Room + the KPI.
-- [ ] P10-06 (umbrella): Complaint -> Case reframe (keep existing flows working).
+- [x] P10-06 (umbrella): Complaint -> Case reframe (keep existing flows working).
   - [x] P10-06A: Generalize Complaint into Case(type=customer_complaint) - schema +
         migration; customer/vehicle become links, not mandatory root.
   - [x] P10-06B: Case tasks + case timeline + case links + tests.
   - [x] P10-06C: Regression - existing complaint flows pass; case-without-vehicle
         works; backend-owned workflow authority intact.
-- [ ] P10-07: KPI dashboard DERIVED from the event timeline (not counters).
+- [x] P10-07: KPI dashboard DERIVED from the event timeline (not counters).
   - [x] P10-07A: KPI read model from events (on-time%, overdue, avg delay,
         promise-kept%, reopened, escalations, stuck-by-dept, first-response/resolution)
         + RBAC/scope + API tests; no raw closed-count leaderboard.
@@ -483,17 +483,19 @@ PLAN-split into 1-5 file sub-tasks before build, like F1-05 was.
           first-response, and resolution timing from complaint/case/SLA events.
     - [x] P10-07A4: Add the scoped KPI HTTP route + OpenAPI + API tests covering
           allowed manager/admin access, denied employee access, and no cross-branch leak.
-  - [ ] P10-07B `[stack]`: KPI dashboard screen + web test.
+  - [x] P10-07B `[stack]`: KPI dashboard screen + web test.
 - [x] P10-08: CAPA / root cause.
   - [x] P10-08A: CAPA model (root cause, responsible dept, corrective + preventive
         action, due, effectiveness check, repeat flag) + service tests.
   - [x] P10-08B: Repeat-issue detection + CAPA surfaced in case detail + tests.
-- [ ] P10-09 (umbrella; Risk Critical; AFTER Task/Case stable): Confidential employee cases.
+- [x] P10-09 (umbrella; Risk Critical; AFTER Task/Case stable): Confidential employee cases.
   - [x] P10-09A: Participant ACL + confidentiality enforced at the service/query layer
         (accused denied by default, conflict-of-interest guard) + denial audit + tests.
   - [x] P10-09B: Employee-grievance case type + confidential lifecycle (HR review ->
         investigation -> decision -> closed -> appealed) + restricted notes + tests.
-  - [ ] P10-09C `[stack]`: Confidential HR-only screens + redaction + privacy regression tests.
+  - [x] P10-09C `[stack]`: Confidential HR-only screens + redaction + privacy regression tests.
+    - [x] P10-09C1: Confidential case timeline HTTP read contract + OpenAPI + API privacy tests.
+    - [x] P10-09C2 `[stack]`: Confidential HR-only screen + redaction + web privacy proof.
 - [ ] P10-10: Local UAT seed + demo (proves the whole thing).
   - [x] P10-10A: Dealership seed - employees/roles, customers, vehicles, deals,
         overdue tasks, a stuck deal, a complaint, an internal task.

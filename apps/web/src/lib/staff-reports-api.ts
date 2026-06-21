@@ -11,7 +11,19 @@ export type StaffReportRow = {
   updatedAt: string;
 };
 
+export type StaffReportKpis = {
+  onTimeCompletionPercent: number;
+  activeOverdueCount: number;
+  averageDelayHours: number;
+  customerPromiseKeptPercent: number;
+  reopenedCount: number;
+  escalationCount: number;
+  averageFirstResponseHours: number;
+  averageResolutionHours: number;
+};
+
 type ReportsResponse = { items?: Partial<StaffReportRow>[] };
+type KpiResponse = { kpis?: Partial<StaffReportKpis> };
 
 const STAFF_SESSION_COOKIE = 'cms_staff_session';
 
@@ -34,6 +46,30 @@ export async function getStaffReportRows({
     });
     if (!response.ok) return null;
     return rowsFrom((await response.json()) as ReportsResponse);
+  } catch {
+    return null;
+  }
+}
+
+export async function getStaffReportKpis({
+  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  cookieHeader,
+  fetchImpl = fetch,
+}: {
+  apiUrl?: string;
+  cookieHeader?: string;
+  fetchImpl?: typeof fetch;
+} = {}): Promise<StaffReportKpis | null> {
+  const cookies = cookieHeader ?? await incomingCookieHeader();
+  if (!hasStaffSessionCookie(cookies)) return null;
+
+  try {
+    const response = await fetchImpl(new URL('/reports/kpis', apiUrl), {
+      cache: 'no-store',
+      headers: { Accept: 'application/json', cookie: cookies },
+    });
+    if (!response.ok) return null;
+    return kpisFrom((await response.json()) as KpiResponse);
   } catch {
     return null;
   }
@@ -75,6 +111,33 @@ function rowFrom(row: Partial<StaffReportRow>): StaffReportRow | null {
     ownerId: typeof row.ownerId === 'string' ? row.ownerId : null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+  };
+}
+
+function kpisFrom(body: KpiResponse): StaffReportKpis | null {
+  const kpis = body.kpis;
+  if (
+    !kpis ||
+    typeof kpis.onTimeCompletionPercent !== 'number' ||
+    typeof kpis.activeOverdueCount !== 'number' ||
+    typeof kpis.averageDelayHours !== 'number' ||
+    typeof kpis.customerPromiseKeptPercent !== 'number' ||
+    typeof kpis.reopenedCount !== 'number' ||
+    typeof kpis.escalationCount !== 'number' ||
+    typeof kpis.averageFirstResponseHours !== 'number' ||
+    typeof kpis.averageResolutionHours !== 'number'
+  ) {
+    return null;
+  }
+  return {
+    onTimeCompletionPercent: kpis.onTimeCompletionPercent,
+    activeOverdueCount: kpis.activeOverdueCount,
+    averageDelayHours: kpis.averageDelayHours,
+    customerPromiseKeptPercent: kpis.customerPromiseKeptPercent,
+    reopenedCount: kpis.reopenedCount,
+    escalationCount: kpis.escalationCount,
+    averageFirstResponseHours: kpis.averageFirstResponseHours,
+    averageResolutionHours: kpis.averageResolutionHours,
   };
 }
 

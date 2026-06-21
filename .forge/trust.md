@@ -1332,3 +1332,76 @@ notification tests, root tests, Redis scheduler smoke, and `test:api --
 notifications` passed. Daily digest and manager rollup batching are split to
 P10-03C because the current notification primitives lack a digest/grouping
 contract.
+
+## P10-03C Builder Trust Note
+
+Date: 2026-06-21
+Risk: High
+Recommendation: Continue
+
+P10-03C is complete: the notifications worker now schedules
+`tasks.notification.batch`, derives daily employee digests and manager rollups
+from backend-owned task read models, and queues idempotent in-app rows with
+stable UTC window keys while ignoring job payload role/branch authority. `db:seed`,
+lint, typecheck, `test:api -- tasks`, `test:api -- notifications`, focused worker
+tests, root tests, and Redis scheduler smoke passed. Continue to P10-04D.
+
+## P10-04D Builder Trust Note
+
+Date: 2026-06-21
+Risk: Medium
+Recommendation: Continue
+
+P10-04D is complete: `/deals/handoff` renders the scoped backend Deal Handoff
+Board read model from the staff session cookie only, with manager/admin
+navigation, staff-hidden navigation, localized empty/error/loading states, and
+runtime screenshot proof on the local stack. `db:seed`, lint, typecheck,
+`test:web -- shell`, root tests, route smoke, and Playwright screenshot proof
+passed after fixing a route import and preview-shell nav icon mapping. Continue
+to P10-07B.
+
+## P10-07B Builder Trust Note
+
+Date: 2026-06-21
+Risk: Medium
+Recommendation: Continue
+
+P10-07B is complete: `/reports` now renders the existing scoped
+`/reports/kpis` backend read model from the staff session cookie only, showing
+event-derived task/promise and complaint/case accountability KPIs without
+client-side KPI calculation or new report navigation. `db:seed`, lint,
+typecheck, `test:web -- shell`, root tests, route smoke, and Playwright
+screenshot proof passed; the temporary local staff session and storage state
+were removed after capture. Continue to P10-09C.
+
+## P10-09C1 Builder Trust Note
+
+Date: 2026-06-21
+Risk: Critical
+Recommendation: Continue
+
+P10-09C1 is complete: Cases now exposes an authenticated
+`GET /cases/{caseId}/confidential-timeline` route that derives actor context
+from the server session and delegates all confidential ACL/redaction logic to
+`CasesService.timelineForActor`. The missing `test:api -- cases` suite was
+registered, OpenAPI canonical/generated artifacts document the route, and
+`db:seed`, lint, typecheck, `test:api -- cases`, OpenAPI check, and root tests
+passed after fixing the test helper exact-optional-property issue. Continue to
+P10-09C2 for the web screen.
+
+## P10-09C2 Builder Trust Note
+
+Date: 2026-06-21
+Risk: Critical
+Recommendation: Replan next item
+
+P10-09C2 is complete: `/cases/confidential/[caseId]` renders the authenticated
+confidential employee-grievance timeline from the backend actor-scoped response,
+including restricted notes only when the service policy permits them, with
+denied/no-note, EN LTR, and AR RTL states. The live route proof initially exposed
+Nest runtime DI/guard metadata assumptions in the new Cases HTTP path; the fix
+kept the route on `SessionAuthGuard` and backend `assertCanReadCase` policy while
+making Cases controller/repository/service injection explicit. `db:seed`, lint,
+typecheck, `test:api -- cases`, `test:web -- shell`, root tests, backend smoke,
+web route smoke, and Playwright screenshot proof passed. P10-09 is closed. P10-10B
+is broad end-to-end proof work and should be split before build.

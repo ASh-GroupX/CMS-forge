@@ -3,7 +3,7 @@ import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const suite = process.argv.slice(2).find((arg) => arg !== '--');
-const allowedSuites = new Set(['auth', 'audit', 'admin', 'security', 'workflow', 'search', 'sla', 'notifications', 'portal', 'portal.tracking', 'attachments', 'integrations', 'surveys', 'reports', 'tasks', 'deals']);
+const allowedSuites = new Set(['auth', 'audit', 'admin', 'security', 'workflow', 'search', 'sla', 'notifications', 'portal', 'portal.tracking', 'attachments', 'integrations', 'surveys', 'reports', 'tasks', 'deals', 'cases']);
 
 if (!suite || !allowedSuites.has(suite)) {
   console.error(`Unknown API test suite: ${suite ?? '(missing)'}`);
@@ -11,10 +11,15 @@ if (!suite || !allowedSuites.has(suite)) {
 }
 
 const suiteDir = join('apps', 'api', 'test', suite);
+const moduleDir = join('apps', 'api', 'src', 'modules', suite);
 const files = existsSync(suiteDir)
   ? readdirSync(suiteDir)
       .filter((file) => file.endsWith('.test.ts'))
       .map((file) => join(suiteDir, file))
+  : existsSync(moduleDir)
+    ? readdirSync(moduleDir)
+        .filter((file) => file.endsWith('.spec.ts'))
+        .map((file) => join(moduleDir, file))
   : [];
 
 if (files.length === 0) {

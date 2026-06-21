@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { reportsDashboardText } from '../../i18n/staff-reports-dashboard';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
-import type { StaffReportRow } from '../../lib/staff-reports-api';
+import type { StaffReportKpis, StaffReportRow } from '../../lib/staff-reports-api';
 
 export type ReportsPreviewState = 'ready' | 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'denied' | 'conflict';
 
@@ -30,10 +30,12 @@ const reports = [
 ] as const;
 
 export function ReportsDashboard({
+  kpis,
   locale,
   rows,
   state,
 }: {
+  kpis?: StaffReportKpis | undefined;
   locale: Locale;
   rows?: StaffReportRow[] | undefined;
   state?: ReportsPreviewState | undefined;
@@ -41,6 +43,16 @@ export function ReportsDashboard({
   const shell = staffShellText[locale];
   const t = reportsDashboardText[locale];
   const realRows = rows?.slice(0, 17);
+  const kpiCards = kpis ? [
+    [t.kpis.onTime, `${kpis.onTimeCompletionPercent}%`],
+    [t.kpis.activeOverdue, String(kpis.activeOverdueCount)],
+    [t.kpis.averageDelay, t.hours(kpis.averageDelayHours)],
+    [t.kpis.promiseKept, `${kpis.customerPromiseKeptPercent}%`],
+    [t.kpis.reopened, String(kpis.reopenedCount)],
+    [t.kpis.escalations, String(kpis.escalationCount)],
+    [t.kpis.firstResponse, t.hours(kpis.averageFirstResponseHours)],
+    [t.kpis.resolution, t.hours(kpis.averageResolutionHours)],
+  ] as const : null;
   return (
     <Card aria-label={t.title} className="rounded-md border-slate-200 bg-white shadow-sm" dir={shell.dir}>
       <CardHeader className="border-b border-slate-200 p-4">
@@ -56,6 +68,27 @@ export function ReportsDashboard({
             {t.states[state]}
           </p>
         ) : null}
+        <section className="mb-3 rounded-md border border-slate-200 bg-white p-3" aria-label={t.kpis.title}>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-semibold">{t.kpis.title}</h3>
+              <p className="mt-1 text-xs text-slate-600">{t.kpis.subtitle}</p>
+            </div>
+            <ReportBadge>{kpis ? t.kpis.backend : t.kpis.unavailable}</ReportBadge>
+          </div>
+          {kpiCards ? (
+            <dl className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {kpiCards.map(([label, value]) => (
+                <div className="rounded-sm border border-slate-200 bg-slate-50 px-3 py-2" key={label}>
+                  <dt className="text-xs font-semibold text-slate-600">{label}</dt>
+                  <dd className="mt-1 text-lg font-semibold tracking-normal text-slate-950">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
+            <p className="mt-3 rounded-sm border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{t.kpis.empty}</p>
+          )}
+        </section>
         <section className="mb-3 rounded-md border border-slate-200 bg-slate-50 p-3" aria-label={t.export.title}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-semibold">{t.export.title}</h3>

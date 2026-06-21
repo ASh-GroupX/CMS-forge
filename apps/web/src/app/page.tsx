@@ -5,6 +5,7 @@ import {
   FilePlus2,
   FolderCog,
   Gauge,
+  GitBranch,
   History,
   Inbox,
   Search,
@@ -33,12 +34,13 @@ import { AuthPanel, RolePanel, roleNav, type RolePreview } from './staff-shell-p
 import { StaffTopBar } from './staff-top-bar';
 import { WorkQueue, type QueuePreviewState } from './work-queue';
 
-const navKeys = ['today', 'manager', 'dashboard', 'queue', 'create', 'detail', 'admin', 'reports', 'audit', 'notifications'] as const;
+const navKeys = ['today', 'manager', 'handoff', 'dashboard', 'queue', 'create', 'detail', 'admin', 'reports', 'audit', 'notifications'] as const;
 type NavKey = (typeof navKeys)[number];
 
 const icons = {
   today: CheckSquare2,
   manager: UsersRound,
+  handoff: GitBranch,
   dashboard: Gauge,
   queue: Inbox,
   create: FilePlus2,
@@ -133,6 +135,7 @@ function navHref(key: NavKey, locale: Locale): string {
   const routes: Record<NavKey, string> = {
     today: '/tasks/today',
     manager: '/tasks/manager',
+    handoff: '/deals/handoff',
     dashboard: '/dashboard',
     queue: '/complaints',
     create: '/complaints/new',

@@ -4707,3 +4707,321 @@ Status: Passed through P9-02
   surface changed.
 - Trust boundaries tested: Passed. Tests cover one queued escalation, idempotent
   duplicate suppression, scheduler registration, and worker payload scope denial.
+
+## P10-03C Digest And Manager Rollup Notification Batching
+
+- Date: 2026-06-21
+- Risk: High
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, REQ-NOTIFY-001, SLA-CALENDAR-001, ARCH-INTEGRATION-001, NFR-OBS-001, METHOD-TEST-001
+
+### Changes
+
+1. Added a backend-owned daily UTC digest window contract for task notifications:
+   `task-digest:employee:{userId}:{yyyy-mm-dd}` for employee digests and
+   `task-rollup:manager:{yyyy-mm-dd}` for manager rollups.
+2. Wired the Phase-8 notifications worker to schedule and execute
+   `tasks.notification.batch` through the existing BullMQ notifications queue.
+3. Reused `TasksService.managerControlRoom` for backend manager scope and
+   `TasksService.employeeToday` for employee digest payloads; the worker does
+   not query task rows directly or trust job payload role/branch fields.
+4. Queued in-app digest/rollup rows through `NotificationsService.queueInternal`
+   with stable idempotency keys and safe payload shapes.
+5. Added focused tests for one employee digest, one manager rollup, idempotent
+   rerun behavior, scheduler registration, and hostile worker payload scope.
+
+### Verification
+
+- Passed: `$env:DATABASE_URL='postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto'; corepack pnpm db:seed`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test:api -- tasks` (10/10).
+- Passed: `corepack pnpm test:api -- notifications` (41/41).
+- Passed: `node --import tsx --test apps/api/test/worker/task-escalation-runner.test.ts apps/api/test/worker/notification-runner.test.ts` (6/6).
+- Passed: `corepack pnpm test` (58/58 with coverage gates).
+- Passed: local Redis scheduler smoke via `corepack pnpm --dir apps/api exec ...`; BullMQ registered `tasks.notification.batch` on the `notifications` queue with `every=5000`.
+
+### Notes
+
+- No new provider, scheduler framework, workflow builder, AI, mobile, WhatsApp,
+  or frontend authority was added.
+- Manager rollup is queued as an internal manager-scope in-app row with no
+  single user recipient until a later user-directory task defines explicit
+  manager recipient expansion.
+
+### Security Self-Check
+
+- Roles and branch scope from server session/backend authority, never client
+  input: Passed. The batch job derives `{ roleCode: ADMIN, branchId: null }`
+  internally and tests assert hostile job payload role/branch values are ignored.
+- State change history + audit in same transaction: not applicable; this task
+  queues notification rows only and performs no workflow or task state mutation.
+- No passwords, OTPs, tokens, hashes, credentials, or provider secrets logged or
+  stored in notification payloads: Passed. Payload keys contain only window,
+  task, count, scope, and recipient identifiers, and existing notification
+  payload validation still rejects secret-like keys.
+- Customer portal exposure rules: not applicable; no customer portal route or
+  public payload surface changed.
+- Trust boundaries tested: Passed. Focused worker tests cover employee digest
+  recipient selection, manager rollup batching, duplicate suppression through
+  stable idempotency keys, and worker payload scope denial.
+
+## P10-04D Deal Handoff Board Screen And Web Test
+
+- Date: 2026-06-21
+- Risk: Medium
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, ARCH-UI-001, UI-DESIGN-001, METHOD-TEST-001
+
+### Changes
+
+1. Added a typed staff web client for `GET /deals/handoff-board`; it forwards
+   only the staff session cookie and parses the existing backend read model.
+2. Added `/deals/handoff` with loading, empty, error, English LTR, and Arabic
+   RTL states using the existing shadcn/ui card, badge, and table primitives.
+3. Added Deal Handoff Board navigation for manager/admin-capable staff surfaces
+   and kept staff/basic navigation hidden.
+4. Added focused shell tests for real deal data rendering, denied/empty states,
+   Arabic RTL labels, and cookie-only API forwarding.
+5. Saved runtime visual proof at
+   `output/playwright/deal-handoff-board.png`.
+
+### Verification
+
+- Passed: `$env:DATABASE_URL='postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto'; corepack pnpm db:seed`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Failed then Passed: `corepack pnpm test:web -- shell`. Initial failures were
+  a bad route relative import and a missing preview-shell icon/route mapping for
+  the new `handoff` nav key; both were fixed. Final run passed 173/173.
+- Passed: `corepack pnpm test` (58/58 with coverage gates).
+- Failed then Passed: local route/screenshot proof. Initial attempts failed
+  because package-scoped scripts did not expose both Prisma and Playwright, then
+  because the transient storage-state JSON had a BOM. Final run passed with
+  route status 200, Chrome-channel Playwright screenshot saved, and temporary
+  local staff session cleanup confirmed.
+
+### Notes
+
+- The screen renders the existing backend Deal Handoff Board read model; no deal
+  stage/workflow authority was added to React.
+- Runtime proof used a temporary local `cms_staff_session` for seeded
+  `cr.manager@cms-auto.test`; the raw cookie value was not recorded in evidence
+  and the session row was deleted after proof.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. The web
+  client calls `/deals/handoff-board` with only the session cookie, and tests
+  assert no role, actor, workflow, branch, owner, token, or credential authority
+  is sent in the URL.
+- State change history + audit in same transaction: not applicable; this task is
+  a read-only web screen and performs no deal/task state mutation.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  Passed. Runtime proof avoided recording the raw cookie and removed the
+  transient storage-state file plus local staff session row.
+- Customer portal exposure rules: not applicable; no customer portal route or
+  public data surface changed.
+- Trust boundaries tested: Passed. Web tests cover manager-capable navigation,
+  staff-hidden navigation, real handoff data, denied state, Arabic RTL, and
+  cookie-only forwarding to the backend read model.
+
+## P10-07B KPI Dashboard Screen And Web Test
+
+- Date: 2026-06-21
+- Risk: Medium
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-REPORT-001, REQ-RBAC-001, ARCH-UI-001, UI-DESIGN-001, METHOD-TEST-001
+
+### Changes
+
+1. Added a typed staff web client for `GET /reports/kpis`; it forwards only the
+   staff session cookie and validates the backend KPI response shape.
+2. Extended the existing `/reports` staff surface to render the event-derived
+   accountability KPIs from the backend read model: on-time completion, active
+   overdue, average delay, customer promises kept, reopened, escalations, first
+   response, and resolution timing.
+3. Kept Reports navigation unchanged and reused existing report/dashboard access
+   surfaces; staff role preview still hides Reports.
+4. Added English LTR and Arabic RTL labels plus no-KPI-data behavior for denied
+   or missing-session reads.
+5. Added focused web tests for real KPI data rendering, denied KPI access, and
+   cookie-only forwarding.
+6. Saved runtime visual proof at `output/playwright/kpi-dashboard.png`.
+
+### Verification
+
+- Passed: `corepack pnpm test:web -- shell` (174/174).
+- Passed: `$env:DATABASE_URL='postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto'; corepack pnpm db:seed`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test` (58/58 with coverage gates).
+- Passed: local API health check returned `{"status":"ok"}`.
+- Passed: local `/reports?locale=en` route smoke with a temporary staff session
+  returned status 200 and contained `Accountability KPIs`.
+- Passed: Chrome-channel Playwright screenshot captured
+  `output/playwright/kpi-dashboard.png`; temporary local staff session and
+  storage-state files were removed after proof.
+
+### Notes
+
+- React renders the backend KPI read model only; it does not calculate KPI truth,
+  branch filters, role filters, or closed-count leaderboards.
+- Runtime proof used a temporary local `cms_staff_session` for seeded
+  `cr.manager@cms-auto.test`; the raw cookie value was not recorded in evidence
+  and the session row was deleted after proof.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. The web
+  client calls `/reports/kpis` with only the session cookie, and tests assert no
+  role, actor, workflow, branch, owner, token, or credential authority is sent in
+  the URL.
+- State change history + audit in same transaction: not applicable; this task is
+  a read-only web screen and performs no report/task/case state mutation.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  Passed. Runtime proof avoided recording the raw cookie and removed the
+  transient storage-state file plus local staff session row.
+- Customer portal exposure rules: not applicable; no customer portal route or
+  public data surface changed.
+- Trust boundaries tested: Passed. Web tests cover report-capable access,
+  staff-hidden Reports surface, real KPI data rendering, denied KPI data, Arabic
+  RTL labels, and cookie-only forwarding to the backend read model.
+
+## P10-09C1 Confidential Case Timeline HTTP Contract
+
+- Date: 2026-06-21
+- Risk: Critical
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, NFR-SEC-002, METHOD-API-001, METHOD-AUDIT-001, METHOD-TEST-001
+
+### Changes
+
+1. Added authenticated `GET /cases/{caseId}/confidential-timeline` to the Cases
+   controller.
+2. Wired Cases module session auth through `AuthModule` and
+   `SESSION_AUTH_SERVICE`; confidential read authorization stays in the case
+   policy.
+3. Kept ACL and redaction authority in `CasesService.timelineForActor`; the
+   controller only derives actor context from the server session and delegates.
+4. Added focused Cases controller tests for allowed confidential participant read
+   with restricted notes and accused denial with SECURITY audit before notes can
+   escape.
+5. Registered the missing `test:api -- cases` suite by letting the API test
+   runner discover module `*.spec.ts` files when no `apps/api/test/<suite>`
+   folder exists.
+6. Added the confidential timeline route and response schemas to canonical and
+   generated OpenAPI JSON.
+
+### Verification
+
+- Passed: `$env:DATABASE_URL='postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto'; corepack pnpm db:seed`.
+- Passed: `corepack pnpm lint`.
+- Failed then Passed: `corepack pnpm typecheck`. Initial failure was an
+  exact-optional-property mismatch in the test request helper; fixed by omitting
+  `correlationId` when absent.
+- Failed then Passed: `corepack pnpm test:api -- cases`. Initial failure was the
+  missing suite registration; added the suite/fallback and final run passed
+  16/16.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm test` (58/58 with coverage gates).
+
+### Notes
+
+- No HR role was introduced; P10-09C1 uses the existing confidential participant
+  ACL semantics because the current role model has no explicit HR role.
+- No web screen was added; P10-09C2 will consume this route.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. The
+  controller builds actor context from `request.principal`; tests include hostile
+  URL query authority and still authorize only by the session actor.
+- State change history + audit in same transaction: not applicable for the read
+  route. Denied confidential reads still write SECURITY audit through existing
+  service policy before throwing.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  Passed. The route returns case timeline DTOs only; tests assert denial before
+  restricted notes are returned.
+- Customer portal exposure rules: not applicable; no customer portal route or
+  public data surface changed.
+- Trust boundaries tested: Passed. Cases API tests cover allowed confidential
+  participant read, accused denial/audit, restricted-note redaction, and no
+  client-provided role/branch authority.
+
+## P10-09C2 Confidential HR-Only Screen And Web Privacy Proof
+
+- Date: 2026-06-21
+- Risk: Critical
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, NFR-SEC-002, ARCH-UI-001, UI-DESIGN-001, METHOD-TEST-001
+
+### Changes
+
+1. Added a typed staff web client for
+   `GET /cases/{caseId}/confidential-timeline`; it forwards only the staff
+   session cookie and validates the backend confidential timeline shape.
+2. Added `/cases/confidential/[caseId]` staff route with loading, denied/error,
+   no-note, English LTR, and Arabic RTL states.
+3. Rendered restricted notes only from the backend actor-scoped response; no
+   confidential ACL, role, branch, participant, or workflow logic was added to
+   React.
+4. Fixed the new cases HTTP route wiring so the controller, repository, service,
+   and session guard resolve deterministically in the local Nest runtime.
+5. Added focused web tests for real restricted-note rendering, denied/no-note
+   privacy, Arabic RTL, and cookie-only forwarding.
+6. Saved runtime visual proof at `output/playwright/confidential-case.png`.
+
+### Verification
+
+- Passed: `$env:DATABASE_URL='postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto'; corepack pnpm db:seed`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test:api -- cases` (16/16).
+- Passed: `corepack pnpm test:web -- shell` (177/177).
+- Passed: `corepack pnpm test` (58/58 with coverage gates).
+- Failed then Passed: local API route smoke. Initial live smoke returned 500
+  because the Cases HTTP route was relying on decorator metadata for guard and
+  controller/service DI; fixed by narrowing the route to `SessionAuthGuard` plus
+  backend case policy and adding explicit Cases module/controller injection.
+- Passed: backend smoke returned status 200 and contained the seeded restricted
+  note.
+- Passed: web route smoke for
+  `/cases/confidential/seed_case_employee_grievance?locale=en` returned status
+  200, contained `Confidential case timeline`, contained the seeded restricted
+  note, and had no role/actor/branch/owner/participant/token/credential query
+  authority.
+- Passed: Chrome-channel Playwright screenshot captured
+  `output/playwright/confidential-case.png`; temporary local staff session and
+  storage-state files were removed after proof.
+
+### Notes
+
+- No explicit HR role exists in the current role model. This screen uses a
+  direct staff route plus backend confidential participant ACL; it was not added
+  to broad staff navigation.
+- The route is read-only. Accused/unauthorized confidential reads are still
+  denied and audited by `CasesService.timelineForActor`/`assertCanReadCase`.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. The web
+  client calls the confidential route with only the session cookie, and tests
+  assert no role, actor, workflow, branch, owner, participant, token, or
+  credential authority is sent in the URL.
+- State change history + audit in same transaction: not applicable; this task is
+  read-only. Denied confidential reads still write SECURITY audit through the
+  existing service policy before throwing.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  Passed. Runtime proof avoided recording the raw cookie and removed the
+  transient storage-state file plus local staff session row.
+- Customer portal exposure rules: Passed. No customer portal route or public data
+  surface changed; restricted notes stay on authenticated staff-only reads.
+- Trust boundaries tested: Passed. Web tests cover allowed actor-scoped
+  restricted-note rendering, denied/no-note states without private notes, Arabic
+  RTL labels, and cookie-only backend forwarding.

@@ -2822,6 +2822,67 @@
           }
         }
       }
+    },
+    "/cases/{caseId}/confidential-timeline": {
+      "get": {
+        "tags": [
+          "Cases"
+        ],
+        "operationId": "caseConfidentialTimelineGet",
+        "summary": "Get actor-scoped confidential case timeline",
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Actor-scoped case timeline",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseTimelineResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Confidential case access denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Case not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5491,6 +5552,273 @@
           }
         },
         "additionalProperties": false
+      },
+      "CaseLink": {
+        "type": "object",
+        "required": [
+          "entityType",
+          "entityId"
+        ],
+        "properties": {
+          "entityType": {
+            "type": "string"
+          },
+          "entityId": {
+            "type": "string"
+          }
+        }
+      },
+      "CaseResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "status",
+          "lifecycleStatus",
+          "confidentialityLevel",
+          "branchId",
+          "ownerId",
+          "subject",
+          "descriptionEn",
+          "descriptionAr",
+          "links",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "lifecycleStatus": {
+            "type": "string"
+          },
+          "confidentialityLevel": {
+            "type": "string"
+          },
+          "branchId": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "subject": {
+            "type": "string"
+          },
+          "descriptionEn": {
+            "type": "string"
+          },
+          "descriptionAr": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CaseLink"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CapaAction": {
+        "type": "object",
+        "required": [
+          "id",
+          "caseId",
+          "rootCause",
+          "responsibleDepartmentId",
+          "correctiveAction",
+          "preventiveAction",
+          "dueAt",
+          "effectivenessCheck",
+          "repeatFlag",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "caseId": {
+            "type": "string"
+          },
+          "rootCause": {
+            "type": "string"
+          },
+          "responsibleDepartmentId": {
+            "type": "string"
+          },
+          "correctiveAction": {
+            "type": "string"
+          },
+          "preventiveAction": {
+            "type": "string"
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "effectivenessCheck": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "repeatFlag": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CaseRestrictedNote": {
+        "type": "object",
+        "required": [
+          "id",
+          "authorId",
+          "body",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "authorId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "body": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CaseRepeatIssue": {
+        "type": "object",
+        "required": [
+          "isRepeat",
+          "rootCauses"
+        ],
+        "properties": {
+          "isRepeat": {
+            "type": "boolean"
+          },
+          "rootCauses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CaseTimelineEvent": {
+        "type": "object",
+        "required": [
+          "type",
+          "occurredAt"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "entityType": {
+            "type": "string"
+          },
+          "entityId": {
+            "type": "string"
+          },
+          "capaActionId": {
+            "type": "string"
+          }
+        }
+      },
+      "TaskCaseLink": {
+        "type": "object",
+        "required": [
+          "entityType",
+          "entityId"
+        ],
+        "properties": {
+          "entityType": {
+            "type": "string"
+          },
+          "entityId": {
+            "type": "string"
+          }
+        }
+      },
+      "CaseTimelineResponse": {
+        "type": "object",
+        "required": [
+          "case",
+          "taskLink",
+          "capaActions",
+          "restrictedNotes",
+          "repeatIssue",
+          "events"
+        ],
+        "properties": {
+          "case": {
+            "$ref": "#/components/schemas/CaseResponse"
+          },
+          "taskLink": {
+            "$ref": "#/components/schemas/TaskCaseLink"
+          },
+          "capaActions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CapaAction"
+            }
+          },
+          "restrictedNotes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CaseRestrictedNote"
+            }
+          },
+          "repeatIssue": {
+            "$ref": "#/components/schemas/CaseRepeatIssue"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CaseTimelineEvent"
+            }
+          }
+        }
       }
     }
   }

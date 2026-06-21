@@ -1,0 +1,56 @@
+export const dealHandoffText = {
+  en: {
+    title: 'Deal Handoff Board',
+    subtitle: 'Stage gates, stuck deals, holders, and delay age from the server.',
+    total: 'deals',
+    sections: {
+      byStage: ['By stage', 'Current deals grouped by pipeline stage'],
+      stuck: ['Stuck deals', 'Blocked or overdue stage handoffs'],
+      currentHolder: ['Current holders', 'Active deals by holder'],
+    },
+    fields: {
+      blocker: 'Blocker',
+      branch: 'Branch',
+      count: 'Count',
+      delay: 'Delay age',
+      due: 'Stage due',
+      holder: 'Current holder',
+      owner: 'Owner',
+      stage: 'Stage',
+      updated: 'Updated',
+    },
+    states: {
+      loading: 'Loading Deal Handoff Board.',
+      empty: 'No deal handoff items are active right now.',
+      error: 'Deal Handoff Board could not be loaded. Sign in with a manager or admin role.',
+      sectionEmpty: 'No items in this section.',
+    },
+  },
+  ar: {
+    title: 'لوحة تسليم الصفقات',
+    subtitle: 'مراحل الصفقات والعوائق والمسؤولون والتأخير من الخادم.',
+    total: 'صفقات',
+    sections: {
+      byStage: ['حسب المرحلة', 'الصفقات الحالية مجمعة حسب مرحلة المسار'],
+      stuck: ['صفقات عالقة', 'تسليمات مراحل متأخرة أو عليها عائق'],
+      currentHolder: ['المسؤولون الحاليون', 'الصفقات النشطة حسب المسؤول'],
+    },
+    fields: {
+      blocker: 'العائق',
+      branch: 'الفرع',
+      count: 'العدد',
+      delay: 'مدة التأخير',
+      due: 'موعد المرحلة',
+      holder: 'المسؤول الحالي',
+      owner: 'المالك',
+      stage: 'المرحلة',
+      updated: 'آخر تحديث',
+    },
+    states: {
+      loading: 'جاري تحميل لوحة تسليم الصفقات.',
+      empty: 'لا توجد عناصر تسليم صفقات نشطة الآن.',
+      error: 'تعذر تحميل لوحة تسليم الصفقات. سجل الدخول بدور مدير أو مشرف.',
+      sectionEmpty: 'لا توجد عناصر في هذا القسم.',
+    },
+  },
+} as const;

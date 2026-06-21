@@ -8,6 +8,7 @@ import {
   processWorkerJob,
   scheduleNotificationJobs,
   taskEscalationJobName,
+  taskNotificationBatchJobName,
 } from '../../src/worker/index.ts';
 
 test('worker dispatches email notifications through the public service', async () => {
@@ -58,6 +59,7 @@ test('worker schedules notification dispatch jobs on an interval', async () => {
     { id: notificationSmsJobName, repeat: { every: 5_000 }, template: { name: notificationSmsJobName, data: {} } },
     { id: notificationWhatsAppJobName, repeat: { every: 5_000 }, template: { name: notificationWhatsAppJobName, data: {} } },
     { id: taskEscalationJobName, repeat: { every: 5_000 }, template: { name: taskEscalationJobName, data: {} } },
+    { id: taskNotificationBatchJobName, repeat: { every: 5_000 }, template: { name: taskNotificationBatchJobName, data: {} } },
   ]);
   await assert.rejects(scheduleNotificationJobs({} as never, 999), /NOTIFICATION_JOB_INTERVAL_MS/);
 });

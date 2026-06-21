@@ -27,6 +27,7 @@ module's boundary so you can work in a fresh context without scanning the tree.
 ## May depend on
 
 - `core/*` (prisma, errors, audit, rbac, correlation).
+- `AuthService` through `AuthModule` for session validation guard wiring.
 - Other modules' public services only. Never import another module repository,
   `dto/`, or Prisma model type.
 

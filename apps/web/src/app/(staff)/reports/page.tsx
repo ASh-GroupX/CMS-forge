@@ -1,7 +1,7 @@
 import React from 'react';
 import { ReportsDashboard, type ReportsPreviewState } from '../../../components/reports-dashboard';
 import { resolveLocale } from '../../../i18n/staff-shell';
-import { getStaffReportRows } from '../../../lib/staff-reports-api';
+import { getStaffReportKpis, getStaffReportRows } from '../../../lib/staff-reports-api';
 
 type SearchParams = { locale?: string | string[]; reports?: string | string[] };
 
@@ -19,9 +19,10 @@ export default async function ReportsPage({
     ...(cookieHeader !== undefined ? { cookieHeader } : {}),
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
   };
-  const rows = await getStaffReportRows(apiInput);
+  const [rows, kpis] = await Promise.all([getStaffReportRows(apiInput), getStaffReportKpis(apiInput)]);
   return (
     <ReportsDashboard
+      kpis={kpis ?? undefined}
       locale={resolveLocale(readParam(params?.locale))}
       rows={rows ?? undefined}
       state={resolveState(readParam(params?.reports))}

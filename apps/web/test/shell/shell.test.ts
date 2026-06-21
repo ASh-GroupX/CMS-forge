@@ -7,6 +7,8 @@ import StaffShellPage from '../../src/app/page';
 import DashboardPage from '../../src/app/(staff)/dashboard/page';
 import EmployeeTodayPage from '../../src/app/(staff)/tasks/today/page';
 import ManagerControlRoomPage from '../../src/app/(staff)/tasks/manager/page';
+import DealHandoffPage from '../../src/app/(staff)/deals/handoff/page';
+import ConfidentialCasePage from '../../src/app/(staff)/cases/confidential/[caseId]/page';
 import { shouldRedirectStaffRoute } from '../../src/app/(staff)/layout';
 import ComplaintsPage from '../../src/app/(staff)/complaints/page';
 import NewComplaintPage from '../../src/app/(staff)/complaints/new/page';
@@ -39,6 +41,8 @@ import { portalTrackingText } from '../../src/i18n/portal-tracking';
 import { reportsDashboardText } from '../../src/i18n/staff-reports-dashboard';
 import { employeeTodayText } from '../../src/i18n/staff-employee-today';
 import { managerControlRoomText } from '../../src/i18n/staff-manager-control-room';
+import { dealHandoffText } from '../../src/i18n/staff-deal-handoff';
+import { confidentialCaseText } from '../../src/i18n/staff-confidential-cases';
 import { staffShellText } from '../../src/i18n/staff-shell';
 
 test('staff shell renders English LTR operational navigation', async () => {
@@ -50,6 +54,7 @@ test('staff shell renders English LTR operational navigation', async () => {
   assert.match(html, /Staff Operations/);
   assert.match(html, /Employee Today/);
   assert.match(html, /Manager Control Room/);
+  assert.match(html, /Deal Handoff Board/);
   assert.match(html, /Dashboard/);
   assert.match(html, /Work queue/);
   assert.match(html, /Create complaint/);
@@ -87,6 +92,7 @@ test('staff shell renders Arabic RTL labels', async () => {
   assert.ok(html.includes(staffShellText.ar.title));
   assert.ok(html.includes(staffShellText.ar.nav.today[0]));
   assert.ok(html.includes(staffShellText.ar.nav.manager[0]));
+  assert.ok(html.includes(staffShellText.ar.nav.handoff[0]));
   assert.ok(html.includes(staffShellText.ar.nav.dashboard[0]));
   assert.ok(html.includes(staffShellText.ar.nav.queue[0]));
   assert.ok(html.includes(staffShellText.ar.nav.create[0]));
@@ -130,6 +136,7 @@ test('staff role preview hides admin-only navigation', async () => {
   assert.match(html, /Role preview/);
   assert.match(html, /Admin-only surfaces hidden/);
   assert.doesNotMatch(html, /Manager Control Room/);
+  assert.doesNotMatch(html, /Deal Handoff Board/);
   assert.doesNotMatch(html, /Users, branches, categories/);
 });
 
@@ -140,6 +147,7 @@ test('admin role preview shows admin-only navigation', async () => {
 
   assert.match(html, /Admin/);
   assert.match(html, /Manager Control Room/);
+  assert.match(html, /Deal Handoff Board/);
   assert.match(html, /Users, branches, categories/);
   assert.doesNotMatch(html, /Admin-only surfaces hidden/);
 });
@@ -444,6 +452,14 @@ function managerRollupEmpty() {
   };
 }
 
+function dealHandoffEmpty() {
+  return {
+    byStage: ['LEAD', 'QUALIFIED', 'TEST_DRIVE', 'QUOTE', 'FINANCE', 'DELIVERY', 'POST_DELIVERY'].map((stage) => ({ stage, count: 0, deals: [] })),
+    stuck: [],
+    currentHolder: [],
+  };
+}
+
 function taskFixture(overrides: Record<string, unknown> = {}) {
   return {
     id: 'task_base',
@@ -460,6 +476,49 @@ function taskFixture(overrides: Record<string, unknown> = {}) {
     participantUserIds: ['usr_owner', 'usr_staff'],
     createdAt: '2026-06-19T08:00:00.000Z',
     updatedAt: '2026-06-20T09:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function dealFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'deal_base',
+    title: 'Base deal',
+    branchId: 'branch_main',
+    ownerId: 'usr_owner',
+    currentHolderId: 'usr_sales',
+    stage: 'QUALIFIED',
+    stageDueAt: '2026-06-20T12:00:00.000Z',
+    blocker: null,
+    delayAgeMinutes: 90,
+    createdAt: '2026-06-19T08:00:00.000Z',
+    updatedAt: '2026-06-20T09:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function confidentialCaseFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    case: {
+      id: 'case_hr_1',
+      type: 'EMPLOYEE_GRIEVANCE',
+      status: 'IN_PROGRESS',
+      lifecycleStatus: 'HR_REVIEW',
+      confidentialityLevel: 'CONFIDENTIAL',
+      branchId: 'branch_main',
+      ownerId: 'usr_hr',
+      subject: 'Workplace grievance',
+      descriptionEn: 'Confidential HR review',
+      descriptionAr: null,
+      links: [{ entityType: 'EMPLOYEE', entityId: 'usr_employee' }],
+      createdAt: '2026-06-20T08:00:00.000Z',
+      updatedAt: '2026-06-20T09:00:00.000Z',
+    },
+    taskLink: { entityType: 'CASE', entityId: 'case_hr_1' },
+    capaActions: [],
+    restrictedNotes: [{ id: 'note_hr_1', authorId: 'usr_hr', body: 'Private HR note', createdAt: '2026-06-20T08:10:00.000Z' }],
+    repeatIssue: { isRepeat: false, rootCauses: [] },
+    events: [{ type: 'CASE_CREATED', occurredAt: '2026-06-20T08:00:00.000Z' }],
     ...overrides,
   };
 }
@@ -1806,6 +1865,20 @@ test('reports route renders real scoped rows through the session cookie', async 
   const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
   const fetchImpl: typeof fetch = async (input, init) => {
     calls.push({ input, init });
+    if (String(input).endsWith('/reports/kpis')) {
+      return jsonResponse({
+        kpis: {
+          onTimeCompletionPercent: 87.5,
+          activeOverdueCount: 3,
+          averageDelayHours: 1.75,
+          customerPromiseKeptPercent: 92,
+          reopenedCount: 2,
+          escalationCount: 4,
+          averageFirstResponseHours: 0.5,
+          averageResolutionHours: 12.25,
+        },
+      });
+    }
     return jsonResponse({
       items: [{
         id: 'rpt_route_1',
@@ -1830,14 +1903,47 @@ test('reports route renders real scoped rows through the session cookie', async 
   );
 
   const reportsCall = calls.find((call) => String(call.input).endsWith('/reports'));
+  const kpisCall = calls.find((call) => String(call.input).endsWith('/reports/kpis'));
   assert.ok(reportsCall);
+  assert.ok(kpisCall);
   assert.deepEqual(reportsCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+  assert.deepEqual(kpisCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
   assert.doesNotMatch(String(reportsCall.input), /role|actor|branchId|owner|token|credential/i);
+  assert.doesNotMatch(String(kpisCall.input), /role|actor|branchId|owner|token|credential/i);
   assert.match(html, /CMP-RPT-ROUTE-001 - Route report row/);
   assert.match(html, /branch_report \/ usr_report/);
   assert.match(html, /cat_report/);
   assert.match(html, /IN_PROGRESS/);
+  assert.match(html, /Accountability KPIs/);
+  assert.match(html, /87\.5%/);
+  assert.match(html, /Active overdue/);
+  assert.match(html, /3/);
+  assert.match(html, /0\.5 h/);
+  assert.match(html, /12\.25 h/);
   assert.doesNotMatch(html, /RPT-017/);
+});
+
+test('reports route handles KPI denial without exposing privileged values', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith('/reports/kpis')) return jsonResponse({ error: { code: 'RBAC_FORBIDDEN' } }, 403);
+    return jsonResponse({ items: [] });
+  };
+  const html = renderToStaticMarkup(
+    await ReportsPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  const kpisCall = calls.find((call) => String(call.input).endsWith('/reports/kpis'));
+  assert.ok(kpisCall);
+  assert.deepEqual(kpisCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+  assert.doesNotMatch(String(kpisCall.input), /role|actor|branchId|owner|token|credential/i);
+  assert.match(html, /KPI values are unavailable for this session or role\./);
+  assert.doesNotMatch(html, /87\.5%|12\.25 h/);
 });
 
 test('reports dashboard source is render-only and placeholder-safe', () => {
@@ -2529,6 +2635,152 @@ test('manager control room route keeps Arabic RTL labels', async () => {
   assert.match(html, /dir="rtl"/);
   assert.ok(html.includes(managerControlRoomText.ar.title));
   assert.ok(html.includes(managerControlRoomText.ar.states.empty));
+});
+
+// ---- (staff)/deals/handoff route ----
+
+test('deal handoff board route renders scoped deal data through the session cookie', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith('/deals/handoff-board')) {
+      const blocked = dealFixture({ id: 'deal_stuck', title: 'Unblock finance approval', blocker: 'Missing bank approval', delayAgeMinutes: 120 });
+      const delivery = dealFixture({ id: 'deal_delivery', title: 'Prepare customer handoff', stage: 'DELIVERY', currentHolderId: 'usr_delivery', delayAgeMinutes: 0 });
+      return jsonResponse({
+        byStage: [
+          { stage: 'QUALIFIED', count: 1, deals: [blocked] },
+          { stage: 'DELIVERY', count: 1, deals: [delivery] },
+        ],
+        stuck: [blocked],
+        currentHolder: [{ currentHolderId: 'usr_sales', count: 1 }, { currentHolderId: 'usr_delivery', count: 1 }],
+      });
+    }
+    return jsonResponse({});
+  };
+  const html = renderToStaticMarkup(
+    await DealHandoffPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  const handoffCall = calls.find((call) => String(call.input).endsWith('/deals/handoff-board'));
+  assert.ok(handoffCall);
+  assert.deepEqual(handoffCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+  assert.doesNotMatch(String(handoffCall.input), /role|actor|workflow|branchId|owner|token|credential/i);
+  assert.match(html, /Deal Handoff Board/);
+  assert.match(html, /By stage/);
+  assert.match(html, /Stuck deals/);
+  assert.match(html, /Current holders/);
+  assert.match(html, /Unblock finance approval/);
+  assert.match(html, /Prepare customer handoff/);
+  assert.match(html, /Missing bank approval/);
+  assert.match(html, /120m/);
+});
+
+test('deal handoff board route renders empty and denied states safely', async () => {
+  const empty = renderToStaticMarkup(
+    await DealHandoffPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: async () => jsonResponse(dealHandoffEmpty()),
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+  const denied = renderToStaticMarkup(
+    await DealHandoffPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: async () => new Response('', { status: 403 }),
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  assert.match(empty, /No deal handoff items are active right now\./);
+  assert.match(empty, /role="status"/);
+  assert.match(denied, /Deal Handoff Board could not be loaded\. Sign in with a manager or admin role\./);
+  assert.match(denied, /role="alert"/);
+});
+
+test('deal handoff board route keeps Arabic RTL labels', async () => {
+  const html = renderToStaticMarkup(
+    await DealHandoffPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: async () => jsonResponse(dealHandoffEmpty()),
+      searchParams: Promise.resolve({ locale: 'ar' }),
+    }),
+  );
+
+  assert.match(html, /dir="rtl"/);
+  assert.ok(html.includes(dealHandoffText.ar.title));
+  assert.ok(html.includes(dealHandoffText.ar.states.empty));
+});
+
+// ---- (staff)/cases/confidential/[caseId] route ----
+
+test('confidential case route renders actor-scoped restricted notes through the session cookie', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse(confidentialCaseFixture());
+  };
+  const html = renderToStaticMarkup(
+    await ConfidentialCasePage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      params: Promise.resolve({ caseId: 'case_hr_1' }),
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  const caseCall = calls.find((call) => String(call.input).endsWith('/cases/case_hr_1/confidential-timeline'));
+  assert.ok(caseCall);
+  assert.deepEqual(caseCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+  assert.doesNotMatch(String(caseCall.input), /role|actor|workflow|branchId|owner|participant|token|credential/i);
+  assert.match(html, /Confidential case timeline/);
+  assert.match(html, /EMPLOYEE_GRIEVANCE/);
+  assert.match(html, /HR_REVIEW/);
+  assert.match(html, /Private HR note/);
+  assert.match(html, /CASE_CREATED/);
+});
+
+test('confidential case route renders denied and no-note states without private notes', async () => {
+  const denied = renderToStaticMarkup(
+    await ConfidentialCasePage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: async () => new Response('', { status: 403 }),
+      params: Promise.resolve({ caseId: 'case_hr_1' }),
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+  const empty = renderToStaticMarkup(
+    await ConfidentialCasePage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: async () => jsonResponse(confidentialCaseFixture({ restrictedNotes: [] })),
+      params: Promise.resolve({ caseId: 'case_hr_1' }),
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  assert.match(denied, /Confidential case timeline could not be loaded/);
+  assert.match(denied, /role="alert"/);
+  assert.doesNotMatch(denied, /Private HR note/);
+  assert.match(empty, /No restricted notes are available for this actor\./);
+  assert.match(empty, /role="status"/);
+});
+
+test('confidential case route keeps Arabic RTL labels', async () => {
+  const html = renderToStaticMarkup(
+    await ConfidentialCasePage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: async () => jsonResponse(confidentialCaseFixture({ restrictedNotes: [] })),
+      params: Promise.resolve({ caseId: 'case_hr_1' }),
+      searchParams: Promise.resolve({ locale: 'ar' }),
+    }),
+  );
+
+  assert.match(html, /dir="rtl"/);
+  assert.ok(html.includes(confidentialCaseText.ar.title));
+  assert.ok(html.includes(confidentialCaseText.ar.states.empty));
 });
 
 // ---- (staff)/dashboard route ----
