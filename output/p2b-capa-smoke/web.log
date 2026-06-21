@@ -1,0 +1,50 @@
+▲ Next.js 16.2.9 (Turbopack)
+- Local:         http://localhost:4000
+- Network:       http://26.121.213.200:4000
+✓ Ready in 1437ms
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+
+ HEAD / 200 in 1925ms (next.js: 497ms, proxy.ts: 198ms, application-code: 1230ms)
+ GET /?locale=en&auth=error 200 in 1845ms (next.js: 1573ms, proxy.ts: 13ms, application-code: 258ms)
+ GET /complaints/cmqnxso0m0003iog3ve5d6llc?locale=en 200 in 3.2s (next.js: 1408ms, proxy.ts: 13ms, application-code: 1807ms)
+ POST /api/cases/cmqnxso1r0006iog3rdf6e9lt/capa 201 in 2.5s (next.js: 2.4s, proxy.ts: 10ms, application-code: 70ms)
+ GET /complaints/cmqnxso0m0003iog3ve5d6llc?locale=en 200 in 368ms (next.js: 28ms, proxy.ts: 10ms, application-code: 331ms)
+ GET /portal/track?locale=en 200 in 2.2s (next.js: 1937ms, proxy.ts: 6ms, application-code: 210ms)
+ GET /?locale=en&auth=error 200 in 155ms (next.js: 27ms, proxy.ts: 12ms, application-code: 115ms)
+✓ Compiled in 3.9s
+ GET /?locale=en&auth=error 200 in 5.1s (next.js: 3.7s, proxy.ts: 110ms, application-code: 1281ms)
+ GET /?locale=en&auth=error 200 in 783ms (next.js: 231ms, proxy.ts: 48ms, application-code: 503ms)
+ GET /?locale=en&auth=error 200 in 434ms (next.js: 52ms, proxy.ts: 26ms, application-code: 356ms)
+ GET /?locale=en&auth=error 200 in 428ms (next.js: 150ms, proxy.ts: 26ms, application-code: 253ms)
+ GET /?locale=en&auth=error 200 in 433ms (next.js: 100ms, proxy.ts: 26ms, application-code: 307ms)
+ GET /?locale=en&auth=error 200 in 427ms (next.js: 197ms, proxy.ts: 26ms, application-code: 204ms)
+ GET /?locale=en&auth=error 200 in 91ms (next.js: 15ms, proxy.ts: 8ms, application-code: 68ms)
+✓ Compiled in 310ms
+ GET /?locale=en&auth=error 200 in 1696ms (next.js: 553ms, proxy.ts: 36ms, application-code: 1107ms)
+ GET /?locale=en&auth=error 200 in 890ms (next.js: 246ms, proxy.ts: 54ms, application-code: 591ms)
+ GET /?locale=en&auth=error 200 in 478ms (next.js: 62ms, proxy.ts: 22ms, application-code: 394ms)
+ GET /?locale=en&auth=error 200 in 477ms (next.js: 109ms, proxy.ts: 21ms, application-code: 346ms)
+ GET /?locale=en&auth=error 200 in 475ms (next.js: 187ms, proxy.ts: 21ms, application-code: 268ms)
+ GET /?locale=en&auth=error 200 in 474ms (next.js: 236ms, proxy.ts: 21ms, application-code: 217ms)
+ GET /?locale=en&auth=error 200 in 113ms (next.js: 14ms, proxy.ts: 6ms, application-code: 92ms)
+✓ Compiled in 214ms
+ GET /?locale=en&auth=error 200 in 534ms (next.js: 243ms, proxy.ts: 39ms, application-code: 252ms)
+ GET /?locale=en&auth=error 200 in 120ms (next.js: 40ms, proxy.ts: 14ms, application-code: 66ms)
+✓ Compiled in 315ms
+ GET /?locale=en&auth=error 200 in 479ms (next.js: 174ms, proxy.ts: 29ms, application-code: 276ms)
+ GET /?locale=en&auth=error 200 in 159ms (next.js: 38ms, proxy.ts: 24ms, application-code: 98ms)
+✓ Compiled in 256ms
+ GET /?locale=en&auth=error 200 in 692ms (next.js: 272ms, proxy.ts: 44ms, application-code: 376ms)
+ GET /?locale=en&auth=error 200 in 233ms (next.js: 47ms, proxy.ts: 18ms, application-code: 169ms)
+ GET /?locale=en&auth=error 200 in 97ms (next.js: 22ms, proxy.ts: 13ms, application-code: 62ms)
+✓ Compiled in 408ms
+ GET /?locale=en&auth=error 200 in 615ms (next.js: 241ms, proxy.ts: 39ms, application-code: 335ms)
+ GET /?locale=en&auth=error 200 in 203ms (next.js: 44ms, proxy.ts: 11ms, application-code: 148ms)
+ GET /?locale=en&auth=error 200 in 112ms (next.js: 25ms, proxy.ts: 11ms, application-code: 77ms)
+ GET /?locale=en 200 in 879ms (next.js: 12ms, proxy.ts: 10ms, application-code: 857ms)
+ GET /tasks/today?locale=en 200 in 1519ms (next.js: 332ms, proxy.ts: 11ms, application-code: 1176ms)
+[?25h
+undefined
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command "next" not found
+
+Did you mean "pnpm exec next"?

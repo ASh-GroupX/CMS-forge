@@ -1,0 +1,81 @@
+{
+  "at": "2026-06-21T15:23:57.371Z",
+  "checks": [
+    {
+      "name": "manual staff sessions created",
+      "ok": true,
+      "mainRole": "CR_MANAGER",
+      "northRole": "BRANCH_MANAGER"
+    },
+    {
+      "name": "staff form options readable",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "complaint with linked case created",
+      "ok": true,
+      "status": 201,
+      "body": {
+        "complaint": {
+          "id": "cmqnxso0m0003iog3ve5d6llc",
+          "referenceNumber": "CMP-000004",
+          "status": "SUBMITTED"
+        }
+      }
+    },
+    {
+      "name": "linked case visible on complaint detail",
+      "ok": true,
+      "status": 200,
+      "caseId": "cmqnxso1r0006iog3rdf6e9lt"
+    },
+    {
+      "name": "complaint detail page exposes CAPA area",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "CAPA created through web proxy",
+      "ok": true,
+      "status": 201,
+      "ownerName": "Local Staff Admin"
+    },
+    {
+      "name": "CAPA appears in API list with owner name",
+      "ok": true,
+      "status": 200,
+      "count": 1
+    },
+    {
+      "name": "CAPA appears in complaint detail HTML",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "case CAPA audit exists",
+      "ok": true,
+      "auditId": "cmqnxssie000hiog3crry2dlx"
+    },
+    {
+      "name": "different branch cannot read CAPA",
+      "ok": true,
+      "status": 403,
+      "code": "BRANCH_SCOPE_FORBIDDEN"
+    },
+    {
+      "name": "different branch cannot create CAPA",
+      "ok": true,
+      "status": 403,
+      "code": "BRANCH_SCOPE_FORBIDDEN"
+    },
+    {
+      "name": "customer portal page does not expose CAPA",
+      "ok": true,
+      "status": 200
+    }
+  ],
+  "complaintId": "cmqnxso0m0003iog3ve5d6llc",
+  "caseId": "cmqnxso1r0006iog3rdf6e9lt",
+  "capaId": "cmqnxssi8000fiog3na7ptfru"
+}

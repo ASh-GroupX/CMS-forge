@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpStatus, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Inject, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ComplaintSeverity, ComplaintStatus, RoleCode } from '@prisma/client';
 import { BranchScoped, RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
@@ -16,7 +16,10 @@ import { parseComplaintTransitionBody, toTransitionInput } from './dto/complaint
 
 @Controller('complaints')
 export class ComplaintsController {
-  constructor(private readonly complaintsService: ComplaintsService, private readonly formOptions: ComplaintFormOptionsService) {}
+  constructor(
+    @Inject(ComplaintsService) private readonly complaintsService: ComplaintsService,
+    @Inject(ComplaintFormOptionsService) private readonly formOptions: ComplaintFormOptionsService,
+  ) {}
 
   @Get()
   @UseGuards(SessionAuthGuard, RbacGuard)

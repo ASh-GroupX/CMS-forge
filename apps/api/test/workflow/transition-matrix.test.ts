@@ -20,6 +20,7 @@ import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.g
 import { CsrfGuard } from '../../src/core/csrf.guard.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
 import { AuthModule } from '../../src/modules/auth/auth.module.ts';
+import { CasesModule } from '../../src/modules/cases/cases.module.ts';
 import { ComplaintsController } from '../../src/modules/complaints/complaints.controller.ts';
 import { ComplaintsModule } from '../../src/modules/complaints/complaints.module.ts';
 import { ComplaintsRepository } from '../../src/modules/complaints/complaints.repository.ts';
@@ -502,8 +503,9 @@ test('complaint transition route uses auth, RBAC, branch-scope, and CSRF guards'
 
   assert.ok(imports.includes(AuthModule));
   assert.ok(imports.includes(NotificationsModule));
+  assert.ok(imports.includes(CasesModule));
   assert.ok(providers.includes(SessionAuthGuard));
-  assert.ok(providers.includes(RbacGuard));
+  assert.equal(providers.some((provider) => providerObject(provider)?.provide === RbacGuard), true);
   assert.ok(providers.includes(CsrfGuard));
   assert.equal(providers.some((provider) => providerObject(provider)?.provide === SESSION_AUTH_SERVICE), true);
 });

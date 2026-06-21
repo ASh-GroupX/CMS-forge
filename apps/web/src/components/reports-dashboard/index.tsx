@@ -3,31 +3,11 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { reportsDashboardText } from '../../i18n/staff-reports-dashboard';
+import { reportCatalogText, reportsDashboardText } from '../../i18n/staff-reports-dashboard';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import type { StaffReportKpis, StaffReportRow } from '../../lib/staff-reports-api';
 
 export type ReportsPreviewState = 'ready' | 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'denied' | 'conflict';
-
-const reports = [
-  ['RPT-001', 'Open complaints summary', 'Managers, Management', 'operations'],
-  ['RPT-002', 'Overdue complaints', 'Managers, Management', 'sla'],
-  ['RPT-003', 'SLA warning complaints', 'Managers, CR team', 'sla'],
-  ['RPT-004', 'Average TAT', 'Management', 'executive'],
-  ['RPT-005', 'Closure performance by branch', 'Management', 'executive'],
-  ['RPT-006', 'Complaints by category', 'Management, CR Manager', 'operations'],
-  ['RPT-007', 'Complaints by brand/model', 'Management', 'executive'],
-  ['RPT-008', 'Complaints by department', 'Management', 'operations'],
-  ['RPT-009', 'Owner workload', 'CR Manager, Branch Manager', 'operations'],
-  ['RPT-010', 'Reopened complaints', 'Management, CR Manager', 'operations'],
-  ['RPT-011', 'Rejected complaints', 'CR Manager', 'operations'],
-  ['RPT-012', 'Customer satisfaction', 'Management', 'executive'],
-  ['RPT-013', 'Aging report', 'Management, Managers', 'sla'],
-  ['RPT-014', 'Compensation tracking', 'Authorized managers', 'executive'],
-  ['RPT-015', 'DMS lookup failure report', 'Admin, IT', 'admin'],
-  ['RPT-016', 'Notification delivery report', 'Admin, CR Manager', 'admin'],
-  ['RPT-017', 'Audit activity report', 'Admin', 'admin'],
-] as const;
 
 export function ReportsDashboard({
   kpis,
@@ -42,6 +22,7 @@ export function ReportsDashboard({
 }) {
   const shell = staffShellText[locale];
   const t = reportsDashboardText[locale];
+  const reports = reportCatalogText[locale];
   const realRows = rows?.slice(0, 17);
   const kpiCards = kpis ? [
     [t.kpis.onTime, `${kpis.onTimeCompletionPercent}%`],

@@ -22,6 +22,7 @@ module's boundary so you can work in a fresh context without scanning the tree.
 - `case_participants`
 - `case_restricted_notes`
 - `case_lifecycle_history`
+- `complaint_status_history` (read-only timeline projection for linked complaint cases)
 - `capa_actions`
 
 ## May depend on

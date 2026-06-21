@@ -1,45 +1,50 @@
-# READY TO PLAN - PLAN-P1-NEXT
+# READY TO PLAN - PLAN-NEXT
 
 Status: Ready to Plan
 Required model tier: PLANNER
 Phase: Phase 10 - Dealership Accountability Layer (local-first)
-Risk: Medium
+Risk: TBD by planner
 SRS IDs: TBD by planner
 
 ## Context
 
-P0 Tasks, P1 Deals write flow, and P1 Customer Promise Tracker are complete and
-live-smoked.
+The accountability repair backlog is complete locally:
 
-Completed P1 customer promise surface:
+- P0 Tasks are operational.
+- P1 Deals write flow is operational.
+- P1 Customer Promise Tracker is operational.
+- P2A Cases wrapper for complaints is operational.
+- P2B Case CAPA is operational and the submit 500 repair is complete.
+- P2C Product Framing is complete.
 
-- `GET /tasks/promises`
-- Staff Promises navigation/page
-- Open promise, overdue promise, and kept-on-time KPI summary
-- Promise list with owner, assignee, next action, due date, and linked
-  customer/deal context where available
-- Quick Add validation requiring a customer, deal, case, or complaint link for
-  customer promises
+The final repair slice fixed the CAPA browser submit blocker, verified customer
+portal privacy, verified unauthorized/different-branch CAPA denial, and reran
+the full requested hardening matrix.
 
 ## Scope
 
-Planner should choose the next narrow repair slice. Keep it small and explicit
-before build work starts.
+Planner should choose the next narrow slice. Keep it explicit before build work
+starts.
 
 ## Guardrails
 
-- Do not implement P2 case/CAPA work unless the planner explicitly selects it.
+- Do not rework complaint intake or customer portal behavior without a narrow
+  task.
 - Do not introduce production deploy, SMTP, WhatsApp, AI, mobile, HR-platform,
-  VPS, admin expansion, or workflow builder work by default.
+  VPS, admin expansion, employee grievance screens, or workflow builder work by
+  default.
 - Keep backend authority server-owned and keep source files under 300 lines.
-- Preserve module boundaries. Rich customer/deal promise labels need public
-  module services, not direct cross-module repository reads.
+- Preserve module boundaries. Cross-module labels need public module services,
+  not direct cross-module repository reads.
 
 ## Suggested Planning Inputs
 
-- P0 Tasks: operational and live-smoked.
-- P1 Deals write flow: operational and live-smoked.
-- P1 Customer Promise Tracker: operational and live-smoked.
+- Final hardening matrix passed locally for tasks, deals, cases, complaints,
+  web shell/localization, OpenAPI, typecheck, lint, and diff whitespace.
+- Live smoke passed for complaint intake -> linked `CUSTOMER_COMPLAINT` case,
+  complaint detail Case Timeline, CAPA create, portal privacy, Promise Tracker,
+  Deal Handoff Board advance, Today task action, and Manager Control Room name
+  rendering.
 - Known admin/search follow-ups still exist, but they are not automatically the
   next task for the deal workflow.
 
@@ -54,4 +59,4 @@ Planner must define proof commands for the selected slice. Typical local proof:
 - `corepack pnpm typecheck`
 - `corepack pnpm lint`
 - `git diff --check`
-- Live browser smoke for any user-facing write path
+- Live smoke for any user-facing write path

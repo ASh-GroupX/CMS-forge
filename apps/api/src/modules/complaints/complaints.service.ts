@@ -3,10 +3,11 @@ import { CommentVisibility, ComplaintSeverity, ComplaintStatus, ComplaintTransit
 import { AuditService } from '../../core/audit.service.js';
 import type { AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
+import { CasesService } from '../cases/cases.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { ComplaintsRepository } from './complaints.repository.js';
 import type { ComplaintCommentRecord, ComplaintDetailRecord, ComplaintQueueRecord, ComplaintRecord, ComplaintReportFilter, ComplaintReportRecord, ComplaintSearchRecord, CreateComplaintData, PortalVerificationTargetRecord } from './complaints.repository.js';
-import type { ComplaintDetailDto, ComplaintQueueItemDto } from './dto/complaint-response.dto.js';
+import type { ComplaintCaseSummaryDto, ComplaintDetailDto, ComplaintQueueItemDto } from './dto/complaint-response.dto.js';
 
 export type ValidateComplaintTransitionInput = { fromStatus: ComplaintStatus; action: ComplaintTransitionAction; actorRole: RoleCode };
 export type ComplaintTransitionDecision = ValidateComplaintTransitionInput & { toStatus: ComplaintStatus };
@@ -62,7 +63,7 @@ function transition(fromStatus: ComplaintStatus, action: ComplaintTransitionActi
 
 @Injectable()
 export class ComplaintsService {
-  constructor(private readonly complaintsRepository: ComplaintsRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService) {}
+  constructor(private readonly complaintsRepository: ComplaintsRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly casesService?: CasesService) {}
 
   async createInternal(input: CreateInternalComplaintInput): Promise<ComplaintCreationResult> {
     const data = createComplaintData(input);
@@ -81,6 +82,7 @@ export class ComplaintsService {
         reason: null,
         correlationId: input.correlationId ?? null,
       }, client);
+      await this.casesService?.ensureCustomerComplaintCaseForComplaint({ complaintId: complaint.id, branchId: complaint.branchId, ownerId: input.actorId ?? null, subject: complaint.subject, descriptionEn: data.descriptionEn, status: complaint.status, actorId: input.actorId ?? null, correlationId: input.correlationId ?? null }, client);
       await this.auditService.record(complaintCreatedAudit(input, complaint), client);
       return { id: complaint.id, referenceNumber: complaint.referenceNumber, status: complaint.status };
     });
@@ -98,10 +100,8 @@ export class ComplaintsService {
 
   async getDetail(id: string, filter: ComplaintQueueFilter = {}): Promise<ComplaintDetailDto> {
     const complaint = await this.complaintsRepository.findDetail(id, filter);
-    if (!complaint) {
-      throw new AppException('COMPLAINT_NOT_FOUND', 'Complaint not found', HttpStatus.NOT_FOUND);
-    }
-    return detailItem(complaint);
+    if (!complaint) throw new AppException('COMPLAINT_NOT_FOUND', 'Complaint not found', HttpStatus.NOT_FOUND);
+    return { ...detailItem(complaint), caseSummary: await this.complaintCaseSummary(complaint.id) };
   }
 
   async createComment(input: CreateComplaintCommentInput): Promise<ComplaintCommentResult> {
@@ -120,13 +120,8 @@ export class ComplaintsService {
       (candidate) => candidate.fromStatus === input.fromStatus && candidate.action === input.action,
     );
 
-    if (!transition) {
-      throw invalidTransitionError();
-    }
-
-    if (!transition.allowedRoles.includes(input.actorRole)) {
-      throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
-    }
+    if (!transition) throw invalidTransitionError();
+    if (!transition.allowedRoles.includes(input.actorRole)) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
 
     return { fromStatus: input.fromStatus, action: input.action, actorRole: input.actorRole, toStatus: transition.toStatus };
   }
@@ -150,9 +145,7 @@ export class ComplaintsService {
         client,
       );
 
-      if (!complaint) {
-        throw invalidTransitionError();
-      }
+      if (!complaint) throw invalidTransitionError();
 
       await this.complaintsRepository.createStatusHistory({
         complaintId: input.complaintId,
@@ -171,6 +164,11 @@ export class ComplaintsService {
     });
     await queueWorkflowSideEffect(this.notificationsService, input, result.toStatus);
     return result;
+  }
+
+  private async complaintCaseSummary(complaintId: string): Promise<ComplaintCaseSummaryDto | null> {
+    const item = await this.casesService?.customerComplaintCaseSummary(complaintId);
+    return item ? { id: item.id, type: item.type, status: item.status, lifecycleStatus: item.lifecycleStatus, confidentialityLevel: item.confidentialityLevel, branchId: item.branchId, branchName: item.branchName, ownerId: item.ownerId, ownerName: item.ownerName } : null;
   }
 }
 
@@ -222,7 +220,7 @@ function searchItem(complaint: ComplaintSearchRecord): ComplaintSearchRow {
   return { ...reportItem(complaint), customerName: complaint.customerName, customerPhone: complaint.customerPhone, customerIdentifier: complaint.customerIdentifier };
 }
 
-function detailItem(complaint: ComplaintDetailRecord): ComplaintDetailDto {
+function detailItem(complaint: ComplaintDetailRecord): Omit<ComplaintDetailDto, 'caseSummary'> {
   return { ...queueItem(complaint), description: complaint.descriptionEn, incidentAt: complaint.incidentAt?.toISOString() ?? null, statusHistory: complaint.statusHistory.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })) };
 }
 

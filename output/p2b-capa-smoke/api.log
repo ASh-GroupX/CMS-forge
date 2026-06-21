@@ -1,0 +1,174 @@
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +169ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mSlaModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mIntegrationsModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPortalModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +3ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAdminModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuditModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mBranchesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTasksModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mNotificationsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDealsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAttachmentsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mSurveysModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mReportsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mCasesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mComplaintsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mHealthController {/}:[39m[38;5;3m +9ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/, GET} route[39m[38;5;3m +4ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/health, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/auth}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/login, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/logout, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/password-reset/request, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/password-reset/consume, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/me, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAdminUsersController {/admin/users}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/users, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/users, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/users/:id/deactivate, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/users/:id/reactivate, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAdminCategoriesController {/admin/categories}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/categories, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/categories/:id, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuditController {/audit}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/audit/logs, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/audit/logs/export, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mBranchesController {/branches}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/branches, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/branches/:idOrCode, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/branches, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/branches/:id, PATCH} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/branches/:id/deactivate, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mCasesController {/cases}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/cases/:caseId/timeline, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/cases/:caseId/confidential-timeline, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/cases/:caseId/capa, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/cases/:caseId/capa, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mPortalController {/portal}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/portal/complaints, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/portal/tracking/otp, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/portal/tracking/otp/verify, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/portal/tracking, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/portal/tracking/follow-ups, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mComplaintsController {/complaints}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/complaints, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/complaints/search, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/complaints/form-options, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/complaints/:id, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/complaints/:id/comments, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/complaints/:id/comments/public, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/complaints, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/complaints/:id/transitions, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mNotificationsController {/notifications}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/notifications/templates, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/notifications/templates, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/notifications/templates/:id, PATCH} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/notifications/templates/:id/activate, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/notifications/templates/:id/deactivate, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mIntegrationsController {/integrations}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAttachmentsController {/complaints/:complaintId/attachments}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/complaints/:complaintId/attachments, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/complaints/:complaintId/attachments/:attachmentId/download, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mPortalAttachmentsController {/portal/attachments}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/portal/attachments, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mReportsController {/reports}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/reports/dashboard, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/reports/kpis, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/reports, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/reports/export, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mSlaController {/sla}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mSurveysController {/portal/surveys}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/portal/surveys, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mComplaintSurveysController {/complaints/:complaintId/surveys}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/complaints/:complaintId/surveys, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mTasksController {/tasks}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/tasks/quick-add, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/tasks/today, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/tasks/manager-rollup, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/tasks/promises, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/tasks/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/tasks/:id, PATCH} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mDealsController {/deals}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/deals/handoff-board, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/deals, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/deals/:id/advance, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/deals/:id/blocker, PATCH} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 13008  - [39m06/21/2026, 6:21:51 PM [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +789ms[39m
+TypeError: Cannot read properties of undefined (reading 'employeeToday')
+    at TasksController.today (C:\Users\dryos\Downloads\CMS-forge\apps\api\src\modules\tasks\tasks.controller.ts:31:30)
+    at C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:38:29
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:46:28
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-proxy.js:9:17
+TypeError: Cannot read properties of undefined (reading 'employeeToday')
+    at TasksController.today (C:\Users\dryos\Downloads\CMS-forge\apps\api\src\modules\tasks\tasks.controller.ts:31:30)
+    at C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:38:29
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:46:28
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-proxy.js:9:17
+TypeError: Cannot read properties of undefined (reading 'employeeToday')
+    at TasksController.today (C:\Users\dryos\Downloads\CMS-forge\apps\api\src\modules\tasks\tasks.controller.ts:31:30)
+    at C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:38:29
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:46:28
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-proxy.js:9:17
+TypeError: Cannot read properties of undefined (reading 'employeeToday')
+    at TasksController.today (C:\Users\dryos\Downloads\CMS-forge\apps\api\src\modules\tasks\tasks.controller.ts:31:30)
+    at C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:38:29
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:46:28
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-proxy.js:9:17
+TypeError: Cannot read properties of undefined (reading 'employeeToday')
+    at TasksController.today (C:\Users\dryos\Downloads\CMS-forge\apps\api\src\modules\tasks\tasks.controller.ts:31:30)
+    at C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:38:29
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:46:28
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-proxy.js:9:17
+TypeError: Cannot read properties of undefined (reading 'employeeToday')
+    at TasksController.today (C:\Users\dryos\Downloads\CMS-forge\apps\api\src\modules\tasks\tasks.controller.ts:31:30)
+    at C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:38:29
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:46:28
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-proxy.js:9:17
+TypeError: Cannot read properties of undefined (reading 'employeeToday')
+    at TasksController.today (C:\Users\dryos\Downloads\CMS-forge\apps\api\src\modules\tasks\tasks.controller.ts:31:30)
+    at C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:38:29
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:46:28
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-proxy.js:9:17
+TypeError: Cannot read properties of undefined (reading 'employeeToday')
+    at TasksController.today (C:\Users\dryos\Downloads\CMS-forge\apps\api\src\modules\tasks\tasks.controller.ts:31:30)
+    at C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:38:29
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:46:28
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-proxy.js:9:17
+TypeError: Cannot read properties of undefined (reading 'employeeToday')
+    at TasksController.today (C:\Users\dryos\Downloads\CMS-forge\apps\api\src\modules\tasks\tasks.controller.ts:31:30)
+    at C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:38:29
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:46:28
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-proxy.js:9:17
+TypeError: Cannot read properties of undefined (reading 'employeeToday')
+    at TasksController.today (C:\Users\dryos\Downloads\CMS-forge\apps\api\src\modules\tasks\tasks.controller.ts:31:30)
+    at C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:38:29
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:46:28
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-proxy.js:9:17
+TypeError: Cannot read properties of undefined (reading 'employeeToday')
+    at TasksController.today (C:\Users\dryos\Downloads\CMS-forge\apps\api\src\modules\tasks\tasks.controller.ts:31:30)
+    at C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:38:29
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:46:28
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-proxy.js:9:17
+TypeError: Cannot read properties of undefined (reading 'employeeToday')
+    at TasksController.today (C:\Users\dryos\Downloads\CMS-forge\apps\api\src\modules\tasks\tasks.controller.ts:31:30)
+    at C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:38:29
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:46:28
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-proxy.js:9:17
+TypeError: Cannot read properties of undefined (reading 'employeeToday')
+    at TasksController.today (C:\Users\dryos\Downloads\CMS-forge\apps\api\src\modules\tasks\tasks.controller.ts:31:30)
+    at C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:38:29
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:46:28
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-proxy.js:9:17
+TypeError: Cannot read properties of undefined (reading 'employeeToday')
+    at TasksController.today (C:\Users\dryos\Downloads\CMS-forge\apps\api\src\modules\tasks\tasks.controller.ts:31:30)
+    at C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:38:29
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:46:28
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-proxy.js:9:17
+TypeError: Cannot read properties of undefined (reading 'record')
+    at CsrfGuard.canActivate (C:\Users\dryos\Downloads\CMS-forge\apps\api\src\core\csrf.guard.ts:32:29)
+    at GuardsConsumer.tryActivate (C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\guards\guards-consumer.js:15:34)
+    at async canActivateFn (C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:135:33)
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-execution-context.js:42:31
+    at async C:\Users\dryos\Downloads\CMS-forge\node_modules\.pnpm\@nestjs+core@10.4.15_@nestjs+common@10.4.15_reflect-metadata@0.2.2_rxjs@7.8.1__@nestjs+platfo_aw6fupqhj3dxgj53odky3dtxfu\node_modules\@nestjs\core\router\router-proxy.js:9:17

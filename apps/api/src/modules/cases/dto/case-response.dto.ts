@@ -1,4 +1,4 @@
-import type { CaseConfidentialityLevel, CaseLifecycleStatus, CaseLinkEntityType, CaseType, ComplaintStatus, TaskLinkEntityType } from '@prisma/client';
+import type { CapaActionStatus, CaseConfidentialityLevel, CaseLifecycleStatus, CaseLinkEntityType, CaseType, ComplaintStatus, TaskLinkEntityType } from '@prisma/client';
 
 export type CaseLinkDto = {
   entityType: CaseLinkEntityType;
@@ -12,7 +12,9 @@ export class CaseResponseDto {
   lifecycleStatus!: CaseLifecycleStatus;
   confidentialityLevel!: CaseConfidentialityLevel;
   branchId!: string;
+  branchName!: string;
   ownerId!: string | null;
+  ownerName!: string | null;
   subject!: string;
   descriptionEn!: string;
   descriptionAr!: string | null;
@@ -25,12 +27,12 @@ export type CapaActionDto = {
   id: string;
   caseId: string;
   rootCause: string;
-  responsibleDepartmentId: string;
   correctiveAction: string;
   preventiveAction: string;
+  ownerId: string;
+  ownerName: string;
   dueAt: string;
-  effectivenessCheck: string | null;
-  repeatFlag: boolean;
+  status: CapaActionStatus;
   createdAt: string;
   updatedAt: string;
 };
@@ -48,10 +50,13 @@ export type CaseRestrictedNoteDto = {
 };
 
 export type CaseTimelineEventDto = {
-  type: 'CASE_CREATED' | 'CASE_LINKED' | 'CAPA_ACTION_CREATED';
+  type: 'CASE_CREATED' | 'CASE_LINKED' | 'CASE_LIFECYCLE' | 'COMPLAINT_STATUS' | 'CAPA_ACTION_CREATED';
   occurredAt: string;
   entityType?: CaseLinkEntityType;
   entityId?: string;
+  fromStatus?: string | null;
+  toStatus?: string;
+  action?: string | null;
   capaActionId?: string;
 };
 

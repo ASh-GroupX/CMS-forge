@@ -56,14 +56,13 @@ test('staff shell renders English LTR operational navigation', async () => {
 
   assert.match(html, /dir="ltr"/);
   assert.match(html, /Staff Operations/);
-  assert.match(html, /Employee Today/);
+  assert.match(html, /Today/);
   assert.match(html, /Promises/);
-  assert.match(html, /Manager Control Room/);
-  assert.match(html, /Deal Handoff Board/);
-  assert.match(html, /Dashboard/);
-  assert.match(html, /Work queue/);
-  assert.match(html, /Create complaint/);
-  assert.match(html, /Complaint detail/);
+  assert.match(html, /Team/);
+  assert.match(html, /Deals/);
+  assert.match(html, /Overview/);
+  assert.match(html, /Cases/);
+  assert.match(html, /New intake/);
   assert.match(html, /Admin/);
   assert.match(html, /Reports/);
   assert.match(html, /Audit/);
@@ -105,7 +104,7 @@ test('staff shell renders Arabic RTL labels', async () => {
   );
 
   assert.match(html, /dir="rtl"/);
-  assert.ok(html.includes(staffShellText.ar.title));
+  assert.ok(html.includes(staffShellText.ar.subtitle));
   assert.ok(html.includes(staffShellText.ar.nav.today[0]));
   assert.ok(html.includes(staffShellText.ar.nav.promises[0]));
   assert.ok(html.includes(staffShellText.ar.nav.manager[0]));
@@ -113,7 +112,6 @@ test('staff shell renders Arabic RTL labels', async () => {
   assert.ok(html.includes(staffShellText.ar.nav.dashboard[0]));
   assert.ok(html.includes(staffShellText.ar.nav.queue[0]));
   assert.ok(html.includes(staffShellText.ar.nav.create[0]));
-  assert.ok(html.includes(staffShellText.ar.nav.detail[0]));
   assert.ok(html.includes(staffShellText.ar.nav.admin[0]));
   assert.ok(html.includes(staffShellText.ar.nav.reports[0]));
   assert.ok(html.includes(staffShellText.ar.nav.audit[0]));
@@ -161,8 +159,7 @@ test('staff role preview hides admin-only navigation', async () => {
 
   assert.match(html, /Role preview/);
   assert.match(html, /Admin-only surfaces hidden/);
-  assert.doesNotMatch(html, /Manager Control Room/);
-  assert.doesNotMatch(html, /Deal Handoff Board/);
+  assert.doesNotMatch(html, /Team/);
   assert.doesNotMatch(html, /Users, branches, categories/);
 });
 
@@ -172,8 +169,8 @@ test('admin role preview shows admin-only navigation', async () => {
   );
 
   assert.match(html, /Admin/);
-  assert.match(html, /Manager Control Room/);
-  assert.match(html, /Deal Handoff Board/);
+  assert.match(html, /Team/);
+  assert.match(html, /Deals/);
   assert.match(html, /Users, branches, categories/);
   assert.doesNotMatch(html, /Admin-only surfaces hidden/);
 });
@@ -553,7 +550,7 @@ function confidentialCaseFixture(overrides: Record<string, unknown> = {}) {
 }
 
 function workQueueHtml(html: string): string {
-  return html.match(/aria-label="Work queue"[\s\S]*?aria-label="Complaint detail"/)?.[0] ?? '';
+  return html.match(/aria-label="Cases"[\s\S]*?aria-label="Complaint detail"/)?.[0] ?? '';
 }
 
 function principal(overrides: { roleCode?: string; branchId?: string | null } = {}) {
@@ -696,9 +693,9 @@ test('staff dashboard summary shows staff role cards only', async () => {
     await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en', role: 'staff', session: 'signed-in' }) }),
   );
 
-  assert.match(html, /Open complaints/);
+  assert.match(html, /Active cases/);
   assert.match(html, /SLA warnings/);
-  assert.match(html, /Overdue complaints/);
+  assert.match(html, /Overdue cases/);
   assert.doesNotMatch(html, /Average TAT/);
 });
 
@@ -707,10 +704,10 @@ test('admin dashboard summary shows all operational cards', async () => {
     await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en', role: 'admin', session: 'signed-in' }) }),
   );
 
-  assert.match(html, /Open complaints/);
+  assert.match(html, /Active cases/);
   assert.match(html, /SLA warnings/);
-  assert.match(html, /Overdue complaints/);
-  assert.match(html, /Closed complaints/);
+  assert.match(html, /Overdue cases/);
+  assert.match(html, /Closed cases/);
   assert.match(html, /Average TAT/);
 });
 
@@ -719,9 +716,9 @@ test('management dashboard summary focuses management cards', async () => {
     await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en', role: 'management', session: 'signed-in' }) }),
   );
 
-  assert.match(html, /Open complaints/);
-  assert.match(html, /Overdue complaints/);
-  assert.match(html, /Closed complaints/);
+  assert.match(html, /Active cases/);
+  assert.match(html, /Overdue cases/);
+  assert.match(html, /Closed cases/);
   assert.match(html, /Average TAT/);
   assert.doesNotMatch(html, /Needs attention soon/);
 });
@@ -744,9 +741,9 @@ test('dashboard summary preview states render loading empty and error messages',
   const empty = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ dashboard: 'empty' }) }));
   const error = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ dashboard: 'error' }) }));
 
-  assert.match(loading, /Loading dashboard summary\./);
-  assert.match(empty, /No dashboard summary is available yet\./);
-  assert.match(error, /Dashboard summary could not be loaded\. Try again\./);
+  assert.match(loading, /Loading accountability overview\./);
+  assert.match(empty, /No accountability overview is available yet\./);
+  assert.match(error, /Accountability overview could not be loaded\. Try again\./);
   assert.match(error, /role="alert"/);
 });
 
@@ -848,15 +845,15 @@ test('work queue preview states render loading empty error success and conflict 
   const success = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ queue: 'success' }) }));
   const conflict = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ queue: 'conflict' }) }));
 
-  assert.match(loading, /Loading work queue\./);
+  assert.match(loading, /Loading cases\./);
   assert.match(loading, /role="status"/);
-  assert.match(empty, /No complaints match the current filters\./);
+  assert.match(empty, /No cases match the current filters\./);
   assert.match(empty, /role="status"/);
-  assert.match(error, /Work queue could not be loaded\. Try again\./);
+  assert.match(error, /Cases could not be loaded\. Try again\./);
   assert.match(error, /role="alert"/);
-  assert.match(success, /Work queue refreshed\./);
+  assert.match(success, /Cases refreshed\./);
   assert.match(success, /role="status"/);
-  assert.match(conflict, /Queue data changed\. Reload before continuing\./);
+  assert.match(conflict, /Case data changed\. Reload before continuing\./);
   assert.match(conflict, /role="alert"/);
 });
 
@@ -924,7 +921,7 @@ test('work queue renders empty state when backend denies queue read', async () =
     }),
   );
 
-  assert.match(html, /No complaints match the current filters\./);
+  assert.match(html, /No cases match the current filters\./);
   assert.match(html, /role="status"/);
   assert.doesNotMatch(workQueueHtml(html), /CMP-2026-/);
   assert.doesNotMatch(html, /CMP-QUEUE-001/);
@@ -1035,11 +1032,30 @@ test('complaint detail route renders real backend facts through the session cook
           updatedAt: '2026-06-19T09:30:00.000Z',
           description: 'Scoped complaint detail.',
           incidentAt: '2026-06-17T00:00:00.000Z',
+          caseSummary: {
+            id: 'case_cmp_1',
+            type: 'CUSTOMER_COMPLAINT',
+            status: 'SUBMITTED',
+            lifecycleStatus: 'DRAFT',
+            confidentialityLevel: 'NORMAL',
+            branchId: 'branch_main',
+            branchName: 'Main Branch',
+            ownerId: 'usr_owner',
+            ownerName: 'Owner User',
+          },
           statusHistory: [
             { id: 'h1', fromStatus: null, toStatus: 'SUBMITTED', action: 'SUBMIT', actorId: 'usr_staff', actorRole: 'CR_OFFICER', requestSource: 'STAFF', reason: null, correlationId: null, createdAt: '2026-06-18T00:00:00.000Z' },
             { id: 'h2', fromStatus: 'SUBMITTED', toStatus: 'IN_PROGRESS', action: 'ASSIGN_INVESTIGATION', actorId: 'usr_mgr', actorRole: 'BRANCH_MANAGER', requestSource: 'STAFF', reason: null, correlationId: null, createdAt: '2026-06-19T00:00:00.000Z' },
           ],
         },
+      });
+    }
+    if (String(input).endsWith('/cases/case_cmp_1/timeline')) {
+      return jsonResponse({
+        events: [
+          { type: 'CASE_CREATED', occurredAt: '2026-06-18T00:00:00.000Z' },
+          { type: 'COMPLAINT_STATUS', toStatus: 'SUBMITTED', action: 'SUBMIT', occurredAt: '2026-06-18T00:00:00.000Z' },
+        ],
       });
     }
     return jsonResponse({ error: { code: 'RBAC_FORBIDDEN' } }, 403);
@@ -1054,9 +1070,13 @@ test('complaint detail route renders real backend facts through the session cook
   );
 
   const detailCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail'));
+  const caseCall = calls.find((call) => String(call.input).endsWith('/cases/case_cmp_1/timeline'));
   assert.ok(detailCall);
+  assert.ok(caseCall);
   assert.equal(String(detailCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail');
+  assert.equal(String(caseCall.input), 'http://localhost:3000/cases/case_cmp_1/timeline');
   assert.doesNotMatch(String(detailCall.input), /role|actor|workflow|branchId/i);
+  assert.doesNotMatch(String(caseCall.input), /role|actor|workflow|branchId/i);
   assert.deepEqual(detailCall.init?.headers, {
     Accept: 'application/json',
     cookie: 'cms_staff_session=raw-session',
@@ -1066,6 +1086,12 @@ test('complaint detail route renders real backend facts through the session cook
   assert.match(html, /HIGH/);
   assert.match(html, /Engine noise/);
   assert.match(html, /branch_main/);
+  assert.match(html, /Case timeline/);
+  assert.match(html, /case_cmp_1/);
+  assert.match(html, /CUSTOMER_COMPLAINT/);
+  assert.match(html, /Main Branch/);
+  assert.match(html, /Owner User/);
+  assert.match(html, /Complaint SUBMITTED - 2026-06-18/);
   assert.match(html, /SUBMITTED - 2026-06-18/);
   assert.match(html, /IN_PROGRESS - 2026-06-19/);
   assert.doesNotMatch(html, /usr_mgr|usr_staff/);
@@ -2058,9 +2084,11 @@ test('reports route handles KPI denial without exposing privileged values', asyn
 
 test('reports dashboard source is render-only and placeholder-safe', () => {
   const source = readFileSync('apps/web/src/components/reports-dashboard/index.tsx', 'utf8');
+  const i18n = readFileSync('apps/web/src/i18n/staff-reports-dashboard.ts', 'utf8');
   const wrapper = readFileSync('apps/web/src/app/reports-dashboard.tsx', 'utf8');
 
-  assert.match(source, /RPT-017/);
+  assert.match(source, /reportCatalogText/);
+  assert.match(i18n, /RPT-017/);
   assert.match(source, /min-w-\[56rem\]/);
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie|Chart|canvas|createObjectURL|Blob|download|branchScope|roleCode|customerPhone|password|otp|token|secret|provider|portal|DMS-[A-Z0-9]+|@|\b\+?\d{10,}\b/i);
   assert.match(wrapper, /components\/reports-dashboard/);
@@ -2466,8 +2494,8 @@ test('complaints route renders English work queue filters and pagination', async
     await ComplaintsPage({ cookieHeader: '', searchParams: Promise.resolve({ locale: 'en' }) }),
   );
 
-  assert.match(html, /Work queue/);
-  assert.match(html, /Branch-scoped complaints/);
+  assert.match(html, /Cases/);
+  assert.match(html, /Branch-scoped cases/);
   assert.match(html, /Status/);
   assert.match(html, /Severity/);
   assert.match(html, /SLA state/);
@@ -2521,7 +2549,7 @@ test('complaints route renders colored severity and status badges for real rows'
   assert.match(html, /Unassigned/);
   assert.match(html, /branch_main/);
   assert.match(html, /2026-06-20/);
-  assert.match(html, /Open detail/);
+  assert.match(html, /Open case/);
   assert.doesNotMatch(html, /QueuePreviewState/);
 });
 
@@ -2538,7 +2566,7 @@ test('complaints route renders empty state when backend returns no items', async
     }),
   );
 
-  assert.match(html, /No complaints match the current filters\./);
+  assert.match(html, /No cases match the current filters\./);
   assert.match(html, /role="status"/);
   assert.doesNotMatch(html, /CMP-BADGE-001/);
 });
@@ -2553,7 +2581,7 @@ test('complaints route renders error state when backend denies queue access', as
     }),
   );
 
-  assert.match(html, /Work queue could not be loaded\. Try again\./);
+  assert.match(html, /Cases could not be loaded\. Try again\./);
   assert.match(html, /role="alert"/);
 });
 
@@ -2998,11 +3026,11 @@ test('dashboard route renders English summary labels', async () => {
     await DashboardPage({ cookieHeader: '', searchParams: Promise.resolve({ locale: 'en' }) }),
   );
 
-  assert.match(html, /Dashboard summary/);
-  assert.match(html, /Open complaints/);
+  assert.match(html, /Accountability overview/);
+  assert.match(html, /Active cases/);
   assert.match(html, /SLA warnings/);
-  assert.match(html, /Overdue complaints/);
-  assert.match(html, /Closed complaints/);
+  assert.match(html, /Overdue cases/);
+  assert.match(html, /Closed cases/);
   assert.match(html, /Average TAT/);
 });
 
@@ -3068,7 +3096,7 @@ test('dashboard route renders empty zero state from all-zero metrics', async () 
     }),
   );
 
-  assert.match(html, /No dashboard summary is available yet\./);
+  assert.match(html, /No accountability overview is available yet\./);
   assert.match(html, /role="status"/);
   assert.equal(html.match(/>0</g)?.length, 5);
 });
@@ -3083,7 +3111,7 @@ test('dashboard route renders error state when backend denies summary access', a
     }),
   );
 
-  assert.match(html, /Dashboard summary could not be loaded\. Try again\./);
+  assert.match(html, /Accountability overview could not be loaded\. Try again\./);
   assert.match(html, /role="alert"/);
 });
 

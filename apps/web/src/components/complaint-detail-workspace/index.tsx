@@ -6,6 +6,7 @@ import type { StaffComplaintDetailView } from '../../lib/staff-detail-api';
 import { ComplaintAttachmentControls, type ComplaintAttachmentPreviewState } from '../complaint-attachment-controls';
 import { ComplaintCommentsPanel, type ComplaintCommentsPreviewState } from '../complaint-comments-panel';
 import { ComplaintWorkflowModal, type ComplaintWorkflowPreviewState } from '../complaint-workflow-modal';
+import { CaseCapaPanel } from './case-capa-panel';
 
 export type ComplaintDetailPreviewState = 'loading' | 'empty' | 'error';
 export type { ComplaintAttachmentPreviewState };
@@ -70,13 +71,34 @@ export function ComplaintDetailWorkspace({
             <section className="rounded-md border border-slate-200 bg-slate-50 p-3" aria-label={t.sections.timeline}>
               <h3 className="text-sm font-semibold">{t.sections.timeline}</h3>
               <ol className="mt-3 grid gap-2 text-sm text-slate-700">
-                {timeline.map((item) => (
-                  <li className="rounded-sm border border-slate-200 bg-white px-3 py-2" key={item}>
+                {timeline.map((item, index) => (
+                  <li className="rounded-sm border border-slate-200 bg-white px-3 py-2" key={`${item}-${index}`}>
                     {item}
                   </li>
                 ))}
               </ol>
             </section>
+            <section className="rounded-md border border-slate-200 bg-slate-50 p-3" aria-label={t.sections.caseTimeline}>
+              <h3 className="text-sm font-semibold">{t.sections.caseTimeline}</h3>
+              <DetailRows rows={detail?.case ? [
+                [t.labels.caseId, detail.case.id],
+                [t.labels.caseType, detail.case.type],
+                [t.labels.status, detail.case.status],
+                [t.labels.caseLifecycle, detail.case.lifecycleStatus],
+                [t.labels.caseBranch, detail.case.branchName],
+                [t.labels.caseOwner, detail.case.ownerName ?? t.values.owner],
+              ] : [[t.labels.caseId, t.states.empty]]} />
+              {detail?.caseTimeline.length ? (
+                <ol className="mt-3 grid gap-2 text-sm text-slate-700">
+                  {detail.caseTimeline.map((item, index) => (
+                    <li className="rounded-sm border border-slate-200 bg-white px-3 py-2" key={`${item}-${index}`}>
+                      {item}
+                    </li>
+                  ))}
+                </ol>
+              ) : null}
+            </section>
+            <CaseCapaPanel caseId={detail?.case?.id} items={detail?.capaActions ?? []} text={t.capa} />
             <DetailPanel title={t.sections.survey} rows={[
               [t.labels.rating, t.values.rating],
               [t.labels.submitted, t.values.submitted],
@@ -107,14 +129,20 @@ function DetailPanel({ rows, title }: { rows: readonly (readonly [string, string
   return (
     <section className="rounded-md border border-slate-200 bg-slate-50 p-3" aria-label={title}>
       <h3 className="text-sm font-semibold">{title}</h3>
-      <dl className="mt-3 grid gap-2 text-sm">
-        {rows.map(([label, value]) => (
-          <div className="grid grid-cols-[8rem_1fr] gap-2 rounded-sm bg-white px-3 py-2" key={label}>
-            <dt className="text-slate-500">{label}</dt>
-            <dd className="font-medium text-slate-800">{value}</dd>
-          </div>
-        ))}
-      </dl>
+      <DetailRows rows={rows} />
     </section>
+  );
+}
+
+function DetailRows({ rows }: { rows: readonly (readonly [string, string])[] }) {
+  return (
+    <dl className="mt-3 grid gap-2 text-sm">
+      {rows.map(([label, value]) => (
+        <div className="grid grid-cols-[8rem_1fr] gap-2 rounded-sm bg-white px-3 py-2" key={label}>
+          <dt className="text-slate-500">{label}</dt>
+          <dd className="font-medium text-slate-800">{value}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }

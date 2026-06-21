@@ -15,6 +15,7 @@ import type { AuditRecordInput, AuditService } from '../../src/core/audit.servic
 import { RbacGuard } from '../../src/core/auth.guard.ts';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
+import { CasesService } from '../../src/modules/cases/cases.service.ts';
 import { ComplaintsController } from '../../src/modules/complaints/complaints.controller.ts';
 import { ComplaintsRepository } from '../../src/modules/complaints/complaints.repository.ts';
 import type { ComplaintDetailRecord, ComplaintQueueRecord, ComplaintSearchRecord } from '../../src/modules/complaints/complaints.repository.ts';
@@ -151,6 +152,38 @@ test('complaint creation persists complaint, initial history, and audit in one t
     status: ComplaintStatus.SUBMITTED,
     severity: ComplaintSeverity.HIGH,
   });
+});
+
+test('complaint creation links a customer complaint case in the same transaction', async () => {
+  const txClient = {};
+  const calls: unknown[] = [];
+  const service = new ComplaintsService({
+    transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
+    nextReferenceNumber: async () => 'CMP-000002',
+    create: async (data) => ({ id: 'cmp_case', referenceNumber: data.referenceNumber, branchId: data.branchId, status: data.status, subject: data.subject, severity: data.severity }),
+    createStatusHistory: async (_data, client) => calls.push({ historyClient: client }),
+  } as ComplaintsRepository, { record: async (_input, client) => calls.push({ auditClient: client }) } as unknown as AuditService, undefined, {
+    ensureCustomerComplaintCaseForComplaint: async (input, client) => calls.push({ caseInput: input, client }),
+  } as unknown as CasesService);
+
+  await service.createInternal({
+    customerName: 'Faisal Al-Otaibi',
+    customerPhone: '+966500000001',
+    categoryId: 'cat_parent',
+    subcategoryId: 'cat_engine',
+    description: 'Engine noise',
+    incidentAt: '2026-06-18T09:00:00.000Z',
+    branchId: 'branch_main',
+    subject: 'Engine noise',
+    severity: ComplaintSeverity.HIGH,
+    actorId: 'usr_1',
+    correlationId: 'req_case',
+  });
+
+  assert.equal((calls[0] as { historyClient: unknown }).historyClient, txClient);
+  assert.deepEqual((calls[1] as { caseInput: unknown; client: unknown }).caseInput, { complaintId: 'cmp_case', branchId: 'branch_main', ownerId: 'usr_1', subject: 'Engine noise', descriptionEn: 'Engine noise', status: ComplaintStatus.SUBMITTED, actorId: 'usr_1', correlationId: 'req_case' });
+  assert.equal((calls[1] as { client: unknown }).client, txClient);
+  assert.equal((calls[2] as { auditClient: unknown }).auditClient, txClient);
 });
 
 test('complaint creation route delegates with guarded branch and server actor context', async () => {

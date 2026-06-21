@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Inject, Post, Req, UseGuards } from '@nestjs/common';
 import type { IncomingMessage } from 'node:http';
 import { PortalSubmissionRateLimitGuard, PortalTrackingOtpRateLimitGuard } from '../../core/rate-limit.guard.js';
 import { parsePortalComplaintBody, toPortalComplaintInput } from './dto/create-portal.dto.js';
@@ -8,7 +8,7 @@ import { PortalService } from './portal.service.js';
 
 @Controller('portal')
 export class PortalController {
-  constructor(private readonly portalService: PortalService) {}
+  constructor(@Inject(PortalService) private readonly portalService: PortalService) {}
 
   @Post('complaints')
   @UseGuards(PortalSubmissionRateLimitGuard)

@@ -5891,3 +5891,315 @@ Status: Passed through P9-02
 - Trust boundaries tested: Passed. API tests cover server-derived route actor
   shape and confidential promise filtering; web tests cover session-cookie API
   forwarding and absence of client authority query parameters.
+
+## P2A-CASES-WRAPPER-FOR-COMPLAINTS
+
+- Date: 2026-06-21
+- Risk: Medium
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-COMPLAINT-001, REQ-WORKFLOW-001, REQ-PORTAL-002,
+  REQ-RBAC-001, METHOD-AUDIT-001, METHOD-API-001, METHOD-TEST-001,
+  PORTAL-SEC-001, NFR-SEC-002, WORKFLOW-MATRIX-001
+
+### Changes
+
+1. New complaint creation now idempotently creates or links a
+   `CUSTOMER_COMPLAINT` case inside the same transaction as complaint status
+   history and audit.
+2. Added an idempotent `cases:backfill-complaints` script for existing
+   complaints without a linked customer complaint case. Existing links are not
+   overwritten.
+3. Added `GET /cases/:caseId/timeline` for staff users with session-derived
+   RBAC, branch scope, confidentiality, and participant ACL enforcement.
+4. Case timeline now includes case lifecycle and linked complaint status
+   history events, while the public staff route suppresses restricted notes.
+5. Complaint detail now displays a Case Timeline area with case ID, type,
+   status, lifecycle, branch, owner, and timeline entries through the typed API
+   client.
+6. OpenAPI canonical and generated contracts document the new route, complaint
+   case summary, case display names, and timeline event fields.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- cases` (18/18).
+- Passed: `corepack pnpm test:api -- complaints` (44/44).
+- Passed: `node --import tsx --test apps/api/src/modules/cases/*.spec.ts`
+  (18/18).
+- Passed: `corepack pnpm test:web -- shell` (185/185).
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: live browser smoke against local API/web created a complaint through
+  the staff intake form, verified the linked `CUSTOMER_COMPLAINT` case in the
+  database, rendered the complaint detail Case Timeline, verified portal
+  tracking still returned only customer-safe complaint tracking data, and
+  verified a different-branch staff user received 403 for the case timeline.
+
+### Notes
+
+- CAPA, employee grievance screens, admin screens, AI, WhatsApp, mobile,
+  deploy, workflow builder, and product rename work remain untouched.
+- Customer portal routes do not call the internal case timeline endpoint and
+  do not expose case summary, audit data, internal comments, or staff PII.
+- The temporary Playwright runner used for live smoke was kept under `output/`
+  and removed after verification.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. The
+  case timeline route derives the actor from `SessionAuthGuard`; web code only
+  forwards staff cookies.
+- State change history + audit in same transaction: Passed. Complaint creation
+  writes complaint status history, customer complaint case, case lifecycle
+  history, and audit in the same transaction before after-commit side effects.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Portal tracking smoke used a temporary session token only
+  inside the verification harness and did not persist it to tracked files.
+- Customer portal exposure rules: Passed. Portal tracking response stayed
+  limited to reference, status, timestamps, and customer-safe status timeline.
+- Trust boundaries tested: Passed. API tests cover case timeline RBAC shape,
+  complaint-to-case transaction behavior, idempotent wrapper behavior, and
+  module boundary declarations; live smoke covers different-branch denial.
+
+## P2B-CASE-CAPA
+
+- Date: 2026-06-21
+- Risk: Medium
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RESOLUTION-001, REQ-RBAC-001, METHOD-AUDIT-001,
+  METHOD-API-001, METHOD-TEST-001, METHOD-MODULAR-001, PORTAL-SEC-001,
+  NFR-SEC-002
+
+### Changes
+
+1. Added internal staff-only `GET /cases/:caseId/capa` and
+   `POST /cases/:caseId/capa` APIs with server-session RBAC, branch scope, and
+   confidential/restricted case participant checks.
+2. CAPA creation now writes `case_capa_created` audit inside the same Prisma
+   transaction as the CAPA insert.
+3. CAPA records expose only root cause, corrective action, preventive action,
+   owner, due date, status, and timestamps; owner display names are resolved by
+   the backend.
+4. Complaint detail now fetches and renders a CAPA area beside the case
+   timeline, including loading, empty, error, success, list, and create states.
+5. OpenAPI canonical and generated contracts document the CAPA list/create
+   routes and schemas.
+6. Runtime provider wiring for the CAPA and complaint-detail path now uses
+   deterministic factory/explicit injection where the local TS runtime did not
+   preserve constructor metadata.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- cases` (20/20).
+- Passed: `node --import tsx --test apps/api/src/modules/cases/*.spec.ts`
+  (20/20).
+- Passed: `corepack pnpm test:web -- shell` (185/185).
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: live local API/web route smoke in
+  `output/p2b-capa-smoke/live-http-smoke.json`: created a staff complaint with
+  linked case, loaded complaint detail CAPA area from the running Next app,
+  created CAPA through the web proxy, verified it appeared in the API list and
+  rendered complaint detail HTML, verified `case_capa_created` audit, verified
+  different-branch read/create denials, and verified the portal tracking page
+  did not expose CAPA.
+- Not Run: interactive browser click smoke. The browser-control tool was not
+  exposed in this thread, and transient Playwright package import attempts did
+  not provide a runnable browser automation surface.
+
+### Notes
+
+- Customer portal behavior was not reworked and no customer portal CAPA route
+  was added.
+- No configurable CAPA workflow engine, admin screens, employee grievance
+  screens, product rename, AI, WhatsApp, mobile, or deploy work was added.
+- Local live stack used PostgreSQL service `postgresql-x64-16` on port `5432`;
+  Docker was unavailable in this environment.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. CAPA
+  controller builds actor context only from `SessionAuthGuard`.
+- CAPA creation audit in same transaction: Passed. Service test and live smoke
+  verify `case_capa_created` audit for the created case.
+- Confidential/restricted cases only visible to allowed actors: Passed. Service
+  tests cover participant/read-denied paths; live smoke covers different-branch
+  read/create denial.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Smoke output contains record IDs and status only.
+- Customer portal exposure rules: Passed. Portal page smoke did not expose
+  CAPA text or records.
+
+## P2C-PRODUCT-FRAMING
+
+- Date: 2026-06-21
+- Risk: Low
+- Status: Passed locally with one carry-forward CAPA smoke failure
+- Builder tier: BUILDER
+- SRS IDs: REQ-LOCALIZATION-001, UI-SCREEN-001, UI-DESIGN-001,
+  METHOD-TEST-001
+
+### Changes
+
+1. Reframed staff shell and dashboard copy from complaint-only language to
+   dealership accountability language.
+2. Reordered the main staff navigation so staff users can reach Today,
+   Promises, Deals, Cases, and Reports from the primary nav.
+3. Kept complaint wording in actual complaint handling surfaces, including
+   complaint intake and complaint detail.
+4. Updated English and Arabic text through the existing localization bundles;
+   no new hardcoded user-facing component strings were added.
+5. Moved the reports catalog labels into localization and reframed visible
+   report names around cases and accountability.
+
+### Verification
+
+- Passed: `corepack pnpm test:web -- shell` (185/185).
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: live browser smoke opened the staff app, verified the main nav showed
+  Today, Promises, Deals, Cases, and Reports first, verified English shell copy
+  used dealership accountability language, verified complaint wording still
+  appeared inside complaint intake/detail contexts, and verified Arabic shell
+  RTL layout rendered without visible breakage.
+- Failed carry-forward: P2B CAPA panel click-smoke reached the complaint detail
+  CAPA form, filled the fields, and clicked Create CAPA, but
+  `POST /api/cases/:caseId/capa` returned HTTP 500 and the panel showed
+  "CAPA could not be saved. Try again." P2C did not change CAPA code by
+  guardrail.
+
+### Notes
+
+- No backend workflow, CAPA implementation, case API, admin screen, AI,
+  WhatsApp, mobile, deploy, or workflow builder work was added.
+- Local smoke used the running API on port `3000`, a restarted Next staff app
+  on port `4000`, and PostgreSQL service `postgresql-x64-16` on port `5432`.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Not changed.
+  The slice only changed localized shell/report text and nav ordering.
+- State change history + audit in same transaction: Not applicable. No backend
+  state-changing workflow was added.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Tracked source changes contain no credential material.
+- Customer portal exposure rules: Not changed. No customer portal route or data
+  surface changed.
+- Trust boundaries tested: Passed for unchanged web forwarding boundaries
+  through the existing shell suite.
+
+## P2B-CAPA-SUBMIT-500-REPAIR
+
+- Date: 2026-06-21
+- Risk: High
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RESOLUTION-001, REQ-RBAC-001, METHOD-AUDIT-001,
+  METHOD-API-001, METHOD-TEST-001, REQ-PORTAL-002, PORTAL-SEC-001,
+  NFR-SEC-002
+
+### Changes
+
+1. Reproduced the CAPA browser save failure against the running app. The API log
+   showed the server-side blocker was `CsrfGuard` receiving an undefined
+   `AuditService` dependency, causing `POST /api/cases/:caseId/capa` to return
+   HTTP 500 before the CAPA controller ran.
+2. Added explicit Nest injection for `CsrfGuard` and the live controller/module
+   paths that the local TS runtime was not reliably wiring from constructor
+   metadata.
+3. Kept CAPA behavior unchanged: internal staff-only list/create, server-session
+   actor, RBAC, branch scope, confidential/participant checks, and
+   `case_capa_created` audit in the same transaction as the CAPA insert.
+4. Added focused CAPA regression coverage for allowed create/audit, readonly
+   deny, different-branch deny with SECURITY audit, controller session actor
+   parsing, and the `CsrfGuard` runtime injection metadata.
+5. Fixed the client CAPA submit handler so a successful async create resets the
+   captured form element and shows the success state instead of appending the
+   row and then falling into the save-error state.
+6. Hardened complaint detail timeline rendering keys so repeated same-day CAPA
+   timeline entries do not create React duplicate-key errors.
+7. Updated workflow/module metadata tests to match the explicit factory
+   provider pattern.
+
+### Verification
+
+- Failed then repaired: live browser CAPA submit initially returned
+  `POST /api/cases/:caseId/capa` HTTP 500 with API log
+  `TypeError: Cannot read properties of undefined (reading 'record')` in
+  `CsrfGuard.canActivate`.
+- Failed then repaired: after the API fix, browser CAPA create returned 201 and
+  appended the row, but the client still showed save-error due to using
+  `event.currentTarget` after the awaited request.
+- Passed: live browser CAPA create from complaint detail. The linked
+  `CUSTOMER_COMPLAINT` case was visible, the CAPA form submitted, the request
+  returned 201, the new CAPA row appeared, the form reset, and the panel showed
+  `CAPA saved.` with no save-error.
+- Passed: customer portal tracking API returned only reference, status,
+  timestamps, and public status timeline; it did not include CAPA/root cause,
+  corrective/preventive action, audit, internal comments, or staff-only fields.
+- Passed: unauthorized/different-branch CAPA read/create returned 403 in live
+  API smoke.
+- Passed: complaint intake live API smoke created a new complaint and linked a
+  `CUSTOMER_COMPLAINT` case.
+- Passed: Promise Tracker loaded in browser.
+- Passed: Deal Handoff Board loaded in browser; throwaway deal advanced from
+  `LEAD` to `BOOKING` through the live API.
+- Passed: Today task live API action created a throwaway task and updated it to
+  `DONE`.
+- Passed: Manager Control Room loaded in browser and rendered assignee/creator,
+  holder, and branch names such as `Omar Al-Khalidi`, `Layla Al-Farsi`,
+  `P2B Fix Manager`, and `Main Branch`.
+- Passed: `corepack pnpm test:api -- tasks` (12/12).
+- Passed: `corepack pnpm test:api -- deals` (9/9).
+- Passed: `corepack pnpm test:api -- cases` (22/22).
+- Failed then repaired: `corepack pnpm test:api -- complaints` initially failed
+  one metadata assertion that expected `RbacGuard` as a bare provider; updated
+  the assertion for the factory provider token.
+- Passed after repair: `corepack pnpm test:api -- complaints` (44/44).
+- Passed: `node --import tsx --test apps/api/src/modules/tasks/*.spec.ts`
+  (23/23).
+- Passed: `node --import tsx --test apps/api/src/modules/deals/*.spec.ts`
+  (9/9).
+- Passed: `node --import tsx --test apps/api/src/modules/cases/*.spec.ts`
+  (22/22).
+- Passed: `corepack pnpm test:web -- shell` (185/185).
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm openapi:check`.
+- Failed then repaired: `corepack pnpm typecheck` initially failed because the
+  new `src`-resident CAPA spec imported Nest private constants through a path
+  not resolved by the app tsconfig; replaced it with the actual metadata key.
+- Passed after repair: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Notes
+
+- Local API/web servers were stopped after smoke so generated logs could be
+  whitespace-cleaned.
+- No admin screens, AI, WhatsApp, mobile, deploy, employee grievance screens, or
+  workflow builder work was added.
+- No new customer portal CAPA route or public CAPA exposure was added.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. CAPA
+  route actor context is built from `SessionAuthGuard`; the browser/web path
+  only forwards staff cookies and CSRF.
+- CAPA create audit in same transaction: Passed. Service regression and live DB
+  smoke verified `case_capa_created` audit on successful create.
+- Confidential/restricted cases only visible to allowed actors: Passed. Tests
+  and live API smoke cover readonly/different-branch denial and SECURITY audit.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Smoke outputs used throwaway local records and did not add
+  credential material to tracked source.
+- Customer portal exposure rules: Passed. Portal tracking stayed limited to
+  customer-safe complaint status fields and did not expose CAPA/internal data.

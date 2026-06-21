@@ -38,10 +38,23 @@ export type ComplaintStatusTimelineItem = {
   createdAt: string;
 };
 
+export type ComplaintCaseSummary = {
+  id: string;
+  type: string;
+  status: ComplaintStatus;
+  lifecycleStatus: string;
+  confidentialityLevel: string;
+  branchId: string;
+  branchName: string;
+  ownerId: string | null;
+  ownerName: string | null;
+};
+
 export type ComplaintDetail = ComplaintQueueItem & {
   description: string;
   incidentAt: string | null;
   statusHistory: ComplaintStatusTimelineItem[];
+  caseSummary: ComplaintCaseSummary | null;
 };
 
 export type StaffApiError = {

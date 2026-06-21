@@ -3712,6 +3712,207 @@
           }
         }
       }
+    },
+    "/cases/{caseId}/timeline": {
+      "get": {
+        "tags": [
+          "Cases"
+        ],
+        "operationId": "caseTimeline",
+        "summary": "Return a staff-safe case timeline",
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Staff-safe case timeline",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseTimelineResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role, branch scope, or case participant ACL denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Case not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cases/{caseId}/capa": {
+      "get": {
+        "tags": [
+          "Cases"
+        ],
+        "operationId": "caseCapaList",
+        "summary": "List actor-authorized case CAPA records",
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Case CAPA records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseCapaListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role, branch scope, or case participant ACL denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Case not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Cases"
+        ],
+        "operationId": "caseCapaCreate",
+        "summary": "Create a case CAPA record",
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCaseCapaRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created case CAPA record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateCaseCapaResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid CAPA request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role, branch scope, or case participant ACL denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Case not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5230,7 +5431,8 @@
                 "required": [
                   "description",
                   "incidentAt",
-                  "statusHistory"
+                  "statusHistory",
+                  "caseSummary"
                 ],
                 "properties": {
                   "description": {
@@ -5248,6 +5450,16 @@
                     "items": {
                       "$ref": "#/components/schemas/ComplaintStatusTimelineItem"
                     }
+                  },
+                  "caseSummary": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/ComplaintCaseSummary"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "additionalProperties": false
@@ -6635,7 +6847,9 @@
           "descriptionAr",
           "links",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "branchName",
+          "ownerName"
         ],
         "properties": {
           "id": {
@@ -6687,6 +6901,15 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "branchName": {
+            "type": "string"
+          },
+          "ownerName": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -6696,12 +6919,12 @@
           "id",
           "caseId",
           "rootCause",
-          "responsibleDepartmentId",
           "correctiveAction",
           "preventiveAction",
+          "ownerId",
+          "ownerName",
           "dueAt",
-          "effectivenessCheck",
-          "repeatFlag",
+          "status",
           "createdAt",
           "updatedAt"
         ],
@@ -6715,27 +6938,29 @@
           "rootCause": {
             "type": "string"
           },
-          "responsibleDepartmentId": {
-            "type": "string"
-          },
           "correctiveAction": {
             "type": "string"
           },
           "preventiveAction": {
             "type": "string"
           },
+          "ownerId": {
+            "type": "string"
+          },
+          "ownerName": {
+            "type": "string"
+          },
           "dueAt": {
             "type": "string",
             "format": "date-time"
           },
-          "effectivenessCheck": {
-            "type": [
-              "string",
-              "null"
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "IN_PROGRESS",
+              "DONE"
             ]
-          },
-          "repeatFlag": {
-            "type": "boolean"
           },
           "createdAt": {
             "type": "string",
@@ -6814,6 +7039,21 @@
           },
           "capaActionId": {
             "type": "string"
+          },
+          "fromStatus": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "toStatus": {
+            "type": "string"
+          },
+          "action": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -7338,6 +7578,114 @@
           }
         },
         "additionalProperties": false
+      },
+      "ComplaintCaseSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "status",
+          "lifecycleStatus",
+          "confidentialityLevel",
+          "branchId",
+          "branchName",
+          "ownerId",
+          "ownerName"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "lifecycleStatus": {
+            "type": "string"
+          },
+          "confidentialityLevel": {
+            "type": "string"
+          },
+          "branchId": {
+            "type": "string"
+          },
+          "branchName": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ownerName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateCaseCapaRequest": {
+        "type": "object",
+        "required": [
+          "rootCause",
+          "correctiveAction",
+          "preventiveAction",
+          "dueAt"
+        ],
+        "properties": {
+          "rootCause": {
+            "type": "string"
+          },
+          "correctiveAction": {
+            "type": "string"
+          },
+          "preventiveAction": {
+            "type": "string"
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "IN_PROGRESS",
+              "DONE"
+            ],
+            "default": "OPEN"
+          }
+        }
+      },
+      "CreateCaseCapaResponse": {
+        "type": "object",
+        "required": [
+          "capa"
+        ],
+        "properties": {
+          "capa": {
+            "$ref": "#/components/schemas/CapaAction"
+          }
+        }
+      },
+      "CaseCapaListResponse": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CapaAction"
+            }
+          }
+        }
       }
     }
   }

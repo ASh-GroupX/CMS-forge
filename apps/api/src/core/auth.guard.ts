@@ -1,8 +1,8 @@
 import {
   CanActivate,
   ExecutionContext,
-  HttpStatus,
   Inject,
+  HttpStatus,
   Injectable,
   SetMetadata,
 } from '@nestjs/common';
@@ -73,7 +73,9 @@ export class SessionAuthGuard implements CanActivate {
 @Injectable()
 export class RbacGuard implements CanActivate {
   constructor(
+    @Inject(Reflector)
     private readonly reflector: Reflector,
+    @Inject(AuditService)
     private readonly auditService: AuditService,
   ) {}
 

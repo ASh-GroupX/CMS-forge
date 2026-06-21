@@ -1,4 +1,4 @@
-import type { ComplaintSeverity, ComplaintStatus } from '@prisma/client';
+import type { CaseConfidentialityLevel, CaseLifecycleStatus, CaseType, ComplaintSeverity, ComplaintStatus } from '@prisma/client';
 
 export type ComplaintQueueItemDto = {
   id: string;
@@ -44,10 +44,23 @@ export type ComplaintStatusTimelineItemDto = {
   createdAt: string;
 };
 
+export type ComplaintCaseSummaryDto = {
+  id: string;
+  type: CaseType;
+  status: ComplaintStatus;
+  lifecycleStatus: CaseLifecycleStatus;
+  confidentialityLevel: CaseConfidentialityLevel;
+  branchId: string;
+  branchName: string;
+  ownerId: string | null;
+  ownerName: string | null;
+};
+
 export type ComplaintDetailDto = ComplaintQueueItemDto & {
   description: string;
   incidentAt: string | null;
   statusHistory: ComplaintStatusTimelineItemDto[];
+  caseSummary: ComplaintCaseSummaryDto | null;
 };
 
 export type ComplaintDetailResponseDto = {

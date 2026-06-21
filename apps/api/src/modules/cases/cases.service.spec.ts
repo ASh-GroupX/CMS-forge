@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CaseConfidentialityLevel, CaseLifecycleStatus, CaseLinkEntityType, CaseParticipantRole, CaseType, ComplaintStatus, RoleCode, TaskLinkEntityType } from '@prisma/client';
+import { CapaActionStatus, CaseConfidentialityLevel, CaseLifecycleStatus, CaseLinkEntityType, CaseParticipantRole, CaseType, ComplaintStatus, RoleCode, TaskLinkEntityType } from '@prisma/client';
 import type { AuditRecordInput, AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import { CasesRepository } from './cases.repository.js';
@@ -49,6 +49,42 @@ test('case draft rejects empty or invalid links', async () => {
   );
 });
 
+test('customer complaint wrapper is idempotent and writes initial case lifecycle', async () => {
+  const calls: unknown[] = [];
+  const tx = {};
+  const service = new CasesService({
+    findCustomerComplaintByComplaintId: async (complaintId: string, client: unknown) => {
+      calls.push({ find: complaintId, client });
+      return null;
+    },
+    create: async (data: CreateCaseData, client: unknown) => {
+      calls.push({ create: data, client });
+      return caseRecord({ ...data, id: 'case_from_cmp', links: withCreatedAt(data.links) });
+    },
+    createInitialLifecycleHistory: async (data: unknown, client: unknown) => { calls.push({ lifecycle: data, client }); },
+  } as unknown as CasesRepository, { record: async (input: AuditRecordInput, client: unknown) => { calls.push({ audit: input, client }); } } as unknown as AuditService);
+
+  const result = await service.ensureCustomerComplaintCaseForComplaint({
+    complaintId: 'cmp_1',
+    branchId: 'branch_1',
+    subject: 'Engine noise',
+    descriptionEn: 'Knocking noise',
+    status: ComplaintStatus.SUBMITTED,
+    actorId: 'usr_1',
+    correlationId: 'req_1',
+  }, tx as never);
+
+  assert.equal(result.id, 'case_from_cmp');
+  assert.equal(result.type, CaseType.CUSTOMER_COMPLAINT);
+  assert.deepEqual(calls[0], { find: 'cmp_1', client: tx });
+  assert.deepEqual(calls[2], { lifecycle: { caseId: 'case_from_cmp', toStatus: CaseLifecycleStatus.DRAFT, actorId: 'usr_1', correlationId: 'req_1' }, client: tx });
+  assert.equal((calls[3] as { audit: { action: string } }).audit.action, 'case_created_from_complaint');
+
+  const existing = caseRecord({ id: 'case_existing' });
+  const idempotent = new CasesService({ findCustomerComplaintByComplaintId: async () => existing } as unknown as CasesRepository);
+  assert.equal((await idempotent.ensureCustomerComplaintCaseForComplaint({ complaintId: 'cmp_1', branchId: 'branch_1', subject: 'Engine noise', descriptionEn: 'Knocking noise', status: ComplaintStatus.SUBMITTED }, tx as never)).id, 'case_existing');
+});
+
 test('case timeline returns metadata links and task link shape', async () => {
   const service = new CasesService({
     findById: async () => caseRecord({
@@ -56,13 +92,14 @@ test('case timeline returns metadata links and task link shape', async () => {
       links: [{ entityType: CaseLinkEntityType.COMPLAINT, entityId: 'complaint_1', createdAt: new Date('2026-06-20T09:00:00.000Z') }],
     }),
     countRepeatCustomerRootCause: async () => 0,
+    listComplaintLifecycle: async () => [{ complaintId: 'complaint_1', fromStatus: null, toStatus: ComplaintStatus.SUBMITTED, action: null, createdAt: new Date('2026-06-20T09:05:00.000Z') }],
   } as unknown as CasesRepository);
 
   const result = await service.timeline('case_1');
 
   assert.equal(result.case.id, 'case_1');
   assert.deepEqual(result.taskLink, { entityType: TaskLinkEntityType.CASE, entityId: 'case_1' });
-  assert.deepEqual(result.events.map((event) => event.type), ['CASE_CREATED', 'CASE_LINKED']);
+  assert.deepEqual(result.events.map((event) => event.type), ['CASE_CREATED', 'CASE_LINKED', 'COMPLAINT_STATUS']);
   assert.deepEqual(result.capaActions, []);
   assert.deepEqual(result.restrictedNotes, []);
   assert.deepEqual(result.repeatIssue, { isRepeat: false, rootCauses: [] });
@@ -79,50 +116,97 @@ test('task link for case rejects blank ids', () => {
 
 test('case CAPA action validates and returns accountability fields', async () => {
   let captured: CreateCapaActionData | undefined;
+  const calls: unknown[] = [];
   const service = new CasesService({
-    createCapaAction: async (data: CreateCapaActionData) => {
+    transaction: async (work: (client: unknown) => Promise<unknown>) => work('tx'),
+    findByIdInTransaction: async (_caseId: string, client: unknown) => {
+      calls.push({ findClient: client });
+      return caseRecord();
+    },
+    createCapaAction: async (data: CreateCapaActionData, client: unknown) => {
       captured = data;
+      calls.push({ createClient: client });
       return capaRecord(data);
     },
-  } as unknown as CasesRepository);
+  } as unknown as CasesRepository, { record: async (input: AuditRecordInput, client: unknown) => { calls.push({ audit: input, client }); } } as AuditService);
 
   const result = await service.createCapaAction({
     caseId: 'case_1',
     rootCause: 'Late parts confirmation',
-    responsibleDepartmentId: 'dept_service',
     correctiveAction: 'Call customer before 10 AM',
     preventiveAction: 'Daily parts delay review',
     dueAt: '2026-06-25T09:00:00.000Z',
-    effectivenessCheck: 'Review repeat delays after 30 days',
-    repeatFlag: true,
-  });
+    status: CapaActionStatus.IN_PROGRESS,
+  }, { userId: 'usr_actor', role: RoleCode.CR_MANAGER, branchId: 'branch_1' }, { correlationId: 'req_capa' });
 
+  assert.equal(captured?.ownerId, 'owner_1');
   assert.equal(captured?.rootCause, 'Late parts confirmation');
   assert.equal(captured?.dueAt.toISOString(), '2026-06-25T09:00:00.000Z');
-  assert.equal(result.responsibleDepartmentId, 'dept_service');
-  assert.equal(result.repeatFlag, true);
-  assert.equal(result.effectivenessCheck, 'Review repeat delays after 30 days');
+  assert.equal(result.ownerName, 'Owner User');
+  assert.equal(result.status, CapaActionStatus.IN_PROGRESS);
+  assert.equal((calls[2] as { audit: AuditRecordInput }).audit.action, 'case_capa_created');
+  assert.equal((calls[2] as { client: unknown }).client, 'tx');
 });
 
 test('case CAPA action rejects missing required accountability fields and can be read', async () => {
   const service = new CasesService({
+    transaction: async (work: (client: unknown) => Promise<unknown>) => work({}),
+    findByIdInTransaction: async () => caseRecord(),
+    findById: async () => caseRecord({ capaActions: [capaRecord()] }),
     createCapaAction: async (data: CreateCapaActionData) => capaRecord(data),
-    listCapaActions: async () => [capaRecord()],
   } as unknown as CasesRepository);
 
   await assert.rejects(
     service.createCapaAction({
       caseId: 'case_1',
       rootCause: ' ',
-      responsibleDepartmentId: 'dept_service',
       correctiveAction: 'Call customer',
       preventiveAction: 'Daily review',
       dueAt: '2026-06-25T09:00:00.000Z',
-    }),
+    }, { userId: 'usr_actor', role: RoleCode.CR_MANAGER, branchId: 'branch_1' }),
     (error) => error instanceof AppException && error.code === 'VALIDATION_FAILED',
   );
 
-  assert.deepEqual((await service.listCapaActions('case_1')).map((item) => item.id), ['capa_1']);
+  assert.deepEqual((await service.listCapaActionsForActor('case_1', { userId: 'usr_actor', role: RoleCode.CR_MANAGER, branchId: 'branch_1' })).map((item) => item.id), ['capa_1']);
+});
+
+test('case CAPA write denies readonly actors before create', async () => {
+  const service = new CasesService({ transaction: async () => assert.fail('transaction should not start') } as unknown as CasesRepository);
+
+  await assert.rejects(
+    service.createCapaAction({
+      caseId: 'case_1',
+      rootCause: 'Late parts confirmation',
+      correctiveAction: 'Call customer',
+      preventiveAction: 'Daily review',
+      dueAt: '2026-06-25T09:00:00.000Z',
+    }, { userId: 'usr_readonly', role: RoleCode.MGMT_READONLY, branchId: 'branch_1' }),
+    (error) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
+});
+
+test('case CAPA write denies different branch before create and audits', async () => {
+  const auditRecords: AuditRecordInput[] = [];
+  const service = new CasesService({
+    transaction: async (work: (client: unknown) => Promise<unknown>) => work('tx'),
+    findByIdInTransaction: async () => caseRecord(),
+    createCapaAction: async () => assert.fail('create should not run'),
+  } as unknown as CasesRepository, { record: async (input) => { auditRecords.push(input); } } as AuditService);
+
+  await assert.rejects(
+    service.createCapaAction({
+      caseId: 'case_1',
+      rootCause: 'Late parts confirmation',
+      correctiveAction: 'Call customer',
+      preventiveAction: 'Daily review',
+      dueAt: '2026-06-25T09:00:00.000Z',
+    }, { userId: 'usr_other', role: RoleCode.CR_MANAGER, branchId: 'branch_other' }, { correlationId: 'req_branch' }),
+    (error) => error instanceof AppException && error.code === 'BRANCH_SCOPE_FORBIDDEN',
+  );
+
+  assert.equal(auditRecords[0]?.eventType, 'SECURITY');
+  assert.equal(auditRecords[0]?.action, 'case_confidential_access_denied');
+  assert.deepEqual(auditRecords[0]?.metadata, { reason: 'branch_scope', caseBranchId: 'branch_1' });
 });
 
 test('case timeline surfaces CAPA actions and repeat customer root cause signal', async () => {
@@ -280,9 +364,12 @@ function caseRecord(overrides: Partial<CaseRecord> & { links?: CaseRecord['links
     descriptionAr: null,
     createdAt: now,
     updatedAt: now,
+    branch: { nameEn: 'Main Branch', nameAr: 'Main Branch' },
+    owner: { nameEn: 'Owner User' },
     links: [{ entityType: CaseLinkEntityType.CUSTOMER, entityId: 'customer_1', createdAt: now }],
     participants: [],
     restrictedNotes: [],
+    lifecycleHistory: [],
     capaActions: [],
     ...overrides,
   };
@@ -307,11 +394,14 @@ function capaRecord(overrides: Partial<CapaActionRecord> & Partial<CreateCapaAct
   return {
     id: 'capa_1',
     caseId: 'case_1',
+    ownerId: 'owner_1',
+    owner: { nameEn: 'Owner User' },
     rootCause: 'Late parts confirmation',
-    responsibleDepartmentId: 'dept_service',
+    responsibleDepartmentId: null,
     correctiveAction: 'Call customer before 10 AM',
     preventiveAction: 'Daily parts delay review',
     dueAt: new Date('2026-06-25T09:00:00.000Z'),
+    status: CapaActionStatus.OPEN,
     effectivenessCheck: null,
     repeatFlag: false,
     createdAt: now,

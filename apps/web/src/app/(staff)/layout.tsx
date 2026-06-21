@@ -11,14 +11,14 @@ import { StaffTopBar } from '../staff-top-bar';
 const NAV_ITEMS = [
   { key: 'today' as const, Icon: CheckSquare2, href: '/tasks/today' },
   { key: 'promises' as const, Icon: Handshake, href: '/tasks/promises' },
-  { key: 'manager' as const, Icon: UsersRound, href: '/tasks/manager' },
   { key: 'handoff' as const, Icon: GitBranch, href: '/deals/handoff' },
-  { key: 'dashboard' as const, Icon: Gauge, href: '/dashboard' },
   { key: 'queue' as const, Icon: Inbox, href: '/complaints' },
+  { key: 'reports' as const, Icon: ClipboardList, href: '/reports' },
+  { key: 'manager' as const, Icon: UsersRound, href: '/tasks/manager' },
+  { key: 'dashboard' as const, Icon: Gauge, href: '/dashboard' },
   { key: 'create' as const, Icon: FilePlus2, href: '/complaints/new' },
   { key: 'detail' as const, Icon: Search, href: '/complaints' },
   { key: 'admin' as const, Icon: FolderCog, href: '/admin' },
-  { key: 'reports' as const, Icon: ClipboardList, href: '/reports' },
   { key: 'audit' as const, Icon: History, href: '/audit' },
   { key: 'notifications' as const, Icon: Bell, href: '/notifications' },
 ] as const;
@@ -26,13 +26,13 @@ const NAV_ITEMS = [
 type NavKey = (typeof NAV_ITEMS)[number]['key'];
 
 const ROLE_NAV: Record<string, readonly NavKey[]> = {
-  ADMIN: ['today', 'promises', 'manager', 'handoff', 'dashboard', 'queue', 'create', 'detail', 'admin', 'reports', 'audit', 'notifications'],
-  CR_MANAGER: ['today', 'promises', 'manager', 'handoff', 'dashboard', 'queue', 'detail', 'reports', 'audit', 'notifications'],
-  BRANCH_MANAGER: ['today', 'promises', 'manager', 'handoff', 'dashboard', 'queue', 'detail', 'reports', 'audit', 'notifications'],
-  MGMT_READONLY: ['promises', 'manager', 'handoff', 'dashboard', 'queue', 'detail', 'reports', 'audit', 'notifications'],
+  ADMIN: ['today', 'promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'create', 'admin', 'audit', 'notifications'],
+  CR_MANAGER: ['today', 'promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'audit', 'notifications'],
+  BRANCH_MANAGER: ['today', 'promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'audit', 'notifications'],
+  MGMT_READONLY: ['promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'audit', 'notifications'],
 };
 
-const STAFF_NAV: readonly NavKey[] = ['today', 'promises', 'dashboard', 'queue', 'create', 'detail', 'notifications'];
+const STAFF_NAV: readonly NavKey[] = ['today', 'promises', 'handoff', 'queue', 'reports', 'dashboard', 'create', 'notifications'];
 
 export default async function StaffLayout({ children }: { children: ReactNode }) {
   const requestHeaders = await headers();

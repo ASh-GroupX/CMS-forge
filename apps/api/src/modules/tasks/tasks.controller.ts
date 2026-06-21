@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { RoleCode } from '@prisma/client';
 import { BranchScoped, RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../core/auth.guard.js';
@@ -12,7 +12,7 @@ import { parseUpdateTaskBody } from './dto/update-task.dto.js';
 
 @Controller('tasks')
 export class TasksController {
-  constructor(private readonly tasksService: TasksService) {}
+  constructor(@Inject(TasksService) private readonly tasksService: TasksService) {}
 
   @Post('quick-add')
   @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)

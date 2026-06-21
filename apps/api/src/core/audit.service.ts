@@ -1,5 +1,5 @@
 import type { AuditEventType, Prisma } from '@prisma/client';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from './http-kernel.js';
 
 type AuditClient = Pick<PrismaService, 'auditLog'>;
@@ -19,7 +19,7 @@ export type AuditRecordInput = {
 
 @Injectable()
 export class AuditService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async record(input: AuditRecordInput, client: AuditClient = this.prisma): Promise<void> {
     const data: Prisma.AuditLogUncheckedCreateInput = {

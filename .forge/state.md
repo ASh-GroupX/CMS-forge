@@ -1,8 +1,8 @@
 # Current State
 
-Status: Ready for Next Slice Planning
+Status: Accountability Repair Backlog Complete
 Phase: Phase 10 - Dealership Accountability Layer (local-first)
-Next Task: PLAN-P1-NEXT
+Next Task: PLAN-NEXT
 Model Tier: PLANNER
 
 ## How to use this file
@@ -12,35 +12,40 @@ Prior state history is in .forge/archive/state-archive.md.
 
 ## Snapshot
 
-- P0 Tasks are operational and live-smoked from the prior slice.
+- P0 Tasks are operational and live-smoked.
 - P1-DEALS-WRITE is complete. Deal create, advance, and blocker writes are
   backend-owned, RBAC and branch scoped, audited in the same transaction, and
   documented in OpenAPI.
 - P1-CUSTOMER-PROMISE-TRACKER is complete. `GET /tasks/promises` returns
   session-authorized, branch-scoped customer promises linked to customer, deal,
   case, or complaint records.
-- The Promises staff page is wired into main navigation and shows open,
-  overdue, and kept-on-time KPIs plus owner, assignee, next-action, due-date,
-  customer, and deal context where available.
-- Quick Add blocks customer promises that do not include a customer, deal, case,
-  or complaint link.
-- Local runtime is active: API on `http://localhost:3000`, web on
-  `http://localhost:4000`, Docker Postgres on host port `5433`, and Redis on
-  `6379`.
-- P2 cases, CAPA, production deploy, SMTP, WhatsApp, AI, mobile, HR-platform,
-  and VPS work remain explicitly untouched.
+- P2A-CASES-WRAPPER-FOR-COMPLAINTS is complete. New complaints create or link a
+  `CUSTOMER_COMPLAINT` case in the same transaction, and staff users can read
+  `GET /cases/:caseId/timeline`.
+- P2B-CASE-CAPA is complete and repaired. The browser CAPA create blocker was
+  traced to undefined `AuditService` injection in `CsrfGuard`; explicit runtime
+  injection/factory wiring fixed the 500. Browser smoke now returns 201,
+  renders the new CAPA row, resets the form, and shows success without
+  save-error.
+- P2C-PRODUCT-FRAMING is complete. The staff shell/dashboard use dealership
+  accountability language, the main nav emphasizes Today, Promises, Deals,
+  Cases, and Reports, and complaint wording remains inside complaint
+  intake/detail contexts.
+- Final hardening matrix passed locally: tasks/deals/cases/complaints API
+  suites, direct tasks/deals/cases specs, web shell/localization, OpenAPI,
+  typecheck, lint, and `git diff --check`.
 
 ## Open carry-forward / known debt
 
-- The next repair slice needs planner selection. Do not infer P2 case/CAPA work
-  from this state file.
+- No active accountability repair blocker remains.
 - Promise Tracker currently resolves customer/deal display context from
   task-boundary link IDs only. Add richer labels later through public
   customer/deal module services rather than direct cross-module repository
   reads.
+- Case Timeline and CAPA resolve case branch and owner names where the cases
+  boundary already owns that projection. Add richer linked-entity labels later
+  through public module services rather than direct cross-module repository
+  reads.
 - Departments, branch activation controls, category activation controls,
   severity/SLA policy, notification templates, and work queue query-param
   filtering remain previously known admin/search follow-ups.
-- Windows service `postgresql-x64-16` still owns host port 5432; keep using 5433
-  for this local Docker database unless the service is stopped with admin
-  rights.

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Inject, Post, Req, Res, UseGuards } from '@nestjs/common';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   SessionAuthGuard,
@@ -23,7 +23,7 @@ type AuthRequest = IncomingMessage & { correlationId?: string };
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(@Inject(AuthService) private readonly authService: AuthService) {}
 
   @Post('login')
   @UseGuards(LoginRateLimitGuard)

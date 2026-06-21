@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { AuditService } from '../../core/audit.service.js';
 import { RbacGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
@@ -19,15 +20,27 @@ import { TasksService } from './tasks.service.js';
       inject: [PrismaService],
       useFactory: (prisma: PrismaService) => new AuditService(prisma),
     },
-    TasksRepository,
-    TasksService,
+    {
+      provide: TasksRepository,
+      inject: [PrismaService],
+      useFactory: (prisma: PrismaService) => new TasksRepository(prisma),
+    },
+    {
+      provide: TasksService,
+      inject: [TasksRepository, AuditService],
+      useFactory: (repository: TasksRepository, audit: AuditService) => new TasksService(repository, audit),
+    },
     {
       provide: SESSION_AUTH_SERVICE,
       inject: [AuthService],
       useFactory: (authService: AuthService) => authService,
     },
     SessionAuthGuard,
-    RbacGuard,
+    {
+      provide: RbacGuard,
+      inject: [Reflector, AuditService],
+      useFactory: (reflector: Reflector, audit: AuditService) => new RbacGuard(reflector, audit),
+    },
     CsrfGuard,
   ],
   exports: [TasksService],

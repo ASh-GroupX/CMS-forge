@@ -1,12 +1,14 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { CaseConfidentialityLevel, CaseLifecycleStatus, CaseLinkEntityType, CaseParticipantRole, CaseType, ComplaintStatus, TaskLinkEntityType } from '@prisma/client';
+import { CapaActionStatus, CaseConfidentialityLevel, CaseLifecycleStatus, CaseLinkEntityType, CaseParticipantRole, CaseType, ComplaintStatus, RoleCode, TaskLinkEntityType } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
-import type { CapaActionDto, CaseRepeatIssueDto, CaseRestrictedNoteDto, CaseResponseDto, CaseTimelineResponseDto, TaskCaseLinkDto } from './dto/case-response.dto.js';
+import type { CapaActionDto, CaseRepeatIssueDto, CaseResponseDto, CaseTimelineResponseDto, TaskCaseLinkDto } from './dto/case-response.dto.js';
 import { assertCanReadCase, assertLifecycle, caseAudit } from './cases.policy.js';
 import type { CaseReadActor, CaseReadAudit } from './cases.policy.js';
 import { CasesRepository } from './cases.repository.js';
 import type { CapaActionRecord, CaseRecord } from './cases.repository.js';
+import { toCapaResponse, toCaseResponse, toRestrictedNoteResponse } from './cases.response.js';
 
 export type CreateCaseDraftInput = {
   branchId: string;
@@ -22,16 +24,24 @@ export type CreateEmployeeGrievanceInput = Omit<CreateCaseDraftInput, 'confident
   employeeUserId: string;
   links?: { entityType: CaseLinkEntityType; entityId: string }[];
 };
+export type EnsureCustomerComplaintCaseInput = {
+  complaintId: string;
+  branchId: string;
+  ownerId?: string | null;
+  subject: string;
+  descriptionEn: string;
+  status: ComplaintStatus;
+  actorId?: string | null;
+  correlationId?: string | null;
+};
 
 export type CreateCapaActionInput = {
   caseId: string;
   rootCause: string;
-  responsibleDepartmentId: string;
   correctiveAction: string;
   preventiveAction: string;
   dueAt: Date | string;
-  effectivenessCheck?: string | null;
-  repeatFlag?: boolean;
+  status?: CapaActionStatus;
 };
 
 export type CapaActionResponse = CapaActionDto;
@@ -46,7 +56,7 @@ export class CasesService {
 
   async createDraft(input: CreateCaseDraftInput): Promise<CaseResponseDto> {
     const links = normalizeLinks(input.links);
-    return toResponse(await this.casesRepository.create({
+    return toCaseResponse(await this.casesRepository.create({
       type: CaseType.CUSTOMER_COMPLAINT,
       status: ComplaintStatus.DRAFT,
       lifecycleStatus: CaseLifecycleStatus.DRAFT,
@@ -66,7 +76,7 @@ export class CasesService {
       { entityType: CaseLinkEntityType.EMPLOYEE, entityId: requiredText(input.employeeUserId, 'employeeUserId') },
       ...(input.links ?? []),
     ]);
-    return toResponse(await this.casesRepository.create({
+    return toCaseResponse(await this.casesRepository.create({
       type: CaseType.EMPLOYEE_GRIEVANCE,
       status: ComplaintStatus.IN_PROGRESS,
       lifecycleStatus: CaseLifecycleStatus.HR_REVIEW,
@@ -81,17 +91,52 @@ export class CasesService {
     }));
   }
 
+  async ensureCustomerComplaintCaseForComplaint(input: EnsureCustomerComplaintCaseInput, client: Prisma.TransactionClient): Promise<CaseResponseDto> {
+    const complaintId = requiredText(input.complaintId, 'complaintId');
+    const existing = await this.casesRepository.findCustomerComplaintByComplaintId(complaintId, client);
+    if (existing) return toCaseResponse(existing);
+    const created = await this.casesRepository.create({
+      type: CaseType.CUSTOMER_COMPLAINT,
+      status: input.status,
+      lifecycleStatus: CaseLifecycleStatus.DRAFT,
+      confidentialityLevel: CaseConfidentialityLevel.NORMAL,
+      branchId: requiredText(input.branchId, 'branchId'),
+      ownerId: input.ownerId ? requiredText(input.ownerId, 'ownerId') : null,
+      subject: requiredText(input.subject, 'subject'),
+      descriptionEn: requiredText(input.descriptionEn, 'descriptionEn'),
+      links: [{ entityType: CaseLinkEntityType.COMPLAINT, entityId: complaintId }],
+      participants: [],
+    }, client);
+    await this.casesRepository.createInitialLifecycleHistory({ caseId: created.id, toStatus: created.lifecycleStatus, actorId: input.actorId ?? null, correlationId: input.correlationId ?? null }, client);
+    await this.auditService?.record({
+      eventType: 'WORKFLOW',
+      action: 'case_created_from_complaint',
+      actorId: input.actorId ?? null,
+      branchId: created.branchId,
+      targetType: 'case',
+      targetId: created.id,
+      correlationId: input.correlationId ?? null,
+      metadata: { complaintId, type: created.type, status: created.status, lifecycleStatus: created.lifecycleStatus },
+    }, client);
+    return toCaseResponse(created);
+  }
+
+  async customerComplaintCaseSummary(complaintId: string): Promise<CaseResponseDto | null> {
+    const record = await this.casesRepository.findCustomerComplaintByComplaintId(requiredText(complaintId, 'complaintId'));
+    return record ? toCaseResponse(record) : null;
+  }
+
   async timeline(caseId: string): Promise<CaseTimelineResponseDto> {
     const record = await this.casesRepository.findById(requiredText(caseId, 'caseId'));
     if (!record) throw new AppException('CASE_NOT_FOUND', 'Case was not found', HttpStatus.NOT_FOUND);
     return this.timelineFromRecord(record, false);
   }
 
-  async timelineForActor(caseId: string, actor: CaseReadActor, audit: CaseReadAudit = {}): Promise<CaseTimelineResponseDto> {
+  async timelineForActor(caseId: string, actor: CaseReadActor, audit: CaseReadAudit = {}, includeRestrictedNotes = true): Promise<CaseTimelineResponseDto> {
     const record = await this.casesRepository.findById(requiredText(caseId, 'caseId'));
     if (!record) throw new AppException('CASE_NOT_FOUND', 'Case was not found', HttpStatus.NOT_FOUND);
     await assertCanReadCase(record, actor, audit, this.auditService);
-    return this.timelineFromRecord(record, true);
+    return this.timelineFromRecord(record, includeRestrictedNotes);
   }
 
   async updateEmployeeGrievanceLifecycle(input: UpdateEmployeeGrievanceLifecycleInput, actor: CaseReadActor, audit: CaseReadAudit = {}): Promise<CaseResponseDto> {
@@ -109,7 +154,7 @@ export class CasesService {
         correlationId: audit.correlationId ?? null,
       }, client);
       await this.auditService?.record(caseAudit('case_lifecycle_updated', updated, actor, audit, { fromStatus: record.lifecycleStatus, toStatus: input.toStatus }), client);
-      return toResponse(updated);
+      return toCaseResponse(updated);
     });
   }
 
@@ -117,21 +162,31 @@ export class CasesService {
     return { entityType: TaskLinkEntityType.CASE, entityId: requiredText(caseId, 'caseId') };
   }
 
-  async createCapaAction(input: CreateCapaActionInput): Promise<CapaActionResponse> {
-    return toCapaResponse(await this.casesRepository.createCapaAction({
-      caseId: requiredText(input.caseId, 'caseId'),
-      rootCause: requiredText(input.rootCause, 'rootCause'),
-      responsibleDepartmentId: requiredText(input.responsibleDepartmentId, 'responsibleDepartmentId'),
-      correctiveAction: requiredText(input.correctiveAction, 'correctiveAction'),
-      preventiveAction: requiredText(input.preventiveAction, 'preventiveAction'),
-      dueAt: validDate(input.dueAt, 'dueAt'),
-      effectivenessCheck: optionalText(input.effectivenessCheck),
-      repeatFlag: input.repeatFlag ?? false,
-    }));
+  async createCapaAction(input: CreateCapaActionInput, actor: CaseReadActor, audit: CaseReadAudit = {}): Promise<CapaActionResponse> {
+    assertCanWriteCapa(actor);
+    return this.casesRepository.transaction(async (client) => {
+      const record = await this.casesRepository.findByIdInTransaction(requiredText(input.caseId, 'caseId'), client);
+      if (!record) throw new AppException('CASE_NOT_FOUND', 'Case was not found', HttpStatus.NOT_FOUND);
+      await assertCanReadCase(record, actor, audit, this.auditService);
+      const created = await this.casesRepository.createCapaAction({
+        caseId: record.id,
+        ownerId: record.ownerId ?? actor.userId,
+        rootCause: requiredText(input.rootCause, 'rootCause'),
+        correctiveAction: requiredText(input.correctiveAction, 'correctiveAction'),
+        preventiveAction: requiredText(input.preventiveAction, 'preventiveAction'),
+        dueAt: validDate(input.dueAt, 'dueAt'),
+        status: validEnum(input.status ?? CapaActionStatus.OPEN, CapaActionStatus, 'status'),
+      }, client);
+      await this.auditService?.record(caseAudit('case_capa_created', record, actor, audit, { capaActionId: created.id, status: created.status }), client);
+      return toCapaResponse(created);
+    });
   }
 
-  async listCapaActions(caseId: string): Promise<CapaActionResponse[]> {
-    return (await this.casesRepository.listCapaActions(requiredText(caseId, 'caseId'))).map(toCapaResponse);
+  async listCapaActionsForActor(caseId: string, actor: CaseReadActor, audit: CaseReadAudit = {}): Promise<CapaActionResponse[]> {
+    const record = await this.casesRepository.findById(requiredText(caseId, 'caseId'));
+    if (!record) throw new AppException('CASE_NOT_FOUND', 'Case was not found', HttpStatus.NOT_FOUND);
+    await assertCanReadCase(record, actor, audit, this.auditService);
+    return record.capaActions.map(toCapaResponse);
   }
 
   private async repeatIssue(record: CaseRecord): Promise<CaseRepeatIssueDto> {
@@ -145,8 +200,10 @@ export class CasesService {
   }
 
   private async timelineFromRecord(record: CaseRecord, includeRestrictedNotes: boolean): Promise<CaseTimelineResponseDto> {
-    const response = toResponse(record);
+    const response = toCaseResponse(record);
     const capaActions = record.capaActions.map(toCapaResponse);
+    const complaintIds = record.links.filter((link) => link.entityType === CaseLinkEntityType.COMPLAINT).map((link) => link.entityId);
+    const complaintLifecycle = await this.casesRepository.listComplaintLifecycle?.(complaintIds) ?? [];
     return {
       case: response,
       taskLink: this.taskLinkForCase(record.id),
@@ -160,6 +217,21 @@ export class CasesService {
           occurredAt: link.createdAt.toISOString(),
           entityType: link.entityType,
           entityId: link.entityId,
+        })),
+        ...record.lifecycleHistory.map((item) => ({
+          type: 'CASE_LIFECYCLE' as const,
+          occurredAt: item.createdAt.toISOString(),
+          fromStatus: item.fromStatus,
+          toStatus: item.toStatus,
+        })),
+        ...complaintLifecycle.map((item) => ({
+          type: 'COMPLAINT_STATUS' as const,
+          occurredAt: item.createdAt.toISOString(),
+          entityType: CaseLinkEntityType.COMPLAINT,
+          entityId: item.complaintId,
+          fromStatus: item.fromStatus,
+          toStatus: item.toStatus,
+          action: item.action,
         })),
         ...capaActions.map((action) => ({
           type: 'CAPA_ACTION_CREATED' as const,
@@ -187,53 +259,10 @@ function normalizeParticipants(input: { userId: string; role: CaseParticipantRol
   }));
 }
 
-function toResponse(record: CaseRecord): CaseResponseDto {
-  return {
-    id: record.id,
-    type: record.type,
-    status: record.status,
-    lifecycleStatus: record.lifecycleStatus,
-    confidentialityLevel: record.confidentialityLevel,
-    branchId: record.branchId,
-    ownerId: record.ownerId,
-    subject: record.subject,
-    descriptionEn: record.descriptionEn,
-    descriptionAr: record.descriptionAr,
-    links: record.links.map((link) => ({ entityType: link.entityType, entityId: link.entityId })),
-    createdAt: record.createdAt.toISOString(),
-    updatedAt: record.updatedAt.toISOString(),
-  };
-}
-
-function toRestrictedNoteResponse(record: CaseRecord['restrictedNotes'][number]): CaseRestrictedNoteDto {
-  return { id: record.id, authorId: record.authorId, body: record.body, createdAt: record.createdAt.toISOString() };
-}
-
-function toCapaResponse(record: CapaActionRecord): CapaActionResponse {
-  return {
-    id: record.id,
-    caseId: record.caseId,
-    rootCause: record.rootCause,
-    responsibleDepartmentId: record.responsibleDepartmentId,
-    correctiveAction: record.correctiveAction,
-    preventiveAction: record.preventiveAction,
-    dueAt: record.dueAt.toISOString(),
-    effectivenessCheck: record.effectivenessCheck,
-    repeatFlag: record.repeatFlag,
-    createdAt: record.createdAt.toISOString(),
-    updatedAt: record.updatedAt.toISOString(),
-  };
-}
-
 function requiredText(value: string, field: string): string {
   const text = value.trim();
   if (!text) throw invalid(field);
   return text;
-}
-
-function optionalText(value: string | null | undefined): string | null {
-  const text = value?.trim() ?? '';
-  return text || null;
 }
 
 function validDate(value: Date | string, field: string): Date {
@@ -251,6 +280,13 @@ function validEnum<T extends Record<string, string>>(value: string, options: T, 
   return value as T[keyof T];
 }
 
+function assertCanWriteCapa(actor: CaseReadActor): void {
+  if (!capaWriteRoles.has(actor.role)) {
+    throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
+  }
+}
+
+const capaWriteRoles = new Set<RoleCode>([RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN]);
 
 function invalid(field: string): AppException {
   return new AppException('VALIDATION_FAILED', 'Invalid case request', HttpStatus.BAD_REQUEST, [

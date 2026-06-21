@@ -231,6 +231,12 @@ enum CaseParticipantRole {
   ACCUSED
 }
 
+enum CapaActionStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+}
+
 enum CaseLinkEntityType {
   CUSTOMER
   VEHICLE
@@ -345,6 +351,7 @@ model User {
   ownedDeals                 Deal[]                   @relation("DealOwner")
   currentDealHandoffs        Deal[]                   @relation("DealCurrentHolder")
   ownedCases                 Case[]                   @relation("CaseOwner")
+  ownedCapaActions           CapaAction[]             @relation("CapaActionOwner")
   caseParticipants           CaseParticipant[]
   caseRestrictedNotes        CaseRestrictedNote[]      @relation("CaseRestrictedNoteAuthor")
 
@@ -941,19 +948,23 @@ model CaseLifecycleHistory {
 model CapaAction {
   id                      String     @id @default(cuid())
   caseId                  String     @map("case_id")
+  ownerId                 String     @map("owner_id")
   rootCause               String     @map("root_cause")
-  responsibleDepartmentId String     @map("responsible_department_id")
+  responsibleDepartmentId String?    @map("responsible_department_id")
   correctiveAction        String     @map("corrective_action")
   preventiveAction        String     @map("preventive_action")
   dueAt                   DateTime   @map("due_at")
+  status                  CapaActionStatus @default(OPEN)
   effectivenessCheck      String?    @map("effectiveness_check")
   repeatFlag              Boolean    @default(false) @map("repeat_flag")
   createdAt               DateTime   @default(now()) @map("created_at")
   updatedAt               DateTime   @updatedAt @map("updated_at")
   case                    Case       @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  responsibleDepartment   Department @relation(fields: [responsibleDepartmentId], references: [id])
+  owner                   User       @relation("CapaActionOwner", fields: [ownerId], references: [id])
+  responsibleDepartment   Department? @relation(fields: [responsibleDepartmentId], references: [id])
 
   @@index([caseId])
+  @@index([ownerId])
   @@index([responsibleDepartmentId])
   @@index([dueAt])
   @@map("capa_actions")

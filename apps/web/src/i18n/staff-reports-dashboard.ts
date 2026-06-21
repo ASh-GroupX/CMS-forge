@@ -1,5 +1,47 @@
 import type { Locale } from './staff-shell';
 
+export type ReportCatalogCategory = 'operations' | 'sla' | 'executive' | 'admin';
+export const reportCatalogText: Record<Locale, readonly (readonly [string, string, string, ReportCatalogCategory])[]> = {
+  en: [
+    ['RPT-001', 'Open case summary', 'Managers, Management', 'operations'],
+    ['RPT-002', 'Overdue cases', 'Managers, Management', 'sla'],
+    ['RPT-003', 'SLA warning cases', 'Managers, CR team', 'sla'],
+    ['RPT-004', 'Average TAT', 'Management', 'executive'],
+    ['RPT-005', 'Closure performance by branch', 'Management', 'executive'],
+    ['RPT-006', 'Cases by category', 'Management, CR Manager', 'operations'],
+    ['RPT-007', 'Cases by brand/model', 'Management', 'executive'],
+    ['RPT-008', 'Cases by department', 'Management', 'operations'],
+    ['RPT-009', 'Owner workload', 'CR Manager, Branch Manager', 'operations'],
+    ['RPT-010', 'Reopened cases', 'Management, CR Manager', 'operations'],
+    ['RPT-011', 'Rejected cases', 'CR Manager', 'operations'],
+    ['RPT-012', 'Customer satisfaction', 'Management', 'executive'],
+    ['RPT-013', 'Aging report', 'Management, Managers', 'sla'],
+    ['RPT-014', 'Compensation tracking', 'Authorized managers', 'executive'],
+    ['RPT-015', 'DMS lookup failure report', 'Admin, IT', 'admin'],
+    ['RPT-016', 'Notification delivery report', 'Admin, CR Manager', 'admin'],
+    ['RPT-017', 'Audit activity report', 'Admin', 'admin'],
+  ],
+  ar: [
+    ['RPT-001', 'ملخص الحالات المفتوحة', 'المديرون، الإدارة', 'operations'],
+    ['RPT-002', 'الحالات المتأخرة', 'المديرون، الإدارة', 'sla'],
+    ['RPT-003', 'حالات تنبيه SLA', 'المديرون، فريق علاقات العملاء', 'sla'],
+    ['RPT-004', 'متوسط زمن الإنجاز', 'الإدارة', 'executive'],
+    ['RPT-005', 'أداء الإغلاق حسب الفرع', 'الإدارة', 'executive'],
+    ['RPT-006', 'الحالات حسب التصنيف', 'الإدارة، مدير علاقات العملاء', 'operations'],
+    ['RPT-007', 'الحالات حسب العلامة/الطراز', 'الإدارة', 'executive'],
+    ['RPT-008', 'الحالات حسب القسم', 'الإدارة', 'operations'],
+    ['RPT-009', 'عبء عمل المالك', 'مدير علاقات العملاء، مدير الفرع', 'operations'],
+    ['RPT-010', 'الحالات المعاد فتحها', 'الإدارة، مدير علاقات العملاء', 'operations'],
+    ['RPT-011', 'الحالات المرفوضة', 'مدير علاقات العملاء', 'operations'],
+    ['RPT-012', 'رضا العملاء', 'الإدارة', 'executive'],
+    ['RPT-013', 'تقرير التقادم', 'الإدارة، المديرون', 'sla'],
+    ['RPT-014', 'متابعة التعويض', 'المديرون المصرح لهم', 'executive'],
+    ['RPT-015', 'تقرير فشل بحث DMS', 'المشرف، تقنية المعلومات', 'admin'],
+    ['RPT-016', 'تقرير تسليم الإشعارات', 'المشرف، مدير علاقات العملاء', 'admin'],
+    ['RPT-017', 'تقرير نشاط التدقيق', 'المشرف', 'admin'],
+  ],
+};
+
 export const reportsDashboardText: Record<Locale, typeof enReportsDashboardText> = {
   en: {
     title: 'Reports dashboard',

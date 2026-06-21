@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, HttpStatus, Injectable } from '@nestjs/common';
+import { CanActivate, ExecutionContext, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { AuditService } from './audit.service.js';
 import { AppException } from './http-kernel.js';
@@ -18,7 +18,7 @@ type CsrfRequest = {
 
 @Injectable()
 export class CsrfGuard implements CanActivate {
-  constructor(private readonly auditService: AuditService) {}
+  constructor(@Inject(AuditService) private readonly auditService: AuditService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<CsrfRequest>();

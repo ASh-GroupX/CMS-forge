@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { RoleCode } from '@prisma/client';
 import { AppException } from '../../core/http-kernel.js';
 import { BranchScoped, RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
@@ -11,7 +11,7 @@ import { DealsService } from './deals.service.js';
 
 @Controller('deals')
 export class DealsController {
-  constructor(private readonly dealsService: DealsService) {}
+  constructor(@Inject(DealsService) private readonly dealsService: DealsService) {}
 
   @Get('handoff-board')
   @UseGuards(SessionAuthGuard, RbacGuard)
