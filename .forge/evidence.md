@@ -5354,3 +5354,145 @@ Status: Passed through P9-02
 - Trust boundaries tested: Passed. API tests cover report-capable allow,
   employee deny, cross-branch denial/audit, aggregate-only KPI shape, and the
   live proof confirmed branch scope plus backend-derived KPI movement.
+
+## P10-AUTH-LOCAL Real Local Staff Login Hardening
+
+- Date: 2026-06-21
+- Risk: High
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: ARCH-AUTH-001, REQ-AUTH-001, REQ-RBAC-001, NFR-SEC-001,
+  NFR-SEC-002, METHOD-TEST-001
+
+### Changes
+
+1. Removed visible preview sign-in/error shortcuts from the staff login panel.
+2. Changed real browser requests to `/` so query parameters cannot bypass the
+   backend session check into a signed-in preview shell.
+3. Added `corepack pnpm staff:bootstrap`, which creates or updates a local staff
+   account from operator-supplied environment variables, stores an Argon2id
+   password hash, activates the user, clears lock state, and assigns a database
+   role plus optional branch scope.
+4. Added auth/web regression tests that reject reintroducing preview sign-in
+   links and verify the bootstrap script requires operator-owned credentials.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- auth` (35/35).
+- Passed: `corepack pnpm test:web -- shell` (178/178).
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: live bootstrap proof against local Postgres using generated
+  proof-only env credentials: `corepack pnpm staff:bootstrap` created the
+  proof admin account, a package-local verifier confirmed the stored Argon2id
+  hash matched the generated password and role `ADMIN`, then deleted the proof
+  user.
+- Passed: final DB cleanup probe returned `proof.bootstrap users: 0`.
+- Passed: live web root smoke against `http://localhost:4000/?session=signed-in&role=admin&locale=en`
+  rendered the staff login form and did not expose the signed-in shell, role
+  preview, or admin navigation.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Notes
+
+- No default password, plaintext credential, seed password, or mocked user was
+  added. Operators must choose the local account password with
+  `CMS_BOOTSTRAP_PASSWORD`.
+- Existing auth routes remain the authority: `/auth/login`, `/auth/logout`, and
+  `/auth/me` still own session creation/validation.
+- The old render-test preview shell still exists for web tests, but real Next.js
+  browser requests to `/` now return either a backend-session redirect or the
+  login form.
+- No production deploy, SMTP, WhatsApp, VPS, AI, mobile, or HR-platform work was
+  introduced.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. Real
+  browser root requests use `/auth/me` via the server cookie; query-preview
+  parameters no longer bypass auth. The bootstrap script writes role/branch onto
+  the database user only.
+- State change history + audit in same transaction: not applicable to complaint
+  workflow state. Existing auth tests still prove login success/failure,
+  logout, and password reset audit behavior.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Bootstrap reads the password from env, stores only Argon2id
+  hash material, does not print the password, and the regression test rejects
+  obvious default plaintext credentials.
+- Customer portal exposure rules: not applicable; no customer portal route or
+  public data surface changed.
+- Trust boundaries tested: Passed. `test:api -- auth` covers server-derived
+  session principal, RBAC allow/deny, branch allow/deny, safe errors, and safe
+  cookie/session behavior; `test:web -- shell` covers removal of preview login
+  shortcuts.
+
+## P10-DATA-LOCAL Complaint Data Plumbing Repair
+
+- Date: 2026-06-21
+- Risk: High
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-COMPLAINT-001, REQ-COMPLAINT-002, REQ-RBAC-001,
+  REQ-ADMIN-001, METHOD-API-001, METHOD-TEST-001, UI-DESIGN-001
+
+### Changes
+
+1. Added backend `/complaints/form-options`, returning DB-backed active
+   branches, active categories, and severity values scoped from the server
+   staff principal.
+2. Updated complaint queue/search/detail read models to include readable
+   `branchName` and `ownerName` alongside IDs.
+3. Wired complaint creation to fetch form options through the staff session
+   cookie and removed the visible `Sample option` fallback from real route data.
+4. Updated work queue rendering so it shows owner and branch names instead of
+   raw database IDs when the API provides names.
+5. Updated the OpenAPI canonical contract and committed contract for the new
+   route and response fields.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- workflow` (43/43).
+- Passed: `corepack pnpm test:api -- search` (4/4).
+- Passed: `corepack pnpm test:web -- shell` (179/179).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: rebuilt API output with `corepack pnpm exec tsc -p apps/api/tsconfig.json`,
+  restarted the local API process on port 3000, and confirmed unauthenticated
+  `/complaints/form-options` returns 401.
+- Passed: live local API smoke with a temporary proof admin account:
+  `/auth/login` returned 201 and `/complaints/form-options` returned
+  `branches=2`, `categories=5`, `severities=4`.
+- Passed: proof account cleanup removed sessions and deactivated proof users;
+  cleanup probe returned `active=0`.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Notes
+
+- This repair does not implement full admin CRUD. It makes complaint creation
+  and queue display use real backend data now, then queues P10-ADMIN-REAL for
+  audited admin account/master-data management.
+- The current local seed already contains branches, roles, staff users,
+  categories, customers, vehicles, complaints, deals, and tasks. Category data is
+  currently flat; hierarchical category editing belongs in P10-ADMIN-REAL.
+- Proof option users were deactivated rather than deleted because login audit
+  rows are append-only and must keep actor linkage intact.
+- No production deploy, SMTP, WhatsApp, VPS, AI, mobile, or HR-platform work was
+  introduced.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed.
+  `/complaints/form-options` reads the authenticated server principal and tests
+  prove non-admin branch scoping plus route RBAC allow/deny behavior.
+- State change history + audit in same transaction: not applicable to this
+  read-model/options repair. Existing workflow tests still cover complaint
+  creation/transition history and audit transactions.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. The new route returns only branch/category labels and enum
+  severity values.
+- Customer portal exposure rules: not applicable; no customer portal route or
+  public data surface changed.
+- Trust boundaries tested: Passed. Workflow tests cover form-options RBAC
+  denial with security audit, server-derived branch scope, queue branch scope,
+  and cross-branch denial behavior.

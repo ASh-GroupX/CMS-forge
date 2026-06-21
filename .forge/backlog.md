@@ -496,10 +496,10 @@ PLAN-split into 1-5 file sub-tasks before build, like F1-05 was.
   - [x] P10-09C `[stack]`: Confidential HR-only screens + redaction + privacy regression tests.
     - [x] P10-09C1: Confidential case timeline HTTP read contract + OpenAPI + API privacy tests.
     - [x] P10-09C2 `[stack]`: Confidential HR-only screen + redaction + web privacy proof.
-- [ ] P10-10: Local UAT seed + demo (proves the whole thing).
+- [x] P10-10: Local UAT seed + demo (proves the whole thing).
   - [x] P10-10A: Dealership seed - employees/roles, customers, vehicles, deals,
         overdue tasks, a stuck deal, a complaint, an internal task.
-  - [ ] P10-10B `[stack]`: End-to-end local proof - employee sees today -> manager sees
+  - [x] P10-10B `[stack]`: End-to-end local proof - employee sees today -> manager sees
         late/stuck -> deal handoff -> overdue escalates -> KPI moves from the timeline.
     - [x] P10-10B1 `[stack]`: Employee Today + Manager Control Room local proof.
           Routes/APIs: web `/tasks/today`, web `/tasks/manager`, API `/tasks/today`,
@@ -521,6 +521,19 @@ PLAN-split into 1-5 file sub-tasks before build, like F1-05 was.
           KPI values move from task/status-history/complaint events, not client
           counters; manager/admin allowed, employee denied, branch scope preserved;
           proof artifacts cleaned of temporary sessions and cookies.
+- [x] P10-AUTH-LOCAL: Real local staff login hardening.
+      Remove public preview sign-in shortcuts from the login surface, make real
+      browser requests pass through backend session validation instead of
+      query-preview bypasses, and add an operator-owned local staff account
+      bootstrap command with Argon2id password hashing.
+- [x] P10-DATA-LOCAL: Real local complaint data plumbing.
+      Replace complaint-create sample dropdowns with backend DB-backed branch,
+      category, and severity options; return readable branch/owner names in
+      queue/search rows; update OpenAPI and regression tests.
+- [ ] P10-ADMIN-REAL: Real admin users and master-data management.
+      Build audited backend admin CRUD and wired admin UI for staff accounts,
+      roles, branches, departments, categories, and SLA/reference data. This
+      replaces preview-only admin shells; no fake frontend-only admin state.
 - [ ] P10-OPS (deferred): capture channels - email-to-task, then WhatsApp / mobile.
   - [ ] O-01: Provision Hostinger Ubuntu VPS and install Docker + Compose
   - [ ] O-02: Point domain A-record to VPS and confirm Caddy TLS issuance

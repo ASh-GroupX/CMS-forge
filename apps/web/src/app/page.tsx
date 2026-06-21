@@ -74,7 +74,7 @@ export default async function StaffShellPage({
   };
   const complaintId = readParam(params?.complaintId);
   const principal = await getStaffSessionPrincipal(apiInput);
-  if (await isNextRequest() && !hasPreviewParam(params)) {
+  if (await isNextRequest()) {
     if (principal) redirect(withLocale(principal.roleCode === 'MGMT_READONLY' ? '/dashboard' : '/tasks/today', locale));
     return <StaffAuthLanding authError={readParam(params?.auth) === 'error'} locale={locale} resetState={resolveReset(readParam(params?.reset))} />;
   }
@@ -120,11 +120,6 @@ async function isNextRequest(): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-function hasPreviewParam(params: SearchParams | undefined): boolean {
-  if (!params) return false;
-  return Object.entries(params).some(([key, value]) => key !== 'locale' && value !== undefined);
 }
 
 function withLocale(path: string, locale: Locale): string {

@@ -18,8 +18,6 @@ export const staffShellText = {
       submit: 'Sign in',
       genericError: 'Could not sign in. Check your credentials and try again.',
       logout: 'Log out',
-      previewSignedIn: 'Preview signed-in shell',
-      previewError: 'Preview error',
     },
     reset: {
       title: 'Password reset',
@@ -166,8 +164,6 @@ export const staffShellText = {
       submit: 'تسجيل الدخول',
       genericError: 'تعذر تسجيل الدخول. تحقق من البيانات وحاول مرة أخرى.',
       logout: 'تسجيل الخروج',
-      previewSignedIn: 'معاينة حالة الدخول',
-      previewError: 'معاينة الخطأ',
     },
     reset: {
       title: 'إعادة تعيين كلمة المرور',

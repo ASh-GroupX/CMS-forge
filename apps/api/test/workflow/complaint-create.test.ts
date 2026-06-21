@@ -184,12 +184,34 @@ test('complaint creation route delegates with guarded branch and server actor co
 });
 
 test('complaint creation route rejects missing branch query with stable validation error', async () => {
-  const controller = new ComplaintsController({} as ComplaintsService);
+  const controller = new ComplaintsController({} as ComplaintsService, {} as never);
 
   await assert.rejects(
     controller.create(undefined, validBody(), request()),
     (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED',
   );
+});
+
+test('complaint form options route is staff scoped by backend session role', async () => {
+  const auditRecords: AuditRecordInput[] = [];
+  const guard = new RbacGuard(
+    new Reflector(),
+    { record: async (input) => auditRecords.push(input) } as AuditService,
+  );
+
+  const allowed = request(RoleCode.CR_OFFICER);
+  allowed.url = '/complaints/form-options';
+  assert.equal(await guard.canActivate(context(allowed, ComplaintsController.prototype.formOptionsForCreate)), true);
+
+  const denied = request(RoleCode.MGMT_READONLY);
+  denied.url = '/complaints/form-options';
+  await assert.rejects(
+    guard.canActivate(context(denied, ComplaintsController.prototype.formOptionsForCreate)),
+    (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
+
+  assert.equal(auditRecords[0]?.eventType, 'SECURITY');
+  assert.equal(auditRecords[0]?.action, 'rbac_forbidden');
 });
 
 test('complaint creation route audits branch-scope denials', async () => {
@@ -282,7 +304,9 @@ test('complaint queue service returns explicit branch-scoped response objects', 
     severity: ComplaintSeverity.HIGH,
     subject: 'Engine noise',
     branchId: 'branch_main',
+    branchName: 'Main Branch',
     ownerId: null,
+    ownerName: null,
     createdAt: '2026-06-18T09:00:00.000Z',
     updatedAt: '2026-06-18T10:00:00.000Z',
   }]);
@@ -322,6 +346,7 @@ test('complaint search service maps required filters into safe branch-scoped row
     ...validQueueItem(),
     categoryId: 'cat_engine',
     ownerId: 'usr_owner',
+    ownerName: 'Owner User',
     customerName: 'Faisal Al-Otaibi',
     customerPhone: '+966500000001',
     customerIdentifier: 'CUST-001',
@@ -605,7 +630,9 @@ const queueRecord: ComplaintQueueRecord = {
   severity: ComplaintSeverity.HIGH,
   subject: 'Engine noise',
   branchId: 'branch_main',
+  branch: { code: 'MAIN', nameEn: 'Main Branch', nameAr: 'الفرع الرئيسي' },
   ownerId: null,
+  owner: null,
   createdAt: new Date('2026-06-18T09:00:00.000Z'),
   updatedAt: new Date('2026-06-18T10:00:00.000Z'),
 };
@@ -636,7 +663,9 @@ function searchRecord(id: string, branchId: string): ComplaintSearchRecord {
     severity: ComplaintSeverity.HIGH,
     subject: 'Engine noise',
     branchId,
+    branch: { code: 'MAIN', nameEn: 'Main Branch', nameAr: 'الفرع الرئيسي' },
     ownerId: 'usr_owner',
+    owner: { nameEn: 'Owner User', email: 'owner@cms-auto.test' },
     categoryId: 'cat_engine',
     customerName: 'Faisal Al-Otaibi',
     customerPhone: '+966500000001',
@@ -654,7 +683,9 @@ function validQueueItem() {
     severity: ComplaintSeverity.HIGH,
     subject: 'Engine noise',
     branchId: 'branch_main',
+    branchName: 'Main Branch',
     ownerId: null,
+    ownerName: null,
     createdAt: '2026-06-18T09:00:00.000Z',
     updatedAt: '2026-06-18T10:00:00.000Z',
   };
@@ -682,10 +713,10 @@ function principal(roleCode: RoleCode): StaffPrincipal {
   };
 }
 
-function context(req: AuthenticatedRequest): ExecutionContext {
+function context(req: AuthenticatedRequest, handler = ComplaintsController.prototype.create): ExecutionContext {
   return {
     switchToHttp: () => ({ getRequest: () => req }),
-    getHandler: () => ComplaintsController.prototype.create,
+    getHandler: () => handler,
     getClass: () => ComplaintsController,
   } as ExecutionContext;
 }

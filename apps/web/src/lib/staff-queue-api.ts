@@ -52,6 +52,7 @@ function rowFrom(row: Partial<ComplaintQueueItem>): ComplaintQueueItem | null {
   ) {
     return null;
   }
+  const branchName = typeof row.branchName === 'string' ? row.branchName : undefined;
   return {
     id: row.id,
     referenceNumber: row.referenceNumber,
@@ -59,7 +60,9 @@ function rowFrom(row: Partial<ComplaintQueueItem>): ComplaintQueueItem | null {
     severity: row.severity,
     subject: row.subject,
     branchId: row.branchId,
+    ...(branchName ? { branchName } : {}),
     ownerId: typeof row.ownerId === 'string' ? row.ownerId : null,
+    ownerName: typeof row.ownerName === 'string' ? row.ownerName : null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

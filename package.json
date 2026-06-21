@@ -12,6 +12,7 @@
     "typecheck": "tsc -p apps/api/tsconfig.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit && tsc -p packages/database/tsconfig.json --noEmit && tsc -p packages/database/prisma/tsconfig.json --noEmit && tsc -p packages/contracts/tsconfig.json --noEmit && tsc -p packages/config/tsconfig.json --noEmit",
     "generate:module": "node tools/generate-module.mjs",
     "db:seed": "corepack pnpm --dir packages/database db:seed",
+    "staff:bootstrap": "corepack pnpm --dir apps/api staff:bootstrap",
     "prisma:validate": "node tools/prisma-validate.mjs",
     "test": "node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=75 --test-coverage-branches=65 tools/*.test.mjs",
     "test:api": "node tools/api-test.mjs",

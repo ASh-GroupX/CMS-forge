@@ -47,8 +47,6 @@ export function AuthPanel({
   resetState?: ResetPreviewState | undefined;
 }) {
   const t = staffShellText[locale];
-  const previewQuery = `?locale=${locale}`;
-
   if (isSignedIn) {
     return (
       <section className="mb-4 rounded-md border border-border bg-muted p-3" aria-label={t.auth.signedIn}>
@@ -79,10 +77,6 @@ export function AuthPanel({
         </label>
         <button className="rounded-sm bg-brand px-3 py-2 text-sm font-semibold text-brand-foreground" type="submit">{t.auth.submit}</button>
       </form>
-      <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
-        <a className="text-brand underline" href={`${previewQuery}&session=signed-in`}>{t.auth.previewSignedIn}</a>
-        <a className="text-brand underline" href={`${previewQuery}&auth=error`}>{t.auth.previewError}</a>
-      </div>
       <PasswordResetPanel locale={locale} state={resetState} />
     </section>
   );

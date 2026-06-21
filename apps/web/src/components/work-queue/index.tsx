@@ -79,8 +79,8 @@ export function WorkQueue({
                     <TableCell className="py-2.5">
                       <SeverityBadge severity={row.severity} />
                     </TableCell>
-                    <TableCell className="py-2.5">{row.ownerId ?? t.unassigned}</TableCell>
-                    <TableCell className="py-2.5">{row.branchId}</TableCell>
+                    <TableCell className="py-2.5">{row.ownerName ?? t.unassigned}</TableCell>
+                    <TableCell className="py-2.5">{row.branchName ?? row.branchId}</TableCell>
                     <TableCell className="py-2.5">
                       <Badge className="border-slate-300" variant="outline">
                         {t.sla.backendScoped}

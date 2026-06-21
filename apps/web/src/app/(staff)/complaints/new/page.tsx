@@ -3,6 +3,7 @@ import { AttachmentUploadPanel, type AttachmentPreviewState } from '../../../../
 import { ComplaintCreateForm, type CreateFormPreviewState } from '../../../../components/complaint-create-form';
 import { CustomerVehicleLookup, type LookupPreviewState } from '../../../../components/customer-vehicle-lookup';
 import { resolveLocale } from '../../../../i18n/staff-shell';
+import { getComplaintFormOptions } from '../../../../lib/staff-complaint-form-options-api';
 
 type SearchParams = {
   attachment?: string | string[];
@@ -11,13 +12,25 @@ type SearchParams = {
   lookup?: string | string[];
 };
 
-export default async function NewComplaintPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
+export default async function NewComplaintPage({
+  cookieHeader,
+  fetchImpl,
+  searchParams,
+}: {
+  cookieHeader?: string;
+  fetchImpl?: typeof fetch;
+  searchParams?: Promise<SearchParams>;
+}) {
   const params = await searchParams;
   const locale = resolveLocale(readParam(params?.locale));
+  const options = await getComplaintFormOptions({
+    ...(cookieHeader !== undefined ? { cookieHeader } : {}),
+    ...(fetchImpl !== undefined ? { fetchImpl } : {}),
+  });
   return (
     <main className="grid gap-4">
       <CustomerVehicleLookup locale={locale} state={resolveLookup(readParam(params?.lookup))} />
-      <ComplaintCreateForm locale={locale} state={resolveCreate(readParam(params?.create))} />
+      <ComplaintCreateForm locale={locale} options={options} state={resolveCreate(readParam(params?.create))} />
       <AttachmentUploadPanel locale={locale} state={resolveAttachment(readParam(params?.attachment))} />
     </main>
   );

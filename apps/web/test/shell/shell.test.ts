@@ -119,6 +119,15 @@ test('staff shell shows only generic login failure text', async () => {
   assert.doesNotMatch(html, /locked/i);
 });
 
+test('staff login surface has no preview sign-in shortcuts', () => {
+  const panelSource = readFileSync('apps/web/src/app/staff-shell-panels.tsx', 'utf8');
+  const pageSource = readFileSync('apps/web/src/app/page.tsx', 'utf8');
+
+  assert.doesNotMatch(panelSource, /previewSignedIn|previewError|Preview signed-in shell|Preview error/);
+  assert.doesNotMatch(pageSource, /hasPreviewParam/);
+  assert.match(pageSource, /if \(await isNextRequest\(\)\)/);
+});
+
 test('staff shell renders signed-in preview with logout affordance', async () => {
   const html = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ session: 'signed-in' }) }));
 
@@ -833,7 +842,9 @@ test('work queue renders real complaint rows through the session cookie', async 
           severity: 'HIGH',
           subject: 'Engine noise',
           branchId: 'branch_main',
+          branchName: 'Main Branch',
           ownerId: 'usr_owner',
+          ownerName: 'Owner User',
           createdAt: '2026-06-18T00:00:00.000Z',
           updatedAt: '2026-06-19T09:30:00.000Z',
         }],
@@ -861,8 +872,9 @@ test('work queue renders real complaint rows through the session cookie', async 
   assert.match(html, /Engine noise/);
   assert.match(html, /IN_PROGRESS/);
   assert.match(html, /HIGH/);
-  assert.match(html, /usr_owner/);
-  assert.match(html, /branch_main/);
+  assert.match(html, /Owner User/);
+  assert.match(html, /Main Branch/);
+  assert.doesNotMatch(html, /usr_owner|branch_main/);
   assert.match(html, /2026-06-19/);
   assert.doesNotMatch(html, /@|\+?\d{10,}/);
 });
@@ -2142,6 +2154,31 @@ test('complaint new route renders lookup and complaint create form together', as
   assert.match(html, /This field is required\./);
 });
 
+test('complaint new route renders real branch category and severity options from the backend', async () => {
+  const fetchImpl: typeof fetch = async (input, init) => {
+    assert.equal(String(input), 'http://localhost:3000/complaints/form-options');
+    assert.deepEqual(init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+    return jsonResponse({
+      branches: [{ id: 'branch_main', code: 'MAIN', nameEn: 'Main Branch', nameAr: 'الفرع الرئيسي' }],
+      categories: [{ id: 'cat_engine', code: 'ENGINE', nameEn: 'Engine & Mechanical', nameAr: 'المحرك', parentId: null }],
+      severities: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
+    });
+  };
+  const html = renderToStaticMarkup(
+    await NewComplaintPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  assert.match(html, /Main Branch/);
+  assert.match(html, /Engine &amp; Mechanical/);
+  assert.match(html, /CRITICAL/);
+  assert.match(html, /LOW/);
+  assert.doesNotMatch(html, /Sample option/);
+});
+
 test('complaint new route keeps Arabic RTL complaint create labels', async () => {
   const html = renderToStaticMarkup(
     await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'ar', create: 'validation' }) }),
@@ -2435,7 +2472,9 @@ test('complaints route renders real rows through the session cookie', async () =
           severity: 'MEDIUM',
           subject: 'Route test complaint',
           branchId: 'branch_route',
+          branchName: 'Route Branch',
           ownerId: 'usr_route',
+          ownerName: 'Route Owner',
           createdAt: '2026-06-20T00:00:00.000Z',
           updatedAt: '2026-06-20T10:00:00.000Z',
         }],
@@ -2459,8 +2498,10 @@ test('complaints route renders real rows through the session cookie', async () =
   assert.match(html, /Route test complaint/);
   assert.match(html, /SUBMITTED/);
   assert.match(html, /MEDIUM/);
-  assert.match(html, /usr_route/);
-  assert.match(html, /branch_route/);
+  assert.match(html, /Route Owner/);
+  assert.match(html, /Route Branch/);
+  assert.doesNotMatch(html, /usr_route/);
+  assert.doesNotMatch(html, /branch_route/);
   assert.match(html, /2026-06-20/);
   assert.match(html, /bg-status-warning/);
 });

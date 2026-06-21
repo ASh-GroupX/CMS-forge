@@ -213,7 +213,7 @@ function complaintCreatedAudit(input: CreateInternalComplaintInput, complaint: C
 }
 
 function queueItem(complaint: ComplaintQueueRecord): ComplaintQueueItemDto {
-  return { id: complaint.id, referenceNumber: complaint.referenceNumber, status: complaint.status, severity: complaint.severity, subject: complaint.subject, branchId: complaint.branchId, ownerId: complaint.ownerId, createdAt: complaint.createdAt.toISOString(), updatedAt: complaint.updatedAt.toISOString() };
+  return { id: complaint.id, referenceNumber: complaint.referenceNumber, status: complaint.status, severity: complaint.severity, subject: complaint.subject, branchId: complaint.branchId, branchName: complaint.branch.nameEn, ownerId: complaint.ownerId, ownerName: complaint.owner?.nameEn ?? null, createdAt: complaint.createdAt.toISOString(), updatedAt: complaint.updatedAt.toISOString() };
 }
 
 function reportItem(complaint: ComplaintReportRecord): ComplaintReportRow { return { ...queueItem(complaint), categoryId: complaint.categoryId }; }

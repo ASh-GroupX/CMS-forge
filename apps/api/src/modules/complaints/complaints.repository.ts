@@ -18,6 +18,7 @@ export type ComplaintRecord = ComplaintStatusRecord & {
 
 export type ComplaintQueueRecord = ComplaintRecord & {
   ownerId: string | null;
+  owner: { nameEn: string; email: string } | null; branch: { code: string; nameEn: string; nameAr: string };
   createdAt: Date;
   updatedAt: Date;
 };
@@ -151,7 +152,7 @@ export class ComplaintsRepository {
     return client.complaint.findMany({
       where: filter.branchId ? { branchId: filter.branchId } : {},
       orderBy: [{ createdAt: 'desc' }, { referenceNumber: 'asc' }],
-      select: { ...complaintSelect, ownerId: true, createdAt: true, updatedAt: true },
+      select: { ...complaintSelect, ownerId: true, owner: { select: { nameEn: true, email: true } }, branch: { select: { code: true, nameEn: true, nameAr: true } }, createdAt: true, updatedAt: true },
     });
   }
 
@@ -161,7 +162,7 @@ export class ComplaintsRepository {
       orderBy: [{ createdAt: 'desc' }, { referenceNumber: 'asc' }],
       select: {
         ...complaintSelect,
-        ownerId: true,
+        ownerId: true, owner: { select: { nameEn: true, email: true } }, branch: { select: { code: true, nameEn: true, nameAr: true } },
         categoryId: true,
         createdAt: true,
         updatedAt: true,
@@ -184,7 +185,7 @@ export class ComplaintsRepository {
       where: { id, ...(filter.branchId ? { branchId: filter.branchId } : {}) },
       select: {
         ...complaintSelect,
-        ownerId: true,
+        ownerId: true, owner: { select: { nameEn: true, email: true } }, branch: { select: { code: true, nameEn: true, nameAr: true } },
         descriptionEn: true,
         incidentAt: true,
         createdAt: true,

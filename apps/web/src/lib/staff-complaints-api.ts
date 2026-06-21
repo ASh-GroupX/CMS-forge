@@ -18,7 +18,9 @@ export type ComplaintQueueItem = {
   severity: ComplaintSeverity;
   subject: string;
   branchId: string;
+  branchName?: string;
   ownerId: string | null;
+  ownerName?: string | null;
   createdAt: string;
   updatedAt: string;
 };

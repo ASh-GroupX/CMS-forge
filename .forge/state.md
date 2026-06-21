@@ -1,9 +1,9 @@
 # Current State
 
-Status: Stopped - deferred human-owned ops remain
+Status: Ready to Plan - real admin users and master data queued
 Phase: Phase 10 - Dealership Accountability Layer (local-first)
-Next Task: None selected
-Model Tier: N/A
+Next Task: P10-ADMIN-REAL
+Model Tier: PLANNER-STRONG
 
 ## How to use this file
 
@@ -23,6 +23,18 @@ Prior state history is in .forge/archive/state-archive.md.
   proof-only task/status-history DONE event moved manager KPIs from 0 to 100,
   employee access returned 403, admin was allowed, and north branch scope stayed
   unchanged.
+- P10-AUTH-LOCAL is complete. The public staff login surface no longer exposes
+  preview sign-in/error shortcuts, real browser requests to `/` no longer bypass
+  auth via query preview parameters, and `corepack pnpm staff:bootstrap` creates
+  real local staff accounts with operator-supplied credentials and Argon2id
+  password hashes.
+- P10-DATA-LOCAL is complete. Complaint create now fetches branch/category/
+  severity options from the backend session, queue/search rows include readable
+  branch and owner names, and OpenAPI documents the new `/complaints/form-options`
+  route plus queue/search name fields.
+- P10-ADMIN-REAL is selected for planning. Admin users/master-data screens are
+  still not real CRUD; account creation outside tests remains the local
+  `staff:bootstrap` command until the admin module is built.
 - Runtime tasks and deals RBAC denial audit wiring now uses explicit
   Prisma-backed `AuditService` providers so denied reads return 403 with
   SECURITY audit instead of 500.
@@ -30,8 +42,7 @@ Prior state history is in .forge/archive/state-archive.md.
   rows and explicit Redis proof jobs were cleaned.
 - B4 KPI proof artifacts are under `output/p10-10b4/`; proof sessions and
   proof task/status-history rows were cleaned.
-- AUTO PHASE stops here. The only remaining Phase 10 backlog item is P10-OPS,
-  explicitly deferred human-owned production/channel work.
+- P10-OPS remains explicitly deferred human-owned production/channel work.
 - Local stack assumptions carry forward for remaining P10-10B `[stack]` tasks:
   Docker Postgres/Redis under compose project `cms-forge-local`, host database
   URL `postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto`, host Redis URL
@@ -42,7 +53,7 @@ Prior state history is in .forge/archive/state-archive.md.
 
 ## Open carry-forward / known debt
 
-- No local Phase 10 build task remains selected.
+- P10-ADMIN-REAL needs planner decomposition before build.
 - P10-OPS remains deferred and human-owned: VPS, DNS/TLS, secrets, backups,
   email sender, hardening, deployed smoke/UAT, and future channels.
 - The current role model has no explicit HR role; confidential staff access uses

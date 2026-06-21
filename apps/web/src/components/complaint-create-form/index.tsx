@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { complaintCreateText } from '../../i18n/staff-complaint-create';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
+import type { ComplaintFormOption, ComplaintFormOptions } from '../../lib/staff-complaint-form-options-api';
 import {
   createStaffComplaint,
   type ComplaintStatus,
@@ -26,9 +27,11 @@ type SubmitState =
 
 export function ComplaintCreateForm({
   locale,
+  options,
   state,
 }: {
   locale: Locale;
+  options?: ComplaintFormOptions | null;
   state?: CreateFormPreviewState | undefined;
 }) {
   const shell = staffShellText[locale];
@@ -38,6 +41,11 @@ export function ComplaintCreateForm({
   const visibleState = submitState.kind === 'idle' ? previewState(state, locale) : submitState;
   const fieldErrors = visibleState.kind === 'validation' ? visibleState.fieldErrors : [];
   const preserveInput = visibleState.kind !== 'idle';
+  const branches = options?.branches ?? [];
+  const categories = options?.categories ?? [];
+  const subcategories = categories.filter((item) => item.parentId);
+  const categoryOptions = categories.filter((item) => !item.parentId);
+  const severityOptions = options?.severities ?? ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -71,17 +79,17 @@ export function ComplaintCreateForm({
           <TextField error={fieldError(fieldErrors, 'customerName')} label={extra.fields.customerName} name="customerName" value={preserveInput ? extra.sampleCustomer : ''} />
           <TextField error={fieldError(fieldErrors, 'customerPhone')} label={extra.fields.customerPhone} name="customerPhone" type="tel" value={preserveInput ? extra.samplePhone : ''} />
           <TextField error={fieldError(fieldErrors, 'customerNumber')} label={extra.fields.customerNumber} name="customerNumber" value="" />
-          <SelectField choose={t.choose} error={fieldError(fieldErrors, 'categoryId')} label={t.fields.category} name="categoryId" preserve={preserveInput} sampleOption={t.sampleOption} />
-          <SelectField choose={t.choose} error={fieldError(fieldErrors, 'subcategoryId')} label={extra.fields.subcategory} name="subcategoryId" preserve={preserveInput} sampleOption={t.sampleOption} />
+          <SelectField choose={t.choose} error={fieldError(fieldErrors, 'categoryId')} label={t.fields.category} name="categoryId" options={categoryOptions} preserve={preserveInput} />
+          <SelectField choose={t.choose} error={fieldError(fieldErrors, 'subcategoryId')} label={extra.fields.subcategory} name="subcategoryId" options={subcategories.length ? subcategories : categories} preserve={preserveInput} />
           <label className="grid gap-1 text-sm font-medium">
             {t.fields.severity}
             <select className="rounded-sm border border-slate-300 px-2 py-2" name="severity" defaultValue={preserveInput ? 'HIGH' : ''}>
               <option value="">{t.choose}</option>
-              <option value="HIGH">{t.sampleOption}</option>
+              {severityOptions.map((severity) => <option key={severity} value={severity}>{severity}</option>)}
             </select>
             <FieldError message={fieldError(fieldErrors, 'severity')} />
           </label>
-          <SelectField choose={t.choose} error={fieldError(fieldErrors, 'branchId')} label={t.fields.branch} name="branchId" preserve={preserveInput} sampleOption={t.sampleOption} />
+          <SelectField choose={t.choose} error={fieldError(fieldErrors, 'branchId')} label={t.fields.branch} name="branchId" options={branches} preserve={preserveInput} />
           <div className="grid gap-1">
             <Label htmlFor="incidentAt">{t.fields.incidentDate}</Label>
             <Input id="incidentAt" name="incidentAt" defaultValue={preserveInput ? '2026-06-19' : ''} type="date" />
@@ -140,13 +148,14 @@ function TextField({ error, label, name, type = 'text', value, wide = false }: {
   );
 }
 
-function SelectField({ choose, error, label, name, preserve, sampleOption }: { choose: string; error: string | undefined; label: string; name: string; preserve: boolean; sampleOption: string }) {
+function SelectField({ choose, error, label, name, options, preserve }: { choose: string; error: string | undefined; label: string; name: string; options: ComplaintFormOption[]; preserve: boolean }) {
+  const value = preserve ? options[0]?.id ?? '' : '';
   return (
     <label className="grid gap-1 text-sm font-medium">
       {label}
-      <select className="rounded-sm border border-slate-300 px-2 py-2" name={name} defaultValue={preserve ? sampleValue(name) : ''}>
+      <select className="rounded-sm border border-slate-300 px-2 py-2" name={name} defaultValue={value}>
         <option value="">{choose}</option>
-        <option value={sampleValue(name)}>{sampleOption}</option>
+        {options.map((option) => <option key={option.id} value={option.id}>{option.nameEn}</option>)}
       </select>
       <FieldError message={error} />
     </label>
@@ -199,10 +208,4 @@ function optionalTextValue(formData: FormData, field: string): string | null {
 
 function incidentAtValue(value: string): string {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00.000Z` : value;
-}
-
-function sampleValue(name: string): string {
-  if (name === 'branchId') return 'branch_main';
-  if (name === 'subcategoryId') return 'cat_engine';
-  return 'cat_parent';
 }

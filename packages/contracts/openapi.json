@@ -1548,6 +1548,47 @@
         }
       }
     },
+    "/complaints/form-options": {
+      "get": {
+        "tags": [
+          "Complaints"
+        ],
+        "operationId": "complaintFormOptions",
+        "summary": "List server-scoped complaint form options",
+        "responses": {
+          "200": {
+            "description": "Complaint form options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintFormOptionsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or branch scope denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/complaints": {
       "get": {
         "tags": [
@@ -3986,6 +4027,71 @@
         },
         "additionalProperties": false
       },
+      "ComplaintFormOption": {
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "nameEn",
+          "nameAr"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintFormOptionsResponse": {
+        "type": "object",
+        "required": [
+          "branches",
+          "categories",
+          "severities"
+        ],
+        "properties": {
+          "branches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplaintFormOption"
+            }
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplaintFormOption"
+            }
+          },
+          "severities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "CRITICAL",
+                "HIGH",
+                "MEDIUM",
+                "LOW"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false
+      },
       "ComplaintQueueItem": {
         "type": "object",
         "required": [
@@ -3995,7 +4101,9 @@
           "severity",
           "subject",
           "branchId",
+          "branchName",
           "ownerId",
+          "ownerName",
           "createdAt",
           "updatedAt"
         ],
@@ -4035,7 +4143,16 @@
           "branchId": {
             "type": "string"
           },
+          "branchName": {
+            "type": "string"
+          },
           "ownerId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ownerName": {
             "type": [
               "string",
               "null"
@@ -4076,7 +4193,9 @@
           "severity",
           "subject",
           "branchId",
+          "branchName",
           "ownerId",
+          "ownerName",
           "createdAt",
           "updatedAt",
           "categoryId",
@@ -4120,7 +4239,16 @@
           "branchId": {
             "type": "string"
           },
+          "branchName": {
+            "type": "string"
+          },
           "ownerId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ownerName": {
             "type": [
               "string",
               "null"

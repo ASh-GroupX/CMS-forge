@@ -6,7 +6,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "start": "node dist/main.js"
+    "start": "node dist/main.js",
+    "staff:bootstrap": "tsx scripts/bootstrap-staff.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1073.0",

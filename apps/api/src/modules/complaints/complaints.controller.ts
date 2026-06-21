@@ -4,6 +4,7 @@ import { BranchScoped, RbacGuard, Roles, SessionAuthGuard } from '../../core/aut
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { AppException } from '../../core/http-kernel.js';
+import { ComplaintFormOptionsService } from './complaint-form-options.service.js';
 import { ComplaintsService } from './complaints.service.js';
 import type { ComplaintCommentResponseDto, ComplaintPublicCommentsResponseDto } from './dto/complaint-comment.dto.js';
 import { parseComplaintCommentBody, toCommentInput } from './dto/complaint-comment.dto.js';
@@ -15,7 +16,7 @@ import { parseComplaintTransitionBody, toTransitionInput } from './dto/complaint
 
 @Controller('complaints')
 export class ComplaintsController {
-  constructor(private readonly complaintsService: ComplaintsService) {}
+  constructor(private readonly complaintsService: ComplaintsService, private readonly formOptions: ComplaintFormOptionsService) {}
 
   @Get()
   @UseGuards(SessionAuthGuard, RbacGuard)
@@ -46,6 +47,13 @@ export class ComplaintsController {
       dateTo: optionalText(query.dateTo),
     });
     return { items: items.slice(offset, offset + limit), limit, offset };
+  }
+
+  @Get('form-options')
+  @UseGuards(SessionAuthGuard, RbacGuard)
+  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  async formOptionsForCreate(@Req() request: AuthenticatedRequest) {
+    return this.formOptions.list(request.principal!);
   }
 
   @Get(':id')
