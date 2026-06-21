@@ -1,0 +1,25 @@
+{
+  "api": {
+    "stuckDeal": {
+      "id": "seed_deal_stuck",
+      "title": "Sonata finance handoff",
+      "stage": "QUALIFIED",
+      "currentHolderMatchesSessionBranchManager": true,
+      "blocker": "Finance approval missing",
+      "delayAgeMinutes": 4212
+    },
+    "byStageCount": 1,
+    "currentHolderRows": 1,
+    "employeeDeniedHandoffStatus": 403,
+    "branchScopedExcludedMainDeal": true
+  },
+  "web": {
+    "en": true,
+    "arRtl": true
+  },
+  "artifacts": [
+    "output/p10-10b2/api-deals-handoff-board.json",
+    "output/p10-10b2/web-deals-handoff-en.html",
+    "output/p10-10b2/web-deals-handoff-ar.html"
+  ]
+}

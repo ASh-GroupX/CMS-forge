@@ -1,9 +1,9 @@
 # Current State
 
-Status: Ready to Plan
+Status: Stopped - deferred human-owned ops remain
 Phase: Phase 10 - Dealership Accountability Layer (local-first)
-Next Task: P10-10B - End-to-end local Phase 10 proof split
-Model Tier: BUILDER-STRONG
+Next Task: None selected
+Model Tier: N/A
 
 ## How to use this file
 
@@ -12,26 +12,39 @@ Prior state history is in .forge/archive/state-archive.md.
 
 ## Snapshot
 
-- Local stack is usable for Phase 10 `[stack]` tasks.
-- Docker Desktop is reachable.
-- Project Postgres and Redis are running under compose project
-  `cms-forge-local`.
-- Host-side database URL is
-  `postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto` because Windows
-  PostgreSQL still owns host port 5432.
-- Host-side Redis URL is `redis://localhost:6379`.
-- Prisma migrations are applied and `$env:DATABASE_URL='postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto'; corepack pnpm db:seed` passes.
-- API is not left running by the latest proof cleanup; start it with
-  `PORT=3000` and the host-side database URL when needed.
-- Web is running at `http://localhost:4000`.
-- P10-09 is complete: the authenticated confidential case timeline route and
-  staff screen both delegate restricted-note visibility to backend
-  actor-scoped ACLs, with local screenshot proof.
+- P10-10B1 is complete. Employee Today and Manager Control Room were proved
+  locally against seeded data through API and EN/AR web route smokes.
+- P10-10B2 is complete. Deal Handoff Board was proved locally against seeded
+  stuck deal data through API and EN/AR web route smokes.
+- P10-10B3 is complete. The compiled BullMQ worker processed
+  `tasks.escalation.scan`, created one idempotent escalation notification for
+  `seed_task_overdue_promise`, and rerun preserved the same row id.
+- P10-10B4 is complete. `/reports/kpis` and `/reports` were proved locally; a
+  proof-only task/status-history DONE event moved manager KPIs from 0 to 100,
+  employee access returned 403, admin was allowed, and north branch scope stayed
+  unchanged.
+- Runtime tasks and deals RBAC denial audit wiring now uses explicit
+  Prisma-backed `AuditService` providers so denied reads return 403 with
+  SECURITY audit instead of 500.
+- B3 worker proof artifacts are under `output/p10-10b3/`; proof notification
+  rows and explicit Redis proof jobs were cleaned.
+- B4 KPI proof artifacts are under `output/p10-10b4/`; proof sessions and
+  proof task/status-history rows were cleaned.
+- AUTO PHASE stops here. The only remaining Phase 10 backlog item is P10-OPS,
+  explicitly deferred human-owned production/channel work.
+- Local stack assumptions carry forward for remaining P10-10B `[stack]` tasks:
+  Docker Postgres/Redis under compose project `cms-forge-local`, host database
+  URL `postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto`, host Redis URL
+  `redis://localhost:6379`, API on `PORT=3000` when needed, and web at
+  `http://localhost:4000`.
+- Proof must remain local-first: no production deploy, SMTP, WhatsApp, AI,
+  mobile, or HR-platform work.
 
 ## Open carry-forward / known debt
 
-- Phase 10 is not complete. The next task is to split P10-10B into buildable
-  local end-to-end proof tasks before implementation.
+- No local Phase 10 build task remains selected.
+- P10-OPS remains deferred and human-owned: VPS, DNS/TLS, secrets, backups,
+  email sender, hardening, deployed smoke/UAT, and future channels.
 - The current role model has no explicit HR role; confidential staff access uses
   backend participant ACL plus existing manager/admin-capable staff surfaces.
 - Manager rollup batching currently queues one internal manager-scope in-app row

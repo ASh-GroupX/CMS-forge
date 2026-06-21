@@ -1,0 +1,74 @@
+{
+  "byStage": [
+    {
+      "stage": "LEAD",
+      "count": 0,
+      "deals": []
+    },
+    {
+      "stage": "QUALIFIED",
+      "count": 1,
+      "deals": [
+        {
+          "id": "seed_deal_stuck",
+          "title": "Sonata finance handoff",
+          "branchId": "cmqmuanyg000110dfusqrye3h",
+          "ownerId": "cmqmuanzx000d10df6rib78qu",
+          "currentHolderId": "cmqmuanzx000d10df6rib78qu",
+          "stage": "QUALIFIED",
+          "stageDueAt": "2026-06-18T09:00:00.000Z",
+          "blocker": "Finance approval missing",
+          "createdAt": "2026-06-20T20:58:12.927Z",
+          "updatedAt": "2026-06-21T07:10:33.378Z",
+          "delayAgeMinutes": 4212
+        }
+      ]
+    },
+    {
+      "stage": "TEST_DRIVE",
+      "count": 0,
+      "deals": []
+    },
+    {
+      "stage": "QUOTE",
+      "count": 0,
+      "deals": []
+    },
+    {
+      "stage": "FINANCE",
+      "count": 0,
+      "deals": []
+    },
+    {
+      "stage": "DELIVERY",
+      "count": 0,
+      "deals": []
+    },
+    {
+      "stage": "POST_DELIVERY",
+      "count": 0,
+      "deals": []
+    }
+  ],
+  "stuck": [
+    {
+      "id": "seed_deal_stuck",
+      "title": "Sonata finance handoff",
+      "branchId": "cmqmuanyg000110dfusqrye3h",
+      "ownerId": "cmqmuanzx000d10df6rib78qu",
+      "currentHolderId": "cmqmuanzx000d10df6rib78qu",
+      "stage": "QUALIFIED",
+      "stageDueAt": "2026-06-18T09:00:00.000Z",
+      "blocker": "Finance approval missing",
+      "createdAt": "2026-06-20T20:58:12.927Z",
+      "updatedAt": "2026-06-21T07:10:33.378Z",
+      "delayAgeMinutes": 4212
+    }
+  ],
+  "currentHolder": [
+    {
+      "currentHolderId": "cmqmuanzx000d10df6rib78qu",
+      "count": 1
+    }
+  ]
+}

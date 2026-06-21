@@ -14,7 +14,11 @@ import { DealsService } from './deals.service.js';
   controllers: [DealsController],
   providers: [
     PrismaService,
-    AuditService,
+    {
+      provide: AuditService,
+      inject: [PrismaService],
+      useFactory: (prisma: PrismaService) => new AuditService(prisma),
+    },
     DealsRepository,
     DealsService,
     {

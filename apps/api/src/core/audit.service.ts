@@ -1,4 +1,5 @@
 import type { AuditEventType, Prisma } from '@prisma/client';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from './http-kernel.js';
 
 type AuditClient = Pick<PrismaService, 'auditLog'>;
@@ -16,6 +17,7 @@ export type AuditRecordInput = {
   metadata?: Prisma.InputJsonValue;
 };
 
+@Injectable()
 export class AuditService {
   constructor(private readonly prisma: PrismaService) {}
 

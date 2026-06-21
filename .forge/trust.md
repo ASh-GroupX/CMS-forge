@@ -1405,3 +1405,66 @@ making Cases controller/repository/service injection explicit. `db:seed`, lint,
 typecheck, `test:api -- cases`, `test:web -- shell`, root tests, backend smoke,
 web route smoke, and Playwright screenshot proof passed. P10-09 is closed. P10-10B
 is broad end-to-end proof work and should be split before build.
+
+## P10-10B1 Builder Trust Note
+
+Date: 2026-06-21
+Risk: High
+Recommendation: Continue
+
+P10-10B1 is complete: the local seeded Employee Today and Manager Control Room
+surfaces were proved through API and web EN/AR route smokes with sanitized
+artifacts in `output/p10-10b1/`. The live proof caught a runtime tasks RBAC-deny
+audit wiring bug that converted employee denial on `/tasks/manager-rollup` into
+500; `TasksModule` now uses explicit Prisma-backed `AuditService` wiring and a
+focused API regression covers it. `db:seed`, lint, API tasks tests, API
+typecheck/build, web shell tests, root tests, live route smokes, cleanup checks,
+and secret scans passed. Continue to P10-10B2.
+
+## P10-10B2 Builder Trust Note
+
+Date: 2026-06-21
+Risk: High
+Recommendation: Continue
+
+P10-10B2 is complete: the seeded Deal Handoff Board was proved through API and
+web EN/AR route smokes with sanitized artifacts in `output/p10-10b2/`. The north
+branch manager sees `seed_deal_stuck` with stage, holder, blocker, delay age,
+and branch scope; the main-branch deal is excluded and ordinary employee access
+returns 403. `DealsModule` now uses explicit Prisma-backed `AuditService` wiring
+for RBAC denial audit, covered by a focused API regression. `db:seed`, lint,
+API deals tests, API typecheck/build, web shell tests, root tests, live route
+smokes, cleanup checks, and secret scans passed. Continue to P10-10B3.
+
+## P10-10B3 Builder Trust Note
+
+Date: 2026-06-21
+Risk: High
+Recommendation: Continue
+
+P10-10B3 is complete: the compiled local worker processed
+`tasks.escalation.scan` from the BullMQ `notifications` queue, created exactly
+one idempotent `task.escalation.internal` in-app notification for
+`seed_task_overdue_promise`, and an explicit rerun preserved the same row id.
+The proof used backend-derived manager scope, ignored hostile job payload
+role/branch values, required no SMTP/VPS/WhatsApp dependency, and cleaned the
+proof notification rows plus explicit Redis jobs. `db:seed`, API task tests,
+API notification tests, root tests, worker/data proof, cleanup checks, secret
+scan, and diff whitespace check passed. Continue to P10-10B4.
+
+## P10-10B4 Builder Trust Note
+
+Date: 2026-06-21
+Risk: High
+Recommendation: Stop - Local Phase 10 Build Complete
+
+P10-10B4 is complete: `/reports/kpis` and `/reports` were proved locally with
+real seeded sessions and backend data. A proof-only main branch task plus
+`task_status_history` DONE event moved manager KPI values from
+`onTimeCompletionPercent 0 -> 100` and `customerPromiseKeptPercent 0 -> 100`;
+admin remained allowed, employee access returned 403, and north branch KPI data
+was unchanged. Web EN/AR reports rendered the moved value, proof sessions/data
+were deleted, artifact secret scan passed, and required reports API, web shell,
+root coverage, seed, and diff checks passed. P10-10B local proof work is
+complete. Stop AUTO PHASE before P10-OPS because it is explicitly deferred,
+human-owned production/channel work.

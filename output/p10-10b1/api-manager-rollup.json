@@ -1,0 +1,193 @@
+{
+  "overdueByEmployee": [
+    {
+      "assigneeId": "cmqmuanzy000f10dfc5mu124h",
+      "count": 1
+    },
+    {
+      "assigneeId": "cmqmuanzr000b10dfdslvwgre",
+      "count": 1
+    }
+  ],
+  "dueToday": [],
+  "overduePromises": [
+    {
+      "id": "seed_task_overdue_promise",
+      "title": "Call customer with delivery update",
+      "ownerId": "cmqmuanzr000b10dfdslvwgre",
+      "assigneeId": "cmqmuanzy000f10dfc5mu124h",
+      "dueAt": "2026-06-18T09:00:00.000Z",
+      "status": "OPEN",
+      "nextAction": {
+        "what": "Call customer with delivery update",
+        "whoId": "cmqmuanzy000f10dfc5mu124h",
+        "when": "2026-06-18T08:30:00.000Z"
+      },
+      "isCustomerPromise": true,
+      "visibility": "PARTICIPANTS",
+      "confidentialityLevel": "NORMAL",
+      "links": [
+        {
+          "entityType": "CUSTOMER",
+          "entityId": "cmqmuao0v000m10dfvwhn0dfp"
+        },
+        {
+          "entityType": "DEAL",
+          "entityId": "seed_deal_active"
+        }
+      ],
+      "participantUserIds": [
+        "cmqmuanzr000b10dfdslvwgre",
+        "cmqmuanzy000f10dfc5mu124h"
+      ],
+      "createdAt": "2026-06-20T20:58:12.933Z",
+      "updatedAt": "2026-06-21T06:57:29.977Z"
+    }
+  ],
+  "stuck": [
+    {
+      "id": "seed_task_overdue_promise",
+      "title": "Call customer with delivery update",
+      "ownerId": "cmqmuanzr000b10dfdslvwgre",
+      "assigneeId": "cmqmuanzy000f10dfc5mu124h",
+      "dueAt": "2026-06-18T09:00:00.000Z",
+      "status": "OPEN",
+      "nextAction": {
+        "what": "Call customer with delivery update",
+        "whoId": "cmqmuanzy000f10dfc5mu124h",
+        "when": "2026-06-18T08:30:00.000Z"
+      },
+      "isCustomerPromise": true,
+      "visibility": "PARTICIPANTS",
+      "confidentialityLevel": "NORMAL",
+      "links": [
+        {
+          "entityType": "CUSTOMER",
+          "entityId": "cmqmuao0v000m10dfvwhn0dfp"
+        },
+        {
+          "entityType": "DEAL",
+          "entityId": "seed_deal_active"
+        }
+      ],
+      "participantUserIds": [
+        "cmqmuanzr000b10dfdslvwgre",
+        "cmqmuanzy000f10dfc5mu124h"
+      ],
+      "createdAt": "2026-06-20T20:58:12.933Z",
+      "updatedAt": "2026-06-21T06:57:29.977Z",
+      "stuckReasons": [
+        "NEXT_ACTION_OVERDUE"
+      ]
+    },
+    {
+      "id": "seed_task_internal_confidential",
+      "title": "Prepare HR grievance interview",
+      "ownerId": "cmqmuanzr000a10dfcnsuojfj",
+      "assigneeId": "cmqmuanzr000b10dfdslvwgre",
+      "dueAt": "2026-06-19T09:00:00.000Z",
+      "status": "OPEN",
+      "nextAction": {
+        "what": "Prepare HR grievance interview",
+        "whoId": "cmqmuanzr000b10dfdslvwgre",
+        "when": "2026-06-19T08:30:00.000Z"
+      },
+      "isCustomerPromise": false,
+      "visibility": "PARTICIPANTS",
+      "confidentialityLevel": "CONFIDENTIAL",
+      "links": [
+        {
+          "entityType": "EMPLOYEE",
+          "entityId": "cmqmuanzy000f10dfc5mu124h"
+        }
+      ],
+      "participantUserIds": [
+        "cmqmuanzr000a10dfcnsuojfj",
+        "cmqmuanzr000b10dfdslvwgre",
+        "cmqmuanzy000f10dfc5mu124h"
+      ],
+      "createdAt": "2026-06-20T20:58:12.933Z",
+      "updatedAt": "2026-06-21T06:57:29.977Z",
+      "stuckReasons": [
+        "NEXT_ACTION_OVERDUE"
+      ]
+    }
+  ],
+  "workloadByAssignee": [
+    {
+      "assigneeId": "cmqmuanzy000f10dfc5mu124h",
+      "count": 1
+    },
+    {
+      "assigneeId": "cmqmuanzr000b10dfdslvwgre",
+      "count": 1
+    }
+  ],
+  "escalated": [
+    {
+      "id": "seed_task_overdue_promise",
+      "title": "Call customer with delivery update",
+      "ownerId": "cmqmuanzr000b10dfdslvwgre",
+      "assigneeId": "cmqmuanzy000f10dfc5mu124h",
+      "dueAt": "2026-06-18T09:00:00.000Z",
+      "status": "OPEN",
+      "nextAction": {
+        "what": "Call customer with delivery update",
+        "whoId": "cmqmuanzy000f10dfc5mu124h",
+        "when": "2026-06-18T08:30:00.000Z"
+      },
+      "isCustomerPromise": true,
+      "visibility": "PARTICIPANTS",
+      "confidentialityLevel": "NORMAL",
+      "links": [
+        {
+          "entityType": "CUSTOMER",
+          "entityId": "cmqmuao0v000m10dfvwhn0dfp"
+        },
+        {
+          "entityType": "DEAL",
+          "entityId": "seed_deal_active"
+        }
+      ],
+      "participantUserIds": [
+        "cmqmuanzr000b10dfdslvwgre",
+        "cmqmuanzy000f10dfc5mu124h"
+      ],
+      "createdAt": "2026-06-20T20:58:12.933Z",
+      "updatedAt": "2026-06-21T06:57:29.977Z"
+    },
+    {
+      "id": "seed_task_internal_confidential",
+      "title": "Prepare HR grievance interview",
+      "ownerId": "cmqmuanzr000a10dfcnsuojfj",
+      "assigneeId": "cmqmuanzr000b10dfdslvwgre",
+      "dueAt": "2026-06-19T09:00:00.000Z",
+      "status": "OPEN",
+      "nextAction": {
+        "what": "Prepare HR grievance interview",
+        "whoId": "cmqmuanzr000b10dfdslvwgre",
+        "when": "2026-06-19T08:30:00.000Z"
+      },
+      "isCustomerPromise": false,
+      "visibility": "PARTICIPANTS",
+      "confidentialityLevel": "CONFIDENTIAL",
+      "links": [
+        {
+          "entityType": "EMPLOYEE",
+          "entityId": "cmqmuanzy000f10dfc5mu124h"
+        }
+      ],
+      "participantUserIds": [
+        "cmqmuanzr000a10dfcnsuojfj",
+        "cmqmuanzr000b10dfdslvwgre",
+        "cmqmuanzy000f10dfc5mu124h"
+      ],
+      "createdAt": "2026-06-20T20:58:12.933Z",
+      "updatedAt": "2026-06-21T06:57:29.977Z"
+    }
+  ],
+  "promiseKpi": {
+    "openPromiseCount": 1,
+    "overduePromiseCount": 1
+  }
+}

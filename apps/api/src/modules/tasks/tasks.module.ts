@@ -14,7 +14,11 @@ import { TasksService } from './tasks.service.js';
   controllers: [TasksController],
   providers: [
     PrismaService,
-    AuditService,
+    {
+      provide: AuditService,
+      inject: [PrismaService],
+      useFactory: (prisma: PrismaService) => new AuditService(prisma),
+    },
     TasksRepository,
     TasksService,
     {

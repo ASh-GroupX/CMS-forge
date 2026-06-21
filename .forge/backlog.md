@@ -501,6 +501,26 @@ PLAN-split into 1-5 file sub-tasks before build, like F1-05 was.
         overdue tasks, a stuck deal, a complaint, an internal task.
   - [ ] P10-10B `[stack]`: End-to-end local proof - employee sees today -> manager sees
         late/stuck -> deal handoff -> overdue escalates -> KPI moves from the timeline.
+    - [x] P10-10B1 `[stack]`: Employee Today + Manager Control Room local proof.
+          Routes/APIs: web `/tasks/today`, web `/tasks/manager`, API `/tasks/today`,
+          API `/tasks/manager-rollup`. Evidence: seeded employee sees today's/
+          overdue/assigned work; seeded manager sees overdue-by-employee, stuck,
+          workload, escalated, and promise signals; EN/AR route proof or screenshots;
+          staff session cookie only, no client role/branch authority.
+    - [x] P10-10B2 `[stack]`: Deal Handoff Board local proof.
+          Routes/APIs: web `/deals/handoff`, API `/deals/handoff-board`. Evidence:
+          seeded stuck deal appears with current stage, holder, delay age, and branch
+          scope; unauthorized employee denied; EN/AR route proof or screenshots.
+    - [x] P10-10B3 `[stack]`: Worker escalation local proof.
+          Job/API: BullMQ job `tasks.escalation.scan`, plus notification API/data
+          proof. Evidence: seeded overdue task produces one idempotent escalation
+          notification through the existing worker path; rerun does not duplicate;
+          no SMTP/VPS/WhatsApp dependency.
+    - [x] P10-10B4 `[stack]`: KPI movement from timeline local proof.
+          Route/API: web `/reports`, API `/reports/kpis`. Evidence: before/after
+          KPI values move from task/status-history/complaint events, not client
+          counters; manager/admin allowed, employee denied, branch scope preserved;
+          proof artifacts cleaned of temporary sessions and cookies.
 - [ ] P10-OPS (deferred): capture channels - email-to-task, then WhatsApp / mobile.
   - [ ] O-01: Provision Hostinger Ubuntu VPS and install Docker + Compose
   - [ ] O-02: Point domain A-record to VPS and confirm Caddy TLS issuance

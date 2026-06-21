@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import 'reflect-metadata';
 import { Reflector } from '@nestjs/core';
+import { MODULE_METADATA } from '@nestjs/common/constants';
 import type { ExecutionContext } from '@nestjs/common';
 import {
   RoleCode,
@@ -11,10 +12,12 @@ import {
   TaskVisibility,
 } from '@prisma/client';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
+import { AuditService as CoreAuditService } from '../../src/core/audit.service.ts';
 import { RbacGuard } from '../../src/core/auth.guard.ts';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
-import { AppException } from '../../src/core/http-kernel.ts';
+import { AppException, PrismaService } from '../../src/core/http-kernel.ts';
 import { TasksController } from '../../src/modules/tasks/tasks.controller.ts';
+import { TasksModule } from '../../src/modules/tasks/tasks.module.ts';
 import { promiseKeptOnTime } from '../../src/modules/tasks/tasks.promise.ts';
 import type { TaskRecord, TasksRepository } from '../../src/modules/tasks/tasks.repository.ts';
 import { TasksService } from '../../src/modules/tasks/tasks.service.ts';
@@ -65,6 +68,15 @@ test('ordinary employee is denied by manager rollup RBAC', async () => {
     guard.canActivate(context(request(employee))),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
+});
+
+test('tasks module wires audit service with Prisma for runtime RBAC denies', () => {
+  const providers = Reflect.getMetadata(MODULE_METADATA.PROVIDERS, TasksModule) as unknown[];
+  assert.ok(providers.some((provider) => {
+    if (!provider || typeof provider !== 'object') return false;
+    const wired = provider as { provide?: unknown; inject?: unknown[] };
+    return wired.provide === CoreAuditService && wired.inject?.includes(PrismaService);
+  }));
 });
 
 test('cross-branch manager rollup request is denied and audited', async () => {

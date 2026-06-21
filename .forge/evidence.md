@@ -5025,3 +5025,332 @@ Status: Passed through P9-02
 - Trust boundaries tested: Passed. Web tests cover allowed actor-scoped
   restricted-note rendering, denied/no-note states without private notes, Arabic
   RTL labels, and cookie-only backend forwarding.
+
+## P10-10B1 Employee Today And Manager Control Room Local Proof
+
+- Date: 2026-06-21
+- Risk: High
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, NFR-SEC-002, ARCH-UI-001, UI-DESIGN-001,
+  METHOD-TEST-001, UAT-SCRIPT-001
+
+### Changes
+
+1. Proved the existing seeded Employee Today and Manager Control Room API/web
+   surfaces against the local Docker Postgres/Redis stack.
+2. Fixed runtime RBAC-denial auditing for `TasksModule` by wiring
+   `AuditService` with the same explicit Prisma factory pattern used by auth and
+   audit modules.
+3. Added a focused tasks API regression that asserts the runtime tasks module
+   provides Prisma-backed audit service wiring for RBAC denies.
+4. Wrote sanitized route-smoke artifacts to `output/p10-10b1/`.
+
+### Verification
+
+- Passed: `$env:DATABASE_URL='postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto'; corepack pnpm db:seed`.
+- Failed then Passed: `corepack pnpm test:api -- tasks`. Initial added
+  metadata assertion did not hold under the test transpiler; replaced with a
+  direct `TasksModule` provider-wiring assertion. Final run passed 11/11.
+- Passed: `corepack pnpm test:web -- shell` (177/177).
+- Passed: `corepack pnpm test` (58/58 with coverage gates).
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm exec tsc -p apps/api/tsconfig.json --noEmit`.
+- Passed: `corepack pnpm exec tsc -p apps/api/tsconfig.json`.
+- Failed then Passed: live API route smoke. Initial employee denial for
+  `GET /tasks/manager-rollup` returned 500 because RBAC denial audit used a
+  runtime `AuditService` without Prisma injection in `TasksModule`; fixed by
+  explicit provider factory. Final live smoke returned 403 for employee denial.
+- Passed: live API `GET /tasks/today` with seeded
+  `officer.main@cms-auto.test` session returned bucket counts
+  dueToday=0, overdue=2, overduePromises=1, assignedToMe=1, waitingOnMe=1.
+- Passed: live API `GET /tasks/manager-rollup` with seeded
+  `cr.manager@cms-auto.test` session returned overdueByEmployee=2,
+  dueToday=0, stuck=2, workloadByAssignee=2, escalated=2,
+  overduePromises=1, promiseKpi open=1/overdue=1.
+- Passed: live web route smokes for `/tasks/today?locale=en`,
+  `/tasks/today?locale=ar`, `/tasks/manager?locale=en`, and
+  `/tasks/manager?locale=ar` rendered seeded task signals and RTL Arabic.
+- Passed: cleanup check found `p10_10b1_session_count=0`; `rg` found no
+  `cms_staff_session`, token hash, password, secret, or credential strings in
+  `output/p10-10b1`; no storage-state/cookie/session artifact files remained.
+
+### Artifacts
+
+- `output/p10-10b1/summary.json`
+- `output/p10-10b1/api-tasks-today.json`
+- `output/p10-10b1/api-manager-rollup.json`
+- `output/p10-10b1/web-tasks-today-en.html`
+- `output/p10-10b1/web-tasks-today-ar.html`
+- `output/p10-10b1/web-tasks-manager-en.html`
+- `output/p10-10b1/web-tasks-manager-ar.html`
+
+### Notes
+
+- Fixed seed dates mean the due-today buckets are empty on 2026-06-21; the
+  seeded employee proof covers overdue, assigned-to-me, waiting-on-me, and
+  overdue promise work.
+- The API proof process started for the smoke was stopped after proof. The
+  pre-existing web server on port 4000 was left alone.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed.
+  `TasksController` derives actor/scope from `request.principal`; web clients
+  forward only the staff session cookie, and tests assert no client role, actor,
+  branch, owner, token, or credential authority is sent.
+- State change history + audit in same transaction: not applicable for the
+  read-only proof surfaces. The runtime denial path now writes SECURITY audit
+  through a Prisma-backed `AuditService` before returning 403.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Raw cookies were kept in memory only, output artifacts are
+  sanitized, and proof session rows were deleted.
+- Customer portal exposure rules: not applicable; no customer portal route or
+  public data surface changed.
+- Trust boundaries tested: Passed. API tests cover manager/admin allow,
+  ordinary employee deny, cross-branch deny with audit, and live proof confirms
+  employee denial returns 403 on `/tasks/manager-rollup`.
+
+## P10-10B2 Deal Handoff Board Local Proof
+
+- Date: 2026-06-21
+- Risk: High
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, NFR-SEC-002, ARCH-UI-001, UI-DESIGN-001,
+  METHOD-TEST-001, UAT-SCRIPT-001
+
+### Changes
+
+1. Proved the existing Deal Handoff Board API/web surfaces against the local
+   Docker Postgres/Redis stack and P10-10A seeded dealership data.
+2. Fixed runtime RBAC-denial auditing for `DealsModule` by wiring
+   `AuditService` with explicit Prisma factory injection, matching the tasks
+   module repair and existing auth/audit factory pattern.
+3. Added a focused deals API regression that asserts the runtime deals module
+   provides Prisma-backed audit service wiring for RBAC denies.
+4. Wrote sanitized route-smoke artifacts to `output/p10-10b2/`.
+
+### Verification
+
+- Passed: `$env:DATABASE_URL='postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto'; corepack pnpm db:seed`.
+- Passed: `corepack pnpm test:api -- deals` (8/8).
+- Passed: `corepack pnpm test:web -- shell` (177/177).
+- Passed: `corepack pnpm test` (58/58 with coverage gates).
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm exec tsc -p apps/api/tsconfig.json --noEmit`.
+- Passed: `corepack pnpm exec tsc -p apps/api/tsconfig.json`.
+- Passed: live API `GET /deals/handoff-board` with seeded
+  `branch.mgr.north@cms-auto.test` session returned stuck deal
+  `seed_deal_stuck`, title `Sonata finance handoff`, stage `QUALIFIED`,
+  blocker `Finance approval missing`, positive delay age, and holder matching
+  the north branch manager session.
+- Passed: live API branch-scope proof excluded main-branch `seed_deal_active`
+  from the north branch manager's stuck board.
+- Passed: live API denied proof returned 403 for seeded
+  `officer.main@cms-auto.test` on `/deals/handoff-board`.
+- Passed: live web route smokes for `/deals/handoff?locale=en` and
+  `/deals/handoff?locale=ar` rendered the seeded stuck deal, blocker, stage, and
+  RTL Arabic.
+- Passed: cleanup check found `p10_10b2_session_count=0`; `rg` found no
+  `cms_staff_session`, token hash, password, secret, or credential strings in
+  `output/p10-10b2`; no storage-state/cookie/session artifact files remained.
+
+### Artifacts
+
+- `output/p10-10b2/summary.json`
+- `output/p10-10b2/api-deals-handoff-board.json`
+- `output/p10-10b2/web-deals-handoff-en.html`
+- `output/p10-10b2/web-deals-handoff-ar.html`
+
+### Notes
+
+- The route is read-only. No deal stage mutation, production deploy, SMTP,
+  WhatsApp, AI, mobile, or HR-platform work was introduced.
+- The API proof process started for the smoke was stopped after proof. The
+  pre-existing web server on port 4000 was left alone.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed.
+  `DealsController` derives scope from `request.principal`; web clients forward
+  only the staff session cookie, and tests assert no role, actor, workflow,
+  branch, owner, token, or credential authority is sent.
+- State change history + audit in same transaction: not applicable for the
+  read-only proof surfaces. Runtime denied reads write SECURITY audit through a
+  Prisma-backed `AuditService` before returning 403.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Raw cookies were kept in memory only, output artifacts are
+  sanitized, and proof session rows were deleted.
+- Customer portal exposure rules: not applicable; no customer portal route or
+  public data surface changed.
+- Trust boundaries tested: Passed. API tests cover manager/admin allow,
+  ordinary employee deny, cross-branch deny with audit, and live proof confirms
+  employee denial returns 403 on `/deals/handoff-board`.
+
+## P10-10B3 Worker Escalation Local Proof
+
+- Date: 2026-06-21
+- Risk: High
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, NFR-SEC-002, METHOD-TEST-001, UAT-SCRIPT-001
+
+### Changes
+
+1. Proved the existing BullMQ `notifications` worker path for
+   `tasks.escalation.scan` against the local Docker Postgres/Redis stack and
+   P10-10A seeded task data.
+2. Ran the compiled worker entrypoint `apps/api/dist/worker/index.js`; no
+   alternate service path or repository shortcut was used for the proof.
+3. Proved `seed_task_overdue_promise` creates exactly one queued in-app
+   `task.escalation.internal` notification with a stable idempotency key.
+4. Proved a rerun with hostile client payload role/branch values did not create
+   a duplicate; the target notification row id stayed the same.
+5. Wrote sanitized worker/data proof artifacts to `output/p10-10b3/`.
+
+### Verification
+
+- Passed: `$env:DATABASE_URL='postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto'; corepack pnpm db:seed`.
+- Passed: `corepack pnpm exec tsc -p apps/api/tsconfig.json`.
+- Passed: compiled worker startup with `REDIS_URL=redis://localhost:6379`;
+  worker log showed `worker ready queues=sla,notifications,attachments-scan`.
+- Passed: worker processed the scheduled `tasks.escalation.scan` job once on
+  startup, then the controlled proof deleted those proof-surface notification
+  rows before the explicit run.
+- Passed: explicit job `p10-10b3-escalation-first` returned
+  `{ scanned: 2, queued: 2 }` and created one target notification for
+  `seed_task_overdue_promise`; payload contained
+  `task-escalation:seed_task_overdue_promise:BRANCH_MANAGER:2026-06-18T08:30:00.000Z`.
+- Passed: explicit rerun job `p10-10b3-escalation-rerun` returned
+  `{ scanned: 2, queued: 2 }`, left `afterRerunTargetCount=1`, and preserved the
+  same target row id.
+- Passed: cleanup removed proof notification rows; final DB probe returned
+  `{"proofTemplates":0,"target":0}`.
+- Passed: explicit Redis proof jobs were removed; final queue probe returned
+  `{"proofJobCount":0}`.
+- Passed: worker process was stopped; `worker_alive=False`.
+- Passed: artifact secret scan found no `cms_staff_session`, token, password,
+  secret, credential, OTP, or hash strings under `output/p10-10b3`.
+- Passed: `corepack pnpm test:api -- tasks` (11/11).
+- Passed: `corepack pnpm test:api -- notifications` (41/41).
+- Passed: `corepack pnpm test` (58/58 with coverage gates).
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Artifacts
+
+- `output/p10-10b3/summary.json`
+- `output/p10-10b3/worker.stdout.log`
+- `output/p10-10b3/worker.stderr.log`
+
+### Notes
+
+- The proof did not require SMTP, VPS, WhatsApp, AI, mobile, or HR-platform
+  services. External notification dispatch was not invoked for the escalation
+  proof; the worker queued internal in-app notifications only.
+- The worker ignores job payload authority for escalation scans; candidates are
+  derived from backend manager rollup scope `{ roleCode: ADMIN, branchId: null }`
+  and task rows.
+
+### Security Self-Check
+
+- Roles and branch scope from server session/backend-owned context, never client
+  input: Passed. The worker uses backend manager scope for escalation selection
+  and ignored hostile job payload role/branch values in the proof.
+- State change history + audit in same transaction: not applicable; the task
+  proof creates idempotent internal notification rows and performs no workflow
+  state mutation.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Artifacts contain no session cookies or provider secrets,
+  and proof rows/jobs were removed after measurement.
+- Customer portal exposure rules: not applicable; no customer portal route or
+  public data surface changed.
+- Trust boundaries tested: Passed. Focused task/worker tests cover payload
+  authority being ignored, and the live proof confirmed notification idempotency
+  through the real BullMQ worker path.
+
+## P10-10B4 KPI Movement From Timeline Local Proof
+
+- Date: 2026-06-21
+- Risk: High
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-REPORT-001, REQ-RBAC-001, NFR-SEC-002, METHOD-TEST-001,
+  UAT-SCRIPT-001
+
+### Changes
+
+1. Proved the existing `/reports/kpis` API and `/reports` web route against the
+   local Docker Postgres/Redis stack and P10-10A seeded data.
+2. Captured baseline manager/admin KPI values, inserted one proof-only main
+   branch task row with a real `task_status_history` DONE event, and proved
+   backend KPI values moved from persisted event data.
+3. Proved ordinary employee access to `/reports/kpis` returned 403 and the north
+   branch manager KPI payload stayed unchanged after the main branch proof
+   mutation.
+4. Rendered `/reports?locale=en` and `/reports?locale=ar` through the live web
+   server with the manager session cookie and saved sanitized HTML artifacts.
+5. Removed proof sessions and proof task/status-history data after measurement.
+
+### Verification
+
+- Passed: `$env:DATABASE_URL='postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto'; corepack pnpm db:seed`.
+- Passed: local API startup on `PORT=3000`; `/health` returned
+  `{"status":"ok","service":"api","databaseConfigured":true,"redisConfigured":true}`.
+- Passed: baseline manager/admin API reads returned 200.
+- Passed: after inserting proof-only task `p10_10b4_done_promise_task` plus a
+  `task_status_history` DONE event, manager KPI movement was:
+  `onTimeCompletionPercent 0 -> 100`,
+  `customerPromiseKeptPercent 0 -> 100`, and `activeOverdueCount 2 -> 2`.
+- Passed: admin API read returned 200 after the mutation.
+- Passed: ordinary employee API read returned 403.
+- Passed: north branch manager KPI payload was unchanged after the main branch
+  mutation.
+- Passed: live web `/reports?locale=en&reports=success` and
+  `/reports?locale=ar&reports=success` returned 200 and rendered the moved
+  `100%` KPI value.
+- Passed: cleanup removed 4 proof staff sessions and 1 proof task; final DB
+  probe returned `{"sessions":0,"task":0}`.
+- Passed: artifact secret scan found no `cms_staff_session`, token, password,
+  secret, credential, OTP, or hash strings under `output/p10-10b4`.
+- Passed: `corepack pnpm test:api -- reports` (21/21).
+- Passed: `corepack pnpm test:web -- shell` (177/177).
+- Passed: `corepack pnpm test` (58/58 with coverage gates).
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Artifacts
+
+- `output/p10-10b4/summary.json`
+- `output/p10-10b4/api-kpis-before-manager.json`
+- `output/p10-10b4/api-kpis-after-manager.json`
+- `output/p10-10b4/api-kpis-after-admin.json`
+- `output/p10-10b4/api-kpis-employee-denied.json`
+- `output/p10-10b4/web-reports-en.html`
+- `output/p10-10b4/web-reports-ar.html`
+
+### Notes
+
+- No React KPI calculation or client counter was added. The web route rendered
+  the existing typed backend `/reports/kpis` response only.
+- The proof did not require SMTP, VPS, WhatsApp, AI, mobile, HR-platform, or
+  production deploy work.
+- The temporary API process started for the smoke was stopped after proof. The
+  pre-existing web server on port 4000 was left alone.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. API
+  reads used temporary server-side staff sessions; manager/admin were allowed,
+  ordinary employee was denied, and north branch scope remained unchanged by
+  main branch proof data.
+- State change history + audit in same transaction: not applicable to product
+  workflow behavior. The proof used a local-only direct DB setup to add one
+  throwaway task row plus its status-history event, then deleted it.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Raw session cookie values stayed in process memory only,
+  artifacts are sanitized, and proof sessions were deleted.
+- Customer portal exposure rules: not applicable; no customer portal route or
+  public data surface changed.
+- Trust boundaries tested: Passed. API tests cover report-capable allow,
+  employee deny, cross-branch denial/audit, aggregate-only KPI shape, and the
+  live proof confirmed branch scope plus backend-derived KPI movement.

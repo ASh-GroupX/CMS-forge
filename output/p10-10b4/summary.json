@@ -1,0 +1,33 @@
+{
+  "apiUrl": "http://localhost:3000",
+  "webUrl": "http://localhost:4000",
+  "taskId": "p10_10b4_done_promise_task",
+  "baselineManagerStatus": 200,
+  "baselineAdminStatus": 200,
+  "afterManagerStatus": 200,
+  "afterAdminStatus": 200,
+  "employeeDeniedStatus": 403,
+  "webEnStatus": 200,
+  "webArStatus": 200,
+  "moved": {
+    "onTimeCompletionPercent": [
+      0,
+      100
+    ],
+    "customerPromiseKeptPercent": [
+      0,
+      100
+    ],
+    "activeOverdueCount": [
+      2,
+      2
+    ]
+  },
+  "northBranchUnchanged": true,
+  "proofSource": "task row plus task_status_history DONE event",
+  "clientSideCountersIntroduced": false,
+  "cleanupDeletedSessions": 4,
+  "cleanupDeletedTasks": 1,
+  "sessionRowsRemaining": 0,
+  "proofTaskRemaining": 0
+}

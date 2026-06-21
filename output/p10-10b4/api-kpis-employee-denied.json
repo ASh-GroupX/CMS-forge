@@ -1,0 +1,10 @@
+{
+  "status": 403,
+  "body": {
+    "error": {
+      "code": "RBAC_FORBIDDEN",
+      "message": "Forbidden",
+      "correlationId": "req_02fb1708-0312-4f05-9aa8-6e7d57abbc55"
+    }
+  }
+}

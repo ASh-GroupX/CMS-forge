@@ -1,0 +1,12 @@
+{
+  "kpis": {
+    "onTimeCompletionPercent": 0,
+    "activeOverdueCount": 2,
+    "averageDelayHours": 0,
+    "customerPromiseKeptPercent": 0,
+    "reopenedCount": 0,
+    "escalationCount": 0,
+    "averageFirstResponseHours": 0,
+    "averageResolutionHours": 0
+  }
+}

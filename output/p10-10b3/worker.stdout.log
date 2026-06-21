@@ -1,0 +1,24 @@
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mWorkerModule dependencies initialized[39m[38;5;3m +54ms[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mIntegrationsModule dependencies initialized[39m[38;5;3m +71ms[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mSlaModule dependencies initialized[39m[38;5;3m +7ms[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +3ms[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTasksModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mComplaintsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mNotificationsModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPortalModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAttachmentsModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[Worker] [39m[32mqueue connected queue=sla[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[Worker] [39m[32mqueue connected queue=attachments-scan[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[Worker] [39m[32mqueue connected queue=notifications[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[Worker] [39m[32mworker ready queues=sla,notifications,attachments-scan[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[Worker] [39m[32msla job received name=sla.warning id=repeat:sla.warning:1782026250603 result={"scanned":0,"created":0,"skipped":0,"warningIdempotencyKeys":[]}[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[Worker] [39m[32mnotification job received name=notifications.email id=repeat:notifications.email:1782009191522 result={"attempted":0,"sent":0,"failed":0,"skipped":0}[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[Worker] [39m[32mnotification job received name=notifications.email id=repeat:notifications.email:1782026250619 result={"attempted":0,"sent":0,"failed":0,"skipped":0}[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[Worker] [39m[32msla job received name=sla.breach id=repeat:sla.breach:1782026250611 result={"scanned":0,"created":0,"skipped":0,"breachIdempotencyKeys":[]}[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[Worker] [39m[32mnotification job received name=notifications.sms id=repeat:notifications.sms:1782026250629 result={"attempted":0,"sent":0,"failed":0,"skipped":0}[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[Worker] [39m[32mnotification job received name=notifications.whatsapp id=repeat:notifications.whatsapp:1782026250632 result={"attempted":0,"sent":0,"failed":0,"skipped":0}[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[Worker] [39m[32mtask escalation job received name=tasks.escalation.scan id=repeat:tasks.escalation.scan:1782026250633 result={"scanned":2,"queued":2}[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:17:30 AM [32m    LOG[39m [38;5;3m[Worker] [39m[32mtask notification batch job received name=tasks.notification.batch id=repeat:tasks.notification.batch:1782026250635 result={"windowKey":"2026-06-21","employeeDigests":3,"managerRollups":1}[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:20:49 AM [32m    LOG[39m [38;5;3m[Worker] [39m[32mtask escalation job received name=tasks.escalation.scan id=p10-10b3-escalation-first result={"scanned":2,"queued":2}[39m
+[32m[Nest] 24712  - [39m06/21/2026, 10:20:49 AM [32m    LOG[39m [38;5;3m[Worker] [39m[32mtask escalation job received name=tasks.escalation.scan id=p10-10b3-escalation-rerun result={"scanned":2,"queued":2}[39m

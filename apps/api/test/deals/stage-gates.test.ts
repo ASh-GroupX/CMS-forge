@@ -2,14 +2,17 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import 'reflect-metadata';
 import { Reflector } from '@nestjs/core';
+import { MODULE_METADATA } from '@nestjs/common/constants';
 import type { ExecutionContext } from '@nestjs/common';
 import { RoleCode } from '@prisma/client';
 import type { AuditRecordInput } from '../../src/core/audit.service.ts';
+import { AuditService as CoreAuditService } from '../../src/core/audit.service.ts';
 import type { AuditService } from '../../src/core/audit.service.ts';
 import { RbacGuard } from '../../src/core/auth.guard.ts';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
-import { AppException } from '../../src/core/http-kernel.ts';
+import { AppException, PrismaService } from '../../src/core/http-kernel.ts';
 import { DealsController } from '../../src/modules/deals/deals.controller.ts';
+import { DealsModule } from '../../src/modules/deals/deals.module.ts';
 import { DealsRepository } from '../../src/modules/deals/deals.repository.ts';
 import type { UpdateDealStageData } from '../../src/modules/deals/deals.repository.ts';
 import { DealsService } from '../../src/modules/deals/deals.service.ts';
@@ -131,6 +134,15 @@ test('ordinary employee is denied by deal handoff board RBAC', async () => {
     guard.canActivate(context(request(employee))),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
+});
+
+test('deals module wires audit service with Prisma for runtime RBAC denies', () => {
+  const providers = Reflect.getMetadata(MODULE_METADATA.PROVIDERS, DealsModule) as unknown[];
+  assert.ok(providers.some((provider) => {
+    if (!provider || typeof provider !== 'object') return false;
+    const wired = provider as { provide?: unknown; inject?: unknown[] };
+    return wired.provide === CoreAuditService && wired.inject?.includes(PrismaService);
+  }));
 });
 
 test('cross-branch deal handoff board request is denied and audited', async () => {

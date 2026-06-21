@@ -1,0 +1,48 @@
+{
+  "api": {
+    "tasksToday": {
+      "dueToday": 0,
+      "overdue": 2,
+      "overduePromises": 1,
+      "assignedToMe": 1,
+      "waitingOnMe": 1
+    },
+    "managerRollup": {
+      "overdueByEmployee": 2,
+      "dueToday": 0,
+      "stuck": 2,
+      "workloadByAssignee": 2,
+      "escalated": 2,
+      "overduePromises": 1,
+      "promiseKpi": {
+        "openPromiseCount": 1,
+        "overduePromiseCount": 1
+      }
+    },
+    "employeeDeniedManagerRollupStatus": 403
+  },
+  "web": {
+    "tasksTodayEn": {
+      "employeeToday": true,
+      "managerControlRoom": false,
+      "seededPromise": true,
+      "promiseKpi": false
+    },
+    "tasksTodayArRtl": true,
+    "managerEn": {
+      "employeeToday": true,
+      "managerControlRoom": true,
+      "seededPromise": true,
+      "promiseKpi": true
+    },
+    "managerArRtl": true
+  },
+  "artifacts": [
+    "output/p10-10b1/api-tasks-today.json",
+    "output/p10-10b1/api-manager-rollup.json",
+    "output/p10-10b1/web-tasks-today-en.html",
+    "output/p10-10b1/web-tasks-today-ar.html",
+    "output/p10-10b1/web-tasks-manager-en.html",
+    "output/p10-10b1/web-tasks-manager-ar.html"
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "taskId": "seed_task_overdue_promise",
+  "queue": "notifications",
+  "jobName": "tasks.escalation.scan",
+  "workerPath": "apps/api/dist/worker/index.js",
+  "cleanupBeforeDeleted": 6,
+  "beforeTargetCount": 0,
+  "beforeEscalationCount": 0,
+  "firstJobId": "p10-10b3-escalation-first",
+  "firstResult": {
+    "scanned": 2,
+    "queued": 2
+  },
+  "afterFirstTargetCount": 1,
+  "afterFirstTargetNotification": {
+    "id": "cmqngjccn000dv4fhml31vehp",
+    "recipientUserId": "cmqmuanzy000f10dfc5mu124h",
+    "channel": "IN_APP",
+    "status": "QUEUED",
+    "templateCode": "task.escalation.internal",
+    "locale": "en",
+    "payload": {
+      "level": "BRANCH_MANAGER",
+      "reason": "OVERDUE",
+      "taskId": "seed_task_overdue_promise",
+      "triggerAt": "2026-06-18T08:30:00.000Z",
+      "idempotencyKey": "task-escalation:seed_task_overdue_promise:BRANCH_MANAGER:2026-06-18T08:30:00.000Z",
+      "overdueMinutes": 4250
+    },
+    "queuedAt": "2026-06-21T07:20:49.224Z"
+  },
+  "afterFirstSeedEscalationCount": 2,
+  "rerunJobId": "p10-10b3-escalation-rerun",
+  "rerunResult": {
+    "scanned": 2,
+    "queued": 2
+  },
+  "afterRerunTargetCount": 1,
+  "afterRerunTargetIds": [
+    "cmqngjccn000dv4fhml31vehp"
+  ],
+  "afterRerunSeedEscalationCount": 2,
+  "sameTargetRowAfterRerun": true,
+  "clientPayloadAuthorityIgnoredByWorkerContract": true,
+  "externalDispatchRequired": false,
+  "cleanupNotificationsDeleted": 2,
+  "afterCleanupTargetCount": 0,
+  "afterCleanupProofTemplateCount": 0
+}
