@@ -7,10 +7,14 @@ export type StaffTask = {
   id: string;
   title: string;
   ownerId: string;
+  ownerName: string | null;
   assigneeId: string;
+  assigneeName: string | null;
+  branchId: string | null;
+  branchName: string | null;
   dueAt: string;
   status: StaffTaskStatus;
-  nextAction: { what: string; whoId: string; when: string } | null;
+  nextAction: { what: string; whoId: string; whoName: string | null; when: string } | null;
   isCustomerPromise: boolean;
   visibility: string;
   confidentialityLevel: string;
@@ -21,7 +25,7 @@ export type StaffTask = {
 };
 
 export type EmployeeTodayTasks = Record<TaskSectionKey, StaffTask[]>;
-export type ManagerRollupCount = { assigneeId: string; count: number };
+export type ManagerRollupCount = { assigneeId: string; assigneeName?: string | null; count: number };
 export type ManagerStuckTask = StaffTask & { stuckReasons: ('NEXT_ACTION_OVERDUE' | 'NO_MOVEMENT')[] };
 export type ManagerControlRoomTasks = Record<ManagerTaskSectionKey, StaffTask[]> & {
   overdueByEmployee: ManagerRollupCount[];
@@ -40,6 +44,7 @@ type ManagerControlRoomBody = Partial<Record<ManagerTaskSectionKey, Partial<Staf
 
 const STAFF_SESSION_COOKIE = 'cms_staff_session';
 const TASK_SECTIONS: readonly TaskSectionKey[] = ['dueToday', 'overdue', 'overduePromises', 'assignedToMe', 'waitingOnMe'];
+const CSRF_COOKIE = 'cms_csrf_token';
 
 export async function getEmployeeTodayTasks({
   apiUrl = process.env.API_URL ?? 'http://localhost:3000',
@@ -89,11 +94,37 @@ export async function getManagerControlRoomTasks({
   }
 }
 
+export type QuickAddTaskPayload = {
+  title: string;
+  what: string;
+  whoId: string;
+  when: string;
+  dueAt?: string;
+  isCustomerPromise?: boolean;
+  links?: { entityType: string; entityId: string }[];
+};
+
+export type UpdateTaskPayload = {
+  status?: StaffTaskStatus;
+  assigneeId?: string;
+  dueAt?: string;
+  nextAction?: { what: string; whoId: string; when: string } | null;
+  isCustomerPromise?: boolean;
+};
+
+export async function quickAddTask(payload: QuickAddTaskPayload, fetchImpl: typeof fetch = fetch): Promise<boolean> {
+  return taskWrite('/tasks/quick-add', payload, 'POST', fetchImpl);
+}
+
+export async function updateTask(taskId: string, payload: UpdateTaskPayload, fetchImpl: typeof fetch = fetch): Promise<boolean> {
+  return taskWrite(`/tasks/${encodeURIComponent(taskId)}`, payload, 'PATCH', fetchImpl);
+}
+
 function tasksFrom(body: EmployeeTodayBody): EmployeeTodayTasks | null {
   const result = {} as EmployeeTodayTasks;
   for (const section of TASK_SECTIONS) {
     if (!Array.isArray(body[section])) return null;
-    const tasks = body[section].map(taskFrom);
+    const tasks = body[section].map(staffTaskFrom);
     if (tasks.some((task) => task === null)) return null;
     result[section] = tasks as StaffTask[];
   }
@@ -110,7 +141,7 @@ function managerRollupFrom(body: ManagerControlRoomBody): ManagerControlRoomTask
   const result = { overdueByEmployee, stuck, workloadByAssignee, promiseKpi } as ManagerControlRoomTasks;
   for (const section of ['dueToday', 'overduePromises', 'escalated'] as const) {
     if (!Array.isArray(body[section])) return null;
-    const tasks = body[section].map(taskFrom);
+    const tasks = body[section].map(staffTaskFrom);
     if (tasks.some((task) => task === null)) return null;
     result[section] = tasks as StaffTask[];
   }
@@ -124,7 +155,7 @@ function countsFrom(rows: Partial<ManagerRollupCount>[]): ManagerRollupCount[] |
 
 function stuckTasksFrom(rows: NonNullable<ManagerControlRoomBody['stuck']>): ManagerStuckTask[] | null {
   const tasks = rows.map((row) => {
-    const task = taskFrom(row);
+    const task = staffTaskFrom(row);
     const rawReasons = row.stuckReasons;
     if (!Array.isArray(rawReasons)) return null;
     const reasons = rawReasons.filter((reason): reason is ManagerStuckTask['stuckReasons'][number] => reason === 'NEXT_ACTION_OVERDUE' || reason === 'NO_MOVEMENT');
@@ -138,7 +169,7 @@ function promiseKpiFrom(value: ManagerControlRoomBody['promiseKpi']): ManagerCon
   return { openPromiseCount: value.openPromiseCount, overduePromiseCount: value.overduePromiseCount };
 }
 
-function taskFrom(task: Partial<StaffTask>): StaffTask | null {
+export function staffTaskFrom(task: Partial<StaffTask>): StaffTask | null {
   if (
     typeof task.id !== 'string' ||
     typeof task.title !== 'string' ||
@@ -168,7 +199,11 @@ function taskFrom(task: Partial<StaffTask>): StaffTask | null {
     id: task.id,
     title: task.title,
     ownerId: task.ownerId,
+    ownerName: typeof task.ownerName === 'string' ? task.ownerName : null,
     assigneeId: task.assigneeId,
+    assigneeName: typeof task.assigneeName === 'string' ? task.assigneeName : null,
+    branchId: typeof task.branchId === 'string' ? task.branchId : null,
+    branchName: typeof task.branchName === 'string' ? task.branchName : null,
     dueAt: task.dueAt,
     status: task.status,
     nextAction,
@@ -185,7 +220,7 @@ function taskFrom(task: Partial<StaffTask>): StaffTask | null {
 function nextActionFrom(value: Partial<StaffTask['nextAction']> | null | undefined) {
   if (value === null || value === undefined) return null;
   if (typeof value.what !== 'string' || typeof value.whoId !== 'string' || typeof value.when !== 'string') return false;
-  return { what: value.what, whoId: value.whoId, when: value.when };
+  return { what: value.what, whoId: value.whoId, whoName: typeof value.whoName === 'string' ? value.whoName : null, when: value.when };
 }
 
 function linksFrom(value: StaffTask['links']): StaffTask['links'] | null {
@@ -211,4 +246,34 @@ async function incomingCookieHeader(): Promise<string> {
   } catch {
     return '';
   }
+}
+
+async function taskWrite(path: string, payload: unknown, method: 'PATCH' | 'POST', fetchImpl: typeof fetch): Promise<boolean> {
+  const cookies = await incomingCookieHeader();
+  if (!hasStaffSessionCookie(cookies)) return false;
+  const csrf = readCookie(cookies, CSRF_COOKIE);
+  try {
+    const response = await fetchImpl(new URL(path, process.env.API_URL ?? 'http://localhost:3000'), {
+      body: JSON.stringify(payload),
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+        'content-type': 'application/json',
+        cookie: cookies,
+        ...(csrf ? { 'x-csrf-token': csrf } : {}),
+      },
+      method,
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+function readCookie(cookieHeader: string, name: string): string | null {
+  return cookieHeader
+    .split(';')
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${name}=`))
+    ?.slice(name.length + 1) ?? null;
 }

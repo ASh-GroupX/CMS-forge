@@ -1,0 +1,10 @@
+{
+  "task": "P1 Deals create + advance + blocker",
+  "date": "2026-06-21",
+  "result": "passed",
+  "dealTitle": "Smoke deal 1782047309322",
+  "stageAfterAdvance": "BOOKING",
+  "createdTaskTitle": "Complete deal BOOKING",
+  "blockerCleared": true,
+  "screenshot": "output/playwright/p1-deals-write-smoke.png"
+}

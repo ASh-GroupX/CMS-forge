@@ -23,6 +23,6 @@ test('phase 10 dealership seed covers demo data and confidential ACL intent', ()
   assert.match(seed, /CaseConfidentialityLevel\.CONFIDENTIAL/);
   assert.match(seed, /CaseParticipantRole\.ACCUSED/);
   assert.match(seed, /TaskConfidentialityLevel\.CONFIDENTIAL/);
-  assert.match(seed, /DealStage\.QUALIFIED/);
+  assert.match(seed, /DealStage\.BOOKING/);
   assert.match(seed, /blocker: 'Finance approval missing'/);
 });

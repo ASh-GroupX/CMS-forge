@@ -1,0 +1,24 @@
+{
+  "ok": true,
+  "taskId": "cmqnrkz1300065hght4qfix9j",
+  "title": "P0 live smoke 1782044993",
+  "finalStatus": "DONE",
+  "assigneeName": "Live Smoke Manager",
+  "ownerName": "Live Smoke Officer",
+  "statusHistory": [
+    "OPEN",
+    "WAITING",
+    "DONE"
+  ],
+  "auditActions": [
+    "task_created",
+    "task_updated",
+    "task_updated",
+    "task_updated"
+  ],
+  "screenshots": [
+    "output/live-smoke/p0-employee-today-after-reassign.png",
+    "output/live-smoke/p0-manager-rollup-reassigned-task.png"
+  ],
+  "proofUsersDeactivated": true
+}

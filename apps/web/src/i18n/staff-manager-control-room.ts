@@ -20,6 +20,7 @@ export const managerControlRoomText = {
     },
     fields: {
       assignee: 'Assignee',
+      branch: 'Branch',
       count: 'Count',
       due: 'Due',
       links: 'Task links',
@@ -62,6 +63,7 @@ export const managerControlRoomText = {
     },
     fields: {
       assignee: 'المكلف',
+      branch: 'الفرع',
       count: 'العدد',
       due: 'الاستحقاق',
       links: 'روابط المهمة',

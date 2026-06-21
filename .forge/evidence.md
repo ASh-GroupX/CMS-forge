@@ -4824,6 +4824,7 @@ Status: Passed through P9-02
   transient storage-state file plus local staff session row.
 - Customer portal exposure rules: not applicable; no customer portal route or
   public data surface changed.
+
 - Trust boundaries tested: Passed. Web tests cover manager-capable navigation,
   staff-hidden navigation, real handoff data, denied state, Arabic RTL, and
   cookie-only forwarding to the backend read model.
@@ -5748,3 +5749,145 @@ Status: Passed through P9-02
   names.
 - Customer portal exposure rules: not applicable; no customer portal route or
   public data surface changed.
+
+## P1-DEALS-WRITE Create Advance Blocker
+
+- Date: 2026-06-21
+- Risk: High
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, METHOD-AUDIT-001, METHOD-API-001,
+  METHOD-TEST-001, UI-DESIGN-001
+
+### Changes
+
+1. Added guarded backend deal write routes: `POST /deals`,
+   `POST /deals/:id/advance`, and `PATCH /deals/:id/blocker`.
+2. Replaced the temporary deal stages with the fixed dealership flow:
+   `LEAD`, `BOOKING`, `PAYMENT`, `FINANCE`, `INSURANCE`, `REGISTRATION`,
+   `PDI`, `DELIVERY`, and `POST_DELIVERY`.
+3. Kept stage, role, and branch authority in the backend. Deal creation derives
+   non-admin branch/owner from the server session; advance/blocker writes are
+   RBAC and branch scoped.
+4. Deal create, advance, and blocker changes write audit in the same Prisma
+   transaction. Stage advance reuses `advanceStagePersisted`, which creates the
+   next holder task after the stage change.
+5. Wired the Deal Handoff Board to real server actions for create, advance,
+   assign next holder/due date, set blocker, and clear blocker. The board now
+   renders holder, owner, and branch names when the API can resolve them.
+6. Updated OpenAPI canonical and generated contracts for the new write routes
+   and deal response schemas.
+
+### Verification
+
+- Passed: `corepack pnpm --dir packages/database generate`.
+- Passed: Prisma migrate deploy against local Postgres on port `5433`.
+- Passed: `corepack pnpm db:seed`.
+- Passed: `node --import tsx --test apps/api/src/modules/deals/*.spec.ts apps/api/test/deals/*.test.ts` (18/18).
+- Passed: `corepack pnpm test:api -- deals` (9/9).
+- Passed: `node --import tsx --test apps/api/src/modules/deals/*.spec.ts` (9/9).
+- Passed: `corepack pnpm test:web -- shell` (183/183).
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: rebuilt and restarted local API on `http://localhost:3000`; `/health`
+  returned OK with database and Redis configured.
+- Passed: restarted local web on `http://localhost:4000`; health probe returned
+  OK.
+- Passed: live browser smoke created a deal, advanced it to `BOOKING`, verified
+  the next holder task `Complete deal BOOKING`, set a blocker, cleared the
+  blocker, and captured `output/playwright/p1-deals-write-smoke.png`.
+
+### Notes
+
+- P2 cases and Promise Tracker remain untouched.
+- No configurable workflow engine was introduced.
+- No production deploy, SMTP, WhatsApp, AI, mobile, HR-platform, VPS, or admin
+  expansion work was introduced.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. Deal
+  write handlers derive actor role/branch from `SessionAuthGuard` and the
+  request principal; web server actions only forward the staff session and CSRF.
+- State change history + audit in same transaction: Passed. Deal create,
+  advance, and blocker writes audit inside the same transaction, and advance
+  uses the persisted stage helper that creates the next holder task.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Smoke artifacts contain no credential material.
+- Customer portal exposure rules: not applicable; no customer portal route or
+  public data surface changed.
+- Trust boundaries tested: Passed. API tests cover write route guard shape,
+  branch-scope denial, server-derived create branch behavior, blocker audit
+  transaction behavior, and stage advance task creation.
+
+## P1-CUSTOMER-PROMISE-TRACKER
+
+- Date: 2026-06-21
+- Risk: Medium
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, METHOD-AUDIT-001, METHOD-API-001,
+  METHOD-TEST-001, UI-DESIGN-001, NFR-MAINT-001
+
+### Changes
+
+1. Added `GET /tasks/promises` with session-derived actor, RBAC, and branch
+   scope. The tracker returns only `isCustomerPromise=true` tasks linked to a
+   customer, deal, case, or complaint.
+2. Added promise KPIs for open promises, overdue promises, and kept-on-time
+   percentage. Kept-on-time is calculated from persisted task status history.
+3. Kept restricted/confidential promises out of branch-wide manager results
+   unless the actor is an allowed participant or admin.
+4. Added a staff Promises page, main navigation entry, KPI summary, promise
+   list, and Done action.
+5. Updated Quick Add validation so a customer promise requires a customer,
+   deal, case, or complaint link before submit.
+6. Documented `GET /tasks/promises` and response schemas in OpenAPI canonical
+   and generated contracts.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- tasks` (12/12).
+- Passed: `node --import tsx --test apps/api/src/modules/tasks/*.spec.ts`
+  (23/23).
+- Passed: `corepack pnpm test:web -- shell` (185/185).
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: rebuilt and restarted local API on `http://localhost:3000`;
+  `/tasks/promises` was mapped and `/health` returned OK.
+- Passed: restarted local web on `http://localhost:4000`; root page returned
+  HTTP 200.
+- Passed: live browser smoke created a deal-linked customer promise through
+  Quick Add, verified it appeared in Promises with KPI counts, marked it Done,
+  and verified open/overdue/kept-on-time counts updated. Screenshot:
+  `output/run/promises-smoke.png`.
+
+### Notes
+
+- P2 cases and CAPA remain untouched.
+- Customer/deal labels use task-boundary link identifiers where available; full
+  human-readable cross-module labels should be added through public module
+  services when that boundary exists.
+- No workflow builder, AI, WhatsApp, mobile, deploy, or admin screen work was
+  introduced.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. The
+  API route derives actor role, branch, and user from `SessionAuthGuard`; web
+  code forwards only the staff session cookie.
+- State change history + audit in same transaction: Passed for the Done action
+  through the existing task update service path.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Smoke output contains no credential material.
+- Customer portal exposure rules: not applicable; no customer portal route or
+  public data surface changed.
+- Trust boundaries tested: Passed. API tests cover server-derived route actor
+  shape and confidential promise filtering; web tests cover session-cookie API
+  forwarding and absence of client authority query parameters.

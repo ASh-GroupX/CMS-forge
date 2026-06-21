@@ -3,6 +3,12 @@ export const dealHandoffText = {
     title: 'Deal Handoff Board',
     subtitle: 'Stage gates, stuck deals, holders, and delay age from the server.',
     total: 'deals',
+    actions: {
+      advance: 'Advance',
+      clearBlocker: 'Clear blocker',
+      create: 'Create deal',
+      setBlocker: 'Set blocker',
+    },
     sections: {
       byStage: ['By stage', 'Current deals grouped by pipeline stage'],
       stuck: ['Stuck deals', 'Blocked or overdue stage handoffs'],
@@ -17,6 +23,7 @@ export const dealHandoffText = {
       holder: 'Current holder',
       owner: 'Owner',
       stage: 'Stage',
+      title: 'Title',
       updated: 'Updated',
     },
     states: {
@@ -30,6 +37,12 @@ export const dealHandoffText = {
     title: 'لوحة تسليم الصفقات',
     subtitle: 'مراحل الصفقات والعوائق والمسؤولون والتأخير من الخادم.',
     total: 'صفقات',
+    actions: {
+      advance: 'تقديم',
+      clearBlocker: 'مسح العائق',
+      create: 'إنشاء صفقة',
+      setBlocker: 'تعيين عائق',
+    },
     sections: {
       byStage: ['حسب المرحلة', 'الصفقات الحالية مجمعة حسب مرحلة المسار'],
       stuck: ['صفقات عالقة', 'تسليمات مراحل متأخرة أو عليها عائق'],
@@ -44,6 +57,7 @@ export const dealHandoffText = {
       holder: 'المسؤول الحالي',
       owner: 'المالك',
       stage: 'المرحلة',
+      title: 'العنوان',
       updated: 'آخر تحديث',
     },
     states: {

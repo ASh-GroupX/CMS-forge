@@ -32,12 +32,12 @@ test('deal stage gate advances exactly one stage with next holder and due date',
 
   const next = service.advanceStage({
     deal,
-    toStage: 'QUALIFIED',
+    toStage: 'BOOKING',
     currentHolderId: 'sales_manager_1',
     stageDueAt: '2026-06-22T09:00:00.000Z',
   }, new Date('2026-06-20T09:00:00.000Z'));
 
-  assert.equal(next.stage, 'QUALIFIED');
+  assert.equal(next.stage, 'BOOKING');
   assert.equal(next.currentHolderId, 'sales_manager_1');
   assert.equal(next.stageDueAt, '2026-06-22T09:00:00.000Z');
   assert.equal(next.updatedAt, '2026-06-20T09:00:00.000Z');
@@ -54,11 +54,11 @@ test('deal stage gate rejects skipped transitions and active blockers', () => {
   });
 
   assert.throws(
-    () => service.advanceStage({ deal, toStage: 'QUOTE', currentHolderId: 'sales_2', stageDueAt: '2026-06-22T09:00:00.000Z' }),
+    () => service.advanceStage({ deal, toStage: 'PAYMENT', currentHolderId: 'sales_2', stageDueAt: '2026-06-22T09:00:00.000Z' }),
     (error) => error instanceof AppException && error.code === 'DEAL_INVALID_STAGE_TRANSITION',
   );
   assert.throws(
-    () => service.advanceStage({ deal: { ...deal, blocker: 'Customer docs missing' }, toStage: 'QUALIFIED', currentHolderId: 'sales_2', stageDueAt: '2026-06-22T09:00:00.000Z' }),
+    () => service.advanceStage({ deal: { ...deal, blocker: 'Customer docs missing' }, toStage: 'BOOKING', currentHolderId: 'sales_2', stageDueAt: '2026-06-22T09:00:00.000Z' }),
     (error) => error instanceof AppException && error.code === 'DEAL_BLOCKED',
   );
 });
@@ -89,16 +89,16 @@ test('persisted deal transition shares transaction client for deal, audit, and t
 
   const result = await service.advanceStagePersisted({
     deal: deal(),
-    toStage: 'QUALIFIED',
+    toStage: 'BOOKING',
     currentHolderId: 'holder_2',
     stageDueAt: '2026-06-22T09:00:00.000Z',
   }, { actorId: 'manager_1', correlationId: 'req_deal' });
 
   assert.equal(result.taskId, 'task_1');
-  assert.equal(result.deal.stage, 'QUALIFIED');
+  assert.equal(result.deal.stage, 'BOOKING');
   assert.deepEqual(clients, [txClient, txClient, txClient]);
   assert.equal(auditRecords[0]?.action, 'deal_stage_advanced');
-  assert.deepEqual(auditRecords[0]?.metadata, { fromStage: 'LEAD', toStage: 'QUALIFIED' });
+  assert.deepEqual(auditRecords[0]?.metadata, { fromStage: 'LEAD', toStage: 'BOOKING' });
 });
 
 test('deal handoff board derives stage, stuck, holder, and delay data from scoped rows', async () => {
@@ -108,8 +108,8 @@ test('deal handoff board derives stage, stuck, holder, and delay data from scope
       scopedBranch = branchId;
       return [
         row({ id: 'deal_late', stageDueAt: new Date('2026-06-20T08:00:00.000Z'), currentHolderId: 'holder_a' }),
-        row({ id: 'deal_blocked', blocker: 'Missing docs', stage: 'QUALIFIED', currentHolderId: 'holder_a', stageDueAt: new Date('2026-06-20T09:00:00.000Z') }),
-        row({ id: 'deal_ok', stage: 'QUOTE', currentHolderId: 'holder_b', stageDueAt: new Date('2026-06-21T08:00:00.000Z') }),
+        row({ id: 'deal_blocked', blocker: 'Missing docs', stage: 'BOOKING', currentHolderId: 'holder_a', stageDueAt: new Date('2026-06-20T09:00:00.000Z') }),
+        row({ id: 'deal_ok', stage: 'PAYMENT', currentHolderId: 'holder_b', stageDueAt: new Date('2026-06-21T08:00:00.000Z') }),
       ];
     },
   } as unknown as DealsRepository;
@@ -120,7 +120,10 @@ test('deal handoff board derives stage, stuck, holder, and delay data from scope
   assert.equal(scopedBranch, 'branch_1');
   assert.equal(result.byStage.find((stage) => stage.stage === 'LEAD')?.count, 1);
   assert.deepEqual(result.stuck.map((deal) => [deal.id, deal.delayAgeMinutes]), [['deal_late', 120], ['deal_blocked', 60]]);
-  assert.deepEqual(result.currentHolder, [{ currentHolderId: 'holder_a', count: 2 }, { currentHolderId: 'holder_b', count: 1 }]);
+  assert.deepEqual(result.currentHolder, [
+    { currentHolderId: 'holder_a', currentHolderName: null, count: 2 },
+    { currentHolderId: 'holder_b', currentHolderName: null, count: 1 },
+  ]);
 });
 
 test('ordinary employee is denied deal handoff board access in service', async () => {
@@ -146,7 +149,10 @@ function deal(): DealRecord {
     stage: 'LEAD' as const,
     stageDueAt: '2026-06-21T09:00:00.000Z',
     blocker: null,
+    branchName: null,
     createdAt: '2026-06-20T08:00:00.000Z',
+    currentHolderName: null,
+    ownerName: null,
     updatedAt: '2026-06-20T08:00:00.000Z',
   };
 }

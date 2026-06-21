@@ -30,10 +30,10 @@ test('deal gate allows the next stage only', () => {
 
   assert.equal(service.advanceStage({
     deal,
-    toStage: 'QUALIFIED',
+    toStage: 'BOOKING',
     currentHolderId: 'sales_lead_a',
     stageDueAt: '2026-06-22T09:00:00.000Z',
-  }).stage, 'QUALIFIED');
+  }).stage, 'BOOKING');
 });
 
 test('deal gate denies skipped transitions', () => {
@@ -63,11 +63,11 @@ test('deal gate validates blockers and due dates', () => {
   });
 
   assert.throws(
-    () => service.advanceStage({ deal: { ...deal, blocker: 'Missing approval' }, toStage: 'QUALIFIED', currentHolderId: 'sales_lead_a', stageDueAt: '2026-06-22T09:00:00.000Z' }),
+    () => service.advanceStage({ deal: { ...deal, blocker: 'Missing approval' }, toStage: 'BOOKING', currentHolderId: 'sales_lead_a', stageDueAt: '2026-06-22T09:00:00.000Z' }),
     (error) => error instanceof AppException && error.code === 'DEAL_BLOCKED',
   );
   assert.throws(
-    () => service.advanceStage({ deal, toStage: 'QUALIFIED', currentHolderId: 'sales_lead_a', stageDueAt: 'not-a-date' }),
+    () => service.advanceStage({ deal, toStage: 'BOOKING', currentHolderId: 'sales_lead_a', stageDueAt: 'not-a-date' }),
     (error) => error instanceof AppException && error.code === 'VALIDATION_FAILED',
   );
 });
@@ -98,7 +98,7 @@ test('deal persisted transition writes deal, audit, and task in one transaction'
 
   const result = await service.advanceStagePersisted({
     deal: deal(),
-    toStage: 'QUALIFIED',
+    toStage: 'BOOKING',
     currentHolderId: 'sales_lead_a',
     stageDueAt: '2026-06-22T09:00:00.000Z',
   }, { actorId: 'manager_a' });
@@ -106,6 +106,46 @@ test('deal persisted transition writes deal, audit, and task in one transaction'
   assert.equal(result.taskId, 'task_deal_next');
   assert.deepEqual(clients, [txClient, txClient, txClient]);
   assert.equal(auditRecords[0]?.action, 'deal_stage_advanced');
+});
+
+test('deal writes are branch scoped and blocker updates audit in the transaction', async () => {
+  const txClient = { deal: {}, auditLog: {} };
+  const clients: unknown[] = [];
+  const auditRecords: AuditRecordInput[] = [];
+  const created: unknown[] = [];
+  const repository = {
+    transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
+    create: async (data: unknown, client: unknown) => {
+      created.push(data);
+      clients.push(client);
+      return row({ branchId: 'branch_a', ownerId: 'manager_a' });
+    },
+    findById: async (_id: string, client: unknown) => {
+      clients.push(client);
+      return row({ branchId: 'branch_a' });
+    },
+    updateBlocker: async (data: { blocker: string | null }, client: unknown) => {
+      clients.push(client);
+      return row({ blocker: data.blocker });
+    },
+  } as unknown as DealsRepository;
+  const service = new DealsService(repository, undefined, {
+    record: async (input: AuditRecordInput, client: unknown) => {
+      auditRecords.push(input);
+      clients.push(client);
+    },
+  } as never);
+
+  await service.createForActor({ title: 'New delivery', branchId: 'branch_spoof', currentHolderId: 'sales_a', stageDueAt: '2026-06-21T09:00:00.000Z' }, branchManager);
+  await service.updateBlockerForActor('deal_a', 'Missing docs', branchManager);
+  await assert.rejects(
+    service.updateBlockerForActor('deal_a', null, { ...branchManager, branchId: 'branch_b' }),
+    (error) => error instanceof AppException && error.code === 'BRANCH_SCOPE_FORBIDDEN',
+  );
+
+  assert.equal((created[0] as { branchId: string }).branchId, 'branch_a');
+  assert.equal(auditRecords.at(-1)?.action, 'deal_blocker_set');
+  assert.deepEqual(clients, [txClient, txClient, txClient, txClient, txClient, txClient]);
 });
 
 test('manager sees scoped deal handoff board derived from deal data', async () => {
@@ -124,7 +164,10 @@ test('manager sees scoped deal handoff board derived from deal data', async () =
 
   assert.equal(scopedBranch, 'branch_a');
   assert.deepEqual(result.stuck.map((item) => item.id), ['late', 'blocked']);
-  assert.deepEqual(result.currentHolder, [{ currentHolderId: 'holder_a', count: 1 }, { currentHolderId: 'holder_b', count: 1 }]);
+  assert.deepEqual(result.currentHolder, [
+    { currentHolderId: 'holder_a', currentHolderName: null, count: 1 },
+    { currentHolderId: 'holder_b', currentHolderName: null, count: 1 },
+  ]);
 });
 
 test('ordinary employee is denied by deal handoff board RBAC', async () => {
@@ -201,7 +244,10 @@ function deal(): DealRecord {
     stage: 'LEAD' as const,
     stageDueAt: '2026-06-21T09:00:00.000Z',
     blocker: null,
+    branchName: null,
     createdAt: '2026-06-20T09:00:00.000Z',
+    currentHolderName: null,
+    ownerName: null,
     updatedAt: '2026-06-20T09:00:00.000Z',
   };
 }

@@ -10,6 +10,7 @@ export type QuickAddTaskRequestDto = {
   whoId: string;
   when: string;
   dueAt?: string;
+  isCustomerPromise?: boolean;
   links?: { entityType: TaskLinkEntityType; entityId: string }[];
   participantUserIds?: string[];
   visibility?: TaskVisibility;
@@ -31,10 +32,12 @@ export function parseQuickAddTaskBody(body: unknown): QuickAddTaskRequestDto {
   };
   const dueAt = optionalText(input.dueAt, 'dueAt');
   const links = optionalLinks(input.links);
+  const isCustomerPromise = optionalBoolean(input.isCustomerPromise, 'isCustomerPromise');
   const participantUserIds = optionalStringArray(input.participantUserIds, 'participantUserIds');
   const visibility = optionalEnum(input.visibility, TaskVisibility, 'visibility');
   const confidentialityLevel = optionalEnum(input.confidentialityLevel, TaskConfidentialityLevel, 'confidentialityLevel');
   if (dueAt !== undefined) result.dueAt = dueAt;
+  if (isCustomerPromise !== undefined) result.isCustomerPromise = isCustomerPromise;
   if (links !== undefined) result.links = links;
   if (participantUserIds !== undefined) result.participantUserIds = participantUserIds;
   if (visibility !== undefined) result.visibility = visibility;
@@ -51,6 +54,7 @@ export function toQuickAddTaskInput(body: QuickAddTaskRequestDto, ownerId: strin
     nextAction: { what: body.what, whoId: body.whoId, when: body.when },
   };
   if (body.links !== undefined) input.links = body.links;
+  if (body.isCustomerPromise !== undefined) input.isCustomerPromise = body.isCustomerPromise;
   if (body.participantUserIds !== undefined) input.participantUserIds = body.participantUserIds;
   if (body.visibility !== undefined) input.visibility = body.visibility;
   if (body.confidentialityLevel !== undefined) input.confidentialityLevel = body.confidentialityLevel;
@@ -83,6 +87,12 @@ function optionalStringArray(value: unknown, field: string): string[] | undefine
   if (value === undefined) return undefined;
   if (!Array.isArray(value)) throw invalid(field, `${field} must be an array.`);
   return value.map((item, index) => requiredText(item, `${field}.${index}`));
+}
+
+function optionalBoolean(value: unknown, field: string): boolean | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value === 'boolean') return value;
+  throw invalid(field, `${field} must be a boolean.`);
 }
 
 function optionalLinks(value: unknown): QuickAddTaskRequestDto['links'] {

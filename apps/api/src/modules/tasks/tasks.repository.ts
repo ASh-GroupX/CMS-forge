@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma, TaskConfidentialityLevel, TaskLinkEntityType, TaskParticipantRole, TaskStatus, TaskVisibility } from '@prisma/client';
+import { TaskLinkEntityType } from '@prisma/client';
+import type { Prisma, TaskConfidentialityLevel, TaskParticipantRole, TaskStatus, TaskVisibility } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
 
 const taskSelect = {
@@ -17,11 +18,15 @@ const taskSelect = {
   confidentialityLevel: true,
   createdAt: true,
   updatedAt: true,
+  owner: { select: { nameEn: true, branchId: true, branch: { select: { nameEn: true } } } },
+  assignee: { select: { nameEn: true, branchId: true, branch: { select: { nameEn: true } } } },
+  nextActionWho: { select: { nameEn: true, branchId: true } },
   links: { select: { entityType: true, entityId: true } },
   participants: { select: { userId: true, role: true } },
 } satisfies Prisma.TaskSelect;
 
 export type TaskRecord = Prisma.TaskGetPayload<{ select: typeof taskSelect }>;
+export type PromiseTaskRecord = TaskRecord & { statusHistory: { toStatus: TaskStatus; createdAt: Date }[] };
 type TaskClient = Pick<Prisma.TransactionClient, 'task' | 'taskStatusHistory'>;
 
 export type CreateTaskData = {
@@ -42,10 +47,13 @@ export type CreateTaskData = {
 
 export type UpdateTaskStatusData = {
   id: string;
-  status: TaskStatus;
+  status?: TaskStatus;
+  assigneeId?: string;
+  dueAt?: Date;
   nextActionWhat?: string | null;
   nextActionWhoId?: string | null;
   nextActionWhen?: Date | null;
+  isCustomerPromise?: boolean;
 };
 
 export type CreateTaskStatusHistoryData = {
@@ -108,10 +116,11 @@ export class TasksRepository {
     });
   }
 
-  async listManagerRollup(branchId: string | null): Promise<TaskRecord[]> {
+  async listManagerRollup(branchId: string | null, includeConfidential = false): Promise<TaskRecord[]> {
     return this.prisma.task.findMany({
       where: {
         status: { not: 'DONE' },
+        ...(includeConfidential ? {} : { confidentialityLevel: 'NORMAL' }),
         ...(branchId
           ? { OR: [{ owner: { branchId } }, { assignee: { branchId } }, { nextActionWho: { branchId } }] }
           : {}),
@@ -121,14 +130,38 @@ export class TasksRepository {
     });
   }
 
+  async listPromiseTracker(actor: { userId: string; branchId: string | null; isManager: boolean; isAdmin: boolean }): Promise<PromiseTaskRecord[]> {
+    return this.prisma.task.findMany({
+      where: {
+        isCustomerPromise: true,
+        links: { some: { entityType: { in: [TaskLinkEntityType.CUSTOMER, TaskLinkEntityType.COMPLAINT, TaskLinkEntityType.CASE, TaskLinkEntityType.DEAL] } } },
+        OR: [
+          ...(actor.isAdmin ? [{}] : []),
+          { ownerId: actor.userId },
+          { assigneeId: actor.userId },
+          { nextActionWhoId: actor.userId },
+          { participants: { some: { userId: actor.userId } } },
+          ...(actor.isManager && actor.branchId
+            ? [{ confidentialityLevel: 'NORMAL' as const, OR: [{ owner: { branchId: actor.branchId } }, { assignee: { branchId: actor.branchId } }, { nextActionWho: { branchId: actor.branchId } }] }]
+            : []),
+        ],
+      },
+      orderBy: [{ status: 'asc' }, { dueAt: 'asc' }, { createdAt: 'asc' }],
+      select: { ...taskSelect, statusHistory: { select: { toStatus: true, createdAt: true }, orderBy: { createdAt: 'asc' } } },
+    });
+  }
+
   async updateStatus(data: UpdateTaskStatusData, client: TaskClient = this.prisma): Promise<TaskRecord> {
     return client.task.update({
       where: { id: data.id },
       data: {
-        status: data.status,
-        nextActionWhat: data.nextActionWhat ?? null,
-        nextActionWhoId: data.nextActionWhoId ?? null,
-        nextActionWhen: data.nextActionWhen ?? null,
+        ...(data.status !== undefined ? { status: data.status } : {}),
+        ...(data.assigneeId !== undefined ? { assignee: { connect: { id: data.assigneeId } } } : {}),
+        ...(data.dueAt !== undefined ? { dueAt: data.dueAt } : {}),
+        ...(data.nextActionWhat !== undefined ? { nextActionWhat: data.nextActionWhat } : {}),
+        ...(data.nextActionWhoId !== undefined ? { nextActionWho: data.nextActionWhoId ? { connect: { id: data.nextActionWhoId } } : { disconnect: true } } : {}),
+        ...(data.nextActionWhen !== undefined ? { nextActionWhen: data.nextActionWhen } : {}),
+        ...(data.isCustomerPromise !== undefined ? { isCustomerPromise: data.isCustomerPromise } : {}),
       },
       select: taskSelect,
     });

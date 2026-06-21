@@ -14,6 +14,9 @@ const dealSelect = {
   blocker: true,
   createdAt: true,
   updatedAt: true,
+  branch: { select: { nameEn: true } },
+  owner: { select: { nameEn: true } },
+  currentHolder: { select: { nameEn: true } },
 } satisfies Prisma.DealSelect;
 
 export type DealRow = Prisma.DealGetPayload<{ select: typeof dealSelect }>;
@@ -49,6 +52,10 @@ export class DealsRepository {
     return client.deal.create({ data, select: dealSelect });
   }
 
+  async findById(id: string, client: DealClient = this.prisma): Promise<DealRow | null> {
+    return client.deal.findUnique({ where: { id }, select: dealSelect });
+  }
+
   async updateStage(data: UpdateDealStageData, client: DealClient = this.prisma): Promise<DealRow> {
     return client.deal.update({
       where: { id: data.id },
@@ -58,6 +65,14 @@ export class DealsRepository {
         stageDueAt: data.stageDueAt,
         blocker: data.blocker ?? null,
       },
+      select: dealSelect,
+    });
+  }
+
+  async updateBlocker(data: { id: string; blocker: string | null }, client: DealClient = this.prisma): Promise<DealRow> {
+    return client.deal.update({
+      where: { id: data.id },
+      data: { blocker: data.blocker },
       select: dealSelect,
     });
   }

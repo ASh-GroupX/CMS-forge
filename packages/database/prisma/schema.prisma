@@ -196,10 +196,12 @@ enum TaskConfidentialityLevel {
 
 enum DealStage {
   LEAD
-  QUALIFIED
-  TEST_DRIVE
-  QUOTE
+  BOOKING
+  PAYMENT
   FINANCE
+  INSURANCE
+  REGISTRATION
+  PDI
   DELIVERY
   POST_DELIVERY
 }

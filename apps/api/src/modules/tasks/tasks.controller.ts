@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { RoleCode } from '@prisma/client';
 import { BranchScoped, RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../core/auth.guard.js';
@@ -6,8 +6,9 @@ import { CsrfGuard } from '../../core/csrf.guard.js';
 import { AppException } from '../../core/http-kernel.js';
 import type { QuickAddTaskResponseDto } from './dto/create-task.dto.js';
 import { parseQuickAddTaskBody, toQuickAddTaskInput } from './dto/create-task.dto.js';
-import type { EmployeeTodayResponseDto, ManagerControlRoomResponseDto } from './dto/task-response.dto.js';
+import type { EmployeeTodayResponseDto, ManagerControlRoomResponseDto, PromiseTrackerResponseDto } from './dto/task-response.dto.js';
 import { TasksService } from './tasks.service.js';
+import { parseUpdateTaskBody } from './dto/update-task.dto.js';
 
 @Controller('tasks')
 export class TasksController {
@@ -37,6 +38,37 @@ export class TasksController {
   async managerRollup(@Req() request: AuthenticatedRequest): Promise<ManagerControlRoomResponseDto> {
     const principal = requirePrincipal(request);
     return this.tasksService.managerControlRoom({ roleCode: principal.roleCode, branchId: principal.branchId });
+  }
+
+  @Get('promises')
+  @UseGuards(SessionAuthGuard, RbacGuard)
+  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN, RoleCode.MGMT_READONLY)
+  @BranchScoped()
+  async promises(@Req() request: AuthenticatedRequest): Promise<PromiseTrackerResponseDto> {
+    const principal = requirePrincipal(request);
+    return this.tasksService.promiseTracker({ userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId });
+  }
+
+  @Get(':id')
+  @UseGuards(SessionAuthGuard, RbacGuard)
+  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  async get(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    const principal = requirePrincipal(request);
+    return { task: await this.tasksService.getForActor(id, { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId }) };
+  }
+
+  @Patch(':id')
+  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
+  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  async update(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    const principal = requirePrincipal(request);
+    return {
+      task: await this.tasksService.updateForActor(
+        parseUpdateTaskBody(id, body),
+        { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId },
+        auditContext(request),
+      ),
+    };
   }
 }
 

@@ -1,0 +1,501 @@
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+[browser] Uncaught TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <anonymous> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>:1:18)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta...
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⨯ TypeError: undefined is not iterable (cannot read property Symbol(Symbol.iterator))
+    at <unknown> (src\app\(staff)\layout.tsx:85:44)
+    at Array.map (<anonymous>)
+    at StaffLayout (src\app\(staff)\layout.tsx:84:27)
+  83 |           <nav aria-label={t.title} className="grid gap-1">
+  84 |             {visibleItems.map(({ key, Icon, href }) => {
+> 85 |               const [label, description] = t.nav[key];
+     |                                            ^
+  86 |               return (
+  87 |                 <a
+  88 |                   className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-sta... {
+  digest: '4072352931'
+}
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⨯ Error: Module [project]/apps/web/src/app/staff-top-bar.tsx [app-ssr] (ecmascript) was instantiated because it was required from module [project]/node_modules/.pnpm/next@16.2.9_react-dom@19.2.7_react@19.2.7__react@19.2.7/node_modules/next/dist/esm/build/templates/app-page.js?page=/page { MODULE_0 => "[project]/apps/web/src/app/layout.tsx [app-rsc] (ecmascript, Next.js Server Component)", MODULE_1 => "[project]/node_modules/.pnpm/next@16.2.9_react-dom@19.2.7_react@19.2.7__react@19.2.7/node_modules/next/dist/client/components/builtin/not-found.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_2 => "[project]/node_modules/.pnpm/next@16.2.9_react-dom@19.2.7_react@19.2.7__react@19.2.7/node_modules/next/dist/client/components/builtin/forbidden.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_3 => "[project]/node_modules/.pnpm/next@16.2.9_react-dom@19.2.7_react@19.2.7__react@19.2.7/node_modules/next/dist/client/components/builtin/unauthorized.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_4 => "[project]/node_modules/.pnpm/next@16.2.9_react-dom@19.2.7_react@19.2.7__react@19.2.7/node_modules/next/dist/client/components/builtin/global-error.js [app-rsc] (ecmascript, Next.js Server Component)", MODULE_5 => "[project]/apps/web/src/app/page.tsx [app-rsc] (ecmascript, Next.js Server Component)" } [app-rsc] (ecmascript) <locals>, but the module factory is not available.
+This is often caused by a stale browser cache, misconfigured Cache-Control headers, or a service worker serving outdated responses.
+To fix this, make sure your Cache-Control headers allow revalidation of chunks and review your service worker configuration. As an immediate workaround, try hard-reloading the page, clearing the browser cache, or unregistering any service workers.
+    at ignore-listed frames {
+  digest: '4094216145'
+}
+[browser] Encountered a script tag while rendering React component. Scripts inside React components are never executed when rendering on the client. Consider using template tag instead (https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template). 

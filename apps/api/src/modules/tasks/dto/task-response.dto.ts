@@ -3,6 +3,7 @@ import type { TaskConfidentialityLevel, TaskLinkEntityType, TaskStatus, TaskVisi
 export type TaskNextActionDto = {
   what: string;
   whoId: string;
+  whoName?: string | null;
   when: string;
 };
 
@@ -15,7 +16,11 @@ export class TaskResponseDto {
   id!: string;
   title!: string;
   ownerId!: string;
+  ownerName?: string | null;
   assigneeId!: string;
+  assigneeName?: string | null;
+  branchId?: string | null;
+  branchName?: string | null;
   dueAt!: string;
   status!: TaskStatus;
   nextAction!: TaskNextActionDto | null;
@@ -38,6 +43,7 @@ export type EmployeeTodayResponseDto = {
 
 export type ManagerRollupCountDto = {
   assigneeId: string;
+  assigneeName?: string | null;
   count: number;
 };
 
@@ -56,4 +62,17 @@ export type ManagerControlRoomResponseDto = {
     openPromiseCount: number;
     overduePromiseCount: number;
   };
+};
+
+export type PromiseTrackerTaskDto = TaskResponseDto & {
+  customerLabel?: string | null;
+  dealLabel?: string | null;
+  keptOnTime?: boolean | null;
+};
+
+export type PromiseTrackerResponseDto = {
+  openPromiseCount: number;
+  overduePromiseCount: number;
+  keptOnTimePercent: number;
+  promises: PromiseTrackerTaskDto[];
 };

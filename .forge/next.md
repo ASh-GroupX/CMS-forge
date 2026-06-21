@@ -1,59 +1,57 @@
-# READY TO BUILD - P10-ADMIN-MASTER-DATA-B
+# READY TO PLAN - PLAN-P1-NEXT
 
-Status: Ready to Build
-Required model tier: BUILDER-STRONG
+Status: Ready to Plan
+Required model tier: PLANNER
 Phase: Phase 10 - Dealership Accountability Layer (local-first)
-Risk: High
-SRS IDs: REQ-ADMIN-001, REQ-RBAC-001, METHOD-AUDIT-001, METHOD-API-001, METHOD-TEST-001, UI-DESIGN-001
+Risk: Medium
+SRS IDs: TBD by planner
 
 ## Context
 
-P10-ADMIN-MASTER-DATA-A is complete. The main `/admin` route now has real
-Add/Save controls for branch and complaint category master data:
+P0 Tasks, P1 Deals write flow, and P1 Customer Promise Tracker are complete and
+live-smoked.
 
-- Branch Add/Save reuses the existing audited `/branches` backend CRUD.
-- Category Add/Save uses new guarded `/admin/categories` create/update routes.
-- Category writes are admin-only, CSRF guarded, audit logged in the same
-  transaction, and documented in OpenAPI.
-- The in-app browser confirmed `/admin?locale=en` has active Add/Save controls
-  and zero disabled buttons.
+Completed P1 customer promise surface:
+
+- `GET /tasks/promises`
+- Staff Promises navigation/page
+- Open promise, overdue promise, and kept-on-time KPI summary
+- Promise list with owner, assignee, next action, due date, and linked
+  customer/deal context where available
+- Quick Add validation requiring a customer, deal, case, or complaint link for
+  customer promises
 
 ## Scope
 
-Build the next narrow master-data slice:
-
-- Department create/update/deactivate/reactivate in the backend and `/admin` UI.
-- Branch deactivate/reactivate controls in `/admin`.
-- Preserve existing complaint/category Add/Save behavior.
-- Keep severity values read-only; SLA policy editing is the next separate slice.
+Planner should choose the next narrow repair slice. Keep it small and explicit
+before build work starts.
 
 ## Guardrails
 
-- Do not introduce production deploy, SMTP, WhatsApp, AI, mobile, HR-platform, or
-  VPS work.
-- Do not hard-delete branch, department, or category rows. Use active/inactive
-  toggles because these records may be referenced by complaints, users, cases,
-  deals, audit logs, and history.
-- Do not move authority into React. Backend owns validation, RBAC, CSRF,
-  audit, branch scope, and referential safety.
-- Keep the task small. If department CRUD plus branch toggles cannot stay
-  focused, split before building.
+- Do not implement P2 case/CAPA work unless the planner explicitly selects it.
+- Do not introduce production deploy, SMTP, WhatsApp, AI, mobile, HR-platform,
+  VPS, admin expansion, or workflow builder work by default.
+- Keep backend authority server-owned and keep source files under 300 lines.
+- Preserve module boundaries. Rich customer/deal promise labels need public
+  module services, not direct cross-module repository reads.
+
+## Suggested Planning Inputs
+
+- P0 Tasks: operational and live-smoked.
+- P1 Deals write flow: operational and live-smoked.
+- P1 Customer Promise Tracker: operational and live-smoked.
+- Known admin/search follow-ups still exist, but they are not automatically the
+  next task for the deal workflow.
 
 ## Required Proof Commands
 
-- `corepack pnpm test:api -- admin`
+Planner must define proof commands for the selected slice. Typical local proof:
+
+- `corepack pnpm test:api -- <area>`
 - `corepack pnpm test:web -- shell`
+- `corepack pnpm test:web -- localization`
 - `corepack pnpm openapi:check`
 - `corepack pnpm typecheck`
 - `corepack pnpm lint`
-- `corepack pnpm test:web -- localization`
 - `git diff --check`
-- Live browser smoke at `http://localhost:4000/admin?locale=en`
-
-## Notes
-
-- Existing app runtime after P10-ADMIN-MASTER-DATA-A: API on
-  `http://localhost:3000`, web on `http://localhost:4000`, Docker Postgres on
-  host port `5433`, Redis on `6379`.
-- Severity/SLA policy management and notification templates remain follow-up
-  slices.
+- Live browser smoke for any user-facing write path

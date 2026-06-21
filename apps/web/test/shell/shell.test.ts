@@ -7,6 +7,7 @@ import { buildStaffComplaintCreateSubmission } from '../../src/app/complaint-cre
 import StaffShellPage from '../../src/app/page';
 import DashboardPage from '../../src/app/(staff)/dashboard/page';
 import EmployeeTodayPage from '../../src/app/(staff)/tasks/today/page';
+import PromisesPage from '../../src/app/(staff)/tasks/promises/page';
 import ManagerControlRoomPage from '../../src/app/(staff)/tasks/manager/page';
 import DealHandoffPage from '../../src/app/(staff)/deals/handoff/page';
 import ConfidentialCasePage from '../../src/app/(staff)/cases/confidential/[caseId]/page';
@@ -42,6 +43,7 @@ import { portalSurveyText } from '../../src/i18n/portal-survey';
 import { portalTrackingText } from '../../src/i18n/portal-tracking';
 import { reportsDashboardText } from '../../src/i18n/staff-reports-dashboard';
 import { employeeTodayText } from '../../src/i18n/staff-employee-today';
+import { staffPromisesText } from '../../src/i18n/staff-promises';
 import { managerControlRoomText } from '../../src/i18n/staff-manager-control-room';
 import { dealHandoffText } from '../../src/i18n/staff-deal-handoff';
 import { confidentialCaseText } from '../../src/i18n/staff-confidential-cases';
@@ -55,6 +57,7 @@ test('staff shell renders English LTR operational navigation', async () => {
   assert.match(html, /dir="ltr"/);
   assert.match(html, /Staff Operations/);
   assert.match(html, /Employee Today/);
+  assert.match(html, /Promises/);
   assert.match(html, /Manager Control Room/);
   assert.match(html, /Deal Handoff Board/);
   assert.match(html, /Dashboard/);
@@ -104,6 +107,7 @@ test('staff shell renders Arabic RTL labels', async () => {
   assert.match(html, /dir="rtl"/);
   assert.ok(html.includes(staffShellText.ar.title));
   assert.ok(html.includes(staffShellText.ar.nav.today[0]));
+  assert.ok(html.includes(staffShellText.ar.nav.promises[0]));
   assert.ok(html.includes(staffShellText.ar.nav.manager[0]));
   assert.ok(html.includes(staffShellText.ar.nav.handoff[0]));
   assert.ok(html.includes(staffShellText.ar.nav.dashboard[0]));
@@ -476,7 +480,7 @@ function managerRollupEmpty() {
 
 function dealHandoffEmpty() {
   return {
-    byStage: ['LEAD', 'QUALIFIED', 'TEST_DRIVE', 'QUOTE', 'FINANCE', 'DELIVERY', 'POST_DELIVERY'].map((stage) => ({ stage, count: 0, deals: [] })),
+    byStage: ['LEAD', 'BOOKING', 'PAYMENT', 'FINANCE', 'INSURANCE', 'REGISTRATION', 'PDI', 'DELIVERY', 'POST_DELIVERY'].map((stage) => ({ stage, count: 0, deals: [] })),
     stuck: [],
     currentHolder: [],
   };
@@ -507,9 +511,12 @@ function dealFixture(overrides: Record<string, unknown> = {}) {
     id: 'deal_base',
     title: 'Base deal',
     branchId: 'branch_main',
+    branchName: 'Main Branch',
     ownerId: 'usr_owner',
+    ownerName: 'Deal Owner',
     currentHolderId: 'usr_sales',
-    stage: 'QUALIFIED',
+    currentHolderName: 'Sales Holder',
+    stage: 'BOOKING',
     stageDueAt: '2026-06-20T12:00:00.000Z',
     blocker: null,
     delayAgeMinutes: 90,
@@ -2686,6 +2693,75 @@ test('employee today route keeps Arabic RTL labels', async () => {
   assert.ok(html.includes(employeeTodayText.ar.states.empty));
 });
 
+// ---- (staff)/tasks/promises route ----
+
+test('promises route renders server-scoped promise KPIs and labels through the session cookie', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith('/tasks/promises')) {
+      return jsonResponse({
+        openPromiseCount: 2,
+        overduePromiseCount: 1,
+        keptOnTimePercent: 50,
+        promises: [
+          taskFixture({
+            id: 'promise_delivery',
+            title: 'Promise customer delivery date',
+            isCustomerPromise: true,
+            customerLabel: 'Noor Customer',
+            dealLabel: 'June Delivery',
+            links: [{ entityType: 'DEAL', entityId: 'deal_delivery_1' }],
+          }),
+        ],
+      });
+    }
+    return jsonResponse({});
+  };
+  const html = renderToStaticMarkup(
+    await PromisesPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  const promisesCall = calls.find((call) => String(call.input).endsWith('/tasks/promises'));
+  assert.ok(promisesCall);
+  assert.deepEqual(promisesCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+  assert.doesNotMatch(String(promisesCall.input), /role|actor|workflow|branchId|owner|token|credential/i);
+  assert.match(html, /Promises/);
+  assert.match(html, /Open promises/);
+  assert.match(html, /Overdue promises/);
+  assert.match(html, /Kept on time/);
+  assert.match(html, /Promise customer delivery date/);
+  assert.match(html, /Noor Customer/);
+  assert.match(html, /June Delivery/);
+  assert.match(html, /DEAL:[\s\S]*deal_delivery_1/);
+});
+
+test('promises route renders empty and denied states safely', async () => {
+  const empty = renderToStaticMarkup(
+    await PromisesPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: async () => jsonResponse({ openPromiseCount: 0, overduePromiseCount: 0, keptOnTimePercent: 0, promises: [] }),
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+  const denied = renderToStaticMarkup(
+    await PromisesPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: async () => new Response('', { status: 403 }),
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  assert.match(empty, /No customer promises are visible right now\./);
+  assert.match(empty, /role="status"/);
+  assert.match(denied, /Promises could not be loaded\. Sign in and try again\./);
+  assert.match(denied, /role="alert"/);
+});
+
 // ---- (staff)/tasks/manager route ----
 
 test('manager control room route renders rollup sections through the session cookie', async () => {
@@ -2780,11 +2856,11 @@ test('deal handoff board route renders scoped deal data through the session cook
       const delivery = dealFixture({ id: 'deal_delivery', title: 'Prepare customer handoff', stage: 'DELIVERY', currentHolderId: 'usr_delivery', delayAgeMinutes: 0 });
       return jsonResponse({
         byStage: [
-          { stage: 'QUALIFIED', count: 1, deals: [blocked] },
+          { stage: 'BOOKING', count: 1, deals: [blocked] },
           { stage: 'DELIVERY', count: 1, deals: [delivery] },
         ],
         stuck: [blocked],
-        currentHolder: [{ currentHolderId: 'usr_sales', count: 1 }, { currentHolderId: 'usr_delivery', count: 1 }],
+        currentHolder: [{ currentHolderId: 'usr_sales', currentHolderName: 'Sales Holder', count: 1 }, { currentHolderId: 'usr_delivery', currentHolderName: 'Delivery Holder', count: 1 }],
       });
     }
     return jsonResponse({});

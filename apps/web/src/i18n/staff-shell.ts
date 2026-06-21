@@ -134,6 +134,7 @@ export const staffShellText = {
     },
     nav: {
       today: ['Employee Today', 'Due, overdue, and waiting tasks'],
+      promises: ['Promises', 'Customer commitments and due dates'],
       manager: ['Manager Control Room', 'Team overdue, stuck, and promise work'],
       handoff: ['Deal Handoff Board', 'Stage gates, holders, and blockers'],
       dashboard: ['Dashboard', 'SLA and volume overview'],
@@ -280,6 +281,7 @@ export const staffShellText = {
     },
     nav: {
       today: ['مهامي اليوم', 'المهام المستحقة والمتأخرة والعالقة'],
+      promises: ['الوعود', 'التزامات العملاء ومواعيدها'],
       manager: ['غرفة تحكم المدير', 'المهام المتأخرة والعالقة ووعود العملاء'],
       handoff: ['لوحة تسليم الصفقات', 'المراحل والمسؤولون والعوائق'],
       dashboard: ['لوحة التحكم', 'ملخص SLA والحجم'],

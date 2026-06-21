@@ -107,7 +107,7 @@ function CountSection({ counts, locale, sectionKey, t }: { counts: ManagerRollup
           <TableBody>
             {counts.map((row) => (
               <TableRow key={`${sectionKey}-${row.assigneeId}`}>
-                <TableCell title={row.assigneeId}>{shortId(row.assigneeId)}</TableCell>
+                <TableCell title={row.assigneeId}>{row.assigneeName ?? shortId(row.assigneeId)}</TableCell>
                 <TableCell className="text-end font-semibold">{formatNumber(locale, row.count)}</TableCell>
               </TableRow>
             ))}
@@ -156,16 +156,17 @@ function TaskCard({ locale, task, t }: { locale: Locale; task: StaffTask | Manag
         </div>
       </div>
       <dl className="mt-3 grid gap-2 text-sm md:grid-cols-2">
-        <Field label={t.fields.assignee} title={task.assigneeId} value={shortId(task.assigneeId)} />
+        <Field label={t.fields.assignee} title={task.assigneeId} value={task.assigneeName ?? shortId(task.assigneeId)} />
         <Field label={t.fields.due} value={formatDate(task.dueAt)} />
-        <Field label={t.fields.owner} title={task.ownerId} value={shortId(task.ownerId)} />
+        <Field label={t.fields.owner} title={task.ownerId} value={task.ownerName ?? shortId(task.ownerId)} />
+        <Field label={t.fields.branch} title={task.branchId ?? undefined} value={task.branchName ?? (task.branchId ? shortId(task.branchId) : '-')} />
         <Field label={t.fields.updated} value={formatDate(task.updatedAt)} />
       </dl>
       {task.nextAction ? (
         <div className="mt-3 rounded-sm border border-border bg-muted px-3 py-2 text-sm">
           <p className="font-semibold">{t.fields.nextAction}</p>
           <p className="mt-1 break-words text-muted-foreground">{task.nextAction.what}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{t.fields.nextOwner}: <span title={task.nextAction.whoId}>{shortId(task.nextAction.whoId)}</span> - {formatDate(task.nextAction.when)}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t.fields.nextOwner}: <span title={task.nextAction.whoId}>{task.nextAction.whoName ?? shortId(task.nextAction.whoId)}</span> - {formatDate(task.nextAction.when)}</p>
         </div>
       ) : null}
       {reasons.length ? <p className="mt-3 text-xs font-semibold text-status-warning">{t.fields.reasons}: {reasons.join(', ')}</p> : null}
@@ -190,7 +191,7 @@ function Metric({ label, locale, value }: { label: string; locale: Locale; value
   return <div className="rounded-sm border border-border bg-muted px-3 py-2"><dt className="text-xs font-semibold text-muted-foreground">{label}</dt><dd className="text-2xl font-semibold">{formatNumber(locale, value)}</dd></div>;
 }
 
-function Field({ label, title, value }: { label: string; title?: string; value: string }) {
+function Field({ label, title, value }: { label: string; title?: string | undefined; value: string }) {
   return <div><dt className="text-xs font-semibold text-muted-foreground">{label}</dt><dd className="break-words" title={title}>{value}</dd></div>;
 }
 

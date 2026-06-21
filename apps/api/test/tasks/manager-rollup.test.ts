@@ -39,10 +39,10 @@ test('manager sees branch-scoped rollup derived from task rows', async () => {
   const result = await service.managerControlRoom({ roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a' }, new Date('2026-06-20T12:00:00.000Z'));
 
   assert.equal(scopedBranch, 'branch_a');
-  assert.deepEqual(result.overdueByEmployee, [{ assigneeId: 'user_a', count: 1 }]);
+  assert.deepEqual(result.overdueByEmployee, [{ assigneeId: 'user_a', assigneeName: 'Assignee User', count: 1 }]);
   assert.deepEqual(result.dueToday.map((task) => task.id), ['today_b', 'promise_late']);
   assert.deepEqual(result.overduePromises.map((task) => task.id), ['promise_late']);
-  assert.deepEqual(result.workloadByAssignee, [{ assigneeId: 'user_a', count: 3 }, { assigneeId: 'user_b', count: 1 }]);
+  assert.deepEqual(result.workloadByAssignee, [{ assigneeId: 'user_a', assigneeName: 'Assignee User', count: 3 }, { assigneeId: 'user_b', assigneeName: 'Assignee User', count: 1 }]);
   assert.deepEqual(result.stuck.map((task) => task.id), ['stuck_a']);
   assert.deepEqual(result.promiseKpi, { openPromiseCount: 1, overduePromiseCount: 1 });
 });
@@ -59,6 +59,20 @@ test('manager rollup route derives scope from the staff session', async () => {
   await controller.managerRollup(request(branchManager));
 
   assert.deepEqual(capturedScope, { roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a' });
+});
+
+test('promise tracker route derives actor from the staff session', async () => {
+  let capturedActor: unknown;
+  const controller = new TasksController({
+    promiseTracker: async (actor: unknown) => {
+      capturedActor = actor;
+      return { openPromiseCount: 0, overduePromiseCount: 0, keptOnTimePercent: 0, promises: [] };
+    },
+  } as unknown as TasksService);
+
+  await controller.promises(request(branchManager, '/tasks/promises'));
+
+  assert.deepEqual(capturedActor, { userId: 'user_manager', roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a' });
 });
 
 test('ordinary employee is denied by manager rollup RBAC', async () => {
@@ -162,6 +176,9 @@ function taskRecord(overrides: Partial<TaskRecord> = {}): TaskRecord {
     confidentialityLevel: TaskConfidentialityLevel.NORMAL,
     createdAt: now,
     updatedAt: now,
+    owner: { nameEn: 'Owner User', branchId: 'branch_a', branch: { nameEn: 'Main Branch' } },
+    assignee: { nameEn: 'Assignee User', branchId: 'branch_a', branch: { nameEn: 'Main Branch' } },
+    nextActionWho: { nameEn: 'Assignee User', branchId: 'branch_a' },
     links: [{ entityType: TaskLinkEntityType.CUSTOMER, entityId: 'customer_1' }],
     participants: [],
     ...overrides,

@@ -3157,6 +3157,128 @@
         }
       }
     },
+    "/tasks/promises": {
+      "get": {
+        "tags": [
+          "Tasks"
+        ],
+        "operationId": "taskPromiseTrackerList",
+        "summary": "List customer promise tasks and KPIs for the current session scope",
+        "responses": {
+          "200": {
+            "description": "Customer promise tracker",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromiseTrackerResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied or branch scope denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deals": {
+      "post": {
+        "tags": [
+          "Deals"
+        ],
+        "operationId": "dealCreate",
+        "summary": "Create a branch-scoped deal",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DealCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Deal created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DealWriteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied, branch scope denied, or invalid CSRF token (CSRF_INVALID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Deal not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Invalid stage transition or active blocker",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/deals/handoff-board": {
       "get": {
         "tags": [
@@ -3187,6 +3309,188 @@
           },
           "403": {
             "description": "Role denied or branch scope denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deals/{id}/advance": {
+      "post": {
+        "tags": [
+          "Deals"
+        ],
+        "operationId": "dealAdvance",
+        "summary": "Advance a deal to the next backend-owned stage and create the next holder task",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DealAdvanceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deal advanced and task created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DealAdvanceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied, branch scope denied, or invalid CSRF token (CSRF_INVALID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Deal not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Invalid stage transition or active blocker",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deals/{id}/blocker": {
+      "patch": {
+        "tags": [
+          "Deals"
+        ],
+        "operationId": "dealBlockerUpdate",
+        "summary": "Set or clear a deal blocker",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DealBlockerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deal blocker updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DealWriteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied, branch scope denied, or invalid CSRF token (CSRF_INVALID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Deal not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Invalid stage transition or active blocker",
             "content": {
               "application/json": {
                 "schema": {
@@ -3248,6 +3552,156 @@
           },
           "404": {
             "description": "Case not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/{id}": {
+      "get": {
+        "tags": [
+          "Tasks"
+        ],
+        "operationId": "taskGet",
+        "summary": "Get an actor-authorized task by id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Task detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Task access denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Tasks"
+        ],
+        "operationId": "taskUpdate",
+        "summary": "Update an actor-authorized task",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Task updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Task access denied or invalid CSRF token (CSRF_INVALID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Task next action required (TASK_NEXT_ACTION_REQUIRED)",
             "content": {
               "application/json": {
                 "schema": {
@@ -5485,6 +5939,12 @@
           "when": {
             "type": "string",
             "format": "date-time"
+          },
+          "whoName": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "additionalProperties": false
@@ -5581,6 +6041,30 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "ownerName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assigneeName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "branchId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "branchName": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "additionalProperties": false
@@ -5642,6 +6126,9 @@
               "CONFIDENTIAL",
               "RESTRICTED"
             ]
+          },
+          "isCustomerPromise": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -5715,6 +6202,12 @@
           "count": {
             "type": "integer",
             "minimum": 0
+          },
+          "assigneeName": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "additionalProperties": false
@@ -5762,6 +6255,73 @@
             "additionalProperties": false
           }
         ]
+      },
+      "PromiseTrackerTask": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Task"
+          },
+          {
+            "type": "object",
+            "required": [
+              "customerLabel",
+              "dealLabel",
+              "keptOnTime"
+            ],
+            "properties": {
+              "customerLabel": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "dealLabel": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "keptOnTime": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "PromiseTrackerResponse": {
+        "type": "object",
+        "required": [
+          "openPromiseCount",
+          "overduePromiseCount",
+          "keptOnTimePercent",
+          "promises"
+        ],
+        "properties": {
+          "openPromiseCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "overduePromiseCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "keptOnTimePercent": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "promises": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PromiseTrackerTask"
+            }
+          }
+        },
+        "additionalProperties": false
       },
       "ManagerControlRoomResponse": {
         "type": "object",
@@ -5823,14 +6383,17 @@
           "id",
           "title",
           "branchId",
+          "branchName",
           "ownerId",
+          "ownerName",
           "currentHolderId",
+          "currentHolderName",
           "stage",
           "stageDueAt",
           "blocker",
-          "delayAgeMinutes",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "delayAgeMinutes"
         ],
         "properties": {
           "id": {
@@ -5842,20 +6405,40 @@
           "branchId": {
             "type": "string"
           },
+          "branchName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "ownerId": {
             "type": "string"
           },
+          "ownerName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "currentHolderId": {
             "type": "string"
+          },
+          "currentHolderName": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "stage": {
             "type": "string",
             "enum": [
               "LEAD",
-              "QUALIFIED",
-              "TEST_DRIVE",
-              "QUOTE",
+              "BOOKING",
+              "PAYMENT",
               "FINANCE",
+              "INSURANCE",
+              "REGISTRATION",
+              "PDI",
               "DELIVERY",
               "POST_DELIVERY"
             ]
@@ -5870,10 +6453,6 @@
               "null"
             ]
           },
-          "delayAgeMinutes": {
-            "type": "integer",
-            "minimum": 0
-          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -5881,6 +6460,10 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "delayAgeMinutes": {
+            "type": "integer",
+            "minimum": 0
           }
         },
         "additionalProperties": false
@@ -5913,6 +6496,7 @@
         "type": "object",
         "required": [
           "currentHolderId",
+          "currentHolderName",
           "count"
         ],
         "properties": {
@@ -5922,6 +6506,12 @@
           "count": {
             "type": "integer",
             "minimum": 0
+          },
+          "currentHolderName": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "additionalProperties": false
@@ -6494,6 +7084,257 @@
               "string",
               "null"
             ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "TaskUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "IN_PROGRESS",
+              "WAITING",
+              "DONE"
+            ]
+          },
+          "assigneeId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "nextAction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaskNextActionInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "isCustomerPromise": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TaskDetailResponse": {
+        "type": "object",
+        "required": [
+          "task"
+        ],
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/Task"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TaskNextActionInput": {
+        "type": "object",
+        "required": [
+          "what",
+          "whoId",
+          "when"
+        ],
+        "properties": {
+          "what": {
+            "type": "string",
+            "minLength": 1
+          },
+          "whoId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "when": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "Deal": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "branchId",
+          "branchName",
+          "ownerId",
+          "ownerName",
+          "currentHolderId",
+          "currentHolderName",
+          "stage",
+          "stageDueAt",
+          "blocker",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "branchId": {
+            "type": "string"
+          },
+          "branchName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ownerId": {
+            "type": "string"
+          },
+          "ownerName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "currentHolderId": {
+            "type": "string"
+          },
+          "currentHolderName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "LEAD",
+              "BOOKING",
+              "PAYMENT",
+              "FINANCE",
+              "INSURANCE",
+              "REGISTRATION",
+              "PDI",
+              "DELIVERY",
+              "POST_DELIVERY"
+            ]
+          },
+          "stageDueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "blocker": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DealCreateRequest": {
+        "type": "object",
+        "required": [
+          "title",
+          "currentHolderId",
+          "stageDueAt"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "branchId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "currentHolderId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "stageDueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "blocker": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "DealAdvanceRequest": {
+        "type": "object",
+        "required": [
+          "currentHolderId",
+          "stageDueAt"
+        ],
+        "properties": {
+          "currentHolderId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "stageDueAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DealBlockerRequest": {
+        "type": "object",
+        "required": [
+          "blocker"
+        ],
+        "properties": {
+          "blocker": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "DealWriteResponse": {
+        "type": "object",
+        "required": [
+          "deal"
+        ],
+        "properties": {
+          "deal": {
+            "$ref": "#/components/schemas/Deal"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DealAdvanceResponse": {
+        "type": "object",
+        "required": [
+          "deal",
+          "taskId"
+        ],
+        "properties": {
+          "deal": {
+            "$ref": "#/components/schemas/Deal"
+          },
+          "taskId": {
+            "type": "string"
           }
         },
         "additionalProperties": false

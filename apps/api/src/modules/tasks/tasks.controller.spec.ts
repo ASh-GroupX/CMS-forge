@@ -3,7 +3,8 @@ import test from 'node:test';
 import { TaskConfidentialityLevel, TaskStatus, TaskVisibility } from '@prisma/client';
 import { AppException } from '../../core/http-kernel.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
-import type { CreateTaskInput } from './tasks.service.js';
+import type { TaskResponseDto } from './dto/task-response.dto.js';
+import type { CreateTaskInput, UpdateTaskInput } from './tasks.service.js';
 import { TasksController } from './tasks.controller.js';
 import { TasksService } from './tasks.service.js';
 
@@ -40,6 +41,31 @@ test('quick-add derives owner and audit actor from the staff session', async () 
   assert.equal(capturedInput?.dueAt, '2026-06-21T09:00:00.000Z');
   assert.equal(capturedAudit?.actorId, 'user_owner');
   assert.equal(capturedAudit?.correlationId, 'req_test');
+});
+
+test('quick-add accepts customer promise flag from the staff form', async () => {
+  let capturedInput: CreateTaskInput | undefined;
+  const controller = new TasksController({
+    create: async (input: CreateTaskInput) => {
+      capturedInput = input;
+      return taskResponse();
+    },
+  } as unknown as TasksService);
+
+  await controller.quickAdd(
+    {
+      title: 'Deliver car',
+      what: 'Confirm handover',
+      whoId: 'user_assignee',
+      when: '2026-06-21T09:00:00.000Z',
+      isCustomerPromise: true,
+      links: [{ entityType: 'CUSTOMER', entityId: 'customer_1' }],
+    },
+    request(),
+  );
+
+  assert.equal(capturedInput?.isCustomerPromise, true);
+  assert.deepEqual(capturedInput?.links, [{ entityType: 'CUSTOMER', entityId: 'customer_1' }]);
 });
 
 test('quick-add rejects client-owned task authority fields', async () => {
@@ -99,6 +125,69 @@ test('manager rollup derives role and branch from the staff session', async () =
   assert.deepEqual(result, { overdueByEmployee: [], dueToday: [], overduePromises: [], stuck: [], workloadByAssignee: [], escalated: [], promiseKpi: { openPromiseCount: 0, overduePromiseCount: 0 } });
 });
 
+test('promises route derives actor from the staff session', async () => {
+  let capturedActor: unknown;
+  const controller = new TasksController({
+    promiseTracker: async (actor: unknown) => {
+      capturedActor = actor;
+      return { openPromiseCount: 0, overduePromiseCount: 0, keptOnTimePercent: 0, promises: [] };
+    },
+  } as unknown as TasksService);
+
+  const result = await controller.promises(request('BRANCH_MANAGER'));
+
+  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'BRANCH_MANAGER', branchId: 'branch_1' });
+  assert.deepEqual(result, { openPromiseCount: 0, overduePromiseCount: 0, keptOnTimePercent: 0, promises: [] });
+});
+
+test('get task derives actor from the staff session', async () => {
+  let capturedActor: unknown;
+  const controller = new TasksController({
+    getForActor: async (_taskId: string, actor: unknown) => {
+      capturedActor = actor;
+      return taskResponse();
+    },
+  } as unknown as TasksService);
+
+  const result = await controller.get('task_1', request('BRANCH_MANAGER'));
+
+  assert.equal(result.task.id, 'task_1');
+  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'BRANCH_MANAGER', branchId: 'branch_1' });
+});
+
+test('update task derives actor and audit from the staff session', async () => {
+  let capturedInput: UpdateTaskInput | undefined;
+  let capturedActor: unknown;
+  let capturedAudit: { actorId?: string | null; correlationId?: string | null } | undefined;
+  const controller = new TasksController({
+    updateForActor: async (input: UpdateTaskInput, actor: unknown, audit: { actorId?: string | null; correlationId?: string | null }) => {
+      capturedInput = input;
+      capturedActor = actor;
+      capturedAudit = audit;
+      return taskResponse({ status: TaskStatus.WAITING });
+    },
+  } as unknown as TasksService);
+
+  const result = await controller.update(
+    'task_1',
+    {
+      status: 'WAITING',
+      nextAction: { what: 'Wait for payment', whoId: 'user_assignee', when: '2026-06-22T09:00:00.000Z' },
+    },
+    request('BRANCH_MANAGER'),
+  );
+
+  assert.equal(result.task.status, TaskStatus.WAITING);
+  assert.deepEqual(capturedInput, {
+    taskId: 'task_1',
+    status: TaskStatus.WAITING,
+    nextAction: { what: 'Wait for payment', whoId: 'user_assignee', when: '2026-06-22T09:00:00.000Z' },
+  });
+  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'BRANCH_MANAGER', branchId: 'branch_1' });
+  assert.equal(capturedAudit?.actorId, 'user_owner');
+  assert.equal(capturedAudit?.correlationId, 'req_test');
+});
+
 function request(roleCode = 'CR_OFFICER'): AuthenticatedRequest {
   return {
     headers: { 'x-correlation-id': 'req_test', 'user-agent': 'node-test' },
@@ -115,17 +204,26 @@ function request(roleCode = 'CR_OFFICER'): AuthenticatedRequest {
   };
 }
 
-function taskResponse() {
+function taskResponse(overrides: Partial<TaskResponseDto> = {}): TaskResponseDto {
+  return { ...taskResponseBase(), ...overrides };
+}
+
+function taskResponseBase(): TaskResponseDto {
   return {
     id: 'task_1',
     title: 'Call customer',
     ownerId: 'user_owner',
+    ownerName: 'Owner',
     assigneeId: 'user_assignee',
+    assigneeName: 'Assignee',
+    branchId: 'branch_1',
+    branchName: 'Main Branch',
     dueAt: '2026-06-21T09:00:00.000Z',
     status: TaskStatus.OPEN,
     nextAction: {
       what: 'Confirm delivery time',
       whoId: 'user_assignee',
+      whoName: 'Assignee',
       when: '2026-06-21T09:00:00.000Z',
     },
     isCustomerPromise: false,

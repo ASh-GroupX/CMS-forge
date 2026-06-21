@@ -8,15 +8,18 @@ import { DealsRepository } from './deals.repository.js';
 import type { DealRow } from './deals.repository.js';
 import { TasksService } from '../tasks/tasks.service.js';
 
-export const dealStages = ['LEAD', 'QUALIFIED', 'TEST_DRIVE', 'QUOTE', 'FINANCE', 'DELIVERY', 'POST_DELIVERY'] as const;
+export const dealStages = ['LEAD', 'BOOKING', 'PAYMENT', 'FINANCE', 'INSURANCE', 'REGISTRATION', 'PDI', 'DELIVERY', 'POST_DELIVERY'] as const;
 export type DealStageCode = (typeof dealStages)[number];
 
 export type DealRecord = {
   id: string;
   title: string;
   branchId: string;
+  branchName: string | null;
   ownerId: string;
+  ownerName: string | null;
   currentHolderId: string;
+  currentHolderName: string | null;
   stage: DealStageCode;
   stageDueAt: string;
   blocker: string | null;
@@ -49,6 +52,7 @@ type DealAuditContext = {
   userAgent?: string | null;
 };
 type DealBoardScope = { roleCode: string; branchId: string | null };
+export type DealWriteActor = { userId: string; roleCode: string; branchId: string | null };
 
 @Injectable()
 export class DealsService {
@@ -63,8 +67,11 @@ export class DealsService {
       id: `deal_${now.getTime()}`,
       title: requiredText(input.title, 'title'),
       branchId: requiredText(input.branchId, 'branchId'),
+      branchName: null,
       ownerId: requiredText(input.ownerId, 'ownerId'),
+      ownerName: null,
       currentHolderId: requiredText(input.currentHolderId, 'currentHolderId'),
+      currentHolderName: null,
       stage: validStage(input.stage ?? 'LEAD'),
       stageDueAt: validDate(input.stageDueAt, 'stageDueAt').toISOString(),
       blocker: optionalText(input.blocker),
@@ -90,6 +97,36 @@ export class DealsService {
       blocker: optionalText(input.blocker),
       updatedAt: now.toISOString(),
     };
+  }
+
+  async createForActor(input: Omit<CreateDealInput, 'branchId' | 'ownerId'> & { branchId?: string }, actor: DealWriteActor, audit: DealAuditContext = {}): Promise<DealRecord> {
+    const branchId = actor.roleCode === RoleCode.ADMIN ? requiredText(input.branchId ?? '', 'branchId') : scopedBranchId(actor);
+    return this.createPersisted({ ...input, branchId, ownerId: actor.userId }, audit);
+  }
+
+  async advanceForActor(id: string, input: { currentHolderId: string; stageDueAt: Date | string }, actor: DealWriteActor, audit: DealAuditContext = {}): Promise<{ deal: DealRecord; taskId: string }> {
+    const deal = await this.dealsRepository.findById(requiredText(id, 'id'));
+    if (!deal) throw new AppException('DEAL_NOT_FOUND', 'Deal was not found', HttpStatus.NOT_FOUND);
+    const current = toResponse(deal);
+    assertDealWriteAllowed(current, actor);
+    return this.advanceStagePersisted({
+      deal: current,
+      toStage: nextStage(current.stage),
+      currentHolderId: input.currentHolderId,
+      stageDueAt: input.stageDueAt,
+    }, audit);
+  }
+
+  async updateBlockerForActor(id: string, blocker: string | null, actor: DealWriteActor, audit: DealAuditContext = {}): Promise<DealRecord> {
+    return this.dealsRepository.transaction(async (client) => {
+      const current = await this.dealsRepository.findById(requiredText(id, 'id'), client);
+      if (!current) throw new AppException('DEAL_NOT_FOUND', 'Deal was not found', HttpStatus.NOT_FOUND);
+      const existing = toResponse(current);
+      assertDealWriteAllowed(existing, actor);
+      const deal = toResponse(await this.dealsRepository.updateBlocker({ id: existing.id, blocker: optionalText(blocker) }, client));
+      await this.auditService?.record(dealAudit(deal.blocker ? 'deal_blocker_set' : 'deal_blocker_cleared', deal, audit, { stage: deal.stage }), client);
+      return deal;
+    });
   }
 
   async createPersisted(input: CreateDealInput, audit: DealAuditContext = {}): Promise<DealRecord> {
@@ -148,6 +185,25 @@ function managerBranchId(scope: DealBoardScope): string | null {
 }
 
 const managerRoles = new Set<string>([RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN, RoleCode.MGMT_READONLY]);
+const writeRoles = new Set<string>([RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN]);
+
+function scopedBranchId(actor: DealWriteActor): string {
+  if (!actor.branchId) throw new AppException('BRANCH_SCOPE_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
+  return actor.branchId;
+}
+
+function assertDealWriteAllowed(deal: DealRecord, actor: DealWriteActor): void {
+  if (!writeRoles.has(actor.roleCode)) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
+  if (actor.roleCode !== RoleCode.ADMIN && scopedBranchId(actor) !== deal.branchId) {
+    throw new AppException('BRANCH_SCOPE_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
+  }
+}
+
+function nextStage(stage: DealStageCode): DealStageCode {
+  const next = dealStages[dealStages.indexOf(stage) + 1];
+  if (!next) throw new AppException('DEAL_INVALID_STAGE_TRANSITION', 'Invalid deal stage transition', HttpStatus.CONFLICT);
+  return next;
+}
 
 function boardItem(deal: DealRow, now: Date): DealBoardItemDto {
   const response = toResponse(deal);
@@ -158,9 +214,13 @@ function boardItem(deal: DealRow, now: Date): DealBoardItemDto {
 }
 
 function holderCounts(deals: DealBoardItemDto[]) {
-  const grouped = new Map<string, number>();
-  for (const deal of deals) grouped.set(deal.currentHolderId, (grouped.get(deal.currentHolderId) ?? 0) + 1);
-  return [...grouped].map(([currentHolderId, count]) => ({ currentHolderId, count }));
+  const grouped = new Map<string, { currentHolderId: string; currentHolderName: string | null; count: number }>();
+  for (const deal of deals) {
+    const row = grouped.get(deal.currentHolderId) ?? { currentHolderId: deal.currentHolderId, currentHolderName: deal.currentHolderName, count: 0 };
+    row.count += 1;
+    grouped.set(deal.currentHolderId, row);
+  }
+  return [...grouped.values()];
 }
 
 function normalizedCreate(input: CreateDealInput) {
@@ -180,8 +240,11 @@ function toResponse(deal: DealRow): DealRecord {
     id: deal.id,
     title: deal.title,
     branchId: deal.branchId,
+    branchName: deal.branch?.nameEn ?? null,
     ownerId: deal.ownerId,
+    ownerName: deal.owner?.nameEn ?? null,
     currentHolderId: deal.currentHolderId,
+    currentHolderName: deal.currentHolder?.nameEn ?? null,
     stage: validStage(deal.stage),
     stageDueAt: deal.stageDueAt.toISOString(),
     blocker: deal.blocker,
