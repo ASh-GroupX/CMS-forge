@@ -1,0 +1,58 @@
+export const employeeTodayText = {
+  en: {
+    title: 'Employee Today',
+    subtitle: 'Your server-authorized task list for the work that can be forgotten.',
+    total: 'tasks',
+    promise: 'Customer promise',
+    sections: {
+      overdue: ['Overdue', 'Past due and needs recovery'],
+      dueToday: ['Due today', 'Must move before the day ends'],
+      waitingOnMe: ['Waiting on me', 'The next action is assigned to you'],
+      assignedToMe: ['Assigned to me', 'Tasks you own operationally'],
+      overduePromises: ['Overdue promises', 'Customer promises past their due time'],
+    },
+    fields: {
+      assignee: 'Assignee',
+      due: 'Due',
+      links: 'Task links',
+      nextAction: 'Next action',
+      nextOwner: 'Owner',
+      owner: 'Created by',
+      updated: 'Updated',
+    },
+    states: {
+      loading: 'Loading your task list.',
+      empty: 'No tasks need your attention right now.',
+      error: 'Employee Today could not be loaded. Sign in and try again.',
+      sectionEmpty: 'No tasks in this section.',
+    },
+  },
+  ar: {
+    title: 'مهامي اليوم',
+    subtitle: 'قائمة مهامك المصرح بها من الخادم حتى لا يضيع العمل.',
+    total: 'مهام',
+    promise: 'وعد للعميل',
+    sections: {
+      overdue: ['متأخر', 'تجاوز موعده ويحتاج متابعة'],
+      dueToday: ['مستحق اليوم', 'يجب تحريكه قبل نهاية اليوم'],
+      waitingOnMe: ['ينتظرني', 'الإجراء التالي مطلوب منك'],
+      assignedToMe: ['مسند إلي', 'مهام أنت مسؤول عنها تشغيليا'],
+      overduePromises: ['وعود متأخرة', 'وعود العملاء التي تجاوزت موعدها'],
+    },
+    fields: {
+      assignee: 'المكلف',
+      due: 'الاستحقاق',
+      links: 'روابط المهمة',
+      nextAction: 'الإجراء التالي',
+      nextOwner: 'المسؤول',
+      owner: 'أنشأها',
+      updated: 'آخر تحديث',
+    },
+    states: {
+      loading: 'جاري تحميل قائمة مهامك.',
+      empty: 'لا توجد مهام تحتاج انتباهك الآن.',
+      error: 'تعذر تحميل مهامي اليوم. سجل الدخول وحاول مرة أخرى.',
+      sectionEmpty: 'لا توجد مهام في هذا القسم.',
+    },
+  },
+} as const;

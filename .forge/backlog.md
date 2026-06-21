@@ -428,7 +428,7 @@ Scope frozen: Task / Case / Deal only. No AI, BPMN/workflow-builder, mobile app,
 WhatsApp, or HR platform. Production deploy deferred. Umbrella tasks (marked) are
 PLAN-split into 1-5 file sub-tasks before build, like F1-05 was.
 
-- [ ] P10-01 (umbrella): Task atom + next-action invariant + quick-add + Employee
+- [x] P10-01 (umbrella): Task atom + next-action invariant + quick-add + Employee
       Today. Model: title, owner, assignee, dueAt, status (Open/InProgress/Waiting/
       Done), nextAction {what, who, when}, polymorphic links[] (entityType+entityId:
       customer/vehicle/complaint/deal/employee), participant/visibility +
@@ -439,7 +439,7 @@ PLAN-split into 1-5 file sub-tasks before build, like F1-05 was.
   - [x] P10-01A: Task domain model + next-action invariant + unit proof.
   - [x] P10-01B: 10-second quick-add capture API.
   - [x] P10-01C: Employee Today query/service API.
-  - [ ] P10-01D: Employee Today screen and runtime proof.
+  - [x] P10-01D: Employee Today screen and runtime proof.
 - [ ] P10-02: Manager Control Room - overdue-by-employee, due-today, stuck, workload,
       escalated, branch/team filters.
   - [x] P10-02A: Manager rollup read model + derived queries + RBAC/branch scope +

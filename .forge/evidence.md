@@ -4514,3 +4514,68 @@ Status: Passed through P9-02
 - Dev seed users intentionally have no documented plaintext password in the
   seed; login proof should use the intended auth/reset path or add an explicit
   dev credential task if product owners want one.
+
+## P10-01D Employee Today Screen And Runtime Proof
+
+- Date: 2026-06-21
+- Risk: Medium
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, REQ-LOCALIZATION-001, UI-DESIGN-001, METHOD-TEST-001
+
+### Changes
+
+1. Added a typed web API client for the existing `GET /tasks/today` read model.
+   The client forwards only the staff session cookie and does not add role,
+   actor, workflow, or branch authority from the browser.
+2. Added `/tasks/today` with loading, empty, error, English LTR, and Arabic RTL
+   states, rendering the server-provided Employee Today buckets: overdue, due
+   today, waiting on me, assigned to me, and overdue promises.
+3. Added `Employee Today` as the first staff navigation item and made signed-in
+   non-readonly staff land on `/tasks/today` from the root shell.
+4. Split Employee Today screen copy into `staff-employee-today.ts` so
+   `staff-shell.ts` stays at the 300-line source budget.
+5. Saved runtime visual proof at `output/playwright/employee-today.png`.
+
+### Verification
+
+- Passed: `$env:DATABASE_URL='postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto'; corepack pnpm db:seed`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test:web -- shell` (167/167).
+- Passed: `Invoke-WebRequest http://localhost:3000/health` returned healthy API,
+  database, and Redis configuration.
+- Passed: `Invoke-WebRequest http://localhost:4000/tasks/today?locale=en`
+  returned 200.
+- Passed: browser runtime smoke with Playwright fallback at
+  `http://localhost:4000/tasks/today?locale=en`, using a temporary local
+  `cms_staff_session` for seeded `officer.main@cms-auto.test`. Snapshot showed
+  Employee Today navigation and real seeded task buckets from the API.
+- Passed: browser console check; only normal React DevTools / HMR dev messages
+  were present, with no hydration or runtime errors.
+
+### Notes
+
+- The in-app browser connector could not be used because it failed with
+  `codex/sandbox-state-meta: missing field sandboxPolicy`; terminal Playwright
+  was used instead.
+- The temporary Playwright auth storage file was deleted after proof, the proof
+  browser was closed, and the temporary local staff session row was removed.
+- The existing Employee Today API does not expose a separate employee-level
+  `escalated` bucket; the UI renders only server-provided read-model sections
+  and does not derive escalation in React.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. The
+  web client calls `/tasks/today` with the session cookie only, and tests assert
+  no role, actor, workflow, or branch query authority.
+- State change history + audit in same transaction: not applicable; this task
+  adds a read-only web screen and no workflow mutation.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Runtime proof used a temporary local session without
+  printing the raw cookie value, and cleanup removed the storage-state artifact.
+- Customer portal exposure rules: not applicable; no customer portal surface was
+  changed.
+- Trust boundaries tested: Passed. Web tests cover real data, denied access,
+  empty state, Arabic RTL, and cookie forwarding to the backend read model.

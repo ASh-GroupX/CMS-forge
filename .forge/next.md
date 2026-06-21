@@ -1,4 +1,4 @@
-# Build Task: P10-01D - Employee Today Screen And Runtime Proof
+# Build Task: P10-02B - Manager Control Room Screen And Web Proof
 
 Status: Ready to Build
 Required model tier: BUILDER-STRONG
@@ -7,8 +7,8 @@ Risk: Medium
 
 ## Context
 
-The local stack blocker is repaired enough to resume `[stack]` Phase 10 work.
-Production remains deferred. Use the local runtime only.
+P10-01D is complete locally. Employee Today is live at `/tasks/today` and the
+local stack is usable for the remaining Phase 10 `[stack]` screens.
 
 Current local stack:
 
@@ -25,29 +25,32 @@ for host-side Prisma/API work unless that service is later stopped.
 
 ## Scope
 
-Build the Employee Today staff screen against the existing P10-01C API/read model.
+Build the Manager Control Room staff screen against the existing P10-02A
+`GET /tasks/manager-rollup` API/read model.
+
 Keep this as the smallest useful slice:
 
-1. Staff route/screen for Employee Today.
-2. Typed web API client call for the Employee Today read model if it does not
-   already exist.
-3. Render due today, overdue, assigned to me, waiting on me, and escalated task
-   sections from real API data.
+1. Manager/admin staff route and navigation entry for Manager Control Room.
+2. Typed web API client for the manager rollup read model if one does not exist.
+3. Render overdue-by-employee, due today, stuck tasks, workload by assignee,
+   escalated tasks, overdue promises, and promise KPI from real API data.
 4. Preserve Arabic RTL / English LTR labels and loading / empty / error states.
 5. Add focused web/runtime proof.
 
 ## Guardrails
 
 - Do not add workflow builders, AI, WhatsApp, mobile app, or new design systems.
-- Do not invent business/workflow authority in React. The API owns task visibility.
+- Do not invent manager authority in React. The API owns role and branch scope.
 - Reuse the existing staff shell, design tokens, and shadcn/Radix primitives.
 - Keep the task to 1-5 files plus focused tests. If it grows, stop and replan.
+- Do not expose confidential HR-only task/case details beyond the API response.
 
 ## Acceptance
 
-- Employee Today screen shows only tasks visible to the signed-in employee.
+- Manager Control Room appears only for manager/admin-capable roles.
+- Employee/basic staff cannot access the route or see manager navigation.
+- Rollup sections render from the signed-in manager/admin API session.
 - Empty/error/loading states are safe and localized.
-- Arabic and English render without mojibake.
 - Runtime smoke against the local API/web passes.
 - Evidence records exactly what ran.
 

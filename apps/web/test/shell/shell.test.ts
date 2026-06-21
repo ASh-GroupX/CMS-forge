@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { buildStaffComplaintCreateSubmission } from '../../src/app/complaint-create-form';
 import StaffShellPage from '../../src/app/page';
 import DashboardPage from '../../src/app/(staff)/dashboard/page';
+import EmployeeTodayPage from '../../src/app/(staff)/tasks/today/page';
 import { shouldRedirectStaffRoute } from '../../src/app/(staff)/layout';
 import ComplaintsPage from '../../src/app/(staff)/complaints/page';
 import NewComplaintPage from '../../src/app/(staff)/complaints/new/page';
@@ -35,6 +36,7 @@ import { portalSubmissionText } from '../../src/i18n/portal-submission';
 import { portalSurveyText } from '../../src/i18n/portal-survey';
 import { portalTrackingText } from '../../src/i18n/portal-tracking';
 import { reportsDashboardText } from '../../src/i18n/staff-reports-dashboard';
+import { employeeTodayText } from '../../src/i18n/staff-employee-today';
 import { staffShellText } from '../../src/i18n/staff-shell';
 
 test('staff shell renders English LTR operational navigation', async () => {
@@ -44,6 +46,7 @@ test('staff shell renders English LTR operational navigation', async () => {
 
   assert.match(html, /dir="ltr"/);
   assert.match(html, /Staff Operations/);
+  assert.match(html, /Employee Today/);
   assert.match(html, /Dashboard/);
   assert.match(html, /Work queue/);
   assert.match(html, /Create complaint/);
@@ -79,6 +82,7 @@ test('staff shell renders Arabic RTL labels', async () => {
 
   assert.match(html, /dir="rtl"/);
   assert.ok(html.includes(staffShellText.ar.title));
+  assert.ok(html.includes(staffShellText.ar.nav.today[0]));
   assert.ok(html.includes(staffShellText.ar.nav.dashboard[0]));
   assert.ok(html.includes(staffShellText.ar.nav.queue[0]));
   assert.ok(html.includes(staffShellText.ar.nav.create[0]));
@@ -416,6 +420,30 @@ test('portal survey source does not render tokens or private data paths', () => 
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' }, status });
+}
+
+function employeeTodayEmpty() {
+  return { dueToday: [], overdue: [], overduePromises: [], assignedToMe: [], waitingOnMe: [] };
+}
+
+function taskFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'task_base',
+    title: 'Base task',
+    ownerId: 'usr_owner',
+    assigneeId: 'usr_staff',
+    dueAt: '2026-06-20T12:00:00.000Z',
+    status: 'OPEN',
+    nextAction: { what: 'Call customer', whoId: 'usr_staff', when: '2026-06-20T13:00:00.000Z' },
+    isCustomerPromise: false,
+    visibility: 'PARTICIPANTS',
+    confidentialityLevel: 'NORMAL',
+    links: [],
+    participantUserIds: ['usr_owner', 'usr_staff'],
+    createdAt: '2026-06-19T08:00:00.000Z',
+    updatedAt: '2026-06-20T09:00:00.000Z',
+    ...overrides,
+  };
 }
 
 function workQueueHtml(html: string): string {
@@ -2311,6 +2339,95 @@ test('complaints route renders real rows through the session cookie', async () =
   assert.match(html, /branch_route/);
   assert.match(html, /2026-06-20/);
   assert.match(html, /bg-status-warning/);
+});
+
+// ---- (staff)/tasks/today route ----
+
+test('employee today route renders real task buckets through the session cookie', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith('/tasks/today')) {
+      return jsonResponse({
+        dueToday: [taskFixture({ id: 'task_due', title: 'Prepare delivery checklist' })],
+        overdue: [taskFixture({ id: 'task_late', title: 'Recover missed handover', dueAt: '2026-06-19T09:00:00.000Z' })],
+        overduePromises: [taskFixture({
+          id: 'task_promise',
+          title: 'Call customer with finance answer',
+          isCustomerPromise: true,
+          links: [{ entityType: 'CASE', entityId: 'case_finance_1' }],
+        })],
+        assignedToMe: [taskFixture({ id: 'task_assigned', title: 'Confirm registration papers' })],
+        waitingOnMe: [taskFixture({
+          id: 'task_waiting',
+          title: 'Approve discount exception',
+          nextAction: { what: 'Approve exception', whoId: 'usr_staff', when: '2026-06-20T15:00:00.000Z' },
+        })],
+      });
+    }
+    return jsonResponse({});
+  };
+  const html = renderToStaticMarkup(
+    await EmployeeTodayPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  const todayCall = calls.find((call) => String(call.input).endsWith('/tasks/today'));
+  assert.ok(todayCall);
+  assert.deepEqual(todayCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+  assert.doesNotMatch(String(todayCall.input), /role|actor|branchId/i);
+  assert.match(html, /Employee Today/);
+  assert.match(html, /Overdue/);
+  assert.match(html, /Due today/);
+  assert.match(html, /Waiting on me/);
+  assert.match(html, /Assigned to me/);
+  assert.match(html, /Overdue promises/);
+  assert.match(html, /Prepare delivery checklist/);
+  assert.match(html, /Recover missed handover/);
+  assert.match(html, /Call customer with finance answer/);
+  assert.match(html, /Customer promise/);
+  assert.match(html, /Approve exception/);
+  assert.match(html, /CASE:[\s\S]*case_finance_1/);
+});
+
+test('employee today route renders empty and denied states safely', async () => {
+  const emptyFetch: typeof fetch = async () => jsonResponse(employeeTodayEmpty());
+  const empty = renderToStaticMarkup(
+    await EmployeeTodayPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: emptyFetch,
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+  const denied = renderToStaticMarkup(
+    await EmployeeTodayPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: async () => new Response('', { status: 403 }),
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  assert.match(empty, /No tasks need your attention right now\./);
+  assert.match(empty, /role="status"/);
+  assert.match(denied, /Employee Today could not be loaded\. Sign in and try again\./);
+  assert.match(denied, /role="alert"/);
+});
+
+test('employee today route keeps Arabic RTL labels', async () => {
+  const html = renderToStaticMarkup(
+    await EmployeeTodayPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: async () => jsonResponse(employeeTodayEmpty()),
+      searchParams: Promise.resolve({ locale: 'ar' }),
+    }),
+  );
+
+  assert.match(html, /dir="rtl"/);
+  assert.ok(html.includes(employeeTodayText.ar.title));
+  assert.ok(html.includes(employeeTodayText.ar.states.empty));
 });
 
 // ---- (staff)/dashboard route ----

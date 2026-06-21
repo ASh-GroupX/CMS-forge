@@ -1,5 +1,6 @@
 import {
   Bell,
+  CheckSquare2,
   ClipboardList,
   FilePlus2,
   FolderCog,
@@ -31,10 +32,11 @@ import { AuthPanel, RolePanel, roleNav, type RolePreview } from './staff-shell-p
 import { StaffTopBar } from './staff-top-bar';
 import { WorkQueue, type QueuePreviewState } from './work-queue';
 
-const navKeys = ['dashboard', 'queue', 'create', 'detail', 'admin', 'reports', 'audit', 'notifications'] as const;
+const navKeys = ['today', 'dashboard', 'queue', 'create', 'detail', 'admin', 'reports', 'audit', 'notifications'] as const;
 type NavKey = (typeof navKeys)[number];
 
 const icons = {
+  today: CheckSquare2,
   dashboard: Gauge,
   queue: Inbox,
   create: FilePlus2,
@@ -69,7 +71,7 @@ export default async function StaffShellPage({
   const complaintId = readParam(params?.complaintId);
   const principal = await getStaffSessionPrincipal(apiInput);
   if (await isNextRequest() && !hasPreviewParam(params)) {
-    if (principal) redirect(withLocale('/dashboard', locale));
+    if (principal) redirect(withLocale(principal.roleCode === 'MGMT_READONLY' ? '/dashboard' : '/tasks/today', locale));
     return <StaffAuthLanding authError={readParam(params?.auth) === 'error'} locale={locale} resetState={resolveReset(readParam(params?.reset))} />;
   }
 
@@ -127,6 +129,7 @@ function withLocale(path: string, locale: Locale): string {
 
 function navHref(key: NavKey, locale: Locale): string {
   const routes: Record<NavKey, string> = {
+    today: '/tasks/today',
     dashboard: '/dashboard',
     queue: '/complaints',
     create: '/complaints/new',
