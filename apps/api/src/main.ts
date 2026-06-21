@@ -5,6 +5,7 @@ import {
   AppExceptionFilter,
   correlationMiddleware,
 } from './core/http-kernel.js';
+import { AdminModule } from './modules/admin/admin.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { AttachmentsModule } from './modules/attachments/attachments.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
@@ -38,6 +39,7 @@ class HealthController {
 @Module({
   imports: [
     AuthModule,
+    AdminModule,
     AuditModule,
     BranchesModule,
     CasesModule,

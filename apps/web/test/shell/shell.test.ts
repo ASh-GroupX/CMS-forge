@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { buildStaffComplaintCreateSubmission } from '../../src/app/complaint-create-form';
 import StaffShellPage from '../../src/app/page';
@@ -19,6 +20,7 @@ import AdminBranchesPage from '../../src/app/(staff)/admin/branches/page';
 import AdminCategoriesPage from '../../src/app/(staff)/admin/categories/page';
 import AdminNotificationTemplatesPage from '../../src/app/(staff)/admin/notification-templates/page';
 import AdminUsersPage from '../../src/app/(staff)/admin/users/page';
+import { AdminUsersRoles } from '../../src/components/admin-users-roles';
 import PasswordResetPage from '../../src/app/(staff)/auth/reset/page';
 import NotificationsPage from '../../src/app/(staff)/notifications/page';
 import ReportsPage from '../../src/app/(staff)/reports/page';
@@ -1277,33 +1279,27 @@ test('Arabic admin branches departments keeps RTL localized labels', async () =>
   assert.ok(html.includes(adminBranchesText.ar.actions.create));
 });
 
-test('admin overview route renders English and Arabic admin configuration labels', async () => {
+test('admin overview route renders real admin users surface without preview controls', async () => {
   const english = renderToStaticMarkup(await AdminPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
-  const arabic = renderToStaticMarkup(await AdminPage({ searchParams: Promise.resolve({ locale: 'ar', admin: 'validation' }) }));
+  const arabic = renderToStaticMarkup(await AdminPage({ searchParams: Promise.resolve({ locale: 'ar' }) }));
 
   assert.match(english, /dir="ltr"/);
-  assert.ok(english.includes(confirmationText.en.deactivate.title));
-  assert.match(english, /Branches and departments/);
   assert.match(english, /Users, roles, and branch scope/);
-  assert.match(english, /Categories, severities, and SLA policies/);
-  assert.match(english, /Notification templates/);
+  assert.match(english, /User settings could not be loaded\. Try again\./);
+  assert.doesNotMatch(english, /Branches and departments/);
+  assert.doesNotMatch(english, /Categories, severities, and SLA policies/);
+  assert.doesNotMatch(english, /Notification templates/);
   assert.doesNotMatch(english, /Audit viewer/);
   assert.match(arabic, /dir="rtl"/);
-  assert.ok(arabic.includes(confirmationText.ar.deactivate.title));
-  assert.ok(arabic.includes(adminBranchesText.ar.title));
   assert.ok(arabic.includes(adminUsersText.ar.title));
-  assert.ok(arabic.includes(adminCategoriesSlaText.ar.title));
-  assert.ok(arabic.includes(adminNotificationTemplatesText.ar.title));
 });
 
-test('admin overview route renders shared deactivate confirmation safely', async () => {
+test('admin overview route does not render disabled preview action buttons', async () => {
   const html = renderToStaticMarkup(await AdminPage({ searchParams: Promise.resolve({ locale: 'en', admin: 'conflict' }) }));
 
-  assert.match(html, /role="alert"/);
-  assert.ok(html.includes(confirmationText.en.deactivate.confirm));
-  assert.ok(html.includes(confirmationText.en.deactivate.cancel));
-  assert.match(html, /Record changed by someone else\. Reload before retrying\./);
-  assert.match(html, /Template changed by someone else\. Reload before retrying\./);
+  assert.match(html, /User settings could not be loaded\. Try again\./);
+  assert.doesNotMatch(html, /Confirm deactivate/);
+  assert.doesNotMatch(html, /disabled=""/);
 });
 
 test('admin branches route renders English and Arabic labels', async () => {
@@ -1347,17 +1343,14 @@ test('admin branches departments source is render-only and privacy-safe', () => 
   assert.match(surfacesWrapper, /components\/admin-surfaces/);
 });
 
-test('admin users roles screen renders only for admin preview with reset affordance', async () => {
+test('admin users roles screen is hidden from staff and does not expose fake reset actions', async () => {
   const admin = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'admin', session: 'signed-in' }) }));
   const staff = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'staff', session: 'signed-in' }) }));
 
   assert.match(admin, /Users, roles, and branch scope/);
-  assert.match(admin, /CR Officer/);
-  assert.match(admin, /CR Manager/);
-  assert.match(admin, /Main branch/);
-  assert.match(admin, /Create user/);
-  assert.match(admin, /Send reset/);
-  assert.match(admin, /If the account can reset a password, instructions will be sent\./);
+  assert.doesNotMatch(admin, /Staff user placeholder/);
+  assert.doesNotMatch(admin, /Send reset/);
+  assert.match(admin, /Accounts use the initial password until the user changes it through password reset\./);
   assert.doesNotMatch(admin, /reset token/i);
   assert.doesNotMatch(staff, /Users, roles, and branch scope/);
 });
@@ -1367,7 +1360,7 @@ test('admin users roles preview states render safely', async () => {
   const validation = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'admin', admin: 'validation' }) }));
 
   assert.match(loading, /Loading users and roles\./);
-  assert.match(validation, /Review the user role and branch scope fields\./);
+  assert.match(validation, /Review the user role, branch scope, and password fields\./);
   assert.match(validation, /role="alert"/);
 });
 
@@ -1376,8 +1369,7 @@ test('Arabic admin users roles keeps RTL localized labels', async () => {
 
   assert.match(html, /dir="rtl"/);
   assert.ok(html.includes(adminUsersText.ar.title));
-  assert.ok(html.includes(adminUsersText.ar.actions.create));
-  assert.ok(html.includes(adminUsersText.ar.actions.reset));
+  assert.ok(html.includes(adminUsersText.ar.resetMessage));
 });
 
 test('admin users route renders English and Arabic labels', async () => {
@@ -1386,24 +1378,54 @@ test('admin users route renders English and Arabic labels', async () => {
 
   assert.match(english, /dir="ltr"/);
   assert.match(english, /Users, roles, and branch scope/);
-  assert.match(english, /Send reset/);
+  assert.match(english, /User settings could not be loaded\. Try again\./);
   assert.match(arabic, /dir="rtl"/);
   assert.ok(arabic.includes(adminUsersText.ar.title));
-  assert.ok(arabic.includes(adminUsersText.ar.actions.reset));
+  assert.ok(arabic.includes(adminUsersText.ar.states.error));
 });
 
-test('admin users route renders preview states safely', async () => {
-  const loading = renderToStaticMarkup(
-    await AdminUsersPage({ searchParams: Promise.resolve({ locale: 'en', admin: 'loading' }) }),
-  );
-  const validation = renderToStaticMarkup(
+test('admin users route fails closed when backend data is unavailable', async () => {
+  const html = renderToStaticMarkup(
     await AdminUsersPage({ searchParams: Promise.resolve({ locale: 'en', admin: 'validation' }) }),
   );
 
-  assert.match(loading, /Loading users and roles\./);
-  assert.match(loading, /role="status"/);
-  assert.match(validation, /Review the user role and branch scope fields\./);
-  assert.match(validation, /role="alert"/);
+  assert.match(html, /User settings could not be loaded\. Try again\./);
+  assert.match(html, /role="alert"/);
+  assert.doesNotMatch(html, /Create user/);
+  assert.doesNotMatch(html, /disabled=""/);
+});
+
+test('admin users roles renders real account actions when backend data is present', () => {
+  const html = renderToStaticMarkup(
+    React.createElement(AdminUsersRoles, {
+      createAction: async () => undefined,
+      data: {
+        users: [
+          {
+            id: 'usr_1',
+            email: 'advisor@cms-auto.test',
+            nameEn: 'Service Advisor',
+            nameAr: 'Service Advisor',
+            roleCode: 'CR_OFFICER',
+            roleName: 'CR Officer',
+            branchId: 'branch_main',
+            branchName: 'Main branch',
+            isActive: true,
+          },
+        ],
+        roles: [{ id: 'role_1', code: 'CR_OFFICER', nameEn: 'CR Officer', nameAr: 'CR Officer' }],
+        branches: [{ id: 'branch_main', code: 'MAIN', nameEn: 'Main branch', nameAr: 'Main branch' }],
+      },
+      locale: 'en',
+      toggleAction: async () => undefined,
+    }),
+  );
+
+  assert.match(html, /Create user/);
+  assert.match(html, /Service Advisor/);
+  assert.match(html, /advisor@cms-auto\.test/);
+  assert.match(html, /Deactivate/);
+  assert.doesNotMatch(html, /disabled=""/);
 });
 
 test('admin users roles source is render-only and reset-safe', () => {
@@ -1412,7 +1434,7 @@ test('admin users roles source is render-only and reset-safe', () => {
 
   assert.match(source, /min-w-\[50rem\]/);
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie/);
-  assert.doesNotMatch(source, /password|resetToken|token|otp|hash|roleCode|principal|branchScope|audit|portal|DMS|@|\b\+?\d{10,}\b/i);
+  assert.doesNotMatch(source, /resetToken|token|otp|hash|principal|audit|portal|DMS|\b\+?\d{10,}\b/i);
   assert.match(wrapper, /components\/admin-users-roles/);
 });
 

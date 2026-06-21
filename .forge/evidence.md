@@ -5496,3 +5496,74 @@ Status: Passed through P9-02
 - Trust boundaries tested: Passed. Workflow tests cover form-options RBAC
   denial with security audit, server-derived branch scope, queue branch scope,
   and cross-branch denial behavior.
+
+## P10-ADMIN-REAL Admin Users Slice
+
+- Date: 2026-06-21
+- Risk: High
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-ADMIN-001, REQ-RBAC-001, METHOD-AUDIT-001, METHOD-API-001,
+  METHOD-TEST-001, UI-DESIGN-001
+
+### Changes
+
+1. Added a backend `AdminModule` with admin-only staff user management:
+   `GET /admin/users`, `POST /admin/users`,
+   `POST /admin/users/:id/deactivate`, and
+   `POST /admin/users/:id/reactivate`.
+2. Admin user create stores only an Argon2id password hash. Deactivate and
+   reactivate update user state and write admin audit entries inside the same
+   Prisma transaction.
+3. Wired the admin users web route to the real backend session and API. The
+   main `/admin` screen now renders real account management instead of preview
+   rows, placeholder users, disabled fake buttons, or reset-link stubs.
+4. Added real server actions for create/deactivate/reactivate and a typed web
+   API client for admin user data.
+5. Updated OpenAPI canonical and generated contracts with the new admin routes,
+   request schema, option schema, and response schema.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- admin` (20/20).
+- Passed: `corepack pnpm test:web -- shell` (180/180).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm exec tsc -p apps/api/tsconfig.json`.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: local API health on `http://localhost:3000/health` returned OK with
+  database and Redis configured.
+- Passed: live authenticated API smoke for `/admin/users` returned real user,
+  role, and branch option data from the local database.
+- Passed: live web smoke for `/admin?locale=en` rendered admin user management,
+  create-user controls, the local admin account, no preview placeholder row, no
+  old branch/departments preview surface, and zero disabled button attributes.
+- Passed: in-app browser at `http://localhost:4000/admin?locale=en` showed
+  active `Create user`, `Deactivate`, and `Reactivate` buttons.
+
+### Notes
+
+- This slice made staff account management real. Branch/category/severity/
+  template master-data CRUD remains a separate admin slice and is now the next
+  Forge task.
+- The app is running locally with Docker Postgres on host port `5433`, Redis on
+  `6379`, API on `3000`, and web on `4000`.
+- No production deploy, SMTP, WhatsApp, VPS, AI, mobile, or HR-platform work was
+  introduced.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. All
+  admin routes use `SessionAuthGuard` plus admin RBAC; the web only forwards the
+  existing staff session cookie.
+- State change history + audit in same transaction: Passed for create,
+  deactivate, and reactivate admin user mutations.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  Passed. The create endpoint accepts an operator-entered initial password and
+  stores only Argon2id hash material.
+- Customer portal exposure rules: not applicable; no customer portal route or
+  public data surface changed.
+- Trust boundaries tested: Passed. API tests cover admin allow, non-admin deny,
+  CSRF enforcement, audit creation, password hashing, deactivation, and
+  reactivation.

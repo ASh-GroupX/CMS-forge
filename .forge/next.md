@@ -1,4 +1,4 @@
-# READY TO PLAN - P10-ADMIN-REAL
+# READY TO PLAN - P10-ADMIN-MASTER-DATA
 
 Status: Ready to Plan
 Required model tier: PLANNER-STRONG
@@ -8,47 +8,51 @@ SRS IDs: REQ-ADMIN-001, REQ-RBAC-001, METHOD-AUDIT-001, METHOD-API-001, METHOD-T
 
 ## Context
 
-P10-AUTH-LOCAL and P10-DATA-LOCAL are complete. The local app now has real staff
-login, no public preview sign-in shortcuts, DB-backed complaint form options,
-and queue/search rows that render branch/owner names instead of raw IDs.
+P10-AUTH-LOCAL, P10-DATA-LOCAL, and the P10-ADMIN-REAL admin users slice are
+complete. The local app now has real staff login, DB-backed complaint options,
+queue/search branch and owner names, and a real `/admin` account-management
+surface with active create/deactivate/reactivate buttons.
 
-The next local product gap is real admin management. The current admin users,
-branches, and categories screens are still frontend shells, while account
-creation outside tests is only available through `corepack pnpm staff:bootstrap`.
-Plan P10-ADMIN-REAL into small build tasks before implementation.
+The next local product gap is admin-controlled master data. The dealership
+needs admins to maintain the operational lists that drive work intake and SLA
+behavior instead of relying on seed data or developer edits.
 
 ## Scope
 
-- Design the smallest audited backend admin CRUD slice that can create/update/
-  deactivate/reactivate staff users and manage the master data required by
-  complaint creation.
+- Plan audited backend CRUD for the master data required by the real app:
+  branches, departments, complaint categories/subcategories, severity/SLA policy,
+  and notification templates.
 - Preserve server-session RBAC and branch scope. Admin-only actions must be
   enforced by API guards and audited.
-- Wire admin UI to real typed API clients. Remove preview-only admin affordances
-  as each real surface lands.
+- Wire admin UI to real typed API clients. Remove or retire preview-only admin
+  routes as each real surface lands.
 - Keep task slices small; do not build a broad frontend-only admin panel.
 
 ## Guardrails
 
 - Do not introduce SMTP, VPS, WhatsApp, AI, mobile, HR-platform, or production
   deploy work.
-- Do not store or return plaintext passwords. Admin-created accounts need a
-  deliberate password/reset-token flow, not a default password.
-- Do not hard-delete master data referenced by complaints.
+- Do not hard-delete master data referenced by complaints, tasks, deals, audit,
+  or history rows. Use deactivate/reactivate where references can exist.
+- Do not move business authority into React. Backend owns validation, state,
+  RBAC, branch scope, audit, and referential safety.
 
 ## Last Proof Commands
 
-- `corepack pnpm test:api -- workflow`
-- `corepack pnpm test:api -- search`
+- `corepack pnpm test:api -- admin`
 - `corepack pnpm test:web -- shell`
-- `corepack pnpm openapi:check`
-- `corepack pnpm lint`
 - `corepack pnpm typecheck`
+- `corepack pnpm lint`
+- `corepack pnpm openapi:check`
+- `corepack pnpm exec tsc -p apps/api/tsconfig.json`
 - `git diff --check`
 
 ## Planner Output Required
 
-- Split P10-ADMIN-REAL into backend-first tasks with tests and OpenAPI updates.
-- First recommended slice: real Admin Users read/create/deactivate/reactivate,
-  with roles/branches option data, audit, RBAC denial test, and web route wired
-  to backend data.
+- Split P10-ADMIN-MASTER-DATA into backend-first tasks with tests and OpenAPI
+  updates.
+- First recommended slice: real branch and department management, because
+  branch scope is foundational for complaint intake, queues, user assignment,
+  manager visibility, and KPI filters.
+- Follow-up slices: complaint category/subcategory management, severity/SLA
+  policy management, then notification template management.
