@@ -5697,3 +5697,54 @@ Status: Passed through P9-02
   with SECURITY audit, CSRF guard presence, invalid parent rejection, and
   same-transaction CONFIG audit. Web tests cover backend-sourced visible
   Add/Save controls with no disabled preview buttons.
+
+## P10-WORK-QUEUE-DROPDOWN-OPTIONS Repair
+
+- Date: 2026-06-21
+- Risk: Medium
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-SEARCH-001, UI-DESIGN-001, METHOD-TEST-001
+
+### Changes
+
+1. Populated work queue filter dropdowns with real selectable values instead of
+   rendering only `All`.
+2. Added status lifecycle options, severity options, row-derived branch options,
+   and the current SLA state option to both work queue render paths.
+3. Added a web shell regression guard that the work queue source keeps option
+   arrays and renders mapped select items.
+
+### Verification
+
+- Failed then corrected: `corepack pnpm test:web -- shell` first exposed that a
+  Radix menu-content assertion was not present in the server-rendered shell
+  snapshot.
+- Passed after repair: `corepack pnpm test:web -- shell` (181/181).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: live in-app browser smoke at `http://localhost:4000/complaints?locale=en`
+  opened each dropdown and showed:
+  - Status: `All`, `DRAFT`, `SUBMITTED`, `MANAGER_REVIEW`, `BRANCH_REVIEW`,
+    `IN_PROGRESS`, `RESOLVED`, `CLOSED`, `REOPENED`, `REJECTED`.
+  - Branch: `All`, `Main Branch`, `North Branch`.
+  - Severity: `All`, `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`.
+  - SLA state: `All`, `Backend scoped`.
+- Passed: browser console error check returned no errors.
+
+### Notes
+
+- This repair only restores visible/selectable dropdown values. Applying filter
+  selections to backend query parameters is still a separate search/work-queue
+  behavior slice.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. Branch
+  options are derived from backend-scoped rows already returned by the session.
+- State change history + audit in same transaction: Not applicable; no mutation.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  Passed. The dropdowns render only workflow/status labels and scoped branch
+  names.
+- Customer portal exposure rules: not applicable; no customer portal route or
+  public data surface changed.

@@ -800,6 +800,9 @@ test('work queue source has no fallback complaint rows or private data paths', a
   assert.doesNotMatch(source, /[\w.-]+@[\w.-]+/);
   assert.doesNotMatch(source, /\b\+?\d{10,}\b/);
   assert.doesNotMatch(source, /VIN|audit|internal comment|portal|document\.cookie|localStorage|sessionStorage|fetch\(/i);
+  assert.match(source, /STATUS_OPTIONS/);
+  assert.match(source, /SEVERITY_OPTIONS/);
+  assert.match(source, /filters\[key\]\.map/);
 });
 
 test('Arabic work queue keeps RTL localized labels', async () => {

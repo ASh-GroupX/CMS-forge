@@ -38,6 +38,7 @@ export function WorkQueue({
   const isEmpty = state === 'empty' || (!state && queueRows.length === 0);
   const message = state ? t.states[state] : isEmpty ? t.states.empty : null;
   const messageRole = state === 'error' || state === 'conflict' ? 'alert' : 'status';
+  const filters = filterOptions(queueRows, t);
 
   return (
     <Card className="rounded-md border-slate-200 bg-white shadow-sm" aria-label={t.title}>
@@ -56,6 +57,9 @@ export function WorkQueue({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t.filters.all}</SelectItem>
+                {filters[key].map((option) => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -146,4 +150,17 @@ function severityVariant(severity: string): 'default' | 'destructive' | 'seconda
   if (severity === 'HIGH') return 'default';
   if (severity === 'MEDIUM') return 'secondary';
   return 'outline';
+}
+
+type FilterOption = { label: string; value: string };
+const STATUS_OPTIONS = ['DRAFT', 'SUBMITTED', 'MANAGER_REVIEW', 'BRANCH_REVIEW', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REOPENED', 'REJECTED'];
+const SEVERITY_OPTIONS = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
+
+function filterOptions(rows: QueueRow[], t: typeof staffShellText[Locale]['workQueue']): Record<'status' | 'branch' | 'severity' | 'sla', FilterOption[]> {
+  return {
+    status: STATUS_OPTIONS.map((status) => ({ label: status, value: status })),
+    branch: [...new Set(rows.map((row) => row.branch))].map((branch) => ({ label: branch, value: branch })),
+    severity: SEVERITY_OPTIONS.map((severity) => ({ label: severity, value: severity })),
+    sla: [{ label: t.sla.backendScoped, value: 'backend-scoped' }],
+  };
 }

@@ -19,6 +19,7 @@ export function WorkQueue({
   const t = staffShellText[locale].workQueue;
   const isError = rows === null;
   const isEmpty = !isError && rows.length === 0;
+  const filters = filterOptions(rows ?? [], t);
 
   return (
     <Card className="rounded-md border-slate-200 bg-white shadow-sm" aria-label={t.title}>
@@ -37,6 +38,9 @@ export function WorkQueue({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t.filters.all}</SelectItem>
+                  {filters[key].map((option) => (
+                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -115,6 +119,21 @@ export function WorkQueue({
       </CardFooter>
     </Card>
   );
+}
+
+type FilterOption = { label: string; value: string };
+const STATUS_OPTIONS: ComplaintStatus[] = ['DRAFT', 'SUBMITTED', 'MANAGER_REVIEW', 'BRANCH_REVIEW', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REOPENED', 'REJECTED'];
+const SEVERITY_OPTIONS: ComplaintSeverity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
+
+function filterOptions(rows: ComplaintQueueItem[], t: typeof staffShellText[Locale]['workQueue']): Record<'status' | 'branch' | 'severity' | 'sla', FilterOption[]> {
+  const branches = new Map<string, string>();
+  for (const row of rows) branches.set(row.branchId, row.branchName ?? row.branchId);
+  return {
+    status: STATUS_OPTIONS.map((status) => ({ label: status, value: status })),
+    branch: [...branches].map(([value, label]) => ({ label, value })),
+    severity: SEVERITY_OPTIONS.map((severity) => ({ label: severity, value: severity })),
+    sla: [{ label: t.sla.backendScoped, value: 'backend-scoped' }],
+  };
 }
 
 const STATUS_CLASS: Partial<Record<ComplaintStatus, string>> = {

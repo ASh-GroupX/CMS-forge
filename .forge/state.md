@@ -17,6 +17,9 @@ Prior state history is in .forge/archive/state-archive.md.
 - P10-DATA-LOCAL is complete. Complaint create uses backend session-scoped
   branch/category/severity options and queue rows show readable branch/owner
   names.
+- P10-WORK-QUEUE-DROPDOWN-OPTIONS is complete. Work queue dropdowns now expose
+  status lifecycle values, row-derived branch values, severity values, and SLA
+  state values instead of only `All`.
 - P10-ADMIN-REAL is complete. `/admin` uses real backend admin user data with
   create/deactivate/reactivate account controls.
 - P10-ADMIN-DROPDOWNS is complete. `/admin` shows live branch/category/severity
@@ -44,5 +47,7 @@ Prior state history is in .forge/archive/state-archive.md.
 - Severity values are Prisma enum/system codes. Real severity editing belongs in
   the SLA policy slice, not a plain dropdown editor.
 - Notification template CRUD remains a later admin master-data slice.
+- Work queue filter selection currently exposes the options; backend query-param
+  filtering remains a later search/work-queue behavior slice.
 - Windows service `postgresql-x64-16` still owns host port 5432; keep using 5433
   for this local Docker database unless the service is stopped with admin rights.
