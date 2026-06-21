@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import React from 'react';
 import type { ReactNode } from 'react';
 import { resolveLocale, staffShellText } from '../../i18n/staff-shell';
+import { logoutStaffAction } from '../../lib/staff-auth-actions';
 import { getStaffSessionPrincipal } from '../../lib/staff-session-api';
 import { StaffTopBar } from '../staff-top-bar';
 
@@ -69,6 +70,14 @@ export default async function StaffLayout({ children }: { children: ReactNode })
             <p className="mt-2 inline-flex rounded-sm bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
               {principal ? t.auth.signedIn : t.auth.signedOut}
             </p>
+            {principal ? (
+              <form action={logoutStaffAction}>
+                <input name="locale" type="hidden" value={locale} />
+                <button className="mt-3 rounded-sm border border-border bg-card px-3 py-2 text-sm font-semibold hover:bg-accent focus:outline-none focus:ring-2 focus:ring-brand" type="submit">
+                  {t.auth.logout}
+                </button>
+              </form>
+            ) : null}
           </div>
           <nav aria-label={t.title} className="grid gap-1">
             {visibleItems.map(({ key, Icon, href }) => {

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { POST as proxyCreateComplaint } from '../../src/app/api/complaints/route';
 import { createStaffComplaint, getStaffComplaint, listStaffComplaints } from '../../src/lib/staff-complaints-api';
 
 function jsonResponse(body: unknown, status = 200) {
@@ -107,7 +108,7 @@ test('createStaffComplaint posts the documented body with cookies and CSRF token
     });
   });
 
-  assert.equal(calls[0]?.input, '/complaints?branchId=branch%20main');
+  assert.equal(calls[0]?.input, '/api/complaints?branchId=branch%20main');
   assert.equal(calls[0]?.init?.method, 'POST');
   assert.equal(calls[0]?.init?.credentials, 'include');
   assert.deepEqual(calls[0]?.init?.headers, {
@@ -129,7 +130,7 @@ test('createStaffComplaint omits CSRF header when the readable cookie is missing
     await createStaffComplaint('branch_main', validCreateBody(), fetchImpl);
   });
 
-  assert.equal(calls[0]?.input, '/complaints?branchId=branch_main');
+  assert.equal(calls[0]?.input, '/api/complaints?branchId=branch_main');
   assert.deepEqual(calls[0]?.init?.headers, {
     Accept: 'application/json',
     'content-type': 'application/json',
@@ -197,6 +198,44 @@ test('createStaffComplaint accepts no client role actor workflow or credential a
   assert.equal('token' in body, false);
   assert.equal('credentials' in body, false);
   assert.doesNotMatch(String(calls[0]?.input), /role|actor|workflow|token|credentials/i);
+});
+
+test('complaint create proxy forwards body, session cookie, and CSRF to the API', async () => {
+  const priorFetch = globalThis.fetch;
+  const priorApiUrl = process.env.API_URL;
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  globalThis.fetch = (async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ complaint: { id: 'cmp_1', referenceNumber: 'CMP-000001', status: 'SUBMITTED' } }, 201);
+  }) as typeof fetch;
+  process.env.API_URL = 'http://api.test';
+
+  try {
+    const response = await proxyCreateComplaint(new Request('http://web.test/api/complaints?branchId=branch_main', {
+      body: JSON.stringify(validCreateBody()),
+      headers: {
+        'content-type': 'application/json',
+        cookie: 'cms_staff_session=raw-session',
+        'x-csrf-token': 'csrf_123',
+      },
+      method: 'POST',
+    }));
+
+    assert.equal(response.status, 201);
+    assert.equal(String(calls[0]?.input), 'http://api.test/complaints?branchId=branch_main');
+    assert.equal(calls[0]?.init?.method, 'POST');
+    assert.equal(calls[0]?.init?.body, JSON.stringify(validCreateBody()));
+    assert.deepEqual(Object.fromEntries(new Headers(calls[0]?.init?.headers).entries()), {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      cookie: 'cms_staff_session=raw-session',
+      'x-csrf-token': 'csrf_123',
+    });
+  } finally {
+    globalThis.fetch = priorFetch;
+    if (priorApiUrl === undefined) delete process.env.API_URL;
+    else process.env.API_URL = priorApiUrl;
+  }
 });
 
 function validCreateBody() {

@@ -100,7 +100,7 @@ export function createStaffComplaint(
   complaint: StaffComplaintCreateRequest,
   fetchImpl: typeof fetch = fetch,
 ): Promise<StaffApiResult<StaffComplaintCreateResponse>> {
-  return requestJson(`/complaints?branchId=${encodeURIComponent(branchId)}`, fetchImpl, {
+  return requestJson(`/api/complaints?branchId=${encodeURIComponent(branchId)}`, fetchImpl, {
     body: JSON.stringify(complaint),
     headers: csrfHeaders(),
     method: 'POST',

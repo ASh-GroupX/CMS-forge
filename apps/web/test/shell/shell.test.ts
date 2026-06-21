@@ -78,6 +78,17 @@ test('staff shell renders app top bar controls', async () => {
   assert.match(html, /aria-pressed="false"/);
 });
 
+test('root and textarea avoid hydration-prone client mutations', () => {
+  const rootSource = readFileSync('apps/web/src/app/layout.tsx', 'utf8');
+  const textareaSource = readFileSync('apps/web/src/components/ui/textarea.tsx', 'utf8');
+
+  assert.match(rootSource, /next\/script/);
+  assert.doesNotMatch(rootSource, /<script/);
+  assert.match(textareaSource, /data-enable-grammarly="false"/);
+  assert.match(textareaSource, /data-lt-active="false"/);
+  assert.match(textareaSource, /spellCheck=\{false\}/);
+});
+
 test('staff routes require a session except password reset', () => {
   assert.equal(shouldRedirectStaffRoute(false, '/dashboard'), true);
   assert.equal(shouldRedirectStaffRoute(false, '/complaints/new'), true);
@@ -560,6 +571,15 @@ test('staff shell exposes password reset entry points', async () => {
   assert.match(source, /action=\{loginStaffAction\}/);
   assert.match(source, /action=\{logoutStaffAction\}/);
   assert.doesNotMatch(source, /type="button"/);
+});
+
+test('staff route layout exposes server-action logout', () => {
+  const source = readFileSync('apps/web/src/app/(staff)/layout.tsx', 'utf8');
+
+  assert.match(source, /logoutStaffAction/);
+  assert.match(source, /action=\{logoutStaffAction\}/);
+  assert.match(source, /name="locale"/);
+  assert.doesNotMatch(source, /localStorage|sessionStorage|document\.cookie/);
 });
 
 test('password reset request state uses generic safe messaging', async () => {

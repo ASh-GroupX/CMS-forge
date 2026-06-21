@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
+import Script from 'next/script';
 import React from 'react';
 import type { ReactNode } from 'react';
 import { resolveLocale, staffShellText, type Locale } from '../i18n/staff-shell';
@@ -33,7 +34,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang={locale} dir={rootDirection(locale)} suppressHydrationWarning>
       <body>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <Script id="cms-theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeScript }} />
         {children}
       </body>
     </html>
