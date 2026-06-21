@@ -347,6 +347,7 @@ model User {
   assignedTasks              Task[]                   @relation("TaskAssignee")
   taskNextActions            Task[]                   @relation("TaskNextActionWho")
   taskParticipants           TaskParticipant[]
+  taskComments               TaskComment[]            @relation("TaskCommentAuthor")
   taskStatusHistory          TaskStatusHistory[]
   ownedDeals                 Deal[]                   @relation("DealOwner")
   currentDealHandoffs        Deal[]                   @relation("DealCurrentHolder")
@@ -786,6 +787,7 @@ model Task {
   nextActionWho          User?                    @relation("TaskNextActionWho", fields: [nextActionWhoId], references: [id])
   links                  TaskLink[]
   participants           TaskParticipant[]
+  comments               TaskComment[]
   statusHistory          TaskStatusHistory[]
 
   @@index([status, dueAt])
@@ -836,6 +838,20 @@ model TaskStatusHistory {
   @@index([taskId, createdAt])
   @@index([actorId])
   @@map("task_status_history")
+}
+
+model TaskComment {
+  id        String    @id @default(cuid())
+  taskId    String    @map("task_id")
+  authorId  String    @map("author_id")
+  body      String
+  createdAt DateTime  @default(now()) @map("created_at")
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author    User      @relation("TaskCommentAuthor", fields: [authorId], references: [id])
+
+  @@index([taskId, createdAt])
+  @@index([authorId])
+  @@map("task_comments")
 }
 
 model Deal {

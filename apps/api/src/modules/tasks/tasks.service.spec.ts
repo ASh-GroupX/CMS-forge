@@ -11,7 +11,7 @@ import {
 import { AppException } from '../../core/http-kernel.js';
 import { promiseKeptOnTime } from './tasks.promise.js';
 import { TasksService } from './tasks.service.js';
-import { TasksRepository, type CreateTaskStatusHistoryData, type PromiseTaskRecord, type TaskRecord, type UpdateTaskStatusData } from './tasks.repository.js';
+import { TasksRepository, type CreateTaskStatusHistoryData, type PromiseTaskRecord, type TaskCommentRecord, type TaskRecord, type UpdateTaskStatusData } from './tasks.repository.js';
 
 test('open task without next action is rejected', async () => {
   const service = new TasksService(txOnlyRepository(), {} as never);
@@ -174,6 +174,127 @@ test('employee today buckets only tasks visible to the actor', async () => {
   assert.deepEqual(result.waitingOnMe.map((task) => task.id), ['waiting']);
 });
 
+test('sent by me lists tasks owned by the actor', async () => {
+  let ownerId = '';
+  let completedSince: Date | undefined;
+  const repository = {
+    listSentByOwner: async (id: string, since: Date) => {
+      ownerId = id;
+      completedSince = since;
+      return [taskRecord({ id: 'sent_1', ownerId: id, assigneeId: 'user_assignee' })];
+    },
+  } as unknown as TasksRepository;
+  const service = new TasksService(repository, {} as never);
+
+  const result = await service.sentByMe({ userId: 'user_owner', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_1' }, new Date('2026-06-21T00:00:00.000Z'));
+
+  assert.equal(ownerId, 'user_owner');
+  assert.equal(completedSince?.toISOString(), '2026-06-07T00:00:00.000Z');
+  assert.deepEqual(result.tasks.map((task) => task.id), ['sent_1']);
+});
+
+test('task comment create writes row and audit in one transaction then notifies owner', async () => {
+  const txClient = { task: {}, taskComment: {} };
+  let commentClient: unknown;
+  let auditClient: unknown;
+  let auditMetadata: unknown;
+  const queued: unknown[] = [];
+  const repository = {
+    transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
+    findById: async () => taskRecord({ ownerId: 'user_owner', assigneeId: 'user_assignee' }),
+    createComment: async (_input: unknown, client: unknown) => {
+      commentClient = client;
+      return taskCommentRecord({ id: 'comment_1', authorId: 'user_assignee' });
+    },
+  } as unknown as TasksRepository;
+  const service = new TasksService(
+    repository,
+    { record: async (input: { metadata: unknown }, client: unknown) => { auditMetadata = input.metadata; auditClient = client; } } as never,
+    { queueInternal: async (input: unknown) => { queued.push(input); } } as never,
+  );
+
+  const result = await service.createCommentForActor(
+    'task_1',
+    'I updated this.',
+    { userId: 'user_assignee', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_1' },
+    { actorId: 'user_assignee' },
+  );
+
+  assert.equal(result.id, 'comment_1');
+  assert.equal(commentClient, txClient);
+  assert.equal(auditClient, txClient);
+  assert.deepEqual(auditMetadata, { commentId: 'comment_1' });
+  assert.deepEqual(queued[0], {
+    recipientUserId: 'user_owner',
+    templateCode: 'task.comment.internal',
+    locale: 'en',
+    payload: { taskId: 'task_1', title: 'Call customer', status: TaskStatus.OPEN, commentId: 'comment_1' },
+  });
+});
+
+test('unrelated user is denied task comments', async () => {
+  let auditRecord: { eventType?: string; action?: string; actorId?: string | null; branchId?: string | null; targetId?: string | null; metadata?: unknown } | undefined;
+  const repository = { findById: async () => taskRecord({ assigneeId: 'user_assignee' }) } as unknown as TasksRepository;
+  const service = new TasksService(repository, { record: async (input: typeof auditRecord) => { auditRecord = input; } } as never);
+
+  await assert.rejects(
+    service.listCommentsForActor('task_1', { userId: 'user_other', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_1' }, { actorId: 'user_other', correlationId: 'req_deny' }),
+    (error) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
+  assert.equal(auditRecord?.eventType, 'SECURITY');
+  assert.equal(auditRecord?.action, 'task_access_forbidden');
+  assert.equal(auditRecord?.actorId, 'user_other');
+  assert.equal(auditRecord?.branchId, 'branch_1');
+  assert.equal(auditRecord?.targetId, 'task_1');
+  assert.deepEqual(auditRecord?.metadata, { reason: 'RBAC_FORBIDDEN' });
+});
+
+test('task nudge audits in transaction and queues notification for next action user', async () => {
+  const txClient = { task: {} };
+  let auditClient: unknown;
+  let auditMetadata: unknown;
+  const queued: unknown[] = [];
+  const repository = {
+    transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
+    findById: async () => taskRecord({ nextActionWhoId: 'user_next', participants: [{ userId: 'user_next', role: TaskParticipantRole.PARTICIPANT }] }),
+  } as unknown as TasksRepository;
+  const service = new TasksService(
+    repository,
+    { record: async (input: { metadata: unknown }, client: unknown) => { auditMetadata = input.metadata; auditClient = client; } } as never,
+    { queueInternal: async (input: unknown) => { queued.push(input); } } as never,
+  );
+
+  await service.nudgeForActor('task_1', { message: 'Please move this.' }, { userId: 'user_owner', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_1' });
+
+  assert.equal(auditClient, txClient);
+  assert.deepEqual(auditMetadata, { recipientUserId: 'user_next' });
+  assert.deepEqual(queued[0], {
+    recipientUserId: 'user_next',
+    templateCode: 'task.nudge.internal',
+    locale: 'en',
+    payload: { taskId: 'task_1', title: 'Call customer', status: TaskStatus.OPEN, message: 'Please move this.' },
+  });
+});
+
+test('task nudge denies recipient override outside participants', async () => {
+  const txClient = {};
+  let auditRecord: { eventType?: string; action?: string; targetId?: string | null; metadata?: unknown } | undefined;
+  const repository = {
+    transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
+    findById: async () => taskRecord(),
+  } as unknown as TasksRepository;
+  const service = new TasksService(repository, { record: async (input: typeof auditRecord) => { auditRecord = input; } } as never);
+
+  await assert.rejects(
+    service.nudgeForActor('task_1', { recipientUserId: 'user_other' }, { userId: 'user_owner', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_1' }, { actorId: 'user_owner' }),
+    (error) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
+  assert.equal(auditRecord?.eventType, 'SECURITY');
+  assert.equal(auditRecord?.action, 'task_access_forbidden');
+  assert.equal(auditRecord?.targetId, 'task_1');
+  assert.deepEqual(auditRecord?.metadata, { recipientUserId: 'user_other', reason: 'RBAC_FORBIDDEN' });
+});
+
 test('manager control room derives scoped rollup counts from active tasks', async () => {
   let scopedBranch: string | null | undefined;
   let includeConfidential: boolean | undefined;
@@ -331,6 +452,18 @@ function taskRecord(overrides: Partial<TaskRecord> = {}): TaskRecord {
 
 function promiseRecord(overrides: Partial<PromiseTaskRecord> = {}): PromiseTaskRecord {
   return { ...taskRecord({ isCustomerPromise: true }), statusHistory: [], ...overrides };
+}
+
+function taskCommentRecord(overrides: Partial<TaskCommentRecord> = {}): TaskCommentRecord {
+  return {
+    id: 'comment_1',
+    taskId: 'task_1',
+    authorId: 'user_owner',
+    author: { nameEn: 'Owner User' },
+    body: 'Please update.',
+    createdAt: new Date('2026-06-20T09:00:00.000Z'),
+    ...overrides,
+  };
 }
 
 function txOnlyRepository(): TasksRepository {

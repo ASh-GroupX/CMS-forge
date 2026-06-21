@@ -110,6 +110,21 @@ test('today rejects missing principal instead of accepting client identity', asy
   );
 });
 
+test('sent by me derives actor from the staff session', async () => {
+  let capturedActor: unknown;
+  const controller = new TasksController({
+    sentByMe: async (actor: unknown) => {
+      capturedActor = actor;
+      return { tasks: [taskResponse()] };
+    },
+  } as unknown as TasksService);
+
+  const result = await controller.sentByMe(request('CR_MANAGER'));
+
+  assert.equal(result.tasks[0]?.id, 'task_1');
+  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'CR_MANAGER', branchId: 'branch_1' });
+});
+
 test('manager rollup derives role and branch from the staff session', async () => {
   let capturedScope: unknown;
   const controller = new TasksController({
@@ -153,6 +168,48 @@ test('get task derives actor from the staff session', async () => {
 
   assert.equal(result.task.id, 'task_1');
   assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'BRANCH_MANAGER', branchId: 'branch_1' });
+});
+
+test('task comments derive actor and audit from the staff session', async () => {
+  let capturedActor: unknown;
+  let capturedAudit: { actorId?: string | null; correlationId?: string | null } | undefined;
+  const controller = new TasksController({
+    listCommentsForActor: async (_taskId: string, actor: unknown) => {
+      capturedActor = actor;
+      return { comments: [{ id: 'comment_1', taskId: 'task_1', authorId: 'user_owner', authorName: 'Owner', body: 'Please update.', createdAt: '2026-06-20T09:00:00.000Z' }] };
+    },
+    createCommentForActor: async (_taskId: string, _body: string, actor: unknown, audit: { actorId?: string | null; correlationId?: string | null }) => {
+      capturedActor = actor;
+      capturedAudit = audit;
+      return { id: 'comment_2', taskId: 'task_1', authorId: 'user_owner', authorName: 'Owner', body: 'Done?', createdAt: '2026-06-20T10:00:00.000Z' };
+    },
+  } as unknown as TasksService);
+
+  const list = await controller.comments('task_1', request('BRANCH_MANAGER'));
+  const created = await controller.createComment('task_1', { body: 'Done?' }, request('BRANCH_MANAGER'));
+
+  assert.equal(list.comments[0]?.id, 'comment_1');
+  assert.equal(created.comment.id, 'comment_2');
+  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'BRANCH_MANAGER', branchId: 'branch_1' });
+  assert.equal(capturedAudit?.actorId, 'user_owner');
+  assert.equal(capturedAudit?.correlationId, 'req_test');
+});
+
+test('task nudge derives actor from the staff session and accepts only body fields', async () => {
+  let capturedInput: unknown;
+  let capturedActor: unknown;
+  const controller = new TasksController({
+    nudgeForActor: async (_taskId: string, input: unknown, actor: unknown) => {
+      capturedInput = input;
+      capturedActor = actor;
+    },
+  } as unknown as TasksService);
+
+  const result = await controller.nudge('task_1', { message: 'Please follow up.' }, request('CR_MANAGER'));
+
+  assert.deepEqual(result, { ok: true });
+  assert.deepEqual(capturedInput, { message: 'Please follow up.' });
+  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'CR_MANAGER', branchId: 'branch_1' });
 });
 
 test('update task derives actor and audit from the staff session', async () => {

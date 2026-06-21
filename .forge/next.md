@@ -1,62 +1,57 @@
-# READY TO PLAN - PLAN-NEXT
+# READY TO BUILD - P11A-OPERATOR-UX-FOUNDATION
 
-Status: Ready to Plan
-Required model tier: PLANNER
-Phase: Phase 10 - Dealership Accountability Layer (local-first)
-Risk: TBD by planner
-SRS IDs: TBD by planner
+Status: Ready to Build
+Required model tier: GPT-5 High or Opus 4.8 Max
+Phase: Phase 11 - Operator UX Foundation
+Risk: High
+SRS IDs: REQ-AUTH-001, REQ-RBAC-001, REQ-LOCALIZATION-001, UI-DESIGN-001
 
 ## Context
 
-The accountability repair backlog is complete locally:
+Phase 10 task collaboration is complete. The next product gap is operator UX:
+staff should not type raw IDs or understand technical field names. Arabic must
+be complete and native-feeling, not partial.
 
-- P0 Tasks are operational.
-- P1 Deals write flow is operational.
-- P1 Customer Promise Tracker is operational.
-- P2A Cases wrapper for complaints is operational.
-- P2B Case CAPA is operational and the submit 500 repair is complete.
-- P2C Product Framing is complete.
-
-The final repair slice fixed the CAPA browser submit blocker, verified customer
-portal privacy, verified unauthorized/different-branch CAPA denial, and reran
-the full requested hardening matrix.
+Read `docs/OPERATOR_UX_FOUNDATION_PLAN.md` before implementation.
 
 ## Scope
 
-Planner should choose the next narrow slice. Keep it explicit before build work
-starts.
+Implement only the first slice:
+
+1. Add username support for staff login.
+   - Login should accept username or email.
+   - UI should say Username + Password.
+   - Seed simple dev usernames such as `admin`, `layla`, `omar`, `sara`.
+   - Do not weaken production password security. Use dev/demo credentials or
+     bootstrap overrides for simple local login.
+2. Add a server-session scoped staff lookup for assignable users.
+3. Replace Quick Add Task assignee free-text ID with a searchable staff picker.
+4. Make the touched login and Quick Add UI Arabic-complete.
+5. Keep raw IDs out of the visible normal workflow.
+
+Do not implement every picker in this slice. After P11A, update `next.md` for
+P11B related-record picker.
 
 ## Guardrails
 
-- Do not rework complaint intake or customer portal behavior without a narrow
-  task.
-- Do not introduce production deploy, SMTP, WhatsApp, AI, mobile, HR-platform,
-  VPS, admin expansion, employee grievance screens, or workflow builder work by
-  default.
-- Keep backend authority server-owned and keep source files under 300 lines.
-- Preserve module boundaries. Cross-module labels need public module services,
-  not direct cross-module repository reads.
+- Backend owns authority; roles and branch scope come from the server session.
+- No raw `ownerId`, `assigneeId`, `branchScope`, or role authority from client
+  input.
+- Customer portal privacy must not change.
+- No admin screens, AI, WhatsApp, mobile, deploy, or workflow builder.
+- Keep source files under 300 lines or split naturally.
+- No hardcoded user-facing strings in components.
+- Use existing shadcn/Radix/Tailwind patterns.
 
-## Suggested Planning Inputs
+## Required Proof
 
-- Final hardening matrix passed locally for tasks, deals, cases, complaints,
-  web shell/localization, OpenAPI, typecheck, lint, and diff whitespace.
-- Live smoke passed for complaint intake -> linked `CUSTOMER_COMPLAINT` case,
-  complaint detail Case Timeline, CAPA create, portal privacy, Promise Tracker,
-  Deal Handoff Board advance, Today task action, and Manager Control Room name
-  rendering.
-- Known admin/search follow-ups still exist, but they are not automatically the
-  next task for the deal workflow.
-
-## Required Proof Commands
-
-Planner must define proof commands for the selected slice. Typical local proof:
-
-- `corepack pnpm test:api -- <area>`
+- `corepack pnpm test:api -- auth`
+- `corepack pnpm test:api -- tasks`
 - `corepack pnpm test:web -- shell`
 - `corepack pnpm test:web -- localization`
 - `corepack pnpm openapi:check`
 - `corepack pnpm typecheck`
 - `corepack pnpm lint`
 - `git diff --check`
-- Live smoke for any user-facing write path
+- Live smoke: login with username, switch/open Arabic shell, create a task from
+  Today using the staff picker, verify no assignee ID typing was needed.

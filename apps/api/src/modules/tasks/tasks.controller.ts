@@ -6,6 +6,7 @@ import { CsrfGuard } from '../../core/csrf.guard.js';
 import { AppException } from '../../core/http-kernel.js';
 import type { QuickAddTaskResponseDto } from './dto/create-task.dto.js';
 import { parseQuickAddTaskBody, toQuickAddTaskInput } from './dto/create-task.dto.js';
+import { parseTaskCommentBody, parseTaskNudgeBody } from './dto/task-collaboration.dto.js';
 import type { EmployeeTodayResponseDto, ManagerControlRoomResponseDto, PromiseTrackerResponseDto } from './dto/task-response.dto.js';
 import { TasksService } from './tasks.service.js';
 import { parseUpdateTaskBody } from './dto/update-task.dto.js';
@@ -29,6 +30,14 @@ export class TasksController {
   @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
   async today(@Req() request: AuthenticatedRequest): Promise<EmployeeTodayResponseDto> {
     return this.tasksService.employeeToday(principalUserId(request));
+  }
+
+  @Get('sent-by-me')
+  @UseGuards(SessionAuthGuard, RbacGuard)
+  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  async sentByMe(@Req() request: AuthenticatedRequest) {
+    const principal = requirePrincipal(request);
+    return this.tasksService.sentByMe({ userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId });
   }
 
   @Get('manager-rollup')
@@ -55,6 +64,38 @@ export class TasksController {
   async get(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
     const principal = requirePrincipal(request);
     return { task: await this.tasksService.getForActor(id, { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId }) };
+  }
+
+  @Get(':id/comments')
+  @UseGuards(SessionAuthGuard, RbacGuard)
+  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  async comments(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    const principal = requirePrincipal(request);
+    return this.tasksService.listCommentsForActor(id, { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId }, auditContext(request));
+  }
+
+  @Post(':id/comments')
+  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
+  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  async createComment(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    const principal = requirePrincipal(request);
+    return {
+      comment: await this.tasksService.createCommentForActor(
+        id,
+        parseTaskCommentBody(body).body,
+        { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId },
+        auditContext(request),
+      ),
+    };
+  }
+
+  @Post(':id/nudge')
+  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
+  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  async nudge(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    const principal = requirePrincipal(request);
+    await this.tasksService.nudgeForActor(id, parseTaskNudgeBody(body), { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId }, auditContext(request));
+    return { ok: true };
   }
 
   @Patch(':id')

@@ -460,6 +460,7 @@ function notificationSelect() {
     payload: true,
     provider: true,
     providerResult: true,
+    queuedAt: true,
     sentAt: true,
     failedAt: true,
     complaint: { select: { customerId: true, severity: true } },

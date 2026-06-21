@@ -7,6 +7,7 @@ import { buildStaffComplaintCreateSubmission } from '../../src/app/complaint-cre
 import StaffShellPage from '../../src/app/page';
 import DashboardPage from '../../src/app/(staff)/dashboard/page';
 import EmployeeTodayPage from '../../src/app/(staff)/tasks/today/page';
+import SentTasksPage from '../../src/app/(staff)/tasks/sent/page';
 import PromisesPage from '../../src/app/(staff)/tasks/promises/page';
 import ManagerControlRoomPage from '../../src/app/(staff)/tasks/manager/page';
 import DealHandoffPage from '../../src/app/(staff)/deals/handoff/page';
@@ -43,6 +44,7 @@ import { portalSurveyText } from '../../src/i18n/portal-survey';
 import { portalTrackingText } from '../../src/i18n/portal-tracking';
 import { reportsDashboardText } from '../../src/i18n/staff-reports-dashboard';
 import { employeeTodayText } from '../../src/i18n/staff-employee-today';
+import { sentTasksText } from '../../src/i18n/staff-sent-tasks';
 import { staffPromisesText } from '../../src/i18n/staff-promises';
 import { managerControlRoomText } from '../../src/i18n/staff-manager-control-room';
 import { dealHandoffText } from '../../src/i18n/staff-deal-handoff';
@@ -57,6 +59,7 @@ test('staff shell renders English LTR operational navigation', async () => {
   assert.match(html, /dir="ltr"/);
   assert.match(html, /Staff Operations/);
   assert.match(html, /Today/);
+  assert.match(html, /Sent Tasks/);
   assert.match(html, /Promises/);
   assert.match(html, /Team/);
   assert.match(html, /Deals/);
@@ -106,6 +109,7 @@ test('staff shell renders Arabic RTL labels', async () => {
   assert.match(html, /dir="rtl"/);
   assert.ok(html.includes(staffShellText.ar.subtitle));
   assert.ok(html.includes(staffShellText.ar.nav.today[0]));
+  assert.ok(html.includes(staffShellText.ar.nav.sent[0]));
   assert.ok(html.includes(staffShellText.ar.nav.promises[0]));
   assert.ok(html.includes(staffShellText.ar.nav.manager[0]));
   assert.ok(html.includes(staffShellText.ar.nav.handoff[0]));
@@ -1826,6 +1830,35 @@ test('notifications route renders English notification center labels', async () 
   assert.match(html, /Complaint links stay scoped by the backend/);
 });
 
+test('notifications route renders fetched task notifications through the session cookie', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const html = renderToStaticMarkup(
+    await NotificationsPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: async (input, init) => {
+        calls.push({ input, init });
+        return jsonResponse({
+          items: [{
+            id: 'notif_task',
+            status: 'QUEUED',
+            templateCode: 'task.nudge.internal',
+            queuedAt: '2026-06-21T09:00:00.000Z',
+            payload: { taskId: 'task_sent', title: 'Send finance update', status: 'WAITING' },
+          }],
+        });
+      },
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  const call = calls.find((entry) => String(entry.input).endsWith('/notifications'));
+  assert.ok(call);
+  assert.deepEqual(call.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+  assert.match(html, /Send finance update/);
+  assert.match(html, /Task link/);
+  assert.match(html, /task_sent/);
+});
+
 test('notifications route renders Arabic RTL labels', async () => {
   const html = renderToStaticMarkup(
     await NotificationsPage({ searchParams: Promise.resolve({ locale: 'ar', notification: 'validation' }) }),
@@ -2719,6 +2752,72 @@ test('employee today route keeps Arabic RTL labels', async () => {
   assert.match(html, /dir="rtl"/);
   assert.ok(html.includes(employeeTodayText.ar.title));
   assert.ok(html.includes(employeeTodayText.ar.states.empty));
+});
+
+// ---- (staff)/tasks/sent route ----
+
+test('sent tasks route renders sent task status comments and nudge controls', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith('/tasks/sent-by-me')) {
+      return jsonResponse({ tasks: [taskFixture({ id: 'task_sent', title: 'Send finance update', status: 'WAITING' })] });
+    }
+    if (url.endsWith('/tasks/task_sent/comments')) {
+      return jsonResponse({ comments: [{ id: 'comment_1', taskId: 'task_sent', authorId: 'usr_assignee', authorName: 'Assignee User', body: 'Waiting for bank answer.', createdAt: '2026-06-20T10:00:00.000Z' }] });
+    }
+    return jsonResponse({});
+  };
+  const html = renderToStaticMarkup(
+    await SentTasksPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  const sentCall = calls.find((call) => String(call.input).endsWith('/tasks/sent-by-me'));
+  assert.ok(sentCall);
+  assert.deepEqual(sentCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+  assert.doesNotMatch(String(sentCall.input), /ownerId|branchId/i);
+  assert.match(html, /Sent Tasks/);
+  assert.match(html, /Send finance update/);
+  assert.match(html, /WAITING/);
+  assert.match(html, /Waiting for bank answer\./);
+  assert.match(html, /Add comment/);
+  assert.match(html, /Remind/);
+});
+
+test('sent tasks route renders empty denied and Arabic states safely', async () => {
+  const empty = renderToStaticMarkup(
+    await SentTasksPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: async (input) => String(input).endsWith('/tasks/sent-by-me') ? jsonResponse({ tasks: [] }) : jsonResponse({ comments: [] }),
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+  const denied = renderToStaticMarkup(
+    await SentTasksPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: async () => new Response('', { status: 403 }),
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+  const arabic = renderToStaticMarkup(
+    await SentTasksPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: async (input) => String(input).endsWith('/tasks/sent-by-me') ? jsonResponse({ tasks: [] }) : jsonResponse({ comments: [] }),
+      searchParams: Promise.resolve({ locale: 'ar' }),
+    }),
+  );
+
+  assert.match(empty, /No sent tasks are waiting on colleagues\./);
+  assert.match(empty, /role="status"/);
+  assert.match(denied, /Sent tasks could not be loaded\. Sign in and try again\./);
+  assert.match(denied, /role="alert"/);
+  assert.match(arabic, /dir="rtl"/);
+  assert.ok(arabic.includes(sentTasksText.ar.title));
 });
 
 // ---- (staff)/tasks/promises route ----

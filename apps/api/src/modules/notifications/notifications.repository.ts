@@ -19,6 +19,7 @@ const notificationSelect = {
   payload: true,
   provider: true,
   providerResult: true,
+  queuedAt: true,
   sentAt: true,
   failedAt: true,
   complaint: { select: { customerId: true, severity: true } },
@@ -176,6 +177,15 @@ export class NotificationsRepository {
       where: { code, channel, locale, isActive: true },
       orderBy: { version: 'desc' },
       select: notificationTemplateSelect,
+    });
+  }
+
+  async listForRecipient(recipientUserId: string, limit = 20): Promise<NotificationRecord[]> {
+    return this.prisma.notification.findMany({
+      where: { channel: NotificationChannel.IN_APP, recipientUserId },
+      orderBy: { queuedAt: 'desc' },
+      take: limit,
+      select: notificationSelect,
     });
   }
 

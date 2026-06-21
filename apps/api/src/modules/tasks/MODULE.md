@@ -21,6 +21,7 @@ module's boundary so you can work in a fresh context without scanning the tree.
 - `tasks`
 - `task_links`
 - `task_participants`
+- `task_comments`
 - `task_status_history`
 
 ## May depend on
@@ -28,6 +29,7 @@ module's boundary so you can work in a fresh context without scanning the tree.
 - `core/http-kernel` for Prisma and stable errors.
 - `core/audit.service` for task mutation audit.
 - `AuthModule` / `AuthService` for staff session guard wiring on task routes.
+- `NotificationsService` public surface for task nudge/comment in-app rows.
 - Other modules' public services only. Never import another module repository,
   `dto/`, or Prisma model type.
 

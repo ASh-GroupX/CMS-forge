@@ -6,9 +6,9 @@ import { PasswordResetPanel, type ResetPreviewState } from './password-reset-pan
 export type RolePreview = 'staff' | 'admin' | 'management';
 
 export const roleNav = {
-  staff: ['today', 'promises', 'handoff', 'queue', 'reports', 'dashboard', 'create', 'notifications'],
-  admin: ['today', 'promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'create', 'admin', 'audit', 'notifications'],
-  management: ['today', 'promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'audit', 'notifications'],
+  staff: ['today', 'sent', 'promises', 'handoff', 'queue', 'reports', 'dashboard', 'create', 'notifications'],
+  admin: ['today', 'sent', 'promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'create', 'admin', 'audit', 'notifications'],
+  management: ['today', 'sent', 'promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'audit', 'notifications'],
 } as const;
 
 export function RolePanel({ locale, role }: { locale: Locale; role: RolePreview }) {

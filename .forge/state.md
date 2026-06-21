@@ -1,9 +1,9 @@
 # Current State
 
-Status: Accountability Repair Backlog Complete
-Phase: Phase 10 - Dealership Accountability Layer (local-first)
-Next Task: PLAN-NEXT
-Model Tier: PLANNER
+Status: Ready for Operator UX Foundation
+Phase: Phase 11 - Operator UX Foundation
+Next Task: P11A username login and Quick Add staff picker
+Model Tier: GPT-5 High or Opus 4.8 Max
 
 ## How to use this file
 
@@ -12,40 +12,55 @@ Prior state history is in .forge/archive/state-archive.md.
 
 ## Snapshot
 
-- P0 Tasks are operational and live-smoked.
-- P1-DEALS-WRITE is complete. Deal create, advance, and blocker writes are
-  backend-owned, RBAC and branch scoped, audited in the same transaction, and
-  documented in OpenAPI.
-- P1-CUSTOMER-PROMISE-TRACKER is complete. `GET /tasks/promises` returns
-  session-authorized, branch-scoped customer promises linked to customer, deal,
-  case, or complaint records.
-- P2A-CASES-WRAPPER-FOR-COMPLAINTS is complete. New complaints create or link a
-  `CUSTOMER_COMPLAINT` case in the same transaction, and staff users can read
-  `GET /cases/:caseId/timeline`.
-- P2B-CASE-CAPA is complete and repaired. The browser CAPA create blocker was
-  traced to undefined `AuditService` injection in `CsrfGuard`; explicit runtime
-  injection/factory wiring fixed the 500. Browser smoke now returns 201,
-  renders the new CAPA row, resets the form, and shows success without
-  save-error.
-- P2C-PRODUCT-FRAMING is complete. The staff shell/dashboard use dealership
-  accountability language, the main nav emphasizes Today, Promises, Deals,
-  Cases, and Reports, and complaint wording remains inside complaint
-  intake/detail contexts.
-- Final hardening matrix passed locally: tasks/deals/cases/complaints API
-  suites, direct tasks/deals/cases specs, web shell/localization, OpenAPI,
-  typecheck, lint, and `git diff --check`.
+- Phase 10 remains complete and release-reviewed.
+- P10 Task Collaboration is complete locally:
+  - Sent Tasks API and UI.
+  - Task comments separate from complaint comments.
+  - Manual task nudge with participant-recipient guard.
+  - Task-linked in-app notification rows and current-user notification list.
+  - OpenAPI canonical/generated contract updated.
+- Remaining live browser proof passed with screenshots under `output/`:
+  - User A created a task for User B.
+  - User A saw it in `/tasks/sent`.
+  - User A commented and nudged.
+  - User B saw notification and task.
+  - User B marked the task `DONE`.
+  - User A saw updated status/comment.
+  - Different-branch unrelated user was denied with `403`.
+- Smoke-blocking bugfixes were limited to notification runtime wiring:
+  - `NotificationsService` provider factory now receives repository,
+    integrations, and audit dependencies.
+  - `NotificationsController` explicitly injects `NotificationsService` for
+    `GET /notifications`.
+- Release review repaired the last RBAC audit gap in the new collaboration
+  paths: object-level denied task comment/nudge access now records `SECURITY`
+  audit.
+- Proof passed:
+  - `corepack pnpm test:api -- tasks`
+  - `node --import tsx --test apps/api/src/modules/tasks/*.spec.ts`
+  - `corepack pnpm test:api -- notifications`
+  - `corepack pnpm test:web -- shell`
+  - `corepack pnpm test:web -- localization`
+  - `corepack pnpm openapi:check`
+  - `corepack pnpm typecheck`
+  - `corepack pnpm lint`
+  - `git diff --check`
+- New plan doc added: `docs/OPERATOR_UX_FOUNDATION_PLAN.md`.
+- Next UX priority is making the app usable for non-technical dealership staff:
+  username login, searchable pickers instead of raw IDs, and full Arabic
+  localization for touched flows.
 
 ## Open carry-forward / known debt
 
-- No active accountability repair blocker remains.
-- Promise Tracker currently resolves customer/deal display context from
-  task-boundary link IDs only. Add richer labels later through public
-  customer/deal module services rather than direct cross-module repository
-  reads.
-- Case Timeline and CAPA resolve case branch and owner names where the cases
-  boundary already owns that projection. Add richer linked-entity labels later
-  through public module services rather than direct cross-module repository
-  reads.
+- No P10 Task Collaboration carry-forward remains.
+- Operator UX is not complete yet. Quick Add still has technical fields such as
+  assignee ID and linked record ID; future slices must replace those with
+  searchable, branch-scoped pickers.
+- No admin screens, AI, WhatsApp, mobile, deploy, employee grievance screens, or
+  workflow builder work was added.
+- Promise Tracker still resolves customer/deal display context from task-boundary
+  link IDs only. Add richer labels later through public customer/deal module
+  services rather than direct cross-module repository reads.
 - Departments, branch activation controls, category activation controls,
   severity/SLA policy, notification templates, and work queue query-param
   filtering remain previously known admin/search follow-ups.

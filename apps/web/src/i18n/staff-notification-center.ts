@@ -5,8 +5,8 @@ export const notificationCenterText: Record<Locale, typeof enNotificationCenterT
     title: 'Notifications',
     subtitle: 'In-app updates scoped by backend authorization.',
     sections: { unread: 'Unread', read: 'Read' },
-    labels: { complaint: 'Complaint link', markRead: 'Mark read', open: 'Open scoped complaint', time: 'Time' },
-    badges: { unread: 'Unread', read: 'Read', workflow: 'Workflow', sla: 'SLA' },
+    labels: { complaint: 'Complaint link', markRead: 'Mark read', open: 'Open scoped complaint', task: 'Task link', time: 'Time' },
+    badges: { unread: 'Unread', read: 'Read', workflow: 'Workflow', sla: 'SLA', task: 'Task' },
     states: {
       loading: 'Loading notifications.',
       empty: 'No notifications are available.',
@@ -21,8 +21,8 @@ export const notificationCenterText: Record<Locale, typeof enNotificationCenterT
     title: 'الإشعارات',
     subtitle: 'تحديثات داخل النظام ضمن صلاحيات الخادم.',
     sections: { unread: 'غير مقروء', read: 'مقروء' },
-    labels: { complaint: 'رابط الشكوى', markRead: 'تحديد كمقروء', open: 'فتح الشكوى المصرح بها', time: 'الوقت' },
-    badges: { unread: 'غير مقروء', read: 'مقروء', workflow: 'سير العمل', sla: 'اتفاقية الخدمة' },
+    labels: { complaint: 'رابط الشكوى', markRead: 'تحديد كمقروء', open: 'فتح الشكوى المصرح بها', task: 'رابط المهمة', time: 'الوقت' },
+    badges: { unread: 'غير مقروء', read: 'مقروء', workflow: 'سير العمل', sla: 'اتفاقية الخدمة', task: 'مهمة' },
     states: {
       loading: 'جار تحميل الإشعارات.',
       empty: 'لا توجد إشعارات.',
@@ -39,8 +39,8 @@ const enNotificationCenterText = {
   title: '',
   subtitle: '',
   sections: { unread: '', read: '' },
-  labels: { complaint: '', markRead: '', open: '', time: '' },
-  badges: { unread: '', read: '', workflow: '', sla: '' },
+  labels: { complaint: '', markRead: '', open: '', task: '', time: '' },
+  badges: { unread: '', read: '', workflow: '', sla: '', task: '' },
   states: { loading: '', empty: '', error: '', success: '', validation: '', conflict: '' },
   safeNote: '',
 };

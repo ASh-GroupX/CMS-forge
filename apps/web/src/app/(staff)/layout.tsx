@@ -1,4 +1,4 @@
-import { Bell, CheckSquare2, ClipboardList, FilePlus2, FolderCog, Gauge, GitBranch, Handshake, History, Inbox, Search, UsersRound } from 'lucide-react';
+import { Bell, CheckSquare2, ClipboardList, FilePlus2, FolderCog, Gauge, GitBranch, Handshake, History, Inbox, Search, Send, UsersRound } from 'lucide-react';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import React from 'react';
@@ -10,6 +10,7 @@ import { StaffTopBar } from '../staff-top-bar';
 
 const NAV_ITEMS = [
   { key: 'today' as const, Icon: CheckSquare2, href: '/tasks/today' },
+  { key: 'sent' as const, Icon: Send, href: '/tasks/sent' },
   { key: 'promises' as const, Icon: Handshake, href: '/tasks/promises' },
   { key: 'handoff' as const, Icon: GitBranch, href: '/deals/handoff' },
   { key: 'queue' as const, Icon: Inbox, href: '/complaints' },
@@ -26,13 +27,13 @@ const NAV_ITEMS = [
 type NavKey = (typeof NAV_ITEMS)[number]['key'];
 
 const ROLE_NAV: Record<string, readonly NavKey[]> = {
-  ADMIN: ['today', 'promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'create', 'admin', 'audit', 'notifications'],
-  CR_MANAGER: ['today', 'promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'audit', 'notifications'],
-  BRANCH_MANAGER: ['today', 'promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'audit', 'notifications'],
+  ADMIN: ['today', 'sent', 'promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'create', 'admin', 'audit', 'notifications'],
+  CR_MANAGER: ['today', 'sent', 'promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'audit', 'notifications'],
+  BRANCH_MANAGER: ['today', 'sent', 'promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'audit', 'notifications'],
   MGMT_READONLY: ['promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'audit', 'notifications'],
 };
 
-const STAFF_NAV: readonly NavKey[] = ['today', 'promises', 'handoff', 'queue', 'reports', 'dashboard', 'create', 'notifications'];
+const STAFF_NAV: readonly NavKey[] = ['today', 'sent', 'promises', 'handoff', 'queue', 'reports', 'dashboard', 'create', 'notifications'];
 
 export default async function StaffLayout({ children }: { children: ReactNode }) {
   const requestHeaders = await headers();

@@ -18,6 +18,7 @@ import { complaintDetailText } from '../../src/i18n/staff-complaint-detail';
 import { confirmationText } from '../../src/i18n/staff-confirmations';
 import { notificationCenterText } from '../../src/i18n/staff-notification-center';
 import { reportCatalogText, reportsDashboardText } from '../../src/i18n/staff-reports-dashboard';
+import { sentTasksText } from '../../src/i18n/staff-sent-tasks';
 import { portalSubmissionText } from '../../src/i18n/portal-submission';
 import { portalSurveyText } from '../../src/i18n/portal-survey';
 import { portalTrackingText } from '../../src/i18n/portal-tracking';
@@ -163,8 +164,8 @@ test('admin screens render Arabic RTL and English LTR', async () => {
 });
 
 test('remaining staff Arabic text uses real Arabic codepoints', () => {
-  const files = ['staff-audit-viewer', 'staff-notification-center', 'staff-reports-dashboard'];
-  const bundles = [auditViewerText, notificationCenterText, reportsDashboardText, reportCatalogText];
+  const files = ['staff-audit-viewer', 'staff-notification-center', 'staff-reports-dashboard', 'staff-sent-tasks'];
+  const bundles = [auditViewerText, notificationCenterText, reportsDashboardText, reportCatalogText, sentTasksText];
 
   for (const file of files) {
     assert.doesNotMatch(readFileSync(`apps/web/src/i18n/${file}.ts`, 'utf8'), mojibakeMarkers);

@@ -1,13 +1,26 @@
 import React from 'react';
 import { NotificationCenter, type NotificationPreviewState } from '../../../components/notification-center';
 import { resolveLocale } from '../../../i18n/staff-shell';
+import { getStaffNotifications } from '../../../lib/staff-notifications-api';
 
 type SearchParams = { locale?: string | string[]; notification?: string | string[] };
 
-export default async function NotificationsPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
+export default async function NotificationsPage({
+  cookieHeader,
+  fetchImpl,
+  searchParams,
+}: {
+  cookieHeader?: string;
+  fetchImpl?: typeof fetch;
+  searchParams?: Promise<SearchParams>;
+}) {
   const params = await searchParams;
+  const items = await getStaffNotifications({
+    ...(cookieHeader !== undefined ? { cookieHeader } : {}),
+    ...(fetchImpl !== undefined ? { fetchImpl } : {}),
+  });
   return (
-    <NotificationCenter locale={resolveLocale(readParam(params?.locale))} state={resolveState(readParam(params?.notification))} />
+    <NotificationCenter items={items ?? undefined} locale={resolveLocale(readParam(params?.locale))} state={resolveState(readParam(params?.notification))} />
   );
 }
 

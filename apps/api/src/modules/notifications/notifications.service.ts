@@ -13,8 +13,8 @@ import { createTemplateData, updateTemplateData } from './notification-template.
 import type { NotificationTemplateCreateData, NotificationTemplateUpdateData } from './notification-template.rules.js';
 import { templateAudit } from './notification-template.audit.js';
 import type { NotificationTemplateAuditContext } from './notification-template.audit.js';
-import { notificationTemplateDto } from './dto/notification-response.dto.js';
-import type { NotificationTemplateResponseDto } from './dto/notification-response.dto.js';
+import { notificationDto, notificationTemplateDto } from './dto/notification-response.dto.js';
+import type { NotificationResponseDto, NotificationTemplateResponseDto } from './dto/notification-response.dto.js';
 
 export type QueueInternalNotificationInput = {
   complaintId?: string | null;
@@ -58,6 +58,10 @@ export class NotificationsService {
 
   async listTemplates(): Promise<NotificationTemplateResponseDto[]> {
     return (await this.notificationsRepository.listTemplates()).map(notificationTemplateDto);
+  }
+
+  async listForRecipient(recipientUserId: string): Promise<NotificationResponseDto[]> {
+    return (await this.notificationsRepository.listForRecipient(requiredText(recipientUserId, 'recipientUserId'))).map(notificationDto);
   }
 
   async getCustomerPreference(customerId: string): Promise<NotificationPreferenceDto> {

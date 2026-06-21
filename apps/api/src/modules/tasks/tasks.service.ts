@@ -2,7 +2,10 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { TaskConfidentialityLevel, TaskLinkEntityType, TaskParticipantRole, RoleCode, TaskStatus, TaskVisibility, type Prisma } from '@prisma/client';
 import { AuditService, type AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
-import type { EmployeeTodayResponseDto, ManagerControlRoomResponseDto, PromiseTrackerResponseDto, TaskResponseDto } from './dto/task-response.dto.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
+import type { EmployeeTodayResponseDto, ManagerControlRoomResponseDto, PromiseTrackerResponseDto, SentTasksResponseDto, TaskCommentsResponseDto, TaskResponseDto } from './dto/task-response.dto.js';
+import type { TaskNudgeInput } from './dto/task-collaboration.dto.js';
+import { createCommentForActor, listCommentsForActor, nudgeForActor, sentByMe } from './tasks.collaboration.js';
 import { assertCanAct, managerBranchId } from './tasks.access.js';
 import { selectTaskEscalations } from './tasks.escalation.js';
 import { assertPromiseLink } from './tasks.promise.js';
@@ -11,7 +14,7 @@ import { TasksRepository } from './tasks.repository.js';
 import type { TaskRecord } from './tasks.repository.js';
 import { currentNextAction, taskCounts, taskToResponse } from './tasks.response.js';
 
-type TaskAuditContext = {
+export type TaskAuditContext = {
   actorId?: string | null;
   correlationId?: string | null;
   ipAddress?: string | null;
@@ -52,7 +55,11 @@ type ManagerRollupScope = { roleCode: string; branchId: string | null };
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly tasksRepository: TasksRepository, private readonly auditService: AuditService) {}
+  constructor(
+    private readonly tasksRepository: TasksRepository,
+    private readonly auditService: AuditService,
+    private readonly notificationsService?: NotificationsService,
+  ) {}
 
   async create(input: CreateTaskInput, audit: TaskAuditContext = {}): Promise<TaskResponseDto> {
     return this.tasksRepository.transaction((client) => this.createInTransaction(input, audit, client));
@@ -156,6 +163,22 @@ export class TasksService {
     return taskToResponse(task);
   }
 
+  async sentByMe(actor: TaskActor, now: Date = new Date()): Promise<SentTasksResponseDto> {
+    return sentByMe(this.tasksRepository, actor, now);
+  }
+
+  async listCommentsForActor(taskId: string, actor: TaskActor, audit: TaskAuditContext = {}): Promise<TaskCommentsResponseDto> {
+    return listCommentsForActor(this.tasksRepository, this.auditService, taskId, actor, audit);
+  }
+
+  async createCommentForActor(taskId: string, body: string, actor: TaskActor, audit: TaskAuditContext = {}) {
+    return createCommentForActor(this.tasksRepository, this.auditService, this.notificationsService, taskId, body, actor, audit);
+  }
+
+  async nudgeForActor(taskId: string, input: TaskNudgeInput, actor: TaskActor, audit: TaskAuditContext = {}): Promise<void> {
+    await nudgeForActor(this.tasksRepository, this.auditService, this.notificationsService, taskId, input, actor, audit);
+  }
+
   async employeeToday(actorId: string, now: Date = new Date()): Promise<EmployeeTodayResponseDto> {
     const userId = requiredText(actorId, 'actorId');
     const tasks = await this.tasksRepository.listEmployeeToday(userId);
@@ -200,6 +223,7 @@ export class TasksService {
       promiseKpi: { openPromiseCount: promises.length, overduePromiseCount: overduePromises.length },
     };
   }
+
 }
 
 function assertNextAction(status: TaskStatus, nextAction: NormalizedNextAction | null): void {
@@ -232,35 +256,15 @@ function participants(input: CreateTaskInput, nextAction: NormalizedNextAction |
 }
 
 function links(input: { entityType: TaskLinkEntityType; entityId: string }[]) {
-  return input.map((link) => ({
-    entityType: validEnum(link.entityType, TaskLinkEntityType, 'links.entityType'),
-    entityId: requiredText(link.entityId, 'links.entityId'),
-  }));
+  return input.map((link) => ({ entityType: validEnum(link.entityType, TaskLinkEntityType, 'links.entityType'), entityId: requiredText(link.entityId, 'links.entityId') }));
 }
 
 function taskAudit(action: string, task: TaskRecord, context: TaskAuditContext, metadata: Prisma.InputJsonObject): AuditRecordInput {
-  return {
-    eventType: 'TASK',
-    action,
-    actorId: context.actorId ?? null,
-    branchId: null,
-    targetType: 'task',
-    targetId: task.id,
-    correlationId: context.correlationId ?? null,
-    ipAddress: context.ipAddress ?? null,
-    userAgent: context.userAgent ?? null,
-    metadata,
-  };
+  return { eventType: 'TASK', action, actorId: context.actorId ?? null, branchId: null, targetType: 'task', targetId: task.id, correlationId: context.correlationId ?? null, ipAddress: context.ipAddress ?? null, userAgent: context.userAgent ?? null, metadata };
 }
 
 function historyInput(taskId: string, fromStatus: TaskStatus | null, toStatus: TaskStatus, context: TaskAuditContext) {
-  return {
-    taskId,
-    fromStatus,
-    toStatus,
-    actorId: context.actorId ?? null,
-    correlationId: context.correlationId ?? null,
-  };
+  return { taskId, fromStatus, toStatus, actorId: context.actorId ?? null, correlationId: context.correlationId ?? null };
 }
 
 function requiredText(value: string, field: string): string {
@@ -289,7 +293,5 @@ function utcDay(value: Date): [Date, Date] {
 }
 
 function invalid(field: string): AppException {
-  return new AppException('VALIDATION_FAILED', 'Invalid task request', HttpStatus.BAD_REQUEST, [
-    { field, code: 'REQUIRED', message: `${field} is required or invalid.` },
-  ]);
+  return new AppException('VALIDATION_FAILED', 'Invalid task request', HttpStatus.BAD_REQUEST, [{ field, code: 'REQUIRED', message: `${field} is required or invalid.` }]);
 }

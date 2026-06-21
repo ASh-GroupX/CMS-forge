@@ -1,4 +1,13 @@
-import type { NotificationTemplateRecord } from '../notifications.repository.js';
+import type { NotificationRecord, NotificationTemplateRecord } from '../notifications.repository.js';
+
+export type NotificationResponseDto = {
+  id: string;
+  status: string;
+  templateCode: string;
+  locale: string;
+  payload: unknown;
+  queuedAt: string;
+};
 
 export type NotificationTemplateResponseDto = {
   id: string;
@@ -13,6 +22,17 @@ export type NotificationTemplateResponseDto = {
   createdAt: string;
   updatedAt: string;
 };
+
+export function notificationDto(notification: NotificationRecord): NotificationResponseDto {
+  return {
+    id: notification.id,
+    status: notification.status,
+    templateCode: notification.templateCode,
+    locale: notification.locale,
+    payload: notification.payload,
+    queuedAt: notification.queuedAt.toISOString(),
+  };
+}
 
 export function notificationTemplateDto(template: NotificationTemplateRecord): NotificationTemplateResponseDto {
   return {

@@ -41,6 +41,23 @@ export type EmployeeTodayResponseDto = {
   waitingOnMe: TaskResponseDto[];
 };
 
+export type SentTasksResponseDto = {
+  tasks: TaskResponseDto[];
+};
+
+export type TaskCommentResponseDto = {
+  id: string;
+  taskId: string;
+  authorId: string;
+  authorName?: string | null;
+  body: string;
+  createdAt: string;
+};
+
+export type TaskCommentsResponseDto = {
+  comments: TaskCommentResponseDto[];
+};
+
 export type ManagerRollupCountDto = {
   assigneeId: string;
   assigneeName?: string | null;

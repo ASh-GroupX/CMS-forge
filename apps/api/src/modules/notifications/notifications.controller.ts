@@ -1,14 +1,24 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { RoleCode } from '@prisma/client';
 import { RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
+import { AppException } from '../../core/http-kernel.js';
 import { parseCreateTemplateBody, parseUpdateTemplateBody } from './notification-template.rules.js';
 import { NotificationsService } from './notifications.service.js';
 
 @Controller('notifications')
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(@Inject(NotificationsService) private readonly notificationsService: NotificationsService) {}
+
+  @Get()
+  @UseGuards(SessionAuthGuard, RbacGuard)
+  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN, RoleCode.MGMT_READONLY)
+  async listMine(@Req() request: AuthenticatedRequest) {
+    const userId = request.principal?.userId;
+    if (!userId) throw new AppException('AUTH_INVALID_CREDENTIALS', 'Invalid credentials', 401);
+    return { items: await this.notificationsService.listForRecipient(userId) };
+  }
 
   @Get('templates')
   @UseGuards(SessionAuthGuard, RbacGuard)

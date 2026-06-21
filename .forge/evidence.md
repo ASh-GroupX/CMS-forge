@@ -6203,3 +6203,212 @@ Status: Passed through P9-02
   credential material to tracked source.
 - Customer portal exposure rules: Passed. Portal tracking stayed limited to
   customer-safe complaint status fields and did not expose CAPA/internal data.
+
+## 2026-06-21 - P10 Task Collaboration Plan
+
+### Scope
+
+Created `docs/TASK_COLLABORATION_PLAN.md` to capture the remaining task
+collaboration gap after the accountability repair backlog:
+
+- Sent Tasks view for tasks the actor assigned/sent to colleagues.
+- Task comments.
+- Manual task nudge/reminder notifications.
+
+Updated `.forge/next.md` and `.forge/state.md` so the next agent can build the
+planned slice instead of reopening broad Phase 10 planning.
+
+### Verification
+
+- Not Run: docs-only planning change; no code path changed.
+
+## 2026-06-21 - P10 Task Collaboration Build
+
+### Scope
+
+Implemented task collaboration for SRS IDs REQ-RBAC-001, REQ-COMMENTS-001,
+REQ-NOTIFY-001, REQ-LOCALIZATION-001, and UI-DESIGN-001:
+
+- Added `GET /tasks/sent-by-me` using the server session actor only.
+- Added task comments with `GET /tasks/:id/comments` and
+  `POST /tasks/:id/comments`; task comments are stored separately from
+  complaint comments.
+- Added `POST /tasks/:id/nudge`; default recipient is next-action user with
+  assignee fallback, and recipient override is limited to task participants.
+- Added task-linked in-app notification rows for comments and nudges, plus
+  `GET /notifications` for the current staff user's in-app notification center.
+- Added Sent Tasks UI at `/tasks/sent`, reachable from staff navigation, with
+  status, assignee, next action, due date, last update, links, branch/name
+  labels, comments, and Remind action.
+- Updated OpenAPI canonical contract and generated `packages/contracts/openapi.json`.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- tasks` (12/12).
+- Passed: `node --import tsx --test apps/api/src/modules/tasks/*.spec.ts`
+  (31/31).
+- Failed then repaired: `corepack pnpm test:api -- notifications` initially
+  failed exact repository-select assertions after adding `queuedAt` to
+  notification projection.
+- Passed after repair: `corepack pnpm test:api -- notifications` (42/42).
+- Passed: `corepack pnpm test:web -- shell` (188/188).
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+- Not Run: browser screenshot/live smoke. A local mock API and Next dev server
+  were started, but Playwright could not launch because the Chromium binary was
+  missing; `npx playwright install chromium` timed out after 120 seconds. The
+  temporary servers were stopped and temp artifacts removed.
+
+### Security Self-Check
+
+- Roles and branch scope come from server session, never client input: Passed.
+  New task routes derive `userId`, `roleCode`, and `branchId` from
+  `AuthenticatedRequest.principal`; Sent Tasks never accepts ownerId.
+- Comment create audit in same transaction: Passed. `task_comment_created` is
+  written in the same task repository transaction as `task_comments` insert.
+- Nudge audit and side effect order: Passed. `task_nudged` audit is written in
+  transaction; in-app notification queues after commit.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Audit metadata excludes comment body and reminder free text;
+  notification payloads are still filtered by the existing blocked-key guard.
+- Customer portal exposure rules: Passed. No portal routes or portal response
+  DTOs were changed, and task comments/nudges live only under staff task and
+  notification routes.
+- Trust boundaries tested: Passed. Tests cover participant/owner allowed paths,
+  unrelated task comment denial, and nudge recipient override denial.
+
+## 2026-06-21 - P10 Task Collaboration Live Smoke Proof
+
+### Scope
+
+Completed the remaining live browser proof for P10 Task Collaboration without
+adding new features. Used the existing local Chrome/in-app browser path instead
+of installing Playwright Chromium.
+
+Smoke task:
+
+- Title: `Smoke collaboration 1782065885823`
+- Task ID: `cmqo40ngs0006sxapr783z6h3`
+
+Smoke steps passed:
+
+- User A created a task assigned to User B.
+- User A opened `/tasks/sent` and saw the task/status.
+- User A commented on the task.
+- User A nudged User B.
+- User B saw the task notification and the assigned task.
+- User B marked the task `DONE`.
+- User A saw the updated `DONE` status and task comment.
+- A different-branch unrelated user was denied with `403`.
+
+Smoke-blocking repairs:
+
+- Fixed notification provider wiring so task nudge/comment notifications can
+  queue through `NotificationsService` at runtime.
+- Fixed current-user notification controller injection so `GET /notifications`
+  can render User B's notification center during the live smoke.
+
+Artifacts:
+
+- `output/p10-task-collaboration-smoke.json`
+- `output/p10-task-collaboration-user-a-sent-before.png`
+- `output/p10-task-collaboration-user-a-sent-after-actions.png`
+- `output/p10-task-collaboration-user-b-notification.png`
+- `output/p10-task-collaboration-user-b-done.png`
+- `output/p10-task-collaboration-user-a-final.png`
+
+### Verification
+
+- Passed: live browser smoke for User A/User B task collaboration.
+- Passed: different-branch unrelated user denial returned `403`.
+- Passed: `corepack pnpm test:api -- tasks` (12/12).
+- Passed: `node --import tsx --test apps/api/src/modules/tasks/*.spec.ts`
+  (31/31).
+- Passed: `corepack pnpm test:api -- notifications` (42/42).
+- Passed: `corepack pnpm test:web -- shell` (188/188).
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. Live
+  smoke covered allowed same-branch collaboration and different-branch denial.
+- Task comment state change audit and history: Passed. Existing task service
+  tests remain green and comment audit writes are covered by the task suite.
+- Nudge audit and side effect order: Passed. Nudge audit remains transactional;
+  notification side effect queued after commit and verified live.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Smoke outputs contain only task proof metadata and
+  screenshots.
+- Customer portal exposure rules: Passed. No customer portal route, DTO, or UI
+  was changed; task comments, nudges, notifications, and staff-only task data
+  remain staff-only.
+- SRS coverage: REQ-RBAC-001, REQ-COMMENTS-001, REQ-NOTIFY-001,
+  REQ-LOCALIZATION-001, UI-DESIGN-001.
+
+## 2026-06-21 - P10 Release Handoff Review
+
+### Scope
+
+Reviewed the final Phase 10 Dealership Accountability diff for release
+handoff. One release blocker was repaired:
+
+- Task collaboration object-level `403` denials now write `SECURITY` audit
+  entries for denied task comment reads and denied nudge recipient overrides.
+
+No portal routes or portal response DTOs were changed. Smoke artifacts under
+`output/p10-task-collaboration-*` were retained as release proof.
+
+### Verification
+
+- Passed: `node --import tsx --test apps/api/src/modules/tasks/*.spec.ts`
+  (31/31).
+- Passed: `corepack pnpm test:api -- tasks` (12/12).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. New
+  collaboration routes still derive actor context from `AuthenticatedRequest`.
+- Unauthorized collaboration access creates security audit: Passed. Regression
+  tests cover denied task comments and denied nudge recipient override.
+- Comment/nudge state changes audit: Passed. Comment insert plus TASK audit
+  stay in one transaction; nudge TASK audit stays transactional and
+  notification queues after commit.
+- Customer portal exposure rules: Passed. No customer portal surface changed.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Review found no new secret-bearing source or smoke
+  artifact content.
+
+## 2026-06-21 - P11 Operator UX Foundation Plan
+
+### Scope
+
+Created `docs/OPERATOR_UX_FOUNDATION_PLAN.md` as the handoff for the next
+product correction: make the staff app simple for non-technical dealership
+operators.
+
+The plan defines:
+
+- Username-first login while keeping production password security intact.
+- Searchable staff and record pickers instead of raw ID fields.
+- Quick Add Task as the first implementation target.
+- Full Arabic localization and RTL proof as acceptance criteria.
+- A slice sequence: P11A username login + staff picker, P11B related-record
+  picker, P11C picker rollout, P11D Arabic completion pass, P11E operator polish.
+
+Updated `.forge/next.md` to point the next builder at P11A and updated
+`.forge/state.md` with the new UX carry-forward.
+
+### Verification
+
+- Not Run: docs-only planning change; no runtime code changed.

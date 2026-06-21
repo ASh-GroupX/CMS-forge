@@ -39,6 +39,43 @@ test('notifications service queues one internal in-app row', async () => {
   assert.equal(result.status, NotificationStatus.QUEUED);
 });
 
+test('notifications service lists only current recipient rows', async () => {
+  let recipient = '';
+  const service = new NotificationsService({
+    listForRecipient: async (recipientUserId: string) => {
+      recipient = recipientUserId;
+      return [{
+        id: 'notif_task',
+        complaintId: null,
+        recipientUserId,
+        channel: NotificationChannel.IN_APP,
+        status: NotificationStatus.QUEUED,
+        templateCode: 'task.nudge.internal',
+        locale: 'en',
+        payload: { taskId: 'task_1', title: 'Call customer' },
+        provider: null,
+        providerResult: null,
+        queuedAt: new Date('2026-06-21T09:00:00.000Z'),
+        sentAt: null,
+        failedAt: null,
+        complaint: null,
+      }];
+    },
+  } as unknown as NotificationsRepository, {} as IntegrationsService, {} as never);
+
+  const result = await service.listForRecipient('usr_1');
+
+  assert.equal(recipient, 'usr_1');
+  assert.deepEqual(result[0], {
+    id: 'notif_task',
+    status: NotificationStatus.QUEUED,
+    templateCode: 'task.nudge.internal',
+    locale: 'en',
+    payload: { taskId: 'task_1', title: 'Call customer' },
+    queuedAt: '2026-06-21T09:00:00.000Z',
+  });
+});
+
 test('notifications service queues idempotent internal rows with payload key', async () => {
   const writes: unknown[] = [];
   const service = new NotificationsService({
@@ -159,6 +196,7 @@ test('notifications repository returns an existing idempotent internal row', asy
       payload: true,
       provider: true,
       providerResult: true,
+      queuedAt: true,
       sentAt: true,
       failedAt: true,
       complaint: { select: { customerId: true, severity: true } },
@@ -214,6 +252,7 @@ test('notifications repository persists queued in-app rows only', async () => {
       payload: true,
       provider: true,
       providerResult: true,
+      queuedAt: true,
       sentAt: true,
       failedAt: true,
       complaint: { select: { customerId: true, severity: true } },

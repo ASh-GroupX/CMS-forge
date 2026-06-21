@@ -25,9 +25,19 @@ const taskSelect = {
   participants: { select: { userId: true, role: true } },
 } satisfies Prisma.TaskSelect;
 
+const taskCommentSelect = {
+  id: true,
+  taskId: true,
+  authorId: true,
+  body: true,
+  createdAt: true,
+  author: { select: { nameEn: true } },
+} satisfies Prisma.TaskCommentSelect;
+
 export type TaskRecord = Prisma.TaskGetPayload<{ select: typeof taskSelect }>;
+export type TaskCommentRecord = Prisma.TaskCommentGetPayload<{ select: typeof taskCommentSelect }>;
 export type PromiseTaskRecord = TaskRecord & { statusHistory: { toStatus: TaskStatus; createdAt: Date }[] };
-type TaskClient = Pick<Prisma.TransactionClient, 'task' | 'taskStatusHistory'>;
+type TaskClient = Pick<Prisma.TransactionClient, 'task' | 'taskComment' | 'taskStatusHistory'>;
 
 export type CreateTaskData = {
   title: string;
@@ -62,6 +72,11 @@ export type CreateTaskStatusHistoryData = {
   toStatus: TaskStatus;
   actorId?: string | null;
   correlationId?: string | null;
+};
+export type CreateTaskCommentData = {
+  taskId: string;
+  authorId: string;
+  body: string;
 };
 
 @Injectable()
@@ -101,6 +116,18 @@ export class TasksRepository {
         id,
         OR: [{ ownerId: userId }, { assigneeId: userId }, { nextActionWhoId: userId }, { participants: { some: { userId } } }],
       },
+      select: taskSelect,
+    });
+  }
+
+  async listSentByOwner(ownerId: string, completedSince: Date): Promise<TaskRecord[]> {
+    return this.prisma.task.findMany({
+      where: {
+        ownerId,
+        OR: [{ assigneeId: { not: ownerId } }, { AND: [{ nextActionWhoId: { not: null } }, { nextActionWhoId: { not: ownerId } }] }],
+        AND: [{ OR: [{ status: { not: 'DONE' } }, { status: 'DONE', updatedAt: { gte: completedSince } }] }],
+      },
+      orderBy: [{ status: 'asc' }, { updatedAt: 'desc' }, { dueAt: 'asc' }],
       select: taskSelect,
     });
   }
@@ -176,6 +203,25 @@ export class TasksRepository {
         actorId: data.actorId ?? null,
         correlationId: data.correlationId ?? null,
       },
+    });
+  }
+
+  async listComments(taskId: string): Promise<TaskCommentRecord[]> {
+    return this.prisma.taskComment.findMany({
+      where: { taskId },
+      orderBy: { createdAt: 'asc' },
+      select: taskCommentSelect,
+    });
+  }
+
+  async createComment(data: CreateTaskCommentData, client: TaskClient = this.prisma): Promise<TaskCommentRecord> {
+    return client.taskComment.create({
+      data: {
+        taskId: data.taskId,
+        authorId: data.authorId,
+        body: data.body,
+      },
+      select: taskCommentSelect,
     });
   }
 }

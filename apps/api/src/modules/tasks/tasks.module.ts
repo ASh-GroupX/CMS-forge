@@ -6,12 +6,14 @@ import { CsrfGuard } from '../../core/csrf.guard.js';
 import { PrismaService } from '../../core/http-kernel.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { AuthService } from '../auth/auth.service.js';
+import { NotificationsModule } from '../notifications/notifications.module.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 import { TasksController } from './tasks.controller.js';
 import { TasksRepository } from './tasks.repository.js';
 import { TasksService } from './tasks.service.js';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, NotificationsModule],
   controllers: [TasksController],
   providers: [
     PrismaService,
@@ -27,8 +29,8 @@ import { TasksService } from './tasks.service.js';
     },
     {
       provide: TasksService,
-      inject: [TasksRepository, AuditService],
-      useFactory: (repository: TasksRepository, audit: AuditService) => new TasksService(repository, audit),
+      inject: [TasksRepository, AuditService, NotificationsService],
+      useFactory: (repository: TasksRepository, audit: AuditService, notifications: NotificationsService) => new TasksService(repository, audit, notifications),
     },
     {
       provide: SESSION_AUTH_SERVICE,

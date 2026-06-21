@@ -1,0 +1,40 @@
+▲ Next.js 16.2.9 (Turbopack)
+- Local:         http://localhost:4000
+- Network:       http://26.121.213.200:4000
+✓ Ready in 1797ms
+
+ GET / 200 in 1932ms (next.js: 546ms, proxy.ts: 183ms, application-code: 1203ms)
+ GET / 200 in 199ms (next.js: 12ms, proxy.ts: 21ms, application-code: 165ms)
+ GET /?locale=en&auth=error 200 in 112ms (next.js: 11ms, proxy.ts: 14ms, application-code: 87ms)
+ POST / 303 in 333ms (next.js: 29ms, proxy.ts: 13ms, application-code: 290ms)
+  └─ ƒ loginStaffAction({}) in 107ms src/lib/staff-auth-actions.ts
+ GET /?locale=en&auth=error 200 in 92ms (next.js: 13ms, proxy.ts: 8ms, application-code: 71ms)
+ POST /?locale=en&auth=error 303 in 161ms (next.js: 14ms, proxy.ts: 9ms, application-code: 137ms)
+  └─ ƒ loginStaffAction({}) in 21ms src/lib/staff-auth-actions.ts
+ GET /?locale=en&auth=error 200 in 102ms (next.js: 13ms, proxy.ts: 10ms, application-code: 80ms)
+ POST /?locale=en&auth=error 303 in 166ms (next.js: 13ms, proxy.ts: 10ms, application-code: 143ms)
+  └─ ƒ loginStaffAction({}) in 13ms src/lib/staff-auth-actions.ts
+ GET /?locale=en 200 in 140ms (next.js: 18ms, proxy.ts: 6ms, application-code: 117ms)
+ POST /?locale=en&auth=error 303 in 398ms (next.js: 22ms, proxy.ts: 10ms, application-code: 366ms)
+  └─ ƒ loginStaffAction({}) in 167ms src/lib/staff-auth-actions.ts
+ GET /tasks/today?locale=en 200 in 639ms (next.js: 116ms, proxy.ts: 6ms, application-code: 516ms)
+ GET /tasks/today?locale=en 200 in 426ms (next.js: 14ms, proxy.ts: 24ms, application-code: 388ms)
+ GET /tasks/today?locale=en 200 in 858ms (next.js: 14ms, proxy.ts: 10ms, application-code: 834ms)
+ GET /tasks/sent?locale=en 200 in 477ms (next.js: 105ms, proxy.ts: 11ms, application-code: 361ms)
+ GET /tasks/sent?locale=en&task=success 200 in 185ms (next.js: 12ms, proxy.ts: 5ms, application-code: 169ms)
+ POST /tasks/sent?locale=en 303 in 304ms (next.js: 14ms, proxy.ts: 13ms, application-code: 277ms)
+  └─ ƒ commentOnTaskAction({}) in 65ms src/app/(staff)/tasks/sent/actions.ts
+ GET /tasks/today?locale=en 200 in 361ms (next.js: 25ms, proxy.ts: 7ms, application-code: 328ms)
+ GET /tasks/today?locale=en&task=success 200 in 283ms (next.js: 15ms, proxy.ts: 9ms, application-code: 259ms)
+ POST /tasks/today?locale=en 303 in 407ms (next.js: 17ms, proxy.ts: 13ms, application-code: 377ms)
+  └─ ƒ updateTaskAction({}) in 59ms src/app/(staff)/tasks/today/actions.ts
+ GET /tasks/today?locale=en&task=success 200 in 216ms (next.js: 10ms, proxy.ts: 6ms, application-code: 200ms)
+ POST /tasks/today?locale=en&task=success 303 in 308ms (next.js: 12ms, proxy.ts: 6ms, application-code: 289ms)
+  └─ ƒ updateTaskAction({}) in 39ms src/app/(staff)/tasks/today/actions.ts
+ GET /tasks/today?locale=en 200 in 338ms (next.js: 15ms, proxy.ts: 9ms, application-code: 314ms)
+ GET /complaints?locale=en 200 in 938ms (next.js: 100ms, proxy.ts: 10ms, application-code: 828ms)
+ GET /deals/handoff?locale=en 200 in 917ms (next.js: 103ms, proxy.ts: 15ms, application-code: 799ms)
+ GET /tasks/manager?locale=en 200 in 672ms (next.js: 105ms, proxy.ts: 6ms, application-code: 562ms)
+ GET /complaints/new?locale=en 200 in 830ms (next.js: 100ms, proxy.ts: 7ms, application-code: 723ms)
+ GET /tasks/today?locale=en 200 in 257ms (next.js: 13ms, proxy.ts: 5ms, application-code: 239ms)
+ GET /deals/handoff?locale=en 200 in 600ms (next.js: 13ms, proxy.ts: 7ms, application-code: 580ms)
