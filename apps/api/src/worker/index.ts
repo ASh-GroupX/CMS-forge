@@ -3,16 +3,20 @@ import { Logger, Module, type INestApplicationContext } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { Queue, Worker } from 'bullmq';
 import { fileURLToPath } from 'node:url';
+import { RoleCode } from '@prisma/client';
 import { AttachmentsModule } from '../modules/attachments/attachments.module.js';
 import { AttachmentsService, type TransitionAttachmentScanInput } from '../modules/attachments/attachments.service.js';
 import { NotificationsModule } from '../modules/notifications/notifications.module.js';
 import { NotificationsService } from '../modules/notifications/notifications.service.js';
 import { SlaService } from '../modules/sla/sla.service.js';
 import { SlaModule } from '../modules/sla/sla.module.js';
+import { TasksModule } from '../modules/tasks/tasks.module.js';
+import { TasksService } from '../modules/tasks/tasks.service.js';
+import { selectTaskEscalations } from '../modules/tasks/tasks.escalation.js';
 import { redisConnectionFromUrl, workerQueueNames, type WorkerJobPayload, type WorkerQueueName } from './queue.js';
 
 @Module({
-  imports: [SlaModule, NotificationsModule, AttachmentsModule],
+  imports: [SlaModule, NotificationsModule, AttachmentsModule, TasksModule],
 })
 class WorkerModule {}
 
@@ -21,14 +25,16 @@ export const slaBreachJobName = 'sla.breach';
 export const notificationEmailJobName = 'notifications.email';
 export const notificationSmsJobName = 'notifications.sms';
 export const notificationWhatsAppJobName = 'notifications.whatsapp';
+export const taskEscalationJobName = 'tasks.escalation.scan';
 export const attachmentScanJobName = 'attachments.scan';
 
 type WorkerJob = { id?: string | number; name: string; data?: WorkerJobPayload };
 type WorkerLogger = Pick<Logger, 'log'>;
 type WorkerContext = Pick<INestApplicationContext, 'get'>;
 type SlaRunner = Pick<SlaService, 'runWarningJob' | 'runBreachJob'>;
-type NotificationsRunner = Pick<NotificationsService, 'dispatchQueuedEmail' | 'dispatchQueuedSms' | 'dispatchQueuedWhatsApp'>;
+type NotificationsRunner = Pick<NotificationsService, 'dispatchQueuedEmail' | 'dispatchQueuedSms' | 'dispatchQueuedWhatsApp' | 'queueInternal'>;
 type AttachmentsRunner = Pick<AttachmentsService, 'transitionScanStatus'>;
+type TaskEscalationRunner = Pick<TasksService, 'managerControlRoom'>;
 type QueueScheduler = Pick<Queue<WorkerJobPayload>, 'upsertJobScheduler' | 'close'>;
 
 async function bootstrap(): Promise<void> {
@@ -78,6 +84,11 @@ export async function processWorkerJob(
   }
 
   if (queueName === 'notifications') {
+    if (job.name === taskEscalationJobName) {
+      const result = await runTaskEscalationJob(app.get(TasksService), app.get(NotificationsService), new Date());
+      logger.log(`task escalation job received name=${job.name} id=${job.id ?? 'unknown'} result=${JSON.stringify(result)}`);
+      return result;
+    }
     if (job.name !== notificationEmailJobName && job.name !== notificationSmsJobName && job.name !== notificationWhatsAppJobName) return logNoopJob(queueName, job, logger);
     const result = await runNotificationJob(app.get(NotificationsService), job.name, new Date());
     logger.log(`notification job received name=${job.name} id=${job.id ?? 'unknown'} result=${JSON.stringify(result)}`);
@@ -117,6 +128,7 @@ export async function scheduleNotificationJobs(
   await queue.upsertJobScheduler(notificationEmailJobName, { every: everyMs }, { name: notificationEmailJobName, data: {} });
   await queue.upsertJobScheduler(notificationSmsJobName, { every: everyMs }, { name: notificationSmsJobName, data: {} });
   await queue.upsertJobScheduler(notificationWhatsAppJobName, { every: everyMs }, { name: notificationWhatsAppJobName, data: {} });
+  await queue.upsertJobScheduler(taskEscalationJobName, { every: everyMs }, { name: taskEscalationJobName, data: {} });
 }
 
 async function runSlaJob(slaService: SlaRunner, jobName: string, now: Date): Promise<unknown> {
@@ -140,6 +152,31 @@ async function runNotificationJob(notificationsService: NotificationsRunner, job
     return notificationsService.dispatchQueuedWhatsApp(25, now);
   }
   return { ok: true };
+}
+
+async function runTaskEscalationJob(tasksService: TaskEscalationRunner, notificationsService: NotificationsRunner, now: Date): Promise<unknown> {
+  const rollup = await tasksService.managerControlRoom({ roleCode: RoleCode.ADMIN, branchId: null }, now);
+  const tasks = new Map(rollup.escalated.map((task) => [task.id, task]));
+  const candidates = selectTaskEscalations(rollup.escalated.map((task) => ({
+    id: task.id,
+    status: task.status,
+    dueAt: new Date(task.dueAt),
+    nextActionWhen: task.nextAction ? new Date(task.nextAction.when) : null,
+  })), undefined, now);
+
+  for (const candidate of candidates) {
+    const task = tasks.get(candidate.taskId);
+    if (!task) continue;
+    const idempotencyKey = `task-escalation:${candidate.taskId}:${candidate.level}:${candidate.triggerAt}`;
+    await notificationsService.queueInternal({
+      recipientUserId: task.nextAction?.whoId ?? task.assigneeId,
+      templateCode: 'task.escalation.internal',
+      locale: 'en',
+      idempotencyKey,
+      payload: { idempotencyKey, taskId: candidate.taskId, level: candidate.level, reason: candidate.reason, triggerAt: candidate.triggerAt, overdueMinutes: candidate.overdueMinutes },
+    });
+  }
+  return { scanned: rollup.escalated.length, queued: candidates.length };
 }
 
 async function runAttachmentScanJob(attachmentsService: AttachmentsRunner, payload: WorkerJobPayload | undefined): Promise<unknown> {

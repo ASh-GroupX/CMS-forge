@@ -8,6 +8,7 @@ import {
   History,
   Inbox,
   Search,
+  UsersRound,
 } from 'lucide-react';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -32,11 +33,12 @@ import { AuthPanel, RolePanel, roleNav, type RolePreview } from './staff-shell-p
 import { StaffTopBar } from './staff-top-bar';
 import { WorkQueue, type QueuePreviewState } from './work-queue';
 
-const navKeys = ['today', 'dashboard', 'queue', 'create', 'detail', 'admin', 'reports', 'audit', 'notifications'] as const;
+const navKeys = ['today', 'manager', 'dashboard', 'queue', 'create', 'detail', 'admin', 'reports', 'audit', 'notifications'] as const;
 type NavKey = (typeof navKeys)[number];
 
 const icons = {
   today: CheckSquare2,
+  manager: UsersRound,
   dashboard: Gauge,
   queue: Inbox,
   create: FilePlus2,
@@ -130,6 +132,7 @@ function withLocale(path: string, locale: Locale): string {
 function navHref(key: NavKey, locale: Locale): string {
   const routes: Record<NavKey, string> = {
     today: '/tasks/today',
+    manager: '/tasks/manager',
     dashboard: '/dashboard',
     queue: '/complaints',
     create: '/complaints/new',

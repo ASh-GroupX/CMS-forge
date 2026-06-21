@@ -1,9 +1,6 @@
 export const locales = ['en', 'ar'] as const;
 export type Locale = (typeof locales)[number];
-export function resolveLocale(value: string | string[] | undefined): Locale {
-  const candidate = Array.isArray(value) ? value[0] : value;
-  return candidate === 'ar' ? 'ar' : 'en';
-}
+export function resolveLocale(value: string | string[] | undefined): Locale { return (Array.isArray(value) ? value[0] : value) === 'ar' ? 'ar' : 'en'; }
 export const staffShellText = {
   en: {
     lang: 'en', dir: 'ltr',
@@ -141,6 +138,7 @@ export const staffShellText = {
     },
     nav: {
       today: ['Employee Today', 'Due, overdue, and waiting tasks'],
+      manager: ['Manager Control Room', 'Team overdue, stuck, and promise work'],
       dashboard: ['Dashboard', 'SLA and volume overview'],
       queue: ['Work queue', 'Filtered complaint list'],
       create: ['Create complaint', 'New intake placeholder'],
@@ -287,6 +285,7 @@ export const staffShellText = {
     },
     nav: {
       today: ['مهامي اليوم', 'المهام المستحقة والمتأخرة والعالقة'],
+      manager: ['غرفة تحكم المدير', 'المهام المتأخرة والعالقة ووعود العملاء'],
       dashboard: ['لوحة التحكم', 'ملخص SLA والحجم'],
       queue: ['قائمة العمل', 'قائمة شكاوى قابلة للتصفية'],
       create: ['إنشاء شكوى', 'مدخل إنشاء مؤقت'],

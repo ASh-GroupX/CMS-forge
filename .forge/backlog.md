@@ -440,17 +440,19 @@ PLAN-split into 1-5 file sub-tasks before build, like F1-05 was.
   - [x] P10-01B: 10-second quick-add capture API.
   - [x] P10-01C: Employee Today query/service API.
   - [x] P10-01D: Employee Today screen and runtime proof.
-- [ ] P10-02: Manager Control Room - overdue-by-employee, due-today, stuck, workload,
+- [x] P10-02: Manager Control Room - overdue-by-employee, due-today, stuck, workload,
       escalated, branch/team filters.
   - [x] P10-02A: Manager rollup read model + derived queries + RBAC/branch scope +
         API tests (employee denied, no cross-branch leak).
-  - [ ] P10-02B `[stack]`: Manager Control Room screen + team/branch filters + web test.
+  - [x] P10-02B `[stack]`: Manager Control Room screen + team/branch filters + web test.
 - [ ] P10-03: Reminder + escalation engine on the Phase-8 worker.
   - [x] P10-03A: Escalation policy + due-date scan (due-soon/overdue selection) -
         pure logic, idempotent, unit tests.
-  - [ ] P10-03B `[stack]`: Wire the scan into the BullMQ worker (reminder -> team
-        leader -> branch manager -> high-priority) + daily employee digest + manager
-        rollup; notify after commit.
+  - [x] P10-03B `[stack]`: Wire the scan into the BullMQ worker (reminder -> team
+        leader -> branch manager -> high-priority); notify idempotently through
+        the existing notification service.
+  - [ ] P10-03C: Add the missing digest/rollup notification contract for daily
+        employee digest and manager rollup batching, then wire it into the worker.
 - [ ] P10-04 (umbrella): Deal object + stage gates (Lead..Post-delivery) + Handoff Board.
   - [x] P10-04A: Deal model + stage gates + per-stage owner/due/blocker + transition
         rules + service tests.

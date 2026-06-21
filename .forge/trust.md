@@ -1302,3 +1302,33 @@ participants. The focused static seed test, typecheck, OpenAPI check, lint, root
 tests, and diff whitespace check passed. Live `db:seed` was not run because the
 remaining Phase 10 tasks are stack-gated and the local stack prerequisite is
 still unresolved.
+
+## P10-02B Builder Trust Note
+
+Date: 2026-06-21
+Risk: Medium
+Recommendation: Continue
+
+P10-02B is complete: Manager Control Room now renders the existing scoped
+`/tasks/manager-rollup` read model from the staff session cookie only, with
+manager/admin navigation, staff-hidden navigation, localized empty/error/loading
+states, and runtime browser proof on the local stack. `db:seed`, lint,
+typecheck, focused web shell tests, health checks, route smoke, Playwright
+snapshot, and screenshot proof passed after fixing a localization line-budget
+split and parser type hole. Continue to P10-03B.
+
+## P10-03B Builder Trust Note
+
+Date: 2026-06-21
+Risk: High
+Recommendation: Continue
+
+P10-03B is complete: the Phase-8 BullMQ notifications worker now schedules and
+executes `tasks.escalation.scan`, derives escalation candidates through the
+backend manager rollup plus the pure P10-03A selector, and queues idempotent
+in-app escalation notifications without trusting job payload role or branch
+scope. `db:seed`, lint, typecheck, `test:api -- tasks`, focused worker/
+notification tests, root tests, Redis scheduler smoke, and `test:api --
+notifications` passed. Daily digest and manager rollup batching are split to
+P10-03C because the current notification primitives lack a digest/grouping
+contract.

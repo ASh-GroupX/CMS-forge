@@ -1,4 +1,4 @@
-import { Bell, CheckSquare2, ClipboardList, FilePlus2, FolderCog, Gauge, History, Inbox, Search } from 'lucide-react';
+import { Bell, CheckSquare2, ClipboardList, FilePlus2, FolderCog, Gauge, History, Inbox, Search, UsersRound } from 'lucide-react';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import React from 'react';
@@ -9,6 +9,7 @@ import { StaffTopBar } from '../staff-top-bar';
 
 const NAV_ITEMS = [
   { key: 'today' as const, Icon: CheckSquare2, href: '/tasks/today' },
+  { key: 'manager' as const, Icon: UsersRound, href: '/tasks/manager' },
   { key: 'dashboard' as const, Icon: Gauge, href: '/dashboard' },
   { key: 'queue' as const, Icon: Inbox, href: '/complaints' },
   { key: 'create' as const, Icon: FilePlus2, href: '/complaints/new' },
@@ -22,10 +23,10 @@ const NAV_ITEMS = [
 type NavKey = (typeof NAV_ITEMS)[number]['key'];
 
 const ROLE_NAV: Record<string, readonly NavKey[]> = {
-  ADMIN: ['today', 'dashboard', 'queue', 'create', 'detail', 'admin', 'reports', 'audit', 'notifications'],
-  CR_MANAGER: ['today', 'dashboard', 'queue', 'detail', 'reports', 'audit', 'notifications'],
-  BRANCH_MANAGER: ['today', 'dashboard', 'queue', 'detail', 'reports', 'audit', 'notifications'],
-  MGMT_READONLY: ['dashboard', 'queue', 'detail', 'reports', 'audit', 'notifications'],
+  ADMIN: ['today', 'manager', 'dashboard', 'queue', 'create', 'detail', 'admin', 'reports', 'audit', 'notifications'],
+  CR_MANAGER: ['today', 'manager', 'dashboard', 'queue', 'detail', 'reports', 'audit', 'notifications'],
+  BRANCH_MANAGER: ['today', 'manager', 'dashboard', 'queue', 'detail', 'reports', 'audit', 'notifications'],
+  MGMT_READONLY: ['manager', 'dashboard', 'queue', 'detail', 'reports', 'audit', 'notifications'],
 };
 
 const STAFF_NAV: readonly NavKey[] = ['today', 'dashboard', 'queue', 'create', 'detail', 'notifications'];

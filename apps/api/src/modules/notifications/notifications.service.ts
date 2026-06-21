@@ -22,6 +22,7 @@ export type QueueInternalNotificationInput = {
   templateCode?: string;
   locale?: string;
   payload?: unknown;
+  idempotencyKey?: string;
 };
 
 export type DispatchEmailNotificationsResult = {
@@ -99,14 +100,18 @@ export class NotificationsService {
     const templateCode = requiredText(input.templateCode, 'templateCode');
     const locale = requiredText(input.locale ?? 'en', 'locale');
     const payload = safePayload(input.payload ?? {});
+    const idempotencyKey = input.idempotencyKey === undefined ? null : requiredText(input.idempotencyKey, 'idempotencyKey');
 
-    return this.notificationsRepository.queueInternal({
+    const data = {
       complaintId: optionalText(input.complaintId),
       recipientUserId: optionalText(input.recipientUserId),
       templateCode,
       locale,
-      payload,
-    });
+      payload: idempotencyKey ? payloadWithIdempotency(payload, idempotencyKey) : payload,
+    };
+    return idempotencyKey
+      ? this.notificationsRepository.queueInternalOnce({ ...data, idempotencyKey })
+      : this.notificationsRepository.queueInternal(data);
   }
 
   async dispatchQueuedEmail(limit = 25, now = new Date()): Promise<DispatchEmailNotificationsResult> {
@@ -225,6 +230,11 @@ function optionalText(value: unknown): string | null {
 function safePayload(value: unknown): Prisma.InputJsonValue {
   if (!isJson(value) || hasBlockedKey(value)) throw invalidNotification('payload');
   return value;
+}
+
+function payloadWithIdempotency(value: Prisma.InputJsonValue, idempotencyKey: string): Prisma.InputJsonValue {
+  if (!isPlainObject(value)) throw invalidNotification('payload');
+  return { ...value, idempotencyKey };
 }
 
 function notificationChannel(value: unknown): NotificationChannel {

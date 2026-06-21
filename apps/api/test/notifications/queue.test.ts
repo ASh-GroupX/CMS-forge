@@ -39,6 +39,42 @@ test('notifications service queues one internal in-app row', async () => {
   assert.equal(result.status, NotificationStatus.QUEUED);
 });
 
+test('notifications service queues idempotent internal rows with payload key', async () => {
+  const writes: unknown[] = [];
+  const service = new NotificationsService({
+    queueInternalOnce: async (data) => {
+      writes.push(data);
+      return {
+        id: 'notif_once',
+        ...data,
+        channel: NotificationChannel.IN_APP,
+        status: NotificationStatus.QUEUED,
+      };
+    },
+  } as NotificationsRepository, {} as IntegrationsService, {} as never);
+
+  await service.queueInternal({
+    recipientUserId: 'usr_1',
+    templateCode: 'task.escalation.internal',
+    locale: 'en',
+    payload: { taskId: 'task_1', level: 'TEAM_LEADER' },
+    idempotencyKey: 'task-escalation:task_1:TEAM_LEADER:2026-06-21T00:00:00.000Z',
+  });
+
+  assert.deepEqual(writes[0], {
+    complaintId: null,
+    recipientUserId: 'usr_1',
+    templateCode: 'task.escalation.internal',
+    locale: 'en',
+    payload: {
+      taskId: 'task_1',
+      level: 'TEAM_LEADER',
+      idempotencyKey: 'task-escalation:task_1:TEAM_LEADER:2026-06-21T00:00:00.000Z',
+    },
+    idempotencyKey: 'task-escalation:task_1:TEAM_LEADER:2026-06-21T00:00:00.000Z',
+  });
+});
+
 test('notifications service accepts portal verification request metadata without secret payload keys', async () => {
   const writes: unknown[] = [];
   const service = new NotificationsService({
@@ -61,6 +97,72 @@ test('notifications service accepts portal verification request metadata without
     templateCode: 'portal.verification.requested.internal',
     locale: 'en',
     payload: { verificationId: 'ver_1', referenceNumber: 'CMP-000010', expiresAt: '2026-06-19T10:05:00.000Z' },
+  });
+});
+
+test('notifications repository returns an existing idempotent internal row', async () => {
+  const calls: unknown[] = [];
+  const existing = {
+    id: 'notif_existing',
+    complaintId: null,
+    recipientUserId: 'usr_1',
+    channel: NotificationChannel.IN_APP,
+    status: NotificationStatus.QUEUED,
+    templateCode: 'task.escalation.internal',
+    locale: 'en',
+    payload: {
+      taskId: 'task_1',
+      idempotencyKey: 'task-escalation:task_1:TEAM_LEADER:2026-06-21T00:00:00.000Z',
+    },
+    provider: null,
+    providerResult: null,
+    sentAt: null,
+    failedAt: null,
+    complaint: null,
+  };
+  const repository = new NotificationsRepository({
+    notification: {
+      findFirst: async (query: unknown) => {
+        calls.push(query);
+        return existing;
+      },
+      create: async () => {
+        throw new Error('should not create duplicate notification');
+      },
+    },
+  } as never);
+
+  const result = await repository.queueInternalOnce({
+    recipientUserId: 'usr_1',
+    templateCode: 'task.escalation.internal',
+    locale: 'en',
+    payload: existing.payload,
+    idempotencyKey: 'task-escalation:task_1:TEAM_LEADER:2026-06-21T00:00:00.000Z',
+  });
+
+  assert.equal(result, existing);
+  assert.deepEqual(calls[0], {
+    where: {
+      channel: NotificationChannel.IN_APP,
+      templateCode: 'task.escalation.internal',
+      recipientUserId: 'usr_1',
+      payload: { path: ['idempotencyKey'], equals: 'task-escalation:task_1:TEAM_LEADER:2026-06-21T00:00:00.000Z' },
+    },
+    select: {
+      id: true,
+      complaintId: true,
+      recipientUserId: true,
+      channel: true,
+      status: true,
+      templateCode: true,
+      locale: true,
+      payload: true,
+      provider: true,
+      providerResult: true,
+      sentAt: true,
+      failedAt: true,
+      complaint: { select: { customerId: true, severity: true } },
+    },
   });
 });
 test('notifications repository persists queued in-app rows only', async () => {

@@ -4579,3 +4579,131 @@ Status: Passed through P9-02
   changed.
 - Trust boundaries tested: Passed. Web tests cover real data, denied access,
   empty state, Arabic RTL, and cookie forwarding to the backend read model.
+
+## P10-02B Manager Control Room Screen And Web Proof
+
+- Date: 2026-06-21
+- Risk: Medium
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, REQ-LOCALIZATION-001, UI-DESIGN-001, METHOD-TEST-001
+
+### Changes
+
+1. Added a typed web API client for `GET /tasks/manager-rollup`. It forwards
+   only the staff session cookie and does not send role, actor, workflow, owner,
+   or branch authority from React.
+2. Added `/tasks/manager` with loading, empty, error, English LTR, and Arabic
+   RTL states, rendering the server-provided overdue-by-employee, due-today,
+   stuck, workload-by-assignee, escalated, overdue-promise, and promise-KPI
+   sections from real API data.
+3. Added Manager Control Room navigation for manager/admin-capable roles and
+   kept staff/basic navigation hidden.
+4. Split manager control-room copy into `staff-manager-control-room.ts` so the
+   shell localization file stays under the enforced source budget.
+5. Saved runtime visual proof at `output/playwright/manager-control-room.png`.
+
+### Verification
+
+- Passed: `$env:DATABASE_URL='postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto'; corepack pnpm db:seed`.
+- Failed then Passed: `corepack pnpm lint`. Initial failure was
+  `staff-shell.ts` exceeding 300 lines; fixed by splitting manager screen copy.
+- Failed then Passed: `corepack pnpm typecheck`. Initial failure was optional
+  stuck-task response parsing; fixed by requiring `stuckReasons` to be an array.
+- Passed: `corepack pnpm test:web -- shell` (170/170).
+- Passed: `Invoke-WebRequest http://localhost:3000/health` returned healthy API,
+  database, and Redis configuration.
+- Passed: `Invoke-WebRequest http://localhost:4000/tasks/manager?locale=en`
+  returned 200.
+- Passed: browser runtime smoke at
+  `http://localhost:4000/tasks/manager?locale=en`, using a temporary local
+  `cms_staff_session` for seeded `cr.manager@cms-auto.test`. Snapshot showed
+  Manager Control Room navigation and real seeded rollup sections from the API.
+- Passed: browser console check returned zero warnings and zero errors.
+
+### Notes
+
+- The Playwright CLI wrote the screenshot to its scratch directory first; it was
+  copied into `output/playwright/manager-control-room.png`, then the scratch
+  directory was removed.
+- Temporary local staff session rows created for runtime proof were deleted.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. The web
+  client calls `/tasks/manager-rollup` with the session cookie only, and tests
+  assert no role, actor, workflow, owner, branch, token, or credential query
+  authority.
+- State change history + audit in same transaction: not applicable; this task
+  adds a read-only web screen and no workflow mutation.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  Passed. Runtime proof used a temporary local session without recording the raw
+  cookie value, and cleanup deleted proof session rows.
+- Customer portal exposure rules: not applicable; no customer portal surface was
+  changed.
+- Trust boundaries tested: Passed. Web tests cover manager/admin navigation,
+  staff-hidden navigation, real rollup data, denied access, empty state, Arabic
+  RTL, and cookie-only forwarding to the backend read model.
+
+## P10-03B Reminder Escalation Worker Wiring
+
+- Date: 2026-06-21
+- Risk: High
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-RBAC-001, NFR-OBS-001, METHOD-TEST-001
+
+### Changes
+
+1. Added `tasks.escalation.scan` to the existing BullMQ notifications worker
+   schedule. The worker derives manager scope internally as Admin/global for the
+   scan and ignores any role or branch fields in the job payload.
+2. Reused the existing backend manager rollup plus the P10-03A pure escalation
+   selector to identify due-soon/overdue task escalation candidates.
+3. Queued in-app escalation notifications through `NotificationsService` with a
+   stable `task-escalation:{taskId}:{level}:{triggerAt}` idempotency key.
+4. Added idempotent internal notification queuing: repeat runs return the
+   existing in-app notification for the same template, recipient, and key instead
+   of creating a duplicate row.
+5. Added focused worker and notification tests for backend-owned scope,
+   escalation queueing, scheduler registration, and duplicate suppression.
+
+### Verification
+
+- Passed: `$env:DATABASE_URL='postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto'; corepack pnpm db:seed`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test:api -- tasks` (10/10).
+- Passed: `node --import tsx --test apps/api/test/worker/task-escalation-runner.test.ts apps/api/test/worker/notification-runner.test.ts apps/api/test/notifications/queue.test.ts` (12/12).
+- Passed: `corepack pnpm test` (58/58 with coverage gates).
+- Failed then Passed: local Redis scheduler smoke. The first inline smoke failed
+  before Redis because `bullmq` is not exposed at the workspace root. Re-ran via
+  `corepack pnpm --dir apps/api exec ...`, matching the API package dependency
+  graph, and verified BullMQ registered `tasks.escalation.scan` on the
+  `notifications` queue with `every=5000`.
+- Passed: `corepack pnpm test:api -- notifications` (41/41).
+
+### Notes
+
+- Daily employee digest and manager-rollup batching were not implemented in this
+  slice. Existing primitives support single recipient/event notifications, but
+  not a digest window, recipient grouping, or rollup batching contract within the
+  1-5 file scope. Follow-up task P10-03C records that work explicitly.
+- The worker does not add a new scheduler framework or provider; it reuses the
+  Phase-8 BullMQ worker and notification service.
+
+### Security Self-Check
+
+- Roles and branch scope from server session/backend authority, never client
+  input: Passed. The worker scan creates its own backend manager scope and tests
+  assert hostile job payload scope is ignored.
+- State change history + audit in same transaction: not applicable for the scan
+  decision itself; notification rows are queued through the existing backend
+  notification service after the decision.
+- No passwords, OTPs, tokens, hashes, credentials, or provider secrets logged or
+  stored in notification payloads: Passed. Payload validation still rejects
+  secret-like keys, and the idempotency key contains only task/window metadata.
+- Customer portal exposure rules: not applicable; no portal route or public data
+  surface changed.
+- Trust boundaries tested: Passed. Tests cover one queued escalation, idempotent
+  duplicate suppression, scheduler registration, and worker payload scope denial.

@@ -1,14 +1,17 @@
-# Build Task: P10-02B - Manager Control Room Screen And Web Proof
+# Build Task: P10-03C - Digest And Manager Rollup Notification Batching
 
 Status: Ready to Build
 Required model tier: BUILDER-STRONG
 Phase: Phase 10 - Dealership Accountability Layer (local-first)
-Risk: Medium
+Risk: High
 
 ## Context
 
-P10-01D is complete locally. Employee Today is live at `/tasks/today` and the
-local stack is usable for the remaining Phase 10 `[stack]` screens.
+P10-03B is complete: the Phase-8 BullMQ notifications worker schedules
+`tasks.escalation.scan` and queues idempotent in-app escalation notifications.
+That slice intentionally did not add daily employee digest or manager-rollup
+batching because the existing notification primitive is single recipient/event
+oriented and has no digest window or grouping contract yet.
 
 Current local stack:
 
@@ -20,38 +23,41 @@ Current local stack:
 - API: `http://localhost:3000`
 - Web: `http://localhost:4000`
 
-Host port `5432` is occupied by the Windows PostgreSQL service, so use `5433`
-for host-side Prisma/API work unless that service is later stopped.
-
 ## Scope
 
-Build the Manager Control Room staff screen against the existing P10-02A
-`GET /tasks/manager-rollup` API/read model.
+Add the smallest backend-owned digest/rollup notification contract:
 
-Keep this as the smallest useful slice:
-
-1. Manager/admin staff route and navigation entry for Manager Control Room.
-2. Typed web API client for the manager rollup read model if one does not exist.
-3. Render overdue-by-employee, due today, stuck tasks, workload by assignee,
-   escalated tasks, overdue promises, and promise KPI from real API data.
-4. Preserve Arabic RTL / English LTR labels and loading / empty / error states.
-5. Add focused web/runtime proof.
+1. Define a deterministic daily digest window key, recipient selection, and
+   payload shape for employee task digests.
+2. Define a deterministic manager rollup batching key, recipient selection, and
+   payload shape for manager-facing escalation rollups.
+3. Wire the Phase-8 worker to enqueue those digest/rollup notifications
+   idempotently using the existing notification service.
+4. Reuse existing Employee Today / Manager Control Room read models where they
+   fit; do not duplicate task query logic in the worker.
+5. Add focused tests for one employee digest, one manager rollup, idempotent
+   rerun behavior, and no role/branch authority from worker payload.
 
 ## Guardrails
 
-- Do not add workflow builders, AI, WhatsApp, mobile app, or new design systems.
-- Do not invent manager authority in React. The API owns role and branch scope.
-- Reuse the existing staff shell, design tokens, and shadcn/Radix primitives.
+- Do not add a new scheduler framework, workflow builder, AI, WhatsApp, mobile
+  app, or new notification provider.
+- Do not move workflow authority into React or the worker; the backend task
+  service/read models remain authoritative.
+- Keep notifications internal/in-app unless an existing provider path is already
+  required by the service contract.
 - Keep the task to 1-5 files plus focused tests. If it grows, stop and replan.
-- Do not expose confidential HR-only task/case details beyond the API response.
+- High risk: record the policy security self-check in evidence before counting
+  the task successful.
 
 ## Acceptance
 
-- Manager Control Room appears only for manager/admin-capable roles.
-- Employee/basic staff cannot access the route or see manager navigation.
-- Rollup sections render from the signed-in manager/admin API session.
-- Empty/error/loading states are safe and localized.
-- Runtime smoke against the local API/web passes.
+- Worker/runtime can enqueue daily employee digest and manager rollup
+  notifications from backend-owned read models.
+- Repeat runs for the same digest/rollup window do not duplicate notifications.
+- Staff cannot gain manager rollup scope through worker job input.
+- Proof covers one digest, one manager rollup, and one duplicate suppression
+  path.
 - Evidence records exactly what ran.
 
 ## Proof Commands
@@ -59,5 +65,7 @@ Keep this as the smallest useful slice:
 - `$env:DATABASE_URL='postgres://cms_auto:cms_auto_dev@localhost:5433/cms_auto'; corepack pnpm db:seed`
 - `corepack pnpm lint`
 - `corepack pnpm typecheck`
-- `corepack pnpm test:web -- shell`
-- Browser/runtime smoke at `http://localhost:4000`
+- `corepack pnpm test:api -- tasks`
+- `corepack pnpm test:api -- notifications`
+- `corepack pnpm test`
+- Local worker/runtime smoke against Redis if available

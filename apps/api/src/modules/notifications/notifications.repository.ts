@@ -60,6 +60,9 @@ export type QueueInternalNotificationData = {
   locale: string;
   payload: Prisma.InputJsonValue;
 };
+export type QueueInternalNotificationOnceData = QueueInternalNotificationData & {
+  idempotencyKey: string;
+};
 
 export type MarkEmailFailedData = {
   id: string;
@@ -92,6 +95,19 @@ export class NotificationsRepository {
       },
       select: notificationSelect,
     });
+  }
+
+  async queueInternalOnce(data: QueueInternalNotificationOnceData): Promise<NotificationRecord> {
+    const existing = await this.prisma.notification.findFirst({
+      where: {
+        channel: NotificationChannel.IN_APP,
+        templateCode: data.templateCode,
+        recipientUserId: data.recipientUserId ?? null,
+        payload: { path: ['idempotencyKey'], equals: data.idempotencyKey },
+      },
+      select: notificationSelect,
+    });
+    return existing ?? this.queueInternal(data);
   }
 
   async findCustomerPreference(customerId: string): Promise<CustomerNotificationPreferenceRecord | null> {

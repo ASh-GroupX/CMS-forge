@@ -6,6 +6,7 @@ import { buildStaffComplaintCreateSubmission } from '../../src/app/complaint-cre
 import StaffShellPage from '../../src/app/page';
 import DashboardPage from '../../src/app/(staff)/dashboard/page';
 import EmployeeTodayPage from '../../src/app/(staff)/tasks/today/page';
+import ManagerControlRoomPage from '../../src/app/(staff)/tasks/manager/page';
 import { shouldRedirectStaffRoute } from '../../src/app/(staff)/layout';
 import ComplaintsPage from '../../src/app/(staff)/complaints/page';
 import NewComplaintPage from '../../src/app/(staff)/complaints/new/page';
@@ -37,6 +38,7 @@ import { portalSurveyText } from '../../src/i18n/portal-survey';
 import { portalTrackingText } from '../../src/i18n/portal-tracking';
 import { reportsDashboardText } from '../../src/i18n/staff-reports-dashboard';
 import { employeeTodayText } from '../../src/i18n/staff-employee-today';
+import { managerControlRoomText } from '../../src/i18n/staff-manager-control-room';
 import { staffShellText } from '../../src/i18n/staff-shell';
 
 test('staff shell renders English LTR operational navigation', async () => {
@@ -47,6 +49,7 @@ test('staff shell renders English LTR operational navigation', async () => {
   assert.match(html, /dir="ltr"/);
   assert.match(html, /Staff Operations/);
   assert.match(html, /Employee Today/);
+  assert.match(html, /Manager Control Room/);
   assert.match(html, /Dashboard/);
   assert.match(html, /Work queue/);
   assert.match(html, /Create complaint/);
@@ -83,6 +86,7 @@ test('staff shell renders Arabic RTL labels', async () => {
   assert.match(html, /dir="rtl"/);
   assert.ok(html.includes(staffShellText.ar.title));
   assert.ok(html.includes(staffShellText.ar.nav.today[0]));
+  assert.ok(html.includes(staffShellText.ar.nav.manager[0]));
   assert.ok(html.includes(staffShellText.ar.nav.dashboard[0]));
   assert.ok(html.includes(staffShellText.ar.nav.queue[0]));
   assert.ok(html.includes(staffShellText.ar.nav.create[0]));
@@ -125,6 +129,7 @@ test('staff role preview hides admin-only navigation', async () => {
 
   assert.match(html, /Role preview/);
   assert.match(html, /Admin-only surfaces hidden/);
+  assert.doesNotMatch(html, /Manager Control Room/);
   assert.doesNotMatch(html, /Users, branches, categories/);
 });
 
@@ -134,6 +139,7 @@ test('admin role preview shows admin-only navigation', async () => {
   );
 
   assert.match(html, /Admin/);
+  assert.match(html, /Manager Control Room/);
   assert.match(html, /Users, branches, categories/);
   assert.doesNotMatch(html, /Admin-only surfaces hidden/);
 });
@@ -424,6 +430,18 @@ function jsonResponse(body: unknown, status = 200) {
 
 function employeeTodayEmpty() {
   return { dueToday: [], overdue: [], overduePromises: [], assignedToMe: [], waitingOnMe: [] };
+}
+
+function managerRollupEmpty() {
+  return {
+    overdueByEmployee: [],
+    dueToday: [],
+    overduePromises: [],
+    stuck: [],
+    workloadByAssignee: [],
+    escalated: [],
+    promiseKpi: { openPromiseCount: 0, overduePromiseCount: 0 },
+  };
 }
 
 function taskFixture(overrides: Record<string, unknown> = {}) {
@@ -2428,6 +2446,89 @@ test('employee today route keeps Arabic RTL labels', async () => {
   assert.match(html, /dir="rtl"/);
   assert.ok(html.includes(employeeTodayText.ar.title));
   assert.ok(html.includes(employeeTodayText.ar.states.empty));
+});
+
+// ---- (staff)/tasks/manager route ----
+
+test('manager control room route renders rollup sections through the session cookie', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith('/tasks/manager-rollup')) {
+      return jsonResponse({
+        overdueByEmployee: [{ assigneeId: 'usr_late', count: 2 }],
+        dueToday: [taskFixture({ id: 'task_due_manager', title: 'Release delivery gate' })],
+        overduePromises: [taskFixture({ id: 'task_promise_manager', title: 'Confirm customer refund date', isCustomerPromise: true })],
+        stuck: [taskFixture({ id: 'task_stuck_manager', title: 'Move blocked registration', stuckReasons: ['NEXT_ACTION_OVERDUE', 'NO_MOVEMENT'] })],
+        workloadByAssignee: [{ assigneeId: 'usr_busy', count: 4 }],
+        escalated: [taskFixture({ id: 'task_escalated_manager', title: 'Escalate missed handover' })],
+        promiseKpi: { openPromiseCount: 3, overduePromiseCount: 1 },
+      });
+    }
+    return jsonResponse({});
+  };
+  const html = renderToStaticMarkup(
+    await ManagerControlRoomPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  const rollupCall = calls.find((call) => String(call.input).endsWith('/tasks/manager-rollup'));
+  assert.ok(rollupCall);
+  assert.deepEqual(rollupCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+  assert.doesNotMatch(String(rollupCall.input), /role|actor|workflow|branchId|owner|token|credential/i);
+  assert.match(html, /Manager Control Room/);
+  assert.match(html, /Overdue by employee/);
+  assert.match(html, /Due today/);
+  assert.match(html, /Stuck tasks/);
+  assert.match(html, /Workload by assignee/);
+  assert.match(html, /Escalated tasks/);
+  assert.match(html, /Overdue promises/);
+  assert.match(html, /Promise KPI/);
+  assert.match(html, /From staff session/);
+  assert.match(html, /Release delivery gate/);
+  assert.match(html, /Confirm customer refund date/);
+  assert.match(html, /Customer promise/);
+  assert.match(html, /NEXT_ACTION_OVERDUE, NO_MOVEMENT/);
+  assert.match(html, /Open promises/);
+});
+
+test('manager control room route renders empty and denied states safely', async () => {
+  const empty = renderToStaticMarkup(
+    await ManagerControlRoomPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: async () => jsonResponse(managerRollupEmpty()),
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+  const denied = renderToStaticMarkup(
+    await ManagerControlRoomPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: async () => new Response('', { status: 403 }),
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  assert.match(empty, /No manager rollup items are active right now\./);
+  assert.match(empty, /role="status"/);
+  assert.match(denied, /Manager Control Room could not be loaded\. Sign in with a manager or admin role\./);
+  assert.match(denied, /role="alert"/);
+});
+
+test('manager control room route keeps Arabic RTL labels', async () => {
+  const html = renderToStaticMarkup(
+    await ManagerControlRoomPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: async () => jsonResponse(managerRollupEmpty()),
+      searchParams: Promise.resolve({ locale: 'ar' }),
+    }),
+  );
+
+  assert.match(html, /dir="rtl"/);
+  assert.ok(html.includes(managerControlRoomText.ar.title));
+  assert.ok(html.includes(managerControlRoomText.ar.states.empty));
 });
 
 // ---- (staff)/dashboard route ----

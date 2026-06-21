@@ -7,8 +7,8 @@ export type RolePreview = 'staff' | 'admin' | 'management';
 
 export const roleNav = {
   staff: ['today', 'dashboard', 'queue', 'create', 'detail', 'notifications'],
-  admin: ['today', 'dashboard', 'queue', 'create', 'detail', 'admin', 'reports', 'audit', 'notifications'],
-  management: ['today', 'dashboard', 'queue', 'detail', 'reports', 'audit', 'notifications'],
+  admin: ['today', 'manager', 'dashboard', 'queue', 'create', 'detail', 'admin', 'reports', 'audit', 'notifications'],
+  management: ['today', 'manager', 'dashboard', 'queue', 'detail', 'reports', 'audit', 'notifications'],
 } as const;
 
 export function RolePanel({ locale, role }: { locale: Locale; role: RolePreview }) {
