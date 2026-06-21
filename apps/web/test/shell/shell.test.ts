@@ -1285,19 +1285,65 @@ test('admin overview route renders real admin users surface without preview cont
 
   assert.match(english, /dir="ltr"/);
   assert.match(english, /Users, roles, and branch scope/);
-  assert.match(english, /User settings could not be loaded\. Try again\./);
+  assert.match(english, /Admin settings could not be loaded\. Try again\./);
+  assert.match(english, /Complaint intake dropdowns/);
+  assert.match(english, /Intake dropdown values could not be loaded\./);
   assert.doesNotMatch(english, /Branches and departments/);
   assert.doesNotMatch(english, /Categories, severities, and SLA policies/);
   assert.doesNotMatch(english, /Notification templates/);
   assert.doesNotMatch(english, /Audit viewer/);
   assert.match(arabic, /dir="rtl"/);
   assert.ok(arabic.includes(adminUsersText.ar.title));
+  assert.ok(arabic.includes(adminUsersText.ar.masterData.title));
+});
+
+test('admin overview route renders real intake dropdown values from backend data', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith('/admin/users')) {
+      return jsonResponse({
+        users: [],
+        roles: [{ id: 'role_admin', code: 'ADMIN', nameEn: 'System Admin', nameAr: 'مدير النظام' }],
+        branches: [{ id: 'branch_main', code: 'MAIN', nameEn: 'Main Branch', nameAr: 'الفرع الرئيسي' }],
+      });
+    }
+    if (String(input).endsWith('/complaints/form-options')) {
+      return jsonResponse({
+        branches: [{ id: 'branch_main', code: 'MAIN', nameEn: 'Main Branch', nameAr: 'الفرع الرئيسي' }],
+        categories: [
+          { id: 'cat_vehicle', code: 'VEHICLE', nameEn: 'Vehicle issue', nameAr: 'مشكلة مركبة', parentId: null },
+          { id: 'cat_engine', code: 'ENGINE', nameEn: 'Engine noise', nameAr: 'صوت المحرك', parentId: 'cat_vehicle' },
+        ],
+        severities: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
+      });
+    }
+    return jsonResponse({});
+  };
+
+  const html = renderToStaticMarkup(
+    await AdminPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  assert.equal(calls.length, 2);
+  assert.match(html, /Complaint intake dropdowns/);
+  assert.match(html, /Main Branch/);
+  assert.match(html, /Vehicle issue/);
+  assert.match(html, /Engine noise/);
+  assert.match(html, /HIGH/);
+  assert.match(html, /Add/);
+  assert.match(html, /Save/);
+  assert.doesNotMatch(html, /disabled=""/);
 });
 
 test('admin overview route does not render disabled preview action buttons', async () => {
   const html = renderToStaticMarkup(await AdminPage({ searchParams: Promise.resolve({ locale: 'en', admin: 'conflict' }) }));
 
-  assert.match(html, /User settings could not be loaded\. Try again\./);
+  assert.match(html, /Admin settings could not be loaded\. Try again\./);
   assert.doesNotMatch(html, /Confirm deactivate/);
   assert.doesNotMatch(html, /disabled=""/);
 });
@@ -1359,8 +1405,8 @@ test('admin users roles preview states render safely', async () => {
   const loading = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'admin', admin: 'loading' }) }));
   const validation = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'admin', admin: 'validation' }) }));
 
-  assert.match(loading, /Loading users and roles\./);
-  assert.match(validation, /Review the user role, branch scope, and password fields\./);
+  assert.match(loading, /Loading admin settings\./);
+  assert.match(validation, /Review the required admin fields\./);
   assert.match(validation, /role="alert"/);
 });
 
@@ -1378,7 +1424,7 @@ test('admin users route renders English and Arabic labels', async () => {
 
   assert.match(english, /dir="ltr"/);
   assert.match(english, /Users, roles, and branch scope/);
-  assert.match(english, /User settings could not be loaded\. Try again\./);
+  assert.match(english, /Admin settings could not be loaded\. Try again\./);
   assert.match(arabic, /dir="rtl"/);
   assert.ok(arabic.includes(adminUsersText.ar.title));
   assert.ok(arabic.includes(adminUsersText.ar.states.error));
@@ -1389,7 +1435,7 @@ test('admin users route fails closed when backend data is unavailable', async ()
     await AdminUsersPage({ searchParams: Promise.resolve({ locale: 'en', admin: 'validation' }) }),
   );
 
-  assert.match(html, /User settings could not be loaded\. Try again\./);
+  assert.match(html, /Admin settings could not be loaded\. Try again\./);
   assert.match(html, /role="alert"/);
   assert.doesNotMatch(html, /Create user/);
   assert.doesNotMatch(html, /disabled=""/);

@@ -12,6 +12,10 @@ import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.g
 import { AppException } from '../../src/core/http-kernel.ts';
 import { AuthModule } from '../../src/modules/auth/auth.module.ts';
 import { AdminModule } from '../../src/modules/admin/admin.module.ts';
+import { AdminCategoriesController } from '../../src/modules/admin/admin-categories.controller.ts';
+import { AdminCategoriesRepository } from '../../src/modules/admin/admin-categories.repository.ts';
+import type { AdminCategoryRecord } from '../../src/modules/admin/admin-categories.repository.ts';
+import { AdminCategoriesService } from '../../src/modules/admin/admin-categories.service.ts';
 import { AdminUsersController } from '../../src/modules/admin/admin-users.controller.ts';
 import { AdminUsersRepository } from '../../src/modules/admin/admin-users.repository.ts';
 import type { AdminUserRecord } from '../../src/modules/admin/admin-users.repository.ts';
@@ -39,6 +43,17 @@ const admin: StaffPrincipal = {
   nameAr: 'Admin',
   roleCode: RoleCode.ADMIN,
   branchId: null,
+};
+
+const categoryRecord: AdminCategoryRecord = {
+  id: 'cat_1',
+  code: 'SERVICE',
+  nameEn: 'Service quality',
+  nameAr: 'Service quality',
+  parentId: null,
+  isActive: true,
+  createdAt: new Date('2026-06-20T10:00:00.000Z'),
+  updatedAt: new Date('2026-06-20T11:00:00.000Z'),
 };
 
 test('admin user service lists users and option data without credential material', async () => {
@@ -147,6 +162,61 @@ test('admin module wires auth guard providers for runtime requests', () => {
   assert.equal(providers.some((provider) => providerObject(provider)?.provide === SESSION_AUTH_SERVICE), true);
 });
 
+test('admin category service creates and updates categories with CONFIG audit in one transaction', async () => {
+  const txClient = {};
+  const auditRecords: Array<{ input: AuditRecordInput; client: unknown }> = [];
+  const service = new AdminCategoriesService({
+    parentExists: async (id) => id === 'cat_parent',
+    transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
+    create: async (data, client) => {
+      assert.equal(client, txClient);
+      return { ...categoryRecord, ...data };
+    },
+    update: async (id, data, client) => {
+      assert.equal(id, 'cat_1');
+      assert.equal(client, txClient);
+      return { ...categoryRecord, ...data };
+    },
+  } as AdminCategoriesRepository, {
+    record: async (input: AuditRecordInput, client?: unknown) => auditRecords.push({ input, client }),
+  } as AuditService);
+
+  assert.equal((await service.create({ code: ' SERVICE ', nameEn: ' Service ', nameAr: ' Service ' }, auditContext())).code, 'SERVICE');
+  assert.equal((await service.update('cat_1', { code: 'ENGINE', nameEn: 'Engine', nameAr: 'Engine', parentId: 'cat_parent' }, auditContext())).parentId, 'cat_parent');
+  assert.deepEqual(auditRecords.map((record) => record.input.action), ['admin_category_created', 'admin_category_updated']);
+  assert.equal(auditRecords.every((record) => record.client === txClient), true);
+});
+
+test('admin category service rejects self parent and invalid parent', async () => {
+  const service = new AdminCategoriesService({
+    parentExists: async () => false,
+  } as AdminCategoriesRepository, noopAudit());
+
+  await assert.rejects(
+    service.update('cat_1', { code: 'ENGINE', nameEn: 'Engine', nameAr: 'Engine', parentId: 'cat_1' }),
+    (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED',
+  );
+  await assert.rejects(
+    service.create({ code: 'ENGINE', nameEn: 'Engine', nameAr: 'Engine', parentId: 'missing' }),
+    (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED',
+  );
+});
+
+test('admin category controller write routes are admin-only and CSRF guarded', async () => {
+  assert.deepEqual(categoryGuardNames('create'), ['SessionAuthGuard', 'RbacGuard', 'CsrfGuard']);
+  assert.deepEqual(categoryGuardNames('update'), ['SessionAuthGuard', 'RbacGuard', 'CsrfGuard']);
+
+  const auditRecords: AuditRecordInput[] = [];
+  const guard = new RbacGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
+  assert.equal(await guard.canActivate(categoryContext(request(RoleCode.ADMIN), 'create')), true);
+
+  await assert.rejects(
+    guard.canActivate(categoryContext(request(RoleCode.CR_MANAGER), 'create')),
+    (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
+  assert.equal(auditRecords[0]?.eventType, 'SECURITY');
+});
+
 function noopAudit(): AuditService {
   return { record: async () => undefined } as unknown as AuditService;
 }
@@ -176,6 +246,19 @@ function context(req: AuthenticatedRequest, handler: keyof AdminUsersController)
 function guardNames(handler: keyof AdminUsersController): string[] {
   const guards = Reflect.getMetadata(GUARDS_METADATA, AdminUsersController.prototype[handler]) as Array<{ name: string }>;
   return guards.map((guard) => guard.name);
+}
+
+function categoryGuardNames(handler: keyof AdminCategoriesController): string[] {
+  const guards = Reflect.getMetadata(GUARDS_METADATA, AdminCategoriesController.prototype[handler]) as Array<{ name: string }>;
+  return guards.map((guard) => guard.name);
+}
+
+function categoryContext(req: AuthenticatedRequest, handler: keyof AdminCategoriesController): ExecutionContext {
+  return {
+    switchToHttp: () => ({ getRequest: () => req }),
+    getHandler: () => AdminCategoriesController.prototype[handler],
+    getClass: () => AdminCategoriesController,
+  } as ExecutionContext;
 }
 
 function providerObject(provider: unknown): { provide?: unknown } | null {

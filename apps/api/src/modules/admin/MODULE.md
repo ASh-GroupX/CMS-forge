@@ -8,12 +8,14 @@ tags: [backend, module, agent-context]
 ## Public surface
 
 - `AdminUsersService` is the public staff-user management service.
+- `AdminCategoriesService` is the public complaint category management service.
 
 ## Owns tables
 
 - `users`
 - `roles`
 - `branches`
+- `categories`
 
 ## May depend on
 

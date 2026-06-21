@@ -5,13 +5,16 @@ import { CsrfGuard } from '../../core/csrf.guard.js';
 import { PrismaService } from '../../core/http-kernel.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { AuthService } from '../auth/auth.service.js';
+import { AdminCategoriesController } from './admin-categories.controller.js';
+import { AdminCategoriesRepository } from './admin-categories.repository.js';
+import { AdminCategoriesService } from './admin-categories.service.js';
 import { AdminUsersController } from './admin-users.controller.js';
 import { AdminUsersRepository } from './admin-users.repository.js';
 import { AdminUsersService } from './admin-users.service.js';
 
 @Module({
   imports: [AuthModule],
-  controllers: [AdminUsersController],
+  controllers: [AdminUsersController, AdminCategoriesController],
   providers: [
     PrismaService,
     { provide: AuditService, inject: [PrismaService], useFactory: (prisma: PrismaService) => new AuditService(prisma) },
@@ -23,9 +26,11 @@ import { AdminUsersService } from './admin-users.service.js';
     SessionAuthGuard,
     RbacGuard,
     CsrfGuard,
+    AdminCategoriesRepository,
+    AdminCategoriesService,
     AdminUsersRepository,
     AdminUsersService,
   ],
-  exports: [AdminUsersService],
+  exports: [AdminUsersService, AdminCategoriesService],
 })
 export class AdminModule {}

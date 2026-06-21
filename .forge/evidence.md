@@ -5567,3 +5567,133 @@ Status: Passed through P9-02
 - Trust boundaries tested: Passed. API tests cover admin allow, non-admin deny,
   CSRF enforcement, audit creation, password hashing, deactivation, and
   reactivation.
+
+## P10-ADMIN-DROPDOWNS Admin Intake Values Visibility
+
+- Date: 2026-06-21
+- Risk: Medium
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-ADMIN-001, REQ-RBAC-001, METHOD-API-001, METHOD-TEST-001,
+  UI-DESIGN-001
+
+### Changes
+
+1. Updated `/admin` to fetch admin users and `/complaints/form-options` in
+   parallel, using the existing staff session cookie.
+2. Added a real `Complaint intake dropdowns` section under admin that displays
+   live branch, category/subcategory, and severity values from the same backend
+   data source used by complaint creation.
+3. Kept old branch/category preview cards out of `/admin`; no fake edit buttons
+   were added for master data.
+4. Repaired `staff-admin-users` Arabic text with real Arabic code points and
+   added localized labels for the intake dropdown section.
+5. Added a web shell regression proving `/admin` renders backend-provided
+   branches, category hierarchy, and severities without disabled fake buttons.
+
+### Verification
+
+- Passed: `corepack pnpm test:web -- shell` (181/181).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: live in-app browser verification at `http://localhost:4000/admin?locale=en`
+  showed users, complaint intake dropdowns, branches, categories/subcategories,
+  severity values, `Main branch`, seeded categories, `HIGH`, and zero disabled
+  buttons.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Notes
+
+- This is a read/display repair using the existing backend options endpoint; it
+  does not claim full branch/category/SLA CRUD is finished.
+- P10-ADMIN-MASTER-DATA remains the next task for audited create/update/
+  deactivate/reactivate flows for branch, category, severity/SLA, and template
+  master data.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. The
+  admin page forwards the server staff session cookie only; option data comes
+  from the existing guarded backend endpoint.
+- State change history + audit in same transaction: not applicable. This slice
+  adds no new mutation.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  Passed. The new section renders only branch/category labels and severity
+  enum values.
+- Customer portal exposure rules: not applicable; no customer portal route or
+  public data surface changed.
+- Trust boundaries tested: Passed. The web regression proves route fetches go
+  through backend data and do not reintroduce disabled preview controls.
+
+## P10-ADMIN-MASTER-DATA-A Branch And Category Add/Edit
+
+- Date: 2026-06-21
+- Risk: High
+- Status: Passed locally
+- Builder tier: BUILDER-STRONG
+- SRS IDs: REQ-ADMIN-001, REQ-RBAC-001, METHOD-AUDIT-001, METHOD-API-001,
+  METHOD-TEST-001, UI-DESIGN-001
+
+### Changes
+
+1. Added real Add/Save forms to the `/admin` `Complaint intake dropdowns`
+   section for branches and complaint categories.
+2. Reused the existing audited `/branches` POST/PATCH routes for branch
+   create/update instead of duplicating branch authority in React.
+3. Added guarded `/admin/categories` POST/PATCH backend routes, repository, and
+   service for hierarchical category create/update.
+4. Category writes validate required fields, reject invalid/self parents, enforce
+   admin-only RBAC plus CSRF, and write CONFIG audit entries in the same
+   transaction as the database mutation.
+5. Updated OpenAPI canonical and generated contracts for the new category write
+   routes and schemas.
+6. Kept severity values read-only because they are currently system enum codes;
+   SLA policy editing remains a separate slice.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- admin` (23/23).
+- Passed: `corepack pnpm test:web -- shell` (181/181).
+- Passed: `corepack pnpm openapi:check`.
+- Failed then repaired: `corepack pnpm typecheck` initially caught
+  `exactOptionalPropertyTypes` issues in the new admin master-data component.
+- Passed after repair: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm exec tsc -p apps/api/tsconfig.json`.
+- Passed: API restart on `http://localhost:3000`; `/health` returned OK with
+  database and Redis configured.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: live in-app browser smoke at `http://localhost:4000/admin?locale=en`
+  showed `Complaint intake dropdowns`, branches, categories/subcategories,
+  `Add`, seven `Save` buttons, nine code inputs, and zero disabled buttons.
+- Passed: browser console error check returned no errors.
+
+### Notes
+
+- This slice does not hard-delete or deactivate master data.
+- Department CRUD, branch deactivate/reactivate controls, category
+  deactivate/reactivate, severity/SLA policy management, and notification
+  template management remain follow-up slices.
+- No production deploy, SMTP, WhatsApp, AI, mobile, HR-platform, or VPS work was
+  introduced.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed.
+  Branch/category writes are admin-only backend routes guarded by
+  `SessionAuthGuard`, `RbacGuard`, and `CsrfGuard`; the web server action only
+  forwards the existing staff session cookie and CSRF cookie/header.
+- State change history + audit in same transaction: Passed for category
+  mutations through CONFIG audit. Branch mutations reuse the existing branch
+  service transaction/audit path. No complaint workflow state was changed.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  Passed. The new category route accepts only category labels/codes/parent IDs;
+  the UI does not render credential material.
+- Customer portal exposure rules: not applicable; no customer portal route or
+  public data surface changed.
+- Trust boundaries tested: Passed. API tests cover admin allow, non-admin deny
+  with SECURITY audit, CSRF guard presence, invalid parent rejection, and
+  same-transaction CONFIG audit. Web tests cover backend-sourced visible
+  Add/Save controls with no disabled preview buttons.
