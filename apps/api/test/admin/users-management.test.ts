@@ -24,6 +24,7 @@ import { AdminUsersService } from '../../src/modules/admin/admin-users.service.t
 const userRecord: AdminUserRecord = {
   id: 'usr_1',
   email: 'advisor@cms-auto.test',
+  username: 'advisor',
   nameEn: 'Service Advisor',
   nameAr: 'Service Advisor',
   isActive: true,
@@ -68,10 +69,45 @@ test('admin user service lists users and option data without credential material
   const result = await service.list();
 
   assert.equal(result.users[0]?.email, 'advisor@cms-auto.test');
+  assert.equal(result.users[0]?.username, 'advisor');
   assert.equal(result.users[0]?.branchName, 'Main branch');
   assert.equal(result.roles[0]?.code, RoleCode.CR_OFFICER);
   assert.equal(JSON.stringify(result).includes('password'), false);
   assert.equal(JSON.stringify(result).includes('hash'), false);
+});
+
+test('staff lookup returns only session-scoped assignable users', async () => {
+  let branchFilter: string | null | undefined;
+  const service = new AdminUsersService({
+    listAssignableStaff: async (branchId) => {
+      branchFilter = branchId;
+      return [userRecord];
+    },
+  } as AdminUsersRepository, noopAudit());
+
+  const result = await service.assignableStaff({ userId: 'usr_manager', roleCode: RoleCode.CR_MANAGER, branchId: 'branch_main' });
+
+  assert.equal(branchFilter, 'branch_main');
+  assert.deepEqual(result.staff, [{
+    userId: 'usr_1',
+    displayName: 'Service Advisor',
+    displayNameAr: 'Service Advisor',
+    role: 'CR Officer',
+    roleAr: 'CR Officer',
+    branchLabel: 'Main branch',
+    branchLabelAr: 'Main branch',
+  }]);
+});
+
+test('staff lookup denies out-of-scope assignee selection', async () => {
+  const service = new AdminUsersService({
+    findAssignableStaff: async () => ({ ...userRecord, branch: { id: 'branch_other', code: 'OTHER', nameEn: 'Other branch', nameAr: 'Other branch' } }),
+  } as AdminUsersRepository, noopAudit());
+
+  await assert.rejects(
+    service.assertAssignable({ userId: 'usr_manager', roleCode: RoleCode.CR_MANAGER, branchId: 'branch_main' }, 'usr_1'),
+    (error: unknown) => error instanceof AppException && error.code === 'BRANCH_SCOPE_FORBIDDEN',
+  );
 });
 
 test('admin user service creates an account with hashed password and CONFIG audit in one transaction', async () => {

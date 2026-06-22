@@ -10,10 +10,12 @@ import { TasksService } from './tasks.service.js';
 
 test('quick-add derives owner and audit actor from the staff session', async () => {
   let capturedInput: CreateTaskInput | undefined;
+  let capturedActor: unknown;
   let capturedAudit: { actorId?: string | null; correlationId?: string | null } | undefined;
   const service = {
-    create: async (input: CreateTaskInput, audit: { actorId?: string | null; correlationId?: string | null }) => {
+    createForActor: async (input: CreateTaskInput, actor: unknown, audit: { actorId?: string | null; correlationId?: string | null }) => {
       capturedInput = input;
+      capturedActor = actor;
       capturedAudit = audit;
       return taskResponse();
     },
@@ -33,6 +35,7 @@ test('quick-add derives owner and audit actor from the staff session', async () 
   assert.equal(result.task.id, 'task_1');
   assert.equal(capturedInput?.ownerId, 'user_owner');
   assert.equal(capturedInput?.assigneeId, 'user_assignee');
+  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'CR_OFFICER', branchId: 'branch_1' });
   assert.deepEqual(capturedInput?.nextAction, {
     what: 'Confirm delivery time',
     whoId: 'user_assignee',
@@ -46,7 +49,7 @@ test('quick-add derives owner and audit actor from the staff session', async () 
 test('quick-add accepts customer promise flag from the staff form', async () => {
   let capturedInput: CreateTaskInput | undefined;
   const controller = new TasksController({
-    create: async (input: CreateTaskInput) => {
+    createForActor: async (input: CreateTaskInput) => {
       capturedInput = input;
       return taskResponse();
     },
@@ -69,7 +72,7 @@ test('quick-add accepts customer promise flag from the staff form', async () => 
 });
 
 test('quick-add rejects client-owned task authority fields', async () => {
-  const controller = new TasksController({ create: async () => taskResponse() } as unknown as TasksService);
+  const controller = new TasksController({ createForActor: async () => taskResponse() } as unknown as TasksService);
 
   await assert.rejects(
     controller.quickAdd(
@@ -153,6 +156,27 @@ test('promises route derives actor from the staff session', async () => {
 
   assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'BRANCH_MANAGER', branchId: 'branch_1' });
   assert.deepEqual(result, { openPromiseCount: 0, overduePromiseCount: 0, keptOnTimePercent: 0, promises: [] });
+});
+
+test('related-record lookup derives actor from the staff session and ignores client scope', async () => {
+  let capturedQuery: unknown;
+  let capturedActor: unknown;
+  const controller = new TasksController({
+    relatedRecords: async (query: unknown, actor: unknown) => {
+      capturedQuery = query;
+      capturedActor = actor;
+      return { records: [{ recordType: 'CUSTOMER', recordId: 'customer_1', label: 'Noor Customer', labelAr: 'عميل نور', context: 'Main Branch', contextAr: 'الفرع الرئيسي' }] };
+    },
+  } as unknown as TasksService);
+
+  const result = await controller.relatedRecords(
+    { type: 'CUSTOMER', q: 'Noor', branchId: 'branch_other', roleCode: 'ADMIN' },
+    request('CR_MANAGER'),
+  );
+
+  assert.equal(result.records[0]?.recordId, 'customer_1');
+  assert.deepEqual(capturedQuery, { type: 'CUSTOMER', q: 'Noor' });
+  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'CR_MANAGER', branchId: 'branch_1' });
 });
 
 test('get task derives actor from the staff session', async () => {

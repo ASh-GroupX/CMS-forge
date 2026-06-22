@@ -1,27 +1,42 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { RoleCode } from '@prisma/client';
 import argon2 from 'argon2';
 import { AuditService } from '../../core/audit.service.js';
 import type { AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import { AdminUsersRepository } from './admin-users.repository.js';
-import type { AdminBranchOption, AdminRoleOption, AdminUserRecord } from './admin-users.repository.js';
+import type { AdminBranchOption, AdminRoleOption, AdminUserRecord, AssignableStaffRecord } from './admin-users.repository.js';
 
 export type AdminUserDto = {
-  id: string; email: string; nameEn: string; nameAr: string; roleCode: RoleCode; roleName: string;
+  id: string; email: string; username: string | null; nameEn: string; nameAr: string; roleCode: RoleCode; roleName: string;
   branchId: string | null; branchName: string | null; isActive: boolean; lockedAt: string | null; lastLoginAt: string | null;
 };
 export type AdminUsersResponse = { users: AdminUserDto[]; roles: AdminRoleOption[]; branches: AdminBranchOption[] };
 export type CreateAdminUserInput = { email: string; nameEn: string; nameAr: string; roleCode: RoleCode; branchId?: string | null; initialPassword: string };
+export type StaffLookupActor = { userId: string; roleCode: string; branchId: string | null };
+export type AssignableStaffDto = { userId: string; displayName: string; displayNameAr: string; role: string; roleAr: string; branchLabel: string | null; branchLabelAr: string | null };
+export type AssignableStaffResponse = { staff: AssignableStaffDto[] };
 type AdminAudit = { actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 
 @Injectable()
 export class AdminUsersService {
-  constructor(private readonly repository: AdminUsersRepository, private readonly audit: AuditService) {}
+  constructor(@Inject(AdminUsersRepository) private readonly repository: AdminUsersRepository, @Inject(AuditService) private readonly audit: AuditService) {}
 
   async list(): Promise<AdminUsersResponse> {
     const [users, options] = await Promise.all([this.repository.listUsers(), this.repository.options()]);
     return { users: users.map(userDto), ...options };
+  }
+
+  async assignableStaff(actor: StaffLookupActor): Promise<AssignableStaffResponse> {
+    const branchId = actor.roleCode === RoleCode.ADMIN ? null : requiredBranch(actor);
+    return { staff: (await this.repository.listAssignableStaff(branchId)).map(assignableStaffDto) };
+  }
+
+  async assertAssignable(actor: StaffLookupActor, userId: string): Promise<void> {
+    const user = await this.repository.findAssignableStaff(nonEmpty(userId, 'userId'));
+    if (!user || (actor.roleCode !== RoleCode.ADMIN && user.branch?.id !== requiredBranch(actor))) {
+      throw new AppException('BRANCH_SCOPE_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
+    }
   }
 
   async create(input: CreateAdminUserInput, audit: AdminAudit = {}): Promise<AdminUserDto> {
@@ -59,10 +74,22 @@ export class AdminUsersService {
 
 function userDto(user: AdminUserRecord): AdminUserDto {
   return {
-    id: user.id, email: user.email, nameEn: user.nameEn, nameAr: user.nameAr, roleCode: user.role.code, roleName: user.role.nameEn,
+    id: user.id, email: user.email, username: user.username, nameEn: user.nameEn, nameAr: user.nameAr, roleCode: user.role.code, roleName: user.role.nameEn,
     branchId: user.branch?.id ?? null, branchName: user.branch?.nameEn ?? null, isActive: user.isActive,
     lockedAt: user.lockedAt?.toISOString() ?? null, lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
   };
+}
+
+function assignableStaffDto(user: AssignableStaffRecord): AssignableStaffDto {
+  return {
+    userId: user.id, displayName: user.nameEn, displayNameAr: user.nameAr, role: user.role.nameEn, roleAr: user.role.nameAr,
+    branchLabel: user.branch?.nameEn ?? null, branchLabelAr: user.branch?.nameAr ?? null,
+  };
+}
+
+function requiredBranch(actor: StaffLookupActor): string {
+  if (!actor.branchId) throw new AppException('BRANCH_SCOPE_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
+  return actor.branchId;
 }
 
 function auditInput(action: string, user: AdminUserRecord, audit: AdminAudit, metadata?: Record<string, unknown>): AuditRecordInput {

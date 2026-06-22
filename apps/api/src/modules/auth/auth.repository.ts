@@ -4,6 +4,7 @@ import { PrismaService } from '../../core/http-kernel.js';
 export type StaffAuthRecord = {
   id: string;
   email: string;
+  username: string | null;
   nameEn: string;
   nameAr: string;
   passwordHash: string | null;
@@ -48,11 +49,13 @@ export class AuthRepository {
   }
 
   async findStaffByIdentifier(identifier: string): Promise<StaffAuthRecord | null> {
-    return this.prisma.user.findUnique({
-      where: { email: identifier.toLowerCase() },
+    const value = identifier.toLowerCase();
+    return this.prisma.user.findFirst({
+      where: { OR: [{ email: value }, { username: value }] },
       select: {
         id: true,
         email: true,
+        username: true,
         nameEn: true,
         nameAr: true,
         passwordHash: true,
@@ -127,6 +130,7 @@ export class AuthRepository {
           select: {
             id: true,
             email: true,
+            username: true,
             nameEn: true,
             nameAr: true,
             branchId: true,

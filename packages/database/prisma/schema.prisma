@@ -315,6 +315,7 @@ model Role {
 model User {
   id                         String                   @id @default(cuid())
   email                      String                   @unique
+  username                   String?                  @unique
   nameEn                     String                   @map("name_en")
   nameAr                     String                   @map("name_ar")
   passwordHash               String?                  @map("password_hash")

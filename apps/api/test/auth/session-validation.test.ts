@@ -13,6 +13,7 @@ const validSession: StaffSessionRecord = {
   user: {
     id: 'usr_test',
     email: 'admin@cms-auto.test',
+    username: 'admin',
     nameEn: 'System Admin',
     nameAr: 'System Admin',
     branchId: 'branch_main',

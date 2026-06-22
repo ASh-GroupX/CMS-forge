@@ -1,15 +1,15 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { RoleCode } from '@prisma/client';
 import { RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { AppException } from '../../core/http-kernel.js';
 import { AdminUsersService } from './admin-users.service.js';
-import type { CreateAdminUserInput } from './admin-users.service.js';
+import type { CreateAdminUserInput, StaffLookupActor } from './admin-users.service.js';
 
 @Controller('admin/users')
 export class AdminUsersController {
-  constructor(private readonly users: AdminUsersService) {}
+  constructor(@Inject(AdminUsersService) private readonly users: AdminUsersService) {}
 
   @Get()
   @UseGuards(SessionAuthGuard, RbacGuard)
@@ -37,6 +37,19 @@ export class AdminUsersController {
   @Roles(RoleCode.ADMIN)
   reactivate(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
     return this.users.setActive(id, true, auditContext(request));
+  }
+}
+
+@Controller('staff')
+export class StaffLookupController {
+  @Inject(AdminUsersService)
+  private readonly users!: AdminUsersService;
+
+  @Get('assignable')
+  @UseGuards(SessionAuthGuard, RbacGuard)
+  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  assignable(@Req() request: AuthenticatedRequest) {
+    return this.users.assignableStaff(actor(request));
   }
 }
 
@@ -74,6 +87,12 @@ function auditContext(request: AuthenticatedRequest) {
     ipAddress: headerValue(request.headers['x-forwarded-for'])?.split(',')[0]?.trim() ?? request.socket?.remoteAddress ?? null,
     userAgent: headerValue(request.headers['user-agent']),
   };
+}
+
+function actor(request: AuthenticatedRequest): StaffLookupActor {
+  const principal = request.principal;
+  if (!principal?.userId) throw new AppException('AUTH_INVALID_CREDENTIALS', 'Invalid credentials', 401);
+  return { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId };
 }
 
 function headerValue(value: string | string[] | undefined): string | null {

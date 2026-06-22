@@ -7,6 +7,7 @@ import type { StaffAuthRecord } from '../../src/modules/auth/auth.repository.ts'
 const baseUser: StaffAuthRecord = {
   id: 'usr_active',
   email: 'admin@cms-auto.test',
+  username: 'admin',
   nameEn: 'System Admin',
   nameAr: 'System Admin',
   passwordHash: 'somehash',

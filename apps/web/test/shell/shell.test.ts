@@ -2689,6 +2689,27 @@ test('employee today route renders real task buckets through the session cookie'
         })],
       });
     }
+    if (String(input).endsWith('/staff/assignable')) {
+      return jsonResponse({
+        staff: [{
+          userId: 'usr_layla',
+          displayName: 'Layla Al-Farsi',
+          displayNameAr: 'ليلى الفارسي',
+          role: 'CR Manager',
+          roleAr: 'مديرة علاقات العملاء',
+          branchLabel: 'Main Branch',
+          branchLabelAr: 'الفرع الرئيسي',
+        }],
+      });
+    }
+    if (String(input).includes('/tasks/related-records')) {
+      const type = new URL(String(input)).searchParams.get('type');
+      return jsonResponse({
+        records: type === 'CUSTOMER'
+          ? [{ recordType: 'CUSTOMER', recordId: 'customer_noor_1', label: 'Noor Customer', labelAr: 'عميل نور', context: '0501234567 - Main Branch', contextAr: '0501234567 - الفرع الرئيسي' }]
+          : [],
+      });
+    }
     return jsonResponse({});
   };
   const html = renderToStaticMarkup(
@@ -2700,10 +2721,23 @@ test('employee today route renders real task buckets through the session cookie'
   );
 
   const todayCall = calls.find((call) => String(call.input).endsWith('/tasks/today'));
+  const staffCall = calls.find((call) => String(call.input).endsWith('/staff/assignable'));
+  const relatedCalls = calls.filter((call) => String(call.input).includes('/tasks/related-records'));
   assert.ok(todayCall);
+  assert.ok(staffCall);
+  assert.equal(relatedCalls.length, 4);
   assert.deepEqual(todayCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+  assert.deepEqual(staffCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+  assert.deepEqual(relatedCalls[0]?.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
   assert.doesNotMatch(String(todayCall.input), /role|actor|branchId/i);
+  assert.doesNotMatch(String(staffCall.input), /role|actor|branchId/i);
+  assert.ok(relatedCalls.every((call) => !/role|actor|branchId|owner|token|credential/i.test(String(call.input))));
   assert.match(html, /Employee Today/);
+  assert.match(html, /Layla Al-Farsi - CR Manager - Main Branch/);
+  assert.match(html, /Related to/);
+  assert.match(html, /Noor Customer - 0501234567 - Main Branch/);
+  assert.doesNotMatch(html, /usr_layla/);
+  assert.doesNotMatch(html, /customer_noor_1/);
   assert.match(html, /Overdue/);
   assert.match(html, /Due today/);
   assert.match(html, /Waiting on me/);
@@ -2751,6 +2785,10 @@ test('employee today route keeps Arabic RTL labels', async () => {
 
   assert.match(html, /dir="rtl"/);
   assert.ok(html.includes(employeeTodayText.ar.title));
+  assert.ok(html.includes(employeeTodayText.ar.fields.assignee));
+  assert.ok(html.includes(employeeTodayText.ar.fields.relatedTo));
+  assert.ok(html.includes(employeeTodayText.ar.recordPicker.error));
+  assert.ok(html.includes(employeeTodayText.ar.staffPicker.error));
   assert.ok(html.includes(employeeTodayText.ar.states.empty));
 });
 

@@ -6412,3 +6412,123 @@ Updated `.forge/next.md` to point the next builder at P11A and updated
 ### Verification
 
 - Not Run: docs-only planning change; no runtime code changed.
+
+## 2026-06-21 - P11A Username Login and Quick Add Staff Picker
+
+### Scope
+
+Implemented the first Operator UX Foundation slice:
+
+- Staff users now have optional unique usernames.
+- Staff login accepts username or email while the UI presents Username +
+  Password.
+- Seeded dev usernames: `admin`, `layla`, `omar`, `sara`.
+- Added `GET /staff/assignable`, scoped from the server session.
+- Quick Add Task now uses a localized staff picker showing name, role, and
+  branch; normal workflow does not show or require raw assignee IDs.
+- Quick Add submission resolves selected staff through the session-scoped
+  lookup and the API validates assignee scope server-side.
+- Login and Quick Add touched copy is localized in English and Arabic; Arabic
+  Today smoke verified `dir=rtl`.
+- OpenAPI canonical and generated contracts were updated.
+
+### Live Smoke
+
+- Passed: login with username `admin`.
+- Passed: login with email `admin@cms-auto.test`.
+- Passed: opened Today and created a task from the visible staff picker without
+  typing or pasting a raw assignee ID.
+- Passed: Arabic Today shell shows native labels for Quick Add and staff picker
+  with RTL document direction.
+- Passed: branch-scoped user `omar` sees only Main Branch assignable staff;
+  North Branch/Sara options were absent.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- auth` (37/37).
+- Passed: `corepack pnpm test:api -- tasks` (12/12).
+- Passed: `corepack pnpm test:api -- admin` (25/25).
+- Passed: `node --import tsx --test apps/api/src/modules/tasks/*.spec.ts`
+  (32/32).
+- Passed: `corepack pnpm test:web -- shell` (188/188).
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed.
+  Staff lookup and task writes derive actor context from `AuthenticatedRequest`.
+- Out-of-scope assignee selection denied: Passed. API service tests cover denial
+  before task persistence; live smoke verified scoped picker visibility.
+- Password policy: Passed. Production validation was not weakened; simple smoke
+  credentials were set through local bootstrap only.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Username support did not expose password material.
+- Customer portal exposure rules: Passed. No portal route, DTO, or UI changed.
+- SRS coverage: REQ-AUTH-001, REQ-RBAC-001, REQ-LOCALIZATION-001,
+  UI-DESIGN-001.
+
+## 2026-06-21 - P11B Quick Add Related-Record Picker
+
+### Scope
+
+Implemented the second Operator UX Foundation slice:
+
+- Added `GET /tasks/related-records`, scoped from the server staff session.
+- Related-record lookup supports Quick Add link types: customer, complaint,
+  case, and deal.
+- Lookup results return safe display labels, Arabic labels, record type, record
+  ID for backend submission, and safe secondary context.
+- Quick Add now shows `Related to` plus a localized record picker instead of
+  visible linked-record type/ID text fields.
+- Selected record IDs are submitted silently; normal Quick Add workflow uses
+  human labels only.
+- Customer promise validation still requires a customer, complaint, case, or
+  deal link.
+- Task creation validates submitted related links against server-side
+  branch/RBAC scope before persistence.
+- OpenAPI canonical and generated contracts were updated.
+
+### Live Smoke
+
+- Passed: logged in with username `admin`.
+- Passed: opened Today and created `P11B smoke linked customer task` using the
+  visible related-record picker, without typing or pasting a raw linked-record
+  ID.
+- Passed: submitted a customer promise without a related record and saw the
+  localized required-link validation message.
+- Passed: Arabic Today rendered `dir=rtl` and showed Arabic Quick Add
+  related-record labels (`مرتبط بـ`, `السجل`) and Arabic picker options.
+- Passed: branch-scoped user `omar` sees Main Branch related customers only;
+  the North Branch customer option was absent.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- tasks` (12/12).
+- Passed: `node --import tsx --test apps/api/src/modules/tasks/*.spec.ts`
+  (36/36).
+- Passed: `corepack pnpm test:web -- shell` (188/188).
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed.
+  Controller derives actor context from `AuthenticatedRequest`; query accepts
+  only record type and search text.
+- Out-of-scope related record selection denied: Passed. Service tests cover
+  denial before task persistence; live smoke verified scoped picker visibility.
+- Privacy: Passed. Lookup selects only safe display fields and does not return
+  DMS codes, portal verification/session data, internal comments, restricted
+  case notes, or password material.
+- Customer portal exposure rules: Passed. No portal route, DTO, or UI changed.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Local smoke credentials were set through bootstrap only and
+  not added to source.
+- SRS coverage: REQ-RBAC-001, REQ-LOCALIZATION-001, UI-DESIGN-001.

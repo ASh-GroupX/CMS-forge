@@ -10,6 +10,7 @@ import {
 } from '@prisma/client';
 import { AppException } from '../../core/http-kernel.js';
 import { promiseKeptOnTime } from './tasks.promise.js';
+import { TasksRelatedRecordsService } from './tasks.related-records.service.js';
 import { TasksService } from './tasks.service.js';
 import { TasksRepository, type CreateTaskStatusHistoryData, type PromiseTaskRecord, type TaskCommentRecord, type TaskRecord, type UpdateTaskStatusData } from './tasks.repository.js';
 
@@ -26,6 +27,91 @@ test('open task without next action is rejected', async () => {
     }),
     (error) => error instanceof AppException && error.code === 'TASK_NEXT_ACTION_REQUIRED',
   );
+});
+
+test('quick-add create denies out-of-scope assignee before writing task rows', async () => {
+  let wrote = false;
+  const repository = {
+    transaction: async <T>(work: (client: never) => Promise<T>) => {
+      wrote = true;
+      return work({} as never);
+    },
+  } as unknown as TasksRepository;
+  const service = new TasksService(repository, {} as never, undefined, {
+    assertAssignable: async () => {
+      throw new AppException('BRANCH_SCOPE_FORBIDDEN', 'Forbidden', 403);
+    },
+  });
+
+  await assert.rejects(
+    service.createForActor(
+      { title: 'Call customer', ownerId: 'user_owner', assigneeId: 'user_other_branch', dueAt: '2026-06-21T09:00:00.000Z', nextAction: { what: 'Call', whoId: 'user_other_branch', when: '2026-06-21T09:00:00.000Z' } },
+      { userId: 'user_owner', roleCode: RoleCode.CR_MANAGER, branchId: 'branch_1' },
+    ),
+    (error) => error instanceof AppException && error.code === 'BRANCH_SCOPE_FORBIDDEN',
+  );
+  assert.equal(wrote, false);
+});
+
+test('quick-add create denies out-of-scope related record before writing task rows', async () => {
+  let wrote = false;
+  const repository = {
+    transaction: async <T>(work: (client: never) => Promise<T>) => {
+      wrote = true;
+      return work({} as never);
+    },
+  } as unknown as TasksRepository;
+  const service = new TasksService(
+    repository,
+    {} as never,
+    undefined,
+    { assertAssignable: async () => undefined },
+    { exists: async () => false } as unknown as TasksRelatedRecordsService,
+  );
+
+  await assert.rejects(
+    service.createForActor(
+      {
+        title: 'Call customer',
+        ownerId: 'user_owner',
+        assigneeId: 'user_assignee',
+        dueAt: '2026-06-21T09:00:00.000Z',
+        nextAction: { what: 'Call', whoId: 'user_assignee', when: '2026-06-21T09:00:00.000Z' },
+        links: [{ entityType: TaskLinkEntityType.CUSTOMER, entityId: 'customer_other_branch' }],
+      },
+      { userId: 'user_owner', roleCode: RoleCode.CR_MANAGER, branchId: 'branch_1' },
+    ),
+    (error) => error instanceof AppException && error.code === 'BRANCH_SCOPE_FORBIDDEN',
+  );
+  assert.equal(wrote, false);
+});
+
+test('related-record lookup derives query from server actor scope', async () => {
+  let captured: unknown;
+  const service = new TasksService(
+    txOnlyRepository(),
+    {} as never,
+    undefined,
+    undefined,
+    {
+      list: async (type: TaskLinkEntityType, actor: unknown, q?: string) => {
+        captured = { type, actor, q };
+        return [{ recordType: TaskLinkEntityType.CUSTOMER, recordId: 'customer_1', label: 'Noor Customer', labelAr: 'عميل نور', context: 'Main Branch', contextAr: 'الفرع الرئيسي' }];
+      },
+    } as unknown as TasksRelatedRecordsService,
+  );
+
+  const result = await service.relatedRecords(
+    { type: TaskLinkEntityType.CUSTOMER, q: 'Noor' },
+    { userId: 'user_owner', roleCode: RoleCode.CR_MANAGER, branchId: 'branch_1' },
+  );
+
+  assert.deepEqual(captured, {
+    type: TaskLinkEntityType.CUSTOMER,
+    actor: { userId: 'user_owner', roleCode: RoleCode.CR_MANAGER, branchId: 'branch_1' },
+    q: 'Noor',
+  });
+  assert.equal(result.records[0]?.recordId, 'customer_1');
 });
 
 test('status Done clears next action and audits inside the transaction', async () => {
@@ -384,6 +470,26 @@ test('promise tracker repository limits confidential branch-wide rows to partici
   assert.match(query, /"ownerId":"user_owner"/);
   assert.match(query, /"participants":\{"some":\{"userId":"user_owner"\}\}/);
   assert.doesNotMatch(query, /\{\}/);
+});
+
+test('related-record customer lookup is branch-scoped and selects no private customer fields', async () => {
+  let captured: unknown;
+  const service = new TasksRelatedRecordsService({
+    customer: {
+      findMany: async (args: unknown) => {
+        captured = args;
+        return [];
+      },
+    },
+  } as never);
+
+  await service.list(TaskLinkEntityType.CUSTOMER, { roleCode: RoleCode.CR_MANAGER, branchId: 'branch_1' }, 'Noor');
+
+  const query = JSON.stringify(captured);
+  assert.match(query, /"branchId":"branch_1"/);
+  assert.match(query, /"nameEn"/);
+  assert.match(query, /"phone"/);
+  assert.doesNotMatch(query, /dmsCode|portalVerifications|portalSessions|email/);
 });
 
 test('ordinary employee is denied manager control room access in service', async () => {

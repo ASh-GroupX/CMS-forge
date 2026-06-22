@@ -13,6 +13,7 @@ const staffEmails = [
   'officer.main@cms-auto.test',
   'branch.mgr.north@cms-auto.test',
 ];
+const staffUsernames = ['admin', 'layla', 'omar', 'sara'];
 
 test('staff seed users have Argon2id hashes and no plaintext password fields', () => {
   const hash = seed.match(/DEV_STAFF_PASSWORD_HASH =\n\s+'([^']+)';/)?.[1];
@@ -22,6 +23,9 @@ test('staff seed users have Argon2id hashes and no plaintext password fields', (
 
   for (const email of staffEmails) {
     assert.match(seed, new RegExp(`email: '${email}'`));
+  }
+  for (const username of staffUsernames) {
+    assert.match(seed, new RegExp(`username: '${username}'`));
   }
 
   const staffSection = seed.slice(seed.indexOf('Staff users'), seed.indexOf('Categories'));

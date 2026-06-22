@@ -8,13 +8,13 @@ import { AuthService } from '../auth/auth.service.js';
 import { AdminCategoriesController } from './admin-categories.controller.js';
 import { AdminCategoriesRepository } from './admin-categories.repository.js';
 import { AdminCategoriesService } from './admin-categories.service.js';
-import { AdminUsersController } from './admin-users.controller.js';
+import { AdminUsersController, StaffLookupController } from './admin-users.controller.js';
 import { AdminUsersRepository } from './admin-users.repository.js';
 import { AdminUsersService } from './admin-users.service.js';
 
 @Module({
   imports: [AuthModule],
-  controllers: [AdminUsersController, AdminCategoriesController],
+  controllers: [AdminUsersController, StaffLookupController, AdminCategoriesController],
   providers: [
     PrismaService,
     { provide: AuditService, inject: [PrismaService], useFactory: (prisma: PrismaService) => new AuditService(prisma) },

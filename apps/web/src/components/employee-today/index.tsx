@@ -3,6 +3,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { employeeTodayText } from '../../i18n/staff-employee-today';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
+import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
+import type { StaffRelatedRecordOptions } from '../../lib/staff-related-records-api';
 import type { EmployeeTodayTasks, StaffTask, StaffTaskStatus } from '../../lib/staff-tasks-api';
 import { QuickAddForm, TaskActions, type TaskAction } from './task-action-forms';
 
@@ -22,13 +24,17 @@ export function EmployeeToday({
   data,
   locale,
   quickAddAction,
+  relatedRecords,
   result,
+  staff,
   updateAction,
 }: {
   data: EmployeeTodayTasks | null;
   locale: Locale;
   quickAddAction?: TaskAction;
+  relatedRecords?: StaffRelatedRecordOptions | null | undefined;
   result?: 'error' | 'link-required' | 'success' | undefined;
+  staff?: AssignableStaff[] | null | undefined;
   updateAction?: TaskAction | undefined;
 }) {
   const shell = staffShellText[locale];
@@ -56,7 +62,7 @@ export function EmployeeToday({
             {result === 'success' ? t.states.saved : result === 'link-required' ? t.states.linkRequired : t.states.saveFailed}
           </p>
         ) : null}
-        {quickAddAction ? <QuickAddForm action={quickAddAction} locale={locale} t={t} /> : null}
+        {quickAddAction ? <QuickAddForm action={quickAddAction} locale={locale} relatedRecords={relatedRecords} staff={staff} t={t} /> : null}
         {data === null ? (
           <p className="rounded-sm border border-status-error bg-status-error/10 px-3 py-2 text-sm text-status-error" role="alert">
             {t.states.error}

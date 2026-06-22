@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { RoleCode } from '@prisma/client';
 import { BranchScoped, RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../core/auth.guard.js';
@@ -6,6 +6,7 @@ import { CsrfGuard } from '../../core/csrf.guard.js';
 import { AppException } from '../../core/http-kernel.js';
 import type { QuickAddTaskResponseDto } from './dto/create-task.dto.js';
 import { parseQuickAddTaskBody, toQuickAddTaskInput } from './dto/create-task.dto.js';
+import { parseRelatedRecordLookupQuery, type RelatedRecordLookupResponseDto } from './dto/related-record-lookup.dto.js';
 import { parseTaskCommentBody, parseTaskNudgeBody } from './dto/task-collaboration.dto.js';
 import type { EmployeeTodayResponseDto, ManagerControlRoomResponseDto, PromiseTrackerResponseDto } from './dto/task-response.dto.js';
 import { TasksService } from './tasks.service.js';
@@ -19,9 +20,13 @@ export class TasksController {
   @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
   @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
   async quickAdd(@Body() body: unknown, @Req() request: AuthenticatedRequest): Promise<QuickAddTaskResponseDto> {
-    const ownerId = principalUserId(request);
+    const principal = requirePrincipal(request);
     return {
-      task: await this.tasksService.create(toQuickAddTaskInput(parseQuickAddTaskBody(body), ownerId), auditContext(request)),
+      task: await this.tasksService.createForActor(
+        toQuickAddTaskInput(parseQuickAddTaskBody(body), principal.userId),
+        { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId },
+        auditContext(request),
+      ),
     };
   }
 
@@ -56,6 +61,15 @@ export class TasksController {
   async promises(@Req() request: AuthenticatedRequest): Promise<PromiseTrackerResponseDto> {
     const principal = requirePrincipal(request);
     return this.tasksService.promiseTracker({ userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId });
+  }
+
+  @Get('related-records')
+  @UseGuards(SessionAuthGuard, RbacGuard)
+  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @BranchScoped()
+  relatedRecords(@Query() query: Record<string, unknown>, @Req() request: AuthenticatedRequest): Promise<RelatedRecordLookupResponseDto> {
+    const principal = requirePrincipal(request);
+    return this.tasksService.relatedRecords(parseRelatedRecordLookupQuery(query), { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId });
   }
 
   @Get(':id')

@@ -3075,6 +3075,81 @@
         }
       }
     },
+    "/tasks/related-records": {
+      "get": {
+        "tags": [
+          "Tasks"
+        ],
+        "operationId": "taskRelatedRecordsLookup",
+        "summary": "Search task related records in the current staff scope",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "CUSTOMER",
+                "COMPLAINT",
+                "CASE",
+                "DEAL"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Related records visible to the staff session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelatedRecordLookupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid lookup query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied or branch scope denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/tasks/today": {
       "get": {
         "tags": [
@@ -4206,6 +4281,47 @@
           },
           "404": {
             "description": "Task not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/staff/assignable": {
+      "get": {
+        "tags": [
+          "Staff"
+        ],
+        "operationId": "staffAssignableList",
+        "summary": "List assignable staff for the current session scope",
+        "responses": {
+          "200": {
+            "description": "Assignable staff in the current staff session scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignableStaffResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or branch scope denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -7443,6 +7559,7 @@
         "required": [
           "id",
           "email",
+          "username",
           "nameEn",
           "nameAr",
           "roleCode",
@@ -7501,6 +7618,12 @@
               "null"
             ],
             "format": "date-time"
+          },
+          "username": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -8154,6 +8277,122 @@
         "properties": {
           "ok": {
             "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RelatedRecord": {
+        "type": "object",
+        "required": [
+          "recordType",
+          "recordId",
+          "label",
+          "labelAr",
+          "context",
+          "contextAr"
+        ],
+        "properties": {
+          "recordType": {
+            "type": "string",
+            "enum": [
+              "CUSTOMER",
+              "COMPLAINT",
+              "CASE",
+              "DEAL"
+            ]
+          },
+          "recordId": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "labelAr": {
+            "type": "string"
+          },
+          "context": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "contextAr": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "RelatedRecordLookupResponse": {
+        "type": "object",
+        "required": [
+          "records"
+        ],
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RelatedRecord"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "AssignableStaff": {
+        "type": "object",
+        "required": [
+          "userId",
+          "displayName",
+          "displayNameAr",
+          "role",
+          "roleAr",
+          "branchLabel",
+          "branchLabelAr"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "displayNameAr": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "roleAr": {
+            "type": "string"
+          },
+          "branchLabel": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "branchLabelAr": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "AssignableStaffResponse": {
+        "type": "object",
+        "required": [
+          "staff"
+        ],
+        "properties": {
+          "staff": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssignableStaff"
+            }
           }
         },
         "additionalProperties": false

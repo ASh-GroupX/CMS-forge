@@ -1,6 +1,8 @@
 import React from 'react';
 import { EmployeeToday } from '../../../../components/employee-today';
 import { resolveLocale } from '../../../../i18n/staff-shell';
+import { getAssignableStaff } from '../../../../lib/staff-assignable-staff-api';
+import { getQuickAddRelatedRecords } from '../../../../lib/staff-related-records-api';
 import { getEmployeeTodayTasks } from '../../../../lib/staff-tasks-api';
 import { quickAddTaskAction, updateTaskAction } from './actions';
 
@@ -21,8 +23,8 @@ export default async function EmployeeTodayPage({
     ...(cookieHeader !== undefined ? { cookieHeader } : {}),
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
   };
-  const data = await getEmployeeTodayTasks(apiInput);
-  return <EmployeeToday locale={locale} data={data} quickAddAction={quickAddTaskAction} result={readResult(params?.task)} updateAction={updateTaskAction} />;
+  const [data, staff, relatedRecords] = await Promise.all([getEmployeeTodayTasks(apiInput), getAssignableStaff(apiInput), getQuickAddRelatedRecords(apiInput)]);
+  return <EmployeeToday locale={locale} data={data} relatedRecords={relatedRecords} staff={staff} quickAddAction={quickAddTaskAction} result={readResult(params?.task)} updateAction={updateTaskAction} />;
 }
 
 function readParam(value: string | string[] | undefined) {

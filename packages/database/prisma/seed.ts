@@ -54,9 +54,10 @@ async function main(): Promise<void> {
   const [adminUser, crManager, officerMain, branchMgrNorth] = await Promise.all([
     prisma.user.upsert({
       where: { email: 'admin@cms-auto.test' },
-      update: { passwordHash: DEV_STAFF_PASSWORD_HASH },
+      update: { passwordHash: DEV_STAFF_PASSWORD_HASH, username: 'admin' },
       create: {
         email: 'admin@cms-auto.test',
+        username: 'admin',
         nameEn: 'System Admin',
         nameAr: 'مدير النظام',
         passwordHash: DEV_STAFF_PASSWORD_HASH,
@@ -65,9 +66,10 @@ async function main(): Promise<void> {
     }),
     prisma.user.upsert({
       where: { email: 'cr.manager@cms-auto.test' },
-      update: { passwordHash: DEV_STAFF_PASSWORD_HASH },
+      update: { passwordHash: DEV_STAFF_PASSWORD_HASH, username: 'layla' },
       create: {
         email: 'cr.manager@cms-auto.test',
+        username: 'layla',
         nameEn: 'Layla Al-Farsi',
         nameAr: 'ليلى الفارسي',
         passwordHash: DEV_STAFF_PASSWORD_HASH,
@@ -77,9 +79,10 @@ async function main(): Promise<void> {
     }),
     prisma.user.upsert({
       where: { email: 'officer.main@cms-auto.test' },
-      update: { passwordHash: DEV_STAFF_PASSWORD_HASH },
+      update: { passwordHash: DEV_STAFF_PASSWORD_HASH, username: 'omar' },
       create: {
         email: 'officer.main@cms-auto.test',
+        username: 'omar',
         nameEn: 'Omar Al-Khalidi',
         nameAr: 'عمر الخالدي',
         passwordHash: DEV_STAFF_PASSWORD_HASH,
@@ -89,9 +92,10 @@ async function main(): Promise<void> {
     }),
     prisma.user.upsert({
       where: { email: 'branch.mgr.north@cms-auto.test' },
-      update: { passwordHash: DEV_STAFF_PASSWORD_HASH },
+      update: { passwordHash: DEV_STAFF_PASSWORD_HASH, username: 'sara' },
       create: {
         email: 'branch.mgr.north@cms-auto.test',
+        username: 'sara',
         nameEn: 'Sara Al-Dosari',
         nameAr: 'سارة الدوسري',
         passwordHash: DEV_STAFF_PASSWORD_HASH,

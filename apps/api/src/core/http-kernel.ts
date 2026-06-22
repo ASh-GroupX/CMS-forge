@@ -78,7 +78,6 @@ export class AppExceptionFilter implements ExceptionFilter {
     const isHttp = exception instanceof HttpException;
     const status = isHttp ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
     const appError = exception instanceof AppException ? exception : undefined;
-
     const body: ErrorBody = {
       error: {
         code: appError?.code ?? 'INTERNAL_ERROR',

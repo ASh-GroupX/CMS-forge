@@ -4,11 +4,13 @@ import argon2 from 'argon2';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
 import { AuthService } from '../../src/modules/auth/auth.service.ts';
+import { AuthRepository } from '../../src/modules/auth/auth.repository.ts';
 import type { StaffAuthRecord } from '../../src/modules/auth/auth.repository.ts';
 
 const baseUser: StaffAuthRecord = {
   id: 'usr_test',
   email: 'admin@cms-auto.test',
+  username: 'admin',
   nameEn: 'System Admin',
   nameAr: 'System Admin',
   passwordHash: null,
@@ -19,8 +21,12 @@ const baseUser: StaffAuthRecord = {
 };
 
 function serviceFor(user: StaffAuthRecord | null): AuthService {
+  let capturedIdentifier = '';
   return new AuthService({
-    findStaffByIdentifier: async () => user,
+    findStaffByIdentifier: async (identifier) => {
+      capturedIdentifier = identifier;
+      return capturedIdentifier ? user : null;
+    },
     createStaffSession: async () => ({ id: 'session_unused' }),
     findStaffSessionByTokenHash: async () => null,
     revokeStaffSession: async () => 0,
@@ -50,6 +56,34 @@ test('valid active staff credentials return safe auth claims', async () => {
     branchId: 'branch_main',
   });
   assert.equal('passwordHash' in claims, false);
+});
+
+test('valid active staff username credentials return safe auth claims', async () => {
+  const passwordHash = await argon2.hash('correct-password', { type: argon2.argon2id });
+  const claims = await serviceFor({ ...baseUser, passwordHash }).verifyCredentials({
+    identifier: ' ADMIN ',
+    password: 'correct-password',
+  });
+
+  assert.equal(claims.userId, 'usr_test');
+  assert.equal(claims.email, 'admin@cms-auto.test');
+  assert.equal('passwordHash' in claims, false);
+});
+
+test('auth repository looks up staff by username or email', async () => {
+  let capturedWhere: unknown;
+  const repository = new AuthRepository({
+    user: {
+      findFirst: async (query: { where: unknown }) => {
+        capturedWhere = query.where;
+        return null;
+      },
+    },
+  } as never);
+
+  await repository.findStaffByIdentifier('Admin');
+
+  assert.deepEqual(capturedWhere, { OR: [{ email: 'admin' }, { username: 'admin' }] });
 });
 
 test('invalid, inactive, locked, and missing-hash users are denied generically', async () => {
