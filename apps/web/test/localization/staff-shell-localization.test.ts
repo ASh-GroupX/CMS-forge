@@ -17,6 +17,7 @@ import { complaintCreateText } from '../../src/i18n/staff-complaint-create';
 import { complaintDetailText } from '../../src/i18n/staff-complaint-detail';
 import { confirmationText } from '../../src/i18n/staff-confirmations';
 import { employeeTodayText } from '../../src/i18n/staff-employee-today';
+import { dealHandoffText } from '../../src/i18n/staff-deal-handoff';
 import { notificationCenterText } from '../../src/i18n/staff-notification-center';
 import { reportCatalogText, reportsDashboardText } from '../../src/i18n/staff-reports-dashboard';
 import { sentTasksText } from '../../src/i18n/staff-sent-tasks';
@@ -165,8 +166,8 @@ test('admin screens render Arabic RTL and English LTR', async () => {
 });
 
 test('remaining staff Arabic text uses real Arabic codepoints', () => {
-  const files = ['staff-audit-viewer', 'staff-employee-today', 'staff-notification-center', 'staff-reports-dashboard', 'staff-sent-tasks'];
-  const bundles = [auditViewerText, employeeTodayText, notificationCenterText, reportsDashboardText, reportCatalogText, sentTasksText];
+  const files = ['staff-audit-viewer', 'staff-employee-today', 'staff-deal-handoff', 'staff-notification-center', 'staff-reports-dashboard', 'staff-sent-tasks'];
+  const bundles = [auditViewerText, employeeTodayText, dealHandoffText, notificationCenterText, reportsDashboardText, reportCatalogText, sentTasksText];
 
   for (const file of files) {
     assert.doesNotMatch(readFileSync(`apps/web/src/i18n/${file}.ts`, 'utf8'), mojibakeMarkers);

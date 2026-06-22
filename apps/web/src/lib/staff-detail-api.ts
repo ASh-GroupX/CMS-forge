@@ -13,6 +13,7 @@ export type StaffComplaintDetailView = {
     status: string;
     lifecycleStatus: string;
     branchName: string;
+    ownerId: string | null;
     ownerName: string | null;
   } | null;
   capaActions: CaseCapaAction[];
@@ -39,6 +40,7 @@ export type CaseCapaAction = {
 };
 
 export type CaseCapaCreateRequest = {
+  ownerId?: string | null;
   rootCause: string;
   correctiveAction: string;
   preventiveAction: string;
@@ -124,7 +126,7 @@ async function fetchCaseCapa({ apiUrl, caseId, cookies, fetchImpl }: { apiUrl: s
 
 function viewFromDetail(detail: ComplaintDetail, caseTimeline: string[], capaActions: CaseCapaAction[]): StaffComplaintDetailView {
   return {
-    assignee: detail.ownerId,
+    assignee: detail.ownerName ?? null,
     branch: detail.branchName ?? detail.branchId,
     case: detail.caseSummary ? {
       id: detail.caseSummary.id,
@@ -132,6 +134,7 @@ function viewFromDetail(detail: ComplaintDetail, caseTimeline: string[], capaAct
       status: detail.caseSummary.status,
       lifecycleStatus: detail.caseSummary.lifecycleStatus,
       branchName: detail.caseSummary.branchName,
+      ownerId: detail.caseSummary.ownerId,
       ownerName: detail.caseSummary.ownerName,
     } : null,
     capaActions,
@@ -189,6 +192,7 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
     subject: complaint.subject,
     branchId: complaint.branchId,
     ownerId: typeof complaint.ownerId === 'string' ? complaint.ownerId : null,
+    ownerName: typeof complaint.ownerName === 'string' ? complaint.ownerName : null,
     createdAt: complaint.createdAt,
     updatedAt: complaint.updatedAt,
     description: complaint.description,

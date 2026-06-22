@@ -116,6 +116,7 @@ test('task link for case rejects blank ids', () => {
 
 test('case CAPA action validates and returns accountability fields', async () => {
   let captured: CreateCapaActionData | undefined;
+  let assignable: unknown;
   const calls: unknown[] = [];
   const service = new CasesService({
     transaction: async (work: (client: unknown) => Promise<unknown>) => work('tx'),
@@ -128,10 +129,13 @@ test('case CAPA action validates and returns accountability fields', async () =>
       calls.push({ createClient: client });
       return capaRecord(data);
     },
-  } as unknown as CasesRepository, { record: async (input: AuditRecordInput, client: unknown) => { calls.push({ audit: input, client }); } } as AuditService);
+  } as unknown as CasesRepository, { record: async (input: AuditRecordInput, client: unknown) => { calls.push({ audit: input, client }); } } as AuditService, {
+    assertAssignable: async (actor, userId) => { assignable = { actor, userId }; },
+  });
 
   const result = await service.createCapaAction({
     caseId: 'case_1',
+    ownerId: 'owner_2',
     rootCause: 'Late parts confirmation',
     correctiveAction: 'Call customer before 10 AM',
     preventiveAction: 'Daily parts delay review',
@@ -139,13 +143,32 @@ test('case CAPA action validates and returns accountability fields', async () =>
     status: CapaActionStatus.IN_PROGRESS,
   }, { userId: 'usr_actor', role: RoleCode.CR_MANAGER, branchId: 'branch_1' }, { correlationId: 'req_capa' });
 
-  assert.equal(captured?.ownerId, 'owner_1');
+  assert.deepEqual(assignable, { actor: { userId: 'usr_actor', roleCode: RoleCode.CR_MANAGER, branchId: 'branch_1' }, userId: 'owner_2' });
+  assert.equal(captured?.ownerId, 'owner_2');
   assert.equal(captured?.rootCause, 'Late parts confirmation');
   assert.equal(captured?.dueAt.toISOString(), '2026-06-25T09:00:00.000Z');
   assert.equal(result.ownerName, 'Owner User');
   assert.equal(result.status, CapaActionStatus.IN_PROGRESS);
   assert.equal((calls[2] as { audit: AuditRecordInput }).audit.action, 'case_capa_created');
   assert.equal((calls[2] as { client: unknown }).client, 'tx');
+});
+
+test('case CAPA owner picker rejects out-of-scope staff before create', async () => {
+  const service = new CasesService({ transaction: async () => assert.fail('transaction should not start') } as unknown as CasesRepository, undefined, {
+    assertAssignable: async () => { throw new AppException('BRANCH_SCOPE_FORBIDDEN', 'Forbidden', 403); },
+  });
+
+  await assert.rejects(
+    service.createCapaAction({
+      caseId: 'case_1',
+      ownerId: 'owner_other',
+      rootCause: 'Late parts confirmation',
+      correctiveAction: 'Call customer',
+      preventiveAction: 'Daily review',
+      dueAt: '2026-06-25T09:00:00.000Z',
+    }, { userId: 'usr_actor', role: RoleCode.CR_MANAGER, branchId: 'branch_1' }),
+    (error) => error instanceof AppException && error.code === 'BRANCH_SCOPE_FORBIDDEN',
+  );
 });
 
 test('case CAPA action rejects missing required accountability fields and can be read', async () => {

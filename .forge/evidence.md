@@ -6532,3 +6532,335 @@ Implemented the second Operator UX Foundation slice:
   returned: Passed. Local smoke credentials were set through bootstrap only and
   not added to source.
 - SRS coverage: REQ-RBAC-001, REQ-LOCALIZATION-001, UI-DESIGN-001.
+
+## 2026-06-22 - Reports Export Live Smoke Repair
+
+### Scope
+
+Fixed the live local `GET /reports/export` HTTP 500 without changing report KPI
+calculations or web Reports page design.
+
+- Reproduced the failure against the local seeded API: `GET /reports/export?format=csv`
+  returned `500 INTERNAL_ERROR`.
+- Captured the API error path:
+  - first failure: reports route handler was invoked without a bound controller
+    instance, so `this.reportsService` was undefined.
+  - after avoiding that binding dependency, second failure showed reports module
+    class providers needed explicit Nest injection metadata in the local runtime.
+- Added explicit injection for `ReportsController`, `ReportsService`, and
+  `ReportsRepository`.
+- Kept export filters, RBAC, branch scope, row limit, and REPORT audit behavior
+  unchanged.
+- Added focused reports API regression coverage for filtered export and the
+  unbound export handler path.
+- No UI files, report calculations, customer portal behavior, Deal/Case/CAPA, or
+  task picker flows were changed.
+
+### Live Smoke
+
+- Passed: live local API export with a branch-scoped manager session returned
+  `HTTP/1.1 200 OK`.
+- Passed: export response included `Content-Type: text/csv; charset=utf-8`,
+  `content-disposition: attachment; filename="reports.csv"`,
+  `x-report-row-count`, and `x-report-row-limit`.
+- Passed: out-of-scope branch export with the same manager session returned
+  `HTTP/1.1 403 Forbidden`.
+- Passed: Arabic Reports render coverage remained green through
+  `corepack pnpm test:web -- shell` and `corepack pnpm test:web -- localization`.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- reports` (23/23).
+- Passed: `corepack pnpm test:web -- shell` (188/188).
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Failed then fixed: `corepack pnpm lint` initially failed after an unnecessary
+  complaints constructor edit pushed `complaints.service.ts` to 303 lines.
+- Passed: `corepack pnpm lint` after narrowing the change back to reports.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input:
+  Passed. Export remains guarded by `SessionAuthGuard`, `RbacGuard`, and
+  `@BranchScoped`; branch spoofing returned 403 in live smoke.
+- State changes/status history/audit transaction rule: Not applicable; report
+  export is read-only. Existing REPORT export audit behavior is preserved.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  Passed. Temporary smoke sessions were server-side only and not added to source.
+- Customer portal exposure rules hold: Passed. No portal route, DTO, or UI
+  changed.
+- Trust boundaries are tested: Passed. Reports tests cover scoped export denial,
+  route RBAC allow/deny, and branch-scope denial auditing.
+- SRS coverage: REQ-REPORT-001, REQ-RBAC-001, REQ-LOCALIZATION-001,
+  UI-DESIGN-001.
+
+## 2026-06-22 - P11D Deals Staff Picker Slice
+
+### Scope
+
+Implemented the Deals-only slice of the requested remaining operational picker
+rollout because `.forge/next.md` and the Forge guardrails explicitly require the
+remaining raw-ID surfaces to be split instead of bundled.
+
+- Added a shared client `StaffPicker` component backed by the existing
+  assignable staff lookup shape.
+- Reused that shared picker in Today task forms and Deal Handoff forms.
+- Deal Handoff create and advance holder controls now show staff name, role, and
+  branch while submitting `currentHolderId` silently.
+- Deal Handoff owner/current-holder display resolves through the session-scoped
+  staff lookup when available and otherwise shows localized unavailable states,
+  not raw user IDs.
+- Deal Handoff branch display no longer falls back to visible raw branch IDs.
+- Deal card raw deal ID display was removed; deal IDs remain hidden form values
+  for server actions.
+- Reused `GET /staff/assignable`; no new lookup route or OpenAPI change was
+  needed.
+- Repaired touched Deal Handoff Arabic copy to real Arabic codepoints and added
+  Arabic holder picker loading/empty/error/clear/selected states.
+
+### Live Smoke
+
+- Passed: opened the live local staff UI on `http://localhost:4000`.
+- Passed: username login with `admin` after temporary local bootstrap.
+- Passed: Deal Handoff loaded with holder picker options from the session-scoped
+  staff lookup.
+- Passed: created `P11D smoke picker deal` using the branch dropdown and holder
+  picker without entering a raw holder ID.
+- Passed: advanced the created deal; Deal Handoff returned `deal=success`.
+- Passed: Arabic Deal Handoff rendered localized RTL labels and Arabic holder
+  picker text.
+- Passed: original local admin password hash was restored after smoke.
+- Not Run: CAPA owner picker live smoke, report/filter picker smoke, and
+  case/complaint owner smoke. These are recorded as next scoped slices.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- deals` (9/9).
+- Passed: `corepack pnpm test:api -- cases` (22/22).
+- Passed: `corepack pnpm test:web -- shell` (188/188).
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. Deal
+  Handoff page fetches `GET /staff/assignable` and `GET /deals/handoff-board`
+  with only the staff session cookie; no role, actor, or branch authority is sent
+  from React.
+- Deal create/advance authority unchanged: Passed. Existing deal write APIs and
+  server-side branch/RBAC tests still pass.
+- Out-of-scope users/records cannot be selected or accepted by API: Passed for
+  the touched Deals staff picker via server-scoped lookup reuse and existing
+  deal API tests. CAPA/reports/case surfaces were not touched in this slice.
+- OpenAPI: Passed. No contract change; existing documented lookup route reused.
+- Customer portal exposure rules: Passed. No portal route, DTO, or UI changed.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  Passed. Temporary local bootstrap was DB-only and the original hash was
+  restored.
+- SRS coverage: REQ-RBAC-001, REQ-LOCALIZATION-001, UI-DESIGN-001.
+
+## 2026-06-22 - P11C Task Update Staff Pickers
+
+### Scope
+
+Implemented the scoped P11C task/collaboration slice:
+
+- Today task update assignee now uses the existing assignable staff picker
+  pattern instead of a visible raw staff ID input.
+- Today next follow-up person now uses the same localized staff picker instead
+  of a visible `nextActionWhoId` text input.
+- Selected staff still submit user IDs silently; visible selected labels show
+  name, role, and branch from `GET /staff/assignable`.
+- Quick Add staff picker behavior was preserved while sharing the generalized
+  picker component.
+- Sent Tasks collaboration cards no longer fall back to visible raw staff IDs
+  for assignee, next owner, or comment author context.
+- Existing task comment, nudge, Done, Waiting, status, and next-action behavior
+  stayed unchanged.
+- Backend contracts were unchanged. Existing task update validation and
+  `AdminUsersService.assertAssignable` continue to enforce assignability from
+  the server session.
+
+### Live Smoke
+
+- Passed: logged in with username `admin` on the live local web app.
+- Passed: opened Today and updated an existing task assignee through the staff
+  picker without typing or pasting a raw staff ID.
+- Passed: updated the next follow-up person through the staff picker without
+  typing or pasting a raw staff ID.
+- Passed: selected picker labels showed staff name, role, and branch.
+- Passed: Waiting and Done task status buttons still saved successfully.
+- Passed: Sent Tasks rendered existing comment and reminder forms; no
+  `recipientUserId` override field was present.
+- Passed: Arabic Today rendered `dir=rtl` and localized assignee,
+  next-follow-up, and staff search placeholder labels.
+- Passed: branch user `omar` could log in through the API and an out-of-scope
+  assignment to North Branch staff returned 403. Temporary local smoke password
+  hashes were restored after the check.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- tasks` (12/12).
+- Passed: `node --import tsx --test apps/api/src/modules/tasks/*.spec.ts`
+  (36/36).
+- Passed: `corepack pnpm test:web -- shell` (188/188).
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed.
+  Today UI uses the session-scoped staff lookup; task update API derives actor
+  context from `AuthenticatedRequest`.
+- Out-of-scope assignee / next-action person denied: Passed. Existing backend
+  validation calls `assertAssignable`; live API smoke returned 403 for
+  cross-branch assignment.
+- OpenAPI: Not changed. Request/response and lookup contracts were reused.
+- Customer portal exposure rules: Passed. No portal route, DTO, or UI changed.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Temporary local smoke hashes were not added to source and
+  were restored.
+- SRS coverage: REQ-RBAC-001, REQ-LOCALIZATION-001, UI-DESIGN-001.
+
+## 2026-06-22 - P11D CAPA / Case Operator UX Pickers
+
+### Scope
+
+Implemented the scoped CAPA and case/complaint detail picker cleanup:
+
+- CAPA create now uses the shared assignable staff picker instead of a visible
+  owner user ID input.
+- CAPA create submits the selected owner user ID silently and validates it with
+  the same server-session scoped assignable staff authority used by other P11
+  pickers.
+- Omitting CAPA owner preserves the prior default behavior: case owner first,
+  then actor.
+- Complaint and confidential case detail owner displays no longer fall back to
+  visible raw owner IDs.
+- No editable complaint/case owner field was added where the detail screen did
+  not already expose one.
+- Reports were not touched.
+- OpenAPI was updated only for the optional CAPA `ownerId` request field.
+
+### Live Smoke
+
+- Passed: logged in with username `admin` on the live local web app.
+- Passed: opened complaint detail with a linked case.
+- Passed: created CAPA through the owner picker without typing a raw owner ID.
+- Passed: selected owner label showed staff name, role, and branch.
+- Passed: database row for the live CAPA stored the picker-selected owner
+  `Layla Al-Farsi`, proving the hidden owner ID was honored.
+- Passed: audit behavior still works; the created CAPA has a
+  `case_capa_created` audit entry with the CAPA action ID in metadata.
+- Passed: Arabic complaint/CAPA area rendered `dir=rtl` with Arabic labels,
+  placeholders, selected state, empty/loading/error copy, and status labels.
+- Passed: branch user `omar` could log in through the API and assigning CAPA
+  ownership to North Branch staff returned `403 BRANCH_SCOPE_FORBIDDEN`.
+- Passed: temporary local smoke password hashes were restored after the check.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- cases` (23/23).
+- Passed: `corepack pnpm test:api -- complaints` (44/44).
+- Passed: `corepack pnpm test:web -- shell` (188/188).
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed.
+  CAPA owner validation calls `AdminUsersService.assertAssignable` with actor
+  context derived from the authenticated request.
+- CAPA create behavior, audit, RBAC, branch scope, and confidential ACL:
+  Passed. Existing default owner fallback remains when no owner is supplied;
+  supplied owner IDs are validated before create.
+- Out-of-scope users cannot be selected or accepted by API: Passed for API
+  acceptance. Staff picker options come from `GET /staff/assignable`; backend
+  rejected a cross-branch owner ID with `BRANCH_SCOPE_FORBIDDEN`.
+- OpenAPI: Passed. Only the optional `ownerId` field was added to the CAPA
+  create request contract.
+- Customer portal exposure rules: Passed. No portal route, DTO, or UI changed.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Temporary local smoke hashes were not added to source and
+  were restored.
+- SRS coverage: REQ-RBAC-001, REQ-LOCALIZATION-001, UI-DESIGN-001.
+
+## 2026-06-22 - P11D Reports Filter Picker Cleanup
+
+### Scope
+
+Implemented the scoped Reports/filter picker cleanup:
+
+- Reports branch and category filters now render as dropdown controls populated
+  from the existing session-scoped complaint form options lookup.
+- Reports owner filter now uses the shared assignable staff picker.
+- Visible report filters and report row scope labels show human labels instead
+  of raw branch, category, or staff IDs.
+- Selected filter IDs are still submitted silently through query parameters, so
+  backend report filtering and calculations keep their existing contract.
+- Report export links preserve selected branch, category, owner, severity, and
+  date filters when present.
+- No new lookup endpoint was added. Existing `GET /complaints/form-options` and
+  `GET /staff/assignable` contracts are reused.
+- Deal, Case, and CAPA workflows were not changed.
+- OpenAPI was not changed.
+
+### Live Smoke
+
+- Passed: authenticated with username-backed staff sessions and opened Reports.
+- Passed: branch/category filters used dropdowns with human labels, not visible
+  raw IDs.
+- Passed: owner filter used the shared staff picker and submitted the selected
+  owner ID silently.
+- Passed: applying filters updated the Reports URL with `branchId`,
+  `categoryId`, and `ownerId` while the page kept human labels visible.
+- Passed: CSV export link preserved the selected filter query parameters.
+- Passed: Arabic Reports rendered RTL with localized branch/category/owner
+  filter controls and screenshots captured:
+  `output/playwright/reports-filters-en.png`,
+  `output/playwright/reports-filters-ar.png`.
+- Passed: branch-scoped `omar` API session only received `MAIN` branch lookup
+  options and Main Branch staff from the reused lookup endpoints.
+- Needs follow-up: the live local export request returned HTTP 500 even though
+  the export link preserved filters. This reproduces against the local backend
+  export path and was not changed by the picker cleanup.
+- Passed: temporary local smoke password hashes were restored with `db:seed`
+  after the check.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- reports` (21/21).
+- Passed: `corepack pnpm test:web -- shell` (188/188).
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+- Additional targeted check passed: `corepack pnpm test:web -- api-client`
+  (12/12).
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed.
+  Reports reuse backend-scoped lookup endpoints and existing report query
+  authorization.
+- Out-of-scope branch/staff options do not appear: Passed for live API lookup
+  smoke with branch-scoped `omar`.
+- OpenAPI: Not changed. Existing report and lookup contracts were reused.
+- Report calculations: Passed by scope. No backend calculation code changed.
+- Customer portal exposure rules: Passed. No portal route, DTO, or UI changed.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Temporary local smoke hashes were not added to source and
+  were restored.
+- SRS coverage: REQ-RBAC-001, REQ-LOCALIZATION-001, UI-DESIGN-001.

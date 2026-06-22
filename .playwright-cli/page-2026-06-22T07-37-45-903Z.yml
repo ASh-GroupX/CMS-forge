@@ -1,0 +1,354 @@
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e44] [cursor=pointer]:
+    - img [ref=e45]
+  - alert [ref=e48]
+  - generic [ref=e49]:
+    - banner [ref=e50]:
+      - generic [ref=e51]:
+        - generic [ref=e52]:
+          - paragraph [ref=e53]: Dealership accountability desk
+          - generic [ref=e54]:
+            - heading "Staff Operations" [level=1] [ref=e55]
+            - generic [ref=e56]: Signed in
+        - generic [ref=e57]:
+          - link "Switch language" [ref=e58] [cursor=pointer]:
+            - /url: "?locale=ar"
+            - text: العربية
+          - button "Toggle theme" [ref=e59] [cursor=pointer]:
+            - img [ref=e60]
+            - generic [ref=e62]: Dark mode
+    - generic [ref=e63]:
+      - complementary [ref=e64]:
+        - generic [ref=e65]:
+          - paragraph [ref=e66]: Dealership accountability desk
+          - heading "Staff Operations" [level=1] [ref=e67]
+          - paragraph [ref=e68]: All authorized branches
+          - paragraph [ref=e69]: Signed in
+          - button "Log out" [ref=e71] [cursor=pointer]
+        - navigation "Staff Operations" [ref=e72]:
+          - link "Today Due, overdue, and waiting tasks" [ref=e73] [cursor=pointer]:
+            - /url: /tasks/today?locale=en
+            - img [ref=e74]
+            - generic [ref=e77]:
+              - generic [ref=e78]: Today
+              - generic [ref=e79]: Due, overdue, and waiting tasks
+          - link "Sent Tasks Tasks assigned to colleagues" [ref=e80] [cursor=pointer]:
+            - /url: /tasks/sent?locale=en
+            - img [ref=e81]
+            - generic [ref=e84]:
+              - generic [ref=e85]: Sent Tasks
+              - generic [ref=e86]: Tasks assigned to colleagues
+          - link "Promises Customer commitments and due dates" [ref=e87] [cursor=pointer]:
+            - /url: /tasks/promises?locale=en
+            - img [ref=e88]
+            - generic [ref=e93]:
+              - generic [ref=e94]: Promises
+              - generic [ref=e95]: Customer commitments and due dates
+          - link "Deals Stage gates, holders, and blockers" [ref=e96] [cursor=pointer]:
+            - /url: /deals/handoff?locale=en
+            - img [ref=e97]
+            - generic [ref=e101]:
+              - generic [ref=e102]: Deals
+              - generic [ref=e103]: Stage gates, holders, and blockers
+          - link "Cases Filtered case queue" [ref=e104] [cursor=pointer]:
+            - /url: /complaints?locale=en
+            - img [ref=e105]
+            - generic [ref=e108]:
+              - generic [ref=e109]: Cases
+              - generic [ref=e110]: Filtered case queue
+          - link "Reports Accountability dashboards" [ref=e111] [cursor=pointer]:
+            - /url: /reports?locale=en
+            - img [ref=e112]
+            - generic [ref=e115]:
+              - generic [ref=e116]: Reports
+              - generic [ref=e117]: Accountability dashboards
+          - link "Team Overdue, stuck, and promise work" [ref=e118] [cursor=pointer]:
+            - /url: /tasks/manager?locale=en
+            - img [ref=e119]
+            - generic [ref=e123]:
+              - generic [ref=e124]: Team
+              - generic [ref=e125]: Overdue, stuck, and promise work
+          - link "Overview SLA and workload summary" [ref=e126] [cursor=pointer]:
+            - /url: /dashboard?locale=en
+            - img [ref=e127]
+            - generic [ref=e130]:
+              - generic [ref=e131]: Overview
+              - generic [ref=e132]: SLA and workload summary
+          - link "New intake Capture a customer case" [ref=e133] [cursor=pointer]:
+            - /url: /complaints/new?locale=en
+            - img [ref=e134]
+            - generic [ref=e137]:
+              - generic [ref=e138]: New intake
+              - generic [ref=e139]: Capture a customer case
+          - link "Admin Users, branches, categories" [ref=e140] [cursor=pointer]:
+            - /url: /admin?locale=en
+            - img [ref=e141]
+            - generic [ref=e152]:
+              - generic [ref=e153]: Admin
+              - generic [ref=e154]: Users, branches, categories
+          - link "Audit Admin review trail" [ref=e155] [cursor=pointer]:
+            - /url: /audit?locale=en
+            - img [ref=e156]
+            - generic [ref=e160]:
+              - generic [ref=e161]: Audit
+              - generic [ref=e162]: Admin review trail
+          - link "Notifications Staff notification center" [ref=e163] [cursor=pointer]:
+            - /url: /notifications?locale=en
+            - img [ref=e164]
+            - generic [ref=e167]:
+              - generic [ref=e168]: Notifications
+              - generic [ref=e169]: Staff notification center
+      - generic "Employee Today" [ref=e171]:
+        - generic [ref=e173]:
+          - generic [ref=e174]:
+            - generic [ref=e175]: Employee Today
+            - paragraph [ref=e176]: Your server-authorized task list for the work that can be forgotten.
+          - generic [ref=e177]: 2 tasks
+        - generic [ref=e178]:
+          - generic [ref=e179]:
+            - generic [ref=e180]:
+              - heading "Quick add task" [level=2] [ref=e181]
+              - generic [ref=e182]:
+                - checkbox "Customer promise" [ref=e183]
+                - text: Customer promise
+            - generic [ref=e184]:
+              - generic [ref=e185]:
+                - generic [ref=e186]: Title
+                - textbox "Title" [ref=e187]
+              - generic [ref=e188]:
+                - generic [ref=e189]: Who should do it?
+                - generic [ref=e190]:
+                  - combobox "Who should do it?" [ref=e191]:
+                    - option "Search staff by name, role, or branch" [disabled] [selected]
+                    - option "Layla Al-Farsi - CR Manager - Main Branch"
+                    - option "Local Staff Admin - CR Officer - Main Branch"
+                    - option "Local Staff Admin - CR Manager - Main Branch"
+                    - option "Local Staff Admin - Branch Manager - North Branch"
+                    - option "P2B Fix Manager - CR Manager - Main Branch"
+                    - option "P2B Fix Manager - CR Manager - Main Branch"
+                    - option "P2B North Manager - Branch Manager - North Branch"
+                    - option "P2B North Manager - Branch Manager - North Branch"
+                    - option "Sara Al-Dosari - Branch Manager - North Branch"
+                    - option "System Admin - System Admin"
+                  - button "Clear selected staff" [ref=e192] [cursor=pointer]:
+                    - img
+                - paragraph [ref=e193]: Choose a staff member from the list.
+              - generic [ref=e194]:
+                - generic [ref=e195]: When
+                - textbox "When" [ref=e196]
+              - generic [ref=e197]:
+                - generic [ref=e198]: Due
+                - textbox "Due" [ref=e199]
+              - generic [ref=e201]:
+                - generic [ref=e202]:
+                  - generic [ref=e203]: Related to
+                  - combobox "Related to" [ref=e204]:
+                    - option "Customer" [selected]
+                    - option "Complaint"
+                    - option "Case"
+                    - option "Deal"
+                - generic [ref=e205]:
+                  - generic [ref=e206]: Record
+                  - generic [ref=e207]:
+                    - combobox "Record" [ref=e208]:
+                      - option "Search records by name, phone, reference, stage, or status" [selected]
+                      - option "P2B Fix Customer - +966557977878 - Main Branch"
+                      - option "P2B Fix Customer - +966557825913 - Main Branch"
+                      - option "P2B CAPA Proof Customer - +201000000001 - Main Branch"
+                      - option "Nora Al-Qahtani - +966500000002 - North Branch"
+                      - option "Faisal Al-Otaibi - +966500000001 - Main Branch"
+                    - button "Clear related record" [ref=e209] [cursor=pointer]:
+                      - img
+                  - paragraph [ref=e210]: Choose a related record when this task belongs to a customer, complaint, case, or deal.
+            - generic [ref=e211]:
+              - generic [ref=e212]: What
+              - textbox "What" [ref=e213]
+            - button "Add task" [ref=e215] [cursor=pointer]
+          - generic [ref=e216]:
+            - region "Overdue" [ref=e217]:
+              - generic [ref=e218]:
+                - generic [ref=e219]:
+                  - heading "Overdue" [level=2] [ref=e220]
+                  - paragraph [ref=e221]: Past due and needs recovery
+                - generic [ref=e222]: "0"
+              - paragraph [ref=e223]: No tasks in this section.
+            - region "Due today" [ref=e224]:
+              - generic [ref=e225]:
+                - generic [ref=e226]:
+                  - heading "Due today" [level=2] [ref=e227]
+                  - paragraph [ref=e228]: Must move before the day ends
+                - generic [ref=e229]: "2"
+              - generic [ref=e230]:
+                - article [ref=e231]:
+                  - generic [ref=e232]:
+                    - generic [ref=e233]:
+                      - heading "P11B smoke linked customer task" [level=3] [ref=e234]
+                      - paragraph [ref=e235]: cmqo89pw90006n3qh1bj0nk8f
+                    - generic [ref=e237]: OPEN
+                  - generic [ref=e238]:
+                    - generic [ref=e239]:
+                      - term [ref=e240]: Who should do it?
+                      - definition [ref=e241]: Local Staff Admin
+                    - generic [ref=e242]:
+                      - term [ref=e243]: Due
+                      - definition [ref=e244]: 2026-06-22 06:00
+                    - generic [ref=e245]:
+                      - term [ref=e246]: Created by
+                      - definition [ref=e247]: System Admin
+                    - generic [ref=e248]:
+                      - term [ref=e249]: Branch
+                      - definition [ref=e250]: Main Branch
+                    - generic [ref=e251]:
+                      - term [ref=e252]: Updated
+                      - definition [ref=e253]: 2026-06-21 20:17
+                  - generic [ref=e254]:
+                    - paragraph [ref=e255]: Next action
+                    - paragraph [ref=e256]: Follow up from related customer picker
+                    - paragraph [ref=e257]: "Who follows up?: Local Staff Admin - 2026-06-21 20:30"
+                  - generic [ref=e258]:
+                    - generic [ref=e259]:
+                      - button "Done" [ref=e261] [cursor=pointer]
+                      - button "Waiting" [ref=e263] [cursor=pointer]
+                    - generic [ref=e264]:
+                      - generic [ref=e265]:
+                        - generic [ref=e266]: Who should do it?
+                        - generic [ref=e267]:
+                          - combobox "Who should do it?" [ref=e268]:
+                            - option "Search staff by name, role, or branch" [disabled]
+                            - option "Layla Al-Farsi - CR Manager - Main Branch"
+                            - option "Local Staff Admin - CR Officer - Main Branch" [selected]
+                            - option "Local Staff Admin - CR Manager - Main Branch"
+                            - option "Local Staff Admin - Branch Manager - North Branch"
+                            - option "P2B Fix Manager - CR Manager - Main Branch"
+                            - option "P2B Fix Manager - CR Manager - Main Branch"
+                            - option "P2B North Manager - Branch Manager - North Branch"
+                            - option "P2B North Manager - Branch Manager - North Branch"
+                            - option "Sara Al-Dosari - Branch Manager - North Branch"
+                            - option "System Admin - System Admin"
+                          - button "Clear selected staff" [ref=e269] [cursor=pointer]:
+                            - img
+                        - paragraph [ref=e270]: "Selected: Local Staff Admin - CR Officer - Main Branch"
+                      - generic [ref=e271]:
+                        - generic [ref=e272]: Next action
+                        - textbox "Next action Next action" [ref=e273]: Follow up from related customer picker
+                      - generic [ref=e274]:
+                        - generic [ref=e275]: Who follows up?
+                        - generic [ref=e276]:
+                          - combobox "Who follows up?" [ref=e277]:
+                            - option "Search staff by name, role, or branch" [disabled]
+                            - option "Layla Al-Farsi - CR Manager - Main Branch"
+                            - option "Local Staff Admin - CR Officer - Main Branch" [selected]
+                            - option "Local Staff Admin - CR Manager - Main Branch"
+                            - option "Local Staff Admin - Branch Manager - North Branch"
+                            - option "P2B Fix Manager - CR Manager - Main Branch"
+                            - option "P2B Fix Manager - CR Manager - Main Branch"
+                            - option "P2B North Manager - Branch Manager - North Branch"
+                            - option "P2B North Manager - Branch Manager - North Branch"
+                            - option "Sara Al-Dosari - Branch Manager - North Branch"
+                            - option "System Admin - System Admin"
+                          - button "Clear selected staff" [ref=e278] [cursor=pointer]:
+                            - img
+                        - paragraph [ref=e279]: "Selected: Local Staff Admin - CR Officer - Main Branch"
+                      - generic [ref=e280]:
+                        - generic [ref=e281]: When
+                        - textbox "When" [ref=e282]: 2026-06-21T20:30
+                      - button "Update" [ref=e284] [cursor=pointer]
+                  - generic "Task links" [ref=e285]:
+                    - generic [ref=e286]:
+                      - text: "CUSTOMER:"
+                      - generic "cmqnx47sp000lythm6kofbij1" [ref=e287]: cmqnx47sp0...bij1
+                - article [ref=e288]:
+                  - generic [ref=e289]:
+                    - generic [ref=e290]:
+                      - heading "Smoke picker task native" [level=3] [ref=e291]
+                      - paragraph [ref=e292]: cmqo77bk1000bf99ahk5wju3j
+                    - generic [ref=e294]: OPEN
+                  - generic [ref=e295]:
+                    - generic [ref=e296]:
+                      - term [ref=e297]: Who should do it?
+                      - definition [ref=e298]: Layla Al-Farsi
+                    - generic [ref=e299]:
+                      - term [ref=e300]: Due
+                      - definition [ref=e301]: 2026-06-22 07:00
+                    - generic [ref=e302]:
+                      - term [ref=e303]: Created by
+                      - definition [ref=e304]: System Admin
+                    - generic [ref=e305]:
+                      - term [ref=e306]: Branch
+                      - definition [ref=e307]: Main Branch
+                    - generic [ref=e308]:
+                      - term [ref=e309]: Updated
+                      - definition [ref=e310]: 2026-06-21 19:47
+                  - generic [ref=e311]:
+                    - paragraph [ref=e312]: Next action
+                    - paragraph [ref=e313]: Confirm picker native path.
+                    - paragraph [ref=e314]: "Who follows up?: Layla Al-Farsi - 2026-06-22 06:00"
+                  - generic [ref=e315]:
+                    - generic [ref=e316]:
+                      - button "Done" [ref=e318] [cursor=pointer]
+                      - button "Waiting" [ref=e320] [cursor=pointer]
+                    - generic [ref=e321]:
+                      - generic [ref=e322]:
+                        - generic [ref=e323]: Who should do it?
+                        - generic [ref=e324]:
+                          - combobox "Who should do it?" [ref=e325]:
+                            - option "Search staff by name, role, or branch" [disabled]
+                            - option "Layla Al-Farsi - CR Manager - Main Branch" [selected]
+                            - option "Local Staff Admin - CR Officer - Main Branch"
+                            - option "Local Staff Admin - CR Manager - Main Branch"
+                            - option "Local Staff Admin - Branch Manager - North Branch"
+                            - option "P2B Fix Manager - CR Manager - Main Branch"
+                            - option "P2B Fix Manager - CR Manager - Main Branch"
+                            - option "P2B North Manager - Branch Manager - North Branch"
+                            - option "P2B North Manager - Branch Manager - North Branch"
+                            - option "Sara Al-Dosari - Branch Manager - North Branch"
+                            - option "System Admin - System Admin"
+                          - button "Clear selected staff" [ref=e326] [cursor=pointer]:
+                            - img
+                        - paragraph [ref=e327]: "Selected: Layla Al-Farsi - CR Manager - Main Branch"
+                      - generic [ref=e328]:
+                        - generic [ref=e329]: Next action
+                        - textbox [ref=e330]: Confirm picker native path.
+                      - generic [ref=e331]:
+                        - generic [ref=e332]: Who follows up?
+                        - generic [ref=e333]:
+                          - combobox "Who follows up?" [ref=e334]:
+                            - option "Search staff by name, role, or branch" [disabled]
+                            - option "Layla Al-Farsi - CR Manager - Main Branch" [selected]
+                            - option "Local Staff Admin - CR Officer - Main Branch"
+                            - option "Local Staff Admin - CR Manager - Main Branch"
+                            - option "Local Staff Admin - Branch Manager - North Branch"
+                            - option "P2B Fix Manager - CR Manager - Main Branch"
+                            - option "P2B Fix Manager - CR Manager - Main Branch"
+                            - option "P2B North Manager - Branch Manager - North Branch"
+                            - option "P2B North Manager - Branch Manager - North Branch"
+                            - option "Sara Al-Dosari - Branch Manager - North Branch"
+                            - option "System Admin - System Admin"
+                          - button "Clear selected staff" [ref=e335] [cursor=pointer]:
+                            - img
+                        - paragraph [ref=e336]: "Selected: Layla Al-Farsi - CR Manager - Main Branch"
+                      - generic [ref=e337]:
+                        - generic [ref=e338]: When
+                        - textbox "When" [ref=e339]: 2026-06-22T06:00
+                      - button "Update" [ref=e341] [cursor=pointer]
+            - region "Waiting on me" [ref=e342]:
+              - generic [ref=e343]:
+                - generic [ref=e344]:
+                  - heading "Waiting on me" [level=2] [ref=e345]
+                  - paragraph [ref=e346]: The next action is assigned to you
+                - generic [ref=e347]: "0"
+              - paragraph [ref=e348]: No tasks in this section.
+            - region "Assigned to me" [ref=e349]:
+              - generic [ref=e350]:
+                - generic [ref=e351]:
+                  - heading "Assigned to me" [level=2] [ref=e352]
+                  - paragraph [ref=e353]: Tasks you own operationally
+                - generic [ref=e354]: "0"
+              - paragraph [ref=e355]: No tasks in this section.
+            - region "Overdue promises" [ref=e356]:
+              - generic [ref=e357]:
+                - generic [ref=e358]:
+                  - heading "Overdue promises" [level=2] [ref=e359]
+                  - paragraph [ref=e360]: Customer promises past their due time
+                - generic [ref=e361]: "0"
+              - paragraph [ref=e362]: No tasks in this section.

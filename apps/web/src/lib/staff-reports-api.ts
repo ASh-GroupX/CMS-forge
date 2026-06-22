@@ -22,6 +22,12 @@ export type StaffReportKpis = {
   averageResolutionHours: number;
 };
 
+export type StaffReportFilters = {
+  branchId?: string;
+  categoryId?: string;
+  ownerId?: string;
+};
+
 type ReportsResponse = { items?: Partial<StaffReportRow>[] };
 type KpiResponse = { kpis?: Partial<StaffReportKpis> };
 
@@ -30,17 +36,21 @@ const STAFF_SESSION_COOKIE = 'cms_staff_session';
 export async function getStaffReportRows({
   apiUrl = process.env.API_URL ?? 'http://localhost:3000',
   cookieHeader,
+  filters = {},
   fetchImpl = fetch,
 }: {
   apiUrl?: string;
   cookieHeader?: string;
+  filters?: StaffReportFilters;
   fetchImpl?: typeof fetch;
 } = {}): Promise<StaffReportRow[] | null> {
   const cookies = cookieHeader ?? await incomingCookieHeader();
   if (!hasStaffSessionCookie(cookies)) return null;
 
   try {
-    const response = await fetchImpl(new URL('/reports', apiUrl), {
+    const url = new URL('/reports', apiUrl);
+    appendFilters(url, filters);
+    const response = await fetchImpl(url, {
       cache: 'no-store',
       headers: { Accept: 'application/json', cookie: cookies },
     });
@@ -48,6 +58,12 @@ export async function getStaffReportRows({
     return rowsFrom((await response.json()) as ReportsResponse);
   } catch {
     return null;
+  }
+}
+
+function appendFilters(url: URL, filters: StaffReportFilters): void {
+  for (const [key, value] of Object.entries(filters)) {
+    if (value?.trim()) url.searchParams.set(key, value.trim());
   }
 }
 

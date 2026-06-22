@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ComplaintSeverity, ComplaintStatus, RoleCode, SlaStage, WorkingCalendarMode } from '@prisma/client';
 import { AuditService } from '../../core/audit.service.js';
 import { ComplaintsService } from '../complaints/complaints.service.js';
@@ -55,10 +55,15 @@ export const MAX_REPORT_EXPORT_ROWS = 1000;
 @Injectable()
 export class ReportsService {
   constructor(
+    @Inject(ReportsRepository)
     private readonly reportsRepository: ReportsRepository,
+    @Inject(ComplaintsService)
     private readonly complaintsService: ComplaintsService,
+    @Inject(SlaService)
     private readonly slaService: SlaService,
+    @Inject(SurveysService)
     private readonly surveysService: SurveysService,
+    @Inject(AuditService)
     private readonly auditService?: AuditService,
   ) {}
 

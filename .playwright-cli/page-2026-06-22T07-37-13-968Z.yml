@@ -1,0 +1,41 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - paragraph [ref=e6]: Dealership accountability desk
+        - generic [ref=e7]:
+          - heading "Staff Operations" [level=1] [ref=e8]
+          - generic [ref=e9]: Signed out
+      - generic [ref=e10]:
+        - link "Switch language" [ref=e11] [cursor=pointer]:
+          - /url: "?locale=ar"
+          - text: العربية
+        - button "Toggle theme" [ref=e12] [cursor=pointer]:
+          - img [ref=e13]
+          - generic [ref=e15]: Dark mode
+    - generic [ref=e17]:
+      - generic [ref=e19]:
+        - paragraph [ref=e20]: Dealership accountability desk
+        - heading "Staff Operations" [level=1] [ref=e21]
+        - paragraph [ref=e22]: All authorized branches
+      - region "Staff sign in" [ref=e23]:
+        - heading "Staff sign in" [level=2] [ref=e24]
+        - generic [ref=e25]:
+          - generic [ref=e26]:
+            - text: Username
+            - textbox "Username" [ref=e27]
+          - generic [ref=e28]:
+            - text: Password
+            - textbox "Password" [ref=e29]
+          - button "Sign in" [ref=e30] [cursor=pointer]
+        - generic "Password reset" [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e33]: Password reset
+            - paragraph [ref=e34]: Use this if you cannot sign in.
+          - generic [ref=e36]:
+            - link "Forgot password?" [ref=e37] [cursor=pointer]:
+              - /url: "?locale=en&reset=request"
+            - link "Use reset token" [ref=e38] [cursor=pointer]:
+              - /url: "?locale=en&reset=token"
+  - button "Open Next.js Dev Tools" [ref=e44] [cursor=pointer]:
+    - img [ref=e45]

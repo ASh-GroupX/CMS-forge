@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 const formats = new Set(['csv', 'excel']);
+const filterKeys = ['branchId', 'categoryId', 'ownerId', 'severity', 'dateFrom', 'dateTo'] as const;
 
 export async function GET(request: Request): Promise<Response> {
   const source = new URL(request.url);
@@ -9,6 +10,10 @@ export async function GET(request: Request): Promise<Response> {
 
   const target = new URL('/reports/export', process.env.API_URL ?? 'http://localhost:3000');
   target.searchParams.set('format', format);
+  for (const key of filterKeys) {
+    const value = source.searchParams.get(key);
+    if (value?.trim()) target.searchParams.set(key, value.trim());
+  }
 
   try {
     const response = await fetch(target, {

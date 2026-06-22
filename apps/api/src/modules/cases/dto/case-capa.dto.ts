@@ -3,6 +3,7 @@ import { CapaActionStatus } from '@prisma/client';
 import { AppException } from '../../../core/http-kernel.js';
 
 export type CreateCapaRequestDto = {
+  ownerId?: string | null;
   rootCause: string;
   correctiveAction: string;
   preventiveAction: string;
@@ -17,6 +18,7 @@ export function parseCreateCapaBody(body: unknown): CreateCapaRequestDto {
     correctiveAction: requiredText(input?.correctiveAction, 'correctiveAction'),
     preventiveAction: requiredText(input?.preventiveAction, 'preventiveAction'),
     dueAt: requiredDate(input?.dueAt, 'dueAt'),
+    ...(input?.ownerId ? { ownerId: requiredText(input.ownerId, 'ownerId') } : {}),
     ...(input?.status ? { status: validStatus(input.status) } : {}),
   };
 }
@@ -26,6 +28,7 @@ export function toCreateCapaInput(caseId: string, body: CreateCapaRequestDto) {
     caseId,
     correctiveAction: body.correctiveAction,
     dueAt: body.dueAt,
+    ownerId: body.ownerId ?? null,
     preventiveAction: body.preventiveAction,
     rootCause: body.rootCause,
     status: body.status ?? CapaActionStatus.OPEN,

@@ -1,0 +1,312 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - paragraph [ref=e6]: مكتب مساءلة الوكالة
+        - generic [ref=e7]:
+          - heading "عمليات الموظفين" [level=1] [ref=e8]
+          - generic [ref=e9]: تم تسجيل الدخول
+      - generic [ref=e10]:
+        - link "تبديل اللغة" [ref=e11] [cursor=pointer]:
+          - /url: "?locale=en"
+          - text: English
+        - button "تبديل المظهر" [ref=e12] [cursor=pointer]:
+          - img [ref=e13]
+          - generic [ref=e15]: الوضع الداكن
+  - generic [ref=e16]:
+    - complementary [ref=e17]:
+      - generic [ref=e18]:
+        - paragraph [ref=e19]: مكتب مساءلة الوكالة
+        - heading "عمليات الموظفين" [level=1] [ref=e20]
+        - paragraph [ref=e21]: كل الفروع المصرح بها
+        - paragraph [ref=e22]: تم تسجيل الدخول
+        - button "تسجيل الخروج" [ref=e24] [cursor=pointer]
+      - navigation "عمليات الموظفين" [ref=e25]:
+        - link "اليوم المهام المستحقة والمتأخرة والعالقة" [ref=e26] [cursor=pointer]:
+          - /url: /tasks/today?locale=ar
+          - img [ref=e27]
+          - generic [ref=e30]:
+            - generic [ref=e31]: اليوم
+            - generic [ref=e32]: المهام المستحقة والمتأخرة والعالقة
+        - link "المهام المرسلة مهام أسندتها إلى زملاء" [ref=e33] [cursor=pointer]:
+          - /url: /tasks/sent?locale=ar
+          - img [ref=e34]
+          - generic [ref=e37]:
+            - generic [ref=e38]: المهام المرسلة
+            - generic [ref=e39]: مهام أسندتها إلى زملاء
+        - link "الوعود التزامات العملاء ومواعيدها" [ref=e40] [cursor=pointer]:
+          - /url: /tasks/promises?locale=ar
+          - img [ref=e41]
+          - generic [ref=e46]:
+            - generic [ref=e47]: الوعود
+            - generic [ref=e48]: التزامات العملاء ومواعيدها
+        - link "الصفقات المراحل والمسؤولون والعوائق" [ref=e49] [cursor=pointer]:
+          - /url: /deals/handoff?locale=ar
+          - img [ref=e50]
+          - generic [ref=e54]:
+            - generic [ref=e55]: الصفقات
+            - generic [ref=e56]: المراحل والمسؤولون والعوائق
+        - link "الحالات قائمة حالات قابلة للتصفية" [ref=e57] [cursor=pointer]:
+          - /url: /complaints?locale=ar
+          - img [ref=e58]
+          - generic [ref=e61]:
+            - generic [ref=e62]: الحالات
+            - generic [ref=e63]: قائمة حالات قابلة للتصفية
+        - link "التقارير لوحات المساءلة" [ref=e64] [cursor=pointer]:
+          - /url: /reports?locale=ar
+          - img [ref=e65]
+          - generic [ref=e68]:
+            - generic [ref=e69]: التقارير
+            - generic [ref=e70]: لوحات المساءلة
+        - link "الفريق المهام المتأخرة والعالقة ووعود العملاء" [ref=e71] [cursor=pointer]:
+          - /url: /tasks/manager?locale=ar
+          - img [ref=e72]
+          - generic [ref=e76]:
+            - generic [ref=e77]: الفريق
+            - generic [ref=e78]: المهام المتأخرة والعالقة ووعود العملاء
+        - link "نظرة عامة ملخص SLA وعبء العمل" [ref=e79] [cursor=pointer]:
+          - /url: /dashboard?locale=ar
+          - img [ref=e80]
+          - generic [ref=e83]:
+            - generic [ref=e84]: نظرة عامة
+            - generic [ref=e85]: ملخص SLA وعبء العمل
+        - link "مدخل جديد تسجيل حالة عميل" [ref=e86] [cursor=pointer]:
+          - /url: /complaints/new?locale=ar
+          - img [ref=e87]
+          - generic [ref=e90]:
+            - generic [ref=e91]: مدخل جديد
+            - generic [ref=e92]: تسجيل حالة عميل
+        - link "الإدارة المستخدمون والفروع والتصنيفات" [ref=e93] [cursor=pointer]:
+          - /url: /admin?locale=ar
+          - img [ref=e94]
+          - generic [ref=e105]:
+            - generic [ref=e106]: الإدارة
+            - generic [ref=e107]: المستخدمون والفروع والتصنيفات
+        - link "التدقيق سجل مراجعة الإدارة" [ref=e108] [cursor=pointer]:
+          - /url: /audit?locale=ar
+          - img [ref=e109]
+          - generic [ref=e113]:
+            - generic [ref=e114]: التدقيق
+            - generic [ref=e115]: سجل مراجعة الإدارة
+        - link "الإشعارات مركز إشعارات الموظفين" [ref=e116] [cursor=pointer]:
+          - /url: /notifications?locale=ar
+          - img [ref=e117]
+          - generic [ref=e120]:
+            - generic [ref=e121]: الإشعارات
+            - generic [ref=e122]: مركز إشعارات الموظفين
+    - generic "تفاصيل الشكوى" [ref=e124]:
+      - generic [ref=e125]:
+        - generic [ref=e126]: تفاصيل الشكوى
+        - paragraph [ref=e127]: معاينة مساحة حالة مصرح بها.
+      - generic [ref=e128]:
+        - generic [ref=e129]:
+          - region "بيانات الشكوى" [ref=e130]:
+            - heading "بيانات الشكوى" [level=3] [ref=e131]
+            - generic [ref=e132]:
+              - generic [ref=e133]:
+                - term [ref=e134]: المرجع
+                - definition [ref=e135]: CMP-000006
+              - generic [ref=e136]:
+                - term [ref=e137]: الحالة
+                - definition [ref=e138]: SUBMITTED
+              - generic [ref=e139]:
+                - term [ref=e140]: الخطورة
+                - definition [ref=e141]: MEDIUM
+              - generic [ref=e142]:
+                - term [ref=e143]: التصنيف
+                - definition [ref=e144]: P2B CAPA smoke
+          - region "المالك و SLA" [ref=e145]:
+            - heading "المالك و SLA" [level=3] [ref=e146]
+            - generic [ref=e147]:
+              - generic [ref=e148]:
+                - term [ref=e149]: المالك الحالي
+                - definition [ref=e150]: قائمة فريق خدمة العملاء
+              - generic [ref=e151]:
+                - term [ref=e152]: مؤقت SLA
+                - definition [ref=e153]: cmqnx47mh0000ythmcv0gxhyo
+          - region "بيانات العميل" [ref=e154]:
+            - heading "بيانات العميل" [level=3] [ref=e155]
+            - generic [ref=e156]:
+              - generic [ref=e157]:
+                - term [ref=e158]: عميل محجوب
+                - definition [ref=e159]: عنصر عميل محجوب
+              - generic [ref=e160]:
+                - term [ref=e161]: التواصل
+                - definition [ref=e162]: محجوب حسب الدور
+          - region "بيانات المركبة" [ref=e163]:
+            - heading "بيانات المركبة" [level=3] [ref=e164]
+            - generic [ref=e165]:
+              - generic [ref=e166]:
+                - term [ref=e167]: المركبة
+                - definition [ref=e168]: ملخص مركبة تجريبي
+              - generic [ref=e169]:
+                - term [ref=e170]: VIN
+                - definition [ref=e171]: VIN محجوب
+        - generic [ref=e172]:
+          - region "الخط الزمني" [ref=e173]:
+            - heading "الخط الزمني" [level=3] [ref=e174]
+            - list [ref=e175]:
+              - listitem [ref=e176]: SUBMITTED - 2026-06-21
+          - region "الخط الزمني للحالة" [ref=e177]:
+            - heading "الخط الزمني للحالة" [level=3] [ref=e178]
+            - generic [ref=e179]:
+              - generic [ref=e180]:
+                - term [ref=e181]: معرف الحالة
+                - definition [ref=e182]: cmqnzb43q0006sk8d65cnyxhw
+              - generic [ref=e183]:
+                - term [ref=e184]: نوع الحالة
+                - definition [ref=e185]: CUSTOMER_COMPLAINT
+              - generic [ref=e186]:
+                - term [ref=e187]: الحالة
+                - definition [ref=e188]: SUBMITTED
+              - generic [ref=e189]:
+                - term [ref=e190]: دورة الحياة
+                - definition [ref=e191]: DRAFT
+              - generic [ref=e192]:
+                - term [ref=e193]: فرع الحالة
+                - definition [ref=e194]: Main Branch
+              - generic [ref=e195]:
+                - term [ref=e196]: مالك الحالة
+                - definition [ref=e197]: P2B Fix Manager
+            - list [ref=e198]:
+              - listitem [ref=e199]: CASE CREATED - 2026-06-21
+              - listitem [ref=e200]: CASE LINKED - 2026-06-21
+              - listitem [ref=e201]: CASE LIFECYCLE - 2026-06-21
+              - listitem [ref=e202]: Complaint SUBMITTED - 2026-06-21
+              - listitem [ref=e203]: CAPA ACTION CREATED - 2026-06-21
+              - listitem [ref=e204]: CAPA ACTION CREATED - 2026-06-21
+              - listitem [ref=e205]: CAPA ACTION CREATED - 2026-06-21
+              - listitem [ref=e206]: CAPA ACTION CREATED - 2026-06-22
+          - region "CAPA" [ref=e207]:
+            - heading "CAPA" [level=3] [ref=e208]
+            - list [ref=e209]:
+              - listitem [ref=e210]:
+                - generic [ref=e211]: Late parts confirmation
+                - generic [ref=e212]: Call customer before 10 AM
+                - generic [ref=e213]: Daily parts delay review
+                - generic [ref=e214]: P2B Fix Manager - مفتوح - 2026-06-25
+              - listitem [ref=e215]:
+                - generic [ref=e216]: Browser root cause after csrf fix
+                - generic [ref=e217]: Browser corrective action after csrf fix
+                - generic [ref=e218]: Browser preventive action after csrf fix
+                - generic [ref=e219]: P2B Fix Manager - مفتوح - 2026-06-26
+              - listitem [ref=e220]:
+                - generic [ref=e221]: Browser root cause final no error
+                - generic [ref=e222]: Browser corrective action final no error
+                - generic [ref=e223]: Browser preventive action final no error
+                - generic [ref=e224]: P2B Fix Manager - مفتوح - 2026-06-27
+              - listitem [ref=e225]:
+                - generic [ref=e226]: P11D owner picker root cause
+                - generic [ref=e227]: P11D owner picker corrective action
+                - generic [ref=e228]: P11D owner picker preventive action
+                - generic [ref=e229]: P2B Fix Manager - مفتوح - 2026-06-28
+            - generic [ref=e230]:
+              - generic [ref=e231]:
+                - generic [ref=e232]: المسؤول عن CAPA
+                - generic [ref=e233]:
+                  - combobox "المسؤول عن CAPA" [ref=e234]:
+                    - option "ابحث بالاسم أو الدور أو الفرع" [disabled]
+                    - option "Layla Al-Farsi - مدير علاقات العملاء - الفرع الرئيسي"
+                    - option "Local Staff Admin - موظف علاقات العملاء - الفرع الرئيسي"
+                    - option "Local Staff Admin - مدير علاقات العملاء - الفرع الرئيسي"
+                    - option "Local Staff Admin - مدير الفرع - فرع الشمال"
+                    - option "P2B Fix Manager - مدير علاقات العملاء - الفرع الرئيسي"
+                    - option "P2B Fix Manager - مدير علاقات العملاء - الفرع الرئيسي" [selected]
+                    - option "P2B North Manager - مدير الفرع - فرع الشمال"
+                    - option "P2B North Manager - مدير الفرع - فرع الشمال"
+                    - option "Sara Al-Dosari - مدير الفرع - فرع الشمال"
+                    - option "مدير النظام - مدير النظام"
+                  - button "مسح الموظف المختار" [ref=e235] [cursor=pointer]:
+                    - img
+                - paragraph [ref=e236]: "تم الاختيار: P2B Fix Manager - مدير علاقات العملاء - الفرع الرئيسي"
+              - generic [ref=e237]:
+                - generic [ref=e238]: السبب الجذري
+                - textbox "السبب الجذري" [ref=e239]
+              - generic [ref=e240]:
+                - generic [ref=e241]: الإجراء التصحيحي
+                - textbox "الإجراء التصحيحي" [ref=e242]
+              - generic [ref=e243]:
+                - generic [ref=e244]: الإجراء الوقائي
+                - textbox "الإجراء الوقائي" [ref=e245]
+              - generic [ref=e246]:
+                - generic [ref=e247]: تاريخ الاستحقاق
+                - textbox "تاريخ الاستحقاق" [ref=e248]
+              - generic [ref=e249]:
+                - generic [ref=e250]: الحالة
+                - combobox [ref=e251] [cursor=pointer]:
+                  - img [ref=e252]
+                - combobox [ref=e254]
+              - button "إنشاء CAPA" [ref=e255] [cursor=pointer]
+          - region "نتائج الاستبيان" [ref=e256]:
+            - heading "نتائج الاستبيان" [level=3] [ref=e257]
+            - generic [ref=e258]:
+              - generic [ref=e259]:
+                - term [ref=e260]: التقييم
+                - definition [ref=e261]: 4 / 5
+              - generic [ref=e262]:
+                - term [ref=e263]: تم الإرسال
+                - definition [ref=e264]: عنصر استبيان مرسل
+          - region "المرفقات" [ref=e265]:
+            - generic [ref=e266]:
+              - heading "المرفقات" [level=3] [ref=e267]
+              - generic [ref=e268]: الفحص قيد الانتظار
+            - generic [ref=e269]:
+              - generic [ref=e270]:
+                - term [ref=e271]: الملف
+                - definition [ref=e272]: supporting-document.pdf
+              - generic [ref=e273]:
+                - term [ref=e274]: حالة الفحص
+                - definition [ref=e275]: الفحص قيد الانتظار
+            - generic [ref=e276]:
+              - button "رفع ملف" [disabled]
+              - button "تنزيل عند التصريح" [disabled]
+            - list [ref=e277]:
+              - listitem [ref=e278]: الخادم يصرح كل رفع وتنزيل
+              - listitem [ref=e279]: لا تظهر روابط التخزين في المتصفح
+        - dialog "إجراء سير العمل" [ref=e280]:
+          - generic [ref=e282]:
+            - heading "إجراء سير العمل" [level=3] [ref=e283]
+            - paragraph [ref=e284]: إتاحة الإجراء تأتي من سياسة الخادم.
+          - generic [ref=e285]:
+            - button "موافقة" [disabled]
+            - button "إرجاع" [disabled]
+            - button "إسناد" [disabled]
+            - button "تحقيق" [disabled]
+            - button "حل" [disabled]
+            - button "إغلاق" [disabled]
+            - button "رفض" [disabled]
+            - button "إعادة فتح" [disabled]
+          - generic [ref=e286]:
+            - text: تعليق مطلوب
+            - textbox "تعليق مطلوب" [ref=e287]
+        - region "تعليقات داخلية / تحديثات عامة" [ref=e288]:
+          - region "تعليقات داخلية" [ref=e289]:
+            - generic [ref=e290]:
+              - heading "تعليقات داخلية" [level=3] [ref=e291]
+              - generic [ref=e292]: داخلي فقط
+            - generic [ref=e293]:
+              - generic [ref=e294]:
+                - term [ref=e295]: المؤلف
+                - definition [ref=e296]: موظف مصرح
+              - generic [ref=e297]:
+                - term [ref=e298]: الوقت
+                - definition [ref=e299]: 2026-06-19 10:00
+              - generic [ref=e300]:
+                - term [ref=e301]: الظهور
+                - definition [ref=e302]: داخلي فقط
+            - paragraph [ref=e303]: عنصر ملاحظة للموظفين فقط
+          - region "تحديثات عامة" [ref=e304]:
+            - generic [ref=e305]:
+              - heading "تحديثات عامة" [level=3] [ref=e306]
+              - generic [ref=e307]: مرئي للعميل
+            - generic [ref=e308]:
+              - generic [ref=e309]:
+                - term [ref=e310]: المؤلف
+                - definition [ref=e311]: موظف مصرح
+              - generic [ref=e312]:
+                - term [ref=e313]: الوقت
+                - definition [ref=e314]: 2026-06-19 10:00
+              - generic [ref=e315]:
+                - term [ref=e316]: الظهور
+                - definition [ref=e317]: مرئي للعميل
+            - paragraph [ref=e318]: عنصر تحديث مرئي للعميل

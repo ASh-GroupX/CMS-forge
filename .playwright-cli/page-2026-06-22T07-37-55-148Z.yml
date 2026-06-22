@@ -1,0 +1,241 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - paragraph [ref=e6]: Dealership accountability desk
+          - generic [ref=e7]:
+            - heading "Staff Operations" [level=1] [ref=e8]
+            - generic [ref=e9]: Signed in
+        - generic [ref=e10]:
+          - link "Switch language" [ref=e11] [cursor=pointer]:
+            - /url: "?locale=ar"
+            - text: العربية
+          - button "Toggle theme" [ref=e12] [cursor=pointer]:
+            - img [ref=e13]
+            - generic [ref=e15]: Dark mode
+    - generic [ref=e16]:
+      - complementary [ref=e17]:
+        - generic [ref=e18]:
+          - paragraph [ref=e19]: Dealership accountability desk
+          - heading "Staff Operations" [level=1] [ref=e20]
+          - paragraph [ref=e21]: All authorized branches
+          - paragraph [ref=e22]: Signed in
+          - button "Log out" [ref=e24] [cursor=pointer]
+        - navigation "Staff Operations" [ref=e25]:
+          - link "Today Due, overdue, and waiting tasks" [ref=e26] [cursor=pointer]:
+            - /url: /tasks/today?locale=en
+            - img [ref=e27]
+            - generic [ref=e30]:
+              - generic [ref=e31]: Today
+              - generic [ref=e32]: Due, overdue, and waiting tasks
+          - link "Sent Tasks Tasks assigned to colleagues" [ref=e33] [cursor=pointer]:
+            - /url: /tasks/sent?locale=en
+            - img [ref=e34]
+            - generic [ref=e37]:
+              - generic [ref=e38]: Sent Tasks
+              - generic [ref=e39]: Tasks assigned to colleagues
+          - link "Promises Customer commitments and due dates" [ref=e40] [cursor=pointer]:
+            - /url: /tasks/promises?locale=en
+            - img [ref=e41]
+            - generic [ref=e46]:
+              - generic [ref=e47]: Promises
+              - generic [ref=e48]: Customer commitments and due dates
+          - link "Deals Stage gates, holders, and blockers" [ref=e49] [cursor=pointer]:
+            - /url: /deals/handoff?locale=en
+            - img [ref=e50]
+            - generic [ref=e54]:
+              - generic [ref=e55]: Deals
+              - generic [ref=e56]: Stage gates, holders, and blockers
+          - link "Cases Filtered case queue" [ref=e57] [cursor=pointer]:
+            - /url: /complaints?locale=en
+            - img [ref=e58]
+            - generic [ref=e61]:
+              - generic [ref=e62]: Cases
+              - generic [ref=e63]: Filtered case queue
+          - link "Reports Accountability dashboards" [ref=e64] [cursor=pointer]:
+            - /url: /reports?locale=en
+            - img [ref=e65]
+            - generic [ref=e68]:
+              - generic [ref=e69]: Reports
+              - generic [ref=e70]: Accountability dashboards
+          - link "Team Overdue, stuck, and promise work" [ref=e71] [cursor=pointer]:
+            - /url: /tasks/manager?locale=en
+            - img [ref=e72]
+            - generic [ref=e76]:
+              - generic [ref=e77]: Team
+              - generic [ref=e78]: Overdue, stuck, and promise work
+          - link "Overview SLA and workload summary" [ref=e79] [cursor=pointer]:
+            - /url: /dashboard?locale=en
+            - img [ref=e80]
+            - generic [ref=e83]:
+              - generic [ref=e84]: Overview
+              - generic [ref=e85]: SLA and workload summary
+          - link "New intake Capture a customer case" [ref=e86] [cursor=pointer]:
+            - /url: /complaints/new?locale=en
+            - img [ref=e87]
+            - generic [ref=e90]:
+              - generic [ref=e91]: New intake
+              - generic [ref=e92]: Capture a customer case
+          - link "Admin Users, branches, categories" [ref=e93] [cursor=pointer]:
+            - /url: /admin?locale=en
+            - img [ref=e94]
+            - generic [ref=e105]:
+              - generic [ref=e106]: Admin
+              - generic [ref=e107]: Users, branches, categories
+          - link "Audit Admin review trail" [ref=e108] [cursor=pointer]:
+            - /url: /audit?locale=en
+            - img [ref=e109]
+            - generic [ref=e113]:
+              - generic [ref=e114]: Audit
+              - generic [ref=e115]: Admin review trail
+          - link "Notifications Staff notification center" [ref=e116] [cursor=pointer]:
+            - /url: /notifications?locale=en
+            - img [ref=e117]
+            - generic [ref=e120]:
+              - generic [ref=e121]: Notifications
+              - generic [ref=e122]: Staff notification center
+      - generic "Cases" [ref=e124]:
+        - generic [ref=e125]:
+          - generic [ref=e126]: Cases
+          - paragraph [ref=e127]: Branch-scoped cases loaded from the staff API session.
+        - generic [ref=e128]:
+          - generic [ref=e129]:
+            - generic [ref=e130]:
+              - generic [ref=e131]: Status
+              - combobox "Status" [ref=e132] [cursor=pointer]:
+                - img [ref=e133]
+              - combobox [ref=e135]
+            - generic [ref=e136]:
+              - generic [ref=e137]: Branch
+              - combobox "Branch" [ref=e138] [cursor=pointer]:
+                - img [ref=e139]
+              - combobox [ref=e141]
+            - generic [ref=e142]:
+              - generic [ref=e143]: Severity
+              - combobox "Severity" [ref=e144] [cursor=pointer]:
+                - img [ref=e145]
+              - combobox [ref=e147]
+            - generic [ref=e148]:
+              - generic [ref=e149]: SLA state
+              - combobox "SLA state" [ref=e150] [cursor=pointer]:
+                - img [ref=e151]
+              - combobox [ref=e153]
+            - generic [ref=e154]:
+              - generic [ref=e155]: Search
+              - searchbox "Search" [ref=e156]
+          - table [ref=e159]:
+            - rowgroup [ref=e160]:
+              - row "Reference Status Severity Owner Branch SLA state Updated Next action" [ref=e161]:
+                - columnheader "Reference" [ref=e162]
+                - columnheader "Status" [ref=e163]
+                - columnheader "Severity" [ref=e164]
+                - columnheader "Owner" [ref=e165]
+                - columnheader "Branch" [ref=e166]
+                - columnheader "SLA state" [ref=e167]
+                - columnheader "Updated" [ref=e168]
+                - columnheader "Next action" [ref=e169]
+            - rowgroup [ref=e170]:
+              - row "CMP-000006 P2B CAPA smoke SUBMITTED MEDIUM Unassigned Main Branch Backend scoped 2026-06-21 Open case" [ref=e171]:
+                - cell "CMP-000006 P2B CAPA smoke" [ref=e172]:
+                  - generic [ref=e173]: CMP-000006
+                  - generic [ref=e174]: P2B CAPA smoke
+                - cell "SUBMITTED" [ref=e175]:
+                  - generic [ref=e176]: SUBMITTED
+                - cell "MEDIUM" [ref=e177]:
+                  - generic [ref=e178]: MEDIUM
+                - cell "Unassigned" [ref=e179]
+                - cell "Main Branch" [ref=e180]
+                - cell "Backend scoped" [ref=e181]:
+                  - generic [ref=e182]: Backend scoped
+                - cell "2026-06-21" [ref=e183]
+                - cell "Open case" [ref=e184]:
+                  - link "Open case" [ref=e185] [cursor=pointer]:
+                    - /url: /complaints/cmqnzb4310003sk8dczowbjjd
+              - row "CMP-000005 P2B CAPA smoke SUBMITTED MEDIUM Unassigned Main Branch Backend scoped 2026-06-21 Open case" [ref=e186]:
+                - cell "CMP-000005 P2B CAPA smoke" [ref=e187]:
+                  - generic [ref=e188]: CMP-000005
+                  - generic [ref=e189]: P2B CAPA smoke
+                - cell "SUBMITTED" [ref=e190]:
+                  - generic [ref=e191]: SUBMITTED
+                - cell "MEDIUM" [ref=e192]:
+                  - generic [ref=e193]: MEDIUM
+                - cell "Unassigned" [ref=e194]
+                - cell "Main Branch" [ref=e195]
+                - cell "Backend scoped" [ref=e196]:
+                  - generic [ref=e197]: Backend scoped
+                - cell "2026-06-21" [ref=e198]
+                - cell "Open case" [ref=e199]:
+                  - link "Open case" [ref=e200] [cursor=pointer]:
+                    - /url: /complaints/cmqnz7uti000359d2pgr2fk0w
+              - row "CMP-000004 P2B CAPA smoke 1782055437635 SUBMITTED MEDIUM Unassigned Main Branch Backend scoped 2026-06-21 Open case" [ref=e201]:
+                - cell "CMP-000004 P2B CAPA smoke 1782055437635" [ref=e202]:
+                  - generic [ref=e203]: CMP-000004
+                  - generic [ref=e204]: P2B CAPA smoke 1782055437635
+                - cell "SUBMITTED" [ref=e205]:
+                  - generic [ref=e206]: SUBMITTED
+                - cell "MEDIUM" [ref=e207]:
+                  - generic [ref=e208]: MEDIUM
+                - cell "Unassigned" [ref=e209]
+                - cell "Main Branch" [ref=e210]
+                - cell "Backend scoped" [ref=e211]:
+                  - generic [ref=e212]: Backend scoped
+                - cell "2026-06-21" [ref=e213]
+                - cell "Open case" [ref=e214]:
+                  - link "Open case" [ref=e215] [cursor=pointer]:
+                    - /url: /complaints/cmqnxso0m0003iog3ve5d6llc
+              - row "CMP-SEED-001 General complaint SUBMITTED MEDIUM Unassigned Main Branch Backend scoped 2026-06-21 Open case" [ref=e216]:
+                - cell "CMP-SEED-001 General complaint" [ref=e217]:
+                  - generic [ref=e218]: CMP-SEED-001
+                  - generic [ref=e219]: General complaint
+                - cell "SUBMITTED" [ref=e220]:
+                  - generic [ref=e221]: SUBMITTED
+                - cell "MEDIUM" [ref=e222]:
+                  - generic [ref=e223]: MEDIUM
+                - cell "Unassigned" [ref=e224]
+                - cell "Main Branch" [ref=e225]
+                - cell "Backend scoped" [ref=e226]:
+                  - generic [ref=e227]: Backend scoped
+                - cell "2026-06-21" [ref=e228]
+                - cell "Open case" [ref=e229]:
+                  - link "Open case" [ref=e230] [cursor=pointer]:
+                    - /url: /complaints/cmqnx47sw000tythmthtr8d29
+              - row "CMP-SEED-002 General complaint IN_PROGRESS MEDIUM Unassigned North Branch Backend scoped 2026-06-21 Open case" [ref=e231]:
+                - cell "CMP-SEED-002 General complaint" [ref=e232]:
+                  - generic [ref=e233]: CMP-SEED-002
+                  - generic [ref=e234]: General complaint
+                - cell "IN_PROGRESS" [ref=e235]:
+                  - generic [ref=e236]: IN_PROGRESS
+                - cell "MEDIUM" [ref=e237]:
+                  - generic [ref=e238]: MEDIUM
+                - cell "Unassigned" [ref=e239]
+                - cell "North Branch" [ref=e240]
+                - cell "Backend scoped" [ref=e241]:
+                  - generic [ref=e242]: Backend scoped
+                - cell "2026-06-21" [ref=e243]
+                - cell "Open case" [ref=e244]:
+                  - link "Open case" [ref=e245] [cursor=pointer]:
+                    - /url: /complaints/cmqnx47sw000uythmbtgi57se
+              - row "CMP-SEED-003 General complaint RESOLVED MEDIUM Unassigned Main Branch Backend scoped 2026-06-21 Open case" [ref=e246]:
+                - cell "CMP-SEED-003 General complaint" [ref=e247]:
+                  - generic [ref=e248]: CMP-SEED-003
+                  - generic [ref=e249]: General complaint
+                - cell "RESOLVED" [ref=e250]:
+                  - generic [ref=e251]: RESOLVED
+                - cell "MEDIUM" [ref=e252]:
+                  - generic [ref=e253]: MEDIUM
+                - cell "Unassigned" [ref=e254]
+                - cell "Main Branch" [ref=e255]
+                - cell "Backend scoped" [ref=e256]:
+                  - generic [ref=e257]: Backend scoped
+                - cell "2026-06-21" [ref=e258]
+                - cell "Open case" [ref=e259]:
+                  - link "Open case" [ref=e260] [cursor=pointer]:
+                    - /url: /complaints/cmqnx47sw000wythm6a7lr4a3
+        - generic [ref=e261]:
+          - generic [ref=e262]: Page 1 of 1
+          - generic [ref=e263]:
+            - button "Previous" [disabled]
+            - button "Next" [disabled]
+  - button "Open Next.js Dev Tools" [ref=e269] [cursor=pointer]:
+    - img [ref=e270]

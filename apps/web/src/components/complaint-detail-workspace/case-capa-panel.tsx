@@ -6,17 +6,22 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Textarea } from '../ui/textarea';
+import { StaffPicker, type StaffPickerText } from '../shared/staff-picker';
+import type { Locale } from '../../i18n/staff-shell';
+import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
 import type { CaseCapaAction } from '../../lib/staff-detail-api';
 import { createCaseCapa } from '../../lib/staff-detail-api';
 
 export type CapaText = {
   title: string;
-  fields: { rootCause: string; correctiveAction: string; preventiveAction: string; dueAt: string; status: string };
+  fields: { owner: string; rootCause: string; correctiveAction: string; preventiveAction: string; dueAt: string; status: string };
+  staffPicker: StaffPickerText;
   actions: { create: string };
+  statusLabels: Record<CaseCapaAction['status'], string>;
   states: { empty: string; error: string; loading: string; success: string };
 };
 
-export function CaseCapaPanel({ caseId, items, text }: { caseId?: string | undefined; items: CaseCapaAction[]; text: CapaText }) {
+export function CaseCapaPanel({ caseId, caseOwnerId, items, locale, staff, text }: { caseId?: string | undefined; caseOwnerId?: string | undefined; items: CaseCapaAction[]; locale: Locale; staff?: AssignableStaff[] | null | undefined; text: CapaText }) {
   const [rows, setRows] = useState(items);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error' | 'success'>(caseId ? 'idle' : 'error');
 
@@ -28,6 +33,7 @@ export function CaseCapaPanel({ caseId, items, text }: { caseId?: string | undef
     setStatus('loading');
     try {
       const created = await createCaseCapa(caseId, {
+        ownerId: optionalText(form.get('ownerId')),
         rootCause: String(form.get('rootCause') ?? ''),
         correctiveAction: String(form.get('correctiveAction') ?? ''),
         preventiveAction: String(form.get('preventiveAction') ?? ''),
@@ -52,7 +58,7 @@ export function CaseCapaPanel({ caseId, items, text }: { caseId?: string | undef
               <div className="font-medium text-slate-900">{item.rootCause}</div>
               <div>{item.correctiveAction}</div>
               <div>{item.preventiveAction}</div>
-              <div className="mt-1 text-xs text-slate-500">{item.ownerName} - {item.status} - {item.dueAt.slice(0, 10)}</div>
+              <div className="mt-1 text-xs text-slate-500">{item.ownerName} - {text.statusLabels[item.status]} - {item.dueAt.slice(0, 10)}</div>
             </li>
           ))}
         </ol>
@@ -60,6 +66,7 @@ export function CaseCapaPanel({ caseId, items, text }: { caseId?: string | undef
         <p className="mt-3 text-sm text-slate-600" role="status">{text.states.empty}</p>
       )}
       <form className="mt-3 grid gap-2" onSubmit={submit}>
+        <StaffPicker initialUserId={caseOwnerId ?? ''} label={text.fields.owner} labelName="ownerLabel" locale={locale} name="ownerId" staff={staff} t={text.staffPicker} />
         <Field id="rootCause" label={text.fields.rootCause} />
         <Field id="correctiveAction" label={text.fields.correctiveAction} />
         <Field id="preventiveAction" label={text.fields.preventiveAction} />
@@ -72,9 +79,9 @@ export function CaseCapaPanel({ caseId, items, text }: { caseId?: string | undef
           <Select defaultValue="OPEN" name="status">
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="OPEN">OPEN</SelectItem>
-              <SelectItem value="IN_PROGRESS">IN_PROGRESS</SelectItem>
-              <SelectItem value="DONE">DONE</SelectItem>
+              <SelectItem value="OPEN">{text.statusLabels.OPEN}</SelectItem>
+              <SelectItem value="IN_PROGRESS">{text.statusLabels.IN_PROGRESS}</SelectItem>
+              <SelectItem value="DONE">{text.statusLabels.DONE}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -84,6 +91,11 @@ export function CaseCapaPanel({ caseId, items, text }: { caseId?: string | undef
       </form>
     </section>
   );
+}
+
+function optionalText(value: FormDataEntryValue | null): string | null {
+  const text = typeof value === 'string' ? value.trim() : '';
+  return text || null;
 }
 
 function Field({ id, label }: { id: 'rootCause' | 'correctiveAction' | 'preventiveAction'; label: string }) {

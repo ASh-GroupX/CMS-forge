@@ -1,4 +1,4 @@
-import { Controller, Get, HttpStatus, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Inject, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { ComplaintSeverity, RoleCode } from '@prisma/client';
 import { BranchScoped, RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
@@ -10,14 +10,18 @@ type ExportResponse = { setHeader(name: string, value: string): void };
 
 @Controller('reports')
 export class ReportsController {
-  constructor(private readonly reportsService: ReportsService) {}
+  private static reportsService: ReportsService;
+
+  constructor(@Inject(ReportsService) reportsService: ReportsService) {
+    ReportsController.reportsService = reportsService;
+  }
 
   @Get('dashboard')
   @UseGuards(SessionAuthGuard, RbacGuard)
   @Roles(RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
   @BranchScoped()
   async dashboard(@Query('branchId') branchId: string | undefined, @Req() request: AuthenticatedRequest): Promise<{ summary: DashboardSummary }> {
-    return { summary: await this.reportsService.dashboardSummary({ role: requestRole(request), branchId: scopedBranchId(branchId, request) }) };
+    return { summary: await ReportsController.reportsService.dashboardSummary({ role: requestRole(request), branchId: scopedBranchId(branchId, request) }) };
   }
 
   @Get('kpis')
@@ -25,7 +29,7 @@ export class ReportsController {
   @Roles(RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
   @BranchScoped()
   async kpis(@Query('branchId') branchId: string | undefined, @Req() request: AuthenticatedRequest): Promise<{ kpis: ReportsKpiSummary }> {
-    return { kpis: await this.reportsService.kpiSummary({ role: requestRole(request), branchId: scopedBranchId(branchId, request) }) };
+    return { kpis: await ReportsController.reportsService.kpiSummary({ role: requestRole(request), branchId: scopedBranchId(branchId, request) }) };
   }
 
   @Get()
@@ -34,7 +38,7 @@ export class ReportsController {
   @BranchScoped()
   async filteredReport(@Query() query: Record<string, string | undefined>, @Req() request: AuthenticatedRequest): Promise<{ items: FilteredReportRow[] }> {
     return {
-      items: await this.reportsService.filteredReport({
+      items: await ReportsController.reportsService.filteredReport({
         role: requestRole(request),
         branchId: scopedBranchId(undefined, request),
         filterBranchId: optionalText(query.branchId),
@@ -52,7 +56,7 @@ export class ReportsController {
   @Roles(RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
   @BranchScoped()
   async exportReport(@Query() query: Record<string, string | undefined>, @Req() request: AuthenticatedRequest, @Res({ passthrough: true }) response: ExportResponse): Promise<string> {
-    const exportFile = await this.reportsService.exportReport({ ...reportInput(query, request), format: exportFormat(query.format) }, auditContext(request));
+    const exportFile = await ReportsController.reportsService.exportReport({ ...reportInput(query, request), format: exportFormat(query.format) }, auditContext(request));
     response.setHeader('content-type', exportFile.contentType);
     response.setHeader('content-disposition', `attachment; filename="${exportFile.fileName}"`);
     response.setHeader('x-report-row-count', String(exportFile.rowCount));

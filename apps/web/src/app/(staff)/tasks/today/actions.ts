@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { getAssignableStaff } from '../../../../lib/staff-assignable-staff-api';
+import { getAssignableStaff, type AssignableStaff } from '../../../../lib/staff-assignable-staff-api';
 import { getQuickAddRelatedRecords, type RelatedRecordType, type StaffRelatedRecord } from '../../../../lib/staff-related-records-api';
 import { quickAddTask, updateTask, type StaffTaskStatus } from '../../../../lib/staff-tasks-api';
 
@@ -12,7 +12,7 @@ export async function quickAddTaskAction(formData: FormData): Promise<void> {
   const ok = await quickAddTask({
     title: text(formData, 'title'),
     what: text(formData, 'what'),
-    whoId: await whoIdFrom(formData),
+    whoId: await staffIdFrom(formData, 'whoId', 'assigneeLabel'),
     when: text(formData, 'when'),
     isCustomerPromise: formData.get('isCustomerPromise') === 'on',
     ...(optionalText(formData, 'dueAt') ? { dueAt: text(formData, 'dueAt') } : {}),
@@ -21,14 +21,12 @@ export async function quickAddTaskAction(formData: FormData): Promise<void> {
   redirect(`/tasks/today?locale=${locale}&task=${ok ? 'success' : 'error'}`);
 }
 
-async function whoIdFrom(formData: FormData): Promise<string> {
-  const id = text(formData, 'whoId');
-  if (id) return id;
-  const label = text(formData, 'assigneeLabel');
-  if (!label) return '';
+async function staffIdFrom(formData: FormData, idName: string, labelName: string): Promise<string> {
+  const id = text(formData, idName);
+  const label = text(formData, labelName);
+  if (!label) return id;
   const staff = await getAssignableStaff();
-  return staff?.find((person) => [person.displayName, person.role, person.branchLabel].filter(Boolean).join(' - ') === label
-    || [person.displayNameAr, person.roleAr, person.branchLabelAr].filter(Boolean).join(' - ') === label)?.userId ?? '';
+  return staff?.find((person) => staffLabels(person).includes(label))?.userId ?? id;
 }
 
 export async function updateTaskAction(formData: FormData): Promise<void> {
@@ -36,17 +34,25 @@ export async function updateTaskAction(formData: FormData): Promise<void> {
   const taskId = text(formData, 'taskId');
   const status = optionalStatus(formData.get('status'));
   const nextActionWhat = optionalText(formData, 'nextActionWhat');
-  const nextActionWhoId = optionalText(formData, 'nextActionWhoId');
+  const assigneeId = await staffIdFrom(formData, 'assigneeId', 'assigneeLabel');
+  const nextActionWhoId = await staffIdFrom(formData, 'nextActionWhoId', 'nextActionWhoLabel');
   const nextActionWhen = optionalText(formData, 'nextActionWhen');
   const ok = await updateTask(taskId, {
     ...(status ? { status } : {}),
-    ...(optionalText(formData, 'assigneeId') ? { assigneeId: text(formData, 'assigneeId') } : {}),
+    ...(assigneeId ? { assigneeId } : {}),
     ...(optionalText(formData, 'dueAt') ? { dueAt: text(formData, 'dueAt') } : {}),
     ...(nextActionWhat && nextActionWhoId && nextActionWhen
       ? { nextAction: { what: nextActionWhat, whoId: nextActionWhoId, when: nextActionWhen } }
       : {}),
   });
   redirect(`/tasks/today?locale=${locale}&task=${ok ? 'success' : 'error'}`);
+}
+
+function staffLabels(person: AssignableStaff): string[] {
+  return [
+    [person.displayName, person.role, person.branchLabel].filter(Boolean).join(' - '),
+    [person.displayNameAr, person.roleAr, person.branchLabelAr].filter(Boolean).join(' - '),
+  ];
 }
 
 async function linkFrom(formData: FormData): Promise<{ entityType: string; entityId: string } | null> {

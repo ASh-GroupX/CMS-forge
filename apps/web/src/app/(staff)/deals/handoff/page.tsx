@@ -6,8 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
+import { StaffPicker } from '../../../../components/shared/staff-picker';
 import { dealHandoffText } from '../../../../i18n/staff-deal-handoff';
 import { resolveLocale, staffShellText, type Locale } from '../../../../i18n/staff-shell';
+import { getAssignableStaff, type AssignableStaff } from '../../../../lib/staff-assignable-staff-api';
 import { getDealHandoffBoard, type DealBoardItem, type DealHandoffBoard, type DealHolderBucket, type DealStageBucket } from '../../../../lib/staff-deals-api';
 import { advanceDealAction, clearDealBlockerAction, createDealAction, setDealBlockerAction } from './actions';
 
@@ -25,19 +27,20 @@ export default async function DealHandoffPage({
 }) {
   const params = await searchParams;
   const locale = resolveLocale(readParam(params?.locale));
-  const data = await getDealHandoffBoard({
+  const apiInput = {
     ...(cookieHeader !== undefined ? { cookieHeader } : {}),
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
-  });
-  return <DealHandoffBoardView data={data} locale={locale} />;
+  };
+  const [data, staff] = await Promise.all([getDealHandoffBoard(apiInput), getAssignableStaff(apiInput)]);
+  return <DealHandoffBoardView data={data} locale={locale} staff={staff} />;
 }
 
-export function DealHandoffBoardView({ data, locale }: { data: DealHandoffBoard | null; locale: Locale }) {
+export function DealHandoffBoardView({ data, locale, staff }: { data: DealHandoffBoard | null; locale: Locale; staff?: AssignableStaff[] | null | undefined }) {
   const shell = staffShellText[locale];
   const t = dealHandoffText[locale];
   const total = data ? data.byStage.reduce((sum, bucket) => sum + bucket.count, 0) : 0;
   const holders = data ? holderOptions(data) : [];
-  const branches = data ? branchOptions(data) : [];
+  const branches = data ? branchOptions(data, t) : [];
 
   return (
     <Card aria-label={t.title} className="rounded-md border-border bg-card text-card-foreground shadow-sm" dir={shell.dir}>
@@ -55,13 +58,13 @@ export function DealHandoffBoardView({ data, locale }: { data: DealHandoffBoard 
           <p className="rounded-sm border border-status-error bg-status-error/10 px-3 py-2 text-sm text-status-error" role="alert">{t.states.error}</p>
         ) : (
           <div className="grid gap-3 xl:grid-cols-2">
-            <CreateDealForm branches={branches} holders={holders} locale={locale} t={t} />
+            <CreateDealForm branches={branches} locale={locale} staff={staff} t={t} />
             {total === 0 && data.stuck.length === 0 && data.currentHolder.length === 0 ? (
               <p className="rounded-sm border border-border bg-muted px-3 py-2 text-sm text-muted-foreground xl:col-span-2" role="status">{t.states.empty}</p>
             ) : null}
-            <StageSection buckets={data.byStage} holders={holders} locale={locale} t={t} />
+            <StageSection buckets={data.byStage} locale={locale} staff={staff} t={t} />
             <HolderSection holders={data.currentHolder} locale={locale} t={t} />
-            <DealSection deals={data.stuck} holders={holders} locale={locale} t={t} />
+            <DealSection deals={data.stuck} locale={locale} staff={staff} t={t} />
           </div>
         )}
       </CardContent>
@@ -85,21 +88,21 @@ export function DealHandoffLoading({ locale }: { locale: Locale }) {
   );
 }
 
-function StageSection({ buckets, holders, locale, t }: { buckets: DealStageBucket[]; holders: DealHolderBucket[]; locale: Locale; t: Copy }) {
+function StageSection({ buckets, locale, staff, t }: { buckets: DealStageBucket[]; locale: Locale; staff?: AssignableStaff[] | null | undefined; t: Copy }) {
   const [title, description] = t.sections.byStage;
   return (
     <section className="rounded-md border border-border bg-background p-3" aria-label={title}>
       <SectionHeader count={buckets.reduce((sum, bucket) => sum + bucket.count, 0)} description={description} locale={locale} title={title} />
-      <div className="mt-3 grid gap-2">{buckets.map((bucket) => <StageBucket bucket={bucket} holders={holders} key={bucket.stage} locale={locale} t={t} />)}</div>
+      <div className="mt-3 grid gap-2">{buckets.map((bucket) => <StageBucket bucket={bucket} key={bucket.stage} locale={locale} staff={staff} t={t} />)}</div>
     </section>
   );
 }
 
-function StageBucket({ bucket, holders, locale, t }: { bucket: DealStageBucket; holders: DealHolderBucket[]; locale: Locale; t: Copy }) {
+function StageBucket({ bucket, locale, staff, t }: { bucket: DealStageBucket; locale: Locale; staff?: AssignableStaff[] | null | undefined; t: Copy }) {
   return (
     <div className="rounded-sm border border-border bg-muted p-2">
       <div className="flex items-center justify-between gap-2"><span className="text-sm font-semibold">{bucket.stage}</span><Badge variant="outline">{formatNumber(locale, bucket.count)}</Badge></div>
-      {bucket.deals.length === 0 ? <EmptyLine t={t} /> : <div className="mt-2 grid gap-2">{bucket.deals.map((deal) => <DealCard deal={deal} holders={holders} key={deal.id} locale={locale} t={t} />)}</div>}
+      {bucket.deals.length === 0 ? <EmptyLine t={t} /> : <div className="mt-2 grid gap-2">{bucket.deals.map((deal) => <DealCard deal={deal} key={deal.id} locale={locale} staff={staff} t={t} />)}</div>}
     </div>
   );
 }
@@ -112,24 +115,24 @@ function HolderSection({ holders, locale, t }: { holders: DealHolderBucket[]; lo
       {holders.length === 0 ? <EmptyLine t={t} /> : (
         <Table className="mt-3">
           <TableHeader><TableRow><TableHead className="text-start">{t.fields.holder}</TableHead><TableHead className="text-end">{t.fields.count}</TableHead></TableRow></TableHeader>
-          <TableBody>{holders.map((holder) => <TableRow key={holder.currentHolderId}><TableCell>{holder.currentHolderName ?? shortId(holder.currentHolderId)}</TableCell><TableCell className="text-end font-semibold">{formatNumber(locale, holder.count)}</TableCell></TableRow>)}</TableBody>
+          <TableBody>{holders.map((holder) => <TableRow key={holder.currentHolderId}><TableCell>{holder.currentHolderName ?? t.states.unknownStaff}</TableCell><TableCell className="text-end font-semibold">{formatNumber(locale, holder.count)}</TableCell></TableRow>)}</TableBody>
         </Table>
       )}
     </section>
   );
 }
 
-function DealSection({ deals, holders, locale, t }: { deals: DealBoardItem[]; holders: DealHolderBucket[]; locale: Locale; t: Copy }) {
+function DealSection({ deals, locale, staff, t }: { deals: DealBoardItem[]; locale: Locale; staff?: AssignableStaff[] | null | undefined; t: Copy }) {
   const [title, description] = t.sections.stuck;
   return (
     <section className="rounded-md border border-border bg-background p-3 xl:col-span-2" aria-label={title}>
       <SectionHeader count={deals.length} description={description} locale={locale} title={title} />
-      {deals.length === 0 ? <EmptyLine t={t} /> : <div className="mt-3 grid gap-2 md:grid-cols-2">{deals.map((deal) => <DealCard deal={deal} holders={holders} key={deal.id} locale={locale} t={t} />)}</div>}
+      {deals.length === 0 ? <EmptyLine t={t} /> : <div className="mt-3 grid gap-2 md:grid-cols-2">{deals.map((deal) => <DealCard deal={deal} key={deal.id} locale={locale} staff={staff} t={t} />)}</div>}
     </section>
   );
 }
 
-function CreateDealForm({ branches, holders, locale, t }: { branches: { id: string; name: string }[]; holders: DealHolderBucket[]; locale: Locale; t: Copy }) {
+function CreateDealForm({ branches, locale, staff, t }: { branches: { id: string; name: string }[]; locale: Locale; staff?: AssignableStaff[] | null | undefined; t: Copy }) {
   return (
     <form action={createDealAction} className="rounded-md border border-border bg-background p-3 xl:col-span-2">
       <input name="locale" type="hidden" value={locale} />
@@ -137,7 +140,7 @@ function CreateDealForm({ branches, holders, locale, t }: { branches: { id: stri
       <div className="mt-3 grid gap-3 md:grid-cols-4">
         <FieldInput label={t.fields.title} name="title" required />
         <SelectInput label={t.fields.branch} name="branchId" options={branches.map((branch) => [branch.id, branch.name])} />
-        <SelectInput label={t.fields.holder} name="currentHolderId" options={holders.map((holder) => [holder.currentHolderId, holder.currentHolderName ?? shortId(holder.currentHolderId)])} required />
+        <StaffPicker label={t.fields.holder} labelName="currentHolderLabel" locale={locale} name="currentHolderId" staff={staff} t={t.staffPicker} />
         <FieldInput label={t.fields.due} name="stageDueAt" required type="datetime-local" />
       </div>
       <Button className="mt-3" size="sm" type="submit">{t.actions.create}</Button>
@@ -145,26 +148,26 @@ function CreateDealForm({ branches, holders, locale, t }: { branches: { id: stri
   );
 }
 
-function DealCard({ deal, holders, locale, t }: { deal: DealBoardItem; holders: DealHolderBucket[]; locale: Locale; t: Copy }) {
+function DealCard({ deal, locale, staff, t }: { deal: DealBoardItem; locale: Locale; staff?: AssignableStaff[] | null | undefined; t: Copy }) {
   return (
     <article className="rounded-md border border-border bg-card p-3 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0"><h3 className="break-words text-sm font-semibold">{deal.title}</h3><p className="mt-1 text-xs text-muted-foreground">{deal.id}</p></div>
+        <div className="min-w-0"><h3 className="break-words text-sm font-semibold">{deal.title}</h3></div>
         <Badge variant={deal.blocker ? 'destructive' : 'outline'}>{deal.stage}</Badge>
       </div>
       <dl className="mt-3 grid gap-2 text-sm md:grid-cols-2">
-        <Field label={t.fields.holder} value={deal.currentHolderName ?? shortId(deal.currentHolderId)} />
+        <Field label={t.fields.holder} value={staffDisplay(deal.currentHolderId, deal.currentHolderName, staff, locale, t)} />
         <Field label={t.fields.delay} value={formatMinutes(locale, deal.delayAgeMinutes)} />
         <Field label={t.fields.due} value={formatDate(deal.stageDueAt)} />
         <Field label={t.fields.updated} value={formatDate(deal.updatedAt)} />
-        <Field label={t.fields.owner} value={deal.ownerName ?? shortId(deal.ownerId)} />
-        <Field label={t.fields.branch} value={deal.branchName ?? shortId(deal.branchId)} />
+        <Field label={t.fields.owner} value={staffDisplay(deal.ownerId, deal.ownerName, staff, locale, t)} />
+        <Field label={t.fields.branch} value={deal.branchName ?? t.states.unknownBranch} />
       </dl>
       {deal.blocker ? <p className="mt-3 rounded-sm border border-status-warning bg-status-warning/10 px-3 py-2 text-sm text-status-warning">{t.fields.blocker}: {deal.blocker}</p> : null}
       <form action={advanceDealAction} className="mt-3 grid gap-2 border-t border-border pt-3 md:grid-cols-[1fr_1fr_auto]">
         <input name="dealId" type="hidden" value={deal.id} />
         <input name="locale" type="hidden" value={locale} />
-        <SelectInput defaultValue={deal.currentHolderId} label={t.fields.holder} name="currentHolderId" options={holders.map((holder) => [holder.currentHolderId, holder.currentHolderName ?? shortId(holder.currentHolderId)])} required />
+        <StaffPicker initialUserId={deal.currentHolderId} label={t.fields.holder} labelName="currentHolderLabel" locale={locale} name="currentHolderId" staff={staff} t={t.staffPicker} />
         <FieldInput defaultValue={toDateTimeLocal(deal.stageDueAt)} label={t.fields.due} name="stageDueAt" required type="datetime-local" />
         <Button className="self-end" disabled={deal.stage === 'POST_DELIVERY' || Boolean(deal.blocker)} size="sm" type="submit">{t.actions.advance}</Button>
       </form>
@@ -226,10 +229,6 @@ function toDateTimeLocal(value: string): string {
   return value.slice(0, 16);
 }
 
-function shortId(value: string): string {
-  return value.length > 18 ? `${value.slice(0, 10)}...${value.slice(-4)}` : value;
-}
-
 function holderOptions(data: DealHandoffBoard): DealHolderBucket[] {
   const options = new Map<string, DealHolderBucket>();
   for (const deal of data.byStage.flatMap((bucket) => bucket.deals)) {
@@ -239,10 +238,19 @@ function holderOptions(data: DealHandoffBoard): DealHolderBucket[] {
   return [...options.values()];
 }
 
-function branchOptions(data: DealHandoffBoard): { id: string; name: string }[] {
+function branchOptions(data: DealHandoffBoard, t: Copy): { id: string; name: string }[] {
   const options = new Map<string, string>();
-  for (const deal of data.byStage.flatMap((bucket) => bucket.deals)) options.set(deal.branchId, deal.branchName ?? shortId(deal.branchId));
+  for (const deal of data.byStage.flatMap((bucket) => bucket.deals)) options.set(deal.branchId, deal.branchName ?? t.states.unknownBranch);
   return [...options].map(([id, name]) => ({ id, name }));
+}
+
+function staffDisplay(id: string, fallback: string | null, staff: AssignableStaff[] | null | undefined, locale: Locale, t: Copy): string {
+  const person = staff?.find((item) => item.userId === id);
+  if (!person) return fallback ?? t.states.unknownStaff;
+  const name = locale === 'ar' ? person.displayNameAr : person.displayName;
+  const role = locale === 'ar' ? person.roleAr : person.role;
+  const branch = locale === 'ar' ? person.branchLabelAr : person.branchLabel;
+  return [name, role, branch].filter(Boolean).join(' - ');
 }
 
 function readParam(value: string | string[] | undefined) {

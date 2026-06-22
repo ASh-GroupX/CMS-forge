@@ -78,7 +78,7 @@ function SentTaskCard({ commentAction, locale, nudgeAction, task, t }: { comment
         </div>
       </div>
       <dl className="mt-3 grid gap-2 text-sm md:grid-cols-2">
-        <Field label={t.fields.assignee} title={task.assigneeId} value={task.assigneeName ?? shortId(task.assigneeId)} />
+        <Field label={t.fields.assignee} value={task.assigneeName ?? '-'} />
         <Field label={t.fields.due} value={formatDate(task.dueAt)} />
         <Field label={t.fields.updated} value={formatDate(task.updatedAt)} />
         <Field label={t.fields.branch} value={task.branchName ?? (task.branchId ? shortId(task.branchId) : '-')} {...(task.branchId ? { title: task.branchId } : {})} />
@@ -88,7 +88,7 @@ function SentTaskCard({ commentAction, locale, nudgeAction, task, t }: { comment
           <p className="font-semibold">{t.fields.nextAction}</p>
           <p className="mt-1 break-words text-muted-foreground">{task.nextAction.what}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {t.fields.nextOwner}: <span title={task.nextAction.whoId}>{task.nextAction.whoName ?? shortId(task.nextAction.whoId)}</span> - {formatDate(task.nextAction.when)}
+            {t.fields.nextOwner}: <span>{task.nextAction.whoName ?? '-'}</span> - {formatDate(task.nextAction.when)}
           </p>
         </div>
       ) : null}
@@ -100,7 +100,7 @@ function SentTaskCard({ commentAction, locale, nudgeAction, task, t }: { comment
       <section className="mt-3 grid gap-2 border-t border-border pt-3" aria-label={t.fields.comment}>
         {task.comments.length === 0 ? <p className="rounded-sm bg-muted px-3 py-2 text-sm text-muted-foreground">{t.states.noComments}</p> : task.comments.map((comment) => (
           <article className="rounded-sm border border-border bg-card px-3 py-2 text-sm" key={comment.id}>
-            <p className="font-semibold">{comment.authorName ?? shortId(comment.authorId)}</p>
+            <p className="font-semibold">{comment.authorName ?? '-'}</p>
             <p className="mt-1 break-words text-muted-foreground">{comment.body}</p>
             <p className="mt-1 text-xs text-muted-foreground">{formatDate(comment.createdAt)}</p>
           </article>

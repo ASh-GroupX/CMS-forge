@@ -8,7 +8,7 @@ test('report export route proxies valid formats with staff cookies', async () =>
   process.env.API_URL = 'http://api.test';
   try {
     globalThis.fetch = async (input, init) => {
-      assert.equal(String(input), 'http://api.test/reports/export?format=csv');
+      assert.equal(String(input), 'http://api.test/reports/export?format=csv&branchId=branch_report&categoryId=cat_report&ownerId=usr_report');
       assert.equal((init?.headers as Record<string, string>).cookie, 'cms_staff_session=session');
       return new Response('id\n1\n', {
         headers: {
@@ -18,7 +18,7 @@ test('report export route proxies valid formats with staff cookies', async () =>
       });
     };
 
-    const response = await GET(new Request('http://web.test/reports/export?format=csv', {
+    const response = await GET(new Request('http://web.test/reports/export?format=csv&branchId=branch_report&categoryId=cat_report&ownerId=usr_report', {
       headers: { cookie: 'cms_staff_session=session' },
     }));
 

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
 import type { ComplaintCaseKpiRow, ComplaintCaseSlaEvent, ComplaintCaseStatusEvent, TaskKpiRow, TaskKpiStatusEvent } from './reports.kpi.js';
@@ -16,7 +16,7 @@ export type ComplaintCaseKpiReadRows = {
 
 @Injectable()
 export class ReportsRepository {
-  constructor(private readonly prisma?: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma?: PrismaService) {}
 
   async listTaskKpiRows(branchId: string | null): Promise<TaskKpiReadRows> {
     if (!this.prisma) throw new Error('ReportsRepository requires PrismaService for task KPI reads');

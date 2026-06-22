@@ -1,8 +1,8 @@
 # Current State
 
-Status: P11B Complete
+Status: Reports Export Live Smoke Repair Complete
 Phase: Phase 11 - Operator UX Foundation
-Next Task: P11C Task update staff pickers
+Next Task: Ready to plan next Operator UX slice
 Model Tier: GPT-5 High or Opus 4.8 Max
 
 ## How to use this file
@@ -29,22 +29,54 @@ Prior state history is in .forge/archive/state-archive.md.
     role or branch authority.
   - Quick Add linked record type/ID fields were replaced with localized
     `Related to` and record picker controls.
-  - Quick Add submits selected related record IDs silently and API-side link
-    scope validation denies out-of-scope records before task persistence.
-  - Customer promise validation still requires a customer, complaint, case, or
-    deal link.
-  - English and Arabic Quick Add touched strings are localized.
-  - OpenAPI canonical/generated contracts are updated.
-- Live smoke passed:
-  - Username login with `admin`.
-  - Today Quick Add task creation using the visible related-record picker.
-  - Customer promise without a related record shows required-link validation.
-  - Arabic Today related-record labels and `dir=rtl`.
-  - Branch user `omar` sees Main Branch related customers only; North Branch
-    customer options are absent.
+- P11C is complete:
+  - Today task update assignee uses the assignable staff picker.
+  - Today next follow-up person uses the assignable staff picker.
+  - Sent Tasks collaboration context no longer falls back to visible raw staff
+    IDs for assignee, next owner, or comment author.
+- P11D Deals slice is complete:
+  - Deal Handoff create and advance holder controls use the shared assignable
+    staff picker.
+  - Selected holder IDs submit silently through hidden inputs.
+  - Visible holder/owner labels show staff name, role, and branch where the
+    session-scoped lookup can resolve them.
+  - Visible branch labels no longer fall back to raw IDs.
+  - Deal card raw deal ID display was removed; action forms still submit the
+    deal ID silently.
+  - Arabic Deal Handoff copy for the touched screen uses real Arabic.
+- P11D CAPA / Case picker slice is complete:
+  - CAPA create uses the shared assignable staff picker instead of visible raw
+    owner ID entry.
+  - CAPA create silently submits owner ID and validates it server-side with
+    `AdminUsersService.assertAssignable`.
+  - CAPA owner omission preserves the prior case-owner/actor fallback.
+  - Complaint and confidential case detail owner displays no longer fall back to
+    visible raw owner IDs.
+  - No new case owner edit field or lifecycle action was added.
+  - Arabic CAPA picker labels, placeholders, selected/empty/loading/error copy,
+    and status labels are complete.
+- P11D Reports filter picker cleanup is complete:
+  - Reports branch and category filters use dropdowns populated by the existing
+    session-scoped complaint form options lookup.
+  - Reports owner filter uses the shared assignable staff picker.
+  - Visible report filter labels and row scope/category labels avoid raw IDs.
+  - Selected branch/category/owner IDs submit silently in query parameters.
+  - Export links preserve selected filters.
+  - Arabic Reports filter labels, placeholders, selected/empty/loading/error
+    copy, and RTL layout are complete for touched controls.
+- Reports export live smoke repair is complete:
+  - Local API export 500 was reproduced and traced to reports module runtime
+    injection/controller binding.
+  - Reports controller/service/repository now use explicit Nest injection where
+    the local runtime needed it.
+  - Export filters, row limits, RBAC, branch scope, and REPORT audit behavior
+    are preserved.
+  - Live allowed export returns 200 with CSV download headers.
+  - Live out-of-scope branch export returns 403.
+  - Report KPI calculations and Reports UI were not changed.
+- OpenAPI did not change for the export repair.
 - Proof passed:
-  - `corepack pnpm test:api -- tasks`
-  - `node --import tsx --test apps/api/src/modules/tasks/*.spec.ts`
+  - `corepack pnpm test:api -- reports`
   - `corepack pnpm test:web -- shell`
   - `corepack pnpm test:web -- localization`
   - `corepack pnpm openapi:check`
@@ -54,22 +86,11 @@ Prior state history is in .forge/archive/state-archive.md.
 
 ## Open carry-forward / known debt
 
-- P11C should start with Task update forms: replace raw assignee and next
-  follow-up person IDs with the existing staff picker pattern.
-- Do not roll pickers across every operational form in one slice; Sent Tasks,
-  Deal Handoff, case/complaint detail, CAPA owner, and report filters remain
-  later P11C follow-ups.
 - Existing task cards still display compact raw task/link IDs for already-saved
-  task links; P11B only removed raw linked-record entry from Quick Add.
+  task links; P11B/P11C only removed raw record/staff entry from normal task
+  workflows.
 - Some seeded smoke/test users have English names in `nameAr`; Arabic copy is
   complete for touched labels, but future data seeding can improve Arabic staff
   names.
 - No admin screens, AI, WhatsApp, mobile, deploy, employee grievance screens, or
   workflow builder work was added.
-- Promise Tracker still resolves customer/deal display context from task-boundary
-  link IDs only. Add richer labels later through public customer/deal module
-  services or a dedicated read model rather than direct cross-module repository
-  reads.
-- Departments, branch activation controls, category activation controls,
-  severity/SLA policy, notification templates, and work queue query-param
-  filtering remain previously known admin/search follow-ups.

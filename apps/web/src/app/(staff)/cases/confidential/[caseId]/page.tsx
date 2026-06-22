@@ -51,7 +51,7 @@ export default async function ConfidentialCasePage({
                 <Summary label={t.labels.type} value={timeline.case.type} />
                 <Summary label={t.labels.status} value={timeline.case.lifecycleStatus} />
                 <Summary label={t.labels.branch} value={timeline.case.branchId} />
-                <Summary label={t.labels.owner} value={timeline.case.ownerId ?? '-'} />
+                <Summary label={t.labels.owner} value={timeline.case.ownerName ?? '-'} />
                 <Summary label={t.labels.updated} value={timeline.case.updatedAt} />
               </dl>
             </section>

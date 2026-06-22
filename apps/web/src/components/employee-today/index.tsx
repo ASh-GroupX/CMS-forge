@@ -74,7 +74,7 @@ export function EmployeeToday({
         ) : (
           <div className="grid items-start gap-3 xl:grid-cols-2">
             {SECTION_KEYS.map((key) => (
-              <TaskSection key={key} locale={locale} sectionKey={key} tasks={data[key]} t={t} updateAction={updateAction} />
+              <TaskSection key={key} locale={locale} sectionKey={key} staff={staff} tasks={data[key]} t={t} updateAction={updateAction} />
             ))}
           </div>
         )}
@@ -105,12 +105,14 @@ export function EmployeeTodayLoading({ locale }: { locale: Locale }) {
 function TaskSection({
   locale,
   sectionKey,
+  staff,
   tasks,
   t,
   updateAction,
 }: {
   locale: Locale;
   sectionKey: SectionKey;
+  staff?: AssignableStaff[] | null | undefined;
   tasks: StaffTask[];
   t: EmployeeTodayText;
   updateAction?: TaskAction | undefined;
@@ -130,14 +132,14 @@ function TaskSection({
         <p className="mt-3 rounded-sm bg-muted px-3 py-2 text-sm text-muted-foreground">{t.states.sectionEmpty}</p>
       ) : (
         <div className="mt-3 grid gap-2">
-          {tasks.map((task) => <TaskCard key={`${sectionKey}-${task.id}`} locale={locale} task={task} t={t} updateAction={updateAction} />)}
+          {tasks.map((task) => <TaskCard key={`${sectionKey}-${task.id}`} locale={locale} staff={staff} task={task} t={t} updateAction={updateAction} />)}
         </div>
       )}
     </section>
   );
 }
 
-function TaskCard({ locale, task, t, updateAction }: { locale: Locale; task: StaffTask; t: EmployeeTodayText; updateAction?: TaskAction | undefined }) {
+function TaskCard({ locale, staff, task, t, updateAction }: { locale: Locale; staff?: AssignableStaff[] | null | undefined; task: StaffTask; t: EmployeeTodayText; updateAction?: TaskAction | undefined }) {
   return (
     <article className="rounded-md border border-border bg-card p-3 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -151,9 +153,9 @@ function TaskCard({ locale, task, t, updateAction }: { locale: Locale; task: Sta
         </div>
       </div>
       <dl className="mt-3 grid gap-2 text-sm md:grid-cols-2">
-        <Field label={t.fields.assignee} title={task.assigneeId} value={task.assigneeName ?? shortId(task.assigneeId)} />
+        <Field label={t.fields.assignee} value={task.assigneeName ?? '-'} />
         <Field label={t.fields.due} value={formatDate(task.dueAt)} />
-        <Field label={t.fields.owner} title={task.ownerId} value={task.ownerName ?? shortId(task.ownerId)} />
+        <Field label={t.fields.owner} value={task.ownerName ?? '-'} />
         <Field label={t.fields.branch} title={task.branchId ?? undefined} value={task.branchName ?? (task.branchId ? shortId(task.branchId) : '-')} />
         <Field label={t.fields.updated} value={formatDate(task.updatedAt)} />
       </dl>
@@ -162,11 +164,11 @@ function TaskCard({ locale, task, t, updateAction }: { locale: Locale; task: Sta
           <p className="font-semibold">{t.fields.nextAction}</p>
           <p className="mt-1 break-words text-muted-foreground">{task.nextAction.what}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {t.fields.nextOwner}: <span title={task.nextAction.whoId}>{task.nextAction.whoName ?? shortId(task.nextAction.whoId)}</span> - {formatDate(task.nextAction.when)}
+            {t.fields.nextOwner}: <span>{task.nextAction.whoName ?? '-'}</span> - {formatDate(task.nextAction.when)}
           </p>
         </div>
       ) : null}
-      {updateAction ? <TaskActions action={updateAction} locale={locale} task={task} t={t} /> : null}
+      {updateAction ? <TaskActions action={updateAction} locale={locale} staff={staff} task={task} t={t} /> : null}
       {task.links.length ? (
         <div className="mt-3 flex flex-wrap gap-1" aria-label={t.fields.links}>
           {task.links.map((link) => (

@@ -3,6 +3,7 @@ import { CapaActionStatus, CaseConfidentialityLevel, CaseLifecycleStatus, CaseLi
 import type { Prisma } from '@prisma/client';
 import { AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
+import type { AdminUsersService } from '../admin/admin-users.service.js';
 import type { CapaActionDto, CaseRepeatIssueDto, CaseResponseDto, CaseTimelineResponseDto, TaskCaseLinkDto } from './dto/case-response.dto.js';
 import { assertCanReadCase, assertLifecycle, caseAudit } from './cases.policy.js';
 import type { CaseReadActor, CaseReadAudit } from './cases.policy.js';
@@ -37,6 +38,7 @@ export type EnsureCustomerComplaintCaseInput = {
 
 export type CreateCapaActionInput = {
   caseId: string;
+  ownerId?: string | null;
   rootCause: string;
   correctiveAction: string;
   preventiveAction: string;
@@ -52,6 +54,7 @@ export class CasesService {
   constructor(
     private readonly casesRepository: CasesRepository,
     private readonly auditService?: AuditService,
+    private readonly usersService?: Pick<AdminUsersService, 'assertAssignable'>,
   ) {}
 
   async createDraft(input: CreateCaseDraftInput): Promise<CaseResponseDto> {
@@ -164,13 +167,14 @@ export class CasesService {
 
   async createCapaAction(input: CreateCapaActionInput, actor: CaseReadActor, audit: CaseReadAudit = {}): Promise<CapaActionResponse> {
     assertCanWriteCapa(actor);
+    if (input.ownerId) await this.usersService?.assertAssignable({ userId: actor.userId, roleCode: actor.role, branchId: actor.branchId ?? null }, input.ownerId);
     return this.casesRepository.transaction(async (client) => {
       const record = await this.casesRepository.findByIdInTransaction(requiredText(input.caseId, 'caseId'), client);
       if (!record) throw new AppException('CASE_NOT_FOUND', 'Case was not found', HttpStatus.NOT_FOUND);
       await assertCanReadCase(record, actor, audit, this.auditService);
       const created = await this.casesRepository.createCapaAction({
         caseId: record.id,
-        ownerId: record.ownerId ?? actor.userId,
+        ownerId: input.ownerId ?? record.ownerId ?? actor.userId,
         rootCause: requiredText(input.rootCause, 'rootCause'),
         correctiveAction: requiredText(input.correctiveAction, 'correctiveAction'),
         preventiveAction: requiredText(input.preventiveAction, 'preventiveAction'),
@@ -243,7 +247,6 @@ export class CasesService {
   }
 
 }
-
 function normalizeLinks(input: { entityType: CaseLinkEntityType; entityId: string }[]) {
   if (!input.length) throw invalid('links');
   return input.map((link) => ({

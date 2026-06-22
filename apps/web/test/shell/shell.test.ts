@@ -1062,6 +1062,36 @@ test('complaint detail route renders real backend facts through the session cook
         ],
       });
     }
+    if (String(input).endsWith('/cases/case_cmp_1/capa')) {
+      return jsonResponse({
+        items: [{
+          id: 'capa_1',
+          caseId: 'case_cmp_1',
+          rootCause: 'Parts delay',
+          correctiveAction: 'Call before 10 AM',
+          preventiveAction: 'Daily parts review',
+          ownerId: 'usr_owner',
+          ownerName: 'Owner User',
+          dueAt: '2026-06-25T09:00:00.000Z',
+          status: 'OPEN',
+          createdAt: '2026-06-20T08:00:00.000Z',
+          updatedAt: '2026-06-20T08:00:00.000Z',
+        }],
+      });
+    }
+    if (String(input).endsWith('/staff/assignable')) {
+      return jsonResponse({
+        staff: [{
+          userId: 'usr_owner',
+          displayName: 'Owner User',
+          displayNameAr: 'موظف مسؤول',
+          role: 'CR Manager',
+          roleAr: 'مدير علاقات العملاء',
+          branchLabel: 'Main Branch',
+          branchLabelAr: 'الفرع الرئيسي',
+        }],
+      });
+    }
     return jsonResponse({ error: { code: 'RBAC_FORBIDDEN' } }, 403);
   };
   const html = renderToStaticMarkup(
@@ -1075,13 +1105,25 @@ test('complaint detail route renders real backend facts through the session cook
 
   const detailCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail'));
   const caseCall = calls.find((call) => String(call.input).endsWith('/cases/case_cmp_1/timeline'));
+  const capaCall = calls.find((call) => String(call.input).endsWith('/cases/case_cmp_1/capa'));
+  const staffCall = calls.find((call) => String(call.input).endsWith('/staff/assignable'));
   assert.ok(detailCall);
   assert.ok(caseCall);
+  assert.ok(capaCall);
+  assert.ok(staffCall);
   assert.equal(String(detailCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail');
   assert.equal(String(caseCall.input), 'http://localhost:3000/cases/case_cmp_1/timeline');
+  assert.equal(String(capaCall.input), 'http://localhost:3000/cases/case_cmp_1/capa');
+  assert.equal(String(staffCall.input), 'http://localhost:3000/staff/assignable');
   assert.doesNotMatch(String(detailCall.input), /role|actor|workflow|branchId/i);
   assert.doesNotMatch(String(caseCall.input), /role|actor|workflow|branchId/i);
+  assert.doesNotMatch(String(capaCall.input), /role|actor|workflow|branchId/i);
+  assert.doesNotMatch(String(staffCall.input), /role|actor|workflow|branchId|owner|token|credential/i);
   assert.deepEqual(detailCall.init?.headers, {
+    Accept: 'application/json',
+    cookie: 'cms_staff_session=raw-session',
+  });
+  assert.deepEqual(staffCall.init?.headers, {
     Accept: 'application/json',
     cookie: 'cms_staff_session=raw-session',
   });
@@ -1095,6 +1137,10 @@ test('complaint detail route renders real backend facts through the session cook
   assert.match(html, /CUSTOMER_COMPLAINT/);
   assert.match(html, /Main Branch/);
   assert.match(html, /Owner User/);
+  assert.match(html, /CAPA owner/);
+  assert.match(html, /Owner User - CR Manager - Main Branch/);
+  assert.match(html, /Parts delay/);
+  assert.match(html, /Open/);
   assert.match(html, /Complaint SUBMITTED - 2026-06-18/);
   assert.match(html, /SUBMITTED - 2026-06-18/);
   assert.match(html, /IN_PROGRESS - 2026-06-19/);
@@ -1944,9 +1990,30 @@ test('reports dashboard renders real scoped rows from the backend read', async (
   const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
   const fetchImpl: typeof fetch = async (input, init) => {
     calls.push({ input, init });
-    if (String(input).endsWith('/auth/me')) return jsonResponse({ user: principal({ roleCode: 'ADMIN', branchId: null }) });
-    if (String(input).endsWith('/reports/dashboard')) {
+    const url = String(input);
+    if (url.endsWith('/auth/me')) return jsonResponse({ user: principal({ roleCode: 'ADMIN', branchId: null }) });
+    if (url.endsWith('/reports/dashboard')) {
       return jsonResponse({ summary: { openComplaints: 1, overdueComplaints: 0, slaWarningComplaints: 0, closedComplaints: 0, averageTatHours: 0 } });
+    }
+    if (url.endsWith('/complaints/form-options')) {
+      return jsonResponse({
+        branches: [{ id: 'branch_main', code: 'MAIN', nameEn: 'Main Branch', nameAr: 'الفرع الرئيسي' }],
+        categories: [{ id: 'cat_engine', code: 'ENGINE', nameEn: 'Engine', nameAr: 'المحرك', parentId: null }],
+        severities: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
+      });
+    }
+    if (url.endsWith('/staff/assignable')) {
+      return jsonResponse({
+        staff: [{
+          userId: 'usr_owner',
+          displayName: 'Case Owner',
+          displayNameAr: 'مسؤول الحالة',
+          role: 'CR Manager',
+          roleAr: 'مدير علاقات العملاء',
+          branchLabel: 'Main Branch',
+          branchLabelAr: 'الفرع الرئيسي',
+        }],
+      });
     }
     return jsonResponse({
       items: [{
@@ -1980,8 +2047,9 @@ test('reports dashboard renders real scoped rows from the backend read', async (
     cookie: 'cms_staff_session=raw-session',
   });
   assert.match(html, /CMP-REAL-001 - Engine noise/);
-  assert.match(html, /branch_main \/ usr_owner/);
-  assert.match(html, /cat_engine/);
+  assert.match(html, /Unavailable \/ Unavailable/);
+  assert.match(html, />Unavailable</);
+  assert.doesNotMatch(html, />cat_engine<|branch_main \/ usr_owner/);
   assert.match(html, /IN_PROGRESS/);
   assert.doesNotMatch(html, /RPT-017/);
 });
@@ -2034,7 +2102,8 @@ test('reports route renders real scoped rows through the session cookie', async 
   const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
   const fetchImpl: typeof fetch = async (input, init) => {
     calls.push({ input, init });
-    if (String(input).endsWith('/reports/kpis')) {
+    const url = String(input);
+    if (url.endsWith('/reports/kpis')) {
       return jsonResponse({
         kpis: {
           onTimeCompletionPercent: 87.5,
@@ -2046,6 +2115,26 @@ test('reports route renders real scoped rows through the session cookie', async 
           averageFirstResponseHours: 0.5,
           averageResolutionHours: 12.25,
         },
+      });
+    }
+    if (url.endsWith('/complaints/form-options')) {
+      return jsonResponse({
+        branches: [{ id: 'branch_report', code: 'REPORT', nameEn: 'Reports Branch', nameAr: 'فرع التقارير' }],
+        categories: [{ id: 'cat_report', code: 'REPORT', nameEn: 'Reports Category', nameAr: 'تصنيف التقارير', parentId: null }],
+        severities: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
+      });
+    }
+    if (url.endsWith('/staff/assignable')) {
+      return jsonResponse({
+        staff: [{
+          userId: 'usr_report',
+          displayName: 'Reports Owner',
+          displayNameAr: 'مسؤول التقارير',
+          role: 'CR Manager',
+          roleAr: 'مدير علاقات العملاء',
+          branchLabel: 'Reports Branch',
+          branchLabelAr: 'فرع التقارير',
+        }],
       });
     }
     return jsonResponse({
@@ -2067,21 +2156,34 @@ test('reports route renders real scoped rows through the session cookie', async 
     await ReportsPage({
       cookieHeader: 'cms_staff_session=raw-session',
       fetchImpl,
-      searchParams: Promise.resolve({ locale: 'en' }),
+      searchParams: Promise.resolve({ locale: 'en', branchId: 'branch_report', categoryId: 'cat_report', ownerId: 'usr_report' }),
     }),
   );
 
-  const reportsCall = calls.find((call) => String(call.input).endsWith('/reports'));
+  const reportsCall = calls.find((call) => String(call.input).startsWith('http://localhost:3000/reports?'));
   const kpisCall = calls.find((call) => String(call.input).endsWith('/reports/kpis'));
+  const optionsCall = calls.find((call) => String(call.input).endsWith('/complaints/form-options'));
+  const staffCall = calls.find((call) => String(call.input).endsWith('/staff/assignable'));
   assert.ok(reportsCall);
   assert.ok(kpisCall);
+  assert.ok(optionsCall);
+  assert.ok(staffCall);
   assert.deepEqual(reportsCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
   assert.deepEqual(kpisCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
-  assert.doesNotMatch(String(reportsCall.input), /role|actor|branchId|owner|token|credential/i);
+  assert.deepEqual(optionsCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+  assert.deepEqual(staffCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+  assert.match(String(reportsCall.input), /branchId=branch_report/);
+  assert.match(String(reportsCall.input), /categoryId=cat_report/);
+  assert.match(String(reportsCall.input), /ownerId=usr_report/);
+  assert.doesNotMatch(String(reportsCall.input), /role|actor|token|credential/i);
   assert.doesNotMatch(String(kpisCall.input), /role|actor|branchId|owner|token|credential/i);
   assert.match(html, /CMP-RPT-ROUTE-001 - Route report row/);
-  assert.match(html, /branch_report \/ usr_report/);
-  assert.match(html, /cat_report/);
+  assert.match(html, /Reports Branch \/ Reports Owner - CR Manager/);
+  assert.match(html, /Reports Category/);
+  assert.match(html, /Owner filter: Reports Owner - CR Manager - Reports Branch/);
+  assert.doesNotMatch(html, /name="ownerLabel"/);
+  assert.match(html, /href="\/reports\/export\?format=csv&amp;branchId=branch_report&amp;categoryId=cat_report&amp;ownerId=usr_report"/);
+  assert.doesNotMatch(html, /branch_report \/ usr_report|>cat_report</);
   assert.match(html, /IN_PROGRESS/);
   assert.match(html, /Accountability KPIs/);
   assert.match(html, /87\.5%/);
@@ -3028,6 +3130,19 @@ test('deal handoff board route renders scoped deal data through the session cook
         currentHolder: [{ currentHolderId: 'usr_sales', currentHolderName: 'Sales Holder', count: 1 }, { currentHolderId: 'usr_delivery', currentHolderName: 'Delivery Holder', count: 1 }],
       });
     }
+    if (String(input).endsWith('/staff/assignable')) {
+      return jsonResponse({
+        staff: [{
+          userId: 'usr_delivery',
+          displayName: 'Delivery Holder',
+          displayNameAr: 'مسؤول التسليم',
+          role: 'Delivery',
+          roleAr: 'التسليم',
+          branchLabel: 'Main Branch',
+          branchLabelAr: 'الفرع الرئيسي',
+        }],
+      });
+    }
     return jsonResponse({});
   };
   const html = renderToStaticMarkup(
@@ -3039,15 +3154,20 @@ test('deal handoff board route renders scoped deal data through the session cook
   );
 
   const handoffCall = calls.find((call) => String(call.input).endsWith('/deals/handoff-board'));
+  const staffCall = calls.find((call) => String(call.input).endsWith('/staff/assignable'));
   assert.ok(handoffCall);
+  assert.ok(staffCall);
   assert.deepEqual(handoffCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+  assert.deepEqual(staffCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
   assert.doesNotMatch(String(handoffCall.input), /role|actor|workflow|branchId|owner|token|credential/i);
+  assert.doesNotMatch(String(staffCall.input), /role|actor|workflow|branchId|owner|token|credential/i);
   assert.match(html, /Deal Handoff Board/);
   assert.match(html, /By stage/);
   assert.match(html, /Stuck deals/);
   assert.match(html, /Current holders/);
   assert.match(html, /Unblock finance approval/);
   assert.match(html, /Prepare customer handoff/);
+  assert.match(html, /Delivery Holder - Delivery - Main Branch/);
   assert.match(html, /Missing bank approval/);
   assert.match(html, /120m/);
 });

@@ -7,6 +7,7 @@ import {
   type ComplaintWorkflowPreviewState,
 } from '../../../../components/complaint-detail-workspace';
 import { resolveLocale } from '../../../../i18n/staff-shell';
+import { getAssignableStaff } from '../../../../lib/staff-assignable-staff-api';
 import { getStaffComplaintDetail } from '../../../../lib/staff-detail-api';
 
 type RouteParams = { id?: string | string[] };
@@ -36,7 +37,10 @@ export default async function ComplaintDetailPage({
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
     ...(id !== undefined ? { complaintId: id } : {}),
   };
-  const detail = await getStaffComplaintDetail(apiInput);
+  const [detail, staff] = await Promise.all([
+    getStaffComplaintDetail(apiInput),
+    getAssignableStaff({ ...(cookieHeader !== undefined ? { cookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
+  ]);
 
   return (
     <ComplaintDetailWorkspace
@@ -44,6 +48,7 @@ export default async function ComplaintDetailPage({
       commentsState={resolveDetail(readParam(query?.comments))}
       detail={detail ?? undefined}
       locale={resolveLocale(readParam(query?.locale))}
+      staff={staff}
       state={resolveDetail(readParam(query?.detail))}
       workflowState={resolveWorkflow(readParam(query?.workflow))}
     />

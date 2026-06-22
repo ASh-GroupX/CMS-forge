@@ -7,6 +7,7 @@ export type StaffConfidentialCaseTimeline = {
     subject: string;
     branchId: string;
     ownerId: string | null;
+    ownerName: string | null;
     createdAt: string;
     updatedAt: string;
   };
@@ -71,6 +72,7 @@ function timelineFrom(body: TimelineResponse): StaffConfidentialCaseTimeline | n
       subject: caseItem.subject,
       branchId: caseItem.branchId,
       ownerId: typeof caseItem.ownerId === 'string' ? caseItem.ownerId : null,
+      ownerName: typeof caseItem.ownerName === 'string' ? caseItem.ownerName : null,
       createdAt: caseItem.createdAt,
       updatedAt: caseItem.updatedAt,
     },

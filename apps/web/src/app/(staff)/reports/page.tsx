@@ -1,9 +1,11 @@
 import React from 'react';
 import { ReportsDashboard, type ReportsPreviewState } from '../../../components/reports-dashboard';
 import { resolveLocale } from '../../../i18n/staff-shell';
+import { getAssignableStaff } from '../../../lib/staff-assignable-staff-api';
+import { getComplaintFormOptions } from '../../../lib/staff-complaint-form-options-api';
 import { getStaffReportKpis, getStaffReportRows } from '../../../lib/staff-reports-api';
 
-type SearchParams = { locale?: string | string[]; reports?: string | string[] };
+type SearchParams = { locale?: string | string[]; reports?: string | string[]; branchId?: string | string[]; categoryId?: string | string[]; ownerId?: string | string[] };
 
 export default async function ReportsPage({
   cookieHeader,
@@ -19,12 +21,25 @@ export default async function ReportsPage({
     ...(cookieHeader !== undefined ? { cookieHeader } : {}),
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
   };
-  const [rows, kpis] = await Promise.all([getStaffReportRows(apiInput), getStaffReportKpis(apiInput)]);
+  const filters = {
+    branchId: readParam(params?.branchId) ?? '',
+    categoryId: readParam(params?.categoryId) ?? '',
+    ownerId: readParam(params?.ownerId) ?? '',
+  };
+  const [rows, kpis, options, staff] = await Promise.all([
+    getStaffReportRows({ ...apiInput, filters }),
+    getStaffReportKpis(apiInput),
+    getComplaintFormOptions(apiInput),
+    getAssignableStaff(apiInput),
+  ]);
   return (
     <ReportsDashboard
+      filters={filters}
       kpis={kpis ?? undefined}
       locale={resolveLocale(readParam(params?.locale))}
+      options={options}
       rows={rows ?? undefined}
+      staff={staff}
       state={resolveState(readParam(params?.reports))}
     />
   );

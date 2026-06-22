@@ -6,12 +6,14 @@ import { CsrfGuard } from '../../core/csrf.guard.js';
 import { PrismaService } from '../../core/http-kernel.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { AuthService } from '../auth/auth.service.js';
+import { AdminModule } from '../admin/admin.module.js';
+import { AdminUsersService } from '../admin/admin-users.service.js';
 import { CasesController } from './cases.controller.js';
 import { CasesRepository } from './cases.repository.js';
 import { CasesService } from './cases.service.js';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, AdminModule],
   controllers: [CasesController],
   providers: [
     PrismaService,
@@ -27,8 +29,8 @@ import { CasesService } from './cases.service.js';
     },
     {
       provide: CasesService,
-      inject: [CasesRepository, AuditService],
-      useFactory: (repository: CasesRepository, audit: AuditService) => new CasesService(repository, audit),
+      inject: [CasesRepository, AuditService, AdminUsersService],
+      useFactory: (repository: CasesRepository, audit: AuditService, users: AdminUsersService) => new CasesService(repository, audit, users),
     },
     {
       provide: SESSION_AUTH_SERVICE,

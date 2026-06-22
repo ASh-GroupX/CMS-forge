@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { complaintDetailText } from '../../i18n/staff-complaint-detail';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
+import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
 import type { StaffComplaintDetailView } from '../../lib/staff-detail-api';
 import { ComplaintAttachmentControls, type ComplaintAttachmentPreviewState } from '../complaint-attachment-controls';
 import { ComplaintCommentsPanel, type ComplaintCommentsPreviewState } from '../complaint-comments-panel';
@@ -18,6 +19,7 @@ export function ComplaintDetailWorkspace({
   commentsState,
   detail,
   locale,
+  staff,
   state,
   workflowState,
 }: {
@@ -25,6 +27,7 @@ export function ComplaintDetailWorkspace({
   commentsState?: ComplaintCommentsPreviewState | undefined;
   detail?: StaffComplaintDetailView | undefined;
   locale: Locale;
+  staff?: AssignableStaff[] | null | undefined;
   state?: ComplaintDetailPreviewState | undefined;
   workflowState?: ComplaintWorkflowPreviewState | undefined;
 }) {
@@ -98,7 +101,7 @@ export function ComplaintDetailWorkspace({
                 </ol>
               ) : null}
             </section>
-            <CaseCapaPanel caseId={detail?.case?.id} items={detail?.capaActions ?? []} text={t.capa} />
+            <CaseCapaPanel caseId={detail?.case?.id} caseOwnerId={detail?.case?.ownerId ?? undefined} items={detail?.capaActions ?? []} locale={locale} staff={staff} text={t.capa} />
             <DetailPanel title={t.sections.survey} rows={[
               [t.labels.rating, t.values.rating],
               [t.labels.submitted, t.values.submitted],

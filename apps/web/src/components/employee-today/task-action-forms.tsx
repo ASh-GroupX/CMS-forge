@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { StaffPicker } from '../shared/staff-picker';
 import { employeeTodayText } from '../../i18n/staff-employee-today';
 import type { Locale } from '../../i18n/staff-shell';
 import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
@@ -30,7 +31,7 @@ export function QuickAddForm({ action, locale, relatedRecords, staff, t }: { act
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         <LabeledInput label={t.fields.title} name="title" required />
-        <StaffPicker locale={locale} staff={staff} t={t} />
+        <StaffPicker label={t.fields.assignee} labelName="assigneeLabel" locale={locale} name="whoId" staff={staff} t={t.staffPicker} />
         <LabeledInput label={t.fields.when} name="when" required type="datetime-local" />
         <LabeledInput label={t.fields.due} name="dueAt" type="datetime-local" />
         <RelatedRecordPicker locale={locale} relatedRecords={relatedRecords} t={t} />
@@ -110,46 +111,6 @@ function RelatedRecordPicker({ locale, relatedRecords, t }: { locale: Locale; re
   );
 }
 
-function StaffPicker({ locale, staff, t }: { locale: Locale; staff?: AssignableStaff[] | null | undefined; t: EmployeeTodayText }) {
-  const listId = React.useId();
-  const options = staff?.map((person) => ({ id: person.userId, label: staffLabel(person, locale) })) ?? [];
-  const selectRef = React.useRef<HTMLSelectElement>(null);
-  const [selectedLabel, setSelectedLabel] = React.useState('');
-  const selected = options.find((option) => option.label === selectedLabel);
-
-  if (staff === undefined) return <PickerState label={t.fields.assignee} message={t.staffPicker.loading} />;
-  if (staff === null) return <PickerState alert label={t.fields.assignee} message={t.staffPicker.error} />;
-  if (staff.length === 0) return <PickerState label={t.fields.assignee} message={t.staffPicker.empty} />;
-
-  return (
-    <div className="grid gap-2">
-      <Label htmlFor={`${listId}-input`}>{t.fields.assignee}</Label>
-      <div className="grid grid-cols-[1fr_auto] gap-2">
-        <select
-          aria-describedby={`${listId}-selected`}
-          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-          id={`${listId}-input`}
-          name="assigneeLabel"
-          onChange={(event) => setSelectedLabel(event.currentTarget.value)}
-          ref={selectRef}
-          required
-          value={selectedLabel}
-        >
-          <option value="" disabled>{t.staffPicker.placeholder}</option>
-          {options.map((option) => <option key={option.id} value={option.label}>{option.label}</option>)}
-        </select>
-        <Button aria-label={t.staffPicker.clear} onClick={() => { setSelectedLabel(''); if (selectRef.current) selectRef.current.value = ''; }} type="button" variant="outline">
-          <X className="size-4" aria-hidden="true" />
-        </Button>
-      </div>
-      <input name="whoId" type="hidden" value={selected?.id ?? ''} />
-      <p className="text-xs text-muted-foreground" id={`${listId}-selected`}>
-        {selected ? t.staffPicker.selected.replace('{name}', selected.label) : t.staffPicker.prompt}
-      </p>
-    </div>
-  );
-}
-
 function PickerState({ alert = false, label, message }: { alert?: boolean; label: string; message: string }) {
   return (
     <div className="grid gap-2">
@@ -161,20 +122,13 @@ function PickerState({ alert = false, label, message }: { alert?: boolean; label
   );
 }
 
-function staffLabel(person: AssignableStaff, locale: Locale): string {
-  const name = locale === 'ar' ? person.displayNameAr : person.displayName;
-  const role = locale === 'ar' ? person.roleAr : person.role;
-  const branch = locale === 'ar' ? person.branchLabelAr : person.branchLabel;
-  return [name, role, branch].filter(Boolean).join(' - ');
-}
-
 function relatedRecordLabel(record: StaffRelatedRecord, locale: Locale): string {
   const label = locale === 'ar' ? record.labelAr : record.label;
   const context = locale === 'ar' ? record.contextAr : record.context;
   return [label, context].filter(Boolean).join(' - ');
 }
 
-export function TaskActions({ action, locale, task, t }: { action: TaskAction; locale: Locale; task: StaffTask; t: EmployeeTodayText }) {
+export function TaskActions({ action, locale, staff, task, t }: { action: TaskAction; locale: Locale; staff?: AssignableStaff[] | null | undefined; task: StaffTask; t: EmployeeTodayText }) {
   const nextWhat = task.nextAction?.what ?? task.title;
   const nextWho = task.nextAction?.whoId ?? task.assigneeId;
   const nextWhen = toDateTimeLocal(task.nextAction?.when ?? task.dueAt);
@@ -187,9 +141,9 @@ export function TaskActions({ action, locale, task, t }: { action: TaskAction; l
       </div>
       <form action={action} className="grid gap-2 md:grid-cols-[1fr_1fr_1fr_auto]">
         <HiddenTaskFields locale={locale} taskId={task.id} />
-        <LabeledInput defaultValue={task.assigneeId} label={t.fields.assignee} name="assigneeId" required />
+        <StaffPicker initialUserId={task.assigneeId} label={t.fields.assignee} labelName="assigneeLabel" locale={locale} name="assigneeId" staff={staff} t={t.staffPicker} />
         <LabeledInput defaultValue={nextWhat} label={t.fields.nextAction} name="nextActionWhat" required />
-        <LabeledInput defaultValue={nextWho} label={t.fields.nextOwner} name="nextActionWhoId" required />
+        <StaffPicker initialUserId={nextWho} label={t.fields.nextOwner} labelName="nextActionWhoLabel" locale={locale} name="nextActionWhoId" staff={staff} t={t.staffPicker} />
         <div className="grid gap-2">
           <Label htmlFor={`next-when-${task.id}`}>{t.fields.when}</Label>
           <Input defaultValue={nextWhen} id={`next-when-${task.id}`} name="nextActionWhen" required type="datetime-local" />

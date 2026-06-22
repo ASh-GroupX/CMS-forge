@@ -66,6 +66,22 @@ test('filtered report denies out-of-branch rows for scoped users', async () => {
   assert.deepEqual(await service.filteredReport({ role: RoleCode.BRANCH_MANAGER, branchId: 'branch-a', filterBranchId: 'branch-b' }), []);
 });
 
+test('filtered export denies out-of-branch rows for scoped users', async () => {
+  const auditRecords: AuditRecordInput[] = [];
+  const service = reportsService({ record: async (input) => auditRecords.push(input) } as AuditService);
+
+  const exported = await service.exportReport({
+    role: RoleCode.BRANCH_MANAGER,
+    branchId: 'branch-a',
+    filterBranchId: 'branch-b',
+    format: 'csv',
+  });
+
+  assert.equal(exported.rowCount, 0);
+  assert.equal(exported.body.split('\n').filter(Boolean).length, 1);
+  assert.deepEqual(auditRecords[0]?.metadata, { format: 'csv', rowCount: 0, rowLimit: 1000 });
+});
+
 test('reports route derives role and branch scope from the request principal', async () => {
   const calls: unknown[] = [];
   const controller = new ReportsController({
@@ -95,6 +111,46 @@ test('reports KPI route derives scope from the principal and returns aggregate v
   assert.deepEqual(calls[0], { role: RoleCode.BRANCH_MANAGER, branchId: 'branch-a' });
   assert.deepEqual(result, { kpis: kpiSummary });
   assert.equal('closedCountLeaderboard' in result.kpis, false);
+});
+
+test('reports export route keeps controller binding and preserves filters', async () => {
+  const calls: unknown[] = [];
+  const headers: Record<string, string> = {};
+  new ReportsController({
+    exportReport: async (input: unknown) => {
+      calls.push(input);
+      return {
+        fileName: 'reports.csv',
+        contentType: 'text/csv; charset=utf-8',
+        body: 'referenceNumber\nCMP-1\n',
+        rowCount: 1,
+        rowLimit: 1000,
+      };
+    },
+  } as ReportsService);
+
+  const handler = ReportsController.prototype.exportReport;
+  const body = await handler(
+    { format: 'csv', branchId: 'branch-a', categoryId: 'cat-service', ownerId: 'owner-b' },
+    request(branchManager, '/reports/export?format=csv&branchId=branch-a&categoryId=cat-service&ownerId=owner-b'),
+    { setHeader: (name, value) => { headers[name] = value; } },
+  );
+
+  assert.equal(body, 'referenceNumber\nCMP-1\n');
+  assert.equal(headers['content-type'], 'text/csv; charset=utf-8');
+  assert.equal(headers['content-disposition'], 'attachment; filename="reports.csv"');
+  assert.equal(headers['x-report-row-count'], '1');
+  assert.deepEqual(calls[0], {
+    role: RoleCode.BRANCH_MANAGER,
+    branchId: 'branch-a',
+    filterBranchId: 'branch-a',
+    categoryId: 'cat-service',
+    ownerId: 'owner-b',
+    severity: null,
+    dateFrom: null,
+    dateTo: null,
+    format: 'csv',
+  });
 });
 
 test('reports KPI route allows manager and admin roles', async () => {
@@ -272,7 +328,7 @@ function request(principal: StaffPrincipal, url: string): AuthenticatedRequest {
 
 function context(
   req: AuthenticatedRequest,
-  handler: typeof ReportsController.prototype.dashboard | typeof ReportsController.prototype.kpis | typeof ReportsController.prototype.filteredReport,
+  handler: typeof ReportsController.prototype.dashboard | typeof ReportsController.prototype.kpis | typeof ReportsController.prototype.filteredReport | typeof ReportsController.prototype.exportReport,
 ): ExecutionContext {
   return {
     switchToHttp: () => ({ getRequest: () => req }),

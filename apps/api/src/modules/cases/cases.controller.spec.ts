@@ -80,6 +80,7 @@ test('case CAPA routes use session actor and parse minimal create body', async (
 
   assert.deepEqual((await controller.capa('case_1', request({ roleCode: RoleCode.CR_MANAGER, url: '/cases/case_1/capa?roleCode=ADMIN&branchId=other' }))).items.map((item) => item.id), ['capa_1']);
   const created = await controller.createCapa('case_1', {
+    ownerId: 'owner_2',
     rootCause: 'Late parts confirmation',
     correctiveAction: 'Call customer',
     preventiveAction: 'Daily review',
@@ -93,6 +94,7 @@ test('case CAPA routes use session actor and parse minimal create body', async (
   assert.deepEqual((calls[0] as { actor: unknown }).actor, { userId: 'session_user', role: RoleCode.CR_MANAGER, branchId: 'branch_1' });
   assert.deepEqual((calls[1] as { create: unknown }).create, {
     caseId: 'case_1',
+    ownerId: 'owner_2',
     rootCause: 'Late parts confirmation',
     correctiveAction: 'Call customer',
     preventiveAction: 'Daily review',
