@@ -76,19 +76,19 @@ function PromiseCard({ locale, task, t }: { locale: Locale; task: StaffPromiseTa
   return (
     <article className="rounded-md border border-border bg-card p-3 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0"><h2 className="break-words text-sm font-semibold">{task.title}</h2><p className="mt-1 text-xs text-muted-foreground">{task.id}</p></div>
+        <div className="min-w-0"><h2 className="break-words text-sm font-semibold">{task.title}</h2></div>
         <Badge className={STATUS_CLASS[task.status]} variant="outline">{task.status}</Badge>
       </div>
       <dl className="mt-3 grid gap-2 text-sm md:grid-cols-3">
         <Field label={t.fields.customer} value={task.customerLabel ?? '-'} />
         <Field label={t.fields.deal} value={task.dealLabel ?? '-'} />
         <Field label={t.fields.due} value={formatDate(task.dueAt)} />
-        <Field label={t.fields.owner} title={task.ownerId} value={task.ownerName ?? shortId(task.ownerId)} />
-        <Field label={t.fields.assignee} title={task.assigneeId} value={task.assigneeName ?? shortId(task.assigneeId)} />
+        <Field label={t.fields.owner} value={task.ownerName ?? '-'} />
+        <Field label={t.fields.assignee} value={task.assigneeName ?? '-'} />
       </dl>
-      {task.nextAction ? <p className="mt-3 rounded-sm border border-border bg-muted px-3 py-2 text-sm"><span className="font-semibold">{t.fields.nextAction}: </span>{task.nextAction.what} <span className="text-muted-foreground">({task.nextAction.whoName ?? shortId(task.nextAction.whoId)} - {formatDate(task.nextAction.when)})</span></p> : null}
+      {task.nextAction ? <p className="mt-3 rounded-sm border border-border bg-muted px-3 py-2 text-sm"><span className="font-semibold">{t.fields.nextAction}: </span>{task.nextAction.what} <span className="text-muted-foreground">({task.nextAction.whoName ?? '-'} - {formatDate(task.nextAction.when)})</span></p> : null}
       {task.status !== 'DONE' ? <DoneForm locale={locale} taskId={task.id} t={t} /> : null}
-      {task.links.length ? <div className="mt-3 flex flex-wrap gap-1" aria-label={t.fields.links}>{task.links.map((link) => <Badge key={`${link.entityType}-${link.entityId}`} variant="outline">{link.entityType}: <span title={link.entityId}>{shortId(link.entityId)}</span></Badge>)}</div> : null}
+      {task.links.length ? <div className="mt-3 flex flex-wrap gap-1" aria-label={t.fields.links}>{task.links.map((link) => <Badge key={`${link.entityType}-${link.entityId}`} variant="outline">{linkTypeLabel(link.entityType, t)}</Badge>)}</div> : null}
     </article>
   );
 }
@@ -101,12 +101,14 @@ function Metric({ label, locale, suffix = '', value }: { label: string; locale: 
   return <div className="rounded-sm border border-border bg-muted px-3 py-2"><dt className="text-xs font-semibold text-muted-foreground">{label}</dt><dd className="text-2xl font-semibold">{formatNumber(locale, value)}{suffix}</dd></div>;
 }
 
-function Field({ label, title, value }: { label: string; title?: string; value: string }) {
-  return <div><dt className="text-xs font-semibold text-muted-foreground">{label}</dt><dd className="break-words" title={title}>{value}</dd></div>;
+function Field({ label, value }: { label: string; value: string }) {
+  return <div><dt className="text-xs font-semibold text-muted-foreground">{label}</dt><dd className="break-words">{value}</dd></div>;
 }
 
 function formatNumber(locale: Locale, value: number): string { return new Intl.NumberFormat(locale).format(value); }
 function formatDate(value: string): string { return value.slice(0, 16).replace('T', ' '); }
-function shortId(value: string): string { return value.length > 18 ? `${value.slice(0, 10)}...${value.slice(-4)}` : value; }
+function linkTypeLabel(entityType: string, t: Copy): string {
+  return entityType in t.recordTypes ? t.recordTypes[entityType as keyof typeof t.recordTypes] : entityType;
+}
 function readParam(value: string | string[] | undefined) { return Array.isArray(value) ? value[0] : value; }
 function readResult(value: string | string[] | undefined): 'error' | 'success' | undefined { const result = readParam(value); return result === 'success' || result === 'error' ? result : undefined; }

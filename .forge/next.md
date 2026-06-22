@@ -1,6 +1,6 @@
-# READY TO PLAN - NEXT OPERATOR UX SLICE
+# READY TO PLAN - AFTER P11 OPERATOR UX RELEASE REVIEW
 
-Status: Ready to Plan
+Status: P11 Operator UX Foundation Release Ready
 Required model tier: GPT-5 High or Opus 4.8 Max
 Phase: Phase 11 - Operator UX Foundation
 Risk: Medium
@@ -9,22 +9,27 @@ SRS IDs: REQ-RBAC-001, REQ-LOCALIZATION-001, UI-DESIGN-001
 ## Context
 
 P11A, P11B, P11C, P11D Deals, P11D CAPA / Case, P11D Reports filter picker
-cleanup, and the Reports export live smoke repair are complete.
+cleanup, the Reports export live smoke repair, and P11E Operator UX Arabic
+completion pass are complete and release-reviewed.
 
-Reports export repair:
+Final release review:
 
-- Reproduced the live local `GET /reports/export` HTTP 500.
-- Fixed reports module runtime DI/controller binding for local API export.
-- Preserved selected filters, RBAC, branch scope, row limits, and REPORT audit
-  behavior.
-- Verified allowed filtered export returns 200 and out-of-scope branch export
-  returns 403.
-- Did not change report KPI calculations or redesign Reports UI.
+- Confirmed touched operator flows use dropdown/picker controls for staff and
+  related-record selection; IDs submit silently where backend contracts require
+  them.
+- Hardened confidential case display so it shows case topic, branch name, and
+  human owner labels instead of raw case/branch/author IDs.
+- Cleaned generated `output/run-app/web.stdout.log`; retained P11E screenshots
+  under `output/playwright/` as release evidence.
+- Final proof passed: API auth/tasks/deals/cases/reports, web shell and
+  localization, OpenAPI, typecheck, lint, and `git diff --check`.
+- Preserved backend authority, report calculations, workflow behavior, password
+  policy, and customer portal privacy.
 
 ## Plan Needed
 
-Pick the next scoped Operator UX Foundation task. Keep it small, usually 1-5
-files plus focused tests.
+Pick the next scoped post-P11 task. Keep it small, usually 1-5 files plus
+focused tests.
 
 ## Guardrails
 
@@ -32,7 +37,7 @@ files plus focused tests.
 - Do not accept role/branch authority from client input.
 - Do not weaken password policy.
 - Do not change customer portal privacy.
-- Do not redesign completed screens unless the next scoped task explicitly asks
-  for it.
+- Do not redesign release-reviewed P11 screens unless the next scoped task
+  explicitly asks for it.
 - No admin screens, AI, WhatsApp, mobile, deploy, or workflow builder unless the
   next scoped task explicitly asks for it.

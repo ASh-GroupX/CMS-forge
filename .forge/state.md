@@ -1,8 +1,8 @@
 # Current State
 
-Status: Reports Export Live Smoke Repair Complete
+Status: P11 Operator UX Foundation Release Ready
 Phase: Phase 11 - Operator UX Foundation
-Next Task: Ready to plan next Operator UX slice
+Next Task: Ready to plan next post-P11 slice
 Model Tier: GPT-5 High or Opus 4.8 Max
 
 ## How to use this file
@@ -74,8 +74,29 @@ Prior state history is in .forge/archive/state-archive.md.
   - Live allowed export returns 200 with CSV download headers.
   - Live out-of-scope branch export returns 403.
   - Report KPI calculations and Reports UI were not changed.
-- OpenAPI did not change for the export repair.
+- P11E Operator UX Arabic completion pass is complete:
+  - Arabic operator copy was tightened across Login, Today / Quick Add, Sent
+    Tasks, Promises, Deals Handoff, Complaint detail / CAPA, confidential case
+    labels, Reports, Notifications, and picker state copy.
+  - Touched operator screens no longer show raw task/link/case/branch/deal ID
+    fallbacks in normal UI.
+  - Staff and related-record picker controls keep stable RTL layout with long
+    Arabic labels.
+  - Complaint detail / CAPA no longer exposes raw case or branch IDs when human
+    labels are unavailable.
+  - Representative Arabic screenshots were saved under `output/playwright/`.
+- P11 final release review is complete:
+  - Confidential case display was hardened to avoid raw case, branch, and note
+    author ID display in the touched case route.
+  - Generated `output/run-app/web.stdout.log` was cleaned after stopping the
+    repo-local smoke dev server that locked it.
+  - P11E screenshots remain under `output/playwright/` as intentional evidence.
+- OpenAPI did not change for the release review.
 - Proof passed:
+  - `corepack pnpm test:api -- auth`
+  - `corepack pnpm test:api -- tasks`
+  - `corepack pnpm test:api -- deals`
+  - `corepack pnpm test:api -- cases`
   - `corepack pnpm test:api -- reports`
   - `corepack pnpm test:web -- shell`
   - `corepack pnpm test:web -- localization`
@@ -86,11 +107,10 @@ Prior state history is in .forge/archive/state-archive.md.
 
 ## Open carry-forward / known debt
 
-- Existing task cards still display compact raw task/link IDs for already-saved
-  task links; P11B/P11C only removed raw record/staff entry from normal task
-  workflows.
 - Some seeded smoke/test users have English names in `nameAr`; Arabic copy is
   complete for touched labels, but future data seeding can improve Arabic staff
   names.
+- Optional live smoke was not repeated in this release review; prior P11E smoke
+  screenshots were retained as evidence and automated proof was rerun.
 - No admin screens, AI, WhatsApp, mobile, deploy, employee grievance screens, or
   workflow builder work was added.

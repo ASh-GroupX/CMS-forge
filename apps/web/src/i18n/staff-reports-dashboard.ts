@@ -45,12 +45,12 @@ export const reportCatalogText: Record<Locale, readonly (readonly [string, strin
 export const reportsDashboardText: Record<Locale, typeof enReportsDashboardText> = {
   en: {
     title: 'Reports dashboard',
-    subtitle: 'Backend-scoped operational reports and accountability KPIs.',
+    subtitle: 'Operational reports and accountability KPIs for your signed-in role.',
     headers: ['Report', 'Audience', 'Category', 'Status'],
     kpis: {
       title: 'Accountability KPIs',
       subtitle: 'Values are read from the backend KPI model.',
-      backend: 'Backend read model',
+      backend: 'System data',
       unavailable: 'No KPI data',
       empty: 'KPI values are unavailable for this session or role.',
       onTime: 'On-time completion',
@@ -105,12 +105,12 @@ export const reportsDashboardText: Record<Locale, typeof enReportsDashboardText>
   },
   ar: {
     title: 'لوحة التقارير',
-    subtitle: 'مدخلات تقارير الحد الأدنى بانتظار واجهات تقارير المرحلة 7.',
+    subtitle: 'تقارير تشغيلية ومؤشرات مساءلة حسب صلاحية دخولك.',
     headers: ['التقرير', 'المستخدمون', 'الفئة', 'الحالة'],
     kpis: {
       title: 'مؤشرات المساءلة',
-      subtitle: 'القيم مقروءة من نموذج مؤشرات الخادم.',
-      backend: 'نموذج الخادم',
+      subtitle: 'القيم مقروءة من بيانات النظام.',
+      backend: 'بيانات النظام',
       unavailable: 'لا توجد بيانات',
       empty: 'قيم المؤشرات غير متاحة لهذه الجلسة أو الدور.',
       onTime: 'الإنجاز في الوقت',
@@ -127,7 +127,7 @@ export const reportsDashboardText: Record<Locale, typeof enReportsDashboardText>
       title: 'تصدير التقرير',
       csv: 'CSV',
       excel: 'Excel',
-      rowLimit: 'تستخدم عمليات التصدير حدود الصفوف المحددة في الخادم.',
+      rowLimit: 'التصدير يلتزم بحد الصفوف المحدد في النظام.',
       scoped: 'تتم فلترة بيانات التصدير حسب نفس نطاق التقرير والصلاحيات.',
       audit: 'يسجل الخادم عمليات التصدير الناجحة في التدقيق.',
     },
@@ -142,9 +142,9 @@ export const reportsDashboardText: Record<Locale, typeof enReportsDashboardText>
       unavailable: 'غير متاح',
       ownerPicker: {
         placeholder: 'اختر المسؤول',
-        prompt: 'لم يتم اختيار مسؤول للفلتر.',
-        selected: 'فلتر المسؤول: {name}',
-        clear: 'مسح فلتر المسؤول',
+        prompt: 'لم يتم اختيار مسؤول للتصفية.',
+        selected: 'تصفية حسب المسؤول: {name}',
+        clear: 'مسح تصفية المسؤول',
         loading: 'جار تحميل المسؤولين.',
         empty: 'لا يوجد مسؤولون متاحون ضمن نطاقك.',
         error: 'تعذر تحميل المسؤولين.',
@@ -157,11 +157,11 @@ export const reportsDashboardText: Record<Locale, typeof enReportsDashboardText>
       empty: 'لا توجد مدخلات تقارير بعد.',
       error: 'تعذر تحميل لوحة التقارير. حاول مرة أخرى.',
       success: 'تم اختيار مدخل التقرير.',
-      validation: 'فلاتر التقارير بانتظار تحقق الخادم.',
+      validation: 'راجع اختيارات التصفية قبل التصدير.',
       denied: 'التصدير غير متاح لهذا التقرير أو الدور.',
       conflict: 'تغير فهرس التقارير. أعد التحميل قبل المتابعة.',
     },
-    safeNote: 'تبقى بيانات التقارير والمقاييس والفلاتر والتصدير مقيدة من الخادم.',
+    safeNote: 'تظهر بيانات التقارير والمقاييس والتصدير حسب صلاحيات دخولك فقط.',
   },
 };
 

@@ -70,7 +70,6 @@ function SentTaskCard({ commentAction, locale, nudgeAction, task, t }: { comment
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h2 className="break-words text-sm font-semibold">{task.title}</h2>
-          <p className="mt-1 text-xs text-muted-foreground">{task.id}</p>
         </div>
         <div className="flex flex-wrap gap-1">
           <Badge className={STATUS_CLASS[task.status]} variant="outline">{task.status}</Badge>
@@ -81,7 +80,7 @@ function SentTaskCard({ commentAction, locale, nudgeAction, task, t }: { comment
         <Field label={t.fields.assignee} value={task.assigneeName ?? '-'} />
         <Field label={t.fields.due} value={formatDate(task.dueAt)} />
         <Field label={t.fields.updated} value={formatDate(task.updatedAt)} />
-        <Field label={t.fields.branch} value={task.branchName ?? (task.branchId ? shortId(task.branchId) : '-')} {...(task.branchId ? { title: task.branchId } : {})} />
+        <Field label={t.fields.branch} value={task.branchName ?? '-'} />
       </dl>
       {task.nextAction ? (
         <div className="mt-3 rounded-sm border border-border bg-muted px-3 py-2 text-sm">
@@ -94,7 +93,7 @@ function SentTaskCard({ commentAction, locale, nudgeAction, task, t }: { comment
       ) : null}
       {task.links.length ? (
         <div className="mt-3 flex flex-wrap gap-1" aria-label={t.fields.links}>
-          {task.links.map((link) => <Badge key={`${link.entityType}-${link.entityId}`} variant="outline">{link.entityType}: <span title={link.entityId}>{shortId(link.entityId)}</span></Badge>)}
+          {task.links.map((link) => <Badge key={`${link.entityType}-${link.entityId}`} variant="outline">{linkTypeLabel(link.entityType, t)}</Badge>)}
         </div>
       ) : null}
       <section className="mt-3 grid gap-2 border-t border-border pt-3" aria-label={t.fields.comment}>
@@ -145,6 +144,6 @@ function formatDate(value: string): string {
   return value.slice(0, 16).replace('T', ' ');
 }
 
-function shortId(value: string): string {
-  return value.length > 18 ? `${value.slice(0, 10)}...${value.slice(-4)}` : value;
+function linkTypeLabel(entityType: string, t: Text): string {
+  return entityType in t.recordTypes ? t.recordTypes[entityType as keyof typeof t.recordTypes] : entityType;
 }

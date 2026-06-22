@@ -84,13 +84,12 @@ export function ComplaintDetailWorkspace({
             <section className="rounded-md border border-slate-200 bg-slate-50 p-3" aria-label={t.sections.caseTimeline}>
               <h3 className="text-sm font-semibold">{t.sections.caseTimeline}</h3>
               <DetailRows rows={detail?.case ? [
-                [t.labels.caseId, detail.case.id],
                 [t.labels.caseType, detail.case.type],
                 [t.labels.status, detail.case.status],
                 [t.labels.caseLifecycle, detail.case.lifecycleStatus],
                 [t.labels.caseBranch, detail.case.branchName],
                 [t.labels.caseOwner, detail.case.ownerName ?? t.values.owner],
-              ] : [[t.labels.caseId, t.states.empty]]} />
+              ] : [[t.labels.caseLifecycle, t.states.empty]]} />
               {detail?.caseTimeline.length ? (
                 <ol className="mt-3 grid gap-2 text-sm text-slate-700">
                   {detail.caseTimeline.map((item, index) => (
@@ -124,7 +123,7 @@ function detailValues(detail: StaffComplaintDetailView, fallback: typeof complai
     severity: detail.severity,
     category: detail.subject,
     owner: detail.assignee ?? fallback.owner,
-    sla: detail.branch,
+    sla: detail.branch || fallback.sla,
   };
 }
 
@@ -141,9 +140,9 @@ function DetailRows({ rows }: { rows: readonly (readonly [string, string])[] }) 
   return (
     <dl className="mt-3 grid gap-2 text-sm">
       {rows.map(([label, value]) => (
-        <div className="grid grid-cols-[8rem_1fr] gap-2 rounded-sm bg-white px-3 py-2" key={label}>
+        <div className="grid grid-cols-[minmax(6rem,8rem)_minmax(0,1fr)] gap-2 rounded-sm bg-white px-3 py-2" key={label}>
           <dt className="text-slate-500">{label}</dt>
-          <dd className="font-medium text-slate-800">{value}</dd>
+          <dd className="break-words font-medium text-slate-800">{value}</dd>
         </div>
       ))}
     </dl>

@@ -6,12 +6,13 @@ export type StaffConfidentialCaseTimeline = {
     confidentialityLevel: string;
     subject: string;
     branchId: string;
+    branchName: string;
     ownerId: string | null;
     ownerName: string | null;
     createdAt: string;
     updatedAt: string;
   };
-  restrictedNotes: { id: string; authorId: string | null; body: string; createdAt: string }[];
+  restrictedNotes: { id: string; authorId: string | null; authorName?: string | null; body: string; createdAt: string }[];
   events: { type: string; occurredAt: string; entityType?: string; entityId?: string }[];
 };
 
@@ -55,6 +56,7 @@ function timelineFrom(body: TimelineResponse): StaffConfidentialCaseTimeline | n
     typeof caseItem.confidentialityLevel !== 'string' ||
     typeof caseItem.subject !== 'string' ||
     typeof caseItem.branchId !== 'string' ||
+    typeof caseItem.branchName !== 'string' ||
     typeof caseItem.createdAt !== 'string' ||
     typeof caseItem.updatedAt !== 'string'
   ) {
@@ -71,6 +73,7 @@ function timelineFrom(body: TimelineResponse): StaffConfidentialCaseTimeline | n
       confidentialityLevel: caseItem.confidentialityLevel,
       subject: caseItem.subject,
       branchId: caseItem.branchId,
+      branchName: caseItem.branchName,
       ownerId: typeof caseItem.ownerId === 'string' ? caseItem.ownerId : null,
       ownerName: typeof caseItem.ownerName === 'string' ? caseItem.ownerName : null,
       createdAt: caseItem.createdAt,
@@ -85,6 +88,7 @@ function isNote(note: unknown): note is StaffConfidentialCaseTimeline['restricte
   return Boolean(note && typeof note === 'object'
     && typeof (note as { id?: unknown }).id === 'string'
     && (((note as { authorId?: unknown }).authorId === null) || typeof (note as { authorId?: unknown }).authorId === 'string')
+    && (((note as { authorName?: unknown }).authorName === undefined) || ((note as { authorName?: unknown }).authorName === null) || typeof (note as { authorName?: unknown }).authorName === 'string')
     && typeof (note as { body?: unknown }).body === 'string'
     && typeof (note as { createdAt?: unknown }).createdAt === 'string');
 }

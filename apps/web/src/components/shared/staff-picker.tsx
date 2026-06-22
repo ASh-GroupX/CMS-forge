@@ -50,10 +50,10 @@ export function StaffPicker({
   return (
     <div className="grid gap-2">
       <Label htmlFor={`${listId}-input`}>{label}</Label>
-      <div className="grid grid-cols-[1fr_auto] gap-2">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
         <select
           aria-describedby={`${listId}-selected`}
-          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+          className="flex h-9 min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
           id={`${listId}-input`}
           name={labelName}
           onChange={(event) => setSelectedLabel(event.currentTarget.value)}
@@ -69,7 +69,7 @@ export function StaffPicker({
         </Button>
       </div>
       <input name={name} type="hidden" value={selected?.id ?? ''} />
-      <p className="text-xs text-muted-foreground" id={`${listId}-selected`}>
+      <p className="break-words text-xs text-muted-foreground" id={`${listId}-selected`}>
         {selected ? t.selected.replace('{name}', selected.label) : t.prompt}
       </p>
     </div>

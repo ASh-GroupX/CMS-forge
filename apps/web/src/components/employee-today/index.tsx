@@ -145,7 +145,6 @@ function TaskCard({ locale, staff, task, t, updateAction }: { locale: Locale; st
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="break-words text-sm font-semibold">{task.title}</h3>
-          <p className="mt-1 text-xs text-muted-foreground">{task.id}</p>
         </div>
         <div className="flex flex-wrap gap-1">
           <Badge className={STATUS_CLASS[task.status]} variant="outline">{task.status}</Badge>
@@ -156,7 +155,7 @@ function TaskCard({ locale, staff, task, t, updateAction }: { locale: Locale; st
         <Field label={t.fields.assignee} value={task.assigneeName ?? '-'} />
         <Field label={t.fields.due} value={formatDate(task.dueAt)} />
         <Field label={t.fields.owner} value={task.ownerName ?? '-'} />
-        <Field label={t.fields.branch} title={task.branchId ?? undefined} value={task.branchName ?? (task.branchId ? shortId(task.branchId) : '-')} />
+        <Field label={t.fields.branch} value={task.branchName ?? '-'} />
         <Field label={t.fields.updated} value={formatDate(task.updatedAt)} />
       </dl>
       {task.nextAction ? (
@@ -173,7 +172,7 @@ function TaskCard({ locale, staff, task, t, updateAction }: { locale: Locale; st
         <div className="mt-3 flex flex-wrap gap-1" aria-label={t.fields.links}>
           {task.links.map((link) => (
             <Badge key={`${link.entityType}-${link.entityId}`} variant="outline">
-              {link.entityType}:{' '}<span title={link.entityId}>{shortId(link.entityId)}</span>
+              {linkTypeLabel(link.entityType, t)}
             </Badge>
           ))}
         </div>
@@ -203,6 +202,6 @@ function formatDate(value: string): string {
   return value.slice(0, 16).replace('T', ' ');
 }
 
-function shortId(value: string): string {
-  return value.length > 18 ? `${value.slice(0, 10)}...${value.slice(-4)}` : value;
+function linkTypeLabel(entityType: string, t: EmployeeTodayText): string {
+  return entityType in t.recordTypes ? t.recordTypes[entityType as keyof typeof t.recordTypes] : entityType;
 }

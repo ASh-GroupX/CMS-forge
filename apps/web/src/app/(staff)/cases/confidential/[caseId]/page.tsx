@@ -47,10 +47,10 @@ export default async function ConfidentialCasePage({
             <section className="rounded-md border border-slate-200 bg-slate-50 p-3" aria-label={t.sections.summary}>
               <h3 className="text-sm font-semibold">{t.sections.summary}</h3>
               <dl className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                <Summary label={t.labels.caseId} value={timeline.case.id} />
+                <Summary label={t.labels.subject} value={timeline.case.subject} />
                 <Summary label={t.labels.type} value={timeline.case.type} />
                 <Summary label={t.labels.status} value={timeline.case.lifecycleStatus} />
-                <Summary label={t.labels.branch} value={timeline.case.branchId} />
+                <Summary label={t.labels.branch} value={timeline.case.branchName} />
                 <Summary label={t.labels.owner} value={timeline.case.ownerName ?? '-'} />
                 <Summary label={t.labels.updated} value={timeline.case.updatedAt} />
               </dl>
@@ -71,7 +71,7 @@ export default async function ConfidentialCasePage({
                   <TableBody>
                     {timeline.restrictedNotes.map((note) => (
                       <TableRow key={note.id}>
-                        <TableCell>{note.authorId ?? '-'}</TableCell>
+                        <TableCell>{note.authorName ?? '-'}</TableCell>
                         <TableCell className="font-semibold">{note.body}</TableCell>
                         <TableCell>{note.createdAt}</TableCell>
                       </TableRow>

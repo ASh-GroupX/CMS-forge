@@ -127,7 +127,7 @@ async function fetchCaseCapa({ apiUrl, caseId, cookies, fetchImpl }: { apiUrl: s
 function viewFromDetail(detail: ComplaintDetail, caseTimeline: string[], capaActions: CaseCapaAction[]): StaffComplaintDetailView {
   return {
     assignee: detail.ownerName ?? null,
-    branch: detail.branchName ?? detail.branchId,
+    branch: detail.branchName ?? '',
     case: detail.caseSummary ? {
       id: detail.caseSummary.id,
       type: detail.caseSummary.type,

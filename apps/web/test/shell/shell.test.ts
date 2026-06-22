@@ -536,7 +536,9 @@ function confidentialCaseFixture(overrides: Record<string, unknown> = {}) {
       lifecycleStatus: 'HR_REVIEW',
       confidentialityLevel: 'CONFIDENTIAL',
       branchId: 'branch_main',
+      branchName: 'Main Branch',
       ownerId: 'usr_hr',
+      ownerName: 'HR Owner',
       subject: 'Workplace grievance',
       descriptionEn: 'Confidential HR review',
       descriptionAr: null,
@@ -967,13 +969,13 @@ test('complaint detail workspace renders core regions and safe placeholders', as
   assert.match(html, /Complaint facts/);
   assert.match(html, /Customer data/);
   assert.match(html, /Vehicle data/);
-  assert.match(html, /Owner and SLA/);
+  assert.match(html, /Responsible staff and SLA/);
   assert.match(html, /Timeline/);
   assert.match(html, /Survey results/);
   assert.match(html, /Internal comments/);
   assert.match(html, /Public updates/);
   assert.match(html, /Attachments/);
-  assert.match(html, /Current owner/);
+  assert.match(html, /Current responsible staff/);
   assert.match(html, /SLA timer/);
   assert.match(html, /Masked customer placeholder/);
   assert.match(html, /Survey submitted placeholder/);
@@ -1131,9 +1133,9 @@ test('complaint detail route renders real backend facts through the session cook
   assert.match(html, /IN_PROGRESS/);
   assert.match(html, /HIGH/);
   assert.match(html, /Engine noise/);
-  assert.match(html, /branch_main/);
+  assert.match(html, /Main Branch/);
   assert.match(html, /Case timeline/);
-  assert.match(html, /case_cmp_1/);
+  assert.match(html, /Case status/);
   assert.match(html, /CUSTOMER_COMPLAINT/);
   assert.match(html, /Main Branch/);
   assert.match(html, /Owner User/);
@@ -2850,7 +2852,8 @@ test('employee today route renders real task buckets through the session cookie'
   assert.match(html, /Call customer with finance answer/);
   assert.match(html, /Customer promise/);
   assert.match(html, /Approve exception/);
-  assert.match(html, /CASE:[\s\S]*case_finance_1/);
+  assert.match(html, /Case/);
+  assert.doesNotMatch(html, /case_finance_1/);
 });
 
 test('employee today route renders empty and denied states safely', async () => {
@@ -3004,7 +3007,8 @@ test('promises route renders server-scoped promise KPIs and labels through the s
   assert.match(html, /Promise customer delivery date/);
   assert.match(html, /Noor Customer/);
   assert.match(html, /June Delivery/);
-  assert.match(html, /DEAL:[\s\S]*deal_delivery_1/);
+  assert.match(html, /Deal/);
+  assert.doesNotMatch(html, /deal_delivery_1/);
 });
 
 test('promises route renders empty and denied states safely', async () => {
@@ -3232,8 +3236,14 @@ test('confidential case route renders actor-scoped restricted notes through the 
   assert.match(html, /Confidential case timeline/);
   assert.match(html, /EMPLOYEE_GRIEVANCE/);
   assert.match(html, /HR_REVIEW/);
+  assert.match(html, /Workplace grievance/);
+  assert.match(html, /Main Branch/);
+  assert.match(html, /HR Owner/);
   assert.match(html, /Private HR note/);
   assert.match(html, /CASE_CREATED/);
+  assert.doesNotMatch(html, /case_hr_1/);
+  assert.doesNotMatch(html, /branch_main/);
+  assert.doesNotMatch(html, /usr_hr/);
 });
 
 test('confidential case route renders denied and no-note states without private notes', async () => {

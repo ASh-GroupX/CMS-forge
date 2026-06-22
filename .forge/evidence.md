@@ -6730,6 +6730,78 @@ Implemented the scoped P11C task/collaboration slice:
   were restored.
 - SRS coverage: REQ-RBAC-001, REQ-LOCALIZATION-001, UI-DESIGN-001.
 
+## 2026-06-22 - P11E Operator UX Arabic Completion Pass
+
+### Scope
+
+Implemented the scoped Arabic completion pass for the operator UX:
+
+- Audited and tightened Arabic copy for Login shell, Today / Quick Add, Sent
+  Tasks, Promises, Complaint detail / CAPA, confidential cases, Reports, and
+  picker validation/loading/empty/error/selected states.
+- Replaced technical operator-facing terms such as raw owner/assignee wording
+  with simpler staff-language labels in English and Arabic.
+- Removed visible task, link, case, branch, and deal ID fallbacks from the
+  touched operator screens. IDs still submit silently where existing backend
+  contracts require them.
+- CAPA/complaint detail no longer shows raw case IDs or branch IDs when a human
+  label is unavailable.
+- Staff and related-record picker rows now keep stable min-width behavior and
+  ellipsis handling for long Arabic labels; selected helper text wraps below
+  the control.
+- Complaint detail metadata values wrap inside their columns in RTL and LTR.
+- No workflow, backend authority, customer portal, or report calculation logic
+  changed.
+- No OpenAPI change was needed.
+
+### Live Smoke
+
+- Passed: local API health was available and the web app loaded on
+  `http://127.0.0.1:4000`.
+- Passed: username login with `admin` after temporary local bootstrap.
+- Passed: opened Arabic shell and visited Today, Sent Tasks, Promises, Deals
+  Handoff, Complaint detail / CAPA, Reports, and Notifications.
+- Passed: used a staff picker on Arabic Today without typing a raw staff ID.
+- Passed: checked representative Arabic routes for `dir=rtl`, no visible raw
+  operator IDs, and no non-select overflow after the final fix.
+- Passed: English Today still rendered with `dir=ltr`.
+- Passed: temporary local smoke password hashes were restored with `db:seed`.
+- Screenshots captured:
+  - `output/playwright/p11e-ar-login.png`
+  - `output/playwright/p11e-ar-today.png`
+  - `output/playwright/p11e-ar-picker-used.png`
+  - `output/playwright/p11e-ar-sent-tasks.png`
+  - `output/playwright/p11e-ar-promises.png`
+  - `output/playwright/p11e-ar-deals.png`
+  - `output/playwright/p11e-ar-complaint-capa.png`
+  - `output/playwright/p11e-ar-reports.png`
+  - `output/playwright/p11e-ar-notifications.png`
+  - `output/playwright/p11e-en-today.png`
+
+### Verification
+
+- Passed: `corepack pnpm test:web -- shell` (188/188).
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+- Not Run: API tests. No backend or API localization contract changed.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. This
+  pass only changed web display/i18n fallbacks and reused existing
+  session-scoped lookup data.
+- Raw ID typing no longer required in normal touched operator flows: Passed for
+  Today, Sent Tasks, Promises, Deals Handoff, Complaint detail / CAPA, Reports,
+  and Notifications smoke coverage.
+- State changes, audit, RBAC, and side effects: Not changed.
+- Customer portal exposure rules: Passed. No portal route, DTO, or UI changed.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or
+  returned: Passed. Temporary local smoke password hashes were not added to
+  source and were restored.
+- SRS coverage: REQ-LOCALIZATION-001, UI-DESIGN-001.
+
 ## 2026-06-22 - P11D CAPA / Case Operator UX Pickers
 
 ### Scope
@@ -6863,4 +6935,61 @@ Implemented the scoped Reports/filter picker cleanup:
 - No passwords, OTPs, tokens, hashes, or provider secrets are logged or
   returned: Passed. Temporary local smoke hashes were not added to source and
   were restored.
+- SRS coverage: REQ-RBAC-001, REQ-LOCALIZATION-001, UI-DESIGN-001.
+
+## 2026-06-22 - P11 Operator UX Foundation Final Release Review
+
+### Scope
+
+Reviewed and hardened the completed P11 Operator UX Foundation work for release.
+
+- Reviewed the dirty diff for raw-ID typing/display regressions in the touched
+  operator flows, picker/dropdown usage, Arabic/RTL completion, English fallback,
+  customer portal privacy, password policy, client authority, and source file
+  size guardrails.
+- Fixed one release-review finding: the confidential case route now renders case
+  topic, branch name, and owner name, and no longer displays raw case ID, branch
+  ID, or restricted-note author ID when a human author label is unavailable.
+- Added shell coverage proving the confidential case route does not render
+  `case_hr_1`, `branch_main`, or `usr_hr`.
+- Confirmed changed app source files remain under 300 lines; docs/tests are
+  exempt.
+- Cleaned generated `output/run-app/web.stdout.log` after stopping the
+  repo-local `next dev -p 4000` smoke server that was locking it.
+- Kept P11E smoke screenshots under `output/playwright/` intentionally as
+  evidence.
+- No customer portal route, password policy, workflow authority, report
+  calculation, or backend role/branch authority behavior was changed.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- auth` (37/37).
+- Passed: `corepack pnpm test:api -- tasks` (12/12).
+- Passed: `corepack pnpm test:api -- deals` (9/9).
+- Passed: `corepack pnpm test:api -- cases` (23/23).
+- Passed: `corepack pnpm test:api -- reports` (23/23).
+- Passed: `corepack pnpm test:web -- shell` (188/188).
+- Passed: `corepack pnpm test:web -- localization` (11/11).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+- Not Run: optional live smoke was not repeated; prior P11E screenshots remain
+  as smoke evidence and the automated release proof was rerun.
+
+### Security Self-Check
+
+- Roles and branch scope from server session, never client input: Passed. Auth,
+  tasks, deals, cases, and reports API suites passed; web source assertions
+  continue to deny client role/branch authority on touched reads.
+- State changes, status history, audit, and side effects: Passed for touched
+  task/deal/case/report paths through existing API suites. The release-review
+  code fix was display-only.
+- No passwords, OTPs, tokens, hashes, or provider secrets are logged or returned:
+  Passed. Auth suite covers safe password/reset behavior; generated runtime log
+  was cleaned.
+- Customer portal exposure rules hold: Passed. No portal source changed, and web
+  shell tests covering portal privacy still passed.
+- Trust boundaries are tested: Passed. API suites cover allowed and denied
+  session/branch/RBAC paths for the P11 picker/export surfaces.
 - SRS coverage: REQ-RBAC-001, REQ-LOCALIZATION-001, UI-DESIGN-001.

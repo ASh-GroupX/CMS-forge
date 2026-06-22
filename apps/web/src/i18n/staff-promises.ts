@@ -1,7 +1,7 @@
 export const staffPromisesText = {
   en: {
     title: 'Promises',
-    subtitle: 'Customer promises visible from your server-authorized scope.',
+    subtitle: 'Customer promises visible to your signed-in role.',
     total: 'promises',
     kpis: {
       open: 'Open promises',
@@ -9,17 +9,23 @@ export const staffPromisesText = {
       kept: 'Kept on time',
     },
     fields: {
-      assignee: 'Assignee',
+      assignee: 'Who should do it?',
       customer: 'Customer',
       deal: 'Deal',
       due: 'Due',
       links: 'Task links',
       nextAction: 'Next action',
-      nextOwner: 'Owner',
+      nextOwner: 'Who follows up?',
       owner: 'Created by',
       status: 'Status',
     },
     actions: { done: 'Done' },
+    recordTypes: {
+      CUSTOMER: 'Customer',
+      COMPLAINT: 'Complaint',
+      CASE: 'Case',
+      DEAL: 'Deal',
+    },
     states: {
       loading: 'Loading promises.',
       empty: 'No customer promises are visible right now.',
@@ -30,7 +36,7 @@ export const staffPromisesText = {
   },
   ar: {
     title: 'الوعود',
-    subtitle: 'وعود العملاء الظاهرة ضمن نطاقك المصرح من الخادم.',
+    subtitle: 'وعود العملاء الظاهرة حسب صلاحية دخولك.',
     total: 'وعود',
     kpis: {
       open: 'وعود مفتوحة',
@@ -38,17 +44,23 @@ export const staffPromisesText = {
       kept: 'أنجزت في موعدها',
     },
     fields: {
-      assignee: 'المكلف',
+      assignee: 'مين المسؤول؟',
       customer: 'العميل',
       deal: 'الصفقة',
       due: 'الاستحقاق',
       links: 'روابط المهمة',
       nextAction: 'الإجراء التالي',
-      nextOwner: 'المسؤول',
+      nextOwner: 'مين يتابع؟',
       owner: 'أنشأها',
       status: 'الحالة',
     },
     actions: { done: 'تم' },
+    recordTypes: {
+      CUSTOMER: 'عميل',
+      COMPLAINT: 'شكوى',
+      CASE: 'حالة',
+      DEAL: 'صفقة',
+    },
     states: {
       loading: 'جاري تحميل الوعود.',
       empty: 'لا توجد وعود عملاء ظاهرة الآن.',
