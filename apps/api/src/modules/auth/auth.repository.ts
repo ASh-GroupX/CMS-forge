@@ -1,4 +1,4 @@
-import type { Prisma, RoleCode } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
 
 export type StaffAuthRecord = {
@@ -11,7 +11,7 @@ export type StaffAuthRecord = {
   branchId: string | null;
   isActive: boolean;
   lockedAt: Date | null;
-  role: { code: RoleCode };
+  role: { code: string; permissions: { permission: { code: string } }[] };
 };
 
 export type CreateStaffSessionInput = {
@@ -62,7 +62,7 @@ export class AuthRepository {
         branchId: true,
         isActive: true,
         lockedAt: true,
-        role: { select: { code: true } },
+        role: { select: { code: true, permissions: { where: { permission: { isActive: true } }, select: { permission: { select: { code: true } } } } } },
       },
     });
   }
@@ -136,7 +136,7 @@ export class AuthRepository {
             branchId: true,
             isActive: true,
             lockedAt: true,
-            role: { select: { code: true } },
+            role: { select: { code: true, permissions: { where: { permission: { isActive: true } }, select: { permission: { select: { code: true } } } } } },
           },
         },
       },

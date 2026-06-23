@@ -16,7 +16,7 @@ const staffEmails = [
 const staffUsernames = ['admin', 'layla', 'omar', 'sara'];
 
 test('staff seed users have Argon2id hashes and no plaintext password fields', () => {
-  const hash = seed.match(/DEV_STAFF_PASSWORD_HASH =\n\s+'([^']+)';/)?.[1];
+  const hash = seed.match(/DEV_STAFF_PASSWORD_HASH\s*=\s*'([^']+)';/)?.[1];
   assert.match(hash ?? '', /^\$argon2id\$v=19\$m=\d+,t=\d+,p=\d+\$[A-Za-z0-9+/=]+\$[A-Za-z0-9+/=]+$/);
   assert.doesNotMatch(seed, /\bpassword\s*:/);
   assert.doesNotMatch(seed, /plain(text)?password/i);

@@ -2,6 +2,7 @@ import React from 'react';
 import { loginStaffAction, logoutStaffAction } from '../lib/staff-auth-actions';
 import { staffShellText, type Locale } from '../i18n/staff-shell';
 import { PasswordResetPanel, type ResetPreviewState } from './password-reset-panel';
+import { PasswordInput } from '../components/password-input';
 
 export type RolePreview = 'staff' | 'admin' | 'management';
 
@@ -73,7 +74,7 @@ export function AuthPanel({
         </label>
         <label className="grid gap-1 text-sm font-medium">
           {t.auth.password}
-          <input className="rounded-sm border border-border bg-background px-3 py-2" name="password" type="password" autoComplete="current-password" />
+          <PasswordInput hideLabel={t.auth.hidePassword} id="staff-password" name="password" showLabel={t.auth.showPassword} />
         </label>
         <button className="rounded-sm bg-brand px-3 py-2 text-sm font-semibold text-brand-foreground" type="submit">{t.auth.submit}</button>
       </form>

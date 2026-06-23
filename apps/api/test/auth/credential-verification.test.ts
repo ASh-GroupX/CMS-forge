@@ -17,7 +17,7 @@ const baseUser: StaffAuthRecord = {
   branchId: 'branch_main',
   isActive: true,
   lockedAt: null,
-  role: { code: 'ADMIN' },
+  role: { code: 'ADMIN', permissions: [] },
 };
 
 function serviceFor(user: StaffAuthRecord | null): AuthService {
@@ -53,6 +53,7 @@ test('valid active staff credentials return safe auth claims', async () => {
     nameEn: 'System Admin',
     nameAr: 'System Admin',
     roleCode: 'ADMIN',
+    permissions: [],
     branchId: 'branch_main',
   });
   assert.equal('passwordHash' in claims, false);

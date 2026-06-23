@@ -9,17 +9,20 @@ tags: [backend, module, agent-context]
 
 - `AdminUsersService` is the public staff-user management service.
 - `AdminCategoriesService` is the public complaint category management service.
+- `AdminRolesService` is the public role catalog and permission-selection service.
 
 ## Owns tables
 
 - `users`
 - `roles`
+- `permissions`
+- `role_permissions`
 - `branches`
 - `categories`
 
 ## May depend on
 
-- `core/audit.service` for admin user create/deactivate/reactivate audit entries.
+- `core/audit.service` for admin user and role configuration audit entries.
 - `core/auth.guard` for Admin-only RBAC on HTTP routes.
 - `core/csrf.guard` for CSRF enforcement on admin mutation routes.
 - `core/http-kernel` for Prisma and stable errors.

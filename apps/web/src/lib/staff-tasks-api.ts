@@ -1,4 +1,4 @@
-type TaskSectionKey = 'dueToday' | 'overdue' | 'overduePromises' | 'assignedToMe' | 'waitingOnMe';
+type TaskSectionKey = 'completed' | 'dueToday' | 'overdue' | 'overduePromises' | 'assignedToMe' | 'waitingOnMe';
 type ManagerTaskSectionKey = 'dueToday' | 'overduePromises' | 'escalated';
 
 export type StaffTaskStatus = 'OPEN' | 'IN_PROGRESS' | 'WAITING' | 'DONE';
@@ -43,7 +43,7 @@ type ManagerControlRoomBody = Partial<Record<ManagerTaskSectionKey, Partial<Staf
 };
 
 const STAFF_SESSION_COOKIE = 'cms_staff_session';
-const TASK_SECTIONS: readonly TaskSectionKey[] = ['dueToday', 'overdue', 'overduePromises', 'assignedToMe', 'waitingOnMe'];
+const TASK_SECTIONS: readonly TaskSectionKey[] = ['completed', 'dueToday', 'overdue', 'overduePromises', 'assignedToMe', 'waitingOnMe'];
 const CSRF_COOKIE = 'cms_csrf_token';
 
 export async function getEmployeeTodayTasks({
@@ -123,6 +123,10 @@ export async function updateTask(taskId: string, payload: UpdateTaskPayload, fet
 function tasksFrom(body: EmployeeTodayBody): EmployeeTodayTasks | null {
   const result = {} as EmployeeTodayTasks;
   for (const section of TASK_SECTIONS) {
+    if (section === 'completed' && body[section] === undefined) {
+      result.completed = [];
+      continue;
+    }
     if (!Array.isArray(body[section])) return null;
     const tasks = body[section].map(staffTaskFrom);
     if (tasks.some((task) => task === null)) return null;

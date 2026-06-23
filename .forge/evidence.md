@@ -6533,6 +6533,83 @@ Implemented the second Operator UX Foundation slice:
   not added to source.
 - SRS coverage: REQ-RBAC-001, REQ-LOCALIZATION-001, UI-DESIGN-001.
 
+## 2026-06-23 - Admin-managed custom roles
+
+### Scope
+
+- Added the admin-only `GET`/`POST /admin/roles` catalog, backed by the
+  Dynamic RBAC role/permission tables.
+- Admins can create a custom staff role with localized names and an explicit
+  permission selection from the server-owned catalog. System role codes,
+  portal submission permission, unknown permissions, and roles without staff
+  login are rejected.
+- Role create and its `CONFIG/admin_role_created` audit entry occur in the
+  same database transaction. The web admin page is at `/admin/roles`, linked
+  from `/admin`; newly created active roles appear in the existing staff-user
+  assignment list.
+- Existing route and workflow authorization remains role-code based pending
+  the planned permission-decorator conversion. The new permission guard is
+  server-session based, but broad conversion was intentionally not included.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- admin` (28/28).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test:web -- shell` (188/188).
+- Passed: `git diff --check`.
+- Failed (pre-existing worktree/tooling): `corepack pnpm lint` reports CRLF
+  frontmatter parsing for every module manifest and the edited
+  `staff-shell.ts` exceeds the 300-line limit.
+- Failed (pre-existing visual fixture): `corepack pnpm test:visual` expects
+  the obsolete `Branches and departments` signal on the admin overview.
+- Failed (pre-existing contract drift): `corepack pnpm openapi:check` reports
+  that the generated document differs from its canonical scaffold.
+
+### Security Self-Check
+
+- Roles and permissions are loaded from the server session; the create request
+  contains no client authority claim: Passed by controller guards and API test.
+- Role configuration is audit logged without credentials, tokens, or hashes:
+  Passed by transactional service test.
+- Customer portal privacy is unchanged; portal-only submission is not assignable
+  to a custom staff role: Passed by validation test.
+- Trust boundary: one ADMIN allowed and one CR_MANAGER denied case: Passed.
+
+
+## 2026-06-23 - P12A Dynamic Role Permission Data Model
+
+### Scope
+
+- Replaced the `roles.code` enum column with an extensible unique string while
+  retaining the historic `RoleCode` enum for persisted workflow history.
+- Added `permissions` and `role_permissions` tables and the Prisma relations.
+- Seeded the SRS RBAC matrix as permission templates for the six existing roles.
+- Preserved every active authorization decision: route/workflow guards remain
+  role-code based until the separately scoped P12B guard conversion.
+
+### Verification
+
+- Passed: `corepack pnpm prisma:validate`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `node --import tsx --test packages/database/prisma/role-permissions.test.ts` (3/3).
+- Passed: `git diff --check`.
+- Failed (pre-existing repository issue): `corepack pnpm lint` reports missing
+  YAML frontmatter in 15 existing module manifests, including modules outside
+  this slice. No lint configuration or manifest was changed.
+- Not Run: database migration against a disposable PostgreSQL instance; this
+  environment did not provide one for the task.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session: Passed by preservation;
+  P12A did not change authentication, guards, workflow, or branch filtering.
+- State history/audit: Not applicable; this slice contains schema/seed data only
+  and no runtime state transition.
+- Secrets: Passed by review; no credentials, tokens, or hashes were introduced.
+- Portal privacy: Passed by preservation; no portal route or response changed.
+- Trust boundary: Passed by preservation; existing role guards remain in force.
+- SRS coverage: REQ-RBAC-001, RBAC-MATRIX-001, REQ-ADMIN-001, METHOD-AUDIT-001.
+
 ## 2026-06-22 - Reports Export Live Smoke Repair
 
 ### Scope

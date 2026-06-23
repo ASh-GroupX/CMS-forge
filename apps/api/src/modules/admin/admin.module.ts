@@ -11,10 +11,13 @@ import { AdminCategoriesService } from './admin-categories.service.js';
 import { AdminUsersController, StaffLookupController } from './admin-users.controller.js';
 import { AdminUsersRepository } from './admin-users.repository.js';
 import { AdminUsersService } from './admin-users.service.js';
+import { AdminRolesController } from './admin-roles.controller.js';
+import { AdminRolesRepository } from './admin-roles.repository.js';
+import { AdminRolesService } from './admin-roles.service.js';
 
 @Module({
   imports: [AuthModule],
-  controllers: [AdminUsersController, StaffLookupController, AdminCategoriesController],
+  controllers: [AdminUsersController, StaffLookupController, AdminCategoriesController, AdminRolesController],
   providers: [
     PrismaService,
     { provide: AuditService, inject: [PrismaService], useFactory: (prisma: PrismaService) => new AuditService(prisma) },
@@ -30,7 +33,9 @@ import { AdminUsersService } from './admin-users.service.js';
     AdminCategoriesService,
     AdminUsersRepository,
     AdminUsersService,
+    AdminRolesRepository,
+    AdminRolesService,
   ],
-  exports: [AdminUsersService, AdminCategoriesService],
+  exports: [AdminUsersService, AdminCategoriesService, AdminRolesService],
 })
 export class AdminModule {}

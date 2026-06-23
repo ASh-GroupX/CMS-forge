@@ -164,15 +164,18 @@ export class TasksService {
 
   async employeeToday(actorId: string, now: Date = new Date()): Promise<EmployeeTodayResponseDto> {
     const userId = requiredText(actorId, 'actorId');
-    const tasks = await this.tasksRepository.listEmployeeToday(userId);
+    const completedSince = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const tasks = await this.tasksRepository.listEmployeeToday(userId, completedSince);
     const [start, end] = utcDay(now);
-    const overduePromises = tasks.filter((task) => task.isCustomerPromise && task.dueAt < now);
+    const openTasks = tasks.filter((task) => task.status !== TaskStatus.DONE);
+    const overduePromises = openTasks.filter((task) => task.isCustomerPromise && task.dueAt < now);
     return {
-      dueToday: tasks.filter((task) => task.dueAt >= start && task.dueAt < end).map(taskToResponse),
-      overdue: tasks.filter((task) => task.dueAt < start).map(taskToResponse),
+      completed: tasks.filter((task) => task.status === TaskStatus.DONE).map(taskToResponse),
+      dueToday: openTasks.filter((task) => task.dueAt >= start && task.dueAt < end).map(taskToResponse),
+      overdue: openTasks.filter((task) => task.dueAt < start).map(taskToResponse),
       overduePromises: overduePromises.map(taskToResponse),
-      assignedToMe: tasks.filter((task) => task.assigneeId === userId).map(taskToResponse),
-      waitingOnMe: tasks.filter((task) => task.nextActionWhoId === userId).map(taskToResponse),
+      assignedToMe: openTasks.filter((task) => task.assigneeId === userId).map(taskToResponse),
+      waitingOnMe: openTasks.filter((task) => task.nextActionWhoId === userId).map(taskToResponse),
     };
   }
 

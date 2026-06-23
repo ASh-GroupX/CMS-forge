@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuditService } from '../../core/audit.service.js';
-import { RbacGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../core/auth.guard.js';
+import { PermissionGuard, RbacGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { PrismaService } from '../../core/http-kernel.js';
 import {
@@ -37,6 +37,7 @@ import { AuthService } from './auth.service.js';
     LoginRateLimitGuard,
     SessionAuthGuard,
     RbacGuard,
+    PermissionGuard,
   ],
   exports: [AuthService],
 })

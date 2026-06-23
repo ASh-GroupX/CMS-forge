@@ -19,7 +19,7 @@ const validSession: StaffSessionRecord = {
     branchId: 'branch_main',
     isActive: true,
     lockedAt: null,
-    role: { code: 'ADMIN' },
+    role: { code: 'ADMIN', permissions: [{ permission: { code: 'ROLES_MANAGE' } }] },
   },
 };
 
@@ -53,6 +53,7 @@ test('valid staff session returns safe server-derived claims', async () => {
     nameEn: 'System Admin',
     nameAr: 'System Admin',
     roleCode: 'ADMIN',
+    permissions: ['ROLES_MANAGE'],
     branchId: 'branch_main',
   });
 });

@@ -13,6 +13,7 @@ import { AppException } from './http-kernel.js';
 
 const STAFF_SESSION_COOKIE = 'cms_staff_session';
 const ROLES_KEY = 'cms:auto:roles';
+const PERMISSIONS_KEY = 'cms:auto:permissions';
 const BRANCH_SCOPED_KEY = 'cms:auto:branch-scoped';
 
 export const SESSION_AUTH_SERVICE = Symbol('SESSION_AUTH_SERVICE');
@@ -24,6 +25,7 @@ export type StaffPrincipal = {
   nameEn: string;
   nameAr: string;
   roleCode: string;
+  permissions?: string[];
   branchId: string | null;
 };
 
@@ -44,6 +46,10 @@ export type SessionAuthValidator = {
 
 export function Roles(...roles: string[]): MethodDecorator & ClassDecorator {
   return SetMetadata(ROLES_KEY, roles);
+}
+
+export function Permissions(...permissions: string[]): MethodDecorator & ClassDecorator {
+  return SetMetadata(PERMISSIONS_KEY, permissions);
 }
 
 export function BranchScoped(): MethodDecorator & ClassDecorator {
@@ -134,6 +140,19 @@ export class RbacGuard implements CanActivate {
     await this.auditService.record(
       deniedBranchId ? { ...record, metadata: { deniedBranchId } } : record,
     );
+  }
+}
+
+@Injectable()
+export class PermissionGuard implements CanActivate {
+  constructor(@Inject(Reflector) private readonly reflector: Reflector, @Inject(AuditService) private readonly auditService: AuditService) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const required = this.reflector.getAllAndOverride<string[]>(PERMISSIONS_KEY, [context.getHandler(), context.getClass()]) ?? [];
+    if (required.length === 0 || required.every((permission) => request.principal?.permissions?.includes(permission))) return true;
+    await this.auditService.record({ eventType: 'SECURITY', action: 'permission_forbidden', actorId: request.principal?.userId ?? null, branchId: request.principal?.branchId ?? null, targetType: 'api_route', targetId: request.url ?? null, correlationId: request.correlationId ?? null });
+    throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
   }
 }
 

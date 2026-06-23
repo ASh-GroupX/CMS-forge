@@ -8,6 +8,7 @@ export const adminUsersText: Record<Locale, typeof enAdminUsersText> = {
     badges: { active: 'Active', inactive: 'Inactive' },
     actions: {
       create: 'Create user',
+      manageRoles: 'Manage roles',
       deactivate: 'Deactivate',
       reactivate: 'Reactivate',
     },
@@ -51,6 +52,7 @@ export const adminUsersText: Record<Locale, typeof enAdminUsersText> = {
     badges: { active: 'نشط', inactive: 'غير نشط' },
     actions: {
       create: 'إنشاء مستخدم',
+      manageRoles: 'إدارة الأدوار',
       deactivate: 'إيقاف',
       reactivate: 'تفعيل',
     },
@@ -94,7 +96,7 @@ const enAdminUsersText = {
   subtitle: '',
   headers: [''],
   badges: { active: '', inactive: '' },
-  actions: { create: '', deactivate: '', reactivate: '' },
+  actions: { create: '', manageRoles: '', deactivate: '', reactivate: '' },
   fields: { email: '', nameEn: '', nameAr: '', role: '', branch: '', initialPassword: '' },
   masterData: {
     title: '',

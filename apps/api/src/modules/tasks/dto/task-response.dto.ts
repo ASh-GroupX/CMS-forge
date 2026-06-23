@@ -34,6 +34,7 @@ export class TaskResponseDto {
 }
 
 export type EmployeeTodayResponseDto = {
+  completed: TaskResponseDto[];
   dueToday: TaskResponseDto[];
   overdue: TaskResponseDto[];
   overduePromises: TaskResponseDto[];

@@ -1,5 +1,6 @@
 import { ComplaintStatus, PrismaClient, RoleCode } from '@prisma/client';
 import { seedPhase10DealershipDemo } from './phase10-seed.js';
+import { defaultRolePermissions, permissionDefinitions } from './role-permissions.js';
 
 // Dev-only seed (F0-04). All upserts are idempotent — safe to run repeatedly.
 // No real credentials, production secrets, or real customer data.
@@ -35,14 +36,35 @@ async function main(): Promise<void> {
     { code: RoleCode.CUSTOMER_PORTAL, nameEn: 'Customer Portal',      nameAr: 'بوابة العملاء' },
   ];
 
-  const roleMap = new Map<RoleCode, string>();
+  const roleMap = new Map<string, string>();
   for (const def of roleDefs) {
     const role = await prisma.role.upsert({
       where: { code: def.code },
-      update: {},
-      create: def,
+      update: { isSystem: true },
+      create: { ...def, isSystem: true },
     });
     roleMap.set(def.code, role.id);
+  }
+
+  const permissionMap = new Map<string, string>();
+  for (const [code, nameEn, nameAr] of permissionDefinitions) {
+    const permission = await prisma.permission.upsert({
+      where: { code },
+      update: {},
+      create: { code, nameEn, nameAr },
+    });
+    permissionMap.set(code, permission.id);
+  }
+  for (const [roleCode, permissions] of Object.entries(defaultRolePermissions)) {
+    const roleId = roleMap.get(roleCode);
+    if (!roleId) continue;
+    for (const permissionCode of permissions) {
+      await prisma.rolePermission.upsert({
+        where: { roleId_permissionId: { roleId, permissionId: permissionMap.get(permissionCode)! } },
+        update: {},
+        create: { roleId, permissionId: permissionMap.get(permissionCode)! },
+      });
+    }
   }
 
   // ── Staff users (dev-only, no real credentials) ───────────────────────────

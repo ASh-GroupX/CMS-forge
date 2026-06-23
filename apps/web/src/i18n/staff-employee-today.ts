@@ -13,6 +13,7 @@ export const employeeTodayText = {
       customerPromise: 'Customer promise',
     },
     sections: {
+      completed: ['Completed recently', 'Completed tasks are kept here for 14 days'],
       overdue: ['Overdue', 'Past due and needs recovery'],
       dueToday: ['Due today', 'Must move before the day ends'],
       waitingOnMe: ['Waiting on me', 'The next action is assigned to you'],
@@ -82,6 +83,7 @@ export const employeeTodayText = {
       customerPromise: 'وعد للعميل',
     },
     sections: {
+      completed: ['المكتملة مؤخراً', 'تُعرض المهام المكتملة هنا لمدة 14 يوماً'],
       overdue: ['متأخر', 'تجاوز موعده ويحتاج متابعة'],
       dueToday: ['مستحق اليوم', 'يجب تحريكه قبل نهاية اليوم'],
       waitingOnMe: ['ينتظرني', 'الإجراء التالي مطلوب منك'],

@@ -71,8 +71,8 @@ function optionalText(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
-function role(value: unknown): RoleCode {
-  if (typeof value === 'string' && Object.values(RoleCode).includes(value as RoleCode)) return value as RoleCode;
+function role(value: unknown): string {
+  if (typeof value === 'string' && value.trim()) return value.trim();
   throw badBody('roleCode');
 }
 

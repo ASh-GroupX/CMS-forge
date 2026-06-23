@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { Prisma, RoleCode } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
 
 const userSelect = {
@@ -57,8 +57,8 @@ export class AdminUsersRepository {
     return { roles, branches };
   }
 
-  async roleId(code: RoleCode): Promise<string | null> {
-    return (await this.prisma.role.findUnique({ where: { code }, select: { id: true } }))?.id ?? null;
+  async roleId(code: string): Promise<string | null> {
+    return (await this.prisma.role.findFirst({ where: { code, isActive: true }, select: { id: true } }))?.id ?? null;
   }
 
   async branchExists(id: string): Promise<boolean> {

@@ -8,11 +8,11 @@ import { AdminUsersRepository } from './admin-users.repository.js';
 import type { AdminBranchOption, AdminRoleOption, AdminUserRecord, AssignableStaffRecord } from './admin-users.repository.js';
 
 export type AdminUserDto = {
-  id: string; email: string; username: string | null; nameEn: string; nameAr: string; roleCode: RoleCode; roleName: string;
+  id: string; email: string; username: string | null; nameEn: string; nameAr: string; roleCode: string; roleName: string;
   branchId: string | null; branchName: string | null; isActive: boolean; lockedAt: string | null; lastLoginAt: string | null;
 };
 export type AdminUsersResponse = { users: AdminUserDto[]; roles: AdminRoleOption[]; branches: AdminBranchOption[] };
-export type CreateAdminUserInput = { email: string; nameEn: string; nameAr: string; roleCode: RoleCode; branchId?: string | null; initialPassword: string };
+export type CreateAdminUserInput = { email: string; nameEn: string; nameAr: string; roleCode: string; branchId?: string | null; initialPassword: string };
 export type StaffLookupActor = { userId: string; roleCode: string; branchId: string | null };
 export type AssignableStaffDto = { userId: string; displayName: string; displayNameAr: string; role: string; roleAr: string; branchLabel: string | null; branchLabelAr: string | null };
 export type AssignableStaffResponse = { staff: AssignableStaffDto[] };

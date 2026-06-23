@@ -11,7 +11,7 @@ import { QuickAddForm, TaskActions, type TaskAction } from './task-action-forms'
 type SectionKey = keyof EmployeeTodayTasks;
 type EmployeeTodayText = (typeof employeeTodayText)[Locale];
 
-const SECTION_KEYS: readonly SectionKey[] = ['overdue', 'dueToday', 'waitingOnMe', 'assignedToMe', 'overduePromises'];
+const SECTION_KEYS: readonly SectionKey[] = ['overdue', 'dueToday', 'waitingOnMe', 'assignedToMe', 'overduePromises', 'completed'];
 
 const STATUS_CLASS: Record<StaffTaskStatus, string> = {
   OPEN: 'border-brand/30 bg-brand/10 text-brand',

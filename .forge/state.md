@@ -1,8 +1,8 @@
 # Current State
 
-Status: P11 Operator UX Foundation Release Ready
-Phase: Phase 11 - Operator UX Foundation
-Next Task: Ready to plan next post-P11 slice
+Status: P12A Dynamic RBAC data model complete
+Phase: Phase 12 - Dynamic RBAC
+Next Task: Plan P12B server-session permission loading and permission guard
 Model Tier: GPT-5 High or Opus 4.8 Max
 
 ## How to use this file
@@ -12,6 +12,16 @@ Prior state history is in .forge/archive/state-archive.md.
 
 ## Snapshot
 
+- P12A is complete:
+  - Role identifiers are stored as extensible strings; the historic `RoleCode`
+    enum remains only for workflow-history metadata.
+  - `permissions` and `role_permissions` provide the persistent selectable
+    permission model; role permission selection has not been exposed in the UI
+    yet.
+  - Dev seed creates the current six roles as system templates and assigns the
+    SRS permission matrix without overwriting existing custom assignments.
+  - Existing server-side role checks remain authoritative, so live access and
+    branch scope did not change in this slice.
 - Phase 10 remains complete and release-reviewed.
 - P11 Operator UX Foundation plan exists in
   `docs/OPERATOR_UX_FOUNDATION_PLAN.md`.

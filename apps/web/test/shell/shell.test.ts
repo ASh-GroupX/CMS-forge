@@ -2777,6 +2777,7 @@ test('employee today route renders real task buckets through the session cookie'
     calls.push({ input, init });
     if (String(input).endsWith('/tasks/today')) {
       return jsonResponse({
+        completed: [taskFixture({ id: 'task_done', title: 'Customer call completed', status: 'DONE' })],
         dueToday: [taskFixture({ id: 'task_due', title: 'Prepare delivery checklist' })],
         overdue: [taskFixture({ id: 'task_late', title: 'Recover missed handover', dueAt: '2026-06-19T09:00:00.000Z' })],
         overduePromises: [taskFixture({
@@ -2847,6 +2848,9 @@ test('employee today route renders real task buckets through the session cookie'
   assert.match(html, /Waiting on me/);
   assert.match(html, /Assigned to me/);
   assert.match(html, /Overdue promises/);
+  assert.match(html, /Completed recently/);
+  assert.match(html, /Customer call completed/);
+  assert.match(html, /DONE/);
   assert.match(html, /Prepare delivery checklist/);
   assert.match(html, /Recover missed handover/);
   assert.match(html, /Call customer with finance answer/);

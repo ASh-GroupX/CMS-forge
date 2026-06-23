@@ -41,6 +41,7 @@ export type StaffAuthClaims = {
   nameEn: string;
   nameAr: string;
   roleCode: StaffAuthRecord['role']['code'];
+  permissions: string[];
   branchId: string | null;
 };
 
@@ -84,6 +85,7 @@ export class AuthService {
         nameEn: user.nameEn,
         nameAr: user.nameAr,
         roleCode: user.role.code,
+        permissions: permissionCodes(user),
         branchId: user.branchId,
       };
     } catch (error) {
@@ -154,6 +156,7 @@ export class AuthService {
       nameEn: session.user.nameEn,
       nameAr: session.user.nameAr,
       roleCode: session.user.role.code,
+      permissions: permissionCodes(session.user),
       branchId: session.user.branchId,
     };
   }
@@ -277,6 +280,10 @@ export class AuthService {
 
 function authDenied(code: 'AUTH_INVALID_CREDENTIALS' | 'AUTH_LOCKED_OR_INACTIVE'): AppException {
   return new AppException(code, 'Invalid credentials', HttpStatus.UNAUTHORIZED);
+}
+
+function permissionCodes(user: Pick<StaffAuthRecord, 'role'>): string[] {
+  return user.role.permissions?.map(({ permission }) => permission.code) ?? [];
 }
 
 function validatePasswordStrength(password: string): void {

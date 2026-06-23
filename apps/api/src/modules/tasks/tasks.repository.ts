@@ -132,10 +132,10 @@ export class TasksRepository {
     });
   }
 
-  async listEmployeeToday(userId: string): Promise<TaskRecord[]> {
+  async listEmployeeToday(userId: string, completedSince: Date): Promise<TaskRecord[]> {
     return this.prisma.task.findMany({
       where: {
-        status: { not: 'DONE' },
+        AND: [{ OR: [{ status: { not: 'DONE' } }, { status: 'DONE', updatedAt: { gte: completedSince } }] }],
         OR: [{ ownerId: userId }, { assigneeId: userId }, { nextActionWhoId: userId }, { participants: { some: { userId } } }],
       },
       orderBy: [{ dueAt: 'asc' }, { createdAt: 'asc' }],

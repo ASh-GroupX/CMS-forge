@@ -1,35 +1,26 @@
-# READY TO PLAN - AFTER P11 OPERATOR UX RELEASE REVIEW
+# P12A COMPLETE - DYNAMIC ROLE PERMISSION DATA MODEL
 
-Status: P11 Operator UX Foundation Release Ready
+Status: P12A complete; ready to plan P12B server-side permission guard conversion
 Required model tier: GPT-5 High or Opus 4.8 Max
-Phase: Phase 11 - Operator UX Foundation
-Risk: Medium
-SRS IDs: REQ-RBAC-001, REQ-LOCALIZATION-001, UI-DESIGN-001
+Phase: Phase 12 - Dynamic RBAC
+Risk: High
+SRS IDs: REQ-RBAC-001, RBAC-MATRIX-001, REQ-ADMIN-001, METHOD-AUDIT-001
 
 ## Context
 
-P11A, P11B, P11C, P11D Deals, P11D CAPA / Case, P11D Reports filter picker
-cleanup, the Reports export live smoke repair, and P11E Operator UX Arabic
-completion pass are complete and release-reviewed.
+P12A adds the persistent data model for Admin-managed, selectable permissions
+without changing any live authorization decision.
 
-Final release review:
+Completed scope: `Role.code` is now extensible, `permissions` and
+`role_permissions` are modeled and migrated, and dev seed supplies the existing
+role matrix as selectable permission templates. Existing guards remain role-code
+based until P12B, so access has not changed.
 
-- Confirmed touched operator flows use dropdown/picker controls for staff and
-  related-record selection; IDs submit silently where backend contracts require
-  them.
-- Hardened confidential case display so it shows case topic, branch name, and
-  human owner labels instead of raw case/branch/author IDs.
-- Cleaned generated `output/run-app/web.stdout.log`; retained P11E screenshots
-  under `output/playwright/` as release evidence.
-- Final proof passed: API auth/tasks/deals/cases/reports, web shell and
-  localization, OpenAPI, typecheck, lint, and `git diff --check`.
-- Preserved backend authority, report calculations, workflow behavior, password
-  policy, and customer portal privacy.
+## Next Scoped Task
 
-## Plan Needed
-
-Pick the next scoped post-P11 task. Keep it small, usually 1-5 files plus
-focused tests.
+P12B: add server-session permission loading and a permission guard alongside
+the existing role guard. Do not convert route or workflow rules in the same
+slice; require API allowed/denied proof and audit logging for denied checks.
 
 ## Guardrails
 

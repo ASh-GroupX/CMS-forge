@@ -237,14 +237,17 @@ test('unrelated user is denied task access', async () => {
 
 test('employee today buckets only tasks visible to the actor', async () => {
   let queriedUserId = '';
+  let completedSince: Date | undefined;
   const repository = {
-    listEmployeeToday: async (userId: string) => {
+    listEmployeeToday: async (userId: string, since: Date) => {
       queriedUserId = userId;
+      completedSince = since;
       return [
         taskRecord({ id: 'due_today', assigneeId: 'user_owner', dueAt: new Date('2026-06-20T15:00:00.000Z') }),
         taskRecord({ id: 'overdue', assigneeId: 'user_owner', dueAt: new Date('2026-06-19T15:00:00.000Z') }),
         taskRecord({ id: 'promise_late', assigneeId: 'user_owner', dueAt: new Date('2026-06-20T10:00:00.000Z'), isCustomerPromise: true }),
         taskRecord({ id: 'waiting', assigneeId: 'user_other', nextActionWhoId: 'user_owner', dueAt: new Date('2026-06-20T16:00:00.000Z') }),
+        taskRecord({ id: 'completed', assigneeId: 'user_owner', status: TaskStatus.DONE }),
       ];
     },
   } as unknown as TasksRepository;
@@ -253,6 +256,8 @@ test('employee today buckets only tasks visible to the actor', async () => {
   const result = await service.employeeToday('user_owner', new Date('2026-06-20T12:00:00.000Z'));
 
   assert.equal(queriedUserId, 'user_owner');
+  assert.equal(completedSince?.toISOString(), '2026-06-06T12:00:00.000Z');
+  assert.deepEqual(result.completed.map((task) => task.id), ['completed']);
   assert.deepEqual(result.dueToday.map((task) => task.id), ['due_today', 'promise_late', 'waiting']);
   assert.deepEqual(result.overdue.map((task) => task.id), ['overdue']);
   assert.deepEqual(result.overduePromises.map((task) => task.id), ['promise_late']);
