@@ -1,11 +1,11 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { RoleCode } from '@prisma/client';
 import { RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { AppException } from '../../core/http-kernel.js';
 import { AdminRolesService } from './admin-roles.service.js';
-import type { CreateAdminRoleInput } from './admin-roles.service.js';
+import type { CreateAdminRoleInput, UpdateAdminRolePermissionsInput } from './admin-roles.service.js';
 
 @Controller('admin/roles')
 export class AdminRolesController {
@@ -20,6 +20,16 @@ export class AdminRolesController {
   @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
   @Roles(RoleCode.ADMIN)
   create(@Body() body: unknown, @Req() request: AuthenticatedRequest) { return this.roles.create(parseRole(body), auditContext(request)); }
+
+  @Patch(':id/permissions')
+  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
+  @Roles(RoleCode.ADMIN)
+  updatePermissions(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) { return this.roles.updatePermissions(id, parsePermissions(body), auditContext(request)); }
+}
+
+function parsePermissions(body: unknown): UpdateAdminRolePermissionsInput {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) throw badBody('body');
+  return { permissionCodes: texts((body as Record<string, unknown>).permissionCodes, 'permissionCodes') };
 }
 
 function parseRole(body: unknown): CreateAdminRoleInput {

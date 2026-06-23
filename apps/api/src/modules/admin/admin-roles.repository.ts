@@ -34,10 +34,18 @@ export class AdminRolesRepository {
     return permissions.map(({ id }) => id);
   }
 
+  async findById(id: string): Promise<AdminRoleRecord | null> {
+    return this.prisma.role.findUnique({ where: { id }, select: roleSelect });
+  }
+
   async create(data: CreateAdminRoleData, client: RoleClient = this.prisma): Promise<AdminRoleRecord> {
     return client.role.create({
       data: { code: data.code, nameEn: data.nameEn, nameAr: data.nameAr, permissions: { create: data.permissionIds.map((permissionId) => ({ permissionId })) } },
       select: roleSelect,
     });
+  }
+
+  async replacePermissions(id: string, permissionIds: string[], client: RoleClient = this.prisma): Promise<AdminRoleRecord> {
+    return client.role.update({ data: { permissions: { deleteMany: {}, create: permissionIds.map((permissionId) => ({ permissionId })) } }, where: { id }, select: roleSelect });
   }
 }

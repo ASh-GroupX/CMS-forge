@@ -9,6 +9,7 @@ export type AdminPermissionDto = { id: string; code: string; nameEn: string; nam
 export type AdminRoleDto = AdminPermissionDto & { isActive: boolean; isSystem: boolean; permissions: AdminPermissionDto[] };
 export type AdminRolesResponse = { roles: AdminRoleDto[]; permissions: AdminPermissionDto[] };
 export type CreateAdminRoleInput = { code: string; nameEn: string; nameAr: string; permissionCodes: string[] };
+export type UpdateAdminRolePermissionsInput = { permissionCodes: string[] };
 type AdminAudit = { actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 
 @Injectable()
@@ -29,15 +30,31 @@ export class AdminRolesService {
     });
   }
 
+  async updatePermissions(id: string, input: UpdateAdminRolePermissionsInput, audit: AdminAudit = {}): Promise<AdminRoleDto> {
+    const role = await this.repository.findById(nonEmpty(id, 'id'));
+    if (!role || role.code === 'CUSTOMER_PORTAL') throw validation('id', 'role cannot be updated.');
+    const permissionIds = await this.permissionIds(input.permissionCodes);
+    return this.repository.transaction(async (client) => {
+      const updated = await this.repository.replacePermissions(role.id, permissionIds, client);
+      await this.audit.record(permissionAuditInput(role, updated, audit), client);
+      return roleDto(updated);
+    });
+  }
+
   private async createData(input: CreateAdminRoleInput): Promise<CreateAdminRoleData> {
     const code = nonEmpty(input.code, 'code').toUpperCase();
     if (!/^[A-Z][A-Z0-9_]{2,63}$/.test(code) || reservedCodes.has(code)) throw validation('code', 'code is invalid.');
-    const permissionCodes = [...new Set(input.permissionCodes.map((value) => value.trim()).filter(Boolean))];
+    const permissionIds = await this.permissionIds(input.permissionCodes);
+    return { code, nameEn: nonEmpty(input.nameEn, 'nameEn'), nameAr: nonEmpty(input.nameAr, 'nameAr'), permissionIds };
+  }
+
+  private async permissionIds(values: string[]): Promise<string[]> {
+    const permissionCodes = [...new Set(values.map((value) => value.trim()).filter(Boolean))];
     if (!permissionCodes.includes('STAFF_LOGIN')) throw validation('permissionCodes', 'STAFF_LOGIN is required.');
     if (permissionCodes.includes('PORTAL_SUBMIT')) throw validation('permissionCodes', 'PORTAL_SUBMIT cannot be assigned to a staff role.');
     const permissionIds = await this.repository.activePermissionIds(permissionCodes);
     if (permissionIds.length !== permissionCodes.length) throw validation('permissionCodes', 'permissionCodes contains an invalid permission.');
-    return { code, nameEn: nonEmpty(input.nameEn, 'nameEn'), nameAr: nonEmpty(input.nameAr, 'nameAr'), permissionIds };
+    return permissionIds;
   }
 }
 
@@ -53,6 +70,10 @@ function roleDto(role: AdminRoleRecord): AdminRoleDto {
 
 function auditInput(role: AdminRoleRecord, audit: AdminAudit): AuditRecordInput {
   return { eventType: 'CONFIG', action: 'admin_role_created', actorId: audit.actorId ?? null, branchId: null, targetType: 'role', targetId: role.id, correlationId: audit.correlationId ?? null, ipAddress: audit.ipAddress ?? null, userAgent: audit.userAgent ?? null, metadata: { changedFields: ['code', 'nameEn', 'nameAr', 'permissionCodes'], code: role.code, nameEn: role.nameEn, nameAr: role.nameAr, permissionCodes: role.permissions.map(({ permission }) => permission.code) } };
+}
+
+function permissionAuditInput(before: AdminRoleRecord, after: AdminRoleRecord, audit: AdminAudit): AuditRecordInput {
+  return { eventType: 'CONFIG', action: 'admin_role_permissions_updated', actorId: audit.actorId ?? null, branchId: null, targetType: 'role', targetId: after.id, correlationId: audit.correlationId ?? null, ipAddress: audit.ipAddress ?? null, userAgent: audit.userAgent ?? null, metadata: { changedFields: ['permissionCodes'], code: after.code, previousPermissionCodes: before.permissions.map(({ permission }) => permission.code), permissionCodes: after.permissions.map(({ permission }) => permission.code) } };
 }
 
 function nonEmpty(value: string | undefined | null, field: string): string {

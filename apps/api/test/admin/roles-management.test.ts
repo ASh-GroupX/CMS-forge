@@ -53,9 +53,33 @@ test('admin role service rejects reserved, unauthenticated, portal, and unknown 
   }
 });
 
+test('admin role service replaces selected permissions and audits the change in one transaction', async () => {
+  const txClient = {};
+  const audits: Array<{ input: AuditRecordInput; client: unknown }> = [];
+  const service = new AdminRolesService({
+    findById: async () => role,
+    activePermissionIds: async (codes) => codes.map((code) => `per_${code}`),
+    transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
+    replacePermissions: async (id, ids, client) => {
+      assert.equal(id, role.id);
+      assert.deepEqual(ids, ['per_STAFF_LOGIN', 'per_REPORT_VIEW']);
+      assert.equal(client, txClient);
+      return { ...role, permissions: [{ permission: login }, { permission: { ...login, id: 'per_report', code: 'REPORT_VIEW', nameEn: 'View reports' } }] };
+    },
+  } as AdminRolesRepository, { record: async (input: AuditRecordInput, client?: unknown) => audits.push({ input, client }) } as AuditService);
+
+  const updated = await service.updatePermissions(role.id, { permissionCodes: ['STAFF_LOGIN', 'REPORT_VIEW'] }, auditContext());
+
+  assert.deepEqual(updated.permissions.map(({ code }) => code), ['STAFF_LOGIN', 'REPORT_VIEW']);
+  assert.equal(audits[0]?.client, txClient);
+  assert.equal(audits[0]?.input.action, 'admin_role_permissions_updated');
+  assert.deepEqual(audits[0]?.input.metadata?.previousPermissionCodes, ['STAFF_LOGIN']);
+});
+
 test('admin role controller routes are admin-only, with CSRF required for creates', async () => {
   assert.deepEqual(guardNames('list'), ['SessionAuthGuard', 'RbacGuard']);
   assert.deepEqual(guardNames('create'), ['SessionAuthGuard', 'RbacGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('updatePermissions'), ['SessionAuthGuard', 'RbacGuard', 'CsrfGuard']);
   const audits: AuditRecordInput[] = [];
   const guard = new RbacGuard(new Reflector(), { record: async (input) => audits.push(input) } as AuditService);
   assert.equal(await guard.canActivate(context(request(RoleCode.ADMIN), 'create')), true);
