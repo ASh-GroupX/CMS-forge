@@ -12,6 +12,7 @@ import ReportsPage from '../apps/web/src/app/(staff)/reports/page.tsx';
 import PortalSubmissionPage from '../apps/web/src/app/portal/page.tsx';
 import PortalSurveyPage from '../apps/web/src/app/portal/survey/page.tsx';
 import PortalTrackingPage from '../apps/web/src/app/portal/track/page.tsx';
+import { PortalTrackingPreview } from '../apps/web/src/components/portal-tracking/index.tsx';
 import { portalSubmissionText } from '../apps/web/src/i18n/portal-submission.ts';
 import { portalSurveyText } from '../apps/web/src/i18n/portal-survey.ts';
 import { portalTrackingText } from '../apps/web/src/i18n/portal-tracking.ts';
@@ -61,7 +62,7 @@ async function renderCase(testCase) {
 async function routePage(testCase) {
   const params = Promise.resolve(testCase.params);
   const staffProps = { cookieHeader: 'cms_staff_session=proof', fetchImpl: proofFetch, searchParams: params };
-  if (testCase.route === 'staff-admin') return staffFrame(testCase, await AdminPage({ searchParams: params }));
+  if (testCase.route === 'staff-admin') return staffFrame(testCase, await AdminPage(staffProps));
   if (testCase.route === 'staff-audit') return staffFrame(testCase, await AuditPage({ searchParams: params }));
   if (testCase.route === 'staff-complaints') return staffFrame(testCase, await ComplaintsPage(staffProps));
   if (testCase.route === 'staff-complaint-detail') return staffFrame(testCase, await ComplaintDetailPage({ ...staffProps, params: Promise.resolve({ id: 'cmp-proof' }) }));
@@ -69,9 +70,18 @@ async function routePage(testCase) {
   if (testCase.route === 'staff-dashboard') return staffFrame(testCase, await DashboardPage(staffProps));
   if (testCase.route === 'staff-reports') return staffFrame(testCase, await ReportsPage(staffProps));
   if (testCase.route === 'portal-submission') return PortalSubmissionPage({ searchParams: params });
+  if (testCase.route === 'portal-tracking-preview') return React.createElement(PortalTrackingPreview, portalTrackingProps(testCase));
   if (testCase.route === 'portal-tracking') return PortalTrackingPage({ searchParams: params });
   if (testCase.route === 'portal-survey') return PortalSurveyPage({ searchParams: params });
   return StaffShellPage({ searchParams: params });
+}
+
+function portalTrackingProps(testCase) {
+  return {
+    locale: testCase.locale,
+    reference: testCase.params.reference ?? portalTrackingText[testCase.locale].sample.reference,
+    state: testCase.params.state,
+  };
 }
 
 function staffFrame(testCase, children) {
@@ -101,7 +111,7 @@ function checkAccessibility(results) {
   for (const token of ['--color-brand', '--color-neutral', '--color-neutral-foreground', '--color-success', '--color-error', '--focus-ring']) {
     expect(css.includes(token), `global CSS missing contrast/focus token ${token}`);
   }
-  for (const route of ['portal-submission', 'portal-tracking', 'portal-survey']) {
+  for (const route of ['portal-submission', 'portal-tracking-preview', 'portal-survey']) {
     for (const locale of ['en', 'ar']) {
       expect(results.some((result) => result.route === route && result.locale === locale), `accessibility proof missing ${route} ${locale}`);
     }
@@ -144,7 +154,7 @@ function checkAccessibility(results) {
 
 function routeText(result) {
   if (result.route === 'portal-submission') return portalSubmissionText[result.locale];
-  if (result.route === 'portal-tracking') return portalTrackingText[result.locale];
+  if (result.route === 'portal-tracking' || result.route === 'portal-tracking-preview') return portalTrackingText[result.locale];
   if (result.route === 'portal-survey') return portalSurveyText[result.locale];
   return staffShellText[result.locale];
 }
@@ -186,6 +196,17 @@ function expect(condition, message) {
 async function proofFetch(input) {
   const path = new URL(String(input)).pathname;
   if (path === '/reports/dashboard') return json({ summary: { openComplaints: 9, overdueComplaints: 2, slaWarningComplaints: 3, closedComplaints: 7, averageTatHours: 18 } });
+  if (path === '/reports/kpis') return json({ kpis: { onTimeCompletionPercent: 88, activeOverdueCount: 2, averageDelayHours: 1.5, customerPromiseKeptPercent: 91, reopenedCount: 3, reopenRate: 43, escalationCount: 5, slaBreachRate: 14, medianTatHours: 22, agingBuckets: { zeroToOneDays: 1, twoToThreeDays: 2, fourToSevenDays: 3, overSevenDays: 4 }, averageFirstResponseHours: 0.75, averageResolutionHours: 16 } });
+  if (path === '/admin/users') return json({
+    users: [{ id: 'usr_proof', email: 'proof@example.test', nameEn: 'Proof Admin', nameAr: 'Proof Admin AR', roleCode: 'ADMIN', roleName: 'Admin', branchId: null, branchName: null, isActive: true }],
+    roles: [{ id: 'role_admin', code: 'ADMIN', nameEn: 'Admin', nameAr: 'Admin AR' }],
+    branches: [{ id: 'branch_proof', code: 'PROOF', nameEn: 'Proof branch', nameAr: 'Proof branch AR' }],
+  });
+  if (path === '/complaints/form-options') return json({
+    branches: [{ id: 'branch_proof', code: 'PROOF', nameEn: 'Proof branch', nameAr: 'Proof branch AR' }],
+    categories: [{ id: 'cat_proof', code: 'PROOF', nameEn: 'Proof category', nameAr: 'Proof category AR', parentId: null }],
+    severities: ['HIGH', 'MEDIUM', 'LOW'],
+  });
   if (path === '/complaints') return json({ items: [proofRow('CMP-PROOF-001', 'Proof queue row')] });
   if (path === '/reports') return json({ items: [proofRow('CMP-PROOF-RPT-001', 'Proof report row', { categoryId: 'cat_proof' })] });
   if (path.startsWith('/complaints/')) return json({ complaint: { ...proofRow('CMP-PROOF-DETAIL', 'Proof detail row'), description: 'Proof detail description.', incidentAt: '2026-06-19T00:00:00.000Z', statusHistory: [{ id: 'hist_1', toStatus: 'SUBMITTED', createdAt: '2026-06-19T00:00:00.000Z' }] } });

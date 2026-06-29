@@ -29,6 +29,7 @@ import ReportsPage from '../../src/app/(staff)/reports/page';
 import PortalSubmissionPage from '../../src/app/portal/page';
 import PortalSurveyPage from '../../src/app/portal/survey/page';
 import PortalTrackingPage from '../../src/app/portal/track/page';
+import { PortalTrackingPreview } from '../../src/components/portal-tracking';
 import { adminBranchesText } from '../../src/i18n/staff-admin-branches';
 import { adminCategoriesSlaText } from '../../src/i18n/staff-admin-categories-sla';
 import { adminNotificationTemplatesText } from '../../src/i18n/staff-admin-notification-templates';
@@ -331,7 +332,7 @@ test('portal tracking starts with verification gate and no status timeline', asy
 
 test('portal tracking keeps Arabic RTL localized labels', async () => {
   const html = renderToStaticMarkup(
-    await PortalTrackingPage({ searchParams: Promise.resolve({ locale: 'ar', state: 'requested' }) }),
+    React.createElement(PortalTrackingPreview, { locale: 'ar', reference: portalTrackingText.ar.sample.reference, state: 'requested' }),
   );
 
   assert.match(html, /dir="rtl"/);
@@ -341,11 +342,9 @@ test('portal tracking keeps Arabic RTL localized labels', async () => {
   assert.ok(html.includes(portalTrackingText.ar.states.requested));
 });
 
-test('portal tracking renders verified public status timeline only after verification', async () => {
+test('portal tracking proof harness renders verified public status timeline only after verification', async () => {
   const html = renderToStaticMarkup(
-    await PortalTrackingPage({
-      searchParams: Promise.resolve({ locale: 'en', state: 'verified', reference: 'CMP-TRACK-001' }),
-    }),
+    React.createElement(PortalTrackingPreview, { locale: 'en', reference: 'CMP-TRACK-001', state: 'verified' }),
   );
 
   assert.match(html, /Verification complete\./);
@@ -359,16 +358,16 @@ test('portal tracking renders verified public status timeline only after verific
 
 test('portal tracking renders invalid expired error and follow-up states', async () => {
   const invalid = renderToStaticMarkup(
-    await PortalTrackingPage({ searchParams: Promise.resolve({ locale: 'en', state: 'invalid' }) }),
+    React.createElement(PortalTrackingPreview, { locale: 'en', reference: portalTrackingText.en.sample.reference, state: 'invalid' }),
   );
   const expired = renderToStaticMarkup(
-    await PortalTrackingPage({ searchParams: Promise.resolve({ locale: 'en', state: 'expired' }) }),
+    React.createElement(PortalTrackingPreview, { locale: 'en', reference: portalTrackingText.en.sample.reference, state: 'expired' }),
   );
   const error = renderToStaticMarkup(
-    await PortalTrackingPage({ searchParams: Promise.resolve({ locale: 'en', state: 'error' }) }),
+    React.createElement(PortalTrackingPreview, { locale: 'en', reference: portalTrackingText.en.sample.reference, state: 'error' }),
   );
   const followup = renderToStaticMarkup(
-    await PortalTrackingPage({ searchParams: Promise.resolve({ locale: 'en', state: 'followup' }) }),
+    React.createElement(PortalTrackingPreview, { locale: 'en', reference: portalTrackingText.en.sample.reference, state: 'followup' }),
   );
 
   assert.match(invalid, /Verification failed\. Check the reference and code, then try again\./);
@@ -383,9 +382,29 @@ test('portal tracking renders invalid expired error and follow-up states', async
 test('portal tracking source does not render secrets or private data paths', () => {
   const source = readFileSync('apps/web/src/components/portal-tracking/index.tsx', 'utf8');
 
-  assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie|createObjectURL|Blob|download/);
-  assert.doesNotMatch(source, /sessionToken|verificationId|roleCode|principal|branchScope|actorId|ownerId|workflow|password|secret|provider/);
+  assert.doesNotMatch(source, /localStorage|sessionStorage|document\.cookie|console\.|createObjectURL|Blob|download/);
+  assert.doesNotMatch(source, /roleCode|principal|branchScope|actorId|ownerId|workflow|password|secret|provider/);
   assert.doesNotMatch(source, /audit|DMS|staff PII|internal comments|unrelated/i);
+});
+
+test('portal tracking production route ignores query proof state bypass', async () => {
+  const html = renderToStaticMarkup(
+    await PortalTrackingPage({ searchParams: Promise.resolve({ locale: 'en', state: 'verified', reference: 'CMP-BYPASS' }) }),
+  );
+
+  assert.match(html, /Track a complaint/);
+  assert.doesNotMatch(html, /Public timeline/);
+  assert.doesNotMatch(html, /CMP-BYPASS/);
+  assert.doesNotMatch(html, /IN_PROGRESS/);
+  assert.doesNotMatch(html, /Add follow-up/);
+});
+
+test('portal tracking renders no challenge or session material in proof states', async () => {
+  const html = renderToStaticMarkup(
+    React.createElement(PortalTrackingPreview, { locale: 'en', reference: 'CMP-TRACK-001', state: 'verified' }),
+  );
+
+  assert.doesNotMatch(html, /verificationId|sessionToken|portal_token|ver_1|otpHash|sessionHash|123456/i);
 });
 
 test('portal survey renders bounded accessible rating controls', async () => {
@@ -2113,7 +2132,11 @@ test('reports route renders real scoped rows through the session cookie', async 
           averageDelayHours: 1.75,
           customerPromiseKeptPercent: 92,
           reopenedCount: 2,
+          reopenRate: 50,
           escalationCount: 4,
+          slaBreachRate: 25,
+          medianTatHours: 18.5,
+          agingBuckets: { zeroToOneDays: 1, twoToThreeDays: 2, fourToSevenDays: 3, overSevenDays: 4 },
           averageFirstResponseHours: 0.5,
           averageResolutionHours: 12.25,
         },
@@ -2158,7 +2181,7 @@ test('reports route renders real scoped rows through the session cookie', async 
     await ReportsPage({
       cookieHeader: 'cms_staff_session=raw-session',
       fetchImpl,
-      searchParams: Promise.resolve({ locale: 'en', branchId: 'branch_report', categoryId: 'cat_report', ownerId: 'usr_report' }),
+      searchParams: Promise.resolve({ locale: 'en', branchId: 'branch_report', categoryId: 'cat_report', departmentId: 'dept_report', ownerId: 'usr_report' }),
     }),
   );
 
@@ -2176,6 +2199,7 @@ test('reports route renders real scoped rows through the session cookie', async 
   assert.deepEqual(staffCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
   assert.match(String(reportsCall.input), /branchId=branch_report/);
   assert.match(String(reportsCall.input), /categoryId=cat_report/);
+  assert.match(String(reportsCall.input), /departmentId=dept_report/);
   assert.match(String(reportsCall.input), /ownerId=usr_report/);
   assert.doesNotMatch(String(reportsCall.input), /role|actor|token|credential/i);
   assert.doesNotMatch(String(kpisCall.input), /role|actor|branchId|owner|token|credential/i);
@@ -2184,11 +2208,22 @@ test('reports route renders real scoped rows through the session cookie', async 
   assert.match(html, /Reports Category/);
   assert.match(html, /Owner filter: Reports Owner - CR Manager - Reports Branch/);
   assert.doesNotMatch(html, /name="ownerLabel"/);
-  assert.match(html, /href="\/reports\/export\?format=csv&amp;branchId=branch_report&amp;categoryId=cat_report&amp;ownerId=usr_report"/);
+  assert.match(html, /href="\/reports\/export\?format=csv&amp;branchId=branch_report&amp;categoryId=cat_report&amp;departmentId=dept_report&amp;ownerId=usr_report"/);
+  assert.match(html, /name="departmentId"/);
+  assert.doesNotMatch(html, /<label[^>]*>Department|>dept_report<\/option>/);
   assert.doesNotMatch(html, /branch_report \/ usr_report|>cat_report</);
   assert.match(html, /IN_PROGRESS/);
   assert.match(html, /Accountability KPIs/);
   assert.match(html, /87\.5%/);
+  assert.match(html, /SLA breach rate/);
+  assert.match(html, /25%/);
+  assert.match(html, /Median TAT/);
+  assert.match(html, /18\.5 h/);
+  assert.match(html, /Reopen rate/);
+  assert.match(html, /50%/);
+  assert.match(html, /Reopen events/);
+  assert.match(html, /Aging 7\+ days/);
+  assert.match(html, /4/);
   assert.match(html, /Active overdue/);
   assert.match(html, /3/);
   assert.match(html, /0\.5 h/);

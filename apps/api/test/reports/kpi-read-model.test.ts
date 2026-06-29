@@ -99,8 +99,11 @@ test('reports service combines task and complaint/case KPI aggregates', async ()
   const service = reportsService(
     async () => ({ tasks: [task('done', '2026-06-20T10:00:00.000Z', TaskStatus.DONE)], events: [event('done', TaskStatus.DONE, '2026-06-20T09:00:00.000Z')] }),
     async () => ({
-      records: [record('cmp_1', '2026-06-20T08:00:00.000Z')],
-      statusEvents: [statusEvent('cmp_1', ComplaintStatus.RESOLVED, ComplaintTransitionAction.RESOLVE, '2026-06-20T12:00:00.000Z')],
+      records: [record('cmp_1', '2026-06-20T08:00:00.000Z', ComplaintStatus.CLOSED)],
+      statusEvents: [
+        statusEvent('cmp_1', ComplaintStatus.RESOLVED, ComplaintTransitionAction.RESOLVE, '2026-06-20T12:00:00.000Z'),
+        statusEvent('cmp_1', ComplaintStatus.CLOSED, ComplaintTransitionAction.CLOSE, '2026-06-20T13:00:00.000Z'),
+      ],
       slaEvents: [slaEvent('cmp_1', SlaEventType.BREACH, '2026-06-20T11:00:00.000Z')],
     }),
   );
@@ -111,7 +114,11 @@ test('reports service combines task and complaint/case KPI aggregates', async ()
     averageDelayHours: 0,
     customerPromiseKeptPercent: 0,
     reopenedCount: 0,
+    reopenRate: 0,
     escalationCount: 1,
+    slaBreachRate: 100,
+    medianTatHours: 5,
+    agingBuckets: { zeroToOneDays: 0, twoToThreeDays: 0, fourToSevenDays: 0, overSevenDays: 0 },
     averageFirstResponseHours: 4,
     averageResolutionHours: 4,
   });
@@ -119,22 +126,30 @@ test('reports service combines task and complaint/case KPI aggregates', async ()
 
 test('complaint/case KPI formulas derive from timeline events', () => {
   const result = complaintCaseKpis([
-    record('cmp_1', '2026-06-20T08:00:00.000Z'),
-    record('case_1', '2026-06-20T10:00:00.000Z'),
+    record('cmp_1', '2026-06-20T08:00:00.000Z', ComplaintStatus.CLOSED),
+    record('cmp_2', '2026-06-18T08:00:00.000Z', ComplaintStatus.REOPENED),
+    record('case_1', '2026-06-20T10:00:00.000Z', undefined, false),
   ], [
     statusEvent('cmp_1', ComplaintStatus.SUBMITTED, ComplaintTransitionAction.SUBMIT, '2026-06-20T08:00:00.000Z'),
     statusEvent('cmp_1', ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.ACCEPT_INTAKE, '2026-06-20T09:00:00.000Z'),
     statusEvent('cmp_1', ComplaintStatus.RESOLVED, ComplaintTransitionAction.RESOLVE, '2026-06-20T12:00:00.000Z'),
+    statusEvent('cmp_1', ComplaintStatus.CLOSED, ComplaintTransitionAction.CLOSE, '2026-06-20T13:00:00.000Z'),
     statusEvent('cmp_1', ComplaintStatus.REOPENED, ComplaintTransitionAction.REOPEN, '2026-06-21T12:00:00.000Z'),
+    statusEvent('cmp_1', ComplaintStatus.REOPENED, ComplaintTransitionAction.REOPEN, '2026-06-21T12:30:00.000Z'),
+    statusEvent('cmp_2', ComplaintStatus.REOPENED, ComplaintTransitionAction.REOPEN, '2026-06-21T13:00:00.000Z'),
     statusEvent('case_1', ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.ASSIGN_INVESTIGATION, '2026-06-20T13:00:00.000Z'),
   ], [
     slaEvent('cmp_1', SlaEventType.BREACH, '2026-06-20T11:00:00.000Z'),
     slaEvent('case_1', SlaEventType.WARNING, '2026-06-20T12:00:00.000Z'),
-  ]);
+  ], new Date('2026-06-22T08:00:00.000Z'));
 
   assert.deepEqual(result, {
-    reopenedCount: 1,
+    reopenedCount: 3,
+    reopenRate: 100,
     escalationCount: 1,
+    slaBreachRate: 50,
+    medianTatHours: 5,
+    agingBuckets: { zeroToOneDays: 0, twoToThreeDays: 0, fourToSevenDays: 1, overSevenDays: 0 },
     averageFirstResponseHours: 2,
     averageResolutionHours: 4,
   });
@@ -145,7 +160,11 @@ test('complaint/case KPI empty denominators return zero and no leaderboard', () 
 
   assert.deepEqual(result, {
     reopenedCount: 0,
+    reopenRate: 0,
     escalationCount: 0,
+    slaBreachRate: 0,
+    medianTatHours: 0,
+    agingBuckets: { zeroToOneDays: 0, twoToThreeDays: 0, fourToSevenDays: 0, overSevenDays: 0 },
     averageFirstResponseHours: 0,
     averageResolutionHours: 0,
   });
@@ -169,8 +188,8 @@ function reportsService(
   return new ReportsService({ listTaskKpiRows, listComplaintCaseKpiRows } as ReportsRepository, {} as never, {} as never, {} as never);
 }
 
-function record(id: string, createdAt: string): ComplaintCaseKpiRow {
-  return { id, createdAt: new Date(createdAt) };
+function record(id: string, createdAt: string, status?: ComplaintStatus, hasSlaObligation = true): ComplaintCaseKpiRow {
+  return { id, createdAt: new Date(createdAt), status, closedAt: null, hasSlaObligation };
 }
 
 function statusEvent(recordId: string, toStatus: ComplaintStatus, action: ComplaintTransitionAction | null, createdAt: string): ComplaintCaseStatusEvent {

@@ -2188,6 +2188,14 @@
             }
           },
           {
+            "name": "departmentId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "severity",
             "in": "query",
             "required": false,
@@ -2302,6 +2310,14 @@
           },
           {
             "name": "categoryId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "departmentId",
             "in": "query",
             "required": false,
             "schema": {
@@ -4332,6 +4348,77 @@
           }
         }
       }
+    },
+    "/sla/policies/{id}/escalation": {
+      "patch": {
+        "tags": [
+          "SLA"
+        ],
+        "operationId": "slaPolicyEscalationUpdate",
+        "summary": "Update SLA policy escalation configuration",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlaPolicyEscalationConfigRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SLA policy escalation configuration updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlaPolicyWriteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing SLA_MANAGE permission or invalid CSRF token (RBAC_FORBIDDEN/CSRF_INVALID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5128,11 +5215,21 @@
       "PortalOtpRequestResponse": {
         "type": "object",
         "required": [
-          "ok"
+          "ok",
+          "verificationId",
+          "expiresAt"
         ],
         "properties": {
           "ok": {
             "const": true
+          },
+          "verificationId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "additionalProperties": false
@@ -7184,7 +7281,11 @@
           "averageDelayHours",
           "customerPromiseKeptPercent",
           "reopenedCount",
+          "reopenRate",
           "escalationCount",
+          "slaBreachRate",
+          "medianTatHours",
+          "agingBuckets",
           "averageFirstResponseHours",
           "averageResolutionHours"
         ],
@@ -7209,9 +7310,49 @@
             "type": "integer",
             "minimum": 0
           },
+          "reopenRate": {
+            "type": "number",
+            "minimum": 0
+          },
           "escalationCount": {
             "type": "integer",
             "minimum": 0
+          },
+          "slaBreachRate": {
+            "type": "number",
+            "minimum": 0
+          },
+          "medianTatHours": {
+            "type": "number",
+            "minimum": 0
+          },
+          "agingBuckets": {
+            "type": "object",
+            "required": [
+              "zeroToOneDays",
+              "twoToThreeDays",
+              "fourToSevenDays",
+              "overSevenDays"
+            ],
+            "properties": {
+              "zeroToOneDays": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "twoToThreeDays": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "fourToSevenDays": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "overSevenDays": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": false
           },
           "averageFirstResponseHours": {
             "type": "number",
@@ -8393,6 +8534,148 @@
             "items": {
               "$ref": "#/components/schemas/AssignableStaff"
             }
+          }
+        },
+        "additionalProperties": false
+      },
+      "SlaPolicy": {
+        "type": "object",
+        "required": [
+          "id",
+          "severity",
+          "stage",
+          "branchId",
+          "departmentId",
+          "categoryId",
+          "escalationLevel1",
+          "escalationLevel2",
+          "escalationLevel3",
+          "escalationLevel2AfterBreachMinutes",
+          "escalationLevel3AfterBreachMinutes"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH",
+              "CRITICAL"
+            ]
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "INTAKE",
+              "MANAGER_REVIEW",
+              "BRANCH_REVIEW",
+              "INVESTIGATION",
+              "RESOLUTION",
+              "CLOSURE"
+            ]
+          },
+          "branchId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "departmentId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "categoryId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "escalationLevel1": {
+            "type": "string"
+          },
+          "escalationLevel2": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "escalationLevel3": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "escalationLevel2AfterBreachMinutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "escalationLevel3AfterBreachMinutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "SlaPolicyEscalationConfigRequest": {
+        "type": "object",
+        "required": [
+          "escalationLevel1"
+        ],
+        "properties": {
+          "escalationLevel1": {
+            "type": "string",
+            "minLength": 1
+          },
+          "escalationLevel2": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "escalationLevel3": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "escalationLevel2AfterBreachMinutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "escalationLevel3AfterBreachMinutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "SlaPolicyWriteResponse": {
+        "type": "object",
+        "required": [
+          "policy"
+        ],
+        "properties": {
+          "policy": {
+            "$ref": "#/components/schemas/SlaPolicy"
           }
         },
         "additionalProperties": false

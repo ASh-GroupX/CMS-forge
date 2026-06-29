@@ -17,14 +17,26 @@ export type StaffReportKpis = {
   averageDelayHours: number;
   customerPromiseKeptPercent: number;
   reopenedCount: number;
+  reopenRate: number;
   escalationCount: number;
+  slaBreachRate: number;
+  medianTatHours: number;
+  agingBuckets: StaffReportAgingBuckets;
   averageFirstResponseHours: number;
   averageResolutionHours: number;
+};
+
+export type StaffReportAgingBuckets = {
+  zeroToOneDays: number;
+  twoToThreeDays: number;
+  fourToSevenDays: number;
+  overSevenDays: number;
 };
 
 export type StaffReportFilters = {
   branchId?: string;
   categoryId?: string;
+  departmentId?: string;
   ownerId?: string;
 };
 
@@ -132,6 +144,7 @@ function rowFrom(row: Partial<StaffReportRow>): StaffReportRow | null {
 
 function kpisFrom(body: KpiResponse): StaffReportKpis | null {
   const kpis = body.kpis;
+  const agingBuckets = agingBucketsFrom(kpis?.agingBuckets);
   if (
     !kpis ||
     typeof kpis.onTimeCompletionPercent !== 'number' ||
@@ -139,7 +152,11 @@ function kpisFrom(body: KpiResponse): StaffReportKpis | null {
     typeof kpis.averageDelayHours !== 'number' ||
     typeof kpis.customerPromiseKeptPercent !== 'number' ||
     typeof kpis.reopenedCount !== 'number' ||
+    typeof kpis.reopenRate !== 'number' ||
     typeof kpis.escalationCount !== 'number' ||
+    typeof kpis.slaBreachRate !== 'number' ||
+    typeof kpis.medianTatHours !== 'number' ||
+    !agingBuckets ||
     typeof kpis.averageFirstResponseHours !== 'number' ||
     typeof kpis.averageResolutionHours !== 'number'
   ) {
@@ -151,9 +168,32 @@ function kpisFrom(body: KpiResponse): StaffReportKpis | null {
     averageDelayHours: kpis.averageDelayHours,
     customerPromiseKeptPercent: kpis.customerPromiseKeptPercent,
     reopenedCount: kpis.reopenedCount,
+    reopenRate: kpis.reopenRate,
     escalationCount: kpis.escalationCount,
+    slaBreachRate: kpis.slaBreachRate,
+    medianTatHours: kpis.medianTatHours,
+    agingBuckets,
     averageFirstResponseHours: kpis.averageFirstResponseHours,
     averageResolutionHours: kpis.averageResolutionHours,
+  };
+}
+
+function agingBucketsFrom(value: unknown): StaffReportAgingBuckets | null {
+  if (!value || typeof value !== 'object') return null;
+  const buckets = value as Partial<StaffReportAgingBuckets>;
+  if (
+    typeof buckets.zeroToOneDays !== 'number' ||
+    typeof buckets.twoToThreeDays !== 'number' ||
+    typeof buckets.fourToSevenDays !== 'number' ||
+    typeof buckets.overSevenDays !== 'number'
+  ) {
+    return null;
+  }
+  return {
+    zeroToOneDays: buckets.zeroToOneDays,
+    twoToThreeDays: buckets.twoToThreeDays,
+    fourToSevenDays: buckets.fourToSevenDays,
+    overSevenDays: buckets.overSevenDays,
   };
 }
 

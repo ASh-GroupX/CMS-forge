@@ -1,9 +1,15 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { ComplaintSeverity, ComplaintStatus, SlaStage, WorkingCalendarMode } from '@prisma/client';
+import { ComplaintSeverity, SlaEventType, SlaStage, WorkingCalendarMode } from '@prisma/client';
+import { AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import type { SlaPolicyResponseDto } from './dto/sla-response.dto.js';
+import type { SlaPolicyEscalationConfigInput } from './dto/update-sla.dto.js';
+import { isPausedAfterDeadline, isTerminalComplaint, isWarningDue, queueSlaBreachNotification, queueSlaWarningNotification, runSlaEscalationJob } from './sla-job-rules.js';
+import type { RunSlaEscalationJobResult } from './sla-job-rules.js';
+import { slaPolicyConfigAudit, slaPolicyResponse, type SlaPolicyConfigAuditContext } from './sla-policy-config.js';
 import { SlaRepository } from './sla.repository.js';
-import type { SlaDeadlineBreachRecord, SlaDeadlineWarningRecord, SlaPolicyRecord } from './sla.repository.js';
+import type { SlaLifecycleEventType, SlaPolicyRecord } from './sla.repository.js';
 
 export const DEFAULT_SLA_DURATION_MINUTES: Record<ComplaintSeverity, number> = {
   [ComplaintSeverity.CRITICAL]: 120,
@@ -11,7 +17,6 @@ export const DEFAULT_SLA_DURATION_MINUTES: Record<ComplaintSeverity, number> = {
   [ComplaintSeverity.MEDIUM]: 1440,
   [ComplaintSeverity.LOW]: 4320,
 };
-
 export type CalculateSlaDeadlineInput = { policyId?: string | null; severity?: ComplaintSeverity; stage?: SlaStage; durationMinutes?: number; warningPercent?: number; branchTimezone?: string; workingCalendarMode?: WorkingCalendarMode; enteredAt?: Date | string };
 
 export type SlaDeadline = {
@@ -29,16 +34,20 @@ export type ResolveSlaPolicyInput = { severity?: ComplaintSeverity; stage?: SlaS
 export type ResolvedSlaPolicy = Omit<SlaPolicyRecord, 'isActive' | 'updatedAt'>;
 
 export type RecordSlaDeadlineEventInput = ResolveSlaPolicyInput & { complaintId: string; enteredAt: Date | string };
+export type RecordSlaLifecycleEventInput = { complaintId: string; stage: SlaStage; type: SlaLifecycleEventType; occurredAt: Date | string };
 
 export type SlaDeadlineEventResult = { complaintId: string; policyId: string | null; stage: SlaStage; dueAt: string | null; idempotencyKey: string };
+export type SlaLifecycleEventResult = SlaDeadlineEventResult & { type: SlaLifecycleEventType; occurredAt: string };
 
 export type RunSlaWarningJobResult = { scanned: number; created: number; skipped: number; warningIdempotencyKeys: string[] };
 
 export type RunSlaBreachJobResult = { scanned: number; created: number; skipped: number; breachIdempotencyKeys: string[] };
 
+export type { RunSlaEscalationJobResult };
+
 @Injectable()
 export class SlaService {
-  constructor(private readonly slaRepository: SlaRepository, private readonly notificationsService?: NotificationsService) {}
+  constructor(private readonly slaRepository: SlaRepository, private readonly notificationsService?: NotificationsService, private readonly auditService?: AuditService) {}
 
   async resolvePolicy(input: ResolveSlaPolicyInput): Promise<ResolvedSlaPolicy> {
     const severity = enumValue(input.severity, ComplaintSeverity, 'severity');
@@ -64,7 +73,20 @@ export class SlaService {
       warningPercent: policy.warningPercent,
       branchTimezone: policy.branchTimezone,
       workingCalendarMode: policy.workingCalendarMode,
+      escalationLevel1: policy.escalationLevel1,
+      escalationLevel2: policy.escalationLevel2,
+      escalationLevel3: policy.escalationLevel3,
+      escalationLevel2AfterBreachMinutes: policy.escalationLevel2AfterBreachMinutes,
+      escalationLevel3AfterBreachMinutes: policy.escalationLevel3AfterBreachMinutes,
     };
+  }
+
+  async updatePolicyEscalationConfig(id: string, input: SlaPolicyEscalationConfigInput, audit: SlaPolicyConfigAuditContext = {}): Promise<SlaPolicyResponseDto> {
+    return this.slaRepository.transaction(async (client) => {
+      const policy = await this.slaRepository.updatePolicyEscalationConfig(id.trim(), input, client);
+      await this.auditService!.record(slaPolicyConfigAudit(policy, audit, Object.keys(input)), client);
+      return slaPolicyResponse(policy);
+    });
   }
 
   calculateDeadline(input: CalculateSlaDeadlineInput): SlaDeadline {
@@ -128,13 +150,36 @@ export class SlaService {
     };
   }
 
+  async recordLifecycleEvent(input: RecordSlaLifecycleEventInput): Promise<SlaLifecycleEventResult> {
+    const type = lifecycleType(input.type);
+    const stage = enumValue(input.stage, SlaStage, 'stage');
+    const occurredAt = dateValue(input.occurredAt, 'occurredAt');
+    const event = await this.slaRepository.createLifecycleEvent({
+      complaintId: input.complaintId,
+      type,
+      stage,
+      occurredAt,
+      idempotencyKey: lifecycleIdempotencyKey(input.complaintId, stage, type, occurredAt.toISOString()),
+    });
+
+    return {
+      complaintId: event.complaintId,
+      policyId: event.policyId,
+      type: lifecycleType(event.type),
+      stage: event.stage,
+      dueAt: event.dueAt?.toISOString() ?? null,
+      occurredAt: event.occurredAt.toISOString(),
+      idempotencyKey: event.idempotencyKey,
+    };
+  }
+
   async runWarningJob(now: Date | string): Promise<RunSlaWarningJobResult> {
     const nowDate = dateValue(now, 'now');
     const deadlines = await this.slaRepository.findDeadlineEventsForWarning();
     const result: RunSlaWarningJobResult = { scanned: deadlines.length, created: 0, skipped: 0, warningIdempotencyKeys: [] };
 
     for (const deadline of deadlines) {
-      if (!deadline.dueAt || !isWarningDue(deadline, nowDate)) {
+      if (!deadline.dueAt || isTerminalComplaint(deadline) || isPausedAfterDeadline(deadline) || !isWarningDue(deadline, nowDate)) {
         result.skipped += 1;
         continue;
       }
@@ -149,6 +194,7 @@ export class SlaService {
       if (created) {
         result.created += 1;
         result.warningIdempotencyKeys.push(idempotencyKey);
+        await queueSlaWarningNotification(this.notificationsService, deadline, idempotencyKey);
       } else {
         result.skipped += 1;
       }
@@ -163,7 +209,7 @@ export class SlaService {
     const result: RunSlaBreachJobResult = { scanned: deadlines.length, created: 0, skipped: 0, breachIdempotencyKeys: [] };
 
     for (const deadline of deadlines) {
-      if (!deadline.dueAt || deadline.dueAt.getTime() > nowDate.getTime() || isTerminalComplaint(deadline)) {
+      if (!deadline.dueAt || deadline.dueAt.getTime() > nowDate.getTime() || isTerminalComplaint(deadline) || isPausedAfterDeadline(deadline)) {
         result.skipped += 1;
         continue;
       }
@@ -178,12 +224,7 @@ export class SlaService {
       if (created) {
         result.created += 1;
         result.breachIdempotencyKeys.push(idempotencyKey);
-        await this.notificationsService?.queueInternal({
-          complaintId: deadline.complaintId,
-          templateCode: 'sla.breach.internal',
-          locale: 'en',
-          payload: { complaintId: deadline.complaintId, policyId: deadline.policyId, stage: deadline.stage, dueAt: deadline.dueAt.toISOString(), breachIdempotencyKey: idempotencyKey },
-        });
+        await queueSlaBreachNotification(this.notificationsService, deadline, idempotencyKey);
       } else {
         result.skipped += 1;
       }
@@ -191,26 +232,26 @@ export class SlaService {
 
     return result;
   }
+
+  async runEscalationJob(now: Date | string): Promise<RunSlaEscalationJobResult> {
+    return runSlaEscalationJob(this.slaRepository, this.notificationsService, dateValue(now, 'now'));
+  }
 }
 
 function enumValue<T extends Record<string, string>>(value: unknown, options: T, field: string): T[keyof T] {
-  if (typeof value === 'string' && Object.values(options).includes(value)) {
-    return value as T[keyof T];
-  }
+  if (typeof value === 'string' && Object.values(options).includes(value)) return value as T[keyof T];
   throw invalidPolicy(field);
 }
 
+function lifecycleType(value: unknown): SlaLifecycleEventType { if (value === SlaEventType.PAUSED || value === SlaEventType.RESUMED) return value; throw invalidPolicy('type'); }
+
 function positiveInteger(value: unknown, field: string): number {
-  if (Number.isInteger(value) && Number(value) > 0) {
-    return Number(value);
-  }
+  if (Number.isInteger(value) && Number(value) > 0) return Number(value);
   throw invalidPolicy(field);
 }
 
 function percent(value: unknown): number {
-  if (Number.isInteger(value) && Number(value) > 0 && Number(value) <= 100) {
-    return Number(value);
-  }
+  if (Number.isInteger(value) && Number(value) > 0 && Number(value) <= 100) return Number(value);
   throw invalidPolicy('warningPercent');
 }
 
@@ -229,9 +270,7 @@ function timezone(value: unknown): string {
 
 function dateValue(value: unknown, field: string): Date {
   const date = value instanceof Date || typeof value === 'string' ? new Date(value) : null;
-  if (date && !Number.isNaN(date.valueOf())) {
-    return date;
-  }
+  if (date && !Number.isNaN(date.valueOf())) return date;
   throw invalidPolicy(field);
 }
 
@@ -253,23 +292,7 @@ function specificity(policy: SlaPolicyRecord): number {
   return Number(policy.branchId !== null) + Number(policy.departmentId !== null) + Number(policy.categoryId !== null);
 }
 
-function deadlineIdempotencyKey(complaintId: string, stage: SlaStage, policyId: string, enteredAt: string): string {
-  return `sla:deadline:${complaintId}:${stage}:${policyId}:${enteredAt}`;
-}
-
-function warningIdempotencyKey(deadlineKey: string): string {
-  return `sla:warning:${deadlineKey}`;
-}
-
+function deadlineIdempotencyKey(complaintId: string, stage: SlaStage, policyId: string, enteredAt: string): string { return `sla:deadline:${complaintId}:${stage}:${policyId}:${enteredAt}`; }
+function warningIdempotencyKey(deadlineKey: string): string { return `sla:warning:${deadlineKey}`; }
 function breachIdempotencyKey(deadlineKey: string): string { return `sla:breach:${deadlineKey}`; }
-
-function isWarningDue(deadline: SlaDeadlineWarningRecord, now: Date): boolean {
-  if (!deadline.dueAt || !deadline.policy) return false;
-  if (!Number.isInteger(deadline.policy.durationMinutes) || deadline.policy.durationMinutes <= 0) return false;
-  if (!Number.isInteger(deadline.policy.warningPercent) || deadline.policy.warningPercent <= 0 || deadline.policy.warningPercent > 100) return false;
-  const remainingPercent = 100 - deadline.policy.warningPercent;
-  const warningAt = deadline.dueAt.getTime() - Math.round(deadline.policy.durationMinutes * 60_000 * remainingPercent / 100);
-  return warningAt <= now.getTime();
-}
-
-function isTerminalComplaint(deadline: SlaDeadlineBreachRecord): boolean { return deadline.complaint.status === ComplaintStatus.CLOSED || deadline.complaint.status === ComplaintStatus.REJECTED; }
+function lifecycleIdempotencyKey(complaintId: string, stage: SlaStage, type: SlaLifecycleEventType, occurredAt: string): string { return `sla:lifecycle:${complaintId}:${stage}:${type}:${occurredAt}`; }

@@ -11,6 +11,9 @@ export type ComplaintTransitionRequestDto = {
   fromStatus: ComplaintStatus;
   action: ComplaintTransitionAction;
   reason?: string | null;
+  targetBranchId?: string | null;
+  targetDepartmentId?: string | null;
+  ownerId?: string | null;
   resolutionType?: string | null;
   resolutionSummary?: string | null;
   customerCommunicationStatus?: string | null;
@@ -23,6 +26,9 @@ export type ComplaintTransitionResponseDto = {
 export function parseComplaintTransitionBody(body: unknown): ComplaintTransitionRequestDto {
   const input = objectBody(body);
   const reason = optionalText(input.reason, 'reason');
+  const targetBranchId = optionalText(input.targetBranchId, 'targetBranchId');
+  const targetDepartmentId = optionalText(input.targetDepartmentId, 'targetDepartmentId');
+  const ownerId = optionalText(input.ownerId, 'ownerId');
   const resolutionType = optionalText(input.resolutionType, 'resolutionType');
   const resolutionSummary = optionalText(input.resolutionSummary, 'resolutionSummary');
   const customerCommunicationStatus = optionalText(input.customerCommunicationStatus, 'customerCommunicationStatus');
@@ -30,6 +36,9 @@ export function parseComplaintTransitionBody(body: unknown): ComplaintTransition
     fromStatus: enumValue(input.fromStatus, ComplaintStatus, 'fromStatus'),
     action: enumValue(input.action, ComplaintTransitionAction, 'action'),
     ...(reason === undefined ? {} : { reason }),
+    ...(targetBranchId === undefined ? {} : { targetBranchId }),
+    ...(targetDepartmentId === undefined ? {} : { targetDepartmentId }),
+    ...(ownerId === undefined ? {} : { ownerId }),
     ...(resolutionType === undefined ? {} : { resolutionType }),
     ...(resolutionSummary === undefined ? {} : { resolutionSummary }),
     ...(customerCommunicationStatus === undefined ? {} : { customerCommunicationStatus }),
@@ -55,6 +64,9 @@ export function toTransitionInput(
     actorId: context.actorId,
     requestSource: 'STAFF_API',
     reason: body.reason ?? null,
+    ...(body.targetBranchId === undefined ? {} : { targetBranchId: body.targetBranchId }),
+    ...(body.targetDepartmentId === undefined ? {} : { targetDepartmentId: body.targetDepartmentId }),
+    ...(body.ownerId === undefined ? {} : { ownerId: body.ownerId }),
     ...(body.resolutionType === undefined ? {} : { resolutionType: body.resolutionType }),
     ...(body.resolutionSummary === undefined ? {} : { resolutionSummary: body.resolutionSummary }),
     ...(body.customerCommunicationStatus === undefined ? {} : { customerCommunicationStatus: body.customerCommunicationStatus }),

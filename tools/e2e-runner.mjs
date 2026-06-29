@@ -19,7 +19,12 @@ if (mode === 'runtime-smoke') {
   process.exit(0);
 }
 
-console.error('Use one of: visual, accessibility, perf, ui-smoke, runtime-smoke.');
+if (mode === 'customer-portal-track') {
+  run('node', ['--import', 'tsx', 'tools/customer-portal-track-proof.mjs']);
+  process.exit(0);
+}
+
+console.error('Use one of: visual, accessibility, perf, ui-smoke, runtime-smoke, customer-portal-track.');
 process.exit(1);
 
 function run(command, args) {

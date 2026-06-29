@@ -7691,3 +7691,2157 @@ Implemented the scoped server-side permission guard foundation:
   and denied permission paths.
 - SRS coverage: ARCH-WORKFLOW-001, WORKFLOW-MATRIX-001, METHOD-AUDIT-001,
   NFR-SEC-002, API-STANDARD-001.
+
+## 2026-06-29 - P14B Assigned Owner Workflow Authority
+
+### Scope
+
+- Identified the smallest failing workflow state path before source edits:
+  `IN_PROGRESS` / `ADD_INVESTIGATION_UPDATE` rejected a `CR_OFFICER` assigned
+  owner before persisted ownership could be checked.
+- Allowed assigned-owner authority for owner-scoped `IN_PROGRESS` actions while
+  keeping Branch Manager, CR Manager, and Admin authority unchanged.
+- Kept the persisted status update, owner check, status history, and workflow
+  audit in the existing transition transaction. Non-owner staff denial rolls
+  back before history/audit and writes a `SECURITY` audit denial after rollback.
+
+### Changed Files
+
+- `apps/api/src/modules/complaints/complaints.repository.ts`
+- `apps/api/src/modules/complaints/complaints.service.ts`
+- `apps/api/test/workflow/transition-matrix.test.ts`
+- `.forge/evidence.md`
+- `.forge/state.md`
+- `.forge/next.md`
+
+### Verification
+
+- Failed as expected before source fix: `corepack pnpm test:api -- workflow`
+  (48/49; assigned owner investigation update returned `RBAC_FORBIDDEN`).
+- Passed: `corepack pnpm test:api -- workflow` (49/49).
+- Passed: `corepack pnpm test:api -- audit` (8/8 plus append-only proof).
+- Passed: `corepack pnpm test:api -- rbac` (2/2).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Security Self-Check
+
+- Roles, permissions, and branch scope come from the server session: Passed.
+  The controller still derives `actorRole` and `actorId` from the server
+  principal; no client-owned role/actor fields are accepted.
+- Each state change writes status history and audit in the same transaction;
+  side effects enqueue after commit: Passed. The assigned-owner allowed case
+  records status/history/audit/commit; the denied non-owner case records no
+  history and no commit.
+- No passwords, OTPs, tokens, hashes, provider secrets, credentials,
+  attachment contents, or portal verification data are logged or returned:
+  Passed. The denial audit uses existing safe workflow denial metadata.
+- Customer portal exposure rules hold: Passed. No portal route or response
+  shape changed.
+- Trust boundaries are tested: Passed. The new workflow test covers one
+  assigned-owner allowed case and one non-owner denied case with
+  `RBAC_FORBIDDEN`.
+- SRS coverage: ARCH-WORKFLOW-001, WORKFLOW-MATRIX-001, METHOD-AUDIT-001,
+  NFR-SEC-002, API-STANDARD-001.
+
+## 2026-06-29 - P14C Workflow Route/Owner Business-State Repair
+
+### Scope
+
+- Extended complaint transition input with `targetBranchId`,
+  `targetDepartmentId`, and `ownerId`.
+- Required `APPROVE_AND_ROUTE` routing data before transaction:
+  `reason`, `targetBranchId`, `targetDepartmentId`, and `ownerId`.
+- Persisted `APPROVE_AND_ROUTE` branch, department, and owner in the same
+  transaction as status, history, and audit.
+- Required `ASSIGN_INVESTIGATION` assignment data before transaction:
+  `reason` and `ownerId`.
+- Persisted `ASSIGN_INVESTIGATION` owner in the same transaction as status,
+  history, and audit.
+- Required `ROUTE_AGAIN` routing comment through existing `reason`.
+- Set `resolvedAt` for `RESOLVE` / `RESOLVE_DIRECTLY` and `closedAt` for
+  `CLOSE` in the status transaction.
+- Preserved P13 draft submit reference assignment, P14A safe audit target
+  behavior, P14B assigned-owner authority, and after-commit side effects.
+
+### Changed Files
+
+- `apps/api/src/modules/complaints/dto/complaint-transition.dto.ts`
+- `apps/api/src/modules/complaints/complaints.service.ts`
+- `apps/api/src/modules/complaints/complaints.repository.ts`
+- `apps/api/test/workflow/transition-matrix.test.ts`
+- `.forge/evidence.md`
+- `.forge/state.md`
+- `.forge/next.md`
+
+### Verification
+
+- Failed as expected before source fix: `corepack pnpm test:api -- workflow`
+  (47/53; missing route/owner validation and persistence, timestamp updates,
+  and DTO forwarding failed).
+- Passed: `corepack pnpm test:api -- workflow` (53/53).
+- Passed: `corepack pnpm test:api -- complaints` (53/53).
+- Passed: `corepack pnpm test:api -- audit` (8/8 plus append-only proof).
+- Passed: `corepack pnpm test:api -- rbac` (2/2).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Security Self-Check
+
+- Roles, permissions, branch scope, actor id, actor role, and request source
+  still come from the server session. Client body actor fields remain ignored.
+- Each tested workflow state change writes status, history, and audit in the
+  same transaction; route, owner, and terminal timestamp updates are part of
+  the status update payload.
+- Side effects remain after commit.
+- No passwords, OTPs, tokens, hashes, provider secrets, credentials,
+  attachment contents, or portal verification data are logged or returned.
+- Customer portal exposure rules hold. No portal route or response shape
+  changed.
+- Trust boundaries are tested: route/assignment required data fails before a
+  transaction; assigned-owner investigation update still passes; non-owner
+  staff still deny with `RBAC_FORBIDDEN`.
+- SRS coverage: ARCH-WORKFLOW-001, WORKFLOW-MATRIX-001, METHOD-AUDIT-001,
+  NFR-SEC-002, API-STANDARD-001.
+
+## 2026-06-29 - P14D Workflow After-Commit Notification and SLA Hooks
+
+### Scope
+
+- Added a focused complaint workflow side-effect helper so
+  `ComplaintsService` stays under the 300-line source cap.
+- Preserved same-transaction complaint status, history, and audit writes; the
+  helper runs only after `complaintsRepository.transaction(...)` returns.
+- Added deterministic internal notification queueing for submitted,
+  approved/routed, investigation assigned, resolved, rejected, resolution
+  rejected, sent back, close survey, and reopen lifecycle actions.
+- Wired `SlaService.recordDeadlineEvent(...)` through `SlaModule` for active
+  workflow stages using the P14D action-to-`SlaStage` map.
+- Expanded the post-update complaint select only with fields required by the
+  side-effect hooks: `ownerId`, `severity`, `categoryId`, and `departmentId`.
+- Left terminal stop-SLA behavior out of this slice because there is no
+  existing `SlaService` stop/pause API; existing breach scanning skips
+  terminal complaint statuses, but no terminal stop event is recorded.
+
+### Changed Files
+
+- `apps/api/src/modules/complaints/complaint-workflow-side-effects.ts`
+- `apps/api/src/modules/complaints/complaints.service.ts`
+- `apps/api/src/modules/complaints/complaints.repository.ts`
+- `apps/api/src/modules/complaints/complaints.module.ts`
+- `apps/api/src/modules/complaints/MODULE.md`
+- `apps/api/test/workflow/transition-matrix.test.ts`
+- `.forge/evidence.md`
+- `.forge/state.md`
+- `.forge/next.md`
+
+### Verification
+
+- Failed as expected before source fix:
+  `$env:TSX_TSCONFIG_PATH='apps/api/tsconfig.json'; node --import tsx --test --test-name-pattern "workflow approve and route queues" apps/api/test/workflow/transition-matrix.test.ts`
+  (call order stopped at `status`, `history`, `audit`, `commit`; missing
+  `queue` and `sla`).
+- Timed out before source fix: `corepack pnpm test:api -- workflow`
+  (124s, no TAP output before timeout; orphaned test child processes stopped).
+- Passed: `corepack pnpm test:api -- workflow` (56/56).
+- Passed: `corepack pnpm test:api -- complaints` (56/56).
+- Passed: `corepack pnpm test:api -- sla` (16/16).
+- Passed: `corepack pnpm test:api -- notifications` (42/42).
+- Passed: `corepack pnpm openapi:check`.
+- Passed after one type-shape fix: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Security Self-Check
+
+- Roles, permissions, branch scope, actor id, actor role, and request source
+  still come from the server session. The controller route test still proves
+  client-owned actor fields are ignored.
+- Each successful workflow state change writes status, history, and audit in
+  the same transaction. New tests prove notification and SLA side effects occur
+  only after the fake commit marker.
+- No side effects run for validation failure, invalid transition, stale status,
+  or transaction failure.
+- No passwords, OTPs, tokens, hashes, provider secrets, credentials,
+  attachment contents, or portal verification data are logged or returned.
+  New notification payloads contain only ids, statuses, action, actor id,
+  target owner/route ids, and resolution type where needed; no template body or
+  provider dispatch is added.
+- Customer portal exposure rules hold. No portal route or response shape
+  changed.
+- Trust boundaries are tested: route scope/permission tests remain in the
+  workflow suite, and the new side-effect tests cover both successful
+  after-commit execution and denied/failing no-side-effect paths.
+- SRS coverage: ARCH-WORKFLOW-001, WORKFLOW-MATRIX-001, REQ-NOTIFY-001,
+  REQ-SLA-001, METHOD-AUDIT-001, NFR-SEC-002, API-STANDARD-001.
+
+## 2026-06-29 - P14E Terminal SLA Stop and Reopen Lifecycle
+
+### Scope
+
+- Added a minimal `SlaService.recordLifecycleEvent(...)` public API for
+  `SlaEventType.PAUSED` and `SlaEventType.RESUMED` only.
+- Added idempotent lifecycle event creation in `SlaRepository` using existing
+  `SlaEvent` rows with `policyId: null` and `dueAt: null`; no schema or
+  due-date columns were added.
+- Updated SLA warning and breach jobs to skip terminal complaints and skip
+  deadline rows with a later PAUSED event for the same complaint and stage.
+  New deadline rows created after a pause remain eligible.
+- Wired workflow side effects so `CLOSE`, `REJECT_AS_INVALID`,
+  `REJECT_AFTER_REVIEW`, and `REJECT_AFTER_INVESTIGATION` record PAUSED after
+  commit, while `REOPEN` records RESUMED after commit.
+- Preserved P14D notification payloads and deadline-stage mapping.
+- Kept source files under 300 lines: `sla.service.ts` is 299 lines,
+  `sla.repository.ts` is 142 lines, `sla-job-rules.ts` is 21 lines, and
+  `complaint-workflow-side-effects.ts` is 149 lines.
+
+### Changed Files
+
+- `apps/api/src/modules/sla/sla.service.ts`
+- `apps/api/src/modules/sla/sla.repository.ts`
+- `apps/api/src/modules/sla/sla-job-rules.ts`
+- `apps/api/src/modules/complaints/complaint-workflow-side-effects.ts`
+- `apps/api/test/sla/deadline-calculator.test.ts`
+- `apps/api/test/workflow/transition-matrix.test.ts`
+- `.forge/evidence.md`
+- `.forge/state.md`
+- `.forge/next.md`
+
+### Verification
+
+- Failed as expected before source fix:
+  `$env:TSX_TSCONFIG_PATH='apps/api/tsconfig.json'; node --import tsx --test --test-name-pattern "SLA service records lifecycle" apps/api/test/sla/deadline-calculator.test.ts`
+  (`recordLifecycleEvent is not a function`).
+- Failed as expected before source fix:
+  `$env:TSX_TSCONFIG_PATH='apps/api/tsconfig.json'; node --import tsx --test --test-name-pattern "workflow close records paused" apps/api/test/workflow/transition-matrix.test.ts`
+  (call order missed `slaLifecycle` after `queue`).
+- Passed: `corepack pnpm test:api -- workflow` (59/59).
+- Passed: `corepack pnpm test:api -- sla` (21/21).
+- Passed: `corepack pnpm test:api -- complaints` (59/59).
+- Passed: `corepack pnpm openapi:check`.
+- Passed after one enum-literal type fix: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Security Self-Check
+
+- Roles, permissions, branch scope, actor id, actor role, and request source
+  still come from the server session. No client-owned workflow authority was
+  added.
+- Each successful workflow state change still writes status, history, and
+  audit in the same transaction. New lifecycle tests prove PAUSED/RESUMED SLA
+  side effects occur only after the fake commit marker.
+- No side effects run for validation failure, invalid transition, stale status,
+  or transaction failure.
+- No passwords, OTPs, tokens, hashes, provider secrets, credentials,
+  attachment contents, or portal verification data are logged or returned.
+  Lifecycle events persist complaint id, SLA stage, type, timestamps, and an
+  idempotency key only.
+- Customer portal exposure rules hold. No portal route or response shape
+  changed.
+- Trust boundaries are tested: workflow permission/branch-scope route tests
+  remain in the suite, and side-effect tests cover both successful after-commit
+  lifecycle execution and denied/failing no-side-effect paths.
+- SRS coverage: ARCH-WORKFLOW-001, WORKFLOW-MATRIX-001, REQ-SLA-001,
+  METHOD-AUDIT-001, NFR-SEC-002, API-STANDARD-001.
+
+## 2026-06-29 - Phase 14 Reviewer Pass
+
+### Scope
+
+- Reviewed P14A through P14E against ARCH-WORKFLOW-001,
+  WORKFLOW-MATRIX-001, METHOD-AUDIT-001, REQ-SLA-001, REQ-NOTIFY-001,
+  NFR-SEC-002, and API-STANDARD-001.
+- `.spec` was absent.
+- Included untracked helper files in review:
+  `apps/api/src/modules/complaints/complaint-workflow-side-effects.ts` and
+  `apps/api/src/modules/sla/sla-job-rules.ts`.
+- No product code was changed during review.
+
+### Finding
+
+- Failed: Phase 14 reviewer audit-safety gate.
+- `apps/api/src/modules/complaints/complaints.service.ts`
+  `workflowAuditInput(...)` stores request `resolutionSummary` in workflow
+  audit metadata.
+- `apps/api/src/core/audit.service.ts` persists metadata unchanged.
+- `apps/api/src/modules/audit/audit.service.ts` redacts sensitive key names on
+  read/export, but not sensitive strings inside a benign key such as
+  `resolutionSummary`.
+- Result: a successful workflow transition can persist passwords, OTPs, tokens,
+  secrets, credentials, or provider data if entered in resolution free text.
+
+### Verification
+
+- Passed: `git status --short` showed the expected dirty Phase 14 worktree and
+  the two untracked helper files.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- workflow` (59/59).
+- Passed: `corepack pnpm test:api -- sla` (21/21).
+- Passed: `corepack pnpm test:api -- complaints` (59/59).
+- Passed after standalone rerun: `corepack pnpm test:api -- audit` (8/8 plus
+  append-only proof). The first parallel run timed out at 120s.
+- Passed: `corepack pnpm test:api -- rbac` (2/2).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Review Notes
+
+- Backend workflow authority remains server-side; controller actor role/id and
+  branch-scope context come from `request.principal`.
+- Successful workflow transitions still write status, history, and audit in one
+  transaction before side effects.
+- Permission and branch-scope denial audit targets are path-only and avoid raw
+  query strings.
+- P14B assigned-owner behavior remains covered.
+- P14E deadline/lifecycle idempotency, terminal skips, paused old deadline
+  skips, and reopened/new deadline behavior remain covered.
+- Phase 14 is not reviewed complete until P14R1 repairs workflow audit
+  free-text metadata.
+
+## 2026-06-29 - P14R1 Workflow Audit Free-Text Safety Repair
+
+### Scope
+
+- Removed `resolutionSummary` from successful workflow audit metadata.
+- Kept structured workflow audit metadata only: from status, to status, action,
+  actor role, request source, resolution type, and customer communication
+  status.
+- Added one workflow regression for `RESOLVE` with
+  `resolutionSummary: "password hunter2 sessionToken leaked"`.
+- Did not change status history, notification payloads, SLA side effects,
+  schema, UI, or broad audit behavior.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- workflow` (60/60).
+- Passed: `corepack pnpm test:api -- audit` (8/8 plus append-only proof).
+- Passed: `corepack pnpm test:api -- complaints` (60/60).
+- Passed: `corepack pnpm test:api -- rbac` (2/2).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Security Self-Check
+
+- Roles, permissions, branch scope, actor id, actor role, and request source
+  still come from the server session.
+- Successful workflow state changes still write status, history, and audit in
+  one transaction before side effects.
+- Workflow audit metadata no longer persists `resolutionSummary`; the new test
+  proves `hunter2`, `sessionToken`, and `password` are absent from the audit
+  record.
+- Customer portal exposure rules hold. No portal route or response shape
+  changed.
+- Trust boundaries remain covered by workflow permission/branch-scope tests and
+  RBAC tests.
+- SRS coverage: METHOD-AUDIT-001, ARCH-WORKFLOW-001, WORKFLOW-MATRIX-001,
+  NFR-SEC-002.
+
+## 2026-06-29 - Phase 14 Reviewer Rerun
+
+### Scope
+
+- Ran a fresh Phase 14 reviewer pass for P14A through P14E plus P14R1 against
+  ARCH-WORKFLOW-001, WORKFLOW-MATRIX-001, METHOD-AUDIT-001, REQ-SLA-001,
+  REQ-NOTIFY-001, NFR-SEC-002, and API-STANDARD-001.
+- `.spec` was absent.
+- Included untracked Phase 14 helper files in review:
+  `apps/api/src/modules/complaints/complaint-workflow-side-effects.ts` and
+  `apps/api/src/modules/sla/sla-job-rules.ts`.
+- No product code was changed during review.
+
+### Findings
+
+- No blocking findings.
+- P14R1 audit-safety repair is holding: workflow audit metadata excludes
+  `resolutionSummary`, and the regression proves
+  `password hunter2 sessionToken leaked` is absent from the audit record.
+
+### Verification
+
+- Passed: `git status --short` showed the expected dirty Phase 14 worktree and
+  both untracked helper files.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- workflow` (60/60).
+- Passed: `corepack pnpm test:api -- sla` (21/21).
+- Passed: `corepack pnpm test:api -- complaints` (60/60).
+- Passed: `corepack pnpm test:api -- audit` (8/8 plus append-only proof).
+- Passed: `corepack pnpm test:api -- rbac` (2/2).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Review Notes
+
+- Backend workflow authority remains in the API service/controller boundary.
+  The transition route derives actor role/id and branch-scope context from the
+  server principal and ignores client-owned actor/request-source fields.
+- Successful workflow transitions still write complaint status, status history,
+  and WORKFLOW audit in one repository transaction.
+- Workflow notifications, SLA deadline events, and PAUSED/RESUMED lifecycle
+  events are queued/recorded only after the transaction commits; validation,
+  invalid transition, stale status, and transaction failure paths do not run
+  side effects.
+- Workflow audit metadata remains structured: from status, to status, action,
+  actor role, request source, resolution type, and customer communication
+  status. It no longer persists request free-text `resolutionSummary`.
+- Permission, role, branch-scope, and assigned-owner denials produce safe
+  SECURITY audit records without raw query strings or request free text.
+- SLA warning/breach jobs skip terminal complaints, skip deadline rows paused
+  after creation, allow newer post-resume deadlines, and keep warning/breach
+  writes idempotent.
+- Notification payloads reviewed in this phase carry backend-owned ids,
+  statuses, actions, owner/route ids, resolution type, and close/reopen
+  workflow context; queueing remains after commit.
+- OpenAPI, typecheck, lint, and evidence labels are honest for the commands
+  that actually ran.
+
+### Security Self-Check
+
+- Roles, permissions, branch scope, actor id, actor role, and request source
+  come from the server session, never client-owned workflow authority.
+- Status changes write status history and audit in the same transaction; side
+  effects run only after commit.
+- Workflow audit records do not include `resolutionSummary`, passwords, OTPs,
+  tokens, hashes, provider secrets, credentials, attachment contents, or portal
+  verification data.
+- Customer portal exposure rules hold. No portal route or response shape
+  changed in Phase 14 review.
+- Trust boundaries are covered by workflow route tests, assigned-owner tests,
+  branch-scope denial tests, and RBAC tests.
+- SRS coverage: ARCH-WORKFLOW-001, WORKFLOW-MATRIX-001, METHOD-AUDIT-001,
+  REQ-SLA-001, REQ-NOTIFY-001, NFR-SEC-002, API-STANDARD-001.
+
+## 2026-06-29 - Next Phase Planning / Audit
+
+### Scope
+
+- Planned the next phase only; no product source or tests were intentionally
+  changed.
+- Read `.forge/next.md`, `.forge/project.md`, `.forge/policy.md`,
+  `.forge/state.md`, latest Phase 14 evidence, latest relevant trust notes,
+  `docs/ARCHITECTURE.md`, and the requested SRS sections.
+- `.spec` is absent.
+- Current dirty Phase 14 worktree was preserved. The planning snapshot includes
+  the untracked helper files:
+  `apps/api/src/modules/complaints/complaint-workflow-side-effects.ts` and
+  `apps/api/src/modules/sla/sla-job-rules.ts`.
+
+### Gap Audit
+
+- `REQ-SLA-001` / `REQ-NOTIFY-001`: Phase 14 records deadline/lifecycle events
+  and breach notifications, but `SlaService.runWarningJob(...)` currently only
+  creates warning events. It does not queue the AC5 current-owner warning
+  notification.
+- `REQ-SLA-001` AC6: breach events queue an internal breach notification, but
+  configured escalation-level routing remains a separate follow-up gap.
+- `REQ-PORTAL-001`, `REQ-PORTAL-002`, `PORTAL-SEC-001`: portal submission,
+  OTP verification, tracking, follow-up, and privacy tests exist; the remaining
+  gap is stronger L3/customer-journey proof rather than a smaller backend
+  prerequisite.
+- `REQ-REPORT-001`, `REPORT-MATRIX-001`: reports and KPI endpoints exist with
+  RBAC/branch-scope proof, but full matrix reconciliation for RPT-001 through
+  RPT-017 is broader than one first backend slice.
+- `REQ-COMPLAINT-003`, `DATA-AUTO-001`: drafts and vehicle intake exist, but
+  related complaint linking, duplicate warning UI, and manual/DMS provenance
+  flags remain future data/UI slices.
+- `UI-DESIGN-001`: UI proof exists for several staff/portal routes, but the
+  next highest dependency is backend SLA business behavior, not UI polish.
+
+### Candidate Ranking
+
+1. **Phase 15 SLA notification and escalation completion**: highest value and
+   risk because SLA warning/escalation is an MVP gate. Dependency order is good
+   because Phase 14 just stabilized workflow/SLA lifecycle. First slice is
+   small: owner warning notification after a new warning event.
+2. **Portal verified tracking/follow-up proof**: high privacy value, but less
+   blocking for backend correctness because the API/session model and UI are
+   already present. Likely needs E2E/proof setup rather than core service work.
+3. **Report formula/matrix reconciliation**: strong management value, but
+   broader. `REPORT-MATRIX-001` spans many reports and UAT reconciliation, so
+   it should be split after the SLA notification hole is closed.
+
+### Decision
+
+- Chosen next phase objective: Phase 15 - SLA notification and escalation
+  completion.
+- First buildable slice: P15A - SLA owner warning notifications.
+- Exact first-slice SRS IDs: REQ-SLA-001, REQ-NOTIFY-001, NFR-SEC-002,
+  API-STANDARD-001.
+
+### Assumptions
+
+- P15A can use the existing `NotificationsService.queueInternal(...)` safe
+  payload guard and does not need a live provider.
+- P15A should not add schema unless owner data cannot be read from the existing
+  complaint relation. The current likely change is to include `ownerId` in the
+  SLA warning deadline read model.
+- If a warning event has no current owner, P15A should not create an unscoped
+  notification; the warning event remains deterministic and escalation routing
+  is left to P15B.
+
+### Verification
+
+- Passed: `git status --short` confirmed the dirty Phase 14 worktree and both
+  untracked helper files.
+- Not Run: product test suites, OpenAPI, typecheck, and lint. This was a
+  planning-only task with no product source/test changes.
+
+## 2026-06-29 - P15A SLA Owner Warning Notifications
+
+### Scope
+
+- Implemented P15A only: a newly created SLA warning event now queues one
+  internal notification to the complaint current owner.
+- `.spec` is absent.
+- Extended the warning deadline read model with `complaint.ownerId`; no schema,
+  UI, provider, portal, report, DMS, duplicate/related complaint, or workflow
+  behavior changes were made.
+- Kept `SlaService` under the 300-line cap: 297 lines after the change.
+
+### Changes
+
+- `SlaService.runWarningJob(...)` queues the warning notification only after
+  `createWarningEvent(...)` returns `true`.
+- Duplicate retries, skipped warnings, terminal complaints, paused old
+  deadlines, invalid policies, future warnings, and missing owners do not queue
+  warning notifications.
+- Missing owner behavior is deterministic: the WARNING event is still created,
+  but no unscoped notification is queued.
+- Notification input uses `templateCode: sla.warning.internal`,
+  `recipientUserId: complaint.ownerId`, `complaintId: deadline.complaintId`,
+  `locale: en`, `idempotencyKey: warning idempotency key`, and a safe payload
+  of complaint id, policy id, SLA stage, due timestamp, and warning idempotency
+  key only.
+
+### Failing-First Proof
+
+- Failed as expected before implementation: `corepack pnpm test:api -- sla`
+  failed 1/24 on `SLA warning job queues one owner notification only for a new
+  warning event` because the warning event was created but no notification was
+  queued.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- sla` (24/24).
+- Passed: `corepack pnpm test:api -- notifications` (42/42).
+- Passed: `corepack pnpm test:api -- workflow` (60/60).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Security Self-Check
+
+- Roles and branch scope remain server-owned; P15A does not add client input or
+  route authority.
+- Complaint state changes remain in the workflow transaction with status
+  history and audit; P15A only adds SLA job notification queueing after a new
+  warning event write.
+- The warning payload contains backend-owned ids/enums/timestamps only. No
+  passwords, OTPs, tokens, hashes, credentials, provider data, staff PII,
+  customer PII, free text, or secrets are logged or queued.
+- Customer portal exposure rules hold. No portal route, portal DTO, public
+  comment, tracking, or customer-visible response changed.
+- Trust boundaries were covered by workflow allowed/denied route tests and
+  notification unsafe-payload denial tests.
+- SRS coverage: REQ-SLA-001 AC5, REQ-NOTIFY-001 AC3, NFR-SEC-002,
+  API-STANDARD-001.
+
+### Assumptions
+
+- If a due warning has no current owner, P15A should not create an unscoped
+  notification; P15B can decide escalation routing for ownerless breached
+  complaints if needed.
+
+## 2026-06-29 - P15B SLA Breach Escalation Route Token
+
+### Scope
+
+- Implemented P15B only: a newly created SLA BREACH event now queues the
+  existing internal breach notification with the configured
+  `SlaPolicy.escalationLevel1` route token in the payload.
+- `.spec` is absent.
+- Extended the breach deadline read model with
+  `policy.escalationLevel1`, `policy.escalationLevel2`, and
+  `policy.escalationLevel3`; no schema, UI, provider, portal, report, DMS,
+  duplicate/related complaint, vehicle provenance, or workflow behavior
+  changed.
+- Kept `SlaService` under the 300-line cap: 292 lines after the change.
+
+### Changes
+
+- Replaced inline breach notification queueing in `SlaService.runBreachJob(...)`
+  with `queueSlaBreachNotification(...)` in `sla-job-rules.ts`.
+- Queueing still happens only after `createBreachEvent(...)` returns `true`.
+- Duplicate breach retries, skipped breach paths, terminal complaints, paused
+  old deadlines, future breaches, missing policy, and missing
+  `escalationLevel1` do not queue escalation notifications.
+- Missing policy/config behavior is deterministic: the BREACH event is still
+  created, but no unscoped escalation notification is queued.
+- Notification input uses `templateCode: sla.breach.internal`, `locale: en`,
+  `idempotencyKey: breach idempotency key`, and a safe payload of complaint id,
+  policy id, SLA stage, due timestamp, breach idempotency key, and
+  `escalationLevel: policy.escalationLevel1`.
+
+### Failing-First Proof
+
+- Failed as expected before implementation: `corepack pnpm test:api -- sla`
+  failed 3/26. The breach read model did not select policy escalation fields,
+  the queued breach notification lacked `idempotencyKey` and
+  `escalationLevel`, and missing escalation config still queued a notification.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- sla` (26/26).
+- Passed: `corepack pnpm test:api -- notifications` (42/42).
+- Passed: `corepack pnpm test:api -- workflow` (60/60).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Security Self-Check
+
+- Roles and branch scope remain server-owned; P15B does not add client input or
+  route authority.
+- Complaint state changes remain in the workflow transaction with status
+  history and audit; P15B only changes SLA job notification queueing after a new
+  breach event write.
+- The breach payload contains backend-owned ids/enums/timestamps and the
+  configured escalation route token only. No passwords, OTPs, tokens, hashes,
+  credentials, provider data, staff PII, customer PII, free text, or secrets
+  are logged or queued.
+- Customer portal exposure rules hold. No portal route, portal DTO, public
+  comment, tracking, or customer-visible response changed.
+- Trust boundaries were covered by workflow allowed/denied route tests and
+  notification unsafe-payload denial tests.
+- SRS coverage: REQ-SLA-001 AC6, REQ-NOTIFY-001 AC3, NFR-SEC-002,
+  API-STANDARD-001.
+
+### Assumptions
+
+- `SlaPolicy.escalationLevel1` is treated as a configured escalation route
+  token/code for this slice, not as a `User.id`.
+- If `policy` or `escalationLevel1` is missing/blank on a due breach, P15B
+  creates the BREACH event but does not queue an unscoped escalation
+  notification.
+- P15B intentionally does not implement timed level2/level3 scans. That remains
+  a separate slice only if existing configuration supports timing semantics.
+
+## 2026-06-29 - P15C SLA Level2/Level3 Timing Config Audit
+
+### Scope
+
+- Ran P15C as an audit-first slice.
+- `.spec` is absent.
+- No app source or tests were changed in this slice.
+- No timed level2/level3 escalation was implemented because no existing timing
+  semantics were found.
+
+### Files / Areas Searched
+
+- Required Forge context: `.forge/next.md`, `.forge/project.md`,
+  `.forge/policy.md`, `.forge/state.md`.
+- Architecture/SRS context: `docs/ARCHITECTURE.md` sections 6.4-6.6 and
+  `docs/CMS_AUTO_SRS.md` sections `REQ-SLA-001`, `REQ-NOTIFY-001`,
+  `NFR-SEC-002`, `API-STANDARD-001`.
+- Schema/migrations/seeds:
+  `packages/database/prisma/schema.prisma`,
+  `packages/database/prisma/seed.ts`,
+  `packages/database/prisma/phase10-seed.ts`, and all files under
+  `packages/database/prisma/migrations/`.
+- SLA source/tests:
+  `apps/api/src/modules/sla/sla.repository.ts`,
+  `apps/api/src/modules/sla/sla.service.ts`,
+  `apps/api/src/modules/sla/sla-job-rules.ts`,
+  `apps/api/src/modules/sla/*.ts`,
+  `apps/api/test/sla/deadline-calculator.test.ts`.
+- Worker/job source/tests/tools:
+  `apps/api/src/worker/index.ts`,
+  `apps/api/src/worker/task-notification-batches.ts`,
+  `apps/api/test/worker/sla-runner.test.ts`,
+  `apps/api/test/worker/notification-runner.test.ts`,
+  `apps/api/test/worker/task-escalation-runner.test.ts`,
+  `tools/job-runtime-check.mjs`,
+  `tools/runtime-smoke.mjs`.
+
+### Search Terms / Commands
+
+- Searched for `escalationLevel2`, `escalationLevel3`, `totalTargetMinutes`,
+  `total_target_minutes`, escalation delay/threshold/timing/minute/hour/after
+  patterns, `level2`, `level3`, SLA escalation, SLA warning/breach job behavior,
+  and direct `slaPolicy` usage.
+- Exact search commands run:
+  - `rg -n -i "escalationLevel2|escalationLevel3|totalTargetMinutes|escalation.*(delay|threshold|timing|minute|hour|after|at)|level2|level3|SLA.*escalat|escalat.*SLA" packages/database/prisma packages/database apps/api/src/modules/sla apps/api/src/worker apps/api/test/sla apps/api/test/worker tools`
+  - `rg -n -i "escalation_level|escalationLevel|total_target_minutes|totalTargetMinutes|delay|threshold|timing|elapsed|overdue|after|minutes" packages/database/prisma packages/database -g "*.prisma" -g "*.sql" -g "*.ts" -g "*.js" -g "*.mjs"`
+  - `rg -n -i "sla|breach|warning|escalation|totalTargetMinutes|total_target_minutes|delay|threshold|timing|elapsed|overdue|after|minutes" apps/api/src/modules/sla apps/api/src/worker apps/api/test/sla apps/api/test/worker`
+  - `rg -n "slaPolicy|SlaPolicy|escalationLevel1|escalationLevel2|escalationLevel3|totalTargetMinutes|total_target_minutes" packages/database/prisma/seed.ts packages/database/prisma/phase10-seed.ts packages/database/prisma/role-permissions.ts apps/api/src apps/api/test tools`
+  - `rg -n -i "sla.*(delay|threshold|timing|after|minutes|level)|level(2|3).*(delay|threshold|timing|after|minutes)|escalation.*(delay|threshold|timing|after|minutes)" apps/api/src packages/database/prisma apps/api/test tools`
+
+### Findings
+
+- Schema/migration fields exist:
+  `SlaPolicy.escalationLevel1`, `SlaPolicy.escalationLevel2`,
+  `SlaPolicy.escalationLevel3`, and optional `SlaPolicy.totalTargetMinutes`.
+- `escalationLevel1/2/3` are stored as route-token strings. P15B uses
+  `escalationLevel1` as a breach route token.
+- `totalTargetMinutes` exists in schema/migration only. It is not selected by
+  the SLA repository, seeded, exposed through DTOs, used by `SlaService`, or
+  referenced by worker/job tests.
+- The only SLA worker behavior is `sla.warning` -> `runWarningJob(...)` and
+  `sla.breach` -> `runBreachJob(...)` on the shared
+  `SLA_JOB_INTERVAL_MS` schedule. There is no separate SLA escalation job or
+  level2/level3 scan.
+- Timed escalation behavior exists only for tasks
+  (`taskEscalationJobName`, `selectTaskEscalations(...)`), not for SLA policy
+  levels.
+
+### Decision
+
+- Level2/level3 timing semantics do not currently exist.
+- Stopped without app/test implementation. Adding implicit delay rules would
+  invent product semantics and risk double-firing escalations.
+- Smallest follow-up is a schema/config planning task to define explicit
+  level2/level3 escalation timing fields and acceptance criteria before any
+  runner implementation.
+
+### Verification
+
+- Passed: `git status --short` captured the intentionally dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Not Run: `corepack pnpm test:api -- sla` because no product code or tests
+  changed in P15C.
+- Not Run: `corepack pnpm test:api -- notifications` because no product code or
+  tests changed in P15C.
+- Not Run: `corepack pnpm test:api -- workflow` because no product code or
+  tests changed in P15C.
+- Not Run: `corepack pnpm openapi:check` because no API/OpenAPI product code
+  changed in P15C.
+- Not Run: `corepack pnpm typecheck` because no TypeScript product code changed
+  in P15C.
+- Not Run: `corepack pnpm lint` because no product code changed in P15C.
+
+### Security Self-Check
+
+- Roles and branch scope remain server-owned; P15C changed no code.
+- Complaint state changes, status history, audit transaction behavior, and
+  after-commit side effects remain unchanged.
+- No passwords, OTPs, tokens, hashes, credentials, provider data, staff PII,
+  customer PII, free text, or secrets were added to logs or payloads.
+- Customer portal exposure rules hold. No portal route, portal DTO, public
+  comment, tracking, or customer-visible response changed.
+- Trust-boundary tests were not run in P15C because no product code changed;
+  P15A/P15B proof remains the current behavioral coverage.
+- SRS coverage audited: REQ-SLA-001 AC6, REQ-NOTIFY-001 AC3, NFR-SEC-002,
+  API-STANDARD-001.
+
+### Follow-Up
+
+- P15C1 should define explicit schema/config semantics for level2/level3 SLA
+  escalation timing before implementation. Candidate fields should name
+  whether thresholds are absolute minutes after stage start, minutes after
+  breach, or percentages of `durationMinutes`/`totalTargetMinutes`.
+
+## 2026-06-29 - P15C1 SLA Level2/Level3 Timing Schema Config Planning
+
+### Scope
+
+- Planned P15C1 only. No schema, app source, tests, UI, providers, workflow,
+  portal, reports, DMS, duplicate/related complaint, or vehicle provenance code
+  changed.
+- `.spec` is absent.
+- Read latest P15 evidence, required Forge files, architecture sections 6.4-6.6,
+  SRS sections `REQ-SLA-001`, `REQ-NOTIFY-001`, `NFR-SEC-002`,
+  `API-STANDARD-001`, and the SRS SLA data dictionary around
+  `escalation_level_1/2/3` and `total_complaint_target_minutes`.
+
+### Decision
+
+- Level1 remains the breach-time escalation already implemented by P15B.
+- Level2 fires a configured number of minutes after breach.
+- Level3 fires a configured number of minutes after breach.
+- Future schema fields:
+  - `escalationLevel2AfterBreachMinutes Int? @map("escalation_level_2_after_breach_minutes")`
+  - `escalationLevel3AfterBreachMinutes Int? @map("escalation_level_3_after_breach_minutes")`
+
+### Why `totalTargetMinutes` Is Not Enough
+
+- SRS data dictionary describes `total_complaint_target_minutes` as an
+  end-to-end target from submission to closure, used for total age reporting
+  and escalation.
+- It does not say whether level2/level3 thresholds are measured from stage
+  start, from breach, from submission, or as percentages.
+- Using it for level2/level3 would mix total complaint age with per-stage SLA
+  breach escalation and would make idempotency/timing ambiguous.
+- P15C1 therefore chooses explicit after-breach delay fields instead of
+  inferring level timing from `totalTargetMinutes`.
+
+### Validation Rules
+
+- `escalationLevel2AfterBreachMinutes` and
+  `escalationLevel3AfterBreachMinutes` are nullable positive integers.
+- If `escalationLevel2` is set, `escalationLevel2AfterBreachMinutes` must be
+  set and positive for level2 timed escalation to queue.
+- If `escalationLevel3` is set, `escalationLevel3AfterBreachMinutes` must be
+  set and positive for level3 timed escalation to queue.
+- If a delay is set without its matching route token, the future implementation
+  must not queue an unscoped notification.
+- If both level2 and level3 are configured, level3 delay must be greater than
+  level2 delay. Equal or earlier level3 timing is invalid policy config.
+- Missing route token or missing delay means no notification for that step,
+  not a fallback to level1.
+
+### Idempotency Keys
+
+- Level2: `sla:escalation:{deadlineKey}:LEVEL2`
+- Level3: `sla:escalation:{deadlineKey}:LEVEL3`
+- `deadlineKey` is the original deadline event idempotency key, matching the
+  existing warning/breach key pattern:
+  `sla:warning:{deadlineKey}` and `sla:breach:{deadlineKey}`.
+
+### Safe Payload
+
+- `complaintId`
+- `policyId`
+- `stage`
+- `dueAt`
+- `breachIdempotencyKey`
+- `escalationLevel`
+- `escalationStep`: `LEVEL2` or `LEVEL3`
+- `escalationIdempotencyKey`
+
+### Future Acceptance Tests
+
+- Level2 due queues exactly once with `escalationLevel2` and
+  `escalationStep: LEVEL2`.
+- Level3 due queues exactly once with `escalationLevel3` and
+  `escalationStep: LEVEL3`.
+- Duplicate retry queues no second level2/level3 notification.
+- Missing route token queues no notification.
+- Missing delay queues no notification.
+- Terminal complaint, paused old deadline, and future escalation paths queue no
+  notification.
+- Level3 configured at or before level2 is rejected as invalid SLA policy
+  config.
+
+### Verification
+
+- Passed: `git status --short` captured the intentionally dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Not Run: `corepack pnpm test:api -- sla` because P15C1 is planning-only and
+  changed no product code or tests.
+- Not Run: `corepack pnpm test:api -- notifications` because P15C1 is
+  planning-only and changed no product code or tests.
+- Not Run: `corepack pnpm test:api -- workflow` because P15C1 is planning-only
+  and changed no product code or tests.
+- Not Run: `corepack pnpm openapi:check` because P15C1 changed no API/OpenAPI
+  product code.
+- Not Run: `corepack pnpm typecheck` because P15C1 changed no TypeScript
+  product code.
+- Not Run: `corepack pnpm lint` because P15C1 changed no product code.
+
+### Security Self-Check
+
+- Roles and branch scope remain server-owned; P15C1 changed no code.
+- Complaint state changes, status history, audit transaction behavior, and
+  after-commit side effects remain unchanged.
+- Planned payload fields are backend-owned ids/enums/timestamps/route tokens
+  only. No passwords, OTPs, tokens, hashes, credentials, provider data, staff
+  PII, customer PII, free text, or secrets are planned.
+- Customer portal exposure rules hold. No portal route, portal DTO, public
+  comment, tracking, or customer-visible response changed.
+- Trust-boundary tests were not run in P15C1 because no product code changed;
+  future P15C2 implementation must include missing-token and missing-delay
+  denial/no-queue tests.
+- SRS coverage planned: REQ-SLA-001 AC6, REQ-NOTIFY-001 AC3, NFR-SEC-002,
+  API-STANDARD-001.
+
+## 2026-06-29 - P15C2 SLA Level2/Level3 Timing Schema Config
+
+### Scope
+
+- Implemented P15C2 schema/config only. No timed level2/level3 runner was
+  implemented.
+- `.spec` is absent.
+- Read required Forge files, architecture sections 6.4-6.6, and SRS sections
+  `REQ-SLA-001`, `REQ-NOTIFY-001`, `NFR-SEC-002`, and
+  `API-STANDARD-001`.
+- Added nullable Prisma fields on `SlaPolicy`:
+  - `escalationLevel2AfterBreachMinutes Int? @map("escalation_level_2_after_breach_minutes")`
+  - `escalationLevel3AfterBreachMinutes Int? @map("escalation_level_3_after_breach_minutes")`
+- Added migration:
+  `packages/database/prisma/migrations/20260629120000_sla_escalation_delays/migration.sql`.
+- Included the new fields in the existing SLA policy read model and resolver
+  return shape.
+
+### Write Path / Validation Audit
+
+- Verified no real SLA policy create/update path currently exists:
+  - `apps/api/src/modules/sla/sla.controller.ts` has no endpoints.
+  - `apps/api/src/modules/sla/dto/create-sla.dto.ts`,
+    `apps/api/src/modules/sla/dto/update-sla.dto.ts`, and
+    `apps/api/src/modules/sla/dto/sla-response.dto.ts` are empty.
+  - Searches found no SLA policy create/update route or repository write path
+    where config validation can be attached.
+- Because there is no write path, P15C2 did not add an unattached validation
+  helper and did not invent admin endpoints.
+- Assumption/follow-up: P15C3 should add the smallest real backend SLA policy
+  config write path and enforce:
+  - each delay is null/undefined or a positive integer,
+  - `escalationLevel2` requires `escalationLevel2AfterBreachMinutes`,
+  - `escalationLevel3` requires `escalationLevel3AfterBreachMinutes`,
+  - level3 delay is greater than level2 delay when both are configured,
+  - delay without route token does not configure an unscoped queued escalation.
+
+### Verification
+
+- Passed: `git status --short` captured the intentionally dirty worktree,
+  including unrelated Phase 14/P15 changes and the new P15C2 migration folder.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm prisma:validate`.
+- Passed: `corepack pnpm --dir packages/database generate`.
+- Passed: `corepack pnpm db:migrate:test`.
+- Passed: `corepack pnpm test:api -- sla` (26/26 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Security Self-Check
+
+- Roles and branch scope remain server-owned.
+- Complaint state changes, status history, audit transaction behavior, and
+  after-commit side effects remain unchanged.
+- P15C2 added only backend-owned policy timing config fields and an ALTER TABLE
+  migration. No passwords, OTPs, tokens, hashes, credentials, provider data,
+  staff PII, customer PII, free text, or secrets were added.
+- Customer portal exposure rules hold. No portal route, portal DTO, public
+  comment, tracking, or customer-visible response changed.
+- SRS coverage: REQ-SLA-001 AC6, REQ-NOTIFY-001 AC3, NFR-SEC-002,
+  API-STANDARD-001.
+
+## 2026-06-29 - P15C3 SLA Policy Escalation Delay Config Write Path
+
+### Scope
+
+- Implemented P15C3 only. No timed level2/level3 runner was implemented.
+- `.spec` is absent.
+- Added protected backend route `PATCH /sla/policies/:id/escalation`.
+- Route guards are `SessionAuthGuard`, `PermissionGuard`, and `CsrfGuard`.
+- Route permission is `SLA_MANAGE`; no branch scope is applied.
+- Added request parsing/validation for:
+  - required non-empty `escalationLevel1`,
+  - optional string/null `escalationLevel2` and `escalationLevel3`,
+  - optional positive integer/null level2 and level3 after-breach delays,
+  - matching route token/delay pairs,
+  - level3 delay greater than level2 delay when both are configured.
+- Added repository transaction/update path that persists only escalation config
+  fields.
+- Added same-transaction `CONFIG` audit with metadata limited to
+  `changedFields`; route-token values are not recorded in audit metadata.
+- Added small response DTO with policy ids, severity/stage, escalation route
+  tokens, and delay fields.
+- Updated canonical and committed OpenAPI documents for the new route.
+- `SlaService` is 299 lines; response/audit formatting lives in
+  `apps/api/src/modules/sla/sla-policy-config.ts`.
+
+### Verification
+
+- Passed: `git status --short` captured the intentionally dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- sla` (30/30 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session. P15C3 uses
+  `SessionAuthGuard` and `PermissionGuard`; no client-supplied branch scope is
+  accepted, and no branch scope is applied to this admin config route.
+- Config state change and audit happen inside one Prisma transaction.
+- No passwords, OTPs, tokens, hashes, credentials, provider data, staff PII,
+  customer PII, free text, or secrets are logged or returned by the new path.
+- Audit metadata contains only `changedFields`; route-token values are excluded.
+- Customer portal exposure rules hold. No portal route, portal DTO, public
+  comment, tracking, or customer-visible response changed.
+- Trust boundaries are tested: `SLA_MANAGE` allow, missing permission deny with
+  safe `SECURITY` audit, validation denials, guard metadata, module wiring, and
+  OpenAPI route presence.
+- SRS coverage: REQ-SLA-001 AC6, REQ-NOTIFY-001 AC3, NFR-SEC-002,
+  API-STANDARD-001.
+
+## 2026-06-29 - P15C4 SLA Timed Level2/Level3 Escalation Runner
+
+### Scope
+
+- Implemented P15C4 only. No schema, UI, portal, reports, DMS, workflow,
+  duplicate/related complaint, vehicle provenance, or provider code changed.
+- `.spec` is absent.
+- Added `SlaService.runEscalationJob(now)` as the public runner.
+- Added repository read for existing `BREACH` SLA events as escalation
+  candidates.
+- Added timed level2/level3 after-breach selection using
+  `escalationLevel2AfterBreachMinutes` and
+  `escalationLevel3AfterBreachMinutes`.
+- Preserved existing terminal complaint and pause skip semantics.
+- Skips missing/blank route tokens, missing delay config, and future paths.
+- Queues idempotent internal notifications with keys:
+  - `sla:escalation:{deadlineKey}:LEVEL2`
+  - `sla:escalation:{deadlineKey}:LEVEL3`
+- Derives `deadlineKey` by stripping `sla:breach:` from the existing breach
+  idempotency key.
+- Escalation payload is limited to:
+  `complaintId`, `policyId`, `stage`, `dueAt`, `breachIdempotencyKey`,
+  `escalationLevel`, `escalationStep`, and `escalationIdempotencyKey`.
+- Added worker job name `sla.escalation`; `scheduleSlaJobs` now schedules
+  warning, breach, and escalation; `processWorkerJob` dispatches escalation to
+  `SlaService.runEscalationJob`.
+- Added `worker` to `tools/api-test.mjs` suite allow-list so the required
+  `corepack pnpm test:api -- worker` command runs the existing worker tests.
+- `SlaService` remains under the agentic file budget at 299 lines.
+
+### Verification
+
+- Passed: `git status --short` captured the intentionally dirty worktree,
+  including existing Phase 14/P15 changes and P15C4 changes.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- sla` (35/35 TAP tests passed).
+- Passed: `corepack pnpm test:api -- worker` (19/19 TAP tests passed).
+- Passed: `corepack pnpm test:api -- notifications` (42/42 TAP tests passed).
+- Passed: `corepack pnpm test:api -- workflow` (60/60 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Security Self-Check
+
+- Roles and branch scope remain server-owned. P15C4 adds no public route and
+  the worker dispatch uses backend-owned job names and `SlaService`.
+- Complaint state changes, status history, audit transaction behavior, and
+  after-commit workflow side effects remain unchanged; P15C4 only reads existing
+  breach events and queues notifications.
+- No passwords, OTPs, secret tokens, hashes, credentials, provider data, staff
+  PII, customer PII, free text, or secrets are included in the escalation
+  payload.
+- Customer portal exposure rules hold. No portal route, portal DTO, public
+  comment, tracking, or customer-visible response changed.
+- Trust boundaries are tested: existing SLA config route still covers
+  `SLA_MANAGE` allow/deny; worker tests cover unknown SLA job noop; SLA runner
+  tests cover due level2/level3, duplicate retry, missing route token, missing
+  delay, terminal, paused, and future no-notification paths.
+- SRS coverage: REQ-SLA-001 AC6, REQ-NOTIFY-001 AC3, NFR-SEC-002,
+  API-STANDARD-001.
+
+## 2026-06-29 - Phase 15 Reviewer Stop - SLA Notification And Escalation Completion
+
+### Scope
+
+- Ran a strict reviewer pass only. No product source, tests, schema, OpenAPI,
+  UI, provider, portal, report, DMS, duplicate/related complaint, or vehicle
+  provenance behavior was implemented or changed.
+- `.spec` is absent.
+- Reviewed required Forge files, latest Phase 15 evidence, architecture
+  sections 6.2-6.6, and SRS sections `REQ-SLA-001`, `REQ-NOTIFY-001`,
+  `NFR-SEC-002`, and `API-STANDARD-001`.
+- Included untracked review files:
+  `apps/api/src/modules/complaints/complaint-workflow-side-effects.ts`,
+  `apps/api/src/modules/sla/sla-job-rules.ts`,
+  `apps/api/src/modules/sla/sla-policy-config.ts`, and
+  `packages/database/prisma/migrations/20260629120000_sla_escalation_delays/`.
+
+### Reviewer Findings
+
+- No blocking findings.
+- P15A warning notifications queue only after a newly created `WARNING` event,
+  skip duplicate/skipped/missing-owner notification paths, and use safe payload
+  fields with deterministic idempotency keys.
+- P15B breach notifications queue only after a newly created `BREACH` event,
+  treat `escalationLevel1` as a backend route token, and queue nothing when the
+  route token is missing or blank.
+- P15C2/C3 schema/config fields are nullable, the config route is guarded by
+  `SessionAuthGuard`, `PermissionGuard`, and `CsrfGuard`, permission is
+  `SLA_MANAGE`, validation rejects unsafe route/delay shapes, the `CONFIG`
+  audit is recorded in the same transaction, and audit metadata contains only
+  `changedFields`.
+- P15C4 timed escalation uses breach `occurredAt` plus configured after-breach
+  minutes, skips terminal/paused/future/missing config paths, uses
+  `sla:escalation:{deadlineKey}:LEVEL2` and
+  `sla:escalation:{deadlineKey}:LEVEL3`, and keeps payloads backend-owned.
+- Worker scheduling and dispatch cover `sla.warning`, `sla.breach`, and
+  `sla.escalation`; unknown SLA jobs remain no-ops.
+- P14 workflow/audit/after-commit behavior still holds by code review and the
+  workflow suite. No UI/provider/portal/report behavior changed.
+- `SlaService` remains under the 300-line budget; the new SLA helper source
+  files are also under budget.
+- `tools/api-test.mjs` change is narrow: it only admits the existing `worker`
+  suite name so the required worker proof command can run.
+
+### Dirty Worktree Snapshot
+
+- Modified Forge files: `.forge/evidence.md`, `.forge/next.md`,
+  `.forge/state.md`.
+- Modified app/tool/schema/OpenAPI/test files from Phase 14/P15 remain dirty.
+- Untracked Phase 15 files remain present:
+  `complaint-workflow-side-effects.ts`, `sla-job-rules.ts`,
+  `sla-policy-config.ts`, and the
+  `20260629120000_sla_escalation_delays` migration folder.
+
+### Verification
+
+- Passed: `git status --short` captured the intentionally dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- sla` (35/35 TAP tests passed).
+- Passed: `corepack pnpm test:api -- worker` (19/19 TAP tests passed).
+- Passed: `corepack pnpm test:api -- notifications` (42/42 TAP tests passed).
+- Passed: `corepack pnpm test:api -- workflow` (60/60 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Security Self-Check
+
+- Roles and branch scope remain server-owned. The P15C3 config route uses
+  session, permission, and CSRF guards; SLA workers add no client-owned
+  authority.
+- Complaint state changes still write status history and audit in one
+  transaction; workflow side effects remain after commit.
+- No passwords, OTPs, tokens, hashes, provider secrets, credentials, customer
+  free text, staff PII, or provider data were added to SLA notification payloads
+  or audit metadata.
+- Customer portal exposure rules hold. No portal route, portal DTO,
+  customer-visible response, public comment, tracking, or related complaint
+  behavior changed.
+- Trust boundaries are covered by `SLA_MANAGE` allow/deny tests, worker unknown
+  job no-op tests, SLA duplicate/missing-token/missing-delay skip tests, and
+  workflow branch-scope/RBAC tests.
+
+### Follow-Up
+
+- Phase 15 is reviewed complete. Do not start another product slice from this
+  reviewer stop.
+- Next step is a planning/audit stop for the next phase, carrying forward:
+  portal tracking/follow-up L3 proof, report formula/business-fit proof, related
+  complaint linking, duplicate warning UI, and vehicle manual/DMS provenance
+  flags.
+
+## 2026-06-29 - Phase 16 Planning/Audit - Portal Verified Tracking
+
+### Scope
+
+- Planned only. No product source, tests, schema, OpenAPI, UI, provider, portal
+  behavior, report behavior, complaint linking, duplicate UI, or vehicle/DMS
+  provenance code was changed.
+- `.spec` is absent.
+- Read required Forge files, latest Phase 15 evidence, full
+  `docs/ARCHITECTURE.md`, and SRS sections `REQ-PORTAL-002`,
+  `PORTAL-SEC-001`, `REQ-REPORT-001`, `REPORT-MATRIX-001`,
+  `REQ-COMPLAINT-003`, `REQ-CUSTOMER-001`, `DATA-AUTO-001`, and
+  `UI-DESIGN-001`.
+- Audited existing portal, report, complaint, vehicle/DMS, and proof-tooling
+  surfaces enough to choose the next phase.
+
+### Candidate Ranking
+
+1. Portal verified tracking/follow-up L3 proof. Highest value because it is
+   customer-facing, high privacy risk, required by `PORTAL-SEC-001`, and the
+   backend APIs already exist but lack the named L3 proof command.
+2. Report formula/business-fit proof and matrix reconciliation. High management
+   value and backend/business-fit focused, but less immediate privacy risk than
+   portal tracking.
+3. Related complaint linking. Useful backend capability, but less urgent than
+   portal privacy proof and likely should precede duplicate UI.
+4. Vehicle manual/DMS provenance flags. Important data-quality work, but it can
+   touch schema, intake, reports, and UI; defer until after the customer-facing
+   portal proof.
+5. Duplicate warning UI. Lowest now because it is UI polish unless paired with
+   backend duplicate/related complaint behavior.
+
+### Chosen Phase
+
+- Phase 16: Portal verified tracking and follow-up proof.
+- SRS IDs: `REQ-PORTAL-002`, `PORTAL-SEC-001`, `UI-DESIGN-001`.
+- Rationale: Existing backend routes cover OTP request, OTP verification,
+  session-gated tracking, and public follow-up. Existing tests cover many
+  privacy cases, but the missing proof is a coherent L3 customer portal journey:
+  reference alone denied, verified session reads only safe fields, follow-up
+  writes public comments only, and closed/rejected complaints deny follow-up.
+
+### Larger Buildable Slices
+
+1. P16A - Portal verified tracking and follow-up L3 proof. Add the missing
+   `corepack pnpm test:e2e -- customer-portal-track` proof command and harden
+   any portal privacy or follow-up behavior gap it exposes.
+2. P16B - Portal tracking UI real-flow wiring and visual/accessibility proof.
+   Replace preview-only tracking behavior with the real API-backed verification,
+   tracking, and follow-up flow if P16A confirms backend behavior is sound.
+3. P16C - Portal attachment follow-up proof. Add only if needed to satisfy
+   `REQ-PORTAL-002` AC3 after text follow-up is proven.
+
+### Assumptions
+
+- The first slice should target 5-10 files because it is one coherent portal
+  capability: API privacy proof, public follow-up behavior, and L3 command
+  wiring.
+- The `customer-portal-track` proof command does not currently exist in
+  `tools/e2e-runner.mjs`; creating it is part of P16A.
+- Live SMS/WhatsApp/email providers are not required; existing notification
+  doubles/proof paths are enough for MVP L3 proof.
+- Portal attachments are not part of P16A unless text follow-up proof cannot
+  satisfy the slice without them.
+
+### Verification
+
+- Passed: `git status --short` captured the intentionally dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Not Run: `corepack pnpm test:api -- portal.tracking` because this was
+  planning-only.
+- Not Run: `corepack pnpm test:e2e -- customer-portal-track` because this was
+  planning-only and the command is planned for P16A.
+- Not Run: `corepack pnpm openapi:check`, `corepack pnpm typecheck`, and
+  `corepack pnpm lint` because no product code changed in this planning stop.
+
+## 2026-06-29 - Phase 16A - Portal Verified Tracking And Follow-Up L3 Proof
+
+### Scope
+
+- Implemented the missing `corepack pnpm test:e2e -- customer-portal-track`
+  command path for SRS IDs `REQ-PORTAL-002`, `PORTAL-SEC-001`, and
+  `UI-DESIGN-001`.
+- `.spec` is absent.
+- Added deterministic L3 proof in `tools/customer-portal-track-proof.mjs` and
+  wired it from `tools/e2e-runner.mjs`.
+- No portal product controller, service, repository, DTO, schema, OpenAPI,
+  provider, or UI code changed; existing backend behavior was sufficient.
+- Tool source file line budget holds: `tools/customer-portal-track-proof.mjs`
+  is 197 lines.
+
+### Proof Assertions
+
+- Reference number alone cannot retrieve tracking details or write follow-ups;
+  the proof rejects before complaint read/comment write.
+- Missing, invalid, and expired portal sessions cannot read tracking or create
+  follow-ups.
+- OTP request/verify gates tracking access; wrong OTP does not create a session,
+  and valid verification returns only the raw session token response.
+- Valid portal session tracking response contains only public-safe fields:
+  reference number, status, created/updated timestamps, and public timeline
+  fields.
+- Negative privacy assertions check for absence of internal comments, audit
+  metadata, DMS/customer codes, staff PII, OTP value/hash, session token/hash,
+  unrelated complaint details, and internal-only timeline data.
+- Valid non-closed complaint session creates a `PUBLIC` follow-up comment with
+  backend-owned authority fields only.
+- CLOSED and REJECTED complaint follow-up attempts are rejected before comment
+  write.
+
+### Changed Files
+
+- `tools/e2e-runner.mjs`
+- `tools/customer-portal-track-proof.mjs`
+- `.forge/evidence.md`
+- `.forge/state.md`
+- `.forge/next.md`
+
+### Verification
+
+- Passed: `git status --short` captured the intentionally dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- customer-portal-track`.
+- Passed: `corepack pnpm security:check`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Security Self-Check
+
+- Backend remains authoritative for portal tracking and follow-up behavior.
+- Portal session verification is required before tracking read or comment write;
+  reference numbers are not sufficient.
+- OTPs, OTP hashes, session hashes, staff PII, DMS/customer codes, provider
+  data, internal comments, audit logs, and unrelated complaint details are not
+  exposed by the proof payloads.
+- Audit records in the exercised flow do not include OTPs, token material, DMS
+  identifiers, or staff PII.
+- Existing dirty Phase 14/P15 worktree entries were preserved and not cleaned,
+  staged, or reverted.
+
+### Skipped Scope
+
+- P16B portal tracking UI real-flow wiring was not started.
+- P16C portal attachment follow-up proof was not started; text follow-up proof
+  passed without attachment work.
+- No live SMS/WhatsApp/email provider integration was added.
+
+## 2026-06-29 - Phase 16B - Portal Tracking UI Real-Flow Wiring And Proof
+
+### Scope
+
+- Implemented P16B for SRS IDs `REQ-PORTAL-002`, `PORTAL-SEC-001`, and
+  `UI-DESIGN-001`.
+- `.spec` is absent.
+- Wired the customer portal tracking screen to the real verified flow:
+  OTP request, OTP verify, tracking read with `x-portal-session`, and public
+  follow-up submission.
+- Repaired a real backend contract gap: OTP request now returns only the opaque
+  `verificationId`, `expiresAt`, and `ok`, matching the documented flow needed
+  by OTP verify.
+- Added one allowlisted Next proxy for the four public portal tracking paths.
+- Preserved preview states only as initial visual/accessibility proof states.
+- Added a small CAPA select accessible name and refreshed stale web proof
+  fixtures/signals because required accessibility/visual checks exposed
+  unrelated proof failures.
+
+### Failing-First Proof
+
+- Failed as expected before backend repair:
+  `corepack pnpm test:api -- portal.tracking` failed because
+  `requestTrackingOtp(...)` returned only `{ ok: true }`.
+- Failed as expected before web helper/proxy implementation:
+  `corepack pnpm test:web -- api-client` failed with missing
+  `apps/web/src/app/api/portal/[...path]/route`.
+- Failed before proof/a11y repair:
+  `corepack pnpm test:e2e -- accessibility` exposed an unnamed CAPA select
+  trigger; `corepack pnpm test:visual` exposed stale admin proof signals.
+
+### Changed Files
+
+- `apps/api/src/modules/portal/portal.service.ts`
+- `apps/api/src/modules/portal/dto/portal-response.dto.ts`
+- `apps/api/test/portal.tracking/otp-request.test.ts`
+- `apps/web/src/app/api/portal/[...path]/route.ts`
+- `apps/web/src/lib/portal-tracking-api.ts`
+- `apps/web/src/components/portal-tracking/index.tsx`
+- `apps/web/src/i18n/portal-tracking.ts`
+- `apps/web/test/api-client/portal-tracking-api.test.ts`
+- `apps/web/test/shell/shell.test.ts`
+- `apps/web/src/components/complaint-detail-workspace/case-capa-panel.tsx`
+- `tools/web-proof.mjs`
+- `tools/web-proof-cases.mjs`
+- `tools/customer-portal-track-proof.mjs`
+- `packages/contracts/openapi.json`
+- `tools/openapi-canonical.json`
+- `.forge/evidence.md`
+- `.forge/state.md`
+- `.forge/next.md`
+
+### Verification
+
+- Passed: `git status --short` captured the intentionally dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- customer-portal-track`.
+- Passed: `corepack pnpm test:web -- api-client` (15/15 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (189/189 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Security Self-Check
+
+- Backend remains authoritative for portal tracking and follow-up behavior.
+  React calls the portal APIs and renders responses; it does not decide
+  complaint workflow state.
+- Portal session verification is required before tracking read or comment write;
+  reference number alone is still denied by API and e2e proof.
+- OTP request returns only `ok`, `verificationId`, and `expiresAt`. OTP values,
+  OTP hashes, session hashes, audit metadata, DMS/customer codes, staff PII,
+  provider data, and unrelated complaint details are not exposed.
+- The UI stores only `verificationId` and the returned session token in React
+  state. Shell tests prove proof renders do not include challenge/session
+  material, and the source guard rejects browser persistence/logging paths.
+- The Next proxy allowlists only public portal tracking paths and forwards only
+  JSON plus `x-portal-session` where required. It does not forward staff cookies,
+  staff CSRF, roles, branch scope, actor IDs, workflow inputs, or provider data.
+- Existing API tests still cover allowed valid follow-up and denied invalid,
+  CLOSED, and REJECTED follow-up paths before comment write.
+
+### Skipped Scope
+
+- Portal attachment follow-up was not started; text follow-up is wired and
+  proven.
+- No live SMS/WhatsApp/email provider integration was added.
+- No report, related complaint, duplicate warning UI, or vehicle/DMS provenance
+  work was started.
+
+## 2026-06-29 - Phase 16 Reviewer Stop - Blocked
+
+### Scope
+
+- Strict review only for P16A + P16B, SRS IDs `REQ-PORTAL-002`,
+  `PORTAL-SEC-001`, and `UI-DESIGN-001`.
+- No product code was changed.
+- Reviewed the required portal API, Next proxy, client, UI, i18n, proof tools,
+  OpenAPI artifacts, and the changed CAPA panel.
+
+### Findings
+
+- Blocker: `apps/web/src/app/portal/track/page.tsx:18` accepts `state` from the
+  public query string and passes it to the production portal tracking component.
+  `apps/web/src/components/portal-tracking/index.tsx:37` then seeds tracking
+  from `sampleTracking(...)`; `index.tsx:203` through `index.tsx:212` renders a
+  verified/follow-up tracking view with sample public status/timeline when the
+  URL contains `?state=verified` or `?state=followup`. This violates the Phase
+  16 rule that preview/query states remain only for visual/accessibility proof
+  and cannot bypass real tracking in production interaction.
+
+### Review Notes
+
+- API tracking reads require a valid hashed portal session before complaint
+  lookup (`apps/api/src/modules/portal/portal.service.ts:106` through
+  `portal.service.ts:116`, with session validation at `portal.service.ts:166`
+  through `portal.service.ts:170`).
+- OTP request response shape is limited to `{ ok, verificationId, expiresAt }`
+  (`portal.service.ts:61` through `portal.service.ts:67` and
+  `portal-response.dto.ts`).
+- OTP verify creates a session only after successful hash verification
+  (`portal.service.ts:90` through `portal.service.ts:103`).
+- Follow-up writes use `CommentVisibility.PUBLIC` and deny CLOSED/REJECTED
+  before comment creation (`portal.service.ts:123` through
+  `portal.service.ts:139`).
+- Next proxy allowlist is limited to the four public tracking paths and forwards
+  only JSON plus `x-portal-session` for tracking/follow-up
+  (`apps/web/src/app/api/portal/[...path]/route.ts:5` through `route.ts:10`,
+  `route.ts:28` through `route.ts:36`).
+- `case-capa-panel.tsx` changed only to add an accessible label/placeholder to
+  the existing status select; unrelated to portal tracking and low risk.
+- Diff review did not show new Phase 16 portal attachment, report, related
+  complaint, duplicate UI, or vehicle/DMS provenance work. Existing
+  `/portal/attachments` contract/service surface predates this reviewed diff.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- customer-portal-track`.
+- Passed: `corepack pnpm test:web -- api-client` (15/15 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (189/189 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: Blocked.
+- Smallest repair: remove query-driven `state`/sample tracking from the
+  production portal tracking route/component, keep proof-only states in the
+  visual/accessibility proof harness, and add a regression proving
+  `/portal/track?state=verified&reference=...` does not render tracking details
+  without real verification.
+
+## 2026-06-29 - P16 Repair - Portal Tracking Proof State Isolation
+
+### Scope
+
+- Repaired the Phase 16 reviewer blocker for SRS IDs `REQ-PORTAL-002`,
+  `PORTAL-SEC-001`, and `UI-DESIGN-001`.
+- Production `/portal/track` now ignores `state` and `reference` query
+  parameters for tracking state and always starts at the verification gate.
+- Split proof-only preview rendering into `PortalTrackingPreview`; visual and
+  accessibility proof tools use the preview harness instead of public route
+  query parameters.
+- Added a shell regression proving
+  `/portal/track?state=verified&reference=CMP-BYPASS` does not render public
+  timeline, the bypass reference, sample status, or follow-up form.
+- No backend, OpenAPI, report, attachment, related complaint, duplicate UI, or
+  vehicle/DMS provenance work was changed.
+
+### Changed Files
+
+- `apps/web/src/app/portal/track/page.tsx`
+- `apps/web/src/components/portal-tracking/index.tsx`
+- `apps/web/test/shell/shell.test.ts`
+- `tools/web-proof.mjs`
+- `tools/web-proof-cases.mjs`
+- `tools/web-visual-review.mjs`
+- `.forge/evidence.md`
+- `.forge/state.md`
+- `.forge/next.md`
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:web -- shell` (190/190 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm test:e2e -- customer-portal-track`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Security Self-Check
+
+- Production tracking details still require successful OTP verification followed
+  by real `GET /api/portal/tracking` with `x-portal-session`.
+- Reference number and query proof state alone cannot render tracking details.
+- UI token handling remains React state only for `verificationId` and
+  `sessionToken`; no URL, DOM text, localStorage, sessionStorage, cookie, or log
+  persistence was added.
+- Proof states remain available only through the proof/test harness.
+
+## 2026-06-29 - Phase 16 Reviewer Stop - Clean
+
+### Scope
+
+- Strict review only for P16A, P16B, and the proof-state repair for SRS IDs
+  `REQ-PORTAL-002`, `PORTAL-SEC-001`, and `UI-DESIGN-001`.
+- No product code was changed.
+- Inspected the required portal API service/DTO/tests, Next proxy, portal
+  tracking route/client/UI/i18n/tests, proof tools, OpenAPI artifacts, and the
+  changed CAPA panel.
+
+### Findings
+
+- No blocking findings.
+
+### Review Notes
+
+- Reference-only tracking and follow-up are denied: controller tests strip
+  reference input from tracking/follow-up calls, and service reads begin with
+  `requireSession(...)` before complaint lookup.
+- OTP request response is limited to `{ ok, verificationId, expiresAt }`;
+  contracts and DTOs do not expose OTP values, OTP hashes, session hashes,
+  audit data, DMS IDs, staff fields, provider data, staff PII, or unrelated
+  complaint data.
+- OTP verification issues a portal session only after successful OTP hash
+  verification; failed, expired, exhausted, unknown, and non-pending
+  verification paths do not create sessions.
+- Tracking requires `x-portal-session` and returns/renders only public-safe
+  reference, status, created/updated timestamps, and public timeline fields.
+- Follow-up writes only `PUBLIC` comments with `actorId: null` for valid
+  non-closed portal sessions; invalid sessions and CLOSED/REJECTED complaints
+  deny before comment creation.
+- Portal tracking UI stores `verificationId` and `sessionToken` only in React
+  state. No URL, DOM text, localStorage, sessionStorage, cookie, or log
+  persistence was found.
+- Production `/portal/track` ignores `state` and `reference` query params for
+  tracking state and renders the verification gate only. `PortalTrackingPreview`
+  is used by tests/proof tools, not the production route.
+- Next proxy allowlist remains limited to the four public tracking paths and
+  forwards only JSON plus `x-portal-session` for tracking/follow-up.
+- `case-capa-panel.tsx` changed only to add an accessible label/placeholder to
+  the existing status select; no portal/security workflow impact.
+- No Phase 16 attachment, report, related complaint, duplicate UI, or
+  vehicle/DMS provenance work was started. Existing portal attachment and other
+  non-P16 surfaces predate this reviewer stop and were not changed here.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- customer-portal-track`.
+- Passed: `corepack pnpm test:web -- api-client` (15/15 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (190/190 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: Phase 16 reviewed complete.
+- Next: next-phase planning/audit stop only; do not start implementation.
+
+## 2026-06-29 - Next-Phase Planning/Audit Stop
+
+### Scope
+
+- Planning only. No product code was changed.
+- Read `.forge/next.md`, `.forge/project.md`, `.forge/policy.md`,
+  `.forge/state.md`, latest `.forge/evidence.md`, `docs/ARCHITECTURE.md`, and
+  candidate SRS sections for reports, related/duplicate complaints, portal
+  follow-up attachments, complaint attachments, and vehicle/DMS provenance.
+
+### Candidate Ranking
+
+1. **Report formula/business-fit proof and matrix reconciliation**:
+   highest next backend value. `REQ-REPORT-001` makes operational dashboards a
+   must-have, and `REPORT-MATRIX-001` requires RPT-001 through RPT-017
+   definitions, formulas, scoped exports, and reconciliation against complaint
+   records. Existing evidence says report/KPI endpoints exist, but full matrix
+   reconciliation remains open.
+2. **Related complaint linking**: useful backend capability under
+   `REQ-COMPLAINT-003` and should precede duplicate UI, but it is priority
+   `should` and less central to MVP acceptance than report reconciliation.
+3. **Portal attachment follow-up**: `REQ-PORTAL-002` AC3 mentions attachments,
+   but prior attachment evidence already covers portal-session upload-only
+   behavior and no portal download token shape. Text follow-up is proven; this
+   is not the highest uncovered backend value.
+4. **Vehicle manual/DMS provenance flags**: important under `DATA-AUTO-001` and
+   `DMS-MAP-001`, but broad if it touches schema, intake, reports, and UI in one
+   pass. It should be split later.
+5. **Duplicate warning UI**: deliberately last because UI-only duplicate work
+   should wait until backend related/duplicate behavior is solid.
+
+### Decision
+
+- Chosen phase: Phase 17 - Report formula/business-fit proof and matrix
+  reconciliation.
+- First slice: P17A - backend report KPI formula and matrix reconciliation.
+- Selected SRS IDs: `REQ-REPORT-001`, `REPORT-MATRIX-001`, `NFR-SEC-002`,
+  `API-STANDARD-001`.
+
+### First Slice Rationale
+
+- Keep the slice larger than a repair but still reviewable: prove formulas,
+  filters, branch/RBAC scope, and the RPT-001 through RPT-017 reconciliation
+  ledger before UI polish.
+- Backend report correctness has direct MVP acceptance value: UAT requires
+  management report export and report numbers that reconcile with sample
+  complaint data.
+- The slice should start with focused API/report tests and only repair the
+  backend read-model/formula gaps those tests expose.
+
+### Assumptions
+
+- Existing report endpoints and export routes are the starting point; do not
+  replace the report module shape.
+- UI polish should wait until backend formulas and report definitions are
+  stable.
+- If formula repair needs broad schema, intake, report, and UI changes at once,
+  the builder should stop and replan instead of expanding P17A.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Not Run: product tests. This was a planning-only stop by request.
+
+## 2026-06-29 - P17A Report KPI Formula And Matrix Reconciliation
+
+### Scope
+
+- Implemented backend-only report formula and filter repair for SRS IDs
+  `REQ-REPORT-001`, `REPORT-MATRIX-001`, `NFR-SEC-002`, and
+  `API-STANDARD-001`.
+- No UI polish, related complaints, duplicate UI, vehicle/DMS provenance,
+  portal attachments, schema migration, or unbounded export work was started.
+
+### Changes
+
+- Added failing-first report tests for:
+  - dashboard average TAT from closure timestamp rather than `updatedAt`;
+  - department filtering through the existing complaint `departmentId` field;
+  - KPI formulas for SLA breach rate, median TAT, aging buckets, and reopen
+    rate;
+  - first response time from the first non-submit/non-reopen status event.
+- Added a report dashboard read model that reads existing complaint
+  `closedAt`, status history, and SLA events without exposing private fields.
+- Added `departmentId` as a report list/export query filter.
+- Extended the aggregate KPI response contract with `reopenRate`,
+  `slaBreachRate`, `medianTatHours`, and `agingBuckets`.
+
+### RPT-001 Through RPT-017 Matrix After P17A
+
+| Report | Status | P17A note |
+|---|---|---|
+| RPT-001 Open complaints summary | Proven | Dashboard count, aging buckets, SLA warning/overdue, filters, and branch scope are covered. |
+| RPT-002 Overdue complaints | Not Covered | Specific overdue list, overdue duration, and current-owner output remain absent. |
+| RPT-003 SLA warning complaints | Not Covered | Warning count exists, but list/percent elapsed/deadline output remains absent. |
+| RPT-004 Average TAT | Proven | Average and median closure duration now use closure status timestamp/current `closedAt` data. |
+| RPT-005 Closure performance by branch | Deferred | Branch filter, closed count, breach rate, and avg TAT formulas exist; branch-grouped output is not implemented. |
+| RPT-006 Complaints by category | Deferred | Category filter exists; count/percentage/trend grouping remains future work. |
+| RPT-007 Complaints by brand/model | Not Covered | Brand/model report output remains blocked on vehicle/report provenance work. |
+| RPT-008 Complaints by department | Deferred | Department filter exists; department-grouped counts/open/closed/overdue/avg TAT remain future work. |
+| RPT-009 Owner workload | Deferred | Owner filter and scoped rows exist; assigned/overdue/closed/avg handling aggregate remains future work. |
+| RPT-010 Reopened complaints | Deferred | Reopened count and reopen rate are proven; reason list remains future work. |
+| RPT-011 Rejected complaints | Not Covered | Rejection count/list/reason summary remains absent. |
+| RPT-012 Customer satisfaction | Not Covered | CSAT formula/report remains absent from this backend slice. |
+| RPT-013 Aging report | Proven | Aging bucket formula is covered for non-terminal complaint records. |
+| RPT-014 Compensation tracking | Deferred | Should-level MVP row; not touched in P17A. |
+| RPT-015 DMS lookup failure report | Not Covered | DMS provider result report remains future integration/report work. |
+| RPT-016 Notification delivery report | Not Covered | Notification delivery aggregate remains future report work. |
+| RPT-017 Audit activity report | Deferred | Existing audit/report surfaces remain outside P17A formula repair. |
+
+### Security Self-Check
+
+- Roles and branch scope still come from the server session through report route
+  guards; controller tests prove branch query spoofing is ignored for scoped
+  users and RBAC/branch denial is audited.
+- State-change transaction/audit rule: not applicable. P17A added report reads
+  and formulas only; no complaint workflow state changes were added.
+- No passwords, OTPs, tokens, hashes, provider credentials, DMS codes, customer
+  phone/email, VIN, plate, audit internals, staff PII, or portal secrets were
+  added to report responses/exports.
+- Customer portal exposure rules: not applicable to this backend report slice;
+  portal routes were not changed.
+- Trust boundaries are tested: allowed report reads/exports and denied
+  out-of-scope/missing-permission report access are covered in the reports API
+  tests.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Failed first as expected: `corepack pnpm test:api -- reports` failed on
+  `updatedAt`-based TAT, missing department filter propagation, and missing KPI
+  fields.
+- Passed: `corepack pnpm test:api -- reports` (26/26 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P17A complete.
+- Next: P17A reviewer stop before any report UI polish.
+
+## 2026-06-29 - P17A Reviewer Stop
+
+### Scope
+
+- Ran a strict reviewer pass for P17A backend report KPI/formula/matrix work
+  against `REQ-REPORT-001`, `REPORT-MATRIX-001`, `NFR-SEC-002`, and
+  `API-STANDARD-001`.
+- Reviewed the report service, KPI helper, repository read models, controller
+  query handling, report tests, OpenAPI/canonical contract, and P17A matrix
+  evidence.
+- No product code was changed during review.
+
+### Finding
+
+- Blocked: reopen rate can exceed 100% and the regression test blesses the bad
+  value.
+- `apps/api/src/modules/reports/reports.kpi.ts:71` counts reopen status
+  events, not distinct reopened complaints.
+- `apps/api/src/modules/reports/reports.kpi.ts:76` divides that event count by
+  closed records, so repeated reopen events or reopen events for records not in
+  the closed denominator can produce impossible rates.
+- `apps/api/test/reports/kpi-read-model.test.ts:145` through
+  `apps/api/test/reports/kpi-read-model.test.ts:148` currently expect
+  `reopenRate: 200`.
+- `docs/CMS_AUTO_SRS.md:2629` defines reopen rate as reopened complaints /
+  closed complaints x 100, and the reviewer stop explicitly required flagging
+  impossible percentages unless justified. No justification is present.
+- The RPT matrix is therefore not honest at `.forge/evidence.md:9365`, where
+  RPT-010 says reopened count and reopen rate are proven.
+
+### Review Notes
+
+- Dashboard average TAT uses `closedAt` or a CLOSED status-history event rather
+  than incidental `updatedAt`.
+- SLA breach rate uses unique breached complaint ids over complaint rows with
+  an SLA obligation.
+- Median TAT uses closed records only.
+- Aging buckets skip terminal CLOSED/REJECTED complaints.
+- First-response timing excludes submit and reopen actions, within current
+  status-history data limits.
+- The department filter uses existing complaint `departmentId` and does not add
+  schema.
+- Report list/export scope is still derived from server-session role and branch
+  context; scoped users cannot broaden branch output through query params.
+- Report response/export schemas and export columns do not add customer phone,
+  email, VIN, plate, DMS codes, audit internals, staff PII, provider
+  credentials, or portal secrets.
+- Export remains row-limited and writes safe REPORT audit metadata.
+- No UI polish, related complaint linking, duplicate UI, vehicle/DMS
+  provenance, portal attachment work, schema migration, staging, cleanup, or
+  unrelated revert was done in this review.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- reports` (26/26 TAP tests passed, but one
+  passing test encodes the blocked 200% reopen-rate behavior).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: Blocked.
+- Next: P17A repair for reopen-rate formula and focused regression only.
+
+## 2026-06-29 - P17A Reopen Rate Repair
+
+### Scope
+
+- Repaired only the P17A reviewer blocker for `REPORT-MATRIX-001` reopen-rate
+  formula.
+- Kept `reopenedCount` as the existing reopen event count.
+- Changed `reopenRate` to use distinct reopened closed complaint records over
+  the closed-record denominator.
+- Did not start reviewer rerun, P17B UI polish, related complaints, duplicate
+  UI, vehicle/DMS provenance, portal attachments, schema migration, cleanup,
+  staging, or unrelated edits.
+
+### Changes
+
+- `apps/api/src/modules/reports/reports.kpi.ts:73` now builds closed record ids.
+- `apps/api/src/modules/reports/reports.kpi.ts:74` now builds distinct reopened
+  record ids.
+- `apps/api/src/modules/reports/reports.kpi.ts:78` now calculates
+  `reopenRate` from distinct reopened ids that are also in the closed
+  denominator.
+- `apps/api/test/reports/kpi-read-model.test.ts:137` through
+  `apps/api/test/reports/kpi-read-model.test.ts:148` now proves repeated reopen
+  events keep `reopenedCount` at 3 while `reopenRate` remains 100.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- reports` (26/26 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P17A repair complete.
+- Next: P17A reviewer rerun.
+
+## 2026-06-29 - P17A Reviewer Rerun
+
+### Scope
+
+- Ran a strict reviewer rerun for P17A plus the reopen-rate repair against
+  `REQ-REPORT-001`, `REPORT-MATRIX-001`, `NFR-SEC-002`, and
+  `API-STANDARD-001`.
+- Reviewed report service, KPI helper, repository read models, controller query
+  handling, complaint report mapping, report tests, OpenAPI/canonical contract,
+  and P17A matrix evidence.
+- No product code was changed during this reviewer rerun.
+
+### Findings
+
+- No blocking findings.
+
+### Review Notes
+
+- Dashboard average TAT uses closure data: `reports.service.ts` pushes TAT only
+  for CLOSED complaints and `tatHours(...)` uses `closedAt` or a CLOSED
+  status-history event, not incidental `updatedAt`.
+- KPI formulas are sane after repair:
+  - `slaBreachRate` uses unique breached complaint ids over complaint records
+    with an SLA obligation.
+  - `medianTatHours` uses closed records only.
+  - Aging buckets skip terminal CLOSED/REJECTED complaints.
+  - `reopenedCount` remains the existing reopen event count.
+  - `reopenRate` now uses distinct reopened closed complaint records over the
+    closed-record denominator.
+  - First-response timing excludes submit and reopen actions.
+- The repeated-reopen regression proves `reopenedCount: 3` with
+  `reopenRate: 100`, so repeated reopen events no longer create impossible
+  percentages.
+- Department filtering uses the existing complaint `departmentId` field.
+- Report list/export routes derive role and branch scope from the server
+  principal and keep `SessionAuthGuard`, `PermissionGuard`, `RbacGuard`, and
+  `@BranchScoped()`.
+- Report rows and export columns avoid customer phone, email, VIN, plate, DMS
+  codes, audit internals, staff PII, provider credentials, and portal secrets.
+  The complaint repository has broader search data internally, but
+  `ComplaintsService.listForReports(...)` maps to `ComplaintReportRow` before
+  reports return/export rows.
+- Export remains row-limited and writes safe REPORT audit metadata.
+- OpenAPI and canonical contract match, document `departmentId`, and keep
+  report rows/KPI responses aggregate-only without private fields.
+- RPT-001 through RPT-017 reconciliation remains honest after repair: RPT-010 is
+  still Deferred because reason-list output is not covered, while reopened
+  event count and bounded reopen-rate formula are now proven.
+- No UI polish, related complaint linking, duplicate UI, vehicle/DMS
+  provenance, portal attachment work, schema migration, cleanup, staging, or
+  unrelated revert was done in this reviewer rerun.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- reports` (26/26 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P17A reviewed complete.
+- Next: P17B report UI polish/visual proof.
+
+## 2026-06-29 - P17B Report UI Polish And Visual Proof
+
+### Scope
+
+- Implemented UI-only report polish and visual proof for SRS IDs
+  `REQ-REPORT-001`, `REPORT-MATRIX-001`, and `UI-DESIGN-001`.
+- Backend report formulas were already reviewed complete in P17A and were not
+  rewritten.
+- No related complaint linking, duplicate UI, vehicle/DMS provenance, portal
+  attachment, schema migration, staging, cleanup, or unrelated revert was
+  started.
+
+### Changes
+
+- Updated the staff reports web API parser/type contract to accept the reviewed
+  P17A KPI fields: `reopenRate`, `slaBreachRate`, `medianTatHours`, and
+  `agingBuckets`.
+- Surfaced SLA breach rate, median TAT, aging buckets, and reopen rate in the
+  existing reports dashboard.
+- Kept `reopenedCount` visible with explicit event-count semantics through the
+  `Reopen events` label.
+- Added `departmentId` pass-through for report row reads and export links.
+- Deferred a visible department picker because no existing department option
+  source is available in this slice; the UI does not show raw department IDs as
+  picker labels.
+- Updated EN/AR report dashboard strings and proof signals for the new KPI
+  cards.
+
+### Security And Privacy Self-Check
+
+- Report UI still relies on staff server-session routes; no client-owned role,
+  branch authority, actor id, token, credential, or workflow input was added.
+- Report rows/export UI remain free of customer phone, email, VIN, plate, DMS
+  codes, audit internals, staff PII, provider credentials, and portal secrets.
+- `departmentId` is query/export pass-through only and does not broaden
+  server-side RBAC or branch scope.
+- Arabic RTL and English LTR report strings remain covered by localization and
+  visual/accessibility proof.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:web -- shell` (190/190 TAP tests passed).
+- Passed: `corepack pnpm test:web -- api-client` (15/15 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P17B complete.
+- Next: Phase 17 reviewer stop.
+
+## 2026-06-29 - Phase 17 Reviewer Stop
+
+### Scope
+
+- Ran a strict reviewer pass over P17A backend, P17A reopen-rate repair, and
+  P17B report UI work for `REQ-REPORT-001`, `REPORT-MATRIX-001`,
+  `UI-DESIGN-001`, `NFR-SEC-002`, and `API-STANDARD-001`.
+- Reviewed the named report backend, complaint report mapper, report UI, export
+  route, i18n, proof tooling, OpenAPI/canonical contract, and active Phase 17
+  evidence.
+- No product code was changed during review.
+
+### Findings
+
+- Blocked: report list runtime rows do not match the committed safe
+  `ReportRow` contract and include staff display data.
+  - `apps/api/src/modules/complaints/complaints.service.ts:204` maps queue rows
+    with `branchName` and `ownerName`.
+  - `apps/api/src/modules/complaints/complaints.service.ts:208` builds
+    `ComplaintReportRow` by spreading that queue row.
+  - `apps/api/src/modules/reports/reports.service.ts:108` through
+    `apps/api/src/modules/reports/reports.service.ts:120` returns those mapped
+    report rows from `/reports`.
+  - `packages/contracts/openapi.json:6396` through
+    `packages/contracts/openapi.json:6464` defines `ReportRow` without
+    `branchName` or `ownerName` and with `additionalProperties: false`.
+  - This violates the reviewer focus for contract match and avoiding staff PII
+    in report responses/rows.
+- Blocked: report export audit metadata omits the filter set required by
+  `REPORT-MATRIX-001`.
+  - `docs/CMS_AUTO_SRS.md:2638` requires export audit entries to include user,
+    filters, row count, file type, and timestamp.
+  - `apps/api/src/modules/reports/reports.service.ts:153` records only
+    `{ format, rowCount, rowLimit }`.
+  - `apps/api/test/reports/dashboard-summary.test.ts:96` and
+    `apps/api/test/reports/dashboard-summary.test.ts:261` currently assert the
+    incomplete metadata shape, so the gap is encoded as passing behavior.
+
+### Review Notes
+
+- Dashboard average TAT uses `closedAt` or a CLOSED status-history event rather
+  than incidental `updatedAt`.
+- KPI formulas are bounded within the current report read model: SLA breach
+  rate uses unique breached complaint ids over SLA-obligated records, median TAT
+  uses closed records only, aging buckets skip CLOSED/REJECTED records,
+  `reopenedCount` is an event count, `reopenRate` uses distinct reopened closed
+  records over closed records, and first response excludes submit/reopen events.
+- Department filtering uses existing complaint `departmentId` and the UI does
+  not add a visible raw-ID department picker.
+- Report list/export routes derive role and branch scope from the server
+  principal and keep session/permission/RBAC/branch-scope guards.
+- Export output is row-limited, but the REPORT audit metadata is incomplete
+  until filters are recorded safely.
+- OpenAPI/canonical files match each other, but the runtime `/reports` row shape
+  is broader than the committed `ReportRow` schema.
+- UI parses and renders `reopenRate`, `slaBreachRate`, `medianTatHours`, and
+  `agingBuckets`; EN LTR and AR RTL proof passed.
+- RPT-001 through RPT-017 evidence remains mostly honest, but Phase 17 cannot be
+  accepted until the two reviewer blockers are repaired.
+- No related complaint linking, duplicate UI, vehicle/DMS provenance, portal
+  attachment, schema migration, cleanup, staging, or unrelated revert was done in
+  this review.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- reports` (26/26 TAP tests passed).
+- Passed: `corepack pnpm test:web -- api-client` (15/15 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (190/190 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: Blocked.
+- Next: P17 reviewer repair for report row contract/privacy and safe export
+  audit filters only.
+
+## 2026-06-29 - P17 Reviewer Repair - Report Row Contract And Export Audit Filters
+
+### Scope
+
+- Repaired only the two Phase 17 reviewer blockers for `REQ-REPORT-001`,
+  `REPORT-MATRIX-001`, `NFR-SEC-002`, and `API-STANDARD-001`.
+- Did not start reviewer rerun, next-phase planning, related complaint linking,
+  duplicate UI, vehicle/DMS provenance, portal attachments, schema migration,
+  cleanup, staging, or unrelated edits.
+
+### Changes
+
+- Made `apps/api/src/modules/complaints/complaints.service.ts` report row
+  mapping explicit instead of spreading `queueItem(...)`.
+- `ComplaintReportRow` now omits queue display fields and `/reports` rows return
+  only the committed safe `ReportRow` fields: `id`, `referenceNumber`,
+  `branchId`, `categoryId`, `status`, `severity`, `subject`, `ownerId`,
+  `createdAt`, and `updatedAt`.
+- Kept complaint search separate from report rows so existing search/controller
+  DTOs still get their expected queue/search display fields.
+- Added safe REPORT export audit filter metadata in
+  `apps/api/src/modules/reports/reports.service.ts` using only
+  `filterBranchId`, `categoryId`, `departmentId`, `severity`, `ownerId`,
+  `dateFrom`, and `dateTo`.
+- Updated report tests to prove exact public report row keys, absence of
+  private/undocumented report fields, and allowlisted export audit filters.
+
+### Security And Privacy Self-Check
+
+- Roles and branch scope still come from server-session report guards; no client
+  role, branch authority, actor id, workflow input, token, or credential trust
+  was added.
+- Report rows no longer return `branchName` or `ownerName` and tests reject
+  customer phone/email, VIN, plate, DMS, audit, provider, portal, secret, token,
+  credential, and undocumented row fields.
+- REPORT export audit metadata includes the required filter snapshot without raw
+  URLs, request bodies, passwords, OTPs, tokens, credentials, or free-form query
+  text.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Failed then repaired: `corepack pnpm test:api -- reports` initially caught the
+  report test double still returning old `closedAt` and `departmentId` fixture
+  extras; repaired by making the test double emit the public `ReportRow` shape.
+- Passed: `corepack pnpm test:api -- reports` (28/28 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Failed then repaired: `corepack pnpm typecheck` initially caught complaint
+  search still sharing the narrowed report row type; repaired by separating the
+  search row type/mapper from the report row type/mapper.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P17 repair complete.
+- Next: Phase 17 reviewer rerun.
+
+## 2026-06-29 - Phase 17 Reviewer Rerun
+
+### Scope
+
+- Ran a strict reviewer rerun for Phase 17 after the report row
+  contract/privacy and export audit filter repair.
+- Reviewed the scoped report backend, complaint report/search mappers, report UI,
+  export proxy, i18n, proof tooling, OpenAPI/canonical contract, and active
+  Phase 17 evidence against `REQ-REPORT-001`, `REPORT-MATRIX-001`,
+  `UI-DESIGN-001`, `NFR-SEC-002`, and `API-STANDARD-001`.
+- No product code was changed, staged, reverted, cleaned, or advanced to the
+  next phase during this review.
+
+### Findings
+
+- No blocking findings.
+
+### Review Notes
+
+- `/reports` runtime rows now match committed `ReportRow`: `id`,
+  `referenceNumber`, `branchId`, `categoryId`, `status`, `severity`, `subject`,
+  `ownerId`, `createdAt`, and `updatedAt` only.
+- Report rows exclude `branchName`, `ownerName`, customer phone/email, VIN,
+  plate, DMS codes, audit internals, provider/portal secrets, staff PII, and
+  undocumented fields.
+- Complaint queue/search/detail mappers remain separate from the report mapper,
+  so the report repair did not remove display data from non-report surfaces.
+- REPORT export audit metadata is exactly `{ format, rowCount, rowLimit,
+  filters }`; `filters` is allowlisted to `filterBranchId`, `categoryId`,
+  `departmentId`, `severity`, `ownerId`, `dateFrom`, and `dateTo`.
+- No raw URL, request body, password, OTP, token, credential, provider secret, or
+  arbitrary query object is audited by the report export path.
+- Dashboard TAT and KPI formulas remain bounded: closure timestamp/current
+  `closedAt`, closed-only median TAT, distinct reopened closed complaint
+  `reopenRate`, reopen event `reopenedCount`, SLA-obligation breach
+  denominator, non-terminal aging buckets, and first-response exclusions.
+- Department filtering uses existing `departmentId`; the UI keeps it as
+  pass-through only and does not show a raw-ID department picker.
+- Report list/export scope still comes from server-session guards/principal, and
+  export remains row-limited.
+- OpenAPI and canonical contract match implementation, including the safe
+  `ReportRow` and new KPI fields.
+- UI parses/renders `reopenRate`, `slaBreachRate`, `medianTatHours`, and
+  `agingBuckets` in English LTR and Arabic RTL proof.
+- RPT-001 through RPT-017 evidence remains honest after P17A/P17B and the
+  repair.
+- No related complaint linking, duplicate UI, vehicle/DMS provenance, portal
+  attachment, schema migration, cleanup, staging, or unrelated revert was done.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- reports` (28/28 TAP tests passed).
+- Passed: `corepack pnpm test:web -- api-client` (15/15 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (190/190 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: Phase 17 reviewed complete.
+- Next: Next-phase planning/audit stop.

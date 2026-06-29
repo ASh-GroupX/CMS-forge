@@ -10,13 +10,15 @@ import { CasesModule } from '../cases/cases.module.js';
 import { CasesService } from '../cases/cases.service.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { SlaModule } from '../sla/sla.module.js';
+import { SlaService } from '../sla/sla.service.js';
 import { ComplaintsController } from './complaints.controller.js';
 import { ComplaintFormOptionsService } from './complaint-form-options.service.js';
 import { ComplaintsRepository } from './complaints.repository.js';
 import { ComplaintsService } from './complaints.service.js';
 
 @Module({
-  imports: [AuthModule, NotificationsModule, CasesModule],
+  imports: [AuthModule, NotificationsModule, CasesModule, SlaModule],
   controllers: [ComplaintsController],
   providers: [
     PrismaService,
@@ -37,13 +39,14 @@ import { ComplaintsService } from './complaints.service.js';
     },
     {
       provide: ComplaintsService,
-      inject: [ComplaintsRepository, AuditService, NotificationsService, CasesService],
+      inject: [ComplaintsRepository, AuditService, NotificationsService, CasesService, SlaService],
       useFactory: (
         repository: ComplaintsRepository,
         audit: AuditService,
         notifications: NotificationsService,
         cases: CasesService,
-      ) => new ComplaintsService(repository, audit, notifications, cases),
+        sla: SlaService,
+      ) => new ComplaintsService(repository, audit, notifications, cases, sla),
     },
     {
       provide: SESSION_AUTH_SERVICE,

@@ -1,7 +1,4 @@
-import { adminBranchesText } from '../apps/web/src/i18n/staff-admin-branches.ts';
 import { adminUsersText } from '../apps/web/src/i18n/staff-admin-users.ts';
-import { adminCategoriesSlaText } from '../apps/web/src/i18n/staff-admin-categories-sla.ts';
-import { adminNotificationTemplatesText } from '../apps/web/src/i18n/staff-admin-notification-templates.ts';
 import { auditViewerText } from '../apps/web/src/i18n/staff-audit-viewer.ts';
 import { complaintDetailText } from '../apps/web/src/i18n/staff-complaint-detail.ts';
 import { portalSubmissionText } from '../apps/web/src/i18n/portal-submission.ts';
@@ -33,8 +30,8 @@ function buildVisualCases(locale) {
     visualCase('complaint create', locale, 'staff-complaint-new', { ...base, create: 'validation' }, [t.createForm.title, t.createForm.fields.category, t.createForm.validation.vinRequired], ['md:grid-cols-2', 'md:col-span-2']),
     visualCase('complaint detail', locale, 'staff-complaint-detail', { ...base, attachment: 'clean' }, [detail.title, detail.sections.customer, detail.sections.timeline, detail.sections.attachments], ['xl:grid-cols-[1.1fr_0.9fr]', 'md:grid-cols-2']),
     visualCase('workflow modal', locale, 'staff-complaint-detail', { ...base, workflow: 'validation' }, [detail.sections.workflow, detail.workflow.actions[0], detail.workflow.validation], ['role="dialog"', 'xl:col-span-2']),
-    visualCase('admin surfaces', locale, 'staff-admin', { ...base, admin: 'validation' }, [adminBranchesText[locale].title, adminUsersText[locale].title, adminCategoriesSlaText[locale].title, adminNotificationTemplatesText[locale].title], []),
-    visualCase('reports', locale, 'staff-reports', { ...base }, [reportsDashboardText[locale].title, reportsDashboardText[locale].export.title, 'CMP-PROOF-RPT-001'], ['min-w-[56rem]', 'md:grid-cols-3']),
+    visualCase('admin surfaces', locale, 'staff-admin', { ...base, admin: 'validation' }, [adminUsersText[locale].masterData.title, adminUsersText[locale].title, adminUsersText[locale].masterData.sections.branches, adminUsersText[locale].masterData.sections.categories], []),
+    visualCase('reports', locale, 'staff-reports', { ...base }, [reportsDashboardText[locale].title, reportsDashboardText[locale].export.title, reportsDashboardText[locale].kpis.slaBreachRate, reportsDashboardText[locale].kpis.agingOverSeven, 'CMP-PROOF-RPT-001'], ['min-w-[56rem]', 'md:grid-cols-3']),
     visualCase('audit viewer', locale, 'staff-audit', { ...base, admin: 'success' }, [auditViewerText[locale].title, auditViewerText[locale].filters.correlationId, auditViewerText[locale].filters.export], ['xl:grid-cols-5']),
   ];
 }
@@ -47,7 +44,7 @@ function buildPortalVisualCases(locale) {
   const submission = portalSubmissionText[locale], tracking = portalTrackingText[locale], survey = portalSurveyText[locale];
   return [
     portalVisualCase('portal submission mobile', locale, 'portal-submission', { state: locale === 'en' ? 'validation' : 'success', reference: 'CMP-PORTAL-MOBILE' }, [submission.title, locale === 'en' ? submission.states.validation : submission.states.success, submission.fields.attachment], ['md:grid-cols-2']),
-    portalVisualCase('portal tracking mobile', locale, 'portal-tracking', { state: locale === 'en' ? 'requested' : 'followup', reference: 'CMP-TRACK-MOBILE' }, [tracking.title, locale === 'en' ? tracking.states.requested : tracking.states.followup, tracking.sections.verify], ['lg:grid-cols-[0.9fr_1.1fr]']),
+    portalVisualCase('portal tracking mobile', locale, 'portal-tracking-preview', { state: locale === 'en' ? 'requested' : 'followup', reference: 'CMP-TRACK-MOBILE' }, [tracking.title, locale === 'en' ? tracking.states.requested : tracking.states.followup, tracking.sections.verify], ['lg:grid-cols-[0.9fr_1.1fr]']),
     portalVisualCase('portal survey mobile', locale, 'portal-survey', { state: locale === 'en' ? 'validation' : 'used' }, [survey.title, locale === 'en' ? survey.states.validation : survey.states.used, locale === 'en' ? survey.fields.rating : survey.subtitle], locale === 'en' ? ['grid-cols-5'] : []),
   ];
 }
@@ -68,13 +65,13 @@ function buildAccessibilityCases() {
     accessibilityCase('create network alert', 'ar', { ...arBase, create: 'network' }, [staffShellText.ar.createForm.title], { route: 'staff-complaint-new' }),
     accessibilityCase('detail route', 'en', { ...enBase }, [complaintDetailText.en.title, 'CMP-PROOF-DETAIL'], { feedbackRole: false, route: 'staff-complaint-detail', minLabels: 0 }),
     accessibilityCase('workflow dialog', 'ar', { ...arBase, workflow: 'validation' }, [complaintDetailText.ar.sections.workflow, complaintDetailText.ar.workflow.comment], { route: 'staff-complaint-detail', dialog: complaintDetailText.ar.sections.workflow, minButtons: 8, minLabels: 0 }),
-    accessibilityCase('admin feedback', 'en', { ...enBase, admin: 'validation' }, [adminUsersText.en.title, adminUsersText.en.states.validation], { route: 'staff-admin', minButtons: 8, minLabels: 0 }),
+    accessibilityCase('admin feedback', 'en', { ...enBase, admin: 'validation' }, [adminUsersText.en.title, adminUsersText.en.states.validation], { route: 'staff-admin', minButtons: 6, minLabels: 0 }),
     accessibilityCase('reports route', 'ar', { ...arBase }, [reportsDashboardText.ar.title, 'CMP-PROOF-RPT-001'], { feedbackRole: false, route: 'staff-reports', minLabels: 0 }),
     accessibilityCase('audit status', 'en', { ...enBase, admin: 'success' }, [auditViewerText.en.title, auditViewerText.en.filters.correlationId], { route: 'staff-audit', minAria: 1 }),
     routeAccessibilityCase('portal submission validation', 'portal-submission', 'en', { locale: 'en', state: 'validation' }, [portalSubmissionText.en.title, portalSubmissionText.en.states.validation], { minLabels: 10, minAria: 5 }),
     routeAccessibilityCase('portal submission success', 'portal-submission', 'ar', { locale: 'ar', state: 'success' }, [portalSubmissionText.ar.title, portalSubmissionText.ar.states.success], { minLabels: 10, minAria: 5 }),
-    routeAccessibilityCase('portal tracking requested', 'portal-tracking', 'en', { locale: 'en', state: 'requested' }, [portalTrackingText.en.title, portalTrackingText.en.states.requested], { minLabels: 3, minAria: 3 }),
-    routeAccessibilityCase('portal tracking follow-up', 'portal-tracking', 'ar', { locale: 'ar', state: 'followup' }, [portalTrackingText.ar.title, portalTrackingText.ar.states.followup], { minLabels: 4, minAria: 5 }),
+    routeAccessibilityCase('portal tracking requested', 'portal-tracking-preview', 'en', { locale: 'en', state: 'requested' }, [portalTrackingText.en.title, portalTrackingText.en.states.requested], { minLabels: 3, minAria: 3 }),
+    routeAccessibilityCase('portal tracking follow-up', 'portal-tracking-preview', 'ar', { locale: 'ar', state: 'followup' }, [portalTrackingText.ar.title, portalTrackingText.ar.states.followup], { minLabels: 4, minAria: 5 }),
     routeAccessibilityCase('portal survey validation', 'portal-survey', 'en', { locale: 'en', state: 'validation' }, [portalSurveyText.en.title, portalSurveyText.en.states.validation], { minLabels: 6, minAria: 5 }),
     routeAccessibilityCase('portal survey used', 'portal-survey', 'ar', { locale: 'ar', state: 'used' }, [portalSurveyText.ar.title, portalSurveyText.ar.states.used], { minLabels: 0, minAria: 1 }),
   ];

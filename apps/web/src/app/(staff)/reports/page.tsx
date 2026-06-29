@@ -5,7 +5,7 @@ import { getAssignableStaff } from '../../../lib/staff-assignable-staff-api';
 import { getComplaintFormOptions } from '../../../lib/staff-complaint-form-options-api';
 import { getStaffReportKpis, getStaffReportRows } from '../../../lib/staff-reports-api';
 
-type SearchParams = { locale?: string | string[]; reports?: string | string[]; branchId?: string | string[]; categoryId?: string | string[]; ownerId?: string | string[] };
+type SearchParams = { locale?: string | string[]; reports?: string | string[]; branchId?: string | string[]; categoryId?: string | string[]; departmentId?: string | string[]; ownerId?: string | string[] };
 
 export default async function ReportsPage({
   cookieHeader,
@@ -24,6 +24,7 @@ export default async function ReportsPage({
   const filters = {
     branchId: readParam(params?.branchId) ?? '',
     categoryId: readParam(params?.categoryId) ?? '',
+    departmentId: readParam(params?.departmentId) ?? '',
     ownerId: readParam(params?.ownerId) ?? '',
   };
   const [rows, kpis, options, staff] = await Promise.all([

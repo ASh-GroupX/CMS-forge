@@ -1,56 +1,45 @@
-# P14B - WORKFLOW STATE REPAIR
+# Next-Phase Planning / Audit Stop
 
-Status: P14A complete; P14B ready
-Required model tier: GPT-5 High or Opus 4.8 Max
-Phase: Phase 14 - Workflow state repair
-Risk: High
-SRS IDs: ARCH-WORKFLOW-001, WORKFLOW-MATRIX-001, METHOD-AUDIT-001,
-NFR-SEC-002, API-STANDARD-001
+Status: Planner Stop
+Required model tier: Planner/Reviewer
+Phase: Next phase not selected
+Risk: Medium
+SRS IDs: TBD by planner
 
-## Completed Proof
+## Scoped Task
 
-- Failed as expected before source fix: `corepack pnpm test:api -- workflow`
-  (47/48; branch-scope denial audit target included a sensitive query).
-- Passed: `corepack pnpm test:api -- workflow` (48/48).
-- Passed: `corepack pnpm test:api -- audit` (8/8 plus append-only proof).
-- Passed: `corepack pnpm test:api -- rbac` (2/2).
-- Passed: `corepack pnpm openapi:check`.
-- Passed: `corepack pnpm typecheck`.
-- Passed: `corepack pnpm lint`.
-- Passed: `git diff --check` (line-ending warnings only).
+Plan the next phase from the current Forge state and active evidence. Do not
+implement product code in this stop.
 
-## Next Scoped Task
+## Read First
 
-Continue P14 workflow state repair. Read the SRS workflow IDs above, then
-identify the smallest failing workflow state path before editing.
+1. `.forge/project.md`
+2. `.forge/policy.md`
+3. `.forge/state.md`
+4. Latest Phase 17 entries in `.forge/evidence.md`
+5. `docs/ARCHITECTURE.md`
+6. Relevant `docs/CMS_AUTO_SRS.md` sections for the selected next phase
 
-Keep P14 focused on backend workflow state behavior: transition validity,
-history/audit consistency, branch/session authority, and stable API errors.
+## Planning Focus
 
-Recommended next seam: compare `WORKFLOW-MATRIX-001` required data and actor
-authority against `applyTransition`, especially assigned-owner authority for
-`IN_PROGRESS` update/resolve and required owner/route data for
-`APPROVE_AND_ROUTE` / `ASSIGN_INVESTIGATION`.
+- Confirm Phase 17 is complete and no repair task remains.
+- Select the smallest next scoped task, preferably one phase slice and about 1
+  to 5 files plus focused tests.
+- Carry forward known debt explicitly:
+  - related complaint linking;
+  - duplicate warning UI after backend duplicate/related-complaint behavior;
+  - vehicle manual/DMS provenance flags;
+  - portal attachment follow-up.
+- Do not clean, stage, revert, or normalize unrelated dirty worktree changes.
+- Do not start implementation until `.forge/next.md` is replaced with a concrete
+  build or reviewer task.
 
-## Carry-Forward
+## Proof Commands
 
-- P14A repaired unsafe branch-scope denial audit targets for workflow routes;
-  RBAC/branch-scope denial audits now store the path, not raw query strings.
-- Duplicate warning UI and related complaint linking remain out of scope.
-- Vehicle manual/DMS provenance flags are still limited by the current vehicle
-  schema and can be handled in a later data-model slice.
-- SLA timers, report formulas, notification providers, portal OTP behavior, DMS
-  live lookup, and UI work remain out of scope unless P14 explicitly cites them.
+- `git status --short`
 
-## Guardrails
+## Outcome
 
-- Backend owns authority; roles, permissions, and branch scope come from the
-  server session.
-- Do not accept role/branch/permission/workflow authority from client input.
-- Every state change writes status history and audit in the same transaction.
-- Side effects enqueue after commit.
-- Audit logs are append-only and must not include passwords, OTPs, tokens,
-  reset tokens, session tokens, hashes, secrets, credentials, provider secrets,
-  attachment contents, or portal verification data.
-- Customer portal routes must not expose internal comments, audit logs, DMS
-  codes, staff PII, unrelated complaints, or attachments without verification.
+Update `.forge/next.md` with the selected concrete next task and update
+`.forge/state.md` with the planning result. Append evidence only if a real check
+or decision was made.

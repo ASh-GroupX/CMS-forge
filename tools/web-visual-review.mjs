@@ -12,6 +12,8 @@ import ReportsPage from '../apps/web/src/app/(staff)/reports/page.tsx';
 import PortalSubmissionPage from '../apps/web/src/app/portal/page.tsx';
 import PortalSurveyPage from '../apps/web/src/app/portal/survey/page.tsx';
 import PortalTrackingPage from '../apps/web/src/app/portal/track/page.tsx';
+import { PortalTrackingPreview } from '../apps/web/src/components/portal-tracking/index.tsx';
+import { portalTrackingText } from '../apps/web/src/i18n/portal-tracking.ts';
 import { staffShellText } from '../apps/web/src/i18n/staff-shell.ts';
 import { visualCases } from './web-proof-cases.mjs';
 
@@ -48,9 +50,18 @@ async function routePage(testCase) {
   if (testCase.route === 'staff-dashboard') return staffFrame(testCase, await DashboardPage(staffProps));
   if (testCase.route === 'staff-reports') return staffFrame(testCase, await ReportsPage(staffProps));
   if (testCase.route === 'portal-submission') return PortalSubmissionPage({ searchParams: params });
+  if (testCase.route === 'portal-tracking-preview') return React.createElement(PortalTrackingPreview, portalTrackingProps(testCase));
   if (testCase.route === 'portal-tracking') return PortalTrackingPage({ searchParams: params });
   if (testCase.route === 'portal-survey') return PortalSurveyPage({ searchParams: params });
   return StaffShellPage({ searchParams: params });
+}
+
+function portalTrackingProps(testCase) {
+  return {
+    locale: testCase.locale,
+    reference: testCase.params.reference ?? portalTrackingText[testCase.locale].sample.reference,
+    state: testCase.params.state,
+  };
 }
 
 function staffFrame(testCase, children) {

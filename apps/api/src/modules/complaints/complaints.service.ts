@@ -6,16 +6,19 @@ import type { AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import { CasesService } from '../cases/cases.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { SlaService } from '../sla/sla.service.js';
 import { complaintCreatedAudit, createComplaintData, isReferenceConflict, referenceConflictError } from './complaint-intake.js';
+import { queueWorkflowSideEffects } from './complaint-workflow-side-effects.js';
 import { ComplaintsRepository } from './complaints.repository.js';
-import type { ComplaintCommentRecord, ComplaintDetailRecord, ComplaintQueueRecord, ComplaintReportFilter, ComplaintReportRecord, ComplaintSearchRecord, PortalVerificationTargetRecord } from './complaints.repository.js';
+import type { ComplaintCommentRecord, ComplaintDetailRecord, ComplaintQueueRecord, ComplaintReportFilter, ComplaintReportRecord, ComplaintSearchRecord, ComplaintStatusRecord, PortalVerificationTargetRecord } from './complaints.repository.js';
 import type { ComplaintCaseSummaryDto, ComplaintDetailDto, ComplaintQueueItemDto } from './dto/complaint-response.dto.js';
 
 export type ValidateComplaintTransitionInput = { fromStatus: ComplaintStatus; action: ComplaintTransitionAction; actorRole: RoleCode };
 export type ComplaintTransitionDecision = ValidateComplaintTransitionInput & { toStatus: ComplaintStatus };
 export type ApplyComplaintTransitionInput = ValidateComplaintTransitionInput & {
   complaintId: string; actorId?: string | null; requestSource: ComplaintTransitionRequestSource;
-  reason?: string | null; resolutionType?: string | null; resolutionSummary?: string | null; customerCommunicationStatus?: string | null;
+  reason?: string | null; targetBranchId?: string | null; targetDepartmentId?: string | null; ownerId?: string | null;
+  resolutionType?: string | null; resolutionSummary?: string | null; customerCommunicationStatus?: string | null;
   correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null;
 };
 export type ApplyComplaintTransitionResult = ComplaintTransitionDecision & { complaintId: string };
@@ -32,9 +35,9 @@ export type CreateInternalComplaintInput = {
 export type ComplaintCreationResult = { id: string; referenceNumber: string; status: ComplaintStatus };
 
 export type ComplaintQueueFilter = { branchId?: string | null };
-export type ComplaintReportRow = ComplaintQueueItemDto & { categoryId: string };
+export type ComplaintReportRow = Omit<ComplaintQueueItemDto, 'branchName' | 'ownerName'> & { categoryId: string };
 export type ComplaintSearchInput = ComplaintReportFilter;
-export type ComplaintSearchRow = ComplaintReportRow & { customerName: string; customerPhone: string; customerIdentifier: string | null };
+export type ComplaintSearchRow = ComplaintQueueItemDto & { categoryId: string; customerName: string; customerPhone: string; customerIdentifier: string | null };
 export type CreateComplaintCommentInput = { complaintId: string; body: string; visibility: CommentVisibility; actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type ComplaintCommentResult = { id: string; complaintId: string; body: string; visibility: CommentVisibility; authorId: string | null; createdAt: string };
 
@@ -42,6 +45,7 @@ type WorkflowTransition = { fromStatus: ComplaintStatus; action: ComplaintTransi
 
 const MANAGER_ROLES = [RoleCode.CR_MANAGER, RoleCode.ADMIN] as const;
 const BRANCH_MANAGER_ROLES = [RoleCode.BRANCH_MANAGER, RoleCode.CR_MANAGER, RoleCode.ADMIN] as const;
+const OWNER_OR_BRANCH_MANAGER_ROLES = [RoleCode.CR_OFFICER, ...BRANCH_MANAGER_ROLES] as const;
 
 export const WORKFLOW_TRANSITIONS: readonly WorkflowTransition[] = [
   transition(ComplaintStatus.DRAFT, ComplaintTransitionAction.SUBMIT, ComplaintStatus.SUBMITTED, [RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.ADMIN, RoleCode.CUSTOMER_PORTAL]),
@@ -53,8 +57,8 @@ export const WORKFLOW_TRANSITIONS: readonly WorkflowTransition[] = [
   transition(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.ASSIGN_INVESTIGATION, ComplaintStatus.IN_PROGRESS, BRANCH_MANAGER_ROLES),
   transition(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.RESOLVE_DIRECTLY, ComplaintStatus.RESOLVED, BRANCH_MANAGER_ROLES),
   transition(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.REJECT_AFTER_REVIEW, ComplaintStatus.REJECTED, BRANCH_MANAGER_ROLES),
-  transition(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE, ComplaintStatus.IN_PROGRESS, BRANCH_MANAGER_ROLES),
-  transition(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.RESOLVE, ComplaintStatus.RESOLVED, BRANCH_MANAGER_ROLES),
+  transition(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE, ComplaintStatus.IN_PROGRESS, OWNER_OR_BRANCH_MANAGER_ROLES),
+  transition(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.RESOLVE, ComplaintStatus.RESOLVED, OWNER_OR_BRANCH_MANAGER_ROLES),
   transition(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.REJECT_AFTER_INVESTIGATION, ComplaintStatus.REJECTED, BRANCH_MANAGER_ROLES),
   transition(ComplaintStatus.RESOLVED, ComplaintTransitionAction.CLOSE, ComplaintStatus.CLOSED, BRANCH_MANAGER_ROLES),
   transition(ComplaintStatus.RESOLVED, ComplaintTransitionAction.REJECT_RESOLUTION, ComplaintStatus.IN_PROGRESS, BRANCH_MANAGER_ROLES),
@@ -67,7 +71,7 @@ function transition(fromStatus: ComplaintStatus, action: ComplaintTransitionActi
 
 @Injectable()
 export class ComplaintsService {
-  constructor(private readonly complaintsRepository: ComplaintsRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly casesService?: CasesService) {}
+  constructor(private readonly complaintsRepository: ComplaintsRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly casesService?: CasesService, private readonly slaService?: SlaService) {}
 
   async createInternal(input: CreateInternalComplaintInput): Promise<ComplaintCreationResult> {
     const data = createComplaintData(input);
@@ -136,7 +140,7 @@ export class ComplaintsService {
     );
 
     if (!transition) throw invalidTransitionError();
-    if (!transition.allowedRoles.includes(input.actorRole)) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
+    if (!transition.allowedRoles.includes(input.actorRole)) throw roleForbiddenError();
 
     return { fromStatus: input.fromStatus, action: input.action, actorRole: input.actorRole, toStatus: transition.toStatus };
   }
@@ -147,41 +151,48 @@ export class ComplaintsService {
       decision = this.validateTransition(input);
     } catch (error) {
       if (error instanceof AppException && error.code === 'RBAC_FORBIDDEN') {
-        await this.auditService.record({ eventType: 'SECURITY', action: 'workflow_role_forbidden', actorId: input.actorId ?? null, branchId: null, targetType: 'complaint', targetId: input.complaintId, correlationId: input.correlationId ?? null, ipAddress: input.ipAddress ?? null, userAgent: input.userAgent ?? null, metadata: { fromStatus: input.fromStatus, action: input.action, actorRole: input.actorRole, requestSource: input.requestSource } });
+        await recordWorkflowRoleForbidden(this.auditService, input);
       }
       throw error;
     }
 
     validateRequiredTransitionData(input);
 
-    const result = await this.complaintsRepository.transaction(async (client) => {
-      const complaint = await this.complaintsRepository.updateStatus(
-        { complaintId: input.complaintId, fromStatus: input.fromStatus, toStatus: decision.toStatus },
-        client,
-      );
+    let committed: { result: ApplyComplaintTransitionResult; complaint: ComplaintStatusRecord };
+    try {
+      committed = await this.complaintsRepository.transaction(async (client) => {
+        const complaint = await this.complaintsRepository.updateStatus(
+          statusUpdateData(input, decision.toStatus),
+          client,
+        );
 
-      if (!complaint) throw invalidTransitionError();
+        if (!complaint) throw invalidTransitionError();
+        assertActorCanApplyTransition(input, complaint);
 
-      await this.complaintsRepository.createStatusHistory({
-        complaintId: input.complaintId,
-        fromStatus: input.fromStatus,
-        toStatus: decision.toStatus,
-        action: input.action,
-        actorId: input.actorId ?? null,
-        actorRole: input.actorRole,
-        requestSource: input.requestSource,
-        reason: input.reason ?? null,
-        correlationId: input.correlationId ?? null,
-      }, client);
-      await this.auditService.record(workflowAuditInput(input, decision.toStatus, complaint.branchId), client);
+        await this.complaintsRepository.createStatusHistory({
+          complaintId: input.complaintId,
+          fromStatus: input.fromStatus,
+          toStatus: decision.toStatus,
+          action: input.action,
+          actorId: input.actorId ?? null,
+          actorRole: input.actorRole,
+          requestSource: input.requestSource,
+          reason: input.reason ?? null,
+          correlationId: input.correlationId ?? null,
+        }, client);
+        await this.auditService.record(workflowAuditInput(input, decision.toStatus, complaint.branchId), client);
 
-      return { complaintId: complaint.id, ...decision };
-    }).catch((error: unknown) => {
+        return { result: { complaintId: complaint.id, ...decision }, complaint };
+      });
+    } catch (error: unknown) {
       if (isReferenceConflict(error)) throw referenceConflictError();
+      if (error instanceof AppException && error.code === 'RBAC_FORBIDDEN') {
+        await recordWorkflowRoleForbidden(this.auditService, input);
+      }
       throw error;
-    });
-    await queueWorkflowSideEffect(this.notificationsService, input, result.toStatus);
-    return result;
+    }
+    await queueWorkflowSideEffects({ notificationsService: this.notificationsService, slaService: this.slaService, input, toStatus: committed.result.toStatus, complaint: committed.complaint, enteredAt: new Date() });
+    return committed.result;
   }
 
   private async complaintCaseSummary(complaintId: string): Promise<ComplaintCaseSummaryDto | null> {
@@ -194,10 +205,12 @@ function queueItem(complaint: ComplaintQueueRecord): ComplaintQueueItemDto {
   return { id: complaint.id, referenceNumber: complaint.referenceNumber, status: complaint.status, severity: complaint.severity, subject: complaint.subject, branchId: complaint.branchId, branchName: complaint.branch.nameEn, ownerId: complaint.ownerId, ownerName: complaint.owner?.nameEn ?? null, createdAt: complaint.createdAt.toISOString(), updatedAt: complaint.updatedAt.toISOString() };
 }
 
-function reportItem(complaint: ComplaintReportRecord): ComplaintReportRow { return { ...queueItem(complaint), categoryId: complaint.categoryId }; }
+function reportItem(complaint: ComplaintReportRecord): ComplaintReportRow {
+  return { id: complaint.id, referenceNumber: complaint.referenceNumber, branchId: complaint.branchId, categoryId: complaint.categoryId, status: complaint.status, severity: complaint.severity, subject: complaint.subject, ownerId: complaint.ownerId, createdAt: complaint.createdAt.toISOString(), updatedAt: complaint.updatedAt.toISOString() };
+}
 
 function searchItem(complaint: ComplaintSearchRecord): ComplaintSearchRow {
-  return { ...reportItem(complaint), customerName: complaint.customerName, customerPhone: complaint.customerPhone, customerIdentifier: complaint.customerIdentifier };
+  return { ...queueItem(complaint), categoryId: complaint.categoryId, customerName: complaint.customerName, customerPhone: complaint.customerPhone, customerIdentifier: complaint.customerIdentifier };
 }
 
 function detailItem(complaint: ComplaintDetailRecord): Omit<ComplaintDetailDto, 'caseSummary'> {
@@ -224,19 +237,46 @@ function requiredTextError(value: unknown, field: string) {
 }
 
 function invalidTransitionError(): AppException { return new AppException('COMPLAINT_INVALID_TRANSITION', 'The requested action is not allowed for the current complaint state.', HttpStatus.CONFLICT); }
+function roleForbiddenError(): AppException { return new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN); }
 
-const REASON_REQUIRED = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.SEND_BACK, ComplaintTransitionAction.REOPEN, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintTransitionAction.REJECT_AFTER_REVIEW, ComplaintTransitionAction.REJECT_AFTER_INVESTIGATION, ComplaintTransitionAction.REJECT_RESOLUTION]);
+const REASON_REQUIRED = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintTransitionAction.SEND_BACK, ComplaintTransitionAction.ASSIGN_INVESTIGATION, ComplaintTransitionAction.CLOSE, ComplaintTransitionAction.REOPEN, ComplaintTransitionAction.ROUTE_AGAIN, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintTransitionAction.REJECT_AFTER_REVIEW, ComplaintTransitionAction.REJECT_AFTER_INVESTIGATION, ComplaintTransitionAction.REJECT_RESOLUTION]);
 const RESOLUTION_REQUIRED = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.RESOLVE, ComplaintTransitionAction.RESOLVE_DIRECTLY]);
+const OWNER_ALLOWED_ACTIONS = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE, ComplaintTransitionAction.RESOLVE]);
+const OWNER_REQUIRED = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintTransitionAction.ASSIGN_INVESTIGATION]);
+
+function assertActorCanApplyTransition(input: ApplyComplaintTransitionInput, complaint: ComplaintStatusRecord): void {
+  if (!OWNER_ALLOWED_ACTIONS.has(input.action) || (BRANCH_MANAGER_ROLES as readonly RoleCode[]).includes(input.actorRole)) return;
+  if (input.actorId && complaint.ownerId === input.actorId) return;
+  throw roleForbiddenError();
+}
+
+async function recordWorkflowRoleForbidden(auditService: AuditService, input: ApplyComplaintTransitionInput): Promise<void> {
+  await auditService.record({ eventType: 'SECURITY', action: 'workflow_role_forbidden', actorId: input.actorId ?? null, branchId: null, targetType: 'complaint', targetId: input.complaintId, correlationId: input.correlationId ?? null, ipAddress: input.ipAddress ?? null, userAgent: input.userAgent ?? null, metadata: { fromStatus: input.fromStatus, action: input.action, actorRole: input.actorRole, requestSource: input.requestSource } });
+}
 
 function validateRequiredTransitionData(input: ApplyComplaintTransitionInput): void {
   const errors = [
-    ...(REASON_REQUIRED.has(input.action) || input.action === ComplaintTransitionAction.CLOSE ? requiredTextError(input.reason, 'reason') : []),
+    ...(REASON_REQUIRED.has(input.action) ? requiredTextError(input.reason, 'reason') : []),
+    ...(input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE ? requiredTextError(input.targetBranchId, 'targetBranchId') : []),
+    ...(input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE ? requiredTextError(input.targetDepartmentId, 'targetDepartmentId') : []),
+    ...(OWNER_REQUIRED.has(input.action) ? requiredTextError(input.ownerId, 'ownerId') : []),
     ...(RESOLUTION_REQUIRED.has(input.action) ? requiredTextError(input.resolutionType, 'resolutionType') : []),
     ...(RESOLUTION_REQUIRED.has(input.action) ? requiredTextError(input.resolutionSummary, 'resolutionSummary') : []),
     ...(RESOLUTION_REQUIRED.has(input.action) && !input.actorId ? [{ field: 'actorId', code: 'REQUIRED', message: 'actorId is required.' }] : []),
     ...(input.action === ComplaintTransitionAction.CLOSE ? requiredTextError(input.customerCommunicationStatus, 'customerCommunicationStatus') : []),
   ];
   if (errors.length) throw new AppException('VALIDATION_FAILED', 'Invalid complaint transition request', HttpStatus.BAD_REQUEST, errors);
+}
+
+function statusUpdateData(input: ApplyComplaintTransitionInput, toStatus: ComplaintStatus) {
+  const now = new Date();
+  return {
+    complaintId: input.complaintId, fromStatus: input.fromStatus, toStatus,
+    ...(input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE ? { targetBranchId: input.targetBranchId, targetDepartmentId: input.targetDepartmentId, ownerId: input.ownerId } : {}),
+    ...(input.action === ComplaintTransitionAction.ASSIGN_INVESTIGATION ? { ownerId: input.ownerId } : {}),
+    ...(RESOLUTION_REQUIRED.has(input.action) ? { resolvedAt: now } : {}),
+    ...(input.action === ComplaintTransitionAction.CLOSE ? { closedAt: now } : {}),
+  };
 }
 
 function workflowAuditInput(input: ApplyComplaintTransitionInput, toStatus: ComplaintStatus, branchId: string): AuditRecordInput {
@@ -246,12 +286,6 @@ function workflowAuditInput(input: ApplyComplaintTransitionInput, toStatus: Comp
     correlationId: input.correlationId ?? null,
     ipAddress: input.ipAddress ?? null,
     userAgent: input.userAgent ?? null,
-    metadata: { fromStatus: input.fromStatus, toStatus, action: input.action, actorRole: input.actorRole, requestSource: input.requestSource, resolutionType: input.resolutionType ?? null, resolutionSummary: input.resolutionSummary ?? null, customerCommunicationStatus: input.customerCommunicationStatus ?? null },
+    metadata: { fromStatus: input.fromStatus, toStatus, action: input.action, actorRole: input.actorRole, requestSource: input.requestSource, resolutionType: input.resolutionType ?? null, customerCommunicationStatus: input.customerCommunicationStatus ?? null },
   };
-}
-
-async function queueWorkflowSideEffect(notificationsService: NotificationsService | undefined, input: ApplyComplaintTransitionInput, toStatus: ComplaintStatus): Promise<void> {
-  const templateCode = input.action === ComplaintTransitionAction.CLOSE ? 'survey.schedule.internal' : input.action === ComplaintTransitionAction.REOPEN ? 'workflow.reopened.internal' : null;
-  if (!templateCode || !notificationsService) return;
-  await notificationsService.queueInternal({ complaintId: input.complaintId, templateCode, payload: { complaintId: input.complaintId, fromStatus: input.fromStatus, toStatus, action: input.action, actorId: input.actorId ?? null, reason: input.reason ?? null, customerCommunicationStatus: input.customerCommunicationStatus ?? null } });
 }

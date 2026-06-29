@@ -623,6 +623,8 @@ model SlaPolicy {
   escalationLevel1    String              @map("escalation_level_1")
   escalationLevel2    String?             @map("escalation_level_2")
   escalationLevel3    String?             @map("escalation_level_3")
+  escalationLevel2AfterBreachMinutes Int? @map("escalation_level_2_after_breach_minutes")
+  escalationLevel3AfterBreachMinutes Int? @map("escalation_level_3_after_breach_minutes")
   totalTargetMinutes  Int?                @map("total_target_minutes")
   isActive            Boolean             @default(true) @map("is_active")
   createdAt           DateTime            @default(now()) @map("created_at")

@@ -15,7 +15,7 @@ export type VerifyPortalOtpInput = { verificationId: string; otp: string; correl
 export type PortalTrackingInput = { sessionToken: string; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type PortalFollowUpInput = PortalTrackingInput & { body: string };
 export type PortalAttachmentUploadContext = { complaintId: string; customerId: string; branchId: string; status: string };
-export type PortalOtpRequestResult = { ok: true };
+export type PortalOtpRequestResult = { ok: true; verificationId: string; expiresAt: string };
 export type PortalSessionResult = { sessionToken: string; expiresAt: string };
 export type PortalTrackingResult = { referenceNumber: string; status: string; createdAt: string; updatedAt: string; timeline: Array<{ fromStatus: string | null; toStatus: string; action: string | null; createdAt: string }> };
 export type PortalFollowUpResult = { ok: true };
@@ -64,7 +64,7 @@ export class PortalService {
       locale: 'en',
       payload: { verificationId: verification.id, referenceNumber, expiresAt: verification.expiresAt.toISOString() },
     });
-    return { ok: true };
+    return { ok: true, verificationId: verification.id, expiresAt: verification.expiresAt.toISOString() };
   }
 
   async verifyTrackingOtp(input: VerifyPortalOtpInput): Promise<PortalSessionResult> {

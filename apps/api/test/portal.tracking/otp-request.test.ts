@@ -20,7 +20,7 @@ test('portal tracking OTP route delegates only reference, phone, and request con
   const controller = new PortalController({
     requestTrackingOtp: async (input) => {
       calls.push(input);
-      return { ok: true };
+      return { ok: true, verificationId: 'ver_1', expiresAt: '2026-06-19T10:05:00.000Z' };
     },
   } as PortalService);
 
@@ -31,7 +31,7 @@ test('portal tracking OTP route delegates only reference, phone, and request con
     auditLogs: true,
   }, request());
 
-  assert.deepEqual(response, { ok: true });
+  assert.deepEqual(response, { ok: true, verificationId: 'ver_1', expiresAt: '2026-06-19T10:05:00.000Z' });
   assert.deepEqual(calls[0], {
     referenceNumber: 'CMP-000010',
     customerPhone: '+966500000001',
@@ -58,9 +58,14 @@ test('portal tracking OTP request persists hash before queueing notification met
     { record: async () => undefined } as AuditService,
   );
 
-  await assert.doesNotReject(service.requestTrackingOtp({ referenceNumber: 'CMP-000010', customerPhone: '+966500000001', ipAddress: '203.0.113.91' }));
+  const response = await service.requestTrackingOtp({ referenceNumber: 'CMP-000010', customerPhone: '+966500000001', ipAddress: '203.0.113.91' });
 
   assert.deepEqual(events, ['lookup', 'persist', 'queue']);
+  assert.deepEqual(response, { ok: true, verificationId: 'ver_1', expiresAt: response.expiresAt });
+  assert.equal(response.expiresAt, (notifications[0] as { payload: { expiresAt: string } }).payload.expiresAt);
+  assert.equal(JSON.stringify(response).includes('otp'), false);
+  assert.equal(JSON.stringify(response).includes('Hash'), false);
+  assert.equal(JSON.stringify(response).includes('session'), false);
   assert.match(writes[0].otpHash, /^sha256:[a-f0-9]{32}:[a-f0-9]{64}$/);
   assert.doesNotMatch(writes[0].otpHash, /^\d{6}$/);
   assert.equal(writes[0].ipAddress, '203.0.113.91');

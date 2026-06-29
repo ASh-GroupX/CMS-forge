@@ -77,7 +77,7 @@ export function CaseCapaPanel({ caseId, caseOwnerId, items, locale, staff, text 
         <div className="grid gap-1">
           <Label>{text.fields.status}</Label>
           <Select defaultValue="OPEN" name="status">
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger aria-label={text.fields.status}><SelectValue placeholder={text.statusLabels.OPEN} /></SelectTrigger>
             <SelectContent>
               <SelectItem value="OPEN">{text.statusLabels.OPEN}</SelectItem>
               <SelectItem value="IN_PROGRESS">{text.statusLabels.IN_PROGRESS}</SelectItem>

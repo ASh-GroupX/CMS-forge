@@ -6,17 +6,8 @@ import type { ComplaintReferenceClient } from './complaint-reference.repository.
 
 type ComplaintTransitionClient = Pick<Prisma.TransactionClient, 'comment' | 'complaint' | 'complaintStatusHistory' | 'customer'> & ComplaintReferenceClient;
 
-export type ComplaintStatusRecord = {
-  id: string;
-  branchId: string;
-  status: ComplaintStatus;
-};
-
-export type ComplaintRecord = ComplaintStatusRecord & {
-  referenceNumber: string;
-  subject: string;
-  severity: ComplaintSeverity;
-};
+export type ComplaintStatusRecord = { id: string; branchId: string; status: ComplaintStatus; ownerId: string | null; severity: ComplaintSeverity; categoryId: string; departmentId: string | null };
+export type ComplaintRecord = { id: string; branchId: string; status: ComplaintStatus; referenceNumber: string; subject: string; severity: ComplaintSeverity };
 
 export type ComplaintQueueRecord = ComplaintRecord & {
   ownerId: string | null;
@@ -64,11 +55,7 @@ export type CreateComplaintData = {
   incidentAt: Date;
 };
 
-export type UpdateComplaintStatusData = {
-  complaintId: string;
-  fromStatus: ComplaintStatus;
-  toStatus: ComplaintStatus;
-};
+export type UpdateComplaintStatusData = { complaintId: string; fromStatus: ComplaintStatus; toStatus: ComplaintStatus; targetBranchId?: string | null; targetDepartmentId?: string | null; ownerId?: string | null; resolvedAt?: Date | null; closedAt?: Date | null };
 
 export type CreateComplaintStatusHistoryData = {
   complaintId: string;
@@ -93,6 +80,7 @@ export type ComplaintReportFilter = ListComplaintQueueFilter & {
   customer?: string | null;
   status?: ComplaintStatus | null;
   categoryId?: string | null;
+  departmentId?: string | null;
   severity?: ComplaintSeverity | null;
   ownerId?: string | null;
 };
@@ -235,9 +223,18 @@ export class ComplaintsRepository {
     client: ComplaintTransitionClient = this.prisma,
   ): Promise<ComplaintStatusRecord | null> {
     const referenceNumber = await submittedReference(data, client);
+    const updateData = {
+      status: data.toStatus,
+      ...(referenceNumber ? { referenceNumber } : {}),
+      ...(data.targetBranchId ? { branchId: data.targetBranchId } : {}),
+      ...(data.targetDepartmentId ? { departmentId: data.targetDepartmentId } : {}),
+      ...(data.ownerId ? { ownerId: data.ownerId } : {}),
+      ...(data.resolvedAt ? { resolvedAt: data.resolvedAt } : {}),
+      ...(data.closedAt ? { closedAt: data.closedAt } : {}),
+    };
     const update = await client.complaint.updateMany({
       where: { id: data.complaintId, status: data.fromStatus },
-      data: { status: data.toStatus, ...(referenceNumber ? { referenceNumber } : {}) },
+      data: updateData,
     });
 
     if (update.count === 0) {
@@ -246,11 +243,7 @@ export class ComplaintsRepository {
 
     return client.complaint.findUniqueOrThrow({
       where: { id: data.complaintId },
-      select: {
-        id: true,
-        branchId: true,
-        status: true,
-      },
+      select: { id: true, branchId: true, status: true, ownerId: true, severity: true, categoryId: true, departmentId: true },
     });
   }
 
@@ -283,6 +276,7 @@ function reportWhere(filter: ComplaintReportFilter): Prisma.ComplaintWhereInput 
     ...(filter.customer ? { customer: { OR: customerSearch(filter.customer) } } : {}),
     ...(filter.status ? { status: filter.status } : {}),
     ...(filter.categoryId ? { categoryId: filter.categoryId } : {}),
+    ...(filter.departmentId ? { departmentId: filter.departmentId } : {}),
     ...(filter.severity ? { severity: filter.severity } : {}),
     ...(filter.ownerId ? { ownerId: filter.ownerId } : {}),
     ...dateRange(filter),

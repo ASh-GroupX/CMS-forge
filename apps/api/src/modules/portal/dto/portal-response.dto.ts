@@ -1,13 +1,11 @@
 import type { ComplaintCreationResult } from '../../complaints/complaints.service.js';
-import type { PortalFollowUpResult, PortalSessionResult, PortalTrackingResult } from '../portal.service.js';
+import type { PortalFollowUpResult, PortalOtpRequestResult, PortalSessionResult, PortalTrackingResult } from '../portal.service.js';
 
 export type PortalComplaintResponseDto = {
   complaint: ComplaintCreationResult;
 };
 
-export type PortalOtpRequestResponseDto = {
-  ok: true;
-};
+export type PortalOtpRequestResponseDto = PortalOtpRequestResult;
 
 export type PortalSessionResponseDto = {
   session: PortalSessionResult;

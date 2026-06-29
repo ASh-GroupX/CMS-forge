@@ -37,6 +37,8 @@ export const portalTrackingText = {
       expired: 'Verification expired. Request a new code.',
       error: 'Tracking could not be loaded. Try again.',
       followup: 'Follow-up received.',
+      denied: 'Follow-up is not available for this complaint.',
+      empty: 'Complete verification to view customer-safe tracking updates.',
     },
     sample: {
       reference: 'CMP-2026-018',
@@ -85,6 +87,8 @@ export const portalTrackingText = {
       expired: 'انتهت صلاحية التحقق. اطلب رمزاً جديداً.',
       error: 'تعذر تحميل المتابعة. حاول مرة أخرى.',
       followup: 'تم استلام المتابعة.',
+      denied: 'لا يمكن إضافة متابعة لهذه الشكوى.',
+      empty: 'أكمل التحقق لعرض تحديثات المتابعة الآمنة للعميل.',
     },
     sample: {
       reference: 'CMP-2026-018',

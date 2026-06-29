@@ -12,10 +12,10 @@ import type { ComplaintFormOption, ComplaintFormOptions } from '../../lib/staff-
 import type { StaffReportKpis, StaffReportRow } from '../../lib/staff-reports-api';
 
 export type ReportsPreviewState = 'ready' | 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'denied' | 'conflict';
-export type ReportsFilters = { branchId: string; categoryId: string; ownerId: string };
+export type ReportsFilters = { branchId: string; categoryId: string; departmentId: string; ownerId: string };
 
 export function ReportsDashboard({
-  filters = { branchId: '', categoryId: '', ownerId: '' },
+  filters = { branchId: '', categoryId: '', departmentId: '', ownerId: '' },
   kpis,
   locale,
   options,
@@ -43,8 +43,15 @@ export function ReportsDashboard({
     [t.kpis.activeOverdue, String(kpis.activeOverdueCount)],
     [t.kpis.averageDelay, t.hours(kpis.averageDelayHours)],
     [t.kpis.promiseKept, `${kpis.customerPromiseKeptPercent}%`],
-    [t.kpis.reopened, String(kpis.reopenedCount)],
+    [t.kpis.slaBreachRate, `${kpis.slaBreachRate}%`],
+    [t.kpis.medianTat, t.hours(kpis.medianTatHours)],
+    [t.kpis.reopenRate, `${kpis.reopenRate}%`],
+    [t.kpis.reopenedEvents, String(kpis.reopenedCount)],
     [t.kpis.escalations, String(kpis.escalationCount)],
+    [t.kpis.agingZeroToOne, String(kpis.agingBuckets.zeroToOneDays)],
+    [t.kpis.agingTwoToThree, String(kpis.agingBuckets.twoToThreeDays)],
+    [t.kpis.agingFourToSeven, String(kpis.agingBuckets.fourToSevenDays)],
+    [t.kpis.agingOverSeven, String(kpis.agingBuckets.overSevenDays)],
     [t.kpis.firstResponse, t.hours(kpis.averageFirstResponseHours)],
     [t.kpis.resolution, t.hours(kpis.averageResolutionHours)],
   ] as const : null;
@@ -65,6 +72,7 @@ export function ReportsDashboard({
         ) : null}
         <form action="/reports" className="mb-3 rounded-md border border-slate-200 bg-slate-50 p-3" method="get">
           <input name="locale" type="hidden" value={locale} />
+          {filters.departmentId ? <input name="departmentId" type="hidden" value={filters.departmentId} /> : null}
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <OptionField
               choose={t.filters.allBranches}

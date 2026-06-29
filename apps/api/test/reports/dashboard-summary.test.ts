@@ -5,7 +5,7 @@ import 'reflect-metadata';
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
 import type { ExecutionContext } from '@nestjs/common';
-import { ComplaintSeverity, ComplaintStatus, RoleCode, WorkingCalendarMode } from '@prisma/client';
+import { ComplaintSeverity, ComplaintStatus, ComplaintTransitionAction, RoleCode, SlaEventType, WorkingCalendarMode } from '@prisma/client';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
 import { PermissionGuard, RbacGuard } from '../../src/core/auth.guard.ts';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
@@ -13,6 +13,7 @@ import { AppException } from '../../src/core/http-kernel.ts';
 import { ReportsController } from '../../src/modules/reports/reports.controller.ts';
 import { ReportsRepository } from '../../src/modules/reports/reports.repository.js';
 import { ReportsService } from '../../src/modules/reports/reports.service.js';
+import type { DashboardReadRows } from '../../src/modules/reports/reports.repository.js';
 import type { ReportsKpiSummary } from '../../src/modules/reports/reports.service.js';
 import type { ComplaintsService } from '../../src/modules/complaints/complaints.service.js';
 import type { SlaService } from '../../src/modules/sla/sla.service.js';
@@ -20,10 +21,10 @@ import type { SurveysService } from '../../src/modules/surveys/surveys.service.j
 
 const now = '2026-01-05T00:00:00.000Z';
 const complaints = [
-  complaint('a-overdue', 'branch-a', ComplaintStatus.IN_PROGRESS, ComplaintSeverity.CRITICAL, '2026-01-04T21:00:00.000Z', '2026-01-04T21:00:00.000Z', 'cat-powertrain', 'owner-a'),
-  complaint('a-warning', 'branch-a', ComplaintStatus.SUBMITTED, ComplaintSeverity.MEDIUM, '2026-01-04T04:30:00.000Z', '2026-01-04T04:30:00.000Z', 'cat-service', 'owner-b'),
-  complaint('a-closed', 'branch-a', ComplaintStatus.CLOSED, ComplaintSeverity.LOW, '2026-01-01T00:00:00.000Z', '2026-01-03T00:00:00.000Z', 'cat-service', 'owner-b'),
-  complaint('b-hidden', 'branch-b', ComplaintStatus.IN_PROGRESS, ComplaintSeverity.CRITICAL, '2026-01-04T20:00:00.000Z', '2026-01-04T20:00:00.000Z', 'cat-powertrain', 'owner-a'),
+  complaint('a-overdue', 'branch-a', ComplaintStatus.IN_PROGRESS, ComplaintSeverity.CRITICAL, '2026-01-04T21:00:00.000Z', '2026-01-04T21:00:00.000Z', 'cat-powertrain', 'owner-a', 'dept-service'),
+  complaint('a-warning', 'branch-a', ComplaintStatus.SUBMITTED, ComplaintSeverity.MEDIUM, '2026-01-04T04:30:00.000Z', '2026-01-04T04:30:00.000Z', 'cat-service', 'owner-b', 'dept-service'),
+  complaint('a-closed', 'branch-a', ComplaintStatus.CLOSED, ComplaintSeverity.LOW, '2026-01-01T00:00:00.000Z', '2026-01-04T12:00:00.000Z', 'cat-service', 'owner-b', 'dept-sales', '2026-01-03T00:00:00.000Z'),
+  complaint('b-hidden', 'branch-b', ComplaintStatus.IN_PROGRESS, ComplaintSeverity.CRITICAL, '2026-01-04T20:00:00.000Z', '2026-01-04T20:00:00.000Z', 'cat-powertrain', 'owner-a', 'dept-service'),
 ];
 
 test('dashboard summary counts branch-scoped allowed data', async () => {
@@ -61,6 +62,18 @@ test('filtered report applies date, branch, category, severity, and owner filter
   assert.deepEqual(rows.map((row) => row.id), ['a-warning']);
 });
 
+test('filtered report applies department filter when the report model has department data', async () => {
+  const service = reportsService();
+
+  const rows = await service.filteredReport({
+    role: RoleCode.ADMIN,
+    filterBranchId: 'branch-a',
+    departmentId: 'dept-sales',
+  });
+
+  assert.deepEqual(rows.map((row) => row.id), ['a-closed']);
+});
+
 test('filtered report denies out-of-branch rows for scoped users', async () => {
   const service = reportsService();
 
@@ -80,7 +93,12 @@ test('filtered export denies out-of-branch rows for scoped users', async () => {
 
   assert.equal(exported.rowCount, 0);
   assert.equal(exported.body.split('\n').filter(Boolean).length, 1);
-  assert.deepEqual(auditRecords[0]?.metadata, { format: 'csv', rowCount: 0, rowLimit: 1000 });
+  assert.deepEqual(auditRecords[0]?.metadata, {
+    format: 'csv',
+    rowCount: 0,
+    rowLimit: 1000,
+    filters: { filterBranchId: 'branch-b', categoryId: null, departmentId: null, severity: null, ownerId: null, dateFrom: null, dateTo: null },
+  });
 });
 
 test('reports route derives role and branch scope from the request principal', async () => {
@@ -146,12 +164,59 @@ test('reports export route keeps controller binding and preserves filters', asyn
     branchId: 'branch-a',
     filterBranchId: 'branch-a',
     categoryId: 'cat-service',
+    departmentId: null,
     ownerId: 'owner-b',
     severity: null,
     dateFrom: null,
     dateTo: null,
     format: 'csv',
   });
+});
+
+test('filtered report rows match the public ReportRow contract exactly', async () => {
+  const [row] = await reportsService().filteredReport({ role: RoleCode.ADMIN, filterBranchId: 'branch-a' });
+
+  assert.deepEqual(Object.keys(row!).sort(), ['branchId', 'categoryId', 'createdAt', 'id', 'ownerId', 'referenceNumber', 'severity', 'status', 'subject', 'updatedAt']);
+  const rowJson = JSON.stringify(row).toLowerCase();
+  for (const forbidden of ['branchname', 'ownername', 'customerphone', 'customeremail', 'vin', 'plate', 'dms', 'audit', 'provider', 'portal', 'secret', 'token', 'credential']) {
+    assert.equal(rowJson.includes(forbidden), false);
+  }
+});
+
+test('report export audit metadata uses only the allowlisted filter snapshot', async () => {
+  const auditRecords: AuditRecordInput[] = [];
+  const service = reportsService({ record: async (input) => auditRecords.push(input) } as AuditService);
+
+  await service.exportReport({
+    role: RoleCode.ADMIN,
+    filterBranchId: 'branch-a',
+    categoryId: 'cat-service',
+    departmentId: 'dept-service',
+    severity: ComplaintSeverity.MEDIUM,
+    ownerId: 'owner-b',
+    dateFrom: '2026-01-04T00:00:00.000Z',
+    dateTo: '2026-01-05T00:00:00.000Z',
+    format: 'csv',
+  });
+
+  assert.deepEqual(auditRecords[0]?.metadata, {
+    format: 'csv',
+    rowCount: 1,
+    rowLimit: 1000,
+    filters: {
+      filterBranchId: 'branch-a',
+      categoryId: 'cat-service',
+      departmentId: 'dept-service',
+      severity: ComplaintSeverity.MEDIUM,
+      ownerId: 'owner-b',
+      dateFrom: '2026-01-04T00:00:00.000Z',
+      dateTo: '2026-01-05T00:00:00.000Z',
+    },
+  });
+  const auditJson = JSON.stringify(auditRecords).toLowerCase();
+  for (const forbidden of ['password', 'otp', 'token', 'credential', 'secret', 'rawurl', 'body']) {
+    assert.equal(auditJson.includes(forbidden), false);
+  }
 });
 
 test('report routes use permission guard and keep branch scope guard', () => {
@@ -244,7 +309,12 @@ test('report export is row-limited and writes REPORT audit', async () => {
   assert.equal(exported.body.split('\n').filter(Boolean).length, 2);
   assert.equal(auditRecords[0]?.eventType, 'REPORT');
   assert.equal(auditRecords[0]?.action, 'report_exported');
-  assert.deepEqual(auditRecords[0]?.metadata, { format: 'csv', rowCount: 1, rowLimit: 1 });
+  assert.deepEqual(auditRecords[0]?.metadata, {
+    format: 'csv',
+    rowCount: 1,
+    rowLimit: 1,
+    filters: { filterBranchId: null, categoryId: null, departmentId: null, severity: null, ownerId: null, dateFrom: null, dateTo: null },
+  });
 });
 
 function reportsService(auditService?: AuditService): ReportsService {
@@ -257,6 +327,7 @@ function reportsService(auditService?: AuditService): ReportsService {
       dateFrom?: Date | string | null;
       dateTo?: Date | string | null;
       categoryId?: string | null;
+      departmentId?: string | null;
       severity?: ComplaintSeverity | null;
       ownerId?: string | null;
     } = {}) {
@@ -264,11 +335,12 @@ function reportsService(auditService?: AuditService): ReportsService {
         const createdAt = new Date(item.createdAt).getTime();
         return (!filter.branchId || item.branchId === filter.branchId)
           && (!filter.categoryId || item.categoryId === filter.categoryId)
+          && (!filter.departmentId || item.departmentId === filter.departmentId)
           && (!filter.severity || item.severity === filter.severity)
           && (!filter.ownerId || item.ownerId === filter.ownerId)
           && (!filter.dateFrom || createdAt >= new Date(filter.dateFrom).getTime())
           && (!filter.dateTo || createdAt <= new Date(filter.dateTo).getTime());
-      });
+      }).map(reportRow);
     },
   } as ComplaintsService;
 
@@ -293,7 +365,23 @@ function reportsService(auditService?: AuditService): ReportsService {
     },
   } as SlaService;
 
-  return new ReportsService(new ReportsRepository(), complaintsService, slaService, {} as SurveysService, auditService);
+  const repository = {
+    async listDashboardRows(branchId: string | null): Promise<DashboardReadRows> {
+      return complaints.filter((item) => !branchId || item.branchId === branchId).map((item) => ({
+        id: item.id,
+        branchId: item.branchId,
+        status: item.status,
+        severity: item.severity,
+        createdAt: new Date(item.createdAt),
+        updatedAt: new Date(item.updatedAt),
+        closedAt: item.closedAt ? new Date(item.closedAt) : null,
+        statusHistory: item.closedAt ? [statusEvent(item.id, ComplaintStatus.CLOSED, ComplaintTransitionAction.CLOSE, item.closedAt)] : [],
+        slaEvents: item.id === 'a-overdue' ? [slaEvent(item.id, SlaEventType.BREACH, '2026-01-04T23:30:00.000Z')] : [],
+      }));
+    },
+  } as ReportsRepository;
+
+  return new ReportsService(repository, complaintsService, slaService, {} as SurveysService, auditService);
 }
 
 function complaint(
@@ -305,6 +393,8 @@ function complaint(
   updatedAt = createdAt,
   categoryId = 'cat-service',
   ownerId: string | null = null,
+  departmentId: string | null = null,
+  closedAt: string | null = null,
 ) {
   return {
     id,
@@ -313,11 +403,36 @@ function complaint(
     status,
     severity,
     categoryId,
+    departmentId,
     subject: id,
     ownerId,
     createdAt,
     updatedAt,
+    closedAt,
   };
+}
+
+function reportRow(item: ReturnType<typeof complaint>) {
+  return {
+    id: item.id,
+    referenceNumber: item.referenceNumber,
+    branchId: item.branchId,
+    categoryId: item.categoryId,
+    status: item.status,
+    severity: item.severity,
+    subject: item.subject,
+    ownerId: item.ownerId,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  };
+}
+
+function statusEvent(recordId: string, toStatus: ComplaintStatus, action: ComplaintTransitionAction | null, createdAt: string) {
+  return { recordId, toStatus, action, createdAt: new Date(createdAt) };
+}
+
+function slaEvent(recordId: string, type: SlaEventType, occurredAt: string) {
+  return { recordId, type, occurredAt: new Date(occurredAt) };
 }
 
 const branchManager: StaffPrincipal = {
@@ -340,7 +455,11 @@ const kpiSummary = {
   averageDelayHours: 0,
   customerPromiseKeptPercent: 100,
   reopenedCount: 0,
+  reopenRate: 0,
   escalationCount: 0,
+  slaBreachRate: 0,
+  medianTatHours: 0,
+  agingBuckets: { zeroToOneDays: 0, twoToThreeDays: 0, fourToSevenDays: 0, overSevenDays: 0 },
   averageFirstResponseHours: 1,
   averageResolutionHours: 2,
 } satisfies ReportsKpiSummary;

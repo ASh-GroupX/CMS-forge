@@ -1,11 +1,25 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
+import 'reflect-metadata';
+import type { ExecutionContext } from '@nestjs/common';
+import { GUARDS_METADATA, MODULE_METADATA } from '@nestjs/common/constants';
+import { Reflector } from '@nestjs/core';
 import { ComplaintSeverity, ComplaintStatus, SlaEventType, SlaStage, WorkingCalendarMode } from '@prisma/client';
+import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
+import { PermissionGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../src/core/auth.guard.ts';
+import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
+import { CsrfGuard } from '../../src/core/csrf.guard.ts';
 import type { PrismaService } from '../../src/core/http-kernel.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
+import { AuthModule } from '../../src/modules/auth/auth.module.ts';
 import { NotificationsService } from '../../src/modules/notifications/notifications.service.ts';
+import { NotificationsModule } from '../../src/modules/notifications/notifications.module.ts';
+import { SlaController } from '../../src/modules/sla/sla.controller.ts';
+import { parseUpdateSlaEscalationConfigBody } from '../../src/modules/sla/dto/update-sla.dto.ts';
+import { SlaModule } from '../../src/modules/sla/sla.module.ts';
 import { SlaRepository } from '../../src/modules/sla/sla.repository.ts';
-import type { SlaDeadlineBreachRecord, SlaDeadlineWarningRecord, SlaPolicyRecord } from '../../src/modules/sla/sla.repository.ts';
+import type { SlaDeadlineBreachRecord, SlaDeadlineWarningRecord, SlaPolicyEscalationRecord, SlaPolicyRecord } from '../../src/modules/sla/sla.repository.ts';
 import { DEFAULT_SLA_DURATION_MINUTES, SlaService } from '../../src/modules/sla/sla.service.ts';
 
 const service = new SlaService({} as SlaRepository);
@@ -110,6 +124,11 @@ test('SLA repository reads only active policies by severity and stage', async ()
       warningPercent: true,
       branchTimezone: true,
       workingCalendarMode: true,
+      escalationLevel1: true,
+      escalationLevel2: true,
+      escalationLevel3: true,
+      escalationLevel2AfterBreachMinutes: true,
+      escalationLevel3AfterBreachMinutes: true,
       isActive: true,
       updatedAt: true,
     },
@@ -144,6 +163,8 @@ test('SLA resolver uses global fallback and deterministic scoped override', asyn
   });
   assert.equal(scoped.id, 'branch-category');
   assert.equal(scoped.durationMinutes, 480);
+  assert.equal(scoped.escalationLevel2AfterBreachMinutes, null);
+  assert.equal(scoped.escalationLevel3AfterBreachMinutes, null);
 });
 
 test('SLA resolver ignores inactive policies and fails closed when none match', async () => {
@@ -218,6 +239,65 @@ test('SLA repository upserts deadline events by deterministic idempotency key', 
   });
 });
 
+test('SLA repository upserts lifecycle events by deterministic idempotency key', async () => {
+  const calls: unknown[] = [];
+  const occurredAt = new Date('2026-06-18T17:05:00.000Z');
+  const repository = new SlaRepository({
+    slaEvent: {
+      upsert: async (query: unknown) => {
+        calls.push(query);
+        return {
+          complaintId: 'cmp_1',
+          policyId: null,
+          type: SlaEventType.PAUSED,
+          stage: SlaStage.INVESTIGATION,
+          dueAt: null,
+          occurredAt,
+          idempotencyKey: 'life_1',
+        };
+      },
+    },
+  } as PrismaService);
+
+  assert.deepEqual(await repository.createLifecycleEvent({
+    complaintId: 'cmp_1',
+    type: SlaEventType.PAUSED,
+    stage: SlaStage.INVESTIGATION,
+    occurredAt,
+    idempotencyKey: 'life_1',
+  }), {
+    complaintId: 'cmp_1',
+    policyId: null,
+    type: SlaEventType.PAUSED,
+    stage: SlaStage.INVESTIGATION,
+    dueAt: null,
+    occurredAt,
+    idempotencyKey: 'life_1',
+  });
+  assert.deepEqual(calls[0], {
+    where: { idempotencyKey: 'life_1' },
+    update: {},
+    create: {
+      complaintId: 'cmp_1',
+      policyId: null,
+      type: SlaEventType.PAUSED,
+      stage: SlaStage.INVESTIGATION,
+      dueAt: null,
+      occurredAt,
+      idempotencyKey: 'life_1',
+    },
+    select: {
+      complaintId: true,
+      policyId: true,
+      type: true,
+      stage: true,
+      dueAt: true,
+      occurredAt: true,
+      idempotencyKey: true,
+    },
+  });
+});
+
 test('SLA repository reads deadline events and creates warning and breach events idempotently', async () => {
   const calls: unknown[] = [];
   const dueAt = new Date('2026-06-18T17:00:00.000Z');
@@ -253,14 +333,21 @@ test('SLA repository reads deadline events and creates warning and breach events
 
   assert.deepEqual(calls[0], {
     findMany: {
-      where: { type: SlaEventType.DEADLINE_SET, dueAt: { not: null }, policy: { isNot: null } },
+      where: {
+        type: SlaEventType.DEADLINE_SET,
+        dueAt: { not: null },
+        policy: { isNot: null },
+        complaint: { status: { notIn: [ComplaintStatus.CLOSED, ComplaintStatus.REJECTED] } },
+      },
       select: {
         complaintId: true,
         policyId: true,
         stage: true,
         dueAt: true,
+        occurredAt: true,
         idempotencyKey: true,
         policy: { select: { durationMinutes: true, warningPercent: true } },
+        complaint: { select: { status: true, ownerId: true, slaEvents: { where: { type: SlaEventType.PAUSED }, select: { type: true, stage: true, occurredAt: true } } } },
       },
     },
   });
@@ -289,8 +376,18 @@ test('SLA repository reads deadline events and creates warning and breach events
         policyId: true,
         stage: true,
         dueAt: true,
+        occurredAt: true,
         idempotencyKey: true,
-        complaint: { select: { status: true } },
+        policy: {
+          select: {
+            escalationLevel1: true,
+            escalationLevel2: true,
+            escalationLevel3: true,
+            escalationLevel2AfterBreachMinutes: true,
+            escalationLevel3AfterBreachMinutes: true,
+          },
+        },
+        complaint: { select: { status: true, slaEvents: { where: { type: SlaEventType.PAUSED }, select: { type: true, stage: true, occurredAt: true } } } },
       },
     },
   });
@@ -342,6 +439,42 @@ test('SLA service records deadline events idempotently', async () => {
   assert.equal(events.size, 1);
 });
 
+test('SLA service records lifecycle events idempotently', async () => {
+  const occurredAt = new Date('2026-06-18T17:05:00.000Z');
+  const events = new Map<string, unknown>();
+  const recorder = new SlaService({
+    createLifecycleEvent: async (event) => {
+      const existing = events.get(event.idempotencyKey);
+      if (existing) return existing as never;
+      const created = { ...event, policyId: null, dueAt: null };
+      events.set(event.idempotencyKey, created);
+      return created as never;
+    },
+  } as SlaRepository);
+
+  const input = {
+    complaintId: 'cmp_1',
+    stage: SlaStage.INVESTIGATION,
+    type: SlaEventType.PAUSED,
+    occurredAt,
+  };
+
+  const first = await recorder.recordLifecycleEvent(input);
+  const second = await recorder.recordLifecycleEvent(input);
+
+  assert.deepEqual(first, {
+    complaintId: 'cmp_1',
+    policyId: null,
+    type: SlaEventType.PAUSED,
+    stage: SlaStage.INVESTIGATION,
+    dueAt: null,
+    occurredAt: '2026-06-18T17:05:00.000Z',
+    idempotencyKey: 'sla:lifecycle:cmp_1:INVESTIGATION:PAUSED:2026-06-18T17:05:00.000Z',
+  });
+  assert.deepEqual(second, first);
+  assert.equal(events.size, 1);
+});
+
 test('SLA service does not create a deadline event when policy is missing', async () => {
   let createCalled = false;
   const recorder = new SlaService({
@@ -362,6 +495,143 @@ test('SLA service does not create a deadline event when policy is missing', asyn
     (error: unknown) => error instanceof AppException && error.code === 'SLA_POLICY_MISSING',
   );
   assert.equal(createCalled, false);
+});
+
+test('SLA policy escalation config persists and audits in the same transaction', async () => {
+  const txClient = {};
+  const audits: Array<{ input: AuditRecordInput; client: unknown }> = [];
+  const updates: unknown[] = [];
+  const serviceWithAudit = new SlaService({
+    transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
+    updatePolicyEscalationConfig: async (id, data, client) => {
+      assert.equal(id, 'policy_1');
+      assert.equal(client, txClient);
+      updates.push(data);
+      return policyEscalationRecord({ ...data });
+    },
+  } as unknown as SlaRepository, undefined, { record: async (input, client) => audits.push({ input, client }) } as unknown as AuditService);
+
+  const result = await serviceWithAudit.updatePolicyEscalationConfig(' policy_1 ', parseUpdateSlaEscalationConfigBody({
+    escalationLevel1: ' branch-manager ',
+    escalationLevel2: 'service-manager',
+    escalationLevel3: null,
+    escalationLevel2AfterBreachMinutes: 30,
+    escalationLevel3AfterBreachMinutes: null,
+  }), { actorId: 'usr_admin', correlationId: 'req_sla', ipAddress: '203.0.113.12', userAgent: 'node:test' });
+
+  assert.equal(result.escalationLevel1, 'branch-manager');
+  assert.deepEqual(updates[0], {
+    escalationLevel1: 'branch-manager',
+    escalationLevel2: 'service-manager',
+    escalationLevel3: null,
+    escalationLevel2AfterBreachMinutes: 30,
+    escalationLevel3AfterBreachMinutes: null,
+  });
+  assert.equal(audits[0]?.client, txClient);
+  assert.deepEqual(audits[0]?.input, {
+    eventType: 'CONFIG',
+    action: 'sla_policy_escalation_updated',
+    actorId: 'usr_admin',
+    branchId: null,
+    targetType: 'sla_policy',
+    targetId: 'policy_1',
+    correlationId: 'req_sla',
+    ipAddress: '203.0.113.12',
+    userAgent: 'node:test',
+    metadata: { changedFields: ['escalationLevel1', 'escalationLevel2', 'escalationLevel3', 'escalationLevel2AfterBreachMinutes', 'escalationLevel3AfterBreachMinutes'] },
+  });
+  assert.equal(JSON.stringify(audits[0]).includes('branch-manager'), false);
+  assert.equal(JSON.stringify(audits[0]).includes('service-manager'), false);
+});
+
+test('SLA policy escalation config validation rejects unsafe timing shapes', () => {
+  assertValidationFields({ escalationLevel1: 'l1', escalationLevel2: 'l2' }, ['escalationLevel2AfterBreachMinutes']);
+  assertValidationFields({ escalationLevel1: 'l1', escalationLevel2AfterBreachMinutes: 10 }, ['escalationLevel2']);
+  assertValidationFields({ escalationLevel1: 'l1', escalationLevel3: 'l3' }, ['escalationLevel3AfterBreachMinutes']);
+  assertValidationFields({ escalationLevel1: 'l1', escalationLevel2: 'l2', escalationLevel3: 'l3', escalationLevel2AfterBreachMinutes: 20, escalationLevel3AfterBreachMinutes: 20 }, ['escalationLevel3AfterBreachMinutes']);
+  assertValidationFields({ escalationLevel1: ' ', escalationLevel2AfterBreachMinutes: 0 }, ['escalationLevel1', 'escalationLevel2AfterBreachMinutes']);
+});
+
+test('SLA policy escalation route requires SLA_MANAGE and CSRF', async () => {
+  assert.deepEqual(guardNames('updatePolicyEscalationConfig'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+
+  const auditRecords: AuditRecordInput[] = [];
+  const guard = new PermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
+
+  assert.equal(await guard.canActivate(context(request(['SLA_MANAGE']), 'updatePolicyEscalationConfig')), true);
+  await assert.rejects(
+    guard.canActivate(context(request([], '/sla/policies/policy_1/escalation?sessionToken=leaked&password=leaked'), 'updatePolicyEscalationConfig')),
+    (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
+  assert.equal(auditRecords[0]?.eventType, 'SECURITY');
+  assert.equal(auditRecords[0]?.action, 'permission_forbidden');
+  assert.deepEqual(auditRecords[0]?.metadata?.requiredPermissions, ['SLA_MANAGE']);
+  assertSafePermissionAudit(auditRecords);
+});
+
+test('SLA module and OpenAPI document policy escalation config route', () => {
+  const imports = Reflect.getMetadata(MODULE_METADATA.IMPORTS, SlaModule) as unknown[];
+  const providers = Reflect.getMetadata(MODULE_METADATA.PROVIDERS, SlaModule) as unknown[];
+  const openapi = JSON.parse(readFileSync('packages/contracts/openapi.json', 'utf8'));
+
+  assert.ok(imports.includes(AuthModule));
+  assert.ok(imports.includes(NotificationsModule));
+  assert.ok(providers.includes(SessionAuthGuard));
+  assert.ok(providers.includes(PermissionGuard));
+  assert.ok(providers.includes(CsrfGuard));
+  assert.equal(providers.some((provider) => providerObject(provider)?.provide === SESSION_AUTH_SERVICE), true);
+  assert.ok(openapi.paths['/sla/policies/{id}/escalation']?.patch);
+  assert.ok(openapi.components.schemas.SlaPolicyEscalationConfigRequest);
+  assert.ok(openapi.components.schemas.SlaPolicyWriteResponse);
+});
+
+test('SLA warning job skips terminal complaint status without writing', async () => {
+  let createCalled = false;
+  const runner = new SlaService({
+    findDeadlineEventsForWarning: async () => [deadlineWarning({ complaint: { status: ComplaintStatus.REJECTED, ownerId: null, slaEvents: [] } })],
+    createWarningEvent: async () => {
+      createCalled = true;
+      throw new Error('should not create warning');
+    },
+  } as unknown as SlaRepository);
+
+  assert.deepEqual(await runner.runWarningJob('2026-06-18T17:00:00.000Z'), {
+    scanned: 1,
+    created: 0,
+    skipped: 1,
+    warningIdempotencyKeys: [],
+  });
+  assert.equal(createCalled, false);
+});
+
+test('SLA warning job skips deadlines paused after creation and allows newer deadlines', async () => {
+  const warnings: unknown[] = [];
+  const runner = new SlaService({
+    findDeadlineEventsForWarning: async () => [
+      deadlineWarning({
+        idempotencyKey: 'deadline_paused',
+        occurredAt: '2026-06-18T09:00:00.000Z',
+        complaint: { status: ComplaintStatus.IN_PROGRESS, ownerId: null, slaEvents: [pauseEvent('2026-06-18T10:00:00.000Z')] },
+      }),
+      deadlineWarning({
+        idempotencyKey: 'deadline_after_reopen',
+        occurredAt: '2026-06-18T11:00:00.000Z',
+        complaint: { status: ComplaintStatus.IN_PROGRESS, ownerId: null, slaEvents: [pauseEvent('2026-06-18T10:00:00.000Z')] },
+      }),
+    ],
+    createWarningEvent: async (event) => {
+      warnings.push(event);
+      return true;
+    },
+  } as unknown as SlaRepository);
+
+  assert.deepEqual(await runner.runWarningJob('2026-06-18T17:00:00.000Z'), {
+    scanned: 2,
+    created: 1,
+    skipped: 1,
+    warningIdempotencyKeys: ['sla:warning:deadline_after_reopen'],
+  });
+  assert.equal(warnings.length, 1);
 });
 
 test('SLA warning job filters due deadlines and records warnings idempotently', async () => {
@@ -396,6 +666,96 @@ test('SLA warning job filters due deadlines and records warnings idempotently', 
     warningIdempotencyKeys: [],
   });
   assert.equal(warnings.size, 1);
+});
+
+test('SLA warning job queues one owner notification only for a new warning event', async () => {
+  const warnings = new Map<string, { complaintId: string; policyId: string | null; stage: SlaStage; dueAt: Date; idempotencyKey: string }>();
+  const notifications: unknown[] = [];
+  const runner = new SlaService({
+    findDeadlineEventsForWarning: async () => [deadlineWarning({ idempotencyKey: 'deadline_due', complaint: { status: ComplaintStatus.IN_PROGRESS, ownerId: 'usr_owner', slaEvents: [] } })],
+    createWarningEvent: async (event) => {
+      const existing = warnings.get(event.idempotencyKey);
+      if (existing) return false;
+      warnings.set(event.idempotencyKey, event);
+      return true;
+    },
+  } as SlaRepository, {
+    queueInternal: async (input) => {
+      notifications.push(input);
+      return {} as never;
+    },
+  } as NotificationsService);
+
+  assert.deepEqual(await runner.runWarningJob('2026-06-18T15:24:00.000Z'), {
+    scanned: 1,
+    created: 1,
+    skipped: 0,
+    warningIdempotencyKeys: ['sla:warning:deadline_due'],
+  });
+  assert.deepEqual(await runner.runWarningJob('2026-06-18T15:24:00.000Z'), {
+    scanned: 1,
+    created: 0,
+    skipped: 1,
+    warningIdempotencyKeys: [],
+  });
+  assert.equal(warnings.size, 1);
+  assert.deepEqual(notifications, [{
+    complaintId: 'cmp_1',
+    recipientUserId: 'usr_owner',
+    templateCode: 'sla.warning.internal',
+    locale: 'en',
+    idempotencyKey: 'sla:warning:deadline_due',
+    payload: {
+      complaintId: 'cmp_1',
+      policyId: 'policy_1',
+      stage: SlaStage.INVESTIGATION,
+      dueAt: '2026-06-18T17:00:00.000Z',
+      warningIdempotencyKey: 'sla:warning:deadline_due',
+    },
+  }]);
+});
+
+test('SLA warning job creates missing-owner warnings without notification', async () => {
+  const warnings: unknown[] = [];
+  const runner = new SlaService({
+    findDeadlineEventsForWarning: async () => [deadlineWarning({ idempotencyKey: 'deadline_no_owner', complaint: { status: ComplaintStatus.IN_PROGRESS, ownerId: null, slaEvents: [] } })],
+    createWarningEvent: async (event) => {
+      warnings.push(event);
+      return true;
+    },
+  } as unknown as SlaRepository, throwingNotifications());
+
+  assert.deepEqual(await runner.runWarningJob('2026-06-18T15:24:00.000Z'), {
+    scanned: 1,
+    created: 1,
+    skipped: 0,
+    warningIdempotencyKeys: ['sla:warning:deadline_no_owner'],
+  });
+  assert.equal(warnings.length, 1);
+});
+
+test('SLA warning job does not notify skipped warning paths', async () => {
+  let createCalled = false;
+  const runner = new SlaService({
+    findDeadlineEventsForWarning: async () => [
+      deadlineWarning({ idempotencyKey: 'terminal', complaint: { status: ComplaintStatus.CLOSED, ownerId: 'usr_owner', slaEvents: [] } }),
+      deadlineWarning({ idempotencyKey: 'paused', complaint: { status: ComplaintStatus.IN_PROGRESS, ownerId: 'usr_owner', slaEvents: [pauseEvent('2026-06-18T10:00:00.000Z')] } }),
+      deadlineWarning({ idempotencyKey: 'future', dueAt: '2026-06-18T18:00:00.000Z', complaint: { status: ComplaintStatus.IN_PROGRESS, ownerId: 'usr_owner', slaEvents: [] } }),
+      deadlineWarning({ idempotencyKey: 'bad_policy', policy: { durationMinutes: 480, warningPercent: 101 }, complaint: { status: ComplaintStatus.IN_PROGRESS, ownerId: 'usr_owner', slaEvents: [] } }),
+    ],
+    createWarningEvent: async () => {
+      createCalled = true;
+      throw new Error('should not create warning');
+    },
+  } as unknown as SlaRepository, throwingNotifications());
+
+  assert.deepEqual(await runner.runWarningJob('2026-06-18T15:24:00.000Z'), {
+    scanned: 4,
+    created: 0,
+    skipped: 4,
+    warningIdempotencyKeys: [],
+  });
+  assert.equal(createCalled, false);
 });
 
 test('SLA warning job skips invalid stored policy values', async () => {
@@ -441,11 +801,11 @@ test('SLA warning job is a no-op when nothing is due', async () => {
   assert.equal(createCalled, false);
 });
 
-test('SLA breach job creates one reportable breach and skips duplicate retry', async () => {
+test('SLA breach job queues one configured escalation notification only for a new breach event', async () => {
   const breaches = new Map<string, { complaintId: string; policyId: string | null; stage: SlaStage; dueAt: Date; idempotencyKey: string }>();
   const notifications: unknown[] = [];
   const runner = new SlaService({
-    findDeadlineEventsForBreach: async () => [deadlineBreach({ idempotencyKey: 'deadline_due' })],
+    findDeadlineEventsForBreach: async () => [deadlineBreach({ idempotencyKey: 'deadline_due', policy: policyEscalation() })],
     createBreachEvent: async (event) => {
       const existing = breaches.get(event.idempotencyKey);
       if (existing) return false;
@@ -476,14 +836,201 @@ test('SLA breach job creates one reportable breach and skips duplicate retry', a
     complaintId: 'cmp_1',
     templateCode: 'sla.breach.internal',
     locale: 'en',
+    idempotencyKey: 'sla:breach:deadline_due',
     payload: {
       complaintId: 'cmp_1',
       policyId: 'policy_1',
       stage: SlaStage.INVESTIGATION,
       dueAt: '2026-06-18T17:00:00.000Z',
       breachIdempotencyKey: 'sla:breach:deadline_due',
+      escalationLevel: 'branch-manager',
     },
   }]);
+});
+
+test('SLA escalation job queues one level2 notification when after-breach delay is due', async () => {
+  const notifications: unknown[] = [];
+  const runner = new SlaService({
+    findBreachEventsForEscalation: async () => [deadlineBreach({
+      idempotencyKey: 'sla:breach:deadline_due',
+      occurredAt: '2026-06-18T17:00:00.000Z',
+      policy: policyEscalation({ escalationLevel2: 'service-manager', escalationLevel2AfterBreachMinutes: 30 }),
+    })],
+  } as unknown as SlaRepository, queueOnceNotifications(notifications));
+
+  assert.deepEqual(await runner.runEscalationJob('2026-06-18T17:30:00.000Z'), {
+    scanned: 1,
+    queued: 1,
+    skipped: 0,
+    escalationIdempotencyKeys: ['sla:escalation:deadline_due:LEVEL2'],
+  });
+  assert.deepEqual(notifications, [{
+    complaintId: 'cmp_1',
+    templateCode: 'sla.breach.internal',
+    locale: 'en',
+    idempotencyKey: 'sla:escalation:deadline_due:LEVEL2',
+    payload: {
+      complaintId: 'cmp_1',
+      policyId: 'policy_1',
+      stage: SlaStage.INVESTIGATION,
+      dueAt: '2026-06-18T17:00:00.000Z',
+      breachIdempotencyKey: 'sla:breach:deadline_due',
+      escalationLevel: 'service-manager',
+      escalationStep: 'LEVEL2',
+      escalationIdempotencyKey: 'sla:escalation:deadline_due:LEVEL2',
+    },
+  }]);
+});
+
+test('SLA escalation job queues one level3 notification when after-breach delay is due', async () => {
+  const notifications: unknown[] = [];
+  const runner = new SlaService({
+    findBreachEventsForEscalation: async () => [deadlineBreach({
+      idempotencyKey: 'sla:breach:deadline_due',
+      occurredAt: '2026-06-18T17:00:00.000Z',
+      policy: policyEscalation({ escalationLevel3: 'general-manager', escalationLevel3AfterBreachMinutes: 90 }),
+    })],
+  } as unknown as SlaRepository, queueOnceNotifications(notifications));
+
+  assert.deepEqual(await runner.runEscalationJob('2026-06-18T18:30:00.000Z'), {
+    scanned: 1,
+    queued: 1,
+    skipped: 0,
+    escalationIdempotencyKeys: ['sla:escalation:deadline_due:LEVEL3'],
+  });
+  assert.equal(notifications.length, 1);
+  assert.deepEqual(notifications[0], {
+    complaintId: 'cmp_1',
+    templateCode: 'sla.breach.internal',
+    locale: 'en',
+    idempotencyKey: 'sla:escalation:deadline_due:LEVEL3',
+    payload: {
+      complaintId: 'cmp_1',
+      policyId: 'policy_1',
+      stage: SlaStage.INVESTIGATION,
+      dueAt: '2026-06-18T17:00:00.000Z',
+      breachIdempotencyKey: 'sla:breach:deadline_due',
+      escalationLevel: 'general-manager',
+      escalationStep: 'LEVEL3',
+      escalationIdempotencyKey: 'sla:escalation:deadline_due:LEVEL3',
+    },
+  });
+});
+
+test('SLA escalation job duplicate retry creates no duplicate notification row', async () => {
+  const notifications: unknown[] = [];
+  const runner = new SlaService({
+    findBreachEventsForEscalation: async () => [deadlineBreach({
+      idempotencyKey: 'sla:breach:deadline_due',
+      occurredAt: '2026-06-18T17:00:00.000Z',
+      policy: policyEscalation({ escalationLevel2: 'service-manager', escalationLevel2AfterBreachMinutes: 30 }),
+    })],
+  } as unknown as SlaRepository, queueOnceNotifications(notifications));
+
+  await runner.runEscalationJob('2026-06-18T17:30:00.000Z');
+  await runner.runEscalationJob('2026-06-18T17:30:00.000Z');
+
+  assert.equal(notifications.length, 1);
+});
+
+test('SLA escalation job skips missing route token and missing delay', async () => {
+  const runner = new SlaService({
+    findBreachEventsForEscalation: async () => [
+      deadlineBreach({
+        idempotencyKey: 'sla:breach:missing_route',
+        occurredAt: '2026-06-18T17:00:00.000Z',
+        policy: policyEscalation({ escalationLevel2: ' ', escalationLevel2AfterBreachMinutes: 30 }),
+      }),
+      deadlineBreach({
+        idempotencyKey: 'sla:breach:missing_delay',
+        occurredAt: '2026-06-18T17:00:00.000Z',
+        policy: policyEscalation({ escalationLevel2: 'service-manager', escalationLevel2AfterBreachMinutes: null }),
+      }),
+    ],
+  } as unknown as SlaRepository, throwingNotifications());
+
+  assert.deepEqual(await runner.runEscalationJob('2026-06-18T17:30:00.000Z'), {
+    scanned: 2,
+    queued: 0,
+    skipped: 2,
+    escalationIdempotencyKeys: [],
+  });
+});
+
+test('SLA escalation job skips terminal paused and future paths', async () => {
+  const runner = new SlaService({
+    findBreachEventsForEscalation: async () => [
+      deadlineBreach({
+        idempotencyKey: 'sla:breach:terminal',
+        occurredAt: '2026-06-18T17:00:00.000Z',
+        complaint: { status: ComplaintStatus.CLOSED, slaEvents: [] },
+        policy: policyEscalation({ escalationLevel2: 'service-manager', escalationLevel2AfterBreachMinutes: 30 }),
+      }),
+      deadlineBreach({
+        idempotencyKey: 'sla:breach:paused',
+        occurredAt: '2026-06-18T17:00:00.000Z',
+        complaint: { status: ComplaintStatus.IN_PROGRESS, slaEvents: [pauseEvent('2026-06-18T17:01:00.000Z')] },
+        policy: policyEscalation({ escalationLevel2: 'service-manager', escalationLevel2AfterBreachMinutes: 30 }),
+      }),
+      deadlineBreach({
+        idempotencyKey: 'sla:breach:future',
+        occurredAt: '2026-06-18T17:00:00.000Z',
+        policy: policyEscalation({ escalationLevel2: 'service-manager', escalationLevel2AfterBreachMinutes: 31 }),
+      }),
+    ],
+  } as unknown as SlaRepository, throwingNotifications());
+
+  assert.deepEqual(await runner.runEscalationJob('2026-06-18T17:30:00.000Z'), {
+    scanned: 3,
+    queued: 0,
+    skipped: 3,
+    escalationIdempotencyKeys: [],
+  });
+});
+
+test('SLA breach job creates missing-escalation breaches without notification', async () => {
+  const breaches: unknown[] = [];
+  const runner = new SlaService({
+    findDeadlineEventsForBreach: async () => [
+      deadlineBreach({ idempotencyKey: 'deadline_no_policy', policy: null }),
+      deadlineBreach({ idempotencyKey: 'deadline_no_route', policy: policyEscalation({ escalationLevel1: '' }) }),
+    ],
+    createBreachEvent: async (event) => {
+      breaches.push(event);
+      return true;
+    },
+  } as unknown as SlaRepository, throwingNotifications());
+
+  assert.deepEqual(await runner.runBreachJob('2026-06-18T17:00:00.000Z'), {
+    scanned: 2,
+    created: 2,
+    skipped: 0,
+    breachIdempotencyKeys: ['sla:breach:deadline_no_policy', 'sla:breach:deadline_no_route'],
+  });
+  assert.equal(breaches.length, 2);
+});
+
+test('SLA breach job does not notify skipped breach paths', async () => {
+  let createCalled = false;
+  const runner = new SlaService({
+    findDeadlineEventsForBreach: async () => [
+      deadlineBreach({ idempotencyKey: 'future', dueAt: '2026-06-18T17:00:01.000Z', policy: policyEscalation() }),
+      deadlineBreach({ idempotencyKey: 'terminal', complaint: { status: ComplaintStatus.CLOSED, slaEvents: [] }, policy: policyEscalation() }),
+      deadlineBreach({ idempotencyKey: 'paused', complaint: { status: ComplaintStatus.IN_PROGRESS, slaEvents: [pauseEvent('2026-06-18T10:00:00.000Z')] }, policy: policyEscalation() }),
+    ],
+    createBreachEvent: async () => {
+      createCalled = true;
+      throw new Error('should not create breach');
+    },
+  } as unknown as SlaRepository, throwingNotifications());
+
+  assert.deepEqual(await runner.runBreachJob('2026-06-18T17:00:00.000Z'), {
+    scanned: 3,
+    created: 0,
+    skipped: 3,
+    breachIdempotencyKeys: [],
+  });
+  assert.equal(createCalled, false);
 });
 
 test('SLA breach job skips future deadlines without writing', async () => {
@@ -524,6 +1071,28 @@ test('SLA breach job skips terminal complaint status without writing', async () 
   assert.equal(createCalled, false);
 });
 
+test('SLA breach job skips deadlines paused after creation without writing', async () => {
+  let createCalled = false;
+  const runner = new SlaService({
+    findDeadlineEventsForBreach: async () => [deadlineBreach({
+      occurredAt: '2026-06-18T09:00:00.000Z',
+      complaint: { status: ComplaintStatus.IN_PROGRESS, slaEvents: [pauseEvent('2026-06-18T10:00:00.000Z')] },
+    })],
+    createBreachEvent: async () => {
+      createCalled = true;
+      throw new Error('should not create breach');
+    },
+  } as unknown as SlaRepository, throwingNotifications());
+
+  assert.deepEqual(await runner.runBreachJob('2026-06-18T17:00:00.000Z'), {
+    scanned: 1,
+    created: 0,
+    skipped: 1,
+    breachIdempotencyKeys: [],
+  });
+  assert.equal(createCalled, false);
+});
+
 function assertPolicyMissing(input: Parameters<SlaService['calculateDeadline']>[0], field: string): void {
   assert.throws(
     () => service.calculateDeadline(input),
@@ -549,6 +1118,11 @@ function policy(overrides: PolicyOverrides = {}): SlaPolicyRecord {
     warningPercent: 80,
     branchTimezone: 'Asia/Riyadh',
     workingCalendarMode: WorkingCalendarMode.ALWAYS_ON,
+    escalationLevel1: 'branch-manager',
+    escalationLevel2: null,
+    escalationLevel3: null,
+    escalationLevel2AfterBreachMinutes: null,
+    escalationLevel3AfterBreachMinutes: null,
     isActive: true,
     updatedAt: new Date('2026-06-18T09:00:00.000Z'),
     ...rest,
@@ -556,46 +1130,152 @@ function policy(overrides: PolicyOverrides = {}): SlaPolicyRecord {
   };
 }
 
-type DeadlineWarningOverrides = Partial<Omit<SlaDeadlineWarningRecord, 'dueAt' | 'policy'>> & {
+type DeadlineWarningOverrides = Partial<Omit<SlaDeadlineWarningRecord, 'dueAt' | 'policy' | 'occurredAt' | 'complaint'>> & {
   dueAt?: Date | string | null;
+  occurredAt?: Date | string;
   policy?: SlaDeadlineWarningRecord['policy'];
+  complaint?: SlaDeadlineWarningRecord['complaint'];
 };
 
 function deadlineWarning(overrides: DeadlineWarningOverrides = {}): SlaDeadlineWarningRecord {
-  const { dueAt, policy: selectedPolicy, ...rest } = overrides;
+  const { dueAt, occurredAt, policy: selectedPolicy, complaint, ...rest } = overrides;
   return {
     complaintId: 'cmp_1',
     policyId: 'policy_1',
     stage: SlaStage.INVESTIGATION,
     dueAt: dueAt === null ? null : new Date(dueAt ?? '2026-06-18T17:00:00.000Z'),
+    occurredAt: new Date(occurredAt ?? '2026-06-18T09:00:00.000Z'),
     idempotencyKey: 'deadline_1',
     policy: selectedPolicy ?? { durationMinutes: 480, warningPercent: 80 },
+    complaint: complaint ?? { status: ComplaintStatus.IN_PROGRESS, ownerId: null, slaEvents: [] },
     ...rest,
   };
 }
 
-type DeadlineBreachOverrides = Partial<Omit<SlaDeadlineBreachRecord, 'dueAt' | 'complaint'>> & {
+type DeadlineBreachOverrides = Partial<Omit<SlaDeadlineBreachRecord, 'dueAt' | 'occurredAt' | 'complaint'>> & {
   dueAt?: Date | string | null;
+  occurredAt?: Date | string;
   complaint?: SlaDeadlineBreachRecord['complaint'];
+  policy?: SlaDeadlineBreachRecord['policy'];
 };
 
 function deadlineBreach(overrides: DeadlineBreachOverrides = {}): SlaDeadlineBreachRecord {
-  const { dueAt, complaint, ...rest } = overrides;
+  const { dueAt, occurredAt, complaint, policy: selectedPolicy, ...rest } = overrides;
   return {
     complaintId: 'cmp_1',
     policyId: 'policy_1',
     stage: SlaStage.INVESTIGATION,
     dueAt: dueAt === null ? null : new Date(dueAt ?? '2026-06-18T17:00:00.000Z'),
+    occurredAt: new Date(occurredAt ?? '2026-06-18T09:00:00.000Z'),
     idempotencyKey: 'deadline_1',
-    complaint: complaint ?? { status: ComplaintStatus.IN_PROGRESS },
+    policy: selectedPolicy === undefined ? policyEscalation() : selectedPolicy,
+    complaint: complaint ?? { status: ComplaintStatus.IN_PROGRESS, slaEvents: [] },
     ...rest,
   };
+}
+
+function pauseEvent(occurredAt: Date | string, stage = SlaStage.INVESTIGATION) {
+  return { type: SlaEventType.PAUSED, stage, occurredAt: new Date(occurredAt) };
+}
+
+function policyEscalation(overrides: Partial<NonNullable<SlaDeadlineBreachRecord['policy']>> = {}): NonNullable<SlaDeadlineBreachRecord['policy']> {
+  return {
+    escalationLevel1: 'branch-manager',
+    escalationLevel2: null,
+    escalationLevel3: null,
+    escalationLevel2AfterBreachMinutes: null,
+    escalationLevel3AfterBreachMinutes: null,
+    ...overrides,
+  };
+}
+
+function policyEscalationRecord(overrides: Partial<SlaPolicyEscalationRecord> = {}): SlaPolicyEscalationRecord {
+  return {
+    id: 'policy_1',
+    severity: ComplaintSeverity.HIGH,
+    stage: SlaStage.INVESTIGATION,
+    branchId: null,
+    departmentId: null,
+    categoryId: null,
+    escalationLevel1: 'branch-manager',
+    escalationLevel2: null,
+    escalationLevel3: null,
+    escalationLevel2AfterBreachMinutes: null,
+    escalationLevel3AfterBreachMinutes: null,
+    ...overrides,
+  };
+}
+
+function assertValidationFields(body: Record<string, unknown>, fields: string[]): void {
+  assert.throws(
+    () => parseUpdateSlaEscalationConfigBody(body),
+    (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED' && assert.deepEqual(error.fieldErrors.map((item) => item.field), fields) === undefined,
+  );
+}
+
+const adminPrincipal: StaffPrincipal = {
+  sessionId: 'ses_sla',
+  userId: 'usr_admin',
+  email: 'admin@cms-auto.test',
+  nameEn: 'Admin',
+  nameAr: 'Admin',
+  roleCode: 'ADMIN',
+  permissions: ['SLA_MANAGE'],
+  branchId: null,
+};
+
+function request(permissions = adminPrincipal.permissions, url = '/sla/policies/policy_1/escalation'): AuthenticatedRequest {
+  return {
+    principal: { ...adminPrincipal, permissions },
+    method: 'PATCH',
+    url,
+    correlationId: 'req_sla_guard',
+    headers: { 'x-forwarded-for': '203.0.113.20, 10.0.0.1', 'user-agent': 'node:test token secret' },
+    socket: { remoteAddress: '127.0.0.1' },
+  };
+}
+
+function context(req: AuthenticatedRequest, handler: keyof SlaController): ExecutionContext {
+  return {
+    switchToHttp: () => ({ getRequest: () => req }),
+    getHandler: () => SlaController.prototype[handler],
+    getClass: () => SlaController,
+  } as ExecutionContext;
+}
+
+function guardNames(handler: keyof SlaController): string[] {
+  const guards = Reflect.getMetadata(GUARDS_METADATA, SlaController.prototype[handler]) as Array<{ name: string }>;
+  return guards.map((guard) => guard.name);
+}
+
+function providerObject(provider: unknown): { provide?: unknown } | null {
+  return provider && typeof provider === 'object' ? provider as { provide?: unknown } : null;
+}
+
+function assertSafePermissionAudit(auditRecords: AuditRecordInput[]): void {
+  const auditJson = JSON.stringify(auditRecords).toLowerCase();
+  for (const forbidden of ['password', 'otp', 'token', 'reset token', 'session token', 'hash', 'secret', 'credential', 'provider']) {
+    assert.equal(auditJson.includes(forbidden), false);
+  }
 }
 
 function throwingNotifications(): NotificationsService {
   return {
     queueInternal: async () => {
       throw new Error('should not queue notification');
+    },
+  } as NotificationsService;
+}
+
+function queueOnceNotifications(notifications: unknown[]): NotificationsService {
+  const idempotencyKeys = new Set<string>();
+  return {
+    queueInternal: async (input) => {
+      if (!input.idempotencyKey || !idempotencyKeys.has(input.idempotencyKey)) {
+        if (input.idempotencyKey) idempotencyKeys.add(input.idempotencyKey);
+        notifications.push(input);
+      }
+      return {} as never;
     },
   } as NotificationsService;
 }
