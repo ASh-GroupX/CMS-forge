@@ -1,7 +1,6 @@
 import { Body, Controller, Get, Inject, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
-import { RoleCode } from '@prisma/client';
 import { AppException } from '../../core/http-kernel.js';
-import { BranchScoped, RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
+import { BranchScoped, PermissionGuard, Permissions, RbacGuard, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { parseCreateDealBody } from './dto/create-deal.dto.js';
@@ -14,8 +13,8 @@ export class DealsController {
   constructor(@Inject(DealsService) private readonly dealsService: DealsService) {}
 
   @Get('handoff-board')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN, RoleCode.MGMT_READONLY)
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('REPORT_VIEW')
   @BranchScoped()
   async handoffBoard(@Req() request: AuthenticatedRequest): Promise<DealHandoffBoardResponseDto> {
     const principal = requirePrincipal(request);
@@ -23,8 +22,8 @@ export class DealsController {
   }
 
   @Post()
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard, CsrfGuard)
+  @Permissions('COMPLAINT_ASSIGN')
   @BranchScoped()
   async create(@Body() body: unknown, @Req() request: AuthenticatedRequest): Promise<Record<string, unknown>> {
     const principal = requirePrincipal(request);
@@ -33,8 +32,8 @@ export class DealsController {
   }
 
   @Post(':id/advance')
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard, CsrfGuard)
+  @Permissions('COMPLAINT_ASSIGN')
   @BranchScoped()
   async advance(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest): Promise<Record<string, unknown>> {
     const principal = requirePrincipal(request);
@@ -42,8 +41,8 @@ export class DealsController {
   }
 
   @Patch(':id/blocker')
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard, CsrfGuard)
+  @Permissions('COMPLAINT_ASSIGN')
   @BranchScoped()
   async blocker(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest): Promise<Record<string, unknown>> {
     const principal = requirePrincipal(request);

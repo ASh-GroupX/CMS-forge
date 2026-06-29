@@ -71,12 +71,34 @@ test('valid active staff username credentials return safe auth claims', async ()
   assert.equal('passwordHash' in claims, false);
 });
 
+test('credential claims include active permissions and ignore inactive permissions', async () => {
+  const passwordHash = await argon2.hash('correct-password', { type: argon2.argon2id });
+  const claims = await serviceFor({
+    ...baseUser,
+    passwordHash,
+    role: {
+      code: 'ADMIN',
+      permissions: [
+        { permission: { code: 'ROLES_MANAGE', isActive: true } },
+        { permission: { code: 'STALE_PERMISSION', isActive: false } },
+      ],
+    },
+  }).verifyCredentials({
+    identifier: 'admin@cms-auto.test',
+    password: 'correct-password',
+  });
+
+  assert.deepEqual(claims.permissions, ['ROLES_MANAGE']);
+});
+
 test('auth repository looks up staff by username or email', async () => {
   let capturedWhere: unknown;
+  let capturedSelect: unknown;
   const repository = new AuthRepository({
     user: {
-      findFirst: async (query: { where: unknown }) => {
+      findFirst: async (query: { where: unknown; select: unknown }) => {
         capturedWhere = query.where;
+        capturedSelect = query.select;
         return null;
       },
     },
@@ -85,6 +107,7 @@ test('auth repository looks up staff by username or email', async () => {
   await repository.findStaffByIdentifier('Admin');
 
   assert.deepEqual(capturedWhere, { OR: [{ email: 'admin' }, { username: 'admin' }] });
+  assert.equal(JSON.stringify(capturedSelect).includes('"isActive":true'), true);
 });
 
 test('invalid, inactive, locked, and missing-hash users are denied generically', async () => {

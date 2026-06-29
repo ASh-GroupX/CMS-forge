@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
-import { RoleCode } from '@prisma/client';
-import { RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
+import { PermissionGuard, Permissions, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { AppException } from '../../core/http-kernel.js';
@@ -12,18 +11,18 @@ export class AdminRolesController {
   constructor(private readonly roles: AdminRolesService) {}
 
   @Get()
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('ROLES_MANAGE')
   list() { return this.roles.list(); }
 
   @Post()
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('ROLES_MANAGE')
   create(@Body() body: unknown, @Req() request: AuthenticatedRequest) { return this.roles.create(parseRole(body), auditContext(request)); }
 
   @Patch(':id/permissions')
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('ROLES_MANAGE')
   updatePermissions(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) { return this.roles.updatePermissions(id, parsePermissions(body), auditContext(request)); }
 }
 

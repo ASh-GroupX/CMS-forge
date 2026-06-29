@@ -69,9 +69,7 @@ export class AuditSearchService {
   ) {}
 
   async search(input: AuditSearchInput, principal: StaffPrincipal): Promise<AuditSearchResult> {
-    if (principal.roleCode !== 'ADMIN') {
-      throw new AppException('RBAC_FORBIDDEN', 'Forbidden', 403);
-    }
+    requirePermission(principal, 'AUDIT_VIEW');
 
     const page = clamp(input.page ?? 1, 1, Number.MAX_SAFE_INTEGER);
     const pageSize = clamp(input.pageSize ?? DEFAULT_PAGE_SIZE, 1, MAX_PAGE_SIZE);
@@ -90,9 +88,7 @@ export class AuditSearchService {
     principal: StaffPrincipal,
     context: AuditExportContext = {},
   ): Promise<AuditExportResult> {
-    if (principal.roleCode !== 'ADMIN') {
-      throw new AppException('RBAC_FORBIDDEN', 'Forbidden', 403);
-    }
+    requirePermission(principal, 'AUDIT_EXPORT');
 
     const { page: _page, pageSize: _pageSize, ...filters } = input;
     if (!filters.branchId) {
@@ -121,6 +117,12 @@ export class AuditSearchService {
       filename: 'audit-logs.json',
       rowCount: items.length,
     };
+  }
+}
+
+function requirePermission(principal: StaffPrincipal, permission: string): void {
+  if (!principal.permissions?.includes(permission)) {
+    throw new AppException('RBAC_FORBIDDEN', 'Forbidden', 403);
   }
 }
 

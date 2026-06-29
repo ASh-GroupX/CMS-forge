@@ -16,6 +16,11 @@ export type PortalComplaintRequestDto = {
   vehicleRelated?: boolean;
   vehicleVin?: string | null;
   vehicleId?: string | null;
+  vehiclePlate?: string | null;
+  vehicleBrand?: string | null;
+  vehicleModel?: string | null;
+  vehicleModelYear?: number | null;
+  departmentId?: string | null;
 };
 
 export function parsePortalComplaintBody(body: unknown): PortalComplaintRequestDto {
@@ -33,6 +38,11 @@ export function parsePortalComplaintBody(body: unknown): PortalComplaintRequestD
     vehicleRelated: input.vehicleRelated === true,
     vehicleVin: optionalText(input.vehicleVin, 'vehicleVin'),
     vehicleId: optionalText(input.vehicleId, 'vehicleId'),
+    vehiclePlate: optionalText(input.vehiclePlate, 'vehiclePlate'),
+    vehicleBrand: optionalText(input.vehicleBrand, 'vehicleBrand'),
+    vehicleModel: optionalText(input.vehicleModel, 'vehicleModel'),
+    vehicleModelYear: optionalNumber(input.vehicleModelYear, 'vehicleModelYear'),
+    departmentId: optionalText(input.departmentId, 'departmentId'),
   };
 }
 
@@ -62,6 +72,16 @@ function optionalText(value: unknown, field: string): string | null {
     return null;
   }
   return requiredText(value, field);
+}
+
+function optionalNumber(value: unknown, field: string): number | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (typeof value === 'number' && Number.isInteger(value)) {
+    return value;
+  }
+  throw invalid(field, `${field} is invalid.`);
 }
 
 function enumValue<T extends Record<string, string>>(value: unknown, options: T, field: string): T[keyof T] {

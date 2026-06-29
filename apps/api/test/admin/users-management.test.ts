@@ -7,7 +7,7 @@ import { Reflector } from '@nestjs/core';
 import { RoleCode } from '@prisma/client';
 import argon2 from 'argon2';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
-import { RbacGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../src/core/auth.guard.ts';
+import { PermissionGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../src/core/auth.guard.ts';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
 import { AuthModule } from '../../src/modules/auth/auth.module.ts';
@@ -16,7 +16,7 @@ import { AdminCategoriesController } from '../../src/modules/admin/admin-categor
 import { AdminCategoriesRepository } from '../../src/modules/admin/admin-categories.repository.ts';
 import type { AdminCategoryRecord } from '../../src/modules/admin/admin-categories.repository.ts';
 import { AdminCategoriesService } from '../../src/modules/admin/admin-categories.service.ts';
-import { AdminUsersController } from '../../src/modules/admin/admin-users.controller.ts';
+import { AdminUsersController, StaffLookupController } from '../../src/modules/admin/admin-users.controller.ts';
 import { AdminUsersRepository } from '../../src/modules/admin/admin-users.repository.ts';
 import type { AdminUserRecord } from '../../src/modules/admin/admin-users.repository.ts';
 import { AdminUsersService } from '../../src/modules/admin/admin-users.service.ts';
@@ -43,6 +43,7 @@ const admin: StaffPrincipal = {
   nameEn: 'Admin',
   nameAr: 'Admin',
   roleCode: RoleCode.ADMIN,
+  permissions: ['USERS_MANAGE'],
   branchId: null,
 };
 
@@ -170,22 +171,46 @@ test('admin user service deactivates and reactivates with audit entries', async 
   assert.equal(auditRecords.every((record) => record.client === txClient), true);
 });
 
-test('admin users controller routes are admin-only and CSRF guarded for writes', async () => {
-  assert.deepEqual(guardNames('list'), ['SessionAuthGuard', 'RbacGuard']);
-  assert.deepEqual(guardNames('create'), ['SessionAuthGuard', 'RbacGuard', 'CsrfGuard']);
-  assert.deepEqual(guardNames('deactivate'), ['SessionAuthGuard', 'RbacGuard', 'CsrfGuard']);
-  assert.deepEqual(guardNames('reactivate'), ['SessionAuthGuard', 'RbacGuard', 'CsrfGuard']);
+test('admin users controller routes require USERS_MANAGE permission and CSRF for writes', async () => {
+  assert.deepEqual(guardNames('list'), ['SessionAuthGuard', 'PermissionGuard']);
+  assert.deepEqual(guardNames('create'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('deactivate'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('reactivate'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  for (const handler of ['list', 'create', 'deactivate', 'reactivate'] as Array<keyof AdminUsersController>) {
+    assert.equal(guardNames(handler).includes('RbacGuard'), false);
+  }
 
   const auditRecords: AuditRecordInput[] = [];
-  const guard = new RbacGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
-  assert.equal(await guard.canActivate(context(request(RoleCode.ADMIN), 'create')), true);
+  const guard = new PermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
+  assert.equal(await guard.canActivate(context(request(RoleCode.CR_MANAGER, ['USERS_MANAGE']), 'create')), true);
 
   await assert.rejects(
-    guard.canActivate(context(request(RoleCode.CR_MANAGER), 'create')),
+    guard.canActivate(context(request(RoleCode.ADMIN, [], '/admin/users?password=leaked&sessionToken=leaked', 'node:test token secret'), 'create')),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
   assert.equal(auditRecords[0]?.eventType, 'SECURITY');
-  assert.equal(auditRecords[0]?.action, 'rbac_forbidden');
+  assert.equal(auditRecords[0]?.action, 'permission_forbidden');
+  assert.deepEqual(auditRecords[0]?.metadata?.requiredPermissions, ['USERS_MANAGE']);
+  const auditJson = JSON.stringify(auditRecords).toLowerCase();
+  for (const forbidden of ['password', 'otp', 'token', 'reset token', 'session token', 'hash', 'secret', 'credential', 'provider']) {
+    assert.equal(auditJson.includes(forbidden), false);
+  }
+});
+
+test('staff lookup route requires internal-comment permission', async () => {
+  assert.deepEqual(staffGuardNames('assignable'), ['SessionAuthGuard', 'PermissionGuard']);
+
+  const auditRecords: AuditRecordInput[] = [];
+  const guard = new PermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
+  assert.equal(await guard.canActivate(staffContext(request(RoleCode.CR_OFFICER, ['COMPLAINT_COMMENT_INTERNAL'], '/staff/assignable'), 'assignable')), true);
+
+  await assert.rejects(
+    guard.canActivate(staffContext(request(RoleCode.MGMT_READONLY, ['REPORT_VIEW'], '/staff/assignable'), 'assignable')),
+    (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
+  assert.equal(auditRecords[0]?.eventType, 'SECURITY');
+  assert.equal(auditRecords[0]?.action, 'permission_forbidden');
+  assert.deepEqual(auditRecords[0]?.metadata?.requiredPermissions, ['COMPLAINT_COMMENT_INTERNAL']);
 });
 
 test('admin module wires auth guard providers for runtime requests', () => {
@@ -194,7 +219,7 @@ test('admin module wires auth guard providers for runtime requests', () => {
 
   assert.ok(imports.includes(AuthModule));
   assert.ok(providers.includes(SessionAuthGuard));
-  assert.ok(providers.includes(RbacGuard));
+  assert.ok(providers.includes(PermissionGuard));
   assert.equal(providers.some((provider) => providerObject(provider)?.provide === SESSION_AUTH_SERVICE), true);
 });
 
@@ -238,19 +263,25 @@ test('admin category service rejects self parent and invalid parent', async () =
   );
 });
 
-test('admin category controller write routes are admin-only and CSRF guarded', async () => {
-  assert.deepEqual(categoryGuardNames('create'), ['SessionAuthGuard', 'RbacGuard', 'CsrfGuard']);
-  assert.deepEqual(categoryGuardNames('update'), ['SessionAuthGuard', 'RbacGuard', 'CsrfGuard']);
+test('admin category controller write routes require MASTER_DATA_MANAGE permission and CSRF', async () => {
+  assert.deepEqual(categoryGuardNames('create'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.deepEqual(categoryGuardNames('update'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
 
   const auditRecords: AuditRecordInput[] = [];
-  const guard = new RbacGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
-  assert.equal(await guard.canActivate(categoryContext(request(RoleCode.ADMIN), 'create')), true);
+  const guard = new PermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
+  assert.equal(await guard.canActivate(categoryContext(request(RoleCode.CR_MANAGER, ['MASTER_DATA_MANAGE'], '/admin/categories'), 'create')), true);
 
   await assert.rejects(
-    guard.canActivate(categoryContext(request(RoleCode.CR_MANAGER), 'create')),
+    guard.canActivate(categoryContext(request(RoleCode.ADMIN, [], '/admin/categories?password=leaked&sessionToken=leaked', 'node:test token secret'), 'create')),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
   assert.equal(auditRecords[0]?.eventType, 'SECURITY');
+  assert.equal(auditRecords[0]?.action, 'permission_forbidden');
+  assert.deepEqual(auditRecords[0]?.metadata?.requiredPermissions, ['MASTER_DATA_MANAGE']);
+  const auditJson = JSON.stringify(auditRecords).toLowerCase();
+  for (const forbidden of ['password', 'otp', 'token', 'reset token', 'session token', 'hash', 'secret', 'credential', 'provider']) {
+    assert.equal(auditJson.includes(forbidden), false);
+  }
 });
 
 function noopAudit(): AuditService {
@@ -261,12 +292,18 @@ function auditContext() {
   return { actorId: 'usr_admin', correlationId: 'req_admin_user', ipAddress: '127.0.0.1', userAgent: 'node:test' };
 }
 
-function request(roleCode: RoleCode): AuthenticatedRequest {
+function request(
+  roleCode: RoleCode,
+  permissions = admin.permissions,
+  url = '/admin/users',
+  userAgent = 'node:test',
+): AuthenticatedRequest {
   return {
-    principal: { ...admin, roleCode },
-    url: '/admin/users',
+    principal: { ...admin, roleCode, permissions },
+    method: 'POST',
+    url,
     correlationId: 'req_admin_user',
-    headers: { 'x-forwarded-for': '127.0.0.1', 'user-agent': 'node:test' },
+    headers: { 'x-forwarded-for': '127.0.0.1', 'user-agent': userAgent },
     socket: { remoteAddress: '127.0.0.2' },
   };
 }
@@ -284,6 +321,11 @@ function guardNames(handler: keyof AdminUsersController): string[] {
   return guards.map((guard) => guard.name);
 }
 
+function staffGuardNames(handler: keyof StaffLookupController): string[] {
+  const guards = Reflect.getMetadata(GUARDS_METADATA, StaffLookupController.prototype[handler]) as Array<{ name: string }>;
+  return guards.map((guard) => guard.name);
+}
+
 function categoryGuardNames(handler: keyof AdminCategoriesController): string[] {
   const guards = Reflect.getMetadata(GUARDS_METADATA, AdminCategoriesController.prototype[handler]) as Array<{ name: string }>;
   return guards.map((guard) => guard.name);
@@ -294,6 +336,14 @@ function categoryContext(req: AuthenticatedRequest, handler: keyof AdminCategori
     switchToHttp: () => ({ getRequest: () => req }),
     getHandler: () => AdminCategoriesController.prototype[handler],
     getClass: () => AdminCategoriesController,
+  } as ExecutionContext;
+}
+
+function staffContext(req: AuthenticatedRequest, handler: keyof StaffLookupController): ExecutionContext {
+  return {
+    switchToHttp: () => ({ getRequest: () => req }),
+    getHandler: () => StaffLookupController.prototype[handler],
+    getClass: () => StaffLookupController,
   } as ExecutionContext;
 }
 

@@ -22,6 +22,7 @@ Agent context manifest. Read this before editing the module.
 
 - `complaints`
 - `complaint_status_history`
+- `complaint_reference_sequences`
 
 Related tables may be read or coordinated through their owning modules once
 those modules exist: `comments`, `attachments`, `approvals`, `sla_events`,

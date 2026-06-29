@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import 'reflect-metadata';
 import { Reflector } from '@nestjs/core';
-import { MODULE_METADATA } from '@nestjs/common/constants';
+import { GUARDS_METADATA, MODULE_METADATA } from '@nestjs/common/constants';
 import type { ExecutionContext } from '@nestjs/common';
 import { RoleCode } from '@prisma/client';
 import type { AuditRecordInput } from '../../src/core/audit.service.ts';
 import { AuditService as CoreAuditService } from '../../src/core/audit.service.ts';
 import type { AuditService } from '../../src/core/audit.service.ts';
-import { RbacGuard } from '../../src/core/auth.guard.ts';
+import { PermissionGuard, RbacGuard } from '../../src/core/auth.guard.ts';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
 import { AppException, PrismaService } from '../../src/core/http-kernel.ts';
 import { DealsController } from '../../src/modules/deals/deals.controller.ts';
@@ -170,17 +170,28 @@ test('manager sees scoped deal handoff board derived from deal data', async () =
   ]);
 });
 
-test('ordinary employee is denied by deal handoff board RBAC', async () => {
-  const guard = new RbacGuard(new Reflector(), { record: async () => undefined } as AuditService);
+test('deal routes require permissions and keep CSRF/branch-scope guards', async () => {
+  assert.deepEqual(guardNames('handoffBoard'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
+  assert.deepEqual(guardNames('create'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('advance'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('blocker'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard', 'CsrfGuard']);
+
+  const auditRecords: AuditRecordInput[] = [];
+  const guard = new PermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
+  assert.equal(await guard.canActivate(context(request({ ...employee, permissions: ['REPORT_VIEW'] }), 'handoffBoard')), true);
+  assert.equal(await guard.canActivate(context(request({ ...branchManager, permissions: ['COMPLAINT_ASSIGN'] }, '/deals'), 'create')), true);
 
   await assert.rejects(
-    guard.canActivate(context(request(employee))),
+    guard.canActivate(context(request({ ...branchManager, permissions: [] }, '/deals'), 'create')),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
+  assert.equal(auditRecords[0]?.action, 'permission_forbidden');
+  assert.deepEqual(auditRecords[0]?.metadata?.requiredPermissions, ['COMPLAINT_ASSIGN']);
 });
 
-test('deals module wires audit service with Prisma for runtime RBAC denies', () => {
+test('deals module wires audit service and permission guard for runtime denies', () => {
   const providers = Reflect.getMetadata(MODULE_METADATA.PROVIDERS, DealsModule) as unknown[];
+  assert.ok(providers.includes(PermissionGuard));
   assert.ok(providers.some((provider) => {
     if (!provider || typeof provider !== 'object') return false;
     const wired = provider as { provide?: unknown; inject?: unknown[] };
@@ -226,12 +237,17 @@ function request(principal: StaffPrincipal, url = '/deals/handoff-board'): Authe
   };
 }
 
-function context(req: AuthenticatedRequest): ExecutionContext {
+function context(req: AuthenticatedRequest, handler: keyof DealsController = 'handoffBoard'): ExecutionContext {
   return {
     switchToHttp: () => ({ getRequest: () => req }),
-    getHandler: () => DealsController.prototype.handoffBoard,
+    getHandler: () => DealsController.prototype[handler],
     getClass: () => DealsController,
   } as ExecutionContext;
+}
+
+function guardNames(handler: keyof DealsController): string[] {
+  const guards = Reflect.getMetadata(GUARDS_METADATA, DealsController.prototype[handler]) as Array<{ name: string }>;
+  return guards.map((guard) => guard.name);
 }
 
 function deal(): DealRecord {

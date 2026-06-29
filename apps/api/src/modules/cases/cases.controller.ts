@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Inject, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { RoleCode } from '@prisma/client';
-import { RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
+import { PermissionGuard, Permissions, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { CasesService } from './cases.service.js';
@@ -12,29 +12,29 @@ export class CasesController {
   constructor(@Inject(CasesService) private readonly casesService: CasesService) {}
 
   @Get(':caseId/timeline')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN, RoleCode.MGMT_READONLY)
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('COMPLAINT_VIEW_BRANCH')
   async timeline(@Param('caseId') caseId: string, @Req() request: AuthenticatedRequest): Promise<CaseTimelineResponseDto> {
     return this.casesService.timelineForActor(caseId, actor(request), auditContext(request), false);
   }
 
   @Get(':caseId/confidential-timeline')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN, RoleCode.MGMT_READONLY)
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('COMPLAINT_VIEW_BRANCH')
   async confidentialTimeline(@Param('caseId') caseId: string, @Req() request: AuthenticatedRequest): Promise<CaseTimelineResponseDto> {
     return this.casesService.timelineForActor(caseId, actor(request), auditContext(request));
   }
 
   @Get(':caseId/capa')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN, RoleCode.MGMT_READONLY)
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('COMPLAINT_VIEW_BRANCH')
   async capa(@Param('caseId') caseId: string, @Req() request: AuthenticatedRequest): Promise<{ items: CapaActionDto[] }> {
     return { items: await this.casesService.listCapaActionsForActor(caseId, actor(request), auditContext(request)) };
   }
 
   @Post(':caseId/capa')
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
   async createCapa(@Param('caseId') caseId: string, @Body() body: unknown, @Req() request: AuthenticatedRequest): Promise<{ capa: CapaActionDto }> {
     return { capa: await this.casesService.createCapaAction(toCreateCapaInput(caseId, parseCreateCapaBody(body)), actor(request), auditContext(request)) };
   }

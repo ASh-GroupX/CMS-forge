@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import 'reflect-metadata';
 import { Reflector } from '@nestjs/core';
-import { MODULE_METADATA } from '@nestjs/common/constants';
+import { GUARDS_METADATA, MODULE_METADATA } from '@nestjs/common/constants';
 import type { ExecutionContext } from '@nestjs/common';
 import {
   RoleCode,
@@ -13,7 +13,7 @@ import {
 } from '@prisma/client';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
 import { AuditService as CoreAuditService } from '../../src/core/audit.service.ts';
-import { RbacGuard } from '../../src/core/auth.guard.ts';
+import { PermissionGuard, RbacGuard } from '../../src/core/auth.guard.ts';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
 import { AppException, PrismaService } from '../../src/core/http-kernel.ts';
 import { TasksController } from '../../src/modules/tasks/tasks.controller.ts';
@@ -75,17 +75,35 @@ test('promise tracker route derives actor from the staff session', async () => {
   assert.deepEqual(capturedActor, { userId: 'user_manager', roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a' });
 });
 
-test('ordinary employee is denied by manager rollup RBAC', async () => {
-  const guard = new RbacGuard(new Reflector(), { record: async () => undefined } as AuditService);
+test('task routes require permissions and keep CSRF/branch-scope guards', async () => {
+  assert.deepEqual(guardNames('quickAdd'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('today'), ['SessionAuthGuard', 'PermissionGuard']);
+  assert.deepEqual(guardNames('sentByMe'), ['SessionAuthGuard', 'PermissionGuard']);
+  assert.deepEqual(guardNames('managerRollup'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
+  assert.deepEqual(guardNames('promises'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
+  assert.deepEqual(guardNames('relatedRecords'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
+  assert.deepEqual(guardNames('get'), ['SessionAuthGuard', 'PermissionGuard']);
+  assert.deepEqual(guardNames('comments'), ['SessionAuthGuard', 'PermissionGuard']);
+  assert.deepEqual(guardNames('createComment'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('nudge'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('update'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+
+  const auditRecords: AuditRecordInput[] = [];
+  const guard = new PermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
+  assert.equal(await guard.canActivate(context(request({ ...employee, permissions: ['COMPLAINT_COMMENT_INTERNAL'] }, '/tasks/today'), 'today')), true);
+  assert.equal(await guard.canActivate(context(request({ ...branchManager, permissions: ['REPORT_VIEW'] }), 'managerRollup')), true);
 
   await assert.rejects(
-    guard.canActivate(context(request(employee))),
+    guard.canActivate(context(request({ ...branchManager, permissions: [] }), 'managerRollup')),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
+  assert.equal(auditRecords[0]?.action, 'permission_forbidden');
+  assert.deepEqual(auditRecords[0]?.metadata?.requiredPermissions, ['REPORT_VIEW']);
 });
 
-test('tasks module wires audit service with Prisma for runtime RBAC denies', () => {
+test('tasks module wires audit service and permission guard for runtime denies', () => {
   const providers = Reflect.getMetadata(MODULE_METADATA.PROVIDERS, TasksModule) as unknown[];
+  assert.ok(providers.includes(PermissionGuard));
   assert.ok(providers.some((provider) => {
     if (!provider || typeof provider !== 'object') return false;
     const wired = provider as { provide?: unknown; inject?: unknown[] };
@@ -151,12 +169,17 @@ function request(principal: StaffPrincipal, url = '/tasks/manager-rollup'): Auth
   };
 }
 
-function context(req: AuthenticatedRequest): ExecutionContext {
+function context(req: AuthenticatedRequest, handler: keyof TasksController = 'managerRollup'): ExecutionContext {
   return {
     switchToHttp: () => ({ getRequest: () => req }),
-    getHandler: () => TasksController.prototype.managerRollup,
+    getHandler: () => TasksController.prototype[handler],
     getClass: () => TasksController,
   } as ExecutionContext;
+}
+
+function guardNames(handler: keyof TasksController): string[] {
+  const guards = Reflect.getMetadata(GUARDS_METADATA, TasksController.prototype[handler]) as Array<{ name: string }>;
+  return guards.map((guard) => guard.name);
 }
 
 function taskRecord(overrides: Partial<TaskRecord> = {}): TaskRecord {

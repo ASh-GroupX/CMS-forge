@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
-import { RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
+import { PermissionGuard, Permissions, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { BranchesService } from './branches.service.js';
@@ -11,22 +11,22 @@ export class BranchesController {
   constructor(private readonly branchesService: BranchesService) {}
 
   @Get()
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles('ADMIN')
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('MASTER_DATA_MANAGE')
   async list(): Promise<{ items: BranchResponseDto[] }> {
     return { items: await this.branchesService.listActive() };
   }
 
   @Get(':idOrCode')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles('ADMIN')
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('MASTER_DATA_MANAGE')
   async get(@Param('idOrCode') idOrCode: string): Promise<{ branch: BranchResponseDto | null }> {
     return { branch: await this.branchesService.findByIdOrCode(idOrCode) };
   }
 
   @Post()
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles('ADMIN')
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('MASTER_DATA_MANAGE')
   async create(
     @Body() body: unknown,
     @Req() request: AuthenticatedRequest,
@@ -37,8 +37,8 @@ export class BranchesController {
   }
 
   @Patch(':id')
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles('ADMIN')
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('MASTER_DATA_MANAGE')
   async update(
     @Param('id') id: string,
     @Body() body: unknown,
@@ -50,8 +50,8 @@ export class BranchesController {
   }
 
   @Post(':id/deactivate')
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles('ADMIN')
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('MASTER_DATA_MANAGE')
   async deactivate(
     @Param('id') id: string,
     @Req() request: AuthenticatedRequest,

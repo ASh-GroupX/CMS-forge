@@ -12,6 +12,8 @@ import {
 } from '@prisma/client';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
 import {
+  DynamicPermissionGuard,
+  PermissionGuard,
   RbacGuard,
   SESSION_AUTH_SERVICE,
   SessionAuthGuard,
@@ -495,8 +497,9 @@ test('complaint transition route rejects invalid request bodies', async () => {
   );
 });
 
-test('complaint transition route uses auth, RBAC, branch-scope, and CSRF guards', () => {
-  assert.deepEqual(guardNames('transition'), ['SessionAuthGuard', 'RbacGuard', 'CsrfGuard']);
+test('complaint comment and transition routes use dynamic permissions and keep branch scope/CSRF', async () => {
+  assert.deepEqual(guardNames('createComment'), ['SessionAuthGuard', 'DynamicPermissionGuard', 'RbacGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('transition'), ['SessionAuthGuard', 'DynamicPermissionGuard', 'RbacGuard', 'CsrfGuard']);
 
   const imports = Reflect.getMetadata(MODULE_METADATA.IMPORTS, ComplaintsModule) as unknown[];
   const providers = Reflect.getMetadata(MODULE_METADATA.PROVIDERS, ComplaintsModule) as unknown[];
@@ -505,9 +508,31 @@ test('complaint transition route uses auth, RBAC, branch-scope, and CSRF guards'
   assert.ok(imports.includes(NotificationsModule));
   assert.ok(imports.includes(CasesModule));
   assert.ok(providers.includes(SessionAuthGuard));
+  assert.ok(providers.includes(PermissionGuard));
+  assert.ok(providers.includes(DynamicPermissionGuard));
   assert.equal(providers.some((provider) => providerObject(provider)?.provide === RbacGuard), true);
   assert.ok(providers.includes(CsrfGuard));
   assert.equal(providers.some((provider) => providerObject(provider)?.provide === SESSION_AUTH_SERVICE), true);
+
+  const auditRecords: AuditRecordInput[] = [];
+  const guard = new DynamicPermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
+  assert.equal(await guard.canActivate(context(request(RoleCode.CR_OFFICER, 'branch_main', ['COMPLAINT_SUBMIT'], {
+    action: ComplaintTransitionAction.SUBMIT,
+  }))), true);
+  assert.equal(await guard.canActivate(context(request(RoleCode.CR_OFFICER, 'branch_main', ['COMPLAINT_COMMENT_PUBLIC'], {
+    visibility: 'PUBLIC',
+  }), ComplaintsController.prototype.createComment)), true);
+
+  await assert.rejects(
+    guard.canActivate(context(request(RoleCode.ADMIN, 'branch_main', [], {
+      action: ComplaintTransitionAction.REJECT_AS_INVALID,
+    }, '/complaints/cmp_1/transitions?password=leaked&sessionToken=leaked'), ComplaintsController.prototype.transition)),
+    (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
+  assert.equal(auditRecords[0]?.eventType, 'SECURITY');
+  assert.equal(auditRecords[0]?.action, 'permission_forbidden');
+  assert.deepEqual(auditRecords[0]?.metadata?.requiredPermissions, ['COMPLAINT_REJECT']);
+  assertSafePermissionAudit(auditRecords);
 });
 
 test('complaint transition route allows scoped staff and audits branch-scope denials', async () => {
@@ -520,13 +545,17 @@ test('complaint transition route allows scoped staff and audits branch-scope den
   assert.equal(await guard.canActivate(context(request())), true);
 
   await assert.rejects(
-    guard.canActivate(context(request(RoleCode.BRANCH_MANAGER, 'branch_other'))),
+    guard.canActivate(context(request(RoleCode.BRANCH_MANAGER, 'branch_other', ['COMPLAINT_SUBMIT'], {
+      action: ComplaintTransitionAction.SUBMIT,
+    }, '/complaints/cmp_1/transitions?branchId=branch_other&sessionToken=leaked'))),
     (error: unknown) => error instanceof AppException && error.code === 'BRANCH_SCOPE_FORBIDDEN',
   );
 
   assert.equal(auditRecords[0]?.eventType, 'SECURITY');
   assert.equal(auditRecords[0]?.action, 'branch_scope_forbidden');
+  assert.equal(auditRecords[0]?.targetId, '/complaints/cmp_1/transitions');
   assert.deepEqual(auditRecords[0]?.metadata, { deniedBranchId: 'branch_other' });
+  assertSafePermissionAudit(auditRecords);
 });
 
 async function assertNoTransaction(
@@ -546,17 +575,24 @@ async function assertNoTransaction(
   );
 }
 
-function request(roleCode = RoleCode.CR_OFFICER, branchId = 'branch_main'): AuthenticatedRequest {
+function request(
+  roleCode = RoleCode.CR_OFFICER,
+  branchId = 'branch_main',
+  permissions = ['COMPLAINT_SUBMIT', 'COMPLAINT_COMMENT_INTERNAL'],
+  body: unknown = { action: ComplaintTransitionAction.SUBMIT },
+  url = `/complaints/cmp_1/transitions?branchId=${branchId}`,
+): AuthenticatedRequest {
   return {
-    principal: principal(roleCode),
-    url: `/complaints/cmp_1/transitions?branchId=${branchId}`,
+    principal: principal(roleCode, permissions),
+    body,
+    url,
     correlationId: 'req_workflow',
     headers: { 'x-forwarded-for': '203.0.113.44, 10.0.0.1', 'user-agent': 'node:test' },
     socket: { remoteAddress: '198.51.100.44' },
   };
 }
 
-function principal(roleCode: RoleCode): StaffPrincipal {
+function principal(roleCode: RoleCode, permissions: string[]): StaffPrincipal {
   return {
     sessionId: 'ses_workflow',
     userId: 'usr_officer',
@@ -564,14 +600,15 @@ function principal(roleCode: RoleCode): StaffPrincipal {
     nameEn: 'CR Officer',
     nameAr: 'CR Officer',
     roleCode,
+    permissions,
     branchId: 'branch_main',
   };
 }
 
-function context(req: AuthenticatedRequest): ExecutionContext {
+function context(req: AuthenticatedRequest, handler = ComplaintsController.prototype.transition): ExecutionContext {
   return {
     switchToHttp: () => ({ getRequest: () => req }),
-    getHandler: () => ComplaintsController.prototype.transition,
+    getHandler: () => handler,
     getClass: () => ComplaintsController,
   } as ExecutionContext;
 }
@@ -583,6 +620,13 @@ function guardNames(handler: keyof ComplaintsController): string[] {
 
 function providerObject(provider: unknown): { provide?: unknown } | null {
   return provider && typeof provider === 'object' ? provider as { provide?: unknown } : null;
+}
+
+function assertSafePermissionAudit(auditRecords: AuditRecordInput[]): void {
+  const auditJson = JSON.stringify(auditRecords).toLowerCase();
+  for (const forbidden of ['password', 'otp', 'token', 'reset token', 'session token', 'hash', 'secret', 'credential', 'provider']) {
+    assert.equal(auditJson.includes(forbidden), false);
+  }
 }
 
 function transitionService(calls: string[], queued: unknown[], updateResult: { id: string; branchId: string; status: ComplaintStatus } | null = { id: 'cmp_1', branchId: 'branch_main', status: ComplaintStatus.CLOSED }): ComplaintsService {

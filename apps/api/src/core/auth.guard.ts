@@ -14,6 +14,7 @@ import { AppException } from './http-kernel.js';
 const STAFF_SESSION_COOKIE = 'cms_staff_session';
 const ROLES_KEY = 'cms:auto:roles';
 const PERMISSIONS_KEY = 'cms:auto:permissions';
+const DYNAMIC_PERMISSIONS_KEY = 'cms:auto:dynamic-permissions';
 const BRANCH_SCOPED_KEY = 'cms:auto:branch-scoped';
 
 export const SESSION_AUTH_SERVICE = Symbol('SESSION_AUTH_SERVICE');
@@ -36,9 +37,13 @@ export type AuthenticatedRequest = RequestLike & {
 
 type RequestLike = {
   headers: Record<string, string | string[] | undefined>;
+  method?: string;
   url?: string;
+  body?: unknown;
   socket?: { remoteAddress?: string };
 };
+
+type DynamicPermissionResolver = (request: AuthenticatedRequest) => string[];
 
 export type SessionAuthValidator = {
   validateStaffSession(token: string): Promise<StaffPrincipal>;
@@ -50,6 +55,10 @@ export function Roles(...roles: string[]): MethodDecorator & ClassDecorator {
 
 export function Permissions(...permissions: string[]): MethodDecorator & ClassDecorator {
   return SetMetadata(PERMISSIONS_KEY, permissions);
+}
+
+export function DynamicPermissions(resolver: DynamicPermissionResolver): MethodDecorator & ClassDecorator {
+  return SetMetadata(DYNAMIC_PERMISSIONS_KEY, resolver);
 }
 
 export function BranchScoped(): MethodDecorator & ClassDecorator {
@@ -129,7 +138,7 @@ export class RbacGuard implements CanActivate {
       actorId: principal?.userId ?? null,
       branchId: principal?.branchId ?? null,
       targetType: 'api_route',
-      targetId: request.url ?? null,
+      targetId: requestPath(request),
       correlationId: request.correlationId ?? headerValue(request.headers['x-correlation-id']),
       ipAddress: headerValue(request.headers['x-forwarded-for'])?.split(',')[0]?.trim()
         ?? request.socket?.remoteAddress
@@ -145,15 +154,123 @@ export class RbacGuard implements CanActivate {
 
 @Injectable()
 export class PermissionGuard implements CanActivate {
-  constructor(@Inject(Reflector) private readonly reflector: Reflector, @Inject(AuditService) private readonly auditService: AuditService) {}
+  constructor(
+    @Inject(Reflector)
+    private readonly reflector: Reflector,
+    @Inject(AuditService)
+    private readonly auditService: AuditService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const required = this.reflector.getAllAndOverride<string[]>(PERMISSIONS_KEY, [context.getHandler(), context.getClass()]) ?? [];
-    if (required.length === 0 || required.every((permission) => request.principal?.permissions?.includes(permission))) return true;
-    await this.auditService.record({ eventType: 'SECURITY', action: 'permission_forbidden', actorId: request.principal?.userId ?? null, branchId: request.principal?.branchId ?? null, targetType: 'api_route', targetId: request.url ?? null, correlationId: request.correlationId ?? null });
+    const principal = request.principal;
+
+    if (!principal) {
+      throw new AppException('AUTH_INVALID_CREDENTIALS', 'Invalid credentials', HttpStatus.UNAUTHORIZED);
+    }
+
+    const required = this.reflector.getAllAndOverride<string[]>(PERMISSIONS_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]) ?? [];
+
+    if (hasPermissions(principal, required)) {
+      return true;
+    }
+
+    await this.auditService.record(permissionDenyAudit(request, context, required));
     throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
   }
+}
+
+@Injectable()
+export class DynamicPermissionGuard implements CanActivate {
+  constructor(
+    @Inject(Reflector)
+    private readonly reflector: Reflector,
+    @Inject(AuditService)
+    private readonly auditService: AuditService,
+  ) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const principal = request.principal;
+
+    if (!principal) {
+      throw new AppException('AUTH_INVALID_CREDENTIALS', 'Invalid credentials', HttpStatus.UNAUTHORIZED);
+    }
+
+    const resolver = this.reflector.getAllAndOverride<DynamicPermissionResolver>(DYNAMIC_PERMISSIONS_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    const required = resolver?.(request) ?? [];
+
+    if (hasPermissions(principal, required)) {
+      return true;
+    }
+
+    await this.auditService.record(permissionDenyAudit(request, context, required));
+    throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
+  }
+}
+
+function hasPermissions(principal: StaffPrincipal, required: string[]): boolean {
+  return required.length === 0 || required.every((permission) => principal.permissions?.includes(permission));
+}
+
+function permissionDenyAudit(
+  request: AuthenticatedRequest,
+  context: ExecutionContext,
+  requiredPermissions: string[],
+): AuditRecordInput {
+  const principal = request.principal;
+  const method = safeAuditText(request.method?.toUpperCase() ?? null);
+  const path = requestPath(request);
+  const correlationId = request.correlationId ?? headerValue(request.headers['x-correlation-id']);
+  const ipAddress = headerValue(request.headers['x-forwarded-for'])?.split(',')[0]?.trim()
+    ?? request.socket?.remoteAddress
+    ?? null;
+  const userAgent = safeAuditText(headerValue(request.headers['user-agent']));
+  return {
+    eventType: 'SECURITY',
+    action: 'permission_forbidden',
+    actorId: principal?.userId ?? null,
+    branchId: principal?.branchId ?? null,
+    targetType: 'api_route',
+    targetId: path,
+    correlationId,
+    ipAddress,
+    userAgent,
+    metadata: {
+      actorId: principal?.userId ?? null,
+      branchId: principal?.branchId ?? null,
+      requiredPermissions: requiredPermissions.map(safeAuditText),
+      method,
+      path,
+      handler: safeAuditText(handlerTarget(context)),
+      correlationId,
+      ipAddress,
+      userAgent,
+    },
+  };
+}
+
+function requestPath(request: AuthenticatedRequest): string {
+  return new URL(request.url ?? '/', 'http://localhost').pathname;
+}
+
+function handlerTarget(context: ExecutionContext): string {
+  const className = context.getClass()?.name || 'UnknownController';
+  const handlerName = context.getHandler()?.name || 'unknownHandler';
+  return `${className}.${handlerName}`;
+}
+
+const sensitiveAuditValue = /password|otp|token|hash|secret|credential|provider/i;
+
+function safeAuditText(value: string | null): string {
+  if (!value) return '';
+  return sensitiveAuditValue.test(value) ? '[REDACTED]' : value;
 }
 
 function requestedBranchId(request: AuthenticatedRequest): string | null {

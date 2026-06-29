@@ -13,6 +13,7 @@ import {
 } from '../../src/core/rate-limit.guard.ts';
 import { PortalController } from '../../src/modules/portal/portal.controller.ts';
 import { PortalService } from '../../src/modules/portal/portal.service.ts';
+import type { ComplaintsService } from '../../src/modules/complaints/complaints.service.ts';
 
 type PortalRequest = {
   body?: unknown;
@@ -26,7 +27,7 @@ test('portal submission route delegates parsed public request context', async ()
   const controller = new PortalController({
     submitComplaint: async (input) => {
       calls.push(input);
-      return { id: 'cmp_portal', referenceNumber: 'CMP-000010', status: ComplaintStatus.SUBMITTED };
+      return { id: 'cmp_portal', referenceNumber: 'CMS-2026-MAIN-000010', status: ComplaintStatus.SUBMITTED };
     },
   } as PortalService);
 
@@ -39,7 +40,7 @@ test('portal submission route delegates parsed public request context', async ()
   }, request());
 
   assert.deepEqual(response, {
-    complaint: { id: 'cmp_portal', referenceNumber: 'CMP-000010', status: ComplaintStatus.SUBMITTED },
+    complaint: { id: 'cmp_portal', referenceNumber: 'CMS-2026-MAIN-000010', status: ComplaintStatus.SUBMITTED },
   });
   assert.deepEqual(calls[0], {
     ...validBody(),
@@ -58,7 +59,7 @@ test('portal privacy regression strips DMS customer identifiers from public subm
   const controller = new PortalController({
     submitComplaint: async (input) => {
       calls.push(input);
-      return { id: 'cmp_portal', referenceNumber: 'CMP-000010', status: ComplaintStatus.SUBMITTED };
+      return { id: 'cmp_portal', referenceNumber: 'CMS-2026-MAIN-000010', status: ComplaintStatus.SUBMITTED };
     },
   } as PortalService);
 
@@ -74,6 +75,20 @@ test('portal privacy regression strips DMS customer identifiers from public subm
   assert.equal('customerCode' in input, false);
   assert.equal('dmsCustomerCode' in input, false);
   assert.equal(JSON.stringify(input).includes('DMS-'), false);
+});
+
+test('portal service always submits and cannot create staff drafts', async () => {
+  const calls: unknown[] = [];
+  const service = new PortalService({
+    createInternal: async (input) => {
+      calls.push(input);
+      return { id: 'cmp_portal', referenceNumber: 'CMS-2026-MAIN-000010', status: ComplaintStatus.SUBMITTED };
+    },
+  } as ComplaintsService, {} as never, {} as never, {} as never);
+
+  await service.submitComplaint({ ...validBody(), saveAsDraft: true } as never);
+
+  assert.equal((calls[0] as { saveAsDraft: boolean }).saveAsDraft, false);
 });
 
 test('portal submission route rejects invalid body before service call', async () => {
@@ -137,7 +152,12 @@ function validBody() {
     severity: ComplaintSeverity.HIGH,
     vehicleRelated: true,
     vehicleVin: 'SEEDDEMO00001',
+    vehiclePlate: 'ABC123',
+    vehicleBrand: 'Nissan',
+    vehicleModel: 'Patrol',
+    vehicleModelYear: 2024,
     vehicleId: null,
+    departmentId: 'dep_service',
   };
 }
 

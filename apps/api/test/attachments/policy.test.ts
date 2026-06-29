@@ -2,16 +2,20 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { Buffer } from 'node:buffer';
 import { readFileSync } from 'node:fs';
+import 'reflect-metadata';
 import type { ExecutionContext } from '@nestjs/common';
+import { GUARDS_METADATA, MODULE_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
 import { AttachmentScanStatus, ComplaintStatus, RoleCode } from '@prisma/client';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
-import { RbacGuard } from '../../src/core/auth.guard.ts';
+import { PermissionGuard, RbacGuard, SessionAuthGuard } from '../../src/core/auth.guard.ts';
 import type { AuthenticatedRequest } from '../../src/core/auth.guard.ts';
+import { CsrfGuard } from '../../src/core/csrf.guard.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
 import { InMemoryAttachmentStorage } from '../../src/modules/attachments/attachment-storage.port.ts';
 import type { AttachmentStoragePort } from '../../src/modules/attachments/attachment-storage.port.ts';
 import { AttachmentsController, PortalAttachmentsController } from '../../src/modules/attachments/attachments.controller.ts';
+import { AttachmentsModule } from '../../src/modules/attachments/attachments.module.ts';
 import { AttachmentsRepository } from '../../src/modules/attachments/attachments.repository.ts';
 import { AttachmentsService } from '../../src/modules/attachments/attachments.service.ts';
 import type { AttachmentUploadResult } from '../../src/modules/attachments/attachments.service.ts';
@@ -295,20 +299,42 @@ test('staff upload route rejects invalid file metadata before storage persistenc
   assert.equal(storageCalled, false);
 });
 
-test('staff upload route RBAC allows staff roles and audits denied roles', async () => {
+test('staff attachment routes require permissions and keep branch scope/CSRF', async () => {
+  assert.deepEqual(guardNames('create'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('prepareDownload'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
+  const providers = Reflect.getMetadata(MODULE_METADATA.PROVIDERS, AttachmentsModule) as unknown[];
+  assert.ok(providers.includes(SessionAuthGuard));
+  assert.ok(providers.includes(PermissionGuard));
+  assert.ok(providers.includes(RbacGuard));
+  assert.ok(providers.includes(CsrfGuard));
+
   const auditRecords: AuditRecordInput[] = [];
-  const guard = new RbacGuard(
+  const guard = new PermissionGuard(
     new Reflector(),
     { record: async (input) => auditRecords.push(input) } as AuditService,
   );
 
-  assert.equal(await guard.canActivate(context(request(RoleCode.CR_OFFICER))), true);
+  assert.equal(await guard.canActivate(context(request(RoleCode.MGMT_READONLY, ['ATTACHMENT_UPLOAD_STAFF']))), true);
+  assert.equal(await guard.canActivate(context(
+    request(RoleCode.MGMT_READONLY, ['ATTACHMENT_DOWNLOAD'], '/complaints/cmp_1/attachments/att_1/download?branchId=branch_main'),
+    'prepareDownload',
+  )), true);
   await assert.rejects(
-    guard.canActivate(context(request(RoleCode.MGMT_READONLY))),
+    guard.canActivate(context(request(RoleCode.ADMIN, [], '/complaints/cmp_1/attachments?password=leaked&sessionToken=leaked'))),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
   assert.equal(auditRecords[0]?.eventType, 'SECURITY');
-  assert.equal(auditRecords[0]?.action, 'rbac_forbidden');
+  assert.equal(auditRecords[0]?.action, 'permission_forbidden');
+  assert.deepEqual(auditRecords[0]?.metadata?.requiredPermissions, ['ATTACHMENT_UPLOAD_STAFF']);
+  assertSafePermissionAudit(auditRecords);
+
+  const branchAudit: AuditRecordInput[] = [];
+  await assert.rejects(
+    new RbacGuard(new Reflector(), { record: async (input) => branchAudit.push(input) } as AuditService)
+      .canActivate(context(request(RoleCode.CR_OFFICER, ['ATTACHMENT_UPLOAD_STAFF'], '/complaints/cmp_1/attachments?branchId=branch_other'))),
+    (error: unknown) => error instanceof AppException && error.code === 'BRANCH_SCOPE_FORBIDDEN',
+  );
+  assert.equal(branchAudit[0]?.action, 'branch_scope_forbidden');
 });
 
 test('staff download preparation returns a backend token and audits access', async () => {
@@ -753,7 +779,11 @@ function complaintDetail(branchId: string) {
   };
 }
 
-function request(roleCode: RoleCode = RoleCode.CR_OFFICER): AuthenticatedRequest {
+function request(
+  roleCode: RoleCode = RoleCode.CR_OFFICER,
+  permissions = ['ATTACHMENT_UPLOAD_STAFF', 'ATTACHMENT_DOWNLOAD'],
+  url = '/complaints/cmp_1/attachments?branchId=branch_main',
+): AuthenticatedRequest {
   return {
     principal: {
       sessionId: 'ses_attachment',
@@ -762,9 +792,10 @@ function request(roleCode: RoleCode = RoleCode.CR_OFFICER): AuthenticatedRequest
       nameEn: 'CR Officer',
       nameAr: 'CR Officer',
       roleCode,
+      permissions,
       branchId: 'branch_main',
     },
-    url: '/complaints/cmp_1/attachments?branchId=branch_main',
+    url,
     correlationId: 'req_attachment',
     headers: { 'x-forwarded-for': '203.0.113.99, 10.0.0.1', 'user-agent': 'node:test' },
     socket: { remoteAddress: '198.51.100.99' },
@@ -779,10 +810,22 @@ function portalRequest() {
   };
 }
 
-function context(req: AuthenticatedRequest): ExecutionContext {
+function context(req: AuthenticatedRequest, handler: keyof AttachmentsController = 'create'): ExecutionContext {
   return {
     switchToHttp: () => ({ getRequest: () => req }),
-    getHandler: () => AttachmentsController.prototype.create,
+    getHandler: () => AttachmentsController.prototype[handler],
     getClass: () => AttachmentsController,
   } as ExecutionContext;
+}
+
+function guardNames(handler: keyof AttachmentsController): string[] {
+  const guards = Reflect.getMetadata(GUARDS_METADATA, AttachmentsController.prototype[handler]) as Array<{ name: string }>;
+  return guards.map((guard) => guard.name);
+}
+
+function assertSafePermissionAudit(auditRecords: AuditRecordInput[]): void {
+  const auditJson = JSON.stringify(auditRecords).toLowerCase();
+  for (const forbidden of ['password', 'otp', 'token', 'reset token', 'session token', 'hash', 'secret', 'credential', 'provider']) {
+    assert.equal(auditJson.includes(forbidden), false);
+  }
 }

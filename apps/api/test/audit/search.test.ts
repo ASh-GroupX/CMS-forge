@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import 'reflect-metadata';
+import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
 import type { ExecutionContext } from '@nestjs/common';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
-import { RbacGuard } from '../../src/core/auth.guard.ts';
+import { PermissionGuard } from '../../src/core/auth.guard.ts';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
 import { AuditController } from '../../src/modules/audit/audit.controller.ts';
@@ -19,6 +20,7 @@ const admin: StaffPrincipal = {
   nameEn: 'Admin',
   nameAr: 'Admin',
   roleCode: 'ADMIN',
+  permissions: ['AUDIT_VIEW', 'AUDIT_EXPORT'],
   branchId: 'branch_main',
 };
 
@@ -32,6 +34,7 @@ const branchManager: StaffPrincipal = {
 function request(principal: StaffPrincipal, url = '/audit/logs?branchId=branch_main'): AuthenticatedRequest {
   return {
     principal,
+    method: 'GET',
     url,
     correlationId: 'req_test',
     headers: {
@@ -107,63 +110,57 @@ test('admin can search audit logs with filters and safe metadata', async () => {
   });
 });
 
-test('non-admin staff is denied and audited by the RBAC guard', async () => {
+test('audit controller routes use permission guard', () => {
+  assert.deepEqual(guardNames('search'), ['SessionAuthGuard', 'PermissionGuard']);
+  assert.deepEqual(guardNames('export'), ['SessionAuthGuard', 'PermissionGuard']);
+});
+
+test('audit search permission allows AUDIT_VIEW and denies missing permission safely', async () => {
   const auditRecords: AuditRecordInput[] = [];
-  const guard = new RbacGuard(
+  const guard = new PermissionGuard(
     new Reflector(),
     { record: async (input) => auditRecords.push(input) } as AuditService,
   );
 
+  assert.equal(await guard.canActivate(context(request({ ...branchManager, permissions: ['AUDIT_VIEW'] }))), true);
+
   await assert.rejects(
-    guard.canActivate(context(request({ ...admin, roleCode: 'CR_OFFICER' }))),
+    guard.canActivate(context(request({ ...admin, permissions: [] }, '/audit/logs?password=leaked&sessionToken=leaked'))),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
 
-  assert.equal(auditRecords[0]?.eventType, 'SECURITY');
-  assert.equal(auditRecords[0]?.action, 'rbac_forbidden');
+  assertSafePermissionAudit(auditRecords, 'AUDIT_VIEW');
 });
 
-test('branch manager cannot search audit logs', async () => {
+test('audit export permission allows AUDIT_EXPORT and denies missing permission safely', async () => {
   const auditRecords: AuditRecordInput[] = [];
-  const guard = new RbacGuard(
+  const guard = new PermissionGuard(
     new Reflector(),
     { record: async (input) => auditRecords.push(input) } as AuditService,
   );
 
+  assert.equal(await guard.canActivate(context(request({ ...branchManager, permissions: ['AUDIT_EXPORT'] }, '/audit/logs/export'), AuditController.prototype.export)), true);
+
   await assert.rejects(
-    guard.canActivate(context(request(branchManager))),
+    guard.canActivate(context(request({ ...admin, permissions: [] }, '/audit/logs/export?password=leaked&sessionToken=leaked'), AuditController.prototype.export)),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
 
-  assert.equal(auditRecords[0]?.eventType, 'SECURITY');
-  assert.equal(auditRecords[0]?.action, 'rbac_forbidden');
+  assertSafePermissionAudit(auditRecords, 'AUDIT_EXPORT');
 });
 
-test('branch manager cannot export audit logs', async () => {
-  const auditRecords: AuditRecordInput[] = [];
-  const guard = new RbacGuard(
-    new Reflector(),
-    { record: async (input) => auditRecords.push(input) } as AuditService,
-  );
-
-  await assert.rejects(
-    guard.canActivate(context(request(branchManager), AuditController.prototype.export)),
-    (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
-  );
-
-  assert.equal(auditRecords[0]?.eventType, 'SECURITY');
-  assert.equal(auditRecords[0]?.action, 'rbac_forbidden');
-});
-
-test('audit search service fails closed for non-admin direct calls', async () => {
+test('audit search service allows required permission and denies missing permission', async () => {
   const repository = {
     search: async () => {
       return [];
     },
   } as AuditRepository;
 
+  await assert.doesNotReject(
+    new AuditSearchService(repository).search({}, { ...branchManager, permissions: ['AUDIT_VIEW'] }),
+  );
   await assert.rejects(
-    new AuditSearchService(repository).search({}, branchManager),
+    new AuditSearchService(repository).search({}, { ...admin, permissions: [] }),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
 });
@@ -228,15 +225,18 @@ test('admin can export capped redacted audit logs and writes export audit', asyn
   }]);
 });
 
-test('audit export service fails closed for non-admin direct calls', async () => {
+test('audit export service allows required permission and denies missing permission', async () => {
   const repository = {
     search: async () => {
       return [];
     },
   } as AuditRepository;
 
+  await assert.doesNotReject(
+    new AuditSearchService(repository).export({}, { ...branchManager, permissions: ['AUDIT_EXPORT'] }),
+  );
   await assert.rejects(
-    new AuditSearchService(repository).export({}, branchManager),
+    new AuditSearchService(repository).export({}, { ...admin, permissions: [] }),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
 });
@@ -250,3 +250,17 @@ test('invalid query values use the stable validation error code', async () => {
     (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED',
   );
 });
+
+function guardNames(handler: keyof AuditController): string[] {
+  return (Reflect.getMetadata(GUARDS_METADATA, AuditController.prototype[handler]) as Array<{ name: string }>).map(({ name }) => name);
+}
+
+function assertSafePermissionAudit(auditRecords: AuditRecordInput[], permission: string): void {
+  assert.equal(auditRecords[0]?.eventType, 'SECURITY');
+  assert.equal(auditRecords[0]?.action, 'permission_forbidden');
+  assert.deepEqual(auditRecords[0]?.metadata?.requiredPermissions, [permission]);
+  const auditJson = JSON.stringify(auditRecords).toLowerCase();
+  for (const forbidden of ['password', 'otp', 'token', 'reset token', 'session token', 'hash', 'secret', 'credential', 'provider']) {
+    assert.equal(auditJson.includes(forbidden), false);
+  }
+}

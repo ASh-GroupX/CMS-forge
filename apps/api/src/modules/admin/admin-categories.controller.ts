@@ -1,6 +1,5 @@
 import { Body, Controller, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
-import { RoleCode } from '@prisma/client';
-import { RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
+import { PermissionGuard, Permissions, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { AppException } from '../../core/http-kernel.js';
@@ -12,15 +11,15 @@ export class AdminCategoriesController {
   constructor(private readonly categories: AdminCategoriesService) {}
 
   @Post()
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('MASTER_DATA_MANAGE')
   create(@Body() body: unknown, @Req() request: AuthenticatedRequest) {
     return this.categories.create(parseCategory(body), auditContext(request));
   }
 
   @Patch(':id')
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('MASTER_DATA_MANAGE')
   update(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
     return this.categories.update(id, parseCategory(body), auditContext(request));
   }

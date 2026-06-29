@@ -6,7 +6,7 @@ import type { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { RoleCode } from '@prisma/client';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
-import { RbacGuard } from '../../src/core/auth.guard.ts';
+import { PermissionGuard } from '../../src/core/auth.guard.ts';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
 import { AdminRolesController } from '../../src/modules/admin/admin-roles.controller.ts';
@@ -76,19 +76,31 @@ test('admin role service replaces selected permissions and audits the change in 
   assert.deepEqual(audits[0]?.input.metadata?.previousPermissionCodes, ['STAFF_LOGIN']);
 });
 
-test('admin role controller routes are admin-only, with CSRF required for creates', async () => {
-  assert.deepEqual(guardNames('list'), ['SessionAuthGuard', 'RbacGuard']);
-  assert.deepEqual(guardNames('create'), ['SessionAuthGuard', 'RbacGuard', 'CsrfGuard']);
-  assert.deepEqual(guardNames('updatePermissions'), ['SessionAuthGuard', 'RbacGuard', 'CsrfGuard']);
+test('admin role controller routes require ROLES_MANAGE permission and CSRF for writes', async () => {
+  assert.deepEqual(guardNames('list'), ['SessionAuthGuard', 'PermissionGuard']);
+  assert.deepEqual(guardNames('create'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('updatePermissions'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  for (const handler of ['list', 'create', 'updatePermissions'] as Array<keyof AdminRolesController>) {
+    assert.equal(guardNames(handler).includes('RbacGuard'), false);
+  }
   const audits: AuditRecordInput[] = [];
-  const guard = new RbacGuard(new Reflector(), { record: async (input) => audits.push(input) } as AuditService);
-  assert.equal(await guard.canActivate(context(request(RoleCode.ADMIN), 'create')), true);
-  await assert.rejects(guard.canActivate(context(request(RoleCode.CR_MANAGER), 'create')), (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN');
-  assert.equal(audits[0]?.action, 'rbac_forbidden');
+  const guard = new PermissionGuard(new Reflector(), { record: async (input) => audits.push(input) } as AuditService);
+  assert.equal(await guard.canActivate(context(request(RoleCode.CR_MANAGER, ['ROLES_MANAGE']), 'create')), true);
+  await assert.rejects(
+    guard.canActivate(context(request(RoleCode.ADMIN, [], '/admin/roles?password=leaked&sessionToken=leaked', 'node:test token secret'), 'create')),
+    (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
+  assert.equal(audits[0]?.eventType, 'SECURITY');
+  assert.equal(audits[0]?.action, 'permission_forbidden');
+  assert.deepEqual(audits[0]?.metadata?.requiredPermissions, ['ROLES_MANAGE']);
+  const auditJson = JSON.stringify(audits).toLowerCase();
+  for (const forbidden of ['password', 'otp', 'token', 'reset token', 'session token', 'hash', 'secret', 'credential', 'provider']) {
+    assert.equal(auditJson.includes(forbidden), false);
+  }
 });
 
 function noopAudit(): AuditService { return { record: async () => undefined } as unknown as AuditService; }
 function auditContext() { return { actorId: 'usr_admin', correlationId: 'req_roles', ipAddress: '127.0.0.1', userAgent: 'node:test' }; }
-function request(roleCode: RoleCode): AuthenticatedRequest { return { principal: { ...admin, roleCode }, url: '/admin/roles', correlationId: 'req_roles', headers: {}, socket: { remoteAddress: '127.0.0.1' } }; }
+function request(roleCode: RoleCode, permissions = admin.permissions, url = '/admin/roles', userAgent = 'node:test'): AuthenticatedRequest { return { principal: { ...admin, roleCode, permissions }, method: 'POST', url, correlationId: 'req_roles', headers: { 'user-agent': userAgent }, socket: { remoteAddress: '127.0.0.1' } }; }
 function context(req: AuthenticatedRequest, handler: keyof AdminRolesController): ExecutionContext { return { switchToHttp: () => ({ getRequest: () => req }), getHandler: () => AdminRolesController.prototype[handler], getClass: () => AdminRolesController } as ExecutionContext; }
 function guardNames(handler: keyof AdminRolesController): string[] { return (Reflect.getMetadata(GUARDS_METADATA, AdminRolesController.prototype[handler]) as Array<{ name: string }>).map(({ name }) => name); }

@@ -2,11 +2,19 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { SurveyStatus } from '@prisma/client';
+import 'reflect-metadata';
+import { GUARDS_METADATA, MODULE_METADATA } from '@nestjs/common/constants';
+import type { ExecutionContext } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { RoleCode, SurveyStatus } from '@prisma/client';
+import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
+import { PermissionGuard, RbacGuard, SessionAuthGuard } from '../../src/core/auth.guard.ts';
+import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
 import { NotificationsService } from '../../src/modules/notifications/notifications.service.ts';
 import { ComplaintsService } from '../../src/modules/complaints/complaints.service.ts';
 import { ComplaintSurveysController, SurveysController } from '../../src/modules/surveys/surveys.controller.ts';
+import { SurveysModule } from '../../src/modules/surveys/surveys.module.ts';
 import { SurveysRepository } from '../../src/modules/surveys/surveys.repository.ts';
 import { SurveysService } from '../../src/modules/surveys/surveys.service.ts';
 
@@ -172,6 +180,29 @@ test('portal survey route validates request body and delegates safely', async ()
   );
 });
 
+test('survey routes keep portal public and require report permission for staff read', async () => {
+  assert.equal(Reflect.getMetadata(GUARDS_METADATA, SurveysController.prototype.submit), undefined);
+  assert.deepEqual(guardNames('list'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
+
+  const auditRecords: AuditRecordInput[] = [];
+  const guard = new PermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
+  assert.equal(await guard.canActivate(context(staffRequest(staffWith(['REPORT_VIEW'])))), true);
+
+  await assert.rejects(
+    guard.canActivate(context(staffRequest(staffWith([])))),
+    (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
+  assert.equal(auditRecords[0]?.action, 'permission_forbidden');
+  assert.deepEqual(auditRecords[0]?.metadata?.requiredPermissions, ['REPORT_VIEW']);
+});
+
+test('surveys module wires permission and branch-scope guards', () => {
+  const providers = Reflect.getMetadata(MODULE_METADATA.PROVIDERS, SurveysModule) as unknown[];
+  assert.ok(providers.includes(SessionAuthGuard));
+  assert.ok(providers.includes(PermissionGuard));
+  assert.ok(providers.includes(RbacGuard));
+});
+
 test('portal survey OpenAPI documents submission route without private fields', () => {
   const openapi = JSON.parse(readFileSync('packages/contracts/openapi.json', 'utf8'));
   assert.ok(openapi.paths['/portal/surveys']?.post);
@@ -286,6 +317,44 @@ function request() {
     principal: { sessionId: 'ses_1', userId: 'usr_1', email: 'u@test', nameEn: 'User', nameAr: 'User', roleCode: 'CR_MANAGER', branchId: 'branch_main' },
     headers: {},
   };
+}
+
+const staffPrincipal: StaffPrincipal = {
+  sessionId: 'ses_1',
+  userId: 'usr_1',
+  email: 'u@test',
+  nameEn: 'User',
+  nameAr: 'User',
+  roleCode: RoleCode.MGMT_READONLY,
+  branchId: 'branch_main',
+};
+
+function staffWith(permissions: string[]): StaffPrincipal {
+  return { ...staffPrincipal, permissions };
+}
+
+function staffRequest(principal: StaffPrincipal): AuthenticatedRequest {
+  return {
+    principal,
+    method: 'GET',
+    url: '/complaints/cmp_1/surveys',
+    correlationId: 'req_survey_permission',
+    headers: { 'user-agent': 'node:test' },
+    socket: { remoteAddress: '127.0.0.1' },
+  };
+}
+
+function context(req: AuthenticatedRequest): ExecutionContext {
+  return {
+    switchToHttp: () => ({ getRequest: () => req }),
+    getHandler: () => ComplaintSurveysController.prototype.list,
+    getClass: () => ComplaintSurveysController,
+  } as ExecutionContext;
+}
+
+function guardNames(handler: keyof ComplaintSurveysController): string[] {
+  const guards = Reflect.getMetadata(GUARDS_METADATA, ComplaintSurveysController.prototype[handler]) as Array<{ name: string }>;
+  return guards.map((guard) => guard.name);
 }
 
 function surveySelect() {

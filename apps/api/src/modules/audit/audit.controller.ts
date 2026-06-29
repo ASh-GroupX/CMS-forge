@@ -1,7 +1,7 @@
 import { Controller, Get, Query, Req, Res, UseGuards } from '@nestjs/common';
 import {
-  RbacGuard,
-  Roles,
+  PermissionGuard,
+  Permissions,
   SessionAuthGuard,
 } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
@@ -17,8 +17,8 @@ export class AuditController {
   constructor(private readonly auditSearch: AuditSearchService) {}
 
   @Get('logs')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles('ADMIN')
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('AUDIT_VIEW')
   async search(
     @Query() query: Record<string, unknown>,
     @Req() request: AuthenticatedRequest,
@@ -27,8 +27,8 @@ export class AuditController {
   }
 
   @Get('logs/export')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles('ADMIN')
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('AUDIT_EXPORT')
   async export(
     @Query() query: Record<string, unknown>,
     @Req() request: AuthenticatedRequest,

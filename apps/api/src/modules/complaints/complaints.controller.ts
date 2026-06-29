@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpStatus, Inject, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
-import { ComplaintSeverity, ComplaintStatus, RoleCode } from '@prisma/client';
-import { BranchScoped, RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
+import { ComplaintSeverity, ComplaintStatus, ComplaintTransitionAction, RoleCode } from '@prisma/client';
+import { BranchScoped, DynamicPermissionGuard, DynamicPermissions, PermissionGuard, Permissions, RbacGuard, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { AppException } from '../../core/http-kernel.js';
@@ -22,8 +22,8 @@ export class ComplaintsController {
   ) {}
 
   @Get()
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('COMPLAINT_VIEW_BRANCH')
   @BranchScoped()
   async list(
     @Query('branchId') branchId: string | undefined,
@@ -33,8 +33,8 @@ export class ComplaintsController {
   }
 
   @Get('search')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('COMPLAINT_VIEW_BRANCH')
   @BranchScoped()
   async search(@Query() query: Record<string, string | undefined>, @Req() request: AuthenticatedRequest): Promise<ComplaintSearchResponseDto> {
     const limit = pageNumber(query.limit, 'limit', 25, 100);
@@ -53,15 +53,15 @@ export class ComplaintsController {
   }
 
   @Get('form-options')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('COMPLAINT_CREATE')
   async formOptionsForCreate(@Req() request: AuthenticatedRequest) {
     return this.formOptions.list(request.principal!);
   }
 
   @Get(':id')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('COMPLAINT_VIEW_BRANCH')
   @BranchScoped()
   async get(
     @Param('id') id: string,
@@ -72,8 +72,8 @@ export class ComplaintsController {
   }
 
   @Post(':id/comments')
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, DynamicPermissionGuard, RbacGuard, CsrfGuard)
+  @DynamicPermissions(commentPermission)
   @BranchScoped()
   async createComment(
     @Param('id') id: string,
@@ -91,8 +91,8 @@ export class ComplaintsController {
   }
 
   @Get(':id/comments/public')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('COMPLAINT_VIEW_BRANCH')
   @BranchScoped()
   async listPublicComments(
     @Param('id') id: string,
@@ -104,8 +104,8 @@ export class ComplaintsController {
   }
 
   @Post()
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard, CsrfGuard)
+  @Permissions('COMPLAINT_CREATE')
   @BranchScoped()
   async create(
     @Query('branchId') branchId: string | undefined,
@@ -120,8 +120,8 @@ export class ComplaintsController {
   }
 
   @Post(':id/transitions')
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, DynamicPermissionGuard, RbacGuard, CsrfGuard)
+  @DynamicPermissions(transitionPermission)
   @BranchScoped()
   async transition(
     @Param('id') id: string,
@@ -137,6 +137,39 @@ export class ComplaintsController {
       ),
     };
   }
+}
+
+function commentPermission(request: AuthenticatedRequest): string[] {
+  const visibility = bodyField(request.body, 'visibility');
+  if (visibility === 'INTERNAL') return ['COMPLAINT_COMMENT_INTERNAL'];
+  if (visibility === 'PUBLIC') return ['COMPLAINT_COMMENT_PUBLIC'];
+  return [];
+}
+
+function transitionPermission(request: AuthenticatedRequest): string[] {
+  const action = bodyField(request.body, 'action');
+  switch (action) {
+    case ComplaintTransitionAction.SUBMIT: return ['COMPLAINT_SUBMIT'];
+    case ComplaintTransitionAction.ACCEPT_INTAKE:
+    case ComplaintTransitionAction.APPROVE_AND_ROUTE:
+    case ComplaintTransitionAction.SEND_BACK: return ['COMPLAINT_APPROVE'];
+    case ComplaintTransitionAction.ASSIGN_INVESTIGATION:
+    case ComplaintTransitionAction.ROUTE_AGAIN: return ['COMPLAINT_ASSIGN'];
+    case ComplaintTransitionAction.RESOLVE:
+    case ComplaintTransitionAction.RESOLVE_DIRECTLY: return ['COMPLAINT_RESOLVE'];
+    case ComplaintTransitionAction.CLOSE: return ['COMPLAINT_CLOSE'];
+    case ComplaintTransitionAction.REOPEN: return ['COMPLAINT_REOPEN'];
+    case ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE: return ['COMPLAINT_COMMENT_INTERNAL'];
+    case ComplaintTransitionAction.REJECT_AS_INVALID:
+    case ComplaintTransitionAction.REJECT_AFTER_REVIEW:
+    case ComplaintTransitionAction.REJECT_AFTER_INVESTIGATION:
+    case ComplaintTransitionAction.REJECT_RESOLUTION: return ['COMPLAINT_REJECT'];
+    default: return [];
+  }
+}
+
+function bodyField(body: unknown, field: string): string | undefined {
+  return body && typeof body === 'object' ? (body as Record<string, unknown>)[field] as string | undefined : undefined;
 }
 
 function auditContext(request: AuthenticatedRequest) {

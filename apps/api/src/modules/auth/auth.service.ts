@@ -283,7 +283,9 @@ function authDenied(code: 'AUTH_INVALID_CREDENTIALS' | 'AUTH_LOCKED_OR_INACTIVE'
 }
 
 function permissionCodes(user: Pick<StaffAuthRecord, 'role'>): string[] {
-  return user.role.permissions?.map(({ permission }) => permission.code) ?? [];
+  return user.role.permissions
+    ?.filter(({ permission }) => permission.isActive)
+    .map(({ permission }) => permission.code) ?? [];
 }
 
 function validatePasswordStrength(password: string): void {

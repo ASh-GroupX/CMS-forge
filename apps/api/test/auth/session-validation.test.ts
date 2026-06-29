@@ -19,7 +19,13 @@ const validSession: StaffSessionRecord = {
     branchId: 'branch_main',
     isActive: true,
     lockedAt: null,
-    role: { code: 'ADMIN', permissions: [{ permission: { code: 'ROLES_MANAGE' } }] },
+    role: {
+      code: 'ADMIN',
+      permissions: [
+        { permission: { code: 'ROLES_MANAGE', isActive: true } },
+        { permission: { code: 'STALE_PERMISSION', isActive: false } },
+      ],
+    },
   },
 };
 

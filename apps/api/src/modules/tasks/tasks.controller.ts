@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Inject, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
-import { RoleCode } from '@prisma/client';
-import { BranchScoped, RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
+import { BranchScoped, PermissionGuard, Permissions, RbacGuard, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { AppException } from '../../core/http-kernel.js';
@@ -17,8 +16,8 @@ export class TasksController {
   constructor(@Inject(TasksService) private readonly tasksService: TasksService) {}
 
   @Post('quick-add')
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
   async quickAdd(@Body() body: unknown, @Req() request: AuthenticatedRequest): Promise<QuickAddTaskResponseDto> {
     const principal = requirePrincipal(request);
     return {
@@ -31,23 +30,23 @@ export class TasksController {
   }
 
   @Get('today')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
   async today(@Req() request: AuthenticatedRequest): Promise<EmployeeTodayResponseDto> {
     return this.tasksService.employeeToday(principalUserId(request));
   }
 
   @Get('sent-by-me')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
   async sentByMe(@Req() request: AuthenticatedRequest) {
     const principal = requirePrincipal(request);
     return this.tasksService.sentByMe({ userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId });
   }
 
   @Get('manager-rollup')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN, RoleCode.MGMT_READONLY)
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('REPORT_VIEW')
   @BranchScoped()
   async managerRollup(@Req() request: AuthenticatedRequest): Promise<ManagerControlRoomResponseDto> {
     const principal = requirePrincipal(request);
@@ -55,8 +54,8 @@ export class TasksController {
   }
 
   @Get('promises')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN, RoleCode.MGMT_READONLY)
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('REPORT_VIEW')
   @BranchScoped()
   async promises(@Req() request: AuthenticatedRequest): Promise<PromiseTrackerResponseDto> {
     const principal = requirePrincipal(request);
@@ -64,8 +63,8 @@ export class TasksController {
   }
 
   @Get('related-records')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
   @BranchScoped()
   relatedRecords(@Query() query: Record<string, unknown>, @Req() request: AuthenticatedRequest): Promise<RelatedRecordLookupResponseDto> {
     const principal = requirePrincipal(request);
@@ -73,24 +72,24 @@ export class TasksController {
   }
 
   @Get(':id')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
   async get(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
     const principal = requirePrincipal(request);
     return { task: await this.tasksService.getForActor(id, { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId }) };
   }
 
   @Get(':id/comments')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
   async comments(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
     const principal = requirePrincipal(request);
     return this.tasksService.listCommentsForActor(id, { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId }, auditContext(request));
   }
 
   @Post(':id/comments')
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
   async createComment(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
     const principal = requirePrincipal(request);
     return {
@@ -104,8 +103,8 @@ export class TasksController {
   }
 
   @Post(':id/nudge')
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
   async nudge(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
     const principal = requirePrincipal(request);
     await this.tasksService.nudgeForActor(id, parseTaskNudgeBody(body), { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId }, auditContext(request));
@@ -113,8 +112,8 @@ export class TasksController {
   }
 
   @Patch(':id')
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
   async update(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
     const principal = requirePrincipal(request);
     return {

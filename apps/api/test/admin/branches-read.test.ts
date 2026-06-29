@@ -3,7 +3,7 @@ import test from 'node:test';
 import { Reflector } from '@nestjs/core';
 import type { ExecutionContext } from '@nestjs/common';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
-import { RbacGuard } from '../../src/core/auth.guard.ts';
+import { PermissionGuard } from '../../src/core/auth.guard.ts';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
 import { BranchesController } from '../../src/modules/branches/branches.controller.ts';
@@ -29,14 +29,15 @@ const admin: StaffPrincipal = {
   nameEn: 'Admin',
   nameAr: 'Admin',
   roleCode: 'ADMIN',
+  permissions: ['MASTER_DATA_MANAGE'],
   branchId: 'branch_main',
 };
 
 const noopAuditService = { record: async () => undefined } as unknown as AuditService;
 
-function request(roleCode = 'ADMIN'): AuthenticatedRequest {
+function request(roleCode = 'ADMIN', permissions = admin.permissions): AuthenticatedRequest {
   return {
-    principal: { ...admin, roleCode },
+    principal: { ...admin, roleCode, permissions },
     url: '/branches',
     correlationId: 'req_test',
     headers: { 'x-forwarded-for': '127.0.0.1', 'user-agent': 'node:test' },
@@ -285,38 +286,40 @@ test('branch controller rejects invalid write request bodies', async () => {
   );
 });
 
-test('branch read routes are admin-only and denials are audited', async () => {
+test('branch read routes require master-data permission and denials are audited', async () => {
   const auditRecords: AuditRecordInput[] = [];
-  const guard = new RbacGuard(
+  const guard = new PermissionGuard(
     new Reflector(),
     { record: async (input) => auditRecords.push(input) } as AuditService,
   );
 
-  assert.equal(await guard.canActivate(context(request('ADMIN'))), true);
+  assert.equal(await guard.canActivate(context(request('BRANCH_MANAGER', ['MASTER_DATA_MANAGE']))), true);
 
   await assert.rejects(
-    guard.canActivate(context(request('BRANCH_MANAGER'))),
+    guard.canActivate(context(request('ADMIN', []))),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
 
   assert.equal(auditRecords[0]?.eventType, 'SECURITY');
-  assert.equal(auditRecords[0]?.action, 'rbac_forbidden');
+  assert.equal(auditRecords[0]?.action, 'permission_forbidden');
+  assert.deepEqual(auditRecords[0]?.metadata?.requiredPermissions, ['MASTER_DATA_MANAGE']);
 });
 
-test('branch write routes are admin-only and denials are audited', async () => {
+test('branch write routes require master-data permission and denials are audited', async () => {
   const auditRecords: AuditRecordInput[] = [];
-  const guard = new RbacGuard(
+  const guard = new PermissionGuard(
     new Reflector(),
     { record: async (input) => auditRecords.push(input) } as AuditService,
   );
 
-  assert.equal(await guard.canActivate(context(request('ADMIN'), 'create')), true);
+  assert.equal(await guard.canActivate(context(request('BRANCH_MANAGER', ['MASTER_DATA_MANAGE']), 'create')), true);
 
   await assert.rejects(
-    guard.canActivate(context(request('BRANCH_MANAGER'), 'create')),
+    guard.canActivate(context(request('ADMIN', []), 'create')),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
 
   assert.equal(auditRecords[0]?.eventType, 'SECURITY');
-  assert.equal(auditRecords[0]?.action, 'rbac_forbidden');
+  assert.equal(auditRecords[0]?.action, 'permission_forbidden');
+  assert.deepEqual(auditRecords[0]?.metadata?.requiredPermissions, ['MASTER_DATA_MANAGE']);
 });

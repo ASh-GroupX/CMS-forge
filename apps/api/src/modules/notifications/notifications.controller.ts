@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Inject, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
-import { RoleCode } from '@prisma/client';
-import { RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
+import { PermissionGuard, Permissions, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { AppException } from '../../core/http-kernel.js';
@@ -12,8 +11,8 @@ export class NotificationsController {
   constructor(@Inject(NotificationsService) private readonly notificationsService: NotificationsService) {}
 
   @Get()
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN, RoleCode.MGMT_READONLY)
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('STAFF_LOGIN')
   async listMine(@Req() request: AuthenticatedRequest) {
     const userId = request.principal?.userId;
     if (!userId) throw new AppException('AUTH_INVALID_CREDENTIALS', 'Invalid credentials', 401);
@@ -21,36 +20,36 @@ export class NotificationsController {
   }
 
   @Get('templates')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('NOTIFICATIONS_MANAGE')
   async listTemplates() {
     return { items: await this.notificationsService.listTemplates() };
   }
 
   @Post('templates')
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('NOTIFICATIONS_MANAGE')
   async createTemplate(@Body() body: unknown, @Req() request: AuthenticatedRequest) {
     return { template: await this.notificationsService.createTemplate(parseCreateTemplateBody(body), auditContext(request)) };
   }
 
   @Patch('templates/:id')
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('NOTIFICATIONS_MANAGE')
   async updateTemplate(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
     return { template: await this.notificationsService.updateTemplate(id, parseUpdateTemplateBody(body), auditContext(request)) };
   }
 
   @Post('templates/:id/activate')
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('NOTIFICATIONS_MANAGE')
   async activateTemplate(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
     return { template: await this.notificationsService.setTemplateActive(id, true, auditContext(request)) };
   }
 
   @Post('templates/:id/deactivate')
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('NOTIFICATIONS_MANAGE')
   async deactivateTemplate(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
     return { template: await this.notificationsService.setTemplateActive(id, false, auditContext(request)) };
   }

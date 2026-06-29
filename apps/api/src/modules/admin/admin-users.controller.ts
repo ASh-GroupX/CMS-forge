@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Inject, Param, Post, Req, UseGuards } from '@nestjs/common';
-import { RoleCode } from '@prisma/client';
-import { RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
+import { PermissionGuard, Permissions, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { AppException } from '../../core/http-kernel.js';
@@ -12,29 +11,29 @@ export class AdminUsersController {
   constructor(@Inject(AdminUsersService) private readonly users: AdminUsersService) {}
 
   @Get()
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('USERS_MANAGE')
   list() {
     return this.users.list();
   }
 
   @Post()
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('USERS_MANAGE')
   create(@Body() body: unknown, @Req() request: AuthenticatedRequest) {
     return this.users.create(parseCreateUser(body), auditContext(request));
   }
 
   @Post(':id/deactivate')
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('USERS_MANAGE')
   deactivate(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
     return this.users.setActive(id, false, auditContext(request));
   }
 
   @Post(':id/reactivate')
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('USERS_MANAGE')
   reactivate(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
     return this.users.setActive(id, true, auditContext(request));
   }
@@ -46,8 +45,8 @@ export class StaffLookupController {
   private readonly users!: AdminUsersService;
 
   @Get('assignable')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
   assignable(@Req() request: AuthenticatedRequest) {
     return this.users.assignableStaff(actor(request));
   }

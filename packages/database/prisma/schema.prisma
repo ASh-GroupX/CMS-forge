@@ -272,6 +272,7 @@ model Branch {
   users       User[]
   departments Department[]
   complaints  Complaint[]
+  complaintReferenceSequences ComplaintReferenceSequence[]
   slaPolicies SlaPolicy[]
   auditLogs   AuditLog[]
   deals       Deal[]
@@ -541,6 +542,17 @@ model ComplaintStatusHistory {
   @@index([complaintId, createdAt])
   @@index([actorId])
   @@map("complaint_status_history")
+}
+
+model ComplaintReferenceSequence {
+  branchId     String   @map("branch_id")
+  year         Int
+  nextSequence Int      @default(1) @map("next_sequence")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  branch       Branch   @relation(fields: [branchId], references: [id])
+
+  @@id([branchId, year])
+  @@map("complaint_reference_sequences")
 }
 
 model Approval {

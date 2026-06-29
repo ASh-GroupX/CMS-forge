@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import type { CommentVisibility, ComplaintSeverity, ComplaintStatus, ComplaintTransitionAction, ComplaintTransitionRequestSource, Prisma, RoleCode } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
+import { nextReferenceNumber, upsertVehicle } from './complaint-reference.repository.js';
+import type { ComplaintReferenceClient } from './complaint-reference.repository.js';
 
-type ComplaintTransitionClient = Pick<Prisma.TransactionClient, 'complaint' | 'complaintStatusHistory' | 'customer' | 'comment'>;
+type ComplaintTransitionClient = Pick<Prisma.TransactionClient, 'comment' | 'complaint' | 'complaintStatusHistory' | 'customer'> & ComplaintReferenceClient;
 
 export type ComplaintStatusRecord = {
   id: string;
@@ -51,6 +53,12 @@ export type CreateComplaintData = {
   customerPhone?: string | null;
   customerNumber?: string | null;
   vehicleId?: string | null;
+  vehicleVin?: string | null;
+  vehiclePlate?: string | null;
+  vehicleBrand?: string | null;
+  vehicleModel?: string | null;
+  vehicleModelYear?: number | null;
+  departmentId?: string | null;
   createdById?: string | null;
   descriptionEn: string;
   incidentAt: Date;
@@ -66,7 +74,7 @@ export type CreateComplaintStatusHistoryData = {
   complaintId: string;
   fromStatus: ComplaintStatus | null;
   toStatus: ComplaintStatus;
-  action: ComplaintTransitionAction;
+  action: ComplaintTransitionAction | null;
   actorId?: string | null;
   actorRole: RoleCode | null;
   requestSource: ComplaintTransitionRequestSource;
@@ -111,10 +119,8 @@ export class ComplaintsRepository {
     return this.prisma.$transaction(work);
   }
 
-  async nextReferenceNumber(client: ComplaintTransitionClient = this.prisma): Promise<string> {
-    // ponytail: count-based references are enough until concurrent create load needs a DB sequence.
-    const count = await client.complaint.count();
-    return `CMP-${String(count + 1).padStart(6, '0')}`;
+  async nextReferenceNumber(branchId: string, at: Date, client: ComplaintTransitionClient = this.prisma): Promise<string> {
+    return nextReferenceNumber(branchId, at, client);
   }
 
   async create(data: CreateComplaintData, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintRecord> {
@@ -130,6 +136,8 @@ export class ComplaintsRepository {
       select: { id: true },
     });
 
+    const vehicleId = data.vehicleId ?? await upsertVehicle(data, customer.id, client);
+
     return client.complaint.create({
       data: {
         referenceNumber: data.referenceNumber,
@@ -139,7 +147,8 @@ export class ComplaintsRepository {
         branchId: data.branchId,
         categoryId: data.categoryId,
         customerId: customer.id,
-        vehicleId: data.vehicleId ?? null,
+        vehicleId,
+        departmentId: data.departmentId ?? null,
         createdById: data.createdById ?? null,
         descriptionEn: data.descriptionEn,
         incidentAt: data.incidentAt,
@@ -225,9 +234,10 @@ export class ComplaintsRepository {
     data: UpdateComplaintStatusData,
     client: ComplaintTransitionClient = this.prisma,
   ): Promise<ComplaintStatusRecord | null> {
+    const referenceNumber = await submittedReference(data, client);
     const update = await client.complaint.updateMany({
       where: { id: data.complaintId, status: data.fromStatus },
-      data: { status: data.toStatus },
+      data: { status: data.toStatus, ...(referenceNumber ? { referenceNumber } : {}) },
     });
 
     if (update.count === 0) {
@@ -252,27 +262,19 @@ export class ComplaintsRepository {
   }
 }
 
-const complaintSelect = {
-  id: true,
-  referenceNumber: true,
-  branchId: true,
-  status: true,
-  subject: true,
-  severity: true,
-} satisfies Prisma.ComplaintSelect;
+const complaintSelect = { id: true, referenceNumber: true, branchId: true, status: true, subject: true, severity: true } satisfies Prisma.ComplaintSelect;
 
 function customerPhone(data: CreateComplaintData): string {
   return data.customerPhone ?? `DMS-${data.customerNumber}`;
 }
 
-const commentSelect = {
-  id: true,
-  complaintId: true,
-  authorId: true,
-  body: true,
-  visibility: true,
-  createdAt: true,
-} satisfies Prisma.CommentSelect;
+async function submittedReference(data: UpdateComplaintStatusData, client: ComplaintTransitionClient): Promise<string | null> {
+  if (data.fromStatus !== 'DRAFT' || data.toStatus !== 'SUBMITTED') return null;
+  const complaint = await client.complaint.findUnique({ where: { id: data.complaintId }, select: { branchId: true, referenceNumber: true } });
+  if (!complaint || complaint.referenceNumber.startsWith('CMS-')) return null;
+  return nextReferenceNumber(complaint.branchId, new Date(), client);
+}
+const commentSelect = { id: true, complaintId: true, authorId: true, body: true, visibility: true, createdAt: true } satisfies Prisma.CommentSelect;
 
 function reportWhere(filter: ComplaintReportFilter): Prisma.ComplaintWhereInput {
   return {
@@ -292,9 +294,6 @@ function customerSearch(value: string): Prisma.CustomerWhereInput[] {
 }
 
 function dateRange(filter: ComplaintReportFilter): Pick<Prisma.ComplaintWhereInput, 'createdAt'> {
-  const range = {
-    ...(filter.dateFrom ? { gte: new Date(filter.dateFrom) } : {}),
-    ...(filter.dateTo ? { lte: new Date(filter.dateTo) } : {}),
-  };
+  const range = { ...(filter.dateFrom ? { gte: new Date(filter.dateFrom) } : {}), ...(filter.dateTo ? { lte: new Date(filter.dateTo) } : {}) };
   return Object.keys(range).length ? { createdAt: range } : {};
 }

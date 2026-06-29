@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
 import { AuditService } from '../../core/audit.service.js';
-import { RbacGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../core/auth.guard.js';
+import { PermissionGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { PrismaService } from '../../core/http-kernel.js';
 import { AuthModule } from '../auth/auth.module.js';
@@ -38,11 +37,7 @@ import { CasesService } from './cases.service.js';
       useFactory: (authService: AuthService) => authService,
     },
     SessionAuthGuard,
-    {
-      provide: RbacGuard,
-      inject: [Reflector, AuditService],
-      useFactory: (reflector: Reflector, audit: AuditService) => new RbacGuard(reflector, audit),
-    },
+    PermissionGuard,
     CsrfGuard,
   ],
   exports: [CasesService],

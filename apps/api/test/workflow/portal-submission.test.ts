@@ -16,17 +16,18 @@ test('portal submission delegates to complaints public service as customer porta
   const service = new PortalService({
     createInternal: async (input) => {
       calls.push(input);
-      return { id: 'cmp_portal', referenceNumber: 'CMP-000010', status: ComplaintStatus.SUBMITTED };
+      return { id: 'cmp_portal', referenceNumber: 'CMS-2026-MAIN-000010', status: ComplaintStatus.SUBMITTED };
     },
   } as ComplaintsService);
 
   const result = await service.submitComplaint(validPortalInput());
 
-  assert.deepEqual(result, { id: 'cmp_portal', referenceNumber: 'CMP-000010', status: ComplaintStatus.SUBMITTED });
+  assert.deepEqual(result, { id: 'cmp_portal', referenceNumber: 'CMS-2026-MAIN-000010', status: ComplaintStatus.SUBMITTED });
   assert.deepEqual(calls[0], {
     ...validPortalInput(),
     actorId: null,
     customerNumber: null,
+    saveAsDraft: false,
     requestSource: ComplaintTransitionRequestSource.CUSTOMER_PORTAL,
   });
 });

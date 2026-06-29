@@ -1,12 +1,14 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { CommentVisibility, ComplaintSeverity, ComplaintStatus, ComplaintTransitionAction, ComplaintTransitionRequestSource, RoleCode } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import { AuditService } from '../../core/audit.service.js';
 import type { AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import { CasesService } from '../cases/cases.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { complaintCreatedAudit, createComplaintData, isReferenceConflict, referenceConflictError } from './complaint-intake.js';
 import { ComplaintsRepository } from './complaints.repository.js';
-import type { ComplaintCommentRecord, ComplaintDetailRecord, ComplaintQueueRecord, ComplaintRecord, ComplaintReportFilter, ComplaintReportRecord, ComplaintSearchRecord, CreateComplaintData, PortalVerificationTargetRecord } from './complaints.repository.js';
+import type { ComplaintCommentRecord, ComplaintDetailRecord, ComplaintQueueRecord, ComplaintReportFilter, ComplaintReportRecord, ComplaintSearchRecord, PortalVerificationTargetRecord } from './complaints.repository.js';
 import type { ComplaintCaseSummaryDto, ComplaintDetailDto, ComplaintQueueItemDto } from './dto/complaint-response.dto.js';
 
 export type ValidateComplaintTransitionInput = { fromStatus: ComplaintStatus; action: ComplaintTransitionAction; actorRole: RoleCode };
@@ -22,6 +24,8 @@ export type CreateInternalComplaintInput = {
   customerName: string; customerPhone?: string | null; customerNumber?: string | null; categoryId: string;
   subcategoryId: string; description: string; incidentAt: Date | string; branchId: string; subject: string;
   severity: ComplaintSeverity; vehicleRelated?: boolean; vehicleVin?: string | null; vehicleId?: string | null;
+  vehiclePlate?: string | null; vehicleBrand?: string | null; vehicleModel?: string | null; vehicleModelYear?: number | null;
+  departmentId?: string | null; saveAsDraft?: boolean;
   actorId?: string | null; requestSource?: ComplaintTransitionRequestSource; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null;
 };
 
@@ -68,24 +72,35 @@ export class ComplaintsService {
   async createInternal(input: CreateInternalComplaintInput): Promise<ComplaintCreationResult> {
     const data = createComplaintData(input);
 
-    return this.complaintsRepository.transaction(async (client) => {
-      const referenceNumber = await this.complaintsRepository.nextReferenceNumber(client);
-      const complaint = await this.complaintsRepository.create({ ...data, referenceNumber }, client);
-      await this.complaintsRepository.createStatusHistory({
-        complaintId: complaint.id,
-        fromStatus: null,
-        toStatus: complaint.status,
-        action: ComplaintTransitionAction.SUBMIT,
-        actorId: input.actorId ?? null,
-        actorRole: null,
-        requestSource: input.requestSource ?? ComplaintTransitionRequestSource.STAFF_API,
-        reason: null,
-        correlationId: input.correlationId ?? null,
-      }, client);
-      await this.casesService?.ensureCustomerComplaintCaseForComplaint({ complaintId: complaint.id, branchId: complaint.branchId, ownerId: input.actorId ?? null, subject: complaint.subject, descriptionEn: data.descriptionEn, status: complaint.status, actorId: input.actorId ?? null, correlationId: input.correlationId ?? null }, client);
-      await this.auditService.record(complaintCreatedAudit(input, complaint), client);
-      return { id: complaint.id, referenceNumber: complaint.referenceNumber, status: complaint.status };
-    });
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        return await this.complaintsRepository.transaction(async (client) => {
+          const referenceNumber = data.status === ComplaintStatus.DRAFT
+            ? `DRAFT-${randomUUID()}`
+            : await this.complaintsRepository.nextReferenceNumber(data.branchId, new Date(), client);
+          const complaint = await this.complaintsRepository.create({ ...data, referenceNumber }, client);
+          await this.complaintsRepository.createStatusHistory({
+            complaintId: complaint.id,
+            fromStatus: null,
+            toStatus: complaint.status,
+            action: complaint.status === ComplaintStatus.SUBMITTED ? ComplaintTransitionAction.SUBMIT : null,
+            actorId: input.actorId ?? null,
+            actorRole: null,
+            requestSource: input.requestSource ?? ComplaintTransitionRequestSource.STAFF_API,
+            reason: null,
+            correlationId: input.correlationId ?? null,
+          }, client);
+          await this.casesService?.ensureCustomerComplaintCaseForComplaint({ complaintId: complaint.id, branchId: complaint.branchId, ownerId: input.actorId ?? null, subject: complaint.subject, descriptionEn: data.descriptionEn, status: complaint.status, actorId: input.actorId ?? null, correlationId: input.correlationId ?? null }, client);
+          await this.auditService.record(complaintCreatedAudit(input, complaint), client);
+          return { id: complaint.id, referenceNumber: complaint.referenceNumber, status: complaint.status };
+        });
+      } catch (error) {
+        if (isReferenceConflict(error) && attempt === 0) continue;
+        if (isReferenceConflict(error)) throw referenceConflictError();
+        throw error;
+      }
+    }
+    throw referenceConflictError();
   }
 
   async listQueue(filter: ComplaintQueueFilter = {}): Promise<ComplaintQueueItemDto[]> { return (await this.complaintsRepository.listQueue(filter)).map(queueItem); }
@@ -161,6 +176,9 @@ export class ComplaintsService {
       await this.auditService.record(workflowAuditInput(input, decision.toStatus, complaint.branchId), client);
 
       return { complaintId: complaint.id, ...decision };
+    }).catch((error: unknown) => {
+      if (isReferenceConflict(error)) throw referenceConflictError();
+      throw error;
     });
     await queueWorkflowSideEffect(this.notificationsService, input, result.toStatus);
     return result;
@@ -170,44 +188,6 @@ export class ComplaintsService {
     const item = await this.casesService?.customerComplaintCaseSummary(complaintId);
     return item ? { id: item.id, type: item.type, status: item.status, lifecycleStatus: item.lifecycleStatus, confidentialityLevel: item.confidentialityLevel, branchId: item.branchId, branchName: item.branchName, ownerId: item.ownerId, ownerName: item.ownerName } : null;
   }
-}
-
-function createComplaintData(input: CreateInternalComplaintInput): Omit<CreateComplaintData, 'referenceNumber'> {
-  const errors = [
-    ...requiredTextError(input.customerName, 'customerName'),
-    ...contactErrors(input),
-    ...requiredTextError(input.categoryId, 'categoryId'),
-    ...requiredTextError(input.subcategoryId, 'subcategoryId'),
-    ...requiredTextError(input.description, 'description'),
-    ...requiredTextError(input.branchId, 'branchId'),
-    ...requiredTextError(input.subject, 'subject'),
-    ...requiredEnumError(input.severity, ComplaintSeverity, 'severity'),
-    ...incidentAtErrors(input.incidentAt),
-    ...(input.vehicleRelated ? requiredTextError(input.vehicleVin, 'vehicleVin') : []),
-  ];
-
-  if (errors.length) {
-    throw new AppException('VALIDATION_FAILED', 'Invalid complaint request', HttpStatus.BAD_REQUEST, errors);
-  }
-
-  return {
-    status: ComplaintStatus.SUBMITTED, subject: input.subject.trim(), severity: input.severity,
-    branchId: input.branchId.trim(), categoryId: input.subcategoryId.trim(), customerName: input.customerName.trim(),
-    customerPhone: optionalText(input.customerPhone), customerNumber: optionalText(input.customerNumber),
-    vehicleId: optionalText(input.vehicleId), createdById: input.actorId ?? null,
-    descriptionEn: input.description.trim(), incidentAt: new Date(input.incidentAt),
-  };
-}
-
-function complaintCreatedAudit(input: CreateInternalComplaintInput, complaint: ComplaintRecord): AuditRecordInput {
-  return {
-    eventType: 'COMPLAINT', action: 'complaint_created', actorId: input.actorId ?? null,
-    branchId: complaint.branchId, targetType: 'complaint', targetId: complaint.id,
-    correlationId: input.correlationId ?? null,
-    ipAddress: input.ipAddress ?? null,
-    userAgent: input.userAgent ?? null,
-    metadata: { referenceNumber: complaint.referenceNumber, status: complaint.status, severity: complaint.severity },
-  };
 }
 
 function queueItem(complaint: ComplaintQueueRecord): ComplaintQueueItemDto {
@@ -242,27 +222,6 @@ function requiredTextError(value: unknown, field: string) {
     ? []
     : [{ field, code: 'REQUIRED', message: `${field} is required.` }];
 }
-
-function contactErrors(input: CreateInternalComplaintInput) {
-  return optionalText(input.customerPhone) || optionalText(input.customerNumber)
-    ? []
-    : [{ field: 'customerPhone', code: 'REQUIRED', message: 'customerPhone or customerNumber is required.' }];
-}
-
-function requiredEnumError<T extends Record<string, string>>(value: unknown, options: T, field: string) {
-  return typeof value === 'string' && Object.values(options).includes(value)
-    ? []
-    : [{ field, code: 'REQUIRED', message: `${field} is required.` }];
-}
-
-function incidentAtErrors(value: unknown) {
-  const date = value instanceof Date || typeof value === 'string' ? new Date(value) : null;
-  return date && !Number.isNaN(date.valueOf())
-    ? []
-    : [{ field: 'incidentAt', code: 'REQUIRED', message: 'incidentAt is required.' }];
-}
-
-function optionalText(value: string | null | undefined): string | null { return typeof value === 'string' && value.trim() ? value.trim() : null; }
 
 function invalidTransitionError(): AppException { return new AppException('COMPLAINT_INVALID_TRANSITION', 'The requested action is not allowed for the current complaint state.', HttpStatus.CONFLICT); }
 

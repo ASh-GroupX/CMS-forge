@@ -38,6 +38,7 @@ export class PortalService {
       ...input,
       actorId: null,
       customerNumber: null,
+      saveAsDraft: false,
       requestSource: ComplaintTransitionRequestSource.CUSTOMER_PORTAL,
     });
   }

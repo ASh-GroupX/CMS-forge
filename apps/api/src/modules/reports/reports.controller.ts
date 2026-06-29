@@ -1,6 +1,6 @@
 import { Controller, Get, HttpStatus, Inject, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { ComplaintSeverity, RoleCode } from '@prisma/client';
-import { BranchScoped, RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
+import { BranchScoped, PermissionGuard, Permissions, RbacGuard, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { AppException } from '../../core/http-kernel.js';
 import { ReportsService } from './reports.service.js';
@@ -17,24 +17,24 @@ export class ReportsController {
   }
 
   @Get('dashboard')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('REPORT_VIEW')
   @BranchScoped()
   async dashboard(@Query('branchId') branchId: string | undefined, @Req() request: AuthenticatedRequest): Promise<{ summary: DashboardSummary }> {
     return { summary: await ReportsController.reportsService.dashboardSummary({ role: requestRole(request), branchId: scopedBranchId(branchId, request) }) };
   }
 
   @Get('kpis')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('REPORT_VIEW')
   @BranchScoped()
   async kpis(@Query('branchId') branchId: string | undefined, @Req() request: AuthenticatedRequest): Promise<{ kpis: ReportsKpiSummary }> {
     return { kpis: await ReportsController.reportsService.kpiSummary({ role: requestRole(request), branchId: scopedBranchId(branchId, request) }) };
   }
 
   @Get()
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('REPORT_VIEW')
   @BranchScoped()
   async filteredReport(@Query() query: Record<string, string | undefined>, @Req() request: AuthenticatedRequest): Promise<{ items: FilteredReportRow[] }> {
     return {
@@ -52,8 +52,8 @@ export class ReportsController {
   }
 
   @Get('export')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('REPORT_EXPORT')
   @BranchScoped()
   async exportReport(@Query() query: Record<string, string | undefined>, @Req() request: AuthenticatedRequest, @Res({ passthrough: true }) response: ExportResponse): Promise<string> {
     const exportFile = await ReportsController.reportsService.exportReport({ ...reportInput(query, request), format: exportFormat(query.format) }, auditContext(request));

@@ -2,11 +2,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import 'reflect-metadata';
+import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
 import type { ExecutionContext } from '@nestjs/common';
 import { ComplaintSeverity, ComplaintStatus, RoleCode, WorkingCalendarMode } from '@prisma/client';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
-import { RbacGuard } from '../../src/core/auth.guard.ts';
+import { PermissionGuard, RbacGuard } from '../../src/core/auth.guard.ts';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
 import { ReportsController } from '../../src/modules/reports/reports.controller.ts';
@@ -153,20 +154,47 @@ test('reports export route keeps controller binding and preserves filters', asyn
   });
 });
 
-test('reports KPI route allows manager and admin roles', async () => {
-  const guard = new RbacGuard(new Reflector(), { record: async () => undefined } as AuditService);
-
-  assert.equal(await guard.canActivate(context(request(branchManager, '/reports/kpis'), ReportsController.prototype.kpis)), true);
-  assert.equal(await guard.canActivate(context(request(admin, '/reports/kpis'), ReportsController.prototype.kpis)), true);
+test('report routes use permission guard and keep branch scope guard', () => {
+  for (const handler of ['dashboard', 'kpis', 'filteredReport'] as Array<keyof ReportsController>) {
+    assert.deepEqual(guardNames(handler), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
+  }
+  assert.deepEqual(guardNames('exportReport'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
 });
 
-test('reports KPI route denies ordinary employees', async () => {
-  const guard = new RbacGuard(new Reflector(), { record: async () => undefined } as AuditService);
+test('report view permission allows dashboard, kpis, and list, and denies missing permission safely', async () => {
+  const auditRecords: AuditRecordInput[] = [];
+  const guard = new PermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
+
+  for (const handler of [ReportsController.prototype.dashboard, ReportsController.prototype.kpis, ReportsController.prototype.filteredReport]) {
+    assert.equal(await guard.canActivate(context(request(branchManager, '/reports'), handler)), true);
+  }
 
   await assert.rejects(
-    guard.canActivate(context(request(employee, '/reports/kpis'), ReportsController.prototype.kpis)),
+    guard.canActivate(context(request({ ...employee, permissions: [] }, '/reports?password=leaked&sessionToken=leaked'), ReportsController.prototype.filteredReport)),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
+  assertSafePermissionAudit(auditRecords, 'REPORT_VIEW');
+});
+
+test('report export permission allows export and denies missing permission safely', async () => {
+  const auditRecords: AuditRecordInput[] = [];
+  const guard = new PermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
+
+  assert.equal(await guard.canActivate(context(request(branchManager, '/reports/export'), ReportsController.prototype.exportReport)), true);
+  await assert.rejects(
+    guard.canActivate(context(request({ ...branchManager, permissions: [] }, '/reports/export?password=leaked&sessionToken=leaked'), ReportsController.prototype.exportReport)),
+    (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
+  assertSafePermissionAudit(auditRecords, 'REPORT_EXPORT');
+});
+
+test('management read-only principal with REPORT_VIEW is not blocked by old role metadata', async () => {
+  const permissionGuard = new PermissionGuard(new Reflector(), { record: async () => undefined } as AuditService);
+  const branchGuard = new RbacGuard(new Reflector(), { record: async () => undefined } as AuditService);
+  const req = request({ ...branchManager, roleCode: RoleCode.MGMT_READONLY, permissions: ['REPORT_VIEW'] }, '/reports/kpis');
+
+  assert.equal(await permissionGuard.canActivate(context(req, ReportsController.prototype.kpis)), true);
+  assert.equal(await branchGuard.canActivate(context(req, ReportsController.prototype.kpis)), true);
 });
 
 test('reports route branch-scope denial is audited by the RBAC guard', async () => {
@@ -299,11 +327,12 @@ const branchManager: StaffPrincipal = {
   nameEn: 'Branch Manager',
   nameAr: 'Branch Manager',
   roleCode: RoleCode.BRANCH_MANAGER,
+  permissions: ['REPORT_VIEW', 'REPORT_EXPORT'],
   branchId: 'branch-a',
 };
 
 const admin: StaffPrincipal = { ...branchManager, userId: 'usr_admin', roleCode: RoleCode.ADMIN, branchId: null };
-const employee: StaffPrincipal = { ...branchManager, userId: 'usr_employee', roleCode: RoleCode.CR_OFFICER };
+const employee: StaffPrincipal = { ...branchManager, userId: 'usr_employee', roleCode: RoleCode.CR_OFFICER, permissions: [] };
 
 const kpiSummary = {
   onTimeCompletionPercent: 100,
@@ -319,6 +348,7 @@ const kpiSummary = {
 function request(principal: StaffPrincipal, url: string): AuthenticatedRequest {
   return {
     principal,
+    method: 'GET',
     url,
     correlationId: 'req_reports',
     headers: { 'x-forwarded-for': '203.0.113.77, 10.0.0.1', 'user-agent': 'node:test' },
@@ -335,4 +365,18 @@ function context(
     getHandler: () => handler,
     getClass: () => ReportsController,
   } as ExecutionContext;
+}
+
+function guardNames(handler: keyof ReportsController): string[] {
+  return (Reflect.getMetadata(GUARDS_METADATA, ReportsController.prototype[handler]) as Array<{ name: string }>).map(({ name }) => name);
+}
+
+function assertSafePermissionAudit(auditRecords: AuditRecordInput[], permission: string): void {
+  assert.equal(auditRecords[0]?.eventType, 'SECURITY');
+  assert.equal(auditRecords[0]?.action, 'permission_forbidden');
+  assert.deepEqual(auditRecords[0]?.metadata?.requiredPermissions, [permission]);
+  const auditJson = JSON.stringify(auditRecords).toLowerCase();
+  for (const forbidden of ['password', 'otp', 'token', 'reset token', 'session token', 'hash', 'secret', 'credential', 'provider']) {
+    assert.equal(auditJson.includes(forbidden), false);
+  }
 }

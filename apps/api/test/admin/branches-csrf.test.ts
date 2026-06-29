@@ -4,7 +4,7 @@ import 'reflect-metadata';
 import { GUARDS_METADATA, MODULE_METADATA } from '@nestjs/common/constants';
 import type { ArgumentsHost, ExecutionContext } from '@nestjs/common';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
-import { RbacGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../src/core/auth.guard.ts';
+import { PermissionGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../src/core/auth.guard.ts';
 import { CSRF_COOKIE, CSRF_HEADER, CsrfGuard } from '../../src/core/csrf.guard.ts';
 import { AppException, AppExceptionFilter } from '../../src/core/http-kernel.ts';
 import { AuthModule } from '../../src/modules/auth/auth.module.ts';
@@ -65,11 +65,11 @@ function renderError(exception: unknown, req: BranchRequest): { error: { code: s
 }
 
 test('branch mutation routes use CSRF guard while read routes do not', () => {
-  assert.deepEqual(guardNames('create'), ['SessionAuthGuard', 'RbacGuard', 'CsrfGuard']);
-  assert.deepEqual(guardNames('update'), ['SessionAuthGuard', 'RbacGuard', 'CsrfGuard']);
-  assert.deepEqual(guardNames('deactivate'), ['SessionAuthGuard', 'RbacGuard', 'CsrfGuard']);
-  assert.deepEqual(guardNames('list'), ['SessionAuthGuard', 'RbacGuard']);
-  assert.deepEqual(guardNames('get'), ['SessionAuthGuard', 'RbacGuard']);
+  assert.deepEqual(guardNames('create'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('update'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('deactivate'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('list'), ['SessionAuthGuard', 'PermissionGuard']);
+  assert.deepEqual(guardNames('get'), ['SessionAuthGuard', 'PermissionGuard']);
 });
 
 test('branches module registers auth and CSRF guard providers', () => {
@@ -78,7 +78,7 @@ test('branches module registers auth and CSRF guard providers', () => {
 
   assert.ok(imports.includes(AuthModule));
   assert.ok(providers.includes(SessionAuthGuard));
-  assert.ok(providers.includes(RbacGuard));
+  assert.ok(providers.includes(PermissionGuard));
   assert.ok(providers.includes(CsrfGuard));
   assert.equal(providers.some((provider) => providerObject(provider)?.provide === SESSION_AUTH_SERVICE), true);
 });

@@ -11,7 +11,7 @@ export type StaffAuthRecord = {
   branchId: string | null;
   isActive: boolean;
   lockedAt: Date | null;
-  role: { code: string; permissions: { permission: { code: string } }[] };
+  role: { code: string; permissions: { permission: { code: string; isActive: boolean } }[] };
 };
 
 export type CreateStaffSessionInput = {
@@ -62,7 +62,7 @@ export class AuthRepository {
         branchId: true,
         isActive: true,
         lockedAt: true,
-        role: { select: { code: true, permissions: { where: { permission: { isActive: true } }, select: { permission: { select: { code: true } } } } } },
+        role: { select: { code: true, permissions: { where: { permission: { isActive: true } }, select: { permission: { select: { code: true, isActive: true } } } } } },
       },
     });
   }
@@ -136,7 +136,7 @@ export class AuthRepository {
             branchId: true,
             isActive: true,
             lockedAt: true,
-            role: { select: { code: true, permissions: { where: { permission: { isActive: true } }, select: { permission: { select: { code: true } } } } } },
+            role: { select: { code: true, permissions: { where: { permission: { isActive: true } }, select: { permission: { select: { code: true, isActive: true } } } } } },
           },
         },
       },

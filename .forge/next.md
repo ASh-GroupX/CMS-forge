@@ -1,34 +1,56 @@
-# P12A COMPLETE - DYNAMIC ROLE PERMISSION DATA MODEL
+# P14B - WORKFLOW STATE REPAIR
 
-Status: P12A complete; ready to plan P12B server-side permission guard conversion
+Status: P14A complete; P14B ready
 Required model tier: GPT-5 High or Opus 4.8 Max
-Phase: Phase 12 - Dynamic RBAC
+Phase: Phase 14 - Workflow state repair
 Risk: High
-SRS IDs: REQ-RBAC-001, RBAC-MATRIX-001, REQ-ADMIN-001, METHOD-AUDIT-001
+SRS IDs: ARCH-WORKFLOW-001, WORKFLOW-MATRIX-001, METHOD-AUDIT-001,
+NFR-SEC-002, API-STANDARD-001
 
-## Context
+## Completed Proof
 
-P12A adds the persistent data model for Admin-managed, selectable permissions
-without changing any live authorization decision.
-
-Completed scope: `Role.code` is now extensible, `permissions` and
-`role_permissions` are modeled and migrated, and dev seed supplies the existing
-role matrix as selectable permission templates. Existing guards remain role-code
-based until P12B, so access has not changed.
+- Failed as expected before source fix: `corepack pnpm test:api -- workflow`
+  (47/48; branch-scope denial audit target included a sensitive query).
+- Passed: `corepack pnpm test:api -- workflow` (48/48).
+- Passed: `corepack pnpm test:api -- audit` (8/8 plus append-only proof).
+- Passed: `corepack pnpm test:api -- rbac` (2/2).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
 
 ## Next Scoped Task
 
-P12B: add server-session permission loading and a permission guard alongside
-the existing role guard. Do not convert route or workflow rules in the same
-slice; require API allowed/denied proof and audit logging for denied checks.
+Continue P14 workflow state repair. Read the SRS workflow IDs above, then
+identify the smallest failing workflow state path before editing.
+
+Keep P14 focused on backend workflow state behavior: transition validity,
+history/audit consistency, branch/session authority, and stable API errors.
+
+Recommended next seam: compare `WORKFLOW-MATRIX-001` required data and actor
+authority against `applyTransition`, especially assigned-owner authority for
+`IN_PROGRESS` update/resolve and required owner/route data for
+`APPROVE_AND_ROUTE` / `ASSIGN_INVESTIGATION`.
+
+## Carry-Forward
+
+- P14A repaired unsafe branch-scope denial audit targets for workflow routes;
+  RBAC/branch-scope denial audits now store the path, not raw query strings.
+- Duplicate warning UI and related complaint linking remain out of scope.
+- Vehicle manual/DMS provenance flags are still limited by the current vehicle
+  schema and can be handled in a later data-model slice.
+- SLA timers, report formulas, notification providers, portal OTP behavior, DMS
+  live lookup, and UI work remain out of scope unless P14 explicitly cites them.
 
 ## Guardrails
 
-- Backend owns authority; roles and branch scope come from the server session.
-- Do not accept role/branch authority from client input.
-- Do not weaken password policy.
-- Do not change customer portal privacy.
-- Do not redesign release-reviewed P11 screens unless the next scoped task
-  explicitly asks for it.
-- No admin screens, AI, WhatsApp, mobile, deploy, or workflow builder unless the
-  next scoped task explicitly asks for it.
+- Backend owns authority; roles, permissions, and branch scope come from the
+  server session.
+- Do not accept role/branch/permission/workflow authority from client input.
+- Every state change writes status history and audit in the same transaction.
+- Side effects enqueue after commit.
+- Audit logs are append-only and must not include passwords, OTPs, tokens,
+  reset tokens, session tokens, hashes, secrets, credentials, provider secrets,
+  attachment contents, or portal verification data.
+- Customer portal routes must not expose internal comments, audit logs, DMS
+  codes, staff PII, unrelated complaints, or attachments without verification.

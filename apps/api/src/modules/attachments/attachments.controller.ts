@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Headers, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { RoleCode } from '@prisma/client';
 import type { IncomingMessage } from 'node:http';
-import { BranchScoped, RbacGuard, Roles, SessionAuthGuard } from '../../core/auth.guard.js';
+import { BranchScoped, PermissionGuard, Permissions, RbacGuard, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { ComplaintsService } from '../complaints/complaints.service.js';
@@ -19,8 +19,8 @@ export class AttachmentsController {
   ) {}
 
   @Post()
-  @UseGuards(SessionAuthGuard, RbacGuard, CsrfGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard, CsrfGuard)
+  @Permissions('ATTACHMENT_UPLOAD_STAFF')
   @BranchScoped()
   async create(
     @Param('complaintId') complaintId: string,
@@ -38,8 +38,8 @@ export class AttachmentsController {
   }
 
   @Get(':attachmentId/download')
-  @UseGuards(SessionAuthGuard, RbacGuard)
-  @Roles(RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN)
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('ATTACHMENT_DOWNLOAD')
   @BranchScoped()
   async prepareDownload(
     @Param('complaintId') complaintId: string,

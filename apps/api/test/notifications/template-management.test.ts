@@ -7,7 +7,7 @@ import type { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { NotificationChannel, RoleCode } from '@prisma/client';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
-import { RbacGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../src/core/auth.guard.ts';
+import { PermissionGuard, RbacGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../src/core/auth.guard.ts';
 import type { AuthenticatedRequest } from '../../src/core/auth.guard.ts';
 import { CsrfGuard } from '../../src/core/csrf.guard.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
@@ -53,21 +53,27 @@ test('admin template routes create and update with same-transaction CONFIG audit
   });
 });
 
-test('template management allows admin and denies non-admin before controller body runs', async () => {
-  assert.deepEqual(guardNames('createTemplate'), ['SessionAuthGuard', 'RbacGuard', 'CsrfGuard']);
-  assert.deepEqual(guardNames('updateTemplate'), ['SessionAuthGuard', 'RbacGuard', 'CsrfGuard']);
-  assert.deepEqual(guardNames('listTemplates'), ['SessionAuthGuard', 'RbacGuard']);
+test('notification routes require DB-backed permissions and CSRF for template writes', async () => {
+  assert.deepEqual(guardNames('listMine'), ['SessionAuthGuard', 'PermissionGuard']);
+  assert.deepEqual(guardNames('listTemplates'), ['SessionAuthGuard', 'PermissionGuard']);
+  assert.deepEqual(guardNames('createTemplate'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('updateTemplate'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('activateTemplate'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('deactivateTemplate'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
 
   const auditRecords: AuditRecordInput[] = [];
-  const guard = new RbacGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
+  const guard = new PermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
 
-  assert.equal(await guard.canActivate(context(request(RoleCode.ADMIN), 'createTemplate')), true);
+  assert.equal(await guard.canActivate(context(request(RoleCode.CR_MANAGER, ['NOTIFICATIONS_MANAGE']), 'createTemplate')), true);
+  assert.equal(await guard.canActivate(context(request(RoleCode.MGMT_READONLY, ['STAFF_LOGIN']), 'listMine')), true);
   await assert.rejects(
-    guard.canActivate(context(request(RoleCode.CR_MANAGER), 'createTemplate')),
+    guard.canActivate(context(request(RoleCode.ADMIN, [], '/notifications/templates?password=leaked&sessionToken=leaked'), 'createTemplate')),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
   assert.equal(auditRecords[0]?.eventType, 'SECURITY');
-  assert.equal(auditRecords[0]?.action, 'rbac_forbidden');
+  assert.equal(auditRecords[0]?.action, 'permission_forbidden');
+  assert.deepEqual(auditRecords[0]?.metadata?.requiredPermissions, ['NOTIFICATIONS_MANAGE']);
+  assertSafePermissionAudit(auditRecords);
 });
 
 test('template validation rejects invalid data before write or audit', async () => {
@@ -119,6 +125,7 @@ test('notifications module and OpenAPI document admin template routes', () => {
 
   assert.ok(imports.includes(AuthModule));
   assert.ok(providers.includes(SessionAuthGuard));
+  assert.ok(providers.includes(PermissionGuard));
   assert.ok(providers.includes(RbacGuard));
   assert.ok(providers.includes(CsrfGuard));
   assert.equal(providers.some((provider) => providerObject(provider)?.provide === SESSION_AUTH_SERVICE), true);
@@ -154,10 +161,14 @@ function templateRecord(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function request(roleCode: RoleCode): AuthenticatedRequest {
+function request(
+  roleCode: RoleCode,
+  permissions = ['NOTIFICATIONS_MANAGE', 'STAFF_LOGIN'],
+  url = '/notifications/templates',
+): AuthenticatedRequest {
   return {
-    principal: { sessionId: 'ses_1', userId: 'usr_1', email: 'admin@test', nameEn: 'Admin', nameAr: 'Admin', roleCode, branchId: null },
-    url: '/notifications/templates',
+    principal: { sessionId: 'ses_1', userId: 'usr_1', email: 'admin@test', nameEn: 'Admin', nameAr: 'Admin', roleCode, permissions, branchId: null },
+    url,
     correlationId: 'req_templates',
     headers: { 'x-forwarded-for': '203.0.113.44, 10.0.0.1', 'user-agent': 'node:test' },
     socket: { remoteAddress: '198.51.100.44' },
@@ -179,4 +190,11 @@ function guardNames(handler: keyof NotificationsController): string[] {
 
 function providerObject(provider: unknown): { provide?: unknown } | null {
   return provider && typeof provider === 'object' ? provider as { provide?: unknown } : null;
+}
+
+function assertSafePermissionAudit(auditRecords: AuditRecordInput[]): void {
+  const auditJson = JSON.stringify(auditRecords).toLowerCase();
+  for (const forbidden of ['password', 'otp', 'token', 'reset token', 'session token', 'hash', 'secret', 'credential', 'provider']) {
+    assert.equal(auditJson.includes(forbidden), false);
+  }
 }
