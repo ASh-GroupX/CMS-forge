@@ -53,6 +53,12 @@ export type ComplaintCaseSummary = {
 export type ComplaintDetail = ComplaintQueueItem & {
   description: string;
   incidentAt: string | null;
+  customerSource: 'LOCAL' | 'MANUAL' | 'DMS';
+  manualCustomer: boolean;
+  vehicleRelated: boolean;
+  vehicleSource: 'LOCAL' | 'MANUAL' | 'DMS' | null;
+  manualVehicle: boolean;
+  vehicleDataUnavailableReason: string | null;
   statusHistory: ComplaintStatusTimelineItem[];
   caseSummary: ComplaintCaseSummary | null;
 };

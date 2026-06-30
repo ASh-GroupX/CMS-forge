@@ -9845,3 +9845,366 @@ Implemented the scoped server-side permission guard foundation:
 
 - Status: Phase 17 reviewed complete.
 - Next: Next-phase planning/audit stop.
+
+## 2026-06-29 - Phase 18 Planning/Audit Stop
+
+### Scope
+
+- Planning only. No product code was changed.
+- Confirmed Phase 17 is reviewed complete and has no remaining repair task.
+- Read current Forge context, latest Phase 17 evidence, architecture rules, and
+  selected Phase 18 SRS sections: `REQ-COMPLAINT-003`, `NFR-SEC-002`,
+  `METHOD-AUDIT-001`, and `API-STANDARD-001`.
+
+### Candidate Ranking
+
+1. **Related complaint linking and duplicate backend foundation**: selected.
+   `REQ-COMPLAINT-003` requires authorized users to link related complaints
+   while preserving separate histories, and this backend behavior must exist
+   before duplicate warning UI is useful.
+2. **Duplicate warning UI**: deferred until backend related/duplicate behavior is
+   solid.
+3. **Vehicle manual/DMS provenance flags**: important data-quality work, but it
+   is broader and does not unblock related complaint linking.
+4. **Portal attachment follow-up**: still out of this phase; current priority is
+   backend complaint relationship behavior.
+
+### Decision
+
+- Chosen phase: Phase 18 - Related complaint linking and duplicate foundation.
+- First slice: P18A - Related complaint linking and duplicate candidate API.
+- Selected SRS IDs: `REQ-COMPLAINT-003`, `NFR-SEC-002`,
+  `METHOD-AUDIT-001`, `API-STANDARD-001`.
+
+### Assumptions
+
+- Current Prisma complaint model has no related-complaint relation table, so
+  P18A may need a small `complaint_relations` model and migration.
+- Existing complaint fields likely support a basic duplicate-candidate read:
+  `customerId`, `categoryId`, `branchId`, and `createdAt`.
+- Existing permissions should be reused where possible: `COMPLAINT_VIEW_BRANCH`
+  for reads and `COMPLAINT_EDIT` for link/unlink.
+- Branch/RBAC scope must be checked for both source and target complaints.
+
+### Skipped Work
+
+- Duplicate warning UI.
+- Advanced/AI duplicate matching.
+- Destructive merge, deletion, or shared complaint history.
+- Vehicle manual/DMS provenance flags.
+- Portal attachment follow-up.
+- Product tests; this was a planning-only stop.
+
+### Verification
+
+- Passed: `git status --short`.
+- Passed: `git diff --check`.
+- Not Run: product tests (`test:api`, `test:web`, `test:e2e`, `test:visual`,
+  `web:perf`, `openapi:check`, `typecheck`, `lint`) because this was
+  planning-only.
+
+### Outcome
+
+- Status: Phase 18 planned.
+- Next: P18A related complaint linking and duplicate candidate API build.
+
+## 2026-06-30 - P18A Related Complaint Linking And Duplicate Candidate API
+
+### Scope
+
+- Implemented backend-only related complaint linking and duplicate-candidate read
+  behavior for `REQ-COMPLAINT-003`, `NFR-SEC-002`, `METHOD-AUDIT-001`, and
+  `API-STANDARD-001`.
+- Added complaint-owned `complaint_relations` persistence and migration instead
+  of reusing `case_links`.
+- Added staff routes for listing related complaints, linking, unlinking, and
+  reading duplicate candidates.
+- Updated OpenAPI canonical/contract files and the complaints module manifest.
+
+### Evidence
+
+- Related links are normalized and idempotent: repeated or reverse link attempts
+  do not duplicate persistence rows.
+- Related complaint list filters returned related complaints through the same
+  server-session branch scope used for complaint detail reads.
+- Link/unlink check both source and target visibility under server-session branch
+  scope before writing.
+- Duplicate candidates use existing complaint fields only:
+  `customerId`, `categoryId`, `branchId`, and a 30-day window around source
+  `createdAt`; self is excluded.
+- Relation operations do not write complaint status history, merge histories, or
+  mutate complaint status.
+- Link/unlink audit rows are recorded in the same transaction as relation
+  writes and contain only complaint ids, relation action, actor role/session, and
+  standard request context.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session via existing
+  `SessionAuthGuard`, `PermissionGuard`, `RbacGuard`, `@BranchScoped`, and
+  server-derived `branchId`.
+- Relation writes audit in the same transaction as the relation insert/delete.
+  No complaint status change occurs, so no status-history row is created.
+- No passwords, OTPs, tokens, hashes, provider secrets, customer phone/email,
+  VIN, plate, DMS codes, raw URLs, request bodies, or free-form query strings
+  are logged or returned by relation metadata or response DTOs.
+- Customer portal exposure is unchanged; all new routes are staff guarded.
+- Trust boundaries are tested with allowed link/list/unlink, denied source
+  scope, denied target scope, and edit-permission denial cases.
+
+### Skipped Work
+
+- Duplicate warning UI.
+- Advanced/AI duplicate matching.
+- Destructive merge, deletion, or shared audit/status history.
+- Vehicle manual/DMS provenance flags.
+- Portal attachment follow-up.
+- Cleanup, staging, or unrelated revert.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- complaints.related` (7/7 TAP tests passed).
+- Passed: `corepack pnpm test:api -- complaints.drafts` (60/60 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm prisma:validate`.
+- Passed: `corepack pnpm --dir packages/database generate`.
+- Passed: `corepack pnpm db:migrate:test`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P18A build complete.
+- Next: P18A reviewer stop.
+
+## 2026-06-30 - P18A Reviewer Stop
+
+### Scope
+
+- Ran a strict reviewer pass over the P18A backend-only related complaint linking
+  and duplicate-candidate API for `REQ-COMPLAINT-003`, `NFR-SEC-002`,
+  `METHOD-AUDIT-001`, and `API-STANDARD-001`.
+- Reviewed the complaint relation schema/migration, complaints module manifest,
+  controller, module wiring, relation DTOs, relation repository/service, related
+  tests, API test runner, OpenAPI contract, and canonical OpenAPI.
+- No product code was changed, staged, cleaned, reverted, or advanced to UI
+  implementation during review.
+
+### Findings
+
+- No blocking findings.
+
+### Review Notes
+
+- `complaint_relations` is complaint-owned and is not reusing `case_links`.
+- Relation pairs are normalized before persistence and use `createMany` with
+  `skipDuplicates`, so reverse link attempts are idempotent.
+- Link/list/unlink preserve separate complaint records and histories; no merge,
+  status mutation, status-history mutation, deletion, destructive cleanup, or
+  workflow side effect was added.
+- Source and target complaint visibility is enforced from server-session branch
+  scope before link/unlink writes; related list and duplicate-candidate reads are
+  scoped through the visible source complaint and branch-matched result reads.
+- Read routes keep `SessionAuthGuard`, `PermissionGuard`, `RbacGuard`, and
+  `COMPLAINT_VIEW_BRANCH`; link/unlink keep those guards plus `CsrfGuard` and
+  `COMPLAINT_EDIT`.
+- The controller uses server-derived actor/session/branch context and ignores
+  spoofed actor authority from the request body.
+- Duplicate candidates use only `customerId`, `categoryId`, `branchId`, a
+  30-day window around source `createdAt`, and self exclusion.
+- Link/unlink audit metadata contains complaint ids, relation action, and
+  actor/session context only, with no customer contact data, VIN, plate, DMS
+  codes, credentials, raw URLs, request bodies, or free-form query strings.
+- OpenAPI/canonical routes and schemas match the implementation and keep
+  relation mutation responses limited to source id, target id, and changed flag.
+- No duplicate warning UI, advanced/AI matching, destructive merge,
+  vehicle/DMS provenance, portal attachment, cleanup, staging, or unrelated
+  revert was done.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty P18A worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- complaints.related` (7/7 TAP tests passed).
+- Passed: `corepack pnpm test:api -- complaints.drafts` (60/60 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm prisma:validate`.
+- Passed: `corepack pnpm --dir packages/database generate`.
+- Passed: `corepack pnpm db:migrate:test`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P18A reviewed complete.
+- Next: P18B duplicate warning UI foundation.
+
+## 2026-06-30 - P18B Duplicate Warning UI Foundation
+
+### Scope
+
+- Built the duplicate warning UI foundation on the staff complaint detail page
+  for `REQ-COMPLAINT-003`, `NFR-SEC-002`, `API-STANDARD-001`, and
+  `UI-DESIGN-001`.
+- Added typed web API helpers for duplicate-candidate reads, related-complaint
+  reads, and linking related complaints through the reviewed P18A backend.
+- Kept backend relation semantics unchanged.
+
+### Changes
+
+- Added a safe complaint relations API helper that reads
+  `/complaints/:id/duplicate-candidates` and `/complaints/:id/related` with the
+  staff session cookie only, and posts link requests through an app proxy with
+  the existing CSRF/session pattern.
+- Added a complaint detail relation panel showing likely duplicates and linked
+  complaints using safe fields only: reference number, status, severity,
+  subject, branch id, created/updated timestamps.
+- Wired the existing staff complaint detail route to fetch relation data beside
+  complaint detail data and render the relation panel only on the existing
+  detail page.
+- Added EN/AR i18n for loading, empty, error, denied, success, candidates, and
+  related states.
+- Updated API-client, shell, localization, accessibility, and visual proof
+  coverage for safe-field filtering, server-session scope, CSRF forwarding,
+  denial states, and RTL/LTR rendering.
+
+### Security And Privacy Self-Check
+
+- No client-owned role, branch, actor, workflow, token, credential, or branch
+  scope input was added.
+- Relation reads forward only the server staff session cookie; link writes
+  forward only the body target id plus CSRF/session context.
+- The UI does not show customer phone/email, VIN, plate, DMS codes, audit
+  internals, staff PII, provider data, portal data, tokens, credentials, raw
+  URLs, request bodies, or unrelated out-of-scope data.
+- Link behavior remains non-destructive: no merge, no status mutation, no
+  status-history mutation, no shared audit/status history, and no deletion of
+  complaint data.
+
+### Skipped Work
+
+- Advanced/AI duplicate matching.
+- Destructive merge, cleanup, or backend relation semantics changes.
+- Vehicle manual/DMS provenance flags.
+- Portal attachment follow-up.
+- Staging, commit, or unrelated revert.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty P18A/P18B worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:web -- api-client` (18/18 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (191/191 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Failed then repaired: `corepack pnpm typecheck` initially caught a
+  discriminated-union narrowing issue in the new relation API helper; repaired
+  by narrowing denied relation reads explicitly.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P18B complete.
+- Next: Phase 18 reviewer stop.
+
+## 2026-06-30 - Phase 18 Reviewer Stop Skipped By User
+
+### Scope
+
+- User explicitly skipped the Phase 18 reviewer stop before Phase 19A.
+- Do not claim Phase 18 is reviewed.
+
+### Outcome
+
+- Status: P18 built, review skipped by user.
+- Next: P19A vehicle manual/DMS provenance backend foundation.
+
+## 2026-06-30 - P19A Vehicle Manual/DMS Provenance Backend Foundation
+
+### Scope
+
+- Built the backend-first customer/vehicle provenance slice for
+  `REQ-CUSTOMER-001`, `DATA-AUTO-001`, `DMS-MAP-001`,
+  `REQ-COMPLAINT-001`, `NFR-SEC-002`, and `API-STANDARD-001`.
+- Phase 18 reviewer stop was skipped by user. Phase 18 is P18 built, review
+  skipped by user; do not claim it is reviewed.
+- No live DMS provider integration, DMS writeback, broad UI, reports, portal
+  attachments, cleanup, staging, or unrelated revert was done.
+
+### Changes
+
+- Added `DataSource` (`LOCAL`, `MANUAL`, `DMS`) plus customer, vehicle, and
+  complaint provenance fields in Prisma and migration
+  `20260630143000_vehicle_provenance`.
+- Complaint intake now persists manual customer/vehicle flags, customer/vehicle
+  source metadata, vehicle-related marker, and vehicle-data-unavailable reason.
+- Manual vehicle-related complaint creation remains allowed when no confirmed
+  vehicle exists if staff documents the unavailable data reason.
+- Staff complaint detail response exposes safe provenance metadata only:
+  source enum, manual flags, vehicle-related flag, and unavailable reason.
+- Close transition now rejects vehicle-related complaints without a confirmed
+  vehicle or documented unavailable reason before status update, history, audit,
+  or side effects.
+- Portal tracking privacy proof includes provenance-shaped internal fields and
+  confirms they are not returned.
+- OpenAPI/canonical were updated only for changed staff create/detail/transition
+  contracts.
+
+### Gaps
+
+- No dedicated customer/vehicle correction or provenance update workflow exists.
+  The gap is recorded instead of inventing a broad admin workflow in P19A.
+- Existing complaint intake can upsert vehicle details by VIN; P19A did not
+  expand that into a correction workflow.
+
+### Security And Privacy Self-Check
+
+- Roles and branch scope still come from server-session guards and principal
+  context; no client-owned role, branch, actor, workflow, token, credential, or
+  branch-scope authority was added.
+- Complaint creation and workflow state changes still write domain data, status
+  history, and audit in the same transaction; workflow side effects remain
+  after commit.
+- Close vehicle-data validation runs before status update/history/audit/side
+  effects, so rejected closes leave no workflow write.
+- Audit metadata records safe source/manual flags and reason presence only; it
+  does not log VIN, plate, DMS identifiers, provider secrets, credentials,
+  passwords, OTPs, tokens, hashes, raw URLs, or request bodies.
+- Customer portal exposure rules hold: portal tracking tests reject provenance
+  internals, DMS, VIN/plate-shaped private fields, staff PII, audit internals,
+  and unrelated complaints.
+- Trust boundaries remain covered by allowed create/close, denied missing
+  vehicle provenance close, branch-scope denial, permission denial, and portal
+  privacy tests.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty P18/P19A worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Failed then repaired: `corepack pnpm test:api -- complaints` initially caught
+  stale audit expectations, a missing branch id in a new manual fallback test,
+  and workflow call-order expectations. Repaired.
+- Passed: `corepack pnpm test:api -- complaints` (63/63 TAP tests passed).
+- Failed then repaired: `corepack pnpm test:api -- workflow` same failures as
+  the complaints alias. Repaired.
+- Passed: `corepack pnpm test:api -- workflow` (63/63 TAP tests passed).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm prisma:validate`.
+- Passed: `corepack pnpm --dir packages/database generate`.
+- Passed: `corepack pnpm db:migrate:test`.
+- Passed: `corepack pnpm typecheck`.
+- Failed then repaired: `corepack pnpm lint` initially caught
+  `complaints.repository.ts` and `complaints.service.ts` over the 300-line
+  budget. Repaired by local formatting compression only.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P19A complete.
+- Next: P19A reviewer stop.

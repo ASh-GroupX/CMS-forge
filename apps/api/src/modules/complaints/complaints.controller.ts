@@ -1,14 +1,15 @@
-import { Body, Controller, Get, HttpStatus, Inject, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpStatus, Inject, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ComplaintSeverity, ComplaintStatus, ComplaintTransitionAction, RoleCode } from '@prisma/client';
 import { BranchScoped, DynamicPermissionGuard, DynamicPermissions, PermissionGuard, Permissions, RbacGuard, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { AppException } from '../../core/http-kernel.js';
 import { ComplaintFormOptionsService } from './complaint-form-options.service.js';
+import { ComplaintRelationsService } from './complaint-relations.service.js';
 import { ComplaintsService } from './complaints.service.js';
 import type { ComplaintCommentResponseDto, ComplaintPublicCommentsResponseDto } from './dto/complaint-comment.dto.js';
 import { parseComplaintCommentBody, toCommentInput } from './dto/complaint-comment.dto.js';
-import type { ComplaintDetailResponseDto, ComplaintQueueResponseDto, ComplaintSearchResponseDto } from './dto/complaint-response.dto.js';
+import type { ComplaintDetailResponseDto, ComplaintDuplicateCandidatesResponseDto, ComplaintQueueResponseDto, ComplaintRelatedResponseDto, ComplaintRelationMutationResponseDto, ComplaintSearchResponseDto } from './dto/complaint-response.dto.js';
 import type { CreateComplaintResponseDto } from './dto/create-complaint.dto.js';
 import { parseCreateComplaintBody, toCreateComplaintInput } from './dto/create-complaint.dto.js';
 import type { ComplaintTransitionResponseDto } from './dto/complaint-transition.dto.js';
@@ -19,6 +20,7 @@ export class ComplaintsController {
   constructor(
     @Inject(ComplaintsService) private readonly complaintsService: ComplaintsService,
     @Inject(ComplaintFormOptionsService) private readonly formOptions: ComplaintFormOptionsService,
+    @Inject(ComplaintRelationsService) private readonly relationsService: ComplaintRelationsService,
   ) {}
 
   @Get()
@@ -69,6 +71,56 @@ export class ComplaintsController {
     @Req() request: AuthenticatedRequest,
   ): Promise<ComplaintDetailResponseDto> {
     return { complaint: await this.complaintsService.getDetail(id, { branchId: queueBranchId(branchId, request) }) };
+  }
+
+  @Get(':id/related')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('COMPLAINT_VIEW_BRANCH')
+  @BranchScoped()
+  async listRelated(
+    @Param('id') id: string,
+    @Query('branchId') branchId: string | undefined,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ComplaintRelatedResponseDto> {
+    return { items: await this.relationsService.listRelated(id, { branchId: queueBranchId(branchId, request) }) };
+  }
+
+  @Get(':id/duplicate-candidates')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('COMPLAINT_VIEW_BRANCH')
+  @BranchScoped()
+  async duplicateCandidates(
+    @Param('id') id: string,
+    @Query('branchId') branchId: string | undefined,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ComplaintDuplicateCandidatesResponseDto> {
+    return this.relationsService.duplicateCandidates(id, { branchId: queueBranchId(branchId, request) });
+  }
+
+  @Post(':id/related')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard, CsrfGuard)
+  @Permissions('COMPLAINT_EDIT')
+  @BranchScoped()
+  async linkRelated(
+    @Param('id') id: string,
+    @Query('branchId') branchId: string | undefined,
+    @Body() body: unknown,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ComplaintRelationMutationResponseDto> {
+    return { relation: await this.relationsService.link({ sourceComplaintId: id, targetComplaintId: targetComplaintId(body), branchId: queueBranchId(branchId, request), ...auditContext(request) }) };
+  }
+
+  @Delete(':id/related/:targetId')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard, CsrfGuard)
+  @Permissions('COMPLAINT_EDIT')
+  @BranchScoped()
+  async unlinkRelated(
+    @Param('id') id: string,
+    @Param('targetId') targetId: string,
+    @Query('branchId') branchId: string | undefined,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ComplaintRelationMutationResponseDto> {
+    return { relation: await this.relationsService.unlink({ sourceComplaintId: id, targetComplaintId: targetId, branchId: queueBranchId(branchId, request), ...auditContext(request) }) };
   }
 
   @Post(':id/comments')
@@ -176,12 +228,20 @@ function auditContext(request: AuthenticatedRequest) {
   return {
     actorId: request.principal?.userId ?? null,
     actorRole: request.principal?.roleCode as RoleCode,
+    sessionId: request.principal?.sessionId ?? null,
     correlationId: request.correlationId ?? headerValue(request.headers['x-correlation-id']),
     ipAddress: headerValue(request.headers['x-forwarded-for'])?.split(',')[0]?.trim()
       ?? request.socket?.remoteAddress
       ?? null,
     userAgent: headerValue(request.headers['user-agent']),
   };
+}
+
+function targetComplaintId(body: unknown): string {
+  const raw = body && typeof body === 'object' ? (body as Record<string, unknown>).targetComplaintId : undefined;
+  const value = typeof raw === 'string' ? raw.trim() : '';
+  if (!value) throw new AppException('VALIDATION_FAILED', 'Invalid complaint relation request', HttpStatus.BAD_REQUEST, [{ field: 'targetComplaintId', code: 'REQUIRED', message: 'targetComplaintId is required.' }]);
+  return value;
 }
 
 function headerValue(value: string | string[] | undefined): string | null {

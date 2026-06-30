@@ -37,6 +37,7 @@ import { adminUsersText } from '../../src/i18n/staff-admin-users';
 import { auditViewerText } from '../../src/i18n/staff-audit-viewer';
 import { attachmentText } from '../../src/i18n/staff-attachments';
 import { complaintDetailText } from '../../src/i18n/staff-complaint-detail';
+import { complaintRelationsText } from '../../src/i18n/staff-complaint-relations';
 import { complaintCreateText } from '../../src/i18n/staff-complaint-create';
 import { confirmationText } from '../../src/i18n/staff-confirmations';
 import { notificationCenterText } from '../../src/i18n/staff-notification-center';
@@ -994,6 +995,7 @@ test('complaint detail workspace renders core regions and safe placeholders', as
   assert.match(html, /Internal comments/);
   assert.match(html, /Public updates/);
   assert.match(html, /Attachments/);
+  assert.match(html, /Related complaints/);
   assert.match(html, /Current responsible staff/);
   assert.match(html, /SLA timer/);
   assert.match(html, /Masked customer placeholder/);
@@ -1010,6 +1012,7 @@ test('Arabic complaint detail workspace keeps RTL localized labels', async () =>
   assert.ok(html.includes(complaintDetailText.ar.sections.survey));
   assert.ok(html.includes(complaintDetailText.ar.sections.internalComments));
   assert.ok(html.includes(complaintDetailText.ar.badges.public));
+  assert.ok(html.includes(complaintRelationsText.ar.title));
 });
 
 test('complaint detail route renders English and Arabic localized workspace labels', async () => {
@@ -1022,10 +1025,12 @@ test('complaint detail route renders English and Arabic localized workspace labe
 
   assert.match(english, /Complaint detail/);
   assert.match(english, /Complaint facts/);
+  assert.match(english, /Related complaints/);
   assert.match(arabic, /dir="rtl"/);
   assert.ok(arabic.includes(complaintDetailText.ar.title));
   assert.ok(arabic.includes(complaintDetailText.ar.sections.workflow));
   assert.ok(arabic.includes(complaintDetailText.ar.workflow.validation));
+  assert.ok(arabic.includes(complaintRelationsText.ar.title));
 });
 
 test('complaint detail workspace preview states render loading empty and error messages', async () => {
@@ -1073,6 +1078,38 @@ test('complaint detail route renders real backend facts through the session cook
             { id: 'h2', fromStatus: 'SUBMITTED', toStatus: 'IN_PROGRESS', action: 'ASSIGN_INVESTIGATION', actorId: 'usr_mgr', actorRole: 'BRANCH_MANAGER', requestSource: 'STAFF', reason: null, correlationId: null, createdAt: '2026-06-19T00:00:00.000Z' },
           ],
         },
+      });
+    }
+    if (String(input).endsWith('/complaints/cmp%2Fdetail/duplicate-candidates')) {
+      return jsonResponse({
+        items: [{
+          id: 'cmp_duplicate',
+          referenceNumber: 'CMP-DUP-001',
+          status: 'SUBMITTED',
+          severity: 'HIGH',
+          subject: 'Engine noise repeat',
+          branchId: 'branch_main',
+          ownerName: 'Hidden Staff',
+          customerPhone: '+966500000001',
+          vehicleVin: 'SEEDDEMO00001',
+          createdAt: '2026-06-17T00:00:00.000Z',
+          updatedAt: '2026-06-18T00:00:00.000Z',
+        }],
+        windowDays: 30,
+      });
+    }
+    if (String(input).endsWith('/complaints/cmp%2Fdetail/related')) {
+      return jsonResponse({
+        items: [{
+          id: 'cmp_related',
+          referenceNumber: 'CMP-REL-001',
+          status: 'IN_PROGRESS',
+          severity: 'MEDIUM',
+          subject: 'Linked service concern',
+          branchId: 'branch_main',
+          createdAt: '2026-06-16T00:00:00.000Z',
+          updatedAt: '2026-06-19T00:00:00.000Z',
+        }],
       });
     }
     if (String(input).endsWith('/cases/case_cmp_1/timeline')) {
@@ -1125,22 +1162,38 @@ test('complaint detail route renders real backend facts through the session cook
   );
 
   const detailCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail'));
+  const duplicateCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail/duplicate-candidates'));
+  const relatedCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail/related'));
   const caseCall = calls.find((call) => String(call.input).endsWith('/cases/case_cmp_1/timeline'));
   const capaCall = calls.find((call) => String(call.input).endsWith('/cases/case_cmp_1/capa'));
   const staffCall = calls.find((call) => String(call.input).endsWith('/staff/assignable'));
   assert.ok(detailCall);
+  assert.ok(duplicateCall);
+  assert.ok(relatedCall);
   assert.ok(caseCall);
   assert.ok(capaCall);
   assert.ok(staffCall);
   assert.equal(String(detailCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail');
+  assert.equal(String(duplicateCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail/duplicate-candidates');
+  assert.equal(String(relatedCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail/related');
   assert.equal(String(caseCall.input), 'http://localhost:3000/cases/case_cmp_1/timeline');
   assert.equal(String(capaCall.input), 'http://localhost:3000/cases/case_cmp_1/capa');
   assert.equal(String(staffCall.input), 'http://localhost:3000/staff/assignable');
   assert.doesNotMatch(String(detailCall.input), /role|actor|workflow|branchId/i);
+  assert.doesNotMatch(String(duplicateCall.input), /role|actor|workflow|branchId|token|credential/i);
+  assert.doesNotMatch(String(relatedCall.input), /role|actor|workflow|branchId|token|credential/i);
   assert.doesNotMatch(String(caseCall.input), /role|actor|workflow|branchId/i);
   assert.doesNotMatch(String(capaCall.input), /role|actor|workflow|branchId/i);
   assert.doesNotMatch(String(staffCall.input), /role|actor|workflow|branchId|owner|token|credential/i);
   assert.deepEqual(detailCall.init?.headers, {
+    Accept: 'application/json',
+    cookie: 'cms_staff_session=raw-session',
+  });
+  assert.deepEqual(duplicateCall.init?.headers, {
+    Accept: 'application/json',
+    cookie: 'cms_staff_session=raw-session',
+  });
+  assert.deepEqual(relatedCall.init?.headers, {
     Accept: 'application/json',
     cookie: 'cms_staff_session=raw-session',
   });
@@ -1149,6 +1202,12 @@ test('complaint detail route renders real backend facts through the session cook
     cookie: 'cms_staff_session=raw-session',
   });
   assert.match(html, /CMP-DETAIL-001/);
+  assert.match(html, /Related complaints/);
+  assert.match(html, /Likely duplicates/);
+  assert.match(html, /Linked complaints/);
+  assert.match(html, /CMP-DUP-001/);
+  assert.match(html, /CMP-REL-001/);
+  assert.match(html, /Link as related/);
   assert.match(html, /IN_PROGRESS/);
   assert.match(html, /HIGH/);
   assert.match(html, /Engine noise/);
@@ -1165,7 +1224,7 @@ test('complaint detail route renders real backend facts through the session cook
   assert.match(html, /Complaint SUBMITTED - 2026-06-18/);
   assert.match(html, /SUBMITTED - 2026-06-18/);
   assert.match(html, /IN_PROGRESS - 2026-06-19/);
-  assert.doesNotMatch(html, /usr_mgr|usr_staff/);
+  assert.doesNotMatch(html, /usr_mgr|usr_staff|Hidden Staff|\+966500000001|SEEDDEMO00001/);
 });
 
 test('complaint detail keeps preview fallback when backend denies detail read', async () => {
@@ -1181,6 +1240,41 @@ test('complaint detail keeps preview fallback when backend denies detail read', 
 
   assert.match(html, /CMP-2026-001/);
   assert.doesNotMatch(html, /CMP-DETAIL-001/);
+});
+
+test('complaint detail relation panel renders empty denied and Arabic states safely', async () => {
+  const empty = renderToStaticMarkup(
+    await ComplaintDetailPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: async (input) => String(input).includes('/duplicate-candidates') ? jsonResponse({ items: [], windowDays: 30 }) : jsonResponse({ items: [] }),
+      params: Promise.resolve({ id: 'cmp_empty' }),
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+  const denied = renderToStaticMarkup(
+    await ComplaintDetailPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: async () => jsonResponse({ error: { code: 'RBAC_FORBIDDEN' } }, 403),
+      params: Promise.resolve({ id: 'cmp_denied' }),
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+  const arabic = renderToStaticMarkup(
+    await ComplaintDetailPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl: async (input) => String(input).includes('/duplicate-candidates') ? jsonResponse({ items: [], windowDays: 30 }) : jsonResponse({ items: [] }),
+      params: Promise.resolve({ id: 'cmp_ar' }),
+      searchParams: Promise.resolve({ locale: 'ar' }),
+    }),
+  );
+
+  assert.match(empty, /No likely duplicates or linked complaints are visible\./);
+  assert.match(empty, /role="status"/);
+  assert.match(denied, /Related complaint checks are not available for your current scope\./);
+  assert.match(denied, /role="alert"/);
+  assert.match(arabic, /dir="rtl"/);
+  assert.ok(arabic.includes(complaintRelationsText.ar.title));
+  assert.ok(arabic.includes(complaintRelationsText.ar.states.empty));
 });
 
 test('complaint detail workspace keeps responsive detail layout classes', async () => {

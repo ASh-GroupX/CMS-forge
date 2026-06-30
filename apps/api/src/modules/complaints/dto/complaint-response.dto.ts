@@ -1,5 +1,7 @@
 import type { CaseConfidentialityLevel, CaseLifecycleStatus, CaseType, ComplaintSeverity, ComplaintStatus } from '@prisma/client';
 
+export type DataSourceDto = 'LOCAL' | 'MANUAL' | 'DMS';
+
 export type ComplaintQueueItemDto = {
   id: string;
   referenceNumber: string;
@@ -59,10 +61,33 @@ export type ComplaintCaseSummaryDto = {
 export type ComplaintDetailDto = ComplaintQueueItemDto & {
   description: string;
   incidentAt: string | null;
+  customerSource: DataSourceDto;
+  manualCustomer: boolean;
+  vehicleRelated: boolean;
+  vehicleSource: DataSourceDto | null;
+  manualVehicle: boolean;
+  vehicleDataUnavailableReason: string | null;
   statusHistory: ComplaintStatusTimelineItemDto[];
   caseSummary: ComplaintCaseSummaryDto | null;
 };
 
 export type ComplaintDetailResponseDto = {
   complaint: ComplaintDetailDto;
+};
+
+export type ComplaintRelatedResponseDto = {
+  items: ComplaintQueueItemDto[];
+};
+
+export type ComplaintDuplicateCandidatesResponseDto = {
+  items: ComplaintQueueItemDto[];
+  windowDays: number;
+};
+
+export type ComplaintRelationMutationResponseDto = {
+  relation: {
+    sourceComplaintId: string;
+    targetComplaintId: string;
+    changed: boolean;
+  };
 };

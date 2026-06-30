@@ -3,10 +3,14 @@ import { ComplaintSeverity } from '@prisma/client';
 import { AppException } from '../../../core/http-kernel.js';
 import type { CreateInternalComplaintInput, ComplaintCreationResult } from '../complaints.service.js';
 
+const dataSources = ['LOCAL', 'MANUAL', 'DMS'] as const;
+type DataSource = typeof dataSources[number];
+
 export type CreateComplaintRequestDto = {
   customerName: string;
   customerPhone?: string | null;
   customerNumber?: string | null;
+  customerSource?: DataSource | null;
   categoryId: string;
   subcategoryId: string;
   description: string;
@@ -20,6 +24,8 @@ export type CreateComplaintRequestDto = {
   vehicleBrand?: string | null;
   vehicleModel?: string | null;
   vehicleModelYear?: number | null;
+  vehicleSource?: DataSource | null;
+  vehicleDataUnavailableReason?: string | null;
   departmentId?: string | null;
   saveAsDraft?: boolean;
 };
@@ -34,6 +40,7 @@ export function parseCreateComplaintBody(body: unknown): CreateComplaintRequestD
     customerName: requiredText(input.customerName, 'customerName'),
     customerPhone: optionalText(input.customerPhone, 'customerPhone'),
     customerNumber: optionalText(input.customerNumber, 'customerNumber'),
+    customerSource: optionalDataSource(input.customerSource, 'customerSource'),
     categoryId: requiredText(input.categoryId, 'categoryId'),
     subcategoryId: requiredText(input.subcategoryId, 'subcategoryId'),
     description: requiredText(input.description, 'description'),
@@ -47,6 +54,8 @@ export function parseCreateComplaintBody(body: unknown): CreateComplaintRequestD
     vehicleBrand: optionalText(input.vehicleBrand, 'vehicleBrand'),
     vehicleModel: optionalText(input.vehicleModel, 'vehicleModel'),
     vehicleModelYear: optionalNumber(input.vehicleModelYear, 'vehicleModelYear'),
+    vehicleSource: optionalDataSource(input.vehicleSource, 'vehicleSource'),
+    vehicleDataUnavailableReason: optionalText(input.vehicleDataUnavailableReason, 'vehicleDataUnavailableReason'),
     departmentId: optionalText(input.departmentId, 'departmentId'),
     saveAsDraft: input.saveAsDraft === true,
   };
@@ -96,6 +105,12 @@ function optionalNumber(value: unknown, field: string): number | null {
   if (typeof value === 'number' && Number.isInteger(value)) {
     return value;
   }
+  throw invalid(field, `${field} is invalid.`);
+}
+
+function optionalDataSource(value: unknown, field: string): DataSource | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value === 'string' && (dataSources as readonly string[]).includes(value)) return value as DataSource;
   throw invalid(field, `${field} is invalid.`);
 }
 

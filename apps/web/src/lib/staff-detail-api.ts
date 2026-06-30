@@ -18,6 +18,7 @@ export type StaffComplaintDetailView = {
   } | null;
   capaActions: CaseCapaAction[];
   caseTimeline: string[];
+  id: string;
   reference: string;
   severity: string;
   status: string;
@@ -139,6 +140,7 @@ function viewFromDetail(detail: ComplaintDetail, caseTimeline: string[], capaAct
     } : null,
     capaActions,
     caseTimeline,
+    id: detail.id,
     reference: detail.referenceNumber,
     severity: detail.severity,
     status: detail.status,
@@ -197,9 +199,19 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
     updatedAt: complaint.updatedAt,
     description: complaint.description,
     incidentAt: typeof complaint.incidentAt === 'string' ? complaint.incidentAt : null,
+    customerSource: dataSource(complaint.customerSource) ?? 'LOCAL',
+    manualCustomer: complaint.manualCustomer === true,
+    vehicleRelated: complaint.vehicleRelated === true,
+    vehicleSource: dataSource(complaint.vehicleSource),
+    manualVehicle: complaint.manualVehicle === true,
+    vehicleDataUnavailableReason: typeof complaint.vehicleDataUnavailableReason === 'string' ? complaint.vehicleDataUnavailableReason : null,
     statusHistory: complaint.statusHistory.filter(statusHistoryItem),
     caseSummary: caseSummary(complaint.caseSummary),
   };
+}
+
+function dataSource(value: unknown): ComplaintDetail['customerSource'] | null {
+  return value === 'LOCAL' || value === 'MANUAL' || value === 'DMS' ? value : null;
 }
 
 function caseSummary(value: unknown): ComplaintDetail['caseSummary'] {

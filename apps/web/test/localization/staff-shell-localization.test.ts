@@ -15,6 +15,7 @@ import { auditViewerText } from '../../src/i18n/staff-audit-viewer';
 import { attachmentText } from '../../src/i18n/staff-attachments';
 import { complaintCreateText } from '../../src/i18n/staff-complaint-create';
 import { complaintDetailText } from '../../src/i18n/staff-complaint-detail';
+import { complaintRelationsText } from '../../src/i18n/staff-complaint-relations';
 import { confirmationText } from '../../src/i18n/staff-confirmations';
 import { employeeTodayText } from '../../src/i18n/staff-employee-today';
 import { dealHandoffText } from '../../src/i18n/staff-deal-handoff';
@@ -100,8 +101,8 @@ test('portal screens render Arabic RTL and English LTR', async () => {
 });
 
 test('complaint and attachment Arabic text uses real Arabic codepoints', () => {
-  const files = ['staff-complaint-create', 'staff-complaint-detail', 'staff-confirmations', 'staff-attachments'];
-  const bundles = [complaintCreateText, complaintDetailText, confirmationText, attachmentText];
+  const files = ['staff-complaint-create', 'staff-complaint-detail', 'staff-complaint-relations', 'staff-confirmations', 'staff-attachments'];
+  const bundles = [complaintCreateText, complaintDetailText, complaintRelationsText, confirmationText, attachmentText];
 
   for (const file of files) {
     assert.doesNotMatch(readFileSync(`apps/web/src/i18n/${file}.ts`, 'utf8'), mojibakeMarkers);

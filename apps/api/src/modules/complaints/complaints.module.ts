@@ -14,6 +14,8 @@ import { SlaModule } from '../sla/sla.module.js';
 import { SlaService } from '../sla/sla.service.js';
 import { ComplaintsController } from './complaints.controller.js';
 import { ComplaintFormOptionsService } from './complaint-form-options.service.js';
+import { ComplaintRelationsRepository } from './complaint-relations.repository.js';
+import { ComplaintRelationsService } from './complaint-relations.service.js';
 import { ComplaintsRepository } from './complaints.repository.js';
 import { ComplaintsService } from './complaints.service.js';
 
@@ -36,6 +38,16 @@ import { ComplaintsService } from './complaints.service.js';
       provide: ComplaintsRepository,
       inject: [PrismaService],
       useFactory: (prisma: PrismaService) => new ComplaintsRepository(prisma),
+    },
+    {
+      provide: ComplaintRelationsRepository,
+      inject: [PrismaService],
+      useFactory: (prisma: PrismaService) => new ComplaintRelationsRepository(prisma),
+    },
+    {
+      provide: ComplaintRelationsService,
+      inject: [ComplaintRelationsRepository, AuditService],
+      useFactory: (repository: ComplaintRelationsRepository, audit: AuditService) => new ComplaintRelationsService(repository, audit),
     },
     {
       provide: ComplaintsService,

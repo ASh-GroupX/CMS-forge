@@ -17,6 +17,7 @@ export type ComplaintTransitionRequestDto = {
   resolutionType?: string | null;
   resolutionSummary?: string | null;
   customerCommunicationStatus?: string | null;
+  vehicleDataUnavailableReason?: string | null;
 };
 
 export type ComplaintTransitionResponseDto = {
@@ -32,6 +33,7 @@ export function parseComplaintTransitionBody(body: unknown): ComplaintTransition
   const resolutionType = optionalText(input.resolutionType, 'resolutionType');
   const resolutionSummary = optionalText(input.resolutionSummary, 'resolutionSummary');
   const customerCommunicationStatus = optionalText(input.customerCommunicationStatus, 'customerCommunicationStatus');
+  const vehicleDataUnavailableReason = optionalText(input.vehicleDataUnavailableReason, 'vehicleDataUnavailableReason');
   return {
     fromStatus: enumValue(input.fromStatus, ComplaintStatus, 'fromStatus'),
     action: enumValue(input.action, ComplaintTransitionAction, 'action'),
@@ -42,6 +44,7 @@ export function parseComplaintTransitionBody(body: unknown): ComplaintTransition
     ...(resolutionType === undefined ? {} : { resolutionType }),
     ...(resolutionSummary === undefined ? {} : { resolutionSummary }),
     ...(customerCommunicationStatus === undefined ? {} : { customerCommunicationStatus }),
+    ...(vehicleDataUnavailableReason === undefined ? {} : { vehicleDataUnavailableReason }),
   };
 }
 
@@ -70,6 +73,7 @@ export function toTransitionInput(
     ...(body.resolutionType === undefined ? {} : { resolutionType: body.resolutionType }),
     ...(body.resolutionSummary === undefined ? {} : { resolutionSummary: body.resolutionSummary }),
     ...(body.customerCommunicationStatus === undefined ? {} : { customerCommunicationStatus: body.customerCommunicationStatus }),
+    ...(body.vehicleDataUnavailableReason === undefined ? {} : { vehicleDataUnavailableReason: body.vehicleDataUnavailableReason }),
     correlationId: context.correlationId,
     ipAddress: context.ipAddress,
     userAgent: context.userAgent,

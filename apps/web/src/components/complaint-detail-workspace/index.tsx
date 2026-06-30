@@ -1,13 +1,16 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { complaintDetailText } from '../../i18n/staff-complaint-detail';
+import { complaintRelationsText } from '../../i18n/staff-complaint-relations';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
+import type { StaffComplaintRelationsView } from '../../lib/staff-complaint-relations-api';
 import type { StaffComplaintDetailView } from '../../lib/staff-detail-api';
 import { ComplaintAttachmentControls, type ComplaintAttachmentPreviewState } from '../complaint-attachment-controls';
 import { ComplaintCommentsPanel, type ComplaintCommentsPreviewState } from '../complaint-comments-panel';
 import { ComplaintWorkflowModal, type ComplaintWorkflowPreviewState } from '../complaint-workflow-modal';
 import { CaseCapaPanel } from './case-capa-panel';
+import { ComplaintRelationsPanel } from './complaint-relations-panel';
 
 export type ComplaintDetailPreviewState = 'loading' | 'empty' | 'error';
 export type { ComplaintAttachmentPreviewState };
@@ -19,6 +22,7 @@ export function ComplaintDetailWorkspace({
   commentsState,
   detail,
   locale,
+  relations,
   staff,
   state,
   workflowState,
@@ -27,6 +31,7 @@ export function ComplaintDetailWorkspace({
   commentsState?: ComplaintCommentsPreviewState | undefined;
   detail?: StaffComplaintDetailView | undefined;
   locale: Locale;
+  relations?: StaffComplaintRelationsView | undefined;
   staff?: AssignableStaff[] | null | undefined;
   state?: ComplaintDetailPreviewState | undefined;
   workflowState?: ComplaintWorkflowPreviewState | undefined;
@@ -69,6 +74,7 @@ export function ComplaintDetailWorkspace({
               [t.labels.vehicle, t.values.vehicle],
               [t.labels.vin, t.values.vin],
             ]} />
+            <ComplaintRelationsPanel complaintId={detail?.id} relations={relations} text={complaintRelationsText[locale]} />
           </div>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
             <section className="rounded-md border border-slate-200 bg-slate-50 p-3" aria-label={t.sections.timeline}>

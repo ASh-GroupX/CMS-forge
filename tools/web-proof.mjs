@@ -209,6 +209,8 @@ async function proofFetch(input) {
   });
   if (path === '/complaints') return json({ items: [proofRow('CMP-PROOF-001', 'Proof queue row')] });
   if (path === '/reports') return json({ items: [proofRow('CMP-PROOF-RPT-001', 'Proof report row', { categoryId: 'cat_proof' })] });
+  if (path.endsWith('/duplicate-candidates')) return json({ items: [proofRow('CMP-PROOF-DUP-001', 'Proof duplicate row')], windowDays: 30 });
+  if (path.endsWith('/related')) return json({ items: [proofRow('CMP-PROOF-REL-001', 'Proof related row')] });
   if (path.startsWith('/complaints/')) return json({ complaint: { ...proofRow('CMP-PROOF-DETAIL', 'Proof detail row'), description: 'Proof detail description.', incidentAt: '2026-06-19T00:00:00.000Z', statusHistory: [{ id: 'hist_1', toStatus: 'SUBMITTED', createdAt: '2026-06-19T00:00:00.000Z' }] } });
   return json({}, 404);
 }

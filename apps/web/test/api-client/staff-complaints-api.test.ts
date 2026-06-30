@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { POST as proxyLinkRelatedComplaint } from '../../src/app/api/complaints/[id]/related/route';
 import { POST as proxyCreateComplaint } from '../../src/app/api/complaints/route';
+import { getStaffComplaintDuplicateCandidates, getStaffComplaintRelated, linkStaffComplaintRelation } from '../../src/lib/staff-complaint-relations-api';
 import { createStaffComplaint, getStaffComplaint, listStaffComplaints } from '../../src/lib/staff-complaints-api';
 
 function jsonResponse(body: unknown, status = 200) {
@@ -55,6 +57,69 @@ test('getStaffComplaint encodes path ids without branch or role query spoofing',
   assert.equal(result.ok, true);
   assert.equal(calls[0]?.input, '/complaints/c%2F1');
   assert.doesNotMatch(String(calls[0]?.input), /branchId|role|actor|workflow/i);
+});
+
+test('staff complaint relation reads use safe fields and server session scope only', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({
+      items: [{
+        id: 'cmp_related',
+        referenceNumber: 'CMP-RELATED-001',
+        status: 'SUBMITTED',
+        severity: 'HIGH',
+        subject: 'Engine noise',
+        branchId: 'branch_main',
+        ownerName: 'Staff Name',
+        customerPhone: '+966500000001',
+        vehicleVin: 'SEEDDEMO00001',
+        createdAt: '2026-06-18T00:00:00.000Z',
+        updatedAt: '2026-06-19T00:00:00.000Z',
+      }],
+      windowDays: 30,
+    });
+  };
+
+  const candidates = await getStaffComplaintDuplicateCandidates({ apiUrl: 'http://api.test', complaintId: 'cmp/1', cookies: 'cms_staff_session=raw-session', fetchImpl });
+  const related = await getStaffComplaintRelated({ apiUrl: 'http://api.test', complaintId: 'cmp/1', cookies: 'cms_staff_session=raw-session', fetchImpl });
+
+  assert.equal(candidates.ok, true);
+  assert.equal(related.ok, true);
+  assert.deepEqual(candidates.ok ? candidates.data.items[0] : null, {
+    id: 'cmp_related',
+    referenceNumber: 'CMP-RELATED-001',
+    status: 'SUBMITTED',
+    severity: 'HIGH',
+    subject: 'Engine noise',
+    branchId: 'branch_main',
+    createdAt: '2026-06-18T00:00:00.000Z',
+    updatedAt: '2026-06-19T00:00:00.000Z',
+  });
+  assert.equal(String(calls[0]?.input), 'http://api.test/complaints/cmp%2F1/duplicate-candidates');
+  assert.equal(String(calls[1]?.input), 'http://api.test/complaints/cmp%2F1/related');
+  assert.ok(calls.every((call) => !/branchId|role|actor|workflow|token|credential/i.test(String(call.input))));
+  assert.deepEqual(calls[0]?.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+});
+
+test('linkStaffComplaintRelation posts only target id with CSRF', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ relation: { sourceComplaintId: 'cmp/1', targetComplaintId: 'cmp_2', changed: true } }, 201);
+  };
+
+  await withDocumentCookie('cms_csrf_token=csrf_123', async () => {
+    const result = await linkStaffComplaintRelation('cmp/1', 'cmp_2', fetchImpl);
+    assert.equal(result.ok, true);
+  });
+
+  assert.equal(calls[0]?.input, '/api/complaints/cmp%2F1/related');
+  assert.equal(calls[0]?.init?.method, 'POST');
+  assert.equal(calls[0]?.init?.credentials, 'include');
+  assert.deepEqual(calls[0]?.init?.headers, { Accept: 'application/json', 'content-type': 'application/json', 'x-csrf-token': 'csrf_123' });
+  assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), { targetComplaintId: 'cmp_2' });
+  assert.doesNotMatch(String(calls[0]?.init?.body), /branch|role|actor|workflow|token|credential/i);
 });
 
 test('staff complaint client maps API error envelopes with correlation ids', async () => {
@@ -225,6 +290,40 @@ test('complaint create proxy forwards body, session cookie, and CSRF to the API'
     assert.equal(String(calls[0]?.input), 'http://api.test/complaints?branchId=branch_main');
     assert.equal(calls[0]?.init?.method, 'POST');
     assert.equal(calls[0]?.init?.body, JSON.stringify(validCreateBody()));
+    assert.deepEqual(Object.fromEntries(new Headers(calls[0]?.init?.headers).entries()), {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      cookie: 'cms_staff_session=raw-session',
+      'x-csrf-token': 'csrf_123',
+    });
+  } finally {
+    globalThis.fetch = priorFetch;
+    if (priorApiUrl === undefined) delete process.env.API_URL;
+    else process.env.API_URL = priorApiUrl;
+  }
+});
+
+test('related complaint proxy forwards body, session cookie, and CSRF to the API', async () => {
+  const priorFetch = globalThis.fetch;
+  const priorApiUrl = process.env.API_URL;
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  globalThis.fetch = (async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ relation: { sourceComplaintId: 'cmp_1', targetComplaintId: 'cmp_2', changed: true } }, 201);
+  }) as typeof fetch;
+  process.env.API_URL = 'http://api.test';
+
+  try {
+    const response = await proxyLinkRelatedComplaint(new Request('http://web.test/api/complaints/cmp_1/related', {
+      body: JSON.stringify({ targetComplaintId: 'cmp_2' }),
+      headers: { 'content-type': 'application/json', cookie: 'cms_staff_session=raw-session', 'x-csrf-token': 'csrf_123' },
+      method: 'POST',
+    }), { params: Promise.resolve({ id: 'cmp_1' }) });
+
+    assert.equal(response.status, 201);
+    assert.equal(String(calls[0]?.input), 'http://api.test/complaints/cmp_1/related');
+    assert.equal(calls[0]?.init?.method, 'POST');
+    assert.equal(calls[0]?.init?.body, JSON.stringify({ targetComplaintId: 'cmp_2' }));
     assert.deepEqual(Object.fromEntries(new Headers(calls[0]?.init?.headers).entries()), {
       accept: 'application/json',
       'content-type': 'application/json',

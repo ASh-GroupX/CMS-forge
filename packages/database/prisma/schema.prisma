@@ -68,6 +68,12 @@ enum ComplaintSource {
   DMS
 }
 
+enum DataSource {
+  LOCAL
+  MANUAL
+  DMS
+}
+
 enum ComplaintType {
   COMPLAINT
   INQUIRY
@@ -444,6 +450,7 @@ model Customer {
   phone                  String                          @unique
   email                  String?
   dmsCode                String?                         @map("dms_code")
+  dataSource             DataSource                      @default(LOCAL) @map("data_source")
   createdAt              DateTime                        @default(now()) @map("created_at")
   updatedAt              DateTime                        @updatedAt @map("updated_at")
   vehicles               Vehicle[]
@@ -463,6 +470,7 @@ model Vehicle {
   makeEn     String      @map("make_en")
   modelEn    String      @map("model_en")
   year       Int
+  dataSource DataSource  @default(LOCAL) @map("data_source")
   customerId String?     @map("customer_id")
   createdAt  DateTime    @default(now()) @map("created_at")
   updatedAt  DateTime    @updatedAt @map("updated_at")
@@ -480,6 +488,12 @@ model Complaint {
   type                ComplaintType            @default(COMPLAINT)
   severity            ComplaintSeverity        @default(MEDIUM)
   source              ComplaintSource          @default(STAFF)
+  customerDataSource  DataSource               @default(LOCAL) @map("customer_data_source")
+  vehicleDataSource   DataSource?              @map("vehicle_data_source")
+  manualCustomerFlag  Boolean                  @default(false) @map("manual_customer_flag")
+  manualVehicleFlag   Boolean                  @default(false) @map("manual_vehicle_flag")
+  vehicleRelated      Boolean                  @default(false) @map("vehicle_related")
+  vehicleDataUnavailableReason String?         @map("vehicle_data_unavailable_reason")
   subject             String                   @default("General complaint")
   branchId            String                   @map("branch_id")
   categoryId          String                   @map("category_id")
@@ -514,6 +528,8 @@ model Complaint {
   compensation        Compensation[]
   portalVerifications PortalVerification[]
   portalSessions      PortalSession[]
+  relatedSources      ComplaintRelation[]      @relation("ComplaintRelationSource")
+  relatedTargets      ComplaintRelation[]      @relation("ComplaintRelationTarget")
 
   @@index([status])
   @@index([branchId, status])
@@ -553,6 +569,19 @@ model ComplaintReferenceSequence {
 
   @@id([branchId, year])
   @@map("complaint_reference_sequences")
+}
+
+model ComplaintRelation {
+  id                String    @id @default(cuid())
+  sourceComplaintId String    @map("source_complaint_id")
+  targetComplaintId String    @map("target_complaint_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  sourceComplaint   Complaint @relation("ComplaintRelationSource", fields: [sourceComplaintId], references: [id], onDelete: Cascade)
+  targetComplaint   Complaint @relation("ComplaintRelationTarget", fields: [targetComplaintId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceComplaintId, targetComplaintId])
+  @@index([targetComplaintId])
+  @@map("complaint_relations")
 }
 
 model Approval {

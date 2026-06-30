@@ -21,6 +21,7 @@ Agent context manifest. Read this before editing the module.
 ## Owns tables
 
 - `complaints`
+- `complaint_relations`
 - `complaint_status_history`
 - `complaint_reference_sequences`
 
@@ -49,6 +50,7 @@ those modules exist: `comments`, `attachments`, `approvals`, `sla_events`,
 - ARCH-WORKFLOW-001
 - WORKFLOW-MATRIX-001
 - METHOD-AUDIT-001
+- REQ-COMPLAINT-003
 - METHOD-MODULAR-001
 - METHOD-TEST-001
 - NFR-MAINT-001

@@ -1,6 +1,7 @@
 import { adminUsersText } from '../apps/web/src/i18n/staff-admin-users.ts';
 import { auditViewerText } from '../apps/web/src/i18n/staff-audit-viewer.ts';
 import { complaintDetailText } from '../apps/web/src/i18n/staff-complaint-detail.ts';
+import { complaintRelationsText } from '../apps/web/src/i18n/staff-complaint-relations.ts';
 import { portalSubmissionText } from '../apps/web/src/i18n/portal-submission.ts';
 import { portalSurveyText } from '../apps/web/src/i18n/portal-survey.ts';
 import { portalTrackingText } from '../apps/web/src/i18n/portal-tracking.ts';
@@ -22,13 +23,13 @@ export function defaultVisualSignals(locale) {
 }
 
 function buildVisualCases(locale) {
-  const t = staffShellText[locale], detail = complaintDetailText[locale];
+  const t = staffShellText[locale], detail = complaintDetailText[locale], relations = complaintRelationsText[locale];
   const base = { locale, role: 'admin', session: 'signed-in' };
   return [
     visualCase('dashboard', locale, 'staff-dashboard', { ...base }, [t.dashboard.title, t.dashboard.cards.open[0], t.dashboard.cards.averageTat[0]], ['md:grid-cols-3', 'xl:grid-cols-5']),
     visualCase('work queue', locale, 'staff-complaints', { ...base }, [t.workQueue.title, 'CMP-PROOF-001', t.workQueue.pagination.page], ['md:grid-cols-5', 'overflow-x-auto']),
     visualCase('complaint create', locale, 'staff-complaint-new', { ...base, create: 'validation' }, [t.createForm.title, t.createForm.fields.category, t.createForm.validation.vinRequired], ['md:grid-cols-2', 'md:col-span-2']),
-    visualCase('complaint detail', locale, 'staff-complaint-detail', { ...base, attachment: 'clean' }, [detail.title, detail.sections.customer, detail.sections.timeline, detail.sections.attachments], ['xl:grid-cols-[1.1fr_0.9fr]', 'md:grid-cols-2']),
+    visualCase('complaint detail', locale, 'staff-complaint-detail', { ...base, attachment: 'clean' }, [detail.title, detail.sections.customer, detail.sections.timeline, detail.sections.attachments, relations.title], ['xl:grid-cols-[1.1fr_0.9fr]', 'md:grid-cols-2']),
     visualCase('workflow modal', locale, 'staff-complaint-detail', { ...base, workflow: 'validation' }, [detail.sections.workflow, detail.workflow.actions[0], detail.workflow.validation], ['role="dialog"', 'xl:col-span-2']),
     visualCase('admin surfaces', locale, 'staff-admin', { ...base, admin: 'validation' }, [adminUsersText[locale].masterData.title, adminUsersText[locale].title, adminUsersText[locale].masterData.sections.branches, adminUsersText[locale].masterData.sections.categories], []),
     visualCase('reports', locale, 'staff-reports', { ...base }, [reportsDashboardText[locale].title, reportsDashboardText[locale].export.title, reportsDashboardText[locale].kpis.slaBreachRate, reportsDashboardText[locale].kpis.agingOverSeven, 'CMP-PROOF-RPT-001'], ['min-w-[56rem]', 'md:grid-cols-3']),
@@ -63,7 +64,7 @@ function buildAccessibilityCases() {
     accessibilityCase('queue status', 'ar', { ...arBase }, [staffShellText.ar.workQueue.title, 'CMP-PROOF-001'], { feedbackRole: false, route: 'staff-complaints' }),
     accessibilityCase('create validation', 'en', { ...enBase, create: 'validation' }, [staffShellText.en.createForm.title, staffShellText.en.createForm.validation.vinRequired], { route: 'staff-complaint-new' }),
     accessibilityCase('create network alert', 'ar', { ...arBase, create: 'network' }, [staffShellText.ar.createForm.title], { route: 'staff-complaint-new' }),
-    accessibilityCase('detail route', 'en', { ...enBase }, [complaintDetailText.en.title, 'CMP-PROOF-DETAIL'], { feedbackRole: false, route: 'staff-complaint-detail', minLabels: 0 }),
+    accessibilityCase('detail route', 'en', { ...enBase }, [complaintDetailText.en.title, 'CMP-PROOF-DETAIL', complaintRelationsText.en.candidates], { feedbackRole: false, route: 'staff-complaint-detail', minLabels: 0 }),
     accessibilityCase('workflow dialog', 'ar', { ...arBase, workflow: 'validation' }, [complaintDetailText.ar.sections.workflow, complaintDetailText.ar.workflow.comment], { route: 'staff-complaint-detail', dialog: complaintDetailText.ar.sections.workflow, minButtons: 8, minLabels: 0 }),
     accessibilityCase('admin feedback', 'en', { ...enBase, admin: 'validation' }, [adminUsersText.en.title, adminUsersText.en.states.validation], { route: 'staff-admin', minButtons: 6, minLabels: 0 }),
     accessibilityCase('reports route', 'ar', { ...arBase }, [reportsDashboardText.ar.title, 'CMP-PROOF-RPT-001'], { feedbackRole: false, route: 'staff-reports', minLabels: 0 }),

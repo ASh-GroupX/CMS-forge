@@ -43,6 +43,9 @@ type ComplaintStatusStub = {
   severity?: ComplaintSeverity;
   categoryId?: string;
   departmentId?: string | null;
+  vehicleRelated?: boolean;
+  vehicleId?: string | null;
+  vehicleDataUnavailableReason?: string | null;
 };
 
 const matrixCases = [
@@ -240,6 +243,7 @@ test('workflow required-data transitions persist with history and audit', async 
         calls.push('status');
         return { id: data.complaintId, branchId: 'branch_main', status: data.toStatus };
       },
+      findTransitionSubject: async (id) => ({ id, vehicleRelated: false, vehicleId: null, vehicleDataUnavailableReason: null }),
       createStatusHistory: async () => { calls.push('history'); },
     } as ComplaintsRepository, { record: async () => { calls.push('audit'); } } as unknown as AuditService);
     await serviceWithPersistence.applyTransition(input);
@@ -261,6 +265,53 @@ test('workflow required data rejects before transaction', async () => {
   ]) {
     await assertNoTransaction(input, 'VALIDATION_FAILED');
   }
+});
+
+test('workflow close rejects vehicle-related complaint without vehicle or unavailable reason before status write', async () => {
+  const calls: string[] = [];
+  const serviceWithVehicleGate = new ComplaintsService({
+    transaction: async <T>(work: (client: never) => Promise<T>) => work({} as never),
+    findTransitionSubject: async () => {
+      calls.push('subject');
+      return { id: 'cmp_1', vehicleRelated: true, vehicleId: null, vehicleDataUnavailableReason: null };
+    },
+    updateStatus: async () => {
+      calls.push('status');
+      throw new Error('status should not update');
+    },
+  } as ComplaintsRepository, noopAudit);
+
+  await assert.rejects(
+    serviceWithVehicleGate.applyTransition(transitionInput(ComplaintStatus.RESOLVED, ComplaintTransitionAction.CLOSE, RoleCode.ADMIN, {
+      reason: 'confirmed closed',
+      customerCommunicationStatus: 'called',
+    })),
+    (error: unknown) =>
+      error instanceof AppException &&
+      error.code === 'VALIDATION_FAILED' &&
+      error.fieldErrors.some((field) => field.field === 'vehicleDataUnavailableReason'),
+  );
+  assert.deepEqual(calls, ['subject']);
+});
+
+test('workflow close allows documented unavailable vehicle data reason and persists it', async () => {
+  const updates: unknown[] = [];
+  const calls: string[] = [];
+  const serviceWithVehicleGate = transitionService(calls, [], complaintStatus({
+    status: ComplaintStatus.CLOSED,
+    vehicleRelated: true,
+    vehicleId: null,
+    vehicleDataUnavailableReason: null,
+  }), undefined, updates);
+
+  await serviceWithVehicleGate.applyTransition(transitionInput(ComplaintStatus.RESOLVED, ComplaintTransitionAction.CLOSE, RoleCode.ADMIN, {
+    reason: 'confirmed closed',
+    customerCommunicationStatus: 'called',
+    vehicleDataUnavailableReason: 'Customer no longer has the vehicle documents',
+  }));
+
+  assert.equal((updates[0] as { vehicleDataUnavailableReason?: string }).vehicleDataUnavailableReason, 'Customer no longer has the vehicle documents');
+  assert.deepEqual(calls.slice(0, 4), ['subject', 'status', 'history', 'audit']);
 });
 
 test('workflow route and assignment required data returns field errors before transaction', async () => {
@@ -483,7 +534,7 @@ test('workflow close queues survey scheduling after transaction commit', async (
     customerCommunicationStatus: 'called',
   }));
 
-  assert.deepEqual(calls, ['status', 'history', 'audit', 'commit', 'queue']);
+  assert.deepEqual(calls, ['subject', 'status', 'history', 'audit', 'commit', 'queue']);
   assert.deepEqual(queued, [{
     complaintId: 'cmp_1',
     templateCode: 'survey.schedule.internal',
@@ -510,7 +561,7 @@ test('workflow close records paused SLA lifecycle only after transaction commit'
     customerCommunicationStatus: 'called',
   }));
 
-  assert.deepEqual(calls, ['status', 'history', 'audit', 'commit', 'queue', 'slaLifecycle']);
+  assert.deepEqual(calls, ['subject', 'status', 'history', 'audit', 'commit', 'queue', 'slaLifecycle']);
   assert.equal((lifecycle[0] as { occurredAt?: unknown }).occurredAt instanceof Date, true);
   assert.deepEqual({ ...(lifecycle[0] as Record<string, unknown>), occurredAt: 'date' }, {
     complaintId: 'cmp_1',
@@ -624,6 +675,11 @@ test('workflow transition persistence rejects stale persisted status before hist
     transaction: async <T>(work: (client: never) => Promise<T>) => {
       calls.push('transaction');
       return work(txClient as never);
+    },
+    findTransitionSubject: async (id, client) => {
+      assert.equal(client, txClient);
+      calls.push({ subject: id });
+      return { id, vehicleRelated: false, vehicleId: null, vehicleDataUnavailableReason: null };
     },
     updateStatus: async (data, client) => {
       assert.equal(client, txClient);
@@ -975,6 +1031,17 @@ function transitionService(calls: string[], queued: unknown[], updateResult: Com
       const result = await work({} as never);
       calls.push('commit');
       return result;
+    },
+    findTransitionSubject: async (id) => {
+      calls.push('subject');
+      return updateResult
+        ? {
+            id,
+            vehicleRelated: updateResult.vehicleRelated ?? false,
+            vehicleId: updateResult.vehicleId ?? null,
+            vehicleDataUnavailableReason: updateResult.vehicleDataUnavailableReason ?? null,
+          }
+        : null;
     },
     updateStatus: async (data) => {
       calls.push('status');

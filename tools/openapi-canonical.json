@@ -1334,6 +1334,308 @@
         }
       }
     },
+    "/complaints/{id}/related": {
+      "get": {
+        "tags": [
+          "Complaints"
+        ],
+        "operationId": "complaintRelatedList",
+        "summary": "List related complaints for a staff complaint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Related complaints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintRelatedResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or branch scope denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Complaint not found (COMPLAINT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Complaints"
+        ],
+        "operationId": "complaintRelatedLink",
+        "summary": "Link a related complaint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComplaintRelationLinkRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Complaint relation linked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintRelationMutation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role, branch scope, or CSRF denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Complaint not found (COMPLAINT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/complaints/{id}/related/{targetId}": {
+      "delete": {
+        "tags": [
+          "Complaints"
+        ],
+        "operationId": "complaintRelatedUnlink",
+        "summary": "Unlink a related complaint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "targetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complaint relation unlinked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintRelationMutation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role, branch scope, or CSRF denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Complaint not found (COMPLAINT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/complaints/{id}/duplicate-candidates": {
+      "get": {
+        "tags": [
+          "Complaints"
+        ],
+        "operationId": "complaintDuplicateCandidates",
+        "summary": "List likely duplicate complaint candidates",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Duplicate candidates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintDuplicateCandidatesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or branch scope denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Complaint not found (COMPLAINT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/complaints/{id}/comments": {
       "post": {
         "tags": [
@@ -5030,6 +5332,18 @@
             ],
             "minLength": 1
           },
+          "customerSource": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "LOCAL",
+              "MANUAL",
+              "DMS",
+              null
+            ]
+          },
           "categoryId": {
             "type": "string",
             "minLength": 1
@@ -5075,6 +5389,62 @@
               "null"
             ],
             "minLength": 1
+          },
+          "vehiclePlate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "vehicleBrand": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "vehicleModel": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "vehicleModelYear": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "vehicleSource": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "LOCAL",
+              "MANUAL",
+              "DMS",
+              null
+            ]
+          },
+          "vehicleDataUnavailableReason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "departmentId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "saveAsDraft": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -5947,6 +6317,12 @@
                 "required": [
                   "description",
                   "incidentAt",
+                  "customerSource",
+                  "manualCustomer",
+                  "vehicleRelated",
+                  "vehicleSource",
+                  "manualVehicle",
+                  "vehicleDataUnavailableReason",
                   "statusHistory",
                   "caseSummary"
                 ],
@@ -5960,6 +6336,41 @@
                       "null"
                     ],
                     "format": "date-time"
+                  },
+                  "customerSource": {
+                    "type": "string",
+                    "enum": [
+                      "LOCAL",
+                      "MANUAL",
+                      "DMS"
+                    ]
+                  },
+                  "manualCustomer": {
+                    "type": "boolean"
+                  },
+                  "vehicleRelated": {
+                    "type": "boolean"
+                  },
+                  "vehicleSource": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "LOCAL",
+                      "MANUAL",
+                      "DMS",
+                      null
+                    ]
+                  },
+                  "manualVehicle": {
+                    "type": "boolean"
+                  },
+                  "vehicleDataUnavailableReason": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
                   },
                   "statusHistory": {
                     "type": "array",
@@ -6252,6 +6663,13 @@
             "minLength": 1
           },
           "customerCommunicationStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "vehicleDataUnavailableReason": {
             "type": [
               "string",
               "null"
@@ -8676,6 +9094,82 @@
         "properties": {
           "policy": {
             "$ref": "#/components/schemas/SlaPolicy"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintRelatedResponse": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplaintQueueItem"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintDuplicateCandidatesResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "windowDays"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplaintQueueItem"
+            }
+          },
+          "windowDays": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintRelationLinkRequest": {
+        "type": "object",
+        "required": [
+          "targetComplaintId"
+        ],
+        "properties": {
+          "targetComplaintId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintRelationMutation": {
+        "type": "object",
+        "required": [
+          "relation"
+        ],
+        "properties": {
+          "relation": {
+            "type": "object",
+            "required": [
+              "sourceComplaintId",
+              "targetComplaintId",
+              "changed"
+            ],
+            "properties": {
+              "sourceComplaintId": {
+                "type": "string"
+              },
+              "targetComplaintId": {
+                "type": "string"
+              },
+              "changed": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
           }
         },
         "additionalProperties": false

@@ -415,6 +415,12 @@ test('portal tracking returns only portal-safe complaint fields for a valid sess
           updatedAt: '2026-06-19T10:10:00.000Z',
           description: 'Customer description',
           incidentAt: '2026-06-19T09:00:00.000Z',
+          customerSource: 'DMS',
+          manualCustomer: false,
+          vehicleRelated: true,
+          vehicleSource: 'DMS',
+          manualVehicle: false,
+          vehicleDataUnavailableReason: 'internal provenance note',
           statusHistory: [{
             fromStatus: null,
             toStatus: ComplaintStatus.SUBMITTED,
@@ -613,7 +619,7 @@ function assertSafePortalAudit(record: AuditRecordInput, otp: string): void {
 
 function assertPortalTrackingSafe(record: unknown): void {
   const body = JSON.stringify(record);
-  for (const blocked of ['description', 'statusHistory', 'actorId', 'reason', 'ownerId', 'branchId', 'DMS', 'audit', 'internalComments', 'staff@example.test', 'unrelatedComplaints', 'CMP-000011', 'sessionToken', 'sessionHash', 'otpHash', '123456']) {
+  for (const blocked of ['description', 'statusHistory', 'actorId', 'reason', 'ownerId', 'branchId', 'DMS', 'customerSource', 'vehicleSource', 'manualVehicle', 'vehicleDataUnavailableReason', 'audit', 'internalComments', 'staff@example.test', 'unrelatedComplaints', 'CMP-000011', 'sessionToken', 'sessionHash', 'otpHash', '123456']) {
     assert.equal(body.includes(blocked), false);
   }
 }

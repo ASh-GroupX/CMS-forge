@@ -1,9 +1,9 @@
 # Current State
 
-Status: Phase 17 reviewed complete
-Phase: Phase 17 - Report formula/business-fit proof and matrix reconciliation
-Next Task: Next-phase planning/audit stop
-Model Tier: Planner/Reviewer
+Status: P19A complete
+Phase: Phase 19A - Vehicle manual/DMS provenance backend foundation
+Next Task: P19A reviewer stop
+Model Tier: GPT-5.5 Extra High
 
 ## How to use this file
 
@@ -13,38 +13,30 @@ Prior state history is in .forge/archive/state-archive.md.
 ## Snapshot
 
 - `.spec` is absent.
-- Phase 16 reviewer stop is complete and clean.
-- Phase 17 is reviewed complete after P17A backend KPI/formula work, P17A
-  reopen-rate repair, P17B report UI proof, and the Phase 17 reviewer repair.
-- The Phase 17 reviewer repair fixed the two blockers from the first reviewer
-  stop:
-  - `/reports` rows now match the committed safe `ReportRow` contract exactly;
-  - REPORT export audit metadata now includes only `{ format, rowCount,
-    rowLimit, filters }`, with `filters` limited to `filterBranchId`,
-    `categoryId`, `departmentId`, `severity`, `ownerId`, `dateFrom`, and
-    `dateTo`.
-- The reviewer rerun found no blockers.
-- Full reviewer proof passed: `git status --short`, `git diff --check`
-  (line-ending warnings only), `corepack pnpm test:api -- reports`,
-  `corepack pnpm test:web -- api-client`, `corepack pnpm test:web -- shell`,
-  `corepack pnpm test:web -- localization`, `corepack pnpm test:e2e --
-  accessibility`, `corepack pnpm test:visual`, `corepack pnpm web:perf`,
-  `corepack pnpm openapi:check`, `corepack pnpm typecheck`, and
-  `corepack pnpm lint`.
-- The worktree remains intentionally dirty with prior Phase 14/P15 changes,
-  P16 work, P17A/P17B work, the P17 repair, reviewer Forge bookkeeping, and
-  carry-forward work from other phases. Do not clean, stage, or revert unrelated
-  changes.
+- Phase 17 is reviewed complete.
+- Phase 18 is built; reviewer stop was skipped by user and must not be claimed as reviewed.
+- P18A backend build and reviewer stop are complete.
+- P18B duplicate warning UI foundation is built.
+- P19A added backend provenance foundation for manual/local/DMS customer and
+  vehicle source metadata, manual flags, vehicle-related marker, and vehicle
+  data unavailable reason.
+- Manual complaint creation remains non-blocking when DMS/provider data is
+  absent; no live DMS integration or writeback was added.
+- Vehicle-related complaints cannot close without a confirmed vehicle or a
+  documented vehicle-data-unavailable reason.
+- Staff-only create/detail/transition OpenAPI contracts were updated for the
+  changed provenance fields.
+- Portal tracking proof confirms provenance internals, DMS, VIN/plate-shaped
+  data, audit internals, staff PII, and unrelated complaints are not exposed.
 
 ## Current Stop
 
-Next task is a next-phase planning/audit stop only. Do not start implementation
-until the planner sets the smallest scoped task.
+Run a strict P19A reviewer stop. Do not start new implementation during review.
 
 ## Open Carry-Forward / Known Debt
 
-- Related complaint linking remains planned.
-- Duplicate warning UI remains planned and should follow backend duplicate or
-  related-complaint behavior.
-- Vehicle manual/DMS provenance flags remain planned.
+- Phase 18 needs a reviewer pass before it can be called reviewed.
+- No dedicated customer/vehicle correction or provenance update workflow exists;
+  P19A recorded the gap instead of inventing a broad admin workflow.
+- Advanced/AI matching is intentionally out of MVP scope.
 - Portal attachment follow-up remains unstarted by Phase 16.

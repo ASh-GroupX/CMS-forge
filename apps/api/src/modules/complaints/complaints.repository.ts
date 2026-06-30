@@ -5,8 +5,10 @@ import { nextReferenceNumber, upsertVehicle } from './complaint-reference.reposi
 import type { ComplaintReferenceClient } from './complaint-reference.repository.js';
 
 type ComplaintTransitionClient = Pick<Prisma.TransactionClient, 'comment' | 'complaint' | 'complaintStatusHistory' | 'customer'> & ComplaintReferenceClient;
+export type DataSource = 'LOCAL' | 'MANUAL' | 'DMS';
 
 export type ComplaintStatusRecord = { id: string; branchId: string; status: ComplaintStatus; ownerId: string | null; severity: ComplaintSeverity; categoryId: string; departmentId: string | null };
+export type ComplaintTransitionSubject = { id: string; vehicleRelated: boolean; vehicleId: string | null; vehicleDataUnavailableReason: string | null };
 export type ComplaintRecord = { id: string; branchId: string; status: ComplaintStatus; referenceNumber: string; subject: string; severity: ComplaintSeverity };
 
 export type ComplaintQueueRecord = ComplaintRecord & {
@@ -19,43 +21,22 @@ export type ComplaintQueueRecord = ComplaintRecord & {
 export type ComplaintDetailRecord = ComplaintQueueRecord & {
   descriptionEn: string;
   incidentAt: Date | null;
-  statusHistory: Array<{
-    id: string;
-    fromStatus: ComplaintStatus | null;
-    toStatus: ComplaintStatus;
-    action: ComplaintTransitionAction | null;
-    actorId: string | null;
-    actorRole: RoleCode | null;
-    requestSource: ComplaintTransitionRequestSource | null;
-    reason: string | null;
-    correlationId: string | null;
-    createdAt: Date;
-  }>;
+  customerDataSource: DataSource; manualCustomerFlag: boolean;
+  vehicleRelated: boolean; vehicleDataSource: DataSource | null; manualVehicleFlag: boolean;
+  vehicleDataUnavailableReason: string | null;
+  statusHistory: Array<{ id: string; fromStatus: ComplaintStatus | null; toStatus: ComplaintStatus; action: ComplaintTransitionAction | null; actorId: string | null; actorRole: RoleCode | null; requestSource: ComplaintTransitionRequestSource | null; reason: string | null; correlationId: string | null; createdAt: Date }>;
 };
 
 export type CreateComplaintData = {
-  referenceNumber: string;
-  status: ComplaintStatus;
-  subject: string;
-  severity: ComplaintSeverity;
-  branchId: string;
-  categoryId: string;
-  customerName: string;
-  customerPhone?: string | null;
-  customerNumber?: string | null;
-  vehicleId?: string | null;
-  vehicleVin?: string | null;
-  vehiclePlate?: string | null;
-  vehicleBrand?: string | null;
-  vehicleModel?: string | null;
-  vehicleModelYear?: number | null;
-  departmentId?: string | null;
-  createdById?: string | null;
-  descriptionEn: string;
-  incidentAt: Date;
+  referenceNumber: string; status: ComplaintStatus; subject: string; severity: ComplaintSeverity;
+  branchId: string; categoryId: string; customerName: string; customerPhone?: string | null; customerNumber?: string | null;
+  customerDataSource: DataSource; manualCustomerFlag: boolean;
+  vehicleId?: string | null; vehicleVin?: string | null; vehiclePlate?: string | null; vehicleBrand?: string | null; vehicleModel?: string | null; vehicleModelYear?: number | null;
+  vehicleDataSource?: DataSource | null; manualVehicleFlag: boolean; vehicleRelated: boolean; vehicleDataUnavailableReason?: string | null;
+  departmentId?: string | null; createdById?: string | null; descriptionEn: string; incidentAt: Date;
 };
 
-export type UpdateComplaintStatusData = { complaintId: string; fromStatus: ComplaintStatus; toStatus: ComplaintStatus; targetBranchId?: string | null; targetDepartmentId?: string | null; ownerId?: string | null; resolvedAt?: Date | null; closedAt?: Date | null };
+export type UpdateComplaintStatusData = { complaintId: string; fromStatus: ComplaintStatus; toStatus: ComplaintStatus; targetBranchId?: string | null; targetDepartmentId?: string | null; ownerId?: string | null; resolvedAt?: Date | null; closedAt?: Date | null; vehicleDataUnavailableReason?: string | null };
 
 export type CreateComplaintStatusHistoryData = {
   complaintId: string;
@@ -118,6 +99,7 @@ export class ComplaintsRepository {
       create: {
         phone: customerPhone(data),
         dmsCode: data.customerNumber ?? null,
+        dataSource: data.customerDataSource,
         nameEn: data.customerName,
         nameAr: data.customerName,
       },
@@ -136,6 +118,12 @@ export class ComplaintsRepository {
         categoryId: data.categoryId,
         customerId: customer.id,
         vehicleId,
+        customerDataSource: data.customerDataSource,
+        manualCustomerFlag: data.manualCustomerFlag,
+        vehicleDataSource: data.vehicleDataSource ?? null,
+        manualVehicleFlag: data.manualVehicleFlag,
+        vehicleRelated: data.vehicleRelated,
+        vehicleDataUnavailableReason: data.vehicleDataUnavailableReason ?? null,
         departmentId: data.departmentId ?? null,
         createdById: data.createdById ?? null,
         descriptionEn: data.descriptionEn,
@@ -183,10 +171,10 @@ export class ComplaintsRepository {
       select: {
         ...complaintSelect,
         ownerId: true, owner: { select: { nameEn: true, email: true } }, branch: { select: { code: true, nameEn: true, nameAr: true } },
-        descriptionEn: true,
-        incidentAt: true,
-        createdAt: true,
-        updatedAt: true,
+        descriptionEn: true, incidentAt: true,
+        customerDataSource: true, manualCustomerFlag: true,
+        vehicleRelated: true, vehicleDataSource: true, manualVehicleFlag: true, vehicleDataUnavailableReason: true,
+        createdAt: true, updatedAt: true,
         statusHistory: {
           orderBy: { createdAt: 'asc' },
           select: {
@@ -218,6 +206,13 @@ export class ComplaintsRepository {
     return complaint ? { complaintId: complaint.id, customerId: complaint.customerId, phone: complaint.customer.phone } : null;
   }
 
+  async findTransitionSubject(id: string, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintTransitionSubject | null> {
+    return client.complaint.findUnique({
+      where: { id },
+      select: { id: true, vehicleRelated: true, vehicleId: true, vehicleDataUnavailableReason: true },
+    });
+  }
+
   async updateStatus(
     data: UpdateComplaintStatusData,
     client: ComplaintTransitionClient = this.prisma,
@@ -231,6 +226,7 @@ export class ComplaintsRepository {
       ...(data.ownerId ? { ownerId: data.ownerId } : {}),
       ...(data.resolvedAt ? { resolvedAt: data.resolvedAt } : {}),
       ...(data.closedAt ? { closedAt: data.closedAt } : {}),
+      ...(data.vehicleDataUnavailableReason ? { vehicleDataUnavailableReason: data.vehicleDataUnavailableReason } : {}),
     };
     const update = await client.complaint.updateMany({
       where: { id: data.complaintId, status: data.fromStatus },

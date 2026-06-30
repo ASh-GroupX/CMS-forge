@@ -10,7 +10,7 @@ import { SlaService } from '../sla/sla.service.js';
 import { complaintCreatedAudit, createComplaintData, isReferenceConflict, referenceConflictError } from './complaint-intake.js';
 import { queueWorkflowSideEffects } from './complaint-workflow-side-effects.js';
 import { ComplaintsRepository } from './complaints.repository.js';
-import type { ComplaintCommentRecord, ComplaintDetailRecord, ComplaintQueueRecord, ComplaintReportFilter, ComplaintReportRecord, ComplaintSearchRecord, ComplaintStatusRecord, PortalVerificationTargetRecord } from './complaints.repository.js';
+import type { ComplaintCommentRecord, ComplaintDetailRecord, ComplaintQueueRecord, ComplaintReportFilter, ComplaintReportRecord, ComplaintSearchRecord, ComplaintStatusRecord, ComplaintTransitionSubject, DataSource, PortalVerificationTargetRecord } from './complaints.repository.js';
 import type { ComplaintCaseSummaryDto, ComplaintDetailDto, ComplaintQueueItemDto } from './dto/complaint-response.dto.js';
 
 export type ValidateComplaintTransitionInput = { fromStatus: ComplaintStatus; action: ComplaintTransitionAction; actorRole: RoleCode };
@@ -19,15 +19,17 @@ export type ApplyComplaintTransitionInput = ValidateComplaintTransitionInput & {
   complaintId: string; actorId?: string | null; requestSource: ComplaintTransitionRequestSource;
   reason?: string | null; targetBranchId?: string | null; targetDepartmentId?: string | null; ownerId?: string | null;
   resolutionType?: string | null; resolutionSummary?: string | null; customerCommunicationStatus?: string | null;
+  vehicleDataUnavailableReason?: string | null;
   correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null;
 };
 export type ApplyComplaintTransitionResult = ComplaintTransitionDecision & { complaintId: string };
 
 export type CreateInternalComplaintInput = {
-  customerName: string; customerPhone?: string | null; customerNumber?: string | null; categoryId: string;
+  customerName: string; customerPhone?: string | null; customerNumber?: string | null; customerSource?: DataSource | null; categoryId: string;
   subcategoryId: string; description: string; incidentAt: Date | string; branchId: string; subject: string;
   severity: ComplaintSeverity; vehicleRelated?: boolean; vehicleVin?: string | null; vehicleId?: string | null;
   vehiclePlate?: string | null; vehicleBrand?: string | null; vehicleModel?: string | null; vehicleModelYear?: number | null;
+  vehicleSource?: DataSource | null; vehicleDataUnavailableReason?: string | null;
   departmentId?: string | null; saveAsDraft?: boolean;
   actorId?: string | null; requestSource?: ComplaintTransitionRequestSource; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null;
 };
@@ -161,6 +163,9 @@ export class ComplaintsService {
     let committed: { result: ApplyComplaintTransitionResult; complaint: ComplaintStatusRecord };
     try {
       committed = await this.complaintsRepository.transaction(async (client) => {
+        if (input.action === ComplaintTransitionAction.CLOSE) {
+          assertVehicleClosureAllowed(input, await this.complaintsRepository.findTransitionSubject(input.complaintId, client));
+        }
         const complaint = await this.complaintsRepository.updateStatus(
           statusUpdateData(input, decision.toStatus),
           client,
@@ -214,7 +219,7 @@ function searchItem(complaint: ComplaintSearchRecord): ComplaintSearchRow {
 }
 
 function detailItem(complaint: ComplaintDetailRecord): Omit<ComplaintDetailDto, 'caseSummary'> {
-  return { ...queueItem(complaint), description: complaint.descriptionEn, incidentAt: complaint.incidentAt?.toISOString() ?? null, statusHistory: complaint.statusHistory.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })) };
+  return { ...queueItem(complaint), description: complaint.descriptionEn, incidentAt: complaint.incidentAt?.toISOString() ?? null, customerSource: complaint.customerDataSource, manualCustomer: complaint.manualCustomerFlag, vehicleRelated: complaint.vehicleRelated, vehicleSource: complaint.vehicleDataSource, manualVehicle: complaint.manualVehicleFlag, vehicleDataUnavailableReason: complaint.vehicleDataUnavailableReason, statusHistory: complaint.statusHistory.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })) };
 }
 
 function commentItem(comment: ComplaintCommentRecord): ComplaintCommentResult { return { ...comment, createdAt: comment.createdAt.toISOString() }; }
@@ -268,15 +273,15 @@ function validateRequiredTransitionData(input: ApplyComplaintTransitionInput): v
   if (errors.length) throw new AppException('VALIDATION_FAILED', 'Invalid complaint transition request', HttpStatus.BAD_REQUEST, errors);
 }
 
+function assertVehicleClosureAllowed(input: ApplyComplaintTransitionInput, complaint: ComplaintTransitionSubject | null): void {
+  if (!complaint) throw invalidTransitionError();
+  if (!complaint.vehicleRelated || complaint.vehicleId || nonEmptyText(input.vehicleDataUnavailableReason) || nonEmptyText(complaint.vehicleDataUnavailableReason)) return;
+  throw new AppException('VALIDATION_FAILED', 'Invalid complaint transition request', HttpStatus.BAD_REQUEST, [{ field: 'vehicleDataUnavailableReason', code: 'REQUIRED', message: 'vehicleDataUnavailableReason is required.' }]);
+}
+
 function statusUpdateData(input: ApplyComplaintTransitionInput, toStatus: ComplaintStatus) {
   const now = new Date();
-  return {
-    complaintId: input.complaintId, fromStatus: input.fromStatus, toStatus,
-    ...(input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE ? { targetBranchId: input.targetBranchId, targetDepartmentId: input.targetDepartmentId, ownerId: input.ownerId } : {}),
-    ...(input.action === ComplaintTransitionAction.ASSIGN_INVESTIGATION ? { ownerId: input.ownerId } : {}),
-    ...(RESOLUTION_REQUIRED.has(input.action) ? { resolvedAt: now } : {}),
-    ...(input.action === ComplaintTransitionAction.CLOSE ? { closedAt: now } : {}),
-  };
+  return { complaintId: input.complaintId, fromStatus: input.fromStatus, toStatus, ...(input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE ? { targetBranchId: input.targetBranchId, targetDepartmentId: input.targetDepartmentId, ownerId: input.ownerId } : {}), ...(input.action === ComplaintTransitionAction.ASSIGN_INVESTIGATION ? { ownerId: input.ownerId } : {}), ...(RESOLUTION_REQUIRED.has(input.action) ? { resolvedAt: now } : {}), ...(input.action === ComplaintTransitionAction.CLOSE ? { closedAt: now } : {}), ...(input.action === ComplaintTransitionAction.CLOSE && nonEmptyText(input.vehicleDataUnavailableReason) ? { vehicleDataUnavailableReason: input.vehicleDataUnavailableReason } : {}) };
 }
 
 function workflowAuditInput(input: ApplyComplaintTransitionInput, toStatus: ComplaintStatus, branchId: string): AuditRecordInput {
@@ -288,4 +293,8 @@ function workflowAuditInput(input: ApplyComplaintTransitionInput, toStatus: Comp
     userAgent: input.userAgent ?? null,
     metadata: { fromStatus: input.fromStatus, toStatus, action: input.action, actorRole: input.actorRole, requestSource: input.requestSource, resolutionType: input.resolutionType ?? null, customerCommunicationStatus: input.customerCommunicationStatus ?? null },
   };
+}
+
+function nonEmptyText(value: string | null | undefined): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }

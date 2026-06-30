@@ -124,12 +124,18 @@ test('complaint creation persists complaint, initial history, and audit in one t
         customerName: 'Faisal Al-Otaibi',
         customerPhone: '+966500000001',
         customerNumber: null,
+        customerDataSource: 'MANUAL',
+        manualCustomerFlag: true,
         vehicleId: 'veh_1',
         vehicleVin: 'SEEDDEMO00001',
         vehiclePlate: null,
         vehicleBrand: null,
         vehicleModel: null,
         vehicleModelYear: null,
+        vehicleDataSource: 'LOCAL',
+        manualVehicleFlag: false,
+        vehicleRelated: true,
+        vehicleDataUnavailableReason: null,
         departmentId: null,
         createdById: 'usr_1',
         descriptionEn: 'Engine makes a knocking noise.',
@@ -160,6 +166,11 @@ test('complaint creation persists complaint, initial history, and audit in one t
     referenceNumber: 'CMS-2026-MAIN-000001',
     status: ComplaintStatus.SUBMITTED,
     severity: ComplaintSeverity.HIGH,
+    customerSource: 'MANUAL',
+    manualCustomer: true,
+    vehicleSource: 'LOCAL',
+    manualVehicle: false,
+    vehicleDataUnavailableReasonPresent: false,
   });
 });
 
@@ -194,6 +205,11 @@ test('staff can save a complaint draft without a customer-facing CMS reference',
     referenceNumber: null,
     status: ComplaintStatus.DRAFT,
     severity: ComplaintSeverity.HIGH,
+    customerSource: 'MANUAL',
+    manualCustomer: true,
+    vehicleSource: 'MANUAL',
+    manualVehicle: true,
+    vehicleDataUnavailableReasonPresent: false,
   });
 });
 
@@ -251,10 +267,10 @@ test('reference allocator uses branch code and independent branch/year sequences
   assert.equal(await repository.nextReferenceNumber('branch_main', new Date('2027-01-01T09:00:00.000Z')), 'CMS-2027-MAIN-000001');
 });
 
-test('complaint repository persists department and upserts vehicle from VIN intake', async () => {
+test('complaint repository persists department and provenance from manual and DMS-shaped intake', async () => {
   const calls: unknown[] = [];
   const repository = new ComplaintsRepository({
-    customer: { upsert: async () => ({ id: 'cust_1' }) },
+    customer: { upsert: async (input: unknown) => { calls.push({ customer: input }); return { id: 'cust_1' }; } },
     vehicle: {
       upsert: async (input: unknown) => {
         calls.push({ vehicle: input });
@@ -285,26 +301,71 @@ test('complaint repository persists department and upserts vehicle from VIN inta
     categoryId: 'cat_engine',
     customerName: 'Faisal Al-Otaibi',
     customerPhone: '+966500000001',
+    customerNumber: 'DMS-CUST-1',
+    customerDataSource: 'DMS',
+    manualCustomerFlag: false,
     vehicleVin: 'VIN123',
     vehiclePlate: 'ABC123',
     vehicleBrand: 'Nissan',
     vehicleModel: 'Patrol',
     vehicleModelYear: 2024,
+    vehicleDataSource: 'MANUAL',
+    manualVehicleFlag: true,
+    vehicleRelated: true,
+    vehicleDataUnavailableReason: null,
     departmentId: 'dep_service',
     descriptionEn: 'Engine noise',
     incidentAt: new Date('2026-06-18T09:00:00.000Z'),
   });
 
-  assert.deepEqual((calls[0] as { vehicle: { create: unknown } }).vehicle.create, {
+  assert.deepEqual((calls[0] as { customer: { create: unknown } }).customer.create, {
+    phone: '+966500000001',
+    dmsCode: 'DMS-CUST-1',
+    dataSource: 'DMS',
+    nameEn: 'Faisal Al-Otaibi',
+    nameAr: 'Faisal Al-Otaibi',
+  });
+  assert.deepEqual((calls[1] as { vehicle: { create: unknown } }).vehicle.create, {
     vin: 'VIN123',
     plate: 'ABC123',
     makeEn: 'Nissan',
     modelEn: 'Patrol',
     year: 2024,
+    dataSource: 'MANUAL',
     customerId: 'cust_1',
   });
-  assert.equal((calls[1] as { complaint: { vehicleId: string } }).complaint.vehicleId, 'veh_vin');
-  assert.equal((calls[1] as { complaint: { departmentId: string } }).complaint.departmentId, 'dep_service');
+  assert.equal((calls[2] as { complaint: { vehicleId: string } }).complaint.vehicleId, 'veh_vin');
+  assert.equal((calls[2] as { complaint: { departmentId: string } }).complaint.departmentId, 'dep_service');
+  assert.equal((calls[2] as { complaint: { customerDataSource: string } }).complaint.customerDataSource, 'DMS');
+  assert.equal((calls[2] as { complaint: { manualVehicleFlag: boolean } }).complaint.manualVehicleFlag, true);
+});
+
+test('manual vehicle-related complaint creation works with an unavailable data reason', async () => {
+  const calls: unknown[] = [];
+  const service = new ComplaintsService({
+    transaction: async <T>(work: (client: never) => Promise<T>) => work({} as never),
+    nextReferenceNumber: async () => 'CMS-2026-MAIN-000010',
+    create: async (data) => {
+      calls.push(data);
+      return { id: 'cmp_manual_vehicle', referenceNumber: data.referenceNumber, branchId: data.branchId, status: data.status, subject: data.subject, severity: data.severity };
+    },
+    createStatusHistory: async () => undefined,
+  } as ComplaintsRepository, { record: async () => undefined } as unknown as AuditService);
+
+  await service.createInternal({
+    ...validBody(),
+    branchId: 'branch_main',
+    vehicleId: null,
+    vehicleVin: null,
+    vehiclePlate: null,
+    vehicleSource: 'MANUAL',
+    vehicleDataUnavailableReason: 'Customer did not have vehicle documents at intake',
+  });
+
+  assert.equal((calls[0] as { vehicleRelated: boolean }).vehicleRelated, true);
+  assert.equal((calls[0] as { vehicleDataSource: string }).vehicleDataSource, 'MANUAL');
+  assert.equal((calls[0] as { manualVehicleFlag: boolean }).manualVehicleFlag, true);
+  assert.equal((calls[0] as { vehicleDataUnavailableReason: string }).vehicleDataUnavailableReason, 'Customer did not have vehicle documents at intake');
 });
 
 test('draft submit assigns one CMS reference inside the status transaction', async () => {
@@ -359,6 +420,9 @@ test('complaint creation route delegates with guarded branch and server actor co
     branchId: 'branch_main',
     actorId: 'usr_officer',
     saveAsDraft: false,
+    customerSource: null,
+    vehicleSource: null,
+    vehicleDataUnavailableReason: null,
     correlationId: 'req_create_route',
     ipAddress: '203.0.113.66',
     userAgent: 'node:test',
@@ -596,6 +660,12 @@ test('complaint detail route delegates with server-derived branch scope', async 
         description: 'Engine makes a knocking noise.',
         incidentAt: '2026-06-18T09:00:00.000Z',
         statusHistory: [],
+        customerSource: 'MANUAL',
+        manualCustomer: true,
+        vehicleRelated: true,
+        vehicleSource: 'MANUAL',
+        manualVehicle: true,
+        vehicleDataUnavailableReason: null,
       };
     },
   } as ComplaintsService);
@@ -835,6 +905,12 @@ const detailRecord: ComplaintDetailRecord = {
   ...queueRecord,
   descriptionEn: 'Engine makes a knocking noise.',
   incidentAt: new Date('2026-06-18T09:00:00.000Z'),
+  customerDataSource: 'MANUAL',
+  manualCustomerFlag: true,
+  vehicleRelated: true,
+  vehicleDataSource: 'MANUAL',
+  manualVehicleFlag: true,
+  vehicleDataUnavailableReason: null,
   statusHistory: [{
     id: 'hist_1',
     fromStatus: null,
