@@ -11145,3 +11145,95 @@ Implemented the scoped server-side permission guard foundation:
 
 - Status: P20C reviewed complete.
 - Next: P18B/P19B/P19C reviewer catch-up.
+
+## 2026-06-30 - P18B/P19B/P19C Reviewer Catch-Up
+
+### Scope
+
+- Ran the skipped reviewer passes for P18B duplicate warning UI foundation,
+  P19B staff customer/vehicle correction backend, and P19C staff
+  customer/vehicle correction UI.
+- Product code was inspected but not changed during this reviewer catch-up.
+- Used the recorded build evidence and file history because
+  `git log --oneline --grep="P18B\\|P19B\\|P19C"` returned no matching commit
+  subjects; the relevant generic build commits are `026476f3` and `afb25292`.
+
+### Findings
+
+- No blocking P18B, P19B, or P19C findings.
+
+### Review Notes
+
+- P18B duplicate/related complaint UI stays staff-scoped and safe-field only.
+  Link/unlink behavior remains non-destructive, runs through backend complaint
+  relation services, and does not merge histories or expose portal-private data.
+- P19B correction backend keeps authority server-side with staff session guards,
+  permission checks, branch scope, CSRF, optimistic concurrency, and same
+  transaction correction/audit writes. Audit metadata records changed field names
+  only, not reason text, VINs, plates, DMS codes, or credentials.
+- P19C correction UI submits only through the P19B correction contract with
+  reason, `expectedUpdatedAt`, and changed fields. Conflict, denied,
+  validation, and generic error states remain visible.
+- The current P19C surface now includes the reviewed P20C DMS lookup, but that
+  does not widen P19C authority: DMS lookup stays read-only through the P20B/P20C
+  staff route/proxy, and correction still writes only through the P19B backend.
+
+### SRS Coverage Reviewed
+
+- `REQ-COMPLAINT-003`: duplicate/related complaint warnings and links are
+  staff-scoped, reversible, and do not perform destructive merges.
+- `REQ-CUSTOMER-001`, `DATA-AUTO-001`, and `DMS-MAP-001`: customer/vehicle
+  correction and source provenance stay explicit and staff-only.
+- `REQ-RESOLUTION-001` and `REQ-AUDIT-001`: correction state changes keep audit
+  ownership in the backend transaction and preserve optimistic conflict behavior.
+- `API-STANDARD-001` and `NFR-SEC-002`: route contracts, CSRF/session authority,
+  branch scope, and privacy boundaries remain intact.
+- `UI-SCREEN-001` and `UI-DESIGN-001`: staff UI states are localized and covered
+  by visual/accessibility proof.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input:
+  Passed. P18B relation reads/writes and P19B correction writes use backend
+  scoped complaint access and guarded staff routes.
+- State changes and audit transaction: Passed. P19B correction repository and
+  audit writes run in the same Prisma transaction; P18B relation changes audit
+  link/unlink actions.
+- No secrets or sensitive provider data logged or returned: Passed. Reviewed
+  audit metadata, proxy/client boundaries, and tests for dropped credential-like
+  input.
+- Customer portal privacy: Passed. The reviewed slices add no portal route and
+  do not expose internal comments, audit logs, DMS codes, staff PII, or unrelated
+  complaints to portal users.
+
+### Verification
+
+- Passed: `git log --oneline --grep="P18B\\|P19B\\|P19C"` returned no matching
+  commit subjects; reviewer used evidence and file history for the relevant
+  generic commits.
+- Passed: `git status --short` returned no output before reviewer Forge edits.
+- Passed: `git diff --check` returned no output before reviewer Forge edits.
+- Passed: `corepack pnpm test:api -- complaints` (69/69 TAP tests passed).
+- Passed: `corepack pnpm test:api -- workflow` (69/69 TAP tests passed).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm test:web -- api-client` (23/23 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (192/192 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm web:visual-review`; generated review artifacts stayed
+  under ignored coverage output.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm prisma:validate`.
+- Passed: `corepack pnpm --dir packages/database generate`.
+- Passed: `corepack pnpm db:migrate:test`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm security:check`.
+- Passed: final `git status --short` returned no output before Forge edits.
+- Passed: final `git diff --check` returned no output before Forge edits.
+
+### Outcome
+
+- Status: P18B, P19B, and P19C reviewed complete.
+- Next: Portal attachment follow-up completion.
