@@ -10915,3 +10915,63 @@ Implemented the scoped server-side permission guard foundation:
 
 - Status: P20B built, reviewer pending.
 - Next: P20B reviewer stop.
+
+## 2026-06-30 - P20B Reviewer Stop
+
+### Scope
+
+- Reviewed P20B only.
+- Product code was inspected but not changed during this reviewer stop.
+- P18B, P19B, and P19C remain built but not reviewed.
+
+### Findings
+
+- No blocking P20B findings.
+
+### Review Notes
+
+- P20B adds one staff-only, read-only route:
+  `GET /integrations/dms/customer-vehicle`.
+- The route uses `SessionAuthGuard` and `PermissionGuard` with
+  `COMPLAINT_CREATE`; default CR Officer and CR Manager roles have both
+  `COMPLAINT_CREATE` and `COMPLAINT_EDIT`, so the planned P20C intake and
+  correction UI can use the same route without widening permissions.
+- The route derives correlation ID from the server request, not a client query
+  field.
+- Response data is the safe normalized P20A lookup result: provider/action/result
+  diagnostics, manual fallback flag, and normalized customer/vehicle matches.
+- No live provider, provider SDK, provider credential, DMS writeback method,
+  mutation route, schema migration, persistence table, frontend call, or customer
+  portal surface was introduced.
+- OpenAPI documents the route, query fields, auth/error responses, and safe DMS
+  lookup schemas.
+
+### SRS Coverage Reviewed
+
+- `ARCH-INTEGRATION-001`: backend adapter boundary is preserved; DMS remains
+  read-only and provider failures remain safe.
+- `ARCH-API-001` and `API-STANDARD-001`: OpenAPI contains the new route and safe
+  response/error contracts.
+- `REQ-CUSTOMER-001` and `DMS-MAP-001`: lookup supports phone, customer number,
+  VIN, and name with match, multiple-match, not-found, provider-down, disabled,
+  and manual fallback paths.
+- `DATA-AUTO-001`: safe automotive customer/vehicle fields and source `DMS` are
+  visible to staff.
+- `NFR-SEC-002` and `RBAC-MATRIX-001`: authority comes from the staff session and
+  permission guard; denied cases are audited safely by existing guard behavior.
+
+### Verification
+
+- Passed: inspected `git show --stat --oneline HEAD` for the P20B commit.
+- Passed: `git status --short` returned no output before reviewer Forge edits.
+- Passed: `corepack pnpm test:api -- integrations` (26/26 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm security:check`.
+- Passed: `git diff --check` returned no output before reviewer Forge edits.
+
+### Outcome
+
+- Status: P20B reviewed complete.
+- Next: P20C Staff DMS Lookup UI.

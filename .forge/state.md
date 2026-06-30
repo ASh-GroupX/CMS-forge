@@ -1,8 +1,8 @@
 # Current State
 
-Status: P20B built, reviewer pending
+Status: P20B reviewed complete
 Phase: P20B - Staff DMS Lookup API
-Next Task: P20B reviewer stop
+Next Task: P20C - Staff DMS Lookup UI
 Model Tier: GPT-5.5 Extra High
 
 ## How to use this file
@@ -26,7 +26,7 @@ Prior state history is in .forge/archive/state-archive.md.
 - Phase 19 must not be claimed fully reviewed because P19B and P19C were not
   reviewed.
 - P20A is reviewed complete.
-- P20B is built but not yet reviewed. It added a staff-only, read-only DMS
+- P20B is reviewed complete. It added and reviewed a staff-only, read-only DMS
   lookup API route over the P20A adapter, protected by staff session plus
   `COMPLAINT_CREATE`, with OpenAPI contract coverage and integration tests.
 - P20B did not add live DMS provider calls, DMS writeback, frontend DMS calls,
@@ -35,21 +35,18 @@ Prior state history is in .forge/archive/state-archive.md.
 
 ## Current Stop
 
-P20B reviewer stop. Do not start P20C until P20B is reviewed complete or the
-user explicitly skips the reviewer and Forge records it as skipped.
+Ready for P20C implementation: staff DMS lookup UI in intake/correction flow.
 
 ## Open Carry-Forward / Known Debt
 
 - P18B needs a reviewer pass before it can be called reviewed.
 - P19B needs a reviewer pass before it can be called reviewed.
 - P19C needs a reviewer pass before it can be called reviewed.
-- P20B needs a reviewer pass before it can be called reviewed.
 - P20C, portal attachment follow-up, duplicate/related UX hardening,
   reports/business-fit closure, and final audit/stabilization remain open.
 - Live DMS provider integration remains future work.
 - DMS writeback remains out of MVP unless a separate approved change request
   authorizes it; writeback endpoints must remain absent or disabled.
-- Customer lookup UI wiring to the DMS adapter remains future work after P20B
-  review.
+- Customer lookup UI wiring to the DMS adapter is the next task.
 - Portal attachment follow-up remains open.
 - Advanced/AI matching is intentionally out of MVP scope.
