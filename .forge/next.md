@@ -1,79 +1,90 @@
-# Reports/Business-Fit Gap Closure Reviewer Stop
+# Final SRS/Business-Fit Audit And Stabilization
 
 Status: Ready
 Required model tier: GPT-5.5 Extra High
-Phase: reports-business-fit-closure-review
+Phase: final-srs-business-fit-audit
 Risk: High
-SRS IDs: REQ-REPORT-001, REPORT-MATRIX-001, REQ-AUDIT-001, NFR-SEC-002, API-STANDARD-001, UI-SCREEN-001, UI-DESIGN-001
+SRS IDs: MVP-BUSINESS-FIT-001, REQ-COMPLAINT-001, REQ-COMPLAINT-002, REQ-COMPLAINT-003, REQ-COMPLAINT-004, REQ-PORTAL-001, REQ-PORTAL-002, REQ-PORTAL-003, REQ-ATTACH-001, REQ-DMS-001, DMS-MVP-001, REQ-REPORT-001, REPORT-MATRIX-001, REQ-AUDIT-001, NFR-SEC-002, API-STANDARD-001, UI-SCREEN-001, UI-DESIGN-001
 
 ## Scoped Task
 
-Review the reports/business-fit gap closure build. Review already-built code
-only. Fix only blocking reviewer findings inside this slice; if no blockers are
-found, update Forge only.
+Run the final SRS/business-fit audit from current state to MVP closure. Prefer
+review and stabilization over feature expansion. Fix only concrete blockers that
+prevent MVP/business-fit completion and can stay small and coherent; otherwise
+record the gap and stop with a scoped follow-up.
 
 ## Scope
 
-- Confirm `GET /reports/catalog` is staff-session guarded with `REPORT_VIEW`,
-  RBAC, and branch-scope guard coverage.
-- Confirm the report catalog includes RPT-001 through RPT-017 exactly once with
-  required filters, required outputs, delivered/deferred status, implemented
-  notes, deferred scope, and `signoffRequired` for every deferral.
-- Confirm delivered statuses are honest: RPT-001, RPT-004, RPT-013, and RPT-017
-  only.
-- Confirm all other report matrix gaps are explicit signed-scope deferrals and
-  not claimed as fully delivered.
-- Confirm no report response/export exposes customer phone/email, VIN, plate,
-  DMS codes, provider credentials, portal data, storage keys, public URLs,
-  staff PII, tokens, passwords, OTPs, or arbitrary audit metadata.
-- Confirm OpenAPI documents `/reports/catalog` and the catalog response schemas.
-- Confirm no web UI changed; visual/accessibility proof is not required unless a
-  reviewer blocker changes the web UI.
-- Update `.forge/evidence.md`, `.forge/state.md`, and `.forge/next.md` at review
-  end.
+- Re-read Forge and the relevant SRS requirements before auditing.
+- Reconcile `.forge/evidence.md`, `.forge/state.md`, and current code so skipped
+  reviews are not claimed unless an actual reviewer pass ran.
+- Confirm P17, P18A/P18B, P19A/P19B/P19C, P20A/P20B/P20C, portal attachment
+  follow-up, and reports/business-fit closure are all either reviewed complete
+  or honestly marked.
+- Confirm DMS work is read-only lookup/import only and no DMS writeback route or
+  frontend credential/provider secret exists.
+- Confirm portal privacy still holds: tracking requires verified session, portal
+  follow-up attachments do not expose download tokens/public links/storage keys,
+  and portal responses do not expose internal comments, audit logs, DMS codes,
+  staff PII, or unrelated complaints.
+- Confirm duplicate/related complaint UX is not still required unless a concrete
+  defect is found.
+- Confirm report/business-fit gaps are either delivered or explicitly signed-scope
+  deferred in the report catalog.
+- Confirm all public/frontend routes are documented in OpenAPI and the canonical
+  OpenAPI check passes.
+- Run the full proof set below and update `.forge/evidence.md`, `.forge/state.md`,
+  and `.forge/next.md` at audit end.
 
 ## Likely Files
 
-- `apps/api/src/modules/reports/report-matrix.ts`
-- `apps/api/src/modules/reports/reports.controller.ts`
-- `apps/api/src/modules/reports/reports.service.ts`
-- `apps/api/test/reports/dashboard-summary.test.ts`
-- `packages/contracts/openapi.json`
-- `tools/openapi-canonical.json`
 - `.forge/next.md`
 - `.forge/state.md`
 - `.forge/evidence.md`
+- `docs/CMS_AUTO_SRS.md`
+- `docs/ARCHITECTURE.md`
+- `apps/api/src/modules/**`
+- `apps/api/test/**`
+- `apps/web/src/**`
+- `packages/contracts/openapi.json`
+- `tools/openapi-canonical.json`
 
 ## Skipped Work
 
-- No new product feature work beyond reviewer blocker repair.
-- No specialized implementation for deferred reports.
-- No DMS telemetry persistence, live DMS provider, DMS writeback, provider
-  credentials, notification aggregate report, CSAT report, compensation report,
-  report warehouse, async export worker, schema migration, or customer portal
-  report exposure.
-- No web reports UI work unless required to fix a blocker.
+- No speculative feature expansion.
+- No DMS writeback, live DMS provider credentials, provider calls from frontend,
+  or frontend secrets.
+- No portal download route, public attachment links, storage key exposure, or
+  unverified tracking by reference number alone.
+- No specialized implementation for report catalog entries currently marked as
+  signed-scope deferrals unless the audit proves a small blocker must be fixed.
+- No advanced/AI matching work.
 
 ## Required Proof
 
 - `git status --short`
 - `git diff --check`
+- `corepack pnpm test:api -- complaints`
+- `corepack pnpm test:api -- portal.tracking`
+- `corepack pnpm test:api -- attachments`
+- `corepack pnpm test:api -- integrations`
 - `corepack pnpm test:api -- reports`
 - `corepack pnpm test:api -- audit`
 - `corepack pnpm test:web -- api-client`
 - `corepack pnpm test:web -- shell`
 - `corepack pnpm test:web -- localization`
+- `corepack pnpm test:visual`
+- `corepack pnpm test:e2e -- accessibility`
+- `corepack pnpm web:visual-review`
 - `corepack pnpm openapi:check`
 - `corepack pnpm typecheck`
 - `corepack pnpm lint`
 - `corepack pnpm security:check`
-- If reviewer changes web UI: `corepack pnpm test:visual`,
-  `corepack pnpm test:e2e -- accessibility`, and
-  `corepack pnpm web:visual-review`.
 
 ## Reviewer Rule
 
-If review passes, record reports/business-fit closure as reviewed complete and
-move to final SRS/business-fit audit and stabilization. If a blocker is found,
-repair it in the smallest reviewer commit and rerun affected proof plus
-`typecheck`, `lint`, `openapi:check`, and `security:check`.
+This is the final audit stop. If all required proof passes and no blocker remains,
+record MVP/business-fit audit complete and set `.forge/next.md` to a done state.
+If any blocker remains, make the smallest stabilization fix only when it fits this
+slice; otherwise set state to blocked with the exact follow-up task and do not
+claim final completion.

@@ -1,8 +1,8 @@
 # Current State
 
-Status: Reports/business-fit gap closure built, reviewer pending
-Phase: reports-business-fit-closure
-Next Task: Reports/business-fit gap closure reviewer stop
+Status: Reports/business-fit closure reviewed complete
+Phase: reports-business-fit-closure-review
+Next Task: Final SRS/business-fit audit and stabilization
 Model Tier: GPT-5.5 Extra High
 
 ## How to use this file
@@ -23,28 +23,28 @@ Prior state history is in .forge/archive/state-archive.md.
 - Duplicate/related complaint UX hardening is not currently re-opened: P18A
   related complaint linking and P18B duplicate warning UI foundation are built
   and reviewed, and the catch-up review found no blockers.
-- Reports/business-fit gap closure is built but not reviewed. It adds a guarded
+- Reports/business-fit gap closure is reviewed complete. It adds a guarded
   `GET /reports/catalog` contract for RPT-001 through RPT-017 with explicit
   delivered/deferred status and signed-scope deferral flags.
-- The report catalog currently marks RPT-001, RPT-004, RPT-013, and RPT-017 as
-  delivered, and marks the other RPT-002 through RPT-016 gaps as explicit
-  signed-scope deferrals where specialized report output is broader than this
-  slice.
+- The report catalog marks RPT-001, RPT-004, RPT-013, and RPT-017 as delivered,
+  and marks RPT-002, RPT-003, RPT-005, RPT-006, RPT-007, RPT-008, RPT-009,
+  RPT-010, RPT-011, RPT-012, RPT-014, RPT-015, and RPT-016 as explicit
+  signed-scope deferrals where specialized report output remains broader than
+  the MVP implementation.
 
 ## Current Stop
 
-Ready for reports/business-fit gap closure reviewer stop.
+Ready for final SRS/business-fit audit and stabilization.
 
 ## Open Carry-Forward / Known Debt
 
-- Reports/business-fit closure needs reviewer pass before it can be called
-  reviewed.
 - Final SRS/business-fit audit and stabilization remain open.
 - Deferred report catalog items require human/signed scope acceptance or future
   report implementation slices; do not imply those specialized reports are fully
   delivered.
 - If final audit finds a concrete duplicate/related complaint defect, open a
-  scoped repair task; do not re-open duplicate UX work speculatively.
+  scoped repair task or make the smallest stabilization fix; do not re-open
+  duplicate UX work speculatively.
 - Live DMS provider integration remains future work.
 - DMS writeback remains out of MVP unless a separate approved change request
   authorizes it; writeback endpoints must remain absent or disabled.

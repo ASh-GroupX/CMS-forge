@@ -11516,3 +11516,61 @@ Implemented the scoped server-side permission guard foundation:
 
 - Status: Reports/business-fit gap closure built, reviewer pending.
 - Next: Reports/business-fit gap closure reviewer stop.
+
+## 2026-06-30 - Reports/Business-Fit Gap Closure Reviewer Stop
+
+### Scope
+
+- Reviewed the built reports/business-fit closure without adding product feature code.
+- Confirmed `GET /reports/catalog` is protected by `SessionAuthGuard`, `PermissionGuard`, `RbacGuard`, `REPORT_VIEW`, and `@BranchScoped()`.
+- Confirmed the catalog includes RPT-001 through RPT-017 exactly once, with filters, outputs, status, implementation notes, deferred scope, and `signoffRequired` on every deferral.
+- Confirmed delivered status is limited to RPT-001, RPT-004, RPT-013, and RPT-017.
+- Confirmed all other report matrix entries are explicit signed-scope deferrals and are not claimed as fully delivered.
+- Confirmed OpenAPI documents `/reports/catalog` and the catalog response schemas.
+- Confirmed no web UI changed, so visual/accessibility proof was not required for this reviewer slice.
+
+### Findings
+
+- No blocking reviewer findings.
+
+### SRS Coverage
+
+- `REQ-REPORT-001` and `REPORT-MATRIX-001`: reviewed catalog coverage for all report IDs and honest delivered/deferred status.
+- `REQ-AUDIT-001`: reviewed that report export audit behavior and audit append-only proof still pass.
+- `NFR-SEC-002`: reviewed staff-session authorization, `REPORT_VIEW`, RBAC, branch-scope guard coverage, and safe catalog content.
+- `API-STANDARD-001`: reviewed canonical OpenAPI documentation for the new route and schemas.
+- `UI-SCREEN-001` and `UI-DESIGN-001`: reviewed no UI changed in this backend-only catalog slice.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input: Passed.
+- State changes and same-transaction audit: Passed/not applicable. The catalog route is read-only; existing export audit and append-only proof still pass.
+- No passwords, OTPs, tokens, hashes, provider credentials, customer phone/email, VIN, plate, DMS codes, portal data, storage keys, public URLs, staff PII, or arbitrary audit metadata are returned by the catalog: Passed.
+- Customer portal privacy: Passed. No portal route or customer surface changed.
+- Trust boundaries are tested: Passed. Tests cover allowed report catalog access, denied missing permission, branch-scope behavior on report routes, safe content, and OpenAPI coverage.
+
+### Skipped Work
+
+- No product feature work beyond review.
+- No specialized implementations for deferred reports.
+- No DMS telemetry persistence, live DMS provider integration, DMS writeback, provider credentials, notification aggregate report, CSAT report, compensation report, report warehouse, async export worker, schema migration, customer portal report exposure, or web reports UI work.
+
+### Verification
+
+- Passed: `git status --short` returned clean before reviewer Forge edits.
+- Passed: `git diff --check` returned no whitespace errors before reviewer Forge edits.
+- Passed: `corepack pnpm test:api -- reports` (31/31 TAP tests passed).
+- Passed: `corepack pnpm test:api -- audit` (8/8 TAP tests passed plus Docker-backed audit append-only SQL proof; escalated rerun was required for Docker named-pipe access).
+- Passed: `corepack pnpm test:web -- api-client` (24/24 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (192/192 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm security:check`, including report authorization and scoped export security.
+- Not Run: `corepack pnpm test:visual`, `corepack pnpm test:e2e -- accessibility`, and `corepack pnpm web:visual-review` were not required because no web UI changed in this reviewer slice.
+
+### Outcome
+
+- Status: Reports/business-fit closure reviewed complete.
+- Next: Final SRS/business-fit audit and stabilization.
