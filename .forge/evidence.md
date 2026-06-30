@@ -11574,3 +11574,86 @@ Implemented the scoped server-side permission guard foundation:
 
 - Status: Reports/business-fit closure reviewed complete.
 - Next: Final SRS/business-fit audit and stabilization.
+
+## 2026-06-30 - Final SRS/Business-Fit Audit And Stabilization
+
+### Scope
+
+- Ran the final MVP/business-fit audit against Forge, the current code, the current commit history, `docs/ARCHITECTURE.md`, and the relevant SRS requirements.
+- Reconciled the task's placeholder IDs with the actual SRS IDs. `MVP-BUSINESS-FIT-001`, `REQ-COMPLAINT-004`, `REQ-PORTAL-003`, `REQ-ATTACH-001`, `REQ-DMS-001`, and `DMS-MVP-001` are not headings in `docs/CMS_AUTO_SRS.md`; the audited SRS coverage is `CONTRACT-READINESS-003`, `REQ-COMPLAINT-001`, `REQ-COMPLAINT-002`, `REQ-COMPLAINT-003`, `REQ-CUSTOMER-001`, `REQ-PORTAL-001`, `REQ-PORTAL-002`, `REQ-FILES-001`, `ARCH-INTEGRATION-001`, `ARCH-FILES-001`, `DMS-MAP-001`, `REQ-REPORT-001`, `REPORT-MATRIX-001`, `REQ-AUDIT-001`, `NFR-SEC-002`, `API-STANDARD-001`, `UI-SCREEN-001`, and `UI-DESIGN-001`.
+- Confirmed the recent goal commits are coherent and revertable: planning, P20B build/review, P20C build/review, P18B/P19B/P19C catch-up review, portal attachment build/review, reports catalog build/review, and this final audit.
+- Confirmed skipped reviewer stops are not still overclaimed: P18B, P19B, and P19C were originally skipped, then covered by the committed catch-up reviewer pass.
+- Confirmed no product code stabilization was needed in this final slice.
+
+### Audit Results
+
+- P17, P18A/P18B, P19A/P19B/P19C, P20A/P20B/P20C, portal attachment follow-up, and reports/business-fit closure are all recorded as reviewed complete after actual reviewer or catch-up passes.
+- DMS remains read-oriented for MVP. The API exposes `GET /integrations/dms/customer-vehicle`; the web route is a same-origin proxy that allowlists only `phone`, `customerNumber`, `vin`, and `name`, and no DMS writeback route was found.
+- No provider credentials or direct provider calls are present in frontend DMS flow; provider failure paths and credential redaction are covered by integration tests.
+- Portal tracking still requires a verified portal session before complaint data is read. Reference-only tracking and follow-up are denied.
+- Portal follow-up attachments expose upload metadata only. The portal has no download route, public URL, storage key, or download-token response.
+- Portal responses remain public-safe: no internal comments, audit logs, DMS codes, staff PII, unrelated complaints, OTP hashes, or session hashes are returned.
+- Duplicate/related complaint UX is not re-opened. P18A/P18B coverage plus catch-up review and final complaint/web proof found no concrete blocker.
+- Reports/business-fit gaps are explicit. RPT-001, RPT-004, RPT-013, and RPT-017 are delivered; RPT-002, RPT-003, RPT-005, RPT-006, RPT-007, RPT-008, RPT-009, RPT-010, RPT-011, RPT-012, RPT-014, RPT-015, and RPT-016 are marked `DEFERRED` with `signoffRequired: true` in the guarded catalog.
+- OpenAPI contract coverage holds. `openapi:check` passed after all route work, including DMS lookup, portal attachment upload, and reports catalog.
+- UI quality gates passed for Arabic RTL and English LTR shell/localization, visual previews, accessibility previews, visual-review artifacts, and supplemental performance proof.
+- Backup/restore readiness is covered by the deterministic local ops check and runbook validation. The command passed for development and retained the expected warning that local `POSTGRES_HOST_AUTH_METHOD=trust` is development-only.
+
+### SRS Coverage
+
+- `CONTRACT-READINESS-003`: architecture, security, portal privacy, reports, Arabic/English UI, UI quality, performance, and backup posture proof ran locally. Human UAT sign-off and real staging backup restore remain operational sign-off activities, not product code changes in this slice.
+- `REQ-COMPLAINT-001`, `REQ-COMPLAINT-002`, and `REQ-COMPLAINT-003`: complaint creation, classification, drafts, duplicate warning foundation, related linking, corrections, and workflow authority remain backend-owned and tested.
+- `REQ-CUSTOMER-001`, `ARCH-INTEGRATION-001`, and `DMS-MAP-001`: staff DMS lookup has success, multiple-match, not-found, disabled, and provider-down paths; manual fallback remains available; provider credentials stay out of the browser; no writeback route exists.
+- `REQ-PORTAL-001` and `REQ-PORTAL-002`: portal submission, verified tracking, public follow-up, and follow-up attachments remain privacy-safe and tested.
+- `REQ-FILES-001` and `ARCH-FILES-001`: attachment validation, scan states, staff download authorization, portal upload-only behavior, audit, and no public URLs are tested.
+- `REQ-REPORT-001` and `REPORT-MATRIX-001`: operational reports remain RBAC/branch scoped; catalog reconciles RPT-001 through RPT-017 with delivered/deferred status and signed-scope deferrals.
+- `REQ-AUDIT-001`: audit search/export, safe metadata redaction, and Docker-backed append-only proof passed.
+- `NFR-SEC-002`: RBAC, branch scope, report export scope, portal privacy, attachment authorization, and sensitive-field logging protections passed.
+- `API-STANDARD-001`: stable error envelopes, OpenAPI coverage, and route contracts passed.
+- `UI-SCREEN-001` and `UI-DESIGN-001`: staff/portal screen coverage, role visibility, Arabic/English localization, visual, accessibility, and performance proof passed.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input: Passed by complaint, reports, admin, attachment, and web API-client tests.
+- Every state change writes status/history/audit in the same transaction and side effects enqueue after commit: Passed by complaint creation/workflow, correction, attachment, comment, admin, and audit proof suites.
+- No passwords, OTPs, tokens, hashes, provider secrets, storage keys, public URLs, DMS codes, or credentials are logged or returned: Passed by source review plus security, portal, integration, attachment, report, and web source-safety tests. Portal session tokens are returned only by OTP verification as the designed customer session bearer and are not persisted in browser storage.
+- Customer portal exposure rules hold: Passed. Portal tracking requires verified session; portal responses expose only public status/timeline/follow-up/upload metadata; no internal comments, audit logs, DMS codes, staff PII, or unrelated complaints are exposed.
+- Trust boundaries are tested: Passed. Proof covers allowed and denied cases for staff RBAC/branch scope, report view/export, DMS lookup permission, portal verification, portal upload, attachment download, audit access, and CSRF/rate-limit behavior.
+
+### Verification
+
+- Passed: `git status --short` returned clean before final Forge edits.
+- Passed: `git diff --check` returned no whitespace errors before final Forge edits.
+- Passed: `corepack pnpm test:api -- complaints` (69/69 TAP tests passed).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm test:api -- attachments` (32/32 TAP tests passed).
+- Passed: `corepack pnpm test:api -- integrations` (26/26 TAP tests passed).
+- Passed: `corepack pnpm test:api -- reports` (31/31 TAP tests passed).
+- Passed: `corepack pnpm test:api -- audit` (8/8 TAP tests passed plus Docker-backed audit append-only SQL proof; escalated Docker access was required).
+- Passed: `corepack pnpm test:web -- api-client` (24/24 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (192/192 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm web:visual-review`; regenerated 22 ignored EN/AR visual review artifacts under `coverage/web-visual-review/`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm security:check` (38 auth/session, 30 admin RBAC/CSRF, 4 CSRF/rate-limit, 8 audit/RBAC, 6 portal submission, 23 portal tracking, 32 attachment authorization/scan policy, and 31 report authorization/export security tests passed).
+- Supplemental Passed: `corepack pnpm web:perf` (2 route previews).
+- Supplemental Passed: `corepack pnpm ops:backup:check`; development backup posture passed with the expected local trust warning.
+
+### Skipped Work
+
+- No product code changes were made in the final audit slice.
+- No DMS writeback, live DMS provider credentials, provider calls from frontend, or frontend secrets were added.
+- No portal download route, public attachment links, storage key exposure, or unverified tracking by reference number alone was added.
+- No specialized implementation was added for report catalog entries currently marked as signed-scope deferrals.
+- No advanced/AI matching work was added.
+- No claim is made that human UAT sign-off, commercial acceptance of report deferrals, or real staging/production backup restore has occurred in this local Codex run.
+
+### Outcome
+
+- Status: Final SRS/business-fit audit and stabilization complete.
+- Blockers: None found in the audited local product scope.
+- Next: Done for the current Codex goal; future work requires a new scoped task or human pilot/UAT sign-off activity.
