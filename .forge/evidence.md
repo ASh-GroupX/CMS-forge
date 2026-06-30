@@ -11075,3 +11075,73 @@ Implemented the scoped server-side permission guard foundation:
 
 - Status: P20C built, reviewer pending.
 - Next: P20C reviewer stop.
+
+## 2026-06-30 - P20C Reviewer Stop
+
+### Scope
+
+- Reviewed P20C only.
+- Product code was inspected but not changed during this reviewer stop.
+- P18B, P19B, and P19C remain built but not reviewed until their separate
+  catch-up reviewer pass runs.
+
+### Findings
+
+- No blocking P20C findings.
+
+### Review Notes
+
+- The staff lookup UI calls the P20B route only through the typed web helper and
+  same-origin proxy.
+- The proxy forwards only `phone`, `customerNumber`, `vin`, and `name` plus the
+  staff session cookie. Spoofed role, branch, actor, workflow, password, token,
+  and credential-shaped query values are dropped before the backend request.
+- Intake displays DMS/local/manual source labels and selected DMS matches can
+  prefill safe visible customer/vehicle fields plus source metadata.
+- Provenance correction embeds the lookup but does not map DMS customer codes or
+  VINs into local foreign keys. Correction still submits through the P19B
+  correction endpoint with reason and `expectedUpdatedAt`.
+- P20C adds no live provider, provider SDK, provider credential, DMS writeback,
+  schema migration, persistence table, backend workflow rule, or customer portal
+  surface.
+- Visual/accessibility proof cases cover English and Arabic complaint intake and
+  detail lookup appearances.
+
+### SRS Coverage Reviewed
+
+- `REQ-CUSTOMER-001`: lookup fields and manual fallback are present in staff
+  intake/correction UI.
+- `DMS-MAP-001`: DMS remains read-only source metadata with no writeback path.
+- `DATA-AUTO-001`: safe DMS customer/vehicle fields are visible to staff and
+  stay distinct from local/manual provenance.
+- `UI-SCREEN-001` and `UI-DESIGN-001`: lookup states are included in the staff
+  intake/detail surfaces and covered by visual/accessibility proof cases.
+- `NFR-SEC-002`: no frontend provider credential, direct DMS call, client-owned
+  role/branch/workflow authority, or portal exposure was added.
+- `API-STANDARD-001`: validation, denied, network, and success paths are routed
+  through the existing API-client result shape.
+
+### Verification
+
+- Passed: `git show --stat --oneline HEAD` inspected the P20C build commit.
+- Passed: `git status --short` returned no output before reviewer Forge edits.
+- Passed: `git diff --check` returned no output before reviewer Forge edits.
+- Passed: `corepack pnpm test:web -- api-client` (23/23 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (192/192 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm web:visual-review`; generated English and Arabic
+  complaint create/detail review artifacts under `coverage/web-visual-review/`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm security:check`.
+- Passed: review grep and `git show` inspection confirmed the same-origin proxy
+  allowlist, no direct provider/browser DMS call, no DMS writeback, and no portal
+  exposure.
+
+### Outcome
+
+- Status: P20C reviewed complete.
+- Next: P18B/P19B/P19C reviewer catch-up.

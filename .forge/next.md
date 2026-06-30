@@ -1,82 +1,92 @@
-# P20C Reviewer Stop - Staff DMS Lookup UI
+# P18B/P19B/P19C Reviewer Catch-Up
 
 Status: Ready
 Required model tier: GPT-5.5 Extra High
-Phase: P20C-review
+Phase: review-catch-up
 Risk: High
-SRS IDs: REQ-CUSTOMER-001, DMS-MAP-001, DATA-AUTO-001, UI-SCREEN-001, UI-DESIGN-001, NFR-SEC-002, API-STANDARD-001
+SRS IDs: REQ-COMPLAINT-003, REQ-CUSTOMER-001, DATA-AUTO-001, REQ-RESOLUTION-001, REQ-AUDIT-001, DMS-MAP-001, API-STANDARD-001, NFR-SEC-002, UI-SCREEN-001, UI-DESIGN-001
 
 ## Scoped Task
 
-Review only the P20C build commit for staff DMS lookup UI wiring in intake and
-provenance correction. Do not implement new product behavior unless the review
-finds a blocker that must be repaired inside the reviewer slice.
+Run the skipped reviewer passes for P18B, P19B, and P19C. Review the already
+built code only. Do not claim any skipped review as reviewed until this pass
+actually inspects and proves it.
 
-The review must confirm the UI searches by phone, customer number, VIN, or name;
-renders match, multiple-match, not-found, provider-down, disabled, validation,
-denied/error, selected, and manual fallback states; preserves DMS/local/manual
-source labels; and keeps all DMS access behind the staff backend/proxy boundary.
+Review order:
+
+1. P18B - Duplicate warning UI foundation.
+2. P19B - Staff customer/vehicle correction workflow backend.
+3. P19C - Staff customer/vehicle correction UI.
 
 ## Scope
 
-- Inspect the P20C diff only.
-- Confirm the same-origin proxy forwards only lookup fields and the staff session
-  cookie.
-- Confirm frontend code contains no provider credentials, direct DMS provider
-  call, DMS writeback, workflow authority, raw provider payload, or portal
-  exposure.
-- Confirm correction still submits through the P19B backend correction contract
-  with reason and optimistic concurrency.
-- Confirm visual/accessibility proof cases cover English and Arabic lookup UI
-  appearances.
+- Locate the relevant P18B, P19B, and P19C commits/evidence before reviewing.
+- Confirm P18B keeps duplicate/related complaint UI safe-field only,
+  non-destructive, staff-scoped, and portal-private.
+- Confirm P19B correction backend keeps server-session RBAC/branch authority,
+  CSRF, optimistic concurrency, same-transaction audit, safe audit metadata, and
+  OpenAPI coverage.
+- Confirm P19C correction UI keeps backend authority server-side, submits only
+  through the P19B contract, preserves conflict/denied states, and exposes no
+  portal/private/DMS-provider data.
+- Fix only blocking reviewer findings that are inside the reviewed slice
+  contracts. If no blockers are found, update Forge only.
 - Update `.forge/evidence.md`, `.forge/state.md`, and `.forge/next.md` at review
   end.
 
 ## Likely Files
 
-- `apps/web/src/app/api/integrations/dms/customer-vehicle/route.ts`
+- `apps/api/src/modules/complaints/**`
+- `apps/api/test/complaints*.test.ts`
 - `apps/web/src/app/(staff)/complaints/**`
-- `apps/web/src/app/page.tsx`
-- `apps/web/src/components/complaint-intake-workspace/**`
-- `apps/web/src/components/customer-vehicle-lookup/**`
-- `apps/web/src/components/complaint-create-form/**`
+- `apps/web/src/app/api/complaints/**`
 - `apps/web/src/components/complaint-detail-workspace/**`
-- `apps/web/src/lib/staff-complaints-api.ts`
 - `apps/web/src/i18n/**`
+- `apps/web/src/lib/staff-complaint-relations-api.ts`
+- `apps/web/src/lib/staff-complaints-api.ts`
 - `apps/web/test/**`
-- `tools/web-proof-cases.mjs`
+- `docs/openapi.yaml` and `packages/contracts/openapi.json` if P19B review
+  requires contract inspection
 - `.forge/next.md`
 - `.forge/state.md`
 - `.forge/evidence.md`
 
 ## Skipped Work
 
-- No live DMS provider, provider SDK, provider credentials, or direct browser DMS
-  call.
-- No DMS writeback.
-- No customer portal exposure.
-- No backend workflow/correction rule changes unless the P20C reviewer finds a
-  blocker.
-- No P18B/P19B/P19C reviewer catch-up inside this reviewer commit.
+- No new product feature work.
+- No portal attachment follow-up.
+- No duplicate/related UX hardening beyond reviewer blocker repair.
+- No reports/business-fit changes.
+- No live DMS provider, provider SDK, provider credentials, direct browser DMS
+  call, DMS writeback, schema migration, or persistence table.
+- No final SRS/business-fit audit.
 
 ## Required Proof
 
-- `git show --stat --oneline HEAD`
+- `git log --oneline --grep="P18B\\|P19B\\|P19C"`
 - `git status --short`
 - `git diff --check`
+- `corepack pnpm test:api -- complaints`
+- `corepack pnpm test:api -- workflow`
+- `corepack pnpm test:api -- portal.tracking`
 - `corepack pnpm test:web -- api-client`
 - `corepack pnpm test:web -- shell`
 - `corepack pnpm test:web -- localization`
-- `corepack pnpm typecheck`
-- `corepack pnpm lint`
 - `corepack pnpm test:visual`
 - `corepack pnpm test:e2e -- accessibility`
 - `corepack pnpm web:visual-review`
 - `corepack pnpm openapi:check`
+- `corepack pnpm prisma:validate`
+- `corepack pnpm --dir packages/database generate`
+- `corepack pnpm db:migrate:test`
+- `corepack pnpm typecheck`
+- `corepack pnpm lint`
 - `corepack pnpm security:check`
 
 ## Reviewer Rule
 
-If the review passes, record P20C as reviewed complete and set the next task to
-P18B/P19B/P19C reviewer catch-up. If the user explicitly skips this review,
-record P20C as built but not reviewed and move next only with that caveat.
+If all three reviews pass, record P18B, P19B, and P19C as reviewed complete and
+set the next task to portal attachment follow-up completion. If any review finds
+a blocker, repair it in the smallest reviewer commit possible and rerun the
+affected proof commands plus `typecheck`, `lint`, `openapi:check`, and
+`security:check` as applicable.
