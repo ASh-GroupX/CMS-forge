@@ -20,6 +20,17 @@ export type PortalTrackingComplaint = {
   timeline: PortalTrackingTimelineItem[];
 };
 export type PortalTrackingResponse = { complaint: PortalTrackingComplaint };
+export type PortalAttachmentUploadResponse = {
+  attachment: {
+    id: string;
+    complaintId: string;
+    fileName: string;
+    contentType: string;
+    sizeBytes: number;
+    scanStatus: string;
+    customerVisible: boolean;
+  };
+};
 
 type ErrorEnvelope = { error?: { code?: string; message?: string; correlationId?: string | null } };
 
@@ -37,6 +48,19 @@ export function getPortalTracking(sessionToken: string, fetchImpl: typeof fetch 
 
 export function submitPortalFollowUp(sessionToken: string, body: string, fetchImpl: typeof fetch = fetch): Promise<PortalApiResult<{ ok: true }>> {
   return requestJson('/api/portal/tracking/follow-ups', fetchImpl, { ...portalSessionInit('POST', sessionToken), body: JSON.stringify({ body }) });
+}
+
+export async function uploadPortalAttachment(sessionToken: string, file: File, fetchImpl: typeof fetch = fetch): Promise<PortalApiResult<PortalAttachmentUploadResponse>> {
+  return requestJson('/api/portal/attachments', fetchImpl, {
+    ...portalSessionInit('POST', sessionToken),
+    body: JSON.stringify({
+      fileName: file.name,
+      contentType: file.type,
+      sizeBytes: file.size,
+      contentBase64: await fileToBase64(file),
+    }),
+    headers: { Accept: 'application/json', 'content-type': 'application/json', 'x-portal-session': sessionToken },
+  });
 }
 
 async function requestJson<T>(path: string, fetchImpl: typeof fetch, init: RequestInit): Promise<PortalApiResult<T>> {
@@ -62,6 +86,16 @@ function portalSessionInit(method: 'GET' | 'POST', sessionToken: string): Reques
     headers: { Accept: 'application/json', 'x-portal-session': sessionToken },
     method,
   };
+}
+
+async function fileToBase64(file: File): Promise<string> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const chunkSize = 0x8000;
+  let binary = '';
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return btoa(binary);
 }
 
 async function mapErrorResponse(response: Response): Promise<PortalApiError> {

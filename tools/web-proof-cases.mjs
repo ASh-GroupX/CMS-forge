@@ -45,7 +45,7 @@ function buildPortalVisualCases(locale) {
   const submission = portalSubmissionText[locale], tracking = portalTrackingText[locale], survey = portalSurveyText[locale];
   return [
     portalVisualCase('portal submission mobile', locale, 'portal-submission', { state: locale === 'en' ? 'validation' : 'success', reference: 'CMP-PORTAL-MOBILE' }, [submission.title, locale === 'en' ? submission.states.validation : submission.states.success, submission.fields.attachment], ['md:grid-cols-2']),
-    portalVisualCase('portal tracking mobile', locale, 'portal-tracking-preview', { state: locale === 'en' ? 'requested' : 'followup', reference: 'CMP-TRACK-MOBILE' }, [tracking.title, locale === 'en' ? tracking.states.requested : tracking.states.followup, tracking.sections.verify], ['lg:grid-cols-[0.9fr_1.1fr]']),
+    portalVisualCase('portal tracking mobile', locale, 'portal-tracking-preview', { state: locale === 'en' ? 'requested' : 'attachment', reference: 'CMP-TRACK-MOBILE' }, [tracking.title, locale === 'en' ? tracking.states.requested : tracking.states.attachment, locale === 'en' ? tracking.sections.verify : tracking.sections.attachments], ['lg:grid-cols-[0.9fr_1.1fr]']),
     portalVisualCase('portal survey mobile', locale, 'portal-survey', { state: locale === 'en' ? 'validation' : 'used' }, [survey.title, locale === 'en' ? survey.states.validation : survey.states.used, locale === 'en' ? survey.fields.rating : survey.subtitle], locale === 'en' ? ['grid-cols-5'] : []),
   ];
 }
@@ -72,7 +72,7 @@ function buildAccessibilityCases() {
     routeAccessibilityCase('portal submission validation', 'portal-submission', 'en', { locale: 'en', state: 'validation' }, [portalSubmissionText.en.title, portalSubmissionText.en.states.validation], { minLabels: 10, minAria: 5 }),
     routeAccessibilityCase('portal submission success', 'portal-submission', 'ar', { locale: 'ar', state: 'success' }, [portalSubmissionText.ar.title, portalSubmissionText.ar.states.success], { minLabels: 10, minAria: 5 }),
     routeAccessibilityCase('portal tracking requested', 'portal-tracking-preview', 'en', { locale: 'en', state: 'requested' }, [portalTrackingText.en.title, portalTrackingText.en.states.requested], { minLabels: 3, minAria: 3 }),
-    routeAccessibilityCase('portal tracking follow-up', 'portal-tracking-preview', 'ar', { locale: 'ar', state: 'followup' }, [portalTrackingText.ar.title, portalTrackingText.ar.states.followup], { minLabels: 4, minAria: 5 }),
+    routeAccessibilityCase('portal tracking attachment follow-up', 'portal-tracking-preview', 'ar', { locale: 'ar', state: 'attachment' }, [portalTrackingText.ar.title, portalTrackingText.ar.states.attachment, portalTrackingText.ar.fields.attachment], { minLabels: 5, minAria: 5 }),
     routeAccessibilityCase('portal survey validation', 'portal-survey', 'en', { locale: 'en', state: 'validation' }, [portalSurveyText.en.title, portalSurveyText.en.states.validation], { minLabels: 6, minAria: 5 }),
     routeAccessibilityCase('portal survey used', 'portal-survey', 'ar', { locale: 'ar', state: 'used' }, [portalSurveyText.ar.title, portalSurveyText.ar.states.used], { minLabels: 0, minAria: 1 }),
   ];

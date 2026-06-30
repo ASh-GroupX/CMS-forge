@@ -7,6 +7,7 @@ const allowed = new Set([
   'POST tracking/otp/verify',
   'GET tracking',
   'POST tracking/follow-ups',
+  'POST attachments',
 ]);
 
 export function GET(request: Request, context: RouteContext): Promise<Response> {
@@ -27,7 +28,7 @@ async function proxyPortal(request: Request, context: RouteContext, method: 'GET
   try {
     const headers = new Headers({ Accept: 'application/json' });
     if (method === 'POST') headers.set('content-type', request.headers.get('content-type') ?? 'application/json');
-    if (path === 'tracking' || path === 'tracking/follow-ups') {
+    if (path === 'tracking' || path === 'tracking/follow-ups' || path === 'attachments') {
       const session = request.headers.get('x-portal-session');
       if (session) headers.set('x-portal-session', session);
     }

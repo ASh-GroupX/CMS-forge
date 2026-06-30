@@ -370,6 +370,12 @@ test('portal tracking renders invalid expired error and follow-up states', async
   const followup = renderToStaticMarkup(
     React.createElement(PortalTrackingPreview, { locale: 'en', reference: portalTrackingText.en.sample.reference, state: 'followup' }),
   );
+  const attachment = renderToStaticMarkup(
+    React.createElement(PortalTrackingPreview, { locale: 'en', reference: portalTrackingText.en.sample.reference, state: 'attachment' }),
+  );
+  const closed = renderToStaticMarkup(
+    React.createElement(PortalTrackingPreview, { locale: 'en', reference: portalTrackingText.en.sample.reference, state: 'closed' }),
+  );
 
   assert.match(invalid, /Verification failed\. Check the reference and code, then try again\./);
   assert.match(expired, /Verification expired\. Request a new code\./);
@@ -378,14 +384,21 @@ test('portal tracking renders invalid expired error and follow-up states', async
   assert.match(followup, /Follow-up received\./);
   assert.match(followup, /Add follow-up/);
   assert.match(followup, /Please add the missing service invoice\./);
+  assert.match(attachment, /Attachment received for review\./);
+  assert.match(attachment, /Follow-up attachments/);
+  assert.match(attachment, /Images and PDFs up to 10 MB/);
+  assert.match(closed, /Follow-up is closed for this complaint\./);
+  assert.match(closed, /disabled=""/);
 });
 
 test('portal tracking source does not render secrets or private data paths', () => {
   const source = readFileSync('apps/web/src/components/portal-tracking/index.tsx', 'utf8');
+  const followUpSource = readFileSync('apps/web/src/components/portal-tracking/follow-up-panel.tsx', 'utf8');
+  const combined = `${source}\n${followUpSource}`;
 
-  assert.doesNotMatch(source, /localStorage|sessionStorage|document\.cookie|console\.|createObjectURL|Blob|download/);
-  assert.doesNotMatch(source, /roleCode|principal|branchScope|actorId|ownerId|workflow|password|secret|provider/);
-  assert.doesNotMatch(source, /audit|DMS|staff PII|internal comments|unrelated/i);
+  assert.doesNotMatch(combined, /localStorage|sessionStorage|document\.cookie|console\.|createObjectURL|Blob|download/);
+  assert.doesNotMatch(combined, /roleCode|principal|branchScope|actorId|ownerId|workflow|password|secret|provider/);
+  assert.doesNotMatch(combined, /audit|DMS|staff PII|internal comments|unrelated|storageKey|uploadUrl|publicUrl/i);
 });
 
 test('portal tracking production route ignores query proof state bypass', async () => {

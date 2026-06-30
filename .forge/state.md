@@ -1,8 +1,8 @@
 # Current State
 
-Status: P18B/P19B/P19C reviewed complete
-Phase: review-catch-up
-Next Task: Portal attachment follow-up completion
+Status: Portal attachment follow-up built, reviewer pending
+Phase: portal-attachment-follow-up
+Next Task: Portal attachment follow-up reviewer stop
 Model Tier: GPT-5.5 Extra High
 
 ## How to use this file
@@ -28,15 +28,24 @@ Prior state history is in .forge/archive/state-archive.md.
 - P20C and the catch-up review did not add live DMS provider calls, DMS
   writeback, provider credentials, customer portal exposure, schema migrations,
   persistence tables, or backend workflow/correction rule changes.
+- Portal attachment follow-up is built but not reviewed. It wires the existing
+  verified backend portal attachment upload route into the tracking follow-up UI
+  through a same-origin proxy/client, with localized policy, success, validation,
+  and closed-complaint states.
+- The portal attachment build did not add a portal download route, public link,
+  download token, storage key exposure, schema migration, DMS work, or backend
+  route rewrite.
 
 ## Current Stop
 
-Ready for portal attachment follow-up completion.
+Ready for portal attachment follow-up reviewer stop.
 
 ## Open Carry-Forward / Known Debt
 
-- Portal attachment follow-up, duplicate/related UX hardening if still required,
-  reports/business-fit closure, and final audit/stabilization remain open.
+- Portal attachment follow-up needs reviewer pass before it can be called
+  reviewed.
+- Duplicate/related UX hardening if still required, reports/business-fit
+  closure, and final audit/stabilization remain open.
 - Live DMS provider integration remains future work.
 - DMS writeback remains out of MVP unless a separate approved change request
   authorizes it; writeback endpoints must remain absent or disabled.

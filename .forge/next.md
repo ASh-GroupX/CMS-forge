@@ -1,70 +1,59 @@
-# Portal Attachment Follow-Up Completion
+# Portal Attachment Follow-Up Reviewer Stop
 
 Status: Ready
 Required model tier: GPT-5.5 Extra High
-Phase: portal-attachment-follow-up
+Phase: portal-attachment-follow-up-review
 Risk: High
 SRS IDs: REQ-PORTAL-002, REQ-FILES-001, PORTAL-SEC-001, REQ-AUDIT-001, API-STANDARD-001, NFR-SEC-002, UI-SCREEN-001, UI-DESIGN-001
 
 ## Scoped Task
 
-Complete portal follow-up attachments for verified customer tracking sessions.
-Start by reading the existing portal attachment backend evidence and code; if the
-backend upload/privacy path already satisfies the SRS, keep product changes to
-the smallest missing UI/client/test proof needed for customers to add follow-up
-attachments from the tracking flow.
+Review the portal attachment follow-up build. Review already-built code only.
+Fix only blocking reviewer findings inside this slice; if no blockers are found,
+update Forge only.
 
 ## Scope
 
-- Support customer follow-up attachments only after successful portal
-  verification/session access, never from reference number alone.
-- Allow follow-up information and attachments only when the complaint is not
-  closed or rejected.
-- Enforce the existing attachment allowlist and size limits through the backend:
-  images/PDFs up to 10 MB, audio/video up to 50 MB, executable files blocked.
-- Associate uploaded files with the complaint and portal uploader context, and
-  preserve audit logging for portal upload actions.
-- Keep portal responses public-safe: no internal comments, audit entries, staff
-  PII, DMS codes, storage keys, public URLs, download tokens, provider fields, or
-  unrelated complaint data.
-- Use the existing same-origin portal client/proxy patterns. No direct browser
-  storage/S3/provider calls and no credentials or secrets in frontend code.
-- Provide localized English/Arabic UI with loading, empty, success, validation,
-  denied, closed-complaint, and generic error states.
-- Update OpenAPI and contract tests if any route, schema, or response shape
-  changes.
-- Update `.forge/evidence.md`, `.forge/state.md`, and `.forge/next.md` at task
+- Confirm portal attachment upload is reachable only after verified portal
+  tracking/session access, never from reference number alone.
+- Confirm closed or rejected complaints cannot receive portal follow-up text or
+  attachments.
+- Confirm the UI sends only the existing attachment upload contract and the web
+  proxy forwards only public portal headers, not staff cookies, CSRF, role,
+  branch, actor, or workflow authority.
+- Confirm the portal still exposes no internal comments, audit entries, staff
+  PII, DMS codes, unrelated complaints, storage keys, public URLs, download
+  tokens, provider fields, or credentials.
+- Confirm attachment limits and blocked executable behavior remain backend-owned
+  and tested.
+- Confirm localized English/Arabic visual and accessibility proof covers the
+  attachment follow-up state.
+- Update `.forge/evidence.md`, `.forge/state.md`, and `.forge/next.md` at review
   end.
 
 ## Likely Files
 
+- `apps/web/src/app/api/portal/[...path]/route.ts`
+- `apps/web/src/components/portal-tracking/**`
+- `apps/web/src/i18n/portal-tracking.ts`
+- `apps/web/src/lib/portal-tracking-api.ts`
+- `apps/web/test/api-client/portal-tracking-api.test.ts`
+- `apps/web/test/shell/shell.test.ts`
+- `tools/web-proof-cases.mjs`
 - `apps/api/src/modules/attachments/**`
 - `apps/api/src/modules/portal/**`
-- `apps/api/test/attachments*.test.ts`
-- `apps/api/test/portal*.test.ts`
-- `apps/web/src/app/portal/track/**`
-- `apps/web/src/app/api/portal/**`
-- `apps/web/src/components/portal*/**`
-- `apps/web/src/lib/portal*.ts`
-- `apps/web/src/i18n/**`
-- `apps/web/test/**`
-- `docs/openapi.yaml`
-- `packages/contracts/openapi.json`
 - `.forge/next.md`
 - `.forge/state.md`
 - `.forge/evidence.md`
 
 ## Skipped Work
 
+- No new product feature work beyond reviewer blocker repair.
 - No staff attachment management rewrite.
-- No portal attachment download route, public attachment link, download token, or
-  storage key exposure unless a separate approved SRS-backed task authorizes it.
-- No malware scanning provider integration, image recognition, file previewer, or
-  binary storage in PostgreSQL.
-- No DMS work, DMS writeback, live provider credentials, or provider SDK.
-- No duplicate/related complaint UX hardening.
-- No reports/business-fit changes.
-- No final SRS/business-fit audit.
+- No portal attachment download route, public link, download token, or storage
+  key exposure.
+- No malware provider integration, schema migration, DMS work, duplicate UX
+  hardening, reports work, or final audit work.
 
 ## Required Proof
 
@@ -83,16 +72,11 @@ attachments from the tracking flow.
 - `corepack pnpm lint`
 - `corepack pnpm security:check`
 
-If schema or migration files change, also run:
-
-- `corepack pnpm prisma:validate`
-- `corepack pnpm --dir packages/database generate`
-- `corepack pnpm db:migrate:test`
-
 ## Reviewer Rule
 
-End this implementation slice with Forge updates and set the next task to a
-portal attachment follow-up reviewer stop. Do not claim the slice reviewed in
-the build commit. The reviewer must re-check portal privacy, upload limits,
-audit behavior, OpenAPI, visual/accessibility proof, and denied/closed complaint
-cases before this slice can be called reviewed.
+If review passes, record portal attachment follow-up as reviewed complete and set
+the next task to duplicate/related complaint UX hardening only if still required
+by current Forge/SRS evidence; otherwise move to remaining report/business-fit
+closure. If a blocker is found, repair it in the smallest reviewer commit and
+rerun affected proof plus `typecheck`, `lint`, `openapi:check`, and
+`security:check`.

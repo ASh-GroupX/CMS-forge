@@ -11237,3 +11237,90 @@ Implemented the scoped server-side permission guard foundation:
 
 - Status: P18B, P19B, and P19C reviewed complete.
 - Next: Portal attachment follow-up completion.
+
+## 2026-06-30 - Portal Attachment Follow-Up Completion Build
+
+### Scope
+
+- Completed the customer portal tracking UI path for verified follow-up
+  attachment upload.
+- Reused the existing backend `POST /portal/attachments` route and attachment
+  policy instead of adding a new attachment API.
+- Added the same-origin web proxy allowlist entry for `POST /api/portal/attachments`.
+- Added a typed portal attachment upload helper that sends `fileName`,
+  `contentType`, `sizeBytes`, and `contentBase64` with only the portal session
+  header.
+- Extended the portal tracking follow-up panel with localized file input,
+  attachment policy rules, success, validation, and closed-complaint states.
+- Updated visual/accessibility proof cases to include the portal tracking
+  attachment state.
+
+### SRS Coverage
+
+- `REQ-PORTAL-002`: verified customers can add follow-up attachments when the
+  complaint is not closed.
+- `REQ-FILES-001`: UI exposes the documented MVP limits while backend tests
+  enforce type/size policy and portal upload privacy.
+- `PORTAL-SEC-001` and `NFR-SEC-002`: portal upload still requires a verified
+  portal session and exposes no internal comments, audit logs, staff PII, DMS
+  codes, storage keys, public URLs, or download tokens.
+- `REQ-AUDIT-001`: backend attachment upload audit behavior remains covered by
+  the existing attachment service tests.
+- `API-STANDARD-001`: no backend route shape changed; OpenAPI drift check passed.
+- `UI-SCREEN-001` and `UI-DESIGN-001`: portal tracking now shows localized
+  follow-up attachment controls with mobile visual and accessibility proof.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input:
+  Passed by boundary. Portal attachment upload uses verified portal session
+  context, not staff role or branch data from the browser.
+- State changes and audit transaction: Passed. Existing attachment service tests
+  prove metadata and audit are written in the same transaction; this slice reused
+  that backend path.
+- No passwords, OTPs, tokens, hashes, provider secrets, storage keys, public URLs,
+  or download tokens are logged or returned: Passed. Web tests assert the proxy
+  drops staff cookies/CSRF headers and portal source tests reject private data
+  paths.
+- Customer portal exposure rules hold: Passed. Backend attachment tests prove
+  portal upload has no portal download route/token shape and tracking responses
+  remain public-safe.
+- Trust boundaries are tested: Passed. API-client tests cover allowed portal
+  attachment proxying and denied non-portal/download paths; backend attachment
+  tests cover invalid sessions and terminal complaints.
+
+### Skipped Work
+
+- No backend attachment route rewrite, staff attachment rewrite, portal download
+  route, public attachment link, download token, storage key exposure, malware
+  provider integration, schema migration, DMS work, duplicate UX work, reports
+  work, or final audit work.
+- No reviewer claim for this build slice.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- attachments` (32/32 TAP tests passed).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm test:web -- api-client` (24/24 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (192/192 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm security:check`.
+- Failed then rerun outside sandbox: `corepack pnpm test:visual` initially hit
+  sandbox `spawn EPERM` from `tsx`/esbuild. Passed on rerun (22 route previews).
+- Failed then rerun outside sandbox: `corepack pnpm test:e2e -- accessibility`
+  initially hit sandbox `spawn EPERM` from `tsx`/esbuild. Passed on rerun (17
+  route previews).
+- Failed then rerun outside sandbox: `corepack pnpm web:visual-review` initially
+  hit sandbox `spawn EPERM` from `tsx`/esbuild. Passed on rerun and wrote
+  portal tracking review artifacts under `coverage/web-visual-review/`.
+- Passed: inspected generated English and Arabic portal tracking mobile visual
+  review artifacts for the request and attachment states.
+- Passed: `git diff --check` returned no errors; CRLF warnings only.
+
+### Outcome
+
+- Status: Portal attachment follow-up built, reviewer pending.
+- Next: Portal attachment follow-up reviewer stop.

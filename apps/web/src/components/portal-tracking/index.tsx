@@ -6,17 +6,18 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
 import { portalTrackingText, type PortalTrackingLocale } from '../../i18n/portal-tracking';
 import {
   getPortalTracking,
   requestPortalOtp,
   submitPortalFollowUp,
+  uploadPortalAttachment,
   verifyPortalOtp,
   type PortalTrackingComplaint,
 } from '../../lib/portal-tracking-api';
+import { PortalFollowUpPanel } from './follow-up-panel';
 
-export type PortalTrackingPreviewState = 'loading' | 'requested' | 'verified' | 'validation' | 'invalid' | 'expired' | 'error' | 'followup';
+export type PortalTrackingPreviewState = 'loading' | 'requested' | 'verified' | 'validation' | 'invalid' | 'expired' | 'error' | 'followup' | 'attachment' | 'closed';
 type Feedback = PortalTrackingPreviewState | 'denied' | undefined;
 
 export function PortalTrackingScreen({ locale }: { locale: PortalTrackingLocale }) {
@@ -28,8 +29,8 @@ export function PortalTrackingPreview({ locale, reference, state }: { locale: Po
   return (
     <PortalTrackingView
       initialFeedback={state}
-      initialFollowUp={state === 'followup' ? t.sample.followUp : ''}
-      initialPhone={state && state !== 'verified' && state !== 'followup' ? t.sample.phone : ''}
+      initialFollowUp={state === 'followup' || state === 'attachment' ? t.sample.followUp : ''}
+      initialPhone={state && state !== 'verified' && state !== 'followup' && state !== 'attachment' && state !== 'closed' ? t.sample.phone : ''}
       initialReference={state ? reference : ''}
       initialTracking={sampleTracking(locale, reference, state)}
       locale={locale}
@@ -83,11 +84,22 @@ function PortalTrackingView({ initialFeedback, initialFollowUp, initialPhone, in
   async function sendFollowUp(event: React.FormEvent) {
     event.preventDefault();
     if (!portalSession || !followUp.trim()) return setFeedback('validation');
+    if (tracking && isTerminal(tracking.status)) return setFeedback('closed');
     setBusy(true);
     const result = await submitPortalFollowUp(portalSession, followUp);
     setBusy(false);
     if (!result.ok) return setFeedback(tracking && isTerminal(tracking.status) ? 'denied' : feedbackFromCode(result.error.code));
     setFeedback('followup');
+  }
+
+  async function sendAttachment(file: File | null) {
+    if (!portalSession || !file) return setFeedback('validation');
+    if (tracking && isTerminal(tracking.status)) return setFeedback('closed');
+    setBusy(true);
+    const result = await uploadPortalAttachment(portalSession, file);
+    setBusy(false);
+    if (!result.ok) return setFeedback(tracking && isTerminal(tracking.status) ? 'denied' : feedbackFromCode(result.error.code));
+    setFeedback('attachment');
   }
 
   return (
@@ -133,7 +145,19 @@ function PortalTrackingView({ initialFeedback, initialFollowUp, initialPhone, in
 
           <div className="grid content-start gap-4">
             {tracking ? <VerifiedTracking locale={locale} tracking={tracking} /> : <PrivacyPanel locale={locale} />}
-            {tracking ? <FollowUpPanel locale={locale} value={followUp} onChange={setFollowUp} onSubmit={sendFollowUp} submitted={feedback === 'followup'} busy={busy} /> : null}
+            {tracking ? (
+              <PortalFollowUpPanel
+                attachmentSubmitted={feedback === 'attachment'}
+                busy={busy}
+                closed={isTerminal(tracking.status)}
+                locale={locale}
+                onAttachmentSubmit={sendAttachment}
+                onTextChange={setFollowUp}
+                onTextSubmit={sendFollowUp}
+                textSubmitted={feedback === 'followup'}
+                textValue={followUp}
+              />
+            ) : null}
           </div>
         </section>
       </div>
@@ -170,25 +194,6 @@ function VerifiedTracking({ locale, tracking }: { locale: PortalTrackingLocale; 
   );
 }
 
-function FollowUpPanel({ locale, value, onChange, onSubmit, submitted, busy }: { locale: PortalTrackingLocale; value: string; onChange: (value: string) => void; onSubmit: (event: React.FormEvent) => void; submitted: boolean; busy: boolean }) {
-  const t = portalTrackingText[locale];
-  return (
-    <Card className="rounded-md border-slate-200 bg-white shadow-sm">
-      <CardHeader className="p-4 pb-2"><CardTitle className="text-sm">{t.sections.followUp}</CardTitle></CardHeader>
-      <CardContent className="p-4 pt-0">
-        <form className="grid gap-3" onSubmit={onSubmit} aria-label={t.sections.followUp}>
-          {submitted ? <p className="rounded-sm border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900" role="status">{t.states.followup}</p> : null}
-          <Label className="grid gap-1 text-sm font-medium">
-            {t.fields.followUp}
-            <Textarea className="min-h-24" name="body" value={value} onChange={(event) => onChange(event.target.value)} />
-          </Label>
-          <Button className="focus:ring-2 focus:ring-ring" disabled={busy} type="submit">{t.actions.followUp}</Button>
-        </form>
-      </CardContent>
-    </Card>
-  );
-}
-
 function PrivacyPanel({ locale }: { locale: PortalTrackingLocale }) {
   const t = portalTrackingText[locale];
   return <Card className="rounded-md border-slate-200 bg-white text-sm text-slate-700 shadow-sm" aria-label={t.sections.status}><CardContent className="p-4">{t.privacy}</CardContent></Card>;
@@ -197,8 +202,8 @@ function PrivacyPanel({ locale }: { locale: PortalTrackingLocale }) {
 function PortalTrackingMessage({ locale, state }: { locale: PortalTrackingLocale; state: Feedback }) {
   const t = portalTrackingText[locale];
   if (!state) return null;
-  const isSafe = state === 'requested' || state === 'verified' || state === 'followup';
-  const message = state === 'denied' ? t.states.denied : state === 'followup' ? t.states.followup : t.states[state];
+  const isSafe = state === 'requested' || state === 'verified' || state === 'followup' || state === 'attachment';
+  const message = state === 'denied' ? t.states.denied : state === 'followup' ? t.states.followup : state === 'attachment' ? t.states.attachment : t.states[state];
   return (
     <p className={`rounded-md border px-4 py-3 text-sm font-medium ${isSafe ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-red-200 bg-red-50 text-red-800'}`} role={isSafe || state === 'loading' ? 'status' : 'alert'}>
       {message}
@@ -211,11 +216,11 @@ function TextField({ label, name, type = 'text', value, onChange, autoComplete }
 }
 
 function sampleTracking(locale: PortalTrackingLocale, reference: string, state?: PortalTrackingPreviewState): PortalTrackingComplaint | null {
-  if (state !== 'verified' && state !== 'followup') return null;
+  if (state !== 'verified' && state !== 'followup' && state !== 'attachment' && state !== 'closed') return null;
   const t = portalTrackingText[locale];
   return {
     referenceNumber: reference,
-    status: t.sample.status,
+    status: state === 'closed' ? 'CLOSED' : t.sample.status,
     createdAt: t.sample.created,
     updatedAt: t.sample.updated,
     timeline: t.sample.timeline.map((item) => ({ fromStatus: null, toStatus: item, action: null, createdAt: '' })),
