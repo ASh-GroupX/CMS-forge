@@ -11324,3 +11324,99 @@ Implemented the scoped server-side permission guard foundation:
 
 - Status: Portal attachment follow-up built, reviewer pending.
 - Next: Portal attachment follow-up reviewer stop.
+
+## 2026-06-30 - Portal Attachment Follow-Up Reviewer Stop
+
+### Scope
+
+- Reviewed the portal attachment follow-up build against
+  `REQ-PORTAL-002`, `REQ-FILES-001`, `PORTAL-SEC-001`, `REQ-AUDIT-001`,
+  `API-STANDARD-001`, `NFR-SEC-002`, `UI-SCREEN-001`, and
+  `UI-DESIGN-001`.
+- Product code was inspected but not changed during this reviewer stop.
+- Confirmed duplicate/related complaint work is not re-opened by current
+  Forge/SRS evidence because P18A and P18B are built and reviewed.
+
+### Findings
+
+- No blocking findings.
+
+### Review Notes
+
+- Portal attachment upload remains reachable only through a verified portal
+  session, not a reference number alone.
+- Closed and rejected complaints are denied by the backend portal attachment
+  context before storage, persistence, or audit writes.
+- The web proxy allowlist exposes only `POST /api/portal/attachments` and
+  forwards portal-safe headers, not staff cookies, CSRF, role, branch, actor, or
+  workflow authority.
+- The UI sends only the existing attachment upload contract:
+  `fileName`, `contentType`, `sizeBytes`, and `contentBase64` plus the portal
+  session header.
+- Portal responses and source checks expose no internal comments, audit entries,
+  staff PII, DMS codes, unrelated complaint details, storage keys, public URLs,
+  download tokens, provider fields, or credentials.
+- Attachment type/size policy, executable blocking, terminal-complaint denial,
+  and attachment audit behavior remain backend-owned and tested.
+- English LTR and Arabic RTL visual/accessibility proof covers the portal
+  tracking follow-up attachment state.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input:
+  Passed by boundary. Portal upload uses verified portal session context, and
+  the web proxy does not forward staff authority headers.
+- State changes and audit transaction: Passed. Existing attachment service tests
+  prove metadata and `ATTACHMENT attachment_uploaded` audit are written in the
+  same transaction.
+- No passwords, OTPs, tokens, hashes, provider secrets, storage keys, public
+  URLs, download tokens, or staff credentials are logged or returned: Passed by
+  source review and attachment/portal tests.
+- Customer portal exposure rules hold: Passed. Portal tracking and attachment
+  responses remain public-safe and expose no internal comments, audit logs, DMS
+  codes, staff PII, unrelated complaints, or provider fields.
+- Trust boundaries are tested: Passed. Proof covers allowed verified portal
+  upload plus denied invalid-session, terminal-complaint, non-portal proxy, and
+  download-path cases.
+
+### Verification
+
+- Passed: `git status --short` returned no output before reviewer Forge edits.
+- Passed: `git diff --check` returned no output before reviewer Forge edits.
+- Passed: `corepack pnpm test:api -- attachments` (32/32 TAP tests passed).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm test:web -- api-client` (24/24 TAP tests passed; rerun
+  outside sandbox after `spawn EPERM` from the Node child-process sandbox).
+- Passed: `corepack pnpm test:web -- shell` (192/192 TAP tests passed; rerun
+  outside sandbox).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed;
+  rerun outside sandbox after `spawn EPERM`).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm web:visual-review`; generated English and Arabic portal
+  tracking review artifacts under ignored `coverage/web-visual-review/`.
+- Passed: inspected the generated English and Arabic portal tracking mobile
+  visual review artifacts for request and attachment states.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm security:check` (38 auth/session, 30 admin RBAC/CSRF,
+  4 CSRF/rate-limit, 8 audit/RBAC, 6 portal submission, 23 portal tracking, 32
+  attachment authorization/scan policy, and 28 report authorization/export
+  security tests passed).
+- Passed: source review confirmed no `localStorage`, `sessionStorage`,
+  `document.cookie`, object URL, download route, storage key, public URL,
+  provider credential, DMS code, staff PII, internal comment, audit log, or
+  unrelated complaint exposure was added to portal tracking source.
+
+### Skipped Work
+
+- No product feature work beyond review.
+- No staff attachment management rewrite, portal download route, public link,
+  download token, storage key exposure, malware provider integration, schema
+  migration, DMS work, duplicate UX work, report work, or final audit work.
+
+### Outcome
+
+- Status: Portal attachment follow-up reviewed complete.
+- Next: Reports/business-fit gap closure.

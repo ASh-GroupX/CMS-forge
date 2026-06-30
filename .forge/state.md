@@ -1,8 +1,8 @@
 # Current State
 
-Status: Portal attachment follow-up built, reviewer pending
-Phase: portal-attachment-follow-up
-Next Task: Portal attachment follow-up reviewer stop
+Status: Portal attachment follow-up reviewed complete
+Phase: portal-attachment-follow-up-review
+Next Task: Reports/business-fit gap closure
 Model Tier: GPT-5.5 Extra High
 
 ## How to use this file
@@ -28,24 +28,26 @@ Prior state history is in .forge/archive/state-archive.md.
 - P20C and the catch-up review did not add live DMS provider calls, DMS
   writeback, provider credentials, customer portal exposure, schema migrations,
   persistence tables, or backend workflow/correction rule changes.
-- Portal attachment follow-up is built but not reviewed. It wires the existing
+- Portal attachment follow-up is reviewed complete. It wires the existing
   verified backend portal attachment upload route into the tracking follow-up UI
   through a same-origin proxy/client, with localized policy, success, validation,
   and closed-complaint states.
-- The portal attachment build did not add a portal download route, public link,
-  download token, storage key exposure, schema migration, DMS work, or backend
-  route rewrite.
+- The portal attachment build/review did not add a portal download route, public
+  link, download token, storage key exposure, schema migration, DMS work, or
+  backend route rewrite.
+- Duplicate/related complaint UX hardening is not currently re-opened: P18A
+  related complaint linking and P18B duplicate warning UI foundation are built
+  and reviewed, and the catch-up review found no blockers.
 
 ## Current Stop
 
-Ready for portal attachment follow-up reviewer stop.
+Ready for reports/business-fit gap closure.
 
 ## Open Carry-Forward / Known Debt
 
-- Portal attachment follow-up needs reviewer pass before it can be called
-  reviewed.
-- Duplicate/related UX hardening if still required, reports/business-fit
-  closure, and final audit/stabilization remain open.
+- Reports/business-fit closure and final audit/stabilization remain open.
+- If final audit finds a concrete duplicate/related complaint defect, open a
+  scoped repair task; do not re-open duplicate UX work speculatively.
 - Live DMS provider integration remains future work.
 - DMS writeback remains out of MVP unless a separate approved change request
   authorizes it; writeback endpoints must remain absent or disabled.
