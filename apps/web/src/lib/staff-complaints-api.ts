@@ -84,6 +84,7 @@ export type StaffComplaintCreateRequest = {
   customerName: string;
   customerPhone?: string | null;
   customerNumber?: string | null;
+  customerSource?: ComplaintDetail['customerSource'];
   categoryId: string;
   subcategoryId: string;
   description: string;
@@ -93,6 +94,12 @@ export type StaffComplaintCreateRequest = {
   vehicleRelated?: boolean;
   vehicleVin?: string | null;
   vehicleId?: string | null;
+  vehiclePlate?: string | null;
+  vehicleBrand?: string | null;
+  vehicleModel?: string | null;
+  vehicleModelYear?: number | null;
+  vehicleSource?: ComplaintDetail['vehicleSource'];
+  vehicleDataUnavailableReason?: string | null;
 };
 
 export type StaffComplaintCreateResponse = {
@@ -119,8 +126,45 @@ export type StaffComplaintCorrectionResponse = {
   };
 };
 
+export type DmsLookupStatus = 'MATCH' | 'MULTIPLE_MATCHES' | 'NOT_FOUND' | 'PROVIDER_DOWN' | 'DISABLED';
+export const DMS_DOWN_STATUS: DmsLookupStatus = 'PROVIDER_DOWN';
+
+export type DmsCustomerVehicleMatch = {
+  customerCode?: string;
+  customerName: string;
+  primaryPhone: string;
+  secondaryPhone?: string;
+  vin?: string;
+  plateNumber?: string;
+  brand?: string;
+  model?: string;
+  modelYear?: number;
+  saleDate?: string;
+  warrantyStatus?: string;
+  serviceBranch?: string;
+  salesBranch?: string;
+  source: 'DMS';
+};
+
+export type DmsLookupResult = {
+  action: 'customerVehicleLookup';
+  result: DmsLookupStatus;
+  latencyMs: number;
+  correlationId: string;
+  manualFallbackAllowed: boolean;
+  matches: DmsCustomerVehicleMatch[];
+};
+
+export type StaffDmsLookupQuery = {
+  phone?: string | null;
+  customerNumber?: string | null;
+  vin?: string | null;
+  name?: string | null;
+};
+
 type ComplaintQueueResponse = { items: ComplaintQueueItem[] };
 type ComplaintDetailResponse = { complaint: ComplaintDetail };
+type DmsLookupResponse = { lookup: DmsLookupResult };
 type ErrorEnvelope = { error?: { code?: string; message?: string; correlationId?: string | null; fieldErrors?: StaffApiFieldError[] } };
 
 export function listStaffComplaints(fetchImpl: typeof fetch = fetch): Promise<StaffApiResult<ComplaintQueueResponse>> {
@@ -158,6 +202,19 @@ export function correctStaffComplaint(
   });
 }
 
+export function lookupStaffDmsCustomerVehicle(
+  query: StaffDmsLookupQuery,
+  fetchImpl: typeof fetch = fetch,
+): Promise<StaffApiResult<DmsLookupResponse>> {
+  const params = new URLSearchParams();
+  appendQuery(params, 'phone', query.phone);
+  appendQuery(params, 'customerNumber', query.customerNumber);
+  appendQuery(params, 'vin', query.vin);
+  appendQuery(params, 'name', query.name);
+  const suffix = params.size ? `?${params.toString()}` : '';
+  return requestJson(`/api/integrations/dms/customer-vehicle${suffix}`, fetchImpl);
+}
+
 async function requestJson<T>(path: string, fetchImpl: typeof fetch, init?: RequestInit): Promise<StaffApiResult<T>> {
   try {
     const response = await fetchImpl(path, {
@@ -183,6 +240,11 @@ async function requestJson<T>(path: string, fetchImpl: typeof fetch, init?: Requ
 function csrfHeaders(): HeadersInit {
   const csrfToken = readableCookie('cms_csrf_token');
   return csrfToken ? { 'content-type': 'application/json', 'x-csrf-token': csrfToken } : { 'content-type': 'application/json' };
+}
+
+function appendQuery(params: URLSearchParams, key: keyof StaffDmsLookupQuery, value: string | null | undefined) {
+  const text = typeof value === 'string' ? value.trim() : '';
+  if (text) params.set(key, text);
 }
 
 function readableCookie(name: string): string | null {

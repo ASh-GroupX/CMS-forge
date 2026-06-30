@@ -10975,3 +10975,103 @@ Implemented the scoped server-side permission guard foundation:
 
 - Status: P20B reviewed complete.
 - Next: P20C Staff DMS Lookup UI.
+
+## 2026-06-30 - P20C Staff DMS Lookup UI Build
+
+### Scope
+
+- Wired the P20B staff DMS lookup API into the staff complaint intake and
+  provenance correction UI.
+- Added a same-origin web proxy for
+  `/api/integrations/dms/customer-vehicle` that forwards only `phone`,
+  `customerNumber`, `vin`, and `name` plus the staff session cookie.
+- Rebuilt the customer/vehicle lookup surface as an interactive client
+  component with loading, idle, match, multiple-match, not-found,
+  provider-down, disabled, validation, denied, error, selected, and manual
+  fallback states.
+- Added a staff intake workspace so selected DMS matches prefill safe visible
+  customer/vehicle fields and submit source metadata through the existing staff
+  complaint create contract.
+- Embedded the lookup in the provenance correction panel while keeping DMS
+  values as source metadata only. The correction UI still writes through the
+  reviewed P19B correction endpoint with reason and `expectedUpdatedAt`.
+- Updated English and Arabic copy, API-client tests, shell tests, visual cases,
+  and accessibility cases for the lookup outcomes.
+
+### SRS Coverage
+
+- `REQ-CUSTOMER-001`: staff can search by phone, customer number, VIN, or name
+  and can keep manual fallback when no usable DMS match is selected.
+- `DMS-MAP-001`: lookup outcomes distinguish DMS/local/manual provenance and
+  expose read-only DMS matches without writeback.
+- `DATA-AUTO-001`: selected DMS matches carry safe automotive customer/vehicle
+  fields into intake metadata and correction provenance.
+- `UI-SCREEN-001` and `UI-DESIGN-001`: intake and correction screens include
+  localized, RTL/LTR aware lookup states with visible success, warning,
+  validation, error, and fallback handling.
+- `NFR-SEC-002`: frontend code has no provider credentials, no direct DMS
+  provider calls, no raw provider payload handling, and no role/branch/workflow
+  authority.
+- `API-STANDARD-001`: API-client/proxy tests cover the same-origin route and
+  validation/denial/error state mapping.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input:
+  Passed. The lookup proxy accepts no role, branch, actor, or workflow query
+  fields, and tests assert spoofed fields are dropped.
+- State changes, status history, and audit transaction: Passed by boundary. P20C
+  adds no DMS mutation or writeback. Intake and correction continue to use the
+  existing backend routes for writes.
+- No passwords, OTPs, tokens, hashes, provider secrets, or credentials are
+  logged or returned: Passed. The proxy only forwards the staff session cookie
+  to the backend and tests cover dropped password/credential-shaped query data.
+- Customer portal exposure rules hold: Passed by scope. No portal route or
+  portal component was changed.
+- Trust boundaries are tested: Passed. API-client tests cover same-origin lookup
+  and proxy allowlisting; shell tests cover no client authority and source
+  metadata behavior.
+
+### Skipped Work
+
+- No live DMS provider, provider SDK, provider credentials, or direct browser
+  DMS call.
+- No DMS writeback endpoint, DMS mutation, sync job, schema migration, or DMS
+  persistence table.
+- No customer portal DMS exposure.
+- No backend workflow/correction rule changes.
+- No P18B/P19B/P19C reviewer catch-up inside this build commit.
+- No claim that P20C is reviewed.
+
+### Verification
+
+- Passed: `corepack pnpm test:web -- api-client` (23/23 TAP tests passed).
+- Failed then fixed: `corepack pnpm test:web -- shell` initially caught a
+  password-reset text assertion collision and hidden-input attribute-order test
+  expectations; both were repaired.
+- Passed: `corepack pnpm test:web -- shell` (192/192 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Failed then fixed: `corepack pnpm typecheck` initially caught exact optional
+  type and vehicle-source sentinel issues; the affected types were corrected.
+- Passed: `corepack pnpm typecheck`.
+- Failed then fixed: `corepack pnpm lint` caught
+  `apps/web/src/i18n/staff-shell.ts` above the 300-line source budget; the new
+  lookup copy was compressed without changing behavior.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm web:visual-review`; generated English and Arabic
+  complaint create/detail review artifacts under `coverage/web-visual-review/`.
+- Passed: Playwright rendered the visual-review complaint create/detail
+  artifacts through a temporary local static server; console noise was limited
+  to missing `favicon.ico` on the temporary server.
+- Passed: `corepack pnpm security:check`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `git diff --check` completed with line-ending warnings only.
+- Passed: `git status --short` showed only P20C product/test/Forge files plus
+  temporary Playwright artifacts before cleanup.
+
+### Outcome
+
+- Status: P20C built, reviewer pending.
+- Next: P20C reviewer stop.

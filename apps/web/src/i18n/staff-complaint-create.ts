@@ -18,6 +18,12 @@ export const complaintCreateText = {
     error: 'Complaint could not be submitted. Review the details and try again.',
     sampleCustomer: 'Faisal Al-Otaibi',
     samplePhone: '+966500000001',
+    source: {
+      title: 'Customer and vehicle source',
+      none: 'No lookup match selected. Manual source will be submitted.',
+      dms: 'DMS match selected. DMS source will be submitted.',
+      manual: 'Manual fallback selected. Manual source will be submitted.',
+    },
   },
   ar: {
     fields: {
@@ -38,5 +44,11 @@ export const complaintCreateText = {
     error: 'تعذر إرسال الشكوى. راجع التفاصيل وحاول مرة أخرى.',
     sampleCustomer: 'فيصل العتيبي',
     samplePhone: '+966500000001',
+    source: {
+      title: 'مصدر العميل والمركبة',
+      none: 'لم يتم اختيار مطابقة بحث. سيتم إرسال المصدر اليدوي.',
+      dms: 'تم اختيار مطابقة DMS. سيتم إرسال مصدر DMS.',
+      manual: 'تم اختيار الإدخال اليدوي. سيتم إرسال المصدر اليدوي.',
+    },
   },
 } as const;

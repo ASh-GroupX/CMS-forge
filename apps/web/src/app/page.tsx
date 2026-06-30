@@ -24,9 +24,10 @@ import { getStaffQueueItems } from '../lib/staff-queue-api';
 import { getStaffSessionPrincipal } from '../lib/staff-session-api';
 import { AdminSurfaces, type AdminPreviewState } from './admin-surfaces';
 import { ComplaintDetailWorkspace, type ComplaintCommentsPreviewState, type ComplaintDetailPreviewState, type ComplaintWorkflowPreviewState } from './complaint-detail-workspace';
+import { ComplaintIntakeWorkspace } from './complaint-intake-workspace';
 import { DashboardSummary, type DashboardPreviewState } from './dashboard-summary';
-import { CustomerVehicleLookup, type LookupPreviewState } from './customer-vehicle-lookup';
-import { ComplaintCreateForm, type CreateFormPreviewState } from './complaint-create-form';
+import { type LookupPreviewState } from './customer-vehicle-lookup';
+import { type CreateFormPreviewState } from './complaint-create-form';
 import { AttachmentUploadPanel, type AttachmentPreviewState } from './attachment-upload-panel';
 import { NotificationCenter, type NotificationPreviewState } from './notification-center';
 import { type ResetPreviewState } from './password-reset-panel';
@@ -166,7 +167,7 @@ function resolveReset(value: string | undefined): ResetPreviewState | undefined 
 function resolveDashboard(value: string | undefined): DashboardPreviewState | undefined { return oneOf(value, ['loading', 'empty', 'error']); }
 function resolveQueue(value: string | undefined): QueuePreviewState | undefined { return oneOf(value, ['loading', 'empty', 'error', 'success', 'conflict']); }
 function resolveDetail(value: string | undefined): ComplaintDetailPreviewState | undefined { return oneOf(value, ['loading', 'empty', 'error']); }
-function resolveLookup(value: string | undefined): LookupPreviewState | undefined { return oneOf(value, ['loading', 'none', 'error']); }
+function resolveLookup(value: string | undefined): LookupPreviewState | undefined { return oneOf(value, ['loading', 'none', 'error', 'match', 'multiple', 'down', 'disabled', 'validation', 'manual']); }
 
 function resolveCreate(value: string | undefined): CreateFormPreviewState | undefined {
   return oneOf(value, ['validation', 'success', 'error', 'loading', 'network']);
@@ -284,10 +285,9 @@ export function StaffShell({
           <NotificationCenter locale={locale} state={notificationState} />
           <WorkQueue locale={locale} rows={queueRows} state={queueState} />
           {role === 'staff' ? null : <ReportsDashboard locale={locale} rows={reportRows} state={reportsState} />}
-          <ComplaintDetailWorkspace attachmentState={attachmentState} commentsState={commentsState} detail={complaintDetail} locale={locale} state={detailState} workflowState={workflowState} />
+          <ComplaintDetailWorkspace attachmentState={attachmentState} commentsState={commentsState} detail={complaintDetail} locale={locale} lookupState={lookupState} state={detailState} workflowState={workflowState} />
           {role === 'admin' ? <AdminSurfaces locale={locale} state={adminState} /> : null}
-          <CustomerVehicleLookup locale={locale} state={lookupState} />
-          <ComplaintCreateForm locale={locale} state={createState} />
+          <ComplaintIntakeWorkspace createState={createState} locale={locale} lookupState={lookupState} />
           <AttachmentUploadPanel locale={locale} state={attachmentState} />
         </section>
       </div>

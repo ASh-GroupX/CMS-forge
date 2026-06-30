@@ -9,6 +9,7 @@ import type { StaffComplaintDetailView } from '../../lib/staff-detail-api';
 import { ComplaintAttachmentControls, type ComplaintAttachmentPreviewState } from '../complaint-attachment-controls';
 import { ComplaintCommentsPanel, type ComplaintCommentsPreviewState } from '../complaint-comments-panel';
 import { ComplaintWorkflowModal, type ComplaintWorkflowPreviewState } from '../complaint-workflow-modal';
+import type { LookupPreviewState } from '../customer-vehicle-lookup';
 import { CaseCapaPanel } from './case-capa-panel';
 import { ComplaintRelationsPanel } from './complaint-relations-panel';
 import { ProvenanceCorrectionPanel } from './provenance-correction-panel';
@@ -23,6 +24,7 @@ export function ComplaintDetailWorkspace({
   commentsState,
   detail,
   locale,
+  lookupState,
   relations,
   staff,
   state,
@@ -32,6 +34,7 @@ export function ComplaintDetailWorkspace({
   commentsState?: ComplaintCommentsPreviewState | undefined;
   detail?: StaffComplaintDetailView | undefined;
   locale: Locale;
+  lookupState?: LookupPreviewState | undefined;
   relations?: StaffComplaintRelationsView | undefined;
   staff?: AssignableStaff[] | null | undefined;
   state?: ComplaintDetailPreviewState | undefined;
@@ -82,7 +85,7 @@ export function ComplaintDetailWorkspace({
               [t.labels.manualVehicle, provenance?.manualVehicle ?? t.values.manualVehicle],
               [t.labels.vehicleDataUnavailableReason, provenance?.vehicleDataUnavailableReason ?? t.values.vehicleDataUnavailableReason],
             ]} />
-            {detail ? <ProvenanceCorrectionPanel detail={detail} text={t.correction} /> : null}
+            {detail ? <ProvenanceCorrectionPanel detail={detail} locale={locale} lookupState={lookupState} text={t.correction} /> : null}
             <ComplaintRelationsPanel complaintId={detail?.id} relations={relations} text={complaintRelationsText[locale]} />
           </div>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">

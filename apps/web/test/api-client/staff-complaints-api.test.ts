@@ -3,8 +3,9 @@ import test from 'node:test';
 import { POST as proxyCorrectComplaint } from '../../src/app/api/complaints/[id]/corrections/route';
 import { POST as proxyLinkRelatedComplaint } from '../../src/app/api/complaints/[id]/related/route';
 import { POST as proxyCreateComplaint } from '../../src/app/api/complaints/route';
+import { GET as proxyLookupDmsCustomerVehicle } from '../../src/app/api/integrations/dms/customer-vehicle/route';
 import { getStaffComplaintDuplicateCandidates, getStaffComplaintRelated, linkStaffComplaintRelation } from '../../src/lib/staff-complaint-relations-api';
-import { correctStaffComplaint, createStaffComplaint, getStaffComplaint, listStaffComplaints } from '../../src/lib/staff-complaints-api';
+import { correctStaffComplaint, createStaffComplaint, getStaffComplaint, listStaffComplaints, lookupStaffDmsCustomerVehicle } from '../../src/lib/staff-complaints-api';
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' }, status });
@@ -121,6 +122,36 @@ test('linkStaffComplaintRelation posts only target id with CSRF', async () => {
   assert.deepEqual(calls[0]?.init?.headers, { Accept: 'application/json', 'content-type': 'application/json', 'x-csrf-token': 'csrf_123' });
   assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), { targetComplaintId: 'cmp_2' });
   assert.doesNotMatch(String(calls[0]?.init?.body), /branch|role|actor|workflow|token|credential/i);
+});
+
+test('lookupStaffDmsCustomerVehicle reads through the same-origin proxy without client authority', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({
+      lookup: {
+        action: 'customerVehicleLookup',
+        result: 'MATCH',
+        latencyMs: 4,
+        correlationId: 'corr_lookup',
+        manualFallbackAllowed: false,
+        matches: [{ customerCode: 'DMS-100', customerName: 'Nadia Saleh', primaryPhone: '+201001112222', vin: 'WBA12345678900001', source: 'DMS' }],
+      },
+    });
+  };
+
+  const result = await lookupStaffDmsCustomerVehicle({ phone: ' +201001112222 ', customerNumber: 'DMS-100', vin: 'wba123', name: 'Nadia' }, fetchImpl);
+
+  assert.equal(result.ok, true);
+  assert.equal(calls[0]?.init?.method, 'GET');
+  assert.equal(calls[0]?.init?.credentials, 'include');
+  assert.deepEqual(calls[0]?.init?.headers, { Accept: 'application/json' });
+  assert.match(String(calls[0]?.input), /^\/api\/integrations\/dms\/customer-vehicle\?/);
+  assert.match(String(calls[0]?.input), /phone=%2B201001112222/);
+  assert.match(String(calls[0]?.input), /customerNumber=DMS-100/);
+  assert.match(String(calls[0]?.input), /vin=wba123/);
+  assert.match(String(calls[0]?.input), /name=Nadia/);
+  assert.doesNotMatch(String(calls[0]?.input), /branch|role|actor|workflow|token|credential|password/i);
 });
 
 test('staff complaint client maps API error envelopes with correlation ids', async () => {
@@ -339,6 +370,46 @@ test('complaint create proxy forwards body, session cookie, and CSRF to the API'
       cookie: 'cms_staff_session=raw-session',
       'x-csrf-token': 'csrf_123',
     });
+  } finally {
+    globalThis.fetch = priorFetch;
+    if (priorApiUrl === undefined) delete process.env.API_URL;
+    else process.env.API_URL = priorApiUrl;
+  }
+});
+
+test('staff DMS lookup proxy forwards only safe query fields and the session cookie', async () => {
+  const priorFetch = globalThis.fetch;
+  const priorApiUrl = process.env.API_URL;
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  globalThis.fetch = (async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({
+      lookup: {
+        action: 'customerVehicleLookup',
+        result: 'NOT_FOUND',
+        latencyMs: 3,
+        correlationId: 'corr_lookup',
+        manualFallbackAllowed: true,
+        matches: [],
+      },
+    });
+  }) as typeof fetch;
+  process.env.API_URL = 'http://api.test';
+
+  try {
+    const response = await proxyLookupDmsCustomerVehicle(new Request('http://web.test/api/integrations/dms/customer-vehicle?phone=%2B201001112222&customerNumber=DMS-100&vin=WBA123&name=Nadia&role=admin&branchId=branch_1&password=leaked', {
+      headers: { cookie: 'cms_staff_session=raw-session' },
+      method: 'GET',
+    }));
+
+    assert.equal(response.status, 200);
+    assert.equal(String(calls[0]?.input), 'http://api.test/integrations/dms/customer-vehicle?phone=%2B201001112222&customerNumber=DMS-100&vin=WBA123&name=Nadia');
+    assert.equal(calls[0]?.init?.method, 'GET');
+    assert.deepEqual(Object.fromEntries(new Headers(calls[0]?.init?.headers).entries()), {
+      accept: 'application/json',
+      cookie: 'cms_staff_session=raw-session',
+    });
+    assert.doesNotMatch(String(calls[0]?.input), /role|branchId|actor|workflow|token|credential|password|leaked/i);
   } finally {
     globalThis.fetch = priorFetch;
     if (priorApiUrl === undefined) delete process.env.API_URL;

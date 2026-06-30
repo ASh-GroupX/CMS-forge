@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { buildStaffComplaintCreateSubmission } from '../../src/app/complaint-create-form';
+import { buildStaffComplaintCreateSubmission, ComplaintCreateForm } from '../../src/app/complaint-create-form';
 import StaffShellPage from '../../src/app/page';
 import DashboardPage from '../../src/app/(staff)/dashboard/page';
 import EmployeeTodayPage from '../../src/app/(staff)/tasks/today/page';
@@ -2380,21 +2380,23 @@ test('customer vehicle lookup renders search fields and manual fallback', async 
 
   assert.match(html, /Customer and vehicle lookup/);
   assert.match(html, /Phone/);
-  assert.match(html, /Customer code/);
+  assert.match(html, /Customer number/);
   assert.match(html, /Customer name/);
   assert.match(html, /VIN/);
-  assert.match(html, /Plate number/);
+  assert.match(html, /Search DMS/);
   assert.match(html, /Manual fallback/);
   assert.match(html, /Continue manually/);
 });
 
-test('customer vehicle lookup sample result uses safe source badges only', async () => {
+test('customer vehicle lookup idle result uses safe source badges only', async () => {
   const html = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
 
+  assert.match(html, /Enter phone, customer number, customer name, or VIN to search DMS\./);
   assert.match(html, /Local source/);
   assert.match(html, /DMS source/);
-  assert.match(html, /Matched customer placeholder/);
-  assert.match(html, /Vehicle profile placeholder/);
+  assert.match(html, /Manual source/);
+  assert.doesNotMatch(html, /Matched customer placeholder/);
+  assert.doesNotMatch(html, /Vehicle profile placeholder/);
   assert.doesNotMatch(html, /@/);
   assert.doesNotMatch(html, /\b\+?\d{10,}\b/);
   assert.doesNotMatch(html, /DMS-[A-Z0-9]+/);
@@ -2405,17 +2407,30 @@ test('Arabic customer vehicle lookup keeps RTL localized labels', async () => {
 
   assert.match(html, /dir="rtl"/);
   assert.ok(html.includes(staffShellText.ar.lookup.title));
-  assert.ok(html.includes(staffShellText.ar.lookup.fields.customerCode));
+  assert.ok(html.includes(staffShellText.ar.lookup.fields.customerNumber));
   assert.ok(html.includes(staffShellText.ar.lookup.manualTitle));
 });
 
-test('customer vehicle lookup preview states render loading no-match and error messages', async () => {
+test('customer vehicle lookup preview states render lookup outcomes and errors', async () => {
   const loading = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ lookup: 'loading' }) }));
   const none = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ lookup: 'none' }) }));
+  const match = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ lookup: 'match' }) }));
+  const multiple = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ lookup: 'multiple' }) }));
+  const down = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ lookup: 'down' }) }));
+  const disabled = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ lookup: 'disabled' }) }));
+  const validation = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ lookup: 'validation' }) }));
   const error = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ lookup: 'error' }) }));
 
   assert.match(loading, /Searching customer and vehicle records\./);
   assert.match(none, /No match found\. Continue with manual entry\./);
+  assert.match(match, /One DMS match found\. Review it before applying\./);
+  assert.match(match, /Use this match/);
+  assert.match(match, /CUST-100/);
+  assert.match(multiple, /Multiple DMS matches found\. Select the correct customer and vehicle\./);
+  assert.match(multiple, /CUST-101/);
+  assert.match(down, /DMS is unavailable\. Continue manually or try again\./);
+  assert.match(disabled, /DMS lookup is disabled\. Continue manually\./);
+  assert.match(validation, /Enter at least one search value\./);
   assert.match(error, /Lookup could not be completed\. Continue manually or try again\./);
   assert.match(error, /role="alert"/);
 });
@@ -2427,12 +2442,13 @@ test('complaint new route renders English customer vehicle lookup panel', async 
 
   assert.match(html, /Customer and vehicle lookup/);
   assert.match(html, /Phone/);
-  assert.match(html, /Customer code/);
+  assert.match(html, /Customer number/);
   assert.match(html, /Customer name/);
   assert.match(html, /VIN/);
-  assert.match(html, /Plate number/);
+  assert.match(html, /Search DMS/);
   assert.match(html, /Local source/);
   assert.match(html, /DMS source/);
+  assert.match(html, /Manual source/);
   assert.match(html, /Manual fallback/);
   assert.match(html, /Continue manually/);
 });
@@ -2444,7 +2460,7 @@ test('complaint new route keeps Arabic RTL lookup labels', async () => {
 
   assert.match(html, /dir="rtl"/);
   assert.ok(html.includes(staffShellText.ar.lookup.title));
-  assert.ok(html.includes(staffShellText.ar.lookup.fields.plate));
+  assert.ok(html.includes(staffShellText.ar.lookup.fields.customerNumber));
   assert.ok(html.includes(staffShellText.ar.lookup.states.none));
 });
 
@@ -2656,6 +2672,72 @@ test('complaint create form builds the backend request without client authority 
   assert.equal('branchId' in body, false);
   assert.equal('token' in body, false);
   assert.equal('credentials' in body, false);
+});
+
+test('complaint create form uses selected DMS match as source metadata', () => {
+  const match = {
+    customerCode: 'CUST-100',
+    customerName: 'Nadia Saleh',
+    primaryPhone: '+201001112222',
+    vin: 'WBA12345678900001',
+    plateNumber: 'EG-123',
+    brand: 'Toyota',
+    model: 'Corolla',
+    modelYear: 2023,
+    source: 'DMS' as const,
+  };
+  const html = renderToStaticMarkup(
+    React.createElement(ComplaintCreateForm, { locale: 'en', lookupSelection: { source: 'DMS', match } }),
+  );
+
+  assert.match(html, /DMS match selected\. DMS source will be submitted\./);
+  assert.match(html, /value="Nadia Saleh"/);
+  assert.match(html, /value="\+201001112222"/);
+  assert.match(html, /value="CUST-100"/);
+  assert.match(html, /value="WBA12345678900001"/);
+  assert.match(html, /type="hidden" name="customerSource" value="DMS"/);
+  assert.match(html, /type="hidden" name="vehicleSource" value="DMS"/);
+
+  const formData = new FormData();
+  formData.set('customerName', match.customerName);
+  formData.set('customerPhone', match.primaryPhone);
+  formData.set('customerNumber', match.customerCode);
+  formData.set('customerSource', 'DMS');
+  formData.set('categoryId', 'cat_parent');
+  formData.set('subcategoryId', 'cat_engine');
+  formData.set('description', 'Engine makes a knocking noise.');
+  formData.set('incidentAt', '2026-06-19');
+  formData.set('subject', 'Engine noise');
+  formData.set('severity', 'HIGH');
+  formData.set('branchId', 'branch_main');
+  formData.set('vehicleRelated', 'on');
+  formData.set('vehicleVin', match.vin);
+  formData.set('vehiclePlate', match.plateNumber);
+  formData.set('vehicleBrand', match.brand);
+  formData.set('vehicleModel', match.model);
+  formData.set('vehicleModelYear', String(match.modelYear));
+  formData.set('vehicleSource', 'DMS');
+
+  assert.deepEqual(buildStaffComplaintCreateSubmission(formData).complaint, {
+    customerName: 'Nadia Saleh',
+    customerPhone: '+201001112222',
+    customerNumber: 'CUST-100',
+    customerSource: 'DMS',
+    categoryId: 'cat_parent',
+    subcategoryId: 'cat_engine',
+    description: 'Engine makes a knocking noise.',
+    incidentAt: '2026-06-19T00:00:00.000Z',
+    subject: 'Engine noise',
+    severity: 'HIGH',
+    vehicleRelated: true,
+    vehicleVin: 'WBA12345678900001',
+    vehicleId: null,
+    vehiclePlate: 'EG-123',
+    vehicleBrand: 'Toyota',
+    vehicleModel: 'Corolla',
+    vehicleModelYear: 2023,
+    vehicleSource: 'DMS',
+  });
 });
 
 test('complaint create form source submits only through the staff write helper', () => {

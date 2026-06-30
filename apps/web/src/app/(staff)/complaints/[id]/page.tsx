@@ -6,6 +6,7 @@ import {
   type ComplaintDetailPreviewState,
   type ComplaintWorkflowPreviewState,
 } from '../../../../components/complaint-detail-workspace';
+import type { LookupPreviewState } from '../../../../components/customer-vehicle-lookup';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { getAssignableStaff } from '../../../../lib/staff-assignable-staff-api';
 import { getStaffComplaintRelationsView } from '../../../../lib/staff-complaint-relations-api';
@@ -17,6 +18,7 @@ type SearchParams = {
   comments?: string | string[];
   detail?: string | string[];
   locale?: string | string[];
+  lookup?: string | string[];
   workflow?: string | string[];
 };
 
@@ -50,6 +52,7 @@ export default async function ComplaintDetailPage({
       commentsState={resolveDetail(readParam(query?.comments))}
       detail={detail ?? undefined}
       locale={resolveLocale(readParam(query?.locale))}
+      lookupState={resolveLookup(readParam(query?.lookup))}
       relations={relations ?? undefined}
       staff={staff}
       state={resolveDetail(readParam(query?.detail))}
@@ -74,6 +77,12 @@ function resolveAttachment(value: string | undefined): ComplaintAttachmentPrevie
 
 function resolveWorkflow(value: string | undefined): ComplaintWorkflowPreviewState | undefined {
   return value === 'loading' || value === 'empty' || value === 'error' || value === 'success' || value === 'conflict' || value === 'validation'
+    ? value
+    : undefined;
+}
+
+function resolveLookup(value: string | undefined): LookupPreviewState | undefined {
+  return value === 'loading' || value === 'none' || value === 'error' || value === 'match' || value === 'multiple' || value === 'down' || value === 'disabled' || value === 'validation' || value === 'manual'
     ? value
     : undefined;
 }
