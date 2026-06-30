@@ -1062,6 +1062,12 @@ test('complaint detail route renders real backend facts through the session cook
           updatedAt: '2026-06-19T09:30:00.000Z',
           description: 'Scoped complaint detail.',
           incidentAt: '2026-06-17T00:00:00.000Z',
+          customerSource: 'DMS',
+          manualCustomer: false,
+          vehicleRelated: true,
+          vehicleSource: 'MANUAL',
+          manualVehicle: true,
+          vehicleDataUnavailableReason: 'VIN unavailable on service invoice.',
           caseSummary: {
             id: 'case_cmp_1',
             type: 'CUSTOMER_COMPLAINT',
@@ -1221,6 +1227,12 @@ test('complaint detail route renders real backend facts through the session cook
   assert.match(html, /Owner User - CR Manager - Main Branch/);
   assert.match(html, /Parts delay/);
   assert.match(html, /Open/);
+  assert.match(html, /Customer and vehicle correction/);
+  assert.match(html, /Customer source/);
+  assert.match(html, /DMS match/);
+  assert.match(html, /Manual entry/);
+  assert.match(html, /VIN unavailable on service invoice\./);
+  assert.match(html, /Correction reason/);
   assert.match(html, /Complaint SUBMITTED - 2026-06-18/);
   assert.match(html, /SUBMITTED - 2026-06-18/);
   assert.match(html, /IN_PROGRESS - 2026-06-19/);
@@ -1287,6 +1299,7 @@ test('complaint detail workspace keeps responsive detail layout classes', async 
 
 test('complaint detail workspace source is privacy-safe and render-only', () => {
   const source = readFileSync('apps/web/src/components/complaint-detail-workspace/index.tsx', 'utf8');
+  const correctionSource = readFileSync('apps/web/src/components/complaint-detail-workspace/provenance-correction-panel.tsx', 'utf8');
   const wrapper = readFileSync('apps/web/src/app/complaint-detail-workspace.tsx', 'utf8');
   const textSource = readFileSync('apps/web/src/i18n/staff-complaint-detail.ts', 'utf8');
   const combined = `${source}\n${textSource}`;
@@ -1294,7 +1307,9 @@ test('complaint detail workspace source is privacy-safe and render-only', () => 
   assert.doesNotMatch(combined, /fetch\(|localStorage|sessionStorage|document\.cookie|https?:\/\//);
   assert.doesNotMatch(combined, /[\w.-]+@[\w.-]+/);
   assert.doesNotMatch(combined, /\b\+?\d{10,}\b/);
-  assert.doesNotMatch(combined, /DMS|audit|portal|staff PII|provider|storage URL/i);
+  assert.doesNotMatch(combined, /portal|staff PII|provider|storage URL/i);
+  assert.doesNotMatch(correctionSource, /branchId|roleCode|actorId|ownerId|workflow|password|otp|token|credential|localStorage|sessionStorage/i);
+  assert.match(correctionSource, /expectedUpdatedAt/);
   assert.match(wrapper, /components\/complaint-detail-workspace/);
 });
 

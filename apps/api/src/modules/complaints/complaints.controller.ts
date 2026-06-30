@@ -9,6 +9,8 @@ import { ComplaintRelationsService } from './complaint-relations.service.js';
 import { ComplaintsService } from './complaints.service.js';
 import type { ComplaintCommentResponseDto, ComplaintPublicCommentsResponseDto } from './dto/complaint-comment.dto.js';
 import { parseComplaintCommentBody, toCommentInput } from './dto/complaint-comment.dto.js';
+import type { ComplaintCorrectionResponseDto } from './dto/complaint-correction.dto.js';
+import { parseComplaintCorrectionBody, toComplaintCorrectionInput } from './dto/complaint-correction.dto.js';
 import type { ComplaintDetailResponseDto, ComplaintDuplicateCandidatesResponseDto, ComplaintQueueResponseDto, ComplaintRelatedResponseDto, ComplaintRelationMutationResponseDto, ComplaintSearchResponseDto } from './dto/complaint-response.dto.js';
 import type { CreateComplaintResponseDto } from './dto/create-complaint.dto.js';
 import { parseCreateComplaintBody, toCreateComplaintInput } from './dto/create-complaint.dto.js';
@@ -170,6 +172,12 @@ export class ComplaintsController {
       ),
     };
   }
+
+  @Post(':id/corrections')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard, CsrfGuard)
+  @Permissions('COMPLAINT_EDIT')
+  @BranchScoped()
+  async correct(@Param('id') id: string, @Query('branchId') branchId: string | undefined, @Body() body: unknown, @Req() request: AuthenticatedRequest): Promise<ComplaintCorrectionResponseDto> { const correctionBody = parseComplaintCorrectionBody(body); await this.complaintsService.getDetail(id, { branchId: queueBranchId(branchId, request) }); return { correction: await this.complaintsService.correctProvenance(toComplaintCorrectionInput(id, correctionBody, auditContext(request))) }; }
 
   @Post(':id/transitions')
   @UseGuards(SessionAuthGuard, DynamicPermissionGuard, RbacGuard, CsrfGuard)

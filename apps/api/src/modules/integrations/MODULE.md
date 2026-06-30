@@ -16,9 +16,11 @@ module's boundary so you can work in a fresh context without scanning the tree.
 - This module owns backend provider adapter boundaries and in-memory test doubles
   for external systems. The email provider port is available through
   `IntegrationsService`; the SMS provider port follows the same boundary-only
-  pattern; the WhatsApp provider port is also boundary-only. Provider SDKs,
-  credentials, dispatch behavior, delivery logging, routes, OpenAPI paths,
-  schema changes, and UI are added only by their scoped tasks.
+  pattern; the WhatsApp provider port is also boundary-only. The DMS lookup port
+  exposes read-only customer/vehicle lookup outcomes with safe diagnostics and an
+  in-memory test double. Provider SDKs, credentials, writeback, durable delivery
+  logging, routes, OpenAPI paths, schema changes, and UI are added only by their
+  scoped tasks.
 
 ## Owns tables
 
@@ -35,6 +37,9 @@ module's boundary so you can work in a fresh context without scanning the tree.
 ## SRS
 
 - ARCH-INTEGRATION-001
+- REQ-CUSTOMER-001
+- DMS-MAP-001
+- DATA-AUTO-001
 - REQ-NOTIFY-001
 - METHOD-API-001
 - METHOD-TEST-001

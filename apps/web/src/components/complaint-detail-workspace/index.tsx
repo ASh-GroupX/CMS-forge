@@ -11,6 +11,7 @@ import { ComplaintCommentsPanel, type ComplaintCommentsPreviewState } from '../c
 import { ComplaintWorkflowModal, type ComplaintWorkflowPreviewState } from '../complaint-workflow-modal';
 import { CaseCapaPanel } from './case-capa-panel';
 import { ComplaintRelationsPanel } from './complaint-relations-panel';
+import { ProvenanceCorrectionPanel } from './provenance-correction-panel';
 
 export type ComplaintDetailPreviewState = 'loading' | 'empty' | 'error';
 export type { ComplaintAttachmentPreviewState };
@@ -40,6 +41,7 @@ export function ComplaintDetailWorkspace({
   const t = complaintDetailText[locale];
   const values = detail ? detailValues(detail, t.values) : t.values;
   const timeline = detail ? detail.timeline : t.timeline;
+  const provenance = detail ? provenanceValues(detail, t) : null;
 
   return (
     <Card aria-label={t.title} className="rounded-md border-slate-200 bg-white shadow-sm" dir={shell.dir}>
@@ -69,11 +71,18 @@ export function ComplaintDetailWorkspace({
             <DetailPanel title={t.sections.customer} rows={[
               [t.labels.customer, t.values.customer],
               [t.labels.contact, t.values.contact],
+              [t.labels.customerSource, provenance?.customerSource ?? t.values.customerSource],
+              [t.labels.manualCustomer, provenance?.manualCustomer ?? t.values.manualCustomer],
             ]} />
             <DetailPanel title={t.sections.vehicle} rows={[
               [t.labels.vehicle, t.values.vehicle],
               [t.labels.vin, t.values.vin],
+              [t.labels.vehicleRelated, provenance?.vehicleRelated ?? t.values.vehicleRelated],
+              [t.labels.vehicleSource, provenance?.vehicleSource ?? t.values.vehicleSource],
+              [t.labels.manualVehicle, provenance?.manualVehicle ?? t.values.manualVehicle],
+              [t.labels.vehicleDataUnavailableReason, provenance?.vehicleDataUnavailableReason ?? t.values.vehicleDataUnavailableReason],
             ]} />
+            {detail ? <ProvenanceCorrectionPanel detail={detail} text={t.correction} /> : null}
             <ComplaintRelationsPanel complaintId={detail?.id} relations={relations} text={complaintRelationsText[locale]} />
           </div>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
@@ -130,6 +139,17 @@ function detailValues(detail: StaffComplaintDetailView, fallback: typeof complai
     category: detail.subject,
     owner: detail.assignee ?? fallback.owner,
     sla: detail.branch || fallback.sla,
+  };
+}
+
+function provenanceValues(detail: StaffComplaintDetailView, t: typeof complaintDetailText.en) {
+  return {
+    customerSource: t.correction.sourceLabels[detail.customerSource],
+    manualCustomer: detail.manualCustomer ? t.values.yes : t.values.no,
+    vehicleRelated: detail.vehicleRelated ? t.values.yes : t.values.no,
+    vehicleSource: t.correction.sourceLabels[detail.vehicleSource ?? 'NONE'],
+    manualVehicle: detail.manualVehicle ? t.values.yes : t.values.no,
+    vehicleDataUnavailableReason: detail.vehicleDataUnavailableReason ?? t.values.none,
   };
 }
 

@@ -1265,6 +1265,95 @@
         }
       }
     },
+    "/complaints/{id}/corrections": {
+      "post": {
+        "tags": [
+          "Complaints"
+        ],
+        "operationId": "complaintCorrectionCreate",
+        "summary": "Correct staff complaint customer and vehicle provenance",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComplaintCorrectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Complaint correction applied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintCorrectionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role, branch scope, or CSRF denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Complaint correction conflict (COMPLAINT_INVALID_TRANSITION)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/complaints/{id}": {
       "get": {
         "tags": [
@@ -9170,6 +9259,112 @@
               }
             },
             "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintCorrectionRequest": {
+        "type": "object",
+        "required": [
+          "expectedUpdatedAt",
+          "reason"
+        ],
+        "properties": {
+          "expectedUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "customerId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "customerSource": {
+            "type": "string",
+            "enum": [
+              "LOCAL",
+              "MANUAL",
+              "DMS"
+            ]
+          },
+          "manualCustomer": {
+            "type": "boolean"
+          },
+          "vehicleId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "vehicleSource": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "LOCAL",
+              "MANUAL",
+              "DMS",
+              null
+            ]
+          },
+          "manualVehicle": {
+            "type": "boolean"
+          },
+          "vehicleRelated": {
+            "type": "boolean"
+          },
+          "vehicleDataUnavailableReason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintCorrection": {
+        "type": "object",
+        "required": [
+          "complaintId",
+          "changedFields"
+        ],
+        "properties": {
+          "complaintId": {
+            "type": "string"
+          },
+          "changedFields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "customerId",
+                "customerSource",
+                "manualCustomer",
+                "vehicleId",
+                "vehicleSource",
+                "manualVehicle",
+                "vehicleRelated",
+                "vehicleDataUnavailableReason"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintCorrectionResponse": {
+        "type": "object",
+        "required": [
+          "correction"
+        ],
+        "properties": {
+          "correction": {
+            "$ref": "#/components/schemas/ComplaintCorrection"
           }
         },
         "additionalProperties": false

@@ -19,10 +19,17 @@ export type StaffComplaintDetailView = {
   capaActions: CaseCapaAction[];
   caseTimeline: string[];
   id: string;
+  updatedAt: string;
   reference: string;
   severity: string;
   status: string;
   subject: string;
+  customerSource: ComplaintDetail['customerSource'];
+  manualCustomer: boolean;
+  vehicleRelated: boolean;
+  vehicleSource: ComplaintDetail['vehicleSource'];
+  manualVehicle: boolean;
+  vehicleDataUnavailableReason: string | null;
   timeline: string[];
 };
 
@@ -141,10 +148,17 @@ function viewFromDetail(detail: ComplaintDetail, caseTimeline: string[], capaAct
     capaActions,
     caseTimeline,
     id: detail.id,
+    updatedAt: detail.updatedAt,
     reference: detail.referenceNumber,
     severity: detail.severity,
     status: detail.status,
     subject: detail.subject,
+    customerSource: detail.customerSource,
+    manualCustomer: detail.manualCustomer,
+    vehicleRelated: detail.vehicleRelated,
+    vehicleSource: detail.vehicleSource,
+    manualVehicle: detail.manualVehicle,
+    vehicleDataUnavailableReason: detail.vehicleDataUnavailableReason,
     timeline: detail.statusHistory.map((item) => `${item.toStatus} - ${item.createdAt.slice(0, 10)}`),
   };
 }

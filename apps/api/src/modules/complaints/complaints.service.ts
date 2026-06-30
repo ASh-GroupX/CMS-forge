@@ -8,6 +8,8 @@ import { CasesService } from '../cases/cases.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { SlaService } from '../sla/sla.service.js';
 import { complaintCreatedAudit, createComplaintData, isReferenceConflict, referenceConflictError } from './complaint-intake.js';
+import { complaintCorrectionAudit, complaintCorrectionData, correctionConflictError } from './complaint-correction.js';
+import type { ApplyComplaintCorrectionInput, ApplyComplaintCorrectionResult } from './complaint-correction.js';
 import { queueWorkflowSideEffects } from './complaint-workflow-side-effects.js';
 import { ComplaintsRepository } from './complaints.repository.js';
 import type { ComplaintCommentRecord, ComplaintDetailRecord, ComplaintQueueRecord, ComplaintReportFilter, ComplaintReportRecord, ComplaintSearchRecord, ComplaintStatusRecord, ComplaintTransitionSubject, DataSource, PortalVerificationTargetRecord } from './complaints.repository.js';
@@ -115,15 +117,11 @@ export class ComplaintsService {
 
   async search(input: ComplaintSearchInput = {}): Promise<ComplaintSearchRow[]> { return (await this.complaintsRepository.search(input)).map(searchItem); }
 
-  async findPortalVerificationTarget(referenceNumber: string, customerPhone: string): Promise<PortalVerificationTargetRecord | null> {
-    return this.complaintsRepository.findPortalVerificationTarget(referenceNumber.trim(), customerPhone.trim());
-  }
+  async findPortalVerificationTarget(referenceNumber: string, customerPhone: string): Promise<PortalVerificationTargetRecord | null> { return this.complaintsRepository.findPortalVerificationTarget(referenceNumber.trim(), customerPhone.trim()); }
 
-  async getDetail(id: string, filter: ComplaintQueueFilter = {}): Promise<ComplaintDetailDto> {
-    const complaint = await this.complaintsRepository.findDetail(id, filter);
-    if (!complaint) throw new AppException('COMPLAINT_NOT_FOUND', 'Complaint not found', HttpStatus.NOT_FOUND);
-    return { ...detailItem(complaint), caseSummary: await this.complaintCaseSummary(complaint.id) };
-  }
+  async getDetail(id: string, filter: ComplaintQueueFilter = {}): Promise<ComplaintDetailDto> { const complaint = await this.complaintsRepository.findDetail(id, filter); if (!complaint) throw new AppException('COMPLAINT_NOT_FOUND', 'Complaint not found', HttpStatus.NOT_FOUND); return { ...detailItem(complaint), caseSummary: await this.complaintCaseSummary(complaint.id) }; }
+
+  async correctProvenance(input: ApplyComplaintCorrectionInput): Promise<ApplyComplaintCorrectionResult> { const data = complaintCorrectionData(input); return this.complaintsRepository.transaction(async (client) => { const complaint = await this.complaintsRepository.updateCorrection(data, client); if (!complaint) throw correctionConflictError(); await this.auditService.record(complaintCorrectionAudit(input, complaint.branchId, data.changedFields), client); return { complaintId: complaint.id, changedFields: data.changedFields }; }); }
 
   async createComment(input: CreateComplaintCommentInput): Promise<ComplaintCommentResult> {
     const body = nonEmpty(input.body, 'body');

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { CommentVisibility, ComplaintSeverity, ComplaintStatus, ComplaintTransitionAction, ComplaintTransitionRequestSource, Prisma, RoleCode } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
+import type { ComplaintCorrectionData, ComplaintCorrectionRecord } from './complaint-correction.js';
 import { nextReferenceNumber, upsertVehicle } from './complaint-reference.repository.js';
 import type { ComplaintReferenceClient } from './complaint-reference.repository.js';
 
@@ -84,9 +85,7 @@ export type CreateComplaintCommentData = { complaintId: string; authorId?: strin
 export class ComplaintsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async transaction<T>(work: (client: Prisma.TransactionClient) => Promise<T>): Promise<T> {
-    return this.prisma.$transaction(work);
-  }
+  async transaction<T>(work: (client: Prisma.TransactionClient) => Promise<T>): Promise<T> { return this.prisma.$transaction(work); }
 
   async nextReferenceNumber(branchId: string, at: Date, client: ComplaintTransitionClient = this.prisma): Promise<string> {
     return nextReferenceNumber(branchId, at, client);
@@ -213,10 +212,9 @@ export class ComplaintsRepository {
     });
   }
 
-  async updateStatus(
-    data: UpdateComplaintStatusData,
-    client: ComplaintTransitionClient = this.prisma,
-  ): Promise<ComplaintStatusRecord | null> {
+  async updateCorrection(data: ComplaintCorrectionData, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintCorrectionRecord | null> { const update = await client.complaint.updateMany({ where: { id: data.complaintId, updatedAt: data.expectedUpdatedAt }, data: correctionUpdateData(data) }); return update.count === 0 ? null : client.complaint.findUniqueOrThrow({ where: { id: data.complaintId }, select: { id: true, branchId: true } }); }
+
+  async updateStatus(data: UpdateComplaintStatusData, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintStatusRecord | null> {
     const referenceNumber = await submittedReference(data, client);
     const updateData = {
       status: data.toStatus,
@@ -243,12 +241,7 @@ export class ComplaintsRepository {
     });
   }
 
-  async createStatusHistory(
-    data: CreateComplaintStatusHistoryData,
-    client: ComplaintTransitionClient = this.prisma,
-  ): Promise<void> {
-    await client.complaintStatusHistory.create({ data });
-  }
+  async createStatusHistory(data: CreateComplaintStatusHistoryData, client: ComplaintTransitionClient = this.prisma): Promise<void> { await client.complaintStatusHistory.create({ data }); }
 }
 
 const complaintSelect = { id: true, referenceNumber: true, branchId: true, status: true, subject: true, severity: true } satisfies Prisma.ComplaintSelect;
@@ -264,6 +257,21 @@ async function submittedReference(data: UpdateComplaintStatusData, client: Compl
   return nextReferenceNumber(complaint.branchId, new Date(), client);
 }
 const commentSelect = { id: true, complaintId: true, authorId: true, body: true, visibility: true, createdAt: true } satisfies Prisma.CommentSelect;
+
+function correctionUpdateData(data: ComplaintCorrectionData): Prisma.ComplaintUncheckedUpdateManyInput {
+  const update: Prisma.ComplaintUncheckedUpdateManyInput = { version: { increment: 1 } };
+  if (has(data, 'customerId')) update.customerId = data.customerId;
+  if (has(data, 'customerDataSource')) update.customerDataSource = data.customerDataSource;
+  if (has(data, 'manualCustomerFlag')) update.manualCustomerFlag = data.manualCustomerFlag;
+  if (has(data, 'vehicleId')) update.vehicleId = data.vehicleId;
+  if (has(data, 'vehicleDataSource')) update.vehicleDataSource = data.vehicleDataSource;
+  if (has(data, 'manualVehicleFlag')) update.manualVehicleFlag = data.manualVehicleFlag;
+  if (has(data, 'vehicleRelated')) update.vehicleRelated = data.vehicleRelated;
+  if (has(data, 'vehicleDataUnavailableReason')) update.vehicleDataUnavailableReason = data.vehicleDataUnavailableReason;
+  return update;
+}
+
+function has<T extends object, K extends PropertyKey>(value: T, key: K): value is T & Record<K, never> { return Object.prototype.hasOwnProperty.call(value, key); }
 
 function reportWhere(filter: ComplaintReportFilter): Prisma.ComplaintWhereInput {
   return {

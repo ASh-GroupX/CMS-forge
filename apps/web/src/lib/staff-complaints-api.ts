@@ -99,6 +99,26 @@ export type StaffComplaintCreateResponse = {
   complaint: Pick<ComplaintQueueItem, 'id' | 'referenceNumber' | 'status'>;
 };
 
+export type StaffComplaintCorrectionRequest = {
+  expectedUpdatedAt: string;
+  reason: string;
+  customerId?: string;
+  customerSource?: ComplaintDetail['customerSource'];
+  manualCustomer?: boolean;
+  vehicleId?: string | null;
+  vehicleSource?: ComplaintDetail['vehicleSource'];
+  manualVehicle?: boolean;
+  vehicleRelated?: boolean;
+  vehicleDataUnavailableReason?: string | null;
+};
+
+export type StaffComplaintCorrectionResponse = {
+  correction: {
+    complaintId: string;
+    changedFields: Array<keyof Omit<StaffComplaintCorrectionRequest, 'expectedUpdatedAt' | 'reason'>>;
+  };
+};
+
 type ComplaintQueueResponse = { items: ComplaintQueueItem[] };
 type ComplaintDetailResponse = { complaint: ComplaintDetail };
 type ErrorEnvelope = { error?: { code?: string; message?: string; correlationId?: string | null; fieldErrors?: StaffApiFieldError[] } };
@@ -121,6 +141,18 @@ export function createStaffComplaint(
 ): Promise<StaffApiResult<StaffComplaintCreateResponse>> {
   return requestJson(`/api/complaints?branchId=${encodeURIComponent(branchId)}`, fetchImpl, {
     body: JSON.stringify(complaint),
+    headers: csrfHeaders(),
+    method: 'POST',
+  });
+}
+
+export function correctStaffComplaint(
+  complaintId: string,
+  correction: StaffComplaintCorrectionRequest,
+  fetchImpl: typeof fetch = fetch,
+): Promise<StaffApiResult<StaffComplaintCorrectionResponse>> {
+  return requestJson(`/api/complaints/${encodeURIComponent(complaintId)}/corrections`, fetchImpl, {
+    body: JSON.stringify(correction),
     headers: csrfHeaders(),
     method: 'POST',
   });

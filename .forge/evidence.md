@@ -10208,3 +10208,577 @@ Implemented the scoped server-side permission guard foundation:
 
 - Status: P19A complete.
 - Next: P19A reviewer stop.
+
+## 2026-06-30 - P19A Reviewer Stop
+
+### Findings
+
+- No blocking findings.
+
+### Review Notes
+
+- Phase 18 is recorded as built with reviewer stop skipped by user, not
+  reviewed; this review did not retro-review Phase 18 except where portal and
+  relation work touched the P19A privacy surface.
+- Manual complaint creation still supports no-provider/manual paths:
+  `complaint-intake.ts` defaults customer source to `MANUAL` without a customer
+  number and vehicle source to `MANUAL` when no local vehicle id is present;
+  `complaints.repository.ts` persists those fields with the complaint.
+- DMS-shaped P19A fields are provenance metadata only. Review found enum/source
+  persistence and OpenAPI schema changes, but no live DMS provider call, DMS
+  writeback endpoint, provider secret handling, or frontend DMS call in the
+  P19A path.
+- Vehicle-related close validation is in the shared backend transition path:
+  `complaints.service.ts` checks the complaint before `updateStatus`, history,
+  audit, or after-commit side effects. Close with an input or already-persisted
+  unavailable reason is allowed.
+- Audit metadata remains bounded to reference/status/severity/source/manual
+  flags and unavailable-reason presence; workflow audit metadata does not carry
+  the free-text unavailable reason, VIN, plate, DMS code, raw request body, OTP,
+  token, credentials, or provider payload.
+- Portal tracking projects only reference/status/timestamps/public timeline
+  fields from `portal.service.ts`; the portal regression fixture includes
+  provenance internals, DMS-shaped fields, staff PII, audit internals, tokens,
+  and unrelated complaints and confirms they are not returned.
+- Staff-facing create/detail/transition DTOs and OpenAPI/canonical contracts
+  include the changed provenance fields. Portal contracts do not expose them.
+- The missing customer/vehicle correction workflow is recorded as a gap and was
+  not invented in P19A.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty P19A worktree at review start;
+  after the proof run, the worktree was clean before Forge-only review updates.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- complaints` (63/63 TAP tests passed).
+- Passed: `corepack pnpm test:api -- workflow` (63/63 TAP tests passed).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm prisma:validate`.
+- Passed: `corepack pnpm --dir packages/database generate`.
+- Passed: `corepack pnpm db:migrate:test`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P19A reviewed complete.
+- Next: Next-phase planning/audit stop.
+
+## 2026-06-30 - Next-Phase Planning After P19A Review
+
+### Scope
+
+- Planned the next phase after P19A reviewed complete.
+- Product code was not changed.
+- Phase 18 remains built with reviewer stop skipped by user; it is not called
+  reviewed.
+
+### Ranking
+
+1. Staff customer/vehicle correction workflow using P19A provenance fields.
+   Chosen as P19B because `DATA-AUTO-001` requires customer/vehicle corrections
+   after submission to be audit logged, `REQ-RESOLUTION-001` allows authorized
+   administrative correction flows even when closed complaints are otherwise
+   read-only, and P19A already supplied the provenance data needed for the
+   workflow.
+2. Portal attachment follow-up completion. This is still MVP-relevant through
+   `REQ-PORTAL-001`, `REQ-PORTAL-002`, `REQ-FILES-001`, and `PORTAL-SEC-001`,
+   but it is less directly enabled by P19A and parts of the backend attachment
+   surface already exist.
+3. Staff UI provenance visibility/edit proof. Important for `DATA-AUTO-001` AC4
+   and `UI-007`, but UI should follow a reviewed backend correction authority,
+   not invent workflow logic in React.
+4. Phase 18 reviewer catch-up. Useful process debt, but not a larger product
+   slice and not a stronger business-fit gap than audited correction.
+5. Live DMS adapter planning/build foundation. Valuable later for
+   `DMS-MAP-001`, but higher integration risk and not as immediate as making
+   stored provenance correctable. DMS writeback is explicitly not allowed in MVP.
+6. Remaining reports/duplicate/business-fit work. Reports are important
+   (`REQ-REPORT-001`), but correction is narrower and closes a known P19A/SRS
+   gap first. Advanced duplicate matching remains a non-goal.
+
+### Chosen Phase
+
+- Name: P19B - Staff customer/vehicle correction workflow backend.
+- Risk: High.
+- Required model tier: GPT-5.5 Extra High.
+- SRS IDs: `REQ-CUSTOMER-001`, `DATA-AUTO-001`, `DMS-MAP-001`,
+  `REQ-RESOLUTION-001`, `REQ-AUDIT-001`, `NFR-SEC-002`,
+  `API-STANDARD-001`.
+
+### Assumptions
+
+- P19B should be backend-only: staff API, service/repository behavior,
+  DTO/contract update, audit, and tests.
+- The correction workflow should use server-session role and branch scope only.
+- Manual fallback remains valid; no DMS/provider data is required to correct a
+  complaint.
+- Correction audit metadata should record changed field names and reason
+  presence, not raw free text, identifiers, provider payloads, or request bodies.
+- Optimistic concurrency is required for correction writes because
+  `API-STANDARD-001` forbids silent last-write-wins complaint updates.
+
+### Skipped Work
+
+- No product implementation.
+- No staff UI.
+- No live DMS provider call or writeback.
+- No broad customer/vehicle master-data admin workflow.
+- No Phase 18 retro-review.
+- No portal attachment work.
+
+### Verification
+
+- Passed: `git status --short` showed only Forge files modified.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Outcome
+
+- Status: P19B planned.
+- Next: Build P19B backend correction workflow.
+
+## 2026-06-30 - P19B Staff Customer/Vehicle Correction Workflow Backend Build
+
+### Scope
+
+- Implemented backend-only staff correction workflow for complaint
+  customer/vehicle links and P19A provenance metadata.
+- Added `POST /complaints/{id}/corrections` with existing staff session,
+  `COMPLAINT_EDIT`, RBAC, CSRF, and branch-scope guard patterns.
+- Added DTO parsing for `expectedUpdatedAt`, non-empty correction reason, and
+  allowed correction fields only.
+- Added service/repository correction persistence with optimistic concurrency on
+  `updatedAt`.
+- Persisted complaint correction and `COMPLAINT/complaint_updated` audit entry
+  in the same transaction.
+- Audit metadata is limited to `changedFields`; raw request bodies, free-text
+  reasons, VIN, plate, DMS codes, provider payloads, tokens, OTPs, and secrets
+  are not included.
+- Updated staff OpenAPI/canonical contracts for the correction request and
+  response.
+
+### SRS Coverage
+
+- `DATA-AUTO-001`: customer/vehicle correction after submission is audit logged;
+  manual/local/DMS provenance fields remain distinguishable.
+- `REQ-CUSTOMER-001`: correction supports complaint customer association without
+  inventing broad master-data administration.
+- `REQ-RESOLUTION-001`: implemented an authorized administrative correction
+  flow without changing resolution workflow rules.
+- `REQ-AUDIT-001` and `NFR-SEC-002`: correction audit is in-transaction and safe.
+- `API-STANDARD-001`: staff API contract updated and optimistic concurrency used
+  to prevent silent overwrite.
+- `DMS-MAP-001`: DMS-shaped fields remain provenance metadata only; no provider
+  call or writeback was added.
+
+### Failing-First
+
+- Failed as expected: `corepack pnpm test:api -- complaints` after adding the
+  focused correction tests and before implementation. The new tests failed on
+  missing `service.correctProvenance` and `controller.correct`.
+
+### Skipped Work
+
+- No staff UI.
+- No live DMS lookup adapter, provider calls, provider credentials, or DMS
+  writeback.
+- No broad customer/vehicle master-data admin.
+- No portal response shape changes; portal privacy regression was still run.
+- No Phase 18 retro-review.
+- No Prisma schema or migration changes, so Prisma proof was not required.
+
+### Verification
+
+- Passed: `git status --short` showed product changes plus pre-existing Forge
+  planning files before final Forge updates.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- complaints` (69/69 TAP tests passed).
+- Passed: `corepack pnpm test:api -- workflow` (69/69 TAP tests passed).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P19B complete.
+- Next: P19B reviewer stop.
+
+## 2026-06-30 - P19B Reviewer Skipped And P19C Planning
+
+### Scope
+
+- User explicitly skipped the P19B reviewer stop.
+- Product code was not changed during this planning stop.
+- Forge was updated only for bookkeeping and the next build plan.
+
+### Status Bookkeeping
+
+- P19B is recorded as built.
+- P19B reviewer was skipped by user and is not claimed reviewed.
+- Phase 18 status is preserved: P18B reviewer was also skipped by user, so
+  Phase 18 is built but not fully reviewed.
+- P19A remains reviewed complete.
+
+### Ranking
+
+1. Staff UI for P19B correction workflow. Chosen as P19C because it is the
+   largest coherent slice directly enabled by P19B and satisfies
+   `DATA-AUTO-001` AC4 staff-visible manual/DMS distinction while reusing the
+   backend correction authority from P19B.
+2. DMS adapter/writeback foundation. DMS read adapter/test-double foundation is
+   still valuable for `REQ-CUSTOMER-001` and `DMS-MAP-001`, but writeback is
+   explicitly not allowed in MVP without a separate approved change request.
+3. Portal attachment follow-up completion. Still open for `REQ-PORTAL-002`,
+   `REQ-FILES-001`, and `PORTAL-SEC-001`, but text follow-up and portal privacy
+   proof already exist, so it is less immediate than making P19B usable by
+   staff.
+4. Phase 18/P19B reviewer catch-up. Important process debt, but not a product
+   build slice and not required to build UI on top of the already recorded P19B
+   backend.
+5. Larger remaining SRS business-fit gap. No larger coherent gap was found in
+   the reviewed Forge/SRS context that should displace P19C.
+
+### Chosen Phase
+
+- Name: P19C - Staff customer/vehicle correction UI.
+- Risk: High.
+- Required model tier: GPT-5.5 Extra High.
+- SRS IDs: `REQ-CUSTOMER-001`, `DATA-AUTO-001`, `DMS-MAP-001`,
+  `REQ-RESOLUTION-001`, `REQ-AUDIT-001`, `NFR-SEC-002`,
+  `API-STANDARD-001`, `UI-DESIGN-001`.
+
+### Assumptions
+
+- P19C may depend on the P19B backend being built, but must not depend on P19B
+  being reviewed.
+- The staff UI should use existing complaint detail, staff API helper, i18n, and
+  shadcn/ui patterns.
+- Backend remains the only authority for correction permission, branch scope,
+  audit, and optimistic concurrency.
+- Staff UI can display provenance fields and submit corrections, but must not
+  expose P19A/P19B internals to the customer portal.
+
+### Skipped Work
+
+- No P18 reviewer catch-up.
+- No P19B reviewer catch-up.
+- No product implementation during this planning stop.
+- No live DMS provider integration, frontend DMS calls, provider credentials, or
+  DMS writeback.
+- No broad customer/vehicle master-data administration.
+- No portal attachment follow-up.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree, including existing
+  P19B product changes plus Forge files.
+- Passed: `git diff --check`.
+
+### Outcome
+
+- Status: P19C planned.
+- Next: Build P19C staff customer/vehicle correction UI.
+
+## 2026-06-30 - P19C Staff Customer/Vehicle Correction UI Build
+
+### Scope
+
+- Built the staff UI slice for the P19B correction workflow.
+- Added staff complaint-detail provenance display for customer/vehicle source,
+  manual flags, vehicle-related flag, and vehicle-data-unavailable reason.
+- Added a client correction panel that submits `expectedUpdatedAt`, correction
+  reason, and changed fields only.
+- Added `correctStaffComplaint` and a same-origin Next proxy for
+  `/api/complaints/{id}/corrections`.
+- Added English and Arabic i18n copy for correction labels and states.
+- Added focused API-client/proxy and shell rendering/source-safety tests.
+
+### SRS Coverage
+
+- `DATA-AUTO-001`: manual/local/DMS provenance is visible to staff; customer or
+  vehicle corrections flow through the backend correction endpoint.
+- `REQ-CUSTOMER-001`: staff can correct local/manual/DMS customer and vehicle
+  association metadata without frontend DMS calls.
+- `REQ-RESOLUTION-001`: UI uses the authorized administrative correction path
+  and does not change workflow closure rules.
+- `REQ-AUDIT-001`: audit remains backend-owned by P19B; the UI does not spoof
+  audit entries.
+- `NFR-SEC-002`: UI/proxy do not accept role, branch, actor, workflow, token, or
+  credential authority from the client.
+- `API-STANDARD-001`: conflict envelopes are preserved distinctly for optimistic
+  concurrency recovery.
+- `UI-DESIGN-001`: correction UI uses existing shadcn/Radix primitives, i18n,
+  RTL/LTR labels, and visible loading/success/error/conflict/denied/validation
+  states.
+- `DMS-MAP-001`: DMS remains source metadata only; no live provider or writeback
+  was added.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input:
+  Passed. `correctStaffComplaint` and the correction proxy accept no role,
+  branch, actor, or workflow authority; API-client tests assert those fields are
+  absent from the request body and URL.
+- Correction audit remains backend-owned: Passed. P19C only posts the correction
+  request to P19B; no frontend audit write path was added.
+- No passwords, OTPs, tokens, hashes, provider secrets, raw provider payloads, VIN,
+  plate, or DMS codes are logged or exposed to the portal: Passed. The staff UI
+  shows source labels only; portal code was not changed.
+- Customer portal exposure rules hold: Passed by scope and source review; P19C
+  changed only staff complaint-detail files and staff proxy/helper tests.
+- Trust boundaries are tested: Passed. API-client tests cover an allowed
+  correction request and a conflict/denied-safe error mapping path; shell tests
+  assert no client authority fields in the correction panel source.
+
+### Skipped Work
+
+- No P18 reviewer catch-up.
+- No P19B reviewer catch-up.
+- No live DMS provider integration, frontend DMS calls, provider credentials, or
+  DMS writeback.
+- No broad customer/vehicle master-data administration.
+- No portal attachment follow-up.
+- No backend correction rule changes.
+
+### Verification
+
+- Failed as planned-command mismatch: `corepack pnpm test:web -- staff-complaints-api`
+  returned `Unknown web test suite: staff-complaints-api`; the repo runner only
+  supports `shell`, `api-client`, and `localization`.
+- Passed: `corepack pnpm test:web -- api-client` (21/21 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (191/191 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm web:visual-review`; generated English and Arabic
+  complaint-detail review artifacts under `coverage/web-visual-review/`.
+- Passed: review artifact grep found the correction panel in English and Arabic
+  complaint-detail artifacts.
+
+### Outcome
+
+- Status: P19C complete.
+- Next: P19C reviewer stop.
+
+## 2026-06-30 - P19C Reviewer Skipped And P20A Planning
+
+### Scope
+
+- User explicitly skipped the P19C reviewer stop.
+- Product code was not changed during this planning stop.
+- Forge was updated only for bookkeeping and the next build plan.
+
+### Status Bookkeeping
+
+- P19C is recorded as built.
+- P19C reviewer was skipped by user and is not claimed reviewed.
+- P18B remains built, but its reviewer stop was skipped by user and is not
+  claimed reviewed.
+- P19B remains built, but its reviewer stop was skipped by user and is not
+  claimed reviewed.
+- Phase 18 is not claimed fully reviewed.
+- Phase 19 is not claimed fully reviewed.
+
+### Ranking
+
+1. DMS adapter/writeback foundation. Chosen as P20A, narrowed to a read-oriented
+   DMS lookup adapter foundation because `REQ-CUSTOMER-001`,
+   `ARCH-INTEGRATION-001`, and `DMS-MAP-001` require testable DMS lookup
+   success/failure paths, while `DMS-MAP-001` explicitly forbids writeback in
+   MVP.
+2. Portal attachment follow-up completion. Still open for `REQ-PORTAL-002` and
+   `REQ-FILES-001`, but prior Forge evidence shows portal tracking/follow-up and
+   attachment foundations already exist, so DMS lookup is the larger business-fit
+   gap.
+3. Phase 18/P19B/P19C reviewer catch-up. Important process debt, but it is not a
+   build slice and the selected DMS adapter foundation does not depend on skipped
+   reviews being reviewed.
+4. Remaining high-value SRS business-fit gap. Reviewed Forge/SRS context did not
+   show a larger coherent MVP gap than DMS lookup adapter foundation.
+
+### Chosen Phase
+
+- Name: P20A - DMS lookup adapter foundation.
+- Risk: High.
+- Required model tier: GPT-5.5 Extra High.
+- SRS IDs: `ARCH-INTEGRATION-001`, `REQ-CUSTOMER-001`, `DMS-MAP-001`,
+  `DATA-AUTO-001`, `NFR-SEC-002`.
+
+### Assumptions
+
+- P20A can reuse the existing `integrations` module and its provider-port/test
+  double pattern.
+- P20A must be backend-only and read-oriented.
+- DMS provider call diagnostics can be held at the adapter boundary first; durable
+  persistence can be planned later if needed.
+- The task may depend on prior customer/vehicle provenance work being built, but
+  must not depend on P18B, P19B, or P19C reviewer catch-up.
+
+### Skipped Work
+
+- No P18 reviewer catch-up.
+- No P19B reviewer catch-up.
+- No P19C reviewer catch-up.
+- No live DMS provider integration, network call, provider SDK, or provider
+  credentials.
+- No DMS writeback endpoint; writeback remains absent or disabled for MVP.
+- No customer lookup UI, frontend DMS call, customer portal exposure, schema
+  migration, reports, or persistence tables.
+- No portal attachment follow-up.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree, including existing
+  P19 product changes plus Forge files.
+- Passed: `git diff --check` completed with line-ending warnings only.
+
+### Outcome
+
+- Status: P20A planned.
+- Next: Build P20A DMS lookup adapter foundation.
+
+## 2026-06-30 - P20A DMS Lookup Adapter Foundation Build
+
+### Scope
+
+- Built the backend-only DMS lookup adapter foundation in the existing
+  `integrations` module.
+- Added a DMS provider port and in-memory test double.
+- Added `IntegrationsService.lookupDmsCustomerVehicle` with normalized outcomes
+  for match, multiple matches, not found, provider down, and disabled.
+- Added safe adapter diagnostics: provider, action, result, latency, and
+  correlation ID.
+- Updated the integrations module manifest for the DMS boundary.
+- Added focused integration tests for success, multiple matches, not-found,
+  disabled, provider-down, validation, and no-secret exposure.
+
+### SRS Coverage
+
+- `ARCH-INTEGRATION-001`: DMS is behind a backend adapter boundary with an
+  in-memory test double; provider failure is visible without corrupting complaint
+  state.
+- `REQ-CUSTOMER-001`: lookup accepts phone, customer number, VIN, or name and
+  preserves manual fallback for unavailable DMS outcomes.
+- `DMS-MAP-001`: read-oriented lookup returns safe normalized customer/vehicle
+  fields, multiple-match selections, provider-down/disabled outcomes, safe
+  diagnostics, and no writeback path.
+- `DATA-AUTO-001`: DMS matches carry automotive customer/vehicle fields and
+  source `DMS` for later staff-visible distinction.
+- `NFR-SEC-002`: no provider credentials, tokens, passwords, raw provider payloads,
+  or frontend authority were added.
+
+### Security Self-Check
+
+- DMS provider credentials never reach the browser, logs, API output, or tests:
+  Passed. P20A has no frontend route and tests assert DMS results do not expose
+  secret-shaped values.
+- Frontend and portal code do not call DMS directly: Passed by scope. Only
+  `apps/api/src/modules/integrations/**` and `apps/api/test/integrations/**`
+  were changed for product behavior.
+- Manual fallback remains possible for outage/not-found/disabled outcomes:
+  Passed. Integration tests assert `manualFallbackAllowed` for not-found,
+  disabled, and provider-down results.
+- DMS writeback endpoints are absent or disabled: Passed by scope and code shape.
+  No route, controller method, OpenAPI path, writeback method, or persistence
+  table was added.
+- Provider call diagnostics include provider, action, result, latency, and
+  correlation ID without raw secrets or raw provider payloads: Passed. The service
+  returns only normalized safe diagnostics and tests cover safe provider-down
+  behavior.
+- Trust boundaries are tested: Passed. Integration tests cover allowed lookup
+  requests plus denied invalid/empty requests before provider access.
+
+### Skipped Work
+
+- No P18 reviewer catch-up.
+- No P19B reviewer catch-up.
+- No P19C reviewer catch-up.
+- No live DMS provider integration, network call, provider SDK, or provider
+  credentials.
+- No DMS writeback endpoint or writeback service method.
+- No customer lookup UI, frontend DMS call, customer portal exposure, schema
+  migration, reports, OpenAPI route, or persistence table.
+- No portal attachment follow-up.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- integrations` (21/21 TAP tests passed).
+- Failed then fixed: `corepack pnpm typecheck` initially caught
+  `exactOptionalPropertyTypes` issues in the new DMS port; the DMS optional field
+  types were corrected.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm security:check`.
+- Passed: `git status --short` captured the dirty worktree, including existing
+  P19 product changes plus P20A/Forge files.
+- Passed: `git diff --check` completed with line-ending warnings only.
+
+### Outcome
+
+- Status: P20A complete.
+- Next: P20A reviewer stop.
+
+## 2026-06-30 - P20A Reviewer Stop
+
+### Scope
+
+- Reviewed P20A only.
+- Product code was inspected but not changed during this reviewer stop.
+- Forge was updated only after the review passed.
+- P18B, P19B, and P19C remain built but not reviewed.
+
+### Findings
+
+- No blocking P20A findings.
+
+### Review Notes
+
+- P20A is backend-only and scoped to the existing `integrations` module plus
+  focused integration tests.
+- The DMS adapter foundation is read-only. It adds no writeback method, mutation,
+  sync job, persistence table, schema change, live provider, provider SDK,
+  provider credential, frontend call, customer portal surface, or DMS OpenAPI
+  route.
+- Lookup behavior is deterministic for match, multiple-match, not-found,
+  disabled, provider-down, and validation paths.
+- Provider failure is normalized to a safe `PROVIDER_DOWN` result with manual
+  fallback.
+- Validation errors use `VALIDATION_FAILED` with safe field names only.
+- The result shape carries safe diagnostics: provider, action, result, latency,
+  and correlation ID. No logging or audit path was added, so there is no new
+  log/audit sink for raw provider data.
+- The current dirty OpenAPI files contain pre-existing P19 complaint-correction
+  route changes; P20A did not add an OpenAPI route and this review did not
+  retro-review P19B or P19C.
+
+### SRS Coverage Reviewed
+
+- `DMS-MAP-001`: read-oriented lookup, mocked success/failure paths, manual
+  fallback for unavailable DMS outcomes, no writeback endpoint.
+- `DATA-AUTO-001`: normalized customer/vehicle DMS fields include source `DMS`
+  for later staff-visible distinction.
+- `NFR-SEC-002`: no frontend or customer portal exposure was added, and no
+  plaintext provider secrets are returned in DMS results or errors.
+- `API-STANDARD-001`: validation failures use the standard `VALIDATION_FAILED`
+  path and safe field errors.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree, including existing
+  P19 product changes plus P20A/Forge files.
+- Passed: `git diff --check` completed with line-ending warnings only.
+- Passed: `corepack pnpm test:api -- integrations` (21/21 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm security:check`.
+
+### Outcome
+
+- Status: P20A reviewed complete.
+- Next: next-phase planning/audit stop.
