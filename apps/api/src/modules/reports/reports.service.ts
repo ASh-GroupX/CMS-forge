@@ -5,6 +5,8 @@ import { ComplaintsService } from '../complaints/complaints.service.js';
 import type { ComplaintReportRow } from '../complaints/complaints.service.js';
 import { SlaService } from '../sla/sla.service.js';
 import { SurveysService } from '../surveys/surveys.service.js';
+import { reportCatalogResponse } from './report-matrix.js';
+import type { ReportCatalogResponse } from './report-matrix.js';
 import { complaintCaseKpis as deriveComplaintCaseKpis, taskPromiseKpis as deriveTaskPromiseKpis } from './reports.kpi.js';
 import type { ComplaintCaseKpis, TaskPromiseKpis } from './reports.kpi.js';
 import { ReportsRepository } from './reports.repository.js';
@@ -60,6 +62,10 @@ export class ReportsService {
     @Inject(AuditService)
     private readonly auditService?: AuditService,
   ) {}
+
+  reportCatalog(): ReportCatalogResponse {
+    return reportCatalogResponse();
+  }
 
   async dashboardSummary(scope: DashboardReportScope): Promise<DashboardSummary> {
     const branchId = scopedBranchId(scope);

@@ -11420,3 +11420,99 @@ Implemented the scoped server-side permission guard foundation:
 
 - Status: Portal attachment follow-up reviewed complete.
 - Next: Reports/business-fit gap closure.
+
+## 2026-06-30 - Reports/Business-Fit Gap Closure Build
+
+### Scope
+
+- Added a guarded backend report catalog/status contract for `REPORT-MATRIX-001`
+  RPT-001 through RPT-017.
+- Added `GET /reports/catalog`, protected by the same staff session,
+  `REPORT_VIEW`, RBAC, and branch-scope guard pattern used by other reports.
+- Added `apps/api/src/modules/reports/report-matrix.ts` with explicit required
+  filters, required outputs, delivery status, implemented notes, deferred scope,
+  and `signoffRequired` for each report ID.
+- Updated the canonical OpenAPI contract for the catalog route and response
+  schemas.
+- Added focused report tests proving all RPT-001 through RPT-017 IDs are present,
+  delivered/deferred counts reconcile, sensitive fields are absent, the catalog
+  route is guarded, and OpenAPI documents the route.
+- Updated the reports module manifest to reflect current implemented behavior.
+
+### Report Matrix Outcome
+
+- Delivered in code: RPT-001, RPT-004, RPT-013, and RPT-017.
+- Explicitly deferred with signed-scope requirement: RPT-002, RPT-003, RPT-005,
+  RPT-006, RPT-007, RPT-008, RPT-009, RPT-010, RPT-011, RPT-012, RPT-014,
+  RPT-015, and RPT-016.
+- This slice closes the hidden business-fit gap by making every remaining report
+  gap explicit and contract-visible instead of implying all specialized reports
+  are complete.
+
+### SRS Coverage
+
+- `REQ-REPORT-001` and `REPORT-MATRIX-001`: report filters, output definitions,
+  delivered items, and signed-scope deferrals are now represented in a guarded
+  API response and tested.
+- `REQ-AUDIT-001`: RPT-017 remains delivered by the existing audit search/export
+  module; report export audit behavior was not weakened and the audit
+  append-only proof passed.
+- `NFR-SEC-002`: report catalog access is staff-session and permission guarded;
+  report row/export RBAC and branch-scope tests still pass.
+- `API-STANDARD-001`: the new route is documented in the canonical OpenAPI
+  contract with standard auth/forbidden error responses.
+- `UI-SCREEN-001` and `UI-DESIGN-001`: no web UI changed in this slice; existing
+  reports dashboard shell, localization, and role visibility tests still pass.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input:
+  Passed. `/reports/catalog` uses `SessionAuthGuard`, `PermissionGuard`,
+  `RbacGuard`, `@Permissions('REPORT_VIEW')`, and `@BranchScoped()`.
+- State changes and audit transaction: Passed/not applicable. The catalog route
+  is read-only. Existing report export audit and audit append-only proof still
+  pass.
+- No passwords, OTPs, tokens, hashes, provider secrets, customer phone/email,
+  VIN, plate, storage keys, public URLs, or credentials are logged or returned:
+  Passed by catalog source/test checks and existing report export redaction
+  tests.
+- Customer portal exposure rules hold: Passed. No portal route or customer
+  surface changed, and the catalog contains only staff report metadata.
+- Trust boundaries are tested: Passed. Tests cover allowed report catalog access
+  through `REPORT_VIEW`, denied missing permission, branch-scope denial on report
+  routes, safe catalog content, and OpenAPI coverage.
+
+### Skipped Work
+
+- No specialized implementations for the deferred reports in this slice.
+- No DMS telemetry persistence, live DMS provider integration, DMS writeback,
+  provider credentials, notification aggregate report, CSAT report, compensation
+  report, report warehouse, async export worker, schema migration, or customer
+  portal report exposure.
+- No web reports UI changes; visual/accessibility proof was not required by
+  `.forge/next.md` for this backend-only change.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- reports` (31/31 TAP tests passed).
+- Failed then passed: `corepack pnpm test:api -- audit` initially passed the
+  audit TAP tests (8/8) but failed the Docker-backed append-only proof because
+  Docker Desktop was not running. After Docker Desktop was started with approval,
+  sandboxed Docker access was permission-denied, then the escalated rerun passed
+  the audit TAP tests (8/8), applied migrations, and passed the append-only SQL
+  proof.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- api-client` (24/24 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (192/192 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm security:check`, including the report authorization and
+  scoped export security suite with the new catalog tests.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization
+  warnings only.
+
+### Outcome
+
+- Status: Reports/business-fit gap closure built, reviewer pending.
+- Next: Reports/business-fit gap closure reviewer stop.

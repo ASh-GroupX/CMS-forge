@@ -3,6 +3,7 @@ import { ComplaintSeverity, RoleCode } from '@prisma/client';
 import { BranchScoped, PermissionGuard, Permissions, RbacGuard, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { AppException } from '../../core/http-kernel.js';
+import type { ReportCatalogResponse } from './report-matrix.js';
 import { ReportsService } from './reports.service.js';
 import type { DashboardSummary, FilteredReportRow, ReportExportFormat, ReportsKpiSummary } from './reports.service.js';
 
@@ -14,6 +15,14 @@ export class ReportsController {
 
   constructor(@Inject(ReportsService) reportsService: ReportsService) {
     ReportsController.reportsService = reportsService;
+  }
+
+  @Get('catalog')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('REPORT_VIEW')
+  @BranchScoped()
+  catalog(): ReportCatalogResponse {
+    return ReportsController.reportsService.reportCatalog();
   }
 
   @Get('dashboard')

@@ -132,6 +132,38 @@ test('reports KPI route derives scope from the principal and returns aggregate v
   assert.equal('closedCountLeaderboard' in result.kpis, false);
 });
 
+test('report catalog reconciles RPT-001 through RPT-017 with signed deferrals', () => {
+  const catalog = reportsService().reportCatalog();
+  const expectedIds = Array.from({ length: 17 }, (_value, index) => `RPT-${String(index + 1).padStart(3, '0')}`);
+
+  assert.deepEqual(catalog.items.map((item) => item.id), expectedIds);
+  assert.deepEqual(catalog.summary, { total: 17, delivered: 4, deferred: 13, signoffRequired: 13 });
+  for (const item of catalog.items) {
+    assert.ok(item.requiredFilters.length > 0);
+    assert.ok(item.requiredOutputs.length > 0);
+    if (item.status === 'DELIVERED') {
+      assert.equal(item.signoffRequired, false);
+      assert.deepEqual(item.deferred, []);
+    } else {
+      assert.equal(item.signoffRequired, true);
+      assert.ok(item.deferred.length > 0);
+    }
+  }
+  assert.equal(catalog.items.find((item) => item.id === 'RPT-015')?.status, 'DEFERRED');
+  assert.equal(catalog.items.find((item) => item.id === 'RPT-017')?.status, 'DELIVERED');
+  const catalogJson = JSON.stringify(catalog).toLowerCase();
+  for (const forbidden of ['password', 'otp', 'sessiontoken', 'credential', 'secret', 'storagekey', 'publicurl', 'customerphone', 'customeremail']) {
+    assert.equal(catalogJson.includes(forbidden), false);
+  }
+});
+
+test('reports catalog route returns the public matrix from the guarded report service', () => {
+  const catalog = reportsService().reportCatalog();
+  const controller = new ReportsController({ reportCatalog: () => catalog } as ReportsService);
+
+  assert.deepEqual(controller.catalog(), catalog);
+});
+
 test('reports export route keeps controller binding and preserves filters', async () => {
   const calls: unknown[] = [];
   const headers: Record<string, string> = {};
@@ -220,7 +252,7 @@ test('report export audit metadata uses only the allowlisted filter snapshot', a
 });
 
 test('report routes use permission guard and keep branch scope guard', () => {
-  for (const handler of ['dashboard', 'kpis', 'filteredReport'] as Array<keyof ReportsController>) {
+  for (const handler of ['catalog', 'dashboard', 'kpis', 'filteredReport'] as Array<keyof ReportsController>) {
     assert.deepEqual(guardNames(handler), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
   }
   assert.deepEqual(guardNames('exportReport'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
@@ -230,7 +262,7 @@ test('report view permission allows dashboard, kpis, and list, and denies missin
   const auditRecords: AuditRecordInput[] = [];
   const guard = new PermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
 
-  for (const handler of [ReportsController.prototype.dashboard, ReportsController.prototype.kpis, ReportsController.prototype.filteredReport]) {
+  for (const handler of [ReportsController.prototype.catalog, ReportsController.prototype.dashboard, ReportsController.prototype.kpis, ReportsController.prototype.filteredReport]) {
     assert.equal(await guard.canActivate(context(request(branchManager, '/reports'), handler)), true);
   }
 
@@ -284,6 +316,15 @@ test('reports KPI route cross-branch request is denied and audited', async () =>
   );
   assert.equal(auditRecords[0]?.action, 'branch_scope_forbidden');
   assert.deepEqual(auditRecords[0]?.metadata, { deniedBranchId: 'branch-b' });
+});
+
+test('reports catalog OpenAPI documents the delivery matrix response', () => {
+  const openapi = JSON.parse(readFileSync('packages/contracts/openapi.json', 'utf8'));
+
+  assert.ok(openapi.paths['/reports/catalog']?.get);
+  assert.equal(openapi.paths['/reports/catalog'].get.operationId, 'reportsCatalog');
+  assert.ok(openapi.components.schemas.ReportCatalogResponse);
+  assert.ok(JSON.stringify(openapi.components.schemas.ReportCatalogItem).includes('signoffRequired'));
 });
 
 test('reports KPI OpenAPI documents aggregate-only response', () => {
@@ -477,7 +518,7 @@ function request(principal: StaffPrincipal, url: string): AuthenticatedRequest {
 
 function context(
   req: AuthenticatedRequest,
-  handler: typeof ReportsController.prototype.dashboard | typeof ReportsController.prototype.kpis | typeof ReportsController.prototype.filteredReport | typeof ReportsController.prototype.exportReport,
+  handler: typeof ReportsController.prototype.catalog | typeof ReportsController.prototype.dashboard | typeof ReportsController.prototype.kpis | typeof ReportsController.prototype.filteredReport | typeof ReportsController.prototype.exportReport,
 ): ExecutionContext {
   return {
     switchToHttp: () => ({ getRequest: () => req }),

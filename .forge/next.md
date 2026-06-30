@@ -1,58 +1,58 @@
-# Reports/Business-Fit Gap Closure
+# Reports/Business-Fit Gap Closure Reviewer Stop
 
 Status: Ready
 Required model tier: GPT-5.5 Extra High
-Phase: reports-business-fit-closure
+Phase: reports-business-fit-closure-review
 Risk: High
 SRS IDs: REQ-REPORT-001, REPORT-MATRIX-001, REQ-AUDIT-001, NFR-SEC-002, API-STANDARD-001, UI-SCREEN-001, UI-DESIGN-001
 
 ## Scoped Task
 
-Close the remaining reports/business-fit gap after P17, P20, and portal
-attachment completion. Start by reconciling current code and evidence against
-`REPORT-MATRIX-001` RPT-001 through RPT-017, then implement the smallest
-coherent closure that is still needed. If a report is too broad for this slice,
-record an explicit defer/needs-signed-scope note in Forge instead of building a
-wide diff.
+Review the reports/business-fit gap closure build. Review already-built code
+only. Fix only blocking reviewer findings inside this slice; if no blockers are
+found, update Forge only.
 
 ## Scope
 
-- Reconcile the current reports backend, web reports dashboard/export surface,
-  audit export surface, DMS lookup behavior, notification delivery evidence, and
-  survey/compensation status against RPT-001 through RPT-017.
-- Keep report reads/exports scoped by server-session RBAC and branch scope.
-- Preserve row limits and safe export audit metadata.
-- Prefer existing report module, audit module, notification module, and DMS
-  adapter patterns; do not add a new reporting framework.
-- Add or update focused tests only for concrete gaps repaired in this slice.
-- Update `.forge/evidence.md`, `.forge/state.md`, and `.forge/next.md` at slice
+- Confirm `GET /reports/catalog` is staff-session guarded with `REPORT_VIEW`,
+  RBAC, and branch-scope guard coverage.
+- Confirm the report catalog includes RPT-001 through RPT-017 exactly once with
+  required filters, required outputs, delivered/deferred status, implemented
+  notes, deferred scope, and `signoffRequired` for every deferral.
+- Confirm delivered statuses are honest: RPT-001, RPT-004, RPT-013, and RPT-017
+  only.
+- Confirm all other report matrix gaps are explicit signed-scope deferrals and
+  not claimed as fully delivered.
+- Confirm no report response/export exposes customer phone/email, VIN, plate,
+  DMS codes, provider credentials, portal data, storage keys, public URLs,
+  staff PII, tokens, passwords, OTPs, or arbitrary audit metadata.
+- Confirm OpenAPI documents `/reports/catalog` and the catalog response schemas.
+- Confirm no web UI changed; visual/accessibility proof is not required unless a
+  reviewer blocker changes the web UI.
+- Update `.forge/evidence.md`, `.forge/state.md`, and `.forge/next.md` at review
   end.
 
 ## Likely Files
 
-- `apps/api/src/modules/reports/**`
-- `apps/api/test/reports/**`
-- `apps/web/src/components/reports-dashboard/**`
-- `apps/web/src/lib/staff-reports-api.ts`
-- `apps/web/src/i18n/staff-reports-dashboard.ts`
-- `apps/web/test/api-client/**`
-- `apps/web/test/shell/**`
-- `tools/web-proof-cases.mjs`
+- `apps/api/src/modules/reports/report-matrix.ts`
+- `apps/api/src/modules/reports/reports.controller.ts`
+- `apps/api/src/modules/reports/reports.service.ts`
+- `apps/api/test/reports/dashboard-summary.test.ts`
+- `packages/contracts/openapi.json`
+- `tools/openapi-canonical.json`
 - `.forge/next.md`
 - `.forge/state.md`
 - `.forge/evidence.md`
 
 ## Skipped Work
 
-- No DMS writeback, live DMS provider integration, provider credentials, or
-  frontend provider calls.
-- No customer portal report exposure.
-- No unbounded exports or export of sensitive row-level fields without an
-  existing explicit permission.
-- No speculative report warehouse, BI framework, async export worker, or schema
-  migration unless the reconciliation proves it is required and the slice is
-  replanned.
-- No duplicate/related complaint UX work unless a concrete blocker is found.
+- No new product feature work beyond reviewer blocker repair.
+- No specialized implementation for deferred reports.
+- No DMS telemetry persistence, live DMS provider, DMS writeback, provider
+  credentials, notification aggregate report, CSAT report, compensation report,
+  report warehouse, async export worker, schema migration, or customer portal
+  report exposure.
+- No web reports UI work unless required to fix a blocker.
 
 ## Required Proof
 
@@ -67,13 +67,13 @@ wide diff.
 - `corepack pnpm typecheck`
 - `corepack pnpm lint`
 - `corepack pnpm security:check`
-- If any web reports UI changes are made: `corepack pnpm test:visual`,
+- If reviewer changes web UI: `corepack pnpm test:visual`,
   `corepack pnpm test:e2e -- accessibility`, and
   `corepack pnpm web:visual-review`.
 
 ## Reviewer Rule
 
-Stop for a reviewer commit after this implementation slice. The reviewer must
-verify RPT-001 through RPT-017 delivery/defer status, RBAC/branch scope, export
-limits, OpenAPI drift, portal privacy, and report/audit metadata safety before
-reports/business-fit closure can be called reviewed complete.
+If review passes, record reports/business-fit closure as reviewed complete and
+move to final SRS/business-fit audit and stabilization. If a blocker is found,
+repair it in the smallest reviewer commit and rerun affected proof plus
+`typecheck`, `lint`, `openapi:check`, and `security:check`.
