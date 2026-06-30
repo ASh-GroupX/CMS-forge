@@ -10782,3 +10782,58 @@ Implemented the scoped server-side permission guard foundation:
 
 - Status: P20A reviewed complete.
 - Next: next-phase planning/audit stop.
+
+## 2026-06-30 - MVP Business-Fit Roadmap Planning Stop
+
+### Scope
+
+- Planned the remaining CMS-Auto MVP/business-fit work from the current Forge
+  state.
+- Product code was not changed.
+- P17 and P20A remain the latest reviewed completions.
+- P18B, P19B, and P19C remain built but not reviewed because their reviewer
+  stops were skipped by user.
+
+### Chosen First Slice
+
+- P20B - Staff DMS Lookup API.
+- Commit name: `P20B: add staff DMS lookup API`.
+- Rationale: P20A provides the reviewed adapter foundation; the smallest useful
+  next step is a staff-only OpenAPI-documented backend route. This does not
+  depend on skipped P18B/P19B/P19C reviews and keeps frontend/customer portal
+  trust boundaries unchanged.
+
+### Roadmap Summary
+
+1. P20B: staff-only read-only DMS lookup API.
+2. P20B reviewer stop.
+3. P20C: staff DMS lookup UI in intake/correction flow.
+4. P20C reviewer stop.
+5. P18B/P19B/P19C reviewer catch-up.
+6. Portal attachment follow-up completion.
+7. Duplicate/related complaint UX hardening if still required after P18B review.
+8. Reports/business-fit gap closure.
+9. Final SRS/business-fit audit and stabilization.
+
+### Skipped Work
+
+- No product implementation.
+- No staging or commit.
+- No live DMS provider, DMS writeback, provider credentials, or frontend DMS
+  direct calls.
+- No claim that skipped reviews are reviewed.
+
+### Verification
+
+- Passed: `git status --short` returned no output before Forge planning edits.
+- Passed: `git diff --check` returned no output before Forge planning edits.
+- Passed: `git status --short` after Forge planning edits showed only
+  `.forge/evidence.md`, `.forge/next.md`, and `.forge/state.md`.
+- Passed with line-ending warnings only: `git diff --check` after Forge planning
+  edits warned that Git will replace LF with CRLF in the three edited Forge
+  files when it next touches them.
+
+### Outcome
+
+- Status: Roadmap planned.
+- Next: Build P20B Staff DMS Lookup API.
