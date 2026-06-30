@@ -1,7 +1,16 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import 'reflect-metadata';
+import { GUARDS_METADATA } from '@nestjs/common/constants';
+import { Reflector } from '@nestjs/core';
+import type { ExecutionContext } from '@nestjs/common';
+import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
+import { PermissionGuard, SessionAuthGuard } from '../../src/core/auth.guard.ts';
+import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
 import { InMemoryDmsProvider, type DmsProviderPort } from '../../src/modules/integrations/dms-provider.port.ts';
+import { IntegrationsController } from '../../src/modules/integrations/integrations.controller.ts';
 import { IntegrationsRepository } from '../../src/modules/integrations/integrations.repository.ts';
 import { IntegrationsService } from '../../src/modules/integrations/integrations.service.ts';
 
@@ -117,6 +126,60 @@ test('integrations dms lookup result exposes no provider credentials', async () 
   assert.equal(/secret|credential|apiKey|password|token/i.test(response), false);
 });
 
+test('staff dms lookup route delegates safe query fields and server correlation id', async () => {
+  const provider = new InMemoryDmsProvider({ status: 'MATCH', matches: [match('DMS-1', 'Nadia', '+201001112222')] });
+  const controller = new IntegrationsController(serviceWith(provider));
+
+  const response = await controller.lookupDmsCustomerVehicle(
+    { vin: 'abc123456789', phone: '+201001112222' },
+    request(staff, '/integrations/dms/customer-vehicle?vin=abc123456789'),
+  );
+
+  assert.equal(response.lookup.result, 'MATCH');
+  assert.equal(response.lookup.correlationId, 'req_dms');
+  assert.equal(provider.lookups[0]?.vin, 'ABC123456789');
+  assert.equal(provider.lookups[0]?.correlationId, 'req_dms');
+  assert.equal(JSON.stringify(response).includes('credential'), false);
+});
+
+test('staff dms lookup route is session and permission guarded', () => {
+  assert.deepEqual(guardNames('lookupDmsCustomerVehicle'), ['SessionAuthGuard', 'PermissionGuard']);
+});
+
+test('staff dms lookup permission allows intake staff and denies missing permission safely', async () => {
+  const auditRecords: AuditRecordInput[] = [];
+  const guard = new PermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
+
+  assert.equal(await guard.canActivate(context(request(staff), IntegrationsController.prototype.lookupDmsCustomerVehicle)), true);
+  await assert.rejects(
+    guard.canActivate(context(request({ ...staff, permissions: [] }, '/integrations/dms/customer-vehicle?password=leaked'), IntegrationsController.prototype.lookupDmsCustomerVehicle)),
+    (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
+  assert.equal(auditRecords[0]?.eventType, 'SECURITY');
+  assert.equal(auditRecords[0]?.action, 'permission_forbidden');
+  assert.deepEqual(auditRecords[0]?.metadata?.requiredPermissions, ['COMPLAINT_CREATE']);
+  assert.equal(JSON.stringify(auditRecords).toLowerCase().includes('leaked'), false);
+});
+
+test('staff dms lookup session guard rejects missing staff session', async () => {
+  const guard = new SessionAuthGuard({ validateStaffSession: async () => staff });
+
+  await assert.rejects(
+    guard.canActivate(context({ headers: {} } as AuthenticatedRequest, IntegrationsController.prototype.lookupDmsCustomerVehicle)),
+    (error: unknown) => error instanceof AppException && error.code === 'AUTH_INVALID_CREDENTIALS',
+  );
+});
+
+test('staff dms lookup OpenAPI documents safe read-only route', () => {
+  const openapi = JSON.parse(readFileSync('packages/contracts/openapi.json', 'utf8'));
+  const operation = openapi.paths['/integrations/dms/customer-vehicle']?.get;
+
+  assert.ok(operation);
+  assert.equal(operation.operationId, 'integrationDmsCustomerVehicleLookup');
+  assert.equal(JSON.stringify(operation).includes('DmsLookupResponse'), true);
+  assert.equal(JSON.stringify(openapi.components.schemas.DmsCustomerVehicleMatch).includes('source'), true);
+});
+
 function serviceWith(provider: DmsProviderPort): IntegrationsService {
   return new IntegrationsService(new IntegrationsRepository(), {} as never, {} as never, {} as never, provider);
 }
@@ -131,4 +194,38 @@ function match(customerCode: string, customerName: string, primaryPhone: string,
     model: 'Corolla',
     source: 'DMS' as const,
   };
+}
+
+const staff: StaffPrincipal = {
+  sessionId: 'ses_dms',
+  userId: 'usr_dms',
+  email: 'staff@cms-auto.test',
+  nameEn: 'Staff User',
+  nameAr: 'Staff User',
+  roleCode: 'CR_OFFICER',
+  permissions: ['COMPLAINT_CREATE'],
+  branchId: 'branch-a',
+};
+
+function request(principal: StaffPrincipal, url = '/integrations/dms/customer-vehicle'): AuthenticatedRequest {
+  return {
+    principal,
+    method: 'GET',
+    url,
+    correlationId: 'req_dms',
+    headers: { 'x-forwarded-for': '203.0.113.10', 'user-agent': 'node:test' },
+    socket: { remoteAddress: '198.51.100.10' },
+  };
+}
+
+function context(req: AuthenticatedRequest, handler: typeof IntegrationsController.prototype.lookupDmsCustomerVehicle): ExecutionContext {
+  return {
+    switchToHttp: () => ({ getRequest: () => req }),
+    getHandler: () => handler,
+    getClass: () => IntegrationsController,
+  } as ExecutionContext;
+}
+
+function guardNames(handler: keyof IntegrationsController): string[] {
+  return (Reflect.getMetadata(GUARDS_METADATA, IntegrationsController.prototype[handler]) as Array<{ name: string }>).map(({ name }) => name);
 }

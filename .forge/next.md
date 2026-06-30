@@ -1,57 +1,35 @@
-# P20B - Staff DMS Lookup API
+# P20B Reviewer Stop - Staff DMS Lookup API
 
 Status: Ready
 Required model tier: GPT-5.5 Extra High
-Phase: P20B
+Phase: P20B Reviewer
 Risk: High
 SRS IDs: ARCH-INTEGRATION-001, ARCH-API-001, API-STANDARD-001, REQ-CUSTOMER-001, DMS-MAP-001, DATA-AUTO-001, NFR-SEC-002, RBAC-MATRIX-001
 
 ## Scoped Task
 
-Add the staff-only, read-only DMS lookup HTTP API on top of the reviewed P20A
-adapter foundation.
+Review P20B only. Do not implement new product scope unless the review finds a
+blocking defect that must be fixed before P20B can be accepted.
 
-The route must let authorized staff search by phone, customer number, VIN, or
-name, return the safe normalized P20A lookup outcomes, document the route in
-OpenAPI, and preserve manual fallback when DMS is unavailable, disabled,
-not-found, or returns multiple matches.
+P20B added a staff-only, read-only DMS lookup route over the reviewed P20A
+adapter foundation. Confirm the route is protected by server-session auth and
+permission checks, returns only safe normalized lookup outcomes, preserves manual
+fallback, documents OpenAPI, and does not add live provider calls, provider
+credentials, frontend DMS calls, customer portal exposure, DMS writeback, schema
+migrations, or persistence tables.
 
-## Scope
+## Required Review Checks
 
-- Reuse the existing `integrations` module and P20A provider port/test double.
-- Add a controller/DTO/API surface only if the route does not already exist.
-- Enforce staff auth/RBAC from the server session.
-- Return safe response DTOs only; no raw provider payloads or credentials.
-- Cover success, multiple-match, not-found, provider-down/disabled, validation,
-  allowed staff, and denied role/session cases.
-- Update `.forge/evidence.md`, `.forge/state.md`, and `.forge/next.md` at task
-  end.
-
-## Likely Files
-
-- `apps/api/src/modules/integrations/**`
-- `apps/api/test/integrations/**`
-- `packages/contracts/**`
-- `docs/openapi/**` or generated OpenAPI artifact, if that is where this repo
-  stores the committed contract
-- `.forge/next.md`
-- `.forge/state.md`
-- `.forge/evidence.md`
-
-## Skipped Work
-
-- No live DMS provider, provider SDK, network call, or provider credentials.
-- No DMS writeback endpoint or writeback service method.
-- No frontend/customer portal DMS calls.
-- No customer lookup UI; that is P20C.
-- No schema migration or DMS persistence table unless OpenAPI generation proves
-  one is already required by existing code.
-- No reviewer catch-up for P18B/P19B/P19C inside this build commit.
+- Inspect the P20B diff.
+- Confirm no raw provider payload, credential, token, password, OTP, hash, DMS
+  writeback, or portal exposure was introduced.
+- Confirm P18B, P19B, and P19C are still not claimed reviewed.
+- Run the proof commands below and record exact results in `.forge/evidence.md`.
+- Update `.forge/state.md` and `.forge/next.md` after review.
 
 ## Required Proof
 
 - `corepack pnpm test:api -- integrations`
-- `corepack pnpm openapi:generate`
 - `corepack pnpm openapi:check`
 - `corepack pnpm typecheck`
 - `corepack pnpm lint`
@@ -61,6 +39,6 @@ not-found, or returns multiple matches.
 
 ## Reviewer Rule
 
-Stop after P20B build and Forge updates. Do not start P20C until a fresh reviewer
-pass reviews P20B, unless the user explicitly skips that review. If skipped,
-record P20B as built but not reviewed.
+If P20B passes review, mark P20B reviewed complete and set next task to P20C
+Staff DMS Lookup UI. If a blocking issue is found, keep P20B unreviewed and set
+the next task to the smallest P20B fix slice.

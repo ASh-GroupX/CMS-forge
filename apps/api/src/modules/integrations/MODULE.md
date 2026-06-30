@@ -31,6 +31,7 @@ module's boundary so you can work in a fresh context without scanning the tree.
 
 - `core/http-kernel` for stable API errors and future request context.
 - `core/audit.service` for future provider call audit/security entries.
+- `modules/auth` for staff-session validation on protected integration routes.
 - Other modules' public services only. Never import another module repository,
   `dto/`, or Prisma model type.
 

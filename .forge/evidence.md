@@ -10837,3 +10837,81 @@ Implemented the scoped server-side permission guard foundation:
 
 - Status: Roadmap planned.
 - Next: Build P20B Staff DMS Lookup API.
+
+## 2026-06-30 - P20B Staff DMS Lookup API Build
+
+### Scope
+
+- Added a staff-only, read-only `GET /integrations/dms/customer-vehicle` route
+  over the reviewed P20A DMS adapter foundation.
+- Protected the route with server-session auth and `COMPLAINT_CREATE`
+  permission checks.
+- Added safe query DTO parsing that accepts phone, customer number, VIN, or name
+  and derives correlation ID from the server request.
+- Added OpenAPI contract entries for the route and safe DMS lookup response
+  schemas.
+- Added integration tests for route delegation, guard metadata, allowed staff,
+  denied missing permission, missing session, OpenAPI coverage, and safe output.
+- Updated the integrations module manifest to declare the auth module dependency.
+
+### SRS Coverage
+
+- `ARCH-INTEGRATION-001`: DMS lookup remains behind the backend adapter boundary;
+  provider failure still normalizes to safe provider-down behavior.
+- `ARCH-API-001` and `API-STANDARD-001`: the new route is documented in the
+  canonical OpenAPI contract and returns stable validation/auth error envelopes.
+- `REQ-CUSTOMER-001` and `DMS-MAP-001`: staff can search by the required lookup
+  fields and get match, multiple-match, not-found, provider-down, or disabled
+  outcomes with manual fallback where required.
+- `DATA-AUTO-001`: response matches include safe automotive customer/vehicle
+  fields and source `DMS` for staff-visible distinction.
+- `NFR-SEC-002` and `RBAC-MATRIX-001`: route authority comes from the staff
+  session and permission guard, not client input.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input:
+  Passed. The route uses `SessionAuthGuard` and `PermissionGuard`; tests cover
+  allowed staff and denied missing permission.
+- State changes, status history, and audit transaction: Not applicable. P20B is
+  read-only and writes no complaint state.
+- No passwords, OTPs, tokens, hashes, provider secrets, or credentials are logged
+  or returned: Passed. Tests assert safe DMS output and safe permission-denial
+  audit metadata.
+- Customer portal exposure rules hold: Passed by scope. P20B added only a staff
+  route under `integrations`; no portal or frontend route was added.
+- Trust boundaries are tested: Passed. Integration tests cover an allowed staff
+  request, a missing permission denial, and missing session denial.
+
+### Skipped Work
+
+- No live DMS provider, provider SDK, network call, or provider credentials.
+- No DMS writeback endpoint or writeback service method.
+- No frontend/customer portal DMS call.
+- No customer lookup UI; that remains P20C.
+- No schema migration, DMS persistence table, or portal attachment work.
+- No reviewer catch-up for P18B, P19B, or P19C.
+
+### Verification
+
+- Passed: `corepack pnpm openapi:generate`.
+- Failed then fixed: `corepack pnpm test:api -- integrations` initially caught
+  a test expectation that did not account for existing VIN uppercase
+  normalization.
+- Passed: `corepack pnpm test:api -- integrations` (26/26 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Failed then fixed: `corepack pnpm lint` required
+  `apps/api/src/modules/integrations/MODULE.md` to declare the new
+  `modules/auth` dependency.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm security:check`.
+- Passed: `git status --short` showed the P20B product/contract/Forge files and
+  the new DMS lookup DTO file.
+- Passed with line-ending warnings only: `git diff --check` warned that Git will
+  replace LF with CRLF in edited files when it next touches them.
+
+### Outcome
+
+- Status: P20B built, reviewer pending.
+- Next: P20B reviewer stop.

@@ -903,6 +903,91 @@
         }
       }
     },
+    "/integrations/dms/customer-vehicle": {
+      "get": {
+        "tags": [
+          "Integrations"
+        ],
+        "operationId": "integrationDmsCustomerVehicleLookup",
+        "summary": "Look up customer and vehicle data through the read-only DMS adapter",
+        "parameters": [
+          {
+            "name": "phone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "customerNumber",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vin",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "DMS lookup result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DmsLookupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid lookup query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/notifications/templates": {
       "get": {
         "tags": [
@@ -4892,6 +4977,133 @@
           },
           "message": {
             "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DmsLookupStatus": {
+        "type": "string",
+        "enum": [
+          "MATCH",
+          "MULTIPLE_MATCHES",
+          "NOT_FOUND",
+          "PROVIDER_DOWN",
+          "DISABLED"
+        ]
+      },
+      "DmsCustomerVehicleMatch": {
+        "type": "object",
+        "required": [
+          "customerName",
+          "primaryPhone",
+          "source"
+        ],
+        "properties": {
+          "customerCode": {
+            "type": "string"
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "primaryPhone": {
+            "type": "string"
+          },
+          "secondaryPhone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "vin": {
+            "type": "string"
+          },
+          "plateNumber": {
+            "type": "string"
+          },
+          "brand": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "modelYear": {
+            "type": "integer"
+          },
+          "saleDate": {
+            "type": "string"
+          },
+          "warrantyStatus": {
+            "type": "string"
+          },
+          "serviceBranch": {
+            "type": "string"
+          },
+          "salesBranch": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "DMS"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "DmsLookupResult": {
+        "type": "object",
+        "required": [
+          "provider",
+          "action",
+          "result",
+          "latencyMs",
+          "correlationId",
+          "manualFallbackAllowed",
+          "matches"
+        ],
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "in-memory"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "customerVehicleLookup"
+            ]
+          },
+          "result": {
+            "$ref": "#/components/schemas/DmsLookupStatus"
+          },
+          "latencyMs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "correlationId": {
+            "type": "string"
+          },
+          "manualFallbackAllowed": {
+            "type": "boolean"
+          },
+          "matches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DmsCustomerVehicleMatch"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "DmsLookupResponse": {
+        "type": "object",
+        "required": [
+          "lookup"
+        ],
+        "properties": {
+          "lookup": {
+            "$ref": "#/components/schemas/DmsLookupResult"
           }
         },
         "additionalProperties": false
