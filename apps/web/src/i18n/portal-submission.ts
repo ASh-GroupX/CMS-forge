@@ -57,6 +57,7 @@ export const portalSubmissionText = {
       error: 'Complaint could not be submitted. Review the details and try again.',
       loading: 'Submitting complaint.',
       attachmentsUploaded: 'Attachments received',
+      attachmentWarning: 'Some attachments were not uploaded',
     },
     validation: {
       required: 'This field is required.',
@@ -121,6 +122,7 @@ export const portalSubmissionText = {
       error: 'تعذر إرسال الشكوى. راجع التفاصيل وحاول مرة أخرى.',
       loading: 'جاري إرسال الشكوى.',
       attachmentsUploaded: 'تم استلام المرفقات',
+      attachmentWarning: 'تعذر رفع بعض المرفقات',
     },
     validation: {
       required: 'هذا الحقل مطلوب.',

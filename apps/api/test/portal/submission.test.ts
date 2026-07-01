@@ -113,6 +113,73 @@ test('portal service always submits and cannot create staff drafts', async () =>
   assert.equal((calls[0] as { saveAsDraft: boolean }).saveAsDraft, false);
 });
 
+test('portal service returns reference and attachment count when initial attachments upload', async () => {
+  const service = new PortalService({
+    createInternal: async () => ({ id: 'cmp_portal', referenceNumber: 'CMS-2026-MAIN-000010', status: ComplaintStatus.SUBMITTED }),
+  } as ComplaintsService, {} as never, {} as never, {} as never, {
+    validateUploadMetadata: () => ({ fileName: 'invoice.pdf', contentType: 'application/pdf', sizeBytes: 7, extension: 'pdf', kind: 'pdf', maxSizeBytes: 10 * 1024 * 1024 }),
+    createUpload: async () => ({ id: 'att_1', complaintId: 'cmp_portal', storageKey: 'private/key', fileName: 'invoice.pdf', contentType: 'application/pdf', sizeBytes: 7, scanStatus: 'PENDING', customerVisible: true }),
+  } as never);
+
+  const result = await service.submitComplaint({ ...validBody(), attachments: [validAttachmentBody()] });
+
+  assert.equal(result.referenceNumber, 'CMS-2026-MAIN-000010');
+  assert.equal(result.attachments?.length, 1);
+  assert.equal(result.attachmentWarning, undefined);
+  assert.doesNotMatch(JSON.stringify(result), /storageKey|private\/key|credential|provider|bucket|uploadUrl|publicUrl/i);
+});
+
+test('portal service preserves reference and warns when attachment upload fails after creation', async () => {
+  let createCount = 0;
+  const service = new PortalService({
+    createInternal: async () => {
+      createCount += 1;
+      return { id: 'cmp_portal', referenceNumber: 'CMS-2026-MAIN-000010', status: ComplaintStatus.SUBMITTED };
+    },
+  } as ComplaintsService, {} as never, {} as never, {} as never, {
+    validateUploadMetadata: () => ({ fileName: 'invoice.pdf', contentType: 'application/pdf', sizeBytes: 7, extension: 'pdf', kind: 'pdf', maxSizeBytes: 10 * 1024 * 1024 }),
+    createUpload: async () => {
+      throw new Error('storage provider private/key secret');
+    },
+  } as never);
+
+  const result = await service.submitComplaint({ ...validBody(), attachments: [validAttachmentBody()] });
+
+  assert.equal(createCount, 1);
+  assert.equal(result.referenceNumber, 'CMS-2026-MAIN-000010');
+  assert.deepEqual(result.attachmentWarning, {
+    code: 'PORTAL_ATTACHMENT_UPLOAD_FAILED',
+    message: 'Complaint submitted, but one or more attachments could not be uploaded.',
+    failedCount: 1,
+    uploadedCount: 0,
+  });
+  assert.equal(result.attachments, undefined);
+  assert.doesNotMatch(JSON.stringify(result), /storage|private|secret|credential|provider|bucket|uploadUrl|publicUrl/i);
+});
+
+test('portal service rejects invalid attachment bytes before complaint creation', async () => {
+  let created = false;
+  const service = new PortalService({
+    createInternal: async () => {
+      created = true;
+      return { id: 'cmp_portal', referenceNumber: 'CMS-2026-MAIN-000010', status: ComplaintStatus.SUBMITTED };
+    },
+  } as ComplaintsService, {} as never, {} as never, {} as never, {
+    validateUploadMetadata: () => {
+      throw new Error('metadata validation should not run');
+    },
+    createUpload: async () => {
+      throw new Error('upload should not run');
+    },
+  } as never);
+
+  await assert.rejects(
+    service.submitComplaint({ ...validBody(), attachments: [{ ...validAttachmentBody(), sizeBytes: 999 }] }),
+    (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED',
+  );
+  assert.equal(created, false);
+});
+
 test('portal submission route rejects invalid body before service call', async () => {
   let called = false;
   const controller = controllerWith({

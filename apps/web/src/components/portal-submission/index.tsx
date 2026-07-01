@@ -10,6 +10,7 @@ import { portalSubmissionText, type PortalLocale } from '../../i18n/portal-submi
 import {
   portalSubmissionAttachments,
   submitPortalComplaint,
+  type PortalAttachmentWarning,
   type PortalComplaintCreateRequest,
   type PortalFieldError,
   type PortalSubmissionOption,
@@ -21,17 +22,19 @@ export type PortalSubmissionPreviewState = 'loading' | 'validation' | 'success' 
 type SubmitState =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'success'; referenceNumber: string; attachmentCount: number }
+  | { kind: 'success'; referenceNumber: string; attachmentCount: number; attachmentWarning?: PortalAttachmentWarning }
   | { kind: 'validation'; fieldErrors: PortalFieldError[] }
   | { kind: 'error'; network: boolean };
 
 export function PortalSubmissionScreen({
   locale,
+  attachmentWarning,
   options = emptyOptions,
   reference,
   state,
 }: {
   locale: PortalLocale;
+  attachmentWarning?: PortalAttachmentWarning | undefined;
   options?: PortalSubmissionOptions;
   reference?: string | undefined;
   state?: PortalSubmissionPreviewState | undefined;
@@ -41,7 +44,7 @@ export function PortalSubmissionScreen({
   const categories = options.categories.filter((option) => !option.parentId);
   const subcategories = options.categories.filter((option) => option.parentId);
   const [submitState, setSubmitState] = useState<SubmitState>({ kind: 'idle' });
-  const visibleState = submitState.kind === 'idle' ? previewState(state, reference, locale) : submitState;
+  const visibleState = submitState.kind === 'idle' ? previewState(state, reference, locale, attachmentWarning) : submitState;
   const fieldErrors = visibleState.kind === 'validation' ? visibleState.fieldErrors : [];
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -60,7 +63,12 @@ export function PortalSubmissionScreen({
     setSubmitState({ kind: 'loading' });
     const result = await submitPortalComplaint(attachmentResult.attachments.length ? { ...complaint, attachments: attachmentResult.attachments } : complaint);
     if (result.ok) {
-      setSubmitState({ kind: 'success', referenceNumber: result.data.complaint.referenceNumber, attachmentCount: result.data.complaint.attachments?.length ?? 0 });
+      setSubmitState({
+        kind: 'success',
+        referenceNumber: result.data.complaint.referenceNumber,
+        attachmentCount: result.data.complaint.attachments?.length ?? 0,
+        ...(result.data.complaint.attachmentWarning ? { attachmentWarning: result.data.complaint.attachmentWarning } : {}),
+      });
       return;
     }
     if (result.error.fieldErrors?.length || result.error.code === 'VALIDATION_FAILED') {
@@ -162,10 +170,17 @@ function PortalSubmissionMessage({ locale, state }: { locale: PortalLocale; stat
   if (state.kind === 'idle') return null;
   if (state.kind === 'success') {
     return (
-      <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900" role="status">
-        {t.states.success}. {t.states.reference}: {state.referenceNumber}.
-        {state.attachmentCount ? ` ${t.states.attachmentsUploaded}: ${state.attachmentCount}.` : ''}
-      </p>
+      <>
+        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900" role="status">
+          {t.states.success}. {t.states.reference}: {state.referenceNumber}.
+          {state.attachmentCount ? ` ${t.states.attachmentsUploaded}: ${state.attachmentCount}.` : ''}
+        </p>
+        {state.attachmentWarning ? (
+          <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900" role="status">
+            {t.states.attachmentWarning}: {state.attachmentWarning.failedCount}.
+          </p>
+        ) : null}
+      </>
     );
   }
   const message = state.kind === 'loading' ? t.states.loading : state.kind === 'validation' ? t.states.validation : t.states.error;
@@ -225,8 +240,8 @@ function fieldError(errors: PortalFieldError[], field: string, locale: PortalLoc
   return error.code === 'REQUIRED' ? portalSubmissionText[locale].validation.required : portalSubmissionText[locale].validation.invalid;
 }
 
-function previewState(state: PortalSubmissionPreviewState | undefined, reference: string | undefined, locale: PortalLocale): SubmitState {
-  if (state === 'success') return { kind: 'success', referenceNumber: reference ?? 'CMP-PORTAL-001', attachmentCount: 0 };
+function previewState(state: PortalSubmissionPreviewState | undefined, reference: string | undefined, locale: PortalLocale, attachmentWarning?: PortalAttachmentWarning): SubmitState {
+  if (state === 'success') return { kind: 'success', referenceNumber: reference ?? 'CMP-PORTAL-001', attachmentCount: 0, ...(attachmentWarning ? { attachmentWarning } : {}) };
   if (state === 'validation') return { kind: 'validation', fieldErrors: [{ field: 'customerName', code: 'REQUIRED', message: portalSubmissionText[locale].validation.required }] };
   if (state === 'loading') return { kind: 'loading' };
   if (state === 'error') return { kind: 'error', network: false };

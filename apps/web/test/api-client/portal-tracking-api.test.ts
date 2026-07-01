@@ -57,6 +57,12 @@ test('portal submission client posts initial attachments with the complaint only
         referenceNumber: 'CMS-2026-MAIN-000010',
         status: 'SUBMITTED',
         attachments: [{ id: 'att_1', fileName: 'invoice.pdf', scanStatus: 'PENDING' }],
+        attachmentWarning: {
+          code: 'PORTAL_ATTACHMENT_UPLOAD_FAILED',
+          message: 'Complaint submitted, but one or more attachments could not be uploaded.',
+          failedCount: 1,
+          uploadedCount: 1,
+        },
       },
     }, 201);
   };
@@ -69,6 +75,10 @@ test('portal submission client posts initial attachments with the complaint only
   }, fetchImpl);
 
   assert.equal(result.ok, true);
+  assert.equal(result.ok ? result.data.complaint.referenceNumber : null, 'CMS-2026-MAIN-000010');
+  assert.equal(result.ok ? result.data.complaint.attachments?.length : null, 1);
+  assert.equal(result.ok ? result.data.complaint.attachmentWarning?.failedCount : null, 1);
+  assert.doesNotMatch(JSON.stringify(result), /storageKey|private|credential|provider|bucket|uploadUrl|publicUrl/i);
   assert.equal(calls[0]?.input, '/api/portal/complaints');
   assert.equal(calls[0]?.init?.credentials, 'omit');
   assert.deepEqual(Object.fromEntries(new Headers(calls[0]?.init?.headers).entries()), {

@@ -5924,6 +5924,35 @@
                 "items": {
                   "$ref": "#/components/schemas/Attachment"
                 }
+              },
+              "attachmentWarning": {
+                "type": "object",
+                "required": [
+                  "code",
+                  "message",
+                  "failedCount",
+                  "uploadedCount"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "enum": [
+                      "PORTAL_ATTACHMENT_UPLOAD_FAILED"
+                    ]
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "failedCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "uploadedCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "additionalProperties": false
               }
             },
             "additionalProperties": false

@@ -14,7 +14,8 @@ import type { PortalSessionLookupRecord, PortalVerificationChallengeRecord } fro
 export type PortalComplaintAttachmentInput = { fileName: string; contentType: string; sizeBytes: number; contentBase64: string };
 export type PortalAttachmentDto = { id: string; complaintId: string; fileName: string; contentType: string; sizeBytes: number; scanStatus: string; customerVisible: boolean };
 export type SubmitPortalComplaintInput = Omit<CreateInternalComplaintInput, 'actorId' | 'requestSource' | 'customerNumber'> & { attachments?: PortalComplaintAttachmentInput[] };
-export type PortalComplaintSubmissionResult = ComplaintCreationResult & { attachments?: PortalAttachmentDto[] };
+export type PortalAttachmentWarningDto = { code: 'PORTAL_ATTACHMENT_UPLOAD_FAILED'; message: string; failedCount: number; uploadedCount: number };
+export type PortalComplaintSubmissionResult = ComplaintCreationResult & { attachments?: PortalAttachmentDto[]; attachmentWarning?: PortalAttachmentWarningDto };
 export type RequestPortalOtpInput = { referenceNumber: string; customerPhone: string; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type VerifyPortalOtpInput = { verificationId: string; otp: string; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type PortalTrackingInput = { sessionToken: string; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
@@ -53,10 +54,19 @@ export class PortalService {
       requestSource: ComplaintTransitionRequestSource.CUSTOMER_PORTAL,
     });
     const uploaded: AttachmentUploadResult[] = [];
+    let failedCount = 0;
     for (const attachment of attachmentInputs) {
-      uploaded.push(await service!.createUpload({ ...attachment, complaintId: complaint.id }));
+      try {
+        uploaded.push(await service!.createUpload({ ...attachment, complaintId: complaint.id }));
+      } catch {
+        failedCount += 1;
+      }
     }
-    return uploaded.length ? { ...complaint, attachments: uploaded.map(portalAttachmentDto) } : complaint;
+    return {
+      ...complaint,
+      ...(uploaded.length ? { attachments: uploaded.map(portalAttachmentDto) } : {}),
+      ...(failedCount ? { attachmentWarning: { code: 'PORTAL_ATTACHMENT_UPLOAD_FAILED' as const, message: 'Complaint submitted, but one or more attachments could not be uploaded.', failedCount, uploadedCount: uploaded.length } } : {}),
+    };
   }
 
   async requestTrackingOtp(input: RequestPortalOtpInput): Promise<PortalOtpRequestResult> {

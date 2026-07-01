@@ -32,8 +32,15 @@ export type PortalSubmitError = {
   status?: number;
 };
 export type PortalSubmitResult<T> = { ok: true; data: T } | { ok: false; error: PortalSubmitError };
+export type PortalAttachmentWarning = { code: 'PORTAL_ATTACHMENT_UPLOAD_FAILED'; message: string; failedCount: number; uploadedCount: number };
 export type PortalComplaintCreateResponse = {
-  complaint: { id: string; referenceNumber: string; status: string; attachments?: Array<{ id: string; fileName: string; scanStatus: string }> };
+  complaint: {
+    id: string;
+    referenceNumber: string;
+    status: string;
+    attachments?: Array<{ id: string; fileName: string; scanStatus: string }>;
+    attachmentWarning?: PortalAttachmentWarning;
+  };
 };
 export type PortalSubmissionOption = { id: string; nameEn: string; nameAr: string; parentId?: string | null };
 export type PortalSubmissionOptions = {

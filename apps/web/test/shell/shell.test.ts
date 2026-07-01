@@ -307,6 +307,27 @@ test('portal submission renders safe success reference result', async () => {
   assert.doesNotMatch(html, /\+966500000001|SEEDDEMO00001|audit|DMS|staff PII/i);
 });
 
+test('portal submission success keeps reference visible when attachments warn', () => {
+  const html = renderToStaticMarkup(
+    React.createElement(PortalSubmissionScreen, {
+      locale: 'en',
+      reference: 'CMS-2026-MAIN-000010',
+      state: 'success',
+      attachmentWarning: {
+        code: 'PORTAL_ATTACHMENT_UPLOAD_FAILED',
+        message: 'Complaint submitted, but one or more attachments could not be uploaded.',
+        failedCount: 1,
+        uploadedCount: 0,
+      },
+    }),
+  );
+
+  assert.match(html, /Complaint submitted/);
+  assert.match(html, /CMS-2026-MAIN-000010/);
+  assert.match(html, /Some attachments were not uploaded: 1/);
+  assert.doesNotMatch(html, /storageKey|private|credential|provider|bucket|uploadUrl|publicUrl/i);
+});
+
 test('portal submission renders loading validation and error states', async () => {
   const loading = renderToStaticMarkup(
     React.createElement(PortalSubmissionScreen, { locale: 'en', state: 'loading' }),
