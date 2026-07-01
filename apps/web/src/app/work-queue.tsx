@@ -117,7 +117,7 @@ export function WorkQueue({
         )}
       </CardContent>
       <CardFooter className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm text-slate-600">
-        <span>{t.pagination.page}</span>
+        <span>{t.pagination.page} 1</span>
         <div className="flex gap-2">
           <Button disabled size="sm" type="button" variant="outline">
             {t.pagination.previous}

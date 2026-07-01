@@ -1,31 +1,31 @@
-# User-Scoped UX Redesign - Slice 4
+# User-Scoped UX Redesign - Slice 5
 
 Status: Ready
 Required model tier: GPT-5.5 Extra High
 Phase: user-scoped-ux-redesign
 Risk: High
-SRS IDs: REQ-COMPLAINT-001, REQ-COMPLAINT-002, RBAC-MATRIX-001, REQ-LOCALIZATION-001, UI-SCREEN-001, UI-DESIGN-001, NFR-SEC-002
+SRS IDs: REQ-COMPLAINT-001, REQ-COMPLAINT-002, REQ-LOCALIZATION-001, UI-SCREEN-001, UI-DESIGN-001, NFR-SEC-002
 
 ## Task
 
-Simplify staff home, queue, and mobile navigation.
+Make complaint detail understandable.
 
 ## Scope
 
-- Re-read Slice 4 in `docs/USER_SCOPED_UX_REDESIGN_PLAN.md`.
-- Inspect the staff layout, dashboard, complaints queue, work queue component, typed queue clients, and existing shell/e2e/visual/perf tests before editing.
-- Make mobile staff navigation put main work content first with a compact header/menu and skip-to-main.
-- Make queue search, filters, and pagination URL-backed and API-backed using existing typed patterns.
-- Default queue to the server/session-scoped "mine or allowed branch scope" behavior; do not add client authority.
-- Replace raw IDs with human labels where visible and improve empty-state guidance.
+- Re-read Slice 5 in `docs/USER_SCOPED_UX_REDESIGN_PLAN.md`.
+- Inspect the complaint detail workspace, comments panel, typed detail client, API response shape, and existing shell/localization/visual tests before editing.
+- Show role-safe customer and vehicle data from the API.
+- If a field is redacted, show the reason.
+- Put status, SLA, owner, severity, and next action in the header area.
+- Separate public customer updates from internal comments.
+- Use locale-aware dates instead of raw timestamps.
+- Do not move complaint state, authorization, workflow, branch scope, portal privacy, audit, or attachment authority into React.
 
 ## Proof
 
-- `corepack pnpm test:web -- shell`
-- `corepack pnpm test:e2e -- work-queues`
-- `corepack pnpm test:e2e -- accessibility`
+- `corepack pnpm test:api -- complaints`
+- `corepack pnpm test:web -- localization`
 - `corepack pnpm test:visual`
-- `corepack pnpm web:perf`
 - `corepack pnpm openapi:check`
 - `corepack pnpm typecheck`
 - `corepack pnpm lint`

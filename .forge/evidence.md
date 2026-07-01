@@ -11783,3 +11783,45 @@ SRS IDs: `REQ-FILES-001`, `ARCH-FILES-001`, `REQ-PORTAL-002`, `UI-SCREEN-001`, `
 
 - Temporary proof route used only for screenshots was deleted before staging.
 - Browser-native file input text remains controlled by Chrome and may appear in English on Arabic screenshots; left for Slice 9 responsive/localization cleanup.
+
+---
+
+## User-Scoped UX Redesign - Slice 4 Simplify Staff Home, Queue, And Mobile Navigation
+
+Status: Complete
+SRS IDs: `REQ-COMPLAINT-001`, `REQ-COMPLAINT-002`, `RBAC-MATRIX-001`, `REQ-LOCALIZATION-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `NFR-SEC-002`
+
+### Scope
+
+- Made the staff complaints queue filters, search, and pagination URL-backed and API-backed through the existing `/complaints/search` route.
+- Kept queue scope backend-owned: the web request forwards only filter/search/page criteria with the staff session cookie, never role, actor, owner, workflow, or authorization inputs.
+- Preserved the existing unfiltered default as the backend/session-scoped queue and used branch names where available instead of raw branch IDs.
+- Added skip-to-main to the staff layout and ordered the staff main content before sidebar navigation on mobile.
+- Replaced the mobile table dependency with compact queue cards so English LTR and Arabic RTL views fit narrow screens without horizontal table scrolling.
+- Added a dedicated work-queue e2e proof mode and updated visual proof fixtures to use the real search route.
+
+### Security Self-Check
+
+- Roles, branch scope, ownership, and queue visibility remain derived by the backend session and `/complaints/search` guard behavior.
+- React does not decide complaint state, authorization, ownership, or workflow transitions; it only renders returned rows and submits filters.
+- No passwords, OTPs, tokens, provider secrets, storage keys, DMS codes, staff PII beyond returned safe queue labels, portal data, audit logs, or internal comments are exposed by the queue UI.
+- Customer portal privacy is unchanged; no portal route changed in this slice.
+- Trust boundaries are tested by shell route tests, the work-queues e2e proof, accessibility/visual proofs, and OpenAPI/type/lint checks.
+
+### Verification
+
+- Passed: `corepack pnpm test:web -- shell` (195/195 TAP tests).
+- Passed: `corepack pnpm test:e2e -- work-queues`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+- Visual review screenshots: `output/playwright/slice4-queue-en-desktop.png`, `output/playwright/slice4-queue-en-mobile.png`, `output/playwright/slice4-queue-ar-desktop.png`, `output/playwright/slice4-queue-ar-mobile.png`.
+
+### Notes
+
+- Temporary proof route used only for screenshots was deleted before staging.
+- Existing unrelated dirty integration module change and untracked output artifacts were left unstaged.

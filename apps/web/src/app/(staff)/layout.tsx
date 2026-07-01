@@ -52,6 +52,9 @@ export default async function StaffLayout({ children }: { children: ReactNode })
       dir={t.dir}
       lang={t.lang}
     >
+      <a className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-sm focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:ring-2 focus:ring-brand" href="#staff-main">
+        {t.skipToMain}
+      </a>
       <StaffTopBar
         languageHref={`?locale=${locale === 'ar' ? 'en' : 'ar'}`}
         signedIn={principal ? t.auth.signedIn : t.auth.signedOut}
@@ -64,7 +67,7 @@ export default async function StaffLayout({ children }: { children: ReactNode })
         title={t.title}
       />
       <div className="grid min-h-[calc(100vh-4.5rem)] grid-cols-1 gap-4 p-4 md:p-6 lg:grid-cols-[18rem_1fr]">
-        <aside className="rounded-md border border-border bg-card p-3 shadow-sm lg:sticky lg:top-20 lg:self-start">
+        <aside className="order-2 rounded-md border border-border bg-card p-3 shadow-sm lg:sticky lg:top-20 lg:order-1 lg:self-start">
           <div className="mb-4">
             <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">{t.subtitle}</p>
             <h1 className="text-2xl font-semibold tracking-normal">{t.title}</h1>
@@ -100,7 +103,7 @@ export default async function StaffLayout({ children }: { children: ReactNode })
             })}
           </nav>
         </aside>
-        <section className="grid content-start gap-4">{children}</section>
+        <section className="order-1 grid content-start gap-4 lg:order-2" id="staff-main">{children}</section>
       </div>
     </div>
   );

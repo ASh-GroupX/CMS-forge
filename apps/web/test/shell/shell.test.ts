@@ -896,7 +896,7 @@ test('work queue renders localized headers filters and pagination', async () => 
   assert.match(html, /Status/);
   assert.match(html, /Branch/);
   assert.match(html, /Search/);
-  assert.match(html, /Page 1 of 1/);
+  assert.match(html, /Page 1/);
   assert.match(html, /Previous/);
   assert.match(html, /Next/);
 });
@@ -919,7 +919,7 @@ test('Arabic work queue keeps RTL localized labels', async () => {
   assert.match(html, /dir="rtl"/);
   assert.ok(html.includes(staffShellText.ar.workQueue.headers[0]));
   assert.ok(html.includes(staffShellText.ar.workQueue.filters.severity));
-  assert.ok(html.includes(staffShellText.ar.workQueue.pagination.page));
+  assert.ok(html.includes(`${staffShellText.ar.workQueue.pagination.page} 1`));
 });
 
 test('work queue preview states render loading empty error success and conflict messages', async () => {
@@ -946,7 +946,7 @@ test('work queue renders real complaint rows through the session cookie', async 
   const fetchImpl: typeof fetch = async (input, init) => {
     calls.push({ input, init });
     if (String(input).endsWith('/auth/me')) return jsonResponse({ user: principal({ roleCode: 'CR_OFFICER' }) });
-    if (String(input).endsWith('/complaints')) {
+    if (String(input).includes('/complaints/search')) {
       return jsonResponse({
         items: [{
           id: 'cmp_real_1',
@@ -973,9 +973,9 @@ test('work queue renders real complaint rows through the session cookie', async 
     }),
   );
 
-  const queueCall = calls.find((call) => String(call.input).endsWith('/complaints'));
+  const queueCall = calls.find((call) => String(call.input).includes('/complaints/search'));
   assert.ok(queueCall);
-  assert.equal(String(queueCall.input), 'http://localhost:3000/complaints');
+  assert.equal(String(queueCall.input), 'http://localhost:3000/complaints/search?limit=10&offset=0');
   assert.doesNotMatch(String(queueCall.input), /role|actor|workflow|branchId/i);
   assert.deepEqual(queueCall.init?.headers, {
     Accept: 'application/json',
@@ -2925,7 +2925,7 @@ test('complaints route renders English work queue filters and pagination', async
   assert.match(html, /Severity/);
   assert.match(html, /SLA state/);
   assert.match(html, /Search/);
-  assert.match(html, /Page 1 of 1/);
+  assert.match(html, /Page 1/);
   assert.match(html, /Previous/);
   assert.match(html, /Next/);
 });
@@ -2937,12 +2937,12 @@ test('complaints route renders Arabic RTL work queue labels', async () => {
 
   assert.ok(html.includes(staffShellText.ar.workQueue.title));
   assert.ok(html.includes(staffShellText.ar.workQueue.filters.severity));
-  assert.ok(html.includes(staffShellText.ar.workQueue.pagination.page));
+  assert.ok(html.includes(`${staffShellText.ar.workQueue.pagination.page} 1`));
 });
 
 test('complaints route renders colored severity and status badges for real rows', async () => {
   const fetchImpl: typeof fetch = async (input) => {
-    if (String(input).endsWith('/complaints')) {
+    if (String(input).includes('/complaints/search')) {
       return jsonResponse({
         items: [{
           id: 'cmp_badge_1',
@@ -2980,7 +2980,7 @@ test('complaints route renders colored severity and status badges for real rows'
 
 test('complaints route renders empty state when backend returns no items', async () => {
   const fetchImpl: typeof fetch = async (input) => {
-    if (String(input).endsWith('/complaints')) return jsonResponse({ items: [] });
+    if (String(input).includes('/complaints/search')) return jsonResponse({ items: [] });
     return jsonResponse({});
   };
   const html = renderToStaticMarkup(
@@ -3014,7 +3014,7 @@ test('complaints route renders real rows through the session cookie', async () =
   const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
   const fetchImpl: typeof fetch = async (input, init) => {
     calls.push({ input, init });
-    if (String(input).endsWith('/complaints')) {
+    if (String(input).includes('/complaints/search')) {
       return jsonResponse({
         items: [{
           id: 'cmp_route_1',
@@ -3041,7 +3041,7 @@ test('complaints route renders real rows through the session cookie', async () =
     }),
   );
 
-  const queueCall = calls.find((c) => String(c.input).endsWith('/complaints'));
+  const queueCall = calls.find((c) => String(c.input).includes('/complaints/search'));
   assert.ok(queueCall);
   assert.deepEqual(queueCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
   assert.doesNotMatch(String(queueCall.input), /role|actor|branchId/i);
@@ -3055,6 +3055,45 @@ test('complaints route renders real rows through the session cookie', async () =
   assert.doesNotMatch(html, /branch_route/);
   assert.match(html, /2026-06-20/);
   assert.match(html, /bg-status-warning/);
+});
+
+test('complaints route sends URL-backed queue filters to the scoped search API', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({
+      items: [{
+        id: 'cmp_filter_1',
+        referenceNumber: 'CMP-FILTER-001',
+        status: 'IN_PROGRESS',
+        severity: 'HIGH',
+        subject: 'Filtered queue complaint',
+        branchId: 'branch_main',
+        branchName: 'Main Branch',
+        ownerId: null,
+        ownerName: null,
+        createdAt: '2026-06-20T00:00:00.000Z',
+        updatedAt: '2026-06-20T10:00:00.000Z',
+      }],
+      limit: 10,
+      offset: 10,
+    });
+  };
+
+  const html = renderToStaticMarkup(
+    await ComplaintsPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ branchId: 'branch_main', locale: 'en', page: '2', search: 'CMP-FILTER', severity: 'HIGH', status: 'IN_PROGRESS' }),
+    }),
+  );
+
+  assert.equal(String(calls[0]?.input), 'http://localhost:3000/complaints/search?limit=10&offset=10&branchId=branch_main&status=IN_PROGRESS&severity=HIGH&referenceNumber=CMP-FILTER');
+  assert.deepEqual(calls[0]?.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+  assert.match(html, /CMP-FILTER-001/);
+  assert.match(html, /Page 2/);
+  assert.match(html, /href="\/complaints\?locale=en&amp;page=1&amp;branchId=branch_main&amp;search=CMP-FILTER&amp;severity=HIGH&amp;status=IN_PROGRESS"/);
+  assert.doesNotMatch(String(calls[0]?.input), /role|actor|workflow|owner/i);
 });
 
 // ---- (staff)/tasks/today route ----

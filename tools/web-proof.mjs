@@ -210,7 +210,7 @@ async function proofFetch(input) {
     categories: [{ id: 'cat_proof', code: 'PROOF', nameEn: 'Proof category', nameAr: 'Proof category AR', parentId: null }],
     severities: ['HIGH', 'MEDIUM', 'LOW'],
   });
-  if (path === '/complaints') return json({ items: [proofRow('CMP-PROOF-001', 'Proof queue row')] });
+  if (path === '/complaints/search') return json({ items: [proofRow('CMP-PROOF-001', 'Proof queue row')] });
   if (path === '/reports') return json({ items: [proofRow('CMP-PROOF-RPT-001', 'Proof report row', { categoryId: 'cat_proof' })] });
   if (path.endsWith('/duplicate-candidates')) return json({ items: [proofRow('CMP-PROOF-DUP-001', 'Proof duplicate row')], windowDays: 30 });
   if (path.endsWith('/related')) return json({ items: [proofRow('CMP-PROOF-REL-001', 'Proof related row')] });

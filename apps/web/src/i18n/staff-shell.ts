@@ -8,7 +8,7 @@ export const staffShellText = {
     switchLabel: 'Switch language',
     switchTarget: 'العربية',
     theme: { label: 'Toggle theme', light: 'Light mode', dark: 'Dark mode' },
-    title: 'Staff Operations', subtitle: 'Dealership accountability desk', branch: 'All authorized branches',
+    title: 'Staff Operations', subtitle: 'Dealership accountability desk', skipToMain: 'Skip to main content', branch: 'All authorized branches',
     auth: {
       signedOut: 'Signed out',
       signedIn: 'Signed in',
@@ -69,10 +69,10 @@ export const staffShellText = {
         success: 'Cases refreshed.', conflict: 'Case data changed. Reload before continuing.',
       },
       sla: { backendScoped: 'Backend scoped' },
-      actions: { open: 'Open case' },
+      actions: { apply: 'Apply filters', open: 'Open case' },
       unassigned: 'Unassigned',
       pagination: {
-        page: 'Page 1 of 1',
+        page: 'Page',
         previous: 'Previous',
         next: 'Next',
       },
@@ -143,7 +143,7 @@ export const staffShellText = {
     switchLabel: 'تبديل اللغة',
     switchTarget: 'English',
     theme: { label: 'تبديل المظهر', light: 'الوضع الفاتح', dark: 'الوضع الداكن' },
-    title: 'عمليات الموظفين', subtitle: 'مكتب مساءلة الوكالة', branch: 'كل الفروع المصرح بها',
+    title: 'عمليات الموظفين', subtitle: 'مكتب مساءلة الوكالة', skipToMain: 'انتقل إلى المحتوى الرئيسي', branch: 'كل الفروع المصرح بها',
     auth: {
       signedOut: 'تم تسجيل الخروج',
       signedIn: 'تم تسجيل الدخول',
@@ -203,10 +203,10 @@ export const staffShellText = {
         success: 'تم تحديث الحالات.', conflict: 'تغيرت بيانات الحالات. أعد التحميل قبل المتابعة.',
       },
       sla: { backendScoped: 'ضمن نطاق الخادم' },
-      actions: { open: 'فتح الحالة' },
+      actions: { apply: 'تطبيق المرشحات', open: 'فتح الحالة' },
       unassigned: 'غير مُكلَّف',
       pagination: {
-        page: 'الصفحة 1 من 1',
+        page: 'الصفحة',
         previous: 'السابق',
         next: 'التالي',
       },

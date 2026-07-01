@@ -1,8 +1,8 @@
 # Current State
 
-Status: User-scoped UX redesign Slice 3 complete
+Status: User-scoped UX redesign Slice 4 complete
 Phase: user-scoped-ux-redesign
-Next Task: Slice 4 - Simplify staff home, queue, and mobile navigation
+Next Task: Slice 5 - Make complaint detail understandable
 Model Tier: GPT-5.5 Extra High
 
 ## How to use this file
@@ -19,11 +19,15 @@ Prior state history is in .forge/archive/state-archive.md.
 - Slice 3 added staff attachment list/upload/download wiring through backend-scoped routes and same-origin web proxies.
 - Staff and verified portal attachment uploads now share early browser file validation while backend policy remains authoritative.
 - Attachment scan state, empty/error, upload, and authorized-download feedback are visible and localized.
+- Slice 4 made staff queue filters/search/pagination URL-backed and API-backed via `/complaints/search`.
+- Staff queue scope remains backend/session-owned; React sends no role, actor, owner, workflow, or authorization fields.
+- Staff layout includes skip-to-main and mobile ordering puts main work content before sidebar navigation.
+- Mobile queue rows render as compact cards for English LTR and Arabic RTL instead of requiring horizontal table scrolling.
 - Screenshots were produced under `output/playwright/` and left unstaged.
 
 ## Current Stop
 
-Proceed to Slice 4: simplify staff home, queue, and mobile navigation.
+Proceed to Slice 5: make complaint detail understandable.
 
 ## Open Carry-Forward / Known Debt
 

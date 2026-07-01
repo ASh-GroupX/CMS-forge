@@ -39,7 +39,12 @@ if (mode === 'attachments') {
   process.exit(0);
 }
 
-console.error('Use one of: visual, accessibility, perf, ui-smoke, runtime-smoke, customer-portal-track, customer-portal-submit, complaint-workflow, attachments.');
+if (mode === 'work-queues') {
+  run('node', ['--import', 'tsx', 'tools/work-queues-proof.mjs']);
+  process.exit(0);
+}
+
+console.error('Use one of: visual, accessibility, perf, ui-smoke, runtime-smoke, customer-portal-track, customer-portal-submit, complaint-workflow, attachments, work-queues.');
 process.exit(1);
 
 function run(command, args) {

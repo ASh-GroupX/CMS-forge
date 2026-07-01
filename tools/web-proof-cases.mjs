@@ -27,7 +27,7 @@ function buildVisualCases(locale) {
   const base = { locale, role: 'admin', session: 'signed-in' };
   return [
     visualCase('dashboard', locale, 'staff-dashboard', { ...base }, [t.dashboard.title, t.dashboard.cards.open[0], t.dashboard.cards.averageTat[0]], ['md:grid-cols-3', 'xl:grid-cols-5']),
-    visualCase('work queue', locale, 'staff-complaints', { ...base }, [t.workQueue.title, 'CMP-PROOF-001', t.workQueue.pagination.page], ['md:grid-cols-5', 'overflow-x-auto']),
+    visualCase('work queue', locale, 'staff-complaints', { ...base }, [t.workQueue.title, 'CMP-PROOF-001', t.workQueue.pagination.page], ['md:grid-cols-6', 'overflow-x-auto']),
     visualCase('complaint create', locale, 'staff-complaint-new', { ...base, create: 'validation', lookup: 'match' }, [t.createForm.title, t.lookup.states.match, t.lookup.actions.useMatch, t.createForm.validation.vinRequired], ['md:grid-cols-2', 'md:col-span-2']),
     visualCase('complaint detail', locale, 'staff-complaint-detail', { ...base, attachment: 'clean', lookup: 'multiple' }, [detail.title, detail.sections.customer, detail.sections.timeline, detail.sections.attachments, detail.correction.title, t.lookup.states.multiple, relations.title], ['xl:grid-cols-[1.1fr_0.9fr]', 'md:grid-cols-2']),
     visualCase('workflow modal', locale, 'staff-complaint-detail', { ...base, workflow: 'validation' }, [detail.sections.workflow, detail.workflow.actions[0], detail.workflow.validation], ['role="dialog"', 'xl:col-span-2']),
