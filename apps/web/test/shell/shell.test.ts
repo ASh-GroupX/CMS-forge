@@ -1056,7 +1056,7 @@ test('complaint detail workspace renders core regions and safe placeholders', as
   assert.match(html, /Related complaints/);
   assert.match(html, /Current responsible staff/);
   assert.match(html, /SLA timer/);
-  assert.match(html, /Masked customer placeholder/);
+  assert.match(html, /Customer data unavailable/);
   assert.match(html, /Survey submitted placeholder/);
 });
 
@@ -1120,9 +1120,25 @@ test('complaint detail route renders real backend facts through the session cook
           updatedAt: '2026-06-19T09:30:00.000Z',
           description: 'Scoped complaint detail.',
           incidentAt: '2026-06-17T00:00:00.000Z',
+          customer: {
+            id: 'cust_detail',
+            name: 'Faisal Al-Otaibi',
+            phone: '+966500000002',
+            identifier: 'CUST-DETAIL-001',
+            source: 'DMS',
+          },
           customerSource: 'DMS',
           manualCustomer: false,
           vehicleRelated: true,
+          vehicle: {
+            id: 'veh_detail',
+            vin: 'DETAILVIN00001',
+            plate: 'ABC123',
+            make: 'Nissan',
+            model: 'Patrol',
+            year: 2024,
+            source: 'MANUAL',
+          },
           vehicleSource: 'MANUAL',
           manualVehicle: true,
           vehicleDataUnavailableReason: 'VIN unavailable on service invoice.',
@@ -1276,6 +1292,12 @@ test('complaint detail route renders real backend facts through the session cook
   assert.match(html, /IN_PROGRESS/);
   assert.match(html, /HIGH/);
   assert.match(html, /Engine noise/);
+  assert.match(html, /Faisal Al-Otaibi/);
+  assert.match(html, /\+966500000002/);
+  assert.match(html, /CUST-DETAIL-001/);
+  assert.match(html, /Nissan Patrol 2024/);
+  assert.match(html, /DETAILVIN00001/);
+  assert.match(html, /ABC123/);
   assert.match(html, /Resolve/);
   assert.doesNotMatch(html, />Close</);
   assert.match(html, /Main Branch/);
@@ -1294,9 +1316,9 @@ test('complaint detail route renders real backend facts through the session cook
   assert.match(html, /Manual entry/);
   assert.match(html, /VIN unavailable on service invoice\./);
   assert.match(html, /Correction reason/);
-  assert.match(html, /Complaint SUBMITTED - 2026-06-18/);
-  assert.match(html, /SUBMITTED - 2026-06-18/);
-  assert.match(html, /IN_PROGRESS - 2026-06-19/);
+  assert.match(html, /Complaint SUBMITTED - Jun 18, 2026/);
+  assert.match(html, /SUBMITTED - Jun 18, 2026/);
+  assert.match(html, /IN_PROGRESS - Jun 19, 2026/);
   assert.doesNotMatch(html, /usr_mgr|usr_staff|Hidden Staff|\+966500000001|SEEDDEMO00001/);
 });
 

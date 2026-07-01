@@ -640,10 +640,25 @@ test('complaint detail service returns explicit timeline and hides missing scope
   const detail = await service.getDetail('cmp_1', { branchId: 'branch_main' });
   assert.equal(detail.referenceNumber, 'CMP-000001');
   assert.equal(detail.description, 'Engine makes a knocking noise.');
+  assert.deepEqual(detail.customer, {
+    id: 'cust_1',
+    name: 'Faisal Al-Otaibi',
+    phone: '+966500000001',
+    identifier: 'CUST-001',
+    source: 'MANUAL',
+  });
+  assert.deepEqual(detail.vehicle, {
+    id: 'veh_1',
+    vin: 'SEEDDEMO00001',
+    plate: 'ABC123',
+    make: 'Nissan',
+    model: 'Patrol',
+    year: 2024,
+    source: 'MANUAL',
+  });
   assert.equal(detail.statusHistory[0]?.toStatus, ComplaintStatus.SUBMITTED);
   assert.equal(detail.statusHistory[0]?.createdAt, '2026-06-18T09:01:00.000Z');
   assert.deepEqual(detail.allowedActions, []);
-  assert.equal('customer' in detail, false);
 
   await assert.rejects(
     service.getDetail('cmp_1', { branchId: 'branch_other' }),
@@ -914,6 +929,8 @@ const detailRecord: ComplaintDetailRecord = {
   ...queueRecord,
   descriptionEn: 'Engine makes a knocking noise.',
   incidentAt: new Date('2026-06-18T09:00:00.000Z'),
+  customer: { id: 'cust_1', nameEn: 'Faisal Al-Otaibi', phone: '+966500000001', dmsCode: 'CUST-001', dataSource: 'MANUAL' },
+  vehicle: { id: 'veh_1', vin: 'SEEDDEMO00001', plate: 'ABC123', makeEn: 'Nissan', modelEn: 'Patrol', year: 2024, dataSource: 'MANUAL' },
   customerDataSource: 'MANUAL',
   manualCustomerFlag: true,
   vehicleRelated: true,

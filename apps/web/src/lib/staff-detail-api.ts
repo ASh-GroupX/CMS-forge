@@ -1,7 +1,5 @@
 import type { ComplaintDetail } from './staff-complaints-api';
-
 type DetailResponse = { complaint?: Partial<ComplaintDetail> };
-
 const STAFF_SESSION_COOKIE = 'cms_staff_session';
 
 export type StaffComplaintDetailView = {
@@ -17,7 +15,8 @@ export type StaffComplaintDetailView = {
     ownerName: string | null;
   } | null;
   capaActions: CaseCapaAction[];
-  caseTimeline: string[];
+  caseTimeline: DetailTimelineItem[];
+  customer: ComplaintDetail['customer'];
   id: string;
   updatedAt: string;
   reference: string;
@@ -27,12 +26,14 @@ export type StaffComplaintDetailView = {
   customerSource: ComplaintDetail['customerSource'];
   manualCustomer: boolean;
   vehicleRelated: boolean;
+  vehicle: ComplaintDetail['vehicle'];
   vehicleSource: ComplaintDetail['vehicleSource'];
   manualVehicle: boolean;
   vehicleDataUnavailableReason: string | null;
   allowedActions: ComplaintDetail['allowedActions'];
-  timeline: string[];
+  timeline: DetailTimelineItem[];
 };
+export type DetailTimelineItem = { at: string; label: string };
 
 export type CaseCapaAction = {
   id: string;
@@ -105,7 +106,7 @@ export async function createCaseCapa(caseId: string, body: CaseCapaCreateRequest
   return payload.capa;
 }
 
-async function fetchCaseTimeline({ apiUrl, caseId, cookies, fetchImpl }: { apiUrl: string; caseId: string; cookies: string; fetchImpl: typeof fetch }): Promise<string[]> {
+async function fetchCaseTimeline({ apiUrl, caseId, cookies, fetchImpl }: { apiUrl: string; caseId: string; cookies: string; fetchImpl: typeof fetch }): Promise<DetailTimelineItem[]> {
   try {
     const response = await fetchImpl(new URL(`/cases/${encodeURIComponent(caseId)}/timeline`, apiUrl), {
       cache: 'no-store',
@@ -113,7 +114,7 @@ async function fetchCaseTimeline({ apiUrl, caseId, cookies, fetchImpl }: { apiUr
     });
     if (!response.ok) return [];
     const body = await response.json() as { events?: Array<{ type?: string; occurredAt?: string; toStatus?: string; action?: string | null }> };
-    return Array.isArray(body.events) ? body.events.filter((item) => typeof item.occurredAt === 'string' && typeof item.type === 'string').map(caseTimelineLabel) : [];
+    return Array.isArray(body.events) ? body.events.filter((item) => typeof item.occurredAt === 'string' && typeof item.type === 'string').map(caseTimelineItem) : [];
   } catch {
     return [];
   }
@@ -133,7 +134,7 @@ async function fetchCaseCapa({ apiUrl, caseId, cookies, fetchImpl }: { apiUrl: s
   }
 }
 
-function viewFromDetail(detail: ComplaintDetail, caseTimeline: string[], capaActions: CaseCapaAction[]): StaffComplaintDetailView {
+function viewFromDetail(detail: ComplaintDetail, caseTimeline: DetailTimelineItem[], capaActions: CaseCapaAction[]): StaffComplaintDetailView {
   return {
     assignee: detail.ownerName ?? null,
     branch: detail.branchName ?? '',
@@ -148,6 +149,7 @@ function viewFromDetail(detail: ComplaintDetail, caseTimeline: string[], capaAct
     } : null,
     capaActions,
     caseTimeline,
+    customer: detail.customer,
     id: detail.id,
     updatedAt: detail.updatedAt,
     reference: detail.referenceNumber,
@@ -157,11 +159,12 @@ function viewFromDetail(detail: ComplaintDetail, caseTimeline: string[], capaAct
     customerSource: detail.customerSource,
     manualCustomer: detail.manualCustomer,
     vehicleRelated: detail.vehicleRelated,
+    vehicle: detail.vehicle,
     vehicleSource: detail.vehicleSource,
     manualVehicle: detail.manualVehicle,
     vehicleDataUnavailableReason: detail.vehicleDataUnavailableReason,
     allowedActions: detail.allowedActions,
-    timeline: detail.statusHistory.map((item) => `${item.toStatus} - ${item.createdAt.slice(0, 10)}`),
+    timeline: detail.statusHistory.map((item) => ({ at: item.createdAt, label: item.toStatus })),
   };
 }
 
@@ -180,13 +183,14 @@ function caseCapaAction(item: unknown): item is CaseCapaAction {
     && typeof row.updatedAt === 'string';
 }
 
-function caseTimelineLabel(item: { type?: string; occurredAt?: string; toStatus?: string; action?: string | null }): string {
+function caseTimelineItem(item: { type?: string; occurredAt?: string; toStatus?: string; action?: string | null }): DetailTimelineItem {
   const label = item.type === 'COMPLAINT_STATUS' && item.toStatus ? `Complaint ${item.toStatus}` : item.type?.replaceAll('_', ' ');
-  return `${label} - ${item.occurredAt?.slice(0, 10)}`;
+  return { at: item.occurredAt ?? '', label: label ?? '' };
 }
 
 function detailFrom(body: DetailResponse): ComplaintDetail | null {
   const complaint = body.complaint;
+  const customer = customerDetail(complaint?.customer);
   if (
     typeof complaint?.id !== 'string' ||
     typeof complaint.referenceNumber !== 'string' ||
@@ -197,10 +201,13 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
     typeof complaint.createdAt !== 'string' ||
     typeof complaint.updatedAt !== 'string' ||
     typeof complaint.description !== 'string' ||
+    !customer ||
     !Array.isArray(complaint.statusHistory)
   ) {
     return null;
   }
+
+  const vehicle = vehicleDetail(complaint.vehicle);
 
   return {
     id: complaint.id,
@@ -215,6 +222,8 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
     updatedAt: complaint.updatedAt,
     description: complaint.description,
     incidentAt: typeof complaint.incidentAt === 'string' ? complaint.incidentAt : null,
+    customer,
+    vehicle,
     customerSource: dataSource(complaint.customerSource) ?? 'LOCAL',
     manualCustomer: complaint.manualCustomer === true,
     vehicleRelated: complaint.vehicleRelated === true,
@@ -225,6 +234,21 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
     caseSummary: caseSummary(complaint.caseSummary),
     allowedActions: Array.isArray(complaint.allowedActions) ? complaint.allowedActions.filter(transitionAction) : [],
   };
+}
+
+function customerDetail(value: unknown): ComplaintDetail['customer'] | null {
+  const item = value as Partial<ComplaintDetail['customer']>;
+  const source = dataSource(item?.source);
+  if (typeof item?.id !== 'string' || typeof item.name !== 'string' || !source) return null;
+  return { id: item.id, name: item.name, phone: typeof item.phone === 'string' ? item.phone : null, identifier: typeof item.identifier === 'string' ? item.identifier : null, source };
+}
+
+function vehicleDetail(value: unknown): ComplaintDetail['vehicle'] {
+  if (value === null || value === undefined) return null;
+  const item = value as Partial<NonNullable<ComplaintDetail['vehicle']>>;
+  const source = dataSource(item?.source);
+  if (typeof item?.id !== 'string' || typeof item.vin !== 'string' || typeof item.plate !== 'string' || typeof item.make !== 'string' || typeof item.model !== 'string' || typeof item.year !== 'number' || !source) return null;
+  return { id: item.id, vin: item.vin, plate: item.plate, make: item.make, model: item.model, year: item.year, source };
 }
 
 function transitionAction(value: unknown): value is ComplaintDetail['allowedActions'][number] {

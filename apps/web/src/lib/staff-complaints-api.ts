@@ -42,9 +42,14 @@ export type ComplaintCaseSummary = {
   ownerName: string | null;
 };
 
+export type ComplaintCustomerDetail = { id: string; name: string; phone: string | null; identifier: string | null; source: 'LOCAL' | 'MANUAL' | 'DMS' };
+export type ComplaintVehicleDetail = { id: string; vin: string; plate: string; make: string; model: string; year: number; source: 'LOCAL' | 'MANUAL' | 'DMS' };
+
 export type ComplaintDetail = ComplaintQueueItem & {
   description: string;
   incidentAt: string | null;
+  customer: ComplaintCustomerDetail;
+  vehicle: ComplaintVehicleDetail | null;
   customerSource: 'LOCAL' | 'MANUAL' | 'DMS';
   manualCustomer: boolean;
   vehicleRelated: boolean;

@@ -11825,3 +11825,42 @@ SRS IDs: `REQ-COMPLAINT-001`, `REQ-COMPLAINT-002`, `RBAC-MATRIX-001`, `REQ-LOCAL
 
 - Temporary proof route used only for screenshots was deleted before staging.
 - Existing unrelated dirty integration module change and untracked output artifacts were left unstaged.
+
+---
+
+## User-Scoped UX Redesign - Slice 5 Make Complaint Detail Understandable
+
+Status: Complete
+SRS IDs: `REQ-COMPLAINT-001`, `REQ-COMPLAINT-002`, `REQ-LOCALIZATION-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `NFR-SEC-002`
+
+### Scope
+
+- Added role-safe customer and vehicle detail fields to the backend complaint detail response and OpenAPI contract.
+- Rendered real customer, contact, customer number, vehicle, VIN, plate, and provenance values in the complaint detail workspace.
+- Added a summary header for status, severity, owner, SLA, next backend-provided action, and locale-aware last-updated date.
+- Changed staff detail timelines from raw timestamp strings to locale-aware English/Arabic dates.
+- Kept workflow actions, branch scope, authorization, portal privacy, audit, comments, and attachment authority backend-owned; React only renders returned detail data and backend-provided actions.
+
+### Security Self-Check
+
+- Complaint detail reads still flow through the backend scoped detail route and server session; no role, actor, branch scope, or authorization input was added to the client.
+- Workflow state and allowed actions remain backend-derived; React formats the next-action label only.
+- Customer portal exposure is unchanged and no portal response includes internal comments, audit logs, DMS codes, staff PII, or unrelated complaints.
+- Trust boundaries are covered by complaint API tests, shell route tests, localization/visual proof, OpenAPI check, typecheck, lint, and diff hygiene.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- complaints` (69/69 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (195/195 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+- Visual review screenshots: `output/playwright/slice5-detail-en-desktop.png`, `output/playwright/slice5-detail-en-mobile.png`, `output/playwright/slice5-detail-ar-desktop.png`, `output/playwright/slice5-detail-ar-mobile.png`.
+
+### Notes
+
+- Temporary proof route used only for screenshots was deleted before staging.
+- Existing unrelated dirty integration module change and untracked output artifacts were left unstaged.

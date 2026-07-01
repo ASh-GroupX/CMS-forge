@@ -6726,6 +6726,8 @@
                 "required": [
                   "description",
                   "incidentAt",
+                  "customer",
+                  "vehicle",
                   "customerSource",
                   "manualCustomer",
                   "vehicleRelated",
@@ -6745,6 +6747,93 @@
                       "null"
                     ],
                     "format": "date-time"
+                  },
+                  "customer": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "name",
+                      "phone",
+                      "identifier",
+                      "source"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "phone": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "identifier": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "source": {
+                        "type": "string",
+                        "enum": [
+                          "LOCAL",
+                          "MANUAL",
+                          "DMS"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "vehicle": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "vin",
+                          "plate",
+                          "make",
+                          "model",
+                          "year",
+                          "source"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "vin": {
+                            "type": "string"
+                          },
+                          "plate": {
+                            "type": "string"
+                          },
+                          "make": {
+                            "type": "string"
+                          },
+                          "model": {
+                            "type": "string"
+                          },
+                          "year": {
+                            "type": "integer"
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "LOCAL",
+                              "MANUAL",
+                              "DMS"
+                            ]
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   },
                   "customerSource": {
                     "type": "string",

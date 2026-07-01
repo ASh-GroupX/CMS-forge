@@ -58,9 +58,29 @@ export type ComplaintCaseSummaryDto = {
   ownerName: string | null;
 };
 
+export type ComplaintCustomerDetailDto = {
+  id: string;
+  name: string;
+  phone: string | null;
+  identifier: string | null;
+  source: DataSourceDto;
+};
+
+export type ComplaintVehicleDetailDto = {
+  id: string;
+  vin: string;
+  plate: string;
+  make: string;
+  model: string;
+  year: number;
+  source: DataSourceDto;
+};
+
 export type ComplaintDetailDto = ComplaintQueueItemDto & {
   description: string;
   incidentAt: string | null;
+  customer: ComplaintCustomerDetailDto;
+  vehicle: ComplaintVehicleDetailDto | null;
   customerSource: DataSourceDto;
   manualCustomer: boolean;
   vehicleRelated: boolean;

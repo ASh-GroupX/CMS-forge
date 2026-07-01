@@ -20,8 +20,9 @@ export type ComplaintQueueRecord = ComplaintRecord & {
 };
 
 export type ComplaintDetailRecord = ComplaintQueueRecord & {
-  descriptionEn: string;
-  incidentAt: Date | null;
+  descriptionEn: string; incidentAt: Date | null;
+  customer: { id: string; nameEn: string; phone: string; dmsCode: string | null; dataSource: DataSource };
+  vehicle: { id: string; vin: string; plate: string; makeEn: string; modelEn: string; year: number; dataSource: DataSource } | null;
   customerDataSource: DataSource; manualCustomerFlag: boolean;
   vehicleRelated: boolean; vehicleDataSource: DataSource | null; manualVehicleFlag: boolean;
   vehicleDataUnavailableReason: string | null;
@@ -171,6 +172,8 @@ export class ComplaintsRepository {
         ...complaintSelect,
         ownerId: true, owner: { select: { nameEn: true, email: true } }, branch: { select: { code: true, nameEn: true, nameAr: true } },
         descriptionEn: true, incidentAt: true,
+        customer: { select: { id: true, nameEn: true, phone: true, dmsCode: true, dataSource: true } },
+        vehicle: { select: { id: true, vin: true, plate: true, makeEn: true, modelEn: true, year: true, dataSource: true } },
         customerDataSource: true, manualCustomerFlag: true,
         vehicleRelated: true, vehicleDataSource: true, manualVehicleFlag: true, vehicleDataUnavailableReason: true,
         createdAt: true, updatedAt: true,

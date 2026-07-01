@@ -78,12 +78,20 @@ async function proofFetch(input) {
   if (path === '/reports/dashboard') return json({ summary: { openComplaints: 9, overdueComplaints: 2, slaWarningComplaints: 3, closedComplaints: 7, averageTatHours: 18 } });
   if (path === '/complaints') return json({ items: [proofRow('CMP-PROOF-001', 'Proof queue row')] });
   if (path === '/reports') return json({ items: [proofRow('CMP-PROOF-RPT-001', 'Proof report row', { categoryId: 'cat_proof' })] });
-  if (path.startsWith('/complaints/')) return json({ complaint: { ...proofRow('CMP-PROOF-DETAIL', 'Proof detail row'), description: 'Proof detail description.', incidentAt: '2026-06-19T00:00:00.000Z', statusHistory: [{ id: 'hist_1', toStatus: 'SUBMITTED', createdAt: '2026-06-19T00:00:00.000Z' }] } });
+  if (path.startsWith('/complaints/')) return json({ complaint: { ...proofRow('CMP-PROOF-DETAIL', 'Proof detail row'), description: 'Proof detail description.', incidentAt: '2026-06-19T00:00:00.000Z', customer: proofCustomer(), customerSource: 'DMS', manualCustomer: false, vehicleRelated: true, vehicle: proofVehicle(), vehicleSource: 'LOCAL', manualVehicle: false, vehicleDataUnavailableReason: null, statusHistory: [{ id: 'hist_1', toStatus: 'SUBMITTED', createdAt: '2026-06-19T00:00:00.000Z' }] } });
   return json({}, 404);
 }
 
 function proofRow(referenceNumber, subject, extra = {}) {
   return { id: 'proof_1', referenceNumber, status: 'IN_PROGRESS', severity: 'HIGH', subject, branchId: 'branch_proof', ownerId: 'usr_proof', createdAt: '2026-06-20T00:00:00.000Z', updatedAt: '2026-06-20T10:00:00.000Z', ...extra };
+}
+
+function proofCustomer() {
+  return { id: 'cust_proof', name: 'Proof Customer', phone: '+966500000099', identifier: 'CUST-PROOF', source: 'DMS' };
+}
+
+function proofVehicle() {
+  return { id: 'veh_proof', vin: 'PROOFVIN00001', plate: 'PRF123', make: 'Nissan', model: 'Patrol', year: 2024, source: 'LOCAL' };
 }
 
 function json(body, status = 200) {
