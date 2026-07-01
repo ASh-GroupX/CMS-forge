@@ -5,6 +5,7 @@ import { complaintDetailText } from '../../i18n/staff-complaint-detail';
 import { complaintRelationsText } from '../../i18n/staff-complaint-relations';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
+import type { ComplaintFormOptions } from '../../lib/staff-complaint-form-options-api';
 import type { StaffComplaintRelationsView } from '../../lib/staff-complaint-relations-api';
 import type { StaffComplaintDetailView } from '../../lib/staff-detail-api';
 import { ComplaintAttachmentControls, type ComplaintAttachmentPreviewState } from '../complaint-attachment-controls';
@@ -26,6 +27,7 @@ export function ComplaintDetailWorkspace({
   detail,
   locale,
   lookupState,
+  options,
   relations,
   staff,
   state,
@@ -36,6 +38,7 @@ export function ComplaintDetailWorkspace({
   detail?: StaffComplaintDetailView | undefined;
   locale: Locale;
   lookupState?: LookupPreviewState | undefined;
+  options?: ComplaintFormOptions | null | undefined;
   relations?: StaffComplaintRelationsView | undefined;
   staff?: AssignableStaff[] | null | undefined;
   state?: ComplaintDetailPreviewState | undefined;
@@ -125,7 +128,10 @@ export function ComplaintDetailWorkspace({
             allowedActions={detail?.allowedActions}
             complaintId={detail?.id}
             locale={locale}
+            options={options}
+            staff={staff}
             status={detail?.status}
+            vehicleNeedsUnavailableReason={Boolean(detail?.vehicleRelated && !detail.vehicle && !detail.vehicleDataUnavailableReason)}
             workflowState={workflowState}
           />
           <ComplaintCommentsPanel commentsState={commentsState} locale={locale} />

@@ -31,6 +31,7 @@ import PortalSurveyPage from '../../src/app/portal/survey/page';
 import PortalTrackingPage from '../../src/app/portal/track/page';
 import { buildPortalComplaintSubmission, PortalSubmissionScreen } from '../../src/components/portal-submission';
 import { PortalTrackingPreview } from '../../src/components/portal-tracking';
+import { ComplaintWorkflowModal } from '../../src/components/complaint-workflow-modal';
 import { adminBranchesText } from '../../src/i18n/staff-admin-branches';
 import { adminCategoriesSlaText } from '../../src/i18n/staff-admin-categories-sla';
 import { adminNotificationTemplatesText } from '../../src/i18n/staff-admin-notification-templates';
@@ -1491,10 +1492,25 @@ test('complaint detail workflow modal renders actions and required comment valid
     assert.ok(html.includes(action));
   }
   assert.match(html, /Workflow action/);
-  assert.match(html, /Required comment/);
   assert.match(html, /Comment or reason is required\./);
   assert.match(html, /role="dialog"/);
   assert.match(html, /role="alert"/);
+});
+
+test('complaint workflow modal renders minimal fields for required actions', () => {
+  const options = { branches: [{ id: 'branch_service', code: 'SERVICE', nameEn: 'Service Branch', nameAr: 'فرع الصيانة' }], categories: [], departments: [{ id: 'dept_service', code: 'SERVICE', nameEn: 'Service', nameAr: 'الصيانة' }], severities: [] };
+  const staff = [{ userId: 'usr_owner', displayName: 'Owner User', displayNameAr: 'مسؤول', role: 'CR Manager', roleAr: 'مدير', branchLabel: 'Service Branch', branchLabelAr: 'فرع الصيانة' }];
+  const render = (action: import('../../src/lib/staff-complaints-api').ComplaintTransitionAction, extra: { vehicleNeedsUnavailableReason?: boolean } = {}) => renderToStaticMarkup(React.createElement(ComplaintWorkflowModal, { allowedActions: [action], complaintId: 'cmp_1', locale: 'en', options, staff, status: 'SUBMITTED', ...extra }));
+
+  assert.match(render('ACCEPT_INTAKE'), /No extra fields are required/);
+  assert.match(render('APPROVE_AND_ROUTE'), /Target branch/);
+  assert.match(render('APPROVE_AND_ROUTE'), /Target department/);
+  assert.match(render('APPROVE_AND_ROUTE'), /Assigned owner/);
+  assert.match(render('ASSIGN_INVESTIGATION'), /Assigned owner/);
+  assert.match(render('RESOLVE'), /Resolution type/);
+  assert.match(render('RESOLVE'), /Resolution summary/);
+  assert.match(render('CLOSE', { vehicleNeedsUnavailableReason: true }), /Customer communication status/);
+  assert.match(render('CLOSE', { vehicleNeedsUnavailableReason: true }), /Vehicle data unavailable reason/);
 });
 
 test('complaint detail workflow requires close and reject confirmation UI', async () => {
@@ -1536,7 +1552,7 @@ test('complaint detail workflow source does not decide transitions', () => {
   const source = readFileSync('apps/web/src/components/complaint-workflow-modal/index.tsx', 'utf8');
 
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie/);
-  assert.doesNotMatch(source, /applyTransition|fromStatus|toStatus|nextStatus|currentState|ownerId|branchScope|roleCode/);
+  assert.doesNotMatch(source, /applyTransition|toStatus|nextStatus|currentState|branchScope|roleCode/);
   assert.doesNotMatch(source, /PATCH|DELETE|POST|createObjectURL|Blob/);
   assert.match(source, /submitStaffComplaintWorkflowAction/);
 });

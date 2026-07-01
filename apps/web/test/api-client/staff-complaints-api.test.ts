@@ -414,28 +414,35 @@ test('correctStaffComplaint preserves conflict envelopes distinctly', async () =
   });
 });
 
-test('submitStaffComplaintWorkflowAction posts action reason and current status without client authority', async () => {
+test('submitStaffComplaintWorkflowAction posts required action fields without client authority', async () => {
   const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
   const fetchImpl: typeof fetch = async (input, init) => {
     calls.push({ input, init });
-    return jsonResponse({ transition: { complaintId: 'cmp/1', fromStatus: 'SUBMITTED', action: 'ACCEPT_INTAKE', actorRole: 'CR_MANAGER', toStatus: 'MANAGER_REVIEW' } });
+    const body = JSON.parse(String(init?.body)) as { action: string; fromStatus: string };
+    return jsonResponse({ transition: { complaintId: 'cmp/1', fromStatus: body.fromStatus, action: body.action, actorRole: 'CR_MANAGER', toStatus: 'MANAGER_REVIEW' } });
   };
 
   await withDocumentCookie('cms_csrf_token=csrf_123', async () => {
-    const result = await submitStaffComplaintWorkflowAction('cmp/1', { status: 'SUBMITTED', action: 'ACCEPT_INTAKE', reason: 'Manager accepted intake.' }, fetchImpl);
-    assert.equal(result.ok, true);
+    for (const request of [
+      { status: 'SUBMITTED', action: 'ACCEPT_INTAKE' },
+      { status: 'MANAGER_REVIEW', action: 'APPROVE_AND_ROUTE', reason: 'Route to branch.', targetBranchId: 'branch_service', targetDepartmentId: 'dept_service', ownerId: 'usr_owner' },
+      { status: 'BRANCH_REVIEW', action: 'ASSIGN_INVESTIGATION', reason: 'Assign investigator.', ownerId: 'usr_investigator' },
+      { status: 'IN_PROGRESS', action: 'RESOLVE', resolutionType: 'repair', resolutionSummary: 'Fixed the issue.' },
+      { status: 'RESOLVED', action: 'CLOSE', reason: 'Customer confirmed.', customerCommunicationStatus: 'called' },
+    ] as const) {
+      assert.equal((await submitStaffComplaintWorkflowAction('cmp/1', request, fetchImpl)).ok, true);
+    }
   });
 
-  assert.equal(calls[0]?.input, '/api/complaints/cmp%2F1/transitions');
-  assert.equal(calls[0]?.init?.method, 'POST');
-  assert.equal(calls[0]?.init?.credentials, 'include');
-  assert.deepEqual(calls[0]?.init?.headers, { Accept: 'application/json', 'content-type': 'application/json', 'x-csrf-token': 'csrf_123' });
-  assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
-    fromStatus: 'SUBMITTED',
-    action: 'ACCEPT_INTAKE',
-    reason: 'Manager accepted intake.',
-  });
-  assert.doesNotMatch(String(calls[0]?.init?.body), /role|actor|owner|branchScope|token|credential/i);
+  assert.ok(calls.every((call) => call.input === '/api/complaints/cmp%2F1/transitions' && call.init?.method === 'POST' && call.init.credentials === 'include'));
+  assert.deepEqual(calls.map((call) => JSON.parse(String(call.init?.body))), [
+    { fromStatus: 'SUBMITTED', action: 'ACCEPT_INTAKE' },
+    { fromStatus: 'MANAGER_REVIEW', action: 'APPROVE_AND_ROUTE', reason: 'Route to branch.', targetBranchId: 'branch_service', targetDepartmentId: 'dept_service', ownerId: 'usr_owner' },
+    { fromStatus: 'BRANCH_REVIEW', action: 'ASSIGN_INVESTIGATION', reason: 'Assign investigator.', ownerId: 'usr_investigator' },
+    { fromStatus: 'IN_PROGRESS', action: 'RESOLVE', resolutionType: 'repair', resolutionSummary: 'Fixed the issue.' },
+    { fromStatus: 'RESOLVED', action: 'CLOSE', reason: 'Customer confirmed.', customerCommunicationStatus: 'called' },
+  ]);
+  assert.ok(calls.every((call) => !/role|actor|branchScope|token|credential/i.test(String(call.init?.body))));
 });
 
 test('complaint create proxy forwards body, session cookie, and CSRF to the API', async () => {

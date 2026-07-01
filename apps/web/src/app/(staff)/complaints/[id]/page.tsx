@@ -9,6 +9,7 @@ import {
 import type { LookupPreviewState } from '../../../../components/customer-vehicle-lookup';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { getAssignableStaff } from '../../../../lib/staff-assignable-staff-api';
+import { getComplaintFormOptions } from '../../../../lib/staff-complaint-form-options-api';
 import { getStaffComplaintRelationsView } from '../../../../lib/staff-complaint-relations-api';
 import { getStaffComplaintDetail } from '../../../../lib/staff-detail-api';
 
@@ -40,10 +41,11 @@ export default async function ComplaintDetailPage({
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
     ...(id !== undefined ? { complaintId: id } : {}),
   };
-  const [detail, relations, staff] = await Promise.all([
+  const [detail, relations, staff, options] = await Promise.all([
     getStaffComplaintDetail(apiInput),
     getStaffComplaintRelationsView(apiInput),
     getAssignableStaff({ ...(cookieHeader !== undefined ? { cookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
+    getComplaintFormOptions({ ...(cookieHeader !== undefined ? { cookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
   ]);
 
   return (
@@ -53,6 +55,7 @@ export default async function ComplaintDetailPage({
       detail={detail ?? undefined}
       locale={resolveLocale(readParam(query?.locale))}
       lookupState={resolveLookup(readParam(query?.lookup))}
+      options={options}
       relations={relations ?? undefined}
       staff={staff}
       state={resolveDetail(readParam(query?.detail))}

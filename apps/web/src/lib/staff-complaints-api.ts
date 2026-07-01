@@ -124,11 +124,7 @@ export type StaffComplaintCorrectionResponse = {
   };
 };
 
-export type StaffComplaintTransitionRequest = {
-  status: ComplaintStatus;
-  action: ComplaintTransitionAction;
-  reason: string;
-};
+export type StaffComplaintTransitionRequest = { status: ComplaintStatus; action: ComplaintTransitionAction; reason?: string | null; targetBranchId?: string | null; targetDepartmentId?: string | null; ownerId?: string | null; resolutionType?: string | null; resolutionSummary?: string | null; customerCommunicationStatus?: string | null; vehicleDataUnavailableReason?: string | null };
 
 export type StaffComplaintTransitionResponse = {
   transition: {
@@ -216,8 +212,9 @@ export function submitStaffComplaintWorkflowAction(
   request: StaffComplaintTransitionRequest,
   fetchImpl: typeof fetch = fetch,
 ): Promise<StaffApiResult<StaffComplaintTransitionResponse>> {
+  const { status, ...body } = request;
   return requestJson(`/api/complaints/${encodeURIComponent(complaintId)}/transitions`, fetchImpl, {
-    body: JSON.stringify({ fromStatus: request.status, action: request.action, reason: request.reason }),
+    body: JSON.stringify({ fromStatus: status, ...body }),
     headers: csrfHeaders(),
     method: 'POST',
   });

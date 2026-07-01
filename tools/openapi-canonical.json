@@ -6352,6 +6352,7 @@
         "required": [
           "branches",
           "categories",
+          "departments",
           "severities"
         ],
         "properties": {
@@ -6362,6 +6363,12 @@
             }
           },
           "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplaintFormOption"
+            }
+          },
+          "departments": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ComplaintFormOption"
