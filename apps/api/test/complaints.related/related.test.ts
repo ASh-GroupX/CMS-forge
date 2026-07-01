@@ -133,8 +133,10 @@ test('OpenAPI documents related complaint routes with safe response shapes', () 
   assert.ok(openapi.paths['/complaints/{id}/related/{targetId}'].delete);
   assert.ok(openapi.paths['/complaints/{id}/duplicate-candidates'].get);
   assert.deepEqual(Object.keys(openapi.components.schemas.ComplaintRelatedResponse.properties), ['items']);
+  assert.equal(openapi.components.schemas.ComplaintRelatedResponse.properties.items.items.$ref, '#/components/schemas/ComplaintRelationItem');
   assert.deepEqual(Object.keys(openapi.components.schemas.ComplaintRelationMutation.properties.relation.properties), ['sourceComplaintId', 'targetComplaintId', 'changed']);
   assert.equal(JSON.stringify(openapi.components.schemas.ComplaintRelatedResponse).includes('customerPhone'), false);
+  assert.equal(JSON.stringify(openapi.components.schemas.ComplaintRelationItem).includes('customerName'), true);
 });
 
 function harness() {
@@ -184,6 +186,7 @@ function item(id: string, branchId: string): ComplaintRelationItemRecord {
     branch: { code: branchId, nameEn: branchId, nameAr: branchId },
     ownerId: null,
     owner: null,
+    customer: { nameEn: 'Faisal Al-Otaibi' },
     createdAt: new Date('2026-06-18T09:00:00.000Z'),
     updatedAt: new Date('2026-06-18T10:00:00.000Z'),
   };

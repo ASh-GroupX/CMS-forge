@@ -11786,6 +11786,49 @@ SRS IDs: `REQ-FILES-001`, `ARCH-FILES-001`, `REQ-PORTAL-002`, `UI-SCREEN-001`, `
 
 ---
 
+## User-Scoped UX Redesign - Slice 7 Complete Related And Duplicate Complaint UX
+
+Status: Complete
+SRS IDs: `REQ-COMPLAINT-001`, `REQ-COMPLAINT-002`, `REQ-LOCALIZATION-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `NFR-SEC-002`
+
+### Scope
+
+- Added a relation-specific complaint item response that includes safe customer and branch display names for duplicate candidates and linked complaints.
+- Kept duplicate matching, branch scope, relation writes, unlink writes, audit entries, permissions, and CSRF enforcement backend-owned.
+- Added same-origin web DELETE proxy and typed client support for unlinking related complaints without sending role, actor, branch scope, workflow, token, or credential inputs.
+- Updated the relation panel to show reference, customer, status, branch name, severity, created date, updated date, link action, and confirmed unlink action.
+- Refreshed relation UI state after link/unlink by moving the item between candidate and linked lists; no destructive merge behavior was added.
+- Replaced mojibake relation Arabic strings with real Arabic labels for the touched UI.
+
+### Security Self-Check
+
+- React still does not decide complaint state, authorization, branch scope, duplicate matching, workflow transitions, audit behavior, portal privacy, or attachment authority.
+- Relation writes still use backend scoped routes with the server session principal, permission guards, branch-scope checks, CSRF, and relation audit records.
+- Relation responses expose customer display name and branch display name only; tests continue to reject unsafe phone, VIN, token, credential, role, actor, and workflow leakage.
+- Customer portal privacy is unchanged; no portal route changed in this slice.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- complaints.related` (7/7 TAP tests).
+- Passed: `corepack pnpm test:api -- complaints` (69/69 TAP tests).
+- Passed: `corepack pnpm test:web -- api-client` (33/33 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (196/196 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+- Not Run/Unavailable: `corepack pnpm test:e2e -- complaint-related` because `tools/e2e-runner.mjs` does not register a `complaint-related` suite.
+- Visual review screenshots: `output/playwright/slice7-related-en-desktop.png`, `output/playwright/slice7-related-en-mobile.png`, `output/playwright/slice7-related-ar-desktop.png`, `output/playwright/slice7-related-ar-mobile.png`.
+
+### Notes
+
+- Temporary proof route used only for screenshots was deleted before staging.
+- Existing unrelated dirty integration module change and untracked output artifacts were left unstaged.
+
+---
+
 ## User-Scoped UX Redesign - Slice 4 Simplify Staff Home, Queue, And Mobile Navigation
 
 Status: Complete

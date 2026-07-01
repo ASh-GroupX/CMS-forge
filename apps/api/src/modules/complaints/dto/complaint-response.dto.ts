@@ -96,12 +96,16 @@ export type ComplaintDetailResponseDto = {
   complaint: ComplaintDetailDto;
 };
 
+export type ComplaintRelationItemDto = ComplaintQueueItemDto & {
+  customerName: string;
+};
+
 export type ComplaintRelatedResponseDto = {
-  items: ComplaintQueueItemDto[];
+  items: ComplaintRelationItemDto[];
 };
 
 export type ComplaintDuplicateCandidatesResponseDto = {
-  items: ComplaintQueueItemDto[];
+  items: ComplaintRelationItemDto[];
   windowDays: number;
 };
 

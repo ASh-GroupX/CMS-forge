@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { linkStaffComplaintRelation, type ComplaintRelationState, type SafeComplaintRelationItem, type StaffComplaintRelationsView } from '../../lib/staff-complaint-relations-api';
+import { linkStaffComplaintRelation, unlinkStaffComplaintRelation, type ComplaintRelationState, type SafeComplaintRelationItem, type StaffComplaintRelationsView } from '../../lib/staff-complaint-relations-api';
 
 type FeedbackState = Exclude<ComplaintRelationState, 'ready'>;
 
@@ -13,7 +13,9 @@ export type ComplaintRelationsText = {
   related: string;
   window: string;
   link: string;
-  fields: { branch: string; created: string; updated: string };
+  unlink: string;
+  unlinkConfirm: string;
+  fields: { branch: string; created: string; customer: string; updated: string };
   states: Record<FeedbackState, string>;
 };
 
@@ -38,6 +40,23 @@ export function ComplaintRelationsPanel({ complaintId, relations, text }: { comp
     }));
   }
 
+  async function unlink(item: SafeComplaintRelationItem) {
+    if (!complaintId || !globalThis.confirm(text.unlinkConfirm.replace('{reference}', item.referenceNumber))) return;
+    setBusyId(item.id);
+    const result = await unlinkStaffComplaintRelation(complaintId, item.id);
+    setBusyId(null);
+    if (!result.ok) {
+      setView((current) => ({ ...current, state: result.error.status === 401 || result.error.status === 403 ? 'denied' : 'error' }));
+      return;
+    }
+    setView((current) => ({
+      ...current,
+      candidates: current.candidates.some((candidate) => candidate.id === item.id) ? current.candidates : [...current.candidates, item],
+      related: current.related.filter((related) => related.id !== item.id),
+      state: 'success',
+    }));
+  }
+
   const feedback = view.state === 'ready' ? null : text.states[view.state];
   return (
     <section className="rounded-md border border-amber-200 bg-amber-50 p-3 md:col-span-2" aria-label={text.title}>
@@ -49,13 +68,13 @@ export function ComplaintRelationsPanel({ complaintId, relations, text }: { comp
         {view.candidates.length ? <Badge variant="secondary">{view.candidates.length}</Badge> : null}
       </div>
       {feedback ? <p className="mt-3 text-sm text-slate-700" role={view.state === 'error' || view.state === 'denied' ? 'alert' : 'status'}>{feedback}</p> : null}
-      <RelationList action={link} busyId={busyId} complaintId={complaintId} items={view.candidates} title={text.candidates} text={text} />
-      <RelationList items={view.related} title={text.related} text={text} />
+      <RelationList action={link} actionLabel={text.link} busyId={busyId} complaintId={complaintId} items={view.candidates} title={text.candidates} text={text} />
+      <RelationList action={unlink} actionLabel={text.unlink} busyId={busyId} complaintId={complaintId} items={view.related} title={text.related} text={text} />
     </section>
   );
 }
 
-function RelationList({ action, busyId, complaintId, items, text, title }: { action?: ((item: SafeComplaintRelationItem) => void) | undefined; busyId?: string | null | undefined; complaintId?: string | undefined; items: SafeComplaintRelationItem[]; text: ComplaintRelationsText; title: string }) {
+function RelationList({ action, actionLabel, busyId, complaintId, items, text, title }: { action?: ((item: SafeComplaintRelationItem) => void) | undefined; actionLabel?: string | undefined; busyId?: string | null | undefined; complaintId?: string | undefined; items: SafeComplaintRelationItem[]; text: ComplaintRelationsText; title: string }) {
   if (!items.length) return null;
   return (
     <div className="mt-3">
@@ -71,12 +90,13 @@ function RelationList({ action, busyId, complaintId, items, text, title }: { act
               </div>
             </div>
             <p className="mt-1 text-slate-700">{item.subject}</p>
-            <dl className="mt-2 grid gap-1 text-xs text-slate-600 sm:grid-cols-3">
-              <Meta label={text.fields.branch} value={item.branchId} />
+            <dl className="mt-2 grid gap-1 text-xs text-slate-600 sm:grid-cols-4">
+              <Meta label={text.fields.customer} value={item.customerName ?? '-'} />
+              <Meta label={text.fields.branch} value={item.branchName} />
               <Meta label={text.fields.created} value={item.createdAt.slice(0, 10)} />
               <Meta label={text.fields.updated} value={item.updatedAt.slice(0, 10)} />
             </dl>
-            {action ? <Button className="mt-3" disabled={!complaintId || busyId === item.id} onClick={() => action(item)} size="sm" type="button">{text.link}</Button> : null}
+            {action ? <Button className="mt-3" disabled={!complaintId || busyId === item.id} onClick={() => action(item)} size="sm" type="button">{actionLabel ?? ''}</Button> : null}
           </li>
         ))}
       </ol>

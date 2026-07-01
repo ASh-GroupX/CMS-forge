@@ -1171,6 +1171,8 @@ test('complaint detail route renders real backend facts through the session cook
           severity: 'HIGH',
           subject: 'Engine noise repeat',
           branchId: 'branch_main',
+          branchName: 'Main Branch',
+          customerName: 'Faisal Al-Otaibi',
           ownerName: 'Hidden Staff',
           customerPhone: '+966500000001',
           vehicleVin: 'SEEDDEMO00001',
@@ -1189,6 +1191,8 @@ test('complaint detail route renders real backend facts through the session cook
           severity: 'MEDIUM',
           subject: 'Linked service concern',
           branchId: 'branch_main',
+          branchName: 'Main Branch',
+          customerName: 'Related Customer',
           createdAt: '2026-06-16T00:00:00.000Z',
           updatedAt: '2026-06-19T00:00:00.000Z',
         }],
@@ -1290,6 +1294,8 @@ test('complaint detail route renders real backend facts through the session cook
   assert.match(html, /CMP-DUP-001/);
   assert.match(html, /CMP-REL-001/);
   assert.match(html, /Link as related/);
+  assert.match(html, /Unlink/);
+  assert.match(html, /Related Customer/);
   assert.match(html, /IN_PROGRESS/);
   assert.match(html, /HIGH/);
   assert.match(html, /Engine noise/);
@@ -1302,6 +1308,7 @@ test('complaint detail route renders real backend facts through the session cook
   assert.match(html, /Resolve/);
   assert.doesNotMatch(html, />Close</);
   assert.match(html, /Main Branch/);
+  assert.doesNotMatch(html, />branch_main</);
   assert.match(html, /Case timeline/);
   assert.match(html, /Case status/);
   assert.match(html, /CUSTOMER_COMPLAINT/);

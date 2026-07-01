@@ -2,7 +2,7 @@ import type { ComplaintQueueItem, StaffApiResult } from './staff-complaints-api'
 
 const STAFF_SESSION_COOKIE = 'cms_staff_session';
 
-export type SafeComplaintRelationItem = Pick<ComplaintQueueItem, 'id' | 'referenceNumber' | 'status' | 'severity' | 'subject' | 'branchId' | 'createdAt' | 'updatedAt'>;
+export type SafeComplaintRelationItem = Pick<ComplaintQueueItem, 'id' | 'referenceNumber' | 'status' | 'severity' | 'subject' | 'branchId' | 'createdAt' | 'updatedAt'> & { branchName: string; customerName?: string };
 export type ComplaintRelationState = 'ready' | 'loading' | 'empty' | 'error' | 'denied' | 'success';
 export type StaffComplaintRelationsView = { candidates: SafeComplaintRelationItem[]; related: SafeComplaintRelationItem[]; state: ComplaintRelationState; windowDays: number };
 export type ComplaintRelationMutationResponse = { relation: { sourceComplaintId: string; targetComplaintId: string; changed: boolean } };
@@ -55,6 +55,14 @@ export function linkStaffComplaintRelation(complaintId: string, targetComplaintI
   });
 }
 
+export function unlinkStaffComplaintRelation(complaintId: string, targetComplaintId: string, fetchImpl: typeof fetch = fetch): Promise<StaffApiResult<ComplaintRelationMutationResponse>> {
+  return requestJson(`/api/complaints/${encodeURIComponent(complaintId)}/related`, fetchImpl, {
+    body: JSON.stringify({ targetComplaintId }),
+    headers: csrfHeaders(),
+    method: 'DELETE',
+  });
+}
+
 async function getJson<T>(apiUrl: string, path: string, cookies: string, fetchImpl: typeof fetch): Promise<RelationRead<T>> {
   try {
     const response = await fetchImpl(new URL(path, apiUrl), { cache: 'no-store', headers: { Accept: 'application/json', cookie: cookies } });
@@ -85,9 +93,19 @@ function safeItems(items: unknown): SafeComplaintRelationItem[] {
 
 function safeItem(value: unknown): SafeComplaintRelationItem[] {
   const item = value as Partial<SafeComplaintRelationItem>;
-  return typeof item?.id === 'string' && typeof item.referenceNumber === 'string' && typeof item.status === 'string' && typeof item.severity === 'string' && typeof item.subject === 'string' && typeof item.branchId === 'string' && typeof item.createdAt === 'string' && typeof item.updatedAt === 'string'
-    ? [{ id: item.id, referenceNumber: item.referenceNumber, status: item.status, severity: item.severity, subject: item.subject, branchId: item.branchId, createdAt: item.createdAt, updatedAt: item.updatedAt }]
-    : [];
+  if (!(typeof item?.id === 'string' && typeof item.referenceNumber === 'string' && typeof item.status === 'string' && typeof item.severity === 'string' && typeof item.subject === 'string' && typeof item.branchId === 'string' && typeof item.branchName === 'string' && typeof item.createdAt === 'string' && typeof item.updatedAt === 'string')) return [];
+  return [{
+    id: item.id,
+    referenceNumber: item.referenceNumber,
+    status: item.status,
+    severity: item.severity,
+    subject: item.subject,
+    branchId: item.branchId,
+    branchName: item.branchName,
+    ...(typeof item.customerName === 'string' ? { customerName: item.customerName } : {}),
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  }];
 }
 
 function csrfHeaders(): HeadersInit {

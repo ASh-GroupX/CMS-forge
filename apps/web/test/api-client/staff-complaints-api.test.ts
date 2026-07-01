@@ -3,11 +3,11 @@ import test from 'node:test';
 import { GET as proxyListAttachments, POST as proxyUploadAttachment } from '../../src/app/api/complaints/[id]/attachments/route';
 import { GET as proxyDownloadAttachment } from '../../src/app/api/complaints/[id]/attachments/[attachmentId]/download/route';
 import { POST as proxyCorrectComplaint } from '../../src/app/api/complaints/[id]/corrections/route';
-import { POST as proxyLinkRelatedComplaint } from '../../src/app/api/complaints/[id]/related/route';
+import { DELETE as proxyUnlinkRelatedComplaint, POST as proxyLinkRelatedComplaint } from '../../src/app/api/complaints/[id]/related/route';
 import { POST as proxyTransitionComplaint } from '../../src/app/api/complaints/[id]/transitions/route';
 import { POST as proxyCreateComplaint } from '../../src/app/api/complaints/route';
 import { GET as proxyLookupDmsCustomerVehicle } from '../../src/app/api/integrations/dms/customer-vehicle/route';
-import { getStaffComplaintDuplicateCandidates, getStaffComplaintRelated, linkStaffComplaintRelation } from '../../src/lib/staff-complaint-relations-api';
+import { getStaffComplaintDuplicateCandidates, getStaffComplaintRelated, linkStaffComplaintRelation, unlinkStaffComplaintRelation } from '../../src/lib/staff-complaint-relations-api';
 import { listStaffComplaintAttachments, prepareStaffAttachmentDownload, uploadStaffComplaintAttachment } from '../../src/lib/staff-attachments-api';
 import { correctStaffComplaint, createStaffComplaint, getStaffComplaint, listStaffComplaints, lookupStaffDmsCustomerVehicle, submitStaffComplaintWorkflowAction } from '../../src/lib/staff-complaints-api';
 
@@ -79,6 +79,8 @@ test('staff complaint relation reads use safe fields and server session scope on
         severity: 'HIGH',
         subject: 'Engine noise',
         branchId: 'branch_main',
+        branchName: 'Main Branch',
+        customerName: 'Faisal Al-Otaibi',
         ownerName: 'Staff Name',
         customerPhone: '+966500000001',
         vehicleVin: 'SEEDDEMO00001',
@@ -101,6 +103,8 @@ test('staff complaint relation reads use safe fields and server session scope on
     severity: 'HIGH',
     subject: 'Engine noise',
     branchId: 'branch_main',
+    branchName: 'Main Branch',
+    customerName: 'Faisal Al-Otaibi',
     createdAt: '2026-06-18T00:00:00.000Z',
     updatedAt: '2026-06-19T00:00:00.000Z',
   });
@@ -124,6 +128,26 @@ test('linkStaffComplaintRelation posts only target id with CSRF', async () => {
 
   assert.equal(calls[0]?.input, '/api/complaints/cmp%2F1/related');
   assert.equal(calls[0]?.init?.method, 'POST');
+  assert.equal(calls[0]?.init?.credentials, 'include');
+  assert.deepEqual(calls[0]?.init?.headers, { Accept: 'application/json', 'content-type': 'application/json', 'x-csrf-token': 'csrf_123' });
+  assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), { targetComplaintId: 'cmp_2' });
+  assert.doesNotMatch(String(calls[0]?.init?.body), /branch|role|actor|workflow|token|credential/i);
+});
+
+test('unlinkStaffComplaintRelation deletes only target id with CSRF', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ relation: { sourceComplaintId: 'cmp/1', targetComplaintId: 'cmp_2', changed: true } });
+  };
+
+  await withDocumentCookie('cms_csrf_token=csrf_123', async () => {
+    const result = await unlinkStaffComplaintRelation('cmp/1', 'cmp_2', fetchImpl);
+    assert.equal(result.ok, true);
+  });
+
+  assert.equal(calls[0]?.input, '/api/complaints/cmp%2F1/related');
+  assert.equal(calls[0]?.init?.method, 'DELETE');
   assert.equal(calls[0]?.init?.credentials, 'include');
   assert.deepEqual(calls[0]?.init?.headers, { Accept: 'application/json', 'content-type': 'application/json', 'x-csrf-token': 'csrf_123' });
   assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), { targetComplaintId: 'cmp_2' });
@@ -640,6 +664,40 @@ test('related complaint proxy forwards body, session cookie, and CSRF to the API
     assert.equal(String(calls[0]?.input), 'http://api.test/complaints/cmp_1/related');
     assert.equal(calls[0]?.init?.method, 'POST');
     assert.equal(calls[0]?.init?.body, JSON.stringify({ targetComplaintId: 'cmp_2' }));
+    assert.deepEqual(Object.fromEntries(new Headers(calls[0]?.init?.headers).entries()), {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      cookie: 'cms_staff_session=raw-session',
+      'x-csrf-token': 'csrf_123',
+    });
+  } finally {
+    globalThis.fetch = priorFetch;
+    if (priorApiUrl === undefined) delete process.env.API_URL;
+    else process.env.API_URL = priorApiUrl;
+  }
+});
+
+test('related complaint proxy forwards unlink to the API relation target route', async () => {
+  const priorFetch = globalThis.fetch;
+  const priorApiUrl = process.env.API_URL;
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  globalThis.fetch = (async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ relation: { sourceComplaintId: 'cmp_1', targetComplaintId: 'cmp_2', changed: true } });
+  }) as typeof fetch;
+  process.env.API_URL = 'http://api.test';
+
+  try {
+    const response = await proxyUnlinkRelatedComplaint(new Request('http://web.test/api/complaints/cmp_1/related', {
+      body: JSON.stringify({ targetComplaintId: 'cmp_2' }),
+      headers: { 'content-type': 'application/json', cookie: 'cms_staff_session=raw-session', 'x-csrf-token': 'csrf_123' },
+      method: 'DELETE',
+    }), { params: Promise.resolve({ id: 'cmp_1' }) });
+
+    assert.equal(response.status, 200);
+    assert.equal(String(calls[0]?.input), 'http://api.test/complaints/cmp_1/related/cmp_2');
+    assert.equal(calls[0]?.init?.method, 'DELETE');
+    assert.equal(calls[0]?.init?.body, undefined);
     assert.deepEqual(Object.fromEntries(new Headers(calls[0]?.init?.headers).entries()), {
       accept: 'application/json',
       'content-type': 'application/json',

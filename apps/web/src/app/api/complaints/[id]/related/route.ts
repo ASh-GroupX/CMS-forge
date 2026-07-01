@@ -7,6 +7,22 @@ export async function POST(request: Request, { params }: { params: Promise<Route
   if (!id?.trim()) return NextResponse.json({ error: { code: 'VALIDATION_FAILED', message: 'Missing complaint id.', correlationId: null } }, { status: 400 });
 
   const target = new URL(`/complaints/${encodeURIComponent(id)}/related`, process.env.API_URL ?? 'http://localhost:3000');
+  return forwardRelation(request, target, 'POST');
+}
+
+export async function DELETE(request: Request, { params }: { params: Promise<RouteParams> }): Promise<Response> {
+  const { id } = await params;
+  if (!id?.trim()) return NextResponse.json({ error: { code: 'VALIDATION_FAILED', message: 'Missing complaint id.', correlationId: null } }, { status: 400 });
+
+  const body = await request.json().catch(() => null) as { targetComplaintId?: unknown } | null;
+  const targetComplaintId = typeof body?.targetComplaintId === 'string' ? body.targetComplaintId.trim() : '';
+  if (!targetComplaintId) return NextResponse.json({ error: { code: 'VALIDATION_FAILED', message: 'Missing target complaint id.', correlationId: null } }, { status: 400 });
+
+  const target = new URL(`/complaints/${encodeURIComponent(id)}/related/${encodeURIComponent(targetComplaintId)}`, process.env.API_URL ?? 'http://localhost:3000');
+  return forwardRelation(request, target, 'DELETE');
+}
+
+async function forwardRelation(request: Request, target: URL, method: 'DELETE' | 'POST'): Promise<Response> {
   try {
     const headers = new Headers({
       Accept: 'application/json',
@@ -15,7 +31,9 @@ export async function POST(request: Request, { params }: { params: Promise<Route
     });
     const csrf = request.headers.get('x-csrf-token');
     if (csrf) headers.set('x-csrf-token', csrf);
-    const response = await fetch(target, { body: await request.text(), cache: 'no-store', headers, method: 'POST' });
+    const init: RequestInit = { cache: 'no-store', headers, method };
+    if (method === 'POST') init.body = await request.text();
+    const response = await fetch(target, init);
     return new Response(await response.arrayBuffer(), { headers: jsonHeaders(response.headers), status: response.status });
   } catch {
     return NextResponse.json({ error: { code: 'NETWORK_ERROR', message: 'Unable to reach server. Try again.', correlationId: null } }, { status: 502 });

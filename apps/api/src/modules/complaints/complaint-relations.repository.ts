@@ -17,6 +17,7 @@ export type ComplaintRelationItemRecord = {
   subject: string;
   ownerId: string | null;
   owner: { nameEn: string; email: string } | null;
+  customer: { nameEn: string };
   branch: { code: string; nameEn: string; nameAr: string };
   createdAt: Date;
   updatedAt: Date;
@@ -66,7 +67,7 @@ export class ComplaintRelationsRepository {
 
 const itemSelect = {
   id: true, referenceNumber: true, branchId: true, status: true, severity: true, subject: true,
-  ownerId: true, owner: { select: { nameEn: true, email: true } }, branch: { select: { code: true, nameEn: true, nameAr: true } },
+  ownerId: true, owner: { select: { nameEn: true, email: true } }, customer: { select: { nameEn: true } }, branch: { select: { code: true, nameEn: true, nameAr: true } },
   createdAt: true, updatedAt: true,
 } satisfies Prisma.ComplaintSelect;
 

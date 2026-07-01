@@ -5,7 +5,7 @@ import type { AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import { ComplaintRelationsRepository } from './complaint-relations.repository.js';
 import type { ComplaintRelationFilter, ComplaintRelationItemRecord } from './complaint-relations.repository.js';
-import type { ComplaintQueueItemDto } from './dto/complaint-response.dto.js';
+import type { ComplaintRelationItemDto } from './dto/complaint-response.dto.js';
 
 export type ComplaintRelationAuditContext = {
   actorId?: string | null; actorRole?: RoleCode | null; sessionId?: string | null;
@@ -13,7 +13,7 @@ export type ComplaintRelationAuditContext = {
 };
 export type LinkComplaintInput = ComplaintRelationAuditContext & { sourceComplaintId: string; targetComplaintId: string; branchId?: string | null };
 export type ComplaintRelationMutationResult = { sourceComplaintId: string; targetComplaintId: string; changed: boolean };
-export type DuplicateCandidateResult = { items: ComplaintQueueItemDto[]; windowDays: number };
+export type DuplicateCandidateResult = { items: ComplaintRelationItemDto[]; windowDays: number };
 
 const DUPLICATE_WINDOW_DAYS = 30;
 
@@ -21,7 +21,7 @@ const DUPLICATE_WINDOW_DAYS = 30;
 export class ComplaintRelationsService {
   constructor(private readonly repository: ComplaintRelationsRepository, private readonly auditService: AuditService) {}
 
-  async listRelated(complaintId: string, filter: ComplaintRelationFilter = {}): Promise<ComplaintQueueItemDto[]> {
+  async listRelated(complaintId: string, filter: ComplaintRelationFilter = {}): Promise<ComplaintRelationItemDto[]> {
     await this.visibleComplaint(complaintId, filter);
     return (await this.repository.listRelated(complaintId, filter)).map(queueItem);
   }
@@ -59,8 +59,8 @@ export class ComplaintRelationsService {
   }
 }
 
-function queueItem(complaint: ComplaintRelationItemRecord): ComplaintQueueItemDto {
-  return { id: complaint.id, referenceNumber: complaint.referenceNumber, status: complaint.status, severity: complaint.severity, subject: complaint.subject, branchId: complaint.branchId, branchName: complaint.branch.nameEn, ownerId: complaint.ownerId, ownerName: complaint.owner?.nameEn ?? null, createdAt: complaint.createdAt.toISOString(), updatedAt: complaint.updatedAt.toISOString() };
+function queueItem(complaint: ComplaintRelationItemRecord): ComplaintRelationItemDto {
+  return { id: complaint.id, referenceNumber: complaint.referenceNumber, status: complaint.status, severity: complaint.severity, subject: complaint.subject, branchId: complaint.branchId, branchName: complaint.branch.nameEn, ownerId: complaint.ownerId, ownerName: complaint.owner?.nameEn ?? null, customerName: complaint.customer.nameEn, createdAt: complaint.createdAt.toISOString(), updatedAt: complaint.updatedAt.toISOString() };
 }
 
 function relationAudit(input: LinkComplaintInput, branchId: string, relationAction: 'link' | 'unlink'): AuditRecordInput {

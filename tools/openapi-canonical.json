@@ -9611,7 +9611,7 @@
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ComplaintQueueItem"
+              "$ref": "#/components/schemas/ComplaintRelationItem"
             }
           }
         },
@@ -9627,7 +9627,7 @@
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ComplaintQueueItem"
+              "$ref": "#/components/schemas/ComplaintRelationItem"
             }
           },
           "windowDays": {
@@ -9911,6 +9911,87 @@
             "items": {
               "$ref": "#/components/schemas/Attachment"
             }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintRelationItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "referenceNumber",
+          "status",
+          "severity",
+          "subject",
+          "branchId",
+          "branchName",
+          "ownerId",
+          "ownerName",
+          "createdAt",
+          "updatedAt",
+          "customerName"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "referenceNumber": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "MANAGER_REVIEW",
+              "BRANCH_REVIEW",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED",
+              "REOPENED",
+              "REJECTED"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "CRITICAL",
+              "HIGH",
+              "MEDIUM",
+              "LOW"
+            ]
+          },
+          "subject": {
+            "type": "string"
+          },
+          "branchId": {
+            "type": "string"
+          },
+          "branchName": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ownerName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "customerName": {
+            "type": "string"
           }
         },
         "additionalProperties": false
