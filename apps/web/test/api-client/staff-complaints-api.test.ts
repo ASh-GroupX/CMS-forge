@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { GET as proxyListAttachments, POST as proxyUploadAttachment } from '../../src/app/api/complaints/[id]/attachments/route';
+import { GET as proxyDownloadAttachment } from '../../src/app/api/complaints/[id]/attachments/[attachmentId]/download/route';
 import { POST as proxyCorrectComplaint } from '../../src/app/api/complaints/[id]/corrections/route';
 import { POST as proxyLinkRelatedComplaint } from '../../src/app/api/complaints/[id]/related/route';
 import { POST as proxyTransitionComplaint } from '../../src/app/api/complaints/[id]/transitions/route';
 import { POST as proxyCreateComplaint } from '../../src/app/api/complaints/route';
 import { GET as proxyLookupDmsCustomerVehicle } from '../../src/app/api/integrations/dms/customer-vehicle/route';
 import { getStaffComplaintDuplicateCandidates, getStaffComplaintRelated, linkStaffComplaintRelation } from '../../src/lib/staff-complaint-relations-api';
+import { listStaffComplaintAttachments, prepareStaffAttachmentDownload, uploadStaffComplaintAttachment } from '../../src/lib/staff-attachments-api';
 import { correctStaffComplaint, createStaffComplaint, getStaffComplaint, listStaffComplaints, lookupStaffDmsCustomerVehicle, submitStaffComplaintWorkflowAction } from '../../src/lib/staff-complaints-api';
 
 function jsonResponse(body: unknown, status = 200) {
@@ -125,6 +128,51 @@ test('linkStaffComplaintRelation posts only target id with CSRF', async () => {
   assert.deepEqual(calls[0]?.init?.headers, { Accept: 'application/json', 'content-type': 'application/json', 'x-csrf-token': 'csrf_123' });
   assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), { targetComplaintId: 'cmp_2' });
   assert.doesNotMatch(String(calls[0]?.init?.body), /branch|role|actor|workflow|token|credential/i);
+});
+
+test('staff attachment client lists uploads and prepares downloads through same-origin routes', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith('/download')) {
+      return jsonResponse({ download: { attachmentId: 'att_1', token: 'attdl_safe', expiresAt: '2026-06-19T10:05:00.000Z' } });
+    }
+    if (init?.method === 'POST') {
+      return jsonResponse({ attachment: { id: 'att_1', complaintId: 'cmp/1', fileName: 'photo.png', contentType: 'image/png', sizeBytes: 10, scanStatus: 'PENDING', customerVisible: false } }, 201);
+    }
+    return jsonResponse({ items: [{ id: 'att_1', complaintId: 'cmp/1', fileName: 'photo.png', contentType: 'image/png', sizeBytes: 10, scanStatus: 'CLEAN', customerVisible: false }] });
+  };
+
+  await withDocumentCookie('cms_csrf_token=csrf_123', async () => {
+    assert.equal((await listStaffComplaintAttachments('cmp/1', fetchImpl)).ok, true);
+    assert.equal((await uploadStaffComplaintAttachment('cmp/1', new File(['file-bytes'], 'photo.png', { type: 'image/png' }), fetchImpl)).ok, true);
+    assert.equal((await prepareStaffAttachmentDownload('cmp/1', 'att_1', fetchImpl)).ok, true);
+  });
+
+  assert.equal(calls[0]?.input, '/api/complaints/cmp%2F1/attachments');
+  assert.deepEqual(calls[0]?.init?.headers, { Accept: 'application/json' });
+  assert.equal(calls[1]?.input, '/api/complaints/cmp%2F1/attachments');
+  assert.deepEqual(calls[1]?.init?.headers, { Accept: 'application/json', 'content-type': 'application/json', 'x-csrf-token': 'csrf_123' });
+  assert.deepEqual(JSON.parse(String(calls[1]?.init?.body)), {
+    fileName: 'photo.png',
+    contentType: 'image/png',
+    sizeBytes: 10,
+    contentBase64: 'ZmlsZS1ieXRlcw==',
+  });
+  assert.equal(calls[2]?.input, '/api/complaints/cmp%2F1/attachments/att_1/download');
+  assert.doesNotMatch(String(calls[1]?.init?.body), /branch|role|actor|workflow|storage|token|credential/i);
+});
+
+test('staff attachment client rejects blocked files before posting', async () => {
+  let called = false;
+  const result = await uploadStaffComplaintAttachment('cmp_1', new File(['bad'], 'malware.exe', { type: 'application/x-msdownload' }), async () => {
+    called = true;
+    return jsonResponse({});
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.ok ? null : result.error.code, 'ATTACHMENT_TYPE_BLOCKED');
+  assert.equal(called, false);
 });
 
 test('lookupStaffDmsCustomerVehicle reads through the same-origin proxy without client authority', async () => {
@@ -510,6 +558,60 @@ test('complaint transition proxy forwards body, session cookie, and CSRF to the 
       cookie: 'cms_staff_session=raw-session',
       'x-csrf-token': 'csrf_123',
     });
+  } finally {
+    globalThis.fetch = priorFetch;
+    if (priorApiUrl === undefined) delete process.env.API_URL;
+    else process.env.API_URL = priorApiUrl;
+  }
+});
+
+test('staff attachment proxies forward only session cookie csrf and body to the API', async () => {
+  const priorFetch = globalThis.fetch;
+  const priorApiUrl = process.env.API_URL;
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  globalThis.fetch = (async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith('/download')) {
+      return jsonResponse({ download: { attachmentId: 'att_1', token: 'attdl_safe', expiresAt: '2026-06-19T10:05:00.000Z' } });
+    }
+    if (init?.method === 'POST') {
+      return jsonResponse({ attachment: { id: 'att_1', complaintId: 'cmp_1', fileName: 'photo.png', contentType: 'image/png', sizeBytes: 10, scanStatus: 'PENDING', customerVisible: false } }, 201);
+    }
+    return jsonResponse({ items: [{ id: 'att_1', complaintId: 'cmp_1', fileName: 'photo.png', contentType: 'image/png', sizeBytes: 10, scanStatus: 'CLEAN', customerVisible: false }] });
+  }) as typeof fetch;
+  process.env.API_URL = 'http://api.test';
+
+  try {
+    const payload = { fileName: 'photo.png', contentType: 'image/png', sizeBytes: 10, contentBase64: 'ZmlsZS1ieXRlcw==', actorId: 'spoofed' };
+    const list = await proxyListAttachments(new Request('http://web.test/api/complaints/cmp_1/attachments?role=admin&branchId=spoofed', {
+      headers: { cookie: 'cms_staff_session=raw-session' },
+      method: 'GET',
+    }), { params: Promise.resolve({ id: 'cmp_1' }) });
+    const upload = await proxyUploadAttachment(new Request('http://web.test/api/complaints/cmp_1/attachments', {
+      body: JSON.stringify(payload),
+      headers: { 'content-type': 'application/json', cookie: 'cms_staff_session=raw-session', 'x-csrf-token': 'csrf_123' },
+      method: 'POST',
+    }), { params: Promise.resolve({ id: 'cmp_1' }) });
+    const download = await proxyDownloadAttachment(new Request('http://web.test/api/complaints/cmp_1/attachments/att_1/download?branchId=spoofed', {
+      headers: { cookie: 'cms_staff_session=raw-session', 'x-csrf-token': 'ignored' },
+      method: 'GET',
+    }), { params: Promise.resolve({ id: 'cmp_1', attachmentId: 'att_1' }) });
+
+    assert.equal(list.status, 200);
+    assert.equal(upload.status, 201);
+    assert.equal(download.status, 200);
+    assert.equal(String(calls[0]?.input), 'http://api.test/complaints/cmp_1/attachments');
+    assert.equal(String(calls[1]?.input), 'http://api.test/complaints/cmp_1/attachments');
+    assert.equal(String(calls[2]?.input), 'http://api.test/complaints/cmp_1/attachments/att_1/download');
+    assert.deepEqual(Object.fromEntries(new Headers(calls[0]?.init?.headers).entries()), { accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+    assert.deepEqual(Object.fromEntries(new Headers(calls[1]?.init?.headers).entries()), {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      cookie: 'cms_staff_session=raw-session',
+      'x-csrf-token': 'csrf_123',
+    });
+    assert.deepEqual(Object.fromEntries(new Headers(calls[2]?.init?.headers).entries()), { accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+    assert.equal(calls[1]?.init?.body, JSON.stringify(payload));
   } finally {
     globalThis.fetch = priorFetch;
     if (priorApiUrl === undefined) delete process.env.API_URL;

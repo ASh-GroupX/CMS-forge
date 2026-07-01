@@ -15,6 +15,10 @@ export type AttachmentUploadResponseDto = {
   attachment: AttachmentDto;
 };
 
+export type AttachmentListResponseDto = {
+  items: AttachmentDto[];
+};
+
 export type AttachmentDownloadResponseDto = {
   download: {
     attachmentId: string;
@@ -33,6 +37,10 @@ export function attachmentDto(attachment: AttachmentUploadResult): AttachmentDto
     scanStatus: attachment.scanStatus,
     customerVisible: attachment.customerVisible,
   };
+}
+
+export function attachmentListDto(attachments: AttachmentUploadResult[]): AttachmentDto[] {
+  return attachments.map(attachmentDto);
 }
 
 export function attachmentDownloadDto(download: AttachmentDownloadResult): AttachmentDownloadResponseDto['download'] {

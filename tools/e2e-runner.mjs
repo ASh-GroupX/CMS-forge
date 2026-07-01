@@ -34,7 +34,12 @@ if (mode === 'complaint-workflow') {
   process.exit(0);
 }
 
-console.error('Use one of: visual, accessibility, perf, ui-smoke, runtime-smoke, customer-portal-track, customer-portal-submit, complaint-workflow.');
+if (mode === 'attachments') {
+  run('node', ['--import', 'tsx', 'tools/attachments-proof.mjs']);
+  process.exit(0);
+}
+
+console.error('Use one of: visual, accessibility, perf, ui-smoke, runtime-smoke, customer-portal-track, customer-portal-submit, complaint-workflow, attachments.');
 process.exit(1);
 
 function run(command, args) {

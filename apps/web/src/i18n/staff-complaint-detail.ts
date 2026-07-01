@@ -39,6 +39,13 @@ export const complaintDetailText: Record<Locale, typeof enComplaintDetailText> =
       download: 'Download when authorized',
       rules: ['Backend authorizes every upload and download', 'Direct file links are never shown in the browser'],
     },
+    attachmentUploadMessages: {
+      required: 'Choose a file first.',
+      type: 'This file type is not allowed.',
+      size: 'This file exceeds the size limit.',
+      uploaded: 'Attachment uploaded. Scan status is pending.',
+      downloaded: 'Download was authorized by the server.',
+    },
     workflow: {
       authority: 'Available actions come from system policy.',
       comment: 'Required comment',
@@ -173,6 +180,13 @@ export const complaintDetailText: Record<Locale, typeof enComplaintDetailText> =
       download: 'تنزيل عند التصريح',
       rules: ['الخادم يصرح كل رفع وتنزيل', 'لا تظهر روابط التخزين في المتصفح'],
     },
+    attachmentUploadMessages: {
+      required: 'اختر ملفا أولا.',
+      type: 'نوع الملف غير مسموح.',
+      size: 'حجم الملف يتجاوز الحد المسموح.',
+      uploaded: 'تم رفع المرفق. حالة الفحص قيد الانتظار.',
+      downloaded: 'صرح الخادم بالتنزيل.',
+    },
     workflow: {
       authority: 'النظام يحدد الإجراءات المتاحة.',
       comment: 'تعليق مطلوب',
@@ -231,6 +245,7 @@ const enComplaintDetailText = {
     states: { idle: '', loading: '', success: '', error: '', conflict: '', validation: '', denied: '' },
   },
   attachmentActions: { upload: '', download: '', rules: [''] },
+  attachmentUploadMessages: { required: '', type: '', size: '', uploaded: '', downloaded: '' },
   workflow: {
     authority: '',
     comment: '',

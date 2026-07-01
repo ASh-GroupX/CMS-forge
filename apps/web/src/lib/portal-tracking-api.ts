@@ -1,3 +1,5 @@
+import { attachmentFileToBase64, validateAttachmentFile } from './attachment-file-policy';
+
 export type PortalApiError = {
   kind: 'api' | 'network';
   code: string;
@@ -51,13 +53,15 @@ export function submitPortalFollowUp(sessionToken: string, body: string, fetchIm
 }
 
 export async function uploadPortalAttachment(sessionToken: string, file: File, fetchImpl: typeof fetch = fetch): Promise<PortalApiResult<PortalAttachmentUploadResponse>> {
+  const validation = validateAttachmentFile(file);
+  if (!validation.ok) return { ok: false, error: { kind: 'api', code: validation.code, message: validation.code === 'ATTACHMENT_SIZE_EXCEEDED' ? 'File exceeds size limit.' : 'File type is not allowed.', correlationId: null, status: 400 } };
   return requestJson('/api/portal/attachments', fetchImpl, {
     ...portalSessionInit('POST', sessionToken),
     body: JSON.stringify({
       fileName: file.name,
       contentType: file.type,
       sizeBytes: file.size,
-      contentBase64: await fileToBase64(file),
+      contentBase64: await attachmentFileToBase64(file),
     }),
     headers: { Accept: 'application/json', 'content-type': 'application/json', 'x-portal-session': sessionToken },
   });
@@ -86,16 +90,6 @@ function portalSessionInit(method: 'GET' | 'POST', sessionToken: string): Reques
     headers: { Accept: 'application/json', 'x-portal-session': sessionToken },
     method,
   };
-}
-
-async function fileToBase64(file: File): Promise<string> {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  const chunkSize = 0x8000;
-  let binary = '';
-  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
-  }
-  return btoa(binary);
 }
 
 async function mapErrorResponse(response: Response): Promise<PortalApiError> {

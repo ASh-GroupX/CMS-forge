@@ -11740,3 +11740,46 @@ SRS IDs: `REQ-COMPLAINT-001`, `REQ-COMPLAINT-002`, `RBAC-MATRIX-001`, `REQ-LOCAL
 ### Notes
 
 - Temporary proof route used only for screenshots was deleted before staging.
+
+---
+
+## User-Scoped UX Redesign - Slice 3 Make Attachments Usable
+
+Status: Complete
+SRS IDs: `REQ-FILES-001`, `ARCH-FILES-001`, `REQ-PORTAL-002`, `UI-SCREEN-001`, `UI-DESIGN-001`, `NFR-SEC-002`
+
+### Scope
+
+- Added a server-scoped staff attachment list route so detail screens can show uploaded files and scan state without exposing storage keys or URLs.
+- Wired staff attachment controls to list, validate, upload, and request authorized downloads through same-origin web proxies and typed web client helpers.
+- Added shared browser-side file validation for staff and verified portal uploads; backend validation remains authoritative.
+- Kept portal upload-only behavior: portal attachments still expose no download route, storage key, public URL, internal files, or staff-only metadata.
+- Added localized upload/download feedback and preserved pending/clean/rejected/empty/error states.
+
+### Security Self-Check
+
+- Staff attachment list/upload/download remains authorized by server session guards, permissions, branch scope, CSRF where required, scan policy, and backend audit paths.
+- React sends no role, actor, branch-scope, workflow, storage, credential, or provider authority fields.
+- Download preparation returns only the existing backend token envelope from the API; the browser component does not create or display storage URLs.
+- Customer portal privacy holds: verified portal upload forwards only `x-portal-session` and file metadata/body, with no staff cookies or CSRF headers forwarded.
+- Trust boundaries are tested by attachment API tests, portal tracking tests, web API/proxy tests, source-safety shell tests, and the attachments e2e proof.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- attachments`.
+- Passed: `corepack pnpm test:api -- portal.tracking`.
+- Passed: `corepack pnpm test:web -- api-client`.
+- Passed: `corepack pnpm test:web -- shell`.
+- Passed: `corepack pnpm test:e2e -- attachments`.
+- Passed: `corepack pnpm test:e2e -- accessibility`.
+- Passed: `corepack pnpm test:visual`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+- Visual review screenshots: `output/playwright/slice3-attachments-en-desktop.png`, `output/playwright/slice3-attachments-en-mobile.png`, `output/playwright/slice3-attachments-ar-desktop.png`, `output/playwright/slice3-attachments-ar-mobile.png`.
+
+### Notes
+
+- Temporary proof route used only for screenshots was deleted before staging.
+- Browser-native file input text remains controlled by Chrome and may appear in English on Arabic screenshots; left for Slice 9 responsive/localization cleanup.

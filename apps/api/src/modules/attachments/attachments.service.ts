@@ -123,6 +123,10 @@ export class AttachmentsService {
     });
   }
 
+  async listForComplaint(complaintId: string): Promise<AttachmentUploadResult[]> {
+    return (await this.attachmentsRepository.listForComplaint(requiredText(complaintId, 'complaintId'))).map(uploadResult);
+  }
+
   async prepareStaffDownload(input: PrepareStaffAttachmentDownloadInput): Promise<AttachmentDownloadResult> {
     const attachment = await this.attachmentsRepository.findMetadata(input.attachmentId);
     if (!attachment || attachment.complaintId !== input.complaintId) throw attachmentNotFound();

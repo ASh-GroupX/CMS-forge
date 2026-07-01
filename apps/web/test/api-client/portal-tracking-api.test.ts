@@ -155,6 +155,18 @@ test('portal proxy allowlists verified attachment upload and drops staff headers
   }
 });
 
+test('portal attachment upload blocks invalid files before forwarding', async () => {
+  let called = false;
+  const result = await uploadPortalAttachment('portal_token', new File(['bad'], 'malware.exe', { type: 'application/x-msdownload' }), async () => {
+    called = true;
+    return jsonResponse({});
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.ok ? null : result.error.code, 'ATTACHMENT_TYPE_BLOCKED');
+  assert.equal(called, false);
+});
+
 function validPortalComplaint() {
   return {
     customerName: 'Faisal Al-Otaibi',

@@ -123,7 +123,7 @@ export function ComplaintDetailWorkspace({
               [t.labels.rating, t.values.rating],
               [t.labels.submitted, t.values.submitted],
             ]} />
-            <ComplaintAttachmentControls attachmentState={attachmentState} locale={locale} />
+            <ComplaintAttachmentControls attachmentState={attachmentState} complaintId={detail?.id} locale={locale} />
           </div>
           <ComplaintWorkflowModal
             allowedActions={detail?.allowedActions}
