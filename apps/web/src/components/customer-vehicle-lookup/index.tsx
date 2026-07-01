@@ -211,9 +211,11 @@ function previewView(state: LookupPreviewState | undefined): ViewState {
 
 function sampleMatch(customerCode: string, customerName: string, vin: string): DmsCustomerVehicleMatch {
   return {
+    customerId: `cust_${customerCode.toLowerCase()}`,
     customerCode,
     customerName,
     primaryPhone: '+201001112222',
+    vehicleId: `veh_${vin.toLowerCase()}`,
     vin,
     plateNumber: 'EG-123',
     brand: 'Toyota',
@@ -227,8 +229,10 @@ function sampleMatch(customerCode: string, customerName: string, vin: string): D
 
 function resultRows(match: DmsCustomerVehicleMatch, t: typeof staffShellText[Locale]['lookup']): Array<[string, string]> {
   return [
+    [t.resultFields.customerId, match.customerId],
     [t.resultFields.customerNumber, match.customerCode],
     [t.resultFields.phone, match.primaryPhone],
+    [t.resultFields.vehicleId, match.vehicleId],
     [t.resultFields.vin, match.vin],
     [t.resultFields.plate, match.plateNumber],
     [t.resultFields.modelYear, match.modelYear === undefined ? undefined : String(match.modelYear)],

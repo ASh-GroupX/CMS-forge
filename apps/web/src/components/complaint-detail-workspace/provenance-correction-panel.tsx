@@ -16,7 +16,7 @@ type Source = ComplaintDetail['customerSource'];
 type VehicleSource = ComplaintDetail['vehicleSource'];
 type VehicleFieldSource = Exclude<VehicleSource, null> | 'NONE';
 
-type CorrectionFields = {
+export type CorrectionFields = {
   clearVehicleId: boolean;
   customerId: string;
   customerSource: Source;
@@ -73,7 +73,7 @@ export function ProvenanceCorrectionPanel({
   }
 
   function applyLookupSelection(selection: LookupSelection) {
-    setFields((current) => selection.source === 'MANUAL' ? manualFields(current) : dmsFields(current, selection.match));
+    setFields((current) => selection.source === 'MANUAL' ? manualFields(current) : applyDmsMatchToCorrectionFields(current, selection.match));
   }
 
   const message = state === 'success' && changed.length ? `${text.states.success}: ${changed.join(', ')}` : text.states[state];
@@ -139,13 +139,16 @@ function manualFields(current: CorrectionFields): CorrectionFields {
   };
 }
 
-function dmsFields(current: CorrectionFields, match: DmsCustomerVehicleMatch): CorrectionFields {
+export function applyDmsMatchToCorrectionFields(current: CorrectionFields, match: DmsCustomerVehicleMatch): CorrectionFields {
   const hasVehicle = Boolean(match.vin || match.plateNumber || match.brand || match.model);
   return {
     ...current,
+    clearVehicleId: match.vehicleId ? false : current.clearVehicleId,
+    customerId: match.customerId ?? current.customerId,
     customerSource: 'DMS',
     manualCustomer: false,
     manualVehicle: hasVehicle ? false : current.manualVehicle,
+    vehicleId: match.vehicleId ?? current.vehicleId,
     vehicleDataUnavailableReason: hasVehicle ? '' : current.vehicleDataUnavailableReason,
     vehicleRelated: hasVehicle || current.vehicleRelated,
     vehicleSource: hasVehicle ? 'DMS' : current.vehicleSource,

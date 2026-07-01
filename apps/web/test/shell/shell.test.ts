@@ -53,6 +53,7 @@ import { managerControlRoomText } from '../../src/i18n/staff-manager-control-roo
 import { dealHandoffText } from '../../src/i18n/staff-deal-handoff';
 import { confidentialCaseText } from '../../src/i18n/staff-confidential-cases';
 import { staffShellText } from '../../src/i18n/staff-shell';
+import { applyDmsMatchToCorrectionFields, type CorrectionFields } from '../../src/components/complaint-detail-workspace/provenance-correction-panel';
 
 test('staff shell renders English LTR operational navigation', async () => {
   const html = renderToStaticMarkup(
@@ -2509,6 +2510,9 @@ test('customer vehicle lookup preview states render lookup outcomes and errors',
   assert.match(none, /No match found\. Continue with manual entry\./);
   assert.match(match, /One DMS match found\. Review it before applying\./);
   assert.match(match, /Use this match/);
+  assert.match(match, /Matched customer ID/);
+  assert.match(match, /cust_cust-100/);
+  assert.match(match, /Matched vehicle ID/);
   assert.match(match, /CUST-100/);
   assert.match(multiple, /Multiple DMS matches found\. Select the correct customer and vehicle\./);
   assert.match(multiple, /CUST-101/);
@@ -2517,6 +2521,49 @@ test('customer vehicle lookup preview states render lookup outcomes and errors',
   assert.match(validation, /Enter at least one search value\./);
   assert.match(error, /Lookup could not be completed\. Continue manually or try again\./);
   assert.match(error, /role="alert"/);
+});
+
+test('provenance correction applies selected DMS local IDs only when present', () => {
+  const current: CorrectionFields = {
+    clearVehicleId: true,
+    customerId: 'cust_current',
+    customerSource: 'MANUAL',
+    manualCustomer: true,
+    manualVehicle: true,
+    vehicleDataUnavailableReason: 'missing vehicle',
+    vehicleId: 'veh_current',
+    vehicleRelated: false,
+    vehicleSource: 'MANUAL',
+  };
+
+  assert.deepEqual(applyDmsMatchToCorrectionFields(current, {
+    customerId: 'cust_local_1',
+    customerCode: 'DMS-100',
+    customerName: 'Nadia Saleh',
+    primaryPhone: '+201001112222',
+    vehicleId: 'veh_local_1',
+    vin: 'WBA12345678900001',
+    source: 'DMS',
+  }), {
+    ...current,
+    clearVehicleId: false,
+    customerId: 'cust_local_1',
+    customerSource: 'DMS',
+    manualCustomer: false,
+    manualVehicle: false,
+    vehicleDataUnavailableReason: '',
+    vehicleId: 'veh_local_1',
+    vehicleRelated: true,
+    vehicleSource: 'DMS',
+  });
+
+  assert.deepEqual(applyDmsMatchToCorrectionFields(current, {
+    customerCode: 'DMS-100',
+    customerName: 'Nadia Saleh',
+    primaryPhone: '+201001112222',
+    vin: 'WBA12345678900001',
+    source: 'DMS',
+  }).customerId, 'cust_current');
 });
 
 test('complaint new route renders English customer vehicle lookup panel', async () => {

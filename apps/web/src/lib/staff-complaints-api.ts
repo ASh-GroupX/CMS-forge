@@ -144,10 +144,12 @@ export type DmsLookupStatus = 'MATCH' | 'MULTIPLE_MATCHES' | 'NOT_FOUND' | 'PROV
 export const DMS_DOWN_STATUS: DmsLookupStatus = 'PROVIDER_DOWN';
 
 export type DmsCustomerVehicleMatch = {
+  customerId?: string;
   customerCode?: string;
   customerName: string;
   primaryPhone: string;
   secondaryPhone?: string;
+  vehicleId?: string;
   vin?: string;
   plateNumber?: string;
   brand?: string;
@@ -160,14 +162,7 @@ export type DmsCustomerVehicleMatch = {
   source: 'DMS';
 };
 
-export type DmsLookupResult = {
-  action: 'customerVehicleLookup';
-  result: DmsLookupStatus;
-  latencyMs: number;
-  correlationId: string;
-  manualFallbackAllowed: boolean;
-  matches: DmsCustomerVehicleMatch[];
-};
+export type DmsLookupResult = { action: 'customerVehicleLookup'; result: DmsLookupStatus; latencyMs: number; correlationId: string; manualFallbackAllowed: boolean; matches: DmsCustomerVehicleMatch[] };
 
 export type StaffDmsLookupQuery = {
   phone?: string | null;

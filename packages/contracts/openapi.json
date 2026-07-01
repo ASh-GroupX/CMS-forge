@@ -5107,6 +5107,9 @@
           "source"
         ],
         "properties": {
+          "customerId": {
+            "type": "string"
+          },
           "customerCode": {
             "type": "string"
           },
@@ -5120,6 +5123,9 @@
             "type": "string"
           },
           "email": {
+            "type": "string"
+          },
+          "vehicleId": {
             "type": "string"
           },
           "vin": {

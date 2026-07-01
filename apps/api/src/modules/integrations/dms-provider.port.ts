@@ -14,11 +14,13 @@ export type DmsLookupQuery = {
 export type DmsLookupStatus = 'MATCH' | 'MULTIPLE_MATCHES' | 'NOT_FOUND' | 'PROVIDER_DOWN' | 'DISABLED';
 
 export type DmsCustomerVehicleMatch = {
+  customerId?: string | undefined;
   customerCode?: string | undefined;
   customerName: string;
   primaryPhone: string;
   secondaryPhone?: string | undefined;
   email?: string | undefined;
+  vehicleId?: string | undefined;
   vin?: string | undefined;
   plateNumber?: string | undefined;
   brand?: string | undefined;
@@ -107,11 +109,13 @@ function normalizedStatus(status: DmsLookupStatus, matchCount: number): DmsLooku
 function normalizeMatch(match: DmsCustomerVehicleMatch): DmsCustomerVehicleMatch {
   return {
     ...match,
+    customerId: optionalText(match.customerId),
     customerCode: optionalText(match.customerCode),
     customerName: requiredText(match.customerName, 'customerName'),
     primaryPhone: requiredText(match.primaryPhone, 'primaryPhone'),
     secondaryPhone: optionalText(match.secondaryPhone),
     email: optionalText(match.email),
+    vehicleId: optionalText(match.vehicleId),
     vin: optionalText(match.vin)?.toUpperCase(),
     plateNumber: optionalText(match.plateNumber),
     brand: optionalText(match.brand),

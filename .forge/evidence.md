@@ -11828,6 +11828,47 @@ SRS IDs: `REQ-COMPLAINT-001`, `REQ-COMPLAINT-002`, `RBAC-MATRIX-001`, `REQ-LOCAL
 
 ---
 
+## User-Scoped UX Redesign - Slice 6 Fix DMS Lookup And Provenance Correction
+
+Status: Complete
+SRS IDs: `REQ-CUSTOMER-001`, `ARCH-INTEGRATION-001`, `DMS-MAP-001`, `REQ-LOCALIZATION-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `NFR-SEC-002`
+
+### Scope
+
+- Added optional local `customerId` and `vehicleId` fields to DMS lookup matches and documented them in OpenAPI.
+- Normalized those optional IDs through the backend DMS adapter result without changing provider authority or adding DMS writeback.
+- Showed matched customer and vehicle IDs in DMS lookup result cards when present.
+- Updated provenance correction so a selected DMS match fills correction `customerId`/`vehicleId` only when local IDs are present; DMS customer codes and VINs are not submitted as database IDs.
+- Kept manual fallback and required correction reason behavior in place.
+
+### Security Self-Check
+
+- DMS provider calls remain backend-only through the integration adapter and same-origin proxy; no credentials or provider-specific logic moved into React.
+- The web proxy still allowlists only `phone`, `customerNumber`, `vin`, and `name`, and forwards only the staff session cookie.
+- Provenance correction still submits through the backend scoped correction route with optimistic precondition, CSRF, permission, branch-scope, and audit enforcement.
+- Customer portal routes were not changed and still do not expose DMS codes, provider metadata, internal comments, audit logs, staff PII, or unrelated complaints.
+
+### Verification
+
+- Failed as written in plan: `corepack pnpm test:api -- dms-adapter` and `corepack pnpm test:api -- customers` because those suite names are not registered by `tools/api-test.mjs`.
+- Passed replacement coverage: `corepack pnpm test:api -- integrations` (26/26 TAP tests), covering DMS adapter lookup and route guards.
+- Passed replacement coverage: `corepack pnpm test:api -- complaints` (69/69 TAP tests), covering provenance correction/audit authority.
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (196/196 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+- Visual review screenshots: `output/playwright/slice6-dms-en-desktop.png`, `output/playwright/slice6-dms-en-mobile.png`, `output/playwright/slice6-dms-ar-desktop.png`, `output/playwright/slice6-dms-ar-mobile.png`.
+
+### Notes
+
+- Temporary proof route used only for screenshots was deleted before staging.
+- Existing unrelated dirty integration module change and untracked output artifacts were left unstaged.
+
+---
+
 ## User-Scoped UX Redesign - Slice 5 Make Complaint Detail Understandable
 
 Status: Complete
