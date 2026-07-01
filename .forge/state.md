@@ -1,8 +1,8 @@
 # Current State
 
-Status: User-scoped UX redesign Slice 8 complete
+Status: User-scoped UX redesign complete through Slice 9
 Phase: user-scoped-ux-redesign
-Next Task: Slice 9 - Arabic, accessibility, and responsive cleanup
+Next Task: None - user-scoped UX redesign slices complete
 Model Tier: GPT-5.5 Extra High
 
 ## How to use this file
@@ -22,18 +22,17 @@ Prior state history is in .forge/archive/state-archive.md.
 - Slice 7 adds safe customer/branch labels to relation responses and lets staff unlink related complaints through the backend-owned relation route.
 - Slice 8 makes reports filter by date range, branch, category, severity, owner, and department where available; export links now use those same scoped filters only after real report rows load.
 - Reports now show guarded delivered/deferred catalog status instead of pretending deferred reports are complete.
+- Slice 9 localizes guarded report catalog values in Arabic, gives disabled report exports an unavailable reason, keeps related/duplicate complaint headings visible in empty states for accessibility, and constrains reports table overflow on narrow viewports.
 - DMS lookup/correction, related complaint writes, report authorization, branch scope, row limits, and export audit still flow through backend adapters/proxies and scoped routes; no DMS writeback, destructive merge, frontend provider/relation authority, or frontend report authority was added.
 - Screenshots were produced under `output/playwright/` and left unstaged.
 
 ## Current Stop
 
-Proceed to Slice 9: Arabic, accessibility, and responsive cleanup.
+User-scoped UX redesign slices are complete.
 
 ## Open Carry-Forward / Known Debt
 
 - Existing dirty files not related to this slice remain untouched.
 - The plan names `test:api -- dms-adapter` and `test:api -- customers`, but this repo's API runner registers `integrations` and `complaints` for the covered behavior.
 - The plan names `test:e2e -- complaint-related`, but this repo's e2e runner does not register that suite.
-- The plan names `test:e2e -- reports`, but this repo's e2e runner does not register that suite.
-- Arabic native date input placeholder is browser-controlled and remains for Slice 9 locale/responsive cleanup.
-- Browser-native file input text remains Chrome-controlled and may appear in English on Arabic screens; remains for Slice 9 locale/responsive cleanup.
+- Browser-native date and file input chrome is still controlled by the browser; product labels and values around those controls are localized.

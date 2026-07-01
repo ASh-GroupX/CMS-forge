@@ -75,10 +75,10 @@ export function ComplaintRelationsPanel({ complaintId, relations, text }: { comp
 }
 
 function RelationList({ action, actionLabel, busyId, complaintId, items, text, title }: { action?: ((item: SafeComplaintRelationItem) => void) | undefined; actionLabel?: string | undefined; busyId?: string | null | undefined; complaintId?: string | undefined; items: SafeComplaintRelationItem[]; text: ComplaintRelationsText; title: string }) {
-  if (!items.length) return null;
   return (
     <div className="mt-3">
       <h4 className="text-xs font-semibold uppercase tracking-normal text-slate-600">{title}</h4>
+      {!items.length ? null : (
       <ol className="mt-2 grid gap-2">
         {items.map((item) => (
           <li className="rounded-sm border border-slate-200 bg-white p-3 text-sm" key={item.id}>
@@ -100,6 +100,7 @@ function RelationList({ action, actionLabel, busyId, complaintId, items, text, t
           </li>
         ))}
       </ol>
+      )}
     </div>
   );
 }

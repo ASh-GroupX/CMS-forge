@@ -11991,3 +11991,55 @@ SRS IDs: `REQ-REPORT-001`, `REPORT-MATRIX-001`, `RBAC-MATRIX-001`, `REQ-LOCALIZA
 - Temporary proof route used only for screenshots was deleted before staging.
 - Playwright dev-server console showed Next HMR websocket errors during screenshot capture only; route rendering and saved screenshots were verified.
 - Existing unrelated dirty integration module change and untracked output artifacts were left unstaged.
+
+---
+
+## User-Scoped UX Redesign - Slice 9 Arabic Accessibility Responsive Cleanup
+
+Status: Complete
+SRS IDs: `REQ-LOCALIZATION-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `NFR-SEC-002`
+
+### Scope
+
+- Localized guarded report catalog rows by matching known report IDs to the existing English/Arabic report catalog text.
+- Localized report required-filter keys for date, branch, category, severity, owner, and department.
+- Added explicit unavailable reasons to disabled report export buttons through `aria-label` and `title`.
+- Kept related/duplicate complaint list headings visible even when there are no rows, so keyboard and assistive-tech users can find the empty related sections.
+- Constrained the reports dashboard card so its table scroll remains local on narrow viewports instead of creating page-level horizontal overflow.
+
+### Security Self-Check
+
+- No RBAC, branch-scope, workflow, portal privacy, report/export, DMS, or attachment authority moved into React.
+- Report catalog localization is presentation-only; report delivery status, export readiness, filter scope, and row limits remain backend-owned.
+- Related complaint writes and visibility remain backend-owned; the UI change only keeps section headings visible in empty states.
+
+### Verification
+
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `corepack pnpm test:web -- shell` (197/197 TAP tests).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+- Visual review screenshots:
+  `output/playwright/slice9-rtl-en-390.png`,
+  `output/playwright/slice9-rtl-en-430.png`,
+  `output/playwright/slice9-rtl-en-768.png`,
+  `output/playwright/slice9-rtl-en-1024.png`,
+  `output/playwright/slice9-rtl-en-1280.png`,
+  `output/playwright/slice9-rtl-en-1440.png`,
+  `output/playwright/slice9-rtl-ar-390.png`,
+  `output/playwright/slice9-rtl-ar-430.png`,
+  `output/playwright/slice9-rtl-ar-768.png`,
+  `output/playwright/slice9-rtl-ar-1024.png`,
+  `output/playwright/slice9-rtl-ar-1280.png`,
+  `output/playwright/slice9-rtl-ar-1440.png`.
+
+### Notes
+
+- Temporary proof route used only for screenshots was deleted before staging.
+- Playwright dev-server console showed Next HMR websocket errors during screenshot capture only; route rendering and saved screenshots were verified.
+- Browser-native date/file input chrome remains browser-controlled; product labels and surrounding values are localized.
+- Existing unrelated dirty integration module change and untracked output artifacts were left unstaged.

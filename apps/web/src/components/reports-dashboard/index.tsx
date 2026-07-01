@@ -61,7 +61,7 @@ export function ReportsDashboard({
     [t.kpis.resolution, t.hours(kpis.averageResolutionHours)],
   ] as const : null;
   return (
-    <Card aria-label={t.title} className="rounded-md border-slate-200 bg-white shadow-sm" dir={shell.dir}>
+    <Card aria-label={t.title} className="max-w-full overflow-hidden rounded-md border-slate-200 bg-white shadow-sm" dir={shell.dir}>
       <CardHeader className="border-b border-slate-200 p-4">
         <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
         <CardDescription className="mt-1 text-sm text-slate-600">{t.subtitle}</CardDescription>
@@ -156,8 +156,8 @@ export function ReportsDashboard({
                 </>
               ) : (
                 <>
-                  <Button disabled size="sm" type="button" variant="outline">{t.export.csv}</Button>
-                  <Button disabled size="sm" type="button" variant="outline">{t.export.excel}</Button>
+                  <Button aria-label={t.states.denied} disabled size="sm" title={t.states.denied} type="button" variant="outline">{t.export.csv}</Button>
+                  <Button aria-label={t.states.denied} disabled size="sm" title={t.states.denied} type="button" variant="outline">{t.export.excel}</Button>
                 </>
               )}
             </div>
@@ -223,15 +223,7 @@ function SelectField({ choose, disabledLabel, label, name, options, value }: { c
   );
 }
 
-function OptionField({ choose, disabledLabel, label, locale, name, options, value }: {
-  choose: string;
-  disabledLabel: string;
-  label: string;
-  locale: Locale;
-  name: string;
-  options: ComplaintFormOption[];
-  value: string;
-}) {
+function OptionField({ choose, disabledLabel, label, locale, name, options, value }: { choose: string; disabledLabel: string; label: string; locale: Locale; name: string; options: ComplaintFormOption[]; value: string }) {
   const id = `reports-${name}`;
   return (
     <div className="grid gap-2">
@@ -258,19 +250,26 @@ function reportQuery(filters: ReportsFilters): string {
 }
 
 function catalogRowsFrom(catalog: StaffReportCatalog | undefined, fallback: readonly (readonly [string, string, string, unknown])[], t: typeof reportsDashboardText.en) {
-  return catalog?.items.map((item) => ({
-    id: item.id,
-    name: item.name,
-    audience: item.users,
-    filters: item.requiredFilters.join(', '),
-    status: item.status === 'DELIVERED' ? t.badges.delivered : item.signoffRequired ? t.badges.deferredSignoff : t.badges.deferred,
-  })) ?? fallback.map(([id, name, audience]) => ({
+  return catalog?.items.map((item) => {
+    const translated = fallback.find(([id]) => id === item.id);
+    return {
+      id: item.id,
+      name: translated?.[1] ?? item.name,
+      audience: translated?.[2] ?? item.users,
+      filters: item.requiredFilters.map((filter) => reportFilterLabel(filter, t)).join(', '),
+      status: item.status === 'DELIVERED' ? t.badges.delivered : item.signoffRequired ? t.badges.deferredSignoff : t.badges.deferred,
+    };
+  }) ?? fallback.map(([id, name, audience]) => ({
     id,
     name,
     audience,
     filters: t.filters.unavailable,
     status: t.badges.pending,
   }));
+}
+
+function reportFilterLabel(filter: string, t: typeof reportsDashboardText.en): string {
+  return ({ date: t.filters.dateFrom, dateFrom: t.filters.dateFrom, dateTo: t.filters.dateTo, branch: t.filters.branch, category: t.filters.category, severity: t.filters.severity, owner: t.filters.owner, department: t.filters.department } as Record<string, string>)[filter] ?? filter;
 }
 
 function rowScopeLabel(row: StaffReportRow, branches: ComplaintFormOption[], staff: AssignableStaff[] | null | undefined, locale: Locale, unavailable: string): string {

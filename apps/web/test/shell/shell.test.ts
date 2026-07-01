@@ -45,7 +45,7 @@ import { notificationCenterText } from '../../src/i18n/staff-notification-center
 import { portalSubmissionText } from '../../src/i18n/portal-submission';
 import { portalSurveyText } from '../../src/i18n/portal-survey';
 import { portalTrackingText } from '../../src/i18n/portal-tracking';
-import { reportsDashboardText } from '../../src/i18n/staff-reports-dashboard';
+import { reportCatalogText, reportsDashboardText } from '../../src/i18n/staff-reports-dashboard';
 import { employeeTodayText } from '../../src/i18n/staff-employee-today';
 import { sentTasksText } from '../../src/i18n/staff-sent-tasks';
 import { staffPromisesText } from '../../src/i18n/staff-promises';
@@ -2203,6 +2203,7 @@ test('reports dashboard renders export affordance without file generation', asyn
   assert.match(html, /Excel/);
   assert.doesNotMatch(html, /href="\/reports\/export\?format=csv"/);
   assert.match(html, /disabled[^>]*>CSV<\/button>/);
+  assert.match(html, /title="Export is unavailable for this report or role\."/);
   assert.match(html, /Exports use backend configured row limits\./);
   assert.match(html, /Export data is RBAC-filtered with the same report scope\./);
   assert.match(html, /Successful exports are audit logged by the backend\./);
@@ -2318,12 +2319,17 @@ test('reports route renders guarded catalog delivery statuses when rows are unav
     return jsonResponse({ error: { code: 'RBAC_FORBIDDEN' } }, 403);
   };
   const html = renderToStaticMarkup(await ReportsPage({ cookieHeader: 'cms_staff_session=raw-session', fetchImpl, searchParams: Promise.resolve({ locale: 'en' }) }));
+  const arabic = renderToStaticMarkup(await ReportsPage({ cookieHeader: 'cms_staff_session=raw-session', fetchImpl, searchParams: Promise.resolve({ locale: 'ar' }) }));
 
   assert.match(html, /RPT-017/);
   assert.match(html, /Delivered/);
   assert.match(html, /Deferred - signoff required/);
-  assert.match(html, /date, branch, category, severity, owner/);
+  assert.match(html, /Date from, Branch, Category, Severity, Owner/);
   assert.doesNotMatch(html, /href="\/reports\/export\?format=csv"/);
+  assert.ok(arabic.includes(reportCatalogText.ar[0][1]));
+  assert.ok(arabic.includes(reportsDashboardText.ar.filters.branch));
+  assert.ok(arabic.includes(reportsDashboardText.ar.filters.owner));
+  assert.doesNotMatch(arabic, /Open complaints summary|Managers|date, branch/);
 });
 
 test('Arabic reports dashboard keeps RTL localized labels', async () => {
