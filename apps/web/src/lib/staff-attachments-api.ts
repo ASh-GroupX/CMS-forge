@@ -46,14 +46,15 @@ export async function downloadStaffAttachment(
   const result = await prepareStaffAttachmentDownload(complaintId, attachmentId, fetchImpl);
   if (!result.ok) return result;
   const target = staffAttachmentDownloadTarget(complaintId, attachmentId, result.data.download);
+  if (!target) return { ok: false, error: unavailableDownloadTarget() };
   openTarget(target);
   return { ok: true, data: { ...result.data, target } };
 }
 
-export function staffAttachmentDownloadTarget(complaintId: string, attachmentId: string, download: StaffAttachmentDownload): string {
+export function staffAttachmentDownloadTarget(complaintId: string, attachmentId: string, download: StaffAttachmentDownload): string | null {
   const token = download.token.trim();
   if (isHttpUrl(token)) return token;
-  return `/api/complaints/${encodeURIComponent(complaintId)}/attachments/${encodeURIComponent(attachmentId)}/download?redirect=1`;
+  return null;
 }
 
 async function requestJson<T>(path: string, fetchImpl: typeof fetch, init: RequestInit): Promise<StaffAttachmentResult<T>> {
@@ -83,6 +84,16 @@ function validationError(validation: Exclude<AttachmentFileValidation, { ok: tru
 
 function openAttachmentDownloadTarget(target: string): void {
   if (typeof window !== 'undefined') window.location.assign(target);
+}
+
+function unavailableDownloadTarget(): StaffAttachmentError {
+  return {
+    kind: 'api',
+    code: 'ATTACHMENT_DOWNLOAD_TARGET_UNAVAILABLE',
+    message: 'Download target is unavailable in this environment.',
+    correlationId: null,
+    status: 409,
+  };
 }
 
 function isHttpUrl(value: string): boolean {

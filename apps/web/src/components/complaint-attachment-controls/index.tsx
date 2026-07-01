@@ -74,7 +74,10 @@ export function ComplaintAttachmentControls({
     setState('loading');
     setMessage(null);
     const result = await downloadStaffAttachment(complaintId, item.id);
-    if (!result.ok) return setState('error');
+    if (!result.ok) {
+      setMessage(result.error.message);
+      return setState('error');
+    }
     setMessage(t.attachmentUploadMessages.downloaded);
     setState('downloaded');
   }

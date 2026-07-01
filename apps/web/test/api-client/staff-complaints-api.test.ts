@@ -189,7 +189,7 @@ test('staff attachment client lists uploads and opens prepared signed download t
   assert.doesNotMatch(String(calls[1]?.init?.body), /branch|role|actor|workflow|storage|token|credential/i);
 });
 
-test('staff attachment client opens same-origin redirect route for opaque download tokens', async () => {
+test('staff attachment client rejects opaque download tokens without opening a broken page', async () => {
   const opened: string[] = [];
   const result = await downloadStaffAttachment('cmp/1', 'att/2', (target) => opened.push(target), async (input, init) => {
     assert.equal(input, '/api/complaints/cmp%2F1/attachments/att%2F2/download');
@@ -197,9 +197,11 @@ test('staff attachment client opens same-origin redirect route for opaque downlo
     return jsonResponse({ download: { attachmentId: 'att/2', token: 'attdl_safe', expiresAt: '2026-06-19T10:05:00.000Z' } });
   });
 
-  assert.equal(result.ok, true);
-  assert.deepEqual(opened, ['/api/complaints/cmp%2F1/attachments/att%2F2/download?redirect=1']);
-  assert.doesNotMatch(opened[0] ?? '', /attdl|token|credential|storage/i);
+  assert.equal(result.ok, false);
+  assert.equal(result.ok ? null : result.error.code, 'ATTACHMENT_DOWNLOAD_TARGET_UNAVAILABLE');
+  assert.equal(result.ok ? null : result.error.message, 'Download target is unavailable in this environment.');
+  assert.equal(JSON.stringify(result).includes('attdl_safe'), false);
+  assert.deepEqual(opened, []);
 });
 
 test('staff attachment client rejects blocked files before posting', async () => {
@@ -685,12 +687,13 @@ test('staff attachment download proxy redirects signed targets and hides opaque 
       headers: { cookie: 'cms_staff_session=raw-session' },
       method: 'GET',
     }), { params: Promise.resolve({ id: 'cmp_1', attachmentId: 'att_1' }) });
-    const opaqueBody = await opaque.json() as { error?: { code?: string } };
+    const opaqueBody = await opaque.json() as { error?: { code?: string; message?: string } };
 
     assert.equal(redirect.status, 307);
     assert.equal(redirect.headers.get('location'), 'https://storage.test/attachments/att_1?X-Amz-Signature=proof');
     assert.equal(opaque.status, 409);
     assert.equal(opaqueBody.error?.code, 'ATTACHMENT_DOWNLOAD_TARGET_UNAVAILABLE');
+    assert.equal(opaqueBody.error?.message, 'Download target is unavailable in this environment.');
     assert.equal(JSON.stringify(opaqueBody).includes('attdl_safe'), false);
     assert.deepEqual(calls.map((call) => String(call.input)), [
       'http://api.test/complaints/cmp_1/attachments/att_1/download',

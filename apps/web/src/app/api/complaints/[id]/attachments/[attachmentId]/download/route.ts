@@ -28,7 +28,7 @@ function redirectDownload(body: ArrayBuffer): Response {
     response.headers.set('cache-control', 'no-store');
     return response;
   }
-  return NextResponse.json({ error: { code: 'ATTACHMENT_DOWNLOAD_TARGET_UNAVAILABLE', message: 'Attachment download target is not available.', correlationId: null } }, { headers: { 'cache-control': 'no-store' }, status: 409 });
+  return NextResponse.json({ error: { code: 'ATTACHMENT_DOWNLOAD_TARGET_UNAVAILABLE', message: 'Download target is unavailable in this environment.', correlationId: null } }, { headers: { 'cache-control': 'no-store' }, status: 409 });
 }
 
 function downloadToken(body: ArrayBuffer): string | null {
