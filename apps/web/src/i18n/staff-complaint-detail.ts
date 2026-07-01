@@ -45,6 +45,7 @@ export const complaintDetailText: Record<Locale, typeof enComplaintDetailText> =
       size: 'This file exceeds the size limit.',
       uploaded: 'Attachment uploaded. Scan status is pending.',
       downloaded: 'Download was authorized by the server.',
+      downloadUnavailable: 'Download is unavailable in this environment.',
     },
     workflow: {
       authority: 'Available actions come from system policy.',
@@ -195,6 +196,7 @@ export const complaintDetailText: Record<Locale, typeof enComplaintDetailText> =
       size: 'حجم الملف يتجاوز الحد المسموح.',
       uploaded: 'تم رفع المرفق. حالة الفحص قيد الانتظار.',
       downloaded: 'صرح الخادم بالتنزيل.',
+      downloadUnavailable: 'التنزيل غير متاح في هذه البيئة.',
     },
     workflow: {
       authority: 'النظام يحدد الإجراءات المتاحة.',
@@ -259,7 +261,7 @@ const enComplaintDetailText = {
     states: { idle: '', loading: '', success: '', error: '', conflict: '', validation: '', denied: '' },
   },
   attachmentActions: { upload: '', download: '', rules: [''] },
-  attachmentUploadMessages: { required: '', type: '', size: '', uploaded: '', downloaded: '' },
+  attachmentUploadMessages: { required: '', type: '', size: '', uploaded: '', downloaded: '', downloadUnavailable: '' },
   workflow: {
     authority: '',
     comment: '',

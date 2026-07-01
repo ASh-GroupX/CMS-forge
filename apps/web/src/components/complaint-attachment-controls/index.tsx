@@ -14,7 +14,7 @@ import {
   type StaffAttachment,
 } from '../../lib/staff-attachments-api';
 
-export type ComplaintAttachmentPreviewState = 'loading' | 'empty' | 'error' | 'pending' | 'clean' | 'rejected';
+export type ComplaintAttachmentPreviewState = 'loading' | 'empty' | 'error' | 'pending' | 'clean' | 'rejected' | 'download-error';
 type LocalState = ComplaintAttachmentPreviewState | 'uploading' | 'uploaded' | 'downloaded' | undefined;
 
 export function ComplaintAttachmentControls({
@@ -52,6 +52,7 @@ export function ComplaintAttachmentControls({
   const preview = items.length ? items : previewItems(attachmentState, t.values.file);
   const scanState = scanBadge(preview[0]?.scanStatus ?? attachmentState);
   const visibleState = state === 'uploading' ? 'loading' : state === 'uploaded' || state === 'downloaded' ? undefined : state;
+  const visibleMessage = message ?? (attachmentState === 'download-error' ? t.attachmentUploadMessages.downloadUnavailable : null);
 
   async function upload(event: React.FormEvent) {
     event.preventDefault();
@@ -71,12 +72,11 @@ export function ComplaintAttachmentControls({
 
   async function download(item: StaffAttachment) {
     if (!complaintId || item.scanStatus !== 'CLEAN') return setState('error');
-    setState('loading');
     setMessage(null);
     const result = await downloadStaffAttachment(complaintId, item.id);
     if (!result.ok) {
-      setMessage(result.error.message);
-      return setState('error');
+      setMessage(t.attachmentUploadMessages.downloadUnavailable);
+      return;
     }
     setMessage(t.attachmentUploadMessages.downloaded);
     setState('downloaded');
@@ -113,7 +113,7 @@ export function ComplaintAttachmentControls({
         </Label>
         <Button disabled={!complaintId || state === 'uploading'} type="submit" variant="outline">{t.attachmentActions.upload}</Button>
       </form>
-      {message ? <p className="mt-2 text-sm text-slate-700" role="status">{message}</p> : null}
+      {visibleMessage ? <p className="mt-2 text-sm text-slate-700" role="status">{visibleMessage}</p> : null}
       <ul className="mt-3 grid gap-1 text-sm text-slate-600">
         {t.attachmentActions.rules.map((rule) => (
           <li key={rule}>{rule}</li>
@@ -130,8 +130,8 @@ function scanBadge(value: string | undefined): 'pending' | 'clean' | 'rejected' 
 }
 
 function previewItems(state: ComplaintAttachmentPreviewState | undefined, fileName: string): StaffAttachment[] {
-  if (state !== 'pending' && state !== 'clean' && state !== 'rejected') return [];
-  const scanStatus = state === 'clean' ? 'CLEAN' : state === 'rejected' ? 'REJECTED' : 'PENDING';
+  if (state !== 'pending' && state !== 'clean' && state !== 'rejected' && state !== 'download-error') return [];
+  const scanStatus = state === 'clean' || state === 'download-error' ? 'CLEAN' : state === 'rejected' ? 'REJECTED' : 'PENDING';
   return [{ id: '', complaintId: '', fileName, contentType: 'application/pdf', sizeBytes: 0, scanStatus, customerVisible: false }];
 }
 

@@ -31,6 +31,7 @@ import PortalSurveyPage from '../../src/app/portal/survey/page';
 import PortalTrackingPage from '../../src/app/portal/track/page';
 import { buildPortalComplaintSubmission, PortalSubmissionScreen } from '../../src/components/portal-submission';
 import { PortalTrackingPreview } from '../../src/components/portal-tracking';
+import { ComplaintAttachmentControls } from '../../src/components/complaint-attachment-controls';
 import { ComplaintWorkflowModal } from '../../src/components/complaint-workflow-modal';
 import { adminBranchesText } from '../../src/i18n/staff-admin-branches';
 import { adminCategoriesSlaText } from '../../src/i18n/staff-admin-categories-sla';
@@ -1514,6 +1515,26 @@ test('complaint detail attachment preview states render loading empty and error 
   assert.match(empty, /No attachments are available yet\./);
   assert.match(error, /Attachments could not be loaded\. Try again\./);
   assert.match(error, /role="alert"/);
+});
+
+test('complaint detail attachment download failure keeps row and button visible', () => {
+  const html = renderToStaticMarkup(React.createElement(ComplaintAttachmentControls, {
+    attachmentState: 'download-error',
+    complaintId: 'cmp_1',
+    locale: 'en',
+  }));
+  const arabic = renderToStaticMarkup(React.createElement(ComplaintAttachmentControls, {
+    attachmentState: 'download-error',
+    complaintId: 'cmp_1',
+    locale: 'ar',
+  }));
+
+  assert.match(html, /supporting-document\.pdf/);
+  assert.match(html, /Download when authorized/);
+  assert.match(html, /Download is unavailable in this environment\./);
+  assert.doesNotMatch(html, /Attachments could not be loaded/);
+  assert.ok(arabic.includes(complaintDetailText.ar.attachmentUploadMessages.downloadUnavailable));
+  assert.doesNotMatch(arabic, /Download is unavailable in this environment/);
 });
 
 test('Arabic complaint detail attachment controls keep RTL localized labels', async () => {
