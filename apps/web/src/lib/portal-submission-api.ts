@@ -35,6 +35,12 @@ export type PortalSubmitResult<T> = { ok: true; data: T } | { ok: false; error: 
 export type PortalComplaintCreateResponse = {
   complaint: { id: string; referenceNumber: string; status: string; attachments?: Array<{ id: string; fileName: string; scanStatus: string }> };
 };
+export type PortalSubmissionOption = { id: string; nameEn: string; nameAr: string; parentId?: string | null };
+export type PortalSubmissionOptions = {
+  branches: PortalSubmissionOption[];
+  categories: PortalSubmissionOption[];
+  severities: Array<'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>;
+};
 
 type ErrorEnvelope = { error?: { code?: string; message?: string; correlationId?: string | null; fieldErrors?: PortalFieldError[] } };
 
@@ -47,6 +53,17 @@ export function submitPortalComplaint(
     headers: { Accept: 'application/json', 'content-type': 'application/json' },
     method: 'POST',
   });
+}
+
+export function getPortalSubmissionOptions({
+  apiUrl,
+  fetchImpl = fetch,
+}: {
+  apiUrl?: string;
+  fetchImpl?: typeof fetch;
+} = {}): Promise<PortalSubmitResult<PortalSubmissionOptions>> {
+  const target = apiUrl ? new URL('/portal/options', apiUrl) : '/api/portal/options';
+  return requestJson(target, fetchImpl, { headers: { Accept: 'application/json' }, method: 'GET' });
 }
 
 export async function portalSubmissionAttachments(files: File[]): Promise<{ ok: true; attachments: PortalComplaintAttachmentRequest[] } | { ok: false; error: PortalFieldError }> {
@@ -64,7 +81,7 @@ export async function portalSubmissionAttachments(files: File[]): Promise<{ ok: 
   return { ok: true, attachments };
 }
 
-async function requestJson<T>(path: string, fetchImpl: typeof fetch, init: RequestInit): Promise<PortalSubmitResult<T>> {
+async function requestJson<T>(path: string | URL, fetchImpl: typeof fetch, init: RequestInit): Promise<PortalSubmitResult<T>> {
   try {
     const response = await fetchImpl(path, { credentials: 'omit', ...init });
     if (!response.ok) return { ok: false, error: await mapErrorResponse(response) };

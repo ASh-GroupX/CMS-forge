@@ -75,6 +75,6 @@ import { ComplaintsService } from './complaints.service.js';
     },
     CsrfGuard,
   ],
-  exports: [ComplaintsService],
+  exports: [ComplaintsService, ComplaintFormOptionsService],
 })
 export class ComplaintsModule {}

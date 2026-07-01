@@ -249,7 +249,12 @@ test('Arabic role preview keeps RTL direction and localized hidden state', async
 });
 
 test('portal submission renders English responsive complaint form', async () => {
-  const html = renderToStaticMarkup(await PortalSubmissionPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse(publicPortalOptions());
+  };
+  const html = renderToStaticMarkup(await PortalSubmissionPage({ fetchImpl, searchParams: Promise.resolve({ locale: 'en' }) }));
 
   assert.match(html, /dir="ltr"/);
   assert.match(html, /Customer complaint portal/);
@@ -259,6 +264,11 @@ test('portal submission renders English responsive complaint form', async () => 
   assert.match(html, /Category/);
   assert.match(html, /Subcategory/);
   assert.match(html, /Severity/);
+  assert.match(html, /Service Branch/);
+  assert.match(html, /Vehicle service/);
+  assert.match(html, /Engine noise/);
+  assert.match(html, /Critical/);
+  assert.match(html, /Low/);
   assert.match(html, /Incident date/);
   assert.match(html, /Subject/);
   assert.match(html, /Description/);
@@ -268,7 +278,10 @@ test('portal submission renders English responsive complaint form', async () => 
   assert.match(html, /name="attachments"/);
   assert.match(html, /multiple=""/);
   assert.match(html, /Submit complaint/);
+  assert.equal(String(calls[0]?.input), 'http://localhost:3000/portal/options');
+  assert.deepEqual(calls[0]?.init?.headers, { Accept: 'application/json' });
   assert.doesNotMatch(html, /audit|DMS|staff PII|internal comments/i);
+  assert.doesNotMatch(html, /department|owner|branchScope|code/i);
 });
 
 test('portal submission keeps Arabic RTL localized labels', async () => {
@@ -543,6 +556,17 @@ test('portal survey source does not render tokens or private data paths', () => 
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' }, status });
+}
+
+function publicPortalOptions() {
+  return {
+    branches: [{ id: 'branch_service', nameEn: 'Service Branch', nameAr: 'فرع الصيانة' }],
+    categories: [
+      { id: 'cat_vehicle', nameEn: 'Vehicle service', nameAr: 'خدمة المركبة', parentId: null },
+      { id: 'cat_engine', nameEn: 'Engine noise', nameAr: 'صوت المحرك', parentId: 'cat_vehicle' },
+    ],
+    severities: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
+  };
 }
 
 function employeeTodayEmpty() {

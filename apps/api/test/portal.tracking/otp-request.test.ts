@@ -8,6 +8,7 @@ import { createHash } from 'node:crypto';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
 import { InMemoryLoginRateLimitStore, LOGIN_RATE_LIMIT_ATTEMPTS, PortalTrackingOtpRateLimitGuard } from '../../src/core/rate-limit.guard.ts';
+import type { ComplaintFormOptionsService } from '../../src/modules/complaints/complaint-form-options.service.ts';
 import type { NotificationsService } from '../../src/modules/notifications/notifications.service.ts';
 import { PortalController } from '../../src/modules/portal/portal.controller.ts';
 import { PortalRepository } from '../../src/modules/portal/portal.repository.ts';
@@ -17,12 +18,12 @@ type PortalRequest = { body?: unknown; headers: Record<string, string | string[]
 
 test('portal tracking OTP route delegates only reference, phone, and request context', async () => {
   const calls: unknown[] = [];
-  const controller = new PortalController({
+  const controller = controllerWith({
     requestTrackingOtp: async (input) => {
       calls.push(input);
       return { ok: true, verificationId: 'ver_1', expiresAt: '2026-06-19T10:05:00.000Z' };
     },
-  } as PortalService);
+  });
 
   const response = await controller.requestTrackingOtp({
     referenceNumber: ' CMP-000010 ',
@@ -153,14 +154,21 @@ function context(req: PortalRequest): ExecutionContext {
   return { switchToHttp: () => ({ getRequest: () => req }), getHandler: () => PortalController.prototype.requestTrackingOtp, getClass: () => PortalController } as ExecutionContext;
 }
 
+function controllerWith(service: Partial<PortalService>): PortalController {
+  return new PortalController(
+    service as PortalService,
+    { listPublic: async () => ({ branches: [], categories: [], severities: [] }) } as ComplaintFormOptionsService,
+  );
+}
+
 test('portal tracking OTP verify route delegates only verification id, OTP, and request context', async () => {
   const calls: unknown[] = [];
-  const controller = new PortalController({
+  const controller = controllerWith({
     verifyTrackingOtp: async (input) => {
       calls.push(input);
       return { sessionToken: 'portal_token', expiresAt: '2026-06-19T10:30:00.000Z' };
     },
-  } as PortalService);
+  });
 
   const response = await controller.verifyTrackingOtp({ verificationId: ' ver_1 ', otp: ' 123456 ', customerNumber: 'DMS-SECRET' }, request());
 
@@ -352,12 +360,12 @@ test('portal repository creates session rows with hash-only token persistence', 
 
 test('portal tracking route delegates only portal session token and request context', async () => {
   const calls: unknown[] = [];
-  const controller = new PortalController({
+  const controller = controllerWith({
     getTracking: async (input) => {
       calls.push(input);
       return { referenceNumber: 'CMP-000010', status: ComplaintStatus.SUBMITTED, createdAt: '2026-06-19T10:00:00.000Z', updatedAt: '2026-06-19T10:10:00.000Z', timeline: [] };
     },
-  } as PortalService);
+  });
 
   const response = await controller.getTracking(' portal_token ', request({ body: { referenceNumber: 'CMP-000010' } }));
 
@@ -368,7 +376,7 @@ test('portal tracking route delegates only portal session token and request cont
 
 test('portal privacy regression rejects reference-only tracking and follow-up route input', async () => {
   const calls: unknown[] = [];
-  const controller = new PortalController({
+  const controller = controllerWith({
     getTracking: async (input) => {
       calls.push(input);
       throw verificationFailed();
@@ -377,7 +385,7 @@ test('portal privacy regression rejects reference-only tracking and follow-up ro
       calls.push(input);
       throw verificationFailed();
     },
-  } as PortalService);
+  });
 
   await assert.rejects(
     controller.getTracking(undefined, request({ body: { referenceNumber: 'CMP-000010' } })),
@@ -507,12 +515,12 @@ test('portal repository validates sessions by hash without selecting stored hash
 
 test('portal follow-up route delegates only portal session token, body, and request context', async () => {
   const calls: unknown[] = [];
-  const controller = new PortalController({
+  const controller = controllerWith({
     submitFollowUp: async (input) => {
       calls.push(input);
       return { ok: true };
     },
-  } as PortalService);
+  });
 
   const response = await controller.submitFollowUp(' portal_token ', { body: ' Customer update ', referenceNumber: 'CMP-000010', visibility: 'INTERNAL', actorId: 'usr_staff', authorId: 'usr_staff', staffEmail: 'staff@example.test' }, request());
 

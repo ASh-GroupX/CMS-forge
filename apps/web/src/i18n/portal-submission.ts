@@ -30,10 +30,12 @@ export const portalSubmissionText = {
     },
     choices: {
       choose: 'Choose',
-      branch: 'Main service branch',
-      category: 'Service quality',
-      subcategory: 'Repair delay',
-      severity: 'High',
+    },
+    severityLabels: {
+      CRITICAL: 'Critical',
+      HIGH: 'High',
+      MEDIUM: 'Medium',
+      LOW: 'Low',
     },
     values: {
       name: 'Faisal Al-Otaibi',
@@ -92,10 +94,12 @@ export const portalSubmissionText = {
     },
     choices: {
       choose: 'اختر',
-      branch: 'فرع الخدمة الرئيسي',
-      category: 'جودة الخدمة',
-      subcategory: 'تأخر الإصلاح',
-      severity: 'عالية',
+    },
+    severityLabels: {
+      CRITICAL: 'حرجة',
+      HIGH: 'عالية',
+      MEDIUM: 'متوسطة',
+      LOW: 'منخفضة',
     },
     values: {
       name: 'فيصل العتيبي',

@@ -3034,6 +3034,27 @@
         }
       }
     },
+    "/portal/options": {
+      "get": {
+        "tags": [
+          "Portal"
+        ],
+        "operationId": "portalOptionsList",
+        "summary": "List public-safe portal submission options",
+        "responses": {
+          "200": {
+            "description": "Public-safe portal submission options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalOptionsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/portal/tracking": {
       "get": {
         "tags": [
@@ -10011,6 +10032,88 @@
           },
           "customerName": {
             "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortalPublicOption": {
+        "type": "object",
+        "required": [
+          "id",
+          "nameEn",
+          "nameAr"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortalPublicCategoryOption": {
+        "type": "object",
+        "required": [
+          "id",
+          "nameEn",
+          "nameAr",
+          "parentId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortalOptionsResponse": {
+        "type": "object",
+        "required": [
+          "branches",
+          "categories",
+          "severities"
+        ],
+        "properties": {
+          "branches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortalPublicOption"
+            }
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortalPublicCategoryOption"
+            }
+          },
+          "severities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "CRITICAL",
+                "HIGH",
+                "MEDIUM",
+                "LOW"
+              ]
+            }
           }
         },
         "additionalProperties": false

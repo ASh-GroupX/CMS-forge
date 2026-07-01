@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { GET, POST } from '../../src/app/api/portal/[...path]/route';
-import { portalSubmissionAttachments, submitPortalComplaint } from '../../src/lib/portal-submission-api';
+import { getPortalSubmissionOptions, portalSubmissionAttachments, submitPortalComplaint } from '../../src/lib/portal-submission-api';
 import { getPortalTracking, requestPortalOtp, submitPortalFollowUp, uploadPortalAttachment, verifyPortalOtp } from '../../src/lib/portal-tracking-api';
 
 function jsonResponse(body: unknown, status = 200) {
@@ -95,6 +95,27 @@ test('portal submission attachment builder blocks invalid files before submit', 
   assert.equal(result.ok ? null : result.error.code, 'ATTACHMENT_TYPE_BLOCKED');
 });
 
+test('portal submission options client loads public-safe catalogs', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({
+      branches: [{ id: 'branch_service', nameEn: 'Service Branch', nameAr: 'فرع الصيانة' }],
+      categories: [{ id: 'cat_engine', nameEn: 'Engine', nameAr: 'المحرك', parentId: 'cat_vehicle' }],
+      severities: ['HIGH', 'LOW'],
+    });
+  };
+
+  const result = await getPortalSubmissionOptions({ fetchImpl });
+
+  assert.equal(result.ok, true);
+  assert.equal(calls[0]?.input, '/api/portal/options');
+  assert.equal(calls[0]?.init?.method, 'GET');
+  assert.equal(calls[0]?.init?.credentials, 'omit');
+  assert.deepEqual(Object.fromEntries(new Headers(calls[0]?.init?.headers).entries()), { accept: 'application/json' });
+  assert.doesNotMatch(JSON.stringify(result.ok ? result.data : {}), /department|staff|owner|code|DMS/i);
+});
+
 test('portal proxy allowlists public submission and never forwards staff authority', async () => {
   const priorFetch = globalThis.fetch;
   const priorApiUrl = process.env.API_URL;
@@ -123,6 +144,35 @@ test('portal proxy allowlists public submission and never forwards staff authori
       accept: 'application/json',
       'content-type': 'application/json',
     });
+  } finally {
+    globalThis.fetch = priorFetch;
+    if (priorApiUrl === undefined) delete process.env.API_URL;
+    else process.env.API_URL = priorApiUrl;
+  }
+});
+
+test('portal proxy allowlists public options without staff authority', async () => {
+  const priorFetch = globalThis.fetch;
+  const priorApiUrl = process.env.API_URL;
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  globalThis.fetch = (async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ branches: [], categories: [], severities: ['HIGH'] });
+  }) as typeof fetch;
+  process.env.API_URL = 'http://api.test';
+
+  try {
+    const response = await GET(new Request('http://web.test/api/portal/options', {
+      headers: {
+        cookie: 'cms_staff_session=raw-session',
+        'x-csrf-token': 'csrf_123',
+        'x-portal-session': 'portal_token',
+      },
+    }), { params: Promise.resolve({ path: ['options'] }) });
+
+    assert.equal(response.status, 200);
+    assert.equal(String(calls[0]?.input), 'http://api.test/portal/options');
+    assert.deepEqual(Object.fromEntries(new Headers(calls[0]?.init?.headers).entries()), { accept: 'application/json' });
   } finally {
     globalThis.fetch = priorFetch;
     if (priorApiUrl === undefined) delete process.env.API_URL;

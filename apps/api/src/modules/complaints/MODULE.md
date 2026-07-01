@@ -11,7 +11,10 @@ Agent context manifest. Read this before editing the module.
 
 ## Public surface
 
-- `ComplaintsService` is the only service exported by `ComplaintsModule`.
+- `ComplaintsService` is the primary exported service.
+- `ComplaintFormOptionsService` is exported only for form option catalogs; public
+  callers must use `listPublic()` so staff-only department and scope metadata is
+  not exposed.
 - This module owns complaint lifecycle behavior: creation, backend-owned
   workflow transitions, complaint read models, and same-transaction status
   history plus audit writes.

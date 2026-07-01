@@ -10,9 +10,31 @@ export type ComplaintFormOptions = {
   severities: ComplaintSeverity[];
 };
 
+export type PublicComplaintFormOptions = {
+  branches: Array<{ id: string; nameEn: string; nameAr: string }>;
+  categories: Array<{ id: string; nameEn: string; nameAr: string; parentId: string | null }>;
+  severities: ComplaintSeverity[];
+};
+
 @Injectable()
 export class ComplaintFormOptionsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async listPublic(): Promise<PublicComplaintFormOptions> {
+    const [branches, categories] = await Promise.all([
+      this.prisma.branch.findMany({
+        orderBy: [{ nameEn: 'asc' }, { id: 'asc' }],
+        select: { id: true, nameEn: true, nameAr: true },
+        where: { isActive: true },
+      }),
+      this.prisma.category.findMany({
+        orderBy: [{ nameEn: 'asc' }, { id: 'asc' }],
+        select: { id: true, nameEn: true, nameAr: true, parentId: true },
+        where: { isActive: true },
+      }),
+    ]);
+    return { branches, categories, severities: Object.values(ComplaintSeverity) };
+  }
 
   async list(principal: StaffPrincipal): Promise<ComplaintFormOptions> {
     const branchScope = principal.roleCode === RoleCode.ADMIN ? {} : { id: principal.branchId ?? '' };

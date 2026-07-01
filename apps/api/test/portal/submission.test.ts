@@ -11,6 +11,7 @@ import {
   LOGIN_RATE_LIMIT_ATTEMPTS,
   PortalSubmissionRateLimitGuard,
 } from '../../src/core/rate-limit.guard.ts';
+import { ComplaintFormOptionsService } from '../../src/modules/complaints/complaint-form-options.service.ts';
 import { PortalController } from '../../src/modules/portal/portal.controller.ts';
 import { PortalService } from '../../src/modules/portal/portal.service.ts';
 import type { ComplaintsService } from '../../src/modules/complaints/complaints.service.ts';
@@ -24,12 +25,12 @@ type PortalRequest = {
 
 test('portal submission route delegates parsed public request context', async () => {
   const calls: unknown[] = [];
-  const controller = new PortalController({
+  const controller = controllerWith({
     submitComplaint: async (input) => {
       calls.push(input);
       return { id: 'cmp_portal', referenceNumber: 'CMS-2026-MAIN-000010', status: ComplaintStatus.SUBMITTED };
     },
-  } as PortalService);
+  });
 
   const response = await controller.submitComplaint({
     ...validBody(),
@@ -56,12 +57,12 @@ test('portal submission route delegates parsed public request context', async ()
 
 test('portal privacy regression strips DMS customer identifiers from public submission', async () => {
   const calls: unknown[] = [];
-  const controller = new PortalController({
+  const controller = controllerWith({
     submitComplaint: async (input) => {
       calls.push(input);
       return { id: 'cmp_portal', referenceNumber: 'CMS-2026-MAIN-000010', status: ComplaintStatus.SUBMITTED };
     },
-  } as PortalService);
+  });
 
   await controller.submitComplaint({
     ...validBody(),
@@ -79,12 +80,12 @@ test('portal privacy regression strips DMS customer identifiers from public subm
 
 test('portal submission route parses initial attachments without storage or staff authority', async () => {
   const calls: unknown[] = [];
-  const controller = new PortalController({
+  const controller = controllerWith({
     submitComplaint: async (input) => {
       calls.push(input);
       return { id: 'cmp_portal', referenceNumber: 'CMS-2026-MAIN-000010', status: ComplaintStatus.SUBMITTED };
     },
-  } as PortalService);
+  });
 
   await controller.submitComplaint({
     ...validBody(),
@@ -114,12 +115,12 @@ test('portal service always submits and cannot create staff drafts', async () =>
 
 test('portal submission route rejects invalid body before service call', async () => {
   let called = false;
-  const controller = new PortalController({
+  const controller = controllerWith({
     submitComplaint: async () => {
       called = true;
       throw new Error('service should not be called');
     },
-  } as unknown as PortalService);
+  });
 
   await assert.rejects(
     controller.submitComplaint({ ...validBody(), customerPhone: ' ' }, request()),
@@ -131,6 +132,40 @@ test('portal submission route rejects invalid body before service call', async (
 test('portal submission route uses the portal rate limit guard', () => {
   const guards = Reflect.getMetadata(GUARDS_METADATA, PortalController.prototype.submitComplaint) as Array<{ name: string }>;
   assert.deepEqual(guards.map((guard) => guard.name), ['PortalSubmissionRateLimitGuard']);
+});
+
+test('portal options route returns only public-safe catalog fields', async () => {
+  const controller = controllerWith({}, {
+    listPublic: async () => ({
+      branches: [{ id: 'branch_service', nameEn: 'Service Branch', nameAr: 'فرع الصيانة' }],
+      categories: [{ id: 'cat_engine', nameEn: 'Engine', nameAr: 'المحرك', parentId: 'cat_vehicle' }],
+      severities: [ComplaintSeverity.HIGH, ComplaintSeverity.LOW],
+    }),
+  });
+
+  const response = await controller.options();
+
+  assert.deepEqual(response, {
+    branches: [{ id: 'branch_service', nameEn: 'Service Branch', nameAr: 'فرع الصيانة' }],
+    categories: [{ id: 'cat_engine', nameEn: 'Engine', nameAr: 'المحرك', parentId: 'cat_vehicle' }],
+    severities: [ComplaintSeverity.HIGH, ComplaintSeverity.LOW],
+  });
+  assert.doesNotMatch(JSON.stringify(response), /department|staff|owner|code|branchScope/i);
+});
+
+test('public complaint options query omits departments and internal codes', async () => {
+  const calls: Array<{ model: string; args: unknown }> = [];
+  const service = new ComplaintFormOptionsService({
+    branch: { findMany: async (args: unknown) => { calls.push({ model: 'branch', args }); return [{ id: 'branch_service', nameEn: 'Service Branch', nameAr: 'فرع الصيانة' }]; } },
+    category: { findMany: async (args: unknown) => { calls.push({ model: 'category', args }); return [{ id: 'cat_engine', nameEn: 'Engine', nameAr: 'المحرك', parentId: 'cat_vehicle' }]; } },
+  } as never);
+
+  const response = await service.listPublic();
+
+  assert.deepEqual(calls.map((call) => call.model), ['branch', 'category']);
+  assert.deepEqual((calls[0]?.args as { select: unknown }).select, { id: true, nameEn: true, nameAr: true });
+  assert.deepEqual((calls[1]?.args as { select: unknown }).select, { id: true, nameEn: true, nameAr: true, parentId: true });
+  assert.doesNotMatch(JSON.stringify(response), /department|code/i);
 });
 
 test('portal submission rate limit denies repeated phone/ip submissions and audits safely', async () => {
@@ -189,6 +224,13 @@ function validAttachmentBody() {
     sizeBytes: 7,
     contentBase64: Buffer.from('invoice').toString('base64'),
   };
+}
+
+function controllerWith(service: Partial<PortalService>, formOptions: Partial<ComplaintFormOptionsService> = {}): PortalController {
+  return new PortalController(
+    service as PortalService,
+    { listPublic: async () => ({ branches: [], categories: [], severities: [] }), ...formOptions } as ComplaintFormOptionsService,
+  );
 }
 
 function request(input: Partial<PortalRequest> = {}): PortalRequest {

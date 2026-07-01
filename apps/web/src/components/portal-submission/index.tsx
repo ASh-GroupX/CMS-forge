@@ -12,6 +12,8 @@ import {
   submitPortalComplaint,
   type PortalComplaintCreateRequest,
   type PortalFieldError,
+  type PortalSubmissionOption,
+  type PortalSubmissionOptions,
 } from '../../lib/portal-submission-api';
 
 export type PortalSubmissionPreviewState = 'loading' | 'validation' | 'success' | 'error';
@@ -25,15 +27,19 @@ type SubmitState =
 
 export function PortalSubmissionScreen({
   locale,
+  options = emptyOptions,
   reference,
   state,
 }: {
   locale: PortalLocale;
+  options?: PortalSubmissionOptions;
   reference?: string | undefined;
   state?: PortalSubmissionPreviewState | undefined;
 }) {
   const t = portalSubmissionText[locale];
   const switchLocale = locale === 'ar' ? 'en' : 'ar';
+  const categories = options.categories.filter((option) => !option.parentId);
+  const subcategories = options.categories.filter((option) => option.parentId);
   const [submitState, setSubmitState] = useState<SubmitState>({ kind: 'idle' });
   const visibleState = submitState.kind === 'idle' ? previewState(state, reference, locale) : submitState;
   const fieldErrors = visibleState.kind === 'validation' ? visibleState.fieldErrors : [];
@@ -88,10 +94,10 @@ export function PortalSubmissionScreen({
           </FieldGroup>
 
           <FieldGroup title={t.sections.complaint}>
-            <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'branchId', locale)} label={t.fields.branch} name="branchId" option={t.choices.branch} value="branch_main" />
-            <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'categoryId', locale)} label={t.fields.category} name="categoryId" option={t.choices.category} value="cat_parent" />
-            <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'subcategoryId', locale)} label={t.fields.subcategory} name="subcategoryId" option={t.choices.subcategory} value="cat_engine" />
-            <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'severity', locale)} label={t.fields.severity} name="severity" option={t.choices.severity} value="HIGH" />
+            <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'branchId', locale)} label={t.fields.branch} name="branchId" options={selectOptions(options.branches, locale)} />
+            <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'categoryId', locale)} label={t.fields.category} name="categoryId" options={selectOptions(categories, locale)} />
+            <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'subcategoryId', locale)} label={t.fields.subcategory} name="subcategoryId" options={selectOptions(subcategories, locale)} />
+            <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'severity', locale)} label={t.fields.severity} name="severity" options={options.severities.map((value) => ({ label: t.severityLabels[value], value }))} />
             <Label className="grid gap-1 text-sm font-medium">
               {t.fields.incidentAt}
               <Input name="incidentAt" type="date" />
@@ -189,13 +195,13 @@ function TextField({ error, label, name, type = 'text' }: { error?: string | und
   );
 }
 
-function SelectField({ choose, error, label, name, option, value }: { choose: string; error?: string | undefined; label: string; name: string; option: string; value: string }) {
+function SelectField({ choose, error, label, name, options }: { choose: string; error?: string | undefined; label: string; name: string; options: Array<{ label: string; value: string }> }) {
   return (
     <Label className="grid gap-1 text-sm font-medium">
       {label}
       <select className="rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring" defaultValue="" name={name}>
         <option value="">{choose}</option>
-        <option value={value}>{option}</option>
+        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
       <FieldError message={error} />
     </Label>
@@ -244,3 +250,9 @@ function portalAttachmentFiles(formData: FormData): File[] {
   if (typeof File === 'undefined') return [];
   return formData.getAll('attachments').filter((value): value is File => value instanceof File && value.size > 0 && Boolean(value.name.trim()));
 }
+
+function selectOptions(options: PortalSubmissionOption[], locale: PortalLocale): Array<{ label: string; value: string }> {
+  return options.map((option) => ({ label: locale === 'ar' ? option.nameAr : option.nameEn, value: option.id }));
+}
+
+const emptyOptions: PortalSubmissionOptions = { branches: [], categories: [], severities: [] };
