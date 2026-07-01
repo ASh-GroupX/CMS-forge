@@ -1126,6 +1126,7 @@ test('complaint detail route renders real backend facts through the session cook
           vehicleSource: 'MANUAL',
           manualVehicle: true,
           vehicleDataUnavailableReason: 'VIN unavailable on service invoice.',
+          allowedActions: ['RESOLVE'],
           caseSummary: {
             id: 'case_cmp_1',
             type: 'CUSTOMER_COMPLAINT',
@@ -1275,6 +1276,8 @@ test('complaint detail route renders real backend facts through the session cook
   assert.match(html, /IN_PROGRESS/);
   assert.match(html, /HIGH/);
   assert.match(html, /Engine noise/);
+  assert.match(html, /Resolve/);
+  assert.doesNotMatch(html, />Close</);
   assert.match(html, /Main Branch/);
   assert.match(html, /Case timeline/);
   assert.match(html, /Case status/);
@@ -1469,8 +1472,8 @@ test('complaint detail workflow requires close and reject confirmation UI', asyn
 
   assert.ok(html.includes(confirmationText.en.workflowCloseReject.title));
   assert.ok(html.includes(confirmationText.en.workflowCloseReject.body));
-  assert.ok(html.includes(confirmationText.en.workflowCloseReject.confirmClose));
-  assert.ok(html.includes(confirmationText.en.workflowCloseReject.confirmReject));
+  assert.ok(html.includes(complaintDetailText.en.workflow.actions[5]));
+  assert.ok(html.includes(complaintDetailText.en.workflow.actions[6]));
   assert.match(html, /role="alert"/);
 });
 
@@ -1505,6 +1508,7 @@ test('complaint detail workflow source does not decide transitions', () => {
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie/);
   assert.doesNotMatch(source, /applyTransition|fromStatus|toStatus|nextStatus|currentState|ownerId|branchScope|roleCode/);
   assert.doesNotMatch(source, /PATCH|DELETE|POST|createObjectURL|Blob/);
+  assert.match(source, /submitStaffComplaintWorkflowAction/);
 });
 
 test('English and Arabic render complete detail workspace regions together', async () => {

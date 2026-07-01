@@ -30,6 +30,7 @@ export type StaffComplaintDetailView = {
   vehicleSource: ComplaintDetail['vehicleSource'];
   manualVehicle: boolean;
   vehicleDataUnavailableReason: string | null;
+  allowedActions: ComplaintDetail['allowedActions'];
   timeline: string[];
 };
 
@@ -159,6 +160,7 @@ function viewFromDetail(detail: ComplaintDetail, caseTimeline: string[], capaAct
     vehicleSource: detail.vehicleSource,
     manualVehicle: detail.manualVehicle,
     vehicleDataUnavailableReason: detail.vehicleDataUnavailableReason,
+    allowedActions: detail.allowedActions,
     timeline: detail.statusHistory.map((item) => `${item.toStatus} - ${item.createdAt.slice(0, 10)}`),
   };
 }
@@ -221,7 +223,12 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
     vehicleDataUnavailableReason: typeof complaint.vehicleDataUnavailableReason === 'string' ? complaint.vehicleDataUnavailableReason : null,
     statusHistory: complaint.statusHistory.filter(statusHistoryItem),
     caseSummary: caseSummary(complaint.caseSummary),
+    allowedActions: Array.isArray(complaint.allowedActions) ? complaint.allowedActions.filter(transitionAction) : [],
   };
+}
+
+function transitionAction(value: unknown): value is ComplaintDetail['allowedActions'][number] {
+  return typeof value === 'string';
 }
 
 function dataSource(value: unknown): ComplaintDetail['customerSource'] | null {

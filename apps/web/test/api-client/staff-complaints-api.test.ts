@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { POST as proxyCorrectComplaint } from '../../src/app/api/complaints/[id]/corrections/route';
 import { POST as proxyLinkRelatedComplaint } from '../../src/app/api/complaints/[id]/related/route';
+import { POST as proxyTransitionComplaint } from '../../src/app/api/complaints/[id]/transitions/route';
 import { POST as proxyCreateComplaint } from '../../src/app/api/complaints/route';
 import { GET as proxyLookupDmsCustomerVehicle } from '../../src/app/api/integrations/dms/customer-vehicle/route';
 import { getStaffComplaintDuplicateCandidates, getStaffComplaintRelated, linkStaffComplaintRelation } from '../../src/lib/staff-complaint-relations-api';
-import { correctStaffComplaint, createStaffComplaint, getStaffComplaint, listStaffComplaints, lookupStaffDmsCustomerVehicle } from '../../src/lib/staff-complaints-api';
+import { correctStaffComplaint, createStaffComplaint, getStaffComplaint, listStaffComplaints, lookupStaffDmsCustomerVehicle, submitStaffComplaintWorkflowAction } from '../../src/lib/staff-complaints-api';
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' }, status });
@@ -50,6 +51,7 @@ test('getStaffComplaint encodes path ids without branch or role query spoofing',
         description: 'Complaint detail',
         incidentAt: null,
         statusHistory: [],
+        allowedActions: ['ACCEPT_INTAKE'],
       },
     });
   };
@@ -59,6 +61,7 @@ test('getStaffComplaint encodes path ids without branch or role query spoofing',
   assert.equal(result.ok, true);
   assert.equal(calls[0]?.input, '/complaints/c%2F1');
   assert.doesNotMatch(String(calls[0]?.input), /branchId|role|actor|workflow/i);
+  assert.deepEqual(result.ok ? result.data.complaint.allowedActions : null, ['ACCEPT_INTAKE']);
 });
 
 test('staff complaint relation reads use safe fields and server session scope only', async () => {
@@ -339,6 +342,30 @@ test('correctStaffComplaint preserves conflict envelopes distinctly', async () =
   });
 });
 
+test('submitStaffComplaintWorkflowAction posts action reason and current status without client authority', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ transition: { complaintId: 'cmp/1', fromStatus: 'SUBMITTED', action: 'ACCEPT_INTAKE', actorRole: 'CR_MANAGER', toStatus: 'MANAGER_REVIEW' } });
+  };
+
+  await withDocumentCookie('cms_csrf_token=csrf_123', async () => {
+    const result = await submitStaffComplaintWorkflowAction('cmp/1', { status: 'SUBMITTED', action: 'ACCEPT_INTAKE', reason: 'Manager accepted intake.' }, fetchImpl);
+    assert.equal(result.ok, true);
+  });
+
+  assert.equal(calls[0]?.input, '/api/complaints/cmp%2F1/transitions');
+  assert.equal(calls[0]?.init?.method, 'POST');
+  assert.equal(calls[0]?.init?.credentials, 'include');
+  assert.deepEqual(calls[0]?.init?.headers, { Accept: 'application/json', 'content-type': 'application/json', 'x-csrf-token': 'csrf_123' });
+  assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
+    fromStatus: 'SUBMITTED',
+    action: 'ACCEPT_INTAKE',
+    reason: 'Manager accepted intake.',
+  });
+  assert.doesNotMatch(String(calls[0]?.init?.body), /role|actor|owner|branchScope|token|credential/i);
+});
+
 test('complaint create proxy forwards body, session cookie, and CSRF to the API', async () => {
   const priorFetch = globalThis.fetch;
   const priorApiUrl = process.env.API_URL;
@@ -438,6 +465,44 @@ test('complaint correction proxy forwards body, session cookie, and CSRF to the 
     assert.equal(response.status, 200);
     assert.equal(String(calls[0]?.input), 'http://api.test/complaints/cmp_1/corrections');
     assert.equal(calls[0]?.init?.method, 'POST');
+    assert.equal(calls[0]?.init?.body, JSON.stringify(body));
+    assert.deepEqual(Object.fromEntries(new Headers(calls[0]?.init?.headers).entries()), {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      cookie: 'cms_staff_session=raw-session',
+      'x-csrf-token': 'csrf_123',
+    });
+  } finally {
+    globalThis.fetch = priorFetch;
+    if (priorApiUrl === undefined) delete process.env.API_URL;
+    else process.env.API_URL = priorApiUrl;
+  }
+});
+
+test('complaint transition proxy forwards body, session cookie, and CSRF to the API', async () => {
+  const priorFetch = globalThis.fetch;
+  const priorApiUrl = process.env.API_URL;
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  globalThis.fetch = (async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ transition: { complaintId: 'cmp_1', fromStatus: 'SUBMITTED', action: 'ACCEPT_INTAKE', actorRole: 'CR_MANAGER', toStatus: 'MANAGER_REVIEW' } });
+  }) as typeof fetch;
+  process.env.API_URL = 'http://api.test';
+
+  try {
+    const body = { fromStatus: 'SUBMITTED', action: 'ACCEPT_INTAKE', reason: 'Manager accepted intake.' };
+    const response = await proxyTransitionComplaint(new Request('http://web.test/api/complaints/cmp_1/transitions', {
+      body: JSON.stringify(body),
+      headers: {
+        'content-type': 'application/json',
+        cookie: 'cms_staff_session=raw-session',
+        'x-csrf-token': 'csrf_123',
+      },
+      method: 'POST',
+    }), { params: Promise.resolve({ id: 'cmp_1' }) });
+
+    assert.equal(response.status, 200);
+    assert.equal(String(calls[0]?.input), 'http://api.test/complaints/cmp_1/transitions');
     assert.equal(calls[0]?.init?.body, JSON.stringify(body));
     assert.deepEqual(Object.fromEntries(new Headers(calls[0]?.init?.headers).entries()), {
       accept: 'application/json',

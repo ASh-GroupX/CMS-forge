@@ -1,15 +1,7 @@
-export type ComplaintStatus =
-  | 'DRAFT'
-  | 'SUBMITTED'
-  | 'MANAGER_REVIEW'
-  | 'BRANCH_REVIEW'
-  | 'IN_PROGRESS'
-  | 'RESOLVED'
-  | 'CLOSED'
-  | 'REOPENED'
-  | 'REJECTED';
+export type ComplaintStatus = 'DRAFT' | 'SUBMITTED' | 'MANAGER_REVIEW' | 'BRANCH_REVIEW' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' | 'REOPENED' | 'REJECTED';
 
 export type ComplaintSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+export type ComplaintTransitionAction = 'SUBMIT' | 'ACCEPT_INTAKE' | 'REJECT_AS_INVALID' | 'APPROVE_AND_ROUTE' | 'SEND_BACK' | 'ASSIGN_INVESTIGATION' | 'RESOLVE_DIRECTLY' | 'REJECT_AFTER_REVIEW' | 'ADD_INVESTIGATION_UPDATE' | 'RESOLVE' | 'REJECT_AFTER_INVESTIGATION' | 'CLOSE' | 'REJECT_RESOLUTION' | 'REOPEN' | 'ROUTE_AGAIN';
 
 export type ComplaintQueueItem = {
   id: string;
@@ -61,6 +53,7 @@ export type ComplaintDetail = ComplaintQueueItem & {
   vehicleDataUnavailableReason: string | null;
   statusHistory: ComplaintStatusTimelineItem[];
   caseSummary: ComplaintCaseSummary | null;
+  allowedActions: ComplaintTransitionAction[];
 };
 
 export type StaffApiError = {
@@ -123,6 +116,22 @@ export type StaffComplaintCorrectionResponse = {
   correction: {
     complaintId: string;
     changedFields: Array<keyof Omit<StaffComplaintCorrectionRequest, 'expectedUpdatedAt' | 'reason'>>;
+  };
+};
+
+export type StaffComplaintTransitionRequest = {
+  status: ComplaintStatus;
+  action: ComplaintTransitionAction;
+  reason: string;
+};
+
+export type StaffComplaintTransitionResponse = {
+  transition: {
+    complaintId: string;
+    fromStatus: ComplaintStatus;
+    action: ComplaintTransitionAction;
+    actorRole: string;
+    toStatus: ComplaintStatus;
   };
 };
 
@@ -197,6 +206,18 @@ export function correctStaffComplaint(
 ): Promise<StaffApiResult<StaffComplaintCorrectionResponse>> {
   return requestJson(`/api/complaints/${encodeURIComponent(complaintId)}/corrections`, fetchImpl, {
     body: JSON.stringify(correction),
+    headers: csrfHeaders(),
+    method: 'POST',
+  });
+}
+
+export function submitStaffComplaintWorkflowAction(
+  complaintId: string,
+  request: StaffComplaintTransitionRequest,
+  fetchImpl: typeof fetch = fetch,
+): Promise<StaffApiResult<StaffComplaintTransitionResponse>> {
+  return requestJson(`/api/complaints/${encodeURIComponent(complaintId)}/transitions`, fetchImpl, {
+    body: JSON.stringify({ fromStatus: request.status, action: request.action, reason: request.reason }),
     headers: csrfHeaders(),
     method: 'POST',
   });

@@ -29,7 +29,12 @@ if (mode === 'customer-portal-submit') {
   process.exit(0);
 }
 
-console.error('Use one of: visual, accessibility, perf, ui-smoke, runtime-smoke, customer-portal-track, customer-portal-submit.');
+if (mode === 'complaint-workflow') {
+  run('node', ['--import', 'tsx', 'tools/complaint-workflow-proof.mjs']);
+  process.exit(0);
+}
+
+console.error('Use one of: visual, accessibility, perf, ui-smoke, runtime-smoke, customer-portal-track, customer-portal-submit, complaint-workflow.');
 process.exit(1);
 
 function run(command, args) {

@@ -1,4 +1,4 @@
-import type { CaseConfidentialityLevel, CaseLifecycleStatus, CaseType, ComplaintSeverity, ComplaintStatus } from '@prisma/client';
+import type { CaseConfidentialityLevel, CaseLifecycleStatus, CaseType, ComplaintSeverity, ComplaintStatus, ComplaintTransitionAction } from '@prisma/client';
 
 export type DataSourceDto = 'LOCAL' | 'MANUAL' | 'DMS';
 
@@ -69,6 +69,7 @@ export type ComplaintDetailDto = ComplaintQueueItemDto & {
   vehicleDataUnavailableReason: string | null;
   statusHistory: ComplaintStatusTimelineItemDto[];
   caseSummary: ComplaintCaseSummaryDto | null;
+  allowedActions: ComplaintTransitionAction[];
 };
 
 export type ComplaintDetailResponseDto = {

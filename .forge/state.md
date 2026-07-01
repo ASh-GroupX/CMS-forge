@@ -1,8 +1,8 @@
 # Current State
 
-Status: User-scoped UX redesign Slice 1 complete
+Status: User-scoped UX redesign Slice 2 complete
 Phase: user-scoped-ux-redesign
-Next Task: Slice 2 - Make staff workflow actions real
+Next Task: Slice 3 - Make attachments usable
 Model Tier: GPT-5.5 Extra High
 
 ## How to use this file
@@ -14,14 +14,15 @@ Prior state history is in .forge/archive/state-archive.md.
 
 - Branch `codex/user-scoped-ux-redesign` is active.
 - Slice 1 made `/portal` submit real customer complaints through the portal API proxy.
-- Production `/portal` no longer accepts query-string preview success/error/loading state.
-- Portal submission now shows localized field validation, retry/error, loading, and real reference-number success feedback.
-- Portal submission client sends no staff authority fields; backend portal submission tests still strip spoofed staff/DMS fields.
+- Slice 2 now returns backend-derived complaint `allowedActions` for the current server session principal.
+- Staff workflow UI renders only backend-provided actions for real complaint details and submits action/comment through the same-origin transition proxy.
+- Workflow validation, success/error, and conflict reload/retry feedback are visible and localized.
+- Workflow panel mobile sizing was tightened for English LTR and Arabic RTL.
 - Screenshots were produced under `output/playwright/` and left unstaged.
 
 ## Current Stop
 
-Proceed to Slice 2: make staff workflow actions real.
+Proceed to Slice 3: make attachments usable.
 
 ## Open Carry-Forward / Known Debt
 

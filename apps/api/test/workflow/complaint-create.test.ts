@@ -642,6 +642,7 @@ test('complaint detail service returns explicit timeline and hides missing scope
   assert.equal(detail.description, 'Engine makes a knocking noise.');
   assert.equal(detail.statusHistory[0]?.toStatus, ComplaintStatus.SUBMITTED);
   assert.equal(detail.statusHistory[0]?.createdAt, '2026-06-18T09:01:00.000Z');
+  assert.deepEqual(detail.allowedActions, []);
   assert.equal('customer' in detail, false);
 
   await assert.rejects(
@@ -666,12 +667,20 @@ test('complaint detail route delegates with server-derived branch scope', async 
         vehicleSource: 'MANUAL',
         manualVehicle: true,
         vehicleDataUnavailableReason: null,
+        allowedActions: [],
       };
+    },
+    allowedActionsFor: (complaint, actor) => {
+      calls.push({ allowedActionsFor: { status: complaint.status, actor } });
+      return [ComplaintTransitionAction.ACCEPT_INTAKE];
     },
   } as ComplaintsService);
 
-  assert.equal((await controller.get('cmp_1', undefined, request(RoleCode.CR_OFFICER))).complaint.id, 'cmp_1');
+  const response = await controller.get('cmp_1', undefined, request(RoleCode.CR_OFFICER));
+  assert.equal(response.complaint.id, 'cmp_1');
+  assert.deepEqual(response.complaint.allowedActions, [ComplaintTransitionAction.ACCEPT_INTAKE]);
   assert.deepEqual(calls[0], { id: 'cmp_1', filter: { branchId: 'branch_main' } });
+  assert.deepEqual(calls[1], { allowedActionsFor: { status: ComplaintStatus.SUBMITTED, actor: { roleCode: RoleCode.CR_OFFICER, userId: 'usr_officer' } } });
 });
 
 test('complaint comments validate body and audit creation in one transaction', async () => {

@@ -11699,3 +11699,44 @@ SRS IDs: `REQ-PORTAL-001`, `REQ-PORTAL-002`, `PORTAL-SEC-001`, `REQ-LOCALIZATION
 ### Notes
 
 - Arabic browser-native empty date placeholder remains Chrome-controlled and is left for Slice 9 date/locale cleanup.
+
+---
+
+## User-Scoped UX Redesign - Slice 2 Staff Workflow Actions
+
+Status: Complete
+SRS IDs: `REQ-COMPLAINT-001`, `REQ-COMPLAINT-002`, `RBAC-MATRIX-001`, `REQ-LOCALIZATION-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `NFR-SEC-002`, `API-STANDARD-001`
+
+### Scope
+
+- Added backend-derived `allowedActions` to complaint detail responses for the current server session principal.
+- Kept workflow authorization in the API service/transition validator; React only renders and submits actions the backend returned.
+- Added a same-origin staff transition proxy and typed web client helper for `POST /complaints/:id/transitions`.
+- Reworked the workflow panel to submit action + required comment, show success/validation/error/conflict states, and offer reload/retry on conflicts.
+- Tightened workflow panel mobile sizing so English LTR and Arabic RTL controls fit narrow screens.
+
+### Security Self-Check
+
+- Roles, owner checks, and branch scope remain backend-owned and derive from the server session.
+- Workflow transitions still write status history and audit in the existing backend transaction path, with side effects queued after commit.
+- The web client sends only `fromStatus`, `action`, and `reason`; it sends no role, actor, owner, branch-scope, credential, token, or workflow-authority fields.
+- Customer portal privacy is unchanged; no portal route or portal data exposure changed in this slice.
+- Trust boundaries are tested by complaint API workflow tests, web API/proxy tests, source-safety shell tests, and the complaint workflow e2e proof.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- complaints`.
+- Passed: `corepack pnpm test:web -- api-client`.
+- Passed: `corepack pnpm test:web -- shell`.
+- Passed: `corepack pnpm test:e2e -- complaint-workflow`.
+- Passed: `corepack pnpm test:e2e -- accessibility`.
+- Passed: `corepack pnpm test:visual`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check`.
+- Visual review screenshots: `output/playwright/slice2-workflow-en-desktop.png`, `output/playwright/slice2-workflow-en-mobile.png`, `output/playwright/slice2-workflow-ar-desktop.png`, `output/playwright/slice2-workflow-ar-mobile.png`.
+
+### Notes
+
+- Temporary proof route used only for screenshots was deleted before staging.

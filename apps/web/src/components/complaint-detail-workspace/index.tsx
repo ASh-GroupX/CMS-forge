@@ -125,7 +125,13 @@ export function ComplaintDetailWorkspace({
             ]} />
             <ComplaintAttachmentControls attachmentState={attachmentState} locale={locale} />
           </div>
-          <ComplaintWorkflowModal locale={locale} workflowState={workflowState} />
+          <ComplaintWorkflowModal
+            allowedActions={detail?.allowedActions}
+            complaintId={detail?.id}
+            locale={locale}
+            status={detail?.status}
+            workflowState={workflowState}
+          />
           <ComplaintCommentsPanel commentsState={commentsState} locale={locale} />
         </CardContent>
       )}

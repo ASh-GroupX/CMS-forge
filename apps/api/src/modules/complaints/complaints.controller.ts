@@ -72,7 +72,9 @@ export class ComplaintsController {
     @Query('branchId') branchId: string | undefined,
     @Req() request: AuthenticatedRequest,
   ): Promise<ComplaintDetailResponseDto> {
-    return { complaint: await this.complaintsService.getDetail(id, { branchId: queueBranchId(branchId, request) }) };
+    const complaint = await this.complaintsService.getDetail(id, { branchId: queueBranchId(branchId, request) });
+    const principal = request.principal!;
+    return { complaint: { ...complaint, allowedActions: this.complaintsService.allowedActionsFor(complaint, { roleCode: principal.roleCode as RoleCode, userId: principal.userId }) } };
   }
 
   @Get(':id/related')

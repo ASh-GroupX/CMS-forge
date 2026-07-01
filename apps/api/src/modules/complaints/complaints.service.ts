@@ -121,6 +121,8 @@ export class ComplaintsService {
 
   async getDetail(id: string, filter: ComplaintQueueFilter = {}): Promise<ComplaintDetailDto> { const complaint = await this.complaintsRepository.findDetail(id, filter); if (!complaint) throw new AppException('COMPLAINT_NOT_FOUND', 'Complaint not found', HttpStatus.NOT_FOUND); return { ...detailItem(complaint), caseSummary: await this.complaintCaseSummary(complaint.id) }; }
 
+  allowedActionsFor(complaint: Pick<ComplaintDetailDto, 'ownerId' | 'status'>, actor: { roleCode: RoleCode; userId: string | null }): ComplaintTransitionAction[] { return WORKFLOW_TRANSITIONS.filter((item) => item.fromStatus === complaint.status && item.allowedRoles.includes(actor.roleCode) && actorCanSeeAction(item.action, actor, complaint)).map((item) => item.action); }
+
   async correctProvenance(input: ApplyComplaintCorrectionInput): Promise<ApplyComplaintCorrectionResult> { const data = complaintCorrectionData(input); return this.complaintsRepository.transaction(async (client) => { const complaint = await this.complaintsRepository.updateCorrection(data, client); if (!complaint) throw correctionConflictError(); await this.auditService.record(complaintCorrectionAudit(input, complaint.branchId, data.changedFields), client); return { complaintId: complaint.id, changedFields: data.changedFields }; }); }
 
   async createComment(input: CreateComplaintCommentInput): Promise<ComplaintCommentResult> {
@@ -217,7 +219,7 @@ function searchItem(complaint: ComplaintSearchRecord): ComplaintSearchRow {
 }
 
 function detailItem(complaint: ComplaintDetailRecord): Omit<ComplaintDetailDto, 'caseSummary'> {
-  return { ...queueItem(complaint), description: complaint.descriptionEn, incidentAt: complaint.incidentAt?.toISOString() ?? null, customerSource: complaint.customerDataSource, manualCustomer: complaint.manualCustomerFlag, vehicleRelated: complaint.vehicleRelated, vehicleSource: complaint.vehicleDataSource, manualVehicle: complaint.manualVehicleFlag, vehicleDataUnavailableReason: complaint.vehicleDataUnavailableReason, statusHistory: complaint.statusHistory.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })) };
+  return { ...queueItem(complaint), description: complaint.descriptionEn, incidentAt: complaint.incidentAt?.toISOString() ?? null, customerSource: complaint.customerDataSource, manualCustomer: complaint.manualCustomerFlag, vehicleRelated: complaint.vehicleRelated, vehicleSource: complaint.vehicleDataSource, manualVehicle: complaint.manualVehicleFlag, vehicleDataUnavailableReason: complaint.vehicleDataUnavailableReason, statusHistory: complaint.statusHistory.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })), allowedActions: [] };
 }
 
 function commentItem(comment: ComplaintCommentRecord): ComplaintCommentResult { return { ...comment, createdAt: comment.createdAt.toISOString() }; }
@@ -243,15 +245,15 @@ function invalidTransitionError(): AppException { return new AppException('COMPL
 function roleForbiddenError(): AppException { return new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN); }
 
 const REASON_REQUIRED = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintTransitionAction.SEND_BACK, ComplaintTransitionAction.ASSIGN_INVESTIGATION, ComplaintTransitionAction.CLOSE, ComplaintTransitionAction.REOPEN, ComplaintTransitionAction.ROUTE_AGAIN, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintTransitionAction.REJECT_AFTER_REVIEW, ComplaintTransitionAction.REJECT_AFTER_INVESTIGATION, ComplaintTransitionAction.REJECT_RESOLUTION]);
-const RESOLUTION_REQUIRED = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.RESOLVE, ComplaintTransitionAction.RESOLVE_DIRECTLY]);
-const OWNER_ALLOWED_ACTIONS = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE, ComplaintTransitionAction.RESOLVE]);
-const OWNER_REQUIRED = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintTransitionAction.ASSIGN_INVESTIGATION]);
+const RESOLUTION_REQUIRED = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.RESOLVE, ComplaintTransitionAction.RESOLVE_DIRECTLY]), OWNER_ALLOWED_ACTIONS = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE, ComplaintTransitionAction.RESOLVE]), OWNER_REQUIRED = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintTransitionAction.ASSIGN_INVESTIGATION]);
 
 function assertActorCanApplyTransition(input: ApplyComplaintTransitionInput, complaint: ComplaintStatusRecord): void {
   if (!OWNER_ALLOWED_ACTIONS.has(input.action) || (BRANCH_MANAGER_ROLES as readonly RoleCode[]).includes(input.actorRole)) return;
   if (input.actorId && complaint.ownerId === input.actorId) return;
   throw roleForbiddenError();
 }
+
+function actorCanSeeAction(action: ComplaintTransitionAction, actor: { roleCode: RoleCode; userId: string | null }, complaint: Pick<ComplaintDetailDto, 'ownerId'>): boolean { return !OWNER_ALLOWED_ACTIONS.has(action) || (BRANCH_MANAGER_ROLES as readonly RoleCode[]).includes(actor.roleCode) || Boolean(actor.userId && complaint.ownerId === actor.userId); }
 
 async function recordWorkflowRoleForbidden(auditService: AuditService, input: ApplyComplaintTransitionInput): Promise<void> {
   await auditService.record({ eventType: 'SECURITY', action: 'workflow_role_forbidden', actorId: input.actorId ?? null, branchId: null, targetType: 'complaint', targetId: input.complaintId, correlationId: input.correlationId ?? null, ipAddress: input.ipAddress ?? null, userAgent: input.userAgent ?? null, metadata: { fromStatus: input.fromStatus, action: input.action, actorRole: input.actorRole, requestSource: input.requestSource } });
