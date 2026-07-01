@@ -1,16 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { GET, POST } from '../../src/app/api/portal/[...path]/route';
+import { submitPortalComplaint } from '../../src/lib/portal-submission-api';
 import { getPortalTracking, requestPortalOtp, submitPortalFollowUp, uploadPortalAttachment, verifyPortalOtp } from '../../src/lib/portal-tracking-api';
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' }, status });
 }
 
-test('portal tracking client runs OTP session tracking follow-up and attachment upload without browser persistence', async () => {
+test('portal client runs submission OTP session tracking follow-up and attachment upload without browser persistence', async () => {
   const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
   const fetchImpl: typeof fetch = async (input, init) => {
     calls.push({ input, init });
+    if (String(input).endsWith('/complaints')) return jsonResponse({ complaint: { id: 'cmp_1', referenceNumber: 'CMS-2026-MAIN-000010', status: 'SUBMITTED' } }, 201);
     if (String(input).endsWith('/otp')) return jsonResponse({ ok: true, verificationId: 'ver_1', expiresAt: '2026-06-29T08:05:00.000Z' }, 201);
     if (String(input).endsWith('/verify')) return jsonResponse({ session: { sessionToken: 'portal_token', expiresAt: '2026-06-29T08:30:00.000Z' } }, 201);
     if (String(input).endsWith('/follow-ups')) return jsonResponse({ ok: true }, 201);
@@ -18,6 +20,7 @@ test('portal tracking client runs OTP session tracking follow-up and attachment 
     return jsonResponse({ complaint: { referenceNumber: 'CMP-1', status: 'IN_PROGRESS', createdAt: '2026-06-29T08:00:00.000Z', updatedAt: '2026-06-29T08:10:00.000Z', timeline: [] } });
   };
 
+  assert.equal((await submitPortalComplaint(validPortalComplaint(), fetchImpl)).ok, true);
   assert.equal((await requestPortalOtp({ referenceNumber: 'CMP-1', customerPhone: '+966500000001' }, fetchImpl)).ok, true);
   assert.equal((await verifyPortalOtp({ verificationId: 'ver_1', otp: '123456' }, fetchImpl)).ok, true);
   assert.equal((await getPortalTracking('portal_token', fetchImpl)).ok, true);
@@ -25,6 +28,7 @@ test('portal tracking client runs OTP session tracking follow-up and attachment 
   assert.equal((await uploadPortalAttachment('portal_token', new File(['invoice'], 'invoice.pdf', { type: 'application/pdf' }), fetchImpl)).ok, true);
 
   assert.deepEqual(calls.map((call) => [call.init?.method, call.input]), [
+    ['POST', '/api/portal/complaints'],
     ['POST', '/api/portal/tracking/otp'],
     ['POST', '/api/portal/tracking/otp/verify'],
     ['GET', '/api/portal/tracking'],
@@ -32,14 +36,50 @@ test('portal tracking client runs OTP session tracking follow-up and attachment 
     ['POST', '/api/portal/attachments'],
   ]);
   assert.equal(calls.every((call) => call.init?.credentials === 'omit'), true);
-  assert.deepEqual(calls[2]?.init?.headers, { Accept: 'application/json', 'x-portal-session': 'portal_token' });
-  assert.deepEqual(JSON.parse(String(calls[3]?.init?.body)), { body: 'Customer update' });
-  assert.deepEqual(JSON.parse(String(calls[4]?.init?.body)), {
+  assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), validPortalComplaint());
+  assert.deepEqual(calls[3]?.init?.headers, { Accept: 'application/json', 'x-portal-session': 'portal_token' });
+  assert.deepEqual(JSON.parse(String(calls[4]?.init?.body)), { body: 'Customer update' });
+  assert.deepEqual(JSON.parse(String(calls[5]?.init?.body)), {
     fileName: 'invoice.pdf',
     contentType: 'application/pdf',
     sizeBytes: 7,
     contentBase64: 'aW52b2ljZQ==',
   });
+});
+
+test('portal proxy allowlists public submission and never forwards staff authority', async () => {
+  const priorFetch = globalThis.fetch;
+  const priorApiUrl = process.env.API_URL;
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  globalThis.fetch = (async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ complaint: { id: 'cmp_1', referenceNumber: 'CMS-2026-MAIN-000010', status: 'SUBMITTED' } }, 201);
+  }) as typeof fetch;
+  process.env.API_URL = 'http://api.test';
+
+  try {
+    const response = await POST(new Request('http://web.test/api/portal/complaints', {
+      body: JSON.stringify({ ...validPortalComplaint(), actorId: 'usr_staff' }),
+      headers: {
+        'content-type': 'application/json',
+        cookie: 'cms_staff_session=raw-session',
+        'x-csrf-token': 'csrf_123',
+        'x-portal-session': 'portal_token',
+      },
+      method: 'POST',
+    }), { params: Promise.resolve({ path: ['complaints'] }) });
+
+    assert.equal(response.status, 201);
+    assert.equal(String(calls[0]?.input), 'http://api.test/portal/complaints');
+    assert.deepEqual(Object.fromEntries(new Headers(calls[0]?.init?.headers).entries()), {
+      accept: 'application/json',
+      'content-type': 'application/json',
+    });
+  } finally {
+    globalThis.fetch = priorFetch;
+    if (priorApiUrl === undefined) delete process.env.API_URL;
+    else process.env.API_URL = priorApiUrl;
+  }
 });
 
 test('portal proxy allowlists public tracking paths and never forwards staff authority', async () => {
@@ -114,6 +154,22 @@ test('portal proxy allowlists verified attachment upload and drops staff headers
     else process.env.API_URL = priorApiUrl;
   }
 });
+
+function validPortalComplaint() {
+  return {
+    customerName: 'Faisal Al-Otaibi',
+    customerPhone: '+966500000001',
+    categoryId: 'cat_parent',
+    subcategoryId: 'cat_engine',
+    description: 'Engine makes a knocking noise.',
+    incidentAt: '2026-06-19T00:00:00.000Z',
+    branchId: 'branch_main',
+    subject: 'Engine noise',
+    severity: 'HIGH',
+    vehicleRelated: true,
+    vehicleVin: 'SEEDDEMO00001',
+  };
+}
 
 test('portal proxy rejects non-portal paths before forwarding', async () => {
   let called = false;

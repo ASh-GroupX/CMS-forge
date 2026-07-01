@@ -29,6 +29,7 @@ import ReportsPage from '../../src/app/(staff)/reports/page';
 import PortalSubmissionPage from '../../src/app/portal/page';
 import PortalSurveyPage from '../../src/app/portal/survey/page';
 import PortalTrackingPage from '../../src/app/portal/track/page';
+import { buildPortalComplaintSubmission, PortalSubmissionScreen } from '../../src/components/portal-submission';
 import { PortalTrackingPreview } from '../../src/components/portal-tracking';
 import { adminBranchesText } from '../../src/i18n/staff-admin-branches';
 import { adminCategoriesSlaText } from '../../src/i18n/staff-admin-categories-sla';
@@ -260,15 +261,15 @@ test('portal submission renders English responsive complaint form', async () => 
   assert.match(html, /Subject/);
   assert.match(html, /Description/);
   assert.match(html, /Vehicle VIN/);
-  assert.match(html, /type="file"/);
   assert.match(html, /PDF, PNG, or JPG only/);
+  assert.match(html, /Attachments can be added after you verify the reference number/);
   assert.match(html, /Submit complaint/);
   assert.doesNotMatch(html, /audit|DMS|staff PII|internal comments/i);
 });
 
 test('portal submission keeps Arabic RTL localized labels', async () => {
   const html = renderToStaticMarkup(
-    await PortalSubmissionPage({ searchParams: Promise.resolve({ locale: 'ar', state: 'validation' }) }),
+    React.createElement(PortalSubmissionScreen, { locale: 'ar', state: 'validation' }),
   );
 
   assert.match(html, /dir="rtl"/);
@@ -280,9 +281,7 @@ test('portal submission keeps Arabic RTL localized labels', async () => {
 
 test('portal submission renders safe success reference result', async () => {
   const html = renderToStaticMarkup(
-    await PortalSubmissionPage({
-      searchParams: Promise.resolve({ locale: 'en', state: 'success', reference: 'CMP-PORTAL-001' }),
-    }),
+    React.createElement(PortalSubmissionScreen, { locale: 'en', state: 'success', reference: 'CMP-PORTAL-001' }),
   );
 
   assert.match(html, /Complaint submitted/);
@@ -293,13 +292,13 @@ test('portal submission renders safe success reference result', async () => {
 
 test('portal submission renders loading validation and error states', async () => {
   const loading = renderToStaticMarkup(
-    await PortalSubmissionPage({ searchParams: Promise.resolve({ locale: 'en', state: 'loading' }) }),
+    React.createElement(PortalSubmissionScreen, { locale: 'en', state: 'loading' }),
   );
   const validation = renderToStaticMarkup(
-    await PortalSubmissionPage({ searchParams: Promise.resolve({ locale: 'en', state: 'validation' }) }),
+    React.createElement(PortalSubmissionScreen, { locale: 'en', state: 'validation' }),
   );
   const error = renderToStaticMarkup(
-    await PortalSubmissionPage({ searchParams: Promise.resolve({ locale: 'en', state: 'error' }) }),
+    React.createElement(PortalSubmissionScreen, { locale: 'en', state: 'error' }),
   );
 
   assert.match(loading, /Submitting complaint\./);
@@ -310,12 +309,58 @@ test('portal submission renders loading validation and error states', async () =
   assert.match(error, /role="alert"/);
 });
 
-test('portal submission source is public and render-only', () => {
+test('portal submission production route ignores preview query strings', async () => {
+  const html = renderToStaticMarkup(
+    await PortalSubmissionPage({ searchParams: Promise.resolve({ locale: 'en', state: 'success', reference: 'CMP-FAKE' } as never) }),
+  );
+
+  assert.doesNotMatch(html, /Complaint submitted|CMP-FAKE/);
+  assert.match(html, /Submit complaint/);
+});
+
+test('portal submission source is public and uses browser-only portal API', () => {
   const source = readFileSync('apps/web/src/components/portal-submission/index.tsx', 'utf8');
 
-  assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie|createObjectURL|Blob|download/);
+  assert.doesNotMatch(source, /localStorage|sessionStorage|document\.cookie|createObjectURL|Blob|download/);
   assert.doesNotMatch(source, /roleCode|principal|branchScope|actorId|ownerId|workflow|password|otp|token|secret|provider/);
   assert.doesNotMatch(source, /audit|DMS|staff PII|internal comments/i);
+});
+
+test('portal submission builds backend request without staff authority fields', () => {
+  const formData = new FormData();
+  formData.set('customerName', ' Faisal Al-Otaibi ');
+  formData.set('customerPhone', '+966500000001');
+  formData.set('categoryId', 'cat_parent');
+  formData.set('subcategoryId', 'cat_engine');
+  formData.set('description', ' Engine makes a knocking noise. ');
+  formData.set('incidentAt', '2026-06-19');
+  formData.set('branchId', 'branch_main');
+  formData.set('subject', ' Engine noise ');
+  formData.set('severity', 'HIGH');
+  formData.set('vehicleRelated', 'on');
+  formData.set('vehicleVin', 'SEEDDEMO00001');
+  formData.set('actorId', 'usr_staff');
+  formData.set('workflow', 'SUBMITTED');
+  formData.set('token', 'secret');
+
+  const body = buildPortalComplaintSubmission(formData) as Record<string, unknown>;
+
+  assert.deepEqual(body, {
+    customerName: 'Faisal Al-Otaibi',
+    customerPhone: '+966500000001',
+    categoryId: 'cat_parent',
+    subcategoryId: 'cat_engine',
+    description: 'Engine makes a knocking noise.',
+    incidentAt: '2026-06-19T00:00:00.000Z',
+    branchId: 'branch_main',
+    subject: 'Engine noise',
+    severity: 'HIGH',
+    vehicleRelated: true,
+    vehicleVin: 'SEEDDEMO00001',
+  });
+  assert.equal('actorId' in body, false);
+  assert.equal('workflow' in body, false);
+  assert.equal('token' in body, false);
 });
 
 test('portal tracking starts with verification gate and no status timeline', async () => {

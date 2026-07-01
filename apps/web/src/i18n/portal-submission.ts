@@ -43,6 +43,7 @@ export const portalSubmissionText = {
       vin: 'SEEDDEMO00001',
     },
     rules: ['PDF, PNG, or JPG only', 'Maximum size follows the portal policy', 'Scan status is checked before review'],
+    attachmentDeferred: 'Attachments can be added after you verify the reference number on the tracking page.',
     actions: {
       submit: 'Submit complaint',
       submitting: 'Submitting complaint.',
@@ -56,6 +57,7 @@ export const portalSubmissionText = {
     },
     validation: {
       required: 'This field is required.',
+      invalid: 'Review this field.',
       attachment: 'Attach files only when they match the portal file rules.',
     },
     privacy: 'The portal shows only customer-safe complaint information and the reference number returned after submission.',
@@ -102,6 +104,7 @@ export const portalSubmissionText = {
       vin: 'SEEDDEMO00001',
     },
     rules: ['PDF أو PNG أو JPG فقط', 'الحجم الأقصى يتبع سياسة البوابة', 'يتم فحص الحالة قبل المراجعة'],
+    attachmentDeferred: 'يمكن إضافة المرفقات بعد التحقق من رقم المرجع في صفحة المتابعة.',
     actions: {
       submit: 'إرسال الشكوى',
       submitting: 'جاري إرسال الشكوى.',
@@ -115,6 +118,7 @@ export const portalSubmissionText = {
     },
     validation: {
       required: 'هذا الحقل مطلوب.',
+      invalid: 'راجع هذا الحقل.',
       attachment: 'أرفق الملفات فقط عندما تطابق قواعد ملفات البوابة.',
     },
     privacy: 'تعرض البوابة معلومات آمنة للعميل فقط ورقم المرجع بعد الإرسال.',

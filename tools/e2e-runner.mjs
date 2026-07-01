@@ -24,7 +24,12 @@ if (mode === 'customer-portal-track') {
   process.exit(0);
 }
 
-console.error('Use one of: visual, accessibility, perf, ui-smoke, runtime-smoke, customer-portal-track.');
+if (mode === 'customer-portal-submit') {
+  run('node', ['--import', 'tsx', 'tools/customer-portal-submit-proof.mjs']);
+  process.exit(0);
+}
+
+console.error('Use one of: visual, accessibility, perf, ui-smoke, runtime-smoke, customer-portal-track, customer-portal-submit.');
 process.exit(1);
 
 function run(command, args) {

@@ -12,6 +12,7 @@ import ReportsPage from '../apps/web/src/app/(staff)/reports/page.tsx';
 import PortalSubmissionPage from '../apps/web/src/app/portal/page.tsx';
 import PortalSurveyPage from '../apps/web/src/app/portal/survey/page.tsx';
 import PortalTrackingPage from '../apps/web/src/app/portal/track/page.tsx';
+import { PortalSubmissionScreen } from '../apps/web/src/components/portal-submission/index.tsx';
 import { PortalTrackingPreview } from '../apps/web/src/components/portal-tracking/index.tsx';
 import { portalSubmissionText } from '../apps/web/src/i18n/portal-submission.ts';
 import { portalSurveyText } from '../apps/web/src/i18n/portal-survey.ts';
@@ -69,7 +70,9 @@ async function routePage(testCase) {
   if (testCase.route === 'staff-complaint-new') return staffFrame(testCase, await NewComplaintPage({ searchParams: params }));
   if (testCase.route === 'staff-dashboard') return staffFrame(testCase, await DashboardPage(staffProps));
   if (testCase.route === 'staff-reports') return staffFrame(testCase, await ReportsPage(staffProps));
-  if (testCase.route === 'portal-submission') return PortalSubmissionPage({ searchParams: params });
+  if (testCase.route === 'portal-submission') return testCase.params.state
+    ? React.createElement(PortalSubmissionScreen, { locale: testCase.locale, reference: testCase.params.reference, state: testCase.params.state })
+    : PortalSubmissionPage({ searchParams: params });
   if (testCase.route === 'portal-tracking-preview') return React.createElement(PortalTrackingPreview, portalTrackingProps(testCase));
   if (testCase.route === 'portal-tracking') return PortalTrackingPage({ searchParams: params });
   if (testCase.route === 'portal-survey') return PortalSurveyPage({ searchParams: params });

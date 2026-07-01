@@ -11657,3 +11657,45 @@ Implemented the scoped server-side permission guard foundation:
 - Status: Final SRS/business-fit audit and stabilization complete.
 - Blockers: None found in the audited local product scope.
 - Next: Done for the current Codex goal; future work requires a new scoped task or human pilot/UAT sign-off activity.
+
+---
+
+## User-Scoped UX Redesign - Slice 1 Customer Portal Submission
+
+Status: Complete
+SRS IDs: `REQ-PORTAL-001`, `REQ-PORTAL-002`, `PORTAL-SEC-001`, `REQ-LOCALIZATION-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `NFR-SEC-002`
+
+### Scope
+
+- Removed production query-string success/error/loading preview behavior from `/portal`.
+- Wired customer submission through the same-origin portal proxy to `POST /portal/complaints`.
+- Added localized field validation, loading, error, and real success reference feedback.
+- Kept staff authority, session, CSRF, workflow, and credential data out of the portal client request.
+- Left attachment upload deferred to verified tracking/attachment slices instead of silently dropping selected files.
+
+### Security Self-Check
+
+- Roles and branch scope remain backend-owned; portal submission sends no actor, role, workflow, or branch-scope authority.
+- Complaint creation still enters the backend portal service, which delegates to complaint creation with status history and audit in the existing transaction path.
+- No passwords, OTPs, tokens, provider secrets, storage keys, DMS codes, staff PII, audit logs, or internal comments are exposed in the portal submission UI.
+- Portal verification/privacy rules remain unchanged: submission returns only the generated complaint reference/status envelope, and tracking data still requires verification.
+- Trust boundaries are tested by portal API submission tests, web client/proxy tests, and the customer portal submit proof.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- portal`.
+- Passed: `corepack pnpm test:e2e -- customer-portal-submit`.
+- Passed: `corepack pnpm test:web -- shell`.
+- Passed: `corepack pnpm test:web -- api-client`.
+- Passed: `corepack pnpm test:web -- localization`.
+- Passed: `corepack pnpm test:visual`.
+- Passed: `corepack pnpm test:e2e -- accessibility`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check`.
+- Visual review screenshots: `output/playwright/slice1-portal-en-desktop.png`, `output/playwright/slice1-portal-en-mobile.png`, `output/playwright/slice1-portal-ar-desktop.png`, `output/playwright/slice1-portal-ar-mobile.png`.
+
+### Notes
+
+- Arabic browser-native empty date placeholder remains Chrome-controlled and is left for Slice 9 date/locale cleanup.

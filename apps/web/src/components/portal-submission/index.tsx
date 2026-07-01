@@ -1,12 +1,26 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { portalSubmissionText, type PortalLocale } from '../../i18n/portal-submission';
+import {
+  submitPortalComplaint,
+  type PortalComplaintCreateRequest,
+  type PortalFieldError,
+} from '../../lib/portal-submission-api';
 
 export type PortalSubmissionPreviewState = 'loading' | 'validation' | 'success' | 'error';
+
+type SubmitState =
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'success'; referenceNumber: string }
+  | { kind: 'validation'; fieldErrors: PortalFieldError[] }
+  | { kind: 'error'; network: boolean };
 
 export function PortalSubmissionScreen({
   locale,
@@ -14,12 +28,36 @@ export function PortalSubmissionScreen({
   state,
 }: {
   locale: PortalLocale;
-  reference: string;
+  reference?: string | undefined;
   state?: PortalSubmissionPreviewState | undefined;
 }) {
   const t = portalSubmissionText[locale];
   const switchLocale = locale === 'ar' ? 'en' : 'ar';
-  const preserve = Boolean(state && state !== 'success');
+  const [submitState, setSubmitState] = useState<SubmitState>({ kind: 'idle' });
+  const visibleState = submitState.kind === 'idle' ? previewState(state, reference, locale) : submitState;
+  const fieldErrors = visibleState.kind === 'validation' ? visibleState.fieldErrors : [];
+
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const complaint = buildPortalComplaintSubmission(new FormData(event.currentTarget));
+    const localErrors = validateSubmission(complaint);
+    if (localErrors.length) {
+      setSubmitState({ kind: 'validation', fieldErrors: localErrors });
+      return;
+    }
+
+    setSubmitState({ kind: 'loading' });
+    const result = await submitPortalComplaint(complaint);
+    if (result.ok) {
+      setSubmitState({ kind: 'success', referenceNumber: result.data.complaint.referenceNumber });
+      return;
+    }
+    if (result.error.fieldErrors?.length || result.error.code === 'VALIDATION_FAILED') {
+      setSubmitState({ kind: 'validation', fieldErrors: result.error.fieldErrors ?? [{ field: 'description', code: 'INVALID', message: result.error.message }] });
+      return;
+    }
+    setSubmitState({ kind: 'error', network: result.error.kind === 'network' });
+  }
 
   return (
     <main lang={t.lang} dir={t.dir} className="min-h-screen bg-neutral p-4 text-neutral-foreground md:p-6">
@@ -30,59 +68,56 @@ export function PortalSubmissionScreen({
               <CardTitle className="text-2xl tracking-normal">{t.title}</CardTitle>
               <p className="mt-1 max-w-2xl text-sm text-slate-600">{t.subtitle}</p>
             </div>
-            <Button asChild size="sm" variant="outline">
+            <Button asChild size="sm" variant="outline" className="focus:ring-2 focus:ring-ring">
               <a href={`/portal?locale=${switchLocale}`} aria-label={t.switchLabel}>{t.switchTarget}</a>
             </Button>
           </CardHeader>
         </Card>
 
-        <PortalSubmissionMessage locale={locale} reference={reference} state={state} />
+        <PortalSubmissionMessage locale={locale} state={visibleState} />
 
-        <form className="grid gap-4 rounded-md border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-2" method="post">
+        <form className="grid gap-4 rounded-md border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-2" onSubmit={onSubmit}>
           <FieldGroup title={t.sections.contact}>
-            <TextField error={state === 'validation' ? t.validation.required : undefined} label={t.fields.customerName} name="customerName" value={preserve ? t.values.name : ''} />
-            <TextField error={state === 'validation' ? t.validation.required : undefined} label={t.fields.customerPhone} name="customerPhone" type="tel" value={preserve ? t.values.phone : ''} />
+            <TextField error={fieldError(fieldErrors, 'customerName', locale)} label={t.fields.customerName} name="customerName" />
+            <TextField error={fieldError(fieldErrors, 'customerPhone', locale)} label={t.fields.customerPhone} name="customerPhone" type="tel" />
           </FieldGroup>
 
           <FieldGroup title={t.sections.complaint}>
-            <SelectField choose={t.choices.choose} label={t.fields.branch} name="branchId" option={t.choices.branch} preserve={preserve} value="branch_main" />
-            <SelectField choose={t.choices.choose} label={t.fields.category} name="categoryId" option={t.choices.category} preserve={preserve} value="cat_service" />
-            <SelectField choose={t.choices.choose} label={t.fields.subcategory} name="subcategoryId" option={t.choices.subcategory} preserve={preserve} value="cat_delay" />
-            <SelectField choose={t.choices.choose} label={t.fields.severity} name="severity" option={t.choices.severity} preserve={preserve} value="HIGH" />
+            <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'branchId', locale)} label={t.fields.branch} name="branchId" option={t.choices.branch} value="branch_main" />
+            <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'categoryId', locale)} label={t.fields.category} name="categoryId" option={t.choices.category} value="cat_parent" />
+            <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'subcategoryId', locale)} label={t.fields.subcategory} name="subcategoryId" option={t.choices.subcategory} value="cat_engine" />
+            <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'severity', locale)} label={t.fields.severity} name="severity" option={t.choices.severity} value="HIGH" />
             <Label className="grid gap-1 text-sm font-medium">
               {t.fields.incidentAt}
-              <Input defaultValue={preserve ? '2026-06-19' : ''} name="incidentAt" type="date" />
+              <Input name="incidentAt" type="date" />
+              <FieldError message={fieldError(fieldErrors, 'incidentAt', locale)} />
             </Label>
-            <TextField label={t.fields.subject} name="subject" value={preserve ? t.values.subject : ''} />
+            <TextField error={fieldError(fieldErrors, 'subject', locale)} label={t.fields.subject} name="subject" />
             <Label className="grid gap-1 text-sm font-medium md:col-span-2">
               {t.fields.description}
-              <Textarea className="min-h-28" defaultValue={preserve ? t.values.description : ''} name="description" />
-              {state === 'validation' ? <span className="text-xs font-semibold text-red-700">{t.validation.required}</span> : null}
+              <Textarea className="min-h-28" name="description" />
+              <FieldError message={fieldError(fieldErrors, 'description', locale)} />
             </Label>
           </FieldGroup>
 
           <FieldGroup title={t.sections.vehicle}>
             <Label className="flex items-center gap-2 text-sm font-medium">
-              <Input className="size-4" defaultChecked={preserve} name="vehicleRelated" type="checkbox" />
+              <Input className="size-4" name="vehicleRelated" type="checkbox" />
               {t.fields.vehicleRelated}
             </Label>
-            <TextField label={t.fields.vehicleVin} name="vehicleVin" value={preserve ? t.values.vin : ''} />
+            <TextField error={fieldError(fieldErrors, 'vehicleVin', locale)} label={t.fields.vehicleVin} name="vehicleVin" />
           </FieldGroup>
 
           <FieldGroup title={t.sections.attachments}>
-            <Label className="grid gap-1 text-sm font-medium">
-              {t.fields.attachment}
-              <Input multiple name="attachment" type="file" />
-              {state === 'validation' ? <span className="text-xs font-semibold text-red-700">{t.validation.attachment}</span> : null}
-            </Label>
-            <ul className="grid gap-1 text-sm text-slate-600">
+            <p className="rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 md:col-span-2">{t.attachmentDeferred}</p>
+            <ul className="grid gap-1 text-sm text-slate-600 md:col-span-2">
               {t.rules.map((rule) => <li key={rule}>{rule}</li>)}
             </ul>
           </FieldGroup>
 
           <p className="rounded-sm bg-slate-100 px-3 py-2 text-sm text-slate-700 md:col-span-2">{t.privacy}</p>
-          <Button className="md:col-span-2" disabled={state === 'loading'} type="submit">
-            {state === 'loading' ? t.actions.submitting : t.actions.submit}
+          <Button className="focus:ring-2 focus:ring-ring md:col-span-2" disabled={visibleState.kind === 'loading'} type="submit">
+            {visibleState.kind === 'loading' ? t.actions.submitting : t.actions.submit}
           </Button>
         </form>
       </div>
@@ -90,19 +125,35 @@ export function PortalSubmissionScreen({
   );
 }
 
-function PortalSubmissionMessage({ locale, reference, state }: { locale: PortalLocale; reference: string; state?: PortalSubmissionPreviewState | undefined }) {
+export function buildPortalComplaintSubmission(formData: FormData): PortalComplaintCreateRequest {
+  return {
+    customerName: textValue(formData, 'customerName'),
+    customerPhone: textValue(formData, 'customerPhone'),
+    categoryId: textValue(formData, 'categoryId'),
+    subcategoryId: textValue(formData, 'subcategoryId'),
+    description: textValue(formData, 'description'),
+    incidentAt: incidentAtValue(textValue(formData, 'incidentAt')),
+    branchId: textValue(formData, 'branchId'),
+    subject: textValue(formData, 'subject'),
+    severity: textValue(formData, 'severity') as PortalComplaintCreateRequest['severity'],
+    vehicleRelated: formData.get('vehicleRelated') === 'on',
+    vehicleVin: optionalTextValue(formData, 'vehicleVin'),
+  };
+}
+
+function PortalSubmissionMessage({ locale, state }: { locale: PortalLocale; state: SubmitState }) {
   const t = portalSubmissionText[locale];
-  if (!state) return null;
-  if (state === 'success') {
+  if (state.kind === 'idle') return null;
+  if (state.kind === 'success') {
     return (
       <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900" role="status">
-        {t.states.success}. {t.states.reference}: {reference}.
+        {t.states.success}. {t.states.reference}: {state.referenceNumber}.
       </p>
     );
   }
-  const message = state === 'loading' ? t.states.loading : state === 'validation' ? t.states.validation : t.states.error;
+  const message = state.kind === 'loading' ? t.states.loading : state.kind === 'validation' ? t.states.validation : t.states.error;
   return (
-    <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800" role={state === 'loading' ? 'status' : 'alert'}>
+    <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800" role={state.kind === 'loading' ? 'status' : 'alert'}>
       {message}
     </p>
   );
@@ -117,24 +168,62 @@ function FieldGroup({ children, title }: { children: React.ReactNode; title: str
   );
 }
 
-function TextField({ error, label, name, type = 'text', value }: { error?: string | undefined; label: string; name: string; type?: string; value: string }) {
+function TextField({ error, label, name, type = 'text' }: { error?: string | undefined; label: string; name: string; type?: string }) {
   return (
     <Label className="grid gap-1 text-sm font-medium">
       {label}
-      <Input defaultValue={value} name={name} type={type} />
-      {error ? <span className="text-xs font-semibold text-red-700">{error}</span> : null}
+      <Input name={name} type={type} />
+      <FieldError message={error} />
     </Label>
   );
 }
 
-function SelectField({ choose, label, name, option, preserve, value }: { choose: string; label: string; name: string; option: string; preserve: boolean; value: string }) {
+function SelectField({ choose, error, label, name, option, value }: { choose: string; error?: string | undefined; label: string; name: string; option: string; value: string }) {
   return (
     <Label className="grid gap-1 text-sm font-medium">
       {label}
-      <select className="rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring" defaultValue={preserve ? value : ''} name={name}>
+      <select className="rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring" defaultValue="" name={name}>
         <option value="">{choose}</option>
         <option value={value}>{option}</option>
       </select>
+      <FieldError message={error} />
     </Label>
   );
+}
+
+function FieldError({ message }: { message?: string | undefined }) {
+  return message ? <span className="text-xs font-semibold text-red-700">{message}</span> : null;
+}
+
+function validateSubmission(input: PortalComplaintCreateRequest): PortalFieldError[] {
+  return ['customerName', 'customerPhone', 'categoryId', 'subcategoryId', 'description', 'incidentAt', 'branchId', 'subject', 'severity']
+    .filter((field) => !String(input[field as keyof PortalComplaintCreateRequest] ?? '').trim())
+    .map((field) => ({ field, code: 'REQUIRED', message: `${field} is required.` }));
+}
+
+function fieldError(errors: PortalFieldError[], field: string, locale: PortalLocale): string | undefined {
+  const error = errors.find((item) => item.field === field);
+  if (!error) return undefined;
+  return error.code === 'REQUIRED' ? portalSubmissionText[locale].validation.required : portalSubmissionText[locale].validation.invalid;
+}
+
+function previewState(state: PortalSubmissionPreviewState | undefined, reference: string | undefined, locale: PortalLocale): SubmitState {
+  if (state === 'success') return { kind: 'success', referenceNumber: reference ?? 'CMP-PORTAL-001' };
+  if (state === 'validation') return { kind: 'validation', fieldErrors: [{ field: 'customerName', code: 'REQUIRED', message: portalSubmissionText[locale].validation.required }] };
+  if (state === 'loading') return { kind: 'loading' };
+  if (state === 'error') return { kind: 'error', network: false };
+  return { kind: 'idle' };
+}
+
+function textValue(formData: FormData, field: string): string {
+  const value = formData.get(field);
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function optionalTextValue(formData: FormData, field: string): string | null {
+  return textValue(formData, field) || null;
+}
+
+function incidentAtValue(value: string): string {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00.000Z` : value;
 }

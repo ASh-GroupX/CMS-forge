@@ -1,44 +1,29 @@
-# Done - Final SRS/Business-Fit Audit And Stabilization
+# User-Scoped UX Redesign - Slice 2
 
-Status: Done
+Status: Ready
 Required model tier: GPT-5.5 Extra High
-Phase: final-srs-business-fit-audit
+Phase: user-scoped-ux-redesign
 Risk: High
-SRS IDs: CONTRACT-READINESS-003, REQ-COMPLAINT-001, REQ-COMPLAINT-002, REQ-COMPLAINT-003, REQ-CUSTOMER-001, REQ-PORTAL-001, REQ-PORTAL-002, REQ-FILES-001, ARCH-INTEGRATION-001, ARCH-FILES-001, DMS-MAP-001, REQ-REPORT-001, REPORT-MATRIX-001, REQ-AUDIT-001, NFR-SEC-002, API-STANDARD-001, UI-SCREEN-001, UI-DESIGN-001
+SRS IDs: REQ-COMPLAINT-001, REQ-COMPLAINT-002, UI-SCREEN-001, UI-DESIGN-001, NFR-SEC-002, RBAC-MATRIX-001
 
-## Outcome
+## Task
 
-Final SRS/business-fit audit and stabilization is complete for the current Codex
-goal. No product-code blocker was found, and no stabilization code was needed.
+Make staff workflow actions real.
 
-## Final Proof
+## Scope
 
-- `git status --short`
-- `git diff --check`
+- Re-read Slice 2 in `docs/USER_SCOPED_UX_REDESIGN_PLAN.md`.
+- Inspect current complaint detail route, workflow modal, staff complaint API client, backend transition response shape, and related tests before editing.
+- Render only backend-allowed workflow actions for the current user/session.
+- Submit action comments/confirmation to the backend transition endpoint.
+- Handle success, validation, and conflict feedback without moving workflow authority into React.
+
+## Proof
+
 - `corepack pnpm test:api -- complaints`
-- `corepack pnpm test:api -- portal.tracking`
-- `corepack pnpm test:api -- attachments`
-- `corepack pnpm test:api -- integrations`
-- `corepack pnpm test:api -- reports`
-- `corepack pnpm test:api -- audit`
-- `corepack pnpm test:web -- api-client`
-- `corepack pnpm test:web -- shell`
-- `corepack pnpm test:web -- localization`
-- `corepack pnpm test:visual`
+- `corepack pnpm test:e2e -- complaint-workflow`
 - `corepack pnpm test:e2e -- accessibility`
-- `corepack pnpm web:visual-review`
 - `corepack pnpm openapi:check`
 - `corepack pnpm typecheck`
 - `corepack pnpm lint`
-- `corepack pnpm security:check`
-- Supplemental: `corepack pnpm web:perf`
-- Supplemental: `corepack pnpm ops:backup:check`
-
-## Carry-Forward Notes
-
-- Deferred report catalog items still need human/signed scope acceptance or future
-  implementation slices.
-- Human UAT sign-off, commercial acceptance of report deferrals, and real
-  staging/production backup restore are operational sign-off activities outside
-  this local Codex run.
-- DMS writeback remains out of MVP unless separately approved.
+- `git diff --check`

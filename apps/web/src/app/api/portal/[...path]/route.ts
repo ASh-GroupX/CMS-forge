@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 type RouteContext = { params: Promise<{ path?: string[] }> | { path?: string[] } };
 
 const allowed = new Set([
+  'POST complaints',
   'POST tracking/otp',
   'POST tracking/otp/verify',
   'GET tracking',
