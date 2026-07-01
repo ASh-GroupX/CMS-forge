@@ -8,8 +8,8 @@ import { Label } from '../ui/label';
 import { complaintDetailText } from '../../i18n/staff-complaint-detail';
 import type { Locale } from '../../i18n/staff-shell';
 import {
+  downloadStaffAttachment,
   listStaffComplaintAttachments,
-  prepareStaffAttachmentDownload,
   uploadStaffComplaintAttachment,
   type StaffAttachment,
 } from '../../lib/staff-attachments-api';
@@ -73,7 +73,7 @@ export function ComplaintAttachmentControls({
     if (!complaintId || item.scanStatus !== 'CLEAN') return setState('error');
     setState('loading');
     setMessage(null);
-    const result = await prepareStaffAttachmentDownload(complaintId, item.id);
+    const result = await downloadStaffAttachment(complaintId, item.id);
     if (!result.ok) return setState('error');
     setMessage(t.attachmentUploadMessages.downloaded);
     setState('downloaded');

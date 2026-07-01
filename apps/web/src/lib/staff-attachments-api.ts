@@ -13,6 +13,7 @@ export type StaffAttachment = {
 export type StaffAttachmentDownload = { attachmentId: string; token: string; expiresAt: string };
 export type StaffAttachmentError = { kind: 'api' | 'network' | 'validation'; code: string; message: string; correlationId: string | null; status?: number };
 export type StaffAttachmentResult<T> = { ok: true; data: T } | { ok: false; error: StaffAttachmentError };
+export type OpenAttachmentDownloadTarget = (target: string) => void;
 
 type ErrorEnvelope = { error?: { code?: string; message?: string; correlationId?: string | null } };
 
@@ -34,6 +35,25 @@ export async function uploadStaffComplaintAttachment(complaintId: string, file: 
 
 export async function prepareStaffAttachmentDownload(complaintId: string, attachmentId: string, fetchImpl: typeof fetch = fetch): Promise<StaffAttachmentResult<{ download: StaffAttachmentDownload }>> {
   return requestJson(`/api/complaints/${encodeURIComponent(complaintId)}/attachments/${encodeURIComponent(attachmentId)}/download`, fetchImpl, { method: 'GET' });
+}
+
+export async function downloadStaffAttachment(
+  complaintId: string,
+  attachmentId: string,
+  openTarget: OpenAttachmentDownloadTarget = openAttachmentDownloadTarget,
+  fetchImpl: typeof fetch = fetch,
+): Promise<StaffAttachmentResult<{ download: StaffAttachmentDownload; target: string }>> {
+  const result = await prepareStaffAttachmentDownload(complaintId, attachmentId, fetchImpl);
+  if (!result.ok) return result;
+  const target = staffAttachmentDownloadTarget(complaintId, attachmentId, result.data.download);
+  openTarget(target);
+  return { ok: true, data: { ...result.data, target } };
+}
+
+export function staffAttachmentDownloadTarget(complaintId: string, attachmentId: string, download: StaffAttachmentDownload): string {
+  const token = download.token.trim();
+  if (isHttpUrl(token)) return token;
+  return `/api/complaints/${encodeURIComponent(complaintId)}/attachments/${encodeURIComponent(attachmentId)}/download?redirect=1`;
 }
 
 async function requestJson<T>(path: string, fetchImpl: typeof fetch, init: RequestInit): Promise<StaffAttachmentResult<T>> {
@@ -59,6 +79,19 @@ function readableCookie(name: string): string | null {
 
 function validationError(validation: Exclude<AttachmentFileValidation, { ok: true }>): StaffAttachmentError {
   return { kind: 'validation', code: validation.code, message: validation.code === 'ATTACHMENT_SIZE_EXCEEDED' ? 'File exceeds size limit.' : validation.code === 'ATTACHMENT_REQUIRED' ? 'Choose a file first.' : 'File type is not allowed.', correlationId: null };
+}
+
+function openAttachmentDownloadTarget(target: string): void {
+  if (typeof window !== 'undefined') window.location.assign(target);
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 async function mapErrorResponse(response: Response): Promise<StaffAttachmentError> {

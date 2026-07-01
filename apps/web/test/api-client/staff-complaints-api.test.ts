@@ -8,7 +8,7 @@ import { POST as proxyTransitionComplaint } from '../../src/app/api/complaints/[
 import { POST as proxyCreateComplaint } from '../../src/app/api/complaints/route';
 import { GET as proxyLookupDmsCustomerVehicle } from '../../src/app/api/integrations/dms/customer-vehicle/route';
 import { getStaffComplaintDuplicateCandidates, getStaffComplaintRelated, linkStaffComplaintRelation, unlinkStaffComplaintRelation } from '../../src/lib/staff-complaint-relations-api';
-import { listStaffComplaintAttachments, prepareStaffAttachmentDownload, uploadStaffComplaintAttachment } from '../../src/lib/staff-attachments-api';
+import { downloadStaffAttachment, listStaffComplaintAttachments, uploadStaffComplaintAttachment } from '../../src/lib/staff-attachments-api';
 import { correctStaffComplaint, createStaffComplaint, getStaffComplaint, listStaffComplaints, lookupStaffDmsCustomerVehicle, submitStaffComplaintWorkflowAction } from '../../src/lib/staff-complaints-api';
 
 function jsonResponse(body: unknown, status = 200) {
@@ -154,12 +154,13 @@ test('unlinkStaffComplaintRelation deletes only target id with CSRF', async () =
   assert.doesNotMatch(String(calls[0]?.init?.body), /branch|role|actor|workflow|token|credential/i);
 });
 
-test('staff attachment client lists uploads and prepares downloads through same-origin routes', async () => {
+test('staff attachment client lists uploads and opens prepared signed download targets', async () => {
   const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const opened: string[] = [];
   const fetchImpl: typeof fetch = async (input, init) => {
     calls.push({ input, init });
     if (String(input).endsWith('/download')) {
-      return jsonResponse({ download: { attachmentId: 'att_1', token: 'attdl_safe', expiresAt: '2026-06-19T10:05:00.000Z' } });
+      return jsonResponse({ download: { attachmentId: 'att_1', token: 'https://storage.test/attachments/att_1?X-Amz-Signature=proof', expiresAt: '2026-06-19T10:05:00.000Z' } });
     }
     if (init?.method === 'POST') {
       return jsonResponse({ attachment: { id: 'att_1', complaintId: 'cmp/1', fileName: 'photo.png', contentType: 'image/png', sizeBytes: 10, scanStatus: 'PENDING', customerVisible: false } }, 201);
@@ -170,7 +171,7 @@ test('staff attachment client lists uploads and prepares downloads through same-
   await withDocumentCookie('cms_csrf_token=csrf_123', async () => {
     assert.equal((await listStaffComplaintAttachments('cmp/1', fetchImpl)).ok, true);
     assert.equal((await uploadStaffComplaintAttachment('cmp/1', new File(['file-bytes'], 'photo.png', { type: 'image/png' }), fetchImpl)).ok, true);
-    assert.equal((await prepareStaffAttachmentDownload('cmp/1', 'att_1', fetchImpl)).ok, true);
+    assert.equal((await downloadStaffAttachment('cmp/1', 'att_1', (target) => opened.push(target), fetchImpl)).ok, true);
   });
 
   assert.equal(calls[0]?.input, '/api/complaints/cmp%2F1/attachments');
@@ -184,7 +185,21 @@ test('staff attachment client lists uploads and prepares downloads through same-
     contentBase64: 'ZmlsZS1ieXRlcw==',
   });
   assert.equal(calls[2]?.input, '/api/complaints/cmp%2F1/attachments/att_1/download');
+  assert.deepEqual(opened, ['https://storage.test/attachments/att_1?X-Amz-Signature=proof']);
   assert.doesNotMatch(String(calls[1]?.init?.body), /branch|role|actor|workflow|storage|token|credential/i);
+});
+
+test('staff attachment client opens same-origin redirect route for opaque download tokens', async () => {
+  const opened: string[] = [];
+  const result = await downloadStaffAttachment('cmp/1', 'att/2', (target) => opened.push(target), async (input, init) => {
+    assert.equal(input, '/api/complaints/cmp%2F1/attachments/att%2F2/download');
+    assert.equal(init?.credentials, 'include');
+    return jsonResponse({ download: { attachmentId: 'att/2', token: 'attdl_safe', expiresAt: '2026-06-19T10:05:00.000Z' } });
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(opened, ['/api/complaints/cmp%2F1/attachments/att%2F2/download?redirect=1']);
+  assert.doesNotMatch(opened[0] ?? '', /attdl|token|credential|storage/i);
 });
 
 test('staff attachment client rejects blocked files before posting', async () => {
@@ -643,6 +658,46 @@ test('staff attachment proxies forward only session cookie csrf and body to the 
     });
     assert.deepEqual(Object.fromEntries(new Headers(calls[2]?.init?.headers).entries()), { accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
     assert.equal(calls[1]?.init?.body, JSON.stringify(payload));
+  } finally {
+    globalThis.fetch = priorFetch;
+    if (priorApiUrl === undefined) delete process.env.API_URL;
+    else process.env.API_URL = priorApiUrl;
+  }
+});
+
+test('staff attachment download proxy redirects signed targets and hides opaque tokens', async () => {
+  const priorFetch = globalThis.fetch;
+  const priorApiUrl = process.env.API_URL;
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  globalThis.fetch = (async (input, init) => {
+    calls.push({ input, init });
+    const token = calls.length === 1 ? 'https://storage.test/attachments/att_1?X-Amz-Signature=proof' : 'attdl_safe';
+    return jsonResponse({ download: { attachmentId: 'att_1', token, expiresAt: '2026-06-19T10:05:00.000Z' } });
+  }) as typeof fetch;
+  process.env.API_URL = 'http://api.test';
+
+  try {
+    const redirect = await proxyDownloadAttachment(new Request('http://web.test/api/complaints/cmp_1/attachments/att_1/download?redirect=1&branchId=spoofed', {
+      headers: { cookie: 'cms_staff_session=raw-session' },
+      method: 'GET',
+    }), { params: Promise.resolve({ id: 'cmp_1', attachmentId: 'att_1' }) });
+    const opaque = await proxyDownloadAttachment(new Request('http://web.test/api/complaints/cmp_1/attachments/att_1/download?redirect=1', {
+      headers: { cookie: 'cms_staff_session=raw-session' },
+      method: 'GET',
+    }), { params: Promise.resolve({ id: 'cmp_1', attachmentId: 'att_1' }) });
+    const opaqueBody = await opaque.json() as { error?: { code?: string } };
+
+    assert.equal(redirect.status, 307);
+    assert.equal(redirect.headers.get('location'), 'https://storage.test/attachments/att_1?X-Amz-Signature=proof');
+    assert.equal(opaque.status, 409);
+    assert.equal(opaqueBody.error?.code, 'ATTACHMENT_DOWNLOAD_TARGET_UNAVAILABLE');
+    assert.equal(JSON.stringify(opaqueBody).includes('attdl_safe'), false);
+    assert.deepEqual(calls.map((call) => String(call.input)), [
+      'http://api.test/complaints/cmp_1/attachments/att_1/download',
+      'http://api.test/complaints/cmp_1/attachments/att_1/download',
+    ]);
+    assert.ok(calls.every((call) => !/branchId|redirect|attdl|token|credential/i.test(String(call.input))));
+    assert.ok(calls.every((call) => Object.fromEntries(new Headers(call.init?.headers).entries()).cookie === 'cms_staff_session=raw-session'));
   } finally {
     globalThis.fetch = priorFetch;
     if (priorApiUrl === undefined) delete process.env.API_URL;
