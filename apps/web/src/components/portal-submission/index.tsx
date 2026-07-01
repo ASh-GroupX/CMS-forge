@@ -8,6 +8,7 @@ import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { portalSubmissionText, type PortalLocale } from '../../i18n/portal-submission';
 import {
+  portalSubmissionAttachments,
   submitPortalComplaint,
   type PortalComplaintCreateRequest,
   type PortalFieldError,
@@ -18,7 +19,7 @@ export type PortalSubmissionPreviewState = 'loading' | 'validation' | 'success' 
 type SubmitState =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'success'; referenceNumber: string }
+  | { kind: 'success'; referenceNumber: string; attachmentCount: number }
   | { kind: 'validation'; fieldErrors: PortalFieldError[] }
   | { kind: 'error'; network: boolean };
 
@@ -39,17 +40,21 @@ export function PortalSubmissionScreen({
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const complaint = buildPortalComplaintSubmission(new FormData(event.currentTarget));
+    const formData = new FormData(event.currentTarget);
+    const complaint = buildPortalComplaintSubmission(formData);
     const localErrors = validateSubmission(complaint);
+    const attachmentResult = await portalSubmissionAttachments(portalAttachmentFiles(formData));
+    if (!attachmentResult.ok) localErrors.push(attachmentResult.error);
     if (localErrors.length) {
       setSubmitState({ kind: 'validation', fieldErrors: localErrors });
       return;
     }
+    if (!attachmentResult.ok) return;
 
     setSubmitState({ kind: 'loading' });
-    const result = await submitPortalComplaint(complaint);
+    const result = await submitPortalComplaint(attachmentResult.attachments.length ? { ...complaint, attachments: attachmentResult.attachments } : complaint);
     if (result.ok) {
-      setSubmitState({ kind: 'success', referenceNumber: result.data.complaint.referenceNumber });
+      setSubmitState({ kind: 'success', referenceNumber: result.data.complaint.referenceNumber, attachmentCount: result.data.complaint.attachments?.length ?? 0 });
       return;
     }
     if (result.error.fieldErrors?.length || result.error.code === 'VALIDATION_FAILED') {
@@ -109,6 +114,11 @@ export function PortalSubmissionScreen({
           </FieldGroup>
 
           <FieldGroup title={t.sections.attachments}>
+            <Label className="grid gap-1 text-sm font-medium md:col-span-2">
+              {t.fields.attachment}
+              <Input accept=".jpg,.jpeg,.png,.webp,.pdf,.mp3,.wav,.ogg,.mp4,.mov,.webm,image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/wav,audio/ogg,video/mp4,video/quicktime,video/webm" multiple name="attachments" type="file" />
+              <FieldError message={fieldError(fieldErrors, 'attachments', locale)} />
+            </Label>
             <p className="rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 md:col-span-2">{t.attachmentDeferred}</p>
             <ul className="grid gap-1 text-sm text-slate-600 md:col-span-2">
               {t.rules.map((rule) => <li key={rule}>{rule}</li>)}
@@ -148,6 +158,7 @@ function PortalSubmissionMessage({ locale, state }: { locale: PortalLocale; stat
     return (
       <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900" role="status">
         {t.states.success}. {t.states.reference}: {state.referenceNumber}.
+        {state.attachmentCount ? ` ${t.states.attachmentsUploaded}: ${state.attachmentCount}.` : ''}
       </p>
     );
   }
@@ -204,11 +215,12 @@ function validateSubmission(input: PortalComplaintCreateRequest): PortalFieldErr
 function fieldError(errors: PortalFieldError[], field: string, locale: PortalLocale): string | undefined {
   const error = errors.find((item) => item.field === field);
   if (!error) return undefined;
+  if (field === 'attachments') return portalSubmissionText[locale].validation.attachment;
   return error.code === 'REQUIRED' ? portalSubmissionText[locale].validation.required : portalSubmissionText[locale].validation.invalid;
 }
 
 function previewState(state: PortalSubmissionPreviewState | undefined, reference: string | undefined, locale: PortalLocale): SubmitState {
-  if (state === 'success') return { kind: 'success', referenceNumber: reference ?? 'CMP-PORTAL-001' };
+  if (state === 'success') return { kind: 'success', referenceNumber: reference ?? 'CMP-PORTAL-001', attachmentCount: 0 };
   if (state === 'validation') return { kind: 'validation', fieldErrors: [{ field: 'customerName', code: 'REQUIRED', message: portalSubmissionText[locale].validation.required }] };
   if (state === 'loading') return { kind: 'loading' };
   if (state === 'error') return { kind: 'error', network: false };
@@ -226,4 +238,9 @@ function optionalTextValue(formData: FormData, field: string): string | null {
 
 function incidentAtValue(value: string): string {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00.000Z` : value;
+}
+
+function portalAttachmentFiles(formData: FormData): File[] {
+  if (typeof File === 'undefined') return [];
+  return formData.getAll('attachments').filter((value): value is File => value instanceof File && value.size > 0 && Boolean(value.name.trim()));
 }

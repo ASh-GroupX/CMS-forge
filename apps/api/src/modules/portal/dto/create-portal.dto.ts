@@ -3,6 +3,14 @@ import { ComplaintSeverity } from '@prisma/client';
 import { AppException } from '../../../core/http-kernel.js';
 import type { SubmitPortalComplaintInput } from '../portal.service.js';
 
+export type PortalAttachmentRequestDto = {
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  contentBase64: string;
+  customerVisible?: boolean;
+};
+
 export type PortalComplaintRequestDto = {
   customerName: string;
   customerPhone: string;
@@ -21,10 +29,12 @@ export type PortalComplaintRequestDto = {
   vehicleModel?: string | null;
   vehicleModelYear?: number | null;
   departmentId?: string | null;
+  attachments?: PortalAttachmentRequestDto[];
 };
 
 export function parsePortalComplaintBody(body: unknown): PortalComplaintRequestDto {
   const input = objectBody(body);
+  const attachments = attachmentList(input.attachments);
   return {
     customerName: requiredText(input.customerName, 'customerName'),
     customerPhone: requiredText(input.customerPhone, 'customerPhone'),
@@ -43,6 +53,7 @@ export function parsePortalComplaintBody(body: unknown): PortalComplaintRequestD
     vehicleModel: optionalText(input.vehicleModel, 'vehicleModel'),
     vehicleModelYear: optionalNumber(input.vehicleModelYear, 'vehicleModelYear'),
     departmentId: optionalText(input.departmentId, 'departmentId'),
+    ...(attachments.length ? { attachments } : {}),
   };
 }
 
@@ -81,6 +92,39 @@ function optionalNumber(value: unknown, field: string): number | null {
   if (typeof value === 'number' && Number.isInteger(value)) {
     return value;
   }
+  throw invalid(field, `${field} is invalid.`);
+}
+
+function attachmentList(value: unknown): PortalAttachmentRequestDto[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) throw invalid('attachments', 'attachments is invalid.');
+  try {
+    return value.map((item) => portalAttachmentBody(item));
+  } catch {
+    throw invalid('attachments', 'attachments is invalid.');
+  }
+}
+
+function portalAttachmentBody(value: unknown): PortalAttachmentRequestDto {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw invalid('attachments', 'attachments is invalid.');
+  const input = value as Record<string, unknown>;
+  const customerVisible = input.customerVisible === undefined ? undefined : booleanValue(input.customerVisible, 'customerVisible');
+  return {
+    fileName: requiredText(input.fileName, 'fileName'),
+    contentType: requiredText(input.contentType, 'contentType'),
+    sizeBytes: positiveInteger(input.sizeBytes, 'sizeBytes'),
+    contentBase64: requiredText(input.contentBase64, 'contentBase64'),
+    ...(customerVisible === undefined ? {} : { customerVisible }),
+  };
+}
+
+function positiveInteger(value: unknown, field: string): number {
+  if (typeof value === 'number' && Number.isSafeInteger(value) && value > 0) return value;
+  throw invalid(field, `${field} is invalid.`);
+}
+
+function booleanValue(value: unknown, field: string): boolean {
+  if (typeof value === 'boolean') return value;
   throw invalid(field, `${field} is invalid.`);
 }
 

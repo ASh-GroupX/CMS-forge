@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { GET, POST } from '../../src/app/api/portal/[...path]/route';
-import { submitPortalComplaint } from '../../src/lib/portal-submission-api';
+import { portalSubmissionAttachments, submitPortalComplaint } from '../../src/lib/portal-submission-api';
 import { getPortalTracking, requestPortalOtp, submitPortalFollowUp, uploadPortalAttachment, verifyPortalOtp } from '../../src/lib/portal-tracking-api';
 
 function jsonResponse(body: unknown, status = 200) {
@@ -45,6 +45,54 @@ test('portal client runs submission OTP session tracking follow-up and attachmen
     sizeBytes: 7,
     contentBase64: 'aW52b2ljZQ==',
   });
+});
+
+test('portal submission client posts initial attachments with the complaint only', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({
+      complaint: {
+        id: 'cmp_1',
+        referenceNumber: 'CMS-2026-MAIN-000010',
+        status: 'SUBMITTED',
+        attachments: [{ id: 'att_1', fileName: 'invoice.pdf', scanStatus: 'PENDING' }],
+      },
+    }, 201);
+  };
+  const attachmentResult = await portalSubmissionAttachments([new File(['invoice'], 'invoice.pdf', { type: 'application/pdf' })]);
+  assert.equal(attachmentResult.ok, true);
+
+  const result = await submitPortalComplaint({
+    ...validPortalComplaint(),
+    attachments: attachmentResult.ok ? attachmentResult.attachments : [],
+  }, fetchImpl);
+
+  assert.equal(result.ok, true);
+  assert.equal(calls[0]?.input, '/api/portal/complaints');
+  assert.equal(calls[0]?.init?.credentials, 'omit');
+  assert.deepEqual(Object.fromEntries(new Headers(calls[0]?.init?.headers).entries()), {
+    accept: 'application/json',
+    'content-type': 'application/json',
+  });
+  assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
+    ...validPortalComplaint(),
+    attachments: [{
+      fileName: 'invoice.pdf',
+      contentType: 'application/pdf',
+      sizeBytes: 7,
+      contentBase64: 'aW52b2ljZQ==',
+    }],
+  });
+  assert.doesNotMatch(String(calls[0]?.init?.body), /x-portal-session|staff|actorId|storageKey|credential|DMS/i);
+});
+
+test('portal submission attachment builder blocks invalid files before submit', async () => {
+  const result = await portalSubmissionAttachments([new File(['bad'], 'malware.exe', { type: 'application/x-msdownload' })]);
+
+  assert.equal(result.ok, false);
+  assert.equal(result.ok ? null : result.error.field, 'attachments');
+  assert.equal(result.ok ? null : result.error.code, 'ATTACHMENT_TYPE_BLOCKED');
 });
 
 test('portal proxy allowlists public submission and never forwards staff authority', async () => {

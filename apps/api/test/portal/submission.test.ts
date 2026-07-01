@@ -77,6 +77,27 @@ test('portal privacy regression strips DMS customer identifiers from public subm
   assert.equal(JSON.stringify(input).includes('DMS-'), false);
 });
 
+test('portal submission route parses initial attachments without storage or staff authority', async () => {
+  const calls: unknown[] = [];
+  const controller = new PortalController({
+    submitComplaint: async (input) => {
+      calls.push(input);
+      return { id: 'cmp_portal', referenceNumber: 'CMS-2026-MAIN-000010', status: ComplaintStatus.SUBMITTED };
+    },
+  } as PortalService);
+
+  await controller.submitComplaint({
+    ...validBody(),
+    attachments: [{ ...validAttachmentBody(), storageKey: 'private/key', token: 'secret', actorId: 'staff', customerVisible: false }],
+  }, request());
+
+  const input = calls[0] as Record<string, unknown>;
+  assert.deepEqual(input.attachments, [{ ...validAttachmentBody(), customerVisible: false }]);
+  assert.equal(JSON.stringify(input).includes('private/key'), false);
+  assert.equal(JSON.stringify(input).includes('secret'), false);
+  assert.equal(JSON.stringify(input).includes('staff'), false);
+});
+
 test('portal service always submits and cannot create staff drafts', async () => {
   const calls: unknown[] = [];
   const service = new PortalService({
@@ -158,6 +179,15 @@ function validBody() {
     vehicleModelYear: 2024,
     vehicleId: null,
     departmentId: 'dep_service',
+  };
+}
+
+function validAttachmentBody() {
+  return {
+    fileName: 'invoice.pdf',
+    contentType: 'application/pdf',
+    sizeBytes: 7,
+    contentBase64: Buffer.from('invoice').toString('base64'),
   };
 }
 

@@ -5897,6 +5897,12 @@
                   "REOPENED",
                   "REJECTED"
                 ]
+              },
+              "attachments": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Attachment"
+                }
               }
             },
             "additionalProperties": false
@@ -5975,6 +5981,12 @@
               "null"
             ],
             "minLength": 1
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttachmentUploadRequest"
+            }
           }
         },
         "additionalProperties": false

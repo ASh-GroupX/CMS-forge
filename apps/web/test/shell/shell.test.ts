@@ -264,7 +264,9 @@ test('portal submission renders English responsive complaint form', async () => 
   assert.match(html, /Description/);
   assert.match(html, /Vehicle VIN/);
   assert.match(html, /PDF, PNG, or JPG only/);
-  assert.match(html, /Attachments can be added after you verify the reference number/);
+  assert.match(html, /Attach files with this complaint or leave this empty/);
+  assert.match(html, /name="attachments"/);
+  assert.match(html, /multiple=""/);
   assert.match(html, /Submit complaint/);
   assert.doesNotMatch(html, /audit|DMS|staff PII|internal comments/i);
 });

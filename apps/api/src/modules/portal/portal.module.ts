@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AuditService } from '../../core/audit.service.js';
 import { PrismaService } from '../../core/http-kernel.js';
 import {
@@ -9,6 +9,8 @@ import {
 } from '../../core/rate-limit.guard.js';
 import { ComplaintsModule } from '../complaints/complaints.module.js';
 import { ComplaintsService } from '../complaints/complaints.service.js';
+import { AttachmentsModule } from '../attachments/attachments.module.js';
+import { AttachmentsService } from '../attachments/attachments.service.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PortalController } from './portal.controller.js';
@@ -16,7 +18,7 @@ import { PortalRepository } from './portal.repository.js';
 import { PortalService } from './portal.service.js';
 
 @Module({
-  imports: [ComplaintsModule, NotificationsModule],
+  imports: [ComplaintsModule, NotificationsModule, forwardRef(() => AttachmentsModule)],
   controllers: [PortalController],
   providers: [
     PrismaService,
@@ -31,13 +33,14 @@ import { PortalService } from './portal.service.js';
     },
     {
       provide: PortalService,
-      inject: [ComplaintsService, PortalRepository, NotificationsService, AuditService],
+      inject: [ComplaintsService, PortalRepository, NotificationsService, AuditService, AttachmentsService],
       useFactory: (
         complaints: ComplaintsService,
         repository: PortalRepository,
         notifications: NotificationsService,
         audit: AuditService,
-      ) => new PortalService(complaints, repository, notifications, audit),
+        attachments: AttachmentsService,
+      ) => new PortalService(complaints, repository, notifications, audit, attachments),
     },
   ],
   exports: [PortalService],

@@ -43,7 +43,7 @@ export const portalSubmissionText = {
       vin: 'SEEDDEMO00001',
     },
     rules: ['PDF, PNG, or JPG only', 'Maximum size follows the portal policy', 'Scan status is checked before review'],
-    attachmentDeferred: 'Attachments can be added after you verify the reference number on the tracking page.',
+    attachmentDeferred: 'Attach files with this complaint or leave this empty.',
     actions: {
       submit: 'Submit complaint',
       submitting: 'Submitting complaint.',
@@ -54,6 +54,7 @@ export const portalSubmissionText = {
       validation: 'Review the highlighted fields.',
       error: 'Complaint could not be submitted. Review the details and try again.',
       loading: 'Submitting complaint.',
+      attachmentsUploaded: 'Attachments received',
     },
     validation: {
       required: 'This field is required.',
@@ -104,7 +105,7 @@ export const portalSubmissionText = {
       vin: 'SEEDDEMO00001',
     },
     rules: ['PDF أو PNG أو JPG فقط', 'الحجم الأقصى يتبع سياسة البوابة', 'يتم فحص الحالة قبل المراجعة'],
-    attachmentDeferred: 'يمكن إضافة المرفقات بعد التحقق من رقم المرجع في صفحة المتابعة.',
+    attachmentDeferred: 'أرفق الملفات مع هذه الشكوى أو اتركها فارغة.',
     actions: {
       submit: 'إرسال الشكوى',
       submitting: 'جاري إرسال الشكوى.',
@@ -115,6 +116,7 @@ export const portalSubmissionText = {
       validation: 'راجع الحقول المحددة.',
       error: 'تعذر إرسال الشكوى. راجع التفاصيل وحاول مرة أخرى.',
       loading: 'جاري إرسال الشكوى.',
+      attachmentsUploaded: 'تم استلام المرفقات',
     },
     validation: {
       required: 'هذا الحقل مطلوب.',
