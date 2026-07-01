@@ -36,12 +36,17 @@ export type StaffReportAgingBuckets = {
 export type StaffReportFilters = {
   branchId?: string;
   categoryId?: string;
+  dateFrom?: string;
+  dateTo?: string;
   departmentId?: string;
   ownerId?: string;
+  severity?: string;
 };
 
 type ReportsResponse = { items?: Partial<StaffReportRow>[] };
 type KpiResponse = { kpis?: Partial<StaffReportKpis> };
+export type StaffReportCatalogItem = { id: string; name: string; users: string; requiredFilters: string[]; status: 'DELIVERED' | 'DEFERRED'; signoffRequired: boolean };
+export type StaffReportCatalog = { items: StaffReportCatalogItem[] };
 
 const STAFF_SESSION_COOKIE = 'cms_staff_session';
 
@@ -98,6 +103,30 @@ export async function getStaffReportKpis({
     });
     if (!response.ok) return null;
     return kpisFrom((await response.json()) as KpiResponse);
+  } catch {
+    return null;
+  }
+}
+
+export async function getStaffReportCatalog({
+  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  cookieHeader,
+  fetchImpl = fetch,
+}: {
+  apiUrl?: string;
+  cookieHeader?: string;
+  fetchImpl?: typeof fetch;
+} = {}): Promise<StaffReportCatalog | null> {
+  const cookies = cookieHeader ?? await incomingCookieHeader();
+  if (!hasStaffSessionCookie(cookies)) return null;
+
+  try {
+    const response = await fetchImpl(new URL('/reports/catalog', apiUrl), {
+      cache: 'no-store',
+      headers: { Accept: 'application/json', cookie: cookies },
+    });
+    if (!response.ok) return null;
+    return catalogFrom(await response.json());
   } catch {
     return null;
   }
@@ -176,6 +205,18 @@ function kpisFrom(body: KpiResponse): StaffReportKpis | null {
     averageFirstResponseHours: kpis.averageFirstResponseHours,
     averageResolutionHours: kpis.averageResolutionHours,
   };
+}
+
+function catalogFrom(body: unknown): StaffReportCatalog | null {
+  const items = (body as { items?: unknown[] })?.items;
+  if (!Array.isArray(items)) return null;
+  const safeItems = items.flatMap((item) => {
+    const value = item as Partial<StaffReportCatalogItem>;
+    return typeof value.id === 'string' && typeof value.name === 'string' && typeof value.users === 'string' && Array.isArray(value.requiredFilters) && (value.status === 'DELIVERED' || value.status === 'DEFERRED') && typeof value.signoffRequired === 'boolean'
+      ? [{ id: value.id, name: value.name, users: value.users, requiredFilters: value.requiredFilters.filter((filter): filter is string => typeof filter === 'string'), status: value.status, signoffRequired: value.signoffRequired }]
+      : [];
+  });
+  return safeItems.length ? { items: safeItems } : null;
 }
 
 function agingBucketsFrom(value: unknown): StaffReportAgingBuckets | null {

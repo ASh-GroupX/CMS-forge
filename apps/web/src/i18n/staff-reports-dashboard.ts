@@ -46,7 +46,7 @@ export const reportsDashboardText: Record<Locale, typeof enReportsDashboardText>
   en: {
     title: 'Reports dashboard',
     subtitle: 'Operational reports and accountability KPIs for your signed-in role.',
-    headers: ['Report', 'Audience', 'Category', 'Status'],
+    headers: ['Report', 'Scope or audience', 'Required filters', 'Delivery status'],
     kpis: {
       title: 'Accountability KPIs',
       subtitle: 'Values are read from the backend KPI model.',
@@ -81,9 +81,13 @@ export const reportsDashboardText: Record<Locale, typeof enReportsDashboardText>
     filters: {
       branch: 'Branch',
       category: 'Category',
+      dateFrom: 'Date from',
+      dateTo: 'Date to',
       owner: 'Owner',
+      severity: 'Severity',
       allBranches: 'All allowed branches',
       allCategories: 'All categories',
+      allSeverities: 'All severities',
       apply: 'Apply filters',
       clear: 'Clear filters',
       unavailable: 'Unavailable',
@@ -97,7 +101,7 @@ export const reportsDashboardText: Record<Locale, typeof enReportsDashboardText>
         error: 'Owners could not be loaded.',
       },
     },
-    badges: { operations: 'Operations', sla: 'SLA', executive: 'Executive', admin: 'Admin', pending: 'API pending' },
+    badges: { operations: 'Operations', sla: 'SLA', executive: 'Executive', admin: 'Admin', delivered: 'Delivered', deferred: 'Deferred', deferredSignoff: 'Deferred - signoff required', pending: 'Catalog unavailable' },
     states: {
       ready: 'Export controls are ready.',
       loading: 'Loading report entries.',
@@ -113,7 +117,7 @@ export const reportsDashboardText: Record<Locale, typeof enReportsDashboardText>
   ar: {
     title: 'لوحة التقارير',
     subtitle: 'تقارير تشغيلية ومؤشرات مساءلة حسب صلاحية دخولك.',
-    headers: ['التقرير', 'المستخدمون', 'الفئة', 'الحالة'],
+    headers: ['\u0627\u0644\u062a\u0642\u0631\u064a\u0631', '\u0627\u0644\u0646\u0637\u0627\u0642 \u0623\u0648 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645\u0648\u0646', '\u0641\u0644\u0627\u062a\u0631 \u0645\u0637\u0644\u0648\u0628\u0629', '\u062d\u0627\u0644\u0629 \u0627\u0644\u062a\u0633\u0644\u064a\u0645'],
     kpis: {
       title: 'مؤشرات المساءلة',
       subtitle: 'القيم مقروءة من بيانات النظام.',
@@ -148,9 +152,13 @@ export const reportsDashboardText: Record<Locale, typeof enReportsDashboardText>
     filters: {
       branch: 'الفرع',
       category: 'التصنيف',
+      dateFrom: '\u0645\u0646 \u062a\u0627\u0631\u064a\u062e',
+      dateTo: '\u0625\u0644\u0649 \u062a\u0627\u0631\u064a\u062e',
       owner: 'المسؤول',
+      severity: '\u0627\u0644\u062e\u0637\u0648\u0631\u0629',
       allBranches: 'كل الفروع المسموح بها',
       allCategories: 'كل التصنيفات',
+      allSeverities: '\u0643\u0644 \u062f\u0631\u062c\u0627\u062a \u0627\u0644\u062e\u0637\u0648\u0631\u0629',
       apply: 'تطبيق الفلاتر',
       clear: 'مسح الفلاتر',
       unavailable: 'غير متاح',
@@ -164,7 +172,7 @@ export const reportsDashboardText: Record<Locale, typeof enReportsDashboardText>
         error: 'تعذر تحميل المسؤولين.',
       },
     },
-    badges: { operations: 'تشغيلي', sla: 'اتفاقية الخدمة', executive: 'تنفيذي', admin: 'إداري', pending: 'واجهة معلقة' },
+    badges: { operations: '\u062a\u0634\u063a\u064a\u0644\u064a', sla: '\u0627\u062a\u0641\u0627\u0642\u064a\u0629 \u0627\u0644\u062e\u062f\u0645\u0629', executive: '\u062a\u0646\u0641\u064a\u0630\u064a', admin: '\u0625\u062f\u0627\u0631\u064a', delivered: '\u0645\u0633\u0644\u0645', deferred: '\u0645\u0624\u062c\u0644', deferredSignoff: '\u0645\u0624\u062c\u0644 - \u064a\u062d\u062a\u0627\u062c \u0627\u0639\u062a\u0645\u0627\u062f', pending: '\u0641\u0647\u0631\u0633 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d' },
     states: {
       ready: 'عناصر التصدير جاهزة.',
       loading: 'جار تحميل مدخلات التقارير.',
@@ -210,15 +218,19 @@ const enReportsDashboardText = {
   filters: {
     branch: '',
     category: '',
+    dateFrom: '',
+    dateTo: '',
     owner: '',
+    severity: '',
     allBranches: '',
     allCategories: '',
+    allSeverities: '',
     apply: '',
     clear: '',
     unavailable: '',
     ownerPicker: { placeholder: '', prompt: '', selected: '', clear: '', loading: '', empty: '', error: '' },
   },
-  badges: { operations: '', sla: '', executive: '', admin: '', pending: '' },
+  badges: { operations: '', sla: '', executive: '', admin: '', delivered: '', deferred: '', deferredSignoff: '', pending: '' },
   states: { ready: '', loading: '', empty: '', error: '', success: '', validation: '', denied: '', conflict: '' },
   safeNote: '',
 };

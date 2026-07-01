@@ -3,9 +3,9 @@ import { ReportsDashboard, type ReportsPreviewState } from '../../../components/
 import { resolveLocale } from '../../../i18n/staff-shell';
 import { getAssignableStaff } from '../../../lib/staff-assignable-staff-api';
 import { getComplaintFormOptions } from '../../../lib/staff-complaint-form-options-api';
-import { getStaffReportKpis, getStaffReportRows } from '../../../lib/staff-reports-api';
+import { getStaffReportCatalog, getStaffReportKpis, getStaffReportRows } from '../../../lib/staff-reports-api';
 
-type SearchParams = { locale?: string | string[]; reports?: string | string[]; branchId?: string | string[]; categoryId?: string | string[]; departmentId?: string | string[]; ownerId?: string | string[] };
+type SearchParams = { locale?: string | string[]; reports?: string | string[]; branchId?: string | string[]; categoryId?: string | string[]; dateFrom?: string | string[]; dateTo?: string | string[]; departmentId?: string | string[]; ownerId?: string | string[]; severity?: string | string[] };
 
 export default async function ReportsPage({
   cookieHeader,
@@ -24,17 +24,22 @@ export default async function ReportsPage({
   const filters = {
     branchId: readParam(params?.branchId) ?? '',
     categoryId: readParam(params?.categoryId) ?? '',
+    dateFrom: readParam(params?.dateFrom) ?? '',
+    dateTo: readParam(params?.dateTo) ?? '',
     departmentId: readParam(params?.departmentId) ?? '',
     ownerId: readParam(params?.ownerId) ?? '',
+    severity: readParam(params?.severity) ?? '',
   };
-  const [rows, kpis, options, staff] = await Promise.all([
+  const [rows, kpis, catalog, options, staff] = await Promise.all([
     getStaffReportRows({ ...apiInput, filters }),
     getStaffReportKpis(apiInput),
+    getStaffReportCatalog(apiInput),
     getComplaintFormOptions(apiInput),
     getAssignableStaff(apiInput),
   ]);
   return (
     <ReportsDashboard
+      catalog={catalog ?? undefined}
       filters={filters}
       kpis={kpis ?? undefined}
       locale={resolveLocale(readParam(params?.locale))}

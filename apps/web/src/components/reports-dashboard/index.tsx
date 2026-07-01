@@ -9,13 +9,14 @@ import { reportCatalogText, reportsDashboardText } from '../../i18n/staff-report
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
 import type { ComplaintFormOption, ComplaintFormOptions } from '../../lib/staff-complaint-form-options-api';
-import type { StaffReportKpis, StaffReportRow } from '../../lib/staff-reports-api';
+import type { StaffReportCatalog, StaffReportKpis, StaffReportRow } from '../../lib/staff-reports-api';
 
 export type ReportsPreviewState = 'ready' | 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'denied' | 'conflict';
-export type ReportsFilters = { branchId: string; categoryId: string; departmentId: string; ownerId: string };
+export type ReportsFilters = { branchId: string; categoryId: string; dateFrom: string; dateTo: string; departmentId: string; ownerId: string; severity: string };
 
 export function ReportsDashboard({
-  filters = { branchId: '', categoryId: '', departmentId: '', ownerId: '' },
+  catalog,
+  filters = { branchId: '', categoryId: '', dateFrom: '', dateTo: '', departmentId: '', ownerId: '', severity: '' },
   kpis,
   locale,
   options,
@@ -23,6 +24,7 @@ export function ReportsDashboard({
   staff,
   state,
 }: {
+  catalog?: StaffReportCatalog | undefined;
   filters?: ReportsFilters | undefined;
   kpis?: StaffReportKpis | undefined;
   locale: Locale;
@@ -36,8 +38,11 @@ export function ReportsDashboard({
   const reports = reportCatalogText[locale];
   const branches = options?.branches ?? [];
   const categories = options?.categories?.filter((item) => !item.parentId) ?? [];
+  const severities = options?.severities ?? [];
   const exportQuery = reportQuery(filters);
   const realRows = rows?.slice(0, 17);
+  const exportEnabled = Array.isArray(rows);
+  const catalogRows = catalogRowsFrom(catalog, reports, t);
   const kpiCards = kpis ? [
     [t.kpis.onTime, `${kpis.onTimeCompletionPercent}%`],
     [t.kpis.activeOverdue, String(kpis.activeOverdueCount)],
@@ -74,6 +79,8 @@ export function ReportsDashboard({
           <input name="locale" type="hidden" value={locale} />
           {filters.departmentId ? <input name="departmentId" type="hidden" value={filters.departmentId} /> : null}
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <DateField label={t.filters.dateFrom} name="dateFrom" value={filters.dateFrom} />
+            <DateField label={t.filters.dateTo} name="dateTo" value={filters.dateTo} />
             <OptionField
               choose={t.filters.allBranches}
               disabledLabel={t.filters.unavailable}
@@ -91,6 +98,14 @@ export function ReportsDashboard({
               name="categoryId"
               options={categories}
               value={filters.categoryId}
+            />
+            <SelectField
+              choose={t.filters.allSeverities}
+              disabledLabel={t.filters.unavailable}
+              label={t.filters.severity}
+              name="severity"
+              options={severities}
+              value={filters.severity}
             />
             <div className="xl:col-span-2">
               <StaffPicker
@@ -134,8 +149,17 @@ export function ReportsDashboard({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-semibold">{t.export.title}</h3>
             <div className="flex flex-wrap gap-2">
-              <Button asChild size="sm" type="button" variant="outline"><a href={`/reports/export?format=csv${exportQuery}`}>{t.export.csv}</a></Button>
-              <Button asChild size="sm" type="button" variant="outline"><a href={`/reports/export?format=excel${exportQuery}`}>{t.export.excel}</a></Button>
+              {exportEnabled ? (
+                <>
+                  <Button asChild size="sm" type="button" variant="outline"><a href={`/reports/export?format=csv${exportQuery}`}>{t.export.csv}</a></Button>
+                  <Button asChild size="sm" type="button" variant="outline"><a href={`/reports/export?format=excel${exportQuery}`}>{t.export.excel}</a></Button>
+                </>
+              ) : (
+                <>
+                  <Button disabled size="sm" type="button" variant="outline">{t.export.csv}</Button>
+                  <Button disabled size="sm" type="button" variant="outline">{t.export.excel}</Button>
+                </>
+              )}
             </div>
           </div>
           <ul className="mt-3 grid gap-1 text-sm text-slate-700 md:grid-cols-3">
@@ -144,45 +168,62 @@ export function ReportsDashboard({
             <li>{t.export.audit}</li>
           </ul>
         </section>
-        <Table className="min-w-[56rem]">
-          <TableHeader className="bg-slate-50 text-xs font-semibold uppercase tracking-normal text-slate-600">
-            <TableRow>{t.headers.map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>
-          </TableHeader>
-          <TableBody>
-            {realRows
-              ? realRows.map((row) => (
-                  <TableRow className="border-b border-slate-100" key={row.id}>
-                    <TableCell className="font-semibold">{row.referenceNumber} - {row.subject}</TableCell>
-                    <TableCell>{rowScopeLabel(row, branches, staff, locale, t.filters.unavailable)}</TableCell>
-                    <TableCell><ReportBadge>{optionLabel(categories, row.categoryId, locale) ?? t.filters.unavailable}</ReportBadge></TableCell>
-                    <TableCell><ReportBadge>{row.status}</ReportBadge></TableCell>
-                  </TableRow>
-                ))
-              : reports.map(([id, name, audience, category]) => (
-                  <TableRow className="border-b border-slate-100" key={id}>
-                    <TableCell className="font-semibold">{id} - {name}</TableCell>
-                    <TableCell>{audience}</TableCell>
-                    <TableCell><ReportBadge>{t.badges[category]}</ReportBadge></TableCell>
-                    <TableCell><ReportBadge>{t.badges.pending}</ReportBadge></TableCell>
-                  </TableRow>
-                ))}
-          </TableBody>
-        </Table>
+        <div className="overflow-x-auto">
+          <Table className="min-w-[56rem]">
+            <TableHeader className="bg-slate-50 text-xs font-semibold uppercase tracking-normal text-slate-600">
+              <TableRow>{t.headers.map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>
+            </TableHeader>
+            <TableBody>
+              {realRows
+                ? realRows.map((row) => (
+                    <TableRow className="border-b border-slate-100" key={row.id}>
+                      <TableCell className="font-semibold">{row.referenceNumber} - {row.subject}</TableCell>
+                      <TableCell>{rowScopeLabel(row, branches, staff, locale, t.filters.unavailable)}</TableCell>
+                      <TableCell><ReportBadge>{optionLabel(categories, row.categoryId, locale) ?? t.filters.unavailable}</ReportBadge></TableCell>
+                      <TableCell><ReportBadge>{row.status}</ReportBadge></TableCell>
+                    </TableRow>
+                  ))
+                : catalogRows.map((row) => (
+                    <TableRow className="border-b border-slate-100" key={row.id}>
+                      <TableCell className="font-semibold">{row.id} - {row.name}</TableCell>
+                      <TableCell>{row.audience}</TableCell>
+                      <TableCell>{row.filters}</TableCell>
+                      <TableCell><ReportBadge>{row.status}</ReportBadge></TableCell>
+                    </TableRow>
+                  ))}
+            </TableBody>
+          </Table>
+        </div>
         <p className="mt-3 rounded-sm border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{t.safeNote}</p>
       </CardContent>
     </Card>
   );
 }
 
-function OptionField({
-  choose,
-  disabledLabel,
-  label,
-  locale,
-  name,
-  options,
-  value,
-}: {
+function DateField({ label, name, value }: { label: string; name: string; value: string }) {
+  const id = `reports-${name}`;
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      <input className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" defaultValue={value} id={id} name={name} type="date" />
+    </div>
+  );
+}
+
+function SelectField({ choose, disabledLabel, label, name, options, value }: { choose: string; disabledLabel: string; label: string; name: string; options: string[]; value: string }) {
+  const id = `reports-${name}`;
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" defaultValue={options.includes(value) ? value : ''} disabled={options.length === 0} id={id} name={name}>
+        <option value="">{options.length === 0 ? disabledLabel : choose}</option>
+        {options.map((option) => <option key={option} value={option}>{option}</option>)}
+      </select>
+    </div>
+  );
+}
+
+function OptionField({ choose, disabledLabel, label, locale, name, options, value }: {
   choose: string;
   disabledLabel: string;
   label: string;
@@ -191,16 +232,11 @@ function OptionField({
   options: ComplaintFormOption[];
   value: string;
 }) {
+  const id = `reports-${name}`;
   return (
     <div className="grid gap-2">
-      <Label htmlFor={`reports-${name}`}>{label}</Label>
-      <select
-        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
-        defaultValue={options.length === 0 ? '' : value}
-        disabled={options.length === 0}
-        id={`reports-${name}`}
-        name={name}
-      >
+      <Label htmlFor={id}>{label}</Label>
+      <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" defaultValue={options.length === 0 ? '' : value} disabled={options.length === 0} id={id} name={name}>
         <option value="">{options.length === 0 ? disabledLabel : choose}</option>
         {options.map((option) => <option key={option.id} value={option.id}>{optionLabelText(option, locale)}</option>)}
       </select>
@@ -219,6 +255,22 @@ function reportQuery(filters: ReportsFilters): string {
   }
   const text = query.toString();
   return text ? `&${text}` : '';
+}
+
+function catalogRowsFrom(catalog: StaffReportCatalog | undefined, fallback: readonly (readonly [string, string, string, unknown])[], t: typeof reportsDashboardText.en) {
+  return catalog?.items.map((item) => ({
+    id: item.id,
+    name: item.name,
+    audience: item.users,
+    filters: item.requiredFilters.join(', '),
+    status: item.status === 'DELIVERED' ? t.badges.delivered : item.signoffRequired ? t.badges.deferredSignoff : t.badges.deferred,
+  })) ?? fallback.map(([id, name, audience]) => ({
+    id,
+    name,
+    audience,
+    filters: t.filters.unavailable,
+    status: t.badges.pending,
+  }));
 }
 
 function rowScopeLabel(row: StaffReportRow, branches: ComplaintFormOption[], staff: AssignableStaff[] | null | undefined, locale: Locale, unavailable: string): string {

@@ -11948,3 +11948,46 @@ SRS IDs: `REQ-COMPLAINT-001`, `REQ-COMPLAINT-002`, `REQ-LOCALIZATION-001`, `UI-S
 
 - Temporary proof route used only for screenshots was deleted before staging.
 - Existing unrelated dirty integration module change and untracked output artifacts were left unstaged.
+
+---
+
+## User-Scoped UX Redesign - Slice 8 Make Reports Honest And Scoped
+
+Status: Complete
+SRS IDs: `REQ-REPORT-001`, `REPORT-MATRIX-001`, `RBAC-MATRIX-001`, `REQ-LOCALIZATION-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `NFR-SEC-002`
+
+### Scope
+
+- Added report filters for date range, branch, category, severity, owner, and department where the existing API supports it.
+- Loaded the guarded report catalog and rendered delivered/deferred/signoff-required status plainly when real report rows are unavailable.
+- Disabled CSV/Excel export buttons until real scoped report rows load.
+- Kept export links on the same filter set as the visible report view.
+- Preserved backend-owned report authorization, branch scope, row limits, export generation, and export audit with filters and row count.
+- Contained the report table in a local horizontal scroll area so mobile views do not create page-level overflow.
+
+### Security Self-Check
+
+- React sends only report filter criteria and never sends role, actor, branch-scope authority, permissions, row limits, audit data, tokens, credentials, workflow state, portal data, or attachment authority.
+- Report view/export routes still derive authority from the server session and backend guards.
+- Export audit remains backend-owned and covered by the reports API tests.
+- Customer portal privacy, DMS adapters, complaint workflow transitions, and attachment security were not changed in this slice.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- reports` (31/31 TAP tests).
+- Passed: `corepack pnpm test:web -- api-client` (33/33 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (197/197 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+- Not Run/Unavailable: `corepack pnpm test:e2e -- reports` because `tools/e2e-runner.mjs` does not register a `reports` suite.
+- Visual review screenshots: `output/playwright/slice8-reports-en-desktop.png`, `output/playwright/slice8-reports-en-mobile.png`, `output/playwright/slice8-reports-ar-desktop.png`, `output/playwright/slice8-reports-ar-mobile.png`.
+
+### Notes
+
+- Temporary proof route used only for screenshots was deleted before staging.
+- Playwright dev-server console showed Next HMR websocket errors during screenshot capture only; route rendering and saved screenshots were verified.
+- Existing unrelated dirty integration module change and untracked output artifacts were left unstaged.

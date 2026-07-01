@@ -2170,7 +2170,7 @@ test('reports dashboard renders RPT-001 through RPT-017 for report-capable roles
   for (let index = 1; index <= 17; index += 1) {
     assert.match(management, new RegExp(`RPT-${String(index).padStart(3, '0')}`));
   }
-  assert.match(management, /API pending/);
+  assert.match(management, /Catalog unavailable/);
   assert.match(management, /Report data, metrics, filters, and exports remain backend-scoped\./);
   assert.doesNotMatch(staff, /Reports dashboard/);
 });
@@ -2201,8 +2201,8 @@ test('reports dashboard renders export affordance without file generation', asyn
   assert.match(html, /Report export/);
   assert.match(html, /CSV/);
   assert.match(html, /Excel/);
-  assert.match(html, /href="\/reports\/export\?format=csv"/);
-  assert.match(html, /href="\/reports\/export\?format=excel"/);
+  assert.doesNotMatch(html, /href="\/reports\/export\?format=csv"/);
+  assert.match(html, /disabled[^>]*>CSV<\/button>/);
   assert.match(html, /Exports use backend configured row limits\./);
   assert.match(html, /Export data is RBAC-filtered with the same report scope\./);
   assert.match(html, /Successful exports are audit logged by the backend\./);
@@ -2280,6 +2280,15 @@ test('reports dashboard keeps catalog fallback when backend denies report rows',
   const fetchImpl: typeof fetch = async (input) => {
     if (String(input).endsWith('/auth/me')) return jsonResponse({ user: principal({ roleCode: 'ADMIN', branchId: null }) });
     if (String(input).endsWith('/reports/dashboard')) return jsonResponse({ summary: { openComplaints: 0, overdueComplaints: 0, slaWarningComplaints: 0, closedComplaints: 0, averageTatHours: 0 } });
+    if (String(input).endsWith('/reports/catalog')) {
+      return jsonResponse({
+        items: [
+          { id: 'RPT-001', name: 'Open complaints summary', users: 'Managers', requiredFilters: ['date', 'branch', 'category', 'severity', 'owner'], status: 'DELIVERED', signoffRequired: false },
+          { id: 'RPT-002', name: 'Overdue complaints', users: 'Managers', requiredFilters: ['branch', 'owner', 'severity'], status: 'DEFERRED', signoffRequired: true },
+          { id: 'RPT-017', name: 'Audit activity report', users: 'Admin', requiredFilters: ['actor', 'action', 'date', 'target'], status: 'DELIVERED', signoffRequired: false },
+        ],
+      });
+    }
     return jsonResponse({ error: { code: 'RBAC_FORBIDDEN' } }, 403);
   };
   const html = renderToStaticMarkup(
@@ -2292,6 +2301,29 @@ test('reports dashboard keeps catalog fallback when backend denies report rows',
 
   assert.match(html, /RPT-017/);
   assert.doesNotMatch(html, /CMP-REAL-001/);
+});
+
+test('reports route renders guarded catalog delivery statuses when rows are unavailable', async () => {
+  const fetchImpl: typeof fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith('/reports/catalog')) {
+      return jsonResponse({
+        items: [
+          { id: 'RPT-001', name: 'Open complaints summary', users: 'Managers', requiredFilters: ['date', 'branch', 'category', 'severity', 'owner'], status: 'DELIVERED', signoffRequired: false },
+          { id: 'RPT-002', name: 'Overdue complaints', users: 'Managers', requiredFilters: ['branch', 'owner', 'severity'], status: 'DEFERRED', signoffRequired: true },
+          { id: 'RPT-017', name: 'Audit activity report', users: 'Admin', requiredFilters: ['actor', 'action', 'date', 'target'], status: 'DELIVERED', signoffRequired: false },
+        ],
+      });
+    }
+    return jsonResponse({ error: { code: 'RBAC_FORBIDDEN' } }, 403);
+  };
+  const html = renderToStaticMarkup(await ReportsPage({ cookieHeader: 'cms_staff_session=raw-session', fetchImpl, searchParams: Promise.resolve({ locale: 'en' }) }));
+
+  assert.match(html, /RPT-017/);
+  assert.match(html, /Delivered/);
+  assert.match(html, /Deferred - signoff required/);
+  assert.match(html, /date, branch, category, severity, owner/);
+  assert.doesNotMatch(html, /href="\/reports\/export\?format=csv"/);
 });
 
 test('Arabic reports dashboard keeps RTL localized labels', async () => {
@@ -2382,7 +2414,7 @@ test('reports route renders real scoped rows through the session cookie', async 
     await ReportsPage({
       cookieHeader: 'cms_staff_session=raw-session',
       fetchImpl,
-      searchParams: Promise.resolve({ locale: 'en', branchId: 'branch_report', categoryId: 'cat_report', departmentId: 'dept_report', ownerId: 'usr_report' }),
+      searchParams: Promise.resolve({ locale: 'en', branchId: 'branch_report', categoryId: 'cat_report', dateFrom: '2026-06-01', dateTo: '2026-06-30', departmentId: 'dept_report', ownerId: 'usr_report', severity: 'HIGH' }),
     }),
   );
 
@@ -2400,8 +2432,11 @@ test('reports route renders real scoped rows through the session cookie', async 
   assert.deepEqual(staffCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
   assert.match(String(reportsCall.input), /branchId=branch_report/);
   assert.match(String(reportsCall.input), /categoryId=cat_report/);
+  assert.match(String(reportsCall.input), /dateFrom=2026-06-01/);
+  assert.match(String(reportsCall.input), /dateTo=2026-06-30/);
   assert.match(String(reportsCall.input), /departmentId=dept_report/);
   assert.match(String(reportsCall.input), /ownerId=usr_report/);
+  assert.match(String(reportsCall.input), /severity=HIGH/);
   assert.doesNotMatch(String(reportsCall.input), /role|actor|token|credential/i);
   assert.doesNotMatch(String(kpisCall.input), /role|actor|branchId|owner|token|credential/i);
   assert.match(html, /CMP-RPT-ROUTE-001 - Route report row/);
@@ -2409,7 +2444,10 @@ test('reports route renders real scoped rows through the session cookie', async 
   assert.match(html, /Reports Category/);
   assert.match(html, /Owner filter: Reports Owner - CR Manager - Reports Branch/);
   assert.doesNotMatch(html, /name="ownerLabel"/);
-  assert.match(html, /href="\/reports\/export\?format=csv&amp;branchId=branch_report&amp;categoryId=cat_report&amp;departmentId=dept_report&amp;ownerId=usr_report"/);
+  assert.match(html, /href="\/reports\/export\?format=csv&amp;branchId=branch_report&amp;categoryId=cat_report&amp;dateFrom=2026-06-01&amp;dateTo=2026-06-30&amp;departmentId=dept_report&amp;ownerId=usr_report&amp;severity=HIGH"/);
+  assert.match(html, /name="severity"/);
+  assert.match(html, /name="dateFrom"/);
+  assert.match(html, /value="2026-06-01"/);
   assert.match(html, /name="departmentId"/);
   assert.doesNotMatch(html, /<label[^>]*>Department|>dept_report<\/option>/);
   assert.doesNotMatch(html, /branch_report \/ usr_report|>cat_report</);
