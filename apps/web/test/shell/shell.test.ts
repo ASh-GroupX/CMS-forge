@@ -2735,7 +2735,7 @@ test('reports dashboard source is render-only and placeholder-safe', () => {
   assert.match(wrapper, /components\/reports-dashboard/);
 });
 
-test('customer vehicle lookup renders search fields and manual fallback', async () => {
+test('customer vehicle lookup defaults to disabled manual-DMS pilot mode', async () => {
   const html = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
 
   assert.match(html, /Customer and vehicle lookup/);
@@ -2743,15 +2743,17 @@ test('customer vehicle lookup renders search fields and manual fallback', async 
   assert.match(html, /Customer number/);
   assert.match(html, /Customer name/);
   assert.match(html, /VIN/);
-  assert.match(html, /Search DMS/);
+  assert.match(html, /DMS lookup is disabled for pilot manual scope\. Continue manually\./);
+  assert.match(html, /DMS disabled/);
+  assert.doesNotMatch(html, /Search DMS/);
   assert.match(html, /Manual fallback/);
   assert.match(html, /Continue manually/);
 });
 
-test('customer vehicle lookup idle result uses safe source badges only', async () => {
+test('customer vehicle lookup disabled result uses safe source badges only', async () => {
   const html = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
 
-  assert.match(html, /Enter phone, customer number, customer name, or VIN to search DMS\./);
+  assert.match(html, /DMS lookup is disabled for pilot manual scope\. Continue manually\./);
   assert.match(html, /Local source/);
   assert.match(html, /DMS source/);
   assert.match(html, /Manual source/);
@@ -2768,6 +2770,7 @@ test('Arabic customer vehicle lookup keeps RTL localized labels', async () => {
   assert.match(html, /dir="rtl"/);
   assert.ok(html.includes(staffShellText.ar.lookup.title));
   assert.ok(html.includes(staffShellText.ar.lookup.fields.customerNumber));
+  assert.ok(html.includes(staffShellText.ar.lookup.states.disabled));
   assert.ok(html.includes(staffShellText.ar.lookup.manualTitle));
 });
 
@@ -2851,7 +2854,9 @@ test('complaint new route renders English customer vehicle lookup panel', async 
   assert.match(html, /Customer number/);
   assert.match(html, /Customer name/);
   assert.match(html, /VIN/);
-  assert.match(html, /Search DMS/);
+  assert.match(html, /DMS lookup is disabled for pilot manual scope\. Continue manually\./);
+  assert.match(html, /DMS disabled/);
+  assert.doesNotMatch(html, /Search DMS/);
   assert.match(html, /Local source/);
   assert.match(html, /DMS source/);
   assert.match(html, /Manual source/);
@@ -2861,13 +2866,14 @@ test('complaint new route renders English customer vehicle lookup panel', async 
 
 test('complaint new route keeps Arabic RTL lookup labels', async () => {
   const html = renderToStaticMarkup(
-    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'ar', lookup: 'none' }) }),
+    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'ar' }) }),
   );
 
   assert.match(html, /dir="rtl"/);
   assert.ok(html.includes(staffShellText.ar.lookup.title));
   assert.ok(html.includes(staffShellText.ar.lookup.fields.customerNumber));
-  assert.ok(html.includes(staffShellText.ar.lookup.states.none));
+  assert.ok(html.includes(staffShellText.ar.lookup.states.disabled));
+  assert.ok(html.includes(staffShellText.ar.lookup.actions.disabled));
 });
 
 test('complaint new route renders lookup loading and error roles', async () => {

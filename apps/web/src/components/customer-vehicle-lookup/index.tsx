@@ -39,9 +39,11 @@ export function CustomerVehicleLookup({
   const shell = staffShellText[locale];
   const t = shell.lookup;
   const [view, setView] = useState<ViewState>(() => previewView(state));
+  const lookupDisabled = view.kind === 'disabled';
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (lookupDisabled) return;
     const query = lookupQuery(new FormData(event.currentTarget));
     if (!hasLookupValue(query)) {
       setView({ kind: 'validation', matches: [] });
@@ -85,12 +87,12 @@ export function CustomerVehicleLookup({
           {fields.map((field) => (
             <div className="grid gap-1" key={field}>
               <Label htmlFor={`lookup-${field}`}>{t.fields[field]}</Label>
-              <Input id={`lookup-${field}`} name={field} />
+              <Input disabled={lookupDisabled} id={`lookup-${field}`} name={field} />
             </div>
           ))}
           <div className="flex items-end">
-            <Button className="w-full" disabled={view.kind === 'loading'} type="submit">
-              {view.kind === 'loading' ? t.states.loading : t.actions.search}
+            <Button className="w-full" disabled={view.kind === 'loading' || lookupDisabled} type="submit">
+              {lookupDisabled ? t.actions.disabled : view.kind === 'loading' ? t.states.loading : t.actions.search}
             </Button>
           </div>
         </form>
@@ -206,7 +208,7 @@ function previewView(state: LookupPreviewState | undefined): ViewState {
   if (state === 'validation') return { kind: 'validation', matches: [] };
   if (state === 'manual') return { kind: 'manual', matches: [] };
   if (state === 'error') return { kind: 'error', matches: [] };
-  return { kind: 'idle', matches: [] };
+  return { kind: 'disabled', matches: [] };
 }
 
 function sampleMatch(customerCode: string, customerName: string, vin: string): DmsCustomerVehicleMatch {
