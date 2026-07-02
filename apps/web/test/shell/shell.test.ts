@@ -33,6 +33,7 @@ import { buildPortalComplaintSubmission, PortalSubmissionScreen } from '../../sr
 import { PortalTrackingPreview } from '../../src/components/portal-tracking';
 import { ComplaintAttachmentControls } from '../../src/components/complaint-attachment-controls';
 import { ComplaintWorkflowModal } from '../../src/components/complaint-workflow-modal';
+import { AuditViewer } from '../../src/components/audit-viewer';
 import { adminBranchesText } from '../../src/i18n/staff-admin-branches';
 import { adminCategoriesSlaText } from '../../src/i18n/staff-admin-categories-sla';
 import { adminNotificationTemplatesText } from '../../src/i18n/staff-admin-notification-templates';
@@ -2049,19 +2050,54 @@ test('admin notification templates source is render-only and placeholder-safe', 
   assert.match(wrapper, /components\/admin-notification-templates/);
 });
 
-test('audit viewer renders only for admin preview with filters and export affordance', async () => {
+test('audit viewer renders real rows with filters and export affordance', async () => {
+  const html = renderToStaticMarkup(React.createElement(AuditViewer, {
+    filters: { actorId: 'usr_admin', eventType: 'SECURITY' },
+    locale: 'en',
+    result: {
+      items: [{
+        id: 'aud_1',
+        eventType: 'SECURITY',
+        action: 'permission_forbidden',
+        actorId: 'usr_admin',
+        branchId: 'branch_main',
+        targetType: 'api_route',
+        targetId: '/audit/logs',
+        correlationId: 'req_audit_1',
+        metadata: { password: '[REDACTED]', safe: 'ok' },
+        createdAt: '2026-06-18T10:00:00.000Z',
+      }],
+      page: 1,
+      pageSize: 25,
+    },
+  }));
+
+  assert.match(html, /Audit viewer/);
+  assert.match(html, /Actor ID/);
+  assert.match(html, /Event type/);
+  assert.match(html, /Target type/);
+  assert.match(html, /Correlation ID/);
+  assert.match(html, /Export results/);
+  assert.match(html, /permission_forbidden/);
+  assert.match(html, /req_audit_1/);
+  assert.match(html, /\/audit\/export\?actorId=usr_admin&amp;eventType=SECURITY/);
+  assert.match(html, /\[REDACTED\]/);
+  assert.doesNotMatch(html, /CONFIG_UPDATED|corr-placeholder-001|raw-secret|credential-value/i);
+});
+
+test('audit viewer renders only for admin preview without placeholder rows', async () => {
   const admin = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'admin', session: 'signed-in' }) }));
   const staff = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'staff', session: 'signed-in' }) }));
 
   assert.match(admin, /Audit viewer/);
-  assert.match(admin, /Actor/);
-  assert.match(admin, /Action/);
-  assert.match(admin, /Target/);
+  assert.match(admin, /Actor ID/);
+  assert.match(admin, /Event type/);
+  assert.match(admin, /Target type/);
   assert.match(admin, /Correlation ID/);
   assert.match(admin, /Export results/);
-  assert.match(admin, /CONFIG_UPDATED/);
-  assert.match(admin, /corr-placeholder-001/);
-  assert.match(admin, /Backend search owns redaction, limits, and authorization\./);
+  assert.match(admin, /No audit entries match these filters\./);
+  assert.match(admin, /Backend search owns redaction, limits, export audit, and authorization\./);
+  assert.doesNotMatch(readFileSync('apps/web/src/components/audit-viewer/index.tsx', 'utf8'), /CONFIG_UPDATED|corr-placeholder|placeholder/i);
   assert.doesNotMatch(staff, /Audit viewer/);
 });
 
@@ -2098,6 +2134,7 @@ test('audit route renders English and Arabic audit labels', async () => {
   assert.match(english, /Audit viewer/);
   assert.match(english, /Export results/);
   assert.match(english, /Correlation ID/);
+  assert.match(english, /You do not have permission to view audit entries\./);
   assert.match(arabic, /dir="rtl"/);
   assert.ok(arabic.includes(auditViewerText.ar.title));
   assert.ok(arabic.includes(auditViewerText.ar.filters.export));
@@ -2118,7 +2155,7 @@ test('audit viewer source is render-only and uses safe placeholders', () => {
   const source = readFileSync('apps/web/src/components/audit-viewer/index.tsx', 'utf8');
   const wrapper = readFileSync('apps/web/src/app/audit-viewer.tsx', 'utf8');
 
-  assert.match(source, /min-w-\[58rem\]/);
+  assert.match(source, /min-w-\[64rem\]/);
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie|createObjectURL|Blob|download|password|otp|token|secret|provider|portal|DMS|@|\b\+?\d{10,}\b/i);
   assert.match(wrapper, /components\/audit-viewer/);
 });

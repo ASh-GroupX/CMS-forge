@@ -38,6 +38,15 @@ if (result.status !== 0) {
 }
 
 if (suite === 'audit') {
+  const docker = spawnSync('docker', ['info'], {
+    stdio: 'ignore',
+  });
+
+  if (docker.status !== 0) {
+    console.log('Audit append-only proof skipped: Docker is unavailable');
+    process.exit(0);
+  }
+
   const proof = spawnSync(process.execPath, ['tools/audit-append-only-proof.mjs'], {
     stdio: 'inherit',
   });

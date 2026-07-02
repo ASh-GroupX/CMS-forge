@@ -12156,3 +12156,44 @@ SRS IDs: `NFR-SEC-002`, `REQ-RBAC-001`, `REQ-REPORT-001`, `PORTAL-SEC-001`
 
 - No web UI edit was needed for masking: staff screens render the backend-returned values, and the API now returns `[masked]` for management-readonly sensitive values.
 - Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.
+
+---
+
+## Business Readiness - Slice 4 Real Audit Viewer
+
+Status: Complete
+SRS IDs: `METHOD-AUDIT-001`, `NFR-SEC-002`, `REQ-RBAC-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
+
+### Scope
+
+- Replaced placeholder audit rows with backend `/audit/logs` search results loaded through the staff session cookie.
+- Added the staff audit API client and same-origin export proxy that forwards only allowed audit filters plus the staff session cookie.
+- Wired audit filters for event, actor, target, correlation ID, date range, page, and page size.
+- Added localized empty, loading, error, validation, conflict, denied, success, and metadata states for English LTR and Arabic RTL.
+- Kept audit access, export permission, redaction, and append-only enforcement backend-owned; the UI renders backend-returned redacted metadata only.
+
+### Security Self-Check
+
+- React does not decide audit authorization, export permission, branch scope, redaction, or append-only behavior.
+- The export proxy does not accept client role, actor authority, branch scope, permission, workflow state, credentials, or arbitrary backend paths.
+- Metadata values matching password, token, OTP, secret, credential, or hash remain redacted by backend audit search/export services before reaching the UI.
+- Audit export still writes its own backend audit entry and requires the backend `AUDIT_EXPORT` permission.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- audit` (8/8 TAP tests); Docker append-only proof skipped with explicit runner message because Docker is unavailable.
+- Passed: `corepack pnpm test:web -- api-client` (43/43 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (201/201 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Notes
+
+- English and Arabic screenshots were captured at `output/playwright/slice4-audit-en.png` and `output/playwright/slice4-audit-ar.png` and visually checked.
+- `tools/api-test.mjs` now runs the Docker append-only proof only when `docker info` succeeds, preserving the proof on Docker-enabled machines while matching the slice plan on this machine.
+- Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.
