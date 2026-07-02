@@ -38,6 +38,7 @@ const service = new ComplaintsService(new ComplaintsRepository({} as never), noo
 type ComplaintStatusStub = {
   id: string;
   branchId: string;
+  customerId?: string;
   status: ComplaintStatus;
   ownerId?: string | null;
   severity?: ComplaintSeverity;
@@ -524,30 +525,20 @@ test('workflow allows assigned owner investigation update and rejects other staf
   assert.equal(deniedAudits[0]?.action, 'workflow_role_forbidden');
 });
 
-test('workflow close queues survey scheduling after transaction commit', async () => {
+test('workflow close schedules customer survey after transaction commit', async () => {
   const calls: string[] = [];
   const queued: unknown[] = [];
-  const serviceWithNotifications = transitionService(calls, queued);
+  const surveys: unknown[] = [];
+  const serviceWithNotifications = transitionService(calls, queued, undefined, undefined, undefined, undefined, undefined, surveys);
 
   await serviceWithNotifications.applyTransition(transitionInput(ComplaintStatus.RESOLVED, ComplaintTransitionAction.CLOSE, RoleCode.ADMIN, {
     reason: 'confirmed closed',
     customerCommunicationStatus: 'called',
   }));
 
-  assert.deepEqual(calls, ['subject', 'status', 'history', 'audit', 'commit', 'queue']);
-  assert.deepEqual(queued, [{
-    complaintId: 'cmp_1',
-    templateCode: 'survey.schedule.internal',
-    payload: {
-      complaintId: 'cmp_1',
-      fromStatus: ComplaintStatus.RESOLVED,
-      toStatus: ComplaintStatus.CLOSED,
-      action: ComplaintTransitionAction.CLOSE,
-      actorId: 'usr_1',
-      reason: 'confirmed closed',
-      customerCommunicationStatus: 'called',
-    },
-  }]);
+  assert.deepEqual(calls, ['subject', 'status', 'history', 'audit', 'commit', 'survey']);
+  assert.deepEqual(queued, []);
+  assert.deepEqual(surveys, [{ complaintId: 'cmp_1', customerId: 'cust_1' }]);
 });
 
 test('workflow close records paused SLA lifecycle only after transaction commit', async () => {
@@ -561,7 +552,7 @@ test('workflow close records paused SLA lifecycle only after transaction commit'
     customerCommunicationStatus: 'called',
   }));
 
-  assert.deepEqual(calls, ['subject', 'status', 'history', 'audit', 'commit', 'queue', 'slaLifecycle']);
+  assert.deepEqual(calls, ['subject', 'status', 'history', 'audit', 'commit', 'slaLifecycle']);
   assert.equal((lifecycle[0] as { occurredAt?: unknown }).occurredAt instanceof Date, true);
   assert.deepEqual({ ...(lifecycle[0] as Record<string, unknown>), occurredAt: 'date' }, {
     complaintId: 'cmp_1',
@@ -1026,7 +1017,7 @@ function assertSafePermissionAudit(auditRecords: AuditRecordInput[]): void {
   }
 }
 
-function transitionService(calls: string[], queued: unknown[], updateResult: ComplaintStatusStub | null = complaintStatus({ status: ComplaintStatus.CLOSED }), audits?: AuditRecordInput[], updates?: unknown[], deadlines?: unknown[], lifecycle?: unknown[]): ComplaintsService {
+function transitionService(calls: string[], queued: unknown[], updateResult: ComplaintStatusStub | null = complaintStatus({ status: ComplaintStatus.CLOSED }), audits?: AuditRecordInput[], updates?: unknown[], deadlines?: unknown[], lifecycle?: unknown[], surveys?: unknown[]): ComplaintsService {
   return complaintService({
     transaction: async <T>(work: (client: never) => Promise<T>) => {
       const result = await work({} as never);
@@ -1050,7 +1041,7 @@ function transitionService(calls: string[], queued: unknown[], updateResult: Com
       return updateResult && { ...updateResult, status: data.toStatus };
     },
     createStatusHistory: async () => { calls.push('history'); },
-  } as ComplaintsRepository, { record: async (input) => { calls.push('audit'); audits?.push(input); } } as unknown as AuditService, notificationSink(calls, queued), undefined, deadlines || lifecycle ? slaSink(calls, deadlines ?? [], lifecycle) : undefined);
+  } as ComplaintsRepository, { record: async (input) => { calls.push('audit'); audits?.push(input); } } as unknown as AuditService, notificationSink(calls, queued), undefined, deadlines || lifecycle ? slaSink(calls, deadlines ?? [], lifecycle) : undefined, surveys ? surveySink(calls, surveys) : undefined);
 }
 
 function notificationSink(calls: string[], queued: unknown[]) {
@@ -1078,15 +1069,26 @@ function slaSink(calls: string[], deadlines: unknown[], lifecycle: unknown[] = [
   } as never;
 }
 
-function complaintService(repository: ComplaintsRepository, audit: AuditService, notifications?: unknown, cases?: unknown, sla?: unknown): ComplaintsService {
+function surveySink(calls: string[], surveys: unknown[]) {
+  return {
+    scheduleClosureSurvey: async (input: unknown) => {
+      calls.push('survey');
+      surveys.push(input);
+      return {};
+    },
+  } as never;
+}
+
+function complaintService(repository: ComplaintsRepository, audit: AuditService, notifications?: unknown, cases?: unknown, sla?: unknown, surveys?: unknown): ComplaintsService {
   const Service = ComplaintsService as unknown as new (...args: unknown[]) => ComplaintsService;
-  return new Service(repository, audit, notifications, cases, sla);
+  return new Service(repository, audit, notifications, cases, sla, surveys);
 }
 
 function complaintStatus(overrides: Partial<ComplaintStatusStub> = {}): ComplaintStatusStub {
   return {
     id: 'cmp_1',
     branchId: 'branch_main',
+    customerId: 'cust_1',
     status: ComplaintStatus.CLOSED,
     ownerId: null,
     severity: ComplaintSeverity.HIGH,

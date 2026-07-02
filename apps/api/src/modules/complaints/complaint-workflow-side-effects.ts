@@ -1,12 +1,14 @@
 import { ComplaintStatus, ComplaintTransitionAction, ComplaintTransitionRequestSource, RoleCode, SlaEventType, SlaStage } from '@prisma/client';
 import type { NotificationsService } from '../notifications/notifications.service.js';
 import type { SlaService } from '../sla/sla.service.js';
+import type { SurveysService } from '../surveys/surveys.service.js';
 import type { ApplyComplaintTransitionInput } from './complaints.service.js';
 import type { ComplaintStatusRecord } from './complaints.repository.js';
 
 type WorkflowSideEffectInput = {
   notificationsService?: Pick<NotificationsService, 'queueInternal'> | undefined;
   slaService?: Pick<SlaService, 'recordDeadlineEvent' | 'recordLifecycleEvent'> | undefined;
+  surveysService?: Pick<SurveysService, 'scheduleClosureSurvey'> | undefined;
   input: ApplyComplaintTransitionInput;
   toStatus: ComplaintStatus;
   complaint: ComplaintStatusRecord;
@@ -44,7 +46,6 @@ const NOTIFICATION_BY_ACTION: Partial<Record<ComplaintTransitionAction, string>>
   [ComplaintTransitionAction.RESOLVE_DIRECTLY]: 'workflow.resolved.internal',
   [ComplaintTransitionAction.REJECT_RESOLUTION]: 'workflow.resolution-rejected.internal',
   [ComplaintTransitionAction.SEND_BACK]: 'workflow.sent-back.internal',
-  [ComplaintTransitionAction.CLOSE]: 'survey.schedule.internal',
   [ComplaintTransitionAction.REOPEN]: 'workflow.reopened.internal',
 };
 
@@ -64,11 +65,16 @@ const PAUSE_ACTIONS = new Set<ComplaintTransitionAction>([
 export async function queueWorkflowSideEffects({
   notificationsService,
   slaService,
+  surveysService,
   input,
   toStatus,
   complaint,
   enteredAt,
 }: WorkflowSideEffectInput): Promise<void> {
+  if (input.action === ComplaintTransitionAction.CLOSE && surveysService) {
+    await surveysService.scheduleClosureSurvey({ complaintId: complaint.id, customerId: complaint.customerId });
+  }
+
   const templateCode = notificationTemplate(input.action);
   if (templateCode && notificationsService) {
     await notificationsService.queueInternal({

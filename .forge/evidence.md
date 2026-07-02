@@ -12322,3 +12322,42 @@ SRS IDs: `REQ-REPORT-001`, `REQ-RBAC-001`, `METHOD-AUDIT-001`, `UI-SCREEN-001`, 
 - The live `/reports` route correctly redirects without a real API-backed staff session; screenshots used the actual `ReportsDashboard` server-rendered component with the dev stylesheet and proof data, matching the repo's visual-proof style.
 - Exact human decision still needed for final Slice 6 acceptance: either sign MVP deferral for RPT-002, RPT-003, RPT-005 through RPT-012, RPT-014, RPT-015, and RPT-016, or approve implementation of those missing report-specific outputs.
 - Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.
+
+---
+
+## Business Readiness - Slice 8 Closure Survey
+
+Status: Complete
+SRS IDs: `REQ-SURVEY-001`, `REQ-COMPLAINT-004`, `REQ-NOTIFICATION-001`, `PORTAL-SEC-001`, `REQ-RBAC-001`, `METHOD-AUDIT-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
+
+### Scope
+
+- Complaint close now calls the existing survey scheduler only after the workflow transaction commits.
+- The scheduler creates the pending survey token hash and queues the tokenized `survey.link.customer` notification through the existing notification path.
+- Portal survey submission is wired through the public portal proxy and browser helper, with backend-owned invalid, used, and expired token states.
+- Staff complaint detail loads submitted CSAT results from the guarded branch-scoped survey route and renders the latest authorized rating/submission date.
+- Module boundaries were kept through `SurveysModule`/`SurveysService`; complaints do not import survey repositories.
+
+### Security Self-Check
+
+- Workflow state, RBAC, branch scope, status history, audit, SLA lifecycle, survey scheduling, token validation, and notification enqueueing remain backend-owned.
+- Survey tokens are hashed at rest, not returned in staff reads, and are not rendered by the portal survey component.
+- Staff CSAT reads require the existing staff session, `REPORT_VIEW`, and branch-scope visibility check before survey rows are returned.
+- Portal survey submission accepts only the tokenized survey link payload and rating/comment; no role, actor, branch-scope, workflow, staff authority, credentials, or audit metadata were added to browser payloads.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- surveys` (15/15 TAP tests).
+- Passed: `corepack pnpm test:api -- workflow` (75/75 TAP tests), including close-to-survey after-commit proof.
+- Passed: `corepack pnpm test:web -- api-client` (50/50 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (202/202 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Notes
+
+- Portal survey screenshots were captured and visually checked at `output/playwright/slice8-survey-valid.png`, `output/playwright/slice8-survey-success.png`, `output/playwright/slice8-survey-used.png`, and `output/playwright/slice8-survey-expired-ar.png`.
+- Screenshot proof used component-rendered HTML over a temporary localhost static server; the only console message was a missing favicon from the proof server.
+- Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.

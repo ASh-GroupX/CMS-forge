@@ -12,6 +12,7 @@ import { getAssignableStaff } from '../../../../lib/staff-assignable-staff-api';
 import { getComplaintFormOptions } from '../../../../lib/staff-complaint-form-options-api';
 import { getStaffComplaintComments } from '../../../../lib/staff-complaint-comments-api';
 import { getStaffComplaintRelationsView } from '../../../../lib/staff-complaint-relations-api';
+import { getStaffComplaintSurveys } from '../../../../lib/staff-complaint-surveys-api';
 import { getStaffComplaintDetail } from '../../../../lib/staff-detail-api';
 
 type RouteParams = { id?: string | string[] };
@@ -42,10 +43,11 @@ export default async function ComplaintDetailPage({
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
     ...(id !== undefined ? { complaintId: id } : {}),
   };
-  const [detail, comments, relations, staff, options] = await Promise.all([
+  const [detail, comments, relations, surveys, staff, options] = await Promise.all([
     getStaffComplaintDetail(apiInput),
     getStaffComplaintComments(apiInput),
     getStaffComplaintRelationsView(apiInput),
+    getStaffComplaintSurveys(apiInput),
     getAssignableStaff({ ...(cookieHeader !== undefined ? { cookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
     getComplaintFormOptions({ ...(cookieHeader !== undefined ? { cookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
   ]);
@@ -62,6 +64,7 @@ export default async function ComplaintDetailPage({
       relations={relations ?? undefined}
       staff={staff}
       state={resolveDetail(readParam(query?.detail))}
+      surveys={surveys}
       workflowState={resolveWorkflow(readParam(query?.workflow))}
     />
   );

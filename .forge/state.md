@@ -1,8 +1,8 @@
 # Current State
 
-Status: Business readiness Slice 7 complete
+Status: Business readiness Slice 8 complete
 Phase: business-readiness-remediation
-Next Task: Slice 8 - Closure Survey
+Next Task: Slice 9 - Staff Intake Attachments
 Model Tier: GPT-5.5 Extra High
 
 ## How to use this file
@@ -21,11 +21,12 @@ Prior state history is in .forge/archive/state-archive.md.
 - Slice 5 adds real admin category list/create/edit/deactivate UI and minimal SLA policy list/edit UI backed by guarded API routes and CONFIG audit entries.
 - Slice 6 keeps the guarded RPT-001 through RPT-017 matrix visible, labels generic exports as operational report rows, and marks incomplete reports as deferred pending business signoff instead of implying delivery.
 - Slice 7 wires staff internal/public comments and verified portal public timeline updates; internal comments remain hidden from portal tracking.
-- Proof passed for Slice 7: `test:api -- workflow`, `test:api -- portal.tracking`, `test:web -- api-client`, `test:web -- shell`, `test:web -- localization`, `typecheck`, `lint`, `git diff --check`, and staff/portal screenshots.
+- Slice 8 schedules closure surveys after workflow commit, sends tokenized survey links through the existing notification path, wires portal survey submit/terminal states, and shows authorized CSAT in staff detail.
+- Proof passed for Slice 8: `test:api -- surveys`, `test:api -- workflow`, `test:web -- api-client`, `test:web -- shell`, `test:web -- localization`, `typecheck`, `lint`, `git diff --check`, and portal survey screenshots.
 
 ## Current Stop
 
-Ready to commit Slice 7, then start Slice 8.
+Ready to commit Slice 8, then start Slice 9.
 
 ## Open Carry-Forward / Known Debt
 

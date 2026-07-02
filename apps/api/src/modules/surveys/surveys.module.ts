@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { AuditService } from '../../core/audit.service.js';
 import { PermissionGuard, RbacGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../core/auth.guard.js';
 import { PrismaService } from '../../core/http-kernel.js';
@@ -11,7 +11,7 @@ import { SurveysRepository } from './surveys.repository.js';
 import { SurveysService } from './surveys.service.js';
 
 @Module({
-  imports: [AuthModule, ComplaintsModule, NotificationsModule],
+  imports: [AuthModule, forwardRef(() => ComplaintsModule), NotificationsModule],
   controllers: [SurveysController, ComplaintSurveysController],
   providers: [
     PrismaService,

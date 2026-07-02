@@ -44,6 +44,8 @@ those modules exist: `comments`, `attachments`, `approvals`, `sla_events`,
 - SlaService through SlaModule for workflow deadline events.
 - CasesService through CasesModule for complaint-to-case wrapper creation and
   staff case summary reads.
+- SurveysService through modules/surveys and SurveysModule for post-close
+  satisfaction survey scheduling.
 - Other modules' public services only. Never import another module repository,
   DTO folder, or Prisma model type.
 

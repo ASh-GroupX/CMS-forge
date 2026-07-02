@@ -3,8 +3,10 @@ import { PortalSurveyScreen, type PortalSurveyPreviewState } from '../../../comp
 import { resolvePortalSurveyLocale } from '../../../i18n/portal-survey';
 
 type SearchParams = {
+  key?: string | string[];
   locale?: string | string[];
   state?: string | string[];
+  token?: string | string[];
 };
 
 export default async function PortalSurveyPage({
@@ -14,7 +16,7 @@ export default async function PortalSurveyPage({
 }) {
   const params = await searchParams;
   const locale = resolvePortalSurveyLocale(params?.locale);
-  return <PortalSurveyScreen locale={locale} state={previewState(readParam(params?.state))} />;
+  return <PortalSurveyScreen locale={locale} state={previewState(readParam(params?.state))} surveyKey={readParam(params?.key) ?? readParam(params?.token)} />;
 }
 
 function readParam(value: string | string[] | undefined): string | undefined {

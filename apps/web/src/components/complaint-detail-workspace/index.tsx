@@ -8,6 +8,7 @@ import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
 import type { ComplaintFormOptions } from '../../lib/staff-complaint-form-options-api';
 import type { StaffComplaintRelationsView } from '../../lib/staff-complaint-relations-api';
 import type { StaffComplaintComment } from '../../lib/staff-complaint-comments-api';
+import type { StaffComplaintSurvey } from '../../lib/staff-complaint-surveys-api';
 import type { StaffComplaintDetailView } from '../../lib/staff-detail-api';
 import { ComplaintAttachmentControls, type ComplaintAttachmentPreviewState } from '../complaint-attachment-controls';
 import { ComplaintCommentsPanel, type ComplaintCommentsPreviewState } from '../complaint-comments-panel';
@@ -33,6 +34,7 @@ export function ComplaintDetailWorkspace({
   relations,
   staff,
   state,
+  surveys,
   workflowState,
 }: {
   attachmentState?: ComplaintAttachmentPreviewState | undefined;
@@ -45,6 +47,7 @@ export function ComplaintDetailWorkspace({
   relations?: StaffComplaintRelationsView | undefined;
   staff?: AssignableStaff[] | null | undefined;
   state?: ComplaintDetailPreviewState | undefined;
+  surveys?: StaffComplaintSurvey[] | null | undefined;
   workflowState?: ComplaintWorkflowPreviewState | undefined;
 }) {
   const shell = staffShellText[locale];
@@ -121,10 +124,7 @@ export function ComplaintDetailWorkspace({
               ) : null}
             </section>
             <CaseCapaPanel caseId={detail?.case?.id} caseOwnerId={detail?.case?.ownerId ?? undefined} items={detail?.capaActions ?? []} locale={locale} staff={staff} text={t.capa} />
-            <DetailPanel title={t.sections.survey} rows={[
-              [t.labels.rating, t.values.rating],
-              [t.labels.submitted, t.values.submitted],
-            ]} />
+            <DetailPanel title={t.sections.survey} rows={surveyRows(surveys, t, locale)} />
             <ComplaintAttachmentControls attachmentState={attachmentState} complaintId={detail?.id} locale={locale} />
           </div>
           <ComplaintWorkflowModal
@@ -142,6 +142,14 @@ export function ComplaintDetailWorkspace({
       )}
     </Card>
   );
+}
+
+function surveyRows(surveys: StaffComplaintSurvey[] | null | undefined, t: typeof complaintDetailText.en, locale: Locale): readonly (readonly [string, string])[] {
+  const latest = surveys?.[0];
+  return [
+    [t.labels.rating, latest ? `${latest.rating} / 5` : t.values.none],
+    [t.labels.submitted, latest ? formatDate(latest.submittedAt, locale) : t.values.none],
+  ];
 }
 
 function DetailSummary({

@@ -1110,7 +1110,7 @@ test('complaint detail workspace renders core regions and safe placeholders', as
   assert.match(html, /Current responsible staff/);
   assert.match(html, /SLA timer/);
   assert.match(html, /Customer data unavailable/);
-  assert.match(html, /Survey submitted placeholder/);
+  assert.match(html, /None/);
 });
 
 test('Arabic complaint detail workspace keeps RTL localized labels', async () => {
@@ -1283,6 +1283,13 @@ test('complaint detail route renders real backend facts through the session cook
         ],
       });
     }
+    if (String(input).endsWith('/complaints/cmp%2Fdetail/surveys')) {
+      return jsonResponse({
+        items: [
+          { id: 'survey_1', complaintId: 'cmp/detail', rating: 5, comment: 'Resolved well', submittedAt: '2026-06-20T10:00:00.000Z' },
+        ],
+      });
+    }
     if (String(input).endsWith('/staff/assignable')) {
       return jsonResponse({
         staff: [{
@@ -1309,6 +1316,7 @@ test('complaint detail route renders real backend facts through the session cook
 
   const detailCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail'));
   const commentsCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail/comments'));
+  const surveyCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail/surveys'));
   const duplicateCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail/duplicate-candidates'));
   const relatedCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail/related'));
   const caseCall = calls.find((call) => String(call.input).endsWith('/cases/case_cmp_1/timeline'));
@@ -1316,6 +1324,7 @@ test('complaint detail route renders real backend facts through the session cook
   const staffCall = calls.find((call) => String(call.input).endsWith('/staff/assignable'));
   assert.ok(detailCall);
   assert.ok(commentsCall);
+  assert.ok(surveyCall);
   assert.ok(duplicateCall);
   assert.ok(relatedCall);
   assert.ok(caseCall);
@@ -1323,6 +1332,7 @@ test('complaint detail route renders real backend facts through the session cook
   assert.ok(staffCall);
   assert.equal(String(detailCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail');
   assert.equal(String(commentsCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail/comments');
+  assert.equal(String(surveyCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail/surveys');
   assert.equal(String(duplicateCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail/duplicate-candidates');
   assert.equal(String(relatedCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail/related');
   assert.equal(String(caseCall.input), 'http://localhost:3000/cases/case_cmp_1/timeline');
@@ -1330,6 +1340,7 @@ test('complaint detail route renders real backend facts through the session cook
   assert.equal(String(staffCall.input), 'http://localhost:3000/staff/assignable');
   assert.doesNotMatch(String(detailCall.input), /role|actor|workflow|branchId/i);
   assert.doesNotMatch(String(commentsCall.input), /role|actor|workflow|branchId|token|credential/i);
+  assert.doesNotMatch(String(surveyCall.input), /role|actor|workflow|branchId|token|credential/i);
   assert.doesNotMatch(String(duplicateCall.input), /role|actor|workflow|branchId|token|credential/i);
   assert.doesNotMatch(String(relatedCall.input), /role|actor|workflow|branchId|token|credential/i);
   assert.doesNotMatch(String(caseCall.input), /role|actor|workflow|branchId/i);
@@ -1340,6 +1351,10 @@ test('complaint detail route renders real backend facts through the session cook
     cookie: 'cms_staff_session=raw-session',
   });
   assert.deepEqual(commentsCall.init?.headers, {
+    Accept: 'application/json',
+    cookie: 'cms_staff_session=raw-session',
+  });
+  assert.deepEqual(surveyCall.init?.headers, {
     Accept: 'application/json',
     cookie: 'cms_staff_session=raw-session',
   });
@@ -1388,6 +1403,8 @@ test('complaint detail route renders real backend facts through the session cook
   assert.match(html, /Open/);
   assert.match(html, /Back office investigation note\./);
   assert.match(html, /Visible customer update\./);
+  assert.match(html, /5 \/ 5/);
+  assert.match(html, /Jun 20, 2026/);
   assert.match(html, /Customer and vehicle correction/);
   assert.match(html, /Customer source/);
   assert.match(html, /DMS match/);

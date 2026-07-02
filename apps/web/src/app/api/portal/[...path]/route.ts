@@ -9,6 +9,7 @@ const allowed = new Set([
   'POST tracking/otp/verify',
   'GET tracking',
   'POST tracking/follow-ups',
+  'POST surveys',
   'POST attachments',
 ]);
 

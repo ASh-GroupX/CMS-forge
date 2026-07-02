@@ -120,7 +120,7 @@ test('portal survey submission accepts one valid unexpired token', async () => {
   const calls: unknown[] = [];
   const token = 'survey_token';
   const service = new SurveysService({
-    findPendingByTokenHash: async (tokenHash) => {
+    findByTokenHash: async (tokenHash) => {
       calls.push({ tokenHash });
       return surveyRecord({ tokenHash, expiresAt: new Date('2026-06-20T10:00:00.000Z') });
     },
@@ -143,21 +143,29 @@ test('portal survey submission accepts one valid unexpired token', async () => {
 });
 
 test('portal survey submission denies invalid expired and duplicate tokens safely', async () => {
-  const expired = new SurveysService({
-    findPendingByTokenHash: async () => surveyRecord({ expiresAt: new Date('2026-06-18T10:00:00.000Z') }),
+  const invalid = new SurveysService({
+    findByTokenHash: async () => null,
   } as SurveysRepository, {} as NotificationsService);
   await assert.rejects(
-    expired.submitPortalSurvey({ surveyToken: 'expired', rating: 4, now: new Date('2026-06-19T10:00:00.000Z') }),
+    invalid.submitPortalSurvey({ surveyToken: 'invalid', rating: 4 }),
     (error: unknown) => error instanceof AppException && error.code === 'PORTAL_VERIFICATION_FAILED',
   );
 
+  const expired = new SurveysService({
+    findByTokenHash: async () => surveyRecord({ expiresAt: new Date('2026-06-18T10:00:00.000Z') }),
+  } as SurveysRepository, {} as NotificationsService);
+  await assert.rejects(
+    expired.submitPortalSurvey({ surveyToken: 'expired', rating: 4, now: new Date('2026-06-19T10:00:00.000Z') }),
+    (error: unknown) => error instanceof AppException && error.code === 'SURVEY_TOKEN_EXPIRED',
+  );
+
   const duplicate = new SurveysService({
-    findPendingByTokenHash: async () => surveyRecord({}),
+    findByTokenHash: async () => surveyRecord({ status: SurveyStatus.SUBMITTED, submittedAt: new Date('2026-06-19T10:00:00.000Z') }),
     submitPending: async () => null,
   } as SurveysRepository, {} as NotificationsService);
   await assert.rejects(
     duplicate.submitPortalSurvey({ surveyToken: 'used', rating: 4 }),
-    (error: unknown) => error instanceof AppException && error.code === 'PORTAL_VERIFICATION_FAILED',
+    (error: unknown) => error instanceof AppException && error.code === 'SURVEY_TOKEN_USED',
   );
 });
 

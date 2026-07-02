@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuditService } from '../../core/audit.service.js';
 import { DynamicPermissionGuard, PermissionGuard, RbacGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../core/auth.guard.js';
@@ -12,6 +12,8 @@ import { NotificationsModule } from '../notifications/notifications.module.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { SlaModule } from '../sla/sla.module.js';
 import { SlaService } from '../sla/sla.service.js';
+import { SurveysModule } from '../surveys/surveys.module.js';
+import { SurveysService } from '../surveys/surveys.service.js';
 import { ComplaintsController } from './complaints.controller.js';
 import { ComplaintFormOptionsService } from './complaint-form-options.service.js';
 import { ComplaintRelationsRepository } from './complaint-relations.repository.js';
@@ -20,7 +22,7 @@ import { ComplaintsRepository } from './complaints.repository.js';
 import { ComplaintsService } from './complaints.service.js';
 
 @Module({
-  imports: [AuthModule, NotificationsModule, CasesModule, SlaModule],
+  imports: [AuthModule, NotificationsModule, CasesModule, SlaModule, forwardRef(() => SurveysModule)],
   controllers: [ComplaintsController],
   providers: [
     PrismaService,
@@ -51,14 +53,15 @@ import { ComplaintsService } from './complaints.service.js';
     },
     {
       provide: ComplaintsService,
-      inject: [ComplaintsRepository, AuditService, NotificationsService, CasesService, SlaService],
+      inject: [ComplaintsRepository, AuditService, NotificationsService, CasesService, SlaService, SurveysService],
       useFactory: (
         repository: ComplaintsRepository,
         audit: AuditService,
         notifications: NotificationsService,
         cases: CasesService,
         sla: SlaService,
-      ) => new ComplaintsService(repository, audit, notifications, cases, sla),
+        surveys: SurveysService,
+      ) => new ComplaintsService(repository, audit, notifications, cases, sla, surveys),
     },
     {
       provide: SESSION_AUTH_SERVICE,

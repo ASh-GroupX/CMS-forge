@@ -7,6 +7,7 @@ import { AppException } from '../../core/http-kernel.js';
 import { CasesService } from '../cases/cases.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { SlaService } from '../sla/sla.service.js';
+import type { SurveysService } from '../surveys/surveys.service.js';
 import { complaintCreatedAudit, createComplaintData, isReferenceConflict, referenceConflictError } from './complaint-intake.js';
 import { complaintCorrectionAudit, complaintCorrectionData, correctionConflictError } from './complaint-correction.js';
 import type { ApplyComplaintCorrectionInput, ApplyComplaintCorrectionResult } from './complaint-correction.js';
@@ -14,7 +15,6 @@ import { queueComplaintCreationSideEffects, queueWorkflowSideEffects } from './c
 import { ComplaintsRepository } from './complaints.repository.js';
 import type { ComplaintCommentRecord, ComplaintDetailRecord, ComplaintQueueRecord, ComplaintReportFilter, ComplaintReportRecord, ComplaintSearchRecord, ComplaintStatusRecord, ComplaintTransitionSubject, DataSource, PortalVerificationTargetRecord } from './complaints.repository.js';
 import type { ComplaintCaseSummaryDto, ComplaintDetailDto, ComplaintQueueItemDto } from './dto/complaint-response.dto.js';
-
 export type ValidateComplaintTransitionInput = { fromStatus: ComplaintStatus; action: ComplaintTransitionAction; actorRole: RoleCode };
 export type ComplaintTransitionDecision = ValidateComplaintTransitionInput & { toStatus: ComplaintStatus };
 export type ApplyComplaintTransitionInput = ValidateComplaintTransitionInput & {
@@ -75,7 +75,7 @@ function transition(fromStatus: ComplaintStatus, action: ComplaintTransitionActi
 
 @Injectable()
 export class ComplaintsService {
-  constructor(private readonly complaintsRepository: ComplaintsRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly casesService?: CasesService, private readonly slaService?: SlaService) {}
+  constructor(private readonly complaintsRepository: ComplaintsRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly casesService?: CasesService, private readonly slaService?: SlaService, private readonly surveysService?: SurveysService) {}
 
   async createInternal(input: CreateInternalComplaintInput): Promise<ComplaintCreationResult> {
     const data = createComplaintData(input);
@@ -199,7 +199,7 @@ export class ComplaintsService {
       }
       throw error;
     }
-    await queueWorkflowSideEffects({ notificationsService: this.notificationsService, slaService: this.slaService, input, toStatus: committed.result.toStatus, complaint: committed.complaint, enteredAt: new Date() });
+    await queueWorkflowSideEffects({ notificationsService: this.notificationsService, slaService: this.slaService, surveysService: this.surveysService, input, toStatus: committed.result.toStatus, complaint: committed.complaint, enteredAt: new Date() });
     return committed.result;
   }
 
