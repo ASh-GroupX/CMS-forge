@@ -52,9 +52,7 @@ export type CreateComplaintStatusHistoryData = {
   correlationId?: string | null;
 };
 
-export type ListComplaintQueueFilter = {
-  branchId?: string | null;
-};
+export type ListComplaintQueueFilter = { branchId?: string | null; role?: RoleCode | null };
 
 export type ComplaintReportFilter = ListComplaintQueueFilter & {
   dateFrom?: Date | string | null;

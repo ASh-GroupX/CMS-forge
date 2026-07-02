@@ -12118,3 +12118,41 @@ SRS IDs: `ARCH-WORKFLOW-001`, `REQ-SLA-001`, `REQ-NOTIFY-001`, `METHOD-AUDIT-001
 
 - `test:api -- sla` is the closest registered SLA warning/breach seeded proof and includes warning, breach, and escalation job coverage.
 - Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.
+
+---
+
+## Business Readiness - Slice 3 Management-Readonly Masking
+
+Status: Complete
+SRS IDs: `NFR-SEC-002`, `REQ-RBAC-001`, `REQ-REPORT-001`, `PORTAL-SEC-001`
+
+### Scope
+
+- Threaded the server session role into complaint queue/search/detail read shaping.
+- Masked management-readonly complaint search customer phone and DMS identifier as `[masked]`.
+- Masked management-readonly complaint detail customer phone/identifier and vehicle VIN/plate as `[masked]`.
+- Kept CR/manager/admin roles on their existing unmasked complaint detail/search behavior.
+- Kept report rows/export on the existing safe report contract; report rows do not include customer phone/email, VIN, plate, compensation notes, or attachment filenames.
+- Added explicit proof that management-readonly report reads remain scoped and sensitive export is denied without `REPORT_EXPORT`.
+
+### Security Self-Check
+
+- Masking is enforced in the backend service response layer using the server-derived role; React does not decide masking, role, branch scope, export permission, or workflow state.
+- Default `MGMT_READONLY` permissions still include `REPORT_VIEW` only, not `REPORT_EXPORT` or `ATTACHMENT_DOWNLOAD`.
+- Attachment filenames remain unavailable to management-readonly by default through existing attachment permissions; `security:check` covered attachment authorization.
+- No passwords, OTPs, tokens, hashes, provider secrets, storage keys, credentials, audit internals, internal comments, or portal-only data were added to responses.
+
+### Verification
+
+- Passed: `corepack pnpm security:check`.
+- Passed: `corepack pnpm test:api -- reports` (32/32 TAP tests).
+- Passed focused masking proof: `corepack pnpm test:api -- workflow` (73/73 TAP tests), including management-readonly search/detail masking and CR manager allowed unmasked reads.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Notes
+
+- No web UI edit was needed for masking: staff screens render the backend-returned values, and the API now returns `[masked]` for management-readonly sensitive values.
+- Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.

@@ -215,6 +215,28 @@ test('filtered report rows match the public ReportRow contract exactly', async (
   }
 });
 
+test('management read-only report rows stay scoped and contain no sensitive fields', async () => {
+  const calls: unknown[] = [];
+  const service = reportsService(undefined, calls);
+
+  const [row] = await service.filteredReport({ role: RoleCode.MGMT_READONLY, branchId: 'branch-a', filterBranchId: 'branch-a' });
+
+  assert.deepEqual(calls[0], {
+    branchId: 'branch-a',
+    dateFrom: null,
+    dateTo: null,
+    categoryId: null,
+    departmentId: null,
+    severity: null,
+    ownerId: null,
+    role: RoleCode.MGMT_READONLY,
+  });
+  assert.deepEqual(Object.keys(row!).sort(), ['branchId', 'categoryId', 'createdAt', 'id', 'ownerId', 'referenceNumber', 'severity', 'status', 'subject', 'updatedAt']);
+  for (const forbidden of ['customerPhone', 'customerEmail', 'vin', 'plate', 'compensation', 'fileName']) {
+    assert.equal(JSON.stringify(row).includes(forbidden), false);
+  }
+});
+
 test('report export audit metadata uses only the allowlisted filter snapshot', async () => {
   const auditRecords: AuditRecordInput[] = [];
   const service = reportsService({ record: async (input) => auditRecords.push(input) } as AuditService);
@@ -278,6 +300,10 @@ test('report export permission allows export and denies missing permission safel
   const guard = new PermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
 
   assert.equal(await guard.canActivate(context(request(branchManager, '/reports/export'), ReportsController.prototype.exportReport)), true);
+  await assert.rejects(
+    guard.canActivate(context(request({ ...branchManager, roleCode: RoleCode.MGMT_READONLY, permissions: ['REPORT_VIEW'] }, '/reports/export'), ReportsController.prototype.exportReport)),
+    (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
   await assert.rejects(
     guard.canActivate(context(request({ ...branchManager, permissions: [] }, '/reports/export?password=leaked&sessionToken=leaked'), ReportsController.prototype.exportReport)),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
@@ -358,7 +384,7 @@ test('report export is row-limited and writes REPORT audit', async () => {
   });
 });
 
-function reportsService(auditService?: AuditService): ReportsService {
+function reportsService(auditService?: AuditService, complaintCalls: unknown[] = []): ReportsService {
   const complaintsService = {
     async listQueue({ branchId }: { branchId?: string | null } = {}) {
       return branchId ? complaints.filter((item) => item.branchId === branchId) : complaints;
@@ -371,7 +397,9 @@ function reportsService(auditService?: AuditService): ReportsService {
       departmentId?: string | null;
       severity?: ComplaintSeverity | null;
       ownerId?: string | null;
+      role?: RoleCode | null;
     } = {}) {
+      complaintCalls.push(filter);
       return complaints.filter((item) => {
         const createdAt = new Date(item.createdAt).getTime();
         return (!filter.branchId || item.branchId === filter.branchId)

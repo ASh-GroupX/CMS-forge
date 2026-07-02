@@ -675,6 +675,20 @@ test('complaint search service hides out-of-branch rows when branch scope is sup
   assert.deepEqual((await service.search({ branchId: 'branch_main' })).map((row) => row.id), ['cmp_allowed']);
 });
 
+test('management read-only complaint search masks customer identifiers', async () => {
+  const service = new ComplaintsService({
+    search: async () => [searchRecord('cmp_1', 'branch_main')],
+  } as ComplaintsRepository, { record: async () => undefined } as unknown as AuditService);
+
+  const [readonlyRow] = await service.search({ branchId: 'branch_main', role: RoleCode.MGMT_READONLY });
+  const [managerRow] = await service.search({ branchId: 'branch_main', role: RoleCode.CR_MANAGER });
+
+  assert.equal(readonlyRow?.customerPhone, '[masked]');
+  assert.equal(readonlyRow?.customerIdentifier, '[masked]');
+  assert.equal(managerRow?.customerPhone, '+966500000001');
+  assert.equal(managerRow?.customerIdentifier, 'CUST-001');
+});
+
 test('complaint queue route derives branch scope from query or server principal', async () => {
   const calls: unknown[] = [];
   const controller = new ComplaintsController({
@@ -686,7 +700,7 @@ test('complaint queue route derives branch scope from query or server principal'
 
   assert.deepEqual(await controller.list(undefined, request(RoleCode.CR_OFFICER)), { items: [] });
   assert.deepEqual(await controller.list('branch_any', request(RoleCode.ADMIN)), { items: [] });
-  assert.deepEqual(calls, [{ branchId: 'branch_main' }, { branchId: 'branch_any' }]);
+  assert.deepEqual(calls, [{ branchId: 'branch_main', role: RoleCode.CR_OFFICER }, { branchId: 'branch_any', role: RoleCode.ADMIN }]);
 });
 
 test('complaint detail service returns explicit timeline and hides missing scoped complaints', async () => {
@@ -723,6 +737,22 @@ test('complaint detail service returns explicit timeline and hides missing scope
   );
 });
 
+test('management read-only complaint detail masks customer and vehicle identifiers', async () => {
+  const service = new ComplaintsService({
+    findDetail: async () => detailRecord,
+  } as ComplaintsRepository, { record: async () => undefined } as unknown as AuditService);
+
+  const readonlyDetail = await service.getDetail('cmp_1', { branchId: 'branch_main', role: RoleCode.MGMT_READONLY });
+  const managerDetail = await service.getDetail('cmp_1', { branchId: 'branch_main', role: RoleCode.CR_MANAGER });
+
+  assert.equal(readonlyDetail.customer.phone, '[masked]');
+  assert.equal(readonlyDetail.customer.identifier, '[masked]');
+  assert.equal(readonlyDetail.vehicle?.vin, '[masked]');
+  assert.equal(readonlyDetail.vehicle?.plate, '[masked]');
+  assert.equal(managerDetail.customer.phone, '+966500000001');
+  assert.equal(managerDetail.vehicle?.vin, 'SEEDDEMO00001');
+});
+
 test('complaint detail route delegates with server-derived branch scope', async () => {
   const calls: unknown[] = [];
   const controller = new ComplaintsController({
@@ -751,7 +781,7 @@ test('complaint detail route delegates with server-derived branch scope', async 
   const response = await controller.get('cmp_1', undefined, request(RoleCode.CR_OFFICER));
   assert.equal(response.complaint.id, 'cmp_1');
   assert.deepEqual(response.complaint.allowedActions, [ComplaintTransitionAction.ACCEPT_INTAKE]);
-  assert.deepEqual(calls[0], { id: 'cmp_1', filter: { branchId: 'branch_main' } });
+  assert.deepEqual(calls[0], { id: 'cmp_1', filter: { branchId: 'branch_main', role: RoleCode.CR_OFFICER } });
   assert.deepEqual(calls[1], { allowedActionsFor: { status: ComplaintStatus.SUBMITTED, actor: { roleCode: RoleCode.CR_OFFICER, userId: 'usr_officer' } } });
 });
 

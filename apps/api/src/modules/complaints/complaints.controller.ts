@@ -33,7 +33,7 @@ export class ComplaintsController {
     @Query('branchId') branchId: string | undefined,
     @Req() request: AuthenticatedRequest,
   ): Promise<ComplaintQueueResponseDto> {
-    return { items: await this.complaintsService.listQueue({ branchId: queueBranchId(branchId, request) }) };
+    return { items: await this.complaintsService.listQueue({ branchId: queueBranchId(branchId, request), role: requestRole(request) }) };
   }
 
   @Get('search')
@@ -52,6 +52,7 @@ export class ComplaintsController {
       ownerId: optionalText(query.ownerId),
       dateFrom: optionalText(query.dateFrom),
       dateTo: optionalText(query.dateTo),
+      role: requestRole(request),
     });
     return { items: items.slice(offset, offset + limit), limit, offset };
   }
@@ -72,7 +73,7 @@ export class ComplaintsController {
     @Query('branchId') branchId: string | undefined,
     @Req() request: AuthenticatedRequest,
   ): Promise<ComplaintDetailResponseDto> {
-    const complaint = await this.complaintsService.getDetail(id, { branchId: queueBranchId(branchId, request) });
+    const complaint = await this.complaintsService.getDetail(id, { branchId: queueBranchId(branchId, request), role: requestRole(request) });
     const principal = request.principal!;
     return { complaint: { ...complaint, allowedActions: this.complaintsService.allowedActionsFor(complaint, { roleCode: principal.roleCode as RoleCode, userId: principal.userId }) } };
   }
@@ -260,17 +261,13 @@ function headerValue(value: string | string[] | undefined): string | null {
 
 function requiredQuery(value: string | undefined, field: string): string {
   if (!value?.trim()) {
-    throw new AppException('VALIDATION_FAILED', 'Invalid complaint request', HttpStatus.BAD_REQUEST, [
-      { field, code: 'REQUIRED', message: `${field} is required.` },
-    ]);
+    throw new AppException('VALIDATION_FAILED', 'Invalid complaint request', HttpStatus.BAD_REQUEST, [{ field, code: 'REQUIRED', message: `${field} is required.` }]);
   }
   return value.trim();
 }
 
 function queueBranchId(value: string | undefined, request: AuthenticatedRequest): string | null {
-  if (value?.trim()) {
-    return value.trim();
-  }
+  if (value?.trim()) return value.trim();
   return request.principal?.roleCode === RoleCode.ADMIN ? null : request.principal?.branchId ?? null;
 }
 
@@ -279,6 +276,8 @@ function searchBranchId(value: string | undefined, request: AuthenticatedRequest
 }
 
 function optionalText(value: string | undefined): string | null { return value?.trim() || null; }
+
+function requestRole(request: AuthenticatedRequest): RoleCode { return request.principal?.roleCode as RoleCode; }
 
 function optionalStatus(value: string | undefined): ComplaintStatus | null { return optionalEnum(value, ComplaintStatus, 'status') as ComplaintStatus | null; }
 

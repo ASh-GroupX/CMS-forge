@@ -121,6 +121,7 @@ export class ReportsService {
       departmentId: input.departmentId ?? null,
       severity: input.severity ?? null,
       ownerId: input.ownerId ?? null,
+      role: input.role,
     });
     return branchFilter(rows, branchId);
   }

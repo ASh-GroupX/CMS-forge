@@ -38,7 +38,7 @@ export type CreateInternalComplaintInput = {
 
 export type ComplaintCreationResult = { id: string; referenceNumber: string; status: ComplaintStatus };
 
-export type ComplaintQueueFilter = { branchId?: string | null };
+export type ComplaintQueueFilter = { branchId?: string | null; role?: RoleCode | null };
 export type ComplaintReportRow = Omit<ComplaintQueueItemDto, 'branchName' | 'ownerName'> & { categoryId: string };
 export type ComplaintSearchInput = ComplaintReportFilter;
 export type ComplaintSearchRow = ComplaintQueueItemDto & { categoryId: string; customerName: string; customerPhone: string; customerIdentifier: string | null };
@@ -117,11 +117,11 @@ export class ComplaintsService {
 
   async listForReports(filter: ComplaintReportFilter = {}): Promise<ComplaintReportRow[]> { return (await this.complaintsRepository.listForReports(filter)).map(reportItem); }
 
-  async search(input: ComplaintSearchInput = {}): Promise<ComplaintSearchRow[]> { return (await this.complaintsRepository.search(input)).map(searchItem); }
+  async search(input: ComplaintSearchInput = {}): Promise<ComplaintSearchRow[]> { return (await this.complaintsRepository.search(input)).map((item) => searchItem(item, shouldMask(input))); }
 
   async findPortalVerificationTarget(referenceNumber: string, customerPhone: string): Promise<PortalVerificationTargetRecord | null> { return this.complaintsRepository.findPortalVerificationTarget(referenceNumber.trim(), customerPhone.trim()); }
 
-  async getDetail(id: string, filter: ComplaintQueueFilter = {}): Promise<ComplaintDetailDto> { const complaint = await this.complaintsRepository.findDetail(id, filter); if (!complaint) throw new AppException('COMPLAINT_NOT_FOUND', 'Complaint not found', HttpStatus.NOT_FOUND); return { ...detailItem(complaint), caseSummary: await this.complaintCaseSummary(complaint.id) }; }
+  async getDetail(id: string, filter: ComplaintQueueFilter = {}): Promise<ComplaintDetailDto> { const complaint = await this.complaintsRepository.findDetail(id, filter); if (!complaint) throw new AppException('COMPLAINT_NOT_FOUND', 'Complaint not found', HttpStatus.NOT_FOUND); return { ...detailItem(complaint, shouldMask(filter)), caseSummary: await this.complaintCaseSummary(complaint.id) }; }
 
   allowedActionsFor(complaint: Pick<ComplaintDetailDto, 'ownerId' | 'status'>, actor: { roleCode: RoleCode; userId: string | null }): ComplaintTransitionAction[] { return WORKFLOW_TRANSITIONS.filter((item) => item.fromStatus === complaint.status && item.allowedRoles.includes(actor.roleCode) && actorCanSeeAction(item.action, actor, complaint)).map((item) => item.action); }
 
@@ -216,13 +216,16 @@ function reportItem(complaint: ComplaintReportRecord): ComplaintReportRow {
   return { id: complaint.id, referenceNumber: complaint.referenceNumber, branchId: complaint.branchId, categoryId: complaint.categoryId, status: complaint.status, severity: complaint.severity, subject: complaint.subject, ownerId: complaint.ownerId, createdAt: complaint.createdAt.toISOString(), updatedAt: complaint.updatedAt.toISOString() };
 }
 
-function searchItem(complaint: ComplaintSearchRecord): ComplaintSearchRow {
-  return { ...queueItem(complaint), categoryId: complaint.categoryId, customerName: complaint.customerName, customerPhone: complaint.customerPhone, customerIdentifier: complaint.customerIdentifier };
+function searchItem(complaint: ComplaintSearchRecord, masked = false): ComplaintSearchRow {
+  return { ...queueItem(complaint), categoryId: complaint.categoryId, customerName: complaint.customerName, customerPhone: masked ? MASKED : complaint.customerPhone, customerIdentifier: masked ? MASKED : complaint.customerIdentifier };
 }
 
-function detailItem(complaint: ComplaintDetailRecord): Omit<ComplaintDetailDto, 'caseSummary'> {
-  return { ...queueItem(complaint), description: complaint.descriptionEn, incidentAt: complaint.incidentAt?.toISOString() ?? null, customer: { id: complaint.customer.id, name: complaint.customer.nameEn, phone: complaint.customer.phone, identifier: complaint.customer.dmsCode, source: complaint.customer.dataSource }, vehicle: complaint.vehicle ? { id: complaint.vehicle.id, vin: complaint.vehicle.vin, plate: complaint.vehicle.plate, make: complaint.vehicle.makeEn, model: complaint.vehicle.modelEn, year: complaint.vehicle.year, source: complaint.vehicle.dataSource } : null, customerSource: complaint.customerDataSource, manualCustomer: complaint.manualCustomerFlag, vehicleRelated: complaint.vehicleRelated, vehicleSource: complaint.vehicleDataSource, manualVehicle: complaint.manualVehicleFlag, vehicleDataUnavailableReason: complaint.vehicleDataUnavailableReason, statusHistory: complaint.statusHistory.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })), allowedActions: [] };
+function detailItem(complaint: ComplaintDetailRecord, masked = false): Omit<ComplaintDetailDto, 'caseSummary'> {
+  const vehicle = complaint.vehicle ? { id: complaint.vehicle.id, vin: masked ? MASKED : complaint.vehicle.vin, plate: masked ? MASKED : complaint.vehicle.plate, make: complaint.vehicle.makeEn, model: complaint.vehicle.modelEn, year: complaint.vehicle.year, source: complaint.vehicle.dataSource } : null;
+  return { ...queueItem(complaint), description: complaint.descriptionEn, incidentAt: complaint.incidentAt?.toISOString() ?? null, customer: { id: complaint.customer.id, name: complaint.customer.nameEn, phone: masked ? MASKED : complaint.customer.phone, identifier: masked ? MASKED : complaint.customer.dmsCode, source: complaint.customer.dataSource }, vehicle, customerSource: complaint.customerDataSource, manualCustomer: complaint.manualCustomerFlag, vehicleRelated: complaint.vehicleRelated, vehicleSource: complaint.vehicleDataSource, manualVehicle: complaint.manualVehicleFlag, vehicleDataUnavailableReason: complaint.vehicleDataUnavailableReason, statusHistory: complaint.statusHistory.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })), allowedActions: [] };
 }
+
+const MASKED = '[masked]'; function shouldMask(input: { role?: RoleCode | null }): boolean { return input.role === RoleCode.MGMT_READONLY; }
 
 function commentItem(comment: ComplaintCommentRecord): ComplaintCommentResult { return { ...comment, createdAt: comment.createdAt.toISOString() }; }
 
@@ -293,6 +296,4 @@ function workflowAuditInput(input: ApplyComplaintTransitionInput, toStatus: Comp
   };
 }
 
-function nonEmptyText(value: string | null | undefined): string | null {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
+function nonEmptyText(value: string | null | undefined): string | null { return typeof value === 'string' && value.trim() ? value.trim() : null; }
