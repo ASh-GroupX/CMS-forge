@@ -13,9 +13,12 @@ export type StaffAttachment = {
 export type StaffAttachmentDownload = { attachmentId: string; token: string; expiresAt: string };
 export type StaffAttachmentError = { kind: 'api' | 'network' | 'validation'; code: string; message: string; correlationId: string | null; status?: number };
 export type StaffAttachmentResult<T> = { ok: true; data: T } | { ok: false; error: StaffAttachmentError };
+export type StaffAttachmentUploadSummary = { uploadedCount: number; failedCount: number; attachments: StaffAttachment[]; errors: StaffAttachmentError[] };
 export type OpenAttachmentDownloadTarget = (target: string) => void;
 
 type ErrorEnvelope = { error?: { code?: string; message?: string; correlationId?: string | null } };
+
+export const staffAttachmentAccept = '.jpg,.jpeg,.png,.webp,.pdf,.mp3,.wav,.ogg,.mp4,.mov,.webm,image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/wav,audio/ogg,video/mp4,video/quicktime,video/webm';
 
 export async function listStaffComplaintAttachments(complaintId: string, fetchImpl: typeof fetch = fetch): Promise<StaffAttachmentResult<{ items: StaffAttachment[] }>> {
   return requestJson(`/api/complaints/${encodeURIComponent(complaintId)}/attachments`, fetchImpl, { method: 'GET' });
@@ -31,6 +34,25 @@ export async function uploadStaffComplaintAttachment(complaintId: string, file: 
     headers: csrfHeaders(),
     method: 'POST',
   });
+}
+
+export async function uploadStaffComplaintAttachments(complaintId: string, files: File[], fetchImpl: typeof fetch = fetch): Promise<StaffAttachmentUploadSummary> {
+  const summary: StaffAttachmentUploadSummary = { uploadedCount: 0, failedCount: 0, attachments: [], errors: [] };
+  for (const file of files) {
+    const result = await uploadStaffComplaintAttachment(complaintId, file, fetchImpl);
+    if (result.ok) {
+      summary.uploadedCount += 1;
+      summary.attachments.push(result.data.attachment);
+    } else {
+      summary.failedCount += 1;
+      summary.errors.push(result.error);
+    }
+  }
+  return summary;
+}
+
+export function staffAttachmentFiles(formData: FormData, field = 'attachments'): File[] {
+  return formData.getAll(field).filter((value): value is File => value instanceof File && value.size > 0 && Boolean(value.name.trim()));
 }
 
 export async function prepareStaffAttachmentDownload(complaintId: string, attachmentId: string, fetchImpl: typeof fetch = fetch): Promise<StaffAttachmentResult<{ download: StaffAttachmentDownload }>> {

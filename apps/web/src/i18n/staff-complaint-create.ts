@@ -24,6 +24,12 @@ export const complaintCreateText = {
       dms: 'DMS match selected. DMS source will be submitted.',
       manual: 'Manual fallback selected. Manual source will be submitted.',
     },
+    attachments: {
+      label: 'Intake attachments',
+      rules: 'PDF, images, audio, or video files are uploaded after the complaint is created.',
+      uploaded: 'Attachments uploaded',
+      partialFailure: 'Some attachments were not uploaded',
+    },
   },
   ar: {
     fields: {
@@ -49,6 +55,12 @@ export const complaintCreateText = {
       none: 'لم يتم اختيار مطابقة بحث. سيتم إرسال المصدر اليدوي.',
       dms: 'تم اختيار مطابقة DMS. سيتم إرسال مصدر DMS.',
       manual: 'تم اختيار الإدخال اليدوي. سيتم إرسال المصدر اليدوي.',
+    },
+    attachments: {
+      label: '\u0645\u0631\u0641\u0642\u0627\u062a \u0627\u0644\u0627\u0633\u062a\u0642\u0628\u0627\u0644',
+      rules: '\u064a\u062a\u0645 \u0631\u0641\u0639 \u0645\u0644\u0641\u0627\u062a PDF \u0623\u0648 \u0627\u0644\u0635\u0648\u0631 \u0623\u0648 \u0627\u0644\u0635\u0648\u062a \u0623\u0648 \u0627\u0644\u0641\u064a\u062f\u064a\u0648 \u0628\u0639\u062f \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0634\u0643\u0648\u0649.',
+      uploaded: '\u062a\u0645 \u0631\u0641\u0639 \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062a',
+      partialFailure: '\u0644\u0645 \u064a\u062a\u0645 \u0631\u0641\u0639 \u0628\u0639\u0636 \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062a',
     },
   },
 } as const;

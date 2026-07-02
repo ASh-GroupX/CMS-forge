@@ -3151,9 +3151,21 @@ test('complaint create form source submits only through the staff write helper',
   const wrapper = readFileSync('apps/web/src/app/complaint-create-form.tsx', 'utf8');
 
   assert.match(source, /createStaffComplaint/);
+  assert.match(source, /uploadStaffComplaintAttachments/);
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie/);
   assert.doesNotMatch(source, /roleId|actorId|workflow|ownerId|session|token|credentials/);
   assert.match(wrapper, /components\/complaint-create-form/);
+});
+
+test('complaint create form renders intake attachment upload and success count', async () => {
+  const base = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
+  const success = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ create: 'success', locale: 'en' }) }));
+
+  assert.ok(base.includes(complaintCreateText.en.attachments.label));
+  assert.ok(base.includes(complaintCreateText.en.attachments.rules));
+  assert.match(base, /name="attachments"/);
+  assert.match(base, /multiple=""/);
+  assert.ok(success.includes(`${complaintCreateText.en.attachments.uploaded}: 1.`));
 });
 
 test('attachment panel renders upload controls and file rules', async () => {

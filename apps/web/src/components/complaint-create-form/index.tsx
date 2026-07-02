@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { complaintCreateText } from '../../i18n/staff-complaint-create';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
+import { staffAttachmentAccept, staffAttachmentFiles, uploadStaffComplaintAttachments } from '../../lib/staff-attachments-api';
 import type { ComplaintFormOption, ComplaintFormOptions } from '../../lib/staff-complaint-form-options-api';
 import {
   createStaffComplaint,
@@ -23,7 +24,7 @@ export type CreateFormPreviewState = 'validation' | 'success' | 'error' | 'loadi
 type SubmitState =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'success'; referenceNumber: string; status: ComplaintStatus }
+  | { kind: 'success'; referenceNumber: string; status: ComplaintStatus; attachmentCount: number; failedAttachmentCount: number }
   | { kind: 'validation'; fieldErrors: StaffApiFieldError[] }
   | { kind: 'error'; network: boolean };
 
@@ -57,11 +58,15 @@ export function ComplaintCreateForm({
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitState({ kind: 'loading' });
-    const { branchId, complaint } = buildStaffComplaintCreateSubmission(new FormData(event.currentTarget));
+    const formData = new FormData(event.currentTarget);
+    const { branchId, complaint } = buildStaffComplaintCreateSubmission(formData);
     const result = await createStaffComplaint(branchId, complaint);
     if (result.ok) {
+      const attachments = await uploadStaffComplaintAttachments(result.data.complaint.id, staffAttachmentFiles(formData));
       setSubmitState({
         kind: 'success',
+        attachmentCount: attachments.uploadedCount,
+        failedAttachmentCount: attachments.failedCount,
         referenceNumber: result.data.complaint.referenceNumber,
         status: result.data.complaint.status,
       });
@@ -116,6 +121,11 @@ export function ComplaintCreateForm({
             <Label htmlFor="description">{t.fields.description}</Label>
             <Textarea id="description" name="description" defaultValue={defaults.description} />
             <FieldError message={fieldError(fieldErrors, 'description') ?? (state === 'validation' ? t.validation.vinRequired : undefined)} />
+          </div>
+          <div className="grid gap-1 md:col-span-2">
+            <Label htmlFor="attachments">{extra.attachments.label}</Label>
+            <Input accept={staffAttachmentAccept} id="attachments" multiple name="attachments" type="file" />
+            <p className="text-xs text-slate-600">{extra.attachments.rules}</p>
           </div>
           <label className="flex items-center gap-2 text-sm font-medium md:col-span-2">
             <input className="size-4" name="vehicleRelated" type="checkbox" defaultChecked={defaults.vehicleRelated} />
@@ -199,6 +209,8 @@ function CreateSubmitMessage({ locale, state }: { locale: Locale; state: SubmitS
     return (
       <p className="m-4 rounded-sm border border-status-success bg-status-success/10 px-3 py-2 text-sm text-status-success" role="status">
         {t.success}. {t.reference}: {state.referenceNumber}. {t.status}: {state.status}.
+        {state.attachmentCount ? ` ${t.attachments.uploaded}: ${state.attachmentCount}.` : ''}
+        {state.failedAttachmentCount ? ` ${t.attachments.partialFailure}: ${state.failedAttachmentCount}.` : ''}
       </p>
     );
   }
@@ -215,7 +227,7 @@ function FieldError({ message }: { message: string | undefined }) {
 }
 
 function previewState(state: CreateFormPreviewState | undefined, locale: Locale): SubmitState {
-  if (state === 'success') return { kind: 'success', referenceNumber: 'CMP-2026-001', status: 'SUBMITTED' };
+  if (state === 'success') return { kind: 'success', attachmentCount: 1, failedAttachmentCount: 0, referenceNumber: 'CMP-2026-001', status: 'SUBMITTED' };
   if (state === 'validation') return { kind: 'validation', fieldErrors: [{ field: 'customerPhone', code: 'REQUIRED', message: staffShellText[locale].createForm.validation.required }] };
   if (state === 'loading') return { kind: 'loading' };
   if (state === 'network') return { kind: 'error', network: true };

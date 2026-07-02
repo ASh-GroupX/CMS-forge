@@ -10,7 +10,7 @@ import { POST as proxyCreateComplaint } from '../../src/app/api/complaints/route
 import { GET as proxyLookupDmsCustomerVehicle } from '../../src/app/api/integrations/dms/customer-vehicle/route';
 import { addStaffComplaintComment } from '../../src/lib/staff-complaint-comments-api';
 import { getStaffComplaintDuplicateCandidates, getStaffComplaintRelated, linkStaffComplaintRelation, unlinkStaffComplaintRelation } from '../../src/lib/staff-complaint-relations-api';
-import { downloadStaffAttachment, listStaffComplaintAttachments, uploadStaffComplaintAttachment } from '../../src/lib/staff-attachments-api';
+import { downloadStaffAttachment, listStaffComplaintAttachments, staffAttachmentFiles, uploadStaffComplaintAttachment, uploadStaffComplaintAttachments } from '../../src/lib/staff-attachments-api';
 import { correctStaffComplaint, createStaffComplaint, getStaffComplaint, listStaffComplaints, lookupStaffDmsCustomerVehicle, submitStaffComplaintWorkflowAction } from '../../src/lib/staff-complaints-api';
 
 function jsonResponse(body: unknown, status = 200) {
@@ -216,6 +216,26 @@ test('staff attachment client rejects blocked files before posting', async () =>
   assert.equal(result.ok, false);
   assert.equal(result.ok ? null : result.error.code, 'ATTACHMENT_TYPE_BLOCKED');
   assert.equal(called, false);
+});
+
+test('staff attachment helper uploads intake files and reports partial failure', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const formData = new FormData();
+  formData.append('attachments', new File(['invoice'], 'invoice.pdf', { type: 'application/pdf' }));
+  formData.append('attachments', new File(['bad'], 'malware.exe', { type: 'application/x-msdownload' }));
+  formData.append('attachments', new File([], '', { type: 'application/pdf' }));
+
+  const summary = await uploadStaffComplaintAttachments('cmp_1', staffAttachmentFiles(formData), async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ attachment: { id: 'att_1', complaintId: 'cmp_1', fileName: 'invoice.pdf', contentType: 'application/pdf', sizeBytes: 7, scanStatus: 'PENDING', customerVisible: false } }, 201);
+  });
+
+  assert.equal(summary.uploadedCount, 1);
+  assert.equal(summary.failedCount, 1);
+  assert.equal(summary.errors[0]?.code, 'ATTACHMENT_TYPE_BLOCKED');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0]?.input, '/api/complaints/cmp_1/attachments');
+  assert.doesNotMatch(String(calls[0]?.init?.body), /branch|role|actor|workflow|storage|token|credential/i);
 });
 
 test('lookupStaffDmsCustomerVehicle reads through the same-origin proxy without client authority', async () => {

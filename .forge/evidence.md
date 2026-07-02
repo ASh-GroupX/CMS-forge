@@ -12361,3 +12361,42 @@ SRS IDs: `REQ-SURVEY-001`, `REQ-COMPLAINT-004`, `REQ-NOTIFICATION-001`, `PORTAL-
 - Portal survey screenshots were captured and visually checked at `output/playwright/slice8-survey-valid.png`, `output/playwright/slice8-survey-success.png`, `output/playwright/slice8-survey-used.png`, and `output/playwright/slice8-survey-expired-ar.png`.
 - Screenshot proof used component-rendered HTML over a temporary localhost static server; the only console message was a missing favicon from the proof server.
 - Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.
+
+---
+
+## Business Readiness - Slice 9 Staff Intake Attachments
+
+Status: Complete
+SRS IDs: `REQ-COMPLAINT-001`, `REQ-ATTACHMENT-001`, `PORTAL-SEC-001`, `REQ-RBAC-001`, `METHOD-AUDIT-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
+
+### Scope
+
+- Staff complaint create now accepts intake evidence files and uploads them only after the complaint create request succeeds.
+- Intake uploads reuse the existing staff attachment API helper, same-origin proxy, CSRF header handling, and backend attachment route.
+- Upload success and partial failure counts are shown in the create success message.
+- The existing detail-page attachment controls remain available as the retry path.
+- File validation, scan state, storage path generation, audit, RBAC, branch scope, and portal privacy remain backend-owned.
+
+### Security Self-Check
+
+- React sends only selected files to the existing attachment helper after the backend returns a created complaint ID; it does not send role, actor, branch-scope authority, workflow state, audit metadata, storage paths, credentials, tokens, or provider data.
+- Staff attachment upload authorization still comes from the backend staff session, permission checks, CSRF guard, and branch-scoped complaint lookup.
+- Invalid attachment file types are blocked before upload, and backend attachment policy still rejects invalid metadata before storage, persistence, or audit.
+- Portal attachment behavior was not widened; staff intake uploads use staff-only routes.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- attachments` (33/33 TAP tests).
+- Passed: `corepack pnpm test:web -- api-client` (51/51 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (203/203 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Notes
+
+- Staff intake screenshot was captured and visually checked at `output/playwright/slice9-staff-intake-styled.png`; the browser proof confirmed one `input[name="attachments"][type="file"]`.
+- Live staff routes correctly require a real session, so the screenshot used route-rendered proof HTML with the compiled app Tailwind CSS and the same component tree used by the visual-review workflow.
+- Slice 10 is blocked until the Slice 0 DMS mode decision is signed: either manual-DMS pilot scope, or live/test provider integration through the existing DMS port.
+- Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.

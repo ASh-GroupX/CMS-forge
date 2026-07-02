@@ -1,29 +1,35 @@
-# Business Readiness Remediation - Slice 9
+# Business Readiness Remediation - Slice 10
 
-Status: Ready
+Status: Blocked pending Slice 0 human scope decision
 Required model tier: GPT-5.5 Extra High
 Phase: business-readiness-remediation
 Risk: High
-SRS IDs: `REQ-COMPLAINT-001`, `REQ-ATTACHMENT-001`, `PORTAL-SEC-001`, `REQ-RBAC-001`, `METHOD-AUDIT-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
+SRS IDs: `REQ-INTEGRATION-001`, `REQ-REPORT-001`, `REQ-RBAC-001`, `METHOD-AUDIT-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
 
 ## Task
 
-Implement Slice 9 from `docs/BUSINESS_READINESS_PLAN.md`: staff intake attachments.
+Implement Slice 10 from `docs/BUSINESS_READINESS_PLAN.md`: DMS pilot mode.
 
-## Scope
+## Scope Decision Required Before Build
 
-- Inspect staff complaint create flow, attachment service/routes, detail attachment retry UI, and existing attachment/create tests before editing.
-- Upload selected staff intake files after complaint create succeeds.
-- Show upload success and partial failure.
-- Keep detail-page attachment upload as retry.
-- Keep upload authorization, file validation, scan state, storage path generation, audit, RBAC, branch scope, and portal privacy backend-owned.
-- If adding a dev download proxy is selected by existing plan context, keep it explicitly development-safe and backend-authorized.
+Choose exactly one:
+
+- Signed manual-DMS pilot scope: make disabled/manual lookup state explicit and reportable.
+- Live/test DMS required: wire the provider through the existing backend DMS port.
+
+Also decide whether RPT-015 is deferred. Persist safe lookup telemetry only if RPT-015 is not deferred.
+
+## Scope After Decision
+
+- Inspect integrations module, DMS lookup port/adapters, customer vehicle lookup UI, reports matrix, and existing integration tests before editing.
+- Keep provider calls, secrets, branch scope, RBAC, audit, and lookup telemetry backend-owned.
+- Do not add frontend provider calls or expose DMS codes/private provider data.
 
 ## Proof
 
-- `corepack pnpm test:api -- attachments`
-- Staff intake screenshot with attached evidence.
+- `corepack pnpm test:api -- integrations`
+- Screenshots for match, multiple match, provider down, and manual fallback.
 
 ## Stop When
 
-- Staff-created complaint can upload intake attachments after create, report partial upload failure, and retry from the detail attachment panel.
+- UAT-001 and UAT-002 are either proven or explicitly scoped.
