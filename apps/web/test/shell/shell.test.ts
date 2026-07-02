@@ -3216,37 +3216,27 @@ test('Arabic attachment panel keeps RTL localized labels', async () => {
   assert.ok(html.includes(attachmentText.ar.scan.clean));
 });
 
-test('complaint new route renders attachment panel and states', async () => {
+test('complaint new route renders only the real intake attachment input', async () => {
   const base = renderToStaticMarkup(
     await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'en', attachment: 'clean' }) }),
-  );
-  const loading = renderToStaticMarkup(
-    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'en', attachment: 'loading' }) }),
-  );
-  const error = renderToStaticMarkup(
-    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'en', attachment: 'error' }) }),
   );
 
   assert.match(base, /Customer and vehicle lookup/);
   assert.match(base, /Create complaint/);
-  assert.match(base, /Attachments/);
-  assert.match(base, /type="file"/);
-  assert.match(base, /Scan clean/);
-  assert.match(loading, /Preparing attachment panel\./);
-  assert.match(loading, /role="status"/);
-  assert.match(error, /Attachment panel could not be prepared\./);
-  assert.match(error, /role="alert"/);
+  assert.ok(base.includes(complaintCreateText.en.attachments.label));
+  assert.equal((base.match(/type="file"/g) ?? []).length, 1);
+  assert.doesNotMatch(base, /Scan clean|Preparing attachment panel|Attachment panel could not be prepared/);
 });
 
-test('complaint new route keeps Arabic RTL attachment labels', async () => {
+test('complaint new route keeps Arabic RTL intake attachment label', async () => {
   const html = renderToStaticMarkup(
     await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'ar', attachment: 'rejected' }) }),
   );
 
   assert.match(html, /dir="rtl"/);
-  assert.ok(html.includes(attachmentText.ar.title));
-  assert.ok(html.includes(attachmentText.ar.scan.rejected));
-  assert.ok(html.includes(confirmationText.ar.attachmentReject.title));
+  assert.ok(html.includes(complaintCreateText.ar.attachments.label));
+  assert.ok(!html.includes(attachmentText.ar.scan.rejected));
+  assert.ok(!html.includes(confirmationText.ar.attachmentReject.title));
 });
 
 test('attachment panel source does not upload read or expose file URLs', () => {

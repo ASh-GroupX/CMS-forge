@@ -1,5 +1,4 @@
 import React from 'react';
-import { AttachmentUploadPanel, type AttachmentPreviewState } from '../../../../components/attachment-upload-panel';
 import { type CreateFormPreviewState } from '../../../../components/complaint-create-form';
 import { ComplaintIntakeWorkspace } from '../../../../components/complaint-intake-workspace';
 import { type LookupPreviewState } from '../../../../components/customer-vehicle-lookup';
@@ -7,7 +6,6 @@ import { resolveLocale } from '../../../../i18n/staff-shell';
 import { getComplaintFormOptions } from '../../../../lib/staff-complaint-form-options-api';
 
 type SearchParams = {
-  attachment?: string | string[];
   create?: string | string[];
   locale?: string | string[];
   lookup?: string | string[];
@@ -31,7 +29,6 @@ export default async function NewComplaintPage({
   return (
     <main className="grid gap-4">
       <ComplaintIntakeWorkspace createState={resolveCreate(readParam(params?.create))} locale={locale} lookupState={resolveLookup(readParam(params?.lookup))} options={options} />
-      <AttachmentUploadPanel locale={locale} state={resolveAttachment(readParam(params?.attachment))} />
     </main>
   );
 }
@@ -46,12 +43,6 @@ function resolveLookup(value: string | undefined): LookupPreviewState | undefine
 
 function resolveCreate(value: string | undefined): CreateFormPreviewState | undefined {
   return value === 'validation' || value === 'success' || value === 'error' || value === 'loading' || value === 'network'
-    ? value
-    : undefined;
-}
-
-function resolveAttachment(value: string | undefined): AttachmentPreviewState | undefined {
-  return value === 'loading' || value === 'empty' || value === 'error' || value === 'pending' || value === 'clean' || value === 'rejected'
     ? value
     : undefined;
 }
