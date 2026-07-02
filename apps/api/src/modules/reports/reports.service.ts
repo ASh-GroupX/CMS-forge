@@ -153,7 +153,7 @@ export class ReportsService {
       actorId: audit.actorId ?? null,
       branchId: audit.branchId ?? null,
       targetType: 'report',
-      targetId: 'operational_reports',
+      targetId: 'operational_report_rows',
       correlationId: audit.correlationId ?? null,
       ipAddress: audit.ipAddress ?? null,
       userAgent: audit.userAgent ?? null,
@@ -217,7 +217,7 @@ function serializeExport(format: ReportExportFormat, rows: FilteredReportRow[], 
   const separator = format === 'csv' ? ',' : '\t';
   const body = [exportHeaders, ...rows.map(exportRow)].map((row) => row.map((cell) => quoteCell(cell, separator)).join(separator)).join('\n');
   return {
-    fileName: format === 'csv' ? 'reports.csv' : 'reports.xls',
+    fileName: format === 'csv' ? 'operational-report-rows.csv' : 'operational-report-rows.xls',
     contentType: format === 'csv' ? 'text/csv; charset=utf-8' : 'application/vnd.ms-excel; charset=utf-8',
     body: `${body}\n`,
     rowCount: rows.length,

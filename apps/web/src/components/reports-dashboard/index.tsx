@@ -40,7 +40,7 @@ export function ReportsDashboard({
   const categories = options?.categories?.filter((item) => !item.parentId) ?? [];
   const severities = options?.severities ?? [];
   const exportQuery = reportQuery(filters);
-  const realRows = rows?.slice(0, 17);
+  const operationalRows = rows?.slice(0, 17);
   const exportEnabled = Array.isArray(rows);
   const catalogRows = catalogRowsFrom(catalog, reports, t);
   const kpiCards = kpis ? [
@@ -147,7 +147,10 @@ export function ReportsDashboard({
         </section>
         <section className="mb-3 rounded-md border border-slate-200 bg-slate-50 p-3" aria-label={t.export.title}>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-sm font-semibold">{t.export.title}</h3>
+            <div>
+              <h3 className="text-sm font-semibold">{t.export.title}</h3>
+              <p className="mt-1 text-xs text-slate-600">{t.export.subtitle}</p>
+            </div>
             <div className="flex flex-wrap gap-2">
               {exportEnabled ? (
                 <>
@@ -168,14 +171,35 @@ export function ReportsDashboard({
             <li>{t.export.audit}</li>
           </ul>
         </section>
+        <section className="mb-3" aria-label={t.catalog.title}>
+          <h3 className="mb-2 text-sm font-semibold">{t.catalog.title}</h3>
+          <div className="overflow-x-auto">
+            <Table className="min-w-[56rem]">
+              <TableHeader className="bg-slate-50 text-xs font-semibold uppercase tracking-normal text-slate-600">
+                <TableRow>{t.headers.map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>
+              </TableHeader>
+              <TableBody>
+                {catalogRows.map((row) => (
+                  <TableRow className="border-b border-slate-100" key={row.id}>
+                    <TableCell className="font-semibold">{row.id} - {row.name}</TableCell>
+                    <TableCell>{row.audience}</TableCell>
+                    <TableCell>{row.filters}</TableCell>
+                    <TableCell><ReportBadge>{row.status}</ReportBadge></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </section>
         <div className="overflow-x-auto">
+          <h3 className="mb-2 text-sm font-semibold">{t.operationalRows.title}</h3>
           <Table className="min-w-[56rem]">
             <TableHeader className="bg-slate-50 text-xs font-semibold uppercase tracking-normal text-slate-600">
-              <TableRow>{t.headers.map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>
+              <TableRow>{t.operationalRows.headers.map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>
             </TableHeader>
             <TableBody>
-              {realRows
-                ? realRows.map((row) => (
+              {operationalRows?.length
+                ? operationalRows.map((row) => (
                     <TableRow className="border-b border-slate-100" key={row.id}>
                       <TableCell className="font-semibold">{row.referenceNumber} - {row.subject}</TableCell>
                       <TableCell>{rowScopeLabel(row, branches, staff, locale, t.filters.unavailable)}</TableCell>
@@ -183,14 +207,11 @@ export function ReportsDashboard({
                       <TableCell><ReportBadge>{row.status}</ReportBadge></TableCell>
                     </TableRow>
                   ))
-                : catalogRows.map((row) => (
-                    <TableRow className="border-b border-slate-100" key={row.id}>
-                      <TableCell className="font-semibold">{row.id} - {row.name}</TableCell>
-                      <TableCell>{row.audience}</TableCell>
-                      <TableCell>{row.filters}</TableCell>
-                      <TableCell><ReportBadge>{row.status}</ReportBadge></TableCell>
+                : (
+                    <TableRow className="border-b border-slate-100">
+                      <TableCell className="text-slate-700" colSpan={4}>{t.operationalRows.empty}</TableCell>
                     </TableRow>
-                  ))}
+                  )}
             </TableBody>
           </Table>
         </div>
@@ -202,43 +223,26 @@ export function ReportsDashboard({
 
 function DateField({ label, name, value }: { label: string; name: string; value: string }) {
   const id = `reports-${name}`;
-  return (
-    <div className="grid gap-2">
-      <Label htmlFor={id}>{label}</Label>
-      <input className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" defaultValue={value} id={id} name={name} type="date" />
-    </div>
-  );
+  return <div className="grid gap-2"><Label htmlFor={id}>{label}</Label><input className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" defaultValue={value} id={id} name={name} type="date" /></div>;
 }
 
 function SelectField({ choose, disabledLabel, label, name, options, value }: { choose: string; disabledLabel: string; label: string; name: string; options: string[]; value: string }) {
   const id = `reports-${name}`;
-  return (
-    <div className="grid gap-2">
-      <Label htmlFor={id}>{label}</Label>
-      <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" defaultValue={options.includes(value) ? value : ''} disabled={options.length === 0} id={id} name={name}>
-        <option value="">{options.length === 0 ? disabledLabel : choose}</option>
-        {options.map((option) => <option key={option} value={option}>{option}</option>)}
-      </select>
-    </div>
-  );
+  return <div className="grid gap-2"><Label htmlFor={id}>{label}</Label><select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" defaultValue={options.includes(value) ? value : ''} disabled={options.length === 0} id={id} name={name}>
+    <option value="">{options.length === 0 ? disabledLabel : choose}</option>
+    {options.map((option) => <option key={option} value={option}>{option}</option>)}
+  </select></div>;
 }
 
 function OptionField({ choose, disabledLabel, label, locale, name, options, value }: { choose: string; disabledLabel: string; label: string; locale: Locale; name: string; options: ComplaintFormOption[]; value: string }) {
   const id = `reports-${name}`;
-  return (
-    <div className="grid gap-2">
-      <Label htmlFor={id}>{label}</Label>
-      <select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" defaultValue={options.length === 0 ? '' : value} disabled={options.length === 0} id={id} name={name}>
-        <option value="">{options.length === 0 ? disabledLabel : choose}</option>
-        {options.map((option) => <option key={option.id} value={option.id}>{optionLabelText(option, locale)}</option>)}
-      </select>
-    </div>
-  );
+  return <div className="grid gap-2"><Label htmlFor={id}>{label}</Label><select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" defaultValue={options.length === 0 ? '' : value} disabled={options.length === 0} id={id} name={name}>
+    <option value="">{options.length === 0 ? disabledLabel : choose}</option>
+    {options.map((option) => <option key={option.id} value={option.id}>{optionLabelText(option, locale)}</option>)}
+  </select></div>;
 }
 
-function ReportBadge({ children }: { children: React.ReactNode }) {
-  return <Badge className="shadow-none" variant="secondary">{children}</Badge>;
-}
+function ReportBadge({ children }: { children: React.ReactNode }) { return <Badge className="shadow-none" variant="secondary">{children}</Badge>; }
 
 function reportQuery(filters: ReportsFilters): string {
   const query = new URLSearchParams();
@@ -278,14 +282,9 @@ function rowScopeLabel(row: StaffReportRow, branches: ComplaintFormOption[], sta
   return owner ? `${branch} / ${owner}` : branch;
 }
 
-function optionLabel(options: ComplaintFormOption[], id: string, locale: Locale): string | null {
-  const option = options.find((item) => item.id === id);
-  return option ? optionLabelText(option, locale) : null;
-}
+function optionLabel(options: ComplaintFormOption[], id: string, locale: Locale): string | null { const option = options.find((item) => item.id === id); return option ? optionLabelText(option, locale) : null; }
 
-function optionLabelText(option: ComplaintFormOption, locale: Locale): string {
-  return locale === 'ar' ? option.nameAr : option.nameEn;
-}
+function optionLabelText(option: ComplaintFormOption, locale: Locale): string { return locale === 'ar' ? option.nameAr : option.nameEn; }
 
 function staffLabel(person: AssignableStaff | undefined, locale: Locale): string | null {
   if (!person) return null;

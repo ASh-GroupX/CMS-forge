@@ -2382,7 +2382,8 @@ test('reports dashboard preview states render safely', async () => {
 test('reports dashboard renders export affordance without file generation', async () => {
   const html = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'management', reports: 'ready' }) }));
 
-  assert.match(html, /Report export/);
+  assert.match(html, /Operational row export/);
+  assert.match(html, /generic operational rows, not specialized RPT outputs/);
   assert.match(html, /CSV/);
   assert.match(html, /Excel/);
   assert.doesNotMatch(html, /href="\/reports\/export\?format=csv"/);
@@ -2458,7 +2459,7 @@ test('reports dashboard renders real scoped rows from the backend read', async (
   assert.match(html, />Unavailable</);
   assert.doesNotMatch(html, />cat_engine<|branch_main \/ usr_owner/);
   assert.match(html, /IN_PROGRESS/);
-  assert.doesNotMatch(html, /RPT-017/);
+  assert.match(html, /RPT-017/);
 });
 
 test('reports dashboard keeps catalog fallback when backend denies report rows', async () => {
@@ -2507,7 +2508,7 @@ test('reports route renders guarded catalog delivery statuses when rows are unav
 
   assert.match(html, /RPT-017/);
   assert.match(html, /Delivered/);
-  assert.match(html, /Deferred - signoff required/);
+  assert.match(html, /Deferred - pending business signoff/);
   assert.match(html, /Date from, Branch, Category, Severity, Owner/);
   assert.doesNotMatch(html, /href="\/reports\/export\?format=csv"/);
   assert.ok(arabic.includes(reportCatalogText.ar[0][1]));
@@ -2534,7 +2535,7 @@ test('reports route renders English and Arabic report labels', async () => {
 
   assert.match(english, /dir="ltr"/);
   assert.match(english, /Reports dashboard/);
-  assert.match(english, /Report export/);
+  assert.match(english, /Operational row export/);
   assert.match(english, /RPT-017/);
   assert.match(arabic, /dir="rtl"/);
   assert.ok(arabic.includes(reportsDashboardText.ar.title));
@@ -2657,7 +2658,7 @@ test('reports route renders real scoped rows through the session cookie', async 
   assert.match(html, /3/);
   assert.match(html, /0\.5 h/);
   assert.match(html, /12\.25 h/);
-  assert.doesNotMatch(html, /RPT-017/);
+  assert.match(html, /RPT-017/);
 });
 
 test('reports route handles KPI denial without exposing privileged values', async () => {

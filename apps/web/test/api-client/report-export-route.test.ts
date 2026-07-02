@@ -12,7 +12,7 @@ test('report export route proxies valid formats with staff cookies', async () =>
       assert.equal((init?.headers as Record<string, string>).cookie, 'cms_staff_session=session');
       return new Response('id\n1\n', {
         headers: {
-          'content-disposition': 'attachment; filename="reports.csv"',
+          'content-disposition': 'attachment; filename="operational-report-rows.csv"',
           'content-type': 'text/csv',
         },
       });

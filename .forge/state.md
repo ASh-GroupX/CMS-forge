@@ -1,8 +1,8 @@
 # Current State
 
-Status: Business readiness Slice 5 complete
+Status: Business readiness Slice 6 code complete with human signoff caveat
 Phase: business-readiness-remediation
-Next Task: Slice 6 - Report Matrix Completion Or Signed Deferral
+Next Task: Slice 7 - Staff Comments And Public Portal Updates
 Model Tier: GPT-5.5 Extra High
 
 ## How to use this file
@@ -19,14 +19,15 @@ Prior state history is in .forge/archive/state-archive.md.
 - Slice 3 enforces backend management-readonly masking for complaint search/detail sensitive values using the server-derived role.
 - Slice 4 wires the audit viewer to backend search/export through the staff session cookie, with filters, localized states, and backend-redacted metadata.
 - Slice 5 adds real admin category list/create/edit/deactivate UI and minimal SLA policy list/edit UI backed by guarded API routes and CONFIG audit entries.
-- Proof passed for Slice 5: `security:check`, `test:api -- admin`, `test:api -- sla`, `test:web -- api-client`, `test:web -- shell`, `test:web -- localization`, `test:e2e -- accessibility`, `test:visual`, `openapi:check`, `typecheck`, `lint`, and `git diff --check`.
+- Slice 6 keeps the guarded RPT-001 through RPT-017 matrix visible, labels generic exports as operational report rows, and marks incomplete reports as deferred pending business signoff instead of implying delivery.
+- Proof passed for Slice 6: `test:api -- reports`, `test:web -- localization`, `test:web -- api-client`, `test:web -- shell`, `typecheck`, `lint`, `git diff --check`, and report screenshots.
 
 ## Current Stop
 
-Ready to commit Slice 5, then start Slice 6.
+Ready to commit Slice 6, then start Slice 7.
 
 ## Open Carry-Forward / Known Debt
 
-- Human signoff is still needed before slices that depend on report deferrals, DMS live/manual mode, compensation scope, or notification-channel approval.
-- Slice 6 can proceed by delivering missing reports; choosing signed report deferrals still depends on the unresolved Slice 0 decision.
+- Human signoff is still needed before final acceptance of report deferrals, DMS live/manual mode, compensation scope, or notification-channel approval.
+- Exact report decision still needed: either sign MVP deferral for RPT-002, RPT-003, RPT-005 through RPT-012, RPT-014, RPT-015, and RPT-016, or approve implementation of those missing report-specific outputs.
 - Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts remain untouched.

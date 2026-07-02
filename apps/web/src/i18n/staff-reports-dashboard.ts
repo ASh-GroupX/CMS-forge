@@ -47,6 +47,12 @@ export const reportsDashboardText: Record<Locale, typeof enReportsDashboardText>
     title: 'Reports dashboard',
     subtitle: 'Operational reports and accountability KPIs for your signed-in role.',
     headers: ['Report', 'Scope or audience', 'Required filters', 'Delivery status'],
+    catalog: { title: 'Report delivery matrix' },
+    operationalRows: {
+      title: 'Operational report rows',
+      headers: ['Complaint', 'Branch or owner', 'Category', 'Status'],
+      empty: 'Operational rows are unavailable for this session or filter set.',
+    },
     kpis: {
       title: 'Accountability KPIs',
       subtitle: 'Values are read from the backend KPI model.',
@@ -71,7 +77,8 @@ export const reportsDashboardText: Record<Locale, typeof enReportsDashboardText>
     },
     hours: (value: number) => `${value} h`,
     export: {
-      title: 'Report export',
+      title: 'Operational row export',
+      subtitle: 'CSV and Excel files contain generic operational rows, not specialized RPT outputs.',
       csv: 'CSV',
       excel: 'Excel',
       rowLimit: 'Exports use backend configured row limits.',
@@ -102,7 +109,7 @@ export const reportsDashboardText: Record<Locale, typeof enReportsDashboardText>
         error: 'Owners could not be loaded.',
       },
     },
-    badges: { operations: 'Operations', sla: 'SLA', executive: 'Executive', admin: 'Admin', delivered: 'Delivered', deferred: 'Deferred', deferredSignoff: 'Deferred - signoff required', pending: 'Catalog unavailable' },
+    badges: { operations: 'Operations', sla: 'SLA', executive: 'Executive', admin: 'Admin', delivered: 'Delivered', deferred: 'Deferred', deferredSignoff: 'Deferred - pending business signoff', pending: 'Catalog unavailable' },
     states: {
       ready: 'Export controls are ready.',
       loading: 'Loading report entries.',
@@ -119,6 +126,12 @@ export const reportsDashboardText: Record<Locale, typeof enReportsDashboardText>
     title: 'لوحة التقارير',
     subtitle: 'تقارير تشغيلية ومؤشرات مساءلة حسب صلاحية دخولك.',
     headers: ['\u0627\u0644\u062a\u0642\u0631\u064a\u0631', '\u0627\u0644\u0646\u0637\u0627\u0642 \u0623\u0648 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645\u0648\u0646', '\u0641\u0644\u0627\u062a\u0631 \u0645\u0637\u0644\u0648\u0628\u0629', '\u062d\u0627\u0644\u0629 \u0627\u0644\u062a\u0633\u0644\u064a\u0645'],
+    catalog: { title: 'مصفوفة تسليم التقارير' },
+    operationalRows: {
+      title: 'صفوف التقارير التشغيلية',
+      headers: ['الشكوى', 'الفرع أو المسؤول', 'التصنيف', 'الحالة'],
+      empty: 'صفوف التشغيل غير متاحة لهذه الجلسة أو الفلاتر.',
+    },
     kpis: {
       title: 'مؤشرات المساءلة',
       subtitle: 'القيم مقروءة من بيانات النظام.',
@@ -143,7 +156,8 @@ export const reportsDashboardText: Record<Locale, typeof enReportsDashboardText>
     },
     hours: (value: number) => `${value} س`,
     export: {
-      title: 'تصدير التقرير',
+      title: 'تصدير صفوف تشغيلية',
+      subtitle: 'ملفات CSV وExcel تحتوي صفوفا تشغيلية عامة، وليست مخرجات RPT متخصصة.',
       csv: 'CSV',
       excel: 'Excel',
       rowLimit: 'التصدير يلتزم بحد الصفوف المحدد في النظام.',
@@ -174,7 +188,7 @@ export const reportsDashboardText: Record<Locale, typeof enReportsDashboardText>
         error: 'تعذر تحميل المسؤولين.',
       },
     },
-    badges: { operations: '\u062a\u0634\u063a\u064a\u0644\u064a', sla: '\u0627\u062a\u0641\u0627\u0642\u064a\u0629 \u0627\u0644\u062e\u062f\u0645\u0629', executive: '\u062a\u0646\u0641\u064a\u0630\u064a', admin: '\u0625\u062f\u0627\u0631\u064a', delivered: '\u0645\u0633\u0644\u0645', deferred: '\u0645\u0624\u062c\u0644', deferredSignoff: '\u0645\u0624\u062c\u0644 - \u064a\u062d\u062a\u0627\u062c \u0627\u0639\u062a\u0645\u0627\u062f', pending: '\u0641\u0647\u0631\u0633 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d' },
+    badges: { operations: '\u062a\u0634\u063a\u064a\u0644\u064a', sla: '\u0627\u062a\u0641\u0627\u0642\u064a\u0629 \u0627\u0644\u062e\u062f\u0645\u0629', executive: '\u062a\u0646\u0641\u064a\u0630\u064a', admin: '\u0625\u062f\u0627\u0631\u064a', delivered: '\u0645\u0633\u0644\u0645', deferred: '\u0645\u0624\u062c\u0644', deferredSignoff: '\u0645\u0624\u062c\u0644 - \u0628\u0627\u0646\u062a\u0638\u0627\u0631 \u0627\u0639\u062a\u0645\u0627\u062f \u0627\u0644\u0639\u0645\u0644', pending: '\u0641\u0647\u0631\u0633 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d' },
     states: {
       ready: 'عناصر التصدير جاهزة.',
       loading: 'جار تحميل مدخلات التقارير.',
@@ -193,6 +207,8 @@ const enReportsDashboardText = {
   title: '',
   subtitle: '',
   headers: [''],
+  catalog: { title: '' },
+  operationalRows: { title: '', headers: [''], empty: '' },
   kpis: {
     title: '',
     subtitle: '',
@@ -216,7 +232,7 @@ const enReportsDashboardText = {
     resolution: '',
   },
   hours: (_value: number) => '',
-  export: { title: '', csv: '', excel: '', rowLimit: '', scoped: '', audit: '' },
+  export: { title: '', subtitle: '', csv: '', excel: '', rowLimit: '', scoped: '', audit: '' },
   filters: {
     branch: '',
     category: '',

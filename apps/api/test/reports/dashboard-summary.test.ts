@@ -171,7 +171,7 @@ test('reports export route keeps controller binding and preserves filters', asyn
     exportReport: async (input: unknown) => {
       calls.push(input);
       return {
-        fileName: 'reports.csv',
+        fileName: 'operational-report-rows.csv',
         contentType: 'text/csv; charset=utf-8',
         body: 'referenceNumber\nCMP-1\n',
         rowCount: 1,
@@ -189,7 +189,7 @@ test('reports export route keeps controller binding and preserves filters', asyn
 
   assert.equal(body, 'referenceNumber\nCMP-1\n');
   assert.equal(headers['content-type'], 'text/csv; charset=utf-8');
-  assert.equal(headers['content-disposition'], 'attachment; filename="reports.csv"');
+  assert.equal(headers['content-disposition'], 'attachment; filename="operational-report-rows.csv"');
   assert.equal(headers['x-report-row-count'], '1');
   assert.deepEqual(calls[0], {
     role: RoleCode.BRANCH_MANAGER,
@@ -372,10 +372,11 @@ test('report export is row-limited and writes REPORT audit', async () => {
 
   assert.equal(exported.rowCount, 1);
   assert.equal(exported.rowLimit, 1);
-  assert.equal(exported.fileName, 'reports.csv');
+  assert.equal(exported.fileName, 'operational-report-rows.csv');
   assert.equal(exported.body.split('\n').filter(Boolean).length, 2);
   assert.equal(auditRecords[0]?.eventType, 'REPORT');
   assert.equal(auditRecords[0]?.action, 'report_exported');
+  assert.equal(auditRecords[0]?.targetId, 'operational_report_rows');
   assert.deepEqual(auditRecords[0]?.metadata, {
     format: 'csv',
     rowCount: 1,

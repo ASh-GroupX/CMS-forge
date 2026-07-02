@@ -12242,3 +12242,42 @@ SRS IDs: `REQ-COMPLAINT-002`, `REQ-SLA-001`, `METHOD-AUDIT-001`, `REQ-RBAC-001`,
 - English and Arabic admin screenshots were captured at `output/playwright/slice5-admin-en.png` and `output/playwright/slice5-admin-ar.png` and visually checked.
 - Slice 6 can proceed by implementing missing reports; selecting signed deferrals still needs the unresolved Slice 0 human signoff.
 - Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.
+
+---
+
+## Business Readiness - Slice 6 Report Matrix Completion Or Signed Deferral
+
+Status: Code complete with human signoff caveat
+SRS IDs: `REQ-REPORT-001`, `REQ-RBAC-001`, `METHOD-AUDIT-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
+
+### Scope
+
+- Kept the guarded RPT-001 through RPT-017 catalog as the always-visible report delivery matrix on the reports dashboard.
+- Labeled incomplete reports as `Deferred - pending business signoff` in English and Arabic rather than implying that commercial signoff already exists.
+- Renamed the generic export surface to `Operational row export` and added copy stating CSV/Excel exports contain generic operational rows, not specialized RPT outputs.
+- Renamed generated export filenames to `operational-report-rows.csv` / `operational-report-rows.xls` and changed the report export audit target to `operational_report_rows`.
+- Split the reports UI table into the report delivery matrix and operational report rows so loaded rows no longer hide the RPT delivery status.
+
+### Security Self-Check
+
+- Backend report view/export permissions, branch scope, row limits, filter handling, and export audit remain backend-owned.
+- React sends only report filters; it does not send role, actor, permissions, branch-scope authority, audit metadata, row limits, workflow state, portal data, or credentials.
+- The unresolved report deferrals are not claimed as signed in code or evidence.
+- No passwords, OTPs, tokens, hashes, provider secrets, credentials, customer phone/email, VIN, plate, audit internals, or portal-only data were added to report rows or export metadata.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- reports` (32/32 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:web -- api-client` (45/45 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (202/202 TAP tests).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Notes
+
+- English and Arabic report screenshots were captured at `output/playwright/slice6-reports-en.png` and `output/playwright/slice6-reports-ar.png` and visually checked.
+- The live `/reports` route correctly redirects without a real API-backed staff session; screenshots used the actual `ReportsDashboard` server-rendered component with the dev stylesheet and proof data, matching the repo's visual-proof style.
+- Exact human decision still needed for final Slice 6 acceptance: either sign MVP deferral for RPT-002, RPT-003, RPT-005 through RPT-012, RPT-014, RPT-015, and RPT-016, or approve implementation of those missing report-specific outputs.
+- Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.

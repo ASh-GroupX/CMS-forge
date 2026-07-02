@@ -1,33 +1,28 @@
-# Business Readiness Remediation - Slice 6
+# Business Readiness Remediation - Slice 7
 
-Status: Ready with caveat
+Status: Ready
 Required model tier: GPT-5.5 Extra High
 Phase: business-readiness-remediation
 Risk: High
-SRS IDs: `REQ-REPORT-001`, `REQ-RBAC-001`, `METHOD-AUDIT-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
+SRS IDs: `REQ-COMPLAINT-001`, `REQ-COMPLAINT-004`, `PORTAL-SEC-001`, `REQ-RBAC-001`, `METHOD-AUDIT-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
 
 ## Task
 
-Implement Slice 6 from `docs/BUSINESS_READINESS_PLAN.md`: report matrix completion or signed deferral.
+Implement Slice 7 from `docs/BUSINESS_READINESS_PLAN.md`: staff comments and public portal updates.
 
 ## Scope
 
-- Inspect the current report matrix, report service, reports dashboard, i18n, API client/export path, and existing report tests before editing.
-- Either deliver missing report outputs or make signed deferrals explicit.
-- Label generic operational row export honestly.
-- Keep branch scope and export audit backend-owned.
-
-## Caveat
-
-- Delivering missing report outputs can proceed.
-- Choosing signed deferrals depends on the unresolved Slice 0 human signoff for report deferrals; document the exact signoff needed if implementation cannot proceed without that choice.
+- Inspect current complaint comments/status history, portal tracking, and existing workflow/portal tests before editing.
+- Add or wire staff detail comment composer/list with explicit internal versus public visibility.
+- Ensure public portal tracking shows only public updates after verification.
+- Keep comment authorization, branch scope, audit, and portal verification backend-owned.
 
 ## Proof
 
-- `corepack pnpm test:api -- reports`
-- `corepack pnpm test:web -- localization`
-- Report screenshots.
+- `corepack pnpm test:api -- workflow`
+- `corepack pnpm test:api -- portal.tracking`
+- Staff and portal screenshots.
 
 ## Stop When
 
-- Every RPT ID is either delivered or signed deferred, and the UI says so.
+- UAT-006 passes with internal note hidden from the portal and public update visible after verification.
