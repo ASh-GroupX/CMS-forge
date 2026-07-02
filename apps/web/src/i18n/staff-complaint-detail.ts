@@ -289,3 +289,10 @@ const enComplaintDetailText = {
   commentStates: { loading: '', empty: '', error: '' },
   attachmentStates: { loading: '', empty: '', error: '' },
 };
+
+export const complaintCommentText: Record<Locale, typeof enComplaintCommentText> = {
+  en: { form: 'Add complaint comment', body: 'Comment', submit: 'Add comment', states: { idle: 'No comment submitted yet.', loading: 'Saving comment.', success: 'Comment saved.', error: 'Comment could not be saved. Try again.', validation: 'Comment body is required.' } },
+  ar: { form: 'إضافة تعليق على الشكوى', body: 'التعليق', submit: 'إضافة تعليق', states: { idle: 'لم يتم إرسال تعليق بعد.', loading: 'جاري حفظ التعليق.', success: 'تم حفظ التعليق.', error: 'تعذر حفظ التعليق. حاول مرة أخرى.', validation: 'نص التعليق مطلوب.' } },
+};
+
+const enComplaintCommentText = { form: '', body: '', submit: '', states: { idle: '', loading: '', success: '', error: '', validation: '' } };

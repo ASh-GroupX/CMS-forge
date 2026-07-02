@@ -7,6 +7,7 @@ import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
 import type { ComplaintFormOptions } from '../../lib/staff-complaint-form-options-api';
 import type { StaffComplaintRelationsView } from '../../lib/staff-complaint-relations-api';
+import type { StaffComplaintComment } from '../../lib/staff-complaint-comments-api';
 import type { StaffComplaintDetailView } from '../../lib/staff-detail-api';
 import { ComplaintAttachmentControls, type ComplaintAttachmentPreviewState } from '../complaint-attachment-controls';
 import { ComplaintCommentsPanel, type ComplaintCommentsPreviewState } from '../complaint-comments-panel';
@@ -23,6 +24,7 @@ export type { ComplaintWorkflowPreviewState };
 
 export function ComplaintDetailWorkspace({
   attachmentState,
+  comments,
   commentsState,
   detail,
   locale,
@@ -34,6 +36,7 @@ export function ComplaintDetailWorkspace({
   workflowState,
 }: {
   attachmentState?: ComplaintAttachmentPreviewState | undefined;
+  comments?: StaffComplaintComment[] | null | undefined;
   commentsState?: ComplaintCommentsPreviewState | undefined;
   detail?: StaffComplaintDetailView | undefined;
   locale: Locale;
@@ -134,7 +137,7 @@ export function ComplaintDetailWorkspace({
             vehicleNeedsUnavailableReason={Boolean(detail?.vehicleRelated && !detail.vehicle && !detail.vehicleDataUnavailableReason)}
             workflowState={workflowState}
           />
-          <ComplaintCommentsPanel commentsState={commentsState} locale={locale} />
+          <ComplaintCommentsPanel comments={comments} commentsState={commentsState} complaintId={detail?.id} locale={locale} />
         </CardContent>
       )}
     </Card>

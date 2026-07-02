@@ -12,6 +12,10 @@ export type ComplaintCommentResponseDto = {
   comment: ComplaintCommentResult;
 };
 
+export type ComplaintCommentsResponseDto = {
+  items: ComplaintCommentResult[];
+};
+
 export type ComplaintPublicCommentsResponseDto = {
   items: ComplaintCommentResult[];
 };

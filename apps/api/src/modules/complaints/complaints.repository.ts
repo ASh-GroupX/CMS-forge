@@ -190,13 +190,9 @@ export class ComplaintsRepository {
     return client.comment.create({ data, select: commentSelect });
   }
 
-  async listPublicComments(complaintId: string, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintCommentRecord[]> {
-    return client.comment.findMany({
-      where: { complaintId, visibility: 'PUBLIC' },
-      orderBy: { createdAt: 'asc' },
-      select: commentSelect,
-    });
-  }
+  async listComments(complaintId: string, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintCommentRecord[]> { return client.comment.findMany({ where: { complaintId }, orderBy: { createdAt: 'asc' }, select: commentSelect }); }
+
+  async listPublicComments(complaintId: string, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintCommentRecord[]> { return client.comment.findMany({ where: { complaintId, visibility: 'PUBLIC' }, orderBy: { createdAt: 'asc' }, select: commentSelect }); }
 
   async findPortalVerificationTarget(referenceNumber: string, phone: string, client: ComplaintTransitionClient = this.prisma): Promise<PortalVerificationTargetRecord | null> {
     const complaint = await client.complaint.findFirst({

@@ -127,14 +127,15 @@ export class ComplaintsService {
 
   async correctProvenance(input: ApplyComplaintCorrectionInput): Promise<ApplyComplaintCorrectionResult> { const data = complaintCorrectionData(input); return this.complaintsRepository.transaction(async (client) => { const complaint = await this.complaintsRepository.updateCorrection(data, client); if (!complaint) throw correctionConflictError(); await this.auditService.record(complaintCorrectionAudit(input, complaint.branchId, data.changedFields), client); return { complaintId: complaint.id, changedFields: data.changedFields }; }); }
 
-  async createComment(input: CreateComplaintCommentInput): Promise<ComplaintCommentResult> {
-    const body = nonEmpty(input.body, 'body');
+  async createComment(input: CreateComplaintCommentInput): Promise<ComplaintCommentResult> { const body = nonEmpty(input.body, 'body');
     return this.complaintsRepository.transaction(async (client) => {
       const comment = await this.complaintsRepository.createComment({ complaintId: input.complaintId, authorId: input.actorId ?? null, body, visibility: input.visibility }, client);
       await this.auditService.record(commentAudit(input, comment), client);
       return commentItem(comment);
     });
   }
+
+  async listComments(complaintId: string): Promise<ComplaintCommentResult[]> { return (await this.complaintsRepository.listComments(complaintId)).map(commentItem); }
 
   async listPublicComments(complaintId: string): Promise<ComplaintCommentResult[]> { return (await this.complaintsRepository.listPublicComments(complaintId)).map(commentItem); }
 

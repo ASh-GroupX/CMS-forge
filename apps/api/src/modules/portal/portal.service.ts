@@ -6,7 +6,7 @@ import { AppException } from '../../core/http-kernel.js';
 import { AttachmentsService } from '../attachments/attachments.service.js';
 import type { AttachmentUploadResult, CreateAttachmentUploadInput } from '../attachments/attachments.service.js';
 import { ComplaintsService } from '../complaints/complaints.service.js';
-import type { ComplaintCreationResult, CreateInternalComplaintInput } from '../complaints/complaints.service.js';
+import type { ComplaintCommentResult, ComplaintCreationResult, CreateInternalComplaintInput } from '../complaints/complaints.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PortalRepository } from './portal.repository.js';
 import type { PortalSessionLookupRecord, PortalVerificationChallengeRecord } from './portal.repository.js';
@@ -23,7 +23,8 @@ export type PortalFollowUpInput = PortalTrackingInput & { body: string };
 export type PortalAttachmentUploadContext = { complaintId: string; customerId: string; branchId: string; status: string };
 export type PortalOtpRequestResult = { ok: true; verificationId: string; expiresAt: string };
 export type PortalSessionResult = { sessionToken: string; expiresAt: string };
-export type PortalTrackingResult = { referenceNumber: string; status: string; createdAt: string; updatedAt: string; timeline: Array<{ fromStatus: string | null; toStatus: string; action: string | null; createdAt: string }> };
+export type PortalTimelineItem = { fromStatus: string | null; toStatus: string; action: string | null; createdAt: string; type: 'STATUS' | 'PUBLIC_UPDATE'; body?: string };
+export type PortalTrackingResult = { referenceNumber: string; status: string; createdAt: string; updatedAt: string; timeline: PortalTimelineItem[] };
 export type PortalFollowUpResult = { ok: true };
 
 const OTP_TTL_MS = 5 * 60 * 1000;
@@ -32,13 +33,7 @@ const MAX_OTP_ATTEMPTS = 5;
 
 @Injectable()
 export class PortalService {
-  constructor(
-    private readonly complaintsService: ComplaintsService,
-    private readonly portalRepository: PortalRepository,
-    private readonly notificationsService: NotificationsService,
-    private readonly auditService: AuditService,
-    private readonly attachmentsService?: AttachmentsService,
-  ) {}
+  constructor(private readonly complaintsService: ComplaintsService, private readonly portalRepository: PortalRepository, private readonly notificationsService: NotificationsService, private readonly auditService: AuditService, private readonly attachmentsService?: AttachmentsService) {}
 
   async submitComplaint(input: SubmitPortalComplaintInput): Promise<PortalComplaintSubmissionResult> {
     const { attachments = [], ...complaintInput } = input;
@@ -135,12 +130,16 @@ export class PortalService {
     const session = await this.requireSession(input.sessionToken);
     try {
       const complaint = await this.complaintsService.getDetail(session.complaintId);
+      const comments = await this.complaintsService.listPublicComments(session.complaintId);
       return {
         referenceNumber: complaint.referenceNumber,
         status: complaint.status,
         createdAt: complaint.createdAt,
         updatedAt: complaint.updatedAt,
-        timeline: complaint.statusHistory.map(({ fromStatus, toStatus, action, createdAt }) => ({ fromStatus, toStatus, action, createdAt })),
+        timeline: publicTimeline([
+          ...complaint.statusHistory.map(({ fromStatus, toStatus, action, createdAt }) => ({ fromStatus, toStatus, action, createdAt, type: 'STATUS' as const })),
+          ...comments.map(publicCommentTimelineItem),
+        ]),
       };
     } catch (error) {
       if (error instanceof AppException && error.code === 'COMPLAINT_NOT_FOUND') throw verificationFailed();
@@ -216,6 +215,10 @@ export class PortalService {
     return session;
   }
 }
+
+function publicCommentTimelineItem(comment: ComplaintCommentResult): PortalTimelineItem { return { fromStatus: null, toStatus: 'PUBLIC_UPDATE', action: 'PUBLIC_UPDATE', createdAt: comment.createdAt, type: 'PUBLIC_UPDATE', body: comment.body }; }
+
+function publicTimeline(items: PortalTimelineItem[]): PortalTimelineItem[] { return items.sort((left, right) => left.createdAt.localeCompare(right.createdAt)); }
 
 function generateOtp(): string { return String(randomInt(0, 1_000_000)).padStart(6, '0'); }
 

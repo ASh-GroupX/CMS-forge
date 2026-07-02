@@ -12085,6 +12085,47 @@ SRS IDs: `REQ-PORTAL-002`, `PORTAL-SEC-001`, `REQ-NOTIFY-001`, `METHOD-AUDIT-001
 
 ---
 
+## Business Readiness - Slice 7 Staff Comments And Public Portal Updates
+
+Status: Complete
+SRS IDs: `REQ-COMMENTS-001`, `PORTAL-SEC-001`, `REQ-RBAC-001`, `METHOD-AUDIT-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
+
+### Scope
+
+- Added a staff-only branch-scoped comment read route returning both internal and public complaint comments.
+- Kept staff comment creation on the existing guarded comment route with dynamic internal/public permissions, CSRF, branch scope, and same-transaction comment audit.
+- Wired staff detail to load real comments through the staff session cookie and added a visibility-aware comment composer.
+- Added a same-origin staff comment proxy and browser helper that send only body and visibility, with no client role, actor, branch, or workflow authority.
+- Updated verified portal tracking to merge status history with public complaint comments only; internal comments remain excluded from the portal response.
+- Rendered portal public updates as explicit public timeline entries after verification.
+
+### Security Self-Check
+
+- Internal comments require staff session, branch scope, and `COMPLAINT_COMMENT_INTERNAL`; public comment creation requires `COMPLAINT_COMMENT_PUBLIC`.
+- Portal tracking still requires a valid portal session token and does not accept reference-only reads.
+- Portal tracking uses `listPublicComments`; internal comments, audit data, staff PII, DMS codes, unrelated complaints, OTPs, session hashes, and credentials are not returned.
+- UI payloads do not include actor, role, branch scope, audit metadata, credentials, OTPs, tokens, provider data, or staff authority fields.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- workflow` (75/75 TAP tests).
+- Passed: `corepack pnpm test:api -- portal.tracking` (24/24 TAP tests).
+- Passed: `corepack pnpm test:web -- api-client` (47/47 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (202/202 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Notes
+
+- Staff comment screenshots were captured at `output/playwright/slice7-staff-comments-en.png` and `output/playwright/slice7-staff-comments-ar.png` and visually checked.
+- Portal tracking screenshots were captured at `output/playwright/slice7-portal-tracking-en.png` and `output/playwright/slice7-portal-tracking-ar.png` and visually checked.
+- Screenshot proof used component-rendered HTML with proof data because live staff and portal routes correctly require real sessions.
+- Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.
+
+---
+
 ## Business Readiness - Slice 2 Submission SLA and Acknowledgement
 
 Status: Complete

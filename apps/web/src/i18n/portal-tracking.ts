@@ -121,3 +121,19 @@ export function resolvePortalTrackingLocale(value: string | string[] | undefined
   const locale = Array.isArray(value) ? value[0] : value;
   return locale === 'ar' ? 'ar' : 'en';
 }
+
+export const portalTimelineText: Record<PortalTrackingLocale, typeof enPortalTimelineText> = {
+  en: {
+    publicUpdate: 'Public update',
+    samplePublicUpdate: 'Your complaint is under review by the customer relations team.',
+  },
+  ar: {
+    publicUpdate: 'تحديث عام',
+    samplePublicUpdate: 'شكواك قيد المراجعة من فريق علاقات العملاء.',
+  },
+};
+
+const enPortalTimelineText = {
+  publicUpdate: '',
+  samplePublicUpdate: '',
+};

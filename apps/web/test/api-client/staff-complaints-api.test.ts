@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { GET as proxyListAttachments, POST as proxyUploadAttachment } from '../../src/app/api/complaints/[id]/attachments/route';
 import { GET as proxyDownloadAttachment } from '../../src/app/api/complaints/[id]/attachments/[attachmentId]/download/route';
+import { POST as proxyAddComment } from '../../src/app/api/complaints/[id]/comments/route';
 import { POST as proxyCorrectComplaint } from '../../src/app/api/complaints/[id]/corrections/route';
 import { DELETE as proxyUnlinkRelatedComplaint, POST as proxyLinkRelatedComplaint } from '../../src/app/api/complaints/[id]/related/route';
 import { POST as proxyTransitionComplaint } from '../../src/app/api/complaints/[id]/transitions/route';
 import { POST as proxyCreateComplaint } from '../../src/app/api/complaints/route';
 import { GET as proxyLookupDmsCustomerVehicle } from '../../src/app/api/integrations/dms/customer-vehicle/route';
+import { addStaffComplaintComment } from '../../src/lib/staff-complaint-comments-api';
 import { getStaffComplaintDuplicateCandidates, getStaffComplaintRelated, linkStaffComplaintRelation, unlinkStaffComplaintRelation } from '../../src/lib/staff-complaint-relations-api';
 import { downloadStaffAttachment, listStaffComplaintAttachments, uploadStaffComplaintAttachment } from '../../src/lib/staff-attachments-api';
 import { correctStaffComplaint, createStaffComplaint, getStaffComplaint, listStaffComplaints, lookupStaffDmsCustomerVehicle, submitStaffComplaintWorkflowAction } from '../../src/lib/staff-complaints-api';
@@ -599,6 +601,58 @@ test('complaint transition proxy forwards body, session cookie, and CSRF to the 
 
     assert.equal(response.status, 200);
     assert.equal(String(calls[0]?.input), 'http://api.test/complaints/cmp_1/transitions');
+    assert.equal(calls[0]?.init?.body, JSON.stringify(body));
+    assert.deepEqual(Object.fromEntries(new Headers(calls[0]?.init?.headers).entries()), {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      cookie: 'cms_staff_session=raw-session',
+      'x-csrf-token': 'csrf_123',
+    });
+  } finally {
+    globalThis.fetch = priorFetch;
+    if (priorApiUrl === undefined) delete process.env.API_URL;
+    else process.env.API_URL = priorApiUrl;
+  }
+});
+
+test('addStaffComplaintComment posts visibility and body without client authority', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ comment: { id: 'cmt_1', complaintId: 'cmp/1', authorId: 'usr_1', body: 'Visible update', visibility: 'PUBLIC', createdAt: '2026-06-19T10:00:00.000Z' } });
+  };
+
+  await withDocumentCookie('cms_csrf_token=csrf_123', async () => {
+    const result = await addStaffComplaintComment('cmp/1', { body: 'Visible update', visibility: 'PUBLIC' }, fetchImpl);
+    assert.equal(result.ok, true);
+  });
+
+  assert.equal(calls[0]?.input, '/api/complaints/cmp%2F1/comments');
+  assert.equal(calls[0]?.init?.body, JSON.stringify({ body: 'Visible update', visibility: 'PUBLIC' }));
+  assert.deepEqual(calls[0]?.init?.headers, { Accept: 'application/json', 'content-type': 'application/json', 'x-csrf-token': 'csrf_123' });
+  assert.doesNotMatch(String(calls[0]?.init?.body), /actor|author|role|branch|credential|token|password/i);
+});
+
+test('complaint comment proxy forwards body, session cookie, and CSRF to the API', async () => {
+  const priorFetch = globalThis.fetch;
+  const priorApiUrl = process.env.API_URL;
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  globalThis.fetch = (async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ comment: { id: 'cmt_1', complaintId: 'cmp_1', body: 'Visible update', visibility: 'PUBLIC', authorId: 'usr_1', createdAt: '2026-06-19T10:00:00.000Z' } });
+  }) as typeof fetch;
+  process.env.API_URL = 'http://api.test';
+
+  try {
+    const body = { body: 'Visible update', visibility: 'PUBLIC' };
+    const response = await proxyAddComment(new Request('http://web.test/api/complaints/cmp_1/comments', {
+      body: JSON.stringify(body),
+      headers: { 'content-type': 'application/json', cookie: 'cms_staff_session=raw-session', 'x-csrf-token': 'csrf_123' },
+      method: 'POST',
+    }), { params: Promise.resolve({ id: 'cmp_1' }) });
+
+    assert.equal(response.status, 200);
+    assert.equal(String(calls[0]?.input), 'http://api.test/complaints/cmp_1/comments');
     assert.equal(calls[0]?.init?.body, JSON.stringify(body));
     assert.deepEqual(Object.fromEntries(new Headers(calls[0]?.init?.headers).entries()), {
       accept: 'application/json',

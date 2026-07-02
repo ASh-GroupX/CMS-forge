@@ -500,6 +500,7 @@ test('complaint create/read routes use permission guards and keep CSRF/branch sc
   assert.deepEqual(guardNames('search'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
   assert.deepEqual(guardNames('formOptionsForCreate'), ['SessionAuthGuard', 'PermissionGuard']);
   assert.deepEqual(guardNames('get'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
+  assert.deepEqual(guardNames('listComments'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
   assert.deepEqual(guardNames('listPublicComments'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
   assert.deepEqual(guardNames('create'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard', 'CsrfGuard']);
 
@@ -863,6 +864,23 @@ test('public comment reads exclude internal comments', async () => {
   }]);
 });
 
+test('staff comment reads include internal and public comments', async () => {
+  const service = new ComplaintsService({
+    listComments: async (complaintId) => {
+      assert.equal(complaintId, 'cmp_1');
+      return [
+        { id: 'cmt_internal', complaintId, authorId: 'usr_officer', body: 'Staff note', visibility: CommentVisibility.INTERNAL, createdAt: new Date('2026-06-18T11:05:00.000Z') },
+        { id: 'cmt_public', complaintId, authorId: 'usr_officer', body: 'Visible update', visibility: CommentVisibility.PUBLIC, createdAt: new Date('2026-06-18T11:10:00.000Z') },
+      ];
+    },
+  } as ComplaintsRepository, { record: async () => undefined } as unknown as AuditService);
+
+  assert.deepEqual(await service.listComments('cmp_1'), [
+    { id: 'cmt_internal', complaintId: 'cmp_1', authorId: 'usr_officer', body: 'Staff note', visibility: CommentVisibility.INTERNAL, createdAt: '2026-06-18T11:05:00.000Z' },
+    { id: 'cmt_public', complaintId: 'cmp_1', authorId: 'usr_officer', body: 'Visible update', visibility: CommentVisibility.PUBLIC, createdAt: '2026-06-18T11:10:00.000Z' },
+  ]);
+});
+
 test('customer portal public follow-up comment audits safely in the complaint transaction', async () => {
   const txClient = {};
   const auditRecords: Array<{ input: AuditRecordInput; client: unknown }> = [];
@@ -974,6 +992,28 @@ test('public comment route verifies scope and returns only public comments', asy
   assert.equal(response.items.length, 1);
   assert.equal(response.items[0]?.visibility, CommentVisibility.PUBLIC);
   assert.deepEqual(calls[0], { method: 'getDetail', id: 'cmp_1', filter: { branchId: 'branch_main' } });
+});
+
+test('staff comment route verifies scope and returns internal and public comments', async () => {
+  const calls: unknown[] = [];
+  const controller = new ComplaintsController({
+    getDetail: async (id, filter) => {
+      calls.push({ method: 'getDetail', id, filter });
+      return { ...validQueueItem(), description: 'Engine noise', incidentAt: null, statusHistory: [] };
+    },
+    listComments: async (id) => {
+      calls.push({ method: 'listComments', id });
+      return [
+        { id: 'cmt_internal', complaintId: id, authorId: 'usr_officer', body: 'Staff note', visibility: CommentVisibility.INTERNAL, createdAt: '2026-06-18T11:05:00.000Z' },
+        { id: 'cmt_public', complaintId: id, authorId: 'usr_officer', body: 'Visible update', visibility: CommentVisibility.PUBLIC, createdAt: '2026-06-18T11:10:00.000Z' },
+      ];
+    },
+  } as ComplaintsService);
+
+  const response = await controller.listComments('cmp_1', 'branch_main', request());
+  assert.deepEqual(response.items.map((item) => item.visibility), [CommentVisibility.INTERNAL, CommentVisibility.PUBLIC]);
+  assert.deepEqual(calls[0], { method: 'getDetail', id: 'cmp_1', filter: { branchId: 'branch_main' } });
+  assert.deepEqual(calls[1], { method: 'listComments', id: 'cmp_1' });
 });
 
 function validBody() {

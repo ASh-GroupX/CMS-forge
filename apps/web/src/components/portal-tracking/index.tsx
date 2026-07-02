@@ -6,7 +6,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { portalTrackingText, type PortalTrackingLocale } from '../../i18n/portal-tracking';
+import { portalTimelineText, portalTrackingText, type PortalTrackingLocale } from '../../i18n/portal-tracking';
 import {
   getPortalTracking,
   requestPortalOtp,
@@ -26,6 +26,7 @@ export function PortalTrackingScreen({ locale }: { locale: PortalTrackingLocale 
 
 export function PortalTrackingPreview({ locale, reference, state }: { locale: PortalTrackingLocale; reference: string; state?: PortalTrackingPreviewState | undefined }) {
   const t = portalTrackingText[locale];
+  const timelineLabels = portalTimelineText[locale];
   return (
     <PortalTrackingView
       initialFeedback={state}
@@ -167,6 +168,7 @@ function PortalTrackingView({ initialFeedback, initialFollowUp, initialPhone, in
 
 function VerifiedTracking({ locale, tracking }: { locale: PortalTrackingLocale; tracking: PortalTrackingComplaint }) {
   const t = portalTrackingText[locale];
+  const timelineLabels = portalTimelineText[locale];
   return (
     <Card className="rounded-md border-slate-200 bg-white shadow-sm" aria-label={t.sections.status}>
       <CardHeader className="p-4 pb-2"><CardTitle className="text-sm">{t.sections.status}</CardTitle></CardHeader>
@@ -183,8 +185,8 @@ function VerifiedTracking({ locale, tracking }: { locale: PortalTrackingLocale; 
           <h3 className="text-sm font-semibold">{t.sections.timeline}</h3>
           <ol className="mt-3 grid gap-2 text-sm text-slate-700">
             {tracking.timeline.length ? tracking.timeline.map((item) => (
-              <li className="rounded-sm border border-slate-200 bg-white px-3 py-2" key={`${item.toStatus}-${item.createdAt}`}>
-                {[item.action, item.toStatus, item.createdAt].filter(Boolean).join(' - ')}
+              <li className="rounded-sm border border-slate-200 bg-white px-3 py-2" key={`${item.type ?? item.toStatus}-${item.createdAt}-${item.body ?? ''}`}>
+                {timelineText(item, timelineLabels)}
               </li>
             )) : <li className="rounded-sm border border-slate-200 bg-white px-3 py-2">{t.states.empty}</li>}
           </ol>
@@ -218,13 +220,22 @@ function TextField({ label, name, type = 'text', value, onChange, autoComplete }
 function sampleTracking(locale: PortalTrackingLocale, reference: string, state?: PortalTrackingPreviewState): PortalTrackingComplaint | null {
   if (state !== 'verified' && state !== 'followup' && state !== 'attachment' && state !== 'closed') return null;
   const t = portalTrackingText[locale];
+  const timelineLabels = portalTimelineText[locale];
   return {
     referenceNumber: reference,
     status: state === 'closed' ? 'CLOSED' : t.sample.status,
     createdAt: t.sample.created,
     updatedAt: t.sample.updated,
-    timeline: t.sample.timeline.map((item) => ({ fromStatus: null, toStatus: item, action: null, createdAt: '' })),
+    timeline: [
+      ...t.sample.timeline.map((item) => ({ fromStatus: null, toStatus: item, action: null, createdAt: '', type: 'STATUS' as const })),
+      { fromStatus: null, toStatus: 'PUBLIC_UPDATE', action: 'PUBLIC_UPDATE', createdAt: t.sample.updated, type: 'PUBLIC_UPDATE' as const, body: timelineLabels.samplePublicUpdate },
+    ],
   };
+}
+
+function timelineText(item: PortalTrackingComplaint['timeline'][number], labels: typeof portalTimelineText.en): string {
+  if (item.type === 'PUBLIC_UPDATE' || item.body) return [labels.publicUpdate, item.body, item.createdAt].filter(Boolean).join(' - ');
+  return [item.action, item.toStatus, item.createdAt].filter(Boolean).join(' - ');
 }
 
 function feedbackFromCode(code: string): Feedback {

@@ -10,6 +10,7 @@ import type { LookupPreviewState } from '../../../../components/customer-vehicle
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { getAssignableStaff } from '../../../../lib/staff-assignable-staff-api';
 import { getComplaintFormOptions } from '../../../../lib/staff-complaint-form-options-api';
+import { getStaffComplaintComments } from '../../../../lib/staff-complaint-comments-api';
 import { getStaffComplaintRelationsView } from '../../../../lib/staff-complaint-relations-api';
 import { getStaffComplaintDetail } from '../../../../lib/staff-detail-api';
 
@@ -41,8 +42,9 @@ export default async function ComplaintDetailPage({
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
     ...(id !== undefined ? { complaintId: id } : {}),
   };
-  const [detail, relations, staff, options] = await Promise.all([
+  const [detail, comments, relations, staff, options] = await Promise.all([
     getStaffComplaintDetail(apiInput),
+    getStaffComplaintComments(apiInput),
     getStaffComplaintRelationsView(apiInput),
     getAssignableStaff({ ...(cookieHeader !== undefined ? { cookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
     getComplaintFormOptions({ ...(cookieHeader !== undefined ? { cookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
@@ -51,6 +53,7 @@ export default async function ComplaintDetailPage({
   return (
     <ComplaintDetailWorkspace
       attachmentState={resolveAttachment(readParam(query?.attachment))}
+      comments={comments}
       commentsState={resolveDetail(readParam(query?.comments))}
       detail={detail ?? undefined}
       locale={resolveLocale(readParam(query?.locale))}

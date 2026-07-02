@@ -7,7 +7,7 @@ import { AppException } from '../../core/http-kernel.js';
 import { ComplaintFormOptionsService } from './complaint-form-options.service.js';
 import { ComplaintRelationsService } from './complaint-relations.service.js';
 import { ComplaintsService } from './complaints.service.js';
-import type { ComplaintCommentResponseDto, ComplaintPublicCommentsResponseDto } from './dto/complaint-comment.dto.js';
+import type { ComplaintCommentResponseDto, ComplaintCommentsResponseDto, ComplaintPublicCommentsResponseDto } from './dto/complaint-comment.dto.js';
 import { parseComplaintCommentBody, toCommentInput } from './dto/complaint-comment.dto.js';
 import type { ComplaintCorrectionResponseDto } from './dto/complaint-correction.dto.js';
 import { parseComplaintCorrectionBody, toComplaintCorrectionInput } from './dto/complaint-correction.dto.js';
@@ -147,18 +147,17 @@ export class ComplaintsController {
     };
   }
 
+  @Get(':id/comments')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
+  @BranchScoped()
+  async listComments(@Param('id') id: string, @Query('branchId') branchId: string | undefined, @Req() request: AuthenticatedRequest): Promise<ComplaintCommentsResponseDto> { await this.complaintsService.getDetail(id, { branchId: queueBranchId(branchId, request) }); return { items: await this.complaintsService.listComments(id) }; }
+
   @Get(':id/comments/public')
   @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
   @Permissions('COMPLAINT_VIEW_BRANCH')
   @BranchScoped()
-  async listPublicComments(
-    @Param('id') id: string,
-    @Query('branchId') branchId: string | undefined,
-    @Req() request: AuthenticatedRequest,
-  ): Promise<ComplaintPublicCommentsResponseDto> {
-    await this.complaintsService.getDetail(id, { branchId: queueBranchId(branchId, request) });
-    return { items: await this.complaintsService.listPublicComments(id) };
-  }
+  async listPublicComments(@Param('id') id: string, @Query('branchId') branchId: string | undefined, @Req() request: AuthenticatedRequest): Promise<ComplaintPublicCommentsResponseDto> { await this.complaintsService.getDetail(id, { branchId: queueBranchId(branchId, request) }); return { items: await this.complaintsService.listPublicComments(id) }; }
 
   @Post()
   @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard, CsrfGuard)

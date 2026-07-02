@@ -1,8 +1,8 @@
 # Current State
 
-Status: Business readiness Slice 6 code complete with human signoff caveat
+Status: Business readiness Slice 7 complete
 Phase: business-readiness-remediation
-Next Task: Slice 7 - Staff Comments And Public Portal Updates
+Next Task: Slice 8 - Closure Survey
 Model Tier: GPT-5.5 Extra High
 
 ## How to use this file
@@ -20,11 +20,12 @@ Prior state history is in .forge/archive/state-archive.md.
 - Slice 4 wires the audit viewer to backend search/export through the staff session cookie, with filters, localized states, and backend-redacted metadata.
 - Slice 5 adds real admin category list/create/edit/deactivate UI and minimal SLA policy list/edit UI backed by guarded API routes and CONFIG audit entries.
 - Slice 6 keeps the guarded RPT-001 through RPT-017 matrix visible, labels generic exports as operational report rows, and marks incomplete reports as deferred pending business signoff instead of implying delivery.
-- Proof passed for Slice 6: `test:api -- reports`, `test:web -- localization`, `test:web -- api-client`, `test:web -- shell`, `typecheck`, `lint`, `git diff --check`, and report screenshots.
+- Slice 7 wires staff internal/public comments and verified portal public timeline updates; internal comments remain hidden from portal tracking.
+- Proof passed for Slice 7: `test:api -- workflow`, `test:api -- portal.tracking`, `test:web -- api-client`, `test:web -- shell`, `test:web -- localization`, `typecheck`, `lint`, `git diff --check`, and staff/portal screenshots.
 
 ## Current Stop
 
-Ready to commit Slice 6, then start Slice 7.
+Ready to commit Slice 7, then start Slice 8.
 
 ## Open Carry-Forward / Known Debt
 

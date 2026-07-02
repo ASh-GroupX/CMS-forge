@@ -883,6 +883,7 @@ test('complaint transition route rejects invalid request bodies', async () => {
 });
 
 test('complaint comment and transition routes use dynamic permissions and keep branch scope/CSRF', async () => {
+  assert.deepEqual(guardNames('listComments'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
   assert.deepEqual(guardNames('createComment'), ['SessionAuthGuard', 'DynamicPermissionGuard', 'RbacGuard', 'CsrfGuard']);
   assert.deepEqual(guardNames('transition'), ['SessionAuthGuard', 'DynamicPermissionGuard', 'RbacGuard', 'CsrfGuard']);
 

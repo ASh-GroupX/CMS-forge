@@ -474,6 +474,17 @@ test('portal tracking returns only portal-safe complaint fields for a valid sess
           sessionHash: 'sha256:session',
         };
       },
+      listPublicComments: async (id) => {
+        assert.equal(id, 'cmp_1');
+        return [{
+          id: 'cmt_public',
+          complaintId: id,
+          body: 'Visible customer update',
+          visibility: 'PUBLIC',
+          authorId: 'usr_staff',
+          createdAt: '2026-06-19T10:08:00.000Z',
+        }];
+      },
     } as never,
     {
       findValidSession: async (sessionHash) => {
@@ -493,8 +504,13 @@ test('portal tracking returns only portal-safe complaint fields for a valid sess
     status: ComplaintStatus.IN_PROGRESS,
     createdAt: '2026-06-19T10:00:00.000Z',
     updatedAt: '2026-06-19T10:10:00.000Z',
-    timeline: [{ fromStatus: null, toStatus: ComplaintStatus.SUBMITTED, action: 'SUBMIT', createdAt: '2026-06-19T10:01:00.000Z' }],
+    timeline: [
+      { fromStatus: null, toStatus: ComplaintStatus.SUBMITTED, action: 'SUBMIT', createdAt: '2026-06-19T10:01:00.000Z', type: 'STATUS' },
+      { fromStatus: null, toStatus: 'PUBLIC_UPDATE', action: 'PUBLIC_UPDATE', createdAt: '2026-06-19T10:08:00.000Z', type: 'PUBLIC_UPDATE', body: 'Visible customer update' },
+    ],
   });
+  assert.match(JSON.stringify(result), /Visible customer update/);
+  assert.doesNotMatch(JSON.stringify(result), /staff only note|internal note/);
   assertPortalTrackingSafe(result);
 });
 

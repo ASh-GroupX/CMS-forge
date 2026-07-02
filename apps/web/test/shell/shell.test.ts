@@ -47,7 +47,7 @@ import { confirmationText } from '../../src/i18n/staff-confirmations';
 import { notificationCenterText } from '../../src/i18n/staff-notification-center';
 import { portalSubmissionText } from '../../src/i18n/portal-submission';
 import { portalSurveyText } from '../../src/i18n/portal-survey';
-import { portalTrackingText } from '../../src/i18n/portal-tracking';
+import { portalTimelineText, portalTrackingText } from '../../src/i18n/portal-tracking';
 import { reportCatalogText, reportsDashboardText } from '../../src/i18n/staff-reports-dashboard';
 import { employeeTodayText } from '../../src/i18n/staff-employee-today';
 import { sentTasksText } from '../../src/i18n/staff-sent-tasks';
@@ -439,6 +439,8 @@ test('portal tracking proof harness renders verified public status timeline only
   assert.match(html, /Public timeline/);
   assert.match(html, /SUBMITTED - 2026-06-19/);
   assert.match(html, /IN_PROGRESS - 2026-06-19/);
+  assert.ok(html.includes(portalTimelineText.en.publicUpdate));
+  assert.ok(html.includes(portalTimelineText.en.samplePublicUpdate));
   assert.doesNotMatch(html, /\+966500000001|audit|DMS|staff PII|internal/i);
 });
 
@@ -1273,6 +1275,14 @@ test('complaint detail route renders real backend facts through the session cook
         }],
       });
     }
+    if (String(input).endsWith('/complaints/cmp%2Fdetail/comments')) {
+      return jsonResponse({
+        items: [
+          { id: 'cmt_internal', complaintId: 'cmp/detail', authorId: 'usr_commenter', body: 'Back office investigation note.', visibility: 'INTERNAL', createdAt: '2026-06-19T10:05:00.000Z' },
+          { id: 'cmt_public', complaintId: 'cmp/detail', authorId: 'usr_commenter', body: 'Visible customer update.', visibility: 'PUBLIC', createdAt: '2026-06-19T10:10:00.000Z' },
+        ],
+      });
+    }
     if (String(input).endsWith('/staff/assignable')) {
       return jsonResponse({
         staff: [{
@@ -1298,30 +1308,38 @@ test('complaint detail route renders real backend facts through the session cook
   );
 
   const detailCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail'));
+  const commentsCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail/comments'));
   const duplicateCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail/duplicate-candidates'));
   const relatedCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail/related'));
   const caseCall = calls.find((call) => String(call.input).endsWith('/cases/case_cmp_1/timeline'));
   const capaCall = calls.find((call) => String(call.input).endsWith('/cases/case_cmp_1/capa'));
   const staffCall = calls.find((call) => String(call.input).endsWith('/staff/assignable'));
   assert.ok(detailCall);
+  assert.ok(commentsCall);
   assert.ok(duplicateCall);
   assert.ok(relatedCall);
   assert.ok(caseCall);
   assert.ok(capaCall);
   assert.ok(staffCall);
   assert.equal(String(detailCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail');
+  assert.equal(String(commentsCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail/comments');
   assert.equal(String(duplicateCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail/duplicate-candidates');
   assert.equal(String(relatedCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail/related');
   assert.equal(String(caseCall.input), 'http://localhost:3000/cases/case_cmp_1/timeline');
   assert.equal(String(capaCall.input), 'http://localhost:3000/cases/case_cmp_1/capa');
   assert.equal(String(staffCall.input), 'http://localhost:3000/staff/assignable');
   assert.doesNotMatch(String(detailCall.input), /role|actor|workflow|branchId/i);
+  assert.doesNotMatch(String(commentsCall.input), /role|actor|workflow|branchId|token|credential/i);
   assert.doesNotMatch(String(duplicateCall.input), /role|actor|workflow|branchId|token|credential/i);
   assert.doesNotMatch(String(relatedCall.input), /role|actor|workflow|branchId|token|credential/i);
   assert.doesNotMatch(String(caseCall.input), /role|actor|workflow|branchId/i);
   assert.doesNotMatch(String(capaCall.input), /role|actor|workflow|branchId/i);
   assert.doesNotMatch(String(staffCall.input), /role|actor|workflow|branchId|owner|token|credential/i);
   assert.deepEqual(detailCall.init?.headers, {
+    Accept: 'application/json',
+    cookie: 'cms_staff_session=raw-session',
+  });
+  assert.deepEqual(commentsCall.init?.headers, {
     Accept: 'application/json',
     cookie: 'cms_staff_session=raw-session',
   });
@@ -1368,6 +1386,8 @@ test('complaint detail route renders real backend facts through the session cook
   assert.match(html, /Owner User - CR Manager - Main Branch/);
   assert.match(html, /Parts delay/);
   assert.match(html, /Open/);
+  assert.match(html, /Back office investigation note\./);
+  assert.match(html, /Visible customer update\./);
   assert.match(html, /Customer and vehicle correction/);
   assert.match(html, /Customer source/);
   assert.match(html, /DMS match/);
@@ -1435,7 +1455,7 @@ test('complaint detail workspace keeps responsive detail layout classes', async 
 
   assert.match(html, /xl:grid-cols-\[1\.1fr_0\.9fr\]/);
   assert.match(html, /md:grid-cols-2/);
-  assert.match(html, /grid-cols-\[8rem_1fr\]/);
+  assert.match(html, /grid-cols-\[minmax\(6rem,8rem\)_minmax\(0,1fr\)\]/);
 });
 
 test('complaint detail workspace source is privacy-safe and render-only', () => {
@@ -1454,13 +1474,15 @@ test('complaint detail workspace source is privacy-safe and render-only', () => 
   assert.match(wrapper, /components\/complaint-detail-workspace/);
 });
 
-test('complaint detail comments render visibility badges and safe placeholders', async () => {
+test('complaint detail comments render visibility badges composer and comment rows', async () => {
   const html = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
 
   assert.match(html, /Internal only/);
   assert.match(html, /Customer visible/);
-  assert.match(html, /Staff-only note placeholder/);
-  assert.match(html, /Customer-visible update placeholder/);
+  assert.match(html, /Investigation note for the case team\./);
+  assert.match(html, /Your complaint is under review by the customer relations team\./);
+  assert.match(html, /Add complaint comment/);
+  assert.match(html, /Add comment/);
   assert.match(html, /Author/);
   assert.match(html, /Time/);
   assert.match(html, /Visibility/);
@@ -1477,7 +1499,7 @@ test('complaint detail comments preview states render loading empty and error me
   assert.match(error, /role="alert"/);
 });
 
-test('complaint detail comments source is render-only and privacy-safe', () => {
+test('complaint detail comments source has no direct private data access', () => {
   const source = readFileSync('apps/web/src/components/complaint-comments-panel/index.tsx', 'utf8');
 
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie|https?:\/\//);

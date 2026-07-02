@@ -13,7 +13,7 @@ export type PortalApiResult<T> = { ok: true; data: T } | { ok: false; error: Por
 export type PortalOtpRequest = { referenceNumber: string; customerPhone: string; locale?: 'en' | 'ar' };
 export type PortalOtpResponse = { ok: true; verificationId: string; expiresAt: string };
 export type PortalSessionResponse = { session: { sessionToken: string; expiresAt: string } };
-export type PortalTrackingTimelineItem = { fromStatus: string | null; toStatus: string; action: string | null; createdAt: string };
+export type PortalTrackingTimelineItem = { fromStatus: string | null; toStatus: string; action: string | null; createdAt: string; type?: 'STATUS' | 'PUBLIC_UPDATE'; body?: string };
 export type PortalTrackingComplaint = {
   referenceNumber: string;
   status: string;
