@@ -12082,3 +12082,39 @@ SRS IDs: `REQ-PORTAL-002`, `PORTAL-SEC-001`, `REQ-NOTIFY-001`, `METHOD-AUDIT-001
 
 - Slice 0 still lacks human signoff for report deferrals, DMS mode, compensation scope, and approved notification channels. Slice 1 used the existing SMS provider path because SRS states the default MVP OTP method is the complaint primary phone.
 - Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.
+
+---
+
+## Business Readiness - Slice 2 Submission SLA and Acknowledgement
+
+Status: Complete
+SRS IDs: `ARCH-WORKFLOW-001`, `REQ-SLA-001`, `REQ-NOTIFY-001`, `METHOD-AUDIT-001`
+
+### Scope
+
+- Submitted complaint creation now reuses the workflow side-effect path after the creation transaction commits.
+- Staff and portal submitted complaints enqueue the submit notification and create the intake SLA deadline event.
+- Draft complaints still create no active SLA deadline and no submit notification.
+- Complaint creation selects the minimal workflow fields needed for SLA scope and notification recipient handling.
+
+### Security Self-Check
+
+- Roles and branch scope still come from server session/controller context; no frontend or client-owned workflow authority was added.
+- Complaint creation still writes complaint, initial status history, case wrapper, and audit inside the same transaction; notifications/SLA enqueue only after that transaction returns.
+- No passwords, OTPs, tokens, hashes, provider secrets, or credentials are logged or returned.
+- Customer portal exposure rules remain unchanged; portal submission delegates to backend-owned complaint creation and returns only the complaint reference/status plus safe attachment warning data.
+- Trust boundaries are covered by workflow route tests for server-derived role/branch scope, allowed submission, denied branch scope, invalid transitions, draft no-SLA behavior, and portal submission parsing.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- workflow` (71/71 TAP tests).
+- Passed: `corepack pnpm test:api -- portal` (12/12 TAP tests).
+- Passed: `corepack pnpm test:api -- sla` (35/35 TAP tests).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Notes
+
+- `test:api -- sla` is the closest registered SLA warning/breach seeded proof and includes warning, breach, and escalation job coverage.
+- Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.

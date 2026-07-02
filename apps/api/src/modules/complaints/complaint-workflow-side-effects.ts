@@ -1,4 +1,4 @@
-import { ComplaintStatus, ComplaintTransitionAction, SlaEventType, SlaStage } from '@prisma/client';
+import { ComplaintStatus, ComplaintTransitionAction, ComplaintTransitionRequestSource, RoleCode, SlaEventType, SlaStage } from '@prisma/client';
 import type { NotificationsService } from '../notifications/notifications.service.js';
 import type { SlaService } from '../sla/sla.service.js';
 import type { ApplyComplaintTransitionInput } from './complaints.service.js';
@@ -11,6 +11,10 @@ type WorkflowSideEffectInput = {
   toStatus: ComplaintStatus;
   complaint: ComplaintStatusRecord;
   enteredAt: Date;
+};
+
+type CreationSideEffectInput = Omit<WorkflowSideEffectInput, 'input' | 'toStatus'> & {
+  input: { requestSource?: ComplaintTransitionRequestSource; actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 };
 
 const SLA_STAGE_BY_ACTION: Partial<Record<ComplaintTransitionAction, SlaStage>> = {
@@ -92,6 +96,24 @@ export async function queueWorkflowSideEffects({
   if (lifecycle && slaService) {
     await slaService.recordLifecycleEvent({ complaintId: complaint.id, ...lifecycle, occurredAt: enteredAt });
   }
+}
+
+export async function queueComplaintCreationSideEffects({ input, ...rest }: CreationSideEffectInput): Promise<void> {
+  await queueWorkflowSideEffects({
+    ...rest,
+    toStatus: ComplaintStatus.SUBMITTED,
+    input: {
+      complaintId: rest.complaint.id,
+      fromStatus: ComplaintStatus.DRAFT,
+      action: ComplaintTransitionAction.SUBMIT,
+      actorRole: input.requestSource === ComplaintTransitionRequestSource.CUSTOMER_PORTAL ? RoleCode.CUSTOMER_PORTAL : RoleCode.CR_OFFICER,
+      actorId: input.actorId ?? null,
+      requestSource: input.requestSource ?? ComplaintTransitionRequestSource.STAFF_API,
+      correlationId: input.correlationId ?? null,
+      ipAddress: input.ipAddress ?? null,
+      userAgent: input.userAgent ?? null,
+    },
+  });
 }
 
 function notificationTemplate(action: ComplaintTransitionAction): string | null {

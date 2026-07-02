@@ -10,7 +10,7 @@ export type DataSource = 'LOCAL' | 'MANUAL' | 'DMS';
 
 export type ComplaintStatusRecord = { id: string; branchId: string; status: ComplaintStatus; ownerId: string | null; severity: ComplaintSeverity; categoryId: string; departmentId: string | null };
 export type ComplaintTransitionSubject = { id: string; vehicleRelated: boolean; vehicleId: string | null; vehicleDataUnavailableReason: string | null };
-export type ComplaintRecord = { id: string; branchId: string; status: ComplaintStatus; referenceNumber: string; subject: string; severity: ComplaintSeverity };
+export type ComplaintRecord = { id: string; branchId: string; status: ComplaintStatus; referenceNumber: string; subject: string; severity: ComplaintSeverity; categoryId: string; departmentId: string | null; ownerId: string | null };
 
 export type ComplaintQueueRecord = ComplaintRecord & {
   ownerId: string | null;
@@ -247,7 +247,7 @@ export class ComplaintsRepository {
   async createStatusHistory(data: CreateComplaintStatusHistoryData, client: ComplaintTransitionClient = this.prisma): Promise<void> { await client.complaintStatusHistory.create({ data }); }
 }
 
-const complaintSelect = { id: true, referenceNumber: true, branchId: true, status: true, subject: true, severity: true } satisfies Prisma.ComplaintSelect;
+const complaintSelect = { id: true, referenceNumber: true, branchId: true, status: true, subject: true, severity: true, categoryId: true, departmentId: true, ownerId: true } satisfies Prisma.ComplaintSelect;
 
 function customerPhone(data: CreateComplaintData): string {
   return data.customerPhone ?? `DMS-${data.customerNumber}`;

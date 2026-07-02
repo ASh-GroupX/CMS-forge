@@ -11,6 +11,7 @@ import {
   ComplaintTransitionAction,
   ComplaintTransitionRequestSource,
   RoleCode,
+  SlaStage,
 } from '@prisma/client';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
 import { PermissionGuard, RbacGuard } from '../../src/core/auth.guard.ts';
@@ -174,10 +175,60 @@ test('complaint creation persists complaint, initial history, and audit in one t
   });
 });
 
+test('submitted complaint creation queues submit notification and SLA only after commit', async () => {
+  const calls: string[] = [];
+  const queued: unknown[] = [];
+  const deadlines: unknown[] = [];
+  const service = new ComplaintsService({
+    transaction: async <T>(work: (client: never) => Promise<T>) => {
+      const result = await work({} as never);
+      calls.push('commit');
+      return result;
+    },
+    nextReferenceNumber: async () => 'CMS-2026-MAIN-000009',
+    create: async (data) => {
+      calls.push('create');
+      return { id: 'cmp_1', referenceNumber: data.referenceNumber, branchId: data.branchId, status: data.status, subject: data.subject, severity: data.severity, categoryId: data.categoryId, departmentId: data.departmentId ?? null };
+    },
+    createStatusHistory: async () => { calls.push('history'); },
+  } as ComplaintsRepository, { record: async () => { calls.push('audit'); } } as unknown as AuditService, {
+    queueInternal: async (input: unknown) => { calls.push('queue'); queued.push(input); return {}; },
+  } as never, undefined, {
+    recordDeadlineEvent: async (input: unknown) => { calls.push('sla'); deadlines.push(input); return {}; },
+  } as never);
+
+  await service.createInternal({
+    ...validBody(),
+    branchId: 'branch_main',
+    actorId: null,
+    requestSource: ComplaintTransitionRequestSource.CUSTOMER_PORTAL,
+    correlationId: 'req_portal_submit',
+  });
+
+  assert.deepEqual(calls, ['create', 'history', 'audit', 'commit', 'queue', 'sla']);
+  assert.deepEqual(queued, [{
+    complaintId: 'cmp_1',
+    templateCode: 'complaint.submitted.internal',
+    payload: { complaintId: 'cmp_1', fromStatus: ComplaintStatus.DRAFT, toStatus: ComplaintStatus.SUBMITTED, action: ComplaintTransitionAction.SUBMIT, actorId: null },
+  }]);
+  assert.equal((deadlines[0] as { enteredAt?: unknown }).enteredAt instanceof Date, true);
+  assert.deepEqual({ ...(deadlines[0] as Record<string, unknown>), enteredAt: 'date' }, {
+    complaintId: 'cmp_1',
+    severity: ComplaintSeverity.HIGH,
+    stage: SlaStage.INTAKE,
+    branchId: 'branch_main',
+    departmentId: 'dep_service',
+    categoryId: 'cat_engine',
+    enteredAt: 'date',
+  });
+});
+
 test('staff can save a complaint draft without a customer-facing CMS reference', async () => {
   const txClient = {};
   const calls: unknown[] = [];
   const auditRecords: AuditRecordInput[] = [];
+  const queued: unknown[] = [];
+  const deadlines: unknown[] = [];
   const service = new ComplaintsService({
     transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
     nextReferenceNumber: async () => {
@@ -192,7 +243,11 @@ test('staff can save a complaint draft without a customer-facing CMS reference',
       assert.equal(client, txClient);
       calls.push({ history: data });
     },
-  } as ComplaintsRepository, { record: async (input) => auditRecords.push(input) } as unknown as AuditService);
+  } as ComplaintsRepository, { record: async (input) => auditRecords.push(input) } as unknown as AuditService, {
+    queueInternal: async (input: unknown) => { queued.push(input); return {}; },
+  } as never, undefined, {
+    recordDeadlineEvent: async (input: unknown) => { deadlines.push(input); return {}; },
+  } as never);
 
   const result = await service.createInternal({ ...validBody(), branchId: 'branch_main', saveAsDraft: true, actorId: 'usr_1' });
 
@@ -211,6 +266,8 @@ test('staff can save a complaint draft without a customer-facing CMS reference',
     manualVehicle: true,
     vehicleDataUnavailableReasonPresent: false,
   });
+  assert.deepEqual(queued, []);
+  assert.deepEqual(deadlines, []);
 });
 
 test('complaint creation links a customer complaint case in the same transaction', async () => {

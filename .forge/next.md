@@ -1,24 +1,24 @@
-# Business Readiness Remediation - Slice 2
+# Business Readiness Remediation - Slice 3
 
 Status: Ready
 Required model tier: GPT-5.5 Extra High
 Phase: business-readiness-remediation
 Risk: High
-SRS IDs: ARCH-WORKFLOW-001, REQ-SLA-001, REQ-NOTIFY-001, METHOD-AUDIT-001
+SRS IDs: NFR-SEC-002, REQ-RBAC-001, REQ-REPORT-001, PORTAL-SEC-001
 
 ## Task
 
-Implement Slice 2 from `docs/BUSINESS_READINESS_PLAN.md`: submitted staff and portal complaints create SLA deadline events after commit and enqueue acknowledgement/submit notifications, while draft complaints stay out of active SLA.
+Implement Slice 3 from `docs/BUSINESS_READINESS_PLAN.md`: management-readonly masking for complaint queue/detail/report rows and sensitive export denial or masking without explicit permission.
 
 ## Scope
 
-- Inspect current complaints, workflow side-effect, SLA, notification, and existing workflow/portal tests before editing.
-- Reuse existing backend services and side-effect helpers.
-- Keep status history and audit in the creation transaction; enqueue side effects only after commit.
-- Do not add frontend workflow authority.
+- Inspect current role permissions, complaints/reports services, report export behavior, UI display, and existing tests before editing.
+- Enforce masking at the API response/export layer, not in React.
+- Management-readonly must not receive unmasked customer phone, email, VIN, plate, compensation notes, or attachment filenames by default.
+- Keep CR/branch roles able to see fields they are already allowed to see.
 
 ## Proof
 
-- `corepack pnpm test:api -- workflow`
-- `corepack pnpm test:api -- portal`
-- SLA warning/breach seeded proof if a registered suite exists; otherwise state the closest registered suite honestly.
+- `corepack pnpm security:check`
+- `corepack pnpm test:api -- reports`
+- One focused allowed/denied masking test.

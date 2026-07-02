@@ -10,7 +10,7 @@ import { SlaService } from '../sla/sla.service.js';
 import { complaintCreatedAudit, createComplaintData, isReferenceConflict, referenceConflictError } from './complaint-intake.js';
 import { complaintCorrectionAudit, complaintCorrectionData, correctionConflictError } from './complaint-correction.js';
 import type { ApplyComplaintCorrectionInput, ApplyComplaintCorrectionResult } from './complaint-correction.js';
-import { queueWorkflowSideEffects } from './complaint-workflow-side-effects.js';
+import { queueComplaintCreationSideEffects, queueWorkflowSideEffects } from './complaint-workflow-side-effects.js';
 import { ComplaintsRepository } from './complaints.repository.js';
 import type { ComplaintCommentRecord, ComplaintDetailRecord, ComplaintQueueRecord, ComplaintReportFilter, ComplaintReportRecord, ComplaintSearchRecord, ComplaintStatusRecord, ComplaintTransitionSubject, DataSource, PortalVerificationTargetRecord } from './complaints.repository.js';
 import type { ComplaintCaseSummaryDto, ComplaintDetailDto, ComplaintQueueItemDto } from './dto/complaint-response.dto.js';
@@ -82,7 +82,7 @@ export class ComplaintsService {
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
-        return await this.complaintsRepository.transaction(async (client) => {
+        const committed = await this.complaintsRepository.transaction(async (client) => {
           const referenceNumber = data.status === ComplaintStatus.DRAFT
             ? `DRAFT-${randomUUID()}`
             : await this.complaintsRepository.nextReferenceNumber(data.branchId, new Date(), client);
@@ -100,8 +100,10 @@ export class ComplaintsService {
           }, client);
           await this.casesService?.ensureCustomerComplaintCaseForComplaint({ complaintId: complaint.id, branchId: complaint.branchId, ownerId: input.actorId ?? null, subject: complaint.subject, descriptionEn: data.descriptionEn, status: complaint.status, actorId: input.actorId ?? null, correlationId: input.correlationId ?? null }, client);
           await this.auditService.record(complaintCreatedAudit(input, complaint), client);
-          return { id: complaint.id, referenceNumber: complaint.referenceNumber, status: complaint.status };
+          return { result: { id: complaint.id, referenceNumber: complaint.referenceNumber, status: complaint.status }, complaint };
         });
+        if (committed.result.status === ComplaintStatus.SUBMITTED) await queueComplaintCreationSideEffects({ notificationsService: this.notificationsService, slaService: this.slaService, input, complaint: committed.complaint, enteredAt: new Date() });
+        return committed.result;
       } catch (error) {
         if (isReferenceConflict(error) && attempt === 0) continue;
         if (isReferenceConflict(error)) throw referenceConflictError();
@@ -235,11 +237,7 @@ function commentAudit(input: CreateComplaintCommentInput, comment: ComplaintComm
 
 function nonEmpty(value: string, field: string): string { const text = value.trim(); if (!text) throw new AppException('VALIDATION_FAILED', 'Invalid complaint comment', HttpStatus.BAD_REQUEST, [{ field, code: 'REQUIRED', message: `${field} is required.` }]); return text; }
 
-function requiredTextError(value: unknown, field: string) {
-  return typeof value === 'string' && value.trim()
-    ? []
-    : [{ field, code: 'REQUIRED', message: `${field} is required.` }];
-}
+function requiredTextError(value: unknown, field: string) { return typeof value === 'string' && value.trim() ? [] : [{ field, code: 'REQUIRED', message: `${field} is required.` }]; }
 
 function invalidTransitionError(): AppException { return new AppException('COMPLAINT_INVALID_TRANSITION', 'The requested action is not allowed for the current complaint state.', HttpStatus.CONFLICT); }
 function roleForbiddenError(): AppException { return new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN); }
