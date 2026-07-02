@@ -215,6 +215,30 @@ test('notifications dispatch skips mismatched customer preferred channel before 
   assert.deepEqual(failures, [{ id: 'notif_email_1', failureReason: 'NOTIFICATION_CHANNEL_PREFERENCE_SKIPPED' }]);
 });
 
+test('notifications dispatch sends requested portal OTP sms despite customer channel preference', async () => {
+  const sent: unknown[] = [];
+  const service = new NotificationsService({
+    findQueuedSms: async () => [messageNotification(NotificationChannel.SMS, { textBody: 'Your complaint tracking code is 123456.' }, 'cust_1', ComplaintSeverity.MEDIUM, 'portal.verification.otp.customer')],
+    findCustomerPreference: async () => preference(NotificationChannel.WHATSAPP, { smsQuietStart: '00:00', smsQuietEnd: '23:59', timezone: 'UTC' }),
+    markSmsSent: async (id, result, metadata) => {
+      sent.push({ id, result, metadata });
+      return true;
+    },
+    markSmsFailed: async () => {
+      throw new Error('should not fail');
+    },
+  } as unknown as NotificationsRepository, {
+    sendSms: async (input) => ({ messageId: 'sms_otp', provider: 'in-memory', accepted: [input.to] }),
+  } as IntegrationsService, {} as never);
+
+  assert.deepEqual(await service.dispatchQueuedSms(25, new Date('2026-06-19T12:00:00.000Z')), { attempted: 1, sent: 1, failed: 0, skipped: 0 });
+  assert.deepEqual(sent, [{
+    id: 'notif_email_1',
+    result: { messageId: 'sms_otp', provider: 'in-memory', accepted: ['+201001112222'] },
+    metadata: undefined,
+  }]);
+});
+
 test('notifications dispatch skips sms during quiet hours before provider send', async () => {
   const failures: unknown[] = [];
   let providerCalled = false;
@@ -410,7 +434,7 @@ function emailNotification(payload: Record<string, unknown> = {}, customerId: st
   return messageNotification(NotificationChannel.EMAIL, payload, customerId);
 }
 
-function messageNotification(channel: NotificationChannel, payload: Record<string, unknown> = {}, customerId: string | null = null, severity = ComplaintSeverity.MEDIUM) {
+function messageNotification(channel: NotificationChannel, payload: Record<string, unknown> = {}, customerId: string | null = null, severity = ComplaintSeverity.MEDIUM, templateCode = 'complaint.update.email') {
   const to = channel === NotificationChannel.EMAIL ? 'customer@example.com' : '+201001112222';
   return {
     id: 'notif_email_1',
@@ -418,7 +442,7 @@ function messageNotification(channel: NotificationChannel, payload: Record<strin
     recipientUserId: null,
     channel,
     status: NotificationStatus.QUEUED,
-    templateCode: 'complaint.update.email',
+    templateCode,
     locale: 'en',
     payload: {
       to,

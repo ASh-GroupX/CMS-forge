@@ -5,6 +5,7 @@ import type { RequestPortalOtpInput, VerifyPortalOtpInput } from '../portal.serv
 export type PortalTrackingOtpRequestDto = {
   referenceNumber: string;
   customerPhone: string;
+  locale: 'en' | 'ar';
 };
 
 export type PortalTrackingOtpVerifyDto = {
@@ -21,6 +22,7 @@ export function parsePortalTrackingOtpBody(body: unknown): PortalTrackingOtpRequ
   return {
     referenceNumber: requiredText(input.referenceNumber, 'referenceNumber'),
     customerPhone: requiredText(input.customerPhone, 'customerPhone'),
+    locale: input.locale === 'ar' ? 'ar' : 'en',
   };
 }
 

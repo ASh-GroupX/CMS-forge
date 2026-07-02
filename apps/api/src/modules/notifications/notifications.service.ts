@@ -19,6 +19,7 @@ import type { NotificationResponseDto, NotificationTemplateResponseDto } from '.
 export type QueueInternalNotificationInput = {
   complaintId?: string | null;
   recipientUserId?: string | null;
+  channel?: NotificationChannel | string;
   templateCode?: string;
   locale?: string;
   payload?: unknown;
@@ -103,12 +104,14 @@ export class NotificationsService {
   async queueInternal(input: QueueInternalNotificationInput): Promise<NotificationRecord> {
     const templateCode = requiredText(input.templateCode, 'templateCode');
     const locale = requiredText(input.locale ?? 'en', 'locale');
+    const channel = input.channel === undefined ? NotificationChannel.IN_APP : notificationChannel(input.channel);
     const payload = safePayload(input.payload ?? {});
     const idempotencyKey = input.idempotencyKey === undefined ? null : requiredText(input.idempotencyKey, 'idempotencyKey');
 
     const data = {
       complaintId: optionalText(input.complaintId),
       recipientUserId: optionalText(input.recipientUserId),
+      channel,
       templateCode,
       locale,
       payload: idempotencyKey ? payloadWithIdempotency(payload, idempotencyKey) : payload,

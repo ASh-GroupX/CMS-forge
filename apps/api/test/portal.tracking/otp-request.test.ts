@@ -3,7 +3,7 @@ import test from 'node:test';
 import 'reflect-metadata';
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import type { ExecutionContext } from '@nestjs/common';
-import { ComplaintStatus, PortalVerificationStatus } from '@prisma/client';
+import { ComplaintStatus, NotificationChannel, PortalVerificationStatus } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
@@ -36,6 +36,7 @@ test('portal tracking OTP route delegates only reference, phone, and request con
   assert.deepEqual(calls[0], {
     referenceNumber: 'CMP-000010',
     customerPhone: '+966500000001',
+    locale: 'en',
     correlationId: 'req_portal_otp',
     ipAddress: '203.0.113.91',
     userAgent: 'node:test',
@@ -48,7 +49,7 @@ test('portal tracking OTP route uses the tracking rate limit guard', () => {
   assert.deepEqual(guards.map((guard) => guard.name), ['PortalTrackingOtpRateLimitGuard']);
 });
 
-test('portal tracking OTP request persists hash before queueing notification metadata', async () => {
+test('portal tracking OTP request persists hash before queueing customer SMS', async () => {
   const events: string[] = [];
   const writes: Array<{ otpHash: string; attempts?: number; ipAddress?: string | null }> = [];
   const notifications: unknown[] = [];
@@ -70,13 +71,36 @@ test('portal tracking OTP request persists hash before queueing notification met
   assert.match(writes[0].otpHash, /^sha256:[a-f0-9]{32}:[a-f0-9]{64}$/);
   assert.doesNotMatch(writes[0].otpHash, /^\d{6}$/);
   assert.equal(writes[0].ipAddress, '203.0.113.91');
+  const sentCode = otpFromText((notifications[0] as { payload: { textBody: string } }).payload.textBody);
+  assert.equal(otpMatchesHash(sentCode, writes[0].otpHash), true);
   assert.deepEqual(notifications[0], {
     complaintId: 'cmp_1',
-    templateCode: 'portal.verification.requested.internal',
+    channel: NotificationChannel.SMS,
+    templateCode: 'portal.verification.otp.customer',
     locale: 'en',
-    payload: { verificationId: 'ver_1', referenceNumber: 'CMP-000010', expiresAt: (notifications[0] as { payload: { expiresAt: string } }).payload.expiresAt },
+    payload: {
+      to: '+966500000001',
+      textBody: (notifications[0] as { payload: { textBody: string } }).payload.textBody,
+      referenceNumber: 'CMP-000010',
+      expiresAt: (notifications[0] as { payload: { expiresAt: string } }).payload.expiresAt,
+    },
   });
   assert.equal(JSON.stringify(notifications[0]).includes('otpHash'), false);
+});
+
+test('portal tracking OTP request queues Arabic SMS when requested', async () => {
+  const notifications: unknown[] = [];
+  const service = new PortalService(
+    { findPortalVerificationTarget: async () => ({ complaintId: 'cmp_1', customerId: 'cus_1', phone: '+966500000001' }) } as never,
+    { createVerification: async (data) => ({ ...data, id: 'ver_1', status: PortalVerificationStatus.PENDING, attempts: 0, createdAt: new Date('2026-06-19T10:00:00.000Z') }) } as never,
+    { queueInternal: async (input) => { notifications.push(input); return {} as never; } } as NotificationsService,
+    { record: async () => undefined } as AuditService,
+  );
+
+  await service.requestTrackingOtp({ referenceNumber: 'CMP-000010', customerPhone: '+966500000001', locale: 'ar' });
+
+  assert.equal((notifications[0] as { locale: string }).locale, 'ar');
+  assert.match((notifications[0] as { payload: { textBody: string } }).payload.textBody, /رمز متابعة الشكوى/);
 });
 
 test('portal tracking OTP denial does not persist or queue notification', async () => {
@@ -598,6 +622,17 @@ test('portal follow-up denies closed or rejected complaints before comment write
 function testOtpHash(otp: string): string {
   const salt = '0123456789abcdef0123456789abcdef';
   return `sha256:${salt}:${createHash('sha256').update(`${salt}:${otp}`).digest('hex')}`;
+}
+
+function otpFromText(text: string): string {
+  const match = text.match(/\bis (\d{6})\b/);
+  assert.ok(match);
+  return match[1];
+}
+
+function otpMatchesHash(otp: string, hash: string): boolean {
+  const [, salt, digest] = hash.split(':');
+  return createHash('sha256').update(`${salt}:${otp}`).digest('hex') === digest;
 }
 
 function challenge(overrides: Partial<{ otpHash: string; status: PortalVerificationStatus; attempts: number; expiresAt: Date }> = {}) {

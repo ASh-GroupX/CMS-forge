@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { CommentVisibility, ComplaintStatus, ComplaintTransitionRequestSource } from '@prisma/client';
+import { CommentVisibility, ComplaintStatus, ComplaintTransitionRequestSource, NotificationChannel } from '@prisma/client';
 import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
@@ -16,7 +16,7 @@ export type PortalAttachmentDto = { id: string; complaintId: string; fileName: s
 export type SubmitPortalComplaintInput = Omit<CreateInternalComplaintInput, 'actorId' | 'requestSource' | 'customerNumber'> & { attachments?: PortalComplaintAttachmentInput[] };
 export type PortalAttachmentWarningDto = { code: 'PORTAL_ATTACHMENT_UPLOAD_FAILED'; message: string; failedCount: number; uploadedCount: number };
 export type PortalComplaintSubmissionResult = ComplaintCreationResult & { attachments?: PortalAttachmentDto[]; attachmentWarning?: PortalAttachmentWarningDto };
-export type RequestPortalOtpInput = { referenceNumber: string; customerPhone: string; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
+export type RequestPortalOtpInput = { referenceNumber: string; customerPhone: string; locale?: 'en' | 'ar'; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type VerifyPortalOtpInput = { verificationId: string; otp: string; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type PortalTrackingInput = { sessionToken: string; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type PortalFollowUpInput = PortalTrackingInput & { body: string };
@@ -75,20 +75,22 @@ export class PortalService {
     const target = await this.complaintsService.findPortalVerificationTarget(referenceNumber, customerPhone);
     if (!target) throw verificationFailed();
 
+    const otp = generateOtp();
     const verification = await this.portalRepository.createVerification({
       complaintId: target.complaintId,
       customerId: target.customerId,
       phone: target.phone,
-      otpHash: hashOtp(generateOtp()),
+      otpHash: hashOtp(otp),
       ipAddress: input.ipAddress ?? null,
       expiresAt: new Date(Date.now() + OTP_TTL_MS),
     });
 
     await this.notificationsService.queueInternal({
       complaintId: target.complaintId,
-      templateCode: 'portal.verification.requested.internal',
-      locale: 'en',
-      payload: { verificationId: verification.id, referenceNumber, expiresAt: verification.expiresAt.toISOString() },
+      channel: NotificationChannel.SMS,
+      templateCode: 'portal.verification.otp.customer',
+      locale: input.locale ?? 'en',
+      payload: portalOtpPayload(input.locale ?? 'en', target.phone, referenceNumber, otp, verification.expiresAt),
     });
     return { ok: true, verificationId: verification.id, expiresAt: verification.expiresAt.toISOString() };
   }
@@ -217,6 +219,8 @@ export class PortalService {
 
 function generateOtp(): string { return String(randomInt(0, 1_000_000)).padStart(6, '0'); }
 
+function portalOtpPayload(locale: 'en' | 'ar', to: string, referenceNumber: string, otp: string, expiresAt: Date) { const textBody = locale === 'ar' ? `رمز متابعة الشكوى ${referenceNumber} هو ${otp}. ينتهي في ${expiresAt.toISOString()}.` : `Your complaint tracking code for ${referenceNumber} is ${otp}. It expires at ${expiresAt.toISOString()}.`; return { to, textBody, referenceNumber, expiresAt: expiresAt.toISOString() }; }
+
 function hashOtp(otp: string): string {
   const salt = randomBytes(16).toString('hex');
   return `sha256:${salt}:${createHash('sha256').update(`${salt}:${otp}`).digest('hex')}`;
@@ -245,16 +249,10 @@ function verificationFailed(): AppException {
 
 function requiredAttachmentsService(service: AttachmentsService | undefined): AttachmentsService {
   if (service) return service;
-  throw new AppException('VALIDATION_FAILED', 'Portal attachment upload is unavailable', HttpStatus.BAD_REQUEST, [
-    { field: 'attachments', code: 'REQUIRED', message: 'attachments is invalid.' },
-  ]);
+  throw new AppException('VALIDATION_FAILED', 'Portal attachment upload is unavailable', HttpStatus.BAD_REQUEST, [{ field: 'attachments', code: 'REQUIRED', message: 'attachments is invalid.' }]);
 }
 
-function invalidPortalAttachment(): AppException {
-  return new AppException('VALIDATION_FAILED', 'Invalid portal attachment request', HttpStatus.BAD_REQUEST, [
-    { field: 'attachments', code: 'REQUIRED', message: 'attachments is invalid.' },
-  ]);
-}
+function invalidPortalAttachment(): AppException { return new AppException('VALIDATION_FAILED', 'Invalid portal attachment request', HttpStatus.BAD_REQUEST, [{ field: 'attachments', code: 'REQUIRED', message: 'attachments is invalid.' }]); }
 
 function portalAttachmentDto(attachment: AttachmentUploadResult): PortalAttachmentDto {
   return {

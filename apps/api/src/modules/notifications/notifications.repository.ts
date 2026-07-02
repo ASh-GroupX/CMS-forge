@@ -57,6 +57,7 @@ export type CustomerNotificationPreferenceRecord = Prisma.CustomerNotificationPr
 export type QueueInternalNotificationData = {
   complaintId?: string | null;
   recipientUserId?: string | null;
+  channel?: NotificationChannel;
   templateCode: string;
   locale: string;
   payload: Prisma.InputJsonValue;
@@ -88,7 +89,7 @@ export class NotificationsRepository {
       data: {
         complaintId: data.complaintId ?? null,
         recipientUserId: data.recipientUserId ?? null,
-        channel: NotificationChannel.IN_APP,
+        channel: data.channel ?? NotificationChannel.IN_APP,
         status: NotificationStatus.QUEUED,
         templateCode: data.templateCode,
         locale: data.locale,
@@ -101,7 +102,7 @@ export class NotificationsRepository {
   async queueInternalOnce(data: QueueInternalNotificationOnceData): Promise<NotificationRecord> {
     const existing = await this.prisma.notification.findFirst({
       where: {
-        channel: NotificationChannel.IN_APP,
+        channel: data.channel ?? NotificationChannel.IN_APP,
         templateCode: data.templateCode,
         recipientUserId: data.recipientUserId ?? null,
         payload: { path: ['idempotencyKey'], equals: data.idempotencyKey },

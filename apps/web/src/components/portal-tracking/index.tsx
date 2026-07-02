@@ -55,7 +55,7 @@ function PortalTrackingView({ initialFeedback, initialFollowUp, initialPhone, in
     event.preventDefault();
     if (!referenceNumber.trim() || !customerPhone.trim()) return setFeedback('validation');
     setBusy(true);
-    const result = await requestPortalOtp({ referenceNumber, customerPhone });
+    const result = await requestPortalOtp({ referenceNumber, customerPhone, locale });
     setBusy(false);
     if (!result.ok) return setFeedback(feedbackFromCode(result.error.code));
     setVerificationId(result.data.verificationId);

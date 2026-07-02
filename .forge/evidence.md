@@ -12043,3 +12043,42 @@ SRS IDs: `REQ-LOCALIZATION-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `NFR-SEC-002`
 - Playwright dev-server console showed Next HMR websocket errors during screenshot capture only; route rendering and saved screenshots were verified.
 - Browser-native date/file input chrome remains browser-controlled; product labels and surrounding values are localized.
 - Existing unrelated dirty integration module change and untracked output artifacts were left unstaged.
+
+---
+
+## Business Readiness - Slice 1 Customer OTP Delivery
+
+Status: Complete
+SRS IDs: `REQ-PORTAL-002`, `PORTAL-SEC-001`, `REQ-NOTIFY-001`, `METHOD-AUDIT-001`
+
+### Scope
+
+- Portal tracking now generates one OTP, stores only its salted hash in the portal verification row, and queues the plaintext code through the existing notification queue as a customer SMS.
+- OTP customer messages support English and Arabic text through the portal tracking locale.
+- The portal tracking UI forwards locale when requesting a code.
+- OTP SMS dispatch bypasses customer notification preference and quiet-hour skips because the OTP is customer-requested and the MVP method is the complaint primary phone.
+
+### Security Self-Check
+
+- Roles and branch scope still come from the server session; this public portal route does not accept role, actor, branch-scope, permission, workflow, or staff authority input.
+- OTP verification state changes and OTP success/failure audit behavior remain backend-owned and covered by `portal.tracking`.
+- The portal verification table persists only `otpHash`; the OTP is not returned in API responses, audit records, session records, portal tracking data, or web storage.
+- Customer portal exposure remains safe: no internal comments, audit logs, DMS codes, staff PII, unrelated complaints, session hashes, or OTP hashes reach the portal.
+- Trust boundary tests cover allowed OTP request/verification and denied wrong, expired, exhausted, unknown, non-pending, invalid-session, and reference-only cases.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- portal.tracking` (24/24 TAP tests).
+- Passed: `corepack pnpm test:api -- notifications` (43/43 TAP tests).
+- Passed: `corepack pnpm test:web -- api-client` (39/39 TAP tests).
+- Passed: `corepack pnpm test:e2e -- customer-portal-track`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Not Run: live browser screenshots for wrong-code, expired, and exhausted OTP states; the registered visual proof renders route previews, and `customer-portal-track` covers those states without a browser.
+
+### Notes
+
+- Slice 0 still lacks human signoff for report deferrals, DMS mode, compensation scope, and approved notification channels. Slice 1 used the existing SMS provider path because SRS states the default MVP OTP method is the complaint primary phone.
+- Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.

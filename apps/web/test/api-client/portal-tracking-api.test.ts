@@ -21,7 +21,7 @@ test('portal client runs submission OTP session tracking follow-up and attachmen
   };
 
   assert.equal((await submitPortalComplaint(validPortalComplaint(), fetchImpl)).ok, true);
-  assert.equal((await requestPortalOtp({ referenceNumber: 'CMP-1', customerPhone: '+966500000001' }, fetchImpl)).ok, true);
+  assert.equal((await requestPortalOtp({ referenceNumber: 'CMP-1', customerPhone: '+966500000001', locale: 'ar' }, fetchImpl)).ok, true);
   assert.equal((await verifyPortalOtp({ verificationId: 'ver_1', otp: '123456' }, fetchImpl)).ok, true);
   assert.equal((await getPortalTracking('portal_token', fetchImpl)).ok, true);
   assert.equal((await submitPortalFollowUp('portal_token', 'Customer update', fetchImpl)).ok, true);
@@ -37,6 +37,7 @@ test('portal client runs submission OTP session tracking follow-up and attachmen
   ]);
   assert.equal(calls.every((call) => call.init?.credentials === 'omit'), true);
   assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), validPortalComplaint());
+  assert.deepEqual(JSON.parse(String(calls[1]?.init?.body)), { referenceNumber: 'CMP-1', customerPhone: '+966500000001', locale: 'ar' });
   assert.deepEqual(calls[3]?.init?.headers, { Accept: 'application/json', 'x-portal-session': 'portal_token' });
   assert.deepEqual(JSON.parse(String(calls[4]?.init?.body)), { body: 'Customer update' });
   assert.deepEqual(JSON.parse(String(calls[5]?.init?.body)), {

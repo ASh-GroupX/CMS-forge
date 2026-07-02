@@ -1,8 +1,8 @@
 # Current State
 
-Status: User-scoped UX redesign complete through Slice 9
-Phase: user-scoped-ux-redesign
-Next Task: None - user-scoped UX redesign slices complete
+Status: Business readiness Slice 1 complete
+Phase: business-readiness-remediation
+Next Task: Slice 2 - Submission SLA and Acknowledgement
 Model Tier: GPT-5.5 Extra High
 
 ## How to use this file
@@ -13,26 +13,18 @@ Prior state history is in .forge/archive/state-archive.md.
 ## Snapshot
 
 - Branch `codex/user-scoped-ux-redesign` is active.
-- Slice 1 made `/portal` submit real customer complaints through the portal API proxy.
-- Slice 2 returns backend-derived complaint `allowedActions` for the current server session principal.
-- Slice 3 added staff attachment list/upload/download wiring through backend-scoped routes and same-origin web proxies.
-- Slice 4 made staff queue filters/search/pagination URL-backed and API-backed via `/complaints/search`, with mobile queue cards and main-first staff layout.
-- Slice 5 exposes server-scoped customer and vehicle detail data in complaint detail responses and renders it in the staff detail workspace.
-- Slice 6 adds optional local IDs to DMS lookup matches, displays them when present, and uses them for provenance correction only when provided.
-- Slice 7 adds safe customer/branch labels to relation responses and lets staff unlink related complaints through the backend-owned relation route.
-- Slice 8 makes reports filter by date range, branch, category, severity, owner, and department where available; export links now use those same scoped filters only after real report rows load.
-- Reports now show guarded delivered/deferred catalog status instead of pretending deferred reports are complete.
-- Slice 9 localizes guarded report catalog values in Arabic, gives disabled report exports an unavailable reason, keeps related/duplicate complaint headings visible in empty states for accessibility, and constrains reports table overflow on narrow viewports.
-- DMS lookup/correction, related complaint writes, report authorization, branch scope, row limits, and export audit still flow through backend adapters/proxies and scoped routes; no DMS writeback, destructive merge, frontend provider/relation authority, or frontend report authority was added.
-- Screenshots were produced under `output/playwright/` and left unstaged.
+- Slice 0 still lacks human signoff for report deferrals, DMS mode, compensation scope, and approved notification channels. Slice 1 could proceed using the SRS default OTP method: code to complaint primary phone.
+- Slice 1 now queues customer OTP delivery through the existing notification queue as SMS, with English/Arabic body text selected by portal locale.
+- Portal verification persistence remains hash-only for OTP values; API responses, portal tracking data, audit records, session records, and web storage do not expose OTP hashes or session hashes.
+- OTP SMS dispatch bypasses preference/quiet-hour skips because the code is requested by the customer and must reach the primary complaint phone.
+- Proof passed: `test:api -- portal.tracking`, `test:api -- notifications`, `test:web -- api-client`, `test:e2e -- customer-portal-track`, `openapi:check`, `typecheck`, `lint`, and `test:visual`.
 
 ## Current Stop
 
-User-scoped UX redesign slices are complete.
+Ready to commit Slice 1, then start Slice 2.
 
 ## Open Carry-Forward / Known Debt
 
-- Existing dirty files not related to this slice remain untouched.
-- The plan names `test:api -- dms-adapter` and `test:api -- customers`, but this repo's API runner registers `integrations` and `complaints` for the covered behavior.
-- The plan names `test:e2e -- complaint-related`, but this repo's e2e runner does not register that suite.
-- Browser-native date and file input chrome is still controlled by the browser; product labels and values around those controls are localized.
+- Human signoff is still needed before slices that depend on report deferrals, DMS live/manual mode, compensation scope, or notification-channel approval.
+- Live browser screenshots for wrong-code, expired, and exhausted OTP states were not run; registered visual proof renders route previews and the customer portal e2e proof covers those states without a browser.
+- Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts remain untouched.

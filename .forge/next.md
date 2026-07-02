@@ -1,20 +1,24 @@
-# User-Scoped UX Redesign
+# Business Readiness Remediation - Slice 2
 
-Status: Complete
+Status: Ready
 Required model tier: GPT-5.5 Extra High
-Phase: user-scoped-ux-redesign
-Risk: Closed
-SRS IDs: REQ-LOCALIZATION-001, UI-SCREEN-001, UI-DESIGN-001, NFR-SEC-002
+Phase: business-readiness-remediation
+Risk: High
+SRS IDs: ARCH-WORKFLOW-001, REQ-SLA-001, REQ-NOTIFY-001, METHOD-AUDIT-001
 
 ## Task
 
-All requested user-scoped UX redesign slices are complete.
+Implement Slice 2 from `docs/BUSINESS_READINESS_PLAN.md`: submitted staff and portal complaints create SLA deadline events after commit and enqueue acknowledgement/submit notifications, while draft complaints stay out of active SLA.
 
 ## Scope
 
-- No next implementation slice remains in `docs/USER_SCOPED_UX_REDESIGN_PLAN.md`.
-- Start a new scoped task for any follow-up outside this redesign plan.
+- Inspect current complaints, workflow side-effect, SLA, notification, and existing workflow/portal tests before editing.
+- Reuse existing backend services and side-effect helpers.
+- Keep status history and audit in the creation transaction; enqueue side effects only after commit.
+- Do not add frontend workflow authority.
 
 ## Proof
 
-- See `.forge/evidence.md` for per-slice proof results.
+- `corepack pnpm test:api -- workflow`
+- `corepack pnpm test:api -- portal`
+- SLA warning/breach seeded proof if a registered suite exists; otherwise state the closest registered suite honestly.

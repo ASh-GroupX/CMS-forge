@@ -31,6 +31,7 @@ export function dispatchSkipReason(
   preference: CustomerNotificationPreferenceRecord | null,
   now: Date,
 ): string | null {
+  if (notification.templateCode === 'portal.verification.otp.customer') return null;
   if (!preference) return null;
   if (preference.preferredChannel && preference.preferredChannel !== notification.channel) return 'NOTIFICATION_CHANNEL_PREFERENCE_SKIPPED';
   if (notification.channel === NotificationChannel.SMS && inQuietHours(preference, now) && notification.complaint?.severity !== ComplaintSeverity.CRITICAL) return 'NOTIFICATION_QUIET_HOURS_SKIPPED';
