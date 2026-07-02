@@ -137,19 +137,25 @@ test('report catalog reconciles RPT-001 through RPT-017 with signed deferrals', 
   const expectedIds = Array.from({ length: 17 }, (_value, index) => `RPT-${String(index + 1).padStart(3, '0')}`);
 
   assert.deepEqual(catalog.items.map((item) => item.id), expectedIds);
-  assert.deepEqual(catalog.summary, { total: 17, delivered: 4, deferred: 13, signoffRequired: 13 });
+  assert.deepEqual(catalog.summary, { total: 17, delivered: 4, deferred: 13, signoffRequired: 12 });
   for (const item of catalog.items) {
     assert.ok(item.requiredFilters.length > 0);
     assert.ok(item.requiredOutputs.length > 0);
     if (item.status === 'DELIVERED') {
       assert.equal(item.signoffRequired, false);
       assert.deepEqual(item.deferred, []);
+    } else if (item.id === 'RPT-015') {
+      assert.equal(item.signoffRequired, false);
+      assert.ok(item.deferred.length > 0);
     } else {
       assert.equal(item.signoffRequired, true);
       assert.ok(item.deferred.length > 0);
     }
   }
-  assert.equal(catalog.items.find((item) => item.id === 'RPT-015')?.status, 'DEFERRED');
+  const dmsReport = catalog.items.find((item) => item.id === 'RPT-015');
+  assert.equal(dmsReport?.status, 'DEFERRED');
+  assert.match(dmsReport?.implemented.join(' ') ?? '', /Manual-DMS pilot lookup/);
+  assert.match(dmsReport?.deferred.join(' ') ?? '', /live\/test provider exists/);
   assert.equal(catalog.items.find((item) => item.id === 'RPT-017')?.status, 'DELIVERED');
   const catalogJson = JSON.stringify(catalog).toLowerCase();
   for (const forbidden of ['password', 'otp', 'sessiontoken', 'credential', 'secret', 'storagekey', 'publicurl', 'customerphone', 'customeremail']) {

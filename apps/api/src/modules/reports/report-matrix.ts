@@ -41,7 +41,7 @@ const REPORT_CATALOG: readonly ReportCatalogItem[] = [
   deferred('RPT-012', 'Customer satisfaction', 'Management', 'YES', ['date', 'branch', 'department', 'category'], ['CSAT average', 'response count', 'comments'], ['Survey scheduling and portal survey surfaces exist.'], ['CSAT reporting output is deferred pending signed business scope.']),
   delivered('RPT-013', 'Aging report', 'Management, Managers', 'YES', ['branch', 'owner', 'severity'], ['0-1 day bucket', '2-3 days bucket', '4-7 days bucket', '7+ days bucket'], ['Aging buckets are implemented in the KPI response for non-terminal complaints.']),
   deferred('RPT-014', 'Compensation tracking', 'Authorized managers', 'SHOULD', ['date', 'branch', 'category', 'amount/status'], ['proposed count/value', 'approved count/value'], [], ['Compensation report remains should-scope and is deferred pending signed MVP scope.']),
-  deferred('RPT-015', 'DMS lookup failure report', 'Admin, IT', 'YES', ['date', 'provider result'], ['failures', 'latency', 'not-found count'], ['Read-only DMS lookup API exposes safe lookup result states for staff.'], ['Persisted DMS lookup telemetry/reporting is deferred pending signed business scope; no live provider or writeback is added.']),
+  signedDeferred('RPT-015', 'DMS lookup failure report', 'Admin, IT', 'YES', ['date', 'provider result'], ['failures', 'latency', 'not-found count'], ['Manual-DMS pilot lookup returns disabled/manual fallback states without blocking complaint creation.'], ['Persisted DMS lookup telemetry/reporting is deferred until a live/test provider exists and lookup telemetry is meaningful.']),
   deferred('RPT-016', 'Notification delivery report', 'Admin, CR Manager', 'YES', ['date', 'channel', 'event', 'status'], ['sent', 'failed', 'pending', 'provider result'], ['Notification queue, templates, and dispatch tests exist.'], ['Notification delivery aggregate report is deferred pending signed business scope.']),
   delivered('RPT-017', 'Audit activity report', 'Admin', 'YES', ['actor', 'action', 'date', 'target'], ['audit entries', 'export'], ['Audit search/export module and guarded audit viewer are implemented.']),
 ];
@@ -71,4 +71,8 @@ function delivered(id: string, name: string, users: string, mvp: ReportMvpScope,
 
 function deferred(id: string, name: string, users: string, mvp: ReportMvpScope, requiredFilters: string[], requiredOutputs: string[], implemented: string[], deferredScope: string[]): ReportCatalogItem {
   return { id, name, users, mvp, requiredFilters, requiredOutputs, status: 'DEFERRED', implemented, deferred: deferredScope, signoffRequired: true };
+}
+
+function signedDeferred(id: string, name: string, users: string, mvp: ReportMvpScope, requiredFilters: string[], requiredOutputs: string[], implemented: string[], deferredScope: string[]): ReportCatalogItem {
+  return { id, name, users, mvp, requiredFilters, requiredOutputs, status: 'DEFERRED', implemented, deferred: deferredScope, signoffRequired: false };
 }

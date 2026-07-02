@@ -1,8 +1,8 @@
 # Current State
 
-Status: Business readiness Slice 9 complete; Slice 10 blocked on scope signoff
+Status: Business readiness Slice 10 complete; Slice 11 blocked on compensation scope signoff
 Phase: business-readiness-remediation
-Next Task: Slice 10 - DMS Pilot Mode scope decision
+Next Task: Slice 11 - Compensation Decision scope decision
 Model Tier: GPT-5.5 Extra High
 
 ## How to use this file
@@ -13,7 +13,7 @@ Prior state history is in .forge/archive/state-archive.md.
 ## Snapshot
 
 - Branch `codex/user-scoped-ux-redesign` is active.
-- Slice 0 still lacks human signoff for report deferrals, DMS mode, compensation scope, and approved notification channels.
+- Slice 0 still lacks human signoff for the remaining report deferrals, compensation scope, and approved notification channels.
 - Slice 1 queues customer OTP delivery through the existing notification queue as SMS, with English/Arabic body text selected by portal locale.
 - Slice 2 queues submit notifications and creates intake SLA deadline events after submitted complaint creation commits; drafts still create no active SLA deadline or submit notification.
 - Slice 3 enforces backend management-readonly masking for complaint search/detail sensitive values using the server-derived role.
@@ -23,16 +23,17 @@ Prior state history is in .forge/archive/state-archive.md.
 - Slice 7 wires staff internal/public comments and verified portal public timeline updates; internal comments remain hidden from portal tracking.
 - Slice 8 schedules closure surveys after workflow commit, sends tokenized survey links through the existing notification path, wires portal survey submit/terminal states, and shows authorized CSAT in staff detail.
 - Slice 9 uploads staff intake attachments after complaint creation through the existing backend-owned attachment path, reports success/partial failure counts, and keeps detail-page upload as retry.
-- Proof passed for Slice 9: `test:api -- attachments`, `test:web -- api-client`, `test:web -- shell`, `test:web -- localization`, `typecheck`, `lint`, `git diff --check`, and the styled staff intake screenshot.
+- Slice 10 records signed manual-DMS pilot scope: the backend DMS provider remains disabled/manual, staff lookup states show manual fallback, complaint creation remains unblocked, and RPT-015 is signed-deferred until a live/test provider exists and telemetry is meaningful.
+- Proof passed for Slice 10: `test:api -- integrations`, `test:api -- reports`, `test:web -- shell`, `test:web -- localization`, `typecheck`, `lint`, `git diff --check`, `web:visual-review`, and focused DMS disabled/manual fallback screenshot proof.
 
 ## Current Stop
 
-Slice 9 is committed. Do not start Slice 10 until the DMS pilot scope decision is signed.
+Slice 10 is complete. Do not start Slice 11 until the compensation MVP scope decision is signed.
 
 ## Open Carry-Forward / Known Debt
 
-- Human signoff is still needed before final acceptance of report deferrals, DMS live/manual mode, compensation scope, or notification-channel approval.
-- Exact Slice 10 DMS decision needed: either signed manual-DMS pilot scope, or approval to wire a live/test provider through the existing DMS port.
-- Exact report decision still needed: either sign MVP deferral for RPT-002, RPT-003, RPT-005 through RPT-012, RPT-014, RPT-015, and RPT-016, or approve implementation of those missing report-specific outputs.
-- Slice 11 compensation also depends on Slice 0 signoff: signed deferral, or approval for minimal compensation metadata and audit.
-- Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts remain untouched.
+- Exact Slice 11 compensation decision needed: signed deferral, or approval for minimal compensation metadata and audit.
+- Exact report decision still needed for RPT-002, RPT-003, RPT-005 through RPT-012, RPT-014, and RPT-016: signed MVP deferral or approval to implement missing report-specific outputs.
+- Approved notification channels for remaining pilot/UAT proof still need final signoff.
+- RPT-015 DMS lookup failure reporting is signed-deferred for manual-DMS pilot scope until a live/test provider exists and lookup telemetry is meaningful.
+- Untracked proof artifacts remain intentionally unstaged.

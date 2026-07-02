@@ -2792,7 +2792,7 @@ test('customer vehicle lookup preview states render lookup outcomes and errors',
   assert.match(multiple, /Multiple DMS matches found\. Select the correct customer and vehicle\./);
   assert.match(multiple, /CUST-101/);
   assert.match(down, /DMS is unavailable\. Continue manually or try again\./);
-  assert.match(disabled, /DMS lookup is disabled\. Continue manually\./);
+  assert.match(disabled, /DMS lookup is disabled for pilot manual scope\. Continue manually\./);
   assert.match(validation, /Enter at least one search value\./);
   assert.match(error, /Lookup could not be completed\. Continue manually or try again\./);
   assert.match(error, /role="alert"/);
@@ -2882,6 +2882,18 @@ test('complaint new route renders lookup loading and error roles', async () => {
   assert.match(loading, /role="status"/);
   assert.match(error, /Lookup could not be completed\. Continue manually or try again\./);
   assert.match(error, /role="alert"/);
+});
+
+test('complaint new route keeps creation available when DMS lookup is disabled', async () => {
+  const html = renderToStaticMarkup(
+    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'en', lookup: 'disabled' }) }),
+  );
+
+  assert.match(html, /DMS lookup is disabled for pilot manual scope\. Continue manually\./);
+  assert.match(html, /Manual fallback/);
+  assert.match(html, /Create complaint/);
+  assert.match(html, /No lookup match selected\. Manual source will be submitted\./);
+  assert.equal((html.match(/type="file"/g) ?? []).length, 1);
 });
 
 test('customer vehicle lookup source does not use APIs or browser storage', () => {

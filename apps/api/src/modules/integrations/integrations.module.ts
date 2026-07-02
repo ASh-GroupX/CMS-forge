@@ -31,7 +31,7 @@ import { InMemoryWhatsAppProvider, WHATSAPP_PROVIDER } from './whatsapp-provider
     { provide: EMAIL_PROVIDER, useFactory: () => emailProviderFromEnv() },
     { provide: SMS_PROVIDER, useClass: InMemorySmsProvider },
     { provide: WHATSAPP_PROVIDER, useClass: InMemoryWhatsAppProvider },
-    { provide: DMS_PROVIDER, useClass: InMemoryDmsProvider },
+    { provide: DMS_PROVIDER, useFactory: () => new InMemoryDmsProvider({ status: 'DISABLED' }) },
   ],
   exports: [IntegrationsService],
 })

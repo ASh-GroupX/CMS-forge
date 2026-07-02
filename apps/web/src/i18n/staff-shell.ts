@@ -84,10 +84,10 @@ export const staffShellText = {
       resultTitle: 'Lookup result',
       resultFields: { customerId: 'Matched customer ID', customerNumber: 'Customer number', phone: 'Phone', vehicleId: 'Matched vehicle ID', vin: 'VIN', plate: 'Plate', vehicle: 'Vehicle', modelYear: 'Model year', warranty: 'Warranty', branch: 'Branch', source: 'Source' },
       sources: { local: 'Local source', dms: 'DMS source', manual: 'Manual source' },
-      states: { idle: 'Enter phone, customer number, customer name, or VIN to search DMS.', loading: 'Searching customer and vehicle records.', match: 'One DMS match found. Review it before applying.', multiple: 'Multiple DMS matches found. Select the correct customer and vehicle.', none: 'No match found. Continue with manual entry.', down: 'DMS is unavailable. Continue manually or try again.', disabled: 'DMS lookup is disabled. Continue manually.', error: 'Lookup could not be completed. Continue manually or try again.', validation: 'Enter at least one search value.', denied: 'Lookup is not available for your current scope.', manual: 'Manual entry selected. DMS fields will not be applied.', selected: 'DMS match selected.' },
+      states: { idle: 'Enter phone, customer number, customer name, or VIN to search DMS.', loading: 'Searching customer and vehicle records.', match: 'One DMS match found. Review it before applying.', multiple: 'Multiple DMS matches found. Select the correct customer and vehicle.', none: 'No match found. Continue with manual entry.', down: 'DMS is unavailable. Continue manually or try again.', disabled: 'DMS lookup is disabled for pilot manual scope. Continue manually.', error: 'Lookup could not be completed. Continue manually or try again.', validation: 'Enter at least one search value.', denied: 'Lookup is not available for your current scope.', manual: 'Manual entry selected. DMS fields will not be applied.', selected: 'DMS match selected.' },
       actions: { search: 'Search DMS', useMatch: 'Use this match' },
       manualTitle: 'Manual fallback',
-      manualHelp: 'Use manual entry when lookup does not find the customer or vehicle.',
+      manualHelp: 'Use manual entry when lookup is disabled or does not find the customer or vehicle.',
       manualAction: 'Continue manually',
     },
     createForm: {

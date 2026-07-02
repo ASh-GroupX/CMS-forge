@@ -12400,3 +12400,42 @@ SRS IDs: `REQ-COMPLAINT-001`, `REQ-ATTACHMENT-001`, `PORTAL-SEC-001`, `REQ-RBAC-
 - Live staff routes correctly require a real session, so the screenshot used route-rendered proof HTML with the compiled app Tailwind CSS and the same component tree used by the visual-review workflow.
 - Slice 10 is blocked until the Slice 0 DMS mode decision is signed: either manual-DMS pilot scope, or live/test provider integration through the existing DMS port.
 - Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.
+
+---
+
+## Business Readiness - Slice 10 DMS Pilot Mode
+
+Status: Complete
+SRS IDs: `REQ-INTEGRATION-001`, `REQ-REPORT-001`, `REQ-RBAC-001`, `METHOD-AUDIT-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
+
+### Scope
+
+- Recorded the signed manual-DMS pilot decision in the integrations module boundary: no live/test DMS provider, provider SDK, credential, writeback, or lookup telemetry persistence exists in this slice.
+- Kept the Nest integrations module on the in-memory DMS adapter with an explicit `DISABLED` response.
+- Marked RPT-015 as signed-deferred until a live/test provider exists and lookup telemetry is meaningful; other incomplete report deferrals still require business signoff.
+- Updated staff lookup copy to state that DMS lookup is disabled for pilot manual scope and that manual fallback should be used.
+- Added web proof that complaint creation remains available when lookup is disabled, with exactly one real intake attachment input.
+
+### Security Self-Check
+
+- Backend remains the authority for DMS adapter behavior, lookup result normalization, RBAC, session validation, branch scope, and report catalog status.
+- No frontend provider calls, provider credentials, DMS writeback, or fake telemetry were added.
+- The DMS lookup route remains guarded by the staff session and `COMPLAINT_CREATE` permission.
+- RPT-015 telemetry/reporting remains deferred rather than populated from disabled in-memory lookups.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- integrations` (27/27 TAP tests).
+- Passed: `corepack pnpm test:api -- reports` (32/32 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (204/204 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+- Passed: `corepack pnpm web:visual-review`; standard visual artifacts were written under `coverage/web-visual-review`.
+
+### Notes
+
+- Focused disabled/manual fallback screenshot proof was captured at `output/playwright/slice10-dms-disabled-manual.png`; the browser DOM proof confirmed the disabled message, manual fallback, create form, and one `input[type="file"]`.
+- Screenshot proof used route-rendered HTML over a temporary localhost static server with compiled app Tailwind CSS; the temporary server was stopped after capture.
+- Slice 11 is blocked until compensation scope is signed: deferral, or approval for minimal compensation metadata and audit.

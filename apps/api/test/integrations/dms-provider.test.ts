@@ -85,6 +85,17 @@ test('integrations dms lookup allows manual fallback for not-found and disabled 
   assert.equal(disabled.manualFallbackAllowed, true);
 });
 
+test('integrations dms lookup defaults to disabled manual pilot mode', async () => {
+  const result = await new IntegrationsService(new IntegrationsRepository(), {} as never, {} as never, {} as never)
+    .lookupDmsCustomerVehicle({ phone: '+201001112222', correlationId: 'req_manual_scope' });
+
+  assert.equal(result.provider, 'in-memory');
+  assert.equal(result.result, 'DISABLED');
+  assert.equal(result.manualFallbackAllowed, true);
+  assert.deepEqual(result.matches, []);
+  assert.equal(result.correlationId, 'req_manual_scope');
+});
+
 test('integrations dms lookup converts provider failure to safe provider-down result', async () => {
   const provider: DmsProviderPort = {
     async lookupCustomerVehicle() {
