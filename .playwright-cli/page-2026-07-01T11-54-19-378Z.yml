@@ -1,0 +1,291 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - strong [ref=e3]: EN workflow modal visual regression
+    - paragraph [ref=e4]: Inspect layout, overflow, RTL/LTR direction, labels, and state messaging before approving golden-screen work.
+    - list [ref=e5]:
+      - listitem [ref=e6]: Workflow action
+      - listitem [ref=e7]: Approve
+      - listitem [ref=e8]: Comment or reason is required.
+  - main [ref=e9]:
+    - generic "Complaint detail" [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e15]: Complaint detail
+        - paragraph [ref=e16]: Authorized case workspace preview.
+      - generic [ref=e17]:
+        - region "Complaint facts" [ref=e18]:
+          - generic [ref=e19]:
+            - term [ref=e20]: Status
+            - definition [ref=e21]:
+              - generic [ref=e22]: IN_PROGRESS
+          - generic [ref=e23]:
+            - term [ref=e24]: Severity
+            - definition [ref=e25]:
+              - generic [ref=e26]: HIGH
+          - generic [ref=e27]:
+            - term [ref=e28]: Current responsible staff
+            - definition [ref=e29]: CR team queue
+          - generic [ref=e30]:
+            - term [ref=e31]: SLA timer
+            - definition [ref=e32]: Backend scoped
+          - generic [ref=e33]:
+            - term [ref=e34]: Next action
+            - definition [ref=e35]: No workflow actions are available.
+          - generic [ref=e36]:
+            - term [ref=e37]: Last updated
+            - definition [ref=e38]: Jun 20, 2026
+        - generic [ref=e39]:
+          - region "Complaint facts" [ref=e40]:
+            - heading "Complaint facts" [level=3] [ref=e41]
+            - generic [ref=e42]:
+              - generic [ref=e43]:
+                - term [ref=e44]: Reference
+                - definition [ref=e45]: CMP-PROOF-DETAIL
+              - generic [ref=e46]:
+                - term [ref=e47]: Status
+                - definition [ref=e48]: IN_PROGRESS
+              - generic [ref=e49]:
+                - term [ref=e50]: Severity
+                - definition [ref=e51]: HIGH
+              - generic [ref=e52]:
+                - term [ref=e53]: Category
+                - definition [ref=e54]: Proof detail row
+          - region "Responsible staff and SLA" [ref=e55]:
+            - heading "Responsible staff and SLA" [level=3] [ref=e56]
+            - generic [ref=e57]:
+              - generic [ref=e58]:
+                - term [ref=e59]: Current responsible staff
+                - definition [ref=e60]: CR team queue
+              - generic [ref=e61]:
+                - term [ref=e62]: SLA timer
+                - definition [ref=e63]: Backend scoped
+          - region "Customer data" [ref=e64]:
+            - heading "Customer data" [level=3] [ref=e65]
+            - generic [ref=e66]:
+              - generic [ref=e67]:
+                - term [ref=e68]: Customer
+                - definition [ref=e69]: Proof Customer
+              - generic [ref=e70]:
+                - term [ref=e71]: Contact
+                - definition [ref=e72]: "+966500000099"
+              - generic [ref=e73]:
+                - term [ref=e74]: Customer number
+                - definition [ref=e75]: CUST-PROOF
+              - generic [ref=e76]:
+                - term [ref=e77]: Customer source
+                - definition [ref=e78]: DMS match
+              - generic [ref=e79]:
+                - term [ref=e80]: Manual customer
+                - definition [ref=e81]: "No"
+          - region "Vehicle data" [ref=e82]:
+            - heading "Vehicle data" [level=3] [ref=e83]
+            - generic [ref=e84]:
+              - generic [ref=e85]:
+                - term [ref=e86]: Vehicle
+                - definition [ref=e87]: Nissan Patrol 2024
+              - generic [ref=e88]:
+                - term [ref=e89]: VIN
+                - definition [ref=e90]: PROOFVIN00001
+              - generic [ref=e91]:
+                - term [ref=e92]: Plate
+                - definition [ref=e93]: PRF123
+              - generic [ref=e94]:
+                - term [ref=e95]: Vehicle related
+                - definition [ref=e96]: "Yes"
+              - generic [ref=e97]:
+                - term [ref=e98]: Vehicle source
+                - definition [ref=e99]: Local record
+              - generic [ref=e100]:
+                - term [ref=e101]: Manual vehicle
+                - definition [ref=e102]: "No"
+              - generic [ref=e103]:
+                - term [ref=e104]: Unavailable reason
+                - definition [ref=e105]: None
+          - region "Customer and vehicle correction" [ref=e106]:
+            - heading "Customer and vehicle correction" [level=3] [ref=e107]
+            - paragraph [ref=e108]: Backend authority applies scoped corrections and records the audit trail.
+            - region "Customer and vehicle lookup" [ref=e110]:
+              - generic [ref=e111]:
+                - generic [ref=e112]: Customer and vehicle lookup
+                - paragraph [ref=e113]: Search before creating a complaint, or continue manually.
+              - generic [ref=e114]:
+                - generic [ref=e115]:
+                  - generic [ref=e116]:
+                    - text: Phone
+                    - textbox "Phone" [ref=e117]
+                  - generic [ref=e118]:
+                    - text: Customer number
+                    - textbox "Customer number" [ref=e119]
+                  - generic [ref=e120]:
+                    - text: Customer name
+                    - textbox "Customer name" [ref=e121]
+                  - generic [ref=e122]:
+                    - text: VIN
+                    - textbox "VIN" [ref=e123]
+                  - button "Search DMS" [ref=e125]
+                - generic [ref=e126]:
+                  - generic [ref=e127]: Local source
+                  - generic [ref=e128]: DMS source
+                  - generic [ref=e129]: Manual source
+                - generic [ref=e130]:
+                  - region "Lookup result" [ref=e131]:
+                    - heading "Lookup result" [level=3] [ref=e132]
+                    - status [ref=e133]: Enter phone, customer number, customer name, or VIN to search DMS.
+                  - region "Manual fallback" [ref=e134]:
+                    - heading "Manual fallback" [level=3] [ref=e135]
+                    - paragraph [ref=e136]: Use manual entry when lookup does not find the customer or vehicle.
+                    - button "Continue manually" [ref=e137]
+            - generic [ref=e138]:
+              - generic [ref=e139]:
+                - generic [ref=e140]:
+                  - text: Matched customer ID
+                  - textbox "Matched customer ID" [ref=e141]
+                - generic [ref=e142]:
+                  - text: Customer source
+                  - combobox "Customer source" [ref=e143]:
+                    - img [ref=e144]
+                  - combobox [ref=e146]
+                - generic [ref=e147]:
+                  - checkbox "Manual customer data" [ref=e148]
+                  - text: Manual customer data
+                - generic [ref=e149]:
+                  - checkbox "Vehicle-related complaint" [checked] [ref=e150]
+                  - text: Vehicle-related complaint
+                - generic [ref=e151]:
+                  - text: Matched vehicle ID
+                  - textbox "Matched vehicle ID" [ref=e152]
+                - generic [ref=e153]:
+                  - checkbox "Clear vehicle link" [ref=e154]
+                  - text: Clear vehicle link
+                - generic [ref=e155]:
+                  - text: Vehicle source
+                  - combobox "Vehicle source" [ref=e156]:
+                    - img [ref=e157]
+                  - combobox [ref=e159]
+                - generic [ref=e160]:
+                  - checkbox "Manual vehicle data" [ref=e161]
+                  - text: Manual vehicle data
+              - generic [ref=e162]:
+                - text: Vehicle data unavailable reason
+                - textbox "Vehicle data unavailable reason" [ref=e163]
+              - generic [ref=e164]:
+                - text: Correction reason
+                - textbox "Correction reason" [ref=e165]
+              - button "Apply correction" [ref=e167]
+              - status [ref=e168]: No correction submitted yet.
+          - region "Related complaints" [ref=e169]:
+            - generic [ref=e171]:
+              - heading "Related complaints" [level=3] [ref=e172]
+              - paragraph [ref=e173]: Recent 30-day match by customer, category, and branch.
+            - status [ref=e174]: No likely duplicates or linked complaints are visible.
+            - heading "Likely duplicates" [level=4] [ref=e176]
+            - heading "Linked complaints" [level=4] [ref=e178]
+        - generic [ref=e179]:
+          - region "Timeline" [ref=e180]:
+            - heading "Timeline" [level=3] [ref=e181]
+            - list [ref=e182]:
+              - listitem [ref=e183]: SUBMITTED - Jun 19, 2026
+          - region "Case timeline" [ref=e184]:
+            - heading "Case timeline" [level=3] [ref=e185]
+            - generic [ref=e187]:
+              - term [ref=e188]: Case status
+              - definition [ref=e189]: Select a complaint to view detail.
+          - region "CAPA" [ref=e190]:
+            - heading "CAPA" [level=3] [ref=e191]
+            - status [ref=e192]: No CAPA records yet.
+            - generic [ref=e193]:
+              - generic [ref=e194]:
+                - text: CAPA owner
+                - alert [ref=e195]: Staff list could not be loaded. Try again.
+              - generic [ref=e196]:
+                - text: Root cause
+                - textbox "Root cause" [ref=e197]
+              - generic [ref=e198]:
+                - text: Corrective action
+                - textbox "Corrective action" [ref=e199]
+              - generic [ref=e200]:
+                - text: Preventive action
+                - textbox "Preventive action" [ref=e201]
+              - generic [ref=e202]:
+                - text: Due date
+                - textbox "Due date" [ref=e203]
+              - generic [ref=e204]:
+                - text: Status
+                - combobox "Status" [ref=e205]:
+                  - img [ref=e206]
+                - combobox [ref=e208]
+              - button "Create CAPA" [disabled] [ref=e209]
+              - alert [ref=e210]: CAPA could not be saved. Try again.
+          - region "Survey results" [ref=e211]:
+            - heading "Survey results" [level=3] [ref=e212]
+            - generic [ref=e213]:
+              - generic [ref=e214]:
+                - term [ref=e215]: Rating
+                - definition [ref=e216]: 4 / 5
+              - generic [ref=e217]:
+                - term [ref=e218]: Submitted
+                - definition [ref=e219]: Survey submitted placeholder
+          - region "Attachments" [ref=e220]:
+            - generic [ref=e221]:
+              - heading "Attachments" [level=3] [ref=e222]
+              - generic [ref=e223]: Scan pending
+            - generic [ref=e224]:
+              - generic [ref=e225]:
+                - text: Upload file
+                - button "Upload file" [ref=e226]
+              - button "Upload file" [ref=e227]
+            - list [ref=e228]:
+              - listitem [ref=e229]: Backend authorizes every upload and download
+              - listitem [ref=e230]: Direct file links are never shown in the browser
+        - dialog "Workflow action" [ref=e231]:
+          - generic [ref=e233]:
+            - heading "Workflow action" [level=3] [ref=e234]
+            - paragraph [ref=e235]: Available actions come from system policy.
+          - alert [ref=e236]: Comment or reason is required.
+          - generic [ref=e237]:
+            - button "Approve" [ref=e238]
+            - button "Approve and route" [ref=e239]
+            - button "Send back" [ref=e240]
+            - button "Assign investigation" [ref=e241]
+            - button "Investigate" [ref=e242]
+            - button "Resolve" [ref=e243]
+            - button "Close" [ref=e244]
+            - button "Reject" [ref=e245]
+            - button "Reopen" [ref=e246]
+          - generic [ref=e247]:
+            - paragraph [ref=e248]: No extra fields are required for this action.
+            - text: Comment or reason is required.
+            - button "Submit action" [ref=e249]
+          - alert "Confirm close or reject" [ref=e250]:
+            - paragraph [ref=e251]: Confirm close or reject
+            - paragraph [ref=e252]: Close and reject actions require a final confirmation after the required comment.
+        - region "Internal comments / Public updates" [ref=e253]:
+          - region "Internal comments" [ref=e254]:
+            - generic [ref=e255]:
+              - heading "Internal comments" [level=3] [ref=e256]
+              - generic [ref=e257]: Internal only
+            - generic [ref=e258]:
+              - generic [ref=e259]:
+                - term [ref=e260]: Author
+                - definition [ref=e261]: Authorized staff
+              - generic [ref=e262]:
+                - term [ref=e263]: Time
+                - definition [ref=e264]: 2026-06-19 10:00
+              - generic [ref=e265]:
+                - term [ref=e266]: Visibility
+                - definition [ref=e267]: Internal only
+            - paragraph [ref=e268]: Staff-only note placeholder
+          - region "Public updates" [ref=e269]:
+            - generic [ref=e270]:
+              - heading "Public updates" [level=3] [ref=e271]
+              - generic [ref=e272]: Customer visible
+            - generic [ref=e273]:
+              - generic [ref=e274]:
+                - term [ref=e275]: Author
+                - definition [ref=e276]: Authorized staff
+              - generic [ref=e277]:
+                - term [ref=e278]: Time
+                - definition [ref=e279]: 2026-06-19 10:00
+              - generic [ref=e280]:
+                - term [ref=e281]: Visibility
+                - definition [ref=e282]: Customer visible
+            - paragraph [ref=e283]: Customer-visible update placeholder

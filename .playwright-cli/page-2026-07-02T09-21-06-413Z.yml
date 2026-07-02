@@ -1,0 +1,33 @@
+- main [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: Customer satisfaction survey
+        - paragraph [ref=e8]: Rate your complaint resolution experience. This survey link can be used once.
+      - link "Switch language" [ref=e9] [cursor=pointer]:
+        - /url: /portal/survey?locale=ar
+        - text: العربية
+    - generic [ref=e12]:
+      - group "Rating" [ref=e13]:
+        - generic [ref=e14]: Rating
+        - generic [ref=e15]:
+          - generic [ref=e16]:
+            - radio "1 - Very dissatisfied" [ref=e17]
+            - generic [ref=e18]: "1"
+          - generic [ref=e19]:
+            - radio "2 - Dissatisfied" [ref=e20]
+            - generic [ref=e21]: "2"
+          - generic [ref=e22]:
+            - radio "3 - Neutral" [ref=e23]
+            - generic [ref=e24]: "3"
+          - generic [ref=e25]:
+            - radio "4 - Satisfied" [ref=e26]
+            - generic [ref=e27]: "4"
+          - generic [ref=e28]:
+            - radio "5 - Very satisfied" [ref=e29]
+            - generic [ref=e30]: "5"
+      - generic [ref=e31]:
+        - text: Optional comment
+        - textbox "Optional comment" [ref=e32]
+      - paragraph [ref=e33]: The survey stores only the rating and optional customer comment for this complaint.
+      - button "Submit survey" [ref=e34]

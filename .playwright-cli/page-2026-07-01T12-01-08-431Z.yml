@@ -1,0 +1,44 @@
+- generic [active] [ref=f3e1]:
+  - main [ref=f3e2]:
+    - dialog "Workflow action" [ref=f3e3]:
+      - generic [ref=f3e5]:
+        - heading "Workflow action" [level=3] [ref=f3e6]
+        - paragraph [ref=f3e7]: Available actions come from system policy.
+      - alert [ref=f3e8]: Comment or reason is required.
+      - generic [ref=f3e9]:
+        - button "Approve and route" [ref=f3e10] [cursor=pointer]
+        - button "Approve" [ref=f3e11] [cursor=pointer]
+        - button "Assign investigation" [ref=f3e12] [cursor=pointer]
+        - button "Resolve" [ref=f3e13] [cursor=pointer]
+        - button "Close" [ref=f3e14] [cursor=pointer]
+      - generic [ref=f3e15]:
+        - generic [ref=f3e16]:
+          - generic [ref=f3e17]:
+            - text: Reason
+            - textbox "Reason" [ref=f3e18]
+          - generic [ref=f3e19]:
+            - text: Target branch
+            - combobox "Target branch" [ref=f3e20]:
+              - option [selected]
+              - option "Service Branch"
+          - generic [ref=f3e21]:
+            - text: Target department
+            - combobox "Target department" [ref=f3e22]:
+              - option [selected]
+              - option "Service"
+          - generic [ref=f3e23]:
+            - generic [ref=f3e24]: Assigned owner
+            - generic [ref=f3e25]:
+              - combobox "Assigned owner" [ref=f3e26]:
+                - option "Search staff by name, role, or branch" [disabled] [selected]
+                - option "Owner User - CR Manager - Service Branch"
+              - button "Clear selected staff" [ref=f3e27] [cursor=pointer]:
+                - img
+            - paragraph [ref=f3e28]: Choose the owner.
+        - generic [ref=f3e29]: Comment or reason is required.
+        - button "Submit action" [ref=f3e30] [cursor=pointer]
+      - alert "Confirm close or reject" [ref=f3e31]:
+        - paragraph [ref=f3e32]: Confirm close or reject
+        - paragraph [ref=f3e33]: Close and reject actions require a final confirmation after the required comment.
+  - button "Open Next.js Dev Tools" [ref=f3e39] [cursor=pointer]:
+    - img [ref=f3e40]

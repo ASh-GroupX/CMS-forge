@@ -1,0 +1,291 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - strong [ref=e3]: AR workflow modal visual regression
+    - paragraph [ref=e4]: Inspect layout, overflow, RTL/LTR direction, labels, and state messaging before approving golden-screen work.
+    - list [ref=e5]:
+      - listitem [ref=e6]: إجراء سير العمل
+      - listitem [ref=e7]: موافقة
+      - listitem [ref=e8]: التعليق أو السبب مطلوب.
+  - main [ref=e9]:
+    - generic "تفاصيل الشكوى" [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e15]: تفاصيل الشكوى
+        - paragraph [ref=e16]: معاينة مساحة حالة مصرح بها.
+      - generic [ref=e17]:
+        - region "بيانات الشكوى" [ref=e18]:
+          - generic [ref=e19]:
+            - term [ref=e20]: الحالة
+            - definition [ref=e21]:
+              - generic [ref=e22]: IN_PROGRESS
+          - generic [ref=e23]:
+            - term [ref=e24]: الخطورة
+            - definition [ref=e25]:
+              - generic [ref=e26]: HIGH
+          - generic [ref=e27]:
+            - term [ref=e28]: المسؤول الحالي
+            - definition [ref=e29]: قائمة فريق خدمة العملاء
+          - generic [ref=e30]:
+            - term [ref=e31]: وقت الخدمة
+            - definition [ref=e32]: ساعتان متبقيتان
+          - generic [ref=e33]:
+            - term [ref=e34]: الإجراء التالي
+            - definition [ref=e35]: لا توجد إجراءات سير عمل متاحة.
+          - generic [ref=e36]:
+            - term [ref=e37]: آخر تحديث
+            - definition [ref=e38]: ٢٠‏/٠٦‏/٢٠٢٦
+        - generic [ref=e39]:
+          - region "بيانات الشكوى" [ref=e40]:
+            - heading "بيانات الشكوى" [level=3] [ref=e41]
+            - generic [ref=e42]:
+              - generic [ref=e43]:
+                - term [ref=e44]: المرجع
+                - definition [ref=e45]: CMP-PROOF-DETAIL
+              - generic [ref=e46]:
+                - term [ref=e47]: الحالة
+                - definition [ref=e48]: IN_PROGRESS
+              - generic [ref=e49]:
+                - term [ref=e50]: الخطورة
+                - definition [ref=e51]: HIGH
+              - generic [ref=e52]:
+                - term [ref=e53]: التصنيف
+                - definition [ref=e54]: Proof detail row
+          - region "المسؤول ووقت الخدمة" [ref=e55]:
+            - heading "المسؤول ووقت الخدمة" [level=3] [ref=e56]
+            - generic [ref=e57]:
+              - generic [ref=e58]:
+                - term [ref=e59]: المسؤول الحالي
+                - definition [ref=e60]: قائمة فريق خدمة العملاء
+              - generic [ref=e61]:
+                - term [ref=e62]: وقت الخدمة
+                - definition [ref=e63]: ساعتان متبقيتان
+          - region "بيانات العميل" [ref=e64]:
+            - heading "بيانات العميل" [level=3] [ref=e65]
+            - generic [ref=e66]:
+              - generic [ref=e67]:
+                - term [ref=e68]: عميل محجوب
+                - definition [ref=e69]: Proof Customer
+              - generic [ref=e70]:
+                - term [ref=e71]: التواصل
+                - definition [ref=e72]: "+966500000099"
+              - generic [ref=e73]:
+                - term [ref=e74]: رقم العميل
+                - definition [ref=e75]: CUST-PROOF
+              - generic [ref=e76]:
+                - term [ref=e77]: مصدر العميل
+                - definition [ref=e78]: مطابقة DMS
+              - generic [ref=e79]:
+                - term [ref=e80]: عميل يدوي
+                - definition [ref=e81]: لا
+          - region "بيانات المركبة" [ref=e82]:
+            - heading "بيانات المركبة" [level=3] [ref=e83]
+            - generic [ref=e84]:
+              - generic [ref=e85]:
+                - term [ref=e86]: المركبة
+                - definition [ref=e87]: Nissan Patrol 2024
+              - generic [ref=e88]:
+                - term [ref=e89]: VIN
+                - definition [ref=e90]: PROOFVIN00001
+              - generic [ref=e91]:
+                - term [ref=e92]: اللوحة
+                - definition [ref=e93]: PRF123
+              - generic [ref=e94]:
+                - term [ref=e95]: مرتبطة بمركبة
+                - definition [ref=e96]: نعم
+              - generic [ref=e97]:
+                - term [ref=e98]: مصدر المركبة
+                - definition [ref=e99]: سجل محلي
+              - generic [ref=e100]:
+                - term [ref=e101]: مركبة يدوية
+                - definition [ref=e102]: لا
+              - generic [ref=e103]:
+                - term [ref=e104]: سبب عدم توفر البيانات
+                - definition [ref=e105]: لا يوجد
+          - region "تصحيح بيانات العميل والمركبة" [ref=e106]:
+            - heading "تصحيح بيانات العميل والمركبة" [level=3] [ref=e107]
+            - paragraph [ref=e108]: الخادم يطبق التصحيح ضمن الصلاحيات ويسجل الأثر.
+            - region "بحث العميل والمركبة" [ref=e110]:
+              - generic [ref=e111]:
+                - generic [ref=e112]: بحث العميل والمركبة
+                - paragraph [ref=e113]: ابحث قبل إنشاء الشكوى، أو تابع بالإدخال اليدوي.
+              - generic [ref=e114]:
+                - generic [ref=e115]:
+                  - generic [ref=e116]:
+                    - text: الهاتف
+                    - textbox "الهاتف" [ref=e117]
+                  - generic [ref=e118]:
+                    - text: رقم العميل
+                    - textbox "رقم العميل" [ref=e119]
+                  - generic [ref=e120]:
+                    - text: اسم العميل
+                    - textbox "اسم العميل" [ref=e121]
+                  - generic [ref=e122]:
+                    - text: رقم VIN
+                    - textbox "رقم VIN" [ref=e123]
+                  - button "بحث DMS" [ref=e125]
+                - generic [ref=e126]:
+                  - generic [ref=e127]: مصدر محلي
+                  - generic [ref=e128]: مصدر DMS
+                  - generic [ref=e129]: مصدر يدوي
+                - generic [ref=e130]:
+                  - region "نتيجة البحث" [ref=e131]:
+                    - heading "نتيجة البحث" [level=3] [ref=e132]
+                    - status [ref=e133]: أدخل الهاتف أو رقم العميل أو الاسم أو VIN للبحث في DMS.
+                  - region "إدخال يدوي" [ref=e134]:
+                    - heading "إدخال يدوي" [level=3] [ref=e135]
+                    - paragraph [ref=e136]: استخدم الإدخال اليدوي عندما لا يجد البحث العميل أو المركبة.
+                    - button "المتابعة يدويا" [ref=e137]
+            - generic [ref=e138]:
+              - generic [ref=e139]:
+                - generic [ref=e140]:
+                  - text: معرف العميل المطابق
+                  - textbox "معرف العميل المطابق" [ref=e141]
+                - generic [ref=e142]:
+                  - text: مصدر العميل
+                  - combobox "مصدر العميل" [ref=e143]:
+                    - img [ref=e144]
+                  - combobox [ref=e146]
+                - generic [ref=e147]:
+                  - checkbox "بيانات عميل يدوية" [ref=e148]
+                  - text: بيانات عميل يدوية
+                - generic [ref=e149]:
+                  - checkbox "شكوى مرتبطة بمركبة" [checked] [ref=e150]
+                  - text: شكوى مرتبطة بمركبة
+                - generic [ref=e151]:
+                  - text: معرف المركبة المطابقة
+                  - textbox "معرف المركبة المطابقة" [ref=e152]
+                - generic [ref=e153]:
+                  - checkbox "مسح ربط المركبة" [ref=e154]
+                  - text: مسح ربط المركبة
+                - generic [ref=e155]:
+                  - text: مصدر المركبة
+                  - combobox "مصدر المركبة" [ref=e156]:
+                    - img [ref=e157]
+                  - combobox [ref=e159]
+                - generic [ref=e160]:
+                  - checkbox "بيانات مركبة يدوية" [ref=e161]
+                  - text: بيانات مركبة يدوية
+              - generic [ref=e162]:
+                - text: سبب عدم توفر بيانات المركبة
+                - textbox "سبب عدم توفر بيانات المركبة" [ref=e163]
+              - generic [ref=e164]:
+                - text: سبب التصحيح
+                - textbox "سبب التصحيح" [ref=e165]
+              - button "تطبيق التصحيح" [ref=e167]
+              - status [ref=e168]: لم يتم إرسال تصحيح بعد.
+          - region "الشكاوى المرتبطة" [ref=e169]:
+            - generic [ref=e171]:
+              - heading "الشكاوى المرتبطة" [level=3] [ref=e172]
+              - paragraph [ref=e173]: مطابقة حديثة خلال 30 يوما حسب العميل والتصنيف والفرع.
+            - status [ref=e174]: لا توجد تكرارات محتملة أو شكاوى مرتبطة ضمن صلاحيتك.
+            - heading "تكرارات محتملة" [level=4] [ref=e176]
+            - heading "شكاوى مرتبطة" [level=4] [ref=e178]
+        - generic [ref=e179]:
+          - region "الخط الزمني" [ref=e180]:
+            - heading "الخط الزمني" [level=3] [ref=e181]
+            - list [ref=e182]:
+              - listitem [ref=e183]: SUBMITTED - ١٩‏/٠٦‏/٢٠٢٦
+          - region "الخط الزمني للحالة" [ref=e184]:
+            - heading "الخط الزمني للحالة" [level=3] [ref=e185]
+            - generic [ref=e187]:
+              - term [ref=e188]: حالة الحالة
+              - definition [ref=e189]: اختر شكوى لعرض التفاصيل.
+          - region "CAPA" [ref=e190]:
+            - heading "CAPA" [level=3] [ref=e191]
+            - status [ref=e192]: لا توجد سجلات CAPA بعد.
+            - generic [ref=e193]:
+              - generic [ref=e194]:
+                - text: المسؤول عن CAPA
+                - alert [ref=e195]: تعذر تحميل قائمة الموظفين. حاول مرة أخرى.
+              - generic [ref=e196]:
+                - text: السبب الجذري
+                - textbox "السبب الجذري" [ref=e197]
+              - generic [ref=e198]:
+                - text: الإجراء التصحيحي
+                - textbox "الإجراء التصحيحي" [ref=e199]
+              - generic [ref=e200]:
+                - text: الإجراء الوقائي
+                - textbox "الإجراء الوقائي" [ref=e201]
+              - generic [ref=e202]:
+                - text: تاريخ الاستحقاق
+                - textbox "تاريخ الاستحقاق" [ref=e203]
+              - generic [ref=e204]:
+                - text: الحالة
+                - combobox "الحالة" [ref=e205]:
+                  - img [ref=e206]
+                - combobox [ref=e208]
+              - button "إنشاء CAPA" [disabled] [ref=e209]
+              - alert [ref=e210]: تعذر حفظ CAPA. حاول مرة أخرى.
+          - region "نتائج الاستبيان" [ref=e211]:
+            - heading "نتائج الاستبيان" [level=3] [ref=e212]
+            - generic [ref=e213]:
+              - generic [ref=e214]:
+                - term [ref=e215]: التقييم
+                - definition [ref=e216]: 4 / 5
+              - generic [ref=e217]:
+                - term [ref=e218]: تم الإرسال
+                - definition [ref=e219]: عنصر استبيان مرسل
+          - region "المرفقات" [ref=e220]:
+            - generic [ref=e221]:
+              - heading "المرفقات" [level=3] [ref=e222]
+              - generic [ref=e223]: الفحص قيد الانتظار
+            - generic [ref=e224]:
+              - generic [ref=e225]:
+                - text: رفع ملف
+                - button "رفع ملف" [ref=e226]
+              - button "رفع ملف" [ref=e227]
+            - list [ref=e228]:
+              - listitem [ref=e229]: الخادم يصرح كل رفع وتنزيل
+              - listitem [ref=e230]: لا تظهر روابط التخزين في المتصفح
+        - dialog "إجراء سير العمل" [ref=e231]:
+          - generic [ref=e233]:
+            - heading "إجراء سير العمل" [level=3] [ref=e234]
+            - paragraph [ref=e235]: النظام يحدد الإجراءات المتاحة.
+          - alert [ref=e236]: التعليق أو السبب مطلوب.
+          - generic [ref=e237]:
+            - button "موافقة" [ref=e238]
+            - button "موافقة وتوجيه" [ref=e239]
+            - button "إرجاع" [ref=e240]
+            - button "إسناد التحقيق" [ref=e241]
+            - button "تحقيق" [ref=e242]
+            - button "حل" [ref=e243]
+            - button "إغلاق" [ref=e244]
+            - button "رفض" [ref=e245]
+            - button "إعادة فتح" [ref=e246]
+          - generic [ref=e247]:
+            - paragraph [ref=e248]: لا توجد حقول إضافية مطلوبة لهذا الإجراء.
+            - text: التعليق أو السبب مطلوب.
+            - button "إرسال الإجراء" [ref=e249]
+          - alert "تأكيد الإغلاق أو الرفض" [ref=e250]:
+            - paragraph [ref=e251]: تأكيد الإغلاق أو الرفض
+            - paragraph [ref=e252]: تتطلب إجراءات الإغلاق والرفض تأكيداً نهائياً بعد التعليق المطلوب.
+        - region "تعليقات داخلية / تحديثات عامة" [ref=e253]:
+          - region "تعليقات داخلية" [ref=e254]:
+            - generic [ref=e255]:
+              - heading "تعليقات داخلية" [level=3] [ref=e256]
+              - generic [ref=e257]: داخلي فقط
+            - generic [ref=e258]:
+              - generic [ref=e259]:
+                - term [ref=e260]: المؤلف
+                - definition [ref=e261]: موظف مصرح
+              - generic [ref=e262]:
+                - term [ref=e263]: الوقت
+                - definition [ref=e264]: 2026-06-19 10:00
+              - generic [ref=e265]:
+                - term [ref=e266]: الظهور
+                - definition [ref=e267]: داخلي فقط
+            - paragraph [ref=e268]: عنصر ملاحظة للموظفين فقط
+          - region "تحديثات عامة" [ref=e269]:
+            - generic [ref=e270]:
+              - heading "تحديثات عامة" [level=3] [ref=e271]
+              - generic [ref=e272]: مرئي للعميل
+            - generic [ref=e273]:
+              - generic [ref=e274]:
+                - term [ref=e275]: المؤلف
+                - definition [ref=e276]: موظف مصرح
+              - generic [ref=e277]:
+                - term [ref=e278]: الوقت
+                - definition [ref=e279]: 2026-06-19 10:00
+              - generic [ref=e280]:
+                - term [ref=e281]: الظهور
+                - definition [ref=e282]: مرئي للعميل
+            - paragraph [ref=e283]: عنصر تحديث مرئي للعميل
