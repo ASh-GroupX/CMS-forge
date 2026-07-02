@@ -12197,3 +12197,48 @@ SRS IDs: `METHOD-AUDIT-001`, `NFR-SEC-002`, `REQ-RBAC-001`, `UI-SCREEN-001`, `UI
 - English and Arabic screenshots were captured at `output/playwright/slice4-audit-en.png` and `output/playwright/slice4-audit-ar.png` and visually checked.
 - `tools/api-test.mjs` now runs the Docker append-only proof only when `docker info` succeeds, preserving the proof on Docker-enabled machines while matching the slice plan on this machine.
 - Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.
+
+---
+
+## Business Readiness - Slice 5 Admin Category and SLA UI
+
+Status: Complete
+SRS IDs: `REQ-COMPLAINT-002`, `REQ-SLA-001`, `METHOD-AUDIT-001`, `REQ-RBAC-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
+
+### Scope
+
+- Added guarded category list and deactivate endpoints beside the existing create/update category endpoints.
+- Added guarded SLA policy list and full MVP policy update endpoints for duration, warning percent, timezone, calendar mode, and escalation route values.
+- Kept category and SLA configuration writes inside backend transactions with CONFIG audit entries.
+- Replaced the admin category/SLA placeholder UI with backend-loaded category and SLA policy rows through the staff session cookie.
+- Added server actions for category create/edit/deactivate and SLA policy updates; the UI sends no role, actor, branch, or workflow authority.
+- Added localized English LTR and Arabic RTL labels for the real category/SLA fields and config audit feedback.
+- Updated OpenAPI canonical contract for new category and SLA policy routes and schemas.
+
+### Security Self-Check
+
+- RBAC, CSRF, SLA truth, branch/scope context, and CONFIG audit remain backend-owned.
+- Category/SLA reads forward only the staff session cookie; writes forward the staff session cookie plus CSRF token.
+- No passwords, OTPs, tokens, hashes, provider secrets, credentials, portal data, DMS data, or staff authority fields were added to the UI payloads or audit metadata.
+- SLA deadlines remain calculated by the backend service using stored policy values; the UI only renders and submits policy fields.
+
+### Verification
+
+- Passed: `corepack pnpm security:check`.
+- Passed: `corepack pnpm test:api -- admin` (30/30 TAP tests).
+- Passed: `corepack pnpm test:api -- sla` (37/37 TAP tests).
+- Passed: `corepack pnpm test:web -- api-client` (45/45 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (202/202 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Notes
+
+- English and Arabic admin screenshots were captured at `output/playwright/slice5-admin-en.png` and `output/playwright/slice5-admin-ar.png` and visually checked.
+- Slice 6 can proceed by implementing missing reports; selecting signed deferrals still needs the unresolved Slice 0 human signoff.
+- Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.

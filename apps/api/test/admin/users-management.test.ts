@@ -223,11 +223,12 @@ test('admin module wires auth guard providers for runtime requests', () => {
   assert.equal(providers.some((provider) => providerObject(provider)?.provide === SESSION_AUTH_SERVICE), true);
 });
 
-test('admin category service creates and updates categories with CONFIG audit in one transaction', async () => {
+test('admin category service lists creates updates and deactivates categories with CONFIG audit', async () => {
   const txClient = {};
   const auditRecords: Array<{ input: AuditRecordInput; client: unknown }> = [];
   const service = new AdminCategoriesService({
     parentExists: async (id) => id === 'cat_parent',
+    list: async () => [categoryRecord, { ...categoryRecord, id: 'cat_inactive', code: 'OLD', isActive: false }],
     transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
     create: async (data, client) => {
       assert.equal(client, txClient);
@@ -238,13 +239,21 @@ test('admin category service creates and updates categories with CONFIG audit in
       assert.equal(client, txClient);
       return { ...categoryRecord, ...data };
     },
+    deactivate: async (id, client) => {
+      assert.equal(id, 'cat_1');
+      assert.equal(client, txClient);
+      return { ...categoryRecord, isActive: false };
+    },
   } as AdminCategoriesRepository, {
     record: async (input: AuditRecordInput, client?: unknown) => auditRecords.push({ input, client }),
   } as AuditService);
 
+  const listed = await service.list();
+  assert.deepEqual(listed.items.map((item) => [item.code, item.isActive]), [['SERVICE', true], ['OLD', false]]);
   assert.equal((await service.create({ code: ' SERVICE ', nameEn: ' Service ', nameAr: ' Service ' }, auditContext())).code, 'SERVICE');
   assert.equal((await service.update('cat_1', { code: 'ENGINE', nameEn: 'Engine', nameAr: 'Engine', parentId: 'cat_parent' }, auditContext())).parentId, 'cat_parent');
-  assert.deepEqual(auditRecords.map((record) => record.input.action), ['admin_category_created', 'admin_category_updated']);
+  assert.equal((await service.deactivate('cat_1', auditContext())).isActive, false);
+  assert.deepEqual(auditRecords.map((record) => record.input.action), ['admin_category_created', 'admin_category_updated', 'admin_category_deactivated']);
   assert.equal(auditRecords.every((record) => record.client === txClient), true);
 });
 
@@ -264,8 +273,10 @@ test('admin category service rejects self parent and invalid parent', async () =
 });
 
 test('admin category controller write routes require MASTER_DATA_MANAGE permission and CSRF', async () => {
+  assert.deepEqual(categoryGuardNames('list'), ['SessionAuthGuard', 'PermissionGuard']);
   assert.deepEqual(categoryGuardNames('create'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
   assert.deepEqual(categoryGuardNames('update'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.deepEqual(categoryGuardNames('deactivate'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
 
   const auditRecords: AuditRecordInput[] = [];
   const guard = new PermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);

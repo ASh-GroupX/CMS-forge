@@ -5,7 +5,7 @@ import type { SlaPolicyEscalationRecord } from './sla.repository.js';
 export type SlaPolicyConfigAuditContext = { actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 
 export function slaPolicyResponse(policy: SlaPolicyEscalationRecord): SlaPolicyResponseDto {
-  return { id: policy.id, severity: policy.severity, stage: policy.stage, branchId: policy.branchId, departmentId: policy.departmentId, categoryId: policy.categoryId, escalationLevel1: policy.escalationLevel1, escalationLevel2: policy.escalationLevel2, escalationLevel3: policy.escalationLevel3, escalationLevel2AfterBreachMinutes: policy.escalationLevel2AfterBreachMinutes, escalationLevel3AfterBreachMinutes: policy.escalationLevel3AfterBreachMinutes };
+  return { id: policy.id, severity: policy.severity, stage: policy.stage, branchId: policy.branchId, departmentId: policy.departmentId, categoryId: policy.categoryId, durationMinutes: policy.durationMinutes, warningPercent: policy.warningPercent, branchTimezone: policy.branchTimezone, workingCalendarMode: policy.workingCalendarMode, pausePolicy: policy.pausePolicy, escalationLevel1: policy.escalationLevel1, escalationLevel2: policy.escalationLevel2, escalationLevel3: policy.escalationLevel3, escalationLevel2AfterBreachMinutes: policy.escalationLevel2AfterBreachMinutes, escalationLevel3AfterBreachMinutes: policy.escalationLevel3AfterBreachMinutes, totalTargetMinutes: policy.totalTargetMinutes, isActive: policy.isActive };
 }
 
 export function slaPolicyConfigAudit(policy: SlaPolicyEscalationRecord, context: SlaPolicyConfigAuditContext, changedFields: string[]): AuditRecordInput {

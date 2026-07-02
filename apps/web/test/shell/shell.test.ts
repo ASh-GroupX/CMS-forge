@@ -1905,8 +1905,8 @@ test('admin categories severity SLA screen renders only for admin preview', asyn
   assert.match(admin, /Category tree/);
   assert.match(admin, /Severity values/);
   assert.match(admin, /SLA policies/);
-  assert.match(admin, /80% warning/);
-  assert.match(admin, /2 hours/);
+  assert.match(admin, /No category or SLA settings are configured yet\./);
+  assert.doesNotMatch(admin, /80% warning|2 hours|Submitted review/);
   assert.match(admin, /SLA deadlines are calculated and enforced by the backend\./);
   assert.doesNotMatch(staff, /Categories, severities, and SLA policies/);
 });
@@ -1949,6 +1949,69 @@ test('admin categories route renders English and Arabic labels', async () => {
   assert.ok(arabic.includes(adminCategoriesSlaText.ar.sections.sla));
 });
 
+test('admin categories route renders real category and SLA policy rows through the session cookie', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith('/admin/categories')) {
+      return jsonResponse({
+        items: [
+          { id: 'cat_service', code: 'SERVICE', nameEn: 'Service Quality', nameAr: 'جودة الخدمة', parentId: null, isActive: true },
+          { id: 'cat_delay', code: 'DELAY', nameEn: 'Repair Delay', nameAr: 'تأخير الإصلاح', parentId: 'cat_service', isActive: false },
+        ],
+      });
+    }
+    if (url.endsWith('/sla/policies')) {
+      return jsonResponse({
+        items: [{
+          id: 'policy_high_intake',
+          severity: 'HIGH',
+          stage: 'INTAKE',
+          branchId: null,
+          departmentId: null,
+          categoryId: 'cat_service',
+          durationMinutes: 480,
+          warningPercent: 80,
+          branchTimezone: 'Africa/Cairo',
+          workingCalendarMode: 'ALWAYS_ON',
+          pausePolicy: 'NONE',
+          escalationLevel1: 'branch-manager',
+          escalationLevel2: null,
+          escalationLevel3: null,
+          escalationLevel2AfterBreachMinutes: null,
+          escalationLevel3AfterBreachMinutes: null,
+          totalTargetMinutes: null,
+          isActive: true,
+        }],
+      });
+    }
+    return jsonResponse({}, { status: 404 });
+  };
+
+  const html = renderToStaticMarkup(
+    await AdminCategoriesPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  assert.match(html, /Service Quality/);
+  assert.match(html, /Repair Delay/);
+  assert.match(html, /INTAKE/);
+  assert.match(html, /480/);
+  assert.match(html, /Africa\/Cairo \/ ALWAYS_ON/);
+  assert.match(html, /branch-manager/);
+  assert.match(html, /Category and SLA changes are saved by the backend and recorded as CONFIG audit entries\./);
+  assert.match(html, /name="returnTo"[^>]+value="\/admin\/categories"/);
+  assert.equal(calls.length, 2);
+  for (const call of calls) {
+    assert.deepEqual(call.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+    assert.doesNotMatch(String(call.input), /role|actor|branchId/i);
+  }
+});
+
 test('admin categories route renders preview states safely', async () => {
   const error = renderToStaticMarkup(
     await AdminCategoriesPage({ searchParams: Promise.resolve({ locale: 'en', admin: 'error' }) }),
@@ -1968,7 +2031,7 @@ test('admin categories severity SLA source is render-only and does not calculate
   const wrapper = readFileSync('apps/web/src/app/admin-categories-sla.tsx', 'utf8');
 
   assert.match(source, /min-w-\[54rem\]/);
-  assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie|Date\.now|setInterval|deadlineAt|escalate|audit|principal|roleCode|portal|DMS|@|\b\+?\d{10,}\b/i);
+  assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|document\.cookie|Date\.now|setInterval|deadlineAt|principal|roleCode|portal|DMS|@|\b\+?\d{10,}\b/i);
   assert.match(wrapper, /components\/admin-categories-sla/);
 });
 

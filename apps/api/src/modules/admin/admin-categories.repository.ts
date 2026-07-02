@@ -29,11 +29,22 @@ export class AdminCategoriesRepository {
     return Boolean(await this.prisma.category.findUnique({ where: { id }, select: { id: true } }));
   }
 
+  async list(): Promise<AdminCategoryRecord[]> {
+    return this.prisma.category.findMany({
+      orderBy: [{ isActive: 'desc' }, { nameEn: 'asc' }, { code: 'asc' }],
+      select: categorySelect,
+    });
+  }
+
   async create(data: AdminCategoryData, client: CategoryClient = this.prisma): Promise<AdminCategoryRecord> {
     return client.category.create({ data, select: categorySelect });
   }
 
   async update(id: string, data: AdminCategoryData, client: CategoryClient = this.prisma): Promise<AdminCategoryRecord> {
     return client.category.update({ where: { id }, data, select: categorySelect });
+  }
+
+  async deactivate(id: string, client: CategoryClient = this.prisma): Promise<AdminCategoryRecord> {
+    return client.category.update({ where: { id }, data: { isActive: false }, select: categorySelect });
   }
 }

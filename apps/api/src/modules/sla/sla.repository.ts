@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import { ComplaintSeverity, ComplaintStatus, SlaEventType, SlaStage } from '@prisma/client';
+import { ComplaintSeverity, ComplaintStatus, SlaEventType, SlaStage, WorkingCalendarMode } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
 
 const slaPolicySelect = {
@@ -14,11 +14,13 @@ const slaPolicySelect = {
   warningPercent: true,
   branchTimezone: true,
   workingCalendarMode: true,
+  pausePolicy: true,
   escalationLevel1: true,
   escalationLevel2: true,
   escalationLevel3: true,
   escalationLevel2AfterBreachMinutes: true,
   escalationLevel3AfterBreachMinutes: true,
+  totalTargetMinutes: true,
   isActive: true,
   updatedAt: true,
 } satisfies Prisma.SlaPolicySelect;
@@ -63,6 +65,13 @@ export type UpdateSlaPolicyEscalationData = {
   escalationLevel3AfterBreachMinutes: number | null;
 };
 
+export type UpdateSlaPolicyConfigData = UpdateSlaPolicyEscalationData & {
+  durationMinutes: number;
+  warningPercent: number;
+  branchTimezone: string;
+  workingCalendarMode: WorkingCalendarMode;
+};
+
 const slaPolicyEscalationSelect = {
   id: true,
   severity: true,
@@ -70,11 +79,18 @@ const slaPolicyEscalationSelect = {
   branchId: true,
   departmentId: true,
   categoryId: true,
+  durationMinutes: true,
+  warningPercent: true,
+  branchTimezone: true,
+  workingCalendarMode: true,
+  pausePolicy: true,
   escalationLevel1: true,
   escalationLevel2: true,
   escalationLevel3: true,
   escalationLevel2AfterBreachMinutes: true,
   escalationLevel3AfterBreachMinutes: true,
+  totalTargetMinutes: true,
+  isActive: true,
 } satisfies Prisma.SlaPolicySelect;
 
 export type SlaPolicyRecord = Prisma.SlaPolicyGetPayload<{ select: typeof slaPolicySelect }>;
@@ -135,6 +151,13 @@ export class SlaRepository {
     });
   }
 
+  async listPolicies(): Promise<SlaPolicyRecord[]> {
+    return this.prisma.slaPolicy.findMany({
+      orderBy: [{ isActive: 'desc' }, { severity: 'asc' }, { stage: 'asc' }, { updatedAt: 'desc' }],
+      select: slaPolicySelect,
+    });
+  }
+
   async createDeadlineEvent(data: CreateSlaDeadlineEventData): Promise<SlaDeadlineEventRecord> {
     return this.prisma.slaEvent.upsert({
       where: { idempotencyKey: data.idempotencyKey },
@@ -191,6 +214,10 @@ export class SlaRepository {
   }
 
   async updatePolicyEscalationConfig(id: string, data: UpdateSlaPolicyEscalationData, client: SlaPolicyClient = this.prisma): Promise<SlaPolicyEscalationRecord> {
+    return client.slaPolicy.update({ where: { id }, data, select: slaPolicyEscalationSelect });
+  }
+
+  async updatePolicyConfig(id: string, data: UpdateSlaPolicyConfigData, client: SlaPolicyClient = this.prisma): Promise<SlaPolicyEscalationRecord> {
     return client.slaPolicy.update({ where: { id }, data, select: slaPolicyEscalationSelect });
   }
 }

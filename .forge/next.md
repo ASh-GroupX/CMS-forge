@@ -1,29 +1,33 @@
-# Business Readiness Remediation - Slice 5
+# Business Readiness Remediation - Slice 6
 
-Status: Ready
+Status: Ready with caveat
 Required model tier: GPT-5.5 Extra High
 Phase: business-readiness-remediation
 Risk: High
-SRS IDs: `REQ-SLA-001`, `METHOD-AUDIT-001`, `REQ-RBAC-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
+SRS IDs: `REQ-REPORT-001`, `REQ-RBAC-001`, `METHOD-AUDIT-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
 
 ## Task
 
-Implement Slice 5 from `docs/BUSINESS_READINESS_PLAN.md`: admin category and SLA UI.
+Implement Slice 6 from `docs/BUSINESS_READINESS_PLAN.md`: report matrix completion or signed deferral.
 
 ## Scope
 
-- Inspect the current admin category API, SLA API, web admin categories/SLA screen, API clients, and existing tests before editing.
-- Provide real category list/create/edit/deactivate behavior.
-- Provide the minimal SLA policy edit/view behavior required for MVP.
-- Show config audit feedback.
-- Keep RBAC, branch scope, SLA truth, and audit backend-owned.
+- Inspect the current report matrix, report service, reports dashboard, i18n, API client/export path, and existing report tests before editing.
+- Either deliver missing report outputs or make signed deferrals explicit.
+- Label generic operational row export honestly.
+- Keep branch scope and export audit backend-owned.
+
+## Caveat
+
+- Delivering missing report outputs can proceed.
+- Choosing signed deferrals depends on the unresolved Slice 0 human signoff for report deferrals; document the exact signoff needed if implementation cannot proceed without that choice.
 
 ## Proof
 
-- `corepack pnpm security:check`
-- `corepack pnpm test:api -- admin`, if registered
-- Admin page screenshots.
+- `corepack pnpm test:api -- reports`
+- `corepack pnpm test:web -- localization`
+- Report screenshots.
 
 ## Stop When
 
-- UAT-012 can be completed without direct database edits.
+- Every RPT ID is either delivered or signed deferred, and the UI says so.

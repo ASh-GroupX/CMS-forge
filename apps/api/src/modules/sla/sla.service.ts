@@ -4,7 +4,7 @@ import { AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import type { SlaPolicyResponseDto } from './dto/sla-response.dto.js';
-import type { SlaPolicyEscalationConfigInput } from './dto/update-sla.dto.js';
+import type { SlaPolicyConfigInput, SlaPolicyEscalationConfigInput } from './dto/update-sla.dto.js';
 import { isPausedAfterDeadline, isTerminalComplaint, isWarningDue, queueSlaBreachNotification, queueSlaWarningNotification, runSlaEscalationJob } from './sla-job-rules.js';
 import type { RunSlaEscalationJobResult } from './sla-job-rules.js';
 import { slaPolicyConfigAudit, slaPolicyResponse, type SlaPolicyConfigAuditContext } from './sla-policy-config.js';
@@ -62,28 +62,24 @@ export class SlaService {
       throw invalidPolicy('policy');
     }
 
-    return {
-      id: policy.id,
-      severity: policy.severity,
-      stage: policy.stage,
-      branchId: policy.branchId,
-      departmentId: policy.departmentId,
-      categoryId: policy.categoryId,
-      durationMinutes: policy.durationMinutes,
-      warningPercent: policy.warningPercent,
-      branchTimezone: policy.branchTimezone,
-      workingCalendarMode: policy.workingCalendarMode,
-      escalationLevel1: policy.escalationLevel1,
-      escalationLevel2: policy.escalationLevel2,
-      escalationLevel3: policy.escalationLevel3,
-      escalationLevel2AfterBreachMinutes: policy.escalationLevel2AfterBreachMinutes,
-      escalationLevel3AfterBreachMinutes: policy.escalationLevel3AfterBreachMinutes,
-    };
+    return (({ id, severity, stage, branchId, departmentId, categoryId, durationMinutes, warningPercent, branchTimezone, workingCalendarMode, pausePolicy, escalationLevel1, escalationLevel2, escalationLevel3, escalationLevel2AfterBreachMinutes, escalationLevel3AfterBreachMinutes, totalTargetMinutes }) => ({ id, severity, stage, branchId, departmentId, categoryId, durationMinutes, warningPercent, branchTimezone, workingCalendarMode, pausePolicy, escalationLevel1, escalationLevel2, escalationLevel3, escalationLevel2AfterBreachMinutes, escalationLevel3AfterBreachMinutes, totalTargetMinutes }))(policy);
+  }
+
+  async listPolicies(): Promise<{ items: SlaPolicyResponseDto[] }> {
+    return { items: (await this.slaRepository.listPolicies()).map(slaPolicyResponse) };
   }
 
   async updatePolicyEscalationConfig(id: string, input: SlaPolicyEscalationConfigInput, audit: SlaPolicyConfigAuditContext = {}): Promise<SlaPolicyResponseDto> {
     return this.slaRepository.transaction(async (client) => {
       const policy = await this.slaRepository.updatePolicyEscalationConfig(id.trim(), input, client);
+      await this.auditService!.record(slaPolicyConfigAudit(policy, audit, Object.keys(input)), client);
+      return slaPolicyResponse(policy);
+    });
+  }
+
+  async updatePolicyConfig(id: string, input: SlaPolicyConfigInput, audit: SlaPolicyConfigAuditContext = {}): Promise<SlaPolicyResponseDto> {
+    return this.slaRepository.transaction(async (client) => {
+      const policy = await this.slaRepository.updatePolicyConfig(id.trim(), input, client);
       await this.auditService!.record(slaPolicyConfigAudit(policy, audit, Object.keys(input)), client);
       return slaPolicyResponse(policy);
     });

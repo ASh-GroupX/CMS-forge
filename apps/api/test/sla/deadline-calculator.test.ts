@@ -16,7 +16,7 @@ import { AuthModule } from '../../src/modules/auth/auth.module.ts';
 import { NotificationsService } from '../../src/modules/notifications/notifications.service.ts';
 import { NotificationsModule } from '../../src/modules/notifications/notifications.module.ts';
 import { SlaController } from '../../src/modules/sla/sla.controller.ts';
-import { parseUpdateSlaEscalationConfigBody } from '../../src/modules/sla/dto/update-sla.dto.ts';
+import { parseUpdateSlaEscalationConfigBody, parseUpdateSlaPolicyConfigBody } from '../../src/modules/sla/dto/update-sla.dto.ts';
 import { SlaModule } from '../../src/modules/sla/sla.module.ts';
 import { SlaRepository } from '../../src/modules/sla/sla.repository.ts';
 import type { SlaDeadlineBreachRecord, SlaDeadlineWarningRecord, SlaPolicyEscalationRecord, SlaPolicyRecord } from '../../src/modules/sla/sla.repository.ts';
@@ -124,11 +124,13 @@ test('SLA repository reads only active policies by severity and stage', async ()
       warningPercent: true,
       branchTimezone: true,
       workingCalendarMode: true,
+      pausePolicy: true,
       escalationLevel1: true,
       escalationLevel2: true,
       escalationLevel3: true,
       escalationLevel2AfterBreachMinutes: true,
       escalationLevel3AfterBreachMinutes: true,
+      totalTargetMinutes: true,
       isActive: true,
       updatedAt: true,
     },
@@ -544,6 +546,60 @@ test('SLA policy escalation config persists and audits in the same transaction',
   assert.equal(JSON.stringify(audits[0]).includes('service-manager'), false);
 });
 
+test('SLA policy list and full config update expose MVP fields and audit in one transaction', async () => {
+  const txClient = {};
+  const audits: Array<{ input: AuditRecordInput; client: unknown }> = [];
+  const updates: unknown[] = [];
+  const serviceWithAudit = new SlaService({
+    listPolicies: async () => [policy({ id: 'policy_1', pausePolicy: 'NONE', totalTargetMinutes: 2880 })],
+    transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
+    updatePolicyConfig: async (id, data, client) => {
+      assert.equal(id, 'policy_1');
+      assert.equal(client, txClient);
+      updates.push(data);
+      return policyEscalationRecord({ ...data, pausePolicy: 'NONE', totalTargetMinutes: 2880 });
+    },
+  } as unknown as SlaRepository, undefined, { record: async (input, client) => audits.push({ input, client }) } as unknown as AuditService);
+
+  const listed = await serviceWithAudit.listPolicies();
+  assert.equal(listed.items[0]?.durationMinutes, 480);
+  assert.equal(listed.items[0]?.warningPercent, 80);
+  assert.equal(listed.items[0]?.pausePolicy, 'NONE');
+  assert.equal(listed.items[0]?.totalTargetMinutes, 2880);
+
+  const result = await serviceWithAudit.updatePolicyConfig(' policy_1 ', parseUpdateSlaPolicyConfigBody({
+    durationMinutes: 360,
+    warningPercent: 75,
+    branchTimezone: 'Africa/Cairo',
+    workingCalendarMode: WorkingCalendarMode.ALWAYS_ON,
+    escalationLevel1: 'branch-manager',
+    escalationLevel2: 'service-manager',
+    escalationLevel3: null,
+    escalationLevel2AfterBreachMinutes: 30,
+    escalationLevel3AfterBreachMinutes: null,
+  }), { actorId: 'usr_admin', correlationId: 'req_sla', ipAddress: '203.0.113.12', userAgent: 'node:test' });
+
+  assert.equal(result.durationMinutes, 360);
+  assert.equal(result.warningPercent, 75);
+  assert.equal(result.branchTimezone, 'Africa/Cairo');
+  assert.deepEqual(updates[0], {
+    durationMinutes: 360,
+    warningPercent: 75,
+    branchTimezone: 'Africa/Cairo',
+    workingCalendarMode: WorkingCalendarMode.ALWAYS_ON,
+    escalationLevel1: 'branch-manager',
+    escalationLevel2: 'service-manager',
+    escalationLevel3: null,
+    escalationLevel2AfterBreachMinutes: 30,
+    escalationLevel3AfterBreachMinutes: null,
+  });
+  assert.equal(audits[0]?.client, txClient);
+  assert.deepEqual(audits[0]?.input.metadata, {
+    changedFields: ['durationMinutes', 'warningPercent', 'branchTimezone', 'workingCalendarMode', 'escalationLevel1', 'escalationLevel2', 'escalationLevel3', 'escalationLevel2AfterBreachMinutes', 'escalationLevel3AfterBreachMinutes'],
+  });
+  assert.equal(JSON.stringify(audits[0]).includes('branch-manager'), false);
+});
+
 test('SLA policy escalation config validation rejects unsafe timing shapes', () => {
   assertValidationFields({ escalationLevel1: 'l1', escalationLevel2: 'l2' }, ['escalationLevel2AfterBreachMinutes']);
   assertValidationFields({ escalationLevel1: 'l1', escalationLevel2AfterBreachMinutes: 10 }, ['escalationLevel2']);
@@ -552,7 +608,22 @@ test('SLA policy escalation config validation rejects unsafe timing shapes', () 
   assertValidationFields({ escalationLevel1: ' ', escalationLevel2AfterBreachMinutes: 0 }, ['escalationLevel1', 'escalationLevel2AfterBreachMinutes']);
 });
 
+test('SLA policy config validation rejects unsafe MVP fields', () => {
+  assert.throws(
+    () => parseUpdateSlaPolicyConfigBody({
+      durationMinutes: 0,
+      warningPercent: 101,
+      branchTimezone: 'Not/A_Timezone',
+      workingCalendarMode: 'browser',
+      escalationLevel1: 'branch-manager',
+    }),
+    (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED' && assert.deepEqual(error.fieldErrors.map((item) => item.field), ['durationMinutes', 'warningPercent', 'branchTimezone', 'workingCalendarMode']) === undefined,
+  );
+});
+
 test('SLA policy escalation route requires SLA_MANAGE and CSRF', async () => {
+  assert.deepEqual(guardNames('listPolicies'), ['SessionAuthGuard', 'PermissionGuard']);
+  assert.deepEqual(guardNames('updatePolicyConfig'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
   assert.deepEqual(guardNames('updatePolicyEscalationConfig'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
 
   const auditRecords: AuditRecordInput[] = [];
@@ -580,7 +651,11 @@ test('SLA module and OpenAPI document policy escalation config route', () => {
   assert.ok(providers.includes(PermissionGuard));
   assert.ok(providers.includes(CsrfGuard));
   assert.equal(providers.some((provider) => providerObject(provider)?.provide === SESSION_AUTH_SERVICE), true);
+  assert.ok(openapi.paths['/sla/policies']?.get);
+  assert.ok(openapi.paths['/sla/policies/{id}']?.patch);
   assert.ok(openapi.paths['/sla/policies/{id}/escalation']?.patch);
+  assert.ok(openapi.components.schemas.SlaPolicyConfigRequest);
+  assert.ok(openapi.components.schemas.SlaPolicyListResponse);
   assert.ok(openapi.components.schemas.SlaPolicyEscalationConfigRequest);
   assert.ok(openapi.components.schemas.SlaPolicyWriteResponse);
 });
@@ -1118,11 +1193,13 @@ function policy(overrides: PolicyOverrides = {}): SlaPolicyRecord {
     warningPercent: 80,
     branchTimezone: 'Asia/Riyadh',
     workingCalendarMode: WorkingCalendarMode.ALWAYS_ON,
+    pausePolicy: 'NONE',
     escalationLevel1: 'branch-manager',
     escalationLevel2: null,
     escalationLevel3: null,
     escalationLevel2AfterBreachMinutes: null,
     escalationLevel3AfterBreachMinutes: null,
+    totalTargetMinutes: null,
     isActive: true,
     updatedAt: new Date('2026-06-18T09:00:00.000Z'),
     ...rest,
@@ -1197,11 +1274,18 @@ function policyEscalationRecord(overrides: Partial<SlaPolicyEscalationRecord> = 
     branchId: null,
     departmentId: null,
     categoryId: null,
+    durationMinutes: 480,
+    warningPercent: 80,
+    branchTimezone: 'Asia/Riyadh',
+    workingCalendarMode: WorkingCalendarMode.ALWAYS_ON,
+    pausePolicy: 'NONE',
     escalationLevel1: 'branch-manager',
     escalationLevel2: null,
     escalationLevel3: null,
     escalationLevel2AfterBreachMinutes: null,
     escalationLevel3AfterBreachMinutes: null,
+    totalTargetMinutes: null,
+    isActive: true,
     ...overrides,
   };
 }

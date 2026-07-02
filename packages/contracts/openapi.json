@@ -457,6 +457,45 @@
             }
           }
         }
+      },
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "adminCategoryList",
+        "summary": "List complaint categories including inactive records",
+        "responses": {
+          "200": {
+            "description": "Complaint categories",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCategoryListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/admin/users/{id}/deactivate": {
@@ -5024,6 +5063,169 @@
           }
         }
       }
+    },
+    "/admin/categories/{id}/deactivate": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "adminCategoryDeactivate",
+        "summary": "Deactivate a complaint category",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complaint category deactivated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCategory"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied or invalid CSRF token (CSRF_INVALID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sla/policies": {
+      "get": {
+        "tags": [
+          "SLA"
+        ],
+        "operationId": "slaPolicyList",
+        "summary": "List SLA policies for admin configuration",
+        "responses": {
+          "200": {
+            "description": "SLA policies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlaPolicyListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sla/policies/{id}": {
+      "patch": {
+        "tags": [
+          "SLA"
+        ],
+        "operationId": "slaPolicyUpdate",
+        "summary": "Update SLA policy duration warning timezone calendar and escalation configuration",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlaPolicyConfigRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SLA policy configuration updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlaPolicyWriteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied or invalid CSRF token (CSRF_INVALID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -9542,7 +9744,14 @@
           "escalationLevel2",
           "escalationLevel3",
           "escalationLevel2AfterBreachMinutes",
-          "escalationLevel3AfterBreachMinutes"
+          "escalationLevel3AfterBreachMinutes",
+          "durationMinutes",
+          "warningPercent",
+          "branchTimezone",
+          "workingCalendarMode",
+          "pausePolicy",
+          "totalTargetMinutes",
+          "isActive"
         ],
         "properties": {
           "id": {
@@ -9614,6 +9823,38 @@
               "null"
             ],
             "minimum": 1
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "warningPercent": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "branchTimezone": {
+            "type": "string"
+          },
+          "workingCalendarMode": {
+            "type": "string",
+            "enum": [
+              "CALENDAR_HOURS",
+              "ALWAYS_ON"
+            ]
+          },
+          "pausePolicy": {
+            "type": "string"
+          },
+          "totalTargetMinutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "isActive": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -10143,6 +10384,101 @@
                 "LOW"
               ]
             }
+          }
+        },
+        "additionalProperties": false
+      },
+      "AdminCategoryListResponse": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminCategory"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "SlaPolicyListResponse": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SlaPolicy"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "SlaPolicyConfigRequest": {
+        "type": "object",
+        "required": [
+          "durationMinutes",
+          "warningPercent",
+          "branchTimezone",
+          "workingCalendarMode",
+          "escalationLevel1"
+        ],
+        "properties": {
+          "durationMinutes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "warningPercent": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "branchTimezone": {
+            "type": "string",
+            "minLength": 1
+          },
+          "workingCalendarMode": {
+            "type": "string",
+            "enum": [
+              "CALENDAR_HOURS",
+              "ALWAYS_ON"
+            ]
+          },
+          "escalationLevel1": {
+            "type": "string",
+            "minLength": 1
+          },
+          "escalationLevel2": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "escalationLevel3": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "escalationLevel2AfterBreachMinutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "escalationLevel3AfterBreachMinutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
           }
         },
         "additionalProperties": false
