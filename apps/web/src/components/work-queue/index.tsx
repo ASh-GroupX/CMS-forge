@@ -81,7 +81,7 @@ export function WorkQueue({
                   </div>
                   <a
                     className="shrink-0 rounded-sm text-sm font-medium text-brand hover:underline focus:outline-none focus:ring-2 focus:ring-brand"
-                    href={`/complaints/${encodeURIComponent(row.id)}`}
+                    href={caseHref(locale, row.id)}
                   >
                     {t.actions.open}
                   </a>
@@ -104,7 +104,7 @@ export function WorkQueue({
                   </div>
                   <div className="col-span-2">
                     <dt className="font-medium text-slate-700">{t.headers[6]}</dt>
-                    <dd>{row.updatedAt.slice(0, 10)}</dd>
+                    <dd>{formatDate(row.updatedAt, locale)}</dd>
                   </div>
                 </dl>
               </article>
@@ -141,11 +141,11 @@ export function WorkQueue({
                         {t.sla.backendScoped}
                       </Badge>
                     </TableCell>
-                    <TableCell className="py-2.5">{row.updatedAt.slice(0, 10)}</TableCell>
+                    <TableCell className="py-2.5">{formatDate(row.updatedAt, locale)}</TableCell>
                     <TableCell className="py-2.5">
                       <a
                         className="rounded-sm text-sm font-medium text-brand hover:underline focus:outline-none focus:ring-2 focus:ring-brand"
-                        href={`/complaints/${encodeURIComponent(row.id)}`}
+                        href={caseHref(locale, row.id)}
                       >
                         {t.actions.open}
                       </a>
@@ -211,6 +211,16 @@ function pageHref(locale: Locale, query: StaffQueueQuery, page: number): string 
   append(params, 'severity', query.severity);
   append(params, 'status', query.status);
   return `/complaints?${params.toString()}`;
+}
+
+function caseHref(locale: Locale, id: string): string {
+  const params = new URLSearchParams({ locale });
+  return `/complaints/${encodeURIComponent(id)}?${params.toString()}`;
+}
+
+function formatDate(value: string, locale: Locale): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-US', { dateStyle: 'medium', timeZone: 'UTC' }).format(date);
 }
 
 function append(params: URLSearchParams, key: string, value: string | null | undefined): void {

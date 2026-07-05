@@ -14,7 +14,7 @@ function readParam(value: string | string[] | undefined) {
 }
 
 function resolveReset(value: string | undefined): ResetPreviewState | undefined {
-  return value === 'request' || value === 'requested' || value === 'token' || value === 'success' || value === 'invalid'
+  return value === 'request' || value === 'requested' || value === 'token' || value === 'success' || value === 'invalid' || value === 'error'
     ? value
     : undefined;
 }

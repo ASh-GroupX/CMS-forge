@@ -1,18 +1,3 @@
-import {
-  Bell,
-  CheckSquare2,
-  ClipboardList,
-  FilePlus2,
-  FolderCog,
-  Gauge,
-  GitBranch,
-  Handshake,
-  History,
-  Inbox,
-  Search,
-  Send,
-  UsersRound,
-} from 'lucide-react';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import React from 'react';
@@ -34,27 +19,8 @@ import { type ResetPreviewState } from './password-reset-panel';
 import { ReportsDashboard, type ReportsPreviewState } from './reports-dashboard';
 import { StaffAuthLanding } from './staff-auth-landing';
 import { AuthPanel, RolePanel, roleNav, type RolePreview } from './staff-shell-panels';
-import { StaffTopBar } from './staff-top-bar';
 import { WorkQueue, type QueuePreviewState } from './work-queue';
-
-const navKeys = ['today', 'sent', 'promises', 'manager', 'handoff', 'dashboard', 'queue', 'create', 'detail', 'admin', 'reports', 'audit', 'notifications'] as const;
-type NavKey = (typeof navKeys)[number];
-
-const icons = {
-  today: CheckSquare2,
-  sent: Send,
-  promises: Handshake,
-  manager: UsersRound,
-  handoff: GitBranch,
-  dashboard: Gauge,
-  queue: Inbox,
-  create: FilePlus2,
-  detail: Search,
-  admin: FolderCog,
-  reports: ClipboardList,
-  audit: History,
-  notifications: Bell,
-} as const;
+import { AppShell, type StaffNavKey } from './app-shell';
 
 type SearchParams = {
   admin?: string | string[]; auth?: string | string[]; attachment?: string | string[]; comments?: string | string[]; create?: string | string[];
@@ -131,25 +97,6 @@ function withLocale(path: string, locale: Locale): string {
   return `${path}?locale=${encodeURIComponent(locale)}`;
 }
 
-function navHref(key: NavKey, locale: Locale): string {
-  const routes: Record<NavKey, string> = {
-    today: '/tasks/today',
-    sent: '/tasks/sent',
-    promises: '/tasks/promises',
-    manager: '/tasks/manager',
-    handoff: '/deals/handoff',
-    dashboard: '/dashboard',
-    queue: '/complaints',
-    create: '/complaints/new',
-    detail: '/complaints',
-    admin: '/admin',
-    reports: '/reports',
-    audit: '/audit',
-    notifications: '/notifications',
-  };
-  return withLocale(routes[key], locale);
-}
-
 function resolveRole(value: string | undefined): RolePreview {
   return value === 'admin' || value === 'management' ? value : 'staff';
 }
@@ -161,7 +108,7 @@ function roleFromPrincipal(roleCode: string): RolePreview {
 }
 
 function resolveReset(value: string | undefined): ResetPreviewState | undefined {
-  return oneOf(value, ['request', 'requested', 'token', 'success', 'invalid']);
+  return oneOf(value, ['request', 'requested', 'token', 'success', 'invalid', 'error']);
 }
 
 function resolveDashboard(value: string | undefined): DashboardPreviewState | undefined { return oneOf(value, ['loading', 'empty', 'error']); }
@@ -225,72 +172,24 @@ export function StaffShell({
   workflowState?: ComplaintWorkflowPreviewState | undefined;
 }) {
   const t = staffShellText[locale];
-  const visibleNav = roleNav[role] as readonly NavKey[];
+  const visibleNav = roleNav[role] as readonly StaffNavKey[];
 
   return (
-    <main lang={t.lang} dir={t.dir} className="min-h-screen bg-background text-foreground">
-      <StaffTopBar
-        languageHref={`?locale=${locale === 'ar' ? 'en' : 'ar'}`}
-        signedIn={isSignedIn ? t.auth.signedIn : t.auth.signedOut}
-        subtitle={t.subtitle}
-        switchLabel={t.switchLabel}
-        switchTarget={t.switchTarget}
-        themeDark={t.theme.dark}
-        themeLabel={t.theme.label}
-        themeLight={t.theme.light}
-        title={t.title}
-      />
-      <div className="grid min-h-[calc(100vh-4.5rem)] grid-cols-1 gap-4 p-4 md:p-6 lg:grid-cols-[18rem_1fr]">
-        <aside className="rounded-md border border-border bg-card p-3 shadow-sm lg:sticky lg:top-20 lg:self-start">
-          <div className="mb-4 flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">{t.subtitle}</p>
-              <h1 className="text-2xl font-semibold tracking-normal">{t.title}</h1>
-              <p className="mt-1 text-sm text-muted-foreground">{t.branch}</p>
-              <p className="mt-2 inline-flex rounded-sm bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
-                {isSignedIn ? t.auth.signedIn : t.auth.signedOut}
-              </p>
-            </div>
-          </div>
-          <AuthPanel authError={authError} isSignedIn={isSignedIn} locale={locale} resetState={resetState} />
-          <RolePanel locale={locale} role={role} />
-          <nav className="grid gap-1" aria-label={t.title}>
-            {visibleNav.map((key) => {
-              const Icon = icons[key];
-              const [label, description] = t.nav[key];
-              return (
-                <a
-                  key={key}
-                  href={navHref(key, locale)}
-                  className="grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-start hover:bg-accent focus:outline-none focus:ring-2 focus:ring-brand"
-                >
-                  <Icon className="mt-1 size-4 text-brand" aria-hidden="true" />
-                  <span>
-                    <span className="block text-sm font-semibold">{label}</span>
-                    <span className="block text-xs text-muted-foreground">{description}</span>
-                  </span>
-                </a>
-              );
-            })}
-          </nav>
-          {visibleNav.includes('admin') ? null : (
-            <p className="mt-3 rounded-sm bg-muted px-2 py-2 text-xs font-semibold text-muted-foreground">
-              {t.role.adminHidden}
-            </p>
-          )}
-        </aside>
-
-        <section className="grid content-start gap-4">
-          <DashboardSummary locale={locale} role={role} state={dashboardState} summary={dashboardSummary ?? undefined} />
-          <NotificationCenter locale={locale} state={notificationState} />
-          <WorkQueue locale={locale} rows={queueRows} state={queueState} />
-          {role === 'staff' ? null : <ReportsDashboard locale={locale} rows={reportRows} state={reportsState} />}
-          <ComplaintDetailWorkspace attachmentState={attachmentState} commentsState={commentsState} detail={complaintDetail} locale={locale} lookupState={lookupState} state={detailState} workflowState={workflowState} />
-          {role === 'admin' ? <AdminSurfaces locale={locale} state={adminState} /> : null}
-          <ComplaintIntakeWorkspace createState={createState} locale={locale} lookupState={lookupState} />
-          <AttachmentUploadPanel locale={locale} state={attachmentState} />
-        </section>
-      </div>
-    </main>
+    <AppShell
+      locale={locale}
+      navKeys={visibleNav}
+      signedIn={isSignedIn}
+      sidebarAfter={visibleNav.includes('admin') ? null : <p className="mt-3 rounded-sm bg-muted px-2 py-2 text-xs font-semibold text-muted-foreground">{t.role.adminHidden}</p>}
+      sidebarBefore={<><AuthPanel authError={authError} isSignedIn={isSignedIn} locale={locale} resetState={resetState} /><RolePanel locale={locale} role={role} /></>}
+    >
+      <DashboardSummary locale={locale} role={role} state={dashboardState} summary={dashboardSummary ?? undefined} />
+      <NotificationCenter locale={locale} state={notificationState} />
+      <WorkQueue locale={locale} rows={queueRows} state={queueState} />
+      {role === 'staff' ? null : <ReportsDashboard locale={locale} rows={reportRows} state={reportsState} />}
+      <ComplaintDetailWorkspace attachmentState={attachmentState} commentsState={commentsState} detail={complaintDetail} locale={locale} lookupState={lookupState} state={detailState} workflowState={workflowState} />
+      {role === 'admin' ? <AdminSurfaces locale={locale} state={adminState} /> : null}
+      <ComplaintIntakeWorkspace createState={createState} locale={locale} lookupState={lookupState} />
+      <AttachmentUploadPanel locale={locale} state={attachmentState} />
+    </AppShell>
   );
 }

@@ -1,6 +1,7 @@
 import React from 'react';
+import { PortalShell } from '../../../components/portal-shell';
 import { PortalSurveyScreen, type PortalSurveyPreviewState } from '../../../components/portal-survey';
-import { resolvePortalSurveyLocale } from '../../../i18n/portal-survey';
+import { portalSurveyText, resolvePortalSurveyLocale } from '../../../i18n/portal-survey';
 
 type SearchParams = {
   key?: string | string[];
@@ -16,7 +17,24 @@ export default async function PortalSurveyPage({
 }) {
   const params = await searchParams;
   const locale = resolvePortalSurveyLocale(params?.locale);
-  return <PortalSurveyScreen locale={locale} state={previewState(readParam(params?.state))} surveyKey={readParam(params?.key) ?? readParam(params?.token)} />;
+  const surveyKey = readParam(params?.key) ?? readParam(params?.token);
+  const t = portalSurveyText[locale];
+  const switchLocale = locale === 'ar' ? 'en' : 'ar';
+  const switchHref = surveyKey ? `/portal/survey?locale=${switchLocale}&key=${encodeURIComponent(surveyKey)}` : `/portal/survey?locale=${switchLocale}`;
+  return (
+    <PortalShell
+      current="survey"
+      locale={locale}
+      privacy={t.privacy}
+      subtitle={t.subtitle}
+      switchHref={switchHref}
+      switchLabel={t.switchLabel}
+      switchTarget={t.switchTarget}
+      title={t.title}
+    >
+      <PortalSurveyScreen locale={locale} state={previewState(readParam(params?.state))} surveyKey={surveyKey} />
+    </PortalShell>
+  );
 }
 
 function readParam(value: string | string[] | undefined): string | undefined {
@@ -24,5 +42,5 @@ function readParam(value: string | string[] | undefined): string | undefined {
 }
 
 function previewState(value: string | undefined): PortalSurveyPreviewState | undefined {
-  return value === 'success' || value === 'used' || value === 'expired' || value === 'validation' || value === 'loading' || value === 'error' ? value : undefined;
+  return value === 'success' || value === 'used' || value === 'expired' || value === 'validation' || value === 'loading' || value === 'error' || value === 'missing' ? value : undefined;
 }

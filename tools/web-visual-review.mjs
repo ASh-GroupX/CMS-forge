@@ -1,6 +1,7 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
+import { compileTailwind, runBrowserArtifactChecks } from './web-browser-check.mjs';
 import StaffShellPage from '../apps/web/src/app/page.tsx';
 import AdminPage from '../apps/web/src/app/(staff)/admin/page.tsx';
 import AuditPage from '../apps/web/src/app/(staff)/audit/page.tsx';
@@ -12,8 +13,10 @@ import ReportsPage from '../apps/web/src/app/(staff)/reports/page.tsx';
 import PortalSubmissionPage from '../apps/web/src/app/portal/page.tsx';
 import PortalSurveyPage from '../apps/web/src/app/portal/survey/page.tsx';
 import PortalTrackingPage from '../apps/web/src/app/portal/track/page.tsx';
+import { PortalShell } from '../apps/web/src/components/portal-shell/index.tsx';
 import { PortalSubmissionScreen } from '../apps/web/src/components/portal-submission/index.tsx';
 import { PortalTrackingPreview } from '../apps/web/src/components/portal-tracking/index.tsx';
+import { portalSubmissionText } from '../apps/web/src/i18n/portal-submission.ts';
 import { portalTrackingText } from '../apps/web/src/i18n/portal-tracking.ts';
 import { staffShellText } from '../apps/web/src/i18n/staff-shell.ts';
 import { visualCases } from './web-proof-cases.mjs';
@@ -25,6 +28,7 @@ const outDir = join('coverage', 'web-visual-review');
 
 rmSync(outDir, { recursive: true, force: true });
 mkdirSync(outDir, { recursive: true });
+compileTailwind(outDir);
 
 const artifacts = [];
 for (const testCase of visualCases) {
@@ -35,6 +39,7 @@ for (const testCase of visualCases) {
 }
 
 writeFileSync(join(outDir, 'index.html'), indexHtml(artifacts));
+await runBrowserArtifactChecks(artifacts, outDir, { screenshots: true });
 console.log(`Visual review artifacts written to ${outDir}`);
 for (const artifact of artifacts) {
   console.log(`- ${artifact.name}: ${join(outDir, artifact.file)}`);
@@ -51,9 +56,9 @@ async function routePage(testCase) {
   if (testCase.route === 'staff-dashboard') return staffFrame(testCase, await DashboardPage(staffProps));
   if (testCase.route === 'staff-reports') return staffFrame(testCase, await ReportsPage(staffProps));
   if (testCase.route === 'portal-submission') return testCase.params.state
-    ? React.createElement(PortalSubmissionScreen, { locale: testCase.locale, reference: testCase.params.reference, state: testCase.params.state })
+    ? portalFrame(testCase, 'submit', React.createElement(PortalSubmissionScreen, { locale: testCase.locale, reference: testCase.params.reference, state: testCase.params.state }))
     : PortalSubmissionPage({ searchParams: params });
-  if (testCase.route === 'portal-tracking-preview') return React.createElement(PortalTrackingPreview, portalTrackingProps(testCase));
+  if (testCase.route === 'portal-tracking-preview') return portalFrame(testCase, 'track', React.createElement(PortalTrackingPreview, portalTrackingProps(testCase)));
   if (testCase.route === 'portal-tracking') return PortalTrackingPage({ searchParams: params });
   if (testCase.route === 'portal-survey') return PortalSurveyPage({ searchParams: params });
   return StaffShellPage({ searchParams: params });
@@ -71,6 +76,22 @@ function staffFrame(testCase, children) {
   const t = staffShellText[testCase.locale];
   return React.createElement('div', { className: 'min-h-screen bg-neutral p-4 text-neutral-foreground md:p-6', dir: t.dir, lang: t.lang },
     React.createElement('section', { className: 'grid content-start gap-4' }, children));
+}
+
+function portalFrame(testCase, current, children) {
+  const t = current === 'submit' ? portalSubmissionText[testCase.locale] : portalTrackingText[testCase.locale];
+  const switchLocale = testCase.locale === 'ar' ? 'en' : 'ar';
+  const switchPath = current === 'submit' ? '/portal' : '/portal/track';
+  return React.createElement(PortalShell, {
+    current,
+    locale: testCase.locale,
+    privacy: t.privacy,
+    subtitle: t.subtitle,
+    switchHref: `${switchPath}?locale=${switchLocale}`,
+    switchLabel: t.switchLabel,
+    switchTarget: t.switchTarget,
+    title: t.title,
+  }, children);
 }
 
 async function proofFetch(input) {
@@ -106,15 +127,15 @@ function reviewHtml(testCase, renderedHtml) {
 <head>
   <meta charset="utf-8" />
   <title>${escapeHtml(testCase.name)}</title>
+  <link rel="stylesheet" href="./proof.css" />
   <style>
-    body { margin: 0; font-family: ui-sans-serif, system-ui, sans-serif; }
-    aside { padding: 12px 16px; border-bottom: 1px solid #d4d4d8; background: #fafafa; }
+    aside.review-chrome { padding: 12px 16px; border-bottom: 1px solid hsl(var(--border)); background: hsl(var(--surface-raised)); }
     main { padding: 16px; }
-    .frame { margin: 0 auto; outline: 1px solid #d4d4d8; }
+    .frame { margin: 0 auto; outline: 1px solid hsl(var(--border)); }
   </style>
 </head>
 <body>
-  <aside>
+  <aside class="review-chrome">
     <strong>${escapeHtml(testCase.name)}</strong>
     <p>Inspect layout, overflow, RTL/LTR direction, labels, and state messaging before approving golden-screen work.</p>
     <ul>${signals}</ul>
@@ -126,11 +147,11 @@ function reviewHtml(testCase, renderedHtml) {
 
 function indexHtml(artifacts) {
   const links = artifacts
-    .map((artifact) => `<li><a href="./${artifact.file}">${escapeHtml(artifact.name)}</a></li>`)
+    .map((artifact) => `<li><a href="./${artifact.file}">${escapeHtml(artifact.name)}</a> · <a href="./${artifact.file.replace(/\.html$/, '.png')}">PNG</a></li>`)
     .join('');
   return `<!doctype html>
 <html lang="en">
-<head><meta charset="utf-8" /><title>CMS-Auto Visual Review</title></head>
+<head><meta charset="utf-8" /><title>CMS-Auto Visual Review</title><link rel="stylesheet" href="./proof.css" /></head>
 <body><h1>CMS-Auto Visual Review</h1><ul>${links}</ul></body>
 </html>`;
 }

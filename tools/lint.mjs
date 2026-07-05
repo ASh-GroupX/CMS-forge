@@ -13,6 +13,9 @@ const maxAgenticFileLines = 300;
 const agenticFileSizeExemptions = new Set(['packages/database/prisma/schema.prisma']);
 const require = createRequire(import.meta.url);
 const frontendProofPackages = ['@axe-core/playwright', 'eslint-plugin-jsx-a11y', 'prettier-plugin-tailwindcss'];
+// ponytail: baseline gates new off-token utility debt until slice migrations delete the existing 455 hits.
+const frontendDesignHardcodeBaseline = 455;
+const frontendDesignHardcodePattern = /\b(?:bg-white|bg-slate-\d{2,3}|text-slate-\d{2,3}|border-slate-\d{2,3}|(?:bg|text|border)-(?:red|amber|emerald)-\d{2,3})\b/g;
 // Each backend module ships an agent context manifest so a fresh-context agent can
 // load only that module's boundary. These fields must be documented in it.
 const manifestRequiredFields = [
@@ -138,6 +141,22 @@ export function checkFrontendProofTooling() {
   });
 }
 
+export function checkFrontendDesignHardcodes(root = process.cwd()) {
+  const checkedFiles = walk(root).filter(
+    (file) =>
+      /^apps\/web\/src\/(?:app|components)\//.test(file) &&
+      !file.startsWith('apps/web/src/components/ui/') &&
+      /\.(?:ts|tsx)$/.test(file),
+  );
+  const hits = checkedFiles.flatMap((file) => {
+    const text = readFileSync(join(root, file), 'utf8');
+    return [...text.matchAll(frontendDesignHardcodePattern)].map((match) => `${file}: ${match[0]}`);
+  });
+  return hits.length > frontendDesignHardcodeBaseline
+    ? [`apps/web/src: off-token color utility debt increased (${hits.length}/${frontendDesignHardcodeBaseline}); use semantic tokens or reduce the baseline`]
+    : [];
+}
+
 // Line count is a crude proxy for complexity, so the budget is generous and tests
 // and DTO/type files are exempt: padding them out is healthy, not a smell. The goal
 // is catching a logic file that has grown past what an agent can hold in context.
@@ -218,6 +237,7 @@ export function lint(root = process.cwd()) {
     ...checkForbiddenImports(root),
     ...checkForbiddenMarkers(root),
     ...checkFrontendProofTooling(),
+    ...checkFrontendDesignHardcodes(root),
     ...checkAgenticFileSize(root),
     ...checkModuleManifests(root),
     ...checkModuleWiring(root),

@@ -24,7 +24,7 @@ export function AuditViewer({
 }) {
   const shell = staffShellText[locale], t = auditViewerText[locale];
   const rows = result?.items ?? [];
-  const visibleState = state ?? (!result || rows.length === 0 ? 'empty' : undefined);
+  const visibleState = state ?? (!result ? 'error' : rows.length === 0 ? 'empty' : undefined);
   const exportDisabled = visibleState === 'denied' || visibleState === 'error' || visibleState === 'loading';
   return (
     <Card aria-label={t.title} className="rounded-md border-slate-200 bg-white shadow-sm" dir={shell.dir}>

@@ -16,14 +16,6 @@ const VALUE_CLASS: Record<SummaryKey, string> = {
   averageTat: 'text-brand',
 };
 
-const EMPTY_SUMMARY: StaffDashboardSummary = {
-  openComplaints: 0,
-  overdueComplaints: 0,
-  slaWarningComplaints: 0,
-  closedComplaints: 0,
-  averageTatHours: 0,
-};
-
 export function DashboardSummary({
   locale,
   data,
@@ -33,7 +25,7 @@ export function DashboardSummary({
 }) {
   const shell = staffShellText[locale];
   const t = shell.dashboard;
-  const values = valuesFromSummary(locale, data ?? EMPTY_SUMMARY);
+  const values = data ? valuesFromSummary(locale, data) : null;
   const isEmpty = data !== null && Object.values(data).every((value) => value === 0);
 
   return (
@@ -51,7 +43,7 @@ export function DashboardSummary({
         ) : null}
       </CardHeader>
       <CardContent className="grid gap-3 p-4 md:grid-cols-3 xl:grid-cols-5">
-        {SUMMARY_KEYS.map((key) => {
+        {values ? SUMMARY_KEYS.map((key) => {
           const [label, description] = t.cards[key];
           return (
             <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm" key={key}>
@@ -60,7 +52,7 @@ export function DashboardSummary({
               <p className="mt-1 text-xs text-slate-500">{description}</p>
             </div>
           );
-        })}
+        }) : null}
       </CardContent>
     </Card>
   );

@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
@@ -22,6 +21,7 @@ export type PortalSubmissionPreviewState = 'loading' | 'validation' | 'success' 
 type SubmitState =
   | { kind: 'idle' }
   | { kind: 'loading' }
+  | { kind: 'options' }
   | { kind: 'success'; referenceNumber: string; attachmentCount: number; attachmentWarning?: PortalAttachmentWarning }
   | { kind: 'validation'; fieldErrors: PortalFieldError[] }
   | { kind: 'error'; network: boolean };
@@ -29,26 +29,32 @@ type SubmitState =
 export function PortalSubmissionScreen({
   locale,
   attachmentWarning,
-  options = emptyOptions,
+  options,
   reference,
   state,
 }: {
   locale: PortalLocale;
   attachmentWarning?: PortalAttachmentWarning | undefined;
-  options?: PortalSubmissionOptions;
+  options?: PortalSubmissionOptions | null | undefined;
   reference?: string | undefined;
   state?: PortalSubmissionPreviewState | undefined;
 }) {
   const t = portalSubmissionText[locale];
-  const switchLocale = locale === 'ar' ? 'en' : 'ar';
-  const categories = options.categories.filter((option) => !option.parentId);
-  const subcategories = options.categories.filter((option) => option.parentId);
+  const resolvedOptions = options ?? emptyOptions;
+  const categories = resolvedOptions.categories.filter((option) => !option.parentId);
+  const subcategories = resolvedOptions.categories.filter((option) => option.parentId);
+  const optionsUnavailable = !hasRequiredOptions(resolvedOptions);
   const [submitState, setSubmitState] = useState<SubmitState>({ kind: 'idle' });
   const visibleState = submitState.kind === 'idle' ? previewState(state, reference, locale, attachmentWarning) : submitState;
+  const messageState = optionsUnavailable && visibleState.kind === 'idle' ? { kind: 'options' as const } : visibleState;
   const fieldErrors = visibleState.kind === 'validation' ? visibleState.fieldErrors : [];
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (optionsUnavailable) {
+      setSubmitState({ kind: 'options' });
+      return;
+    }
     const formData = new FormData(event.currentTarget);
     const complaint = buildPortalComplaintSubmission(formData);
     const localErrors = validateSubmission(complaint);
@@ -79,33 +85,20 @@ export function PortalSubmissionScreen({
   }
 
   return (
-    <main lang={t.lang} dir={t.dir} className="min-h-screen bg-neutral p-4 text-neutral-foreground md:p-6">
-      <div className="mx-auto grid max-w-5xl gap-4">
-        <Card className="rounded-md border-slate-200 bg-white shadow-sm">
-          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0 p-4">
-            <div>
-              <CardTitle className="text-2xl tracking-normal">{t.title}</CardTitle>
-              <p className="mt-1 max-w-2xl text-sm text-slate-600">{t.subtitle}</p>
-            </div>
-            <Button asChild size="sm" variant="outline" className="focus:ring-2 focus:ring-ring">
-              <a href={`/portal?locale=${switchLocale}`} aria-label={t.switchLabel}>{t.switchTarget}</a>
-            </Button>
-          </CardHeader>
-        </Card>
+    <section lang={t.lang} dir={t.dir} className="grid gap-4" aria-label={t.title}>
+      <PortalSubmissionMessage locale={locale} state={messageState} />
 
-        <PortalSubmissionMessage locale={locale} state={visibleState} />
-
-        <form className="grid gap-4 rounded-md border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-2" onSubmit={onSubmit}>
+      <form className="grid gap-4 rounded-md border border-line-subtle bg-surface p-portal-card shadow-sm md:grid-cols-2" onSubmit={onSubmit}>
           <FieldGroup title={t.sections.contact}>
             <TextField error={fieldError(fieldErrors, 'customerName', locale)} label={t.fields.customerName} name="customerName" />
             <TextField error={fieldError(fieldErrors, 'customerPhone', locale)} label={t.fields.customerPhone} name="customerPhone" type="tel" />
           </FieldGroup>
 
           <FieldGroup title={t.sections.complaint}>
-            <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'branchId', locale)} label={t.fields.branch} name="branchId" options={selectOptions(options.branches, locale)} />
-            <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'categoryId', locale)} label={t.fields.category} name="categoryId" options={selectOptions(categories, locale)} />
-            <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'subcategoryId', locale)} label={t.fields.subcategory} name="subcategoryId" options={selectOptions(subcategories, locale)} />
-            <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'severity', locale)} label={t.fields.severity} name="severity" options={options.severities.map((value) => ({ label: t.severityLabels[value], value }))} />
+            <SelectField choose={t.choices.choose} disabled={optionsUnavailable} error={fieldError(fieldErrors, 'branchId', locale)} label={t.fields.branch} name="branchId" options={selectOptions(resolvedOptions.branches, locale)} />
+            <SelectField choose={t.choices.choose} disabled={optionsUnavailable} error={fieldError(fieldErrors, 'categoryId', locale)} label={t.fields.category} name="categoryId" options={selectOptions(categories, locale)} />
+            <SelectField choose={t.choices.choose} disabled={optionsUnavailable} error={fieldError(fieldErrors, 'subcategoryId', locale)} label={t.fields.subcategory} name="subcategoryId" options={selectOptions(subcategories, locale)} />
+            <SelectField choose={t.choices.choose} disabled={optionsUnavailable} error={fieldError(fieldErrors, 'severity', locale)} label={t.fields.severity} name="severity" options={resolvedOptions.severities.map((value) => ({ label: t.severityLabels[value], value }))} />
             <Label className="grid gap-1 text-sm font-medium">
               {t.fields.incidentAt}
               <Input name="incidentAt" type="date" />
@@ -130,22 +123,21 @@ export function PortalSubmissionScreen({
           <FieldGroup title={t.sections.attachments}>
             <Label className="grid gap-1 text-sm font-medium md:col-span-2">
               {t.fields.attachment}
-              <Input accept=".jpg,.jpeg,.png,.webp,.pdf,.mp3,.wav,.ogg,.mp4,.mov,.webm,image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/wav,audio/ogg,video/mp4,video/quicktime,video/webm" multiple name="attachments" type="file" />
+              <Input accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" multiple name="attachments" type="file" />
               <FieldError message={fieldError(fieldErrors, 'attachments', locale)} />
             </Label>
-            <p className="rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 md:col-span-2">{t.attachmentDeferred}</p>
-            <ul className="grid gap-1 text-sm text-slate-600 md:col-span-2">
+            <p className="rounded-sm border border-line-subtle bg-surface px-3 py-2 text-sm text-content-muted md:col-span-2">{t.attachmentDeferred}</p>
+            <ul className="grid gap-1 text-sm text-content-muted md:col-span-2">
               {t.rules.map((rule) => <li key={rule}>{rule}</li>)}
             </ul>
           </FieldGroup>
 
-          <p className="rounded-sm bg-slate-100 px-3 py-2 text-sm text-slate-700 md:col-span-2">{t.privacy}</p>
-          <Button className="focus:ring-2 focus:ring-ring md:col-span-2" disabled={visibleState.kind === 'loading'} type="submit">
+          <p className="rounded-sm bg-surface-raised px-3 py-2 text-sm text-content-muted md:col-span-2">{t.privacy}</p>
+          <Button className="focus:ring-2 focus:ring-ring md:col-span-2" disabled={visibleState.kind === 'loading' || optionsUnavailable} type="submit">
             {visibleState.kind === 'loading' ? t.actions.submitting : t.actions.submit}
           </Button>
-        </form>
-      </div>
-    </main>
+      </form>
+    </section>
   );
 }
 
@@ -171,21 +163,21 @@ function PortalSubmissionMessage({ locale, state }: { locale: PortalLocale; stat
   if (state.kind === 'success') {
     return (
       <>
-        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900" role="status">
+        <p className="rounded-md border border-status-success-border bg-status-success-bg px-4 py-3 text-sm font-medium text-status-success" role="status">
           {t.states.success}. {t.states.reference}: {state.referenceNumber}.
           {state.attachmentCount ? ` ${t.states.attachmentsUploaded}: ${state.attachmentCount}.` : ''}
         </p>
         {state.attachmentWarning ? (
-          <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900" role="status">
+          <p className="rounded-md border border-status-warning-border bg-status-warning-bg px-4 py-3 text-sm font-medium text-status-warning" role="status">
             {t.states.attachmentWarning}: {state.attachmentWarning.failedCount}.
           </p>
         ) : null}
       </>
     );
   }
-  const message = state.kind === 'loading' ? t.states.loading : state.kind === 'validation' ? t.states.validation : t.states.error;
+  const message = state.kind === 'loading' ? t.states.loading : state.kind === 'validation' ? t.states.validation : state.kind === 'options' ? t.states.options : t.states.error;
   return (
-    <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800" role={state.kind === 'loading' ? 'status' : 'alert'}>
+    <p className="rounded-md border border-status-error-border bg-status-error-bg px-4 py-3 text-sm font-medium text-status-error" role={state.kind === 'loading' ? 'status' : 'alert'}>
       {message}
     </p>
   );
@@ -193,7 +185,7 @@ function PortalSubmissionMessage({ locale, state }: { locale: PortalLocale; stat
 
 function FieldGroup({ children, title }: { children: React.ReactNode; title: string }) {
   return (
-    <section className="grid content-start gap-3 rounded-md border border-slate-200 bg-slate-50 p-3 md:col-span-2 md:grid-cols-2" aria-label={title}>
+    <section className="grid content-start gap-3 rounded-md border border-line-subtle bg-surface-raised p-3 md:col-span-2 md:grid-cols-2" aria-label={title}>
       <h2 className="text-sm font-semibold md:col-span-2">{title}</h2>
       {children}
     </section>
@@ -210,11 +202,11 @@ function TextField({ error, label, name, type = 'text' }: { error?: string | und
   );
 }
 
-function SelectField({ choose, error, label, name, options }: { choose: string; error?: string | undefined; label: string; name: string; options: Array<{ label: string; value: string }> }) {
+function SelectField({ choose, disabled = false, error, label, name, options }: { choose: string; disabled?: boolean; error?: string | undefined; label: string; name: string; options: Array<{ label: string; value: string }> }) {
   return (
     <Label className="grid gap-1 text-sm font-medium">
       {label}
-      <select className="rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring" defaultValue="" name={name}>
+      <select className="rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring" defaultValue="" disabled={disabled} name={name}>
         <option value="">{choose}</option>
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
@@ -224,7 +216,7 @@ function SelectField({ choose, error, label, name, options }: { choose: string; 
 }
 
 function FieldError({ message }: { message?: string | undefined }) {
-  return message ? <span className="text-xs font-semibold text-red-700">{message}</span> : null;
+  return message ? <span className="text-xs font-semibold text-status-error">{message}</span> : null;
 }
 
 function validateSubmission(input: PortalComplaintCreateRequest): PortalFieldError[] {
@@ -268,6 +260,10 @@ function portalAttachmentFiles(formData: FormData): File[] {
 
 function selectOptions(options: PortalSubmissionOption[], locale: PortalLocale): Array<{ label: string; value: string }> {
   return options.map((option) => ({ label: locale === 'ar' ? option.nameAr : option.nameEn, value: option.id }));
+}
+
+function hasRequiredOptions(options: PortalSubmissionOptions): boolean {
+  return Boolean(options.branches.length && options.categories.some((option) => !option.parentId) && options.categories.some((option) => option.parentId) && options.severities.length);
 }
 
 const emptyOptions: PortalSubmissionOptions = { branches: [], categories: [], severities: [] };

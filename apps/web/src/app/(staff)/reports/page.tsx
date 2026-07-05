@@ -37,6 +37,8 @@ export default async function ReportsPage({
     getComplaintFormOptions(apiInput),
     getAssignableStaff(apiInput),
   ]);
+  const explicitState = resolveState(readParam(params?.reports));
+  const loadState = rows === null || kpis === null || catalog === null ? 'error' : undefined;
   return (
     <ReportsDashboard
       catalog={catalog ?? undefined}
@@ -46,7 +48,7 @@ export default async function ReportsPage({
       options={options}
       rows={rows ?? undefined}
       staff={staff}
-      state={resolveState(readParam(params?.reports))}
+      state={explicitState ?? loadState}
     />
   );
 }

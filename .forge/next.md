@@ -1,32 +1,48 @@
-# Business Readiness Remediation - Slice 11
+# UI/UX Refactor - Slice 2 Shared UI Primitives
 
-Status: Blocked pending Slice 0 human scope decision
+Status: Ready
 Required model tier: GPT-5.5 Extra High
-Phase: business-readiness-remediation
-Risk: High
-SRS IDs: `REQ-COMPLAINT-001`, `REQ-RBAC-001`, `METHOD-AUDIT-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
+Phase: ui-ux-redesign
+Risk: Medium
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`
+Skills: `ui-ux-pro-max`, `redesign`, `design-qa`, `design-taste-frontend` supporting anti-slop only
 
 ## Task
 
-Implement Slice 11 from `docs/BUSINESS_READINESS_PLAN.md`: Compensation decision.
+Continue the CMS-Auto UI/UX refactor after the shared staff and portal shell
+slice. Build the smallest useful shared UI primitives that current screens can
+consume without a whole-app rewrite.
 
-## Scope Decision Required Before Build
+## Scope
 
-Choose exactly one:
-
-- Signed compensation deferral: document that compensation is not productized in the complaint MVP.
-- Minimal compensation metadata in MVP scope: approve proposed/approved, amount when needed, status, approver, and audit.
-
-## Scope After Decision
-
-- If deferred, avoid schema/UI/API expansion and make the absence of compensation explicit.
-- If in scope, keep compensation metadata, approval authority, branch scope, RBAC, and audit backend-owned.
-- Do not add client-side compensation authority or placeholder UI that implies unavailable workflows are live.
+- Add or consolidate shared primitives only where the current screens need them:
+  `PageHeader`, `StateBlock`, `Field`, `ActionDialog`, `FilterBar`,
+  `DataTable`, `StatusBadge`, `MetricStrip`, `Timeline`, and
+  `AttachmentDropzone`.
+- Use existing shadcn/Radix/Lucide/Tailwind primitives and semantic tokens.
+- Add only the props required by current migrated screens; no speculative
+  component APIs.
+- Keep UI copy in dictionaries and preserve Arabic RTL plus English LTR.
+- Preserve backend authority, route contracts, RBAC, branch scope, audit,
+  portal privacy, and OpenAPI behavior.
 
 ## Proof
 
-- Signed deferral, or `corepack pnpm test:api -- compensation` if implemented.
+- `corepack pnpm typecheck`
+- `corepack pnpm lint`
+- `corepack pnpm test:web -- shell`
+- `corepack pnpm test:web -- localization`
+- `corepack pnpm test:visual`
+- `corepack pnpm web:visual-review`
+- `corepack pnpm test:e2e -- accessibility`
+- `corepack pnpm web:perf`
+- `git diff --check`
 
 ## Stop When
 
-- No user can assume compensation is productized unless it is actually available.
+- Shared primitives exist only where they remove real duplication for upcoming
+  screen migrations.
+- No production route behavior, backend authority, workflow authority, RBAC,
+  branch scope, audit, or portal privacy rule changes.
+- No new UI dependency is introduced.
+- The off-token color ratchet does not increase beyond the current baseline.

@@ -1,6 +1,8 @@
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 import { createRequire } from 'node:module';
+import { join } from 'node:path';
+import { compileTailwind, runBrowserArtifactChecks } from './web-browser-check.mjs';
 import StaffShellPage from '../apps/web/src/app/page.tsx';
 import AdminPage from '../apps/web/src/app/(staff)/admin/page.tsx';
 import AuditPage from '../apps/web/src/app/(staff)/audit/page.tsx';
@@ -12,6 +14,7 @@ import ReportsPage from '../apps/web/src/app/(staff)/reports/page.tsx';
 import PortalSubmissionPage from '../apps/web/src/app/portal/page.tsx';
 import PortalSurveyPage from '../apps/web/src/app/portal/survey/page.tsx';
 import PortalTrackingPage from '../apps/web/src/app/portal/track/page.tsx';
+import { PortalShell } from '../apps/web/src/components/portal-shell/index.tsx';
 import { PortalSubmissionScreen } from '../apps/web/src/components/portal-submission/index.tsx';
 import { PortalTrackingPreview } from '../apps/web/src/components/portal-tracking/index.tsx';
 import { portalSubmissionText } from '../apps/web/src/i18n/portal-submission.ts';
@@ -47,6 +50,19 @@ if (mode === 'accessibility') {
   checkAccessibility(rendered);
 }
 
+if (mode === 'visual' || mode === 'accessibility') {
+  const outDir = join('coverage', `web-proof-${mode}`);
+  rmSync(outDir, { recursive: true, force: true });
+  mkdirSync(outDir, { recursive: true });
+  compileTailwind(outDir);
+  const artifacts = rendered.map((result) => {
+    const file = `${slug(result.name)}.html`;
+    writeFileSync(join(outDir, file), proofHtml(result, result.html));
+    return { ...result, file };
+  });
+  await runBrowserArtifactChecks(artifacts, outDir, { axe: mode === 'accessibility' });
+}
+
 if (mode === 'perf') {
   checkPerformance(rendered);
 }
@@ -71,9 +87,9 @@ async function routePage(testCase) {
   if (testCase.route === 'staff-dashboard') return staffFrame(testCase, await DashboardPage(staffProps));
   if (testCase.route === 'staff-reports') return staffFrame(testCase, await ReportsPage(staffProps));
   if (testCase.route === 'portal-submission') return testCase.params.state
-    ? React.createElement(PortalSubmissionScreen, { locale: testCase.locale, reference: testCase.params.reference, state: testCase.params.state })
+    ? portalFrame(testCase, 'submit', React.createElement(PortalSubmissionScreen, { locale: testCase.locale, reference: testCase.params.reference, state: testCase.params.state }))
     : PortalSubmissionPage({ searchParams: params });
-  if (testCase.route === 'portal-tracking-preview') return React.createElement(PortalTrackingPreview, portalTrackingProps(testCase));
+  if (testCase.route === 'portal-tracking-preview') return portalFrame(testCase, 'track', React.createElement(PortalTrackingPreview, portalTrackingProps(testCase)));
   if (testCase.route === 'portal-tracking') return PortalTrackingPage({ searchParams: params });
   if (testCase.route === 'portal-survey') return PortalSurveyPage({ searchParams: params });
   return StaffShellPage({ searchParams: params });
@@ -91,6 +107,22 @@ function staffFrame(testCase, children) {
   const t = staffShellText[testCase.locale];
   return React.createElement('div', { className: 'min-h-screen bg-neutral p-4 text-neutral-foreground md:p-6', dir: t.dir, lang: t.lang },
     React.createElement('section', { className: 'grid content-start gap-4' }, children));
+}
+
+function portalFrame(testCase, current, children) {
+  const t = routeText(testCase);
+  const switchLocale = testCase.locale === 'ar' ? 'en' : 'ar';
+  const switchPath = current === 'submit' ? '/portal' : current === 'track' ? '/portal/track' : '/portal/survey';
+  return React.createElement(PortalShell, {
+    current,
+    locale: testCase.locale,
+    privacy: t.privacy,
+    subtitle: t.subtitle,
+    switchHref: `${switchPath}?locale=${switchLocale}`,
+    switchLabel: t.switchLabel,
+    switchTarget: t.switchTarget,
+    title: t.title,
+  }, children);
 }
 
 function checkVisual(results) {
@@ -127,7 +159,7 @@ function checkAccessibility(results) {
     if (String(result.route ?? 'staff').startsWith('staff')) {
       expect(result.html.includes(`dir="${t.dir}"`), `${result.name} missing direction`);
     } else {
-      expect(result.html.includes(`<main lang="${t.lang}" dir="${t.dir}"`), `${result.name} missing language or direction`);
+      expect(result.html.includes(`lang="${t.lang}"`) && result.html.includes(`dir="${t.dir}"`), `${result.name} missing language or direction`);
     }
     if (result.route === 'staff') {
       expect(result.html.includes(`aria-label="${t.title}"`), `${result.name} missing nav accessible name`);
@@ -188,6 +220,28 @@ function checkPerformance(results) {
 
 function count(text, needle) {
   return text.split(needle).length - 1;
+}
+
+function proofHtml(testCase, renderedHtml) {
+  const width = testCase.viewport?.width ? ` style="max-width:${testCase.viewport.width}px"` : '';
+  return `<!doctype html>
+<html lang="${testCase.locale}">
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(testCase.name)}</title>
+  <link rel="stylesheet" href="./proof.css" />
+  <style>body{margin:0}.proof-frame{margin:0 auto;padding:16px}${testCase.locale === 'ar' ? 'body{direction:rtl}' : ''}</style>
+</head>
+<body><main class="proof-frame"${width}>${renderedHtml}</main></body>
+</html>`;
+}
+
+function slug(value) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function escapeHtml(value) {
+  return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 }
 
 function expect(condition, message) {

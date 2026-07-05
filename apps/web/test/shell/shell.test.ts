@@ -46,6 +46,7 @@ import { complaintCreateText } from '../../src/i18n/staff-complaint-create';
 import { confirmationText } from '../../src/i18n/staff-confirmations';
 import { notificationCenterText } from '../../src/i18n/staff-notification-center';
 import { portalSubmissionText } from '../../src/i18n/portal-submission';
+import { portalShellText } from '../../src/i18n/portal-shell';
 import { portalSurveyText } from '../../src/i18n/portal-survey';
 import { portalTimelineText, portalTrackingText } from '../../src/i18n/portal-tracking';
 import { reportCatalogText, reportsDashboardText } from '../../src/i18n/staff-reports-dashboard';
@@ -57,6 +58,7 @@ import { dealHandoffText } from '../../src/i18n/staff-deal-handoff';
 import { confidentialCaseText } from '../../src/i18n/staff-confidential-cases';
 import { staffShellText } from '../../src/i18n/staff-shell';
 import { applyDmsMatchToCorrectionFields, type CorrectionFields } from '../../src/components/complaint-detail-workspace/provenance-correction-panel';
+import { isActiveNav } from '../../src/app/app-shell';
 
 test('staff shell renders English LTR operational navigation', async () => {
   const html = renderToStaticMarkup(
@@ -88,6 +90,15 @@ test('staff shell renders app top bar controls', async () => {
   assert.match(html, /href="\?locale=ar"/);
   assert.match(html, /aria-label="Toggle theme"/);
   assert.match(html, /aria-pressed="false"/);
+  assert.match(html, /Skip to main content/);
+  assert.match(html, /href="#staff-main"/);
+});
+
+test('staff shell active route helper distinguishes queue create and detail routes', () => {
+  assert.equal(isActiveNav('queue', '/complaints', '/complaints'), true);
+  assert.equal(isActiveNav('queue', '/complaints', '/complaints/new'), false);
+  assert.equal(isActiveNav('create', '/complaints/new', '/complaints/new'), true);
+  assert.equal(isActiveNav('detail', '/complaints', '/complaints/cmp_1'), true);
 });
 
 test('root and textarea avoid hydration-prone client mutations', () => {
@@ -259,7 +270,14 @@ test('portal submission renders English responsive complaint form', async () => 
   const html = renderToStaticMarkup(await PortalSubmissionPage({ fetchImpl, searchParams: Promise.resolve({ locale: 'en' }) }));
 
   assert.match(html, /dir="ltr"/);
+  assert.ok(html.includes(portalShellText.en.skipToMain));
+  assert.ok(html.includes(portalShellText.en.navLabel));
+  assert.ok(html.includes(portalShellText.en.footerLabel));
+  assert.ok(html.includes(portalShellText.en.trust));
   assert.match(html, /Customer complaint portal/);
+  assert.match(html, /aria-current="page"/);
+  assert.match(html, /href="\/portal\?locale=ar"/);
+  assert.match(html, /href="\/portal\/track\?locale=en"/);
   assert.match(html, /Customer name/);
   assert.match(html, /Customer phone/);
   assert.match(html, /Branch/);
@@ -279,6 +297,8 @@ test('portal submission renders English responsive complaint form', async () => 
   assert.match(html, /Attach files with this complaint or leave this empty/);
   assert.match(html, /name="attachments"/);
   assert.match(html, /multiple=""/);
+  assert.match(html, /accept="\.pdf,\.png,\.jpg,\.jpeg,application\/pdf,image\/png,image\/jpeg"/);
+  assert.doesNotMatch(html, /webp|audio|video|mp3|wav|mp4/i);
   assert.match(html, /Submit complaint/);
   assert.equal(String(calls[0]?.input), 'http://localhost:3000/portal/options');
   assert.deepEqual(calls[0]?.init?.headers, { Accept: 'application/json' });
@@ -292,7 +312,6 @@ test('portal submission keeps Arabic RTL localized labels', async () => {
   );
 
   assert.match(html, /dir="rtl"/);
-  assert.ok(html.includes(portalSubmissionText.ar.title));
   assert.ok(html.includes(portalSubmissionText.ar.fields.customerName));
   assert.ok(html.includes(portalSubmissionText.ar.fields.attachment));
   assert.ok(html.includes(portalSubmissionText.ar.validation.required));
@@ -358,6 +377,20 @@ test('portal submission production route ignores preview query strings', async (
   assert.match(html, /Submit complaint/);
 });
 
+test('portal submission option-load failure blocks submit honestly', async () => {
+  const html = renderToStaticMarkup(
+    await PortalSubmissionPage({
+      fetchImpl: async () => new Response('', { status: 503 }),
+      searchParams: Promise.resolve({ locale: 'en' }),
+    }),
+  );
+
+  assert.match(html, /Complaint form options could not be loaded\. Try again before submitting\./);
+  assert.match(html, /role="alert"/);
+  assert.match(html, /disabled=""/);
+  assert.doesNotMatch(html, /Service Branch|Vehicle service|Engine noise/);
+});
+
 test('portal submission source is public and uses browser-only portal API', () => {
   const source = readFileSync('apps/web/src/components/portal-submission/index.tsx', 'utf8');
 
@@ -408,6 +441,9 @@ test('portal tracking starts with verification gate and no status timeline', asy
 
   assert.match(html, /dir="ltr"/);
   assert.match(html, /Track a complaint/);
+  assert.ok(html.includes(portalShellText.en.trust));
+  assert.match(html, /aria-current="page"/);
+  assert.match(html, /href="\/portal\/track\?locale=ar"/);
   assert.match(html, /Reference number/);
   assert.match(html, /Customer phone/);
   assert.match(html, /Verification code/);
@@ -422,7 +458,6 @@ test('portal tracking keeps Arabic RTL localized labels', async () => {
   );
 
   assert.match(html, /dir="rtl"/);
-  assert.ok(html.includes(portalTrackingText.ar.title));
   assert.ok(html.includes(portalTrackingText.ar.sections.request));
   assert.ok(html.includes(portalTrackingText.ar.fields.code));
   assert.ok(html.includes(portalTrackingText.ar.states.requested));
@@ -478,6 +513,26 @@ test('portal tracking renders invalid expired error and follow-up states', async
   assert.match(closed, /disabled=""/);
 });
 
+test('portal tracking has step-specific validation and load errors', () => {
+  const requestValidation = renderToStaticMarkup(
+    React.createElement(PortalTrackingPreview, { locale: 'en', reference: portalTrackingText.en.sample.reference, state: 'requestValidation' }),
+  );
+  const requestError = renderToStaticMarkup(
+    React.createElement(PortalTrackingPreview, { locale: 'en', reference: portalTrackingText.en.sample.reference, state: 'requestError' }),
+  );
+  const codeValidation = renderToStaticMarkup(
+    React.createElement(PortalTrackingPreview, { locale: 'en', reference: portalTrackingText.en.sample.reference, state: 'codeValidation' }),
+  );
+  const trackingError = renderToStaticMarkup(
+    React.createElement(PortalTrackingPreview, { locale: 'en', reference: portalTrackingText.en.sample.reference, state: 'trackingError' }),
+  );
+
+  assert.match(requestValidation, /Reference number and customer phone are required to send a code\./);
+  assert.match(requestError, /Verification code could not be sent\. Check the reference and phone, then try again\./);
+  assert.match(codeValidation, /Enter the verification code sent to the complaint phone\./);
+  assert.match(trackingError, /Verification completed, but tracking could not be loaded\. Try again\./);
+});
+
 test('portal tracking source does not render secrets or private data paths', () => {
   const source = readFileSync('apps/web/src/components/portal-tracking/index.tsx', 'utf8');
   const followUpSource = readFileSync('apps/web/src/components/portal-tracking/follow-up-panel.tsx', 'utf8');
@@ -509,16 +564,29 @@ test('portal tracking renders no challenge or session material in proof states',
 });
 
 test('portal survey renders bounded accessible rating controls', async () => {
-  const html = renderToStaticMarkup(await PortalSurveyPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
+  const html = renderToStaticMarkup(await PortalSurveyPage({ searchParams: Promise.resolve({ locale: 'en', key: 'survey_key' }) }));
 
   assert.match(html, /dir="ltr"/);
   assert.match(html, /Customer satisfaction survey/);
+  assert.ok(html.includes(portalShellText.en.trust));
+  assert.match(html, /href="\/portal\/survey\?locale=ar&amp;key=survey_key"/);
   assert.match(html, /This survey link can be used once/);
   assert.equal(html.match(/type="radio"/g)?.length, 5);
   assert.match(html, /aria-label="1 - Very dissatisfied"/);
   assert.match(html, /aria-label="5 - Very satisfied"/);
   assert.match(html, /Optional comment/);
   assert.match(html, /Submit survey/);
+  assert.doesNotMatch(html, /checked=""/);
+  assert.doesNotMatch(html, /The issue was resolved clearly/);
+});
+
+test('portal survey missing key renders invalid-link terminal state', async () => {
+  const html = renderToStaticMarkup(await PortalSurveyPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
+
+  assert.match(html, /This survey link is invalid\. Use the link sent for your complaint\./);
+  assert.match(html, /role="alert"/);
+  assert.doesNotMatch(html, /Submit survey/);
+  assert.doesNotMatch(html, /type="radio"/);
 });
 
 test('portal survey keeps Arabic RTL localized labels', async () => {
@@ -686,6 +754,35 @@ function confidentialCaseFixture(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function complaintDetailFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'cmp_fixture',
+    referenceNumber: 'CMP-FIXTURE-001',
+    status: 'IN_PROGRESS',
+    severity: 'LOW',
+    subject: 'Fixture complaint',
+    branchId: 'branch_fixture',
+    ownerId: null,
+    ownerName: null,
+    createdAt: '2026-06-18T00:00:00.000Z',
+    updatedAt: '2026-06-19T00:00:00.000Z',
+    description: 'Fixture complaint detail.',
+    incidentAt: '2026-06-17T00:00:00.000Z',
+    customer: { id: 'cust_fixture', name: 'Fixture Customer', phone: null, identifier: null, source: 'LOCAL' },
+    customerSource: 'LOCAL',
+    manualCustomer: false,
+    vehicleRelated: false,
+    vehicle: null,
+    vehicleSource: null,
+    manualVehicle: false,
+    vehicleDataUnavailableReason: null,
+    allowedActions: [],
+    statusHistory: [{ id: 'hist_fixture', fromStatus: null, toStatus: 'IN_PROGRESS', action: null, actorId: null, actorRole: null, requestSource: 'STAFF', reason: null, correlationId: null, createdAt: '2026-06-19T00:00:00.000Z' }],
+    caseSummary: null,
+    ...overrides,
+  };
+}
+
 function workQueueHtml(html: string): string {
   return html.match(/aria-label="Cases"[\s\S]*?aria-label="Complaint detail"/)?.[0] ?? '';
 }
@@ -729,7 +826,8 @@ test('password reset request state uses generic safe messaging', async () => {
   );
 
   assert.match(html, /If the account can reset a password, instructions will be sent\./);
-  assert.match(html, /name="resetIdentifier"/);
+  assert.match(html, /name="identifier"/);
+  assert.match(html, /type="submit"/);
   assert.doesNotMatch(html, /inactive/i);
   assert.doesNotMatch(html, /locked/i);
   assert.doesNotMatch(html, /not found/i);
@@ -745,7 +843,16 @@ test('password reset token state renders token and new-password inputs', async (
   assert.match(html, /name="newPassword"/);
   assert.match(html, /autoComplete="off"/);
   assert.match(html, /autoComplete="new-password"/);
-  assert.doesNotMatch(source, /defaultValue|value=/);
+  assert.doesNotMatch(source, /defaultValue/);
+});
+
+test('password reset route renders generic network error state', async () => {
+  const html = renderToStaticMarkup(
+    await PasswordResetPage({ searchParams: Promise.resolve({ locale: 'en', reset: 'error' }) }),
+  );
+
+  assert.match(html, /Password reset could not be completed\. Try again\./);
+  assert.match(html, /role="alert"/);
 });
 
 test('password reset result states stay generic', async () => {
@@ -791,8 +898,9 @@ test('password reset route renders English request and token states', async () =
   );
 
   assert.match(request, /Password reset/);
-  assert.match(request, /name="resetIdentifier"/);
+  assert.match(request, /name="identifier"/);
   assert.match(request, /autoComplete="username"/);
+  assert.match(request, /type="submit"/);
   assert.match(token, /name="resetToken"/);
   assert.match(token, /autoComplete="off"/);
   assert.match(token, /name="newPassword"/);
@@ -1041,7 +1149,7 @@ test('work queue renders real complaint rows through the session cookie', async 
   assert.match(html, /Owner User/);
   assert.match(html, /Main Branch/);
   assert.doesNotMatch(html, /usr_owner|branch_main/);
-  assert.match(html, /2026-06-19/);
+  assert.match(html, /Jun 19, 2026/);
   assert.doesNotMatch(html, /@|\+?\d{10,}/);
 });
 
@@ -1126,7 +1234,7 @@ test('Arabic complaint detail workspace keeps RTL localized labels', async () =>
   assert.ok(html.includes(complaintRelationsText.ar.title));
 });
 
-test('complaint detail route renders English and Arabic localized workspace labels', async () => {
+test('complaint detail route renders localized error shell when detail is unavailable', async () => {
   const english = renderToStaticMarkup(
     await ComplaintDetailPage({ cookieHeader: '', params: Promise.resolve({ id: 'cmp_1' }), searchParams: Promise.resolve({ locale: 'en' }) }),
   );
@@ -1135,13 +1243,10 @@ test('complaint detail route renders English and Arabic localized workspace labe
   );
 
   assert.match(english, /Complaint detail/);
-  assert.match(english, /Complaint facts/);
-  assert.match(english, /Related complaints/);
+  assert.match(english, /Complaint detail could not be loaded\. Try again\./);
   assert.match(arabic, /dir="rtl"/);
   assert.ok(arabic.includes(complaintDetailText.ar.title));
-  assert.ok(arabic.includes(complaintDetailText.ar.sections.workflow));
-  assert.ok(arabic.includes(complaintDetailText.ar.workflow.validation));
-  assert.ok(arabic.includes(complaintRelationsText.ar.title));
+  assert.ok(arabic.includes(complaintDetailText.ar.states.error));
 });
 
 test('complaint detail workspace preview states render loading empty and error messages', async () => {
@@ -1417,7 +1522,7 @@ test('complaint detail route renders real backend facts through the session cook
   assert.doesNotMatch(html, /usr_mgr|usr_staff|Hidden Staff|\+966500000001|SEEDDEMO00001/);
 });
 
-test('complaint detail keeps preview fallback when backend denies detail read', async () => {
+test('complaint detail route renders error when backend denies detail read', async () => {
   const fetchImpl: typeof fetch = async () => jsonResponse({ error: { code: 'BRANCH_SCOPE_FORBIDDEN' } }, 403);
   const html = renderToStaticMarkup(
     await ComplaintDetailPage({
@@ -1428,7 +1533,10 @@ test('complaint detail keeps preview fallback when backend denies detail read', 
     }),
   );
 
-  assert.match(html, /CMP-2026-001/);
+  assert.match(html, /Complaint detail could not be loaded\. Try again\./);
+  assert.match(html, /role="alert"/);
+  assert.doesNotMatch(html, /Complaint facts/);
+  assert.doesNotMatch(html, /CMP-2026-001/);
   assert.doesNotMatch(html, /CMP-DETAIL-001/);
 });
 
@@ -1436,7 +1544,12 @@ test('complaint detail relation panel renders empty denied and Arabic states saf
   const empty = renderToStaticMarkup(
     await ComplaintDetailPage({
       cookieHeader: 'cms_staff_session=raw-session',
-      fetchImpl: async (input) => String(input).includes('/duplicate-candidates') ? jsonResponse({ items: [], windowDays: 30 }) : jsonResponse({ items: [] }),
+      fetchImpl: async (input) => {
+        const url = String(input);
+        if (url.endsWith('/complaints/cmp_empty')) return jsonResponse({ complaint: complaintDetailFixture({ id: 'cmp_empty' }) });
+        if (url.includes('/duplicate-candidates')) return jsonResponse({ items: [], windowDays: 30 });
+        return jsonResponse({ items: [] });
+      },
       params: Promise.resolve({ id: 'cmp_empty' }),
       searchParams: Promise.resolve({ locale: 'en' }),
     }),
@@ -1444,7 +1557,9 @@ test('complaint detail relation panel renders empty denied and Arabic states saf
   const denied = renderToStaticMarkup(
     await ComplaintDetailPage({
       cookieHeader: 'cms_staff_session=raw-session',
-      fetchImpl: async () => jsonResponse({ error: { code: 'RBAC_FORBIDDEN' } }, 403),
+      fetchImpl: async (input) => String(input).endsWith('/complaints/cmp_denied')
+        ? jsonResponse({ complaint: complaintDetailFixture({ id: 'cmp_denied' }) })
+        : jsonResponse({ error: { code: 'RBAC_FORBIDDEN' } }, 403),
       params: Promise.resolve({ id: 'cmp_denied' }),
       searchParams: Promise.resolve({ locale: 'en' }),
     }),
@@ -1452,7 +1567,12 @@ test('complaint detail relation panel renders empty denied and Arabic states saf
   const arabic = renderToStaticMarkup(
     await ComplaintDetailPage({
       cookieHeader: 'cms_staff_session=raw-session',
-      fetchImpl: async (input) => String(input).includes('/duplicate-candidates') ? jsonResponse({ items: [], windowDays: 30 }) : jsonResponse({ items: [] }),
+      fetchImpl: async (input) => {
+        const url = String(input);
+        if (url.endsWith('/complaints/cmp_ar')) return jsonResponse({ complaint: complaintDetailFixture({ id: 'cmp_ar' }) });
+        if (url.includes('/duplicate-candidates')) return jsonResponse({ items: [], windowDays: 30 });
+        return jsonResponse({ items: [] });
+      },
       params: Promise.resolve({ id: 'cmp_ar' }),
       searchParams: Promise.resolve({ locale: 'ar' }),
     }),
@@ -1496,8 +1616,9 @@ test('complaint detail comments render visibility badges composer and comment ro
 
   assert.match(html, /Internal only/);
   assert.match(html, /Customer visible/);
-  assert.match(html, /Investigation note for the case team\./);
-  assert.match(html, /Your complaint is under review by the customer relations team\./);
+  assert.match(html, /No comments or public updates yet\./);
+  assert.doesNotMatch(html, /Investigation note for the case team\./);
+  assert.doesNotMatch(html, /Your complaint is under review by the customer relations team\./);
   assert.match(html, /Add complaint comment/);
   assert.match(html, /Add comment/);
   assert.match(html, /Author/);
@@ -2197,7 +2318,7 @@ test('audit viewer renders only for admin preview without placeholder rows', asy
   assert.match(admin, /Target type/);
   assert.match(admin, /Correlation ID/);
   assert.match(admin, /Export results/);
-  assert.match(admin, /No audit entries match these filters\./);
+  assert.match(admin, /Audit entries could not be loaded\. Try again\./);
   assert.match(admin, /Backend search owns redaction, limits, export audit, and authorization\./);
   assert.doesNotMatch(readFileSync('apps/web/src/components/audit-viewer/index.tsx', 'utf8'), /CONFIG_UPDATED|corr-placeholder|placeholder/i);
   assert.doesNotMatch(staff, /Audit viewer/);
@@ -2420,14 +2541,16 @@ test('reports dashboard preview states render safely', async () => {
 
 test('reports dashboard renders export affordance without file generation', async () => {
   const html = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'management', reports: 'ready' }) }));
+  const denied = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'management', reports: 'denied' }) }));
 
   assert.match(html, /Operational row export/);
   assert.match(html, /generic operational rows, not specialized RPT outputs/);
   assert.match(html, /CSV/);
   assert.match(html, /Excel/);
-  assert.doesNotMatch(html, /href="\/reports\/export\?format=csv"/);
-  assert.match(html, /disabled[^>]*>CSV<\/button>/);
-  assert.match(html, /title="Export is unavailable for this report or role\."/);
+  assert.match(html, /href="\/reports\/export\?format=csv"/);
+  assert.match(html, /href="\/reports\/export\?format=excel"/);
+  assert.match(denied, /disabled[^>]*>CSV<\/button>/);
+  assert.match(denied, /title="Export is unavailable for this report or role\."/);
   assert.match(html, /Exports use backend configured row limits\./);
   assert.match(html, /Export data is RBAC-filtered with the same report scope\./);
   assert.match(html, /Successful exports are audit logged by the backend\./);
@@ -2460,6 +2583,14 @@ test('reports dashboard renders real scoped rows from the backend read', async (
           branchLabel: 'Main Branch',
           branchLabelAr: 'الفرع الرئيسي',
         }],
+      });
+    }
+    if (url.endsWith('/reports/catalog')) {
+      return jsonResponse({
+        items: [
+          { id: 'RPT-001', name: 'Open complaints summary', users: 'Managers', requiredFilters: ['date', 'branch', 'category', 'severity', 'owner'], status: 'DELIVERED', signoffRequired: false },
+          { id: 'RPT-017', name: 'Audit activity report', users: 'Admin', requiredFilters: ['actor', 'action', 'date', 'target'], status: 'DELIVERED', signoffRequired: false },
+        ],
       });
     }
     return jsonResponse({
@@ -2623,6 +2754,14 @@ test('reports route renders real scoped rows through the session cookie', async 
           branchLabel: 'Reports Branch',
           branchLabelAr: 'فرع التقارير',
         }],
+      });
+    }
+    if (url.endsWith('/reports/catalog')) {
+      return jsonResponse({
+        items: [
+          { id: 'RPT-001', name: 'Open complaints summary', users: 'Managers', requiredFilters: ['date', 'branch', 'category', 'severity', 'owner'], status: 'DELIVERED', signoffRequired: false },
+          { id: 'RPT-017', name: 'Audit activity report', users: 'Admin', requiredFilters: ['actor', 'action', 'date', 'target'], status: 'DELIVERED', signoffRequired: false },
+        ],
       });
     }
     return jsonResponse({
@@ -3037,6 +3176,35 @@ test('complaint new route keeps Arabic RTL complaint create labels', async () =>
   assert.ok(html.includes(staffShellText.ar.createForm.validation.required));
 });
 
+test('complaint create validation does not inject sample field values', async () => {
+  const html = renderToStaticMarkup(
+    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'en', create: 'validation' }) }),
+  );
+
+  assert.match(html, /Review the highlighted fields\./);
+  assert.doesNotMatch(html, /Faisal Al-Otaibi|\+966500000001|SEEDDEMO00001|Service concern|2026-06-19/);
+});
+
+test('complaint new route renders Arabic option labels from backend data', async () => {
+  const fetchImpl: typeof fetch = async () => jsonResponse({
+    branches: [{ id: 'branch_ar', code: 'AR', nameEn: 'English Branch', nameAr: 'فرع عربي' }],
+    categories: [{ id: 'cat_ar', code: 'AR', nameEn: 'English Category', nameAr: 'تصنيف عربي', parentId: null }],
+    severities: ['HIGH'],
+  });
+  const html = renderToStaticMarkup(
+    await NewComplaintPage({
+      cookieHeader: 'cms_staff_session=raw-session',
+      fetchImpl,
+      searchParams: Promise.resolve({ locale: 'ar' }),
+    }),
+  );
+
+  assert.ok(html.includes('فرع عربي'));
+  assert.ok(html.includes('تصنيف عربي'));
+  assert.ok(html.includes(complaintCreateText.ar.severityLabels.HIGH));
+  assert.doesNotMatch(html, /English Branch|English Category/);
+});
+
 test('complaint new route renders create success loading and network states', async () => {
   const success = renderToStaticMarkup(
     await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'en', create: 'success' }) }),
@@ -3337,7 +3505,7 @@ test('complaints route renders colored severity and status badges for real rows'
   assert.match(html, /bg-brand/);
   assert.match(html, /Unassigned/);
   assert.match(html, /branch_main/);
-  assert.match(html, /2026-06-20/);
+  assert.match(html, /Jun 20, 2026/);
   assert.match(html, /Open case/);
   assert.doesNotMatch(html, /QueuePreviewState/);
 });
@@ -3417,7 +3585,7 @@ test('complaints route renders real rows through the session cookie', async () =
   assert.match(html, /Route Branch/);
   assert.doesNotMatch(html, /usr_route/);
   assert.doesNotMatch(html, /branch_route/);
-  assert.match(html, /2026-06-20/);
+  assert.match(html, /Jun 20, 2026/);
   assert.match(html, /bg-status-warning/);
 });
 
@@ -3456,6 +3624,7 @@ test('complaints route sends URL-backed queue filters to the scoped search API',
   assert.deepEqual(calls[0]?.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
   assert.match(html, /CMP-FILTER-001/);
   assert.match(html, /Page 2/);
+  assert.match(html, /href="\/complaints\/cmp_filter_1\?locale=en"/);
   assert.match(html, /href="\/complaints\?locale=en&amp;page=1&amp;branchId=branch_main&amp;search=CMP-FILTER&amp;severity=HIGH&amp;status=IN_PROGRESS"/);
   assert.doesNotMatch(String(calls[0]?.input), /role|actor|workflow|owner/i);
 });
@@ -3983,28 +4152,27 @@ test('confidential case route keeps Arabic RTL labels', async () => {
 
 // ---- (staff)/dashboard route ----
 
-test('dashboard route renders English summary labels', async () => {
+test('dashboard route renders English unavailable state without fake cards', async () => {
   const html = renderToStaticMarkup(
     await DashboardPage({ cookieHeader: '', searchParams: Promise.resolve({ locale: 'en' }) }),
   );
 
   assert.match(html, /Accountability overview/);
-  assert.match(html, /Active cases/);
-  assert.match(html, /SLA warnings/);
-  assert.match(html, /Overdue cases/);
-  assert.match(html, /Closed cases/);
-  assert.match(html, /Average TAT/);
+  assert.match(html, /Accountability overview could not be loaded\. Try again\./);
+  assert.match(html, /role="alert"/);
+  assert.doesNotMatch(html, /Active cases|SLA warnings|Overdue cases|Closed cases|Average TAT/);
 });
 
-test('dashboard route renders Arabic RTL summary labels', async () => {
+test('dashboard route renders Arabic RTL unavailable state', async () => {
   const html = renderToStaticMarkup(
     await DashboardPage({ cookieHeader: '', searchParams: Promise.resolve({ locale: 'ar' }) }),
   );
 
   assert.match(html, /dir="rtl"/);
   assert.ok(html.includes(staffShellText.ar.dashboard.title));
-  assert.ok(html.includes(staffShellText.ar.dashboard.cards.open[0]));
-  assert.ok(html.includes(staffShellText.ar.dashboard.cards.averageTat[0]));
+  assert.ok(html.includes(staffShellText.ar.dashboard.states.error));
+  assert.ok(!html.includes(staffShellText.ar.dashboard.cards.open[0]));
+  assert.ok(!html.includes(staffShellText.ar.dashboard.cards.averageTat[0]));
 });
 
 test('dashboard route renders real metric values through the session cookie', async () => {

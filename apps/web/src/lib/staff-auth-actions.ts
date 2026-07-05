@@ -8,19 +8,61 @@ const CSRF_COOKIE = 'cms_csrf_token';
 
 export async function loginStaffAction(formData: FormData): Promise<void> {
   const locale = safeLocale(formData.get('locale'));
-  const response = await fetch(new URL('/auth/login', API_URL), {
-    body: JSON.stringify({
-      identifier: String(formData.get('identifier') ?? ''),
-      password: String(formData.get('password') ?? ''),
-    }),
-    cache: 'no-store',
-    headers: { Accept: 'application/json', 'content-type': 'application/json' },
-    method: 'POST',
-  });
+  let response: Response;
+  try {
+    response = await fetch(new URL('/auth/login', API_URL), {
+      body: JSON.stringify({
+        identifier: String(formData.get('identifier') ?? ''),
+        password: String(formData.get('password') ?? ''),
+      }),
+      cache: 'no-store',
+      headers: { Accept: 'application/json', 'content-type': 'application/json' },
+      method: 'POST',
+    });
+  } catch {
+    redirect(`/?locale=${locale}&auth=error`);
+  }
 
   if (!response.ok) redirect(`/?locale=${locale}&auth=error`);
   await applySetCookie(response.headers);
   redirect(`/?locale=${locale}`);
+}
+
+export async function requestPasswordResetAction(formData: FormData): Promise<void> {
+  const locale = safeLocale(formData.get('locale'));
+  let response: Response;
+  try {
+    response = await fetch(new URL('/auth/password-reset/request', API_URL), {
+      body: JSON.stringify({ identifier: String(formData.get('identifier') ?? '') }),
+      cache: 'no-store',
+      headers: { Accept: 'application/json', 'content-type': 'application/json' },
+      method: 'POST',
+    });
+  } catch {
+    redirect(`/?locale=${locale}&reset=error`);
+  }
+  redirect(`/?locale=${locale}&reset=${response.ok ? 'requested' : 'error'}`);
+}
+
+export async function consumePasswordResetAction(formData: FormData): Promise<void> {
+  const locale = safeLocale(formData.get('locale'));
+  let response: Response;
+  try {
+    response = await fetch(new URL('/auth/password-reset/consume', API_URL), {
+      body: JSON.stringify({
+        token: String(formData.get('resetToken') ?? ''),
+        newPassword: String(formData.get('newPassword') ?? ''),
+      }),
+      cache: 'no-store',
+      headers: { Accept: 'application/json', 'content-type': 'application/json' },
+      method: 'POST',
+    });
+  } catch {
+    redirect(`/?locale=${locale}&reset=error`);
+  }
+  if (!response.ok) redirect(`/?locale=${locale}&reset=invalid`);
+  const body = await response.json().catch(() => null) as { ok?: boolean } | null;
+  redirect(`/?locale=${locale}&reset=${body?.ok === false ? 'invalid' : 'success'}`);
 }
 
 export async function logoutStaffAction(formData: FormData): Promise<void> {

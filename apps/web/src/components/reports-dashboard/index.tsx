@@ -41,7 +41,7 @@ export function ReportsDashboard({
   const severities = options?.severities ?? [];
   const exportQuery = reportQuery(filters);
   const operationalRows = rows?.slice(0, 17);
-  const exportEnabled = Array.isArray(rows);
+  const exportEnabled = state !== 'denied' && state !== 'error' && state !== 'loading';
   const catalogRows = catalogRowsFrom(catalog, reports, t);
   const kpiCards = kpis ? [
     [t.kpis.onTime, `${kpis.onTimeCompletionPercent}%`],

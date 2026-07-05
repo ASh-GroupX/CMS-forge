@@ -45,15 +45,14 @@ export function ComplaintCreateForm({
   const [submitState, setSubmitState] = useState<SubmitState>({ kind: 'idle' });
   const visibleState = submitState.kind === 'idle' ? previewState(state, locale) : submitState;
   const fieldErrors = visibleState.kind === 'validation' ? visibleState.fieldErrors : [];
-  const preserveInput = visibleState.kind !== 'idle';
   const selectedMatch = lookupSelection?.source === 'DMS' ? lookupSelection.match : null;
   const sourceState = selectedMatch ? 'dms' : lookupSelection?.source === 'MANUAL' ? 'manual' : 'none';
-  const defaults = formDefaults({ extra, preserveInput, selectedMatch, t });
+  const defaults = formDefaults(selectedMatch);
   const branches = options?.branches ?? [];
   const categories = options?.categories ?? [];
   const subcategories = categories.filter((item) => item.parentId);
   const categoryOptions = categories.filter((item) => !item.parentId);
-  const severityOptions = options?.severities ?? ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
+  const severityOptions: ComplaintFormOptions['severities'] = options?.severities ?? ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -100,17 +99,17 @@ export function ComplaintCreateForm({
           <TextField error={fieldError(fieldErrors, 'customerName')} label={extra.fields.customerName} name="customerName" value={defaults.customerName} />
           <TextField error={fieldError(fieldErrors, 'customerPhone')} label={extra.fields.customerPhone} name="customerPhone" type="tel" value={defaults.customerPhone} />
           <TextField error={fieldError(fieldErrors, 'customerNumber')} label={extra.fields.customerNumber} name="customerNumber" value={defaults.customerNumber} />
-          <SelectField choose={t.choose} error={fieldError(fieldErrors, 'categoryId')} label={t.fields.category} name="categoryId" options={categoryOptions} preserve={preserveInput} />
-          <SelectField choose={t.choose} error={fieldError(fieldErrors, 'subcategoryId')} label={extra.fields.subcategory} name="subcategoryId" options={subcategories.length ? subcategories : categories} preserve={preserveInput} />
+          <SelectField choose={t.choose} error={fieldError(fieldErrors, 'categoryId')} label={t.fields.category} locale={locale} name="categoryId" options={categoryOptions} />
+          <SelectField choose={t.choose} error={fieldError(fieldErrors, 'subcategoryId')} label={extra.fields.subcategory} locale={locale} name="subcategoryId" options={subcategories.length ? subcategories : categories} />
           <label className="grid gap-1 text-sm font-medium">
             {t.fields.severity}
-            <select className="rounded-sm border border-slate-300 px-2 py-2" name="severity" defaultValue={preserveInput ? 'HIGH' : ''}>
+            <select className="rounded-sm border border-slate-300 px-2 py-2" name="severity" defaultValue="">
               <option value="">{t.choose}</option>
-              {severityOptions.map((severity) => <option key={severity} value={severity}>{severity}</option>)}
+              {severityOptions.map((severity) => <option key={severity} value={severity}>{extra.severityLabels[severity]}</option>)}
             </select>
             <FieldError message={fieldError(fieldErrors, 'severity')} />
           </label>
-          <SelectField choose={t.choose} error={fieldError(fieldErrors, 'branchId')} label={t.fields.branch} name="branchId" options={branches} preserve={preserveInput} />
+          <SelectField choose={t.choose} error={fieldError(fieldErrors, 'branchId')} label={t.fields.branch} locale={locale} name="branchId" options={branches} />
           <div className="grid gap-1">
             <Label htmlFor="incidentAt">{t.fields.incidentDate}</Label>
             <Input id="incidentAt" name="incidentAt" defaultValue={defaults.incidentAt} type="date" />
@@ -188,14 +187,13 @@ function TextField({ error, label, name, type = 'text', value, wide = false }: {
   );
 }
 
-function SelectField({ choose, error, label, name, options, preserve }: { choose: string; error: string | undefined; label: string; name: string; options: ComplaintFormOption[]; preserve: boolean }) {
-  const value = preserve ? options[0]?.id ?? '' : '';
+function SelectField({ choose, error, label, locale, name, options }: { choose: string; error: string | undefined; label: string; locale: Locale; name: string; options: ComplaintFormOption[] }) {
   return (
     <label className="grid gap-1 text-sm font-medium">
       {label}
-      <select className="rounded-sm border border-slate-300 px-2 py-2" name={name} defaultValue={value}>
+      <select className="rounded-sm border border-slate-300 px-2 py-2" name={name} defaultValue="">
         <option value="">{choose}</option>
-        {options.map((option) => <option key={option.id} value={option.id}>{option.nameEn}</option>)}
+        {options.map((option) => <option key={option.id} value={option.id}>{locale === 'ar' ? option.nameAr : option.nameEn}</option>)}
       </select>
       <FieldError message={error} />
     </label>
@@ -264,33 +262,23 @@ function incidentAtValue(value: string): string {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00.000Z` : value;
 }
 
-function formDefaults({
-  extra,
-  preserveInput,
-  selectedMatch,
-  t,
-}: {
-  extra: typeof complaintCreateText[Locale];
-  preserveInput: boolean;
-  selectedMatch: DmsCustomerVehicleMatch | null;
-  t: typeof staffShellText[Locale]['createForm'];
-}) {
+function formDefaults(selectedMatch: DmsCustomerVehicleMatch | null) {
   const hasVehicle = Boolean(selectedMatch?.vin || selectedMatch?.plateNumber || selectedMatch?.brand || selectedMatch?.model);
   return {
-    key: selectedMatch ? `${selectedMatch.customerCode ?? ''}-${selectedMatch.primaryPhone}-${selectedMatch.vin ?? ''}` : preserveInput ? 'preview' : 'manual',
-    customerName: selectedMatch?.customerName ?? (preserveInput ? extra.sampleCustomer : ''),
-    customerPhone: selectedMatch?.primaryPhone ?? (preserveInput ? extra.samplePhone : ''),
+    key: selectedMatch ? `${selectedMatch.customerCode ?? ''}-${selectedMatch.primaryPhone}-${selectedMatch.vin ?? ''}` : 'manual',
+    customerName: selectedMatch?.customerName ?? '',
+    customerPhone: selectedMatch?.primaryPhone ?? '',
     customerNumber: selectedMatch?.customerCode ?? '',
     customerSource: selectedMatch ? 'DMS' : 'MANUAL',
-    description: preserveInput ? t.sampleDescription : '',
-    incidentAt: preserveInput ? '2026-06-19' : '',
-    subject: preserveInput ? t.sampleSubject : '',
+    description: '',
+    incidentAt: '',
+    subject: '',
     vehicleBrand: selectedMatch?.brand ?? '',
     vehicleModel: selectedMatch?.model ?? '',
     vehicleModelYear: selectedMatch?.modelYear === undefined ? '' : String(selectedMatch.modelYear),
     vehiclePlate: selectedMatch?.plateNumber ?? '',
-    vehicleRelated: hasVehicle || preserveInput,
-    vehicleSource: hasVehicle ? 'DMS' : preserveInput ? 'MANUAL' : '',
-    vehicleVin: selectedMatch?.vin ?? (preserveInput ? 'SEEDDEMO00001' : ''),
+    vehicleRelated: hasVehicle,
+    vehicleSource: hasVehicle ? 'DMS' : '',
+    vehicleVin: selectedMatch?.vin ?? '',
   };
 }

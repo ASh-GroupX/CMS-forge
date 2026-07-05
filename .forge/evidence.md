@@ -12439,3 +12439,111 @@ SRS IDs: `REQ-INTEGRATION-001`, `REQ-REPORT-001`, `REQ-RBAC-001`, `METHOD-AUDIT-
 - Focused disabled/manual fallback screenshot proof was captured at `output/playwright/slice10-dms-disabled-manual.png`; the browser DOM proof confirmed the disabled message, manual fallback, create form, and one `input[type="file"]`.
 - Screenshot proof used route-rendered HTML over a temporary localhost static server with compiled app Tailwind CSS; the temporary server was stopped after capture.
 - Slice 11 is blocked until compensation scope is signed: deferral, or approval for minimal compensation metadata and audit.
+
+---
+
+## UI/UX Redesign - Slice 0 Proof Harness and Token Spine
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `NFR-PERF-001`
+
+### Scope
+
+- Replaced the UI proof path's string-only confidence with browser-backed route artifact checks using compiled Tailwind CSS.
+- Kept the existing script names: `test:visual`, `web:visual-review`, `test:e2e -- accessibility`, and `web:perf`.
+- Added shared browser proof utilities that compile `apps/web/src/globals.css`, open each rendered artifact in Chromium, check nonblank output, page-level horizontal overflow, keyboard focus visibility, and optional axe serious/critical violations.
+- Extended `web:visual-review` to generate HTML and PNG artifacts for English and Arabic staff/portal surfaces under `coverage/web-visual-review`.
+- Added the Precision Ops token spine for surfaces, content, line, status, conflict, loading/empty, density, portal spacing, radius, shadow, and focus.
+- Removed global dark-mode raw slate/white patch selectors so migrated components must consume semantic tokens.
+- Added a frontend color-utility lint ratchet for `apps/web/src/app` and `apps/web/src/components`, excluding generated shadcn primitives. The current baseline is 455 matches and must shrink in later migration slices.
+
+### Security Self-Check
+
+- No backend API, schema, RBAC, branch-scope, audit, workflow, attachment, report, notification, or portal verification behavior changed.
+- React still does not decide complaint state, role, branch scope, audit visibility, portal verification, or workflow authority.
+- Browser proof fixtures remain local generated artifacts and do not introduce credentials, tokens, OTPs, provider secrets, or staff/customer private data.
+- Customer portal exposure rules remain unchanged; the slice only improved proof and token infrastructure.
+
+### Verification
+
+- Passed: `node --test tools/lint.test.mjs` (21/21 TAP tests).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (210/210 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Notes
+
+- Axe initially caught insufficient contrast for the info status token; `--color-info` was darkened before the final accessibility pass.
+- Sampled generated PNGs for EN dashboard, AR work queue, EN portal submission mobile, and AR portal tracking mobile; no blank output or obvious page-level overflow was visible in those samples.
+- The `design-qa` skill referenced a missing `workflows/design-qa.md` file, so the implementation used the available local UI proof scripts and added browser gates directly.
+- Existing unrelated dirty files and untracked proof artifacts were left untouched.
+- The next active Forge task is `UI/UX Refactor - Slice 1B Shared Shell Primitives`.
+
+---
+
+## UI/UX Redesign - Roadmap Packet
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`
+
+### Scope
+
+- Added `.forge/ui-ux-refactor/README.md` as the canonical detailed roadmap packet.
+- Recorded the applied skills: `ui-ux-pro-max`, `redesign`, `design-qa`, and supporting `design-taste-frontend`.
+- Preserved `.forge/ui-ux-refactor-roadmap.md` as a pointer for older references.
+- Updated `.forge/state.md` and `.forge/next.md` to reference the packet and active skills.
+
+### Verification
+
+- Passed: `git diff --check -- .forge/ui-ux-refactor/README.md .forge/ui-ux-refactor-roadmap.md .forge/state.md .forge/next.md .forge/evidence.md`.
+
+---
+
+## UI/UX Redesign - Slice 1B Shared Shell Primitives
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`
+
+### Scope
+
+- Consolidated shared authenticated staff shell behavior around server-session authority, role-aware navigation, active route matching, skip link, compact topbar/sidebar, and focus-visible keyboard paths.
+- Added a shared `PortalShell` for public portal routes with localized navigation, language switch, skip link, mobile-first touch targets, and trust/privacy footer.
+- Moved touched shell surfaces to semantic tokens and kept remaining raw screen-level utility debt for later migration slices.
+- Updated portal visual and accessibility fixtures so generated browser artifacts include the shared portal shell, not bare child components.
+
+### Security Self-Check
+
+- No backend API, RBAC, branch scope, audit, workflow, attachment, report, notification, or portal verification behavior changed.
+- Staff role and branch scope still come from the server session on production staff routes; preview query role stays test/demo-only and is ignored when a real principal exists.
+- Customer portal pages still show only customer-safe submission, verification, tracking, follow-up, attachment, and survey content.
+- No passwords, OTPs, tokens, provider secrets, staff PII, internal comments, audit logs, or DMS codes were added to shell copy or browser artifacts.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (211/211 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`. First run hit a transient Chromium file-read miss for an artifact that existed on disk; immediate rerun passed.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Visual Review
+
+- Sampled generated PNGs for EN portal submission mobile, AR portal tracking mobile, EN dashboard, and AR work queue.
+- Portal shell rendered localized navigation, language switch, and trust/privacy footer. RTL/LTR framing was correct in sampled artifacts.
+- The visible skip link in sampled PNGs is expected because the browser artifact check tabs once before screenshot capture to prove keyboard focus visibility.
+
+### Notes
+
+- The `redesign` and `design-qa` skills reference workflow files that are not present in the installed skill folders; local repo proof scripts were used as the design QA source.
+- The `ui-ux-pro-max` design-system query was run for a regulated operational SaaS dashboard, but the repo's Precision Ops packet and semantic tokens remained the source of truth.
+- Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.

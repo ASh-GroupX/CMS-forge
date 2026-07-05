@@ -1,8 +1,8 @@
 # Current State
 
-Status: Business readiness Slice 10 complete; Slice 11 blocked on compensation scope signoff
-Phase: business-readiness-remediation
-Next Task: Slice 11 - Compensation Decision scope decision
+Status: UI/UX redesign Slice 1B complete; Slice 2 ready
+Phase: ui-ux-redesign
+Next Task: Slice 2 - Shared UI primitives
 Model Tier: GPT-5.5 Extra High
 
 ## How to use this file
@@ -13,27 +13,25 @@ Prior state history is in .forge/archive/state-archive.md.
 ## Snapshot
 
 - Branch `codex/user-scoped-ux-redesign` is active.
-- Slice 0 still lacks human signoff for the remaining report deferrals, compensation scope, and approved notification channels.
-- Slice 1 queues customer OTP delivery through the existing notification queue as SMS, with English/Arabic body text selected by portal locale.
-- Slice 2 queues submit notifications and creates intake SLA deadline events after submitted complaint creation commits; drafts still create no active SLA deadline or submit notification.
-- Slice 3 enforces backend management-readonly masking for complaint search/detail sensitive values using the server-derived role.
-- Slice 4 wires the audit viewer to backend search/export through the staff session cookie, with filters, localized states, and backend-redacted metadata.
-- Slice 5 adds real admin category list/create/edit/deactivate UI and minimal SLA policy list/edit UI backed by guarded API routes and CONFIG audit entries.
-- Slice 6 keeps the guarded RPT-001 through RPT-017 matrix visible, labels generic exports as operational report rows, and marks incomplete reports as deferred pending business signoff instead of implying delivery.
-- Slice 7 wires staff internal/public comments and verified portal public timeline updates; internal comments remain hidden from portal tracking.
-- Slice 8 schedules closure surveys after workflow commit, sends tokenized survey links through the existing notification path, wires portal survey submit/terminal states, and shows authorized CSAT in staff detail.
-- Slice 9 uploads staff intake attachments after complaint creation through the existing backend-owned attachment path, reports success/partial failure counts, and keeps detail-page upload as retry.
-- Slice 10 records signed manual-DMS pilot scope: the backend DMS provider remains disabled/manual, staff lookup states show manual fallback, complaint creation remains unblocked, and RPT-015 is signed-deferred until a live/test provider exists and telemetry is meaningful.
-- Proof passed for Slice 10: `test:api -- integrations`, `test:api -- reports`, `test:web -- shell`, `test:web -- localization`, `typecheck`, `lint`, `git diff --check`, `web:visual-review`, and focused DMS disabled/manual fallback screenshot proof.
+- The old Business Readiness Slice 11 compensation task remains blocked and is now carry-forward debt, not the active Forge task.
+- The full UI/UX refactor packet is stored in `.forge/ui-ux-refactor/README.md`; `.forge/ui-ux-refactor-roadmap.md` is only a compatibility pointer.
+- UI/UX refactor Slice 0 established the browser proof harness and Precision Ops token spine.
+- UI/UX refactor Slice 1B completed shared shell primitives for staff and portal routes.
+- Staff shell now has skip link, compact topbar/sidebar, active route helper coverage, role-aware navigation, server-session authority, and focus-visible keyboard path.
+- Portal shell now has localized navigation, language switch, skip link, trust/privacy footer, mobile-first touch targets, and semantic shell tokens.
+- `web:visual-review` writes English and Arabic HTML plus PNG artifacts for the covered staff and portal surfaces under `coverage/web-visual-review`.
+- Lint retains the frontend raw color utility ratchet for `apps/web/src/app` and `apps/web/src/components`; current baseline is 455 matches.
+- Proof passed for Slice 1B: `typecheck`, `lint`, `test:web -- shell`, `test:web -- localization`, `test:visual`, `web:visual-review`, `test:e2e -- accessibility`, `web:perf`, and `git diff --check`.
 
 ## Current Stop
 
-Slice 10 is complete. Do not start Slice 11 until the compensation MVP scope decision is signed.
+Proceed with Slice 2 only: shared UI primitives.
 
 ## Open Carry-Forward / Known Debt
 
-- Exact Slice 11 compensation decision needed: signed deferral, or approval for minimal compensation metadata and audit.
+- Exact Slice 11 compensation decision still needed: signed deferral, or approval for minimal compensation metadata and audit.
 - Exact report decision still needed for RPT-002, RPT-003, RPT-005 through RPT-012, RPT-014, and RPT-016: signed MVP deferral or approval to implement missing report-specific outputs.
 - Approved notification channels for remaining pilot/UAT proof still need final signoff.
 - RPT-015 DMS lookup failure reporting is signed-deferred for manual-DMS pilot scope until a live/test provider exists and lookup telemetry is meaningful.
-- Untracked proof artifacts remain intentionally unstaged.
+- Existing off-token color debt is intentionally ratcheted, not removed in Slice 0; later slices should reduce the 455-match baseline as screens migrate.
+- Generated proof artifacts under `coverage/` remain intentionally unstaged.

@@ -34,6 +34,7 @@ export const staffShellText = {
       resetSubmit: 'Reset password',
       resetSuccess: 'Password reset complete. Sign in with the new password.',
       invalidToken: 'Reset link is invalid or expired. Request a new reset link.',
+      resetError: 'Password reset could not be completed. Try again.',
     },
     dashboard: {
       title: 'Accountability overview',
@@ -169,6 +170,7 @@ export const staffShellText = {
       resetSubmit: 'إعادة تعيين كلمة المرور',
       resetSuccess: 'اكتملت إعادة تعيين كلمة المرور. سجل الدخول بكلمة المرور الجديدة.',
       invalidToken: 'رابط الإعادة غير صالح أو منتهي. اطلب رابطا جديدا.',
+      resetError: 'تعذرت معالجة طلب إعادة التعيين. حاول مرة أخرى.',
     },
     dashboard: {
       title: 'نظرة عامة على المساءلة',

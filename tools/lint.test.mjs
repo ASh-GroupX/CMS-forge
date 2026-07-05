@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import {
   checkAgenticFileSize,
+  checkFrontendDesignHardcodes,
   checkForbiddenImports,
   checkForbiddenMarkers,
   checkModuleManifests,
@@ -94,6 +95,19 @@ test('lint exempts test and dto files from the size budget', () => {
   writeFileSync(join(root, 'apps/api/src/modules/auth/dto/create-auth.dto.ts'), longBody);
 
   assert.deepEqual(checkAgenticFileSize(root), []);
+});
+
+test('lint rejects frontend design hardcode debt growth', () => {
+  const root = mkdtempSync(join(tmpdir(), 'cms-auto-lint-'));
+  mkdirSync(join(root, 'apps/web/src/components/work-queue'), { recursive: true });
+  writeFileSync(
+    join(root, 'apps/web/src/components/work-queue/index.tsx'),
+    `${Array.from({ length: 456 }, () => '<div className="bg-white" />').join('\n')}\n`,
+  );
+
+  assert.deepEqual(checkFrontendDesignHardcodes(root), [
+    'apps/web/src: off-token color utility debt increased (456/455); use semantic tokens or reduce the baseline',
+  ]);
 });
 
 test('lint requires a complete MODULE.md manifest in each module', () => {

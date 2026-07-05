@@ -16,8 +16,12 @@ export const complaintCreateText = {
     validation: 'Review the highlighted fields.',
     network: 'Unable to reach server. Try again.',
     error: 'Complaint could not be submitted. Review the details and try again.',
-    sampleCustomer: 'Faisal Al-Otaibi',
-    samplePhone: '+966500000001',
+    severityLabels: {
+      CRITICAL: 'Critical',
+      HIGH: 'High',
+      MEDIUM: 'Medium',
+      LOW: 'Low',
+    },
     source: {
       title: 'Customer and vehicle source',
       none: 'No lookup match selected. Manual source will be submitted.',
@@ -48,8 +52,12 @@ export const complaintCreateText = {
     validation: 'راجع الحقول المحددة.',
     network: 'تعذر الوصول إلى الخادم. حاول مرة أخرى.',
     error: 'تعذر إرسال الشكوى. راجع التفاصيل وحاول مرة أخرى.',
-    sampleCustomer: 'فيصل العتيبي',
-    samplePhone: '+966500000001',
+    severityLabels: {
+      CRITICAL: 'حرجة',
+      HIGH: 'عالية',
+      MEDIUM: 'متوسطة',
+      LOW: 'منخفضة',
+    },
     source: {
       title: 'مصدر العميل والمركبة',
       none: 'لم يتم اختيار مطابقة بحث. سيتم إرسال المصدر اليدوي.',

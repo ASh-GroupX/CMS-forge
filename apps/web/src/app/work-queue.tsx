@@ -34,7 +34,7 @@ export function WorkQueue({
   state?: QueuePreviewState | undefined;
 }) {
   const t = staffShellText[locale].workQueue;
-  const queueRows = (realRows ?? []).map((row) => queueRow(row, t));
+  const queueRows = (realRows ?? []).map((row) => queueRow(row, t, locale));
   const isEmpty = state === 'empty' || (!state && queueRows.length === 0);
   const message = state ? t.states[state] : isEmpty ? t.states.empty : null;
   const messageRole = state === 'error' || state === 'conflict' ? 'alert' : 'status';
@@ -131,7 +131,7 @@ export function WorkQueue({
   );
 }
 
-function queueRow(row: ComplaintQueueItem, t: typeof staffShellText[Locale]['workQueue']): QueueRow {
+function queueRow(row: ComplaintQueueItem, t: typeof staffShellText[Locale]['workQueue'], locale: Locale): QueueRow {
   return {
     reference: row.referenceNumber,
     status: row.status,
@@ -140,9 +140,14 @@ function queueRow(row: ComplaintQueueItem, t: typeof staffShellText[Locale]['wor
     owner: row.ownerName ?? t.unassigned,
     branch: row.branchName ?? row.branchId,
     sla: t.sla.backendScoped,
-    updated: row.updatedAt.slice(0, 10),
+    updated: formatDate(row.updatedAt, locale),
     action: t.actions.open,
   };
+}
+
+function formatDate(value: string, locale: Locale): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-US', { dateStyle: 'medium', timeZone: 'UTC' }).format(date);
 }
 
 function severityVariant(severity: string): 'default' | 'destructive' | 'secondary' | 'outline' {

@@ -26,7 +26,7 @@ export function ComplaintCommentsPanel({
 }) {
   const t = complaintDetailText[locale];
   const ct = complaintCommentText[locale];
-  const [items, setItems] = useState(() => comments ?? sampleComments());
+  const [items, setItems] = useState(() => comments ?? []);
   const [body, setBody] = useState('');
   const [status, setStatus] = useState<Status>('idle');
   const [visibility, setVisibility] = useState<StaffComplaintCommentVisibility>('INTERNAL');
@@ -114,13 +114,6 @@ function CommentGroup({ badge, comments, locale, title }: { badge: string; comme
       )}
     </section>
   );
-}
-
-function sampleComments(): StaffComplaintComment[] {
-  return [
-    { id: 'cmt_internal_preview', complaintId: 'cmp_preview', authorId: 'Authorized staff', body: 'Investigation note for the case team.', visibility: 'INTERNAL', createdAt: '2026-06-19T10:00:00.000Z' },
-    { id: 'cmt_public_preview', complaintId: 'cmp_preview', authorId: 'Authorized staff', body: 'Your complaint is under review by the customer relations team.', visibility: 'PUBLIC', createdAt: '2026-06-19T10:15:00.000Z' },
-  ];
 }
 
 function formatDate(value: string, locale: Locale): string {

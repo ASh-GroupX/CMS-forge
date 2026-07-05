@@ -51,19 +51,21 @@ export default async function ComplaintDetailPage({
     getAssignableStaff({ ...(cookieHeader !== undefined ? { cookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
     getComplaintFormOptions({ ...(cookieHeader !== undefined ? { cookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
   ]);
+  const detailState = resolveDetail(readParam(query?.detail)) ?? (id && !detail ? 'error' : undefined);
+  const commentsState = resolveDetail(readParam(query?.comments)) ?? (detail && comments === null ? 'error' : undefined);
 
   return (
     <ComplaintDetailWorkspace
       attachmentState={resolveAttachment(readParam(query?.attachment))}
       comments={comments}
-      commentsState={resolveDetail(readParam(query?.comments))}
+      commentsState={commentsState}
       detail={detail ?? undefined}
       locale={resolveLocale(readParam(query?.locale))}
       lookupState={resolveLookup(readParam(query?.lookup))}
       options={options}
       relations={relations ?? undefined}
       staff={staff}
-      state={resolveDetail(readParam(query?.detail))}
+      state={detailState}
       surveys={surveys}
       workflowState={resolveWorkflow(readParam(query?.workflow))}
     />

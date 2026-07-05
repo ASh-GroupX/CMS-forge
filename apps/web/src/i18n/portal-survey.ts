@@ -24,9 +24,7 @@ export const portalSurveyText = {
       validation: 'Choose a rating from 1 to 5.',
       loading: 'Submitting survey.',
       error: 'Survey could not be submitted. Try again.',
-    },
-    sample: {
-      comment: 'The issue was resolved clearly.',
+      missing: 'This survey link is invalid. Use the link sent for your complaint.',
     },
     privacy: 'The survey stores only the rating and optional customer comment for this complaint.',
   },
@@ -53,9 +51,7 @@ export const portalSurveyText = {
       validation: 'اختر تقييماً من 1 إلى 5.',
       loading: 'جاري إرسال الاستبيان.',
       error: 'تعذر إرسال الاستبيان. حاول مرة أخرى.',
-    },
-    sample: {
-      comment: 'تم حل المشكلة بوضوح.',
+      missing: 'رابط الاستبيان غير صالح. استخدم الرابط المرسل لشكواك.',
     },
     privacy: 'يحفظ الاستبيان التقييم وتعليق العميل الاختياري لهذه الشكوى فقط.',
   },
