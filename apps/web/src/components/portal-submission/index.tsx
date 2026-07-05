@@ -5,6 +5,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
+import { StateBlock } from '../shared/ui-primitives';
 import { portalSubmissionText, type PortalLocale } from '../../i18n/portal-submission';
 import {
   portalSubmissionAttachments,
@@ -89,6 +90,7 @@ export function PortalSubmissionScreen({
       <PortalSubmissionMessage locale={locale} state={messageState} />
 
       <form className="grid gap-4 rounded-md border border-line-subtle bg-surface p-portal-card shadow-sm md:grid-cols-2" onSubmit={onSubmit}>
+          <StateBlock className="md:col-span-2" message={t.privacy} />
           <FieldGroup title={t.sections.contact}>
             <TextField error={fieldError(fieldErrors, 'customerName', locale)} label={t.fields.customerName} name="customerName" />
             <TextField error={fieldError(fieldErrors, 'customerPhone', locale)} label={t.fields.customerPhone} name="customerPhone" type="tel" />
@@ -101,7 +103,7 @@ export function PortalSubmissionScreen({
             <SelectField choose={t.choices.choose} disabled={optionsUnavailable} error={fieldError(fieldErrors, 'severity', locale)} label={t.fields.severity} name="severity" options={resolvedOptions.severities.map((value) => ({ label: t.severityLabels[value], value }))} />
             <Label className="grid gap-1 text-sm font-medium">
               {t.fields.incidentAt}
-              <Input name="incidentAt" type="date" />
+              <Input className="min-h-11" name="incidentAt" type="date" />
               <FieldError message={fieldError(fieldErrors, 'incidentAt', locale)} />
             </Label>
             <TextField error={fieldError(fieldErrors, 'subject', locale)} label={t.fields.subject} name="subject" />
@@ -123,7 +125,7 @@ export function PortalSubmissionScreen({
           <FieldGroup title={t.sections.attachments}>
             <Label className="grid gap-1 text-sm font-medium md:col-span-2">
               {t.fields.attachment}
-              <Input accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" multiple name="attachments" type="file" />
+              <Input accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" className="min-h-11" multiple name="attachments" type="file" />
               <FieldError message={fieldError(fieldErrors, 'attachments', locale)} />
             </Label>
             <p className="rounded-sm border border-line-subtle bg-surface px-3 py-2 text-sm text-content-muted md:col-span-2">{t.attachmentDeferred}</p>
@@ -132,8 +134,7 @@ export function PortalSubmissionScreen({
             </ul>
           </FieldGroup>
 
-          <p className="rounded-sm bg-surface-raised px-3 py-2 text-sm text-content-muted md:col-span-2">{t.privacy}</p>
-          <Button className="focus:ring-2 focus:ring-ring md:col-span-2" disabled={visibleState.kind === 'loading' || optionsUnavailable} type="submit">
+          <Button className="min-h-11 focus:ring-2 focus:ring-ring md:col-span-2" disabled={visibleState.kind === 'loading' || optionsUnavailable} type="submit">
             {visibleState.kind === 'loading' ? t.actions.submitting : t.actions.submit}
           </Button>
       </form>
@@ -163,29 +164,23 @@ function PortalSubmissionMessage({ locale, state }: { locale: PortalLocale; stat
   if (state.kind === 'success') {
     return (
       <>
-        <p className="rounded-md border border-status-success-border bg-status-success-bg px-4 py-3 text-sm font-medium text-status-success" role="status">
-          {t.states.success}. {t.states.reference}: {state.referenceNumber}.
-          {state.attachmentCount ? ` ${t.states.attachmentsUploaded}: ${state.attachmentCount}.` : ''}
-        </p>
+        <StateBlock
+          message={`${t.states.success}. ${t.states.reference}: ${state.referenceNumber}.${state.attachmentCount ? ` ${t.states.attachmentsUploaded}: ${state.attachmentCount}.` : ''}`}
+          tone="success"
+        />
         {state.attachmentWarning ? (
-          <p className="rounded-md border border-status-warning-border bg-status-warning-bg px-4 py-3 text-sm font-medium text-status-warning" role="status">
-            {t.states.attachmentWarning}: {state.attachmentWarning.failedCount}.
-          </p>
+          <StateBlock message={`${t.states.attachmentWarning}: ${state.attachmentWarning.failedCount}.`} tone="warning" />
         ) : null}
       </>
     );
   }
   const message = state.kind === 'loading' ? t.states.loading : state.kind === 'validation' ? t.states.validation : state.kind === 'options' ? t.states.options : t.states.error;
-  return (
-    <p className="rounded-md border border-status-error-border bg-status-error-bg px-4 py-3 text-sm font-medium text-status-error" role={state.kind === 'loading' ? 'status' : 'alert'}>
-      {message}
-    </p>
-  );
+  return <StateBlock message={message} tone={state.kind === 'loading' ? 'neutral' : 'error'} />;
 }
 
 function FieldGroup({ children, title }: { children: React.ReactNode; title: string }) {
   return (
-    <section className="grid content-start gap-3 rounded-md border border-line-subtle bg-surface-raised p-3 md:col-span-2 md:grid-cols-2" aria-label={title}>
+    <section className="grid content-start gap-3 rounded-md bg-surface-raised p-3 md:col-span-2 md:grid-cols-2" aria-label={title}>
       <h2 className="text-sm font-semibold md:col-span-2">{title}</h2>
       {children}
     </section>
@@ -196,7 +191,7 @@ function TextField({ error, label, name, type = 'text' }: { error?: string | und
   return (
     <Label className="grid gap-1 text-sm font-medium">
       {label}
-      <Input name={name} type={type} />
+      <Input className="min-h-11" name={name} type={type} />
       <FieldError message={error} />
     </Label>
   );
@@ -206,7 +201,7 @@ function SelectField({ choose, disabled = false, error, label, name, options }: 
   return (
     <Label className="grid gap-1 text-sm font-medium">
       {label}
-      <select className="rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring" defaultValue="" disabled={disabled} name={name}>
+      <select className="min-h-11 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring" defaultValue="" disabled={disabled} name={name}>
         <option value="">{choose}</option>
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>

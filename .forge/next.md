@@ -1,32 +1,32 @@
-# UI/UX Refactor - Slice 7 Customer Portal
+# UI/UX Refactor - Slice 8 Cleanup and Hardening
 
 Status: Ready
 Required model tier: GPT-5.5 Extra High
 Phase: ui-ux-redesign
-Risk: Medium
-SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `REQ-PORTAL-001`, `REQ-PORTAL-002`, `REQ-SURVEY-001`, `PORTAL-SEC-001`
+Risk: High
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `PORTAL-SEC-001`
 Skills: `ui-ux-pro-max`, `redesign`, `design-qa`, `design-taste-frontend` supporting anti-slop only
 
 ## Task
 
-Continue the CMS-Auto UI/UX refactor after the admin, reports, audit, and
-notifications slice. Migrate the public customer portal surfaces onto a
-trust-first portal experience without changing portal verification, public route
-contracts, privacy boundaries, attachment handling, or backend authority.
+Continue the CMS-Auto UI/UX refactor after the customer portal slice. Remove
+remaining production UI scaffolding and harden migrated surfaces without changing
+backend authority, route contracts, RBAC, branch scope, audit, reports,
+notifications, attachments, or portal privacy.
 
 ## Scope
 
-- Refactor portal submit, tracking, follow-up, attachment, and survey surfaces.
-- Use the portal shell and shared primitives where they fit, with larger public
-  touch targets and fewer competing panels than staff screens.
-- Strengthen privacy and verification messaging without exposing internal staff
-  data, audit logs, DMS codes, staff PII, unrelated complaints, or internal
-  comments.
-- Keep portal verification backend-owned; tracking must not work from reference
-  number alone.
-- Preserve existing typed portal API helpers and route behavior.
-- Use semantic tokens, dictionary copy, Arabic RTL, and English LTR.
-- Do not introduce staff-workbench visual language into public portal screens.
+- Remove remaining production `PreviewState` and query-state demo scaffolding
+  where it is safe to do so.
+- Remove fake modal semantics, empty `href`, and hardcoded user-facing English
+  outside dictionaries.
+- Shrink the raw color utility baseline in migrated surfaces.
+- Confirm migrated screens still expose loading, empty, error, success, conflict,
+  and destructive-confirm states where applicable.
+- Keep visual-test fixtures as fixtures; do not move demo authority into
+  production components.
+- Preserve typed API helpers, route behavior, OpenAPI contracts, Arabic RTL, and
+  English LTR.
 
 ## Proof
 
@@ -42,12 +42,12 @@ contracts, privacy boundaries, attachment handling, or backend authority.
 
 ## Stop When
 
-- Portal submit, track, follow-up, attachment, and survey flows are visibly
-  trust-first and mobile-friendly.
-- Portal verification and privacy constraints remain backend-owned and covered
-  by existing proof.
-- Portal screens do not expose internal comments, audit logs, DMS codes, staff
-  PII, unrelated complaints, or staff-only workflow details.
+- No production `PreviewState` remains in migrated surfaces unless explicitly
+  documented as test-only fixture code.
+- No fake modal semantics, empty `href`, or new hardcoded user-facing English is
+  present in touched UI.
+- Raw color utility usage shrinks from the current ratcheted baseline where
+  touched.
 - No production route behavior, OpenAPI contract, portal privacy, attachment,
-  verification, RBAC, branch scope, audit, or notification rule changes.
+  verification, RBAC, branch scope, audit, report, or notification rule changes.
 - No new UI dependency is introduced.

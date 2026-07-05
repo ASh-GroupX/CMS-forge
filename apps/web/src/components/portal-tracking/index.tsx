@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { StateBlock, StatusBadge } from '../shared/ui-primitives';
 import { portalTimelineText, portalTrackingText, type PortalTrackingLocale } from '../../i18n/portal-tracking';
 import {
   getPortalTracking,
@@ -114,7 +114,7 @@ function PortalTrackingView({ initialFeedback, initialFollowUp, initialPhone, in
                 <form className="grid gap-3" onSubmit={requestCode} aria-label={t.sections.request}>
                   <TextField label={t.fields.reference} name="referenceNumber" value={referenceNumber} onChange={setReferenceNumber} autoComplete="off" />
                   <TextField label={t.fields.phone} name="customerPhone" type="tel" value={customerPhone} onChange={setCustomerPhone} autoComplete="tel" />
-                  <Button className="focus:ring-2 focus:ring-ring" disabled={busy} type="submit">{t.actions.request}</Button>
+                  <Button className="min-h-11 focus:ring-2 focus:ring-ring" disabled={busy} type="submit">{t.actions.request}</Button>
                 </form>
               </CardContent>
             </Card>
@@ -124,7 +124,7 @@ function PortalTrackingView({ initialFeedback, initialFollowUp, initialPhone, in
               <CardContent className="p-4 pt-0">
                 <form className="grid gap-3" onSubmit={verifyCode} aria-label={t.sections.verify}>
                   <TextField label={t.fields.code} name="verificationCode" type="text" value={otp} onChange={setOtp} autoComplete="one-time-code" />
-                  <Button className="focus:ring-2 focus:ring-ring" disabled={busy || !verificationId} type="submit">{t.actions.verify}</Button>
+                  <Button className="min-h-11 focus:ring-2 focus:ring-ring" disabled={busy || !verificationId} type="submit">{t.actions.verify}</Button>
                 </form>
               </CardContent>
             </Card>
@@ -162,7 +162,7 @@ function VerifiedTracking({ locale, tracking }: { locale: PortalTrackingLocale; 
           {[[t.fields.reference, tracking.referenceNumber], [t.sections.status, tracking.status], [t.fields.created, tracking.createdAt], [t.fields.updated, tracking.updatedAt]].map(([label, value]) => (
             <div className="rounded-sm bg-surface-raised px-3 py-2" key={label}>
               <dt className="text-content-muted">{label}</dt>
-              <dd className="break-words font-semibold text-content-strong">{label === t.sections.status ? <Badge variant="secondary">{value}</Badge> : value}</dd>
+              <dd className="break-words font-semibold text-content-strong">{label === t.sections.status ? <StatusBadge tone="info">{value}</StatusBadge> : value}</dd>
             </div>
           ))}
         </dl>
@@ -183,7 +183,7 @@ function VerifiedTracking({ locale, tracking }: { locale: PortalTrackingLocale; 
 
 function PrivacyPanel({ locale }: { locale: PortalTrackingLocale }) {
   const t = portalTrackingText[locale];
-  return <Card className="rounded-md border-line-subtle bg-surface text-sm text-content-muted shadow-sm" aria-label={t.sections.status}><CardContent className="p-4">{t.privacy}</CardContent></Card>;
+  return <Card className="rounded-md border-line-subtle bg-surface text-sm text-content-muted shadow-sm" aria-label={t.sections.status}><CardContent className="p-4"><StateBlock message={t.privacy} /></CardContent></Card>;
 }
 
 function PortalTrackingMessage({ locale, state }: { locale: PortalTrackingLocale; state: Feedback }) {
@@ -191,15 +191,11 @@ function PortalTrackingMessage({ locale, state }: { locale: PortalTrackingLocale
   if (!state) return null;
   const isSafe = state === 'requested' || state === 'verified' || state === 'followup' || state === 'attachment';
   const message = state === 'denied' ? t.states.denied : state === 'followup' ? t.states.followup : state === 'attachment' ? t.states.attachment : t.states[state];
-  return (
-    <p className={`rounded-md border px-4 py-3 text-sm font-medium ${isSafe ? 'border-status-success-border bg-status-success-bg text-content-strong' : 'border-status-error-border bg-status-error-bg text-status-error'}`} role={isSafe || state === 'loading' ? 'status' : 'alert'}>
-      {message}
-    </p>
-  );
+  return <StateBlock message={message} tone={isSafe ? 'success' : state === 'loading' ? 'neutral' : 'error'} />;
 }
 
 function TextField({ label, name, type = 'text', value, onChange, autoComplete }: { label: string; name: string; type?: string; value: string; onChange: (value: string) => void; autoComplete: string }) {
-  return <Label className="grid gap-1 text-sm font-medium">{label}<Input autoComplete={autoComplete} name={name} type={type} value={value} onChange={(event) => onChange(event.target.value)} /></Label>;
+  return <Label className="grid gap-1 text-sm font-medium">{label}<Input autoComplete={autoComplete} className="min-h-11" name={name} type={type} value={value} onChange={(event) => onChange(event.target.value)} /></Label>;
 }
 
 function sampleTracking(locale: PortalTrackingLocale, reference: string, state?: PortalTrackingPreviewState): PortalTrackingComplaint | null {

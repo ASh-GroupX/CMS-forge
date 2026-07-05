@@ -12775,3 +12775,47 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 
 - Accessibility initially failed on nested report `dl` markup and an audit success-message contrast issue; both were fixed and the final accessibility pass passed.
 - Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.
+
+---
+
+## UI/UX Redesign - Slice 7 Customer Portal
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `REQ-PORTAL-001`, `REQ-PORTAL-002`, `REQ-SURVEY-001`, `PORTAL-SEC-001`
+
+### Scope
+
+- Hardened portal submission, tracking, follow-up, attachment, and survey surfaces with shared state blocks, semantic tokens, and larger mobile touch targets.
+- Kept existing localized privacy and verification messaging visible without adding hardcoded user-facing strings.
+- Kept tracking status behind the existing OTP verification flow; reference number alone still does not render customer complaint details.
+- Preserved existing portal submission, tracking, attachment, follow-up, and survey typed API helpers and route behavior.
+
+### Security Self-Check
+
+- No backend API, OpenAPI contract, RBAC, branch scope, audit, workflow, report, notification, DMS adapter, attachment authorization, survey, or portal verification behavior changed.
+- React still does not decide complaint state, role, branch scope, workflow authority, audit visibility, report scope, notification scope, or portal verification.
+- Portal tracking still requires backend verification before public status and timeline details render.
+- Portal screens still do not expose internal comments, audit logs, DMS codes, staff private names/emails/phones, unrelated complaints, credentials, tokens, OTPs, or provider secrets.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Visual Review
+
+- Sampled generated PNGs for EN portal submission mobile, AR portal submission mobile, EN portal tracking mobile, AR portal tracking mobile, and EN portal survey mobile under `coverage/web-visual-review`.
+- Portal forms retained mobile containment, readable touch targets, visible privacy/status messaging, and Arabic RTL without obvious overlap or clipped labels.
+- Tracking still showed only verification request UI before verification and public-safe tracking/follow-up content in proof fixtures.
+
+### Notes
+
+- Existing visual-review screenshots show the skip link focused during keyboard-path proof; this is expected from the browser proof harness and not a portal layout regression.
+- Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.

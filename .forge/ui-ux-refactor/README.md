@@ -215,7 +215,7 @@ Acceptance:
 
 ## Slice 7 - Customer Portal
 
-Status: Ready in `.forge/next.md`
+Status: Complete
 
 Purpose:
 
@@ -238,7 +238,7 @@ Acceptance:
 
 ## Slice 8 - Cleanup and Hardening
 
-Status: Pending
+Status: Ready in `.forge/next.md`
 
 Remove:
 

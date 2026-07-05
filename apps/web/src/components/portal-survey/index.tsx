@@ -5,6 +5,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
+import { StateBlock } from '../shared/ui-primitives';
 import { portalSurveyText, type PortalSurveyLocale } from '../../i18n/portal-survey';
 import { submitPortalSurvey, terminalSurveyState } from '../../lib/portal-survey-api';
 
@@ -60,7 +61,7 @@ export function PortalSurveyScreen({
                     {t.ratingLabels.map((label, index) => {
                       const value = String(index + 1);
                       return (
-                        <Label className="grid min-h-20 content-center gap-2 rounded-sm border border-line-strong bg-surface-raised px-2 py-3 text-center text-sm font-semibold" key={label}>
+                        <Label className="grid min-h-24 content-center gap-2 rounded-sm border border-line-strong bg-surface-raised px-2 py-3 text-center text-sm font-semibold" key={label}>
                           <input className="mx-auto size-4" disabled={liveState === 'loading'} name="rating" type="radio" value={value} aria-label={label} />
                           <span>{value}</span>
                         </Label>
@@ -76,7 +77,7 @@ export function PortalSurveyScreen({
                 </Label>
 
                 <p className="rounded-sm bg-surface-raised px-3 py-2 text-sm text-content-muted">{t.privacy}</p>
-                <Button className="focus:ring-2 focus:ring-ring" disabled={liveState === 'loading'} type="submit">
+                <Button className="min-h-11 focus:ring-2 focus:ring-ring" disabled={liveState === 'loading'} type="submit">
                   {liveState === 'loading' ? t.actions.submitting : t.actions.submit}
                 </Button>
               </form>
@@ -91,9 +92,5 @@ function PortalSurveyMessage({ locale, state }: { locale: PortalSurveyLocale; st
   const t = portalSurveyText[locale];
   if (!state) return null;
   const successful = state === 'success';
-  return (
-    <p className={`rounded-md border px-4 py-3 text-sm font-medium ${successful ? 'border-status-success-border bg-status-success-bg text-status-success' : 'border-status-error-border bg-status-error-bg text-status-error'}`} role={successful || state === 'loading' ? 'status' : 'alert'}>
-      {t.states[state]}
-    </p>
-  );
+  return <StateBlock message={t.states[state]} tone={successful ? 'success' : state === 'loading' ? 'neutral' : 'error'} />;
 }
