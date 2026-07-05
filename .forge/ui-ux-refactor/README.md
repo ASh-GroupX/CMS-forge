@@ -149,7 +149,7 @@ Acceptance:
 
 ## Slice 4 - Complaint Create, Lookup, and Attachments
 
-Status: Ready in `.forge/next.md`
+Status: Complete
 
 Purpose:
 
@@ -174,7 +174,7 @@ Acceptance:
 
 ## Slice 5 - Complaint Detail and Workflow
 
-Status: Pending
+Status: Ready in `.forge/next.md`
 
 Purpose:
 

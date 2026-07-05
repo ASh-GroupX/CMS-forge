@@ -12640,3 +12640,48 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 - The `redesign` and `design-qa` skill workflow files remain missing locally; repo proof scripts were used as the design QA source.
 - The `ui-ux-pro-max` design-system query was refreshed for regulated operational SaaS shared primitives, but the Precision Ops packet and semantic tokens remained the source of truth.
 - Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.
+
+---
+
+## UI/UX Redesign - Slice 4 Complaint Create, Lookup, and Attachments
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `REQ-COMPLAINT-001`, `REQ-ATTACHMENT-001`
+
+### Scope
+
+- Rebuilt complaint intake as one structured staff flow with a localized page header, step rail, customer/vehicle lookup, manual fallback, complaint facts, intake attachments, validation summary, and submit result.
+- Reused Slice 2 primitives for fields, state messaging, badges, and headers where they removed duplication without changing route behavior.
+- Kept the real typed staff lookup, complaint create, and attachment helpers; no frontend workflow, role, branch-scope, audit, or attachment-authorization authority was added.
+- Made attachment policy expectations visible in dictionary-backed EN/AR copy while preserving backend validation and scan-state ownership.
+- Moved touched complaint create, lookup, and attachment surfaces toward semantic tokens and kept Arabic RTL plus English LTR rendering.
+
+### Security Self-Check
+
+- No backend API, OpenAPI contract, RBAC, branch scope, audit, workflow, notification, report, DMS adapter, or portal behavior changed.
+- React still does not decide complaint state, role, branch scope, workflow authority, audit visibility, attachment authorization, or portal verification.
+- Customer lookup and complaint create still use existing staff API helpers and session-backed backend authority; no browser storage, provider calls, credentials, tokens, OTPs, staff PII expansion, internal comments, audit logs, or DMS codes were added.
+- Intake attachment files are still uploaded only after backend complaint creation succeeds through the existing staff attachment helper.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Visual Review
+
+- Sampled generated PNGs for EN complaint create and AR complaint create under `coverage/web-visual-review`.
+- The intake step rail, lookup/manual fallback, validation summary, complaint facts, attachment rules, and submit action were visible without blank output, overlap, or clipped Arabic text.
+- RTL and LTR direction held for the redesigned intake flow.
+
+### Notes
+
+- The `redesign` and `design-qa` skill workflow files remain missing locally; repo proof scripts were used as the design QA source.
+- Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.

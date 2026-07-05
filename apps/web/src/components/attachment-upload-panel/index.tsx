@@ -21,14 +21,14 @@ export function AttachmentUploadPanel({
   const scanState = state === 'pending' || state === 'clean' || state === 'rejected' ? state : 'pending';
 
   return (
-    <Card aria-label={t.title} className="rounded-md border-slate-200 bg-white shadow-sm" dir={shell.dir}>
-      <CardHeader className="border-b border-slate-200 p-4">
+    <Card aria-label={t.title} className="rounded-md border-line-subtle bg-surface shadow-sm" dir={shell.dir}>
+      <CardHeader className="border-b border-line-subtle p-4">
         <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
-        <p className="text-sm text-slate-600">{t.subtitle}</p>
+        <p className="text-sm text-content-muted">{t.subtitle}</p>
       </CardHeader>
       <CardContent className="grid gap-3 p-4 md:grid-cols-2">
         <AttachmentDropzone id="attachment-file" label={t.chooseFile} rules={t.fileRules} />
-        <section aria-label={t.selectedFile} className="rounded-md border border-slate-200 bg-slate-50 p-3">
+        <section aria-label={t.selectedFile} className="rounded-md border border-line-subtle bg-surface-raised p-3">
           <h3 className="text-sm font-semibold">{t.selectedFile}</h3>
           {state === 'loading' || state === 'empty' || state === 'error' ? (
             <StateBlock className="mt-2" message={t.states[state]} tone={state === 'error' ? 'error' : 'neutral'} />

@@ -1,8 +1,8 @@
 # Current State
 
-Status: UI/UX redesign Slice 3 complete; Slice 4 ready
+Status: UI/UX redesign Slice 4 complete; Slice 5 ready
 Phase: ui-ux-redesign
-Next Task: Slice 4 - Complaint Create, Lookup, and Attachments
+Next Task: Slice 5 - Complaint Detail and Workflow
 Model Tier: GPT-5.5 Extra High
 
 ## How to use this file
@@ -19,15 +19,15 @@ Prior state history is in .forge/archive/state-archive.md.
 - UI/UX refactor Slice 1B completed shared staff and portal shell primitives.
 - UI/UX refactor Slice 2 completed shared UI primitives and wired them into current duplicated screen patterns.
 - UI/UX refactor Slice 3 completed the staff dashboard and work queue refactor.
-- Dashboard now renders a compact accountability summary with active workload as the primary metric and supporting overdue, warning, closed, and TAT metrics grouped beside it.
-- Work queue now keeps status, severity, SLA, owner, branch, age, and next action visible, while preserving URL-backed filters and scoped staff search API behavior.
+- UI/UX refactor Slice 4 completed complaint create, lookup, and attachments as one structured intake flow.
+- Complaint intake now shows a localized step rail, customer/vehicle lookup, manual fallback, complaint facts, intake attachment guidance, validation summary, field-level recovery, and submit result while preserving existing typed staff API helpers.
 - `web:visual-review` writes English and Arabic HTML plus PNG artifacts for the covered staff and portal surfaces under `coverage/web-visual-review`.
 - Lint retains the frontend raw color utility ratchet for `apps/web/src/app` and `apps/web/src/components`; current baseline is 455 matches.
-- Proof passed for Slice 3: `typecheck`, `lint`, `test:web -- shell`, `test:web -- localization`, `test:visual`, `web:visual-review`, `test:e2e -- accessibility`, `web:perf`, and `git diff --check`.
+- Proof passed for Slice 4: `typecheck`, `lint`, `test:web -- shell`, `test:web -- localization`, `test:visual`, `web:visual-review`, `test:e2e -- accessibility`, `web:perf`, and `git diff --check`.
 
 ## Current Stop
 
-Proceed with Slice 4 only: complaint create, lookup, and attachments.
+Proceed with Slice 5 only: complaint detail and workflow.
 
 ## Open Carry-Forward / Known Debt
 

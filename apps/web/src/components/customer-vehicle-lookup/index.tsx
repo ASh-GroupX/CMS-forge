@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Field, StateBlock, StatusBadge } from '../shared/ui-primitives';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import {
   DMS_DOWN_STATUS,
@@ -78,17 +77,16 @@ export function CustomerVehicleLookup({
 
   const body = (
     <>
-      <div className="border-b border-slate-200 p-4">
+      <div className="border-b border-line-subtle p-4">
         <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
-        <p className="text-sm text-slate-600">{t.subtitle}</p>
+        <p className="text-sm text-content-muted">{t.subtitle}</p>
       </div>
       <CardContent className="grid gap-4 p-4">
         <form className="grid gap-3 md:grid-cols-[repeat(4,minmax(0,1fr))_auto]" onSubmit={submit}>
           {fields.map((field) => (
-            <div className="grid gap-1" key={field}>
-              <Label htmlFor={`lookup-${field}`}>{t.fields[field]}</Label>
+            <Field id={`lookup-${field}`} key={field} label={t.fields[field]}>
               <Input disabled={lookupDisabled} id={`lookup-${field}`} name={field} />
-            </div>
+            </Field>
           ))}
           <div className="flex items-end">
             <Button className="w-full" disabled={view.kind === 'loading' || lookupDisabled} type="submit">
@@ -98,33 +96,31 @@ export function CustomerVehicleLookup({
         </form>
 
         <div className="flex flex-wrap gap-2">
-          <Badge className="bg-status-success text-white">{t.sources.local}</Badge>
-          <Badge className="bg-status-info text-white">{t.sources.dms}</Badge>
-          <Badge className="bg-slate-700 text-white">{t.sources.manual}</Badge>
+          <StatusBadge tone="success">{t.sources.local}</StatusBadge>
+          <StatusBadge tone="info">{t.sources.dms}</StatusBadge>
+          <StatusBadge>{t.sources.manual}</StatusBadge>
         </div>
 
         <div className="grid gap-3 md:grid-cols-[1.3fr_0.7fr]">
-          <section aria-label={t.resultTitle} className="rounded-md border border-slate-200 bg-slate-50 p-3">
+          <section aria-label={t.resultTitle} className="rounded-md border border-line-subtle bg-surface-raised p-3">
             <h3 className="text-sm font-semibold">{t.resultTitle}</h3>
-            <p className={`mt-2 rounded-sm border bg-white px-3 py-2 text-sm ${statusRole === 'alert' ? 'border-status-error text-status-error' : 'border-slate-200 text-slate-700'}`} role={statusRole}>
-              {statusText}
-            </p>
+            <StateBlock className="mt-2" message={statusText} tone={statusRole === 'alert' ? 'error' : statusKind === 'selected' ? 'success' : 'neutral'} />
             {view.kind === 'match' || view.kind === 'multiple' || view.kind === 'selected' ? (
               <ul className="mt-3 grid gap-2">
                 {view.matches.map((match) => (
-                  <li className="rounded-sm border border-slate-200 bg-white p-3 text-sm" key={`${match.customerCode ?? match.customerName}-${match.vin ?? match.primaryPhone}`}>
+                  <li className="rounded-sm border border-line-subtle bg-surface p-3 text-sm" key={`${match.customerCode ?? match.customerName}-${match.vin ?? match.primaryPhone}`}>
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
-                        <p className="font-semibold text-slate-900">{match.customerName}</p>
-                        <p className="text-xs text-slate-600">{vehicleLabel(match) || t.resultFields.vehicle}</p>
+                        <p className="font-semibold text-content-strong">{match.customerName}</p>
+                        <p className="text-xs text-content-muted">{vehicleLabel(match) || t.resultFields.vehicle}</p>
                       </div>
-                      <Badge className="bg-status-info text-white">{t.sources.dms}</Badge>
+                      <StatusBadge tone="info">{t.sources.dms}</StatusBadge>
                     </div>
                     <dl className="mt-3 grid gap-2 sm:grid-cols-2">
                       {resultRows(match, t).map(([label, value]) => (
-                        <div className="rounded-sm bg-slate-50 px-2 py-1" key={label}>
-                          <dt className="text-xs text-slate-500">{label}</dt>
-                          <dd className="break-words font-medium text-slate-800">{value}</dd>
+                        <div className="rounded-sm bg-surface-raised px-2 py-1" key={label}>
+                          <dt className="text-xs text-content-muted">{label}</dt>
+                          <dd className="break-words font-medium text-content-strong">{value}</dd>
                         </div>
                       ))}
                     </dl>
@@ -137,9 +133,9 @@ export function CustomerVehicleLookup({
             ) : null}
           </section>
 
-          <section aria-label={t.manualTitle} className="rounded-md border border-slate-200 bg-slate-50 p-3">
+          <section aria-label={t.manualTitle} className="rounded-md border border-line-subtle bg-surface-raised p-3">
             <h3 className="text-sm font-semibold">{t.manualTitle}</h3>
-            <p className="mt-2 text-sm text-slate-600">{t.manualHelp}</p>
+            <p className="mt-2 text-sm text-content-muted">{t.manualHelp}</p>
             <Button className="mt-3" onClick={selectManual} type="button" variant="outline">
               {t.manualAction}
             </Button>
@@ -151,14 +147,14 @@ export function CustomerVehicleLookup({
 
   if (surface === 'section') {
     return (
-      <section aria-label={t.title} className="rounded-md border border-slate-200 bg-white shadow-sm" dir={shell.dir}>
+      <section aria-label={t.title} className="rounded-md border border-line-subtle bg-surface shadow-sm" dir={shell.dir}>
         {body}
       </section>
     );
   }
 
   return (
-    <Card aria-label={t.title} className="rounded-md border-slate-200 bg-white shadow-sm" dir={shell.dir}>
+    <Card aria-label={t.title} className="rounded-md border-line-subtle bg-surface shadow-sm" dir={shell.dir}>
       {body}
     </Card>
   );

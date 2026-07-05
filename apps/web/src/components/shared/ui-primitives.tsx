@@ -73,8 +73,8 @@ export function Field({
   label,
 }: {
   children: React.ReactNode;
-  className?: string;
-  error?: string;
+  className?: string | undefined;
+  error?: string | undefined;
   id: string;
   label: string;
 }) {
