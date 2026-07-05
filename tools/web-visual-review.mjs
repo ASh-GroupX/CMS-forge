@@ -97,7 +97,7 @@ function portalFrame(testCase, current, children) {
 async function proofFetch(input) {
   const path = new URL(String(input)).pathname;
   if (path === '/reports/dashboard') return json({ summary: { openComplaints: 9, overdueComplaints: 2, slaWarningComplaints: 3, closedComplaints: 7, averageTatHours: 18 } });
-  if (path === '/complaints') return json({ items: [proofRow('CMP-PROOF-001', 'Proof queue row')] });
+  if (path === '/complaints/search') return json({ items: [proofRow('CMP-PROOF-001', 'Proof queue row')] });
   if (path === '/reports') return json({ items: [proofRow('CMP-PROOF-RPT-001', 'Proof report row', { categoryId: 'cat_proof' })] });
   if (path.startsWith('/complaints/')) return json({ complaint: { ...proofRow('CMP-PROOF-DETAIL', 'Proof detail row'), description: 'Proof detail description.', incidentAt: '2026-06-19T00:00:00.000Z', customer: proofCustomer(), customerSource: 'DMS', manualCustomer: false, vehicleRelated: true, vehicle: proofVehicle(), vehicleSource: 'LOCAL', manualVehicle: false, vehicleDataUnavailableReason: null, statusHistory: [{ id: 'hist_1', toStatus: 'SUBMITTED', createdAt: '2026-06-19T00:00:00.000Z' }] } });
   return json({}, 404);

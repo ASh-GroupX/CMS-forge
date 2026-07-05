@@ -123,7 +123,7 @@ Rules:
 
 ## Slice 3 - Staff Dashboard and Work Queue
 
-Status: Ready in `.forge/next.md`
+Status: Complete
 
 Purpose:
 
@@ -149,7 +149,7 @@ Acceptance:
 
 ## Slice 4 - Complaint Create, Lookup, and Attachments
 
-Status: Pending
+Status: Ready in `.forge/next.md`
 
 Purpose:
 

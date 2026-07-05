@@ -1210,7 +1210,7 @@ test('staff shell keeps responsive layout classes for dashboard and queue', asyn
   assert.match(html, /xl:grid-cols-5/);
   assert.match(html, /md:grid-cols-5/);
   assert.match(html, /overflow-x-auto/);
-  assert.match(html, /min-w-\[58rem\]/);
+  assert.match(html, /min-width:58rem/);
 });
 
 test('English and Arabic render dashboard and queue labels together', async () => {

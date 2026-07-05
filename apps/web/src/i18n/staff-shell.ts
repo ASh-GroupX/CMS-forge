@@ -62,7 +62,8 @@ export const staffShellText = {
         search: 'Search',
         all: 'All',
       },
-      headers: ['Reference', 'Status', 'Severity', 'Owner', 'Branch', 'SLA state', 'Updated', 'Next action'],
+      headers: ['Reference', 'Status', 'Severity', 'Owner', 'Branch', 'SLA state', 'Age', 'Next action'],
+      labels: { updated: 'Updated', age: 'Age' },
       states: {
         loading: 'Loading cases.',
         empty: 'No cases match the current filters.',
@@ -197,7 +198,8 @@ export const staffShellText = {
         search: 'بحث',
         all: 'الكل',
       },
-      headers: ['المرجع', 'الحالة', 'الخطورة', 'المالك', 'الفرع', 'حالة SLA', 'آخر تحديث', 'الإجراء التالي'],
+      headers: ['المرجع', 'الحالة', 'الخطورة', 'المالك', 'الفرع', 'حالة SLA', 'العمر', 'الإجراء التالي'],
+      labels: { updated: 'آخر تحديث', age: 'العمر' },
       states: {
         loading: 'جاري تحميل الحالات.',
         empty: 'لا توجد حالات تطابق المرشحات الحالية.',

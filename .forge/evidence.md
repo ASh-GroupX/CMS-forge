@@ -12550,6 +12550,53 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 
 ---
 
+## UI/UX Redesign - Slice 3 Staff Dashboard and Work Queue
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`
+
+### Scope
+
+- Reworked the staff dashboard into a compact accountability summary with active workload as the primary metric and supporting overdue, warning, closed, and TAT metrics grouped beside it.
+- Reworked the work queue to keep status, severity, SLA, owner, branch, age, and next action visible in the desktop table and mobile cards.
+- Reused Slice 2 primitives for state messaging, filters, fields, tables, and badges instead of adding new wrappers or UI dependencies.
+- Kept queue filters URL-backed and preserved the existing scoped staff search API behavior.
+- Moved touched dashboard and queue surfaces further onto semantic tokens and dictionary-backed EN/AR copy.
+- Updated visual proof expectations and visual-review proof fixtures to match the Slice 3 layout and `/complaints/search` scoped queue endpoint.
+
+### Security Self-Check
+
+- No backend API, RBAC, branch scope, audit, workflow state machine, reports, notifications, or portal verification behavior changed.
+- React still does not decide complaint state, role, branch scope, workflow authority, audit visibility, portal verification, or SLA truth.
+- Work queue actions remain links to scoped complaint detail routes; no empty `href`, browser storage, direct provider calls, or client-side authority was added.
+- No passwords, OTPs, tokens, provider secrets, staff PII, internal comments, audit logs, DMS codes, or portal-only data were added to dashboard or queue artifacts.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Visual Review
+
+- Sampled generated PNGs for EN dashboard, AR dashboard, EN work queue, and AR work queue.
+- Dashboard rendered the intended primary/supporting accountability hierarchy without blank output, overlap, or clipped Arabic text.
+- Work queue artifacts rendered the proof row through `/complaints/search`; status, severity, SLA, owner, branch, age, and next action were visible in EN and AR.
+
+### Notes
+
+- The `redesign` and `design-qa` skill workflow files remain missing locally; repo proof scripts were used as the design QA source.
+- The `ui-ux-pro-max` design-system query was refreshed for regulated operational SaaS dashboard/work queue density, but the Precision Ops packet and semantic tokens remained the source of truth.
+- Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.
+
+---
+
 ## UI/UX Redesign - Slice 2 Shared UI Primitives
 
 Status: Complete

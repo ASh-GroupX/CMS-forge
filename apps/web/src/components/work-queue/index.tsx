@@ -4,7 +4,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { DataTable, Field, FilterBar, StatusBadge as SharedStatusBadge, type PrimitiveTone } from '../shared/ui-primitives';
+import { DataTable, Field, FilterBar, StateBlock, StatusBadge as SharedStatusBadge, type PrimitiveTone } from '../shared/ui-primitives';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import type { ComplaintQueueItem, ComplaintSeverity, ComplaintStatus } from '../../lib/staff-complaints-api';
 import type { StaffQueueQuery, StaffQueueResult } from '../../lib/staff-queue-api';
@@ -28,13 +28,13 @@ export function WorkQueue({
   const filters = filterOptions(queueRows ?? [], t, query);
 
   return (
-    <Card className="rounded-md border-slate-200 bg-white shadow-sm" aria-label={t.title}>
-      <CardHeader className="border-b border-slate-200 p-4">
+    <Card className="rounded-md border-line-subtle bg-surface shadow-sm" aria-label={t.title}>
+      <CardHeader className="border-b border-line-subtle p-4">
         <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
-        <p className="text-sm text-slate-600">{t.status}</p>
+        <p className="text-sm text-content-muted">{t.status}</p>
       </CardHeader>
       <CardContent className="p-0">
-        <FilterBar action="/complaints">
+        <FilterBar action="/complaints" className="md:grid-cols-6">
           <input name="locale" type="hidden" value={locale} />
           {(['status', 'branch', 'severity', 'sla'] as const).map((key) => (
             <Field id={`work-queue-${key}`} key={key} label={t.filters[key]}>
@@ -59,22 +59,18 @@ export function WorkQueue({
           </div>
         </FilterBar>
         {isError ? (
-          <p className="p-4 text-sm text-slate-600" role="alert">
-            {t.states.error}
-          </p>
+          <StateBlock className="m-4" message={t.states.error} tone="error" />
         ) : isEmpty ? (
-          <p className="p-4 text-sm text-slate-600" role="status">
-            {t.states.empty}
-          </p>
+          <StateBlock className="m-4" message={t.states.empty} />
         ) : (
           <>
           <div className="grid gap-3 p-4 md:hidden">
             {queueRows.map((row) => (
-              <article className="grid gap-3 rounded-md border border-slate-200 p-3" key={row.id}>
+              <article className="grid gap-3 rounded-md border border-line-subtle bg-surface p-3" key={row.id}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <span className="block truncate font-medium text-slate-900">{row.referenceNumber}</span>
-                    <span className="block text-sm text-slate-600">{row.subject}</span>
+                    <span className="block truncate font-medium text-content-strong">{row.referenceNumber}</span>
+                    <span className="block text-sm text-content-muted">{row.subject}</span>
                   </div>
                   <a
                     className="shrink-0 rounded-sm text-sm font-medium text-brand hover:underline focus:outline-none focus:ring-2 focus:ring-brand"
@@ -88,17 +84,21 @@ export function WorkQueue({
                   <SeverityBadge severity={row.severity} />
                   <SharedStatusBadge>{t.sla.backendScoped}</SharedStatusBadge>
                 </div>
-                <dl className="grid grid-cols-2 gap-2 text-sm text-slate-600">
+                <dl className="grid grid-cols-2 gap-2 text-sm text-content-muted">
                   <div>
-                    <dt className="font-medium text-slate-700">{t.headers[3]}</dt>
+                    <dt className="font-medium text-content-strong">{t.headers[3]}</dt>
                     <dd>{row.ownerName ?? t.unassigned}</dd>
                   </div>
                   <div>
-                    <dt className="font-medium text-slate-700">{t.headers[4]}</dt>
+                    <dt className="font-medium text-content-strong">{t.headers[4]}</dt>
                     <dd>{row.branchName ?? row.branchId}</dd>
                   </div>
-                  <div className="col-span-2">
-                    <dt className="font-medium text-slate-700">{t.headers[6]}</dt>
+                  <div>
+                    <dt className="font-medium text-content-strong">{t.labels.age}</dt>
+                    <dd>{formatAge(row.updatedAt, locale)}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium text-content-strong">{t.labels.updated}</dt>
                     <dd>{formatDate(row.updatedAt, locale)}</dd>
                   </div>
                 </dl>
@@ -107,30 +107,30 @@ export function WorkQueue({
           </div>
           <DataTable headers={t.headers} minWidth="58rem">
                 {queueRows.map((row) => (
-                  <TableRow key={row.id} className="hover:bg-slate-50">
-                    <TableCell className="py-2.5 font-medium text-slate-900">
+                  <TableRow key={row.id} className="hover:bg-surface-raised">
+                    <TableCell className="py-2 font-medium text-content-strong">
                       <span className="block">{row.referenceNumber}</span>
-                      <span className="block text-xs font-normal text-slate-600">{row.subject}</span>
+                      <span className="block text-xs font-normal text-content-muted">{row.subject}</span>
                     </TableCell>
-                    <TableCell className="py-2.5">
+                    <TableCell className="py-2">
                       <StatusBadge status={row.status} />
                     </TableCell>
-                    <TableCell className="py-2.5">
+                    <TableCell className="py-2">
                       <SeverityBadge severity={row.severity} />
                     </TableCell>
-                    <TableCell className="py-2.5">{row.ownerName ?? t.unassigned}</TableCell>
-                    <TableCell className="py-2.5">{row.branchName ?? row.branchId}</TableCell>
-                    <TableCell className="py-2.5">
+                    <TableCell className="py-2">{row.ownerName ?? t.unassigned}</TableCell>
+                    <TableCell className="py-2">{row.branchName ?? row.branchId}</TableCell>
+                    <TableCell className="py-2">
                       <SharedStatusBadge>{t.sla.backendScoped}</SharedStatusBadge>
                     </TableCell>
-                    <TableCell className="py-2.5">{formatDate(row.updatedAt, locale)}</TableCell>
-                    <TableCell className="py-2.5">
-                      <a
-                        className="rounded-sm text-sm font-medium text-brand hover:underline focus:outline-none focus:ring-2 focus:ring-brand"
-                        href={caseHref(locale, row.id)}
-                      >
-                        {t.actions.open}
-                      </a>
+                    <TableCell className="py-2">
+                      <span className="block font-medium">{formatAge(row.updatedAt, locale)}</span>
+                      <span className="block text-xs text-content-muted">{formatDate(row.updatedAt, locale)}</span>
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <Button asChild size="sm" variant="outline">
+                        <a href={caseHref(locale, row.id)}>{t.actions.open}</a>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -138,7 +138,7 @@ export function WorkQueue({
           </>
         )}
       </CardContent>
-      <CardFooter className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm text-slate-600">
+      <CardFooter className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm text-content-muted">
         <span>{t.pagination.page} {page}</span>
         <div className="flex gap-2">
           {page > 1 ? (
@@ -201,6 +201,13 @@ function caseHref(locale: Locale, id: string): string {
 function formatDate(value: string, locale: Locale): string {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-US', { dateStyle: 'medium', timeZone: 'UTC' }).format(date);
+}
+
+function formatAge(value: string, locale: Locale): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const days = Math.max(0, Math.floor((Date.now() - date.getTime()) / 86_400_000));
+  return new Intl.NumberFormat(locale === 'ar' ? 'ar-EG' : 'en-US').format(days) + (locale === 'ar' ? ' يوم' : 'd');
 }
 
 function append(params: URLSearchParams, key: string, value: string | null | undefined): void {
