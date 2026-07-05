@@ -1,8 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { AttachmentDropzone, StateBlock, StatusBadge } from '../shared/ui-primitives';
 import { attachmentText } from '../../i18n/staff-attachments';
 import { confirmationText } from '../../i18n/staff-confirmations';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
@@ -28,27 +27,15 @@ export function AttachmentUploadPanel({
         <p className="text-sm text-slate-600">{t.subtitle}</p>
       </CardHeader>
       <CardContent className="grid gap-3 p-4 md:grid-cols-2">
-        <div className="grid gap-1">
-          <Label htmlFor="attachment-file">{t.chooseFile}</Label>
-          <Input id="attachment-file" type="file" />
-        </div>
+        <AttachmentDropzone id="attachment-file" label={t.chooseFile} rules={t.fileRules} />
         <section aria-label={t.selectedFile} className="rounded-md border border-slate-200 bg-slate-50 p-3">
           <h3 className="text-sm font-semibold">{t.selectedFile}</h3>
           {state === 'loading' || state === 'empty' || state === 'error' ? (
-            <p className="mt-2 text-sm text-slate-600" role={state === 'error' ? 'alert' : 'status'}>
-              {t.states[state]}
-            </p>
+            <StateBlock className="mt-2" message={t.states[state]} tone={state === 'error' ? 'error' : 'neutral'} />
           ) : (
-            <p className="mt-2 inline-flex rounded-sm bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
-              {t.scan[scanState]}
-            </p>
+            <div className="mt-2"><StatusBadge tone={scanState === 'rejected' ? 'danger' : scanState === 'clean' ? 'success' : 'warning'}>{t.scan[scanState]}</StatusBadge></div>
           )}
         </section>
-        <ul className="grid gap-1 text-sm text-slate-600 md:col-span-2">
-          {t.fileRules.map((rule) => (
-            <li key={rule}>{rule}</li>
-          ))}
-        </ul>
         {state === 'rejected' ? (
           <section
             aria-label={confirm.title}

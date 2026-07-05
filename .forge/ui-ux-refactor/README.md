@@ -100,7 +100,7 @@ Acceptance:
 
 ## Slice 2 - Shared UI Primitives
 
-Status: Ready in `.forge/next.md`
+Status: Complete
 
 Build the smallest useful shared primitives:
 
@@ -123,7 +123,7 @@ Rules:
 
 ## Slice 3 - Staff Dashboard and Work Queue
 
-Status: Pending
+Status: Ready in `.forge/next.md`
 
 Purpose:
 

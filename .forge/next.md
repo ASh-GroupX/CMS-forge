@@ -1,4 +1,4 @@
-# UI/UX Refactor - Slice 2 Shared UI Primitives
+# UI/UX Refactor - Slice 3 Staff Dashboard and Work Queue
 
 Status: Ready
 Required model tier: GPT-5.5 Extra High
@@ -9,22 +9,23 @@ Skills: `ui-ux-pro-max`, `redesign`, `design-qa`, `design-taste-frontend` suppor
 
 ## Task
 
-Continue the CMS-Auto UI/UX refactor after the shared staff and portal shell
-slice. Build the smallest useful shared UI primitives that current screens can
-consume without a whole-app rewrite.
+Continue the CMS-Auto UI/UX refactor after the shared primitive slice. Make the
+staff dashboard and work queue the primary operational accountability surfaces
+without changing backend authority, route contracts, RBAC, branch scope, audit,
+or portal behavior.
 
 ## Scope
 
-- Add or consolidate shared primitives only where the current screens need them:
-  `PageHeader`, `StateBlock`, `Field`, `ActionDialog`, `FilterBar`,
-  `DataTable`, `StatusBadge`, `MetricStrip`, `Timeline`, and
-  `AttachmentDropzone`.
-- Use existing shadcn/Radix/Lucide/Tailwind primitives and semantic tokens.
-- Add only the props required by current migrated screens; no speculative
-  component APIs.
+- Make the work queue the primary operational surface for repeated staff work.
+- Redesign the dashboard as a compact accountability summary, not an equal-weight
+  decorative KPI grid.
+- Keep these work queue signals visually prominent:
+  SLA, severity, owner, branch, next action, age, and status.
+- Use the shared primitives from Slice 2 where they fit; do not add broad new
+  APIs or duplicate local badge/table/state wrappers.
+- Keep filters URL-backed and preserve existing scoped API query behavior.
+- Use semantic tokens and shrink raw color utility usage where touched.
 - Keep UI copy in dictionaries and preserve Arabic RTL plus English LTR.
-- Preserve backend authority, route contracts, RBAC, branch scope, audit,
-  portal privacy, and OpenAPI behavior.
 
 ## Proof
 
@@ -40,9 +41,10 @@ consume without a whole-app rewrite.
 
 ## Stop When
 
-- Shared primitives exist only where they remove real duplication for upcoming
-  screen migrations.
+- Dashboard and work queue use the shared primitives where useful and remain
+  dense, scannable, and operational.
+- Queue filters remain URL-backed and backend-scoped.
+- Status/severity/SLA indicators use text plus token-backed non-color cues.
 - No production route behavior, backend authority, workflow authority, RBAC,
   branch scope, audit, or portal privacy rule changes.
 - No new UI dependency is introduced.
-- The off-token color ratchet does not increase beyond the current baseline.

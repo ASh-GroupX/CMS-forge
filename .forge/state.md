@@ -1,8 +1,8 @@
 # Current State
 
-Status: UI/UX redesign Slice 1B complete; Slice 2 ready
+Status: UI/UX redesign Slice 2 complete; Slice 3 ready
 Phase: ui-ux-redesign
-Next Task: Slice 2 - Shared UI primitives
+Next Task: Slice 3 - Staff Dashboard and Work Queue
 Model Tier: GPT-5.5 Extra High
 
 ## How to use this file
@@ -16,16 +16,18 @@ Prior state history is in .forge/archive/state-archive.md.
 - The old Business Readiness Slice 11 compensation task remains blocked and is now carry-forward debt, not the active Forge task.
 - The full UI/UX refactor packet is stored in `.forge/ui-ux-refactor/README.md`; `.forge/ui-ux-refactor-roadmap.md` is only a compatibility pointer.
 - UI/UX refactor Slice 0 established the browser proof harness and Precision Ops token spine.
-- UI/UX refactor Slice 1B completed shared shell primitives for staff and portal routes.
-- Staff shell now has skip link, compact topbar/sidebar, active route helper coverage, role-aware navigation, server-session authority, and focus-visible keyboard path.
-- Portal shell now has localized navigation, language switch, skip link, trust/privacy footer, mobile-first touch targets, and semantic shell tokens.
+- UI/UX refactor Slice 1B completed shared staff and portal shell primitives.
+- UI/UX refactor Slice 2 completed shared UI primitives and wired them into current duplicated screen patterns.
+- Shared primitives now include `PageHeader`, `StateBlock`, `Field`, `ActionDialog`, `FilterBar`, `DataTable`, `StatusBadge`, `MetricStrip`, `Timeline`, and `AttachmentDropzone`.
+- Current consumers include dashboard metrics/states, work queue filters/table/badges, intake attachment upload, and admin active/status/form fields.
+- The inline workflow action panel no longer uses fake modal semantics, and conflict recovery links are real complaint-detail links instead of empty `href` values.
 - `web:visual-review` writes English and Arabic HTML plus PNG artifacts for the covered staff and portal surfaces under `coverage/web-visual-review`.
 - Lint retains the frontend raw color utility ratchet for `apps/web/src/app` and `apps/web/src/components`; current baseline is 455 matches.
-- Proof passed for Slice 1B: `typecheck`, `lint`, `test:web -- shell`, `test:web -- localization`, `test:visual`, `web:visual-review`, `test:e2e -- accessibility`, `web:perf`, and `git diff --check`.
+- Proof passed for Slice 2: `typecheck`, `lint`, `test:web -- shell`, `test:web -- localization`, `test:visual`, `web:visual-review`, `test:e2e -- accessibility`, `web:perf`, and `git diff --check`.
 
 ## Current Stop
 
-Proceed with Slice 2 only: shared UI primitives.
+Proceed with Slice 3 only: staff dashboard and work queue.
 
 ## Open Carry-Forward / Known Debt
 

@@ -12547,3 +12547,49 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 - The `redesign` and `design-qa` skills reference workflow files that are not present in the installed skill folders; local repo proof scripts were used as the design QA source.
 - The `ui-ux-pro-max` design-system query was run for a regulated operational SaaS dashboard, but the repo's Precision Ops packet and semantic tokens remained the source of truth.
 - Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.
+
+---
+
+## UI/UX Redesign - Slice 2 Shared UI Primitives
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`
+
+### Scope
+
+- Added small shared UI wrappers for `PageHeader`, `StateBlock`, `Field`, `FilterBar`, `DataTable`, `StatusBadge`, `MetricStrip`, `Timeline`, `AttachmentDropzone`, and a client-only `ActionDialog`.
+- Reused the wrappers in current screens where they removed real duplication: dashboard metrics/states, work queue filters/table/badges, intake attachment upload, and admin active/status/form fields.
+- Preserved URL-backed queue filters, typed API usage, server-session authority, branch scope, RBAC, audit boundaries, portal privacy, and OpenAPI route behavior.
+- Removed the fake `role="dialog"` from the inline workflow action panel and replaced empty conflict-recovery links with localized complaint-detail links.
+- Updated browser proof cases from "workflow dialog" to "workflow action panel" semantics.
+
+### Security Self-Check
+
+- No backend API, RBAC, branch scope, audit, workflow state machine, attachment authorization, reports, notifications, or portal verification behavior changed.
+- React still renders available workflow actions from backend/API data and submits through the existing staff transition helper; it does not decide complaint state or authority.
+- Conflict recovery links reload the complaint detail route without adding browser storage, direct provider calls, or client-side authority.
+- No passwords, OTPs, tokens, provider secrets, staff PII, internal comments, audit logs, or DMS codes were added to shared primitives or browser artifacts.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Visual Review
+
+- Sampled generated PNGs for EN work queue, EN workflow action panel, EN complaint create, AR admin surfaces, and EN dashboard after the contrast fix.
+- No blank output, page-level horizontal overflow, obvious overlap, clipped Arabic text, or modal/focus semantic mismatch was visible in the sampled artifacts.
+- Axe initially caught a dashboard contrast regression in shared metric helper text; `MetricStrip` now uses the stronger muted text token and the final accessibility pass passed.
+
+### Notes
+
+- The `redesign` and `design-qa` skill workflow files remain missing locally; repo proof scripts were used as the design QA source.
+- The `ui-ux-pro-max` design-system query was refreshed for regulated operational SaaS shared primitives, but the Precision Ops packet and semantic tokens remained the source of truth.
+- Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.

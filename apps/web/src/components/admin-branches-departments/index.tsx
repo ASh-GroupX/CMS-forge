@@ -1,8 +1,8 @@
 import React from 'react';
-import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { StatusBadge } from '../shared/ui-primitives';
 import { adminBranchesText } from '../../i18n/staff-admin-branches';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 
@@ -82,9 +82,7 @@ function AdminTable({
               <TableCell className="font-semibold">{code}</TableCell>
               <TableCell>{name}</TableCell>
               <TableCell>
-                <Badge className="shadow-none" variant={status === 'active' ? 'secondary' : 'outline'}>
-                  {t.badges[status]}
-                </Badge>
+                <StatusBadge tone={status === 'active' ? 'success' : 'neutral'}>{t.badges[status]}</StatusBadge>
               </TableCell>
               <TableCell>
                 <div className="flex gap-2">

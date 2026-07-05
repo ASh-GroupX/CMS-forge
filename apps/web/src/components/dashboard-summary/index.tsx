@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { MetricStrip, StateBlock, type PrimitiveTone } from '../shared/ui-primitives';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import type { StaffDashboardSummary } from '../../lib/staff-dashboard-api';
 
@@ -8,12 +9,12 @@ type SummaryKey = 'open' | 'overdue' | 'warnings' | 'closed' | 'averageTat';
 
 const SUMMARY_KEYS: readonly SummaryKey[] = ['open', 'overdue', 'warnings', 'closed', 'averageTat'];
 
-const VALUE_CLASS: Record<SummaryKey, string> = {
-  open: 'text-slate-900',
-  overdue: 'text-status-error',
-  warnings: 'text-status-warning',
-  closed: 'text-slate-900',
-  averageTat: 'text-brand',
+const VALUE_TONE: Record<SummaryKey, PrimitiveTone | undefined> = {
+  open: undefined,
+  overdue: 'danger',
+  warnings: 'warning',
+  closed: undefined,
+  averageTat: 'brand',
 };
 
 export function DashboardSummary({
@@ -33,26 +34,20 @@ export function DashboardSummary({
       <CardHeader className="border-b border-slate-200 p-4">
         <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
         {data === null ? (
-          <p className="text-sm text-slate-600" role="alert">
-            {t.states.error}
-          </p>
+          <StateBlock className="mt-2" message={t.states.error} tone="error" />
         ) : isEmpty ? (
-          <p className="text-sm text-slate-600" role="status">
-            {t.states.empty}
-          </p>
+          <StateBlock className="mt-2" message={t.states.empty} />
         ) : null}
       </CardHeader>
-      <CardContent className="grid gap-3 p-4 md:grid-cols-3 xl:grid-cols-5">
-        {values ? SUMMARY_KEYS.map((key) => {
-          const [label, description] = t.cards[key];
-          return (
-            <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm" key={key}>
-              <p className="text-sm font-medium text-slate-600">{label}</p>
-              <p className={`mt-2 text-3xl font-semibold tracking-normal ${VALUE_CLASS[key]}`}>{values[key]}</p>
-              <p className="mt-1 text-xs text-slate-500">{description}</p>
-            </div>
-          );
-        }) : null}
+      <CardContent className="p-4">
+        {values ? (
+          <MetricStrip
+            items={SUMMARY_KEYS.map((key) => {
+              const [label, description] = t.cards[key];
+              return { description, label, tone: VALUE_TONE[key], value: values[key] };
+            })}
+          />
+        ) : null}
       </CardContent>
     </Card>
   );

@@ -106,7 +106,7 @@ export function ProvenanceCorrectionPanel({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button disabled={state === 'loading'} type="submit">{state === 'loading' ? text.states.loading : text.actions.save}</Button>
-          {state === 'conflict' ? <Button asChild type="button" variant="outline"><a href="">{text.actions.reload}</a></Button> : null}
+          {state === 'conflict' ? <Button asChild type="button" variant="outline"><a href={`/complaints/${encodeURIComponent(detail.id)}?locale=${locale}`}>{text.actions.reload}</a></Button> : null}
         </div>
         {state === 'idle' ? <p className="text-sm text-muted-foreground" role="status">{message}</p> : null}
         {state !== 'idle' ? <p className={state === 'success' || state === 'loading' ? 'text-sm text-muted-foreground' : 'text-sm text-destructive'} role={state === 'success' || state === 'loading' ? 'status' : 'alert'}>{message}</p> : null}

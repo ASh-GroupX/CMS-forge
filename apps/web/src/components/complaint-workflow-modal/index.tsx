@@ -84,7 +84,7 @@ export function ComplaintWorkflowModal({
   }
 
   return (
-    <section className="min-w-0 rounded-md border border-slate-200 bg-slate-50 p-3 xl:col-span-2" role="dialog" aria-label={t.sections.workflow}>
+    <section className="min-w-0 rounded-md border border-slate-200 bg-slate-50 p-3 xl:col-span-2" aria-label={t.sections.workflow}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold">{t.sections.workflow}</h3>
@@ -94,7 +94,7 @@ export function ComplaintWorkflowModal({
       {message ? <p className="mt-3 break-words rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700" role={visibleState === 'success' || visibleState === 'loading' ? 'status' : 'alert'}>{message}</p> : null}
       {visibleState === 'conflict' ? (
         <div className="mt-3 flex flex-wrap gap-2">
-          <Button asChild type="button" variant="outline"><a href="">{t.workflow.reload}</a></Button>
+          <Button asChild type="button" variant="outline"><a href={complaintHref(complaintId, locale)}>{t.workflow.reload}</a></Button>
           <Button type="button" variant="outline" onClick={() => setSubmitState(undefined)}>{t.workflow.retry}</Button>
         </div>
       ) : null}
@@ -192,4 +192,8 @@ function fieldText(form: FormData, field: TransitionField): string {
 
 function actionLabel(action: ComplaintTransitionAction, labels: Partial<Record<ComplaintTransitionAction, string>>): string {
   return labels[action] ?? action;
+}
+
+function complaintHref(complaintId: string | undefined, locale: Locale): string {
+  return complaintId ? `/complaints/${encodeURIComponent(complaintId)}?locale=${locale}` : `?locale=${locale}`;
 }

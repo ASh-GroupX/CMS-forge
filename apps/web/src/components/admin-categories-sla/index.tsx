@@ -1,10 +1,10 @@
 import React from 'react';
-import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Field, StatusBadge } from '../shared/ui-primitives';
 import { adminCategoriesSlaText } from '../../i18n/staff-admin-categories-sla';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import type { AdminCategory, AdminCategorySlaConfig, AdminSlaPolicy } from '../../lib/staff-admin-category-sla-api';
@@ -104,9 +104,9 @@ function CategoryForm({ action, compact = false, item, locale, rows }: { action:
       <input name="id" type="hidden" value={item?.id ?? ''} />
       <input name="locale" type="hidden" value={locale} />
       <input name="returnTo" type="hidden" value="/admin/categories" />
-      <Field label={t.fields.code} name="code" value={item?.code} />
-      <Field label={t.fields.nameEn} name="nameEn" value={item?.nameEn} />
-      <Field label={t.fields.nameAr} name="nameAr" value={item?.nameAr} />
+      <TextField label={t.fields.code} name="code" value={item?.code} />
+      <TextField label={t.fields.nameEn} name="nameEn" value={item?.nameEn} />
+      <TextField label={t.fields.nameAr} name="nameAr" value={item?.nameAr} />
       <label className="grid gap-1 text-sm font-medium">
         {t.fields.parent}
         <select className="rounded-md border border-slate-300 bg-white px-3 py-2" defaultValue={item?.parentId ?? ''} name="parentId">
@@ -176,7 +176,7 @@ function SlaForm({ action, locale, policy }: { action: AdminAction; locale: Loca
       <input name="locale" type="hidden" value={locale} />
       <NumberField label={t.fields.durationMinutes} name="durationMinutes" value={policy.durationMinutes} />
       <NumberField label={t.fields.warningPercent} name="warningPercent" value={policy.warningPercent} />
-      <Field label={t.fields.timezone} name="branchTimezone" value={policy.branchTimezone} />
+      <TextField label={t.fields.timezone} name="branchTimezone" value={policy.branchTimezone} />
       <label className="grid gap-1 text-sm font-medium">
         {t.fields.calendar}
         <select className="rounded-md border border-slate-300 bg-white px-3 py-2" defaultValue={policy.workingCalendarMode} name="workingCalendarMode">
@@ -184,26 +184,22 @@ function SlaForm({ action, locale, policy }: { action: AdminAction; locale: Loca
           <option value="CALENDAR_HOURS">{t.modes.CALENDAR_HOURS}</option>
         </select>
       </label>
-      <Field label={t.fields.escalationLevel1} name="escalationLevel1" value={policy.escalationLevel1} />
-      <Field label={t.fields.escalationLevel2} name="escalationLevel2" value={policy.escalationLevel2 ?? ''} />
+      <TextField label={t.fields.escalationLevel1} name="escalationLevel1" value={policy.escalationLevel1} />
+      <TextField label={t.fields.escalationLevel2} name="escalationLevel2" value={policy.escalationLevel2 ?? ''} />
       <NumberField label={t.fields.escalationLevel2AfterBreachMinutes} name="escalationLevel2AfterBreachMinutes" value={policy.escalationLevel2AfterBreachMinutes ?? ''} />
-      <Field label={t.fields.escalationLevel3} name="escalationLevel3" value={policy.escalationLevel3 ?? ''} />
+      <TextField label={t.fields.escalationLevel3} name="escalationLevel3" value={policy.escalationLevel3 ?? ''} />
       <NumberField label={t.fields.escalationLevel3AfterBreachMinutes} name="escalationLevel3AfterBreachMinutes" value={policy.escalationLevel3AfterBreachMinutes ?? ''} />
       <Button className="self-end" size="sm" type="submit" variant="outline">{t.actions.edit}</Button>
     </form>
   );
 }
 
-function Field({ label, name, value = '' }: { label: string; name: string; value?: string | number | undefined }) {
+function TextField({ label, name, value = '' }: { label: string; name: string; value?: string | number | undefined }) {
   const id = `${name}-${String(value || 'new').replace(/\W+/g, '-')}`;
-  return <div className="grid gap-1"><Label htmlFor={id}>{label}</Label><Input defaultValue={value} id={id} name={name} /></div>;
+  return <Field id={id} label={label}><Input defaultValue={value} id={id} name={name} /></Field>;
 }
 
 function NumberField({ label, name, value }: { label: string; name: string; value: number | '' }) {
   const id = `${name}-${String(value || 'blank')}`;
-  return <div className="grid gap-1"><Label htmlFor={id}>{label}</Label><Input defaultValue={value} id={id} min={1} name={name} type="number" /></div>;
-}
-
-function StatusBadge({ children }: { children: React.ReactNode }) {
-  return <Badge className="shadow-none" variant="secondary">{children}</Badge>;
+  return <Field id={id} label={label}><Input defaultValue={value} id={id} min={1} name={name} type="number" /></Field>;
 }

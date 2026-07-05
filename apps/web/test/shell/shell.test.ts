@@ -59,6 +59,34 @@ import { confidentialCaseText } from '../../src/i18n/staff-confidential-cases';
 import { staffShellText } from '../../src/i18n/staff-shell';
 import { applyDmsMatchToCorrectionFields, type CorrectionFields } from '../../src/components/complaint-detail-workspace/provenance-correction-panel';
 import { isActiveNav } from '../../src/app/app-shell';
+import { AttachmentDropzone, DataTable, Field, FilterBar, MetricStrip, PageHeader, StateBlock, StatusBadge, Timeline } from '../../src/components/shared/ui-primitives';
+import { TableCell, TableRow } from '../../src/components/ui/table';
+
+test('shared UI primitives render accessible operational markup', () => {
+  const html = renderToStaticMarkup(
+    React.createElement('section', null,
+      React.createElement(PageHeader, { title: 'Queue', description: 'Scoped operational work', actions: React.createElement('a', { href: '/complaints' }, 'Open') }),
+      React.createElement(StateBlock, { message: 'Record changed by someone else', tone: 'conflict' }),
+      React.createElement(FilterBar, { action: '/complaints' }, React.createElement(Field, { id: 'shared-search', label: 'Search' }, React.createElement('input', { id: 'shared-search', name: 'search' }))),
+      React.createElement(DataTable, { headers: ['Reference', 'Status'] },
+        React.createElement(TableRow, null,
+          React.createElement(TableCell, null, 'CMP-1'),
+          React.createElement(TableCell, null, React.createElement(StatusBadge, { tone: 'success' }, 'Closed')),
+        ),
+      ),
+      React.createElement(MetricStrip, { items: [{ description: 'Past SLA target', label: 'Overdue', tone: 'danger', value: '2' }] }),
+      React.createElement(Timeline, { emptyText: 'No timeline', items: [{ meta: '2026-06-01', text: 'Submitted' }] }),
+      React.createElement(AttachmentDropzone, { id: 'shared-attachment', label: 'Choose file', rules: ['PDF only'] }),
+    ),
+  );
+
+  assert.match(html, /<h1[^>]*>Queue<\/h1>/);
+  assert.match(html, /role="alert"/);
+  assert.match(html, /action="\/complaints"/);
+  assert.match(html, /<table/);
+  assert.match(html, /Closed/);
+  assert.match(html, /type="file"/);
+});
 
 test('staff shell renders English LTR operational navigation', async () => {
   const html = renderToStaticMarkup(
@@ -1722,7 +1750,7 @@ test('complaint detail workflow modal renders actions and required comment valid
   }
   assert.match(html, /Workflow action/);
   assert.match(html, /Comment or reason is required\./);
-  assert.match(html, /role="dialog"/);
+  assert.match(html, /aria-label="Workflow action"/);
   assert.match(html, /role="alert"/);
 });
 

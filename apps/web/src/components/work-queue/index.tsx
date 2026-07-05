@@ -1,11 +1,10 @@
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { TableCell, TableRow } from '@/components/ui/table';
+import { DataTable, Field, FilterBar, StatusBadge as SharedStatusBadge, type PrimitiveTone } from '../shared/ui-primitives';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import type { ComplaintQueueItem, ComplaintSeverity, ComplaintStatus } from '../../lib/staff-complaints-api';
 import type { StaffQueueQuery, StaffQueueResult } from '../../lib/staff-queue-api';
@@ -35,13 +34,12 @@ export function WorkQueue({
         <p className="text-sm text-slate-600">{t.status}</p>
       </CardHeader>
       <CardContent className="p-0">
-        <form action="/complaints" className="grid gap-2 border-b border-slate-200 p-4 md:grid-cols-6" method="get">
+        <FilterBar action="/complaints">
           <input name="locale" type="hidden" value={locale} />
           {(['status', 'branch', 'severity', 'sla'] as const).map((key) => (
-            <div className="grid gap-1" key={key}>
-              <Label>{t.filters[key]}</Label>
+            <Field id={`work-queue-${key}`} key={key} label={t.filters[key]}>
               <Select defaultValue={filterValue(key, query)} name={key === 'branch' ? 'branchId' : key}>
-                <SelectTrigger aria-label={t.filters[key]}>
+                <SelectTrigger aria-label={t.filters[key]} id={`work-queue-${key}`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -51,16 +49,15 @@ export function WorkQueue({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
           ))}
-          <div className="grid gap-1">
-            <Label htmlFor="work-queue-search">{t.filters.search}</Label>
+          <Field id="work-queue-search" label={t.filters.search}>
             <Input defaultValue={query.search ?? ''} id="work-queue-search" name="search" type="search" />
-          </div>
+          </Field>
           <div className="grid content-end">
             <Button type="submit">{t.actions.apply}</Button>
           </div>
-        </form>
+        </FilterBar>
         {isError ? (
           <p className="p-4 text-sm text-slate-600" role="alert">
             {t.states.error}
@@ -89,9 +86,7 @@ export function WorkQueue({
                 <div className="flex flex-wrap gap-2">
                   <StatusBadge status={row.status} />
                   <SeverityBadge severity={row.severity} />
-                  <Badge className="border-slate-300" variant="outline">
-                    {t.sla.backendScoped}
-                  </Badge>
+                  <SharedStatusBadge>{t.sla.backendScoped}</SharedStatusBadge>
                 </div>
                 <dl className="grid grid-cols-2 gap-2 text-sm text-slate-600">
                   <div>
@@ -110,18 +105,7 @@ export function WorkQueue({
               </article>
             ))}
           </div>
-          <div className="hidden overflow-x-auto md:block">
-            <Table className="min-w-[58rem]">
-              <TableHeader className="bg-slate-50 text-xs font-semibold uppercase tracking-normal text-slate-600">
-                <TableRow>
-                  {t.headers.map((header) => (
-                    <TableHead className="text-start" key={header}>
-                      {header}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+          <DataTable headers={t.headers} minWidth="58rem">
                 {queueRows.map((row) => (
                   <TableRow key={row.id} className="hover:bg-slate-50">
                     <TableCell className="py-2.5 font-medium text-slate-900">
@@ -137,9 +121,7 @@ export function WorkQueue({
                     <TableCell className="py-2.5">{row.ownerName ?? t.unassigned}</TableCell>
                     <TableCell className="py-2.5">{row.branchName ?? row.branchId}</TableCell>
                     <TableCell className="py-2.5">
-                      <Badge className="border-slate-300" variant="outline">
-                        {t.sla.backendScoped}
-                      </Badge>
+                      <SharedStatusBadge>{t.sla.backendScoped}</SharedStatusBadge>
                     </TableCell>
                     <TableCell className="py-2.5">{formatDate(row.updatedAt, locale)}</TableCell>
                     <TableCell className="py-2.5">
@@ -152,9 +134,7 @@ export function WorkQueue({
                     </TableCell>
                   </TableRow>
                 ))}
-              </TableBody>
-            </Table>
-          </div>
+          </DataTable>
           </>
         )}
       </CardContent>
@@ -227,36 +207,28 @@ function append(params: URLSearchParams, key: string, value: string | null | und
   if (value?.trim()) params.set(key, value.trim());
 }
 
-const STATUS_CLASS: Partial<Record<ComplaintStatus, string>> = {
-  SUBMITTED: 'border-transparent bg-status-info text-white',
-  IN_PROGRESS: 'border-transparent bg-brand text-brand-foreground',
-  MANAGER_REVIEW: 'border-transparent bg-status-warning text-slate-900',
-  BRANCH_REVIEW: 'border-transparent bg-status-warning text-slate-900',
-  REOPENED: 'border-transparent bg-status-info text-white',
-  RESOLVED: 'border-transparent bg-status-success text-white',
-  CLOSED: 'border-transparent bg-muted text-muted-foreground',
-  REJECTED: 'border-transparent bg-destructive text-destructive-foreground',
+const STATUS_TONE: Partial<Record<ComplaintStatus, PrimitiveTone>> = {
+  SUBMITTED: 'info',
+  IN_PROGRESS: 'brand',
+  MANAGER_REVIEW: 'warning',
+  BRANCH_REVIEW: 'warning',
+  REOPENED: 'info',
+  RESOLVED: 'success',
+  CLOSED: 'neutral',
+  REJECTED: 'danger',
 };
 
-const SEVERITY_CLASS: Record<ComplaintSeverity, string> = {
-  CRITICAL: 'border-transparent bg-destructive text-destructive-foreground',
-  HIGH: 'border-transparent bg-status-error text-white',
-  MEDIUM: 'border-transparent bg-status-warning text-slate-900',
-  LOW: 'border-slate-300',
+const SEVERITY_TONE: Record<ComplaintSeverity, PrimitiveTone> = {
+  CRITICAL: 'danger',
+  HIGH: 'danger',
+  MEDIUM: 'warning',
+  LOW: 'neutral',
 };
 
 function StatusBadge({ status }: { status: ComplaintStatus }) {
-  return (
-    <Badge className={STATUS_CLASS[status] ?? 'border-slate-300'} variant="outline">
-      {status}
-    </Badge>
-  );
+  return <SharedStatusBadge tone={STATUS_TONE[status] ?? 'neutral'}>{status}</SharedStatusBadge>;
 }
 
 function SeverityBadge({ severity }: { severity: ComplaintSeverity }) {
-  return (
-    <Badge className={SEVERITY_CLASS[severity]} variant="outline">
-      {severity}
-    </Badge>
-  );
+  return <SharedStatusBadge tone={SEVERITY_TONE[severity]}>{severity}</SharedStatusBadge>;
 }
