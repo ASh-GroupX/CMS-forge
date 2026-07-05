@@ -90,7 +90,7 @@ export function AppShell({
           </nav>
           {sidebarAfter}
         </aside>
-        <section className="order-1 grid content-start gap-4 lg:order-2" id="staff-main">{children}</section>
+        <section className="order-1 grid min-w-0 content-start gap-4 lg:order-2" id="staff-main">{children}</section>
       </div>
     </main>
   );

@@ -1,36 +1,30 @@
-# UI/UX Refactor - Slice 9 Final Visual QA Gate
+# UI/UX Refactor - Phase Review Ready
 
-Status: Ready
-Required model tier: GPT-5.5 Extra High
+Status: Complete
+Required model tier: GPT-5.5 Extra High or Opus 4.8 Max
 Phase: ui-ux-redesign
 Risk: High
 SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `PORTAL-SEC-001`
-Skills: `ui-ux-pro-max`, `redesign`, `design-qa`, `design-taste-frontend` supporting anti-slop only
 
 ## Task
 
-Complete the final UI/UX visual QA gate for the CMS-Auto refactor. Verify the
-redesigned staff and portal surfaces across English LTR and Arabic RTL, confirm
-keyboard/accessibility/performance proof, and make only narrowly scoped fixes
-needed to satisfy the final gate.
+The CMS-Auto UI/UX refactor slices are complete. The next action is a fresh
+phase review per Forge policy before starting another phase or returning to the
+older carry-forward business blockers.
 
-## Scope
+## Completed Slice Order
 
-- Review English and Arabic screenshots for every redesigned screen covered by
-  the proof harness.
-- Check applicable viewport sizes: 390px, 430px, 768px, 1024px, 1280px, and
-  1440px where the harness or manual browser checks expose them.
-- Verify keyboard-only paths through navigation, filters, forms, workflow
-  actions, portal verification, portal submit, and portal tracking.
-- Confirm axe serious/critical violations remain at zero.
-- Confirm no page-level horizontal overflow, clipped Arabic text, incoherent
-  overlap, production `PreviewState`, fake modal semantics, empty `href`, or new
-  hardcoded user-facing English outside dictionaries.
-- Preserve backend authority, route behavior, OpenAPI contracts, RBAC, branch
-  scope, audit, reports, notifications, attachments, portal privacy, Arabic RTL,
-  and English LTR.
+1. Slice 1B - Shared Shell Primitives
+2. Slice 2 - Shared UI Primitives
+3. Slice 3 - Staff Dashboard and Work Queue
+4. Slice 4 - Complaint Create, Lookup, and Attachments
+5. Slice 5 - Complaint Detail and Workflow
+6. Slice 6 - Admin, Reports, Audit, and Notifications
+7. Slice 7 - Customer Portal
+8. Slice 8 - Cleanup and Hardening
+9. Slice 9 - Final Visual QA Gate
 
-## Proof
+## Final Proof
 
 - `corepack pnpm typecheck`
 - `corepack pnpm lint`
@@ -42,14 +36,8 @@ needed to satisfy the final gate.
 - `corepack pnpm web:perf`
 - `git diff --check`
 
-## Stop When
+## Notes
 
-- Final visual QA evidence covers every redesigned proof surface in English and
-  Arabic.
-- Browser-backed visual, axe, keyboard, localization, and perf proof passes.
-- No production `PreviewState`, fake modal semantics, or empty `href` remains.
-- No new hardcoded user-facing English outside dictionaries is introduced.
-- No page-level horizontal overflow, clipped Arabic text, or incoherent overlap
-  is visible in reviewed artifacts.
-- All UI/UX refactor slices are marked complete and Forge evidence is complete.
-- No new UI dependency is introduced.
+- Generated visual-review artifacts are under `coverage/web-visual-review`.
+- Existing `.playwright-cli` scratch artifacts remain intentionally unstaged.
+- Carry-forward business blockers remain listed in `.forge/state.md`.

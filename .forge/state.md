@@ -1,9 +1,9 @@
 # Current State
 
-Status: UI/UX redesign Slice 8 complete; Slice 9 ready
+Status: UI/UX redesign slices complete; phase review ready
 Phase: ui-ux-redesign
-Next Task: Slice 9 - Final Visual QA Gate
-Model Tier: GPT-5.5 Extra High
+Next Task: Phase review for completed UI/UX refactor
+Model Tier: GPT-5.5 Extra High or Opus 4.8 Max
 
 ## How to use this file
 
@@ -23,15 +23,16 @@ Prior state history is in .forge/archive/state-archive.md.
 - UI/UX refactor Slice 5 completed complaint detail and workflow as an operational workbench.
 - UI/UX refactor Slice 6 completed admin, reports, audit, and notification surfaces.
 - UI/UX refactor Slice 7 completed customer portal surface hardening for submit, tracking, follow-up, attachments, and survey.
-- UI/UX refactor Slice 8 completed cleanup and hardening.
-- Slice 8 renamed production `*PreviewState` types to `*FixtureState`, leaving existing proof fixture behavior intact while removing production `PreviewState` names.
-- Slice 8 moved migrated admin category/SLA and complaint detail CAPA/correction panels off raw slate/white utilities and tightened the off-token color lint ratchet from 455 to 33 matches.
+- UI/UX refactor Slice 8 completed cleanup and hardening, including production `PreviewState` removal and raw color ratchet reduction.
+- UI/UX refactor Slice 9 completed the final visual QA gate.
+- Slice 9 added responsive containment for staff shell content, work queue, admin, audit, and shared table wrappers so tablet-width tables/forms scroll internally instead of causing page-level overflow.
 - `web:visual-review` writes English and Arabic HTML plus PNG artifacts for the covered staff and portal surfaces under `coverage/web-visual-review`.
-- Proof passed for Slice 8: `typecheck`, `lint`, `test:web -- shell`, `test:web -- localization`, `test:visual`, `web:visual-review`, `test:e2e -- accessibility`, `web:perf`, and `git diff --check`.
+- Final visual QA reviewed 22 generated EN/AR artifacts and ran an additional browser viewport sweep: staff widths 768/1024/1280/1440 and portal widths 390/430/768/1440.
+- Proof passed for Slice 9: `typecheck`, `lint`, `test:web -- shell`, `test:web -- localization`, `test:visual`, `web:visual-review`, `test:e2e -- accessibility`, `web:perf`, and `git diff --check`.
 
 ## Current Stop
 
-Proceed with Slice 9 only: final visual QA gate.
+All UI/UX refactor slices are complete. Per Forge policy, run a fresh phase review before starting another phase.
 
 ## Open Carry-Forward / Known Debt
 

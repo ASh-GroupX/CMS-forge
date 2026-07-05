@@ -28,12 +28,12 @@ export function WorkQueue({
   const filters = filterOptions(queueRows ?? [], t, query);
 
   return (
-    <Card className="rounded-md border-line-subtle bg-surface shadow-sm" aria-label={t.title}>
+    <Card className="w-full min-w-0 max-w-full overflow-hidden rounded-md border-line-subtle bg-surface shadow-sm" aria-label={t.title}>
       <CardHeader className="border-b border-line-subtle p-4">
         <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
         <p className="text-sm text-content-muted">{t.status}</p>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent className="min-w-0 p-0">
         <FilterBar action="/complaints" className="md:grid-cols-6">
           <input name="locale" type="hidden" value={locale} />
           {(['status', 'branch', 'severity', 'sla'] as const).map((key) => (

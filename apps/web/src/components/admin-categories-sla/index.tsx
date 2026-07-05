@@ -34,7 +34,7 @@ export function AdminCategoriesSla({
   const visibleState = state ?? (config && categories.length === 0 && policies.length === 0 ? 'empty' : undefined);
 
   return (
-    <Card aria-label={t.title} className="rounded-md border-border-subtle bg-surface-card shadow-sm" dir={shell.dir}>
+    <Card aria-label={t.title} className="min-w-0 rounded-md border-border-subtle bg-surface-card shadow-sm" dir={shell.dir}>
       <CardHeader className="border-b border-border-subtle p-4">
         <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
         <CardDescription className="mt-1 text-sm text-content-muted">{t.subtitle}</CardDescription>

@@ -30,7 +30,7 @@ export function AdminUsersRoles({
   const users = data?.users ?? [];
 
   return (
-    <Card aria-label={t.title} className="rounded-md shadow-sm" dir={shell.dir}>
+    <Card aria-label={t.title} className="min-w-0 rounded-md shadow-sm" dir={shell.dir}>
       <CardHeader className="border-b p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div><CardTitle className="text-lg tracking-normal">{t.title}</CardTitle><CardDescription className="mt-1 text-sm">{t.subtitle}</CardDescription></div>

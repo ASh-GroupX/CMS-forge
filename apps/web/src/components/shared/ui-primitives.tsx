@@ -117,7 +117,7 @@ export function DataTable({
   minWidth?: string;
 }) {
   return (
-    <div className="hidden overflow-x-auto md:block">
+    <div className="hidden w-full min-w-0 max-w-full overflow-x-auto md:block">
       <Table style={{ minWidth }}>
         <TableHeader className="bg-surface-raised text-xs font-semibold uppercase tracking-normal text-content-muted">
           <TableRow>

@@ -12867,3 +12867,54 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 
 - Existing proof/test copy still uses the word preview in test names and review labels, but production `apps/web/src` no longer contains `PreviewState`.
 - Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.
+
+---
+
+## UI/UX Redesign - Slice 9 Final Visual QA Gate
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `PORTAL-SEC-001`
+
+### Scope
+
+- Completed the final browser-backed visual QA gate for the redesigned staff and portal proof surfaces.
+- Reviewed the generated 22 English/Arabic visual-review PNG artifacts under `coverage/web-visual-review`.
+- Added responsive containment where the final breakpoint sweep found tablet-width page overflow:
+  staff shell main content, shared table wrapper, feature work queue, audit viewer, admin user/category cards, and the visual proof frame.
+- Preserved existing route behavior, typed API helpers, RBAC, branch scope, audit, reports, notifications, attachments, portal privacy, Arabic RTL, and English LTR.
+
+### Security Self-Check
+
+- No backend API, OpenAPI contract, RBAC, branch scope, audit, workflow state machine, attachment authorization, report, notification, DMS adapter, survey, or portal verification behavior changed.
+- React still does not decide complaint state, role, branch scope, workflow authority, audit visibility, report scope, notification scope, attachment authorization, or portal verification.
+- Portal tracking still requires backend verification before public status/timeline content renders; reference number alone remains insufficient.
+- No passwords, OTPs, tokens, credentials, provider secrets, staff PII expansion, internal comments, audit logs, DMS codes, unrelated complaints, or public file URLs were added.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: viewport sweep over generated visual-review artifacts:
+  - Staff artifacts: 768, 1024, 1280, and 1440px.
+  - Portal artifacts: 390, 430, 768, and 1440px.
+  - Checks: nonblank body, no page-level horizontal overflow, and visible keyboard focus on first tabbable control.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe serious/critical violations at zero).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Visual Review
+
+- Generated and reviewed `coverage/web-visual-review/contact-sheet.png` for all 22 screenshots.
+- Opened higher-detail PNGs for EN work queue, EN audit viewer, and EN admin surfaces after fixing the initial overflow findings.
+- The final reviewed artifacts showed no blank output, page-level horizontal overflow, incoherent overlap, or clipped Arabic text in the covered proof surfaces.
+
+### Notes
+
+- The initial Slice 9 viewport sweep exposed page-level overflow in EN admin, audit, and work queue artifacts at tablet widths; the final sweep passed after `min-w-0` and width containment fixes.
+- Production source scans after the final changes found no `PreviewState`, fake `role="dialog"`, or empty `href` under `apps/web/src`.
+- The raw color lint ratchet remains at 33 matches.
+- Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.

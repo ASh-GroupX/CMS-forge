@@ -106,7 +106,7 @@ function portalTrackingProps(testCase) {
 function staffFrame(testCase, children) {
   const t = staffShellText[testCase.locale];
   return React.createElement('div', { className: 'min-h-screen bg-neutral p-4 text-neutral-foreground md:p-6', dir: t.dir, lang: t.lang },
-    React.createElement('section', { className: 'grid content-start gap-4' }, children));
+    React.createElement('section', { className: 'grid min-w-0 content-start gap-4' }, children));
 }
 
 function portalFrame(testCase, current, children) {
