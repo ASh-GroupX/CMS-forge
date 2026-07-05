@@ -12730,3 +12730,48 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 
 - The SRS attachment requirement is detailed as `REQ-FILES-001`; Slice 5 retained the roadmap's `REQ-ATTACHMENT-001` label while applying the secure attachment constraints from the SRS.
 - Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.
+
+---
+
+## UI/UX Redesign - Slice 6 Admin, Reports, Audit, and Notifications
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `REQ-ADMIN-001`, `REQ-REPORT-001`, `REQ-AUDIT-001`, `METHOD-AUDIT-001`, `REQ-NOTIFY-001`
+
+### Scope
+
+- Migrated touched admin, reports, audit, and notification surfaces toward shared state blocks, badges, fields, and semantic Precision Ops tokens.
+- Refined reports around one primary KPI, supporting metrics, report catalog, scoped filters, and existing scoped export affordances.
+- Kept the audit viewer dense, searchable, backend-redacted, export-scoped, and accessible by wiring filter inputs to their labels.
+- Made notification read/unread and task/complaint state clearer with shared badges while preserving the existing render-only scoped-link behavior.
+- Fixed shared success `StateBlock` contrast after axe identified a 4.17:1 success-message contrast failure.
+
+### Security Self-Check
+
+- No backend API, OpenAPI contract, RBAC, branch scope, audit, workflow, report, notification, DMS adapter, attachment, or portal behavior changed.
+- React still does not decide complaint state, role, branch scope, workflow authority, audit visibility, report scope, export authority, notification scope, or portal verification.
+- Reports still use existing typed helpers and server-scoped export URLs; audit export still uses the existing backend-owned export href helper.
+- Notification center remains render-only and does not add browser storage, direct navigation authority, provider calls, credentials, tokens, OTPs, staff PII expansion, internal comments, audit logs, or DMS codes.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Visual Review
+
+- Sampled generated PNGs for EN admin surfaces, AR admin surfaces, EN reports, AR reports, EN audit viewer, and AR audit viewer under `coverage/web-visual-review`.
+- Admin, reports, and audit surfaces rendered without blank output, obvious overlap, clipped Arabic text, or RTL/LTR direction problems.
+- Reports retained scoped filters/export affordances and the catalog table while making the KPI area less equal-weight.
+
+### Notes
+
+- Accessibility initially failed on nested report `dl` markup and an audit success-message contrast issue; both were fixed and the final accessibility pass passed.
+- Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.

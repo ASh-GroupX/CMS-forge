@@ -199,7 +199,7 @@ Acceptance:
 
 ## Slice 6 - Admin, Reports, Audit, and Notifications
 
-Status: Ready in `.forge/next.md`
+Status: Complete
 
 Purpose:
 
@@ -215,7 +215,7 @@ Acceptance:
 
 ## Slice 7 - Customer Portal
 
-Status: Pending
+Status: Ready in `.forge/next.md`
 
 Purpose:
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { StatusBadge } from '../shared/ui-primitives';
+import { StateBlock, StatusBadge } from '../shared/ui-primitives';
 import { adminBranchesText } from '../../i18n/staff-admin-branches';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 
@@ -29,23 +29,16 @@ export function AdminBranchesDepartments({
   const t = adminBranchesText[locale];
 
   return (
-    <Card aria-label={t.title} className="rounded-md border-slate-200 bg-white shadow-sm" dir={shell.dir}>
-      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0 border-b border-slate-200 p-4">
+    <Card aria-label={t.title} className="rounded-md border-line-subtle bg-surface shadow-sm" dir={shell.dir}>
+      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0 border-b border-line-subtle p-4">
         <div>
           <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
-          <CardDescription className="mt-1 text-sm text-slate-600">{t.subtitle}</CardDescription>
+          <CardDescription className="mt-1 text-sm text-content-muted">{t.subtitle}</CardDescription>
         </div>
         <Button type="button">{t.actions.create}</Button>
       </CardHeader>
       <CardContent className="p-4">
-        {state ? (
-          <p
-            className="mb-4 rounded-sm border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
-            role={state === 'success' || state === 'loading' ? 'status' : 'alert'}
-          >
-            {t.states[state]}
-          </p>
-        ) : null}
+        {state ? <StateBlock className="mb-4" message={t.states[state]} tone={state === 'success' ? 'success' : state === 'error' || state === 'validation' || state === 'conflict' ? 'error' : 'neutral'} /> : null}
         <div className="grid gap-3 xl:grid-cols-2">
           <AdminTable locale={locale} rows={branchRows} title={t.sections.branches} />
           <AdminTable locale={locale} rows={departmentRows} title={t.sections.departments} />
@@ -66,10 +59,10 @@ function AdminTable({
 }) {
   const t = adminBranchesText[locale];
   return (
-    <section className="rounded-md border border-slate-200 bg-slate-50" aria-label={title}>
-      <h3 className="border-b border-slate-200 px-3 py-2 text-sm font-semibold">{title}</h3>
+    <section className="rounded-md border border-line-subtle bg-surface-raised" aria-label={title}>
+      <h3 className="border-b border-line-subtle px-3 py-2 text-sm font-semibold">{title}</h3>
       <Table className="min-w-[34rem]">
-        <TableHeader className="bg-white text-xs font-semibold uppercase tracking-normal text-slate-600">
+        <TableHeader className="bg-surface text-xs font-semibold uppercase tracking-normal text-content-muted">
           <TableRow>
             {t.headers.map((header) => (
               <TableHead className="text-start" key={header}>{header}</TableHead>
@@ -78,7 +71,7 @@ function AdminTable({
         </TableHeader>
         <TableBody>
           {rows.map(([code, name, status]) => (
-            <TableRow className="border-b border-slate-100" key={`${title}-${code}`}>
+            <TableRow className="border-b border-line-subtle" key={`${title}-${code}`}>
               <TableCell className="font-semibold">{code}</TableCell>
               <TableCell>{name}</TableCell>
               <TableCell>

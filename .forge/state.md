@@ -1,8 +1,8 @@
 # Current State
 
-Status: UI/UX redesign Slice 5 complete; Slice 6 ready
+Status: UI/UX redesign Slice 6 complete; Slice 7 ready
 Phase: ui-ux-redesign
-Next Task: Slice 6 - Admin, Reports, Audit, and Notifications
+Next Task: Slice 7 - Customer Portal
 Model Tier: GPT-5.5 Extra High
 
 ## How to use this file
@@ -21,14 +21,15 @@ Prior state history is in .forge/archive/state-archive.md.
 - UI/UX refactor Slice 3 completed the staff dashboard and work queue refactor.
 - UI/UX refactor Slice 4 completed complaint create, lookup, and attachments as one structured intake flow.
 - UI/UX refactor Slice 5 completed complaint detail and workflow as an operational workbench.
-- Complaint detail now shows a summary strip, primary facts/timeline/comments region, and action rail for workflow, attachments, case/CAPA, survey, and related complaints while preserving backend-owned workflow and attachment authority.
+- UI/UX refactor Slice 6 completed admin, reports, audit, and notification surfaces.
+- Slice 6 moved touched admin, reports, audit, and notification screens toward shared state blocks, fields, badges, report KPI hierarchy, semantic tokens, and accessible audit filters while preserving backend authority and scoped exports.
 - `web:visual-review` writes English and Arabic HTML plus PNG artifacts for the covered staff and portal surfaces under `coverage/web-visual-review`.
 - Lint retains the frontend raw color utility ratchet for `apps/web/src/app` and `apps/web/src/components`; current baseline is 455 matches.
-- Proof passed for Slice 5: `typecheck`, `lint`, `test:web -- shell`, `test:web -- localization`, `test:visual`, `web:visual-review`, `test:e2e -- accessibility`, `web:perf`, and `git diff --check`.
+- Proof passed for Slice 6: `typecheck`, `lint`, `test:web -- shell`, `test:web -- localization`, `test:visual`, `web:visual-review`, `test:e2e -- accessibility`, `web:perf`, and `git diff --check`.
 
 ## Current Stop
 
-Proceed with Slice 6 only: admin, reports, audit, and notifications.
+Proceed with Slice 7 only: customer portal.
 
 ## Open Carry-Forward / Known Debt
 

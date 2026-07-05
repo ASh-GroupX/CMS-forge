@@ -53,7 +53,7 @@ export function StateBlock({
   const alert = tone === 'conflict' || tone === 'error' || tone === 'warning';
   const colors =
     tone === 'success'
-      ? 'border-status-success-border bg-status-success-bg text-status-success'
+      ? 'border-status-success-border bg-status-success-bg text-content-strong'
       : alert
         ? 'border-status-error-border bg-status-error-bg text-status-error'
         : 'border-line-subtle bg-surface-raised text-content-muted';

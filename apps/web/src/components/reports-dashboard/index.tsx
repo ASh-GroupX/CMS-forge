@@ -1,10 +1,10 @@
 import React from 'react';
-import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Label } from '../ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { StaffPicker } from '../shared/staff-picker';
+import { StateBlock, StatusBadge } from '../shared/ui-primitives';
 import { reportCatalogText, reportsDashboardText } from '../../i18n/staff-reports-dashboard';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
@@ -60,22 +60,17 @@ export function ReportsDashboard({
     [t.kpis.firstResponse, t.hours(kpis.averageFirstResponseHours)],
     [t.kpis.resolution, t.hours(kpis.averageResolutionHours)],
   ] as const : null;
+  const primaryKpi = kpiCards?.[0];
+  const supportingKpis = kpiCards?.slice(1);
   return (
-    <Card aria-label={t.title} className="max-w-full overflow-hidden rounded-md border-slate-200 bg-white shadow-sm" dir={shell.dir}>
-      <CardHeader className="border-b border-slate-200 p-4">
+    <Card aria-label={t.title} className="max-w-full overflow-hidden rounded-md border-line-subtle bg-surface shadow-sm" dir={shell.dir}>
+      <CardHeader className="border-b border-line-subtle p-4">
         <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
-        <CardDescription className="mt-1 text-sm text-slate-600">{t.subtitle}</CardDescription>
+        <CardDescription className="mt-1 text-sm text-content-muted">{t.subtitle}</CardDescription>
       </CardHeader>
       <CardContent className="p-4">
-        {state ? (
-          <p
-            className="mb-4 rounded-sm border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
-            role={state === 'success' || state === 'loading' ? 'status' : 'alert'}
-          >
-            {t.states[state]}
-          </p>
-        ) : null}
-        <form action="/reports" className="mb-3 rounded-md border border-slate-200 bg-slate-50 p-3" method="get">
+        {state ? <StateBlock className="mb-4" message={t.states[state]} tone={state === 'success' ? 'success' : state === 'error' || state === 'validation' || state === 'conflict' || state === 'denied' ? 'error' : 'neutral'} /> : null}
+        <form action="/reports" className="mb-3 rounded-md border border-line-subtle bg-surface-raised p-3" method="get">
           <input name="locale" type="hidden" value={locale} />
           {filters.departmentId ? <input name="departmentId" type="hidden" value={filters.departmentId} /> : null}
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -124,32 +119,38 @@ export function ReportsDashboard({
             <Button asChild size="sm" type="button" variant="outline"><a href={`/reports?locale=${locale}`}>{t.filters.clear}</a></Button>
           </div>
         </form>
-        <section className="mb-3 rounded-md border border-slate-200 bg-white p-3" aria-label={t.kpis.title}>
+        <section className="mb-3 rounded-md border border-line-subtle bg-surface p-3" aria-label={t.kpis.title}>
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <h3 className="text-sm font-semibold">{t.kpis.title}</h3>
-              <p className="mt-1 text-xs text-slate-600">{t.kpis.subtitle}</p>
+              <p className="mt-1 text-xs text-content-muted">{t.kpis.subtitle}</p>
             </div>
             <ReportBadge>{kpis ? t.kpis.backend : t.kpis.unavailable}</ReportBadge>
           </div>
-          {kpiCards ? (
-            <dl className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-              {kpiCards.map(([label, value]) => (
-                <div className="rounded-sm border border-slate-200 bg-slate-50 px-3 py-2" key={label}>
-                  <dt className="text-xs font-semibold text-slate-600">{label}</dt>
-                  <dd className="mt-1 text-lg font-semibold tracking-normal text-slate-950">{value}</dd>
-                </div>
-              ))}
-            </dl>
+          {primaryKpi ? (
+            <div className="mt-3 grid gap-2 xl:grid-cols-[minmax(14rem,1fr)_minmax(0,3fr)]">
+              <dl className="rounded-sm border border-line-subtle bg-brand-soft px-4 py-3">
+                <dt className="text-xs font-semibold text-brand">{primaryKpi[0]}</dt>
+                <dd className="mt-1 text-3xl font-semibold tracking-normal text-content-strong">{primaryKpi[1]}</dd>
+              </dl>
+              <dl className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                {supportingKpis?.map(([label, value]) => (
+                  <div className="rounded-sm border border-line-subtle bg-surface-raised px-3 py-2" key={label}>
+                    <dt className="text-xs font-semibold text-content-muted">{label}</dt>
+                    <dd className="mt-1 text-lg font-semibold tracking-normal text-content-strong">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
           ) : (
-            <p className="mt-3 rounded-sm border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{t.kpis.empty}</p>
+            <StateBlock className="mt-3" message={t.kpis.empty} />
           )}
         </section>
-        <section className="mb-3 rounded-md border border-slate-200 bg-slate-50 p-3" aria-label={t.export.title}>
+        <section className="mb-3 rounded-md border border-line-subtle bg-surface-raised p-3" aria-label={t.export.title}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold">{t.export.title}</h3>
-              <p className="mt-1 text-xs text-slate-600">{t.export.subtitle}</p>
+              <p className="mt-1 text-xs text-content-muted">{t.export.subtitle}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {exportEnabled ? (
@@ -165,7 +166,7 @@ export function ReportsDashboard({
               )}
             </div>
           </div>
-          <ul className="mt-3 grid gap-1 text-sm text-slate-700 md:grid-cols-3">
+          <ul className="mt-3 grid gap-1 text-sm text-content-muted md:grid-cols-3">
             <li>{t.export.rowLimit}</li>
             <li>{t.export.scoped}</li>
             <li>{t.export.audit}</li>
@@ -175,12 +176,12 @@ export function ReportsDashboard({
           <h3 className="mb-2 text-sm font-semibold">{t.catalog.title}</h3>
           <div className="overflow-x-auto">
             <Table className="min-w-[56rem]">
-              <TableHeader className="bg-slate-50 text-xs font-semibold uppercase tracking-normal text-slate-600">
+              <TableHeader className="bg-surface-raised text-xs font-semibold uppercase tracking-normal text-content-muted">
                 <TableRow>{t.headers.map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>
               </TableHeader>
               <TableBody>
                 {catalogRows.map((row) => (
-                  <TableRow className="border-b border-slate-100" key={row.id}>
+                  <TableRow className="border-b border-line-subtle" key={row.id}>
                     <TableCell className="font-semibold">{row.id} - {row.name}</TableCell>
                     <TableCell>{row.audience}</TableCell>
                     <TableCell>{row.filters}</TableCell>
@@ -194,13 +195,13 @@ export function ReportsDashboard({
         <div className="overflow-x-auto">
           <h3 className="mb-2 text-sm font-semibold">{t.operationalRows.title}</h3>
           <Table className="min-w-[56rem]">
-            <TableHeader className="bg-slate-50 text-xs font-semibold uppercase tracking-normal text-slate-600">
+            <TableHeader className="bg-surface-raised text-xs font-semibold uppercase tracking-normal text-content-muted">
               <TableRow>{t.operationalRows.headers.map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>
             </TableHeader>
             <TableBody>
               {operationalRows?.length
                 ? operationalRows.map((row) => (
-                    <TableRow className="border-b border-slate-100" key={row.id}>
+                    <TableRow className="border-b border-line-subtle" key={row.id}>
                       <TableCell className="font-semibold">{row.referenceNumber} - {row.subject}</TableCell>
                       <TableCell>{rowScopeLabel(row, branches, staff, locale, t.filters.unavailable)}</TableCell>
                       <TableCell><ReportBadge>{optionLabel(categories, row.categoryId, locale) ?? t.filters.unavailable}</ReportBadge></TableCell>
@@ -208,14 +209,14 @@ export function ReportsDashboard({
                     </TableRow>
                   ))
                 : (
-                    <TableRow className="border-b border-slate-100">
-                      <TableCell className="text-slate-700" colSpan={4}>{t.operationalRows.empty}</TableCell>
+                    <TableRow className="border-b border-line-subtle">
+                      <TableCell className="text-content-muted" colSpan={4}>{t.operationalRows.empty}</TableCell>
                     </TableRow>
                   )}
             </TableBody>
           </Table>
         </div>
-        <p className="mt-3 rounded-sm border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{t.safeNote}</p>
+        <StateBlock className="mt-3" message={t.safeNote} />
       </CardContent>
     </Card>
   );
@@ -242,7 +243,7 @@ function OptionField({ choose, disabledLabel, label, locale, name, options, valu
   </select></div>;
 }
 
-function ReportBadge({ children }: { children: React.ReactNode }) { return <Badge className="shadow-none" variant="secondary">{children}</Badge>; }
+function ReportBadge({ children }: { children: React.ReactNode }) { return <StatusBadge>{children}</StatusBadge>; }
 
 function reportQuery(filters: ReportsFilters): string {
   const query = new URLSearchParams();

@@ -1,31 +1,32 @@
-# UI/UX Refactor - Slice 6 Admin, Reports, Audit, and Notifications
+# UI/UX Refactor - Slice 7 Customer Portal
 
 Status: Ready
 Required model tier: GPT-5.5 Extra High
 Phase: ui-ux-redesign
 Risk: Medium
-SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `REQ-ADMIN-001`, `REQ-REPORT-001`, `REQ-AUDIT-001`, `METHOD-AUDIT-001`
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `REQ-PORTAL-001`, `REQ-PORTAL-002`, `REQ-SURVEY-001`, `PORTAL-SEC-001`
 Skills: `ui-ux-pro-max`, `redesign`, `design-qa`, `design-taste-frontend` supporting anti-slop only
 
 ## Task
 
-Continue the CMS-Auto UI/UX refactor after the complaint detail/workflow slice.
-Migrate the operational admin, reports, audit, and notification surfaces onto the
-shared primitives without changing backend authority, route contracts, RBAC,
-branch scope, audit, report scoping, notification privacy, or portal behavior.
+Continue the CMS-Auto UI/UX refactor after the admin, reports, audit, and
+notifications slice. Migrate the public customer portal surfaces onto a
+trust-first portal experience without changing portal verification, public route
+contracts, privacy boundaries, attachment handling, or backend authority.
 
 ## Scope
 
-- Migrate admin tables/forms to shared states, fields, badges, and semantic tokens.
-- Refine reports hierarchy around one primary metric, supporting metrics, report
-  catalog, scoped filters, and scoped export affordances.
-- Keep audit viewer dense, searchable, backend-redacted, and export-scoped.
-- Make notifications clearly show unread/read state and scoped complaint links.
-- Use the shared primitives from Slice 2 where they fit.
-- Keep all data from existing typed API helpers; do not add hardcoded data or
-  frontend RBAC/report/audit authority.
-- Use semantic tokens and shrink raw color usage where touched.
-- Keep UI copy in dictionaries and preserve Arabic RTL plus English LTR.
+- Refactor portal submit, tracking, follow-up, attachment, and survey surfaces.
+- Use the portal shell and shared primitives where they fit, with larger public
+  touch targets and fewer competing panels than staff screens.
+- Strengthen privacy and verification messaging without exposing internal staff
+  data, audit logs, DMS codes, staff PII, unrelated complaints, or internal
+  comments.
+- Keep portal verification backend-owned; tracking must not work from reference
+  number alone.
+- Preserve existing typed portal API helpers and route behavior.
+- Use semantic tokens, dictionary copy, Arabic RTL, and English LTR.
+- Do not introduce staff-workbench visual language into public portal screens.
 
 ## Proof
 
@@ -41,12 +42,12 @@ branch scope, audit, report scoping, notification privacy, or portal behavior.
 
 ## Stop When
 
-- Admin tables/forms use shared states and fields where appropriate.
-- Reports show clear hierarchy, scoped filters, catalog, and scoped export
-  affordances.
-- Audit remains dense, searchable, and backend-redacted.
-- Notifications clearly distinguish unread/read and preserve scoped complaint
-  links.
-- No production route behavior, OpenAPI contract, RBAC, branch scope, audit,
-  report scoping, notification privacy, or portal privacy rule changes.
+- Portal submit, track, follow-up, attachment, and survey flows are visibly
+  trust-first and mobile-friendly.
+- Portal verification and privacy constraints remain backend-owned and covered
+  by existing proof.
+- Portal screens do not expose internal comments, audit logs, DMS codes, staff
+  PII, unrelated complaints, or staff-only workflow details.
+- No production route behavior, OpenAPI contract, portal privacy, attachment,
+  verification, RBAC, branch scope, audit, or notification rule changes.
 - No new UI dependency is introduced.
