@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { complaintDetailText } from '../../i18n/staff-complaint-detail';
 import type { Locale } from '../../i18n/staff-shell';
+import { StateBlock, StatusBadge } from '../shared/ui-primitives';
 import {
   downloadStaffAttachment,
   listStaffComplaintAttachments,
@@ -83,24 +83,22 @@ export function ComplaintAttachmentControls({
   }
 
   return (
-    <section className="rounded-md border border-slate-200 bg-slate-50 p-3" aria-label={t.sections.attachments}>
+    <section className="rounded-md border border-line-subtle bg-surface p-3" aria-label={t.sections.attachments}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">{t.sections.attachments}</h3>
-        <Badge className="bg-slate-200 text-slate-700 hover:bg-slate-200">{t.badges[scanState]}</Badge>
+        <StatusBadge tone={scanState === 'clean' ? 'success' : scanState === 'rejected' ? 'danger' : 'warning'}>{t.badges[scanState]}</StatusBadge>
       </div>
       {visibleState === 'loading' || visibleState === 'empty' || visibleState === 'error' ? (
-        <p className="mt-3 text-sm text-slate-600" role={visibleState === 'error' ? 'alert' : 'status'}>
-          {t.attachmentStates[visibleState]}
-        </p>
+        <StateBlock className="mt-3" message={t.attachmentStates[visibleState]} tone={visibleState === 'error' ? 'error' : 'neutral'} />
       ) : (
         <dl className="mt-3 grid gap-2 text-sm">
           {(preview.length ? preview : previewItems('empty', t.values.file)).map((item) => (
-            <div className="grid grid-cols-[8rem_1fr] gap-2 rounded-sm bg-white px-3 py-2" key={item.id || item.fileName}>
-              <dt className="text-slate-500">{t.labels.file}</dt>
-              <dd className="break-words font-medium text-slate-800">{item.fileName}</dd>
-              <dt className="text-slate-500">{t.labels.scan}</dt>
-              <dd className="font-medium text-slate-800">{t.badges[scanBadge(item.scanStatus)]}</dd>
-              <dt className="text-slate-500">{t.attachmentActions.download}</dt>
+            <div className="grid grid-cols-[8rem_1fr] gap-2 rounded-sm bg-surface-raised px-3 py-2" key={item.id || item.fileName}>
+              <dt className="text-content-muted">{t.labels.file}</dt>
+              <dd className="break-words font-medium text-content-strong">{item.fileName}</dd>
+              <dt className="text-content-muted">{t.labels.scan}</dt>
+              <dd className="font-medium text-content-strong">{t.badges[scanBadge(item.scanStatus)]}</dd>
+              <dt className="text-content-muted">{t.attachmentActions.download}</dt>
               <dd><Button disabled={item.scanStatus !== 'CLEAN' || !complaintId || !item.id} size="sm" type="button" variant="outline" onClick={() => { void download(item); }}>{t.attachmentActions.download}</Button></dd>
             </div>
           ))}
@@ -113,8 +111,8 @@ export function ComplaintAttachmentControls({
         </Label>
         <Button disabled={!complaintId || state === 'uploading'} type="submit" variant="outline">{t.attachmentActions.upload}</Button>
       </form>
-      {visibleMessage ? <p className="mt-2 text-sm text-slate-700" role="status">{visibleMessage}</p> : null}
-      <ul className="mt-3 grid gap-1 text-sm text-slate-600">
+      {visibleMessage ? <StateBlock className="mt-2" message={visibleMessage} tone={state === 'uploaded' || state === 'downloaded' ? 'success' : 'neutral'} /> : null}
+      <ul className="mt-3 grid gap-1 text-sm text-content-muted">
         {t.attachmentActions.rules.map((rule) => (
           <li key={rule}>{rule}</li>
         ))}

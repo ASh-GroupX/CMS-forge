@@ -12685,3 +12685,48 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 
 - The `redesign` and `design-qa` skill workflow files remain missing locally; repo proof scripts were used as the design QA source.
 - Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.
+
+---
+
+## UI/UX Redesign - Slice 5 Complaint Detail and Workflow
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `REQ-COMPLAINT-001`, `REQ-WORKFLOW-001`, `REQ-ATTACHMENT-001`, `METHOD-AUDIT-001`
+
+### Scope
+
+- Converted complaint detail into a two-column operational workbench with a summary strip, facts/customer/vehicle panels, timeline, comments, workflow next action, attachments, case/CAPA, survey, and related complaints.
+- Kept workflow actions as a clear inline action panel driven by backend-provided `allowedActions` and the existing typed transition helper.
+- Kept conflict recovery visible with reload-latest and retry controls; no fake `role="dialog"` or empty `href` was added.
+- Reused Slice 2 primitives for page header, state blocks, badges, fields, and timeline where they fit.
+- Moved touched detail, workflow, comments, attachment, and relation surfaces toward semantic tokens while preserving Arabic RTL and English LTR rendering.
+
+### Security Self-Check
+
+- No backend API, OpenAPI contract, RBAC, branch scope, audit, workflow state machine, attachment authorization, notification, report, DMS adapter, or portal behavior changed.
+- React still does not decide complaint state, role, branch scope, workflow authority, audit visibility, attachment authorization, or portal verification.
+- Workflow transitions still submit through `submitStaffComplaintWorkflowAction` with backend status validation and backend-owned transition rules.
+- Attachment upload/download still goes through existing staff attachment helpers; no public storage links, browser file readers, credentials, tokens, OTPs, provider secrets, internal comments, audit logs, or DMS codes were added.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Visual Review
+
+- Sampled generated PNGs for EN complaint detail, AR complaint detail, EN workflow action panel, and AR workflow action panel under `coverage/web-visual-review`.
+- Detail rendered the summary strip, primary facts/timeline/comments region, and action rail with workflow, attachments, case, survey, and related complaints.
+- Workflow validation and conflict states remained visible and accessible without fake modal semantics, overlap, or clipped Arabic text.
+
+### Notes
+
+- The SRS attachment requirement is detailed as `REQ-FILES-001`; Slice 5 retained the roadmap's `REQ-ATTACHMENT-001` label while applying the secure attachment constraints from the SRS.
+- Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.

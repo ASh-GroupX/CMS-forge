@@ -1618,7 +1618,7 @@ test('complaint detail relation panel renders empty denied and Arabic states saf
 test('complaint detail workspace keeps responsive detail layout classes', async () => {
   const html = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
 
-  assert.match(html, /xl:grid-cols-\[1\.1fr_0\.9fr\]/);
+  assert.match(html, /xl:grid-cols-\[minmax\(0,1\.35fr\)_minmax\(22rem,0\.65fr\)\]/);
   assert.match(html, /md:grid-cols-2/);
   assert.match(html, /grid-cols-\[minmax\(6rem,8rem\)_minmax\(0,1fr\)\]/);
 });

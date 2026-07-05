@@ -23,8 +23,8 @@ export function PageHeader({
   title,
 }: {
   actions?: React.ReactNode;
-  description?: string;
-  eyebrow?: string;
+  description?: string | undefined;
+  eyebrow?: string | undefined;
   title: string;
 }) {
   return (
@@ -169,7 +169,7 @@ export function Timeline({ emptyText, items }: { emptyText: string; items: reado
       {items.map((item) => (
         <li className="rounded-sm border border-line-subtle bg-surface px-3 py-2 text-sm" key={`${item.meta}-${item.text}`}>
           <p className="font-medium text-content-strong">{item.text}</p>
-          <p className="mt-1 text-xs text-content-muted">{item.meta}</p>
+          {item.meta ? <p className="mt-1 text-xs text-content-muted">{item.meta}</p> : null}
         </li>
       ))}
     </ol>

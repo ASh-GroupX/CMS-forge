@@ -1,8 +1,8 @@
 # Current State
 
-Status: UI/UX redesign Slice 4 complete; Slice 5 ready
+Status: UI/UX redesign Slice 5 complete; Slice 6 ready
 Phase: ui-ux-redesign
-Next Task: Slice 5 - Complaint Detail and Workflow
+Next Task: Slice 6 - Admin, Reports, Audit, and Notifications
 Model Tier: GPT-5.5 Extra High
 
 ## How to use this file
@@ -20,14 +20,15 @@ Prior state history is in .forge/archive/state-archive.md.
 - UI/UX refactor Slice 2 completed shared UI primitives and wired them into current duplicated screen patterns.
 - UI/UX refactor Slice 3 completed the staff dashboard and work queue refactor.
 - UI/UX refactor Slice 4 completed complaint create, lookup, and attachments as one structured intake flow.
-- Complaint intake now shows a localized step rail, customer/vehicle lookup, manual fallback, complaint facts, intake attachment guidance, validation summary, field-level recovery, and submit result while preserving existing typed staff API helpers.
+- UI/UX refactor Slice 5 completed complaint detail and workflow as an operational workbench.
+- Complaint detail now shows a summary strip, primary facts/timeline/comments region, and action rail for workflow, attachments, case/CAPA, survey, and related complaints while preserving backend-owned workflow and attachment authority.
 - `web:visual-review` writes English and Arabic HTML plus PNG artifacts for the covered staff and portal surfaces under `coverage/web-visual-review`.
 - Lint retains the frontend raw color utility ratchet for `apps/web/src/app` and `apps/web/src/components`; current baseline is 455 matches.
-- Proof passed for Slice 4: `typecheck`, `lint`, `test:web -- shell`, `test:web -- localization`, `test:visual`, `web:visual-review`, `test:e2e -- accessibility`, `web:perf`, and `git diff --check`.
+- Proof passed for Slice 5: `typecheck`, `lint`, `test:web -- shell`, `test:web -- localization`, `test:visual`, `web:visual-review`, `test:e2e -- accessibility`, `web:perf`, and `git diff --check`.
 
 ## Current Stop
 
-Proceed with Slice 5 only: complaint detail and workflow.
+Proceed with Slice 6 only: admin, reports, audit, and notifications.
 
 ## Open Carry-Forward / Known Debt
 

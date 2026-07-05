@@ -174,7 +174,7 @@ Acceptance:
 
 ## Slice 5 - Complaint Detail and Workflow
 
-Status: Ready in `.forge/next.md`
+Status: Complete
 
 Purpose:
 
@@ -199,7 +199,7 @@ Acceptance:
 
 ## Slice 6 - Admin, Reports, Audit, and Notifications
 
-Status: Pending
+Status: Ready in `.forge/next.md`
 
 Purpose:
 

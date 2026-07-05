@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
+import { StateBlock, StatusBadge } from '../shared/ui-primitives';
 import { linkStaffComplaintRelation, unlinkStaffComplaintRelation, type ComplaintRelationState, type SafeComplaintRelationItem, type StaffComplaintRelationsView } from '../../lib/staff-complaint-relations-api';
 
 type FeedbackState = Exclude<ComplaintRelationState, 'ready'>;
@@ -59,15 +59,15 @@ export function ComplaintRelationsPanel({ complaintId, relations, text }: { comp
 
   const feedback = view.state === 'ready' ? null : text.states[view.state];
   return (
-    <section className="rounded-md border border-amber-200 bg-amber-50 p-3 md:col-span-2" aria-label={text.title}>
+    <section className="rounded-md border border-line-subtle bg-surface p-3" aria-label={text.title}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">{text.title}</h3>
-          <p className="mt-1 text-xs text-slate-600">{text.window.replace('{days}', String(view.windowDays))}</p>
+          <h3 className="text-sm font-semibold text-content-strong">{text.title}</h3>
+          <p className="mt-1 text-xs text-content-muted">{text.window.replace('{days}', String(view.windowDays))}</p>
         </div>
-        {view.candidates.length ? <Badge variant="secondary">{view.candidates.length}</Badge> : null}
+        {view.candidates.length ? <StatusBadge tone="warning">{view.candidates.length}</StatusBadge> : null}
       </div>
-      {feedback ? <p className="mt-3 text-sm text-slate-700" role={view.state === 'error' || view.state === 'denied' ? 'alert' : 'status'}>{feedback}</p> : null}
+      {feedback ? <StateBlock className="mt-3" message={feedback} tone={view.state === 'error' || view.state === 'denied' ? 'error' : view.state === 'success' ? 'success' : 'neutral'} /> : null}
       <RelationList action={link} actionLabel={text.link} busyId={busyId} complaintId={complaintId} items={view.candidates} title={text.candidates} text={text} />
       <RelationList action={unlink} actionLabel={text.unlink} busyId={busyId} complaintId={complaintId} items={view.related} title={text.related} text={text} />
     </section>
@@ -77,20 +77,20 @@ export function ComplaintRelationsPanel({ complaintId, relations, text }: { comp
 function RelationList({ action, actionLabel, busyId, complaintId, items, text, title }: { action?: ((item: SafeComplaintRelationItem) => void) | undefined; actionLabel?: string | undefined; busyId?: string | null | undefined; complaintId?: string | undefined; items: SafeComplaintRelationItem[]; text: ComplaintRelationsText; title: string }) {
   return (
     <div className="mt-3">
-      <h4 className="text-xs font-semibold uppercase tracking-normal text-slate-600">{title}</h4>
+      <h4 className="text-xs font-semibold uppercase tracking-normal text-content-muted">{title}</h4>
       {!items.length ? null : (
       <ol className="mt-2 grid gap-2">
         {items.map((item) => (
-          <li className="rounded-sm border border-slate-200 bg-white p-3 text-sm" key={item.id}>
+          <li className="rounded-sm border border-line-subtle bg-surface-raised p-3 text-sm" key={item.id}>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="font-medium text-slate-900">{item.referenceNumber}</div>
+              <div className="font-medium text-content-strong">{item.referenceNumber}</div>
               <div className="flex flex-wrap gap-1">
-                <Badge variant="outline">{item.status}</Badge>
-                <Badge variant={item.severity === 'CRITICAL' ? 'destructive' : 'secondary'}>{item.severity}</Badge>
+                <StatusBadge tone="brand">{item.status}</StatusBadge>
+                <StatusBadge tone={item.severity === 'CRITICAL' ? 'danger' : 'warning'}>{item.severity}</StatusBadge>
               </div>
             </div>
-            <p className="mt-1 text-slate-700">{item.subject}</p>
-            <dl className="mt-2 grid gap-1 text-xs text-slate-600 sm:grid-cols-4">
+            <p className="mt-1 text-content-muted">{item.subject}</p>
+            <dl className="mt-2 grid gap-1 text-xs text-content-muted sm:grid-cols-4">
               <Meta label={text.fields.customer} value={item.customerName ?? '-'} />
               <Meta label={text.fields.branch} value={item.branchName} />
               <Meta label={text.fields.created} value={item.createdAt.slice(0, 10)} />
@@ -106,5 +106,5 @@ function RelationList({ action, actionLabel, busyId, complaintId, items, text, t
 }
 
 function Meta({ label, value }: { label: string; value: string }) {
-  return <div><dt className="text-slate-500">{label}</dt><dd className="break-words font-medium text-slate-800">{value}</dd></div>;
+  return <div><dt className="text-content-muted">{label}</dt><dd className="break-words font-medium text-content-strong">{value}</dd></div>;
 }

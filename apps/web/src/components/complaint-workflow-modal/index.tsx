@@ -5,6 +5,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
+import { Field, StateBlock } from '../shared/ui-primitives';
 import { StaffPicker } from '../shared/staff-picker';
 import { complaintDetailText } from '../../i18n/staff-complaint-detail';
 import { confirmationText } from '../../i18n/staff-confirmations';
@@ -84,14 +85,14 @@ export function ComplaintWorkflowModal({
   }
 
   return (
-    <section className="min-w-0 rounded-md border border-slate-200 bg-slate-50 p-3 xl:col-span-2" aria-label={t.sections.workflow}>
+    <section className="min-w-0 rounded-md border border-line-subtle bg-surface p-3" aria-label={t.sections.workflow}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold">{t.sections.workflow}</h3>
-          <p className="mt-1 text-xs text-slate-600">{t.workflow.authority}</p>
+          <p className="mt-1 text-xs text-content-muted">{t.workflow.authority}</p>
         </div>
       </div>
-      {message ? <p className="mt-3 break-words rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700" role={visibleState === 'success' || visibleState === 'loading' ? 'status' : 'alert'}>{message}</p> : null}
+      {message ? <StateBlock className="mt-3" message={message} tone={stateTone(visibleState)} /> : null}
       {visibleState === 'conflict' ? (
         <div className="mt-3 flex flex-wrap gap-2">
           <Button asChild type="button" variant="outline"><a href={complaintHref(complaintId, locale)}>{t.workflow.reload}</a></Button>
@@ -113,14 +114,14 @@ export function ComplaintWorkflowModal({
             <Button disabled={visibleState === 'loading'} type="submit">{t.workflow.submit}</Button>
           </form>
           {visibleState === 'validation' ? (
-            <section className="mt-3 break-words rounded-sm border border-status-error bg-status-error/10 px-3 py-2 text-sm text-status-error" role="alert" aria-label={confirm.title}>
+            <section className="mt-3 break-words rounded-sm border border-status-error-border bg-status-error-bg px-3 py-2 text-sm text-status-error" role="alert" aria-label={confirm.title}>
               <p className="font-semibold">{confirm.title}</p>
               <p className="mt-1">{confirm.body}</p>
             </section>
           ) : null}
         </>
       ) : (
-        <p className="mt-3 rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700" role="status">{t.workflow.states.empty}</p>
+        <StateBlock className="mt-3" message={t.workflow.states.empty} />
       )}
     </section>
   );
@@ -128,7 +129,7 @@ export function ComplaintWorkflowModal({
 
 function WorkflowFields({ action, locale, options, staff, text, vehicleNeedsUnavailableReason }: { action: ComplaintTransitionAction; locale: Locale; options?: ComplaintFormOptions | null | undefined; staff?: AssignableStaff[] | null | undefined; text: typeof complaintDetailText.en.workflow; vehicleNeedsUnavailableReason: boolean }) {
   const fields = requiredFields(action, vehicleNeedsUnavailableReason);
-  if (fields.length === 0) return <p className="rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">{text.noExtraFields}</p>;
+  if (fields.length === 0) return <StateBlock message={text.noExtraFields} />;
   return (
     <div className="grid gap-3 md:grid-cols-2">
       {fields.map((field) => {
@@ -165,10 +166,9 @@ function transitionRequest(action: ComplaintTransitionAction, status: ComplaintS
 function TextField({ area = false, label, name }: { area?: boolean; label: string; name: TransitionField }) {
   const id = `workflow-${name}`;
   return (
-    <Label className="grid min-w-0 gap-1" htmlFor={id}>
-      {label}
+    <Field id={id} label={label}>
       {area ? <Textarea className="min-h-20 min-w-0" id={id} name={name} required /> : <Input id={id} name={name} required />}
-    </Label>
+    </Field>
   );
 }
 
@@ -196,4 +196,12 @@ function actionLabel(action: ComplaintTransitionAction, labels: Partial<Record<C
 
 function complaintHref(complaintId: string | undefined, locale: Locale): string {
   return complaintId ? `/complaints/${encodeURIComponent(complaintId)}?locale=${locale}` : `?locale=${locale}`;
+}
+
+function stateTone(state: SubmitState): 'conflict' | 'error' | 'loading' | 'neutral' | 'success' {
+  if (state === 'success') return 'success';
+  if (state === 'conflict') return 'conflict';
+  if (state === 'error' || state === 'validation') return 'error';
+  if (state === 'loading') return 'loading';
+  return 'neutral';
 }

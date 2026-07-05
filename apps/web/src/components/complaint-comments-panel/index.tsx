@@ -4,11 +4,11 @@ import React, { useMemo, useState } from 'react';
 import { addStaffComplaintComment, type StaffComplaintComment, type StaffComplaintCommentVisibility } from '../../lib/staff-complaint-comments-api';
 import { complaintCommentText, complaintDetailText } from '../../i18n/staff-complaint-detail';
 import type { Locale } from '../../i18n/staff-shell';
-import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Textarea } from '../ui/textarea';
+import { StateBlock, StatusBadge } from '../shared/ui-primitives';
 
 export type ComplaintCommentsPreviewState = 'loading' | 'empty' | 'error';
 type Status = 'idle' | 'loading' | 'success' | 'error' | 'validation';
@@ -48,21 +48,19 @@ export function ComplaintCommentsPanel({
   }
 
   return (
-    <section className="grid gap-3 md:grid-cols-2 xl:col-span-2" aria-label={`${t.sections.internalComments} / ${t.sections.publicUpdates}`}>
+    <section className="grid gap-3 md:grid-cols-2" aria-label={`${t.sections.internalComments} / ${t.sections.publicUpdates}`}>
       {commentsState ? (
-        <p className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600 md:col-span-2" role={commentsState === 'error' ? 'alert' : 'status'}>
-          {t.commentStates[commentsState]}
-        </p>
+        <StateBlock className="md:col-span-2" message={t.commentStates[commentsState]} tone={commentsState === 'error' ? 'error' : 'neutral'} />
       ) : (
         <>
           <CommentGroup badge={t.badges.internal} comments={grouped.internal} locale={locale} title={t.sections.internalComments} />
           <CommentGroup badge={t.badges.public} comments={grouped.public} locale={locale} title={t.sections.publicUpdates} />
-          <form className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3 md:col-span-2" onSubmit={submit} aria-label={ct.form}>
+          <form className="grid gap-3 rounded-md border border-line-subtle bg-surface-raised p-3 md:col-span-2" onSubmit={submit} aria-label={ct.form}>
             <div className="grid gap-3 md:grid-cols-[12rem_1fr_auto] md:items-end">
               <Label className="grid gap-1 text-sm font-medium">
                 {t.labels.visibility}
                 <Select value={visibility} onValueChange={(value) => setVisibility(value as StaffComplaintCommentVisibility)}>
-                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="bg-surface"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="INTERNAL">{t.badges.internal}</SelectItem>
                     <SelectItem value="PUBLIC">{t.badges.public}</SelectItem>
@@ -71,13 +69,13 @@ export function ComplaintCommentsPanel({
               </Label>
               <Label className="grid gap-1 text-sm font-medium">
                 {ct.body}
-                <Textarea className="min-h-20 bg-white" onChange={(event) => setBody(event.target.value)} value={body} />
+                <Textarea className="min-h-20 bg-surface" onChange={(event) => setBody(event.target.value)} value={body} />
               </Label>
               <Button className="focus:ring-2 focus:ring-ring" disabled={status === 'loading' || !complaintId} type="submit">
                 {ct.submit}
               </Button>
             </div>
-            {status !== 'idle' ? <p className="text-sm text-slate-600" role={status === 'error' || status === 'validation' ? 'alert' : 'status'}>{ct.states[status]}</p> : null}
+            {status !== 'idle' ? <StateBlock message={ct.states[status]} tone={status === 'error' || status === 'validation' ? 'error' : status === 'success' ? 'success' : 'neutral'} /> : null}
           </form>
         </>
       )}
@@ -88,29 +86,29 @@ export function ComplaintCommentsPanel({
 function CommentGroup({ badge, comments, locale, title }: { badge: string; comments: StaffComplaintComment[]; locale: Locale; title: string }) {
   const t = complaintDetailText[locale];
   return (
-    <section className="rounded-md border border-slate-200 bg-slate-50 p-3" aria-label={title}>
+    <section className="rounded-md border border-line-subtle bg-surface-raised p-3" aria-label={title}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">{title}</h3>
-        <Badge className="bg-slate-200 text-slate-700 hover:bg-slate-200">{badge}</Badge>
+        <StatusBadge>{badge}</StatusBadge>
       </div>
       {comments.length ? (
         <ol className="mt-3 grid gap-2 text-sm">
           {comments.map((comment) => (
-            <li className="rounded-sm border border-slate-200 bg-white px-3 py-2" key={comment.id}>
+            <li className="rounded-sm border border-line-subtle bg-surface px-3 py-2" key={comment.id}>
               <div className="grid gap-2 sm:grid-cols-[8rem_1fr]">
-                <span className="text-slate-500">{t.labels.author}</span>
-                <span className="break-words font-medium text-slate-800">{comment.authorId ?? t.values.author}</span>
-                <span className="text-slate-500">{t.labels.time}</span>
-                <span className="break-words font-medium text-slate-800">{formatDate(comment.createdAt, locale)}</span>
-                <span className="text-slate-500">{t.labels.visibility}</span>
-                <span className="break-words font-medium text-slate-800">{badge}</span>
+                <span className="text-content-muted">{t.labels.author}</span>
+                <span className="break-words font-medium text-content-strong">{comment.authorId ?? t.values.author}</span>
+                <span className="text-content-muted">{t.labels.time}</span>
+                <span className="break-words font-medium text-content-strong">{formatDate(comment.createdAt, locale)}</span>
+                <span className="text-content-muted">{t.labels.visibility}</span>
+                <span className="break-words font-medium text-content-strong">{badge}</span>
               </div>
-              <p className="mt-2 break-words rounded-sm bg-slate-50 px-3 py-2 text-slate-700">{comment.body}</p>
+              <p className="mt-2 break-words rounded-sm bg-surface-raised px-3 py-2 text-content-muted">{comment.body}</p>
             </li>
           ))}
         </ol>
       ) : (
-        <p className="mt-3 rounded-sm bg-white px-3 py-2 text-sm text-slate-600">{t.commentStates.empty}</p>
+        <StateBlock className="mt-3" message={t.commentStates.empty} />
       )}
     </section>
   );
