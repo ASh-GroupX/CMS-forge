@@ -13,8 +13,8 @@ const maxAgenticFileLines = 300;
 const agenticFileSizeExemptions = new Set(['packages/database/prisma/schema.prisma']);
 const require = createRequire(import.meta.url);
 const frontendProofPackages = ['@axe-core/playwright', 'eslint-plugin-jsx-a11y', 'prettier-plugin-tailwindcss'];
-// ponytail: baseline gates new off-token utility debt until slice migrations delete the existing 455 hits.
-const frontendDesignHardcodeBaseline = 455;
+// ponytail: baseline gates new off-token utility debt until slice migrations delete the existing 33 hits.
+const frontendDesignHardcodeBaseline = 33;
 const frontendDesignHardcodePattern = /\b(?:bg-white|bg-slate-\d{2,3}|text-slate-\d{2,3}|border-slate-\d{2,3}|(?:bg|text|border)-(?:red|amber|emerald)-\d{2,3})\b/g;
 // Each backend module ships an agent context manifest so a fresh-context agent can
 // load only that module's boundary. These fields must be documented in it.

@@ -1,5 +1,5 @@
 import React from 'react';
-import { NotificationCenter, type NotificationPreviewState } from '../../../components/notification-center';
+import { NotificationCenter, type NotificationFixtureState } from '../../../components/notification-center';
 import { resolveLocale } from '../../../i18n/staff-shell';
 import { getStaffNotifications } from '../../../lib/staff-notifications-api';
 
@@ -28,7 +28,7 @@ function readParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function resolveState(value: string | undefined): NotificationPreviewState | undefined {
+function resolveState(value: string | undefined): NotificationFixtureState | undefined {
   return value === 'loading' || value === 'empty' || value === 'error' || value === 'success' || value === 'validation' || value === 'conflict'
     ? value
     : undefined;

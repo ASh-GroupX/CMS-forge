@@ -6,14 +6,14 @@ import { attachmentText } from '../../i18n/staff-attachments';
 import { confirmationText } from '../../i18n/staff-confirmations';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 
-export type AttachmentPreviewState = 'loading' | 'empty' | 'error' | 'pending' | 'clean' | 'rejected';
+export type AttachmentFixtureState = 'loading' | 'empty' | 'error' | 'pending' | 'clean' | 'rejected';
 
 export function AttachmentUploadPanel({
   locale,
   state,
 }: {
   locale: Locale;
-  state?: AttachmentPreviewState | undefined;
+  state?: AttachmentFixtureState | undefined;
 }) {
   const shell = staffShellText[locale];
   const t = attachmentText[locale];

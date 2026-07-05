@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Textarea } from '../ui/textarea';
 import { StateBlock, StatusBadge } from '../shared/ui-primitives';
 
-export type ComplaintCommentsPreviewState = 'loading' | 'empty' | 'error';
+export type ComplaintCommentsFixtureState = 'loading' | 'empty' | 'error';
 type Status = 'idle' | 'loading' | 'success' | 'error' | 'validation';
 
 export function ComplaintCommentsPanel({
@@ -20,7 +20,7 @@ export function ComplaintCommentsPanel({
   locale,
 }: {
   comments?: StaffComplaintComment[] | null | undefined;
-  commentsState?: ComplaintCommentsPreviewState | undefined;
+  commentsState?: ComplaintCommentsFixtureState | undefined;
   complaintId?: string | undefined;
   locale: Locale;
 }) {

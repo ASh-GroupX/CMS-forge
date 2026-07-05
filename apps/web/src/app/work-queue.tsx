@@ -9,7 +9,7 @@ import { DataTable, Field, FilterBar, StateBlock, StatusBadge, type PrimitiveTon
 import { staffShellText, type Locale } from '../i18n/staff-shell';
 import type { ComplaintQueueItem } from '../lib/staff-complaints-api';
 
-export type QueuePreviewState = 'loading' | 'empty' | 'error' | 'success' | 'conflict';
+export type QueueFixtureState = 'loading' | 'empty' | 'error' | 'success' | 'conflict';
 
 type QueueRow = {
   reference: string;
@@ -32,7 +32,7 @@ export function WorkQueue({
 }: {
   locale: Locale;
   rows?: ComplaintQueueItem[] | undefined;
-  state?: QueuePreviewState | undefined;
+  state?: QueueFixtureState | undefined;
 }) {
   const t = staffShellText[locale].workQueue;
   const queueRows = (realRows ?? []).map((row) => queueRow(row, t, locale));

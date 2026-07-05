@@ -1,5 +1,5 @@
 import React from 'react';
-import { ReportsDashboard, type ReportsPreviewState } from '../../../components/reports-dashboard';
+import { ReportsDashboard, type ReportsFixtureState } from '../../../components/reports-dashboard';
 import { resolveLocale } from '../../../i18n/staff-shell';
 import { getAssignableStaff } from '../../../lib/staff-assignable-staff-api';
 import { getComplaintFormOptions } from '../../../lib/staff-complaint-form-options-api';
@@ -57,7 +57,7 @@ function readParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function resolveState(value: string | undefined): ReportsPreviewState | undefined {
+function resolveState(value: string | undefined): ReportsFixtureState | undefined {
   return value === 'ready' || value === 'loading' || value === 'empty' || value === 'error' || value === 'success' || value === 'validation' || value === 'denied' || value === 'conflict'
     ? value
     : undefined;

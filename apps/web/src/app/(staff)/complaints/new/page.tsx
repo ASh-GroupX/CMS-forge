@@ -1,7 +1,7 @@
 import React from 'react';
-import { type CreateFormPreviewState } from '../../../../components/complaint-create-form';
+import { type CreateFormFixtureState } from '../../../../components/complaint-create-form';
 import { ComplaintIntakeWorkspace } from '../../../../components/complaint-intake-workspace';
-import { type LookupPreviewState } from '../../../../components/customer-vehicle-lookup';
+import { type LookupFixtureState } from '../../../../components/customer-vehicle-lookup';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { getComplaintFormOptions } from '../../../../lib/staff-complaint-form-options-api';
 
@@ -37,11 +37,11 @@ function readParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function resolveLookup(value: string | undefined): LookupPreviewState | undefined {
+function resolveLookup(value: string | undefined): LookupFixtureState | undefined {
   return value === 'loading' || value === 'none' || value === 'error' || value === 'match' || value === 'multiple' || value === 'down' || value === 'disabled' || value === 'validation' || value === 'manual' ? value : undefined;
 }
 
-function resolveCreate(value: string | undefined): CreateFormPreviewState | undefined {
+function resolveCreate(value: string | undefined): CreateFormFixtureState | undefined {
   return value === 'validation' || value === 'success' || value === 'error' || value === 'loading' || value === 'network'
     ? value
     : undefined;

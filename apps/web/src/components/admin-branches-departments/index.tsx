@@ -6,7 +6,7 @@ import { StateBlock, StatusBadge } from '../shared/ui-primitives';
 import { adminBranchesText } from '../../i18n/staff-admin-branches';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 
-export type AdminBranchesPreviewState = 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'conflict';
+export type AdminBranchesFixtureState = 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'conflict';
 
 const branchRows = [
   ['MAIN', 'Main branch', 'active'],
@@ -23,7 +23,7 @@ export function AdminBranchesDepartments({
   state,
 }: {
   locale: Locale;
-  state?: AdminBranchesPreviewState | undefined;
+  state?: AdminBranchesFixtureState | undefined;
 }) {
   const shell = staffShellText[locale];
   const t = adminBranchesText[locale];

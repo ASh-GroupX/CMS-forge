@@ -17,7 +17,7 @@ import {
   type PortalSubmissionOptions,
 } from '../../lib/portal-submission-api';
 
-export type PortalSubmissionPreviewState = 'loading' | 'validation' | 'success' | 'error';
+export type PortalSubmissionFixtureState = 'loading' | 'validation' | 'success' | 'error';
 
 type SubmitState =
   | { kind: 'idle' }
@@ -38,7 +38,7 @@ export function PortalSubmissionScreen({
   attachmentWarning?: PortalAttachmentWarning | undefined;
   options?: PortalSubmissionOptions | null | undefined;
   reference?: string | undefined;
-  state?: PortalSubmissionPreviewState | undefined;
+  state?: PortalSubmissionFixtureState | undefined;
 }) {
   const t = portalSubmissionText[locale];
   const resolvedOptions = options ?? emptyOptions;
@@ -227,7 +227,7 @@ function fieldError(errors: PortalFieldError[], field: string, locale: PortalLoc
   return error.code === 'REQUIRED' ? portalSubmissionText[locale].validation.required : portalSubmissionText[locale].validation.invalid;
 }
 
-function previewState(state: PortalSubmissionPreviewState | undefined, reference: string | undefined, locale: PortalLocale, attachmentWarning?: PortalAttachmentWarning): SubmitState {
+function previewState(state: PortalSubmissionFixtureState | undefined, reference: string | undefined, locale: PortalLocale, attachmentWarning?: PortalAttachmentWarning): SubmitState {
   if (state === 'success') return { kind: 'success', referenceNumber: reference ?? 'CMP-PORTAL-001', attachmentCount: 0, ...(attachmentWarning ? { attachmentWarning } : {}) };
   if (state === 'validation') return { kind: 'validation', fieldErrors: [{ field: 'customerName', code: 'REQUIRED', message: portalSubmissionText[locale].validation.required }] };
   if (state === 'loading') return { kind: 'loading' };

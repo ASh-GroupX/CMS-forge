@@ -1,1 +1,1 @@
-export { AttachmentUploadPanel, type AttachmentPreviewState } from '../components/attachment-upload-panel';
+export { AttachmentUploadPanel, type AttachmentFixtureState } from '../components/attachment-upload-panel';

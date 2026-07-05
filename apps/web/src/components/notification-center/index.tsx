@@ -6,7 +6,7 @@ import { notificationCenterText } from '../../i18n/staff-notification-center';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import type { StaffNotification } from '../../lib/staff-notifications-api';
 
-export type NotificationPreviewState = 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'conflict';
+export type NotificationFixtureState = 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'conflict';
 
 const notifications = [
   ['unread', 'workflow', '2026-06-19 11:00', 'CMP-SCOPED-001'],
@@ -20,7 +20,7 @@ export function NotificationCenter({
 }: {
   items?: StaffNotification[] | null | undefined;
   locale: Locale;
-  state?: NotificationPreviewState | undefined;
+  state?: NotificationFixtureState | undefined;
 }) {
   const shell = staffShellText[locale];
   const t = notificationCenterText[locale];

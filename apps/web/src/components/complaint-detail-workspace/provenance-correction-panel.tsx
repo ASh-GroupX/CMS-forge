@@ -10,7 +10,7 @@ import type { Locale } from '../../i18n/staff-shell';
 import type { ComplaintDetail, DmsCustomerVehicleMatch, StaffComplaintCorrectionRequest } from '../../lib/staff-complaints-api';
 import { correctStaffComplaint } from '../../lib/staff-complaints-api';
 import type { StaffComplaintDetailView } from '../../lib/staff-detail-api';
-import { CustomerVehicleLookup, type LookupPreviewState, type LookupSelection } from '../customer-vehicle-lookup';
+import { CustomerVehicleLookup, type LookupFixtureState, type LookupSelection } from '../customer-vehicle-lookup';
 
 type Source = ComplaintDetail['customerSource'];
 type VehicleSource = ComplaintDetail['vehicleSource'];
@@ -45,7 +45,7 @@ export function ProvenanceCorrectionPanel({
 }: {
   detail: StaffComplaintDetailView;
   locale: Locale;
-  lookupState?: LookupPreviewState | undefined;
+  lookupState?: LookupFixtureState | undefined;
   text: ProvenanceCorrectionText;
 }) {
   const [state, setState] = useState<keyof ProvenanceCorrectionText['states']>('idle');
@@ -79,9 +79,9 @@ export function ProvenanceCorrectionPanel({
   const message = state === 'success' && changed.length ? `${text.states.success}: ${changed.join(', ')}` : text.states[state];
 
   return (
-    <section className="rounded-md border border-slate-200 bg-slate-50 p-3 md:col-span-2" aria-label={text.title}>
+    <section className="rounded-md border border-border-subtle bg-surface-muted p-3 md:col-span-2" aria-label={text.title}>
       <h3 className="text-sm font-semibold">{text.title}</h3>
-      <p className="mt-1 text-xs text-slate-600">{text.description}</p>
+      <p className="mt-1 text-xs text-content-muted">{text.description}</p>
       <div className="mt-3">
         <CustomerVehicleLookup locale={locale} onSelectionChange={applyLookupSelection} state={lookupState} surface="section" />
       </div>
@@ -211,5 +211,5 @@ function TextField({ id, label, name, onChange, value }: { id: string; label: st
 }
 
 function CheckField({ checked, label, name, onChange }: { checked: boolean; label: string; name: string; onChange: (value: boolean) => void }) {
-  return <Label className="flex items-center gap-2 rounded-sm bg-white px-3 py-2 text-sm"><Input checked={checked} className="size-4" name={name} onChange={(event) => onChange(event.currentTarget.checked)} type="checkbox" />{label}</Label>;
+  return <Label className="flex items-center gap-2 rounded-sm bg-surface-card px-3 py-2 text-sm"><Input checked={checked} className="size-4" name={name} onChange={(event) => onChange(event.currentTarget.checked)} type="checkbox" />{label}</Label>;
 }

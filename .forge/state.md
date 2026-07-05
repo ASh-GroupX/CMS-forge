@@ -1,8 +1,8 @@
 # Current State
 
-Status: UI/UX redesign Slice 7 complete; Slice 8 ready
+Status: UI/UX redesign Slice 8 complete; Slice 9 ready
 Phase: ui-ux-redesign
-Next Task: Slice 8 - Cleanup and Hardening
+Next Task: Slice 9 - Final Visual QA Gate
 Model Tier: GPT-5.5 Extra High
 
 ## How to use this file
@@ -23,14 +23,15 @@ Prior state history is in .forge/archive/state-archive.md.
 - UI/UX refactor Slice 5 completed complaint detail and workflow as an operational workbench.
 - UI/UX refactor Slice 6 completed admin, reports, audit, and notification surfaces.
 - UI/UX refactor Slice 7 completed customer portal surface hardening for submit, tracking, follow-up, attachments, and survey.
-- Slice 7 reused shared state and badge primitives, strengthened existing localized privacy/status messaging, and made portal controls more mobile-friendly while preserving backend-owned portal verification.
+- UI/UX refactor Slice 8 completed cleanup and hardening.
+- Slice 8 renamed production `*PreviewState` types to `*FixtureState`, leaving existing proof fixture behavior intact while removing production `PreviewState` names.
+- Slice 8 moved migrated admin category/SLA and complaint detail CAPA/correction panels off raw slate/white utilities and tightened the off-token color lint ratchet from 455 to 33 matches.
 - `web:visual-review` writes English and Arabic HTML plus PNG artifacts for the covered staff and portal surfaces under `coverage/web-visual-review`.
-- Lint retains the frontend raw color utility ratchet for `apps/web/src/app` and `apps/web/src/components`; current baseline is 455 matches.
-- Proof passed for Slice 7: `typecheck`, `lint`, `test:web -- shell`, `test:web -- localization`, `test:visual`, `web:visual-review`, `test:e2e -- accessibility`, `web:perf`, and `git diff --check`.
+- Proof passed for Slice 8: `typecheck`, `lint`, `test:web -- shell`, `test:web -- localization`, `test:visual`, `web:visual-review`, `test:e2e -- accessibility`, `web:perf`, and `git diff --check`.
 
 ## Current Stop
 
-Proceed with Slice 8 only: cleanup and hardening.
+Proceed with Slice 9 only: final visual QA gate.
 
 ## Open Carry-Forward / Known Debt
 
@@ -38,5 +39,5 @@ Proceed with Slice 8 only: cleanup and hardening.
 - Exact report decision still needed for RPT-002, RPT-003, RPT-005 through RPT-012, RPT-014, and RPT-016: signed MVP deferral or approval to implement missing report-specific outputs.
 - Approved notification channels for remaining pilot/UAT proof still need final signoff.
 - RPT-015 DMS lookup failure reporting is signed-deferred for manual-DMS pilot scope until a live/test provider exists and lookup telemetry is meaningful.
-- Existing off-token color debt is intentionally ratcheted; Slice 8 should reduce the 455-match baseline where safe.
+- The remaining off-token color lint ratchet is 33 matches in `apps/web/src/app` and `apps/web/src/components`; future migrated surfaces should continue shrinking it.
 - Generated proof artifacts under `coverage/` and `.playwright-cli/` remain intentionally unstaged.

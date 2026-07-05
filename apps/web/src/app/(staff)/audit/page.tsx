@@ -1,5 +1,5 @@
 import React from 'react';
-import { AuditViewer, type AuditPreviewState } from '../../../components/audit-viewer';
+import { AuditViewer, type AuditFixtureState } from '../../../components/audit-viewer';
 import { resolveLocale } from '../../../i18n/staff-shell';
 import { getStaffAuditLogs, type StaffAuditFilters } from '../../../lib/staff-audit-api';
 
@@ -17,7 +17,7 @@ function readParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function resolveState(value: string | undefined): AuditPreviewState | undefined {
+function resolveState(value: string | undefined): AuditFixtureState | undefined {
   return value === 'loading' || value === 'empty' || value === 'error' || value === 'success' || value === 'validation' || value === 'conflict' || value === 'denied'
     ? value
     : undefined;

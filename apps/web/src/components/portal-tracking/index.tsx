@@ -17,14 +17,14 @@ import {
 } from '../../lib/portal-tracking-api';
 import { PortalFollowUpPanel } from './follow-up-panel';
 
-export type PortalTrackingPreviewState = 'loading' | 'requested' | 'verified' | 'validation' | 'requestValidation' | 'codeValidation' | 'requestError' | 'trackingError' | 'invalid' | 'expired' | 'error' | 'followup' | 'attachment' | 'closed';
-type Feedback = PortalTrackingPreviewState | 'denied' | undefined;
+export type PortalTrackingFixtureState = 'loading' | 'requested' | 'verified' | 'validation' | 'requestValidation' | 'codeValidation' | 'requestError' | 'trackingError' | 'invalid' | 'expired' | 'error' | 'followup' | 'attachment' | 'closed';
+type Feedback = PortalTrackingFixtureState | 'denied' | undefined;
 
 export function PortalTrackingScreen({ locale }: { locale: PortalTrackingLocale }) {
   return <PortalTrackingView initialFeedback={undefined} initialFollowUp="" initialPhone="" initialReference="" initialTracking={null} locale={locale} />;
 }
 
-export function PortalTrackingPreview({ locale, reference, state }: { locale: PortalTrackingLocale; reference: string; state?: PortalTrackingPreviewState | undefined }) {
+export function PortalTrackingPreview({ locale, reference, state }: { locale: PortalTrackingLocale; reference: string; state?: PortalTrackingFixtureState | undefined }) {
   const t = portalTrackingText[locale];
   const timelineLabels = portalTimelineText[locale];
   return (
@@ -198,7 +198,7 @@ function TextField({ label, name, type = 'text', value, onChange, autoComplete }
   return <Label className="grid gap-1 text-sm font-medium">{label}<Input autoComplete={autoComplete} className="min-h-11" name={name} type={type} value={value} onChange={(event) => onChange(event.target.value)} /></Label>;
 }
 
-function sampleTracking(locale: PortalTrackingLocale, reference: string, state?: PortalTrackingPreviewState): PortalTrackingComplaint | null {
+function sampleTracking(locale: PortalTrackingLocale, reference: string, state?: PortalTrackingFixtureState): PortalTrackingComplaint | null {
   if (state !== 'verified' && state !== 'followup' && state !== 'attachment' && state !== 'closed') return null;
   const t = portalTrackingText[locale];
   const timelineLabels = portalTimelineText[locale];

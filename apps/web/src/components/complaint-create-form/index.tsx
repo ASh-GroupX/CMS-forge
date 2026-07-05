@@ -19,7 +19,7 @@ import {
 } from '../../lib/staff-complaints-api';
 import type { LookupSelection } from '../customer-vehicle-lookup';
 
-export type CreateFormPreviewState = 'validation' | 'success' | 'error' | 'loading' | 'network';
+export type CreateFormFixtureState = 'validation' | 'success' | 'error' | 'loading' | 'network';
 
 type SubmitState =
   | { kind: 'idle' }
@@ -37,7 +37,7 @@ export function ComplaintCreateForm({
   locale: Locale;
   lookupSelection?: LookupSelection | null | undefined;
   options?: ComplaintFormOptions | null | undefined;
-  state?: CreateFormPreviewState | undefined;
+  state?: CreateFormFixtureState | undefined;
 }) {
   const shell = staffShellText[locale];
   const t = shell.createForm;
@@ -223,7 +223,7 @@ function CreateSubmitMessage({ locale, state }: { locale: Locale; state: SubmitS
   );
 }
 
-function previewState(state: CreateFormPreviewState | undefined, locale: Locale): SubmitState {
+function previewState(state: CreateFormFixtureState | undefined, locale: Locale): SubmitState {
   if (state === 'success') return { kind: 'success', attachmentCount: 1, failedAttachmentCount: 0, referenceNumber: 'CMP-2026-001', status: 'SUBMITTED' };
   if (state === 'validation') return { kind: 'validation', fieldErrors: [{ field: 'customerPhone', code: 'REQUIRED', message: staffShellText[locale].createForm.validation.required }] };
   if (state === 'loading') return { kind: 'loading' };

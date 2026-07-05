@@ -11,7 +11,7 @@ import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
 import type { ComplaintFormOption, ComplaintFormOptions } from '../../lib/staff-complaint-form-options-api';
 import type { StaffReportCatalog, StaffReportKpis, StaffReportRow } from '../../lib/staff-reports-api';
 
-export type ReportsPreviewState = 'ready' | 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'denied' | 'conflict';
+export type ReportsFixtureState = 'ready' | 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'denied' | 'conflict';
 export type ReportsFilters = { branchId: string; categoryId: string; dateFrom: string; dateTo: string; departmentId: string; ownerId: string; severity: string };
 
 export function ReportsDashboard({
@@ -31,7 +31,7 @@ export function ReportsDashboard({
   options?: ComplaintFormOptions | null | undefined;
   rows?: StaffReportRow[] | undefined;
   staff?: AssignableStaff[] | null | undefined;
-  state?: ReportsPreviewState | undefined;
+  state?: ReportsFixtureState | undefined;
 }) {
   const shell = staffShellText[locale];
   const t = reportsDashboardText[locale];

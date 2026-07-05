@@ -1,5 +1,5 @@
 export {
   buildStaffComplaintCreateSubmission,
   ComplaintCreateForm,
-  type CreateFormPreviewState,
+  type CreateFormFixtureState,
 } from '../components/complaint-create-form';

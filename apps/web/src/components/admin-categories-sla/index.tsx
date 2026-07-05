@@ -4,12 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { Field, StatusBadge } from '../shared/ui-primitives';
+import { Field, StateBlock, StatusBadge } from '../shared/ui-primitives';
 import { adminCategoriesSlaText } from '../../i18n/staff-admin-categories-sla';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import type { AdminCategory, AdminCategorySlaConfig, AdminSlaPolicy } from '../../lib/staff-admin-category-sla-api';
 
-export type AdminConfigPreviewState = 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'conflict';
+export type AdminConfigFixtureState = 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'conflict';
 type AdminAction = (formData: FormData) => void | Promise<void>;
 
 export function AdminCategoriesSla({
@@ -25,7 +25,7 @@ export function AdminCategoriesSla({
   deactivateCategoryAction?: AdminAction;
   locale: Locale;
   slaAction?: AdminAction;
-  state?: AdminConfigPreviewState | undefined;
+  state?: AdminConfigFixtureState | undefined;
 }) {
   const shell = staffShellText[locale];
   const t = adminCategoriesSlaText[locale];
@@ -34,19 +34,19 @@ export function AdminCategoriesSla({
   const visibleState = state ?? (config && categories.length === 0 && policies.length === 0 ? 'empty' : undefined);
 
   return (
-    <Card aria-label={t.title} className="rounded-md border-slate-200 bg-white shadow-sm" dir={shell.dir}>
-      <CardHeader className="border-b border-slate-200 p-4">
+    <Card aria-label={t.title} className="rounded-md border-border-subtle bg-surface-card shadow-sm" dir={shell.dir}>
+      <CardHeader className="border-b border-border-subtle p-4">
         <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
-        <CardDescription className="mt-1 text-sm text-slate-600">{t.subtitle}</CardDescription>
+        <CardDescription className="mt-1 text-sm text-content-muted">{t.subtitle}</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4 p-4">
-        {visibleState ? <p className="rounded-sm border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700" role={visibleState === 'success' || visibleState === 'loading' || visibleState === 'empty' ? 'status' : 'alert'}>{t.states[visibleState]}</p> : null}
-        <p className="rounded-sm border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{t.auditNote}</p>
+        {visibleState ? <StateBlock message={t.states[visibleState]} tone={visibleState === 'success' ? 'success' : visibleState === 'error' || visibleState === 'validation' || visibleState === 'conflict' ? 'error' : 'neutral'} /> : null}
+        <p className="rounded-sm border border-border-subtle bg-surface-muted px-3 py-2 text-sm text-content-muted">{t.auditNote}</p>
         <div className="grid gap-3 xl:grid-cols-2">
           <CategoryTable action={categoryAction} deactivateAction={deactivateCategoryAction} locale={locale} rows={categories} />
           <SeverityTable locale={locale} policies={policies} />
           <SlaTable action={slaAction} locale={locale} policies={policies} />
-          <p className="rounded-sm border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 xl:col-span-2">{t.slaNote}</p>
+          <p className="rounded-sm border border-border-subtle bg-surface-muted px-3 py-2 text-sm text-content-muted xl:col-span-2">{t.slaNote}</p>
         </div>
       </CardContent>
     </Card>
@@ -57,16 +57,16 @@ function CategoryTable({ action, deactivateAction, locale, rows }: { action: Adm
   const t = adminCategoriesSlaText[locale];
   const parentName = new Map(rows.map((row) => [row.id, row.nameEn]));
   return (
-    <section className="overflow-x-auto rounded-md border border-slate-200 bg-slate-50" aria-label={t.sections.categories}>
-      <h3 className="border-b border-slate-200 px-3 py-2 text-sm font-semibold">{t.sections.categories}</h3>
+    <section className="overflow-x-auto rounded-md border border-border-subtle bg-surface-muted" aria-label={t.sections.categories}>
+      <h3 className="border-b border-border-subtle px-3 py-2 text-sm font-semibold">{t.sections.categories}</h3>
       {action ? <CategoryForm action={action} locale={locale} rows={rows} /> : null}
       <Table className="min-w-[54rem]">
-        <TableHeader className="bg-white text-xs font-semibold uppercase tracking-normal text-slate-600">
+        <TableHeader className="bg-surface-card text-xs font-semibold uppercase tracking-normal text-content-muted">
           <TableRow>{t.categoryHeaders.map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>
         </TableHeader>
         <TableBody>
           {rows.length ? rows.map((row) => (
-            <TableRow className="border-b border-slate-100" key={row.id}>
+            <TableRow className="border-b border-border-subtle" key={row.id}>
               <TableCell className="font-semibold">{row.code}</TableCell>
               <TableCell>{row.nameEn}</TableCell>
               <TableCell>{row.nameAr}</TableCell>
@@ -74,7 +74,7 @@ function CategoryTable({ action, deactivateAction, locale, rows }: { action: Adm
               <TableCell><StatusBadge>{row.isActive ? t.badges.active : t.badges.inactive}</StatusBadge></TableCell>
               <TableCell><CategoryActions action={action} deactivateAction={deactivateAction} item={row} locale={locale} rows={rows} /></TableCell>
             </TableRow>
-          )) : <TableRow><TableCell className="text-slate-600" colSpan={6}>{t.states.empty}</TableCell></TableRow>}
+          )) : <TableRow><TableCell className="text-content-muted" colSpan={6}>{t.states.empty}</TableCell></TableRow>}
         </TableBody>
       </Table>
     </section>
@@ -100,7 +100,7 @@ function CategoryActions({ action, deactivateAction, item, locale, rows }: { act
 function CategoryForm({ action, compact = false, item, locale, rows }: { action: AdminAction; compact?: boolean; item?: AdminCategory; locale: Locale; rows: AdminCategory[] }) {
   const t = adminCategoriesSlaText[locale];
   return (
-    <form action={action} className={compact ? 'grid gap-2 md:grid-cols-5' : 'grid gap-2 border-b border-slate-200 p-3 md:grid-cols-5'}>
+    <form action={action} className={compact ? 'grid gap-2 md:grid-cols-5' : 'grid gap-2 border-b border-border-subtle p-3 md:grid-cols-5'}>
       <input name="id" type="hidden" value={item?.id ?? ''} />
       <input name="locale" type="hidden" value={locale} />
       <input name="returnTo" type="hidden" value="/admin/categories" />
@@ -109,7 +109,7 @@ function CategoryForm({ action, compact = false, item, locale, rows }: { action:
       <TextField label={t.fields.nameAr} name="nameAr" value={item?.nameAr} />
       <label className="grid gap-1 text-sm font-medium">
         {t.fields.parent}
-        <select className="rounded-md border border-slate-300 bg-white px-3 py-2" defaultValue={item?.parentId ?? ''} name="parentId">
+        <select className="rounded-md border border-input bg-background px-3 py-2" defaultValue={item?.parentId ?? ''} name="parentId">
           <option value="">{t.root}</option>
           {rows.filter((row) => row.parentId === null && row.id !== item?.id).map((row) => <option key={row.id} value={row.id}>{row.nameEn}</option>)}
         </select>
@@ -123,13 +123,13 @@ function SeverityTable({ locale, policies }: { locale: Locale; policies: AdminSl
   const t = adminCategoriesSlaText[locale];
   const severities = Array.from(new Set(policies.map((policy) => policy.severity)));
   return (
-    <section className="overflow-x-auto rounded-md border border-slate-200 bg-slate-50" aria-label={t.sections.severities}>
-      <h3 className="border-b border-slate-200 px-3 py-2 text-sm font-semibold">{t.sections.severities}</h3>
+    <section className="overflow-x-auto rounded-md border border-border-subtle bg-surface-muted" aria-label={t.sections.severities}>
+      <h3 className="border-b border-border-subtle px-3 py-2 text-sm font-semibold">{t.sections.severities}</h3>
       <Table className="min-w-[30rem]">
-        <TableHeader className="bg-white text-xs font-semibold uppercase tracking-normal text-slate-600">
+        <TableHeader className="bg-surface-card text-xs font-semibold uppercase tracking-normal text-content-muted">
           <TableRow>{t.severityHeaders.map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>
         </TableHeader>
-        <TableBody>{severities.length ? severities.map((severity) => <TableRow key={severity}><TableCell className="font-semibold">{severity}</TableCell><TableCell>{t.severitySource}</TableCell></TableRow>) : <TableRow><TableCell className="text-slate-600" colSpan={2}>{t.states.empty}</TableCell></TableRow>}</TableBody>
+        <TableBody>{severities.length ? severities.map((severity) => <TableRow key={severity}><TableCell className="font-semibold">{severity}</TableCell><TableCell>{t.severitySource}</TableCell></TableRow>) : <TableRow><TableCell className="text-content-muted" colSpan={2}>{t.states.empty}</TableCell></TableRow>}</TableBody>
       </Table>
     </section>
   );
@@ -138,14 +138,14 @@ function SeverityTable({ locale, policies }: { locale: Locale; policies: AdminSl
 function SlaTable({ action, locale, policies }: { action: AdminAction | undefined; locale: Locale; policies: AdminSlaPolicy[] }) {
   const t = adminCategoriesSlaText[locale];
   return (
-    <section className="overflow-x-auto rounded-md border border-slate-200 bg-slate-50 xl:col-span-2" aria-label={t.sections.sla}>
-      <h3 className="border-b border-slate-200 px-3 py-2 text-sm font-semibold">{t.sections.sla}</h3>
+    <section className="overflow-x-auto rounded-md border border-border-subtle bg-surface-muted xl:col-span-2" aria-label={t.sections.sla}>
+      <h3 className="border-b border-border-subtle px-3 py-2 text-sm font-semibold">{t.sections.sla}</h3>
       <Table className="min-w-[64rem]">
-        <TableHeader className="bg-white text-xs font-semibold uppercase tracking-normal text-slate-600">
+        <TableHeader className="bg-surface-card text-xs font-semibold uppercase tracking-normal text-content-muted">
           <TableRow>{t.slaHeaders.map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>
         </TableHeader>
         <TableBody>
-          {policies.length ? policies.map((policy) => <SlaRow action={action} key={policy.id} locale={locale} policy={policy} />) : <TableRow><TableCell className="text-slate-600" colSpan={8}>{t.states.empty}</TableCell></TableRow>}
+          {policies.length ? policies.map((policy) => <SlaRow action={action} key={policy.id} locale={locale} policy={policy} />) : <TableRow><TableCell className="text-content-muted" colSpan={8}>{t.states.empty}</TableCell></TableRow>}
         </TableBody>
       </Table>
     </section>
@@ -155,7 +155,7 @@ function SlaTable({ action, locale, policies }: { action: AdminAction | undefine
 function SlaRow({ action, locale, policy }: { action: AdminAction | undefined; locale: Locale; policy: AdminSlaPolicy }) {
   const t = adminCategoriesSlaText[locale];
   return (
-    <TableRow className="border-b border-slate-100">
+    <TableRow className="border-b border-border-subtle">
       <TableCell className="font-semibold">{policy.stage}</TableCell>
       <TableCell>{policy.severity}</TableCell>
       <TableCell>{policy.durationMinutes}</TableCell>
@@ -179,7 +179,7 @@ function SlaForm({ action, locale, policy }: { action: AdminAction; locale: Loca
       <TextField label={t.fields.timezone} name="branchTimezone" value={policy.branchTimezone} />
       <label className="grid gap-1 text-sm font-medium">
         {t.fields.calendar}
-        <select className="rounded-md border border-slate-300 bg-white px-3 py-2" defaultValue={policy.workingCalendarMode} name="workingCalendarMode">
+        <select className="rounded-md border border-input bg-background px-3 py-2" defaultValue={policy.workingCalendarMode} name="workingCalendarMode">
           <option value="ALWAYS_ON">{t.modes.ALWAYS_ON}</option>
           <option value="CALENDAR_HOURS">{t.modes.CALENDAR_HOURS}</option>
         </select>

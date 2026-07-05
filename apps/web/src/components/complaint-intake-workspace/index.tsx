@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ComplaintCreateForm, type CreateFormPreviewState } from '../complaint-create-form';
-import { CustomerVehicleLookup, type LookupPreviewState, type LookupSelection } from '../customer-vehicle-lookup';
+import { ComplaintCreateForm, type CreateFormFixtureState } from '../complaint-create-form';
+import { CustomerVehicleLookup, type LookupFixtureState, type LookupSelection } from '../customer-vehicle-lookup';
 import { PageHeader } from '../shared/ui-primitives';
 import { complaintCreateText } from '../../i18n/staff-complaint-create';
 import type { Locale } from '../../i18n/staff-shell';
@@ -14,9 +14,9 @@ export function ComplaintIntakeWorkspace({
   lookupState,
   options,
 }: {
-  createState?: CreateFormPreviewState | undefined;
+  createState?: CreateFormFixtureState | undefined;
   locale: Locale;
-  lookupState?: LookupPreviewState | undefined;
+  lookupState?: LookupFixtureState | undefined;
   options?: ComplaintFormOptions | null | undefined;
 }) {
   const [lookupSelection, setLookupSelection] = useState<LookupSelection | null>(null);

@@ -238,7 +238,7 @@ Acceptance:
 
 ## Slice 8 - Cleanup and Hardening
 
-Status: Ready in `.forge/next.md`
+Status: Complete
 
 Remove:
 
@@ -257,7 +257,7 @@ Acceptance:
 
 ## Slice 9 - Final Visual QA Gate
 
-Status: Pending
+Status: Ready in `.forge/next.md`
 
 Required review:
 

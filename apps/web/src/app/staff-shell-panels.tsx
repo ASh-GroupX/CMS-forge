@@ -1,7 +1,7 @@
 import React from 'react';
 import { loginStaffAction, logoutStaffAction } from '../lib/staff-auth-actions';
 import { staffShellText, type Locale } from '../i18n/staff-shell';
-import { PasswordResetPanel, type ResetPreviewState } from './password-reset-panel';
+import { PasswordResetPanel, type ResetFixtureState } from './password-reset-panel';
 import { PasswordInput } from '../components/password-input';
 
 export type RolePreview = 'staff' | 'admin' | 'management';
@@ -45,7 +45,7 @@ export function AuthPanel({
   authError: boolean;
   isSignedIn: boolean;
   locale: Locale;
-  resetState?: ResetPreviewState | undefined;
+  resetState?: ResetFixtureState | undefined;
 }) {
   const t = staffShellText[locale];
   if (isSignedIn) {

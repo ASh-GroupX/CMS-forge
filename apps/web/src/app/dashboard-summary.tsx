@@ -4,7 +4,7 @@ import { staffShellText, type Locale } from '../i18n/staff-shell';
 import type { StaffDashboardSummary } from '../lib/staff-dashboard-api';
 
 type RolePreview = 'staff' | 'admin' | 'management';
-export type DashboardPreviewState = 'loading' | 'empty' | 'error';
+export type DashboardFixtureState = 'loading' | 'empty' | 'error';
 
 type SummaryKey = 'open' | 'overdue' | 'warnings' | 'closed' | 'averageTat';
 
@@ -31,7 +31,7 @@ export function DashboardSummary({
 }: {
   locale: Locale;
   role: RolePreview;
-  state?: DashboardPreviewState | undefined;
+  state?: DashboardFixtureState | undefined;
   summary?: StaffDashboardSummary | undefined;
 }) {
   const t = staffShellText[locale].dashboard;

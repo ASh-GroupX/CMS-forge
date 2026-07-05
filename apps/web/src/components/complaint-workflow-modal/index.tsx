@@ -19,9 +19,9 @@ import {
   type StaffComplaintTransitionRequest,
 } from '../../lib/staff-complaints-api';
 
-export type ComplaintWorkflowPreviewState = 'loading' | 'empty' | 'error' | 'success' | 'conflict' | 'validation';
+export type ComplaintWorkflowFixtureState = 'loading' | 'empty' | 'error' | 'success' | 'conflict' | 'validation';
 
-type SubmitState = ComplaintWorkflowPreviewState | undefined;
+type SubmitState = ComplaintWorkflowFixtureState | undefined;
 type TransitionField = Exclude<keyof StaffComplaintTransitionRequest, 'status' | 'action'>;
 
 const previewActions: ComplaintTransitionAction[] = ['ACCEPT_INTAKE', 'APPROVE_AND_ROUTE', 'SEND_BACK', 'ASSIGN_INVESTIGATION', 'ADD_INVESTIGATION_UPDATE', 'RESOLVE', 'CLOSE', 'REJECT_AS_INVALID', 'REOPEN'];
@@ -47,7 +47,7 @@ export function ComplaintWorkflowModal({
   staff?: AssignableStaff[] | null | undefined;
   status?: ComplaintStatus | string | undefined;
   vehicleNeedsUnavailableReason?: boolean | undefined;
-  workflowState?: ComplaintWorkflowPreviewState | undefined;
+  workflowState?: ComplaintWorkflowFixtureState | undefined;
 }) {
   const t = complaintDetailText[locale];
   const confirm = confirmationText[locale].workflowCloseReject;

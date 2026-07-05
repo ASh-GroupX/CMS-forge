@@ -14,7 +14,7 @@ import {
   type StaffDmsLookupQuery,
 } from '../../lib/staff-complaints-api';
 
-export type LookupPreviewState = 'loading' | 'none' | 'error' | 'match' | 'multiple' | 'down' | 'disabled' | 'validation' | 'manual';
+export type LookupFixtureState = 'loading' | 'none' | 'error' | 'match' | 'multiple' | 'down' | 'disabled' | 'validation' | 'manual';
 export type LookupSelection = { source: 'DMS'; match: DmsCustomerVehicleMatch } | { source: 'MANUAL'; match: null };
 
 type ViewState =
@@ -32,7 +32,7 @@ export function CustomerVehicleLookup({
 }: {
   locale: Locale;
   onSelectionChange?: ((selection: LookupSelection) => void) | undefined;
-  state?: LookupPreviewState | undefined;
+  state?: LookupFixtureState | undefined;
   surface?: 'card' | 'section';
 }) {
   const shell = staffShellText[locale];
@@ -186,7 +186,7 @@ function viewFromLookup(lookup: DmsLookupResult): ViewState {
   return { kind: 'disabled', matches: [] };
 }
 
-function previewView(state: LookupPreviewState | undefined): ViewState {
+function previewView(state: LookupFixtureState | undefined): ViewState {
   if (state === 'match') return { kind: 'match', matches: [sampleMatch('CUST-100', 'Nadia Saleh', 'WBA12345678900001')] };
   if (state === 'multiple') {
     return {

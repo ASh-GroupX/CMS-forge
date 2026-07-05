@@ -9,7 +9,7 @@ import { StateBlock } from '../shared/ui-primitives';
 import { portalSurveyText, type PortalSurveyLocale } from '../../i18n/portal-survey';
 import { submitPortalSurvey, terminalSurveyState } from '../../lib/portal-survey-api';
 
-export type PortalSurveyPreviewState = 'success' | 'used' | 'expired' | 'validation' | 'loading' | 'error' | 'missing';
+export type PortalSurveyFixtureState = 'success' | 'used' | 'expired' | 'validation' | 'loading' | 'error' | 'missing';
 
 export function PortalSurveyScreen({
   locale,
@@ -17,11 +17,11 @@ export function PortalSurveyScreen({
   surveyKey,
 }: {
   locale: PortalSurveyLocale;
-  state?: PortalSurveyPreviewState | undefined;
+  state?: PortalSurveyFixtureState | undefined;
   surveyKey?: string | undefined;
 }) {
   const t = portalSurveyText[locale];
-  const [liveState, setLiveState] = useState<PortalSurveyPreviewState | undefined>(() => state ?? (surveyKey ? undefined : 'missing'));
+  const [liveState, setLiveState] = useState<PortalSurveyFixtureState | undefined>(() => state ?? (surveyKey ? undefined : 'missing'));
   const closed = liveState === 'success' || liveState === 'used' || liveState === 'expired' || liveState === 'missing';
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -88,7 +88,7 @@ export function PortalSurveyScreen({
   );
 }
 
-function PortalSurveyMessage({ locale, state }: { locale: PortalSurveyLocale; state?: PortalSurveyPreviewState | undefined }) {
+function PortalSurveyMessage({ locale, state }: { locale: PortalSurveyLocale; state?: PortalSurveyFixtureState | undefined }) {
   const t = portalSurveyText[locale];
   if (!state) return null;
   const successful = state === 'success';

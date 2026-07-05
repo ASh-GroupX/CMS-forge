@@ -1,6 +1,6 @@
 import React from 'react';
 import { PortalShell } from '../../../components/portal-shell';
-import { PortalSurveyScreen, type PortalSurveyPreviewState } from '../../../components/portal-survey';
+import { PortalSurveyScreen, type PortalSurveyFixtureState } from '../../../components/portal-survey';
 import { portalSurveyText, resolvePortalSurveyLocale } from '../../../i18n/portal-survey';
 
 type SearchParams = {
@@ -41,6 +41,6 @@ function readParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function previewState(value: string | undefined): PortalSurveyPreviewState | undefined {
+function previewState(value: string | undefined): PortalSurveyFixtureState | undefined {
   return value === 'success' || value === 'used' || value === 'expired' || value === 'validation' || value === 'loading' || value === 'error' || value === 'missing' ? value : undefined;
 }

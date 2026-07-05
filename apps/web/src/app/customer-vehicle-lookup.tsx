@@ -1,1 +1,1 @@
-export { CustomerVehicleLookup, type LookupPreviewState } from '../components/customer-vehicle-lookup';
+export { CustomerVehicleLookup, type LookupFixtureState } from '../components/customer-vehicle-lookup';

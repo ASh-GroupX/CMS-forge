@@ -8,7 +8,7 @@ import { auditViewerText } from '../../i18n/staff-audit-viewer';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import { auditExportHref, type StaffAuditFilters, type StaffAuditResult } from '../../lib/staff-audit-api';
 
-export type AuditPreviewState = 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'conflict' | 'denied';
+export type AuditFixtureState = 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'conflict' | 'denied';
 
 export function AuditViewer({
   filters = {},
@@ -19,7 +19,7 @@ export function AuditViewer({
   filters?: StaffAuditFilters;
   locale: Locale;
   result?: StaffAuditResult | undefined;
-  state?: AuditPreviewState | undefined;
+  state?: AuditFixtureState | undefined;
 }) {
   const shell = staffShellText[locale], t = auditViewerText[locale];
   const rows = result?.items ?? [];

@@ -1,4 +1,4 @@
-# UI/UX Refactor - Slice 8 Cleanup and Hardening
+# UI/UX Refactor - Slice 9 Final Visual QA Gate
 
 Status: Ready
 Required model tier: GPT-5.5 Extra High
@@ -9,24 +9,26 @@ Skills: `ui-ux-pro-max`, `redesign`, `design-qa`, `design-taste-frontend` suppor
 
 ## Task
 
-Continue the CMS-Auto UI/UX refactor after the customer portal slice. Remove
-remaining production UI scaffolding and harden migrated surfaces without changing
-backend authority, route contracts, RBAC, branch scope, audit, reports,
-notifications, attachments, or portal privacy.
+Complete the final UI/UX visual QA gate for the CMS-Auto refactor. Verify the
+redesigned staff and portal surfaces across English LTR and Arabic RTL, confirm
+keyboard/accessibility/performance proof, and make only narrowly scoped fixes
+needed to satisfy the final gate.
 
 ## Scope
 
-- Remove remaining production `PreviewState` and query-state demo scaffolding
-  where it is safe to do so.
-- Remove fake modal semantics, empty `href`, and hardcoded user-facing English
-  outside dictionaries.
-- Shrink the raw color utility baseline in migrated surfaces.
-- Confirm migrated screens still expose loading, empty, error, success, conflict,
-  and destructive-confirm states where applicable.
-- Keep visual-test fixtures as fixtures; do not move demo authority into
-  production components.
-- Preserve typed API helpers, route behavior, OpenAPI contracts, Arabic RTL, and
-  English LTR.
+- Review English and Arabic screenshots for every redesigned screen covered by
+  the proof harness.
+- Check applicable viewport sizes: 390px, 430px, 768px, 1024px, 1280px, and
+  1440px where the harness or manual browser checks expose them.
+- Verify keyboard-only paths through navigation, filters, forms, workflow
+  actions, portal verification, portal submit, and portal tracking.
+- Confirm axe serious/critical violations remain at zero.
+- Confirm no page-level horizontal overflow, clipped Arabic text, incoherent
+  overlap, production `PreviewState`, fake modal semantics, empty `href`, or new
+  hardcoded user-facing English outside dictionaries.
+- Preserve backend authority, route behavior, OpenAPI contracts, RBAC, branch
+  scope, audit, reports, notifications, attachments, portal privacy, Arabic RTL,
+  and English LTR.
 
 ## Proof
 
@@ -42,12 +44,12 @@ notifications, attachments, or portal privacy.
 
 ## Stop When
 
-- No production `PreviewState` remains in migrated surfaces unless explicitly
-  documented as test-only fixture code.
-- No fake modal semantics, empty `href`, or new hardcoded user-facing English is
-  present in touched UI.
-- Raw color utility usage shrinks from the current ratcheted baseline where
-  touched.
-- No production route behavior, OpenAPI contract, portal privacy, attachment,
-  verification, RBAC, branch scope, audit, report, or notification rule changes.
+- Final visual QA evidence covers every redesigned proof surface in English and
+  Arabic.
+- Browser-backed visual, axe, keyboard, localization, and perf proof passes.
+- No production `PreviewState`, fake modal semantics, or empty `href` remains.
+- No new hardcoded user-facing English outside dictionaries is introduced.
+- No page-level horizontal overflow, clipped Arabic text, or incoherent overlap
+  is visible in reviewed artifacts.
+- All UI/UX refactor slices are marked complete and Forge evidence is complete.
 - No new UI dependency is introduced.

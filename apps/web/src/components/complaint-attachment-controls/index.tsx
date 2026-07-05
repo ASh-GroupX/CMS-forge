@@ -14,15 +14,15 @@ import {
   type StaffAttachment,
 } from '../../lib/staff-attachments-api';
 
-export type ComplaintAttachmentPreviewState = 'loading' | 'empty' | 'error' | 'pending' | 'clean' | 'rejected' | 'download-error';
-type LocalState = ComplaintAttachmentPreviewState | 'uploading' | 'uploaded' | 'downloaded' | undefined;
+export type ComplaintAttachmentFixtureState = 'loading' | 'empty' | 'error' | 'pending' | 'clean' | 'rejected' | 'download-error';
+type LocalState = ComplaintAttachmentFixtureState | 'uploading' | 'uploaded' | 'downloaded' | undefined;
 
 export function ComplaintAttachmentControls({
   attachmentState,
   complaintId,
   locale,
 }: {
-  attachmentState?: ComplaintAttachmentPreviewState | undefined;
+  attachmentState?: ComplaintAttachmentFixtureState | undefined;
   complaintId?: string | undefined;
   locale: Locale;
 }) {
@@ -127,7 +127,7 @@ function scanBadge(value: string | undefined): 'pending' | 'clean' | 'rejected' 
   return 'pending';
 }
 
-function previewItems(state: ComplaintAttachmentPreviewState | undefined, fileName: string): StaffAttachment[] {
+function previewItems(state: ComplaintAttachmentFixtureState | undefined, fileName: string): StaffAttachment[] {
   if (state !== 'pending' && state !== 'clean' && state !== 'rejected' && state !== 'download-error') return [];
   const scanStatus = state === 'clean' || state === 'download-error' ? 'CLEAN' : state === 'rejected' ? 'REJECTED' : 'PENDING';
   return [{ id: '', complaintId: '', fileName, contentType: 'application/pdf', sizeBytes: 0, scanStatus, customerVisible: false }];

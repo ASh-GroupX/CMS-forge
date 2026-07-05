@@ -9,7 +9,7 @@ import { adminUsersText } from '../../i18n/staff-admin-users';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import type { AdminUsersData } from '../../lib/staff-admin-users-api';
 
-export type AdminUsersPreviewState = 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'conflict';
+export type AdminUsersFixtureState = 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'conflict';
 type AdminAction = (formData: FormData) => void | Promise<void>;
 
 export function AdminUsersRoles({
@@ -22,7 +22,7 @@ export function AdminUsersRoles({
   createAction?: AdminAction;
   data?: AdminUsersData | null;
   locale: Locale;
-  state?: AdminUsersPreviewState | undefined;
+  state?: AdminUsersFixtureState | undefined;
   toggleAction?: AdminAction;
 }) {
   const shell = staffShellText[locale];
@@ -113,7 +113,7 @@ function Field({ label, minLength, name, type = 'text' }: { label: string; minLe
   );
 }
 
-function StateMessage({ locale, state }: { locale: Locale; state: AdminUsersPreviewState }) {
+function StateMessage({ locale, state }: { locale: Locale; state: AdminUsersFixtureState }) {
   const t = adminUsersText[locale];
   return (
     <p className="mb-4 rounded-sm border bg-muted/40 px-3 py-2 text-sm text-muted-foreground" role={state === 'success' || state === 'loading' ? 'status' : 'alert'}>

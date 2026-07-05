@@ -1,5 +1,5 @@
 import React from 'react';
-import { PasswordReset, type ResetPreviewState } from '../../../../components/password-reset';
+import { PasswordReset, type ResetFixtureState } from '../../../../components/password-reset';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 
 type SearchParams = { locale?: string | string[]; reset?: string | string[] };
@@ -13,7 +13,7 @@ function readParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function resolveReset(value: string | undefined): ResetPreviewState | undefined {
+function resolveReset(value: string | undefined): ResetFixtureState | undefined {
   return value === 'request' || value === 'requested' || value === 'token' || value === 'success' || value === 'invalid' || value === 'error'
     ? value
     : undefined;

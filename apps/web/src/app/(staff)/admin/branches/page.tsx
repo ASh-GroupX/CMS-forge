@@ -1,5 +1,5 @@
 import React from 'react';
-import { AdminBranchesDepartments, type AdminBranchesPreviewState } from '../../../../components/admin-branches-departments';
+import { AdminBranchesDepartments, type AdminBranchesFixtureState } from '../../../../components/admin-branches-departments';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 
 type SearchParams = { admin?: string | string[]; locale?: string | string[] };
@@ -15,7 +15,7 @@ function readParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function resolveState(value: string | undefined): AdminBranchesPreviewState | undefined {
+function resolveState(value: string | undefined): AdminBranchesFixtureState | undefined {
   return value === 'loading' || value === 'empty' || value === 'error' || value === 'success' || value === 'validation' || value === 'conflict'
     ? value
     : undefined;

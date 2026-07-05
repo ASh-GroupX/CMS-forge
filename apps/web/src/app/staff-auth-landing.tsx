@@ -1,7 +1,7 @@
 import React from 'react';
 import { staffShellText, type Locale } from '../i18n/staff-shell';
 import { AuthPanel } from './staff-shell-panels';
-import type { ResetPreviewState } from './password-reset-panel';
+import type { ResetFixtureState } from './password-reset-panel';
 import { StaffTopBar } from './staff-top-bar';
 
 export function StaffAuthLanding({
@@ -11,7 +11,7 @@ export function StaffAuthLanding({
 }: {
   authError: boolean;
   locale: Locale;
-  resetState?: ResetPreviewState | undefined;
+  resetState?: ResetFixtureState | undefined;
 }) {
   const t = staffShellText[locale];
   return (

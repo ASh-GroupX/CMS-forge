@@ -8,19 +8,19 @@ import type { StaffComplaintRelationsView } from '../../lib/staff-complaint-rela
 import type { StaffComplaintComment } from '../../lib/staff-complaint-comments-api';
 import type { StaffComplaintSurvey } from '../../lib/staff-complaint-surveys-api';
 import type { StaffComplaintDetailView } from '../../lib/staff-detail-api';
-import { ComplaintAttachmentControls, type ComplaintAttachmentPreviewState } from '../complaint-attachment-controls';
-import { ComplaintCommentsPanel, type ComplaintCommentsPreviewState } from '../complaint-comments-panel';
-import { ComplaintWorkflowModal, type ComplaintWorkflowPreviewState } from '../complaint-workflow-modal';
-import type { LookupPreviewState } from '../customer-vehicle-lookup';
+import { ComplaintAttachmentControls, type ComplaintAttachmentFixtureState } from '../complaint-attachment-controls';
+import { ComplaintCommentsPanel, type ComplaintCommentsFixtureState } from '../complaint-comments-panel';
+import { ComplaintWorkflowModal, type ComplaintWorkflowFixtureState } from '../complaint-workflow-modal';
+import type { LookupFixtureState } from '../customer-vehicle-lookup';
 import { PageHeader, StateBlock, StatusBadge, Timeline } from '../shared/ui-primitives';
 import { CaseCapaPanel } from './case-capa-panel';
 import { ComplaintRelationsPanel } from './complaint-relations-panel';
 import { ProvenanceCorrectionPanel } from './provenance-correction-panel';
 
-export type ComplaintDetailPreviewState = 'loading' | 'empty' | 'error';
-export type { ComplaintAttachmentPreviewState };
-export type { ComplaintCommentsPreviewState };
-export type { ComplaintWorkflowPreviewState };
+export type ComplaintDetailFixtureState = 'loading' | 'empty' | 'error';
+export type { ComplaintAttachmentFixtureState };
+export type { ComplaintCommentsFixtureState };
+export type { ComplaintWorkflowFixtureState };
 
 export function ComplaintDetailWorkspace({
   attachmentState,
@@ -36,18 +36,18 @@ export function ComplaintDetailWorkspace({
   surveys,
   workflowState,
 }: {
-  attachmentState?: ComplaintAttachmentPreviewState | undefined;
+  attachmentState?: ComplaintAttachmentFixtureState | undefined;
   comments?: StaffComplaintComment[] | null | undefined;
-  commentsState?: ComplaintCommentsPreviewState | undefined;
+  commentsState?: ComplaintCommentsFixtureState | undefined;
   detail?: StaffComplaintDetailView | undefined;
   locale: Locale;
-  lookupState?: LookupPreviewState | undefined;
+  lookupState?: LookupFixtureState | undefined;
   options?: ComplaintFormOptions | null | undefined;
   relations?: StaffComplaintRelationsView | undefined;
   staff?: AssignableStaff[] | null | undefined;
-  state?: ComplaintDetailPreviewState | undefined;
+  state?: ComplaintDetailFixtureState | undefined;
   surveys?: StaffComplaintSurvey[] | null | undefined;
-  workflowState?: ComplaintWorkflowPreviewState | undefined;
+  workflowState?: ComplaintWorkflowFixtureState | undefined;
 }) {
   const shell = staffShellText[locale];
   const t = complaintDetailText[locale];

@@ -7,19 +7,19 @@ import { getStaffComplaintDetail } from '../lib/staff-detail-api';
 import { getStaffReportRows } from '../lib/staff-reports-api';
 import { getStaffQueueItems } from '../lib/staff-queue-api';
 import { getStaffSessionPrincipal } from '../lib/staff-session-api';
-import { AdminSurfaces, type AdminPreviewState } from './admin-surfaces';
-import { ComplaintDetailWorkspace, type ComplaintCommentsPreviewState, type ComplaintDetailPreviewState, type ComplaintWorkflowPreviewState } from './complaint-detail-workspace';
+import { AdminSurfaces, type AdminFixtureState } from './admin-surfaces';
+import { ComplaintDetailWorkspace, type ComplaintCommentsFixtureState, type ComplaintDetailFixtureState, type ComplaintWorkflowFixtureState } from './complaint-detail-workspace';
 import { ComplaintIntakeWorkspace } from './complaint-intake-workspace';
-import { DashboardSummary, type DashboardPreviewState } from './dashboard-summary';
-import { type LookupPreviewState } from './customer-vehicle-lookup';
-import { type CreateFormPreviewState } from './complaint-create-form';
-import { AttachmentUploadPanel, type AttachmentPreviewState } from './attachment-upload-panel';
-import { NotificationCenter, type NotificationPreviewState } from './notification-center';
-import { type ResetPreviewState } from './password-reset-panel';
-import { ReportsDashboard, type ReportsPreviewState } from './reports-dashboard';
+import { DashboardSummary, type DashboardFixtureState } from './dashboard-summary';
+import { type LookupFixtureState } from './customer-vehicle-lookup';
+import { type CreateFormFixtureState } from './complaint-create-form';
+import { AttachmentUploadPanel, type AttachmentFixtureState } from './attachment-upload-panel';
+import { NotificationCenter, type NotificationFixtureState } from './notification-center';
+import { type ResetFixtureState } from './password-reset-panel';
+import { ReportsDashboard, type ReportsFixtureState } from './reports-dashboard';
 import { StaffAuthLanding } from './staff-auth-landing';
 import { AuthPanel, RolePanel, roleNav, type RolePreview } from './staff-shell-panels';
-import { WorkQueue, type QueuePreviewState } from './work-queue';
+import { WorkQueue, type QueueFixtureState } from './work-queue';
 import { AppShell, type StaffNavKey } from './app-shell';
 
 type SearchParams = {
@@ -58,7 +58,7 @@ export default async function StaffShellPage({
   ]);
   return (
     <StaffShell
-      adminState={oneOf<AdminPreviewState>(readParam(params?.admin), ['loading', 'empty', 'error', 'success', 'validation', 'conflict'])}
+      adminState={oneOf<AdminFixtureState>(readParam(params?.admin), ['loading', 'empty', 'error', 'success', 'validation', 'conflict'])}
       authError={readParam(params?.auth) === 'error'}
       attachmentState={resolveAttachment(readParam(params?.attachment))}
       commentsState={resolveDetail(readParam(params?.comments))}
@@ -70,14 +70,14 @@ export default async function StaffShellPage({
       isSignedIn={Boolean(principal) || readParam(params?.session) === 'signed-in'}
       locale={locale}
       lookupState={resolveLookup(readParam(params?.lookup))}
-      notificationState={oneOf<NotificationPreviewState>(readParam(params?.notification), ['loading', 'empty', 'error', 'success', 'validation', 'conflict'])}
+      notificationState={oneOf<NotificationFixtureState>(readParam(params?.notification), ['loading', 'empty', 'error', 'success', 'validation', 'conflict'])}
       queueState={resolveQueue(readParam(params?.queue))}
       queueRows={queueRows ?? undefined}
-      reportsState={oneOf<ReportsPreviewState>(readParam(params?.reports), ['ready', 'loading', 'empty', 'error', 'success', 'validation', 'denied', 'conflict'])}
+      reportsState={oneOf<ReportsFixtureState>(readParam(params?.reports), ['ready', 'loading', 'empty', 'error', 'success', 'validation', 'denied', 'conflict'])}
       reportRows={reportRows ?? undefined}
       resetState={resolveReset(readParam(params?.reset))}
       role={principal ? roleFromPrincipal(principal.roleCode) : resolveRole(readParam(params?.role))}
-      workflowState={oneOf<ComplaintWorkflowPreviewState>(readParam(params?.workflow), ['loading', 'empty', 'error', 'success', 'conflict', 'validation'])}
+      workflowState={oneOf<ComplaintWorkflowFixtureState>(readParam(params?.workflow), ['loading', 'empty', 'error', 'success', 'conflict', 'validation'])}
     />
   );
 }
@@ -107,20 +107,20 @@ function roleFromPrincipal(roleCode: string): RolePreview {
   return 'staff';
 }
 
-function resolveReset(value: string | undefined): ResetPreviewState | undefined {
+function resolveReset(value: string | undefined): ResetFixtureState | undefined {
   return oneOf(value, ['request', 'requested', 'token', 'success', 'invalid', 'error']);
 }
 
-function resolveDashboard(value: string | undefined): DashboardPreviewState | undefined { return oneOf(value, ['loading', 'empty', 'error']); }
-function resolveQueue(value: string | undefined): QueuePreviewState | undefined { return oneOf(value, ['loading', 'empty', 'error', 'success', 'conflict']); }
-function resolveDetail(value: string | undefined): ComplaintDetailPreviewState | undefined { return oneOf(value, ['loading', 'empty', 'error']); }
-function resolveLookup(value: string | undefined): LookupPreviewState | undefined { return oneOf(value, ['loading', 'none', 'error', 'match', 'multiple', 'down', 'disabled', 'validation', 'manual']); }
+function resolveDashboard(value: string | undefined): DashboardFixtureState | undefined { return oneOf(value, ['loading', 'empty', 'error']); }
+function resolveQueue(value: string | undefined): QueueFixtureState | undefined { return oneOf(value, ['loading', 'empty', 'error', 'success', 'conflict']); }
+function resolveDetail(value: string | undefined): ComplaintDetailFixtureState | undefined { return oneOf(value, ['loading', 'empty', 'error']); }
+function resolveLookup(value: string | undefined): LookupFixtureState | undefined { return oneOf(value, ['loading', 'none', 'error', 'match', 'multiple', 'down', 'disabled', 'validation', 'manual']); }
 
-function resolveCreate(value: string | undefined): CreateFormPreviewState | undefined {
+function resolveCreate(value: string | undefined): CreateFormFixtureState | undefined {
   return oneOf(value, ['validation', 'success', 'error', 'loading', 'network']);
 }
 
-function resolveAttachment(value: string | undefined): AttachmentPreviewState | undefined {
+function resolveAttachment(value: string | undefined): AttachmentFixtureState | undefined {
   return oneOf(value, ['loading', 'empty', 'error', 'pending', 'clean', 'rejected']);
 }
 
@@ -150,26 +150,26 @@ export function StaffShell({
   role = 'staff',
   workflowState,
 }: {
-  adminState?: AdminPreviewState | undefined;
+  adminState?: AdminFixtureState | undefined;
   authError?: boolean;
-  attachmentState?: AttachmentPreviewState | undefined;
-  commentsState?: ComplaintCommentsPreviewState | undefined;
+  attachmentState?: AttachmentFixtureState | undefined;
+  commentsState?: ComplaintCommentsFixtureState | undefined;
   complaintDetail?: import('../lib/staff-detail-api').StaffComplaintDetailView | undefined;
-  createState?: CreateFormPreviewState | undefined;
-  dashboardState?: DashboardPreviewState | undefined;
+  createState?: CreateFormFixtureState | undefined;
+  dashboardState?: DashboardFixtureState | undefined;
   dashboardSummary?: import('../lib/staff-dashboard-api').StaffDashboardSummary | undefined;
-  detailState?: ComplaintDetailPreviewState | undefined;
+  detailState?: ComplaintDetailFixtureState | undefined;
   isSignedIn?: boolean;
   locale: Locale;
-  lookupState?: LookupPreviewState | undefined;
-  notificationState?: NotificationPreviewState | undefined;
-  queueState?: QueuePreviewState | undefined;
+  lookupState?: LookupFixtureState | undefined;
+  notificationState?: NotificationFixtureState | undefined;
+  queueState?: QueueFixtureState | undefined;
   queueRows?: import('../lib/staff-complaints-api').ComplaintQueueItem[] | undefined;
-  reportsState?: ReportsPreviewState | undefined;
+  reportsState?: ReportsFixtureState | undefined;
   reportRows?: import('../lib/staff-reports-api').StaffReportRow[] | undefined;
-  resetState?: ResetPreviewState | undefined;
+  resetState?: ResetFixtureState | undefined;
   role?: RolePreview;
-  workflowState?: ComplaintWorkflowPreviewState | undefined;
+  workflowState?: ComplaintWorkflowFixtureState | undefined;
 }) {
   const t = staffShellText[locale];
   const visibleNav = roleNav[role] as readonly StaffNavKey[];

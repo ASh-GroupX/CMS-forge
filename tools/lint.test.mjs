@@ -102,11 +102,11 @@ test('lint rejects frontend design hardcode debt growth', () => {
   mkdirSync(join(root, 'apps/web/src/components/work-queue'), { recursive: true });
   writeFileSync(
     join(root, 'apps/web/src/components/work-queue/index.tsx'),
-    `${Array.from({ length: 456 }, () => '<div className="bg-white" />').join('\n')}\n`,
+    `${Array.from({ length: 34 }, () => '<div className="bg-white" />').join('\n')}\n`,
   );
 
   assert.deepEqual(checkFrontendDesignHardcodes(root), [
-    'apps/web/src: off-token color utility debt increased (456/455); use semantic tokens or reduce the baseline',
+    'apps/web/src: off-token color utility debt increased (34/33); use semantic tokens or reduce the baseline',
   ]);
 });
 

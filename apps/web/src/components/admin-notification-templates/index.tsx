@@ -5,14 +5,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { StateBlock, StatusBadge } from '../shared/ui-primitives';
 import { adminNotificationTemplatesText } from '../../i18n/staff-admin-notification-templates';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
-import type { AdminConfigPreviewState } from '../admin-categories-sla';
+import type { AdminConfigFixtureState } from '../admin-categories-sla';
 
 const rows = [
   ['Complaint created', 'Email, in-app', 'Arabic + English', 'active'],
   ['SLA warning', 'In-app, SMS-ready', 'Arabic + English', 'inactive'],
 ] as const;
 
-export function AdminNotificationTemplates({ locale, state }: { locale: Locale; state?: AdminConfigPreviewState | undefined }) {
+export function AdminNotificationTemplates({ locale, state }: { locale: Locale; state?: AdminConfigFixtureState | undefined }) {
   const shell = staffShellText[locale];
   const t = adminNotificationTemplatesText[locale];
   return (

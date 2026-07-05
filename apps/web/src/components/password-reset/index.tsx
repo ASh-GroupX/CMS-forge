@@ -6,9 +6,9 @@ import { Label } from '@/components/ui/label';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import { consumePasswordResetAction, requestPasswordResetAction } from '../../lib/staff-auth-actions';
 
-export type ResetPreviewState = 'request' | 'requested' | 'token' | 'success' | 'invalid' | 'error';
+export type ResetFixtureState = 'request' | 'requested' | 'token' | 'success' | 'invalid' | 'error';
 
-export function PasswordReset({ locale, state }: { locale: Locale; state?: ResetPreviewState | undefined }) {
+export function PasswordReset({ locale, state }: { locale: Locale; state?: ResetFixtureState | undefined }) {
   const shell = staffShellText[locale];
   const t = shell.reset;
   const queryPrefix = `?locale=${locale}&reset=`;

@@ -49,21 +49,21 @@ export function CaseCapaPanel({ caseId, caseOwnerId, items, locale, staff, text 
   }
 
   return (
-    <section className="rounded-md border border-slate-200 bg-slate-50 p-3" aria-label={text.title}>
+    <section className="rounded-md border border-border-subtle bg-surface-muted p-3" aria-label={text.title}>
       <h3 className="text-sm font-semibold">{text.title}</h3>
       {rows.length ? (
-        <ol className="mt-3 grid gap-2 text-sm text-slate-700">
+        <ol className="mt-3 grid gap-2 text-sm text-content-muted">
           {rows.map((item) => (
-            <li className="rounded-sm border border-slate-200 bg-white px-3 py-2" key={item.id}>
-              <div className="font-medium text-slate-900">{item.rootCause}</div>
+            <li className="rounded-sm border border-border-subtle bg-surface-card px-3 py-2" key={item.id}>
+              <div className="font-medium text-content-strong">{item.rootCause}</div>
               <div>{item.correctiveAction}</div>
               <div>{item.preventiveAction}</div>
-              <div className="mt-1 text-xs text-slate-500">{item.ownerName} - {text.statusLabels[item.status]} - {item.dueAt.slice(0, 10)}</div>
+              <div className="mt-1 text-xs text-content-muted">{item.ownerName} - {text.statusLabels[item.status]} - {item.dueAt.slice(0, 10)}</div>
             </li>
           ))}
         </ol>
       ) : (
-        <p className="mt-3 text-sm text-slate-600" role="status">{text.states.empty}</p>
+        <p className="mt-3 text-sm text-content-muted" role="status">{text.states.empty}</p>
       )}
       <form className="mt-3 grid gap-2" onSubmit={submit}>
         <StaffPicker initialUserId={caseOwnerId ?? ''} label={text.fields.owner} labelName="ownerLabel" locale={locale} name="ownerId" staff={staff} t={text.staffPicker} />

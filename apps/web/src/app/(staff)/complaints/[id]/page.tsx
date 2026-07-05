@@ -1,12 +1,12 @@
 import React from 'react';
 import {
   ComplaintDetailWorkspace,
-  type ComplaintAttachmentPreviewState,
-  type ComplaintCommentsPreviewState,
-  type ComplaintDetailPreviewState,
-  type ComplaintWorkflowPreviewState,
+  type ComplaintAttachmentFixtureState,
+  type ComplaintCommentsFixtureState,
+  type ComplaintDetailFixtureState,
+  type ComplaintWorkflowFixtureState,
 } from '../../../../components/complaint-detail-workspace';
-import type { LookupPreviewState } from '../../../../components/customer-vehicle-lookup';
+import type { LookupFixtureState } from '../../../../components/customer-vehicle-lookup';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { getAssignableStaff } from '../../../../lib/staff-assignable-staff-api';
 import { getComplaintFormOptions } from '../../../../lib/staff-complaint-form-options-api';
@@ -76,23 +76,23 @@ function readParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function resolveDetail(value: string | undefined): ComplaintDetailPreviewState | undefined {
+function resolveDetail(value: string | undefined): ComplaintDetailFixtureState | undefined {
   return value === 'loading' || value === 'empty' || value === 'error' ? value : undefined;
 }
 
-function resolveAttachment(value: string | undefined): ComplaintAttachmentPreviewState | undefined {
+function resolveAttachment(value: string | undefined): ComplaintAttachmentFixtureState | undefined {
   return value === 'loading' || value === 'empty' || value === 'error' || value === 'pending' || value === 'clean' || value === 'rejected'
     ? value
     : undefined;
 }
 
-function resolveWorkflow(value: string | undefined): ComplaintWorkflowPreviewState | undefined {
+function resolveWorkflow(value: string | undefined): ComplaintWorkflowFixtureState | undefined {
   return value === 'loading' || value === 'empty' || value === 'error' || value === 'success' || value === 'conflict' || value === 'validation'
     ? value
     : undefined;
 }
 
-function resolveLookup(value: string | undefined): LookupPreviewState | undefined {
+function resolveLookup(value: string | undefined): LookupFixtureState | undefined {
   return value === 'loading' || value === 'none' || value === 'error' || value === 'match' || value === 'multiple' || value === 'down' || value === 'disabled' || value === 'validation' || value === 'manual'
     ? value
     : undefined;

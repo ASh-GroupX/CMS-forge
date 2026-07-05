@@ -1,5 +1,5 @@
 import React from 'react';
-import { AdminCategoriesSla, type AdminConfigPreviewState } from '../../../../components/admin-categories-sla';
+import { AdminCategoriesSla, type AdminConfigFixtureState } from '../../../../components/admin-categories-sla';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { getAdminCategorySlaConfig } from '../../../../lib/staff-admin-category-sla-api';
 import { deactivateCategoryAction, saveCategoryAction, saveSlaPolicyAction } from '../actions';
@@ -36,7 +36,7 @@ function readParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function resolveState(value: string | undefined): AdminConfigPreviewState | undefined {
+function resolveState(value: string | undefined): AdminConfigFixtureState | undefined {
   return value === 'loading' || value === 'empty' || value === 'error' || value === 'success' || value === 'validation' || value === 'conflict'
     ? value
     : undefined;
