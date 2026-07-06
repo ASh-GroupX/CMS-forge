@@ -52,9 +52,11 @@ export class ComplaintsController {
       ownerId: optionalText(query.ownerId),
       dateFrom: optionalText(query.dateFrom),
       dateTo: optionalText(query.dateTo),
+      limit,
+      offset,
       role: requestRole(request),
     });
-    return { items: items.slice(offset, offset + limit), limit, offset };
+    return { items, limit, offset };
   }
 
   @Get('form-options')

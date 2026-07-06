@@ -79,8 +79,8 @@ export function ProvenanceCorrectionPanel({
   const message = state === 'success' && changed.length ? `${text.states.success}: ${changed.join(', ')}` : text.states[state];
 
   return (
-    <section className="rounded-md border border-border-subtle bg-surface-muted p-3 md:col-span-2" aria-label={text.title}>
-      <h3 className="text-sm font-semibold">{text.title}</h3>
+    <details className="rounded-md border border-border-subtle bg-surface-muted p-3 md:col-span-2" aria-label={text.title}>
+      <summary className="cursor-pointer text-sm font-semibold">{text.title}</summary>
       <p className="mt-1 text-xs text-content-muted">{text.description}</p>
       <div className="mt-3">
         <CustomerVehicleLookup locale={locale} onSelectionChange={applyLookupSelection} state={lookupState} surface="section" />
@@ -111,19 +111,19 @@ export function ProvenanceCorrectionPanel({
         {state === 'idle' ? <p className="text-sm text-muted-foreground" role="status">{message}</p> : null}
         {state !== 'idle' ? <p className={state === 'success' || state === 'loading' ? 'text-sm text-muted-foreground' : 'text-sm text-destructive'} role={state === 'success' || state === 'loading' ? 'status' : 'alert'}>{message}</p> : null}
       </form>
-    </section>
+    </details>
   );
 }
 
 function initialFields(detail: StaffComplaintDetailView): CorrectionFields {
   return {
     clearVehicleId: false,
-    customerId: '',
+    customerId: detail.customer.id,
     customerSource: detail.customerSource,
     manualCustomer: detail.manualCustomer,
     manualVehicle: detail.manualVehicle,
     vehicleDataUnavailableReason: detail.vehicleDataUnavailableReason ?? '',
-    vehicleId: '',
+    vehicleId: detail.vehicle?.id ?? '',
     vehicleRelated: detail.vehicleRelated,
     vehicleSource: detail.vehicleSource ?? 'NONE',
   };
@@ -159,11 +159,11 @@ function correctionBody(detail: StaffComplaintDetailView, fields: CorrectionFiel
   const reason = textValue(form, 'reason');
   if (!reason) return null;
   const correction: StaffComplaintCorrectionRequest = { expectedUpdatedAt: detail.updatedAt, reason };
-  setText(correction, 'customerId', fields.customerId.trim());
+  setTextIfChanged(correction, 'customerId', fields.customerId.trim(), detail.customer.id);
   setIfChanged(correction, 'customerSource', fields.customerSource, detail.customerSource);
   setIfChanged(correction, 'manualCustomer', fields.manualCustomer, detail.manualCustomer);
-  if (fields.clearVehicleId) correction.vehicleId = null;
-  else setText(correction, 'vehicleId', fields.vehicleId.trim());
+  if (fields.clearVehicleId && detail.vehicle?.id) correction.vehicleId = null;
+  else setTextIfChanged(correction, 'vehicleId', fields.vehicleId.trim(), detail.vehicle?.id ?? '');
   setIfChanged(correction, 'vehicleSource', vehicleSource(fields.vehicleSource), detail.vehicleSource);
   setIfChanged(correction, 'manualVehicle', fields.manualVehicle, detail.manualVehicle);
   setIfChanged(correction, 'vehicleRelated', fields.vehicleRelated, detail.vehicleRelated);
@@ -176,8 +176,8 @@ function textValue(form: FormData, name: string): string {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-function setText<T extends 'customerId' | 'vehicleId'>(body: StaffComplaintCorrectionRequest, key: T, value: string) {
-  if (value) body[key] = value;
+function setTextIfChanged<T extends 'customerId' | 'vehicleId'>(body: StaffComplaintCorrectionRequest, key: T, value: string, current: string) {
+  if (value && value !== current) body[key] = value;
 }
 
 function setIfChanged<T extends keyof StaffComplaintCorrectionRequest>(body: StaffComplaintCorrectionRequest, key: T, value: StaffComplaintCorrectionRequest[T], current: StaffComplaintCorrectionRequest[T]) {

@@ -1,9 +1,23 @@
 export type StaffNotification = {
   id: string;
   status: string;
+  targetHref?: string;
+  targetId?: string;
+  targetType?: string;
   templateCode: string;
   queuedAt: string;
-  payload: { taskId?: string; title?: string; status?: string; message?: string };
+  payload: {
+    complaintId?: string;
+    complaintReference?: string;
+    message?: string;
+    referenceNumber?: string;
+    status?: string;
+    targetHref?: string;
+    targetId?: string;
+    targetType?: string;
+    taskId?: string;
+    title?: string;
+  };
 };
 
 const STAFF_SESSION_COOKIE = 'cms_staff_session';
@@ -37,9 +51,18 @@ function notificationFrom(item: Partial<StaffNotification>): StaffNotification |
   return {
     id: item.id,
     status: item.status,
+    ...(typeof item.targetHref === 'string' ? { targetHref: item.targetHref } : {}),
+    ...(typeof item.targetId === 'string' ? { targetId: item.targetId } : {}),
+    ...(typeof item.targetType === 'string' ? { targetType: item.targetType } : {}),
     templateCode: item.templateCode,
     queuedAt: item.queuedAt,
     payload: {
+      ...(typeof payload.complaintId === 'string' ? { complaintId: payload.complaintId } : {}),
+      ...(typeof payload.complaintReference === 'string' ? { complaintReference: payload.complaintReference } : {}),
+      ...(typeof payload.referenceNumber === 'string' ? { referenceNumber: payload.referenceNumber } : {}),
+      ...(typeof payload.targetHref === 'string' ? { targetHref: payload.targetHref } : {}),
+      ...(typeof payload.targetId === 'string' ? { targetId: payload.targetId } : {}),
+      ...(typeof payload.targetType === 'string' ? { targetType: payload.targetType } : {}),
       ...(typeof payload.taskId === 'string' ? { taskId: payload.taskId } : {}),
       ...(typeof payload.title === 'string' ? { title: payload.title } : {}),
       ...(typeof payload.status === 'string' ? { status: payload.status } : {}),

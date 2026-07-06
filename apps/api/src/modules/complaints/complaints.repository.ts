@@ -57,6 +57,8 @@ export type ListComplaintQueueFilter = { branchId?: string | null; role?: RoleCo
 export type ComplaintReportFilter = ListComplaintQueueFilter & {
   dateFrom?: Date | string | null;
   dateTo?: Date | string | null;
+  limit?: number | null;
+  offset?: number | null;
   referenceNumber?: string | null;
   customer?: string | null;
   status?: ComplaintStatus | null;
@@ -143,6 +145,8 @@ export class ComplaintsRepository {
     return client.complaint.findMany({
       where: reportWhere(filter),
       orderBy: [{ createdAt: 'desc' }, { referenceNumber: 'asc' }],
+      ...(filter.offset === null || filter.offset === undefined ? {} : { skip: filter.offset }),
+      ...(filter.limit === null || filter.limit === undefined ? {} : { take: filter.limit }),
       select: {
         ...complaintSelect,
         ownerId: true, owner: { select: { nameEn: true, email: true } }, branch: { select: { code: true, nameEn: true, nameAr: true } },

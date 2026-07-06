@@ -19,9 +19,7 @@ export default async function NotificationsPage({
     ...(cookieHeader !== undefined ? { cookieHeader } : {}),
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
   });
-  return (
-    <NotificationCenter items={items ?? undefined} locale={resolveLocale(readParam(params?.locale))} state={resolveState(readParam(params?.notification))} />
-  );
+  return <NotificationCenter items={items} locale={resolveLocale(readParam(params?.locale))} state={resolveState(readParam(params?.notification))} />;
 }
 
 function readParam(value: string | string[] | undefined) {

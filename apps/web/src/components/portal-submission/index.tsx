@@ -171,11 +171,44 @@ function PortalSubmissionMessage({ locale, state }: { locale: PortalLocale; stat
         {state.attachmentWarning ? (
           <StateBlock message={`${t.states.attachmentWarning}: ${state.attachmentWarning.failedCount}.`} tone="warning" />
         ) : null}
+        <ReferenceSuccess locale={locale} referenceNumber={state.referenceNumber} />
       </>
     );
   }
   const message = state.kind === 'loading' ? t.states.loading : state.kind === 'validation' ? t.states.validation : state.kind === 'options' ? t.states.options : t.states.error;
   return <StateBlock message={message} tone={state.kind === 'loading' ? 'neutral' : 'error'} />;
+}
+
+function ReferenceSuccess({ locale, referenceNumber }: { locale: PortalLocale; referenceNumber: string }) {
+  const t = portalSubmissionText[locale];
+  const [copied, setCopied] = useState(false);
+  const trackHref = `/portal/track?locale=${locale}&reference=${encodeURIComponent(referenceNumber)}`;
+  return (
+    <section className="grid gap-2 rounded-md border border-status-success bg-status-success/10 p-3" aria-label={t.states.reference}>
+      <Label className="grid gap-1 text-sm font-medium">
+        {t.states.reference}
+        <Input className="min-h-11 font-mono" readOnly value={referenceNumber} />
+      </Label>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            if (navigator.clipboard) void navigator.clipboard.writeText(referenceNumber).then(() => setCopied(true));
+          }}
+        >
+          {copied ? actionText(t, 'copied', t.states.reference) : actionText(t, 'copyReference', t.states.reference)}
+        </Button>
+        <Button asChild type="button">
+          <a href={trackHref}>{actionText(t, 'track', t.subtitle)}</a>
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+function actionText(t: (typeof portalSubmissionText)[PortalLocale], key: 'copied' | 'copyReference' | 'track', fallback: string): string {
+  return (t.actions as Partial<Record<typeof key, string>>)[key] ?? fallback;
 }
 
 function FieldGroup({ children, title }: { children: React.ReactNode; title: string }) {

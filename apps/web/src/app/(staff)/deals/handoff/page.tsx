@@ -7,14 +7,17 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { StaffPicker } from '../../../../components/shared/staff-picker';
+import { StateBlock } from '../../../../components/shared/ui-primitives';
 import { dealHandoffText } from '../../../../i18n/staff-deal-handoff';
 import { resolveLocale, staffShellText, type Locale } from '../../../../i18n/staff-shell';
 import { getAssignableStaff, type AssignableStaff } from '../../../../lib/staff-assignable-staff-api';
+import { getComplaintFormOptions, type ComplaintFormOptions } from '../../../../lib/staff-complaint-form-options-api';
 import { getDealHandoffBoard, type DealBoardItem, type DealHandoffBoard, type DealHolderBucket, type DealStageBucket } from '../../../../lib/staff-deals-api';
 import { advanceDealAction, clearDealBlockerAction, createDealAction, setDealBlockerAction } from './actions';
 
-type SearchParams = { locale?: string | string[] };
+type SearchParams = { deal?: string | string[]; locale?: string | string[] };
 type Copy = (typeof dealHandoffText)[Locale];
+type DealFeedback = 'success' | 'error';
 
 export default async function DealHandoffPage({
   cookieHeader,
@@ -31,16 +34,15 @@ export default async function DealHandoffPage({
     ...(cookieHeader !== undefined ? { cookieHeader } : {}),
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
   };
-  const [data, staff] = await Promise.all([getDealHandoffBoard(apiInput), getAssignableStaff(apiInput)]);
-  return <DealHandoffBoardView data={data} locale={locale} staff={staff} />;
+  const [data, staff, options] = await Promise.all([getDealHandoffBoard(apiInput), getAssignableStaff(apiInput), getComplaintFormOptions(apiInput)]);
+  return <DealHandoffBoardView data={data} feedback={resolveFeedback(readParam(params?.deal))} locale={locale} options={options} staff={staff} />;
 }
 
-export function DealHandoffBoardView({ data, locale, staff }: { data: DealHandoffBoard | null; locale: Locale; staff?: AssignableStaff[] | null | undefined }) {
+export function DealHandoffBoardView({ data, feedback, locale, options, staff }: { data: DealHandoffBoard | null; feedback?: DealFeedback | undefined; locale: Locale; options?: ComplaintFormOptions | null | undefined; staff?: AssignableStaff[] | null | undefined }) {
   const shell = staffShellText[locale];
   const t = dealHandoffText[locale];
   const total = data ? data.byStage.reduce((sum, bucket) => sum + bucket.count, 0) : 0;
-  const holders = data ? holderOptions(data) : [];
-  const branches = data ? branchOptions(data, t) : [];
+  const branches = branchOptions(options, locale);
 
   return (
     <Card aria-label={t.title} className="rounded-md border-border bg-card text-card-foreground shadow-sm" dir={shell.dir}>
@@ -54,6 +56,7 @@ export function DealHandoffBoardView({ data, locale, staff }: { data: DealHandof
         </div>
       </CardHeader>
       <CardContent className="p-4">
+        {feedback ? <StateBlock className="mb-3" message={dealFeedbackMessage(t, feedback)} tone={feedback === 'success' ? 'success' : 'error'} /> : null}
         {data === null ? (
           <p className="rounded-sm border border-status-error bg-status-error/10 px-3 py-2 text-sm text-status-error" role="alert">{t.states.error}</p>
         ) : (
@@ -260,19 +263,8 @@ function toDateTimeLocal(value: string): string {
   return value.slice(0, 16);
 }
 
-function holderOptions(data: DealHandoffBoard): DealHolderBucket[] {
-  const options = new Map<string, DealHolderBucket>();
-  for (const deal of data.byStage.flatMap((bucket) => bucket.deals)) {
-    options.set(deal.currentHolderId, { currentHolderId: deal.currentHolderId, currentHolderName: deal.currentHolderName, count: 0 });
-  }
-  for (const holder of data.currentHolder) options.set(holder.currentHolderId, holder);
-  return [...options.values()];
-}
-
-function branchOptions(data: DealHandoffBoard, t: Copy): { id: string; name: string }[] {
-  const options = new Map<string, string>();
-  for (const deal of data.byStage.flatMap((bucket) => bucket.deals)) options.set(deal.branchId, deal.branchName ?? t.states.unknownBranch);
-  return [...options].map(([id, name]) => ({ id, name }));
+function branchOptions(options: ComplaintFormOptions | null | undefined, locale: Locale): { id: string; name: string }[] {
+  return (options?.branches ?? []).map((branch) => ({ id: branch.id, name: locale === 'ar' ? branch.nameAr : branch.nameEn }));
 }
 
 function staffDisplay(id: string, fallback: string | null, staff: AssignableStaff[] | null | undefined, locale: Locale, t: Copy): string {
@@ -286,4 +278,14 @@ function staffDisplay(id: string, fallback: string | null, staff: AssignableStaf
 
 function readParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
+}
+
+function resolveFeedback(value: string | undefined): DealFeedback | undefined {
+  return value === 'success' || value === 'error' ? value : undefined;
+}
+
+function dealFeedbackMessage(t: Copy, feedback: DealFeedback): string {
+  const states = t.states as typeof t.states & Partial<Record<'actionError' | 'actionSuccess', string>>;
+  if (feedback === 'success') return states.actionSuccess ?? t.states.empty;
+  return states.actionError ?? t.states.error;
 }

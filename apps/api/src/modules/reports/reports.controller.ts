@@ -46,6 +46,8 @@ export class ReportsController {
   @Permissions('REPORT_VIEW')
   @BranchScoped()
   async filteredReport(@Query() query: Record<string, string | undefined>, @Req() request: AuthenticatedRequest): Promise<{ items: FilteredReportRow[] }> {
+    const limit = pageNumber(query.limit, 'limit', 25, 100);
+    const offset = pageNumber(query.offset, 'offset', 0);
     return {
       items: await ReportsController.reportsService.filteredReport({
         role: requestRole(request),
@@ -57,6 +59,8 @@ export class ReportsController {
         severity: optionalSeverity(query.severity),
         dateFrom: optionalText(query.dateFrom),
         dateTo: optionalText(query.dateTo),
+        limit,
+        offset,
       }),
     };
   }
@@ -133,6 +137,17 @@ function exportFormat(value: string | undefined): ReportExportFormat {
   throw new AppException('VALIDATION_FAILED', 'Invalid report query', HttpStatus.BAD_REQUEST, [
     { field: 'format', code: 'INVALID', message: 'format must be csv or excel.' },
   ]);
+}
+
+function pageNumber(value: string | undefined, field: 'limit' | 'offset', fallback: number, max?: number): number {
+  if (!value?.trim()) return fallback;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < (field === 'limit' ? 1 : 0)) {
+    throw new AppException('VALIDATION_FAILED', 'Invalid report query', HttpStatus.BAD_REQUEST, [
+      { field, code: 'INVALID', message: `${field} is invalid.` },
+    ]);
+  }
+  return max ? Math.min(parsed, max) : parsed;
 }
 
 function headerValue(value: string | string[] | undefined): string | null {

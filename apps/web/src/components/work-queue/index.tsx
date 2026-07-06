@@ -6,16 +6,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TableCell, TableRow } from '@/components/ui/table';
 import { DataTable, Field, FilterBar, StateBlock, StatusBadge as SharedStatusBadge, type PrimitiveTone } from '../shared/ui-primitives';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
+import type { ComplaintFormOptions } from '../../lib/staff-complaint-form-options-api';
 import type { ComplaintQueueItem, ComplaintSeverity, ComplaintStatus } from '../../lib/staff-complaints-api';
 import type { StaffQueueQuery, StaffQueueResult } from '../../lib/staff-queue-api';
 
 export function WorkQueue({
   locale,
+  options,
   query = {},
   queue,
   rows,
 }: {
   locale: Locale;
+  options?: ComplaintFormOptions | null | undefined;
   query?: StaffQueueQuery;
   queue?: StaffQueueResult | null;
   rows?: ComplaintQueueItem[] | null;
@@ -25,7 +28,7 @@ export function WorkQueue({
   const isError = queueRows === null;
   const isEmpty = !isError && queueRows.length === 0;
   const page = queue?.page ?? query.page ?? 1;
-  const filters = filterOptions(queueRows ?? [], t, query);
+  const filters = filterOptions(queueRows ?? [], t, query, options, locale);
 
   return (
     <Card className="w-full min-w-0 max-w-full overflow-hidden rounded-sm border-line-subtle bg-surface shadow-none" aria-label={t.title}>
@@ -82,7 +85,7 @@ export function WorkQueue({
                 <div className="flex flex-wrap gap-2">
                   <StatusBadge status={row.status} />
                   <SeverityBadge severity={row.severity} />
-                  <SharedStatusBadge>{t.sla.backendScoped}</SharedStatusBadge>
+                  <SharedStatusBadge>{slaUnavailable(t)}</SharedStatusBadge>
                 </div>
                 <dl className="grid grid-cols-2 gap-2 text-sm text-content-muted">
                   <div>
@@ -121,7 +124,7 @@ export function WorkQueue({
                     <TableCell className="py-2">{row.ownerName ?? t.unassigned}</TableCell>
                     <TableCell className="py-2">{row.branchName ?? row.branchId}</TableCell>
                     <TableCell className="py-2">
-                      <SharedStatusBadge>{t.sla.backendScoped}</SharedStatusBadge>
+                      <SharedStatusBadge>{slaUnavailable(t)}</SharedStatusBadge>
                     </TableCell>
                     <TableCell className="py-2">
                       <span className="block font-medium">{formatAge(row.updatedAt, locale)}</span>
@@ -165,16 +168,21 @@ type FilterOption = { label: string; value: string };
 const STATUS_OPTIONS: ComplaintStatus[] = ['DRAFT', 'SUBMITTED', 'MANAGER_REVIEW', 'BRANCH_REVIEW', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REOPENED', 'REJECTED'];
 const SEVERITY_OPTIONS: ComplaintSeverity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 
-function filterOptions(rows: ComplaintQueueItem[], t: typeof staffShellText[Locale]['workQueue'], query: StaffQueueQuery): Record<'status' | 'branch' | 'severity' | 'sla', FilterOption[]> {
+function filterOptions(rows: ComplaintQueueItem[], t: typeof staffShellText[Locale]['workQueue'], query: StaffQueueQuery, options: ComplaintFormOptions | null | undefined, locale: Locale): Record<'status' | 'branch' | 'severity' | 'sla', FilterOption[]> {
   const branches = new Map<string, string>();
-  for (const row of rows) branches.set(row.branchId, row.branchName ?? row.branchId);
+  for (const branch of options?.branches ?? []) branches.set(branch.id, locale === 'ar' ? branch.nameAr : branch.nameEn);
+  for (const row of rows) if (!branches.has(row.branchId)) branches.set(row.branchId, row.branchName ?? row.branchId);
   if (query.branchId && !branches.has(query.branchId)) branches.set(query.branchId, query.branchId);
   return {
     status: STATUS_OPTIONS.map((status) => ({ label: status, value: status })),
     branch: [...branches].map(([value, label]) => ({ label, value })),
     severity: SEVERITY_OPTIONS.map((severity) => ({ label: severity, value: severity })),
-    sla: [{ label: t.sla.backendScoped, value: 'backend-scoped' }],
+    sla: [],
   };
+}
+
+function slaUnavailable(t: typeof staffShellText[Locale]['workQueue']): string {
+  return (t.sla as typeof t.sla & { unavailable?: string }).unavailable ?? t.sla.backendScoped;
 }
 
 function filterValue(key: 'branch' | 'severity' | 'sla' | 'status', query: StaffQueueQuery): string {

@@ -24,6 +24,7 @@ export function EmployeeToday({
   data,
   locale,
   quickAddAction,
+  loadRelatedRecordsAction,
   relatedRecords,
   result,
   staff,
@@ -31,6 +32,7 @@ export function EmployeeToday({
 }: {
   data: EmployeeTodayTasks | null;
   locale: Locale;
+  loadRelatedRecordsAction?: (() => Promise<StaffRelatedRecordOptions | null>) | undefined;
   quickAddAction?: TaskAction;
   relatedRecords?: StaffRelatedRecordOptions | null | undefined;
   result?: 'error' | 'link-required' | 'success' | undefined;
@@ -64,7 +66,7 @@ export function EmployeeToday({
             {result === 'success' ? t.states.saved : result === 'link-required' ? t.states.linkRequired : t.states.saveFailed}
           </p>
         ) : null}
-        {quickAddAction ? <QuickAddForm action={quickAddAction} locale={locale} relatedRecords={relatedRecords} staff={staff} t={t} /> : null}
+        {quickAddAction ? <QuickAddForm action={quickAddAction} loadRelatedRecordsAction={loadRelatedRecordsAction} locale={locale} relatedRecords={relatedRecords} staff={staff} t={t} /> : null}
         {data === null ? (
           <p className="rounded-sm border border-status-error bg-status-error/10 px-3 py-2 text-sm text-status-error" role="alert">
             {t.states.error}

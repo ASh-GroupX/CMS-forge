@@ -79,7 +79,7 @@ test('portal Arabic text uses real Arabic codepoints', () => {
     }
   }
 
-  assert.match(portalTrackingText.en.subtitle, /Verification is required/);
+  assert.match(portalTrackingText.en.subtitle, /Enter your reference and phone first/);
   assert.match(portalTrackingText.ar.subtitle, arabic);
 });
 

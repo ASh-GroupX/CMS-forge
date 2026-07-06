@@ -58,7 +58,7 @@ export function StateBlock({
         ? 'border-status-error-border bg-status-error-bg text-status-error'
         : 'border-line-subtle bg-surface-raised text-content-muted';
   return (
-    <section className={cn('rounded-sm border px-3 py-2 text-sm', colors, className)} role={alert ? 'alert' : 'status'}>
+    <section className={cn('rounded-sm border px-3 py-2 text-sm leading-6', colors, className)} role={alert ? 'alert' : 'status'}>
       {title ? <p className="font-semibold">{title}</p> : null}
       <p className={title ? 'mt-1' : undefined}>{message}</p>
     </section>

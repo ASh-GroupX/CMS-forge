@@ -20,8 +20,8 @@ import { PortalFollowUpPanel } from './follow-up-panel';
 export type PortalTrackingFixtureState = 'loading' | 'requested' | 'verified' | 'validation' | 'requestValidation' | 'codeValidation' | 'requestError' | 'trackingError' | 'invalid' | 'expired' | 'error' | 'followup' | 'attachment' | 'closed';
 type Feedback = PortalTrackingFixtureState | 'denied' | undefined;
 
-export function PortalTrackingScreen({ locale }: { locale: PortalTrackingLocale }) {
-  return <PortalTrackingView initialFeedback={undefined} initialFollowUp="" initialPhone="" initialReference="" initialTracking={null} locale={locale} />;
+export function PortalTrackingScreen({ initialReference = '', locale }: { initialReference?: string; locale: PortalTrackingLocale }) {
+  return <PortalTrackingView initialFeedback={undefined} initialFollowUp="" initialPhone="" initialReference={initialReference} initialTracking={null} locale={locale} />;
 }
 
 export function PortalTrackingPreview({ locale, reference, state }: { locale: PortalTrackingLocale; reference: string; state?: PortalTrackingFixtureState | undefined }) {

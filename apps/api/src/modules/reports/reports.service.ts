@@ -29,6 +29,8 @@ export type DashboardSummary = {
 export type FilteredReportInput = DashboardReportScope & {
   dateFrom?: Date | string | null;
   dateTo?: Date | string | null;
+  limit?: number | null;
+  offset?: number | null;
   filterBranchId?: string | null;
   categoryId?: string | null;
   departmentId?: string | null;
@@ -122,6 +124,8 @@ export class ReportsService {
       severity: input.severity ?? null,
       ownerId: input.ownerId ?? null,
       role: input.role,
+      ...(input.limit === null || input.limit === undefined ? {} : { limit: input.limit }),
+      ...(input.offset === null || input.offset === undefined ? {} : { offset: input.offset }),
     });
     return branchFilter(rows, branchId);
   }
@@ -146,7 +150,7 @@ export class ReportsService {
 
   async exportReport(input: FilteredReportInput & { format: ReportExportFormat; rowLimit?: number }, audit: ReportExportAudit = {}): Promise<ReportExportResult> {
     const rowLimit = input.rowLimit ?? MAX_REPORT_EXPORT_ROWS;
-    const rows = (await this.filteredReport(input)).slice(0, rowLimit);
+    const rows = (await this.filteredReport({ ...input, limit: rowLimit, offset: 0 })).slice(0, rowLimit);
     await this.auditService?.record({
       eventType: 'REPORT',
       action: 'report_exported',

@@ -3,7 +3,7 @@ import type { Locale } from './staff-shell';
 export const complaintDetailText: Record<Locale, typeof enComplaintDetailText> = {
   en: {
     title: 'Complaint detail',
-    subtitle: 'Authorized case workspace preview.',
+    subtitle: 'Read the facts first, then use the action panel only when you need to move the case.',
     sections: {
       facts: 'Complaint facts',
       customer: 'Customer data',
@@ -27,12 +27,12 @@ export const complaintDetailText: Record<Locale, typeof enComplaintDetailText> =
       rejected: 'Scan rejected',
     },
     correction: {
-      title: 'Customer and vehicle correction',
-      description: 'Backend authority applies scoped corrections and records the audit trail.',
-      fields: { customerId: 'Matched customer ID', customerSource: 'Customer source', manualCustomer: 'Manual customer data', vehicleId: 'Matched vehicle ID', clearVehicleId: 'Clear vehicle link', vehicleSource: 'Vehicle source', manualVehicle: 'Manual vehicle data', vehicleRelated: 'Vehicle-related complaint', vehicleDataUnavailableReason: 'Vehicle data unavailable reason', reason: 'Correction reason' },
+      title: 'Fix customer or vehicle details',
+      description: 'Use this only when the current customer or vehicle link is wrong. A reason is required.',
+      fields: { customerId: 'Customer ID', customerSource: 'Customer source', manualCustomer: 'Manual customer data', vehicleId: 'Vehicle ID', clearVehicleId: 'Remove vehicle link', vehicleSource: 'Vehicle source', manualVehicle: 'Manual vehicle data', vehicleRelated: 'Vehicle-related complaint', vehicleDataUnavailableReason: 'Why vehicle data is missing', reason: 'Why are you changing this?' },
       actions: { save: 'Apply correction', reload: 'Reload latest detail' },
       sourceLabels: { LOCAL: 'Local record', MANUAL: 'Manual entry', DMS: 'DMS match', NONE: 'No source' },
-      states: { idle: 'No correction submitted yet.', loading: 'Applying correction.', success: 'Correction applied', error: 'Correction could not be applied. Try again.', conflict: 'Record changed by someone else. Reload latest detail before retrying.', validation: 'Reason and at least one changed field are required.', denied: 'Correction is not available for your current scope.' },
+      states: { idle: 'Nothing changed yet.', loading: 'Saving correction.', success: 'Correction saved', error: 'Correction was not saved. Check the fields and try again.', conflict: 'Someone else changed this case. Reload latest detail before retrying.', validation: 'Add a reason and change at least one field.', denied: 'You cannot correct this case from your account.' },
     },
     attachmentActions: {
       upload: 'Upload file',
@@ -48,23 +48,23 @@ export const complaintDetailText: Record<Locale, typeof enComplaintDetailText> =
       downloadUnavailable: 'Download is unavailable in this environment.',
     },
     workflow: {
-      authority: 'Available actions come from system policy.',
-      comment: 'Required comment',
-      validation: 'Comment or reason is required.',
+      authority: 'Choose one action. The system shows only actions allowed for this case.',
+      comment: 'Comment for the timeline',
+      validation: 'Add the required comment or reason.',
       reload: 'Reload latest detail',
       retry: 'Retry after reload',
-      noExtraFields: 'No extra fields are required for this action.',
-      submit: 'Submit action',
+      noExtraFields: 'Nothing else is needed. Submit when ready.',
+      submit: 'Save action',
       actions: ['Approve', 'Send back', 'Assign', 'Investigate', 'Resolve', 'Close', 'Reject', 'Reopen'],
       actionLabels: { SUBMIT: 'Submit', ACCEPT_INTAKE: 'Approve', APPROVE_AND_ROUTE: 'Approve and route', SEND_BACK: 'Send back', ASSIGN_INVESTIGATION: 'Assign investigation', ADD_INVESTIGATION_UPDATE: 'Investigate', RESOLVE: 'Resolve', RESOLVE_DIRECTLY: 'Resolve directly', CLOSE: 'Close', REJECT_AS_INVALID: 'Reject', REJECT_AFTER_REVIEW: 'Reject', REJECT_AFTER_INVESTIGATION: 'Reject', REJECT_RESOLUTION: 'Reject resolution', REOPEN: 'Reopen', ROUTE_AGAIN: 'Route again' },
       fields: { reason: 'Reason', targetBranchId: 'Target branch', targetDepartmentId: 'Target department', ownerId: 'Assigned owner', resolutionType: 'Resolution type', resolutionSummary: 'Resolution summary', customerCommunicationStatus: 'Customer communication status', vehicleDataUnavailableReason: 'Vehicle data unavailable reason' },
-      ownerPicker: { placeholder: 'Search staff by name, role, or branch', prompt: 'Choose the owner.', selected: 'Selected: {name}', clear: 'Clear selected staff', loading: 'Loading staff list.', empty: 'No assignable staff found in your scope.', error: 'Staff list could not be loaded. Try again.' },
+      ownerPicker: { placeholder: 'Search staff by name, role, or branch', prompt: 'Choose who owns the next step.', selected: 'Selected: {name}', clear: 'Clear selected staff', loading: 'Loading staff list.', empty: 'No assignable staff found in your scope.', error: 'Staff list could not be loaded. Refresh and try again.' },
       states: {
         loading: 'Submitting workflow action.',
         empty: 'No workflow actions are available.',
-        error: 'Workflow action could not be submitted. Try again.',
-        success: 'Workflow action submitted.',
-        conflict: 'Record changed by someone else. Reload latest detail before retrying.',
+        error: 'Action was not saved. Check the fields and try again.',
+        success: 'Action saved. The case will reload with the latest status.',
+        conflict: 'Someone else changed this case. Reload latest detail before retrying.',
       },
     },
     capa: {
@@ -78,18 +78,18 @@ export const complaintDetailText: Record<Locale, typeof enComplaintDetailText> =
     timeline: ['Complaint submitted', 'Manager review pending'],
     states: {
       loading: 'Loading complaint detail.',
-      empty: 'Select a complaint to view detail.',
-      error: 'Complaint detail could not be loaded. Try again.',
+      empty: 'Select a complaint from Cases to view its details.',
+      error: 'Complaint detail could not be loaded. Refresh the page or open the case again.',
     },
     commentStates: {
       loading: 'Loading comments.',
-      empty: 'No comments or public updates yet.',
-      error: 'Comments could not be loaded. Try again.',
+      empty: 'No comments or public updates yet. Add a comment when there is something useful to record.',
+      error: 'Comments could not be loaded. Refresh and try again.',
     },
     attachmentStates: {
       loading: 'Loading attachments.',
-      empty: 'No attachments are available yet.',
-      error: 'Attachments could not be loaded. Try again.',
+      empty: 'No attachments yet. Upload a file only when it helps explain the case.',
+      error: 'Attachments could not be loaded. Refresh and try again.',
     },
   },
   ar: {

@@ -5,6 +5,10 @@ import { getAssignableStaff, type AssignableStaff } from '../../../../lib/staff-
 import { getQuickAddRelatedRecords, type RelatedRecordType, type StaffRelatedRecord } from '../../../../lib/staff-related-records-api';
 import { quickAddTask, updateTask, type StaffTaskStatus } from '../../../../lib/staff-tasks-api';
 
+export async function loadRelatedRecordsAction() {
+  return getQuickAddRelatedRecords();
+}
+
 export async function quickAddTaskAction(formData: FormData): Promise<void> {
   const locale = safeLocale(formData.get('locale'));
   const link = await linkFrom(formData);

@@ -49,6 +49,7 @@ export type StaffReportCatalogItem = { id: string; name: string; users: string; 
 export type StaffReportCatalog = { items: StaffReportCatalogItem[] };
 
 const STAFF_SESSION_COOKIE = 'cms_staff_session';
+const REPORT_ROW_LIMIT = 17;
 
 export async function getStaffReportRows({
   apiUrl = process.env.API_URL ?? 'http://localhost:3000',
@@ -67,6 +68,7 @@ export async function getStaffReportRows({
   try {
     const url = new URL('/reports', apiUrl);
     appendFilters(url, filters);
+    url.searchParams.set('limit', String(REPORT_ROW_LIMIT));
     const response = await fetchImpl(url, {
       cache: 'no-store',
       headers: { Accept: 'application/json', cookie: cookies },

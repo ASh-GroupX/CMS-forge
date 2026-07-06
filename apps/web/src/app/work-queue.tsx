@@ -128,7 +128,7 @@ function queueRow(row: ComplaintQueueItem, t: typeof staffShellText[Locale]['wor
     subject: row.subject,
     owner: row.ownerName ?? t.unassigned,
     branch: row.branchName ?? row.branchId,
-    sla: t.sla.backendScoped,
+    sla: slaUnavailable(t),
     age: formatAge(row.updatedAt, locale),
     updated: formatDate(row.updatedAt, locale),
     action: t.actions.open,
@@ -172,6 +172,10 @@ function filterOptions(rows: QueueRow[], t: typeof staffShellText[Locale]['workQ
     status: STATUS_OPTIONS.map((status) => ({ label: status, value: status })),
     branch: [...new Set(rows.map((row) => row.branch))].map((branch) => ({ label: branch, value: branch })),
     severity: SEVERITY_OPTIONS.map((severity) => ({ label: severity, value: severity })),
-    sla: [{ label: t.sla.backendScoped, value: 'backend-scoped' }],
+    sla: [],
   };
+}
+
+function slaUnavailable(t: typeof staffShellText[Locale]['workQueue']): string {
+  return (t.sla as typeof t.sla & { unavailable?: string }).unavailable ?? t.sla.backendScoped;
 }

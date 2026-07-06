@@ -1,7 +1,7 @@
 import type { ComplaintQueueItem, ComplaintSeverity, ComplaintStatus } from './staff-complaints-api';
 
 type QueueResponse = { items?: Partial<ComplaintQueueItem>[] };
-type SearchResponse = QueueResponse & { limit?: number; offset?: number };
+type SearchResponse = QueueResponse & { hasNext?: boolean; limit?: number; offset?: number; total?: number };
 
 export type StaffQueueQuery = {
   branchId?: string | null;
@@ -58,7 +58,7 @@ export async function getStaffQueueResult({
     const page = clampPositive(query.page, 1, 1000);
     const url = new URL('/complaints/search', apiUrl);
     const search = query.search?.trim();
-    url.searchParams.set('limit', String(pageSize));
+    url.searchParams.set('limit', String(pageSize + 1));
     url.searchParams.set('offset', String((page - 1) * pageSize));
     append(url.searchParams, 'branchId', query.branchId);
     append(url.searchParams, 'status', query.status);
@@ -72,7 +72,10 @@ export async function getStaffQueueResult({
     if (!response.ok) return null;
     const body = (await response.json()) as SearchResponse;
     const rows = rowsFrom(body);
-    return rows ? { hasNext: rows.length >= pageSize, page, pageSize, rows } : null;
+    if (!rows) return null;
+    const offset = (page - 1) * pageSize;
+    const hasNext = typeof body.hasNext === 'boolean' ? body.hasNext : typeof body.total === 'number' ? offset + pageSize < body.total : rows.length > pageSize;
+    return { hasNext, page, pageSize, rows: rows.slice(0, pageSize) };
   } catch {
     return null;
   }

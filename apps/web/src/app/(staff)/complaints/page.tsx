@@ -1,5 +1,6 @@
 import React from 'react';
 import { resolveLocale } from '../../../i18n/staff-shell';
+import { getComplaintFormOptions } from '../../../lib/staff-complaint-form-options-api';
 import { getStaffQueueResult, type StaffQueueQuery } from '../../../lib/staff-queue-api';
 import { WorkQueue } from '../../../components/work-queue';
 import type { ComplaintSeverity, ComplaintStatus } from '../../../lib/staff-complaints-api';
@@ -18,13 +19,16 @@ export default async function ComplaintsPage({
   const params = await searchParams;
   const locale = resolveLocale(readParam(params?.locale));
   const query = queueQuery(params);
-  const apiInput = {
+  const requestOptions = {
     ...(cookieHeader !== undefined ? { cookieHeader } : {}),
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
+  };
+  const apiInput = {
+    ...requestOptions,
     query,
   };
-  const queue = await getStaffQueueResult(apiInput);
-  return <WorkQueue locale={locale} query={query} queue={queue} />;
+  const [queue, options] = await Promise.all([getStaffQueueResult(apiInput), getComplaintFormOptions(requestOptions)]);
+  return <WorkQueue locale={locale} options={options} query={query} queue={queue} />;
 }
 
 function readParam(value: string | string[] | undefined) {

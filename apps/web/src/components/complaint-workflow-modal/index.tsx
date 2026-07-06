@@ -75,6 +75,7 @@ export function ComplaintWorkflowModal({
     const result = await submitStaffComplaintWorkflowAction(complaintId, transitionRequest(action, status as ComplaintStatus, form));
     if (result.ok) {
       setSubmitState('success');
+      reloadCurrentComplaint();
       return;
     }
     if (result.error.status === 409 || result.error.code === 'COMPLAINT_INVALID_TRANSITION') {
@@ -204,4 +205,8 @@ function stateTone(state: SubmitState): 'conflict' | 'error' | 'loading' | 'neut
   if (state === 'error' || state === 'validation') return 'error';
   if (state === 'loading') return 'loading';
   return 'neutral';
+}
+
+function reloadCurrentComplaint(): void {
+  (globalThis as typeof globalThis & { location?: Location }).location?.reload();
 }

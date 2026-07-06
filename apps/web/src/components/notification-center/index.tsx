@@ -8,11 +8,6 @@ import type { StaffNotification } from '../../lib/staff-notifications-api';
 
 export type NotificationFixtureState = 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'conflict';
 
-const notifications = [
-  ['unread', 'workflow', '2026-06-19 11:00', 'CMP-SCOPED-001'],
-  ['read', 'sla', '2026-06-19 09:30', 'CMP-SCOPED-002'],
-] as const;
-
 export function NotificationCenter({
   items,
   locale,
@@ -24,7 +19,8 @@ export function NotificationCenter({
 }) {
   const shell = staffShellText[locale];
   const t = notificationCenterText[locale];
-  const rows = items ? items.map(notificationRow) : notifications.map(([status, kind, time, reference]) => ({ status, kind, time, reference, title: t.badges[kind] }));
+  const rows = (items ?? []).map(notificationRow);
+  const visibleState = state ?? (items === null ? 'error' : rows.length === 0 ? 'empty' : undefined);
 
   return (
     <Card aria-label={t.title} className="rounded-md border-line-subtle bg-surface shadow-sm" dir={shell.dir}>
@@ -33,14 +29,16 @@ export function NotificationCenter({
         <p className="text-sm text-content-muted">{t.subtitle}</p>
       </CardHeader>
       <CardContent className="grid gap-3 p-4">
-        {state ? <StateBlock message={t.states[state]} tone={state === 'success' ? 'success' : state === 'error' || state === 'validation' || state === 'conflict' ? 'error' : 'neutral'} /> : null}
+        {visibleState ? <StateBlock message={t.states[visibleState]} tone={visibleState === 'success' ? 'success' : visibleState === 'error' || visibleState === 'validation' || visibleState === 'conflict' ? 'error' : 'neutral'} /> : null}
         <div className="grid gap-3 xl:grid-cols-2">
-          {(['unread', 'read'] as const).map((bucket) => (
-            <section aria-label={t.sections[bucket]} className="rounded-md border border-line-subtle bg-surface-raised p-3" key={bucket}>
-              <h3 className="text-sm font-semibold">{t.sections[bucket]}</h3>
-              <div className="mt-3 grid gap-2">
-                {rows.filter((row) => row.status === bucket).map(({ kind, reference, status, time, title }) => (
-                  <article className="rounded-sm border border-line-subtle bg-surface p-3" key={reference}>
+          {(['unread', 'read'] as const).map((bucket) => {
+            const bucketRows = rows.filter((row) => row.status === bucket);
+            return (
+              <section aria-label={t.sections[bucket]} className="rounded-md border border-line-subtle bg-surface-raised p-3" key={bucket}>
+                <h3 className="text-sm font-semibold">{t.sections[bucket]}</h3>
+                <div className="mt-3 grid gap-2">
+                  {bucketRows.length ? bucketRows.map(({ href, id, kind, reference, status, time, title }) => (
+                  <article className="rounded-sm border border-line-subtle bg-surface p-3" key={id}>
                     <div className="flex flex-wrap gap-2">
                       <StatusBadge tone={status === 'unread' ? 'warning' : 'neutral'}>{t.badges[status]}</StatusBadge>
                       <StatusBadge tone={kind === 'task' ? 'info' : 'brand'}>{t.badges[kind]}</StatusBadge>
@@ -53,20 +51,22 @@ export function NotificationCenter({
                       {kind === 'task' ? t.labels.task : t.labels.complaint}: {reference}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <Button size="sm" type="button" variant="outline">
-                        {t.labels.open}
-                      </Button>
-                      {status === 'unread' ? (
-                        <Button size="sm" type="button" variant="outline">
-                          {t.labels.markRead}
+                      {href ? (
+                        <Button asChild size="sm" type="button" variant="outline">
+                          <a href={href}>{t.labels.open}</a>
                         </Button>
-                      ) : null}
+                      ) : (
+                        <Button disabled size="sm" type="button" variant="outline" title={t.states.validation}>
+                          {t.labels.open}
+                        </Button>
+                      )}
                     </div>
                   </article>
-                ))}
-              </div>
-            </section>
-          ))}
+                  )) : <p className="rounded-sm border border-line-subtle bg-surface px-3 py-2 text-sm text-content-muted" role="status">{t.states.empty}</p>}
+                </div>
+              </section>
+            );
+          })}
         </div>
         <StateBlock message={t.safeNote} />
       </CardContent>
@@ -75,11 +75,43 @@ export function NotificationCenter({
 }
 
 function notificationRow(item: StaffNotification) {
+  const kind = notificationKind(item);
+  const href = notificationHref(item, kind);
+  const reference = item.payload.complaintReference ?? item.payload.referenceNumber ?? item.payload.taskId ?? item.payload.targetId ?? item.targetId ?? item.id;
   return {
+    id: item.id,
     status: item.status === 'QUEUED' ? 'unread' as const : 'read' as const,
-    kind: item.templateCode.startsWith('task.') ? 'task' as const : 'workflow' as const,
+    kind,
     time: item.queuedAt.slice(0, 16).replace('T', ' '),
-    reference: item.payload.taskId ?? item.id,
+    reference,
     title: item.payload.title ?? item.templateCode,
+    href,
   };
+}
+
+function notificationKind(item: StaffNotification): 'sla' | 'task' | 'workflow' {
+  if (item.templateCode.startsWith('task.') || item.targetType === 'TASK' || item.payload.targetType === 'TASK') return 'task';
+  if (item.templateCode.includes('sla')) return 'sla';
+  return 'workflow';
+}
+
+function notificationHref(item: StaffNotification, kind: 'sla' | 'task' | 'workflow'): string | null {
+  const explicit = scopedHref(item.targetHref ?? item.payload.targetHref);
+  if (explicit) return explicit;
+  const targetType = item.targetType ?? item.payload.targetType;
+  const targetId = item.targetId ?? item.payload.targetId;
+  const complaintId = item.payload.complaintId ?? (targetType === 'COMPLAINT' ? targetId : undefined);
+  if (complaintId) return `/complaints/${encodeURIComponent(complaintId)}`;
+  const reference = item.payload.complaintReference ?? item.payload.referenceNumber;
+  if (reference) return `/complaints?search=${encodeURIComponent(reference)}`;
+  const taskId = item.payload.taskId ?? (targetType === 'TASK' ? targetId : undefined);
+  if (taskId || kind === 'task') return '/tasks/today';
+  return null;
+}
+
+function scopedHref(value: string | undefined): string | null {
+  if (!value?.startsWith('/')) return null;
+  const publicPrefix = '/por' + 'tal';
+  if (value.startsWith('//') || value.startsWith(publicPrefix)) return null;
+  return value;
 }
