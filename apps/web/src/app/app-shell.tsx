@@ -46,26 +46,12 @@ export function AppShell({
       <a className="sr-only focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-50 focus:rounded-sm focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:ring-2 focus:ring-brand" href="#staff-main">
         {t.skipToMain}
       </a>
-      <StaffTopBar
-        languageHref={`?locale=${locale === 'ar' ? 'en' : 'ar'}`}
-        signedIn={signedIn ? t.auth.signedIn : t.auth.signedOut}
-        subtitle={t.subtitle}
-        switchLabel={t.switchLabel}
-        switchTarget={t.switchTarget}
-        themeDark={t.theme.dark}
-        themeLabel={t.theme.label}
-        themeLight={t.theme.light}
-        title={t.title}
-      />
-      <div className="grid min-h-[calc(100dvh-4.5rem)] grid-cols-1 gap-4 p-4 md:p-6 lg:grid-cols-[18rem_1fr]">
-        <aside className="order-2 rounded-md border border-line-subtle bg-surface p-3 shadow-sm lg:sticky lg:top-20 lg:order-1 lg:self-start">
-          <div className="mb-4">
-            <p className="text-xs font-semibold uppercase tracking-normal text-content-muted">{t.subtitle}</p>
-            <h1 className="text-2xl font-semibold tracking-normal">{t.title}</h1>
-            <p className="mt-1 text-sm text-content-muted">{t.branch}</p>
-            <p className="mt-2 inline-flex rounded-sm bg-surface-raised px-2 py-1 text-xs font-semibold text-content-muted">
-              {signedIn ? t.auth.signedIn : t.auth.signedOut}
-            </p>
+      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)]">
+        <aside className="order-2 border-line-subtle bg-content-strong p-3 text-brand-foreground lg:sticky lg:top-0 lg:order-1 lg:h-screen lg:overflow-y-auto">
+          <div className="mb-4 border-b border-brand-foreground/15 pb-3">
+            <p className="text-xs font-semibold text-brand-foreground/65">{t.subtitle}</p>
+            <h1 className="text-xl font-semibold tracking-normal">{t.title}</h1>
+            <p className="mt-1 text-xs text-brand-foreground/65">{t.branch}</p>
           </div>
           {sidebarBefore}
           <nav className="grid gap-1" aria-label={t.title}>
@@ -75,22 +61,36 @@ export function AppShell({
               return (
                 <a
                   aria-current={active ? 'page' : undefined}
-                  className={`grid grid-cols-[2rem_1fr] gap-2 rounded-sm px-2 py-2 text-start focus:outline-none focus:ring-2 focus:ring-brand ${active ? 'bg-surface-raised text-content-strong' : 'hover:bg-surface-raised'}`}
+                  aria-label={`${label}: ${description}`}
+                  className={`grid grid-cols-[1.5rem_1fr] items-center gap-2 rounded-sm px-2 py-2 text-start text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand ${
+                    active ? 'bg-brand text-brand-foreground' : 'text-brand-foreground/78 hover:bg-brand/15 hover:text-brand-foreground'
+                  }`}
                   href={`${href}?locale=${locale}`}
                   key={key}
+                  title={description}
                 >
-                  <Icon aria-hidden="true" className="mt-1 size-4 text-brand" />
-                  <span>
-                    <span className="block text-sm font-semibold">{label}</span>
-                    <span className="block text-xs text-content-muted">{description}</span>
-                  </span>
+                  <Icon aria-hidden="true" className="size-4" />
+                  <span className="truncate">{label}</span>
                 </a>
               );
             })}
           </nav>
           {sidebarAfter}
         </aside>
-        <section className="order-1 grid min-w-0 content-start gap-4 lg:order-2" id="staff-main">{children}</section>
+        <div className="order-1 min-w-0 lg:order-2">
+          <StaffTopBar
+            languageHref={`?locale=${locale === 'ar' ? 'en' : 'ar'}`}
+            signedIn={signedIn ? t.auth.signedIn : t.auth.signedOut}
+            subtitle={t.subtitle}
+            switchLabel={t.switchLabel}
+            switchTarget={t.switchTarget}
+            themeDark={t.theme.dark}
+            themeLabel={t.theme.label}
+            themeLight={t.theme.light}
+            title={t.title}
+          />
+          <section className="grid min-w-0 content-start gap-3 p-3 md:p-4 xl:p-5" id="staff-main">{children}</section>
+        </div>
       </div>
     </main>
   );

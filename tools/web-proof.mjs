@@ -14,6 +14,7 @@ import ReportsPage from '../apps/web/src/app/(staff)/reports/page.tsx';
 import PortalSubmissionPage from '../apps/web/src/app/portal/page.tsx';
 import PortalSurveyPage from '../apps/web/src/app/portal/survey/page.tsx';
 import PortalTrackingPage from '../apps/web/src/app/portal/track/page.tsx';
+import { StaffAuthLanding } from '../apps/web/src/app/staff-auth-landing.tsx';
 import { PortalShell } from '../apps/web/src/components/portal-shell/index.tsx';
 import { PortalSubmissionScreen } from '../apps/web/src/components/portal-submission/index.tsx';
 import { PortalTrackingPreview } from '../apps/web/src/components/portal-tracking/index.tsx';
@@ -79,6 +80,7 @@ async function renderCase(testCase) {
 async function routePage(testCase) {
   const params = Promise.resolve(testCase.params);
   const staffProps = { cookieHeader: 'cms_staff_session=proof', fetchImpl: proofFetch, searchParams: params };
+  if (testCase.route === 'staff-auth') return React.createElement(StaffAuthLanding, { authError: false, locale: testCase.locale });
   if (testCase.route === 'staff-admin') return staffFrame(testCase, await AdminPage(staffProps));
   if (testCase.route === 'staff-audit') return staffFrame(testCase, await AuditPage({ searchParams: params }));
   if (testCase.route === 'staff-complaints') return staffFrame(testCase, await ComplaintsPage(staffProps));

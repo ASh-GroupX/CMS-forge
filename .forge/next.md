@@ -1,4 +1,4 @@
-# UI/UX Refactor - Phase Review Ready
+# UI/UX Refactor - Visual Rescue Complete
 
 Status: Complete
 Required model tier: GPT-5.5 Extra High or Opus 4.8 Max
@@ -23,6 +23,7 @@ older carry-forward business blockers.
 7. Slice 7 - Customer Portal
 8. Slice 8 - Cleanup and Hardening
 9. Slice 9 - Final Visual QA Gate
+10. Visual Rescue - Staff Operations Shell and Auth Landing
 
 ## Final Proof
 
@@ -39,5 +40,9 @@ older carry-forward business blockers.
 ## Notes
 
 - Generated visual-review artifacts are under `coverage/web-visual-review`.
+- Visual proof now covers 26 route previews, including English/Arabic auth
+  landing and full staff shell screenshots.
+- Rescue used installed skills: `redesign`, `design-qa`, `ui-ux-pro-max`, and
+  `design-taste-frontend` as the anti-slop/taste filter.
 - Existing `.playwright-cli` scratch artifacts remain intentionally unstaged.
 - Carry-forward business blockers remain listed in `.forge/state.md`.

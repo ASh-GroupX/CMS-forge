@@ -99,7 +99,7 @@ export function FilterBar({
   method?: 'get' | 'post';
 }) {
   return (
-    <form action={action} className={cn('grid gap-2 border-b border-line-subtle p-4 md:grid-cols-6', className)} method={method}>
+    <form action={action} className={cn('grid gap-2 border-b border-line-subtle bg-surface px-3 py-2 md:grid-cols-6', className)} method={method}>
       {children}
     </form>
   );
@@ -117,12 +117,12 @@ export function DataTable({
   minWidth?: string;
 }) {
   return (
-    <div className="hidden w-full min-w-0 max-w-full overflow-x-auto md:block">
+    <div className="hidden w-full min-w-0 max-w-full overflow-x-auto border-t border-line-subtle md:block">
       <Table style={{ minWidth }}>
-        <TableHeader className="bg-surface-raised text-xs font-semibold uppercase tracking-normal text-content-muted">
+        <TableHeader className="bg-content-strong text-xs font-semibold uppercase tracking-normal text-brand-foreground">
           <TableRow>
             {headers.map((header) => (
-              <TableHead className="text-start" key={header}>{header}</TableHead>
+              <TableHead className="text-start text-brand-foreground" key={header}>{header}</TableHead>
             ))}
           </TableRow>
         </TableHeader>

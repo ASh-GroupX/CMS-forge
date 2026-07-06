@@ -28,9 +28,9 @@ export function WorkQueue({
   const filters = filterOptions(queueRows ?? [], t, query);
 
   return (
-    <Card className="w-full min-w-0 max-w-full overflow-hidden rounded-md border-line-subtle bg-surface shadow-sm" aria-label={t.title}>
-      <CardHeader className="border-b border-line-subtle p-4">
-        <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
+    <Card className="w-full min-w-0 max-w-full overflow-hidden rounded-sm border-line-subtle bg-surface shadow-none" aria-label={t.title}>
+      <CardHeader className="border-b border-line-subtle bg-surface-raised p-3">
+        <CardTitle className="text-base tracking-normal">{t.title}</CardTitle>
         <p className="text-sm text-content-muted">{t.status}</p>
       </CardHeader>
       <CardContent className="min-w-0 p-0">
@@ -64,9 +64,9 @@ export function WorkQueue({
           <StateBlock className="m-4" message={t.states.empty} />
         ) : (
           <>
-          <div className="grid gap-3 p-4 md:hidden">
+          <div className="grid gap-2 p-3 md:hidden">
             {queueRows.map((row) => (
-              <article className="grid gap-3 rounded-md border border-line-subtle bg-surface p-3" key={row.id}>
+              <article className="grid gap-3 rounded-sm border border-line-subtle bg-surface p-3" key={row.id}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <span className="block truncate font-medium text-content-strong">{row.referenceNumber}</span>
@@ -138,7 +138,7 @@ export function WorkQueue({
           </>
         )}
       </CardContent>
-      <CardFooter className="flex flex-wrap items-center justify-between gap-2 p-4 text-sm text-content-muted">
+      <CardFooter className="flex flex-wrap items-center justify-between gap-2 border-t border-line-subtle bg-surface-raised p-3 text-sm text-content-muted">
         <span>{t.pagination.page} {page}</span>
         <div className="flex gap-2">
           {page > 1 ? (

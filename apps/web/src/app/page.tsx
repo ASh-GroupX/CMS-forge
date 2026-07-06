@@ -179,7 +179,7 @@ export function StaffShell({
       locale={locale}
       navKeys={visibleNav}
       signedIn={isSignedIn}
-      sidebarAfter={visibleNav.includes('admin') ? null : <p className="mt-3 rounded-sm bg-muted px-2 py-2 text-xs font-semibold text-muted-foreground">{t.role.adminHidden}</p>}
+      sidebarAfter={visibleNav.includes('admin') ? null : <p className="mt-3 rounded-sm bg-brand-foreground/5 px-2 py-2 text-xs font-semibold text-brand-foreground/65">{t.role.adminHidden}</p>}
       sidebarBefore={<><AuthPanel authError={authError} isSignedIn={isSignedIn} locale={locale} resetState={resetState} /><RolePanel locale={locale} role={role} /></>}
     >
       <DashboardSummary locale={locale} role={role} state={dashboardState} summary={dashboardSummary ?? undefined} />

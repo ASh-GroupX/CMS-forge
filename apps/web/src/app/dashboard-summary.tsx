@@ -39,9 +39,11 @@ export function DashboardSummary({
 
   if (state) {
     return (
-      <section className="rounded-md border border-line-subtle bg-surface p-4 shadow-sm" aria-label={t.title}>
-        <h2 className="text-lg font-semibold tracking-normal">{t.title}</h2>
-        <StateBlock className="mt-2" message={t.states[state]} tone={state === 'error' ? 'error' : 'neutral'} />
+      <section className="rounded-sm border border-line-subtle bg-surface" aria-label={t.title}>
+        <header className="border-b border-line-subtle bg-surface-raised px-3 py-2">
+          <h2 className="text-base font-semibold tracking-normal">{t.title}</h2>
+        </header>
+        <StateBlock className="m-3" message={t.states[state]} tone={state === 'error' ? 'error' : 'neutral'} />
       </section>
     );
   }
@@ -49,10 +51,15 @@ export function DashboardSummary({
   const primary = roleCards[role][0] ?? 'open';
   const secondary = roleCards[role].slice(1);
   return (
-    <section aria-label={t.title} className="grid gap-3 lg:grid-cols-[1.2fr_2fr]">
-      <MetricCard item={metric(primary, t, cardValues)} primary />
-      <div className="grid gap-2 md:grid-cols-2">
-        {secondary.map((key) => <MetricCard item={metric(key, t, cardValues)} key={key} />)}
+    <section aria-label={t.title} className="rounded-sm border border-line-subtle bg-surface">
+      <header className="border-b border-line-subtle bg-surface-raised px-3 py-2">
+        <h2 className="text-base font-semibold tracking-normal">{t.title}</h2>
+      </header>
+      <div className="grid gap-2 p-3 lg:grid-cols-[1.1fr_2fr]">
+        <MetricCard item={metric(primary, t, cardValues)} primary />
+        <div className="grid gap-2 md:grid-cols-2">
+          {secondary.map((key) => <MetricCard item={metric(key, t, cardValues)} key={key} />)}
+        </div>
       </div>
     </section>
   );
@@ -66,10 +73,10 @@ function metric(key: SummaryKey, t: typeof staffShellText[Locale]['dashboard'], 
 function MetricCard({ item, primary = false }: { item: { description: string; label: string; tone?: PrimitiveTone | undefined; value: string }; primary?: boolean }) {
   const valueClass = item.tone === 'brand' ? 'text-brand' : item.tone === 'danger' ? 'text-status-error' : item.tone === 'warning' ? 'text-status-warning' : 'text-content-strong';
   return (
-    <div className={`rounded-md border border-line-subtle bg-surface p-3 shadow-sm ${primary ? 'lg:min-h-32' : ''}`}>
-      <p className="text-sm font-medium text-content-muted">{item.label}</p>
-      <p className={`${primary ? 'text-4xl' : 'text-2xl'} mt-2 font-semibold tracking-normal ${valueClass}`}>{item.value}</p>
-      <p className="mt-1 text-xs text-content-muted">{item.description}</p>
+    <div className={`rounded-sm border border-line-subtle ${primary ? 'bg-content-strong text-brand-foreground lg:min-h-28' : 'bg-surface'} p-3`}>
+      <p className={`text-sm font-medium ${primary ? 'text-brand-foreground/70' : 'text-content-muted'}`}>{item.label}</p>
+      <p className={`${primary ? 'text-4xl text-brand-foreground' : 'text-2xl'} mt-2 font-semibold tracking-normal ${primary ? '' : valueClass}`}>{item.value}</p>
+      <p className={`mt-1 text-xs ${primary ? 'text-brand-foreground/65' : 'text-content-muted'}`}>{item.description}</p>
     </div>
   );
 }

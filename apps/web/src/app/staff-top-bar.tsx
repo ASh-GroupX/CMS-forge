@@ -43,19 +43,19 @@ export function StaffTopBar({
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-background/95 px-4 py-3 text-foreground shadow-sm backdrop-blur md:px-6">
+    <header className="sticky top-0 z-30 border-b border-line-subtle bg-surface/95 px-3 py-2 text-content-strong backdrop-blur md:px-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">{subtitle}</p>
+          <p className="text-xs font-semibold text-content-muted">{subtitle}</p>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-lg font-semibold tracking-normal">{title}</h1>
-            <span className="rounded-sm bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">{signedIn}</span>
+            <h1 className="text-base font-semibold tracking-normal">{title}</h1>
+            <span className="rounded-sm bg-surface-raised px-2 py-1 text-xs font-semibold text-content-muted">{signedIn}</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <a
             aria-label={switchLabel}
-            className="rounded-sm border border-border bg-card px-3 py-2 text-sm font-semibold hover:bg-accent focus:outline-none focus:ring-2 focus:ring-brand"
+            className="rounded-sm border border-line-subtle bg-surface-raised px-3 py-2 text-sm font-semibold hover:bg-accent focus:outline-none focus:ring-2 focus:ring-brand"
             href={languageHref}
           >
             {switchTarget}
@@ -63,7 +63,7 @@ export function StaffTopBar({
           <button
             aria-label={themeLabel}
             aria-pressed={theme === 'dark'}
-            className="inline-flex size-10 items-center justify-center rounded-sm border border-border bg-card hover:bg-accent focus:outline-none focus:ring-2 focus:ring-brand"
+            className="inline-flex size-10 items-center justify-center rounded-sm border border-line-subtle bg-surface-raised hover:bg-accent focus:outline-none focus:ring-2 focus:ring-brand"
             onClick={toggleTheme}
             type="button"
           >

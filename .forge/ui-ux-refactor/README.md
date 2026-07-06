@@ -269,6 +269,32 @@ Required review:
 - No page-level horizontal overflow.
 - No clipped or overlapping Arabic text.
 
+## Visual Rescue - Staff Operations Shell And Auth Landing
+
+Status: Complete
+
+Skills used:
+
+- `redesign`
+- `design-qa`
+- `ui-ux-pro-max`
+- `design-taste-frontend`
+
+Purpose:
+
+- Fix the post-slice user review that the app still looked too close to the
+  old generic card layout.
+
+Scope:
+
+- Split operational auth landing.
+- Fixed dark staff navigation rail.
+- Tighter topbar.
+- Stronger dashboard primary metric hierarchy.
+- Dark operational table headers.
+- Visual-review coverage for auth landing and full staff shell in English and
+  Arabic.
+
 ## Proof Set For Every Slice
 
 - `corepack pnpm typecheck`

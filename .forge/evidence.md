@@ -12550,6 +12550,52 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 
 ---
 
+## UI/UX Redesign - Visual Rescue Staff Operations Shell
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `PORTAL-SEC-001`
+Skills used: `redesign`, `design-qa`, `ui-ux-pro-max`, `design-taste-frontend`
+
+### Scope
+
+- Responded to user visual review that the completed redesign still felt too close to the old generic card layout.
+- Strengthened the visible Precision Ops hierarchy on the unauthenticated staff landing, staff shell, dashboard summary, work queue, and shared table headers.
+- Replaced the centered generic login card with a split operational auth landing using the same graphite/porcelain direction.
+- Moved staff navigation into a fixed dark left rail, tightened the topbar, and reduced decorative card weight.
+- Promoted dashboard open workload into a dark primary metric and gave work queue tables dark operational headers.
+- Added English and Arabic visual-review coverage for auth landing and full staff shell.
+
+### Security Self-Check
+
+- No backend API, OpenAPI contract, RBAC, branch scope, audit, workflow state machine, attachment authorization, report, notification, DMS adapter, survey, or portal verification behavior changed.
+- React still does not decide complaint state, role, branch scope, workflow authority, audit visibility, report scope, notification scope, attachment authorization, or portal verification.
+- Auth still submits through the existing staff login/logout server actions; no browser storage, credentials, tokens, OTPs, provider secrets, internal comments, audit logs, DMS codes, unrelated complaints, or public file URLs were added.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (26 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe serious/critical violations at zero).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Visual Review
+
+- Reviewed `coverage/web-visual-review/en-auth-landing-visual-regression.png` and `ar-auth-landing-visual-regression.png`.
+- Reviewed `coverage/web-visual-review/en-staff-shell-visual-regression.png` and `ar-staff-shell-visual-regression.png`.
+- Reviewed `coverage/web-visual-review/en-dashboard-visual-regression.png`, `ar-dashboard-visual-regression.png`, and `en-work-queue-visual-regression.png`.
+- Auth landing, staff shell, dashboard, and work queue now show a visibly different operational SaaS direction while preserving English LTR and Arabic RTL.
+
+### Notes
+
+- Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.
+
+---
+
 ## UI/UX Redesign - Slice 3 Staff Dashboard and Work Queue
 
 Status: Complete

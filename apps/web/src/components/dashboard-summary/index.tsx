@@ -1,5 +1,4 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StateBlock, type PrimitiveTone } from '../shared/ui-primitives';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
@@ -29,26 +28,26 @@ export function DashboardSummary({
   const isEmpty = data !== null && Object.values(data).every((value) => value === 0);
 
   return (
-    <Card aria-label={t.title} className="rounded-md border-line-subtle bg-surface shadow-sm" dir={shell.dir}>
-      <CardHeader className="border-b border-line-subtle p-4">
-        <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
+    <section aria-label={t.title} className="rounded-sm border border-line-subtle bg-surface" dir={shell.dir}>
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line-subtle bg-surface-raised px-3 py-2">
+        <h2 className="text-base font-semibold tracking-normal">{t.title}</h2>
         {data === null ? (
           <StateBlock className="mt-2" message={t.states.error} tone="error" />
         ) : isEmpty ? (
           <StateBlock className="mt-2" message={t.states.empty} />
         ) : null}
-      </CardHeader>
-      <CardContent className="p-4">
+      </header>
+      <div className="p-3">
         {values ? (
-          <div className="grid gap-3 lg:grid-cols-[1.2fr_2fr]">
+          <div className="grid gap-2 lg:grid-cols-[1.1fr_2fr]">
             <MetricCard item={metric('open', t, values)} primary />
             <div className="grid gap-2 md:grid-cols-2">
               {SECONDARY_KEYS.map((key) => <MetricCard item={metric(key, t, values)} key={key} />)}
             </div>
           </div>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 
@@ -57,16 +56,16 @@ export function DashboardSummaryLoading({ locale }: { locale: Locale }) {
   const t = shell.dashboard;
 
   return (
-    <Card aria-label={t.title} className="rounded-md border-line-subtle bg-surface shadow-sm" dir={shell.dir}>
-      <CardHeader className="border-b border-line-subtle p-4">
-        <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4" role="status" aria-label={t.states.loading}>
+    <section aria-label={t.title} className="rounded-sm border border-line-subtle bg-surface" dir={shell.dir}>
+      <header className="border-b border-line-subtle bg-surface-raised px-3 py-2">
+        <h2 className="text-base font-semibold tracking-normal">{t.title}</h2>
+      </header>
+      <div className="grid gap-2 p-3 md:grid-cols-2 xl:grid-cols-4" role="status" aria-label={t.states.loading}>
         {Array.from({ length: 4 }).map((_, index) => (
-          <Skeleton className="h-28 rounded-md" key={index} />
+          <Skeleton className="h-24 rounded-sm" key={index} />
         ))}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 
@@ -80,10 +79,12 @@ function metric(key: SummaryKey, t: typeof staffShellText[Locale]['dashboard'], 
 function MetricCard({ item, primary = false }: { item: MetricItem; primary?: boolean }) {
   const valueClass = item.tone === 'brand' ? 'text-brand' : item.tone === 'danger' ? 'text-status-error' : item.tone === 'warning' ? 'text-status-warning' : 'text-content-strong';
   return (
-    <div className={`rounded-md border border-line-subtle bg-surface p-3 shadow-sm ${primary ? 'lg:min-h-32' : ''}`}>
-      <p className="text-sm font-medium text-content-muted">{item.label}</p>
-      <p className={`${primary ? 'text-4xl' : 'text-2xl'} mt-2 font-semibold tracking-normal ${valueClass}`}>{item.value}</p>
-      <p className="mt-1 text-xs text-content-muted">{item.description}</p>
+    <div className={`rounded-sm border border-line-subtle ${primary ? 'bg-content-strong text-brand-foreground lg:min-h-28' : 'bg-surface'} p-3`}>
+      <p className={`text-sm font-medium ${primary ? 'text-brand-foreground/70' : 'text-content-muted'}`}>{item.label}</p>
+      <p className={`${primary ? 'text-4xl text-brand-foreground' : 'text-2xl'} mt-2 font-semibold tracking-normal ${primary ? '' : valueClass}`}>{item.value}</p>
+      <p className={`mt-1 text-xs ${primary ? 'text-brand-foreground/65' : 'text-content-muted'}`}>
+        {item.description}
+      </p>
     </div>
   );
 }
