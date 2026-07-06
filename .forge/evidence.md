@@ -12868,6 +12868,58 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 
 ---
 
+---
+
+## UI/UX Redesign - Visual Rescue 2 Dense Shell Polish
+
+Status: Complete
+Date: 2026-07-06
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `PORTAL-SEC-001`
+
+### Scope
+
+- Used installed skills: `redesign`, `design-qa`, `ui-ux-pro-max`, `design-taste-frontend`, and `ui-craft-dense-dashboard`.
+- Audited the existing generated EN/AR visual-review screenshots for auth landing, staff shell, dashboard, work queue, complaint create, complaint detail/workflow, admin/reports/audit/notifications, and customer portal submit/track/survey before editing.
+- Refined the staff auth landing and staff shell from heavy dark chrome to a subtler operational shell using existing semantic surface/content tokens.
+- Changed shared table headers from uppercase to sentence case and changed shared status badges to dot-style indicators to reduce badge noise in dense staff/admin tables.
+- Updated visual proof expectations to assert the new shell treatment.
+- No backend API, OpenAPI contract, RBAC, branch scope, audit, workflow, reports, notifications, attachments, DMS adapter, survey, localization authority, or portal verification behavior changed.
+
+### Security Self-Check
+
+- Roles and branch scope still come from the server session; React still only renders scoped API results and navigation affordances.
+- React still does not decide complaint workflow state, status transitions, audit writes, report scope, notification scope, attachment authorization, or portal verification.
+- No state-changing backend behavior was touched, so status history, audit transactionality, and after-commit side effects remain under the existing backend implementation.
+- No passwords, OTPs, tokens, hashes, provider secrets, staff PII expansion, internal comments, audit logs, DMS codes, unrelated complaints, or public file URLs were added.
+- Customer portal exposure rules remain unchanged: portal tracking still requires verification and does not expose internal staff/audit/DMS details.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (26 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check`; CRLF normalization warnings only.
+
+### Visual Review
+
+- Opened refreshed EN auth landing, EN staff shell, AR staff shell, EN work queue, and AR portal submission mobile PNGs under `coverage/web-visual-review`.
+- Auth and staff shell now share a lighter operational SaaS chrome instead of a full-dark sidebar/landing panel.
+- Work queue now shows sentence-case headers and quieter dot-style status/severity indicators.
+- Arabic staff shell remained RTL-aligned without obvious clipping or overlap.
+- Portal mobile stayed calm, contained, and privacy-forward; visible skip-link focus remains a proof-harness accessibility artifact.
+
+### Notes
+
+- Existing untracked `.playwright-cli/` scratch artifacts remain intentionally unstaged.
+- Generated `coverage/` visual-review artifacts were regenerated for inspection and remain untracked/unstaged by project convention.
+
+---
+
 ## UI/UX Redesign - Slice 8 Cleanup and Hardening
 
 Status: Complete

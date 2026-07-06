@@ -47,11 +47,11 @@ export function AppShell({
         {t.skipToMain}
       </a>
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)]">
-        <aside className="order-2 border-line-subtle bg-content-strong p-3 text-brand-foreground lg:sticky lg:top-0 lg:order-1 lg:h-screen lg:overflow-y-auto">
-          <div className="mb-4 border-b border-brand-foreground/15 pb-3">
-            <p className="text-xs font-semibold text-brand-foreground/65">{t.subtitle}</p>
+        <aside className="order-2 border-e border-line-subtle bg-surface-raised p-3 text-content-strong lg:sticky lg:top-0 lg:order-1 lg:h-screen lg:overflow-y-auto">
+          <div className="mb-4 border-b border-line-subtle pb-3">
+            <p className="text-xs font-semibold text-content-muted">{t.subtitle}</p>
             <h1 className="text-xl font-semibold tracking-normal">{t.title}</h1>
-            <p className="mt-1 text-xs text-brand-foreground/65">{t.branch}</p>
+            <p className="mt-1 text-xs text-content-muted">{t.branch}</p>
           </div>
           {sidebarBefore}
           <nav className="grid gap-1" aria-label={t.title}>
@@ -63,7 +63,7 @@ export function AppShell({
                   aria-current={active ? 'page' : undefined}
                   aria-label={`${label}: ${description}`}
                   className={`grid grid-cols-[1.5rem_1fr] items-center gap-2 rounded-sm px-2 py-2 text-start text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand ${
-                    active ? 'bg-brand text-brand-foreground' : 'text-brand-foreground/78 hover:bg-brand/15 hover:text-brand-foreground'
+                    active ? 'bg-brand/10 text-brand' : 'text-content-muted hover:bg-surface hover:text-content-strong'
                   }`}
                   href={`${href}?locale=${locale}`}
                   key={key}

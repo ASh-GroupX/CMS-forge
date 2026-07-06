@@ -1,4 +1,4 @@
-# UI/UX Refactor - Visual Rescue Complete
+# UI/UX Refactor - Visual Rescue 2 Complete
 
 Status: Complete
 Required model tier: GPT-5.5 Extra High or Opus 4.8 Max
@@ -8,9 +8,10 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 
 ## Task
 
-The CMS-Auto UI/UX refactor slices are complete. The next action is a fresh
-phase review per Forge policy before starting another phase or returning to the
-older carry-forward business blockers.
+The requested full UI/UX screen audit has been performed against generated
+English and Arabic screenshots, and a small follow-up visual polish slice is
+complete. The next action remains a fresh phase review per Forge policy before
+starting another phase or returning to carry-forward business blockers.
 
 ## Completed Slice Order
 
@@ -24,6 +25,7 @@ older carry-forward business blockers.
 8. Slice 8 - Cleanup and Hardening
 9. Slice 9 - Final Visual QA Gate
 10. Visual Rescue - Staff Operations Shell and Auth Landing
+11. Visual Rescue 2 - Dense Shell Polish
 
 ## Final Proof
 
@@ -40,9 +42,10 @@ older carry-forward business blockers.
 ## Notes
 
 - Generated visual-review artifacts are under `coverage/web-visual-review`.
-- Visual proof now covers 26 route previews, including English/Arabic auth
-  landing and full staff shell screenshots.
-- Rescue used installed skills: `redesign`, `design-qa`, `ui-ux-pro-max`, and
-  `design-taste-frontend` as the anti-slop/taste filter.
+- Visual proof covers 26 route previews, including English/Arabic auth landing,
+  staff shell, staff/admin surfaces, and customer portal mobile flows.
+- Visual Rescue 2 used installed skills: `redesign`, `design-qa`,
+  `ui-ux-pro-max`, `design-taste-frontend`, and
+  `ui-craft-dense-dashboard`.
 - Existing `.playwright-cli` scratch artifacts remain intentionally unstaged.
 - Carry-forward business blockers remain listed in `.forge/state.md`.

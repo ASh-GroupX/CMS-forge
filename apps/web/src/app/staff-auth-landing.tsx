@@ -28,13 +28,13 @@ export function StaffAuthLanding({
         title={t.title}
       />
       <section className="grid min-h-[calc(100vh-3.75rem)] lg:grid-cols-[minmax(0,1fr)_minmax(24rem,32rem)]">
-        <div className="hidden bg-content-strong p-8 text-brand-foreground lg:grid lg:content-between">
+        <div className="hidden border-e border-line-subtle bg-surface-raised p-8 text-content-strong lg:grid lg:content-between">
           <div>
-            <p className="text-sm font-semibold text-brand-foreground/65">{t.subtitle}</p>
+            <p className="text-sm font-semibold text-content-muted">{t.subtitle}</p>
             <h1 className="mt-2 max-w-lg text-4xl font-semibold tracking-normal">{t.title}</h1>
-            <p className="mt-3 text-sm text-brand-foreground/70">{t.branch}</p>
+            <p className="mt-3 text-sm text-content-muted">{t.branch}</p>
           </div>
-          <div className="grid gap-2 border-t border-brand-foreground/15 pt-4 text-sm text-brand-foreground/70">
+          <div className="grid gap-2 border-t border-line-subtle pt-4 text-sm text-content-muted">
             <span>{t.nav.today[0]}</span>
             <span>{t.nav.queue[0]}</span>
             <span>{t.nav.reports[0]}</span>

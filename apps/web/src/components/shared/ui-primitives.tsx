@@ -8,12 +8,12 @@ import { cn } from '@/lib/utils';
 export type PrimitiveTone = 'brand' | 'danger' | 'info' | 'neutral' | 'success' | 'warning';
 
 const toneClass: Record<PrimitiveTone, string> = {
-  brand: 'border-transparent bg-brand text-brand-foreground',
-  danger: 'border-transparent bg-status-error text-white',
-  info: 'border-transparent bg-status-info text-white',
-  neutral: 'border-line-subtle bg-surface-raised text-content-muted',
-  success: 'border-transparent bg-status-success text-white',
-  warning: 'border-transparent bg-status-warning text-slate-950',
+  brand: 'bg-brand',
+  danger: 'bg-status-error',
+  info: 'bg-status-info',
+  neutral: 'bg-content-muted',
+  success: 'bg-status-success',
+  warning: 'bg-status-warning',
 };
 
 export function PageHeader({
@@ -119,7 +119,7 @@ export function DataTable({
   return (
     <div className="hidden w-full min-w-0 max-w-full overflow-x-auto border-t border-line-subtle md:block">
       <Table style={{ minWidth }}>
-        <TableHeader className="bg-content-strong text-xs font-semibold uppercase tracking-normal text-brand-foreground">
+        <TableHeader className="bg-content-strong text-xs font-semibold tracking-normal text-brand-foreground">
           <TableRow>
             {headers.map((header) => (
               <TableHead className="text-start text-brand-foreground" key={header}>{header}</TableHead>
@@ -139,7 +139,12 @@ export function DataTable({
 }
 
 export function StatusBadge({ children, tone = 'neutral' }: { children: React.ReactNode; tone?: PrimitiveTone }) {
-  return <Badge className={cn('shadow-none', toneClass[tone])} variant="outline">{children}</Badge>;
+  return (
+    <Badge className="gap-1.5 border-line-subtle bg-surface-raised text-content-strong shadow-none" variant="outline">
+      <span aria-hidden="true" className={cn('size-1.5 rounded-full', toneClass[tone])} />
+      {children}
+    </Badge>
+  );
 }
 
 export function MetricStrip({
