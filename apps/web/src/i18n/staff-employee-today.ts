@@ -10,6 +10,7 @@ export const employeeTodayText = {
       done: 'Done',
       waiting: 'Waiting',
       update: 'Update',
+      updateDetails: 'Update details',
       customerPromise: 'Customer promise',
     },
     sections: {
@@ -25,6 +26,7 @@ export const employeeTodayText = {
       branch: 'Branch',
       due: 'Due',
       links: 'Task links',
+      moreInfo: 'More info',
       nextAction: 'Next action',
       nextOwner: 'Who follows up?',
       owner: 'Created by',
@@ -80,6 +82,7 @@ export const employeeTodayText = {
       done: 'تم',
       waiting: 'انتظار',
       update: 'تحديث',
+      updateDetails: 'تحديث التفاصيل',
       customerPromise: 'وعد للعميل',
     },
     sections: {
@@ -95,6 +98,7 @@ export const employeeTodayText = {
       branch: 'الفرع',
       due: 'الاستحقاق',
       links: 'روابط المهمة',
+      moreInfo: 'معلومات إضافية',
       nextAction: 'الإجراء التالي',
       nextOwner: 'مين يتابع؟',
       owner: 'أنشأها',

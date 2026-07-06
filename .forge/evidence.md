@@ -13016,3 +13016,53 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 - Production source scans after the final changes found no `PreviewState`, fake `role="dialog"`, or empty `href` under `apps/web/src`.
 - The raw color lint ratchet remains at 33 matches.
 - Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.
+
+---
+
+## UI/UX Redesign - Visual Rescue 3 Progressive Disclosure Repair
+
+Status: Complete
+Date: 2026-07-06
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `PORTAL-SEC-001`
+
+### Scope
+
+- Used installed skills: `redesign`, `design-qa`, `ui-ux-pro-max`, `design-taste-frontend`, and `ui-craft-dense-dashboard`.
+- Re-audited the user-provided screenshots for Employee Today, Deal Handoff, and Admin intake dropdowns; the rejected pattern was too many always-open forms and empty sections fighting the primary task list.
+- Repaired Employee Today so quick add, extra task metadata, and detailed update fields are closed by default; active task buckets render first and empty buckets collapse into one disclosure.
+- Repaired Deal Handoff so create-deal and detailed holder/blocker editing are closed by default; simple advance remains visible and empty pipeline stages collapse into one disclosure.
+- Repaired Admin so create-user, add-value, and edit-value forms are intent-revealed instead of always open; removed the duplicate hardcoded English manage-roles action from the admin route.
+- Added direct EN/AR browser visual proof coverage for Today tasks and Deal handoff, plus shared proof fixtures so `test:visual` and `web:visual-review` render the same real route data.
+- No backend API, OpenAPI contract, RBAC, branch scope, audit, workflow, reports, notifications, attachments, DMS adapter, survey, localization authority, or portal verification behavior changed.
+
+### Security Self-Check
+
+- Roles and branch scope still come from the server session; React still only renders scoped API results and action affordances.
+- React still does not decide complaint workflow state, task/deal authority, status transitions, audit writes, report scope, notification scope, attachment authorization, or portal verification.
+- Task and deal mutations still submit through the existing server actions and typed backend helpers; no client-side workflow authority was added.
+- No passwords, OTPs, tokens, hashes, provider secrets, staff PII expansion, internal comments, audit logs, DMS codes, unrelated complaints, or public file URLs were added.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (30 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check`; CRLF normalization warnings only.
+
+### Visual Review
+
+- Opened refreshed PNGs for EN Today tasks, EN Deal handoff, EN Admin surfaces, AR Today tasks, and AR Admin surfaces under `coverage/web-visual-review`.
+- Employee Today now opens as two active work buckets with quick add, detailed edits, and empty buckets collapsed.
+- Deal Handoff now opens on stage/current-holder/stuck-deal status with create and detailed blocker/holder edits collapsed.
+- Admin now opens on existing users and intake data tables; create/add/edit forms are collapsed and the duplicate hardcoded English action is gone.
+- Arabic RTL remained aligned without obvious clipped labels, overlap, or page-level horizontal overflow in the sampled artifacts.
+
+### Notes
+
+- Existing untracked `.playwright-cli/` scratch artifacts remain intentionally unstaged.
+- Generated `coverage/` visual-review artifacts were regenerated for inspection and remain untracked/unstaged by project convention.

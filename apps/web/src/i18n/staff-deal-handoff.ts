@@ -8,6 +8,7 @@ export const dealHandoffText = {
       clearBlocker: 'Clear blocker',
       create: 'Create deal',
       setBlocker: 'Set blocker',
+      updateDetails: 'Change holder, due, or blocker',
     },
     sections: {
       byStage: ['By stage', 'Current deals grouped by pipeline stage'],
@@ -53,6 +54,7 @@ export const dealHandoffText = {
       clearBlocker: 'مسح العائق',
       create: 'إنشاء صفقة',
       setBlocker: 'تعيين عائق',
+      updateDetails: 'تغيير المسؤول أو الموعد أو العائق',
     },
     sections: {
       byStage: ['حسب المرحلة', 'الصفقات الحالية مجمعة حسب مرحلة المسار'],

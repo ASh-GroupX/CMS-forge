@@ -1,4 +1,4 @@
-# UI/UX Refactor - Visual Rescue 2 Complete
+# UI/UX Refactor - Visual Rescue 3 Complete
 
 Status: Complete
 Required model tier: GPT-5.5 Extra High or Opus 4.8 Max
@@ -9,7 +9,8 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 ## Task
 
 The requested full UI/UX screen audit has been performed against generated
-English and Arabic screenshots, and a small follow-up visual polish slice is
+English and Arabic screenshots. After user review found task/deal/admin screens
+still felt like stacked forms, a focused progressive-disclosure repair slice is
 complete. The next action remains a fresh phase review per Forge policy before
 starting another phase or returning to carry-forward business blockers.
 
@@ -26,6 +27,7 @@ starting another phase or returning to carry-forward business blockers.
 9. Slice 9 - Final Visual QA Gate
 10. Visual Rescue - Staff Operations Shell and Auth Landing
 11. Visual Rescue 2 - Dense Shell Polish
+12. Visual Rescue 3 - Screenshot-led Progressive Disclosure Repair
 
 ## Final Proof
 
@@ -43,8 +45,10 @@ starting another phase or returning to carry-forward business blockers.
 
 - Generated visual-review artifacts are under `coverage/web-visual-review`.
 - Visual proof covers 26 route previews, including English/Arabic auth landing,
-  staff shell, staff/admin surfaces, and customer portal mobile flows.
-- Visual Rescue 2 used installed skills: `redesign`, `design-qa`,
+- Visual proof covers 30 route previews, including English/Arabic auth landing,
+  staff shell, today tasks, deal handoff, staff/admin surfaces, and customer
+  portal mobile flows.
+- Visual Rescue 3 used installed skills: `redesign`, `design-qa`,
   `ui-ux-pro-max`, `design-taste-frontend`, and
   `ui-craft-dense-dashboard`.
 - Existing `.playwright-cli` scratch artifacts remain intentionally unstaged.

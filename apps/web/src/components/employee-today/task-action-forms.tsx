@@ -20,30 +20,32 @@ const RELATED_RECORD_TYPES: RelatedRecordType[] = ['CUSTOMER', 'COMPLAINT', 'CAS
 
 export function QuickAddForm({ action, locale, relatedRecords, staff, t }: { action: TaskAction; locale: Locale; relatedRecords?: StaffRelatedRecordOptions | null | undefined; staff?: AssignableStaff[] | null | undefined; t: EmployeeTodayText }) {
   return (
-    <form action={action} className="mb-4 grid gap-3 rounded-md border border-border bg-muted/40 p-3">
-      <input name="locale" type="hidden" value={locale} />
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-semibold tracking-normal">{t.actions.quickAdd}</h2>
-        <label className="flex items-center gap-2 text-sm">
-          <input className="size-4 rounded border-border" name="isCustomerPromise" type="checkbox" />
-          {t.actions.customerPromise}
-        </label>
-      </div>
-      <div className="grid gap-3 md:grid-cols-2">
-        <LabeledInput label={t.fields.title} name="title" required />
-        <StaffPicker label={t.fields.assignee} labelName="assigneeLabel" locale={locale} name="whoId" staff={staff} t={t.staffPicker} />
-        <LabeledInput label={t.fields.when} name="when" required type="datetime-local" />
-        <LabeledInput label={t.fields.due} name="dueAt" type="datetime-local" />
-        <RelatedRecordPicker locale={locale} relatedRecords={relatedRecords} t={t} />
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="quick-add-what">{t.fields.what}</Label>
-        <Textarea id="quick-add-what" name="what" required />
-      </div>
-      <div>
-        <Button type="submit">{t.actions.add}</Button>
-      </div>
-    </form>
+    <details className="mb-4 rounded-sm border border-line-subtle bg-surface-raised">
+      <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-content-strong">{t.actions.quickAdd}</summary>
+      <form action={action} className="grid gap-3 border-t border-line-subtle p-3">
+        <input name="locale" type="hidden" value={locale} />
+        <div className="flex justify-end">
+          <label className="flex items-center gap-2 text-sm">
+            <input className="size-4 rounded border-border" name="isCustomerPromise" type="checkbox" />
+            {t.actions.customerPromise}
+          </label>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <LabeledInput label={t.fields.title} name="title" required />
+          <StaffPicker label={t.fields.assignee} labelName="assigneeLabel" locale={locale} name="whoId" staff={staff} t={t.staffPicker} />
+          <LabeledInput label={t.fields.when} name="when" required type="datetime-local" />
+          <LabeledInput label={t.fields.due} name="dueAt" type="datetime-local" />
+          <RelatedRecordPicker locale={locale} relatedRecords={relatedRecords} t={t} />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="quick-add-what">{t.fields.what}</Label>
+          <Textarea id="quick-add-what" name="what" required />
+        </div>
+        <div>
+          <Button type="submit">{t.actions.add}</Button>
+        </div>
+      </form>
+    </details>
   );
 }
 
@@ -134,24 +136,27 @@ export function TaskActions({ action, locale, staff, task, t }: { action: TaskAc
   const nextWhen = toDateTimeLocal(task.nextAction?.when ?? task.dueAt);
 
   return (
-    <div className="mt-3 grid gap-2 border-t border-border pt-3">
+    <div className="mt-3 grid gap-2 border-t border-line-subtle pt-3">
       <div className="flex flex-wrap gap-2">
         <StatusForm action={action} label={t.actions.done} locale={locale} status="DONE" task={task} />
         <StatusForm action={action} label={t.actions.waiting} locale={locale} nextAction={{ what: nextWhat, whoId: nextWho, when: nextWhen }} status="WAITING" task={task} />
       </div>
-      <form action={action} className="grid gap-2 md:grid-cols-[1fr_1fr_1fr_auto]">
-        <HiddenTaskFields locale={locale} taskId={task.id} />
-        <StaffPicker initialUserId={task.assigneeId} label={t.fields.assignee} labelName="assigneeLabel" locale={locale} name="assigneeId" staff={staff} t={t.staffPicker} />
-        <LabeledInput defaultValue={nextWhat} label={t.fields.nextAction} name="nextActionWhat" required />
-        <StaffPicker initialUserId={nextWho} label={t.fields.nextOwner} labelName="nextActionWhoLabel" locale={locale} name="nextActionWhoId" staff={staff} t={t.staffPicker} />
-        <div className="grid gap-2">
-          <Label htmlFor={`next-when-${task.id}`}>{t.fields.when}</Label>
-          <Input defaultValue={nextWhen} id={`next-when-${task.id}`} name="nextActionWhen" required type="datetime-local" />
-        </div>
-        <div className="md:col-span-4">
-          <Button size="sm" type="submit" variant="outline">{t.actions.update}</Button>
-        </div>
-      </form>
+      <details className="rounded-sm border border-line-subtle bg-surface-raised px-3 py-2">
+        <summary className="cursor-pointer text-sm font-semibold text-content-strong">{t.actions.updateDetails}</summary>
+        <form action={action} className="mt-3 grid gap-2 md:grid-cols-[1fr_1fr_1fr_auto]">
+          <HiddenTaskFields locale={locale} taskId={task.id} />
+          <StaffPicker initialUserId={task.assigneeId} label={t.fields.assignee} labelName="assigneeLabel" locale={locale} name="assigneeId" staff={staff} t={t.staffPicker} />
+          <LabeledInput defaultValue={nextWhat} label={t.fields.nextAction} name="nextActionWhat" required />
+          <StaffPicker initialUserId={nextWho} label={t.fields.nextOwner} labelName="nextActionWhoLabel" locale={locale} name="nextActionWhoId" staff={staff} t={t.staffPicker} />
+          <div className="grid gap-2">
+            <Label htmlFor={`next-when-${task.id}`}>{t.fields.when}</Label>
+            <Input defaultValue={nextWhen} id={`next-when-${task.id}`} name="nextActionWhen" required type="datetime-local" />
+          </div>
+          <div className="md:col-span-4">
+            <Button size="sm" type="submit" variant="outline">{t.actions.update}</Button>
+          </div>
+        </form>
+      </details>
     </div>
   );
 }

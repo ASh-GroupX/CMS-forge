@@ -63,12 +63,19 @@ function EditableOptionsTable({
 }) {
   const t = adminUsersText[locale].masterData;
   return (
-    <section className="overflow-x-auto rounded-md border bg-muted/30" aria-label={title}>
-      <h3 className="border-b px-3 py-2 text-sm font-semibold">{title}</h3>
-      {action ? <OptionForm action={action} itemType={itemType} locale={locale} rows={rows} /> : null}
-      <Table className="min-w-[42rem]">
-        <TableHeader className="bg-muted/40 text-xs font-semibold uppercase tracking-normal text-muted-foreground">
-          <TableRow>{[...t.headers, t.actionHeader].map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>
+    <section className="overflow-x-auto rounded-sm border border-line-subtle bg-surface" aria-label={title}>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-subtle bg-surface-raised px-3 py-2">
+        <h3 className="text-sm font-semibold">{title}</h3>
+        {action ? (
+          <details className="rounded-sm border border-line-subtle bg-surface px-2 py-1">
+            <summary className="cursor-pointer text-sm font-semibold text-content-strong">{t.addValue}</summary>
+            <OptionForm action={action} itemType={itemType} locale={locale} rows={rows} />
+          </details>
+        ) : null}
+      </div>
+      <Table className="min-w-[34rem]">
+        <TableHeader className="bg-content-strong text-xs font-semibold text-brand-foreground">
+          <TableRow>{[...t.headers, t.actionHeader].map((header) => <TableHead className="text-start text-brand-foreground" key={header}>{header}</TableHead>)}</TableRow>
         </TableHeader>
         <TableBody>
           {rows.length ? rows.map((row) => (
@@ -77,7 +84,12 @@ function EditableOptionsTable({
               <TableCell>{row.nameEn}</TableCell>
               <TableCell>{row.nameAr}</TableCell>
               <TableCell>{row.parentId ? parentName.get(row.parentId) ?? t.root : t.root}</TableCell>
-              <TableCell>{action ? <OptionForm action={action} compact item={row} itemType={itemType} locale={locale} rows={rows} /> : null}</TableCell>
+              <TableCell>{action ? (
+                <details className="rounded-sm border border-line-subtle bg-surface-raised px-2 py-1">
+                  <summary className="cursor-pointer text-sm font-semibold text-content-strong">{t.editValue}</summary>
+                  <OptionForm action={action} compact item={row} itemType={itemType} locale={locale} rows={rows} />
+                </details>
+              ) : null}</TableCell>
             </TableRow>
           )) : (
             <TableRow><TableCell className="text-muted-foreground" colSpan={5}>{t.noRows}</TableCell></TableRow>
@@ -107,7 +119,7 @@ function OptionForm({
   const button = item ? t.edit : t.add;
   const key = item?.id ?? itemType;
   return (
-    <form action={action} className={compact ? 'grid min-w-[24rem] gap-2 md:grid-cols-4' : 'grid gap-2 border-b p-3 md:grid-cols-4'}>
+    <form action={action} className={compact ? 'mt-2 grid min-w-[24rem] gap-2 md:grid-cols-4' : 'mt-2 grid gap-2 p-2 md:grid-cols-4'}>
       <input name="id" type="hidden" value={item?.id ?? ''} />
       <input name="itemType" type="hidden" value={itemType} />
       <input name="locale" type="hidden" value={locale} />
@@ -145,12 +157,12 @@ function Field({ id, label, name, value = '' }: { id: string; label: string; nam
 function SeverityTable({ locale, values }: { locale: Locale; values: string[] }) {
   const t = adminUsersText[locale].masterData;
   return (
-    <section className="overflow-x-auto rounded-md border bg-muted/30" aria-label={t.sections.severities}>
-      <h3 className="border-b px-3 py-2 text-sm font-semibold">{t.sections.severities}</h3>
-      <p className="border-b px-3 py-2 text-sm text-muted-foreground">{t.severityNote}</p>
+    <section className="overflow-x-auto rounded-sm border border-line-subtle bg-surface" aria-label={t.sections.severities}>
+      <h3 className="border-b border-line-subtle bg-surface-raised px-3 py-2 text-sm font-semibold">{t.sections.severities}</h3>
+      <p className="border-b border-line-subtle px-3 py-2 text-sm text-muted-foreground">{t.severityNote}</p>
       <Table className="min-w-[24rem]">
-        <TableHeader className="bg-muted/40 text-xs font-semibold uppercase tracking-normal text-muted-foreground">
-          <TableRow>{t.headers.slice(0, 3).map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>
+        <TableHeader className="bg-content-strong text-xs font-semibold text-brand-foreground">
+          <TableRow>{t.headers.slice(0, 3).map((header) => <TableHead className="text-start text-brand-foreground" key={header}>{header}</TableHead>)}</TableRow>
         </TableHeader>
         <TableBody>
           {values.map((value) => (

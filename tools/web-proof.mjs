@@ -3,12 +3,15 @@ import { performance } from 'node:perf_hooks';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { compileTailwind, runBrowserArtifactChecks } from './web-browser-check.mjs';
+import { proofFetch } from './web-proof-fixtures.mjs';
 import StaffShellPage from '../apps/web/src/app/page.tsx';
 import AdminPage from '../apps/web/src/app/(staff)/admin/page.tsx';
 import AuditPage from '../apps/web/src/app/(staff)/audit/page.tsx';
 import ComplaintsPage from '../apps/web/src/app/(staff)/complaints/page.tsx';
 import ComplaintDetailPage from '../apps/web/src/app/(staff)/complaints/[id]/page.tsx';
 import DashboardPage from '../apps/web/src/app/(staff)/dashboard/page.tsx';
+import DealHandoffPage from '../apps/web/src/app/(staff)/deals/handoff/page.tsx';
+import EmployeeTodayPage from '../apps/web/src/app/(staff)/tasks/today/page.tsx';
 import NewComplaintPage from '../apps/web/src/app/(staff)/complaints/new/page.tsx';
 import ReportsPage from '../apps/web/src/app/(staff)/reports/page.tsx';
 import PortalSubmissionPage from '../apps/web/src/app/portal/page.tsx';
@@ -87,7 +90,9 @@ async function routePage(testCase) {
   if (testCase.route === 'staff-complaint-detail') return staffFrame(testCase, await ComplaintDetailPage({ ...staffProps, params: Promise.resolve({ id: 'cmp-proof' }) }));
   if (testCase.route === 'staff-complaint-new') return staffFrame(testCase, await NewComplaintPage({ searchParams: params }));
   if (testCase.route === 'staff-dashboard') return staffFrame(testCase, await DashboardPage(staffProps));
+  if (testCase.route === 'staff-deal-handoff') return staffFrame(testCase, await DealHandoffPage(staffProps));
   if (testCase.route === 'staff-reports') return staffFrame(testCase, await ReportsPage(staffProps));
+  if (testCase.route === 'staff-today') return staffFrame(testCase, await EmployeeTodayPage(staffProps));
   if (testCase.route === 'portal-submission') return testCase.params.state
     ? portalFrame(testCase, 'submit', React.createElement(PortalSubmissionScreen, { locale: testCase.locale, reference: testCase.params.reference, state: testCase.params.state }))
     : PortalSubmissionPage({ searchParams: params });
@@ -250,42 +255,4 @@ function expect(condition, message) {
   if (!condition) {
     throw new Error(message);
   }
-}
-
-async function proofFetch(input) {
-  const path = new URL(String(input)).pathname;
-  if (path === '/reports/dashboard') return json({ summary: { openComplaints: 9, overdueComplaints: 2, slaWarningComplaints: 3, closedComplaints: 7, averageTatHours: 18 } });
-  if (path === '/reports/kpis') return json({ kpis: { onTimeCompletionPercent: 88, activeOverdueCount: 2, averageDelayHours: 1.5, customerPromiseKeptPercent: 91, reopenedCount: 3, reopenRate: 43, escalationCount: 5, slaBreachRate: 14, medianTatHours: 22, agingBuckets: { zeroToOneDays: 1, twoToThreeDays: 2, fourToSevenDays: 3, overSevenDays: 4 }, averageFirstResponseHours: 0.75, averageResolutionHours: 16 } });
-  if (path === '/admin/users') return json({
-    users: [{ id: 'usr_proof', email: 'proof@example.test', nameEn: 'Proof Admin', nameAr: 'Proof Admin AR', roleCode: 'ADMIN', roleName: 'Admin', branchId: null, branchName: null, isActive: true }],
-    roles: [{ id: 'role_admin', code: 'ADMIN', nameEn: 'Admin', nameAr: 'Admin AR' }],
-    branches: [{ id: 'branch_proof', code: 'PROOF', nameEn: 'Proof branch', nameAr: 'Proof branch AR' }],
-  });
-  if (path === '/complaints/form-options') return json({
-    branches: [{ id: 'branch_proof', code: 'PROOF', nameEn: 'Proof branch', nameAr: 'Proof branch AR' }],
-    categories: [{ id: 'cat_proof', code: 'PROOF', nameEn: 'Proof category', nameAr: 'Proof category AR', parentId: null }],
-    severities: ['HIGH', 'MEDIUM', 'LOW'],
-  });
-  if (path === '/complaints/search') return json({ items: [proofRow('CMP-PROOF-001', 'Proof queue row')] });
-  if (path === '/reports') return json({ items: [proofRow('CMP-PROOF-RPT-001', 'Proof report row', { categoryId: 'cat_proof' })] });
-  if (path.endsWith('/duplicate-candidates')) return json({ items: [proofRow('CMP-PROOF-DUP-001', 'Proof duplicate row')], windowDays: 30 });
-  if (path.endsWith('/related')) return json({ items: [proofRow('CMP-PROOF-REL-001', 'Proof related row')] });
-  if (path.startsWith('/complaints/')) return json({ complaint: { ...proofRow('CMP-PROOF-DETAIL', 'Proof detail row'), description: 'Proof detail description.', incidentAt: '2026-06-19T00:00:00.000Z', customer: proofCustomer(), customerSource: 'DMS', manualCustomer: false, vehicleRelated: true, vehicle: proofVehicle(), vehicleSource: 'LOCAL', manualVehicle: false, vehicleDataUnavailableReason: null, statusHistory: [{ id: 'hist_1', toStatus: 'SUBMITTED', createdAt: '2026-06-19T00:00:00.000Z' }] } });
-  return json({}, 404);
-}
-
-function proofRow(referenceNumber, subject, extra = {}) {
-  return { id: 'proof_1', referenceNumber, status: 'IN_PROGRESS', severity: 'HIGH', subject, branchId: 'branch_proof', ownerId: 'usr_proof', createdAt: '2026-06-20T00:00:00.000Z', updatedAt: '2026-06-20T10:00:00.000Z', ...extra };
-}
-
-function proofCustomer() {
-  return { id: 'cust_proof', name: 'Proof Customer', phone: '+966500000099', identifier: 'CUST-PROOF', source: 'DMS' };
-}
-
-function proofVehicle() {
-  return { id: 'veh_proof', vin: 'PROOFVIN00001', plate: 'PRF123', make: 'Nissan', model: 'Patrol', year: 2024, source: 'LOCAL' };
-}
-
-function json(body, status = 200) {
-  return new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' }, status });
 }

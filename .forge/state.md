@@ -1,6 +1,6 @@
 # Current State
 
-Status: UI/UX redesign visual rescue 2 complete; phase review ready
+Status: UI/UX redesign visual rescue 3 complete; phase review ready
 Phase: ui-ux-redesign
 Next Task: Phase review for completed UI/UX refactor
 Model Tier: GPT-5.5 Extra High or Opus 4.8 Max
@@ -27,12 +27,13 @@ Prior state history is in .forge/archive/state-archive.md.
 - UI/UX refactor Slice 9 completed the final visual QA gate.
 - Visual Rescue completed after user review found the app still felt visually unchanged: auth landing, staff shell, dashboard summary, work queue, and shared table headers showed a stronger Precision Ops hierarchy.
 - Visual Rescue 2 completed a focused screenshot-led polish pass: staff auth and shell moved from heavy dark chrome to subtler semantic shell surfaces, shared table headers are sentence case, and shared status indicators now use quieter dot-style badges.
-- `web:visual-review` writes English and Arabic HTML plus PNG artifacts for the covered staff and portal surfaces under `coverage/web-visual-review`, including auth landing and full staff shell.
-- Latest proof passed for Visual Rescue 2: `typecheck`, `lint`, `test:web -- shell`, `test:web -- localization`, `test:visual`, `web:visual-review`, `test:e2e -- accessibility`, `web:perf`, and `git diff --check`.
+- Visual Rescue 3 completed the user-screenshot-led progressive-disclosure repair: Today tasks, Deal handoff, and Admin surfaces now default to read-first lists/tables, with create/update/add/edit forms closed until intent.
+- `web:visual-review` writes English and Arabic HTML plus PNG artifacts for the covered staff and portal surfaces under `coverage/web-visual-review`, including auth landing, full staff shell, today tasks, deal handoff, admin, and portal mobile flows.
+- Latest proof passed for Visual Rescue 3: `typecheck`, `lint`, `test:web -- shell`, `test:web -- localization`, `test:visual`, `web:visual-review`, `test:e2e -- accessibility`, `web:perf`, and `git diff --check`.
 
 ## Current Stop
 
-All UI/UX refactor slices and the requested screenshot-led visual polish pass are complete. Per Forge policy, run a fresh phase review before starting another phase.
+All UI/UX refactor slices and the requested screenshot-led progressive-disclosure repair pass are complete. Per Forge policy, run a fresh phase review before starting another phase.
 
 ## Open Carry-Forward / Known Debt
 

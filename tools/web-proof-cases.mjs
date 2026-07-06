@@ -2,6 +2,8 @@ import { adminUsersText } from '../apps/web/src/i18n/staff-admin-users.ts';
 import { auditViewerText } from '../apps/web/src/i18n/staff-audit-viewer.ts';
 import { complaintDetailText } from '../apps/web/src/i18n/staff-complaint-detail.ts';
 import { complaintRelationsText } from '../apps/web/src/i18n/staff-complaint-relations.ts';
+import { dealHandoffText } from '../apps/web/src/i18n/staff-deal-handoff.ts';
+import { employeeTodayText } from '../apps/web/src/i18n/staff-employee-today.ts';
 import { portalSubmissionText } from '../apps/web/src/i18n/portal-submission.ts';
 import { portalSurveyText } from '../apps/web/src/i18n/portal-survey.ts';
 import { portalTrackingText } from '../apps/web/src/i18n/portal-tracking.ts';
@@ -28,12 +30,14 @@ function buildVisualCases(locale) {
   return [
     visualCase('auth landing', locale, 'staff-auth', { locale }, [t.title, t.auth.loginTitle, t.nav.queue[0]], ['lg:grid-cols-[minmax(0,1fr)_minmax(24rem,32rem)]', 'bg-surface-raised']),
     visualCase('staff shell', locale, 'staff', { ...base }, [t.title, t.nav.today[0], t.workQueue.title], ['lg:grid-cols-[16rem_minmax(0,1fr)]', 'bg-surface-raised']),
+    visualCase('today tasks', locale, 'staff-today', { ...base }, [employeeTodayText[locale].title, employeeTodayText[locale].sections.overdue[0], employeeTodayText[locale].actions.updateDetails, 'TASK-PROOF-001'], ['<details', 'bg-surface-raised']),
     visualCase('dashboard', locale, 'staff-dashboard', { ...base }, [t.dashboard.title, t.dashboard.cards.open[0], t.dashboard.cards.averageTat[0]], ['lg:grid-cols-[1.1fr_2fr]', 'md:grid-cols-2']),
     visualCase('work queue', locale, 'staff-complaints', { ...base }, [t.workQueue.title, 'CMP-PROOF-001', t.workQueue.pagination.page], ['md:grid-cols-6', 'overflow-x-auto']),
+    visualCase('deal handoff', locale, 'staff-deal-handoff', { ...base }, [dealHandoffText[locale].title, dealHandoffText[locale].sections.stuck[0], dealHandoffText[locale].actions.updateDetails, 'DEAL-PROOF-001'], ['<details', 'bg-surface-raised']),
     visualCase('complaint create', locale, 'staff-complaint-new', { ...base, create: 'validation', lookup: 'match' }, [t.createForm.title, t.lookup.states.match, t.lookup.actions.useMatch, t.createForm.validation.vinRequired], ['md:grid-cols-2', 'md:col-span-2']),
     visualCase('complaint detail', locale, 'staff-complaint-detail', { ...base, attachment: 'clean', lookup: 'multiple' }, [detail.title, detail.sections.customer, detail.sections.timeline, detail.sections.attachments, detail.correction.title, t.lookup.states.multiple, relations.title], ['xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)]', 'md:grid-cols-2']),
     visualCase('workflow action panel', locale, 'staff-complaint-detail', { ...base, workflow: 'validation' }, [detail.sections.workflow, detail.workflow.actions[0], detail.workflow.validation], [`aria-label="${detail.sections.workflow}"`, 'border-line-subtle']),
-    visualCase('admin surfaces', locale, 'staff-admin', { ...base, admin: 'validation' }, [adminUsersText[locale].masterData.title, adminUsersText[locale].title, adminUsersText[locale].masterData.sections.branches, adminUsersText[locale].masterData.sections.categories], []),
+    visualCase('admin surfaces', locale, 'staff-admin', { ...base }, [adminUsersText[locale].masterData.title, adminUsersText[locale].title, adminUsersText[locale].masterData.sections.branches, adminUsersText[locale].masterData.sections.categories, adminUsersText[locale].masterData.addValue, adminUsersText[locale].masterData.editValue], ['<details']),
     visualCase('reports', locale, 'staff-reports', { ...base }, [reportsDashboardText[locale].title, reportsDashboardText[locale].export.title, reportsDashboardText[locale].kpis.slaBreachRate, reportsDashboardText[locale].kpis.agingOverSeven, 'CMP-PROOF-RPT-001'], ['min-w-[56rem]', 'md:grid-cols-3']),
     visualCase('audit viewer', locale, 'staff-audit', { ...base, admin: 'success' }, [auditViewerText[locale].title, auditViewerText[locale].filters.correlationId, auditViewerText[locale].filters.export], ['xl:grid-cols-5']),
   ];

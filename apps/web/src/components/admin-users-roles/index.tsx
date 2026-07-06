@@ -68,27 +68,30 @@ export function AdminUsersRoles({
 function CreateUserForm({ action, data, locale }: { action: AdminAction; data: AdminUsersData; locale: Locale }) {
   const t = adminUsersText[locale];
   return (
-    <form action={action} className="mb-4 grid gap-3 rounded-md border bg-muted/40 p-3 md:grid-cols-3">
-      <input name="locale" type="hidden" value={locale} />
-      <Field label={t.fields.email} name="email" type="email" />
-      <Field label={t.fields.nameEn} name="nameEn" />
-      <Field label={t.fields.nameAr} name="nameAr" />
-      <label className="grid gap-1 text-sm font-medium">
-        {t.fields.role}
-        <select className="rounded-md border border-input bg-background px-3 py-2" name="roleCode" required>
-          {data.roles.map((role) => <option key={role.id} value={role.code}>{role.nameEn}</option>)}
-        </select>
-      </label>
-      <label className="grid gap-1 text-sm font-medium">
-        {t.fields.branch}
-        <select className="rounded-md border border-input bg-background px-3 py-2" name="branchId">
-          <option value="">{t.allBranches}</option>
-          {data.branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.nameEn}</option>)}
-        </select>
-      </label>
-      <Field label={t.fields.initialPassword} minLength={12} name="initialPassword" type="password" />
-      <Button className="md:col-span-3" type="submit">{t.actions.create}</Button>
-    </form>
+    <details className="mb-4 rounded-sm border border-line-subtle bg-surface-raised">
+      <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-content-strong">{t.actions.create}</summary>
+      <form action={action} className="grid gap-3 border-t border-line-subtle p-3 md:grid-cols-3">
+        <input name="locale" type="hidden" value={locale} />
+        <Field label={t.fields.email} name="email" type="email" />
+        <Field label={t.fields.nameEn} name="nameEn" />
+        <Field label={t.fields.nameAr} name="nameAr" />
+        <label className="grid gap-1 text-sm font-medium">
+          {t.fields.role}
+          <select className="rounded-md border border-input bg-background px-3 py-2" name="roleCode" required>
+            {data.roles.map((role) => <option key={role.id} value={role.code}>{role.nameEn}</option>)}
+          </select>
+        </label>
+        <label className="grid gap-1 text-sm font-medium">
+          {t.fields.branch}
+          <select className="rounded-md border border-input bg-background px-3 py-2" name="branchId">
+            <option value="">{t.allBranches}</option>
+            {data.branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.nameEn}</option>)}
+          </select>
+        </label>
+        <Field label={t.fields.initialPassword} minLength={12} name="initialPassword" type="password" />
+        <Button className="md:col-span-3" type="submit">{t.actions.create}</Button>
+      </form>
+    </details>
   );
 }
 

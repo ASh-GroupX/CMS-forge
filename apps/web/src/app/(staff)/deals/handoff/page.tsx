@@ -90,11 +90,27 @@ export function DealHandoffLoading({ locale }: { locale: Locale }) {
 
 function StageSection({ buckets, locale, staff, t }: { buckets: DealStageBucket[]; locale: Locale; staff?: AssignableStaff[] | null | undefined; t: Copy }) {
   const [title, description] = t.sections.byStage;
+  const activeBuckets = buckets.filter((bucket) => bucket.deals.length > 0);
+  const emptyBuckets = buckets.filter((bucket) => bucket.deals.length === 0);
   return (
     <section className="rounded-md border border-border bg-background p-3" aria-label={title}>
       <SectionHeader count={buckets.reduce((sum, bucket) => sum + bucket.count, 0)} description={description} locale={locale} title={title} />
-      <div className="mt-3 grid gap-2">{buckets.map((bucket) => <StageBucket bucket={bucket} key={bucket.stage} locale={locale} staff={staff} t={t} />)}</div>
+      <div className="mt-3 grid gap-2">
+        {activeBuckets.map((bucket) => <StageBucket bucket={bucket} key={bucket.stage} locale={locale} staff={staff} t={t} />)}
+        {emptyBuckets.length ? <EmptyStageBuckets buckets={emptyBuckets} locale={locale} t={t} /> : null}
+      </div>
     </section>
+  );
+}
+
+function EmptyStageBuckets({ buckets, locale, t }: { buckets: DealStageBucket[]; locale: Locale; t: Copy }) {
+  return (
+    <details className="rounded-sm border border-line-subtle bg-surface-raised px-3 py-2">
+      <summary className="cursor-pointer text-sm font-semibold text-content-strong">{t.states.sectionEmpty}</summary>
+      <ul className="mt-2 grid gap-2 text-sm text-content-muted">
+        {buckets.map((bucket) => <li className="flex items-center justify-between gap-2" key={bucket.stage}><span>{bucket.stage}</span><span>{formatNumber(locale, bucket.count)}</span></li>)}
+      </ul>
+    </details>
   );
 }
 
@@ -134,28 +150,31 @@ function DealSection({ deals, locale, staff, t }: { deals: DealBoardItem[]; loca
 
 function CreateDealForm({ branches, locale, staff, t }: { branches: { id: string; name: string }[]; locale: Locale; staff?: AssignableStaff[] | null | undefined; t: Copy }) {
   return (
-    <form action={createDealAction} className="rounded-md border border-border bg-background p-3 xl:col-span-2">
-      <input name="locale" type="hidden" value={locale} />
-      <h2 className="text-base font-semibold tracking-normal">{t.actions.create}</h2>
-      <div className="mt-3 grid gap-3 md:grid-cols-4">
-        <FieldInput label={t.fields.title} name="title" required />
-        <SelectInput label={t.fields.branch} name="branchId" options={branches.map((branch) => [branch.id, branch.name])} />
-        <StaffPicker label={t.fields.holder} labelName="currentHolderLabel" locale={locale} name="currentHolderId" staff={staff} t={t.staffPicker} />
-        <FieldInput label={t.fields.due} name="stageDueAt" required type="datetime-local" />
-      </div>
-      <Button className="mt-3" size="sm" type="submit">{t.actions.create}</Button>
-    </form>
+    <details className="rounded-sm border border-line-subtle bg-surface-raised xl:col-span-2">
+      <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-content-strong">{t.actions.create}</summary>
+      <form action={createDealAction} className="grid gap-3 border-t border-line-subtle p-3">
+        <input name="locale" type="hidden" value={locale} />
+        <div className="grid gap-3 md:grid-cols-4">
+          <FieldInput label={t.fields.title} name="title" required />
+          <SelectInput label={t.fields.branch} name="branchId" options={branches.map((branch) => [branch.id, branch.name])} />
+          <StaffPicker label={t.fields.holder} labelName="currentHolderLabel" locale={locale} name="currentHolderId" staff={staff} t={t.staffPicker} />
+          <FieldInput label={t.fields.due} name="stageDueAt" required type="datetime-local" />
+        </div>
+        <Button className="w-fit" size="sm" type="submit">{t.actions.create}</Button>
+      </form>
+    </details>
   );
 }
 
 function DealCard({ deal, locale, staff, t }: { deal: DealBoardItem; locale: Locale; staff?: AssignableStaff[] | null | undefined; t: Copy }) {
+  const canAdvance = deal.stage !== 'POST_DELIVERY' && !deal.blocker;
   return (
-    <article className="rounded-md border border-border bg-card p-3 shadow-sm">
+    <article className="rounded-sm border border-line-subtle bg-surface p-3 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0"><h3 className="break-words text-sm font-semibold">{deal.title}</h3></div>
+        <div className="min-w-0"><h3 className="break-words text-base font-semibold text-content-strong">{deal.title}</h3></div>
         <Badge variant={deal.blocker ? 'destructive' : 'outline'}>{deal.stage}</Badge>
       </div>
-      <dl className="mt-3 grid gap-2 text-sm md:grid-cols-2">
+      <dl className="mt-3 grid gap-2 rounded-sm bg-surface-raised p-3 text-sm md:grid-cols-2">
         <Field label={t.fields.holder} value={staffDisplay(deal.currentHolderId, deal.currentHolderName, staff, locale, t)} />
         <Field label={t.fields.delay} value={formatMinutes(locale, deal.delayAgeMinutes)} />
         <Field label={t.fields.due} value={formatDate(deal.stageDueAt)} />
@@ -164,27 +183,39 @@ function DealCard({ deal, locale, staff, t }: { deal: DealBoardItem; locale: Loc
         <Field label={t.fields.branch} value={deal.branchName ?? t.states.unknownBranch} />
       </dl>
       {deal.blocker ? <p className="mt-3 rounded-sm border border-status-warning bg-status-warning/10 px-3 py-2 text-sm text-status-warning">{t.fields.blocker}: {deal.blocker}</p> : null}
-      <form action={advanceDealAction} className="mt-3 grid gap-2 border-t border-border pt-3 md:grid-cols-[1fr_1fr_auto]">
-        <input name="dealId" type="hidden" value={deal.id} />
-        <input name="locale" type="hidden" value={locale} />
-        <StaffPicker initialUserId={deal.currentHolderId} label={t.fields.holder} labelName="currentHolderLabel" locale={locale} name="currentHolderId" staff={staff} t={t.staffPicker} />
-        <FieldInput defaultValue={toDateTimeLocal(deal.stageDueAt)} label={t.fields.due} name="stageDueAt" required type="datetime-local" />
-        <Button className="self-end" disabled={deal.stage === 'POST_DELIVERY' || Boolean(deal.blocker)} size="sm" type="submit">{t.actions.advance}</Button>
-      </form>
-      <form action={setDealBlockerAction} className="mt-3 grid gap-2">
-        <input name="dealId" type="hidden" value={deal.id} />
-        <input name="locale" type="hidden" value={locale} />
-        <Label className="text-xs font-semibold text-muted-foreground" htmlFor={`blocker-${deal.id}`}>{t.fields.blocker}</Label>
-        <Textarea className="min-h-16" defaultValue={deal.blocker ?? ''} id={`blocker-${deal.id}`} name="blocker" />
-        <Button className="w-fit" size="sm" type="submit" variant="outline">{t.actions.setBlocker}</Button>
-      </form>
-      {deal.blocker ? (
-        <form action={clearDealBlockerAction} className="mt-2">
+      <div className="mt-3 grid gap-2 border-t border-line-subtle pt-3">
+        <form action={advanceDealAction}>
           <input name="dealId" type="hidden" value={deal.id} />
           <input name="locale" type="hidden" value={locale} />
-          <Button size="sm" type="submit" variant="secondary">{t.actions.clearBlocker}</Button>
+          <input name="currentHolderId" type="hidden" value={deal.currentHolderId} />
+          <input name="stageDueAt" type="hidden" value={toDateTimeLocal(deal.stageDueAt)} />
+          <Button disabled={!canAdvance} size="sm" type="submit">{t.actions.advance}</Button>
         </form>
-      ) : null}
+        <details className="rounded-sm border border-line-subtle bg-surface-raised px-3 py-2">
+          <summary className="cursor-pointer text-sm font-semibold text-content-strong">{t.actions.updateDetails}</summary>
+          <form action={advanceDealAction} className="mt-3 grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+            <input name="dealId" type="hidden" value={deal.id} />
+            <input name="locale" type="hidden" value={locale} />
+            <StaffPicker initialUserId={deal.currentHolderId} label={t.fields.holder} labelName="currentHolderLabel" locale={locale} name="currentHolderId" staff={staff} t={t.staffPicker} />
+            <FieldInput defaultValue={toDateTimeLocal(deal.stageDueAt)} label={t.fields.due} name="stageDueAt" required type="datetime-local" />
+            <Button className="self-end" disabled={!canAdvance} size="sm" type="submit">{t.actions.advance}</Button>
+          </form>
+          <form action={setDealBlockerAction} className="mt-3 grid gap-2">
+            <input name="dealId" type="hidden" value={deal.id} />
+            <input name="locale" type="hidden" value={locale} />
+            <Label className="text-xs font-semibold text-muted-foreground" htmlFor={`blocker-${deal.id}`}>{t.fields.blocker}</Label>
+            <Textarea className="min-h-16" defaultValue={deal.blocker ?? ''} id={`blocker-${deal.id}`} name="blocker" />
+            <Button className="w-fit" size="sm" type="submit" variant="outline">{t.actions.setBlocker}</Button>
+          </form>
+          {deal.blocker ? (
+            <form action={clearDealBlockerAction} className="mt-2">
+              <input name="dealId" type="hidden" value={deal.id} />
+              <input name="locale" type="hidden" value={locale} />
+              <Button size="sm" type="submit" variant="secondary">{t.actions.clearBlocker}</Button>
+            </form>
+          ) : null}
+        </details>
+      </div>
     </article>
   );
 }

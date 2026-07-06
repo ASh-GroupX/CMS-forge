@@ -6,7 +6,6 @@ import { getAdminUsers } from '../../../lib/staff-admin-users-api';
 import { getComplaintFormOptions } from '../../../lib/staff-complaint-form-options-api';
 import { saveBranchAction, saveCategoryAction } from './actions';
 import { createAdminUserAction, toggleAdminUserAction } from './users/actions';
-import { Button } from '../../../components/ui/button';
 
 type SearchParams = { admin?: string | string[]; locale?: string | string[] };
 
@@ -31,7 +30,6 @@ export default async function AdminPage({
   const locale = resolveLocale(readParam(params?.locale));
   return (
     <div className="grid gap-4">
-      <Button asChild className="justify-self-start" variant="outline"><a href={`/admin/roles?locale=${locale}`}>Manage roles and permissions</a></Button>
       <AdminUsersRoles
         createAction={createAdminUserAction}
         data={data}

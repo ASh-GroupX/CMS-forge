@@ -2,12 +2,15 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { compileTailwind, runBrowserArtifactChecks } from './web-browser-check.mjs';
+import { proofFetch } from './web-proof-fixtures.mjs';
 import StaffShellPage from '../apps/web/src/app/page.tsx';
 import AdminPage from '../apps/web/src/app/(staff)/admin/page.tsx';
 import AuditPage from '../apps/web/src/app/(staff)/audit/page.tsx';
 import ComplaintsPage from '../apps/web/src/app/(staff)/complaints/page.tsx';
 import ComplaintDetailPage from '../apps/web/src/app/(staff)/complaints/[id]/page.tsx';
 import DashboardPage from '../apps/web/src/app/(staff)/dashboard/page.tsx';
+import DealHandoffPage from '../apps/web/src/app/(staff)/deals/handoff/page.tsx';
+import EmployeeTodayPage from '../apps/web/src/app/(staff)/tasks/today/page.tsx';
 import NewComplaintPage from '../apps/web/src/app/(staff)/complaints/new/page.tsx';
 import ReportsPage from '../apps/web/src/app/(staff)/reports/page.tsx';
 import PortalSubmissionPage from '../apps/web/src/app/portal/page.tsx';
@@ -50,13 +53,15 @@ async function routePage(testCase) {
   const params = Promise.resolve(testCase.params);
   const staffProps = { cookieHeader: 'cms_staff_session=proof', fetchImpl: proofFetch, searchParams: params };
   if (testCase.route === 'staff-auth') return React.createElement(StaffAuthLanding, { authError: false, locale: testCase.locale });
-  if (testCase.route === 'staff-admin') return staffFrame(testCase, await AdminPage({ searchParams: params }));
+  if (testCase.route === 'staff-admin') return staffFrame(testCase, await AdminPage(staffProps));
   if (testCase.route === 'staff-audit') return staffFrame(testCase, await AuditPage({ searchParams: params }));
   if (testCase.route === 'staff-complaints') return staffFrame(testCase, await ComplaintsPage(staffProps));
   if (testCase.route === 'staff-complaint-detail') return staffFrame(testCase, await ComplaintDetailPage({ ...staffProps, params: Promise.resolve({ id: 'cmp-proof' }) }));
   if (testCase.route === 'staff-complaint-new') return staffFrame(testCase, await NewComplaintPage({ searchParams: params }));
   if (testCase.route === 'staff-dashboard') return staffFrame(testCase, await DashboardPage(staffProps));
+  if (testCase.route === 'staff-deal-handoff') return staffFrame(testCase, await DealHandoffPage(staffProps));
   if (testCase.route === 'staff-reports') return staffFrame(testCase, await ReportsPage(staffProps));
+  if (testCase.route === 'staff-today') return staffFrame(testCase, await EmployeeTodayPage(staffProps));
   if (testCase.route === 'portal-submission') return testCase.params.state
     ? portalFrame(testCase, 'submit', React.createElement(PortalSubmissionScreen, { locale: testCase.locale, reference: testCase.params.reference, state: testCase.params.state }))
     : PortalSubmissionPage({ searchParams: params });
@@ -96,31 +101,6 @@ function portalFrame(testCase, current, children) {
   }, children);
 }
 
-async function proofFetch(input) {
-  const path = new URL(String(input)).pathname;
-  if (path === '/reports/dashboard') return json({ summary: { openComplaints: 9, overdueComplaints: 2, slaWarningComplaints: 3, closedComplaints: 7, averageTatHours: 18 } });
-  if (path === '/complaints/search') return json({ items: [proofRow('CMP-PROOF-001', 'Proof queue row')] });
-  if (path === '/reports') return json({ items: [proofRow('CMP-PROOF-RPT-001', 'Proof report row', { categoryId: 'cat_proof' })] });
-  if (path.startsWith('/complaints/')) return json({ complaint: { ...proofRow('CMP-PROOF-DETAIL', 'Proof detail row'), description: 'Proof detail description.', incidentAt: '2026-06-19T00:00:00.000Z', customer: proofCustomer(), customerSource: 'DMS', manualCustomer: false, vehicleRelated: true, vehicle: proofVehicle(), vehicleSource: 'LOCAL', manualVehicle: false, vehicleDataUnavailableReason: null, statusHistory: [{ id: 'hist_1', toStatus: 'SUBMITTED', createdAt: '2026-06-19T00:00:00.000Z' }] } });
-  return json({}, 404);
-}
-
-function proofRow(referenceNumber, subject, extra = {}) {
-  return { id: 'proof_1', referenceNumber, status: 'IN_PROGRESS', severity: 'HIGH', subject, branchId: 'branch_proof', ownerId: 'usr_proof', createdAt: '2026-06-20T00:00:00.000Z', updatedAt: '2026-06-20T10:00:00.000Z', ...extra };
-}
-
-function proofCustomer() {
-  return { id: 'cust_proof', name: 'Proof Customer', phone: '+966500000099', identifier: 'CUST-PROOF', source: 'DMS' };
-}
-
-function proofVehicle() {
-  return { id: 'veh_proof', vin: 'PROOFVIN00001', plate: 'PRF123', make: 'Nissan', model: 'Patrol', year: 2024, source: 'LOCAL' };
-}
-
-function json(body, status = 200) {
-  return new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' }, status });
-}
-
 function reviewHtml(testCase, renderedHtml) {
   const signals = (testCase.signals ?? []).map((signal) => `<li>${escapeHtml(signal)}</li>`).join('');
   const frameStyle = testCase.viewport?.width ? ` style="max-width:${testCase.viewport.width}px"` : '';
@@ -149,7 +129,7 @@ function reviewHtml(testCase, renderedHtml) {
 
 function indexHtml(artifacts) {
   const links = artifacts
-    .map((artifact) => `<li><a href="./${artifact.file}">${escapeHtml(artifact.name)}</a> · <a href="./${artifact.file.replace(/\.html$/, '.png')}">PNG</a></li>`)
+    .map((artifact) => `<li><a href="./${artifact.file}">${escapeHtml(artifact.name)}</a> &middot; <a href="./${artifact.file.replace(/\.html$/, '.png')}">PNG</a></li>`)
     .join('');
   return `<!doctype html>
 <html lang="en">
