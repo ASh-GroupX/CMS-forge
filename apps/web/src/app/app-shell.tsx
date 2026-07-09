@@ -23,6 +23,7 @@ export type StaffNavKey = (typeof staffNavItems)[number]['key'];
 
 export function AppShell({
   activePath = '',
+  activeSearch = '',
   children,
   locale,
   navKeys,
@@ -31,6 +32,7 @@ export function AppShell({
   signedIn,
 }: {
   activePath?: string;
+  activeSearch?: string;
   children: ReactNode;
   locale: Locale;
   navKeys: readonly StaffNavKey[];
@@ -79,7 +81,7 @@ export function AppShell({
         </aside>
         <div className="order-1 min-w-0 lg:order-2">
           <StaffTopBar
-            languageHref={`?locale=${locale === 'ar' ? 'en' : 'ar'}`}
+            languageHref={languageHref(activePath, activeSearch, locale === 'ar' ? 'en' : 'ar')}
             signedIn={signedIn ? t.auth.signedIn : t.auth.signedOut}
             subtitle={t.subtitle}
             switchLabel={t.switchLabel}
@@ -89,11 +91,39 @@ export function AppShell({
             themeLight={t.theme.light}
             title={t.title}
           />
+          <nav className="sticky top-[4.5rem] z-20 flex gap-2 overflow-x-auto border-b border-line-subtle bg-surface/95 px-3 py-2 backdrop-blur lg:hidden" aria-label={t.title}>
+            {visibleItems.map(({ key, Icon, href }) => {
+              const [label, description] = t.nav[key];
+              const active = isActiveNav(key, href, activePath);
+              return (
+                <a
+                  aria-current={active ? 'page' : undefined}
+                  aria-label={`${label}: ${description}`}
+                  className={`inline-flex shrink-0 items-center gap-2 rounded-sm border px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand ${
+                    active ? 'border-brand bg-brand/10 text-brand' : 'border-line-subtle bg-surface-raised text-content-muted'
+                  }`}
+                  href={`${href}?locale=${locale}`}
+                  key={key}
+                  title={description}
+                >
+                  <Icon aria-hidden="true" className="size-4" />
+                  <span>{label}</span>
+                </a>
+              );
+            })}
+          </nav>
           <section className="grid min-w-0 content-start gap-3 p-3 md:p-4 xl:p-5" id="staff-main">{children}</section>
         </div>
       </div>
     </main>
   );
+}
+
+function languageHref(pathname: string, search: string, locale: Locale): string {
+  const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+  params.set('locale', locale);
+  const query = params.toString();
+  return `${pathname || '/'}${query ? `?${query}` : ''}`;
 }
 
 export function isActiveNav(key: StaffNavKey, href: string, activePath: string): boolean {

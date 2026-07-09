@@ -19,7 +19,10 @@ const dealSelect = {
   currentHolder: { select: { nameEn: true } },
 } satisfies Prisma.DealSelect;
 
+const dealAuditSelect = { id: true, action: true, actorId: true, targetId: true, metadata: true, createdAt: true, actor: { select: { nameEn: true } } } satisfies Prisma.AuditLogSelect;
+
 export type DealRow = Prisma.DealGetPayload<{ select: typeof dealSelect }>;
+export type DealAuditRow = Prisma.AuditLogGetPayload<{ select: typeof dealAuditSelect }>;
 type DealClient = Pick<Prisma.TransactionClient, 'deal'>;
 
 export type CreateDealData = {
@@ -38,6 +41,12 @@ export type UpdateDealStageData = {
   currentHolderId: string;
   stageDueAt: Date;
   blocker?: string | null;
+};
+
+export type UpdateDealDetailsData = {
+  id: string;
+  currentHolderId: string;
+  stageDueAt: Date;
 };
 
 @Injectable()
@@ -77,11 +86,31 @@ export class DealsRepository {
     });
   }
 
+  async updateDetails(data: UpdateDealDetailsData, client: DealClient = this.prisma): Promise<DealRow> {
+    return client.deal.update({
+      where: { id: data.id },
+      data: {
+        currentHolderId: data.currentHolderId,
+        stageDueAt: data.stageDueAt,
+      },
+      select: dealSelect,
+    });
+  }
+
   async listHandoffBoard(branchId: string | null): Promise<DealRow[]> {
     return this.prisma.deal.findMany({
       where: branchId ? { branchId } : {},
       orderBy: [{ stageDueAt: 'asc' }, { updatedAt: 'asc' }],
       select: dealSelect,
+    });
+  }
+
+  async listHandoffHistory(dealIds: string[]): Promise<DealAuditRow[]> {
+    if (dealIds.length === 0) return [];
+    return this.prisma.auditLog.findMany({
+      where: { targetType: 'deal', targetId: { in: dealIds } },
+      orderBy: { createdAt: 'desc' },
+      select: dealAuditSelect,
     });
   }
 }

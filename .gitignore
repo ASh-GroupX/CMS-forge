@@ -8,3 +8,6 @@ coverage/
 !.env.example
 pnpm-debug.log*
 *.tsbuildinfo
+.codex-run/
+.playwright-cli/
+output/

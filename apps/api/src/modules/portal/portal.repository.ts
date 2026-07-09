@@ -4,6 +4,7 @@ import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
 
 type PortalClient = Pick<Prisma.TransactionClient, 'portalVerification' | 'portalSession'>;
+type PortalCatalogClient = Pick<Prisma.TransactionClient, 'branch' | 'category'>;
 
 export type CreatePortalVerificationData = {
   complaintId: string;
@@ -42,6 +43,7 @@ export type PortalSessionRecord = {
   createdAt: Date;
 };
 export type PortalSessionLookupRecord = Pick<PortalSessionRecord, 'id' | 'complaintId' | 'customerId' | 'expiresAt'>;
+export type PortalManualTriageDefaults = { branchId: string; categoryId: string; subcategoryId: string };
 
 @Injectable()
 export class PortalRepository {
@@ -90,6 +92,18 @@ export class PortalRepository {
       where: { sessionHash, expiresAt: { gt: now } },
       select: { id: true, complaintId: true, customerId: true, expiresAt: true },
     });
+  }
+
+  async findManualTriageDefaults(client: PortalCatalogClient = this.prisma): Promise<PortalManualTriageDefaults | null> {
+    const [branch, subcategory] = await Promise.all([
+      client.branch.findFirst({ orderBy: [{ nameEn: 'asc' }, { id: 'asc' }], select: { id: true }, where: { isActive: true } }),
+      client.category.findFirst({
+        orderBy: [{ nameEn: 'asc' }, { id: 'asc' }],
+        select: { id: true, parentId: true },
+        where: { isActive: true, parentId: { not: null } },
+      }),
+    ]);
+    return branch && subcategory?.parentId ? { branchId: branch.id, categoryId: subcategory.parentId, subcategoryId: subcategory.id } : null;
   }
 }
 

@@ -7,14 +7,19 @@ import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import type { StaffNotification } from '../../lib/staff-notifications-api';
 
 export type NotificationFixtureState = 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'conflict';
+export type NotificationAction = (formData: FormData) => void | Promise<void>;
 
 export function NotificationCenter({
   items,
   locale,
+  markAllReadAction,
+  markReadAction,
   state,
 }: {
   items?: StaffNotification[] | null | undefined;
   locale: Locale;
+  markAllReadAction?: NotificationAction | undefined;
+  markReadAction?: NotificationAction | undefined;
   state?: NotificationFixtureState | undefined;
 }) {
   const shell = staffShellText[locale];
@@ -25,8 +30,18 @@ export function NotificationCenter({
   return (
     <Card aria-label={t.title} className="rounded-md border-line-subtle bg-surface shadow-sm" dir={shell.dir}>
       <CardHeader className="border-b border-line-subtle p-4">
-        <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
-        <p className="text-sm text-content-muted">{t.subtitle}</p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
+            <p className="text-sm text-content-muted">{t.subtitle}</p>
+          </div>
+          {markAllReadAction && rows.some((row) => row.status === 'unread') ? (
+            <form action={markAllReadAction}>
+              <input name="locale" type="hidden" value={locale} />
+              <Button size="sm" type="submit" variant="outline">{t.labels.markAllRead}</Button>
+            </form>
+          ) : null}
+        </div>
       </CardHeader>
       <CardContent className="grid gap-3 p-4">
         {visibleState ? <StateBlock message={t.states[visibleState]} tone={visibleState === 'success' ? 'success' : visibleState === 'error' || visibleState === 'validation' || visibleState === 'conflict' ? 'error' : 'neutral'} /> : null}
@@ -51,6 +66,13 @@ export function NotificationCenter({
                       {kind === 'task' ? t.labels.task : t.labels.complaint}: {reference}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
+                      {status === 'unread' && markReadAction ? (
+                        <form action={markReadAction}>
+                          <input name="locale" type="hidden" value={locale} />
+                          <input name="notificationId" type="hidden" value={id} />
+                          <Button size="sm" type="submit" variant="outline">{t.labels.markRead}</Button>
+                        </form>
+                      ) : null}
                       {href ? (
                         <Button asChild size="sm" type="button" variant="outline">
                           <a href={href}>{t.labels.open}</a>

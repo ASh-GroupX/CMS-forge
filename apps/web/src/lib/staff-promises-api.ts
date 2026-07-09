@@ -14,6 +14,7 @@ export type StaffPromises = {
   keptOnTimePercent: number;
   promises: StaffPromiseTask[];
 };
+export type StaffPromisesLoadResult = { status: 'ready'; data: StaffPromises } | { status: 'denied' | 'error' };
 
 type Body = Partial<Omit<StaffPromises, 'promises'>> & { promises?: Partial<StaffPromiseTask>[] };
 
@@ -26,13 +27,29 @@ export async function getStaffPromises({
   cookieHeader?: string;
   fetchImpl?: typeof fetch;
 } = {}): Promise<StaffPromises | null> {
+  const result = await getStaffPromisesLoadResult({ apiUrl, ...(cookieHeader !== undefined ? { cookieHeader } : {}), fetchImpl });
+  return result.status === 'ready' ? result.data : null;
+}
+
+export async function getStaffPromisesLoadResult({
+  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  cookieHeader,
+  fetchImpl = fetch,
+}: {
+  apiUrl?: string;
+  cookieHeader?: string;
+  fetchImpl?: typeof fetch;
+} = {}): Promise<StaffPromisesLoadResult> {
   const cookies = cookieHeader ?? await incomingCookieHeader();
-  if (!cookies.split(';').some((cookie) => cookie.trim().startsWith(`${STAFF_SESSION_COOKIE}=`))) return null;
+  if (!cookies.split(';').some((cookie) => cookie.trim().startsWith(`${STAFF_SESSION_COOKIE}=`))) return { status: 'denied' };
   try {
     const response = await fetchImpl(new URL('/tasks/promises', apiUrl), { cache: 'no-store', headers: { Accept: 'application/json', cookie: cookies } });
-    return response.ok ? promisesFrom((await response.json()) as Body) : null;
+    if (response.status === 401 || response.status === 403) return { status: 'denied' };
+    if (!response.ok) return { status: 'error' };
+    const data = promisesFrom((await response.json()) as Body);
+    return data ? { status: 'ready', data } : { status: 'error' };
   } catch {
-    return null;
+    return { status: 'error' };
   }
 }
 

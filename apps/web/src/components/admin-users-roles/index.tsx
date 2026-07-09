@@ -28,6 +28,8 @@ export function AdminUsersRoles({
   const shell = staffShellText[locale];
   const t = adminUsersText[locale];
   const users = data?.users ?? [];
+  const roleNames = new Map((data?.roles ?? []).map((role) => [role.code, localizedName(role, locale)]));
+  const branchNames = new Map((data?.branches ?? []).map((branch) => [branch.id, localizedName(branch, locale)]));
 
   return (
     <Card aria-label={t.title} className="min-w-0 rounded-md shadow-sm" dir={shell.dir}>
@@ -49,8 +51,8 @@ export function AdminUsersRoles({
               {users.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-semibold">{user.nameEn}<span className="block text-xs text-muted-foreground">{user.email}</span></TableCell>
-                  <TableCell>{user.roleName}</TableCell>
-                  <TableCell>{user.branchName ?? t.allBranches}</TableCell>
+                  <TableCell>{roleNames.get(user.roleCode) ?? user.roleName}</TableCell>
+                  <TableCell>{user.branchId ? branchNames.get(user.branchId) ?? user.branchName ?? t.allBranches : t.allBranches}</TableCell>
                   <TableCell><Badge className="shadow-none" variant={user.isActive ? 'secondary' : 'outline'}>{user.isActive ? t.badges.active : t.badges.inactive}</Badge></TableCell>
                   <TableCell>{toggleAction ? <ToggleForm action={toggleAction} active={user.isActive} id={user.id} locale={locale} /> : null}</TableCell>
                 </TableRow>
@@ -78,14 +80,14 @@ function CreateUserForm({ action, data, locale }: { action: AdminAction; data: A
         <label className="grid gap-1 text-sm font-medium">
           {t.fields.role}
           <select className="rounded-md border border-input bg-background px-3 py-2" name="roleCode" required>
-            {data.roles.map((role) => <option key={role.id} value={role.code}>{role.nameEn}</option>)}
+            {data.roles.map((role) => <option key={role.id} value={role.code}>{localizedName(role, locale)}</option>)}
           </select>
         </label>
         <label className="grid gap-1 text-sm font-medium">
           {t.fields.branch}
           <select className="rounded-md border border-input bg-background px-3 py-2" name="branchId">
             <option value="">{t.allBranches}</option>
-            {data.branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.nameEn}</option>)}
+            {data.branches.map((branch) => <option key={branch.id} value={branch.id}>{localizedName(branch, locale)}</option>)}
           </select>
         </label>
         <Field label={t.fields.initialPassword} minLength={12} name="initialPassword" type="password" />
@@ -93,6 +95,10 @@ function CreateUserForm({ action, data, locale }: { action: AdminAction; data: A
       </form>
     </details>
   );
+}
+
+function localizedName(item: { nameAr?: string | null; nameEn: string }, locale: Locale): string {
+  return locale === 'ar' && item.nameAr ? item.nameAr : item.nameEn;
 }
 
 function ToggleForm({ action, active, id, locale }: { action: AdminAction; active: boolean; id: string; locale: Locale }) {

@@ -5,6 +5,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Field, StateBlock, StatusBadge } from '../shared/ui-primitives';
+import { severityLabel } from '../../i18n/domain-labels';
 import { adminCategoriesSlaText } from '../../i18n/staff-admin-categories-sla';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import type { AdminCategory, AdminCategorySlaConfig, AdminSlaPolicy } from '../../lib/staff-admin-category-sla-api';
@@ -55,7 +56,7 @@ export function AdminCategoriesSla({
 
 function CategoryTable({ action, deactivateAction, locale, rows }: { action: AdminAction | undefined; deactivateAction: AdminAction | undefined; locale: Locale; rows: AdminCategory[] }) {
   const t = adminCategoriesSlaText[locale];
-  const parentName = new Map(rows.map((row) => [row.id, row.nameEn]));
+  const parentName = new Map(rows.map((row) => [row.id, localizedName(row, locale)]));
   return (
     <section className="overflow-x-auto rounded-md border border-border-subtle bg-surface-muted" aria-label={t.sections.categories}>
       <h3 className="border-b border-border-subtle px-3 py-2 text-sm font-semibold">{t.sections.categories}</h3>
@@ -68,7 +69,7 @@ function CategoryTable({ action, deactivateAction, locale, rows }: { action: Adm
           {rows.length ? rows.map((row) => (
             <TableRow className="border-b border-border-subtle" key={row.id}>
               <TableCell className="font-semibold">{row.code}</TableCell>
-              <TableCell>{row.nameEn}</TableCell>
+              <TableCell>{localizedName(row, locale)}</TableCell>
               <TableCell>{row.nameAr}</TableCell>
               <TableCell>{row.parentId ? parentName.get(row.parentId) ?? t.root : t.root}</TableCell>
               <TableCell><StatusBadge>{row.isActive ? t.badges.active : t.badges.inactive}</StatusBadge></TableCell>
@@ -111,12 +112,16 @@ function CategoryForm({ action, compact = false, item, locale, rows }: { action:
         {t.fields.parent}
         <select className="rounded-md border border-input bg-background px-3 py-2" defaultValue={item?.parentId ?? ''} name="parentId">
           <option value="">{t.root}</option>
-          {rows.filter((row) => row.parentId === null && row.id !== item?.id).map((row) => <option key={row.id} value={row.id}>{row.nameEn}</option>)}
+          {rows.filter((row) => row.parentId === null && row.id !== item?.id).map((row) => <option key={row.id} value={row.id}>{localizedName(row, locale)}</option>)}
         </select>
       </label>
       <Button className="self-end" size={compact ? 'sm' : 'default'} type="submit" variant={item ? 'outline' : 'default'}>{item ? t.actions.edit : t.actions.create}</Button>
     </form>
   );
+}
+
+function localizedName(item: { nameAr?: string | null; nameEn: string }, locale: Locale): string {
+  return locale === 'ar' && item.nameAr ? item.nameAr : item.nameEn;
 }
 
 function SeverityTable({ locale, policies }: { locale: Locale; policies: AdminSlaPolicy[] }) {
@@ -129,7 +134,7 @@ function SeverityTable({ locale, policies }: { locale: Locale; policies: AdminSl
         <TableHeader className="bg-surface-card text-xs font-semibold uppercase tracking-normal text-content-muted">
           <TableRow>{t.severityHeaders.map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>
         </TableHeader>
-        <TableBody>{severities.length ? severities.map((severity) => <TableRow key={severity}><TableCell className="font-semibold">{severity}</TableCell><TableCell>{t.severitySource}</TableCell></TableRow>) : <TableRow><TableCell className="text-content-muted" colSpan={2}>{t.states.empty}</TableCell></TableRow>}</TableBody>
+        <TableBody>{severities.length ? severities.map((severity) => <TableRow key={severity}><TableCell className="font-semibold" title={severity}>{severityLabel(locale, severity)}</TableCell><TableCell>{t.severitySource}</TableCell></TableRow>) : <TableRow><TableCell className="text-content-muted" colSpan={2}>{t.states.empty}</TableCell></TableRow>}</TableBody>
       </Table>
     </section>
   );
@@ -157,7 +162,7 @@ function SlaRow({ action, locale, policy }: { action: AdminAction | undefined; l
   return (
     <TableRow className="border-b border-border-subtle">
       <TableCell className="font-semibold">{policy.stage}</TableCell>
-      <TableCell>{policy.severity}</TableCell>
+      <TableCell title={policy.severity}>{severityLabel(locale, policy.severity)}</TableCell>
       <TableCell>{policy.durationMinutes}</TableCell>
       <TableCell>{policy.warningPercent}%</TableCell>
       <TableCell>{policy.branchTimezone} / {policy.workingCalendarMode}</TableCell>

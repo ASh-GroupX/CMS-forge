@@ -1,4 +1,4 @@
-export type ReportDeliveryStatus = 'DELIVERED' | 'DEFERRED';
+export type ReportDeliveryStatus = 'DELIVERED' | 'DEFERRED' | 'UNAVAILABLE';
 export type ReportMvpScope = 'YES' | 'SHOULD';
 
 export type ReportCatalogItem = {
@@ -11,6 +11,8 @@ export type ReportCatalogItem = {
   status: ReportDeliveryStatus;
   implemented: string[];
   deferred: string[];
+  exportable: boolean;
+  unavailableReason: string | null;
   signoffRequired: boolean;
 };
 
@@ -66,13 +68,13 @@ export function reportCatalogResponse(): ReportCatalogResponse {
 }
 
 function delivered(id: string, name: string, users: string, mvp: ReportMvpScope, requiredFilters: string[], requiredOutputs: string[], implemented: string[]): ReportCatalogItem {
-  return { id, name, users, mvp, requiredFilters, requiredOutputs, status: 'DELIVERED', implemented, deferred: [], signoffRequired: false };
+  return { id, name, users, mvp, requiredFilters, requiredOutputs, status: 'DELIVERED', implemented, deferred: [], exportable: true, unavailableReason: null, signoffRequired: false };
 }
 
 function deferred(id: string, name: string, users: string, mvp: ReportMvpScope, requiredFilters: string[], requiredOutputs: string[], implemented: string[], deferredScope: string[]): ReportCatalogItem {
-  return { id, name, users, mvp, requiredFilters, requiredOutputs, status: 'DEFERRED', implemented, deferred: deferredScope, signoffRequired: true };
+  return { id, name, users, mvp, requiredFilters, requiredOutputs, status: 'DEFERRED', implemented, deferred: deferredScope, exportable: false, unavailableReason: deferredScope[0] ?? 'Deferred pending business signoff.', signoffRequired: true };
 }
 
 function signedDeferred(id: string, name: string, users: string, mvp: ReportMvpScope, requiredFilters: string[], requiredOutputs: string[], implemented: string[], deferredScope: string[]): ReportCatalogItem {
-  return { id, name, users, mvp, requiredFilters, requiredOutputs, status: 'DEFERRED', implemented, deferred: deferredScope, signoffRequired: false };
+  return { id, name, users, mvp, requiredFilters, requiredOutputs, status: 'DEFERRED', implemented, deferred: deferredScope, exportable: false, unavailableReason: deferredScope[0] ?? 'Signed-deferred from MVP scope.', signoffRequired: false };
 }

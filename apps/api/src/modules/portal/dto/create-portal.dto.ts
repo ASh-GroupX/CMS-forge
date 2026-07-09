@@ -14,13 +14,14 @@ export type PortalAttachmentRequestDto = {
 export type PortalComplaintRequestDto = {
   customerName: string;
   customerPhone: string;
-  categoryId: string;
-  subcategoryId: string;
+  categoryId?: string | null;
+  subcategoryId?: string | null;
   description: string;
   incidentAt: string;
-  branchId: string;
+  branchId?: string | null;
   subject: string;
-  severity: ComplaintSeverity;
+  severity?: ComplaintSeverity | null;
+  manualTriage?: boolean;
   vehicleRelated?: boolean;
   vehicleVin?: string | null;
   vehicleId?: string | null;
@@ -35,16 +36,18 @@ export type PortalComplaintRequestDto = {
 export function parsePortalComplaintBody(body: unknown): PortalComplaintRequestDto {
   const input = objectBody(body);
   const attachments = attachmentList(input.attachments);
+  const manualTriage = input.manualTriage === true;
   return {
     customerName: requiredText(input.customerName, 'customerName'),
     customerPhone: requiredText(input.customerPhone, 'customerPhone'),
-    categoryId: requiredText(input.categoryId, 'categoryId'),
-    subcategoryId: requiredText(input.subcategoryId, 'subcategoryId'),
+    categoryId: manualTriage ? optionalText(input.categoryId, 'categoryId') : requiredText(input.categoryId, 'categoryId'),
+    subcategoryId: manualTriage ? optionalText(input.subcategoryId, 'subcategoryId') : requiredText(input.subcategoryId, 'subcategoryId'),
     description: requiredText(input.description, 'description'),
     incidentAt: requiredText(input.incidentAt, 'incidentAt'),
-    branchId: requiredText(input.branchId, 'branchId'),
+    branchId: manualTriage ? optionalText(input.branchId, 'branchId') : requiredText(input.branchId, 'branchId'),
     subject: requiredText(input.subject, 'subject'),
-    severity: enumValue(input.severity, ComplaintSeverity, 'severity'),
+    severity: manualTriage ? optionalEnum(input.severity, ComplaintSeverity, 'severity') : enumValue(input.severity, ComplaintSeverity, 'severity'),
+    ...(manualTriage ? { manualTriage } : {}),
     vehicleRelated: input.vehicleRelated === true,
     vehicleVin: optionalText(input.vehicleVin, 'vehicleVin'),
     vehicleId: optionalText(input.vehicleId, 'vehicleId'),
@@ -82,6 +85,7 @@ function optionalText(value: unknown, field: string): string | null {
   if (value === undefined || value === null) {
     return null;
   }
+  if (typeof value === 'string' && !value.trim()) return null;
   return requiredText(value, field);
 }
 
@@ -133,6 +137,11 @@ function enumValue<T extends Record<string, string>>(value: unknown, options: T,
     return value as T[keyof T];
   }
   throw invalid(field, `${field} is invalid.`);
+}
+
+function optionalEnum<T extends Record<string, string>>(value: unknown, options: T, field: string): T[keyof T] | null {
+  if (value === undefined || value === null || value === '') return null;
+  return enumValue(value, options, field);
 }
 
 function invalid(field: string, message: string): AppException {

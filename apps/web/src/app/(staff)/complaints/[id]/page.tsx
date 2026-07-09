@@ -1,28 +1,18 @@
 import React from 'react';
 import {
   ComplaintDetailWorkspace,
-  type ComplaintAttachmentFixtureState,
-  type ComplaintCommentsFixtureState,
-  type ComplaintDetailFixtureState,
-  type ComplaintWorkflowFixtureState,
 } from '../../../../components/complaint-detail-workspace';
-import type { LookupFixtureState } from '../../../../components/customer-vehicle-lookup';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { getAssignableStaff } from '../../../../lib/staff-assignable-staff-api';
 import { getComplaintFormOptions } from '../../../../lib/staff-complaint-form-options-api';
 import { getStaffComplaintComments } from '../../../../lib/staff-complaint-comments-api';
 import { getStaffComplaintRelationsView } from '../../../../lib/staff-complaint-relations-api';
 import { getStaffComplaintSurveys } from '../../../../lib/staff-complaint-surveys-api';
-import { getStaffComplaintDetail } from '../../../../lib/staff-detail-api';
+import { getStaffComplaintDetailLoadResult } from '../../../../lib/staff-detail-api';
 
 type RouteParams = { id?: string | string[] };
 type SearchParams = {
-  attachment?: string | string[];
-  comments?: string | string[];
-  detail?: string | string[];
   locale?: string | string[];
-  lookup?: string | string[];
-  workflow?: string | string[];
 };
 
 export default async function ComplaintDetailPage({
@@ -43,57 +33,33 @@ export default async function ComplaintDetailPage({
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
     ...(id !== undefined ? { complaintId: id } : {}),
   };
-  const [detail, comments, relations, surveys, staff, options] = await Promise.all([
-    getStaffComplaintDetail(apiInput),
+  const detailResult = await getStaffComplaintDetailLoadResult(apiInput);
+  const detail = detailResult.status === 'ready' ? detailResult.data : null;
+  const [comments, relations, surveys, staff, options] = detail ? await Promise.all([
     getStaffComplaintComments(apiInput),
     getStaffComplaintRelationsView(apiInput),
     getStaffComplaintSurveys(apiInput),
     getAssignableStaff({ ...(cookieHeader !== undefined ? { cookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
     getComplaintFormOptions({ ...(cookieHeader !== undefined ? { cookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
-  ]);
-  const detailState = resolveDetail(readParam(query?.detail)) ?? (id && !detail ? 'error' : undefined);
-  const commentsState = resolveDetail(readParam(query?.comments)) ?? (detail && comments === null ? 'error' : undefined);
+  ]) : [null, null, null, null, null] as const;
+  const detailState = detailResult.status === 'ready' ? undefined : detailResult.status;
+  const commentsState = detail && comments === null ? 'error' : undefined;
 
   return (
     <ComplaintDetailWorkspace
-      attachmentState={resolveAttachment(readParam(query?.attachment))}
       comments={comments}
       commentsState={commentsState}
       detail={detail ?? undefined}
       locale={resolveLocale(readParam(query?.locale))}
-      lookupState={resolveLookup(readParam(query?.lookup))}
       options={options}
       relations={relations ?? undefined}
       staff={staff}
       state={detailState}
       surveys={surveys}
-      workflowState={resolveWorkflow(readParam(query?.workflow))}
     />
   );
 }
 
 function readParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
-}
-
-function resolveDetail(value: string | undefined): ComplaintDetailFixtureState | undefined {
-  return value === 'loading' || value === 'empty' || value === 'error' ? value : undefined;
-}
-
-function resolveAttachment(value: string | undefined): ComplaintAttachmentFixtureState | undefined {
-  return value === 'loading' || value === 'empty' || value === 'error' || value === 'pending' || value === 'clean' || value === 'rejected'
-    ? value
-    : undefined;
-}
-
-function resolveWorkflow(value: string | undefined): ComplaintWorkflowFixtureState | undefined {
-  return value === 'loading' || value === 'empty' || value === 'error' || value === 'success' || value === 'conflict' || value === 'validation'
-    ? value
-    : undefined;
-}
-
-function resolveLookup(value: string | undefined): LookupFixtureState | undefined {
-  return value === 'loading' || value === 'none' || value === 'error' || value === 'match' || value === 'multiple' || value === 'down' || value === 'disabled' || value === 'validation' || value === 'manual'
-    ? value
-    : undefined;
 }

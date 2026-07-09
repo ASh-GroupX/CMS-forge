@@ -16,10 +16,10 @@ export function PasswordReset({ locale, state }: { locale: Locale; state?: Reset
   const showToken = state === 'token' || state === 'success' || state === 'invalid';
 
   return (
-    <Card aria-label={t.title} className="rounded-md border-slate-200 bg-white shadow-sm" dir={shell.dir}>
-      <CardHeader className="border-b border-slate-200 p-4">
+    <Card aria-label={t.title} className="rounded-md border-line-subtle bg-surface shadow-sm" dir={shell.dir}>
+      <CardHeader className="border-b border-line-subtle p-4">
         <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
-        <p className="text-sm text-slate-600">{t.help}</p>
+        <p className="text-sm text-content-muted">{t.help}</p>
       </CardHeader>
       <CardContent className="grid gap-3 p-4">
         {state ? null : (

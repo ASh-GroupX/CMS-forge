@@ -5,7 +5,7 @@ export const notificationCenterText: Record<Locale, typeof enNotificationCenterT
     title: 'Notifications',
     subtitle: 'Open the updates that need your attention. If a link is disabled, the app cannot safely open it.',
     sections: { unread: 'Unread', read: 'Read' },
-    labels: { complaint: 'Complaint link', markRead: 'Mark read', open: 'Open', task: 'Task link', time: 'Time' },
+    labels: { complaint: 'Complaint link', markAllRead: 'Mark all read', markRead: 'Mark read', open: 'Open', task: 'Task link', time: 'Time' },
     badges: { unread: 'Unread', read: 'Read', workflow: 'Workflow', sla: 'SLA', task: 'Task' },
     states: {
       loading: 'Loading notifications.',
@@ -21,7 +21,7 @@ export const notificationCenterText: Record<Locale, typeof enNotificationCenterT
     title: 'الإشعارات',
     subtitle: 'تحديثات داخل النظام ضمن صلاحيات الخادم.',
     sections: { unread: 'غير مقروء', read: 'مقروء' },
-    labels: { complaint: 'رابط الشكوى', markRead: 'تحديد كمقروء', open: 'فتح الشكوى المصرح بها', task: 'رابط المهمة', time: 'الوقت' },
+    labels: { complaint: 'رابط الشكوى', markAllRead: 'تحديد الكل كمقروء', markRead: 'تحديد كمقروء', open: 'فتح الشكوى المصرح بها', task: 'رابط المهمة', time: 'الوقت' },
     badges: { unread: 'غير مقروء', read: 'مقروء', workflow: 'سير العمل', sla: 'اتفاقية الخدمة', task: 'مهمة' },
     states: {
       loading: 'جار تحميل الإشعارات.',
@@ -39,7 +39,7 @@ const enNotificationCenterText = {
   title: '',
   subtitle: '',
   sections: { unread: '', read: '' },
-  labels: { complaint: '', markRead: '', open: '', task: '', time: '' },
+  labels: { complaint: '', markAllRead: '', markRead: '', open: '', task: '', time: '' },
   badges: { unread: '', read: '', workflow: '', sla: '', task: '' },
   states: { loading: '', empty: '', error: '', success: '', validation: '', conflict: '' },
   safeNote: '',

@@ -14,6 +14,8 @@ import { SlaModule } from '../sla/sla.module.js';
 import { SlaService } from '../sla/sla.service.js';
 import { SurveysModule } from '../surveys/surveys.module.js';
 import { SurveysService } from '../surveys/surveys.service.js';
+import { TasksModule } from '../tasks/tasks.module.js';
+import { TasksService } from '../tasks/tasks.service.js';
 import { ComplaintsController } from './complaints.controller.js';
 import { ComplaintFormOptionsService } from './complaint-form-options.service.js';
 import { ComplaintRelationsRepository } from './complaint-relations.repository.js';
@@ -22,7 +24,7 @@ import { ComplaintsRepository } from './complaints.repository.js';
 import { ComplaintsService } from './complaints.service.js';
 
 @Module({
-  imports: [AuthModule, NotificationsModule, CasesModule, SlaModule, forwardRef(() => SurveysModule)],
+  imports: [AuthModule, NotificationsModule, CasesModule, SlaModule, TasksModule, forwardRef(() => SurveysModule)],
   controllers: [ComplaintsController],
   providers: [
     PrismaService,
@@ -53,7 +55,7 @@ import { ComplaintsService } from './complaints.service.js';
     },
     {
       provide: ComplaintsService,
-      inject: [ComplaintsRepository, AuditService, NotificationsService, CasesService, SlaService, SurveysService],
+      inject: [ComplaintsRepository, AuditService, NotificationsService, CasesService, SlaService, SurveysService, TasksService],
       useFactory: (
         repository: ComplaintsRepository,
         audit: AuditService,
@@ -61,7 +63,8 @@ import { ComplaintsService } from './complaints.service.js';
         cases: CasesService,
         sla: SlaService,
         surveys: SurveysService,
-      ) => new ComplaintsService(repository, audit, notifications, cases, sla, surveys),
+        tasks: TasksService,
+      ) => new ComplaintsService(repository, audit, notifications, cases, sla, surveys, tasks),
     },
     {
       provide: SESSION_AUTH_SERVICE,

@@ -20,6 +20,8 @@ Agent context manifest. Read this before editing the module.
 
 - `portal_verifications`
 - `portal_sessions`
+- `branches`
+- `categories`
 
 ## May depend on
 

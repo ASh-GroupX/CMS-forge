@@ -12,8 +12,12 @@ export function parseUpdateTaskBody(taskId: string, body: unknown): UpdateTaskIn
   if (input.dueAt !== undefined) result.dueAt = requiredText(input.dueAt, 'dueAt');
   if (input.isCustomerPromise !== undefined) result.isCustomerPromise = booleanValue(input.isCustomerPromise, 'isCustomerPromise');
   if (input.nextAction !== undefined) result.nextAction = nextActionValue(input.nextAction);
+  if (input.statusNote !== undefined) result.statusNote = requiredText(input.statusNote, 'statusNote');
 
   if (Object.keys(result).length === 1) throw invalid('body', 'At least one task field is required.');
+  if ((result.status === TaskStatus.DONE || result.status === TaskStatus.WAITING) && !result.statusNote) {
+    throw invalid('statusNote', 'statusNote is required for done or waiting status changes.');
+  }
   return result;
 }
 

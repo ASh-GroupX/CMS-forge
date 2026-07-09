@@ -8,13 +8,16 @@ import { CasesService } from '../cases/cases.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { SlaService } from '../sla/sla.service.js';
 import type { SurveysService } from '../surveys/surveys.service.js';
+import { TasksService } from '../tasks/tasks.service.js';
 import { complaintCreatedAudit, createComplaintData, isReferenceConflict, referenceConflictError } from './complaint-intake.js';
 import { complaintCorrectionAudit, complaintCorrectionData, correctionConflictError } from './complaint-correction.js';
 import type { ApplyComplaintCorrectionInput, ApplyComplaintCorrectionResult } from './complaint-correction.js';
+import { detailItem, queueItem, reportItem, searchItem, shouldMask } from './complaint-read-models.js';
+import { timelineItems } from './complaint-timeline.js';
 import { queueComplaintCreationSideEffects, queueWorkflowSideEffects } from './complaint-workflow-side-effects.js';
 import { ComplaintsRepository } from './complaints.repository.js';
-import type { ComplaintCommentRecord, ComplaintDetailRecord, ComplaintQueueRecord, ComplaintReportFilter, ComplaintReportRecord, ComplaintSearchRecord, ComplaintStatusRecord, ComplaintTransitionSubject, DataSource, PortalVerificationTargetRecord } from './complaints.repository.js';
-import type { ComplaintCaseSummaryDto, ComplaintDetailDto, ComplaintQueueItemDto } from './dto/complaint-response.dto.js';
+import type { ComplaintCommentRecord, ComplaintReportFilter, ComplaintStatusRecord, ComplaintTransitionSubject, DataSource, PortalVerificationTargetRecord } from './complaints.repository.js';
+import type { ComplaintCaseSummaryDto, ComplaintDetailDto, ComplaintQueueItemDto, ComplaintTimelineItemDto } from './dto/complaint-response.dto.js';
 export type ValidateComplaintTransitionInput = { fromStatus: ComplaintStatus; action: ComplaintTransitionAction; actorRole: RoleCode };
 export type ComplaintTransitionDecision = ValidateComplaintTransitionInput & { toStatus: ComplaintStatus };
 export type ApplyComplaintTransitionInput = ValidateComplaintTransitionInput & {
@@ -34,13 +37,14 @@ export type CreateInternalComplaintInput = {
   vehicleSource?: DataSource | null; vehicleDataUnavailableReason?: string | null;
   departmentId?: string | null; saveAsDraft?: boolean;
   actorId?: string | null; requestSource?: ComplaintTransitionRequestSource; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null;
+  manualTriage?: boolean;
 };
 
 export type ComplaintCreationResult = { id: string; referenceNumber: string; status: ComplaintStatus };
 
 export type ComplaintQueueFilter = { branchId?: string | null; role?: RoleCode | null };
-export type ComplaintReportRow = Omit<ComplaintQueueItemDto, 'branchName' | 'ownerName'> & { categoryId: string };
-export type ComplaintSearchInput = ComplaintReportFilter;
+export type ComplaintReportRow = { id: string; referenceNumber: string; branchId: string; categoryId: string; status: ComplaintStatus; severity: ComplaintSeverity; subject: string; ownerId: string | null; createdAt: string; updatedAt: string };
+export type ComplaintSearchInput = ComplaintReportFilter & { sla?: ComplaintQueueItemDto['slaState'] | null };
 export type ComplaintSearchRow = ComplaintQueueItemDto & { categoryId: string; customerName: string; customerPhone: string; customerIdentifier: string | null };
 export type CreateComplaintCommentInput = { complaintId: string; body: string; visibility: CommentVisibility; actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type ComplaintCommentResult = { id: string; complaintId: string; body: string; visibility: CommentVisibility; authorId: string | null; createdAt: string };
@@ -75,7 +79,7 @@ function transition(fromStatus: ComplaintStatus, action: ComplaintTransitionActi
 
 @Injectable()
 export class ComplaintsService {
-  constructor(private readonly complaintsRepository: ComplaintsRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly casesService?: CasesService, private readonly slaService?: SlaService, private readonly surveysService?: SurveysService) {}
+  constructor(private readonly complaintsRepository: ComplaintsRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly casesService?: CasesService, private readonly slaService?: SlaService, private readonly surveysService?: SurveysService, private readonly tasksService?: TasksService) {}
 
   async createInternal(input: CreateInternalComplaintInput): Promise<ComplaintCreationResult> {
     const data = createComplaintData(input);
@@ -113,15 +117,29 @@ export class ComplaintsService {
     throw referenceConflictError();
   }
 
-  async listQueue(filter: ComplaintQueueFilter = {}): Promise<ComplaintQueueItemDto[]> { return (await this.complaintsRepository.listQueue(filter)).map(queueItem); }
+  async listQueue(filter: ComplaintQueueFilter = {}): Promise<ComplaintQueueItemDto[]> { return (await this.complaintsRepository.listQueue(filter)).map((item) => queueItem(item, this.slaService)); }
 
   async listForReports(filter: ComplaintReportFilter = {}): Promise<ComplaintReportRow[]> { return (await this.complaintsRepository.listForReports(filter)).map(reportItem); }
 
-  async search(input: ComplaintSearchInput = {}): Promise<ComplaintSearchRow[]> { return (await this.complaintsRepository.search(input)).map((item) => searchItem(item, shouldMask(input))); }
+  async search(input: ComplaintSearchInput = {}): Promise<ComplaintSearchRow[]> {
+    const rows = (await this.complaintsRepository.search(input.sla ? withoutSlaPage(input) : input)).map((item) => searchItem(item, shouldMask(input), this.slaService));
+    if (!input.sla) return rows;
+    const offset = input.offset ?? 0, filtered = rows.filter((row) => row.slaState === input.sla);
+    return filtered.slice(offset, offset + (input.limit ?? filtered.length));
+  }
 
   async findPortalVerificationTarget(referenceNumber: string, customerPhone: string): Promise<PortalVerificationTargetRecord | null> { return this.complaintsRepository.findPortalVerificationTarget(referenceNumber.trim(), customerPhone.trim()); }
 
-  async getDetail(id: string, filter: ComplaintQueueFilter = {}): Promise<ComplaintDetailDto> { const complaint = await this.complaintsRepository.findDetail(id, filter); if (!complaint) throw new AppException('COMPLAINT_NOT_FOUND', 'Complaint not found', HttpStatus.NOT_FOUND); return { ...detailItem(complaint, shouldMask(filter)), caseSummary: await this.complaintCaseSummary(complaint.id) }; }
+  async getDetail(id: string, filter: ComplaintQueueFilter = {}): Promise<ComplaintDetailDto> { const complaint = await this.complaintsRepository.findDetail(id, filter); if (!complaint) throw new AppException('COMPLAINT_NOT_FOUND', 'Complaint not found', HttpStatus.NOT_FOUND); return { ...detailItem(complaint, shouldMask(filter), this.slaService), caseSummary: await this.complaintCaseSummary(complaint.id) }; }
+
+  async timeline(id: string, filter: ComplaintQueueFilter = {}): Promise<ComplaintTimelineItemDto[]> {
+    const complaint = await this.getDetail(id, filter);
+    const [facts, tasks] = await Promise.all([
+      this.complaintsRepository.timelineFacts(id),
+      this.tasksService?.timelineForComplaint(id) ?? Promise.resolve([]),
+    ]);
+    return timelineItems(complaint, facts, tasks);
+  }
 
   allowedActionsFor(complaint: Pick<ComplaintDetailDto, 'ownerId' | 'status'>, actor: { roleCode: RoleCode; userId: string | null }): ComplaintTransitionAction[] { return WORKFLOW_TRANSITIONS.filter((item) => item.fromStatus === complaint.status && item.allowedRoles.includes(actor.roleCode) && actorCanSeeAction(item.action, actor, complaint)).map((item) => item.action); }
 
@@ -209,25 +227,6 @@ export class ComplaintsService {
   }
 }
 
-function queueItem(complaint: ComplaintQueueRecord): ComplaintQueueItemDto {
-  return { id: complaint.id, referenceNumber: complaint.referenceNumber, status: complaint.status, severity: complaint.severity, subject: complaint.subject, branchId: complaint.branchId, branchName: complaint.branch.nameEn, ownerId: complaint.ownerId, ownerName: complaint.owner?.nameEn ?? null, createdAt: complaint.createdAt.toISOString(), updatedAt: complaint.updatedAt.toISOString() };
-}
-
-function reportItem(complaint: ComplaintReportRecord): ComplaintReportRow {
-  return { id: complaint.id, referenceNumber: complaint.referenceNumber, branchId: complaint.branchId, categoryId: complaint.categoryId, status: complaint.status, severity: complaint.severity, subject: complaint.subject, ownerId: complaint.ownerId, createdAt: complaint.createdAt.toISOString(), updatedAt: complaint.updatedAt.toISOString() };
-}
-
-function searchItem(complaint: ComplaintSearchRecord, masked = false): ComplaintSearchRow {
-  return { ...queueItem(complaint), categoryId: complaint.categoryId, customerName: complaint.customerName, customerPhone: masked ? MASKED : complaint.customerPhone, customerIdentifier: masked ? MASKED : complaint.customerIdentifier };
-}
-
-function detailItem(complaint: ComplaintDetailRecord, masked = false): Omit<ComplaintDetailDto, 'caseSummary'> {
-  const vehicle = complaint.vehicle ? { id: complaint.vehicle.id, vin: masked ? MASKED : complaint.vehicle.vin, plate: masked ? MASKED : complaint.vehicle.plate, make: complaint.vehicle.makeEn, model: complaint.vehicle.modelEn, year: complaint.vehicle.year, source: complaint.vehicle.dataSource } : null;
-  return { ...queueItem(complaint), description: complaint.descriptionEn, incidentAt: complaint.incidentAt?.toISOString() ?? null, customer: { id: complaint.customer.id, name: complaint.customer.nameEn, phone: masked ? MASKED : complaint.customer.phone, identifier: masked ? MASKED : complaint.customer.dmsCode, source: complaint.customer.dataSource }, vehicle, customerSource: complaint.customerDataSource, manualCustomer: complaint.manualCustomerFlag, vehicleRelated: complaint.vehicleRelated, vehicleSource: complaint.vehicleDataSource, manualVehicle: complaint.manualVehicleFlag, vehicleDataUnavailableReason: complaint.vehicleDataUnavailableReason, statusHistory: complaint.statusHistory.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })), allowedActions: [] };
-}
-
-const MASKED = '[masked]'; function shouldMask(input: { role?: RoleCode | null }): boolean { return input.role === RoleCode.MGMT_READONLY; }
-
 function commentItem(comment: ComplaintCommentRecord): ComplaintCommentResult { return { ...comment, createdAt: comment.createdAt.toISOString() }; }
 
 function commentAudit(input: CreateComplaintCommentInput, comment: ComplaintCommentRecord): AuditRecordInput {
@@ -298,3 +297,4 @@ function workflowAuditInput(input: ApplyComplaintTransitionInput, toStatus: Comp
 }
 
 function nonEmptyText(value: string | null | undefined): string | null { return typeof value === 'string' && value.trim() ? value.trim() : null; }
+function withoutSlaPage(input: ComplaintSearchInput): ComplaintReportFilter { const filter = { ...input }; delete filter.sla; delete filter.limit; delete filter.offset; return filter; }

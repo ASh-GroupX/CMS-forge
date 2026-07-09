@@ -19,6 +19,8 @@ module's boundary so you can work in a fresh context without scanning the tree.
 
 - `deals`
 
+Reads `audit_logs` for deal handoff history.
+
 ## May depend on
 
 - `core/*` (prisma, errors, audit, rbac, correlation).

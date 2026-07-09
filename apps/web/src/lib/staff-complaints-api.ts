@@ -13,6 +13,11 @@ export type ComplaintQueueItem = {
   branchName?: string;
   ownerId: string | null;
   ownerName?: string | null;
+  slaState: 'ON_TRACK' | 'WARNING' | 'BREACHED' | 'CLOSED';
+  slaDueAt: string | null;
+  slaStage: string | null;
+  slaPercentElapsed: number | null;
+  nextAction: string | null;
   createdAt: string;
   updatedAt: string;
 };

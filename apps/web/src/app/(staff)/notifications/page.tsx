@@ -2,6 +2,7 @@ import React from 'react';
 import { NotificationCenter, type NotificationFixtureState } from '../../../components/notification-center';
 import { resolveLocale } from '../../../i18n/staff-shell';
 import { getStaffNotifications } from '../../../lib/staff-notifications-api';
+import { markAllNotificationsReadAction, markNotificationReadAction } from './actions';
 
 type SearchParams = { locale?: string | string[]; notification?: string | string[] };
 
@@ -19,7 +20,7 @@ export default async function NotificationsPage({
     ...(cookieHeader !== undefined ? { cookieHeader } : {}),
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
   });
-  return <NotificationCenter items={items} locale={resolveLocale(readParam(params?.locale))} state={resolveState(readParam(params?.notification))} />;
+  return <NotificationCenter items={items} locale={resolveLocale(readParam(params?.locale))} markAllReadAction={markAllNotificationsReadAction} markReadAction={markNotificationReadAction} state={resolveState(readParam(params?.notification))} />;
 }
 
 function readParam(value: string | string[] | undefined) {

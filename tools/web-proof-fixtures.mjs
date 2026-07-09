@@ -20,6 +20,11 @@ export async function proofFetch(input) {
   });
   if (path === '/reports/dashboard') return json({ summary: { openComplaints: 9, overdueComplaints: 2, slaWarningComplaints: 3, closedComplaints: 7, averageTatHours: 18 } });
   if (path === '/reports/kpis') return json({ kpis: proofKpis() });
+  if (path === '/reports/catalog') return json({ items: [
+    { id: 'RPT-001', name: 'Open complaints summary', users: 'Managers', requiredFilters: ['date', 'branch'], status: 'DELIVERED', signoffRequired: false, exportable: true, unavailableReason: null },
+    { id: 'RPT-002', name: 'Overdue complaints', users: 'Managers', requiredFilters: ['branch', 'owner'], status: 'DEFERRED', signoffRequired: true, exportable: false, unavailableReason: 'Deferred pending business signoff.' },
+    { id: 'RPT-017', name: 'Audit activity report', users: 'Admin', requiredFilters: ['actor', 'action'], status: 'DELIVERED', signoffRequired: false, exportable: true, unavailableReason: null },
+  ] });
   if (path === '/admin/users') return json({
     users: [{ id: 'usr_proof', email: 'proof@example.test', nameEn: 'Proof Admin', nameAr: 'Proof Admin AR', roleCode: 'ADMIN', roleName: 'Admin', branchId: null, branchName: null, isActive: true }],
     roles: [{ id: 'role_admin', code: 'ADMIN', nameEn: 'Admin', nameAr: 'Admin AR' }],

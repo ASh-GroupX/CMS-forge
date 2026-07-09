@@ -10,6 +10,7 @@ import { portalSurveyText, type PortalSurveyLocale } from '../../i18n/portal-sur
 import { submitPortalSurvey, terminalSurveyState } from '../../lib/portal-survey-api';
 
 export type PortalSurveyFixtureState = 'success' | 'used' | 'expired' | 'validation' | 'loading' | 'error' | 'missing';
+type PortalSurveyClosedState = Extract<PortalSurveyFixtureState, 'expired' | 'missing' | 'success' | 'used'>;
 
 export function PortalSurveyScreen({
   locale,
@@ -51,6 +52,8 @@ export function PortalSurveyScreen({
     <section lang={t.lang} dir={t.dir} className="mx-auto grid w-full max-w-3xl gap-4" aria-label={t.title}>
       <PortalSurveyMessage locale={locale} state={liveState} />
 
+      {closed && liveState ? <PortalSurveyTerminalCard locale={locale} state={liveState} /> : null}
+
       {closed ? null : (
         <Card className="rounded-md border-line-subtle bg-surface shadow-sm">
           <CardContent className="p-portal-card">
@@ -91,6 +94,30 @@ export function PortalSurveyScreen({
 function PortalSurveyMessage({ locale, state }: { locale: PortalSurveyLocale; state?: PortalSurveyFixtureState | undefined }) {
   const t = portalSurveyText[locale];
   if (!state) return null;
+  if (state === 'success' || state === 'used' || state === 'expired' || state === 'missing') return null;
+  return <StateBlock message={t.states[state]} tone={state === 'loading' ? 'neutral' : 'error'} />;
+}
+
+function PortalSurveyTerminalCard({ locale, state }: { locale: PortalSurveyLocale; state: PortalSurveyClosedState }) {
+  const t = portalSurveyText[locale];
+  const copy = t.terminal[state];
   const successful = state === 'success';
-  return <StateBlock message={t.states[state]} tone={successful ? 'success' : state === 'loading' ? 'neutral' : 'error'} />;
+  return (
+    <Card className={`rounded-md border-line-subtle bg-surface shadow-sm ${successful ? 'border-status-success' : ''}`} role={successful ? 'status' : 'alert'}>
+      <CardContent className="grid gap-3 p-portal-card">
+        <div className="grid gap-1">
+          <h2 className="text-base font-semibold text-content-strong">{copy.title}</h2>
+          <p className="text-sm text-content-muted">{copy.body}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild type="button">
+            <a href={`/portal/track?locale=${locale}`}>{t.actions.trackComplaint}</a>
+          </Button>
+          <Button asChild type="button" variant="outline">
+            <a href={`/portal?locale=${locale}`}>{t.actions.submitComplaint}</a>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }

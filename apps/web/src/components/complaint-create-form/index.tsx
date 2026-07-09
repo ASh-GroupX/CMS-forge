@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Field, StateBlock } from '../shared/ui-primitives';
+import { LocalizedFileInput } from '../shared/localized-file-input';
+import { complaintStatusLabel } from '../../i18n/domain-labels';
 import { complaintCreateText } from '../../i18n/staff-complaint-create';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import { staffAttachmentAccept, staffAttachmentFiles, uploadStaffComplaintAttachments } from '../../lib/staff-attachments-api';
@@ -115,7 +117,7 @@ export function ComplaintCreateForm({
           </Field>
           <section aria-label={extra.attachments.label} className="grid gap-2 rounded-md border border-line-subtle bg-surface-raised p-3 md:col-span-2">
             <Field id="attachments" label={extra.attachments.label}>
-              <Input accept={staffAttachmentAccept} id="attachments" multiple name="attachments" type="file" />
+              <LocalizedFileInput accept={staffAttachmentAccept} id="attachments" locale={locale} multiple name="attachments" />
             </Field>
             <p className="text-xs text-content-muted">{extra.attachments.rules}</p>
             <ul className="grid gap-1 text-xs text-content-muted">
@@ -198,7 +200,7 @@ function CreateSubmitMessage({ locale, state }: { locale: Locale; state: SubmitS
   if (state.kind === 'success') {
     return (
       <p className="m-4 rounded-sm border border-status-success-border bg-status-success-bg px-3 py-2 text-sm text-status-success" role="status">
-        {t.success}. {t.reference}: {state.referenceNumber}. {t.status}: {state.status}.
+        {t.success}. {t.reference}: {state.referenceNumber}. {t.status}: {complaintStatusLabel(locale, state.status)}.
         {state.attachmentCount ? ` ${t.attachments.uploaded}: ${state.attachmentCount}.` : ''}
         {state.failedAttachmentCount ? ` ${t.attachments.partialFailure}: ${state.failedAttachmentCount}.` : ''}
       </p>

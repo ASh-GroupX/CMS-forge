@@ -1,11 +1,11 @@
 import React from 'react';
 import { resolveLocale } from '../../../i18n/staff-shell';
 import { getComplaintFormOptions } from '../../../lib/staff-complaint-form-options-api';
-import { getStaffQueueResult, type StaffQueueQuery } from '../../../lib/staff-queue-api';
+import { getStaffQueueLoadResult, type StaffQueueQuery } from '../../../lib/staff-queue-api';
 import { WorkQueue } from '../../../components/work-queue';
 import type { ComplaintSeverity, ComplaintStatus } from '../../../lib/staff-complaints-api';
 
-type SearchParams = { branchId?: string | string[]; locale?: string | string[]; page?: string | string[]; search?: string | string[]; severity?: string | string[]; status?: string | string[] };
+type SearchParams = { branchId?: string | string[]; locale?: string | string[]; page?: string | string[]; search?: string | string[]; severity?: string | string[]; sla?: string | string[]; status?: string | string[] };
 
 export default async function ComplaintsPage({
   cookieHeader,
@@ -27,8 +27,8 @@ export default async function ComplaintsPage({
     ...requestOptions,
     query,
   };
-  const [queue, options] = await Promise.all([getStaffQueueResult(apiInput), getComplaintFormOptions(requestOptions)]);
-  return <WorkQueue locale={locale} options={options} query={query} queue={queue} />;
+  const [queue, options] = await Promise.all([getStaffQueueLoadResult(apiInput), getComplaintFormOptions(requestOptions)]);
+  return <WorkQueue locale={locale} options={options} query={query} queue={queue.status === 'ready' ? queue.data : null} state={queue.status === 'ready' ? undefined : queue.status} />;
 }
 
 function readParam(value: string | string[] | undefined) {
@@ -41,6 +41,7 @@ function queueQuery(params: SearchParams | undefined): StaffQueueQuery {
     page: positiveInt(readParam(params?.page)),
     search: clean(readParam(params?.search)),
     severity: severity(readParam(params?.severity)),
+    sla: sla(readParam(params?.sla)),
     status: status(readParam(params?.status)),
   };
 }
@@ -61,4 +62,8 @@ function status(value: string | undefined): ComplaintStatus | null {
 
 function severity(value: string | undefined): ComplaintSeverity | null {
   return ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].includes(value ?? '') ? value as ComplaintSeverity : null;
+}
+
+function sla(value: string | undefined): NonNullable<StaffQueueQuery['sla']> | null {
+  return value === 'ON_TRACK' || value === 'WARNING' || value === 'BREACHED' || value === 'CLOSED' ? value : null;
 }

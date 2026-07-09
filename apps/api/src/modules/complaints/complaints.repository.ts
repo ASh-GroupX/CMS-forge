@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { AuditEventType, NotificationChannel } from '@prisma/client';
 import type { CommentVisibility, ComplaintSeverity, ComplaintStatus, ComplaintTransitionAction, ComplaintTransitionRequestSource, Prisma, RoleCode } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
 import type { ComplaintCorrectionData, ComplaintCorrectionRecord } from './complaint-correction.js';
+import { correctionUpdateData } from './complaint-correction-update.js';
 import { nextReferenceNumber, upsertVehicle } from './complaint-reference.repository.js';
 import type { ComplaintReferenceClient } from './complaint-reference.repository.js';
+import { reportWhere } from './complaints.report-query.js';
 
 type ComplaintTransitionClient = Pick<Prisma.TransactionClient, 'comment' | 'complaint' | 'complaintStatusHistory' | 'customer'> & ComplaintReferenceClient;
 export type DataSource = 'LOCAL' | 'MANUAL' | 'DMS';
@@ -81,6 +84,14 @@ export type ComplaintSearchRecord = ComplaintReportRecord & {
 export type ComplaintCommentRecord = { id: string; complaintId: string; authorId: string | null; body: string; visibility: CommentVisibility; createdAt: Date };
 export type PortalVerificationTargetRecord = { complaintId: string; customerId: string; phone: string };
 export type CreateComplaintCommentData = { complaintId: string; authorId?: string | null; body: string; visibility: CommentVisibility };
+export type ComplaintTimelineFacts = {
+  attachmentAudits: Prisma.AuditLogGetPayload<{ select: typeof timelineAttachmentAuditSelect }>[];
+  attachments: Prisma.AttachmentGetPayload<{ select: typeof timelineAttachmentSelect }>[];
+  comments: Prisma.CommentGetPayload<{ select: typeof timelineCommentSelect }>[];
+  notifications: Prisma.NotificationGetPayload<{ select: typeof timelineNotificationSelect }>[];
+  slaEvents: Prisma.SlaEventGetPayload<{ select: typeof timelineSlaSelect }>[];
+  statusHistory: Prisma.ComplaintStatusHistoryGetPayload<{ select: typeof timelineStatusSelect }>[];
+};
 
 @Injectable()
 export class ComplaintsRepository {
@@ -198,6 +209,18 @@ export class ComplaintsRepository {
 
   async listPublicComments(complaintId: string, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintCommentRecord[]> { return client.comment.findMany({ where: { complaintId, visibility: 'PUBLIC' }, orderBy: { createdAt: 'asc' }, select: commentSelect }); }
 
+  async timelineFacts(complaintId: string): Promise<ComplaintTimelineFacts> {
+    const [statusHistory, comments, slaEvents, notifications, attachments, attachmentAudits] = await Promise.all([
+      this.prisma.complaintStatusHistory.findMany({ where: { complaintId }, orderBy: { createdAt: 'asc' }, select: timelineStatusSelect }),
+      this.prisma.comment.findMany({ where: { complaintId }, orderBy: { createdAt: 'asc' }, select: timelineCommentSelect }),
+      this.prisma.slaEvent.findMany({ where: { complaintId }, orderBy: { occurredAt: 'asc' }, select: timelineSlaSelect }),
+      this.prisma.notification.findMany({ where: { complaintId, channel: NotificationChannel.IN_APP }, orderBy: { queuedAt: 'asc' }, select: timelineNotificationSelect }),
+      this.prisma.attachment.findMany({ where: { complaintId }, orderBy: { createdAt: 'asc' }, select: timelineAttachmentSelect }),
+      this.prisma.auditLog.findMany({ where: { eventType: AuditEventType.ATTACHMENT, metadata: { path: ['complaintId'], equals: complaintId } }, orderBy: { createdAt: 'asc' }, select: timelineAttachmentAuditSelect }),
+    ]);
+    return { attachmentAudits, attachments, comments, notifications, slaEvents, statusHistory };
+  }
+
   async findPortalVerificationTarget(referenceNumber: string, phone: string, client: ComplaintTransitionClient = this.prisma): Promise<PortalVerificationTargetRecord | null> {
     const complaint = await client.complaint.findFirst({
       where: { referenceNumber, customer: { phone } },
@@ -259,40 +282,17 @@ async function submittedReference(data: UpdateComplaintStatusData, client: Compl
 }
 const commentSelect = { id: true, complaintId: true, authorId: true, body: true, visibility: true, createdAt: true } satisfies Prisma.CommentSelect;
 
-function correctionUpdateData(data: ComplaintCorrectionData): Prisma.ComplaintUncheckedUpdateManyInput {
-  const update: Prisma.ComplaintUncheckedUpdateManyInput = { version: { increment: 1 } };
-  if (has(data, 'customerId')) update.customerId = data.customerId;
-  if (has(data, 'customerDataSource')) update.customerDataSource = data.customerDataSource;
-  if (has(data, 'manualCustomerFlag')) update.manualCustomerFlag = data.manualCustomerFlag;
-  if (has(data, 'vehicleId')) update.vehicleId = data.vehicleId;
-  if (has(data, 'vehicleDataSource')) update.vehicleDataSource = data.vehicleDataSource;
-  if (has(data, 'manualVehicleFlag')) update.manualVehicleFlag = data.manualVehicleFlag;
-  if (has(data, 'vehicleRelated')) update.vehicleRelated = data.vehicleRelated;
-  if (has(data, 'vehicleDataUnavailableReason')) update.vehicleDataUnavailableReason = data.vehicleDataUnavailableReason;
-  return update;
-}
+const timelineStatusSelect = {
+  id: true, fromStatus: true, toStatus: true, action: true, actorId: true, actorRole: true, requestSource: true, reason: true, correlationId: true, createdAt: true,
+  actor: { select: { nameEn: true } },
+} satisfies Prisma.ComplaintStatusHistorySelect;
 
-function has<T extends object, K extends PropertyKey>(value: T, key: K): value is T & Record<K, never> { return Object.prototype.hasOwnProperty.call(value, key); }
+const timelineCommentSelect = {
+  id: true, complaintId: true, authorId: true, body: true, visibility: true, createdAt: true,
+  author: { select: { nameEn: true } },
+} satisfies Prisma.CommentSelect;
 
-function reportWhere(filter: ComplaintReportFilter): Prisma.ComplaintWhereInput {
-  return {
-    ...(filter.branchId ? { branchId: filter.branchId } : {}),
-    ...(filter.referenceNumber ? { referenceNumber: { contains: filter.referenceNumber, mode: 'insensitive' } } : {}),
-    ...(filter.customer ? { customer: { OR: customerSearch(filter.customer) } } : {}),
-    ...(filter.status ? { status: filter.status } : {}),
-    ...(filter.categoryId ? { categoryId: filter.categoryId } : {}),
-    ...(filter.departmentId ? { departmentId: filter.departmentId } : {}),
-    ...(filter.severity ? { severity: filter.severity } : {}),
-    ...(filter.ownerId ? { ownerId: filter.ownerId } : {}),
-    ...dateRange(filter),
-  };
-}
-
-function customerSearch(value: string): Prisma.CustomerWhereInput[] {
-  return ['nameEn', 'nameAr', 'phone', 'dmsCode'].map((field) => ({ [field]: { contains: value, mode: 'insensitive' } }));
-}
-
-function dateRange(filter: ComplaintReportFilter): Pick<Prisma.ComplaintWhereInput, 'createdAt'> {
-  const range = { ...(filter.dateFrom ? { gte: new Date(filter.dateFrom) } : {}), ...(filter.dateTo ? { lte: new Date(filter.dateTo) } : {}) };
-  return Object.keys(range).length ? { createdAt: range } : {};
-}
+const timelineSlaSelect = { id: true, type: true, stage: true, dueAt: true, occurredAt: true } satisfies Prisma.SlaEventSelect;
+const timelineAttachmentSelect = { id: true, fileName: true, contentType: true, sizeBytes: true, scanStatus: true, customerVisible: true, uploadedById: true, createdAt: true, uploadedBy: { select: { nameEn: true } } } satisfies Prisma.AttachmentSelect;
+const timelineAttachmentAuditSelect = { id: true, action: true, actorId: true, targetId: true, createdAt: true, metadata: true, actor: { select: { nameEn: true } } } satisfies Prisma.AuditLogSelect;
+const timelineNotificationSelect = { id: true, recipientUserId: true, status: true, templateCode: true, payload: true, queuedAt: true, sentAt: true, recipientUser: { select: { nameEn: true } } } satisfies Prisma.NotificationSelect;

@@ -190,6 +190,22 @@ export class NotificationsRepository {
     });
   }
 
+  async markInAppRead(id: string, recipientUserId: string, now = new Date()): Promise<boolean> {
+    const update = await this.prisma.notification.updateMany({
+      where: { id, channel: NotificationChannel.IN_APP, recipientUserId, status: NotificationStatus.QUEUED },
+      data: { status: NotificationStatus.SENT, sentAt: now },
+    });
+    return update.count === 1;
+  }
+
+  async markAllInAppRead(recipientUserId: string, now = new Date()): Promise<number> {
+    const update = await this.prisma.notification.updateMany({
+      where: { channel: NotificationChannel.IN_APP, recipientUserId, status: NotificationStatus.QUEUED },
+      data: { status: NotificationStatus.SENT, sentAt: now },
+    });
+    return update.count;
+  }
+
   async listTemplates(): Promise<NotificationTemplateRecord[]> {
     return this.prisma.notificationTemplate.findMany({
       orderBy: [{ code: 'asc' }, { channel: 'asc' }, { locale: 'asc' }, { version: 'desc' }],

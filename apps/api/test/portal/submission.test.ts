@@ -3,7 +3,7 @@ import test from 'node:test';
 import 'reflect-metadata';
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import type { ExecutionContext } from '@nestjs/common';
-import { ComplaintSeverity, ComplaintStatus } from '@prisma/client';
+import { ComplaintSeverity, ComplaintStatus, ComplaintTransitionRequestSource } from '@prisma/client';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
 import {
@@ -111,6 +111,63 @@ test('portal service always submits and cannot create staff drafts', async () =>
   await service.submitComplaint({ ...validBody(), saveAsDraft: true } as never);
 
   assert.equal((calls[0] as { saveAsDraft: boolean }).saveAsDraft, false);
+});
+
+test('portal manual triage fills missing catalog IDs from active defaults', async () => {
+  const calls: unknown[] = [];
+  const service = new PortalService({
+    createInternal: async (input) => {
+      calls.push(input);
+      return { id: 'cmp_portal', referenceNumber: 'CMS-2026-MAIN-000011', status: ComplaintStatus.SUBMITTED };
+    },
+  } as ComplaintsService, {
+    findManualTriageDefaults: async () => ({ branchId: 'branch_default', categoryId: 'cat_default', subcategoryId: 'subcat_default' }),
+  } as never, {} as never, {} as never);
+
+  const result = await service.submitComplaint({
+    ...validBody(),
+    branchId: null,
+    categoryId: undefined,
+    subcategoryId: ' ',
+    severity: undefined,
+    manualTriage: true,
+  } as never);
+
+  assert.equal(result.referenceNumber, 'CMS-2026-MAIN-000011');
+  assert.deepEqual(calls[0], {
+    ...validBody(),
+    branchId: 'branch_default',
+    categoryId: 'cat_default',
+    subcategoryId: 'subcat_default',
+    severity: ComplaintSeverity.MEDIUM,
+    manualTriage: true,
+    actorId: null,
+    customerNumber: null,
+    saveAsDraft: false,
+    requestSource: ComplaintTransitionRequestSource.CUSTOMER_PORTAL,
+  });
+});
+
+test('portal manual triage returns typed failure when defaults are unavailable', async () => {
+  let created = false;
+  const service = new PortalService({
+    createInternal: async () => {
+      created = true;
+      return { id: 'cmp_portal', referenceNumber: 'CMS-2026-MAIN-000011', status: ComplaintStatus.SUBMITTED };
+    },
+  } as ComplaintsService, {
+    findManualTriageDefaults: async () => null,
+  } as never, {} as never, {} as never);
+
+  await assert.rejects(
+    service.submitComplaint({ ...validBody(), branchId: null, categoryId: null, subcategoryId: null, manualTriage: true } as never),
+    (error: unknown) =>
+      error instanceof AppException &&
+      error.code === 'PORTAL_OPTIONS_REQUIRED' &&
+      error.getStatus() === 400 &&
+      error.fieldErrors.some((field) => field.field === 'manualTriage' && field.code === 'UNAVAILABLE'),
+  );
+  assert.equal(created, false);
 });
 
 test('portal service returns reference and attachment count when initial attachments upload', async () => {

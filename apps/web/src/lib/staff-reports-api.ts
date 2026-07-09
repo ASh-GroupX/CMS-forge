@@ -1,3 +1,5 @@
+import { hasStaffSessionCookie, incomingCookieHeader } from './staff-request-auth';
+
 export type StaffReportRow = {
   id: string;
   referenceNumber: string;
@@ -45,10 +47,10 @@ export type StaffReportFilters = {
 
 type ReportsResponse = { items?: Partial<StaffReportRow>[] };
 type KpiResponse = { kpis?: Partial<StaffReportKpis> };
-export type StaffReportCatalogItem = { id: string; name: string; users: string; requiredFilters: string[]; status: 'DELIVERED' | 'DEFERRED'; signoffRequired: boolean };
+export type StaffReportCatalogItem = { id: string; name: string; users: string; requiredFilters: string[]; status: 'DELIVERED' | 'DEFERRED' | 'UNAVAILABLE'; signoffRequired: boolean; exportable: boolean; unavailableReason: string | null };
 export type StaffReportCatalog = { items: StaffReportCatalogItem[] };
+export type StaffReportLoadResult<T> = { status: 'ready'; data: T } | { status: 'denied' | 'error' };
 
-const STAFF_SESSION_COOKIE = 'cms_staff_session';
 const REPORT_ROW_LIMIT = 17;
 
 export async function getStaffReportRows({
@@ -62,8 +64,23 @@ export async function getStaffReportRows({
   filters?: StaffReportFilters;
   fetchImpl?: typeof fetch;
 } = {}): Promise<StaffReportRow[] | null> {
+  const result = await getStaffReportRowsLoadResult({ apiUrl, ...(cookieHeader !== undefined ? { cookieHeader } : {}), filters, fetchImpl });
+  return result.status === 'ready' ? result.data : null;
+}
+
+export async function getStaffReportRowsLoadResult({
+  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  cookieHeader,
+  filters = {},
+  fetchImpl = fetch,
+}: {
+  apiUrl?: string;
+  cookieHeader?: string;
+  filters?: StaffReportFilters;
+  fetchImpl?: typeof fetch;
+} = {}): Promise<StaffReportLoadResult<StaffReportRow[]>> {
   const cookies = cookieHeader ?? await incomingCookieHeader();
-  if (!hasStaffSessionCookie(cookies)) return null;
+  if (!hasStaffSessionCookie(cookies)) return { status: 'denied' };
 
   try {
     const url = new URL('/reports', apiUrl);
@@ -73,10 +90,12 @@ export async function getStaffReportRows({
       cache: 'no-store',
       headers: { Accept: 'application/json', cookie: cookies },
     });
-    if (!response.ok) return null;
-    return rowsFrom((await response.json()) as ReportsResponse);
+    if (response.status === 401 || response.status === 403) return { status: 'denied' };
+    if (!response.ok) return { status: 'error' };
+    const data = rowsFrom((await response.json()) as ReportsResponse);
+    return data ? { status: 'ready', data } : { status: 'error' };
   } catch {
-    return null;
+    return { status: 'error' };
   }
 }
 
@@ -95,18 +114,33 @@ export async function getStaffReportKpis({
   cookieHeader?: string;
   fetchImpl?: typeof fetch;
 } = {}): Promise<StaffReportKpis | null> {
+  const result = await getStaffReportKpisLoadResult({ apiUrl, ...(cookieHeader !== undefined ? { cookieHeader } : {}), fetchImpl });
+  return result.status === 'ready' ? result.data : null;
+}
+
+export async function getStaffReportKpisLoadResult({
+  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  cookieHeader,
+  fetchImpl = fetch,
+}: {
+  apiUrl?: string;
+  cookieHeader?: string;
+  fetchImpl?: typeof fetch;
+} = {}): Promise<StaffReportLoadResult<StaffReportKpis>> {
   const cookies = cookieHeader ?? await incomingCookieHeader();
-  if (!hasStaffSessionCookie(cookies)) return null;
+  if (!hasStaffSessionCookie(cookies)) return { status: 'denied' };
 
   try {
     const response = await fetchImpl(new URL('/reports/kpis', apiUrl), {
       cache: 'no-store',
       headers: { Accept: 'application/json', cookie: cookies },
     });
-    if (!response.ok) return null;
-    return kpisFrom((await response.json()) as KpiResponse);
+    if (response.status === 401 || response.status === 403) return { status: 'denied' };
+    if (!response.ok) return { status: 'error' };
+    const data = kpisFrom((await response.json()) as KpiResponse);
+    return data ? { status: 'ready', data } : { status: 'error' };
   } catch {
-    return null;
+    return { status: 'error' };
   }
 }
 
@@ -119,18 +153,33 @@ export async function getStaffReportCatalog({
   cookieHeader?: string;
   fetchImpl?: typeof fetch;
 } = {}): Promise<StaffReportCatalog | null> {
+  const result = await getStaffReportCatalogLoadResult({ apiUrl, ...(cookieHeader !== undefined ? { cookieHeader } : {}), fetchImpl });
+  return result.status === 'ready' ? result.data : null;
+}
+
+export async function getStaffReportCatalogLoadResult({
+  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  cookieHeader,
+  fetchImpl = fetch,
+}: {
+  apiUrl?: string;
+  cookieHeader?: string;
+  fetchImpl?: typeof fetch;
+} = {}): Promise<StaffReportLoadResult<StaffReportCatalog>> {
   const cookies = cookieHeader ?? await incomingCookieHeader();
-  if (!hasStaffSessionCookie(cookies)) return null;
+  if (!hasStaffSessionCookie(cookies)) return { status: 'denied' };
 
   try {
     const response = await fetchImpl(new URL('/reports/catalog', apiUrl), {
       cache: 'no-store',
       headers: { Accept: 'application/json', cookie: cookies },
     });
-    if (!response.ok) return null;
-    return catalogFrom(await response.json());
+    if (response.status === 401 || response.status === 403) return { status: 'denied' };
+    if (!response.ok) return { status: 'error' };
+    const data = catalogFrom(await response.json());
+    return data ? { status: 'ready', data } : { status: 'error' };
   } catch {
-    return null;
+    return { status: 'error' };
   }
 }
 
@@ -214,8 +263,8 @@ function catalogFrom(body: unknown): StaffReportCatalog | null {
   if (!Array.isArray(items)) return null;
   const safeItems = items.flatMap((item) => {
     const value = item as Partial<StaffReportCatalogItem>;
-    return typeof value.id === 'string' && typeof value.name === 'string' && typeof value.users === 'string' && Array.isArray(value.requiredFilters) && (value.status === 'DELIVERED' || value.status === 'DEFERRED') && typeof value.signoffRequired === 'boolean'
-      ? [{ id: value.id, name: value.name, users: value.users, requiredFilters: value.requiredFilters.filter((filter): filter is string => typeof filter === 'string'), status: value.status, signoffRequired: value.signoffRequired }]
+    return typeof value.id === 'string' && typeof value.name === 'string' && typeof value.users === 'string' && Array.isArray(value.requiredFilters) && (value.status === 'DELIVERED' || value.status === 'DEFERRED' || value.status === 'UNAVAILABLE') && typeof value.signoffRequired === 'boolean'
+      ? [{ id: value.id, name: value.name, users: value.users, requiredFilters: value.requiredFilters.filter((filter): filter is string => typeof filter === 'string'), status: value.status, signoffRequired: value.signoffRequired, exportable: value.exportable === true, unavailableReason: typeof value.unavailableReason === 'string' ? value.unavailableReason : null }]
       : [];
   });
   return safeItems.length ? { items: safeItems } : null;
@@ -238,17 +287,4 @@ function agingBucketsFrom(value: unknown): StaffReportAgingBuckets | null {
     fourToSevenDays: buckets.fourToSevenDays,
     overSevenDays: buckets.overSevenDays,
   };
-}
-
-function hasStaffSessionCookie(cookieHeader: string): boolean {
-  return cookieHeader.split(';').some((cookie) => cookie.trim().startsWith(`${STAFF_SESSION_COOKIE}=`));
-}
-
-async function incomingCookieHeader(): Promise<string> {
-  try {
-    const { cookies } = await import('next/headers');
-    return (await cookies()).toString();
-  } catch {
-    return '';
-  }
 }

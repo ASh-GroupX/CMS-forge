@@ -5,8 +5,10 @@ import { Label } from '../ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { StaffPicker } from '../shared/staff-picker';
 import { StateBlock, StatusBadge } from '../shared/ui-primitives';
+import { complaintStatusLabel, reportDeliveryStatusLabel, severityLabel } from '../../i18n/domain-labels';
 import { reportCatalogText, reportsDashboardText } from '../../i18n/staff-reports-dashboard';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
+import { formatDisplayNumber, formatDurationHours, formatPercent } from '../../lib/locale-format';
 import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
 import type { ComplaintFormOption, ComplaintFormOptions } from '../../lib/staff-complaint-form-options-api';
 import type { StaffReportCatalog, StaffReportKpis, StaffReportRow } from '../../lib/staff-reports-api';
@@ -15,6 +17,7 @@ export type ReportsFixtureState = 'ready' | 'loading' | 'empty' | 'error' | 'suc
 export type ReportsFilters = { branchId: string; categoryId: string; dateFrom: string; dateTo: string; departmentId: string; ownerId: string; severity: string };
 
 export function ReportsDashboard({
+  canExport = false,
   catalog,
   filters = { branchId: '', categoryId: '', dateFrom: '', dateTo: '', departmentId: '', ownerId: '', severity: '' },
   kpis,
@@ -24,6 +27,7 @@ export function ReportsDashboard({
   staff,
   state,
 }: {
+  canExport?: boolean | undefined;
   catalog?: StaffReportCatalog | undefined;
   filters?: ReportsFilters | undefined;
   kpis?: StaffReportKpis | undefined;
@@ -41,24 +45,30 @@ export function ReportsDashboard({
   const severities = options?.severities ?? [];
   const exportQuery = reportQuery(filters);
   const operationalRows = rows?.slice(0, 17);
-  const exportEnabled = state !== 'denied' && state !== 'error' && state !== 'loading';
-  const catalogRows = catalogRowsFrom(catalog, reports, t);
+  const exportDenied = canExport ? t.states.denied : t.export.permissionDenied;
+  const exportEnabled = canExport && Boolean(catalog?.items.some((item) => item.exportable)) && state !== 'denied' && state !== 'error' && state !== 'loading';
+  const catalogRows = catalogRowsFrom(catalog, reports, t, locale);
+  const deferredCatalogRows = catalogRows.filter((row) => row.group === 'deferred');
+  const catalogGroups = [
+    { key: 'available', title: reportDeliveryStatusLabel(locale, 'DELIVERED'), rows: catalogRows.filter((row) => row.group === 'available') },
+    { key: 'export', title: t.export.title, rows: catalogRows.filter((row) => row.group === 'export') },
+  ] as const;
   const kpiCards = kpis ? [
-    [t.kpis.onTime, `${kpis.onTimeCompletionPercent}%`],
-    [t.kpis.activeOverdue, String(kpis.activeOverdueCount)],
-    [t.kpis.averageDelay, t.hours(kpis.averageDelayHours)],
-    [t.kpis.promiseKept, `${kpis.customerPromiseKeptPercent}%`],
-    [t.kpis.slaBreachRate, `${kpis.slaBreachRate}%`],
-    [t.kpis.medianTat, t.hours(kpis.medianTatHours)],
-    [t.kpis.reopenRate, `${kpis.reopenRate}%`],
-    [t.kpis.reopenedEvents, String(kpis.reopenedCount)],
-    [t.kpis.escalations, String(kpis.escalationCount)],
-    [t.kpis.agingZeroToOne, String(kpis.agingBuckets.zeroToOneDays)],
-    [t.kpis.agingTwoToThree, String(kpis.agingBuckets.twoToThreeDays)],
-    [t.kpis.agingFourToSeven, String(kpis.agingBuckets.fourToSevenDays)],
-    [t.kpis.agingOverSeven, String(kpis.agingBuckets.overSevenDays)],
-    [t.kpis.firstResponse, t.hours(kpis.averageFirstResponseHours)],
-    [t.kpis.resolution, t.hours(kpis.averageResolutionHours)],
+    [t.kpis.onTime, formatPercent(kpis.onTimeCompletionPercent, locale)],
+    [t.kpis.activeOverdue, formatDisplayNumber(kpis.activeOverdueCount, locale)],
+    [t.kpis.averageDelay, formatDurationHours(kpis.averageDelayHours, locale)],
+    [t.kpis.promiseKept, formatPercent(kpis.customerPromiseKeptPercent, locale)],
+    [t.kpis.slaBreachRate, formatPercent(kpis.slaBreachRate, locale)],
+    [t.kpis.medianTat, formatDurationHours(kpis.medianTatHours, locale)],
+    [t.kpis.reopenRate, formatPercent(kpis.reopenRate, locale)],
+    [t.kpis.reopenedEvents, formatDisplayNumber(kpis.reopenedCount, locale)],
+    [t.kpis.escalations, formatDisplayNumber(kpis.escalationCount, locale)],
+    [t.kpis.agingZeroToOne, formatDisplayNumber(kpis.agingBuckets.zeroToOneDays, locale)],
+    [t.kpis.agingTwoToThree, formatDisplayNumber(kpis.agingBuckets.twoToThreeDays, locale)],
+    [t.kpis.agingFourToSeven, formatDisplayNumber(kpis.agingBuckets.fourToSevenDays, locale)],
+    [t.kpis.agingOverSeven, formatDisplayNumber(kpis.agingBuckets.overSevenDays, locale)],
+    [t.kpis.firstResponse, formatDurationHours(kpis.averageFirstResponseHours, locale)],
+    [t.kpis.resolution, formatDurationHours(kpis.averageResolutionHours, locale)],
   ] as const : null;
   const primaryKpi = kpiCards?.[0];
   const supportingKpis = kpiCards?.slice(1);
@@ -76,42 +86,11 @@ export function ReportsDashboard({
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <DateField label={t.filters.dateFrom} name="dateFrom" value={filters.dateFrom} />
             <DateField label={t.filters.dateTo} name="dateTo" value={filters.dateTo} />
-            <OptionField
-              choose={t.filters.allBranches}
-              disabledLabel={t.filters.unavailable}
-              label={t.filters.branch}
-              locale={locale}
-              name="branchId"
-              options={branches}
-              value={filters.branchId}
-            />
-            <OptionField
-              choose={t.filters.allCategories}
-              disabledLabel={t.filters.unavailable}
-              label={t.filters.category}
-              locale={locale}
-              name="categoryId"
-              options={categories}
-              value={filters.categoryId}
-            />
-            <SelectField
-              choose={t.filters.allSeverities}
-              disabledLabel={t.filters.unavailable}
-              label={t.filters.severity}
-              name="severity"
-              options={severities}
-              value={filters.severity}
-            />
+            <OptionField choose={t.filters.allBranches} disabledLabel={t.filters.unavailable} label={t.filters.branch} locale={locale} name="branchId" options={branches} value={filters.branchId} />
+            <OptionField choose={t.filters.allCategories} disabledLabel={t.filters.unavailable} label={t.filters.category} locale={locale} name="categoryId" options={categories} value={filters.categoryId} />
+            <SelectField choose={t.filters.allSeverities} disabledLabel={t.filters.unavailable} label={t.filters.severity} name="severity" optionLabel={(severity) => severityLabel(locale, severity)} options={severities} value={filters.severity} />
             <div className="xl:col-span-2">
-              <StaffPicker
-                initialUserId={filters.ownerId}
-                label={t.filters.owner}
-                locale={locale}
-                name="ownerId"
-                required={false}
-                staff={staff}
-                t={t.filters.ownerPicker}
-              />
+              <StaffPicker initialUserId={filters.ownerId} label={t.filters.owner} locale={locale} name="ownerId" required={false} staff={staff} t={t.filters.ownerPicker} />
             </div>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -160,8 +139,8 @@ export function ReportsDashboard({
                 </>
               ) : (
                 <>
-                  <Button aria-label={t.states.denied} disabled size="sm" title={t.states.denied} type="button" variant="outline">{t.export.csv}</Button>
-                  <Button aria-label={t.states.denied} disabled size="sm" title={t.states.denied} type="button" variant="outline">{t.export.excel}</Button>
+                  <Button aria-label={exportDenied} disabled size="sm" title={exportDenied} type="button" variant="outline">{t.export.csv}</Button>
+                  <Button aria-label={exportDenied} disabled size="sm" title={exportDenied} type="button" variant="outline">{t.export.excel}</Button>
                 </>
               )}
             </div>
@@ -174,22 +153,14 @@ export function ReportsDashboard({
         </section>
         <section className="mb-3" aria-label={t.catalog.title}>
           <h3 className="mb-2 text-sm font-semibold">{t.catalog.title}</h3>
-          <div className="overflow-x-auto">
-            <Table className="min-w-[56rem]">
-              <TableHeader className="bg-surface-raised text-xs font-semibold uppercase tracking-normal text-content-muted">
-                <TableRow>{t.headers.map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>
-              </TableHeader>
-              <TableBody>
-                {catalogRows.map((row) => (
-                  <TableRow className="border-b border-line-subtle" key={row.id}>
-                    <TableCell className="font-semibold">{row.id} - {row.name}</TableCell>
-                    <TableCell>{row.audience}</TableCell>
-                    <TableCell>{row.filters}</TableCell>
-                    <TableCell><ReportBadge>{row.status}</ReportBadge></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <div className="grid gap-3">
+            {!catalog ? <StateBlock message={t.filters.unavailable} /> : catalogGroups.map((group) => <CatalogTable headers={t.headers} key={group.key} rows={group.rows} title={group.title} />)}
+            {deferredCatalogRows.length ? (
+              <details className="rounded-md border border-line-subtle bg-surface-raised p-3">
+                <summary className="cursor-pointer text-sm font-semibold">{t.catalog.deferredTitle}</summary>
+                <CatalogTable headers={t.headers} rows={deferredCatalogRows} title={t.catalog.deferredTitle} />
+              </details>
+            ) : null}
           </div>
         </section>
         <div className="overflow-x-auto">
@@ -205,7 +176,7 @@ export function ReportsDashboard({
                       <TableCell className="font-semibold">{row.referenceNumber} - {row.subject}</TableCell>
                       <TableCell>{rowScopeLabel(row, branches, staff, locale, t.filters.unavailable)}</TableCell>
                       <TableCell><ReportBadge>{optionLabel(categories, row.categoryId, locale) ?? t.filters.unavailable}</ReportBadge></TableCell>
-                      <TableCell><ReportBadge>{row.status}</ReportBadge></TableCell>
+                      <TableCell><ReportBadge>{complaintStatusLabel(locale, row.status)}</ReportBadge></TableCell>
                     </TableRow>
                   ))
                 : (
@@ -227,11 +198,11 @@ function DateField({ label, name, value }: { label: string; name: string; value:
   return <div className="grid gap-2"><Label htmlFor={id}>{label}</Label><input className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" defaultValue={value} id={id} name={name} type="date" /></div>;
 }
 
-function SelectField({ choose, disabledLabel, label, name, options, value }: { choose: string; disabledLabel: string; label: string; name: string; options: string[]; value: string }) {
+function SelectField({ choose, disabledLabel, label, name, optionLabel = (option: string) => option, options, value }: { choose: string; disabledLabel: string; label: string; name: string; optionLabel?: (option: string) => string; options: string[]; value: string }) {
   const id = `reports-${name}`;
   return <div className="grid gap-2"><Label htmlFor={id}>{label}</Label><select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" defaultValue={options.includes(value) ? value : ''} disabled={options.length === 0} id={id} name={name}>
     <option value="">{options.length === 0 ? disabledLabel : choose}</option>
-    {options.map((option) => <option key={option} value={option}>{option}</option>)}
+    {options.map((option) => <option key={option} value={option}>{optionLabel(option)}</option>)}
   </select></div>;
 }
 
@@ -254,27 +225,57 @@ function reportQuery(filters: ReportsFilters): string {
   return text ? `&${text}` : '';
 }
 
-function catalogRowsFrom(catalog: StaffReportCatalog | undefined, fallback: readonly (readonly [string, string, string, unknown])[], t: typeof reportsDashboardText.en) {
+type CatalogGroup = 'available' | 'deferred' | 'export';
+type CatalogRow = { audience: string; filters: string; group: CatalogGroup; id: string; name: string; reason: string | null; status: string };
+
+function CatalogTable({ headers, rows, title }: { headers: readonly string[]; rows: CatalogRow[]; title: string }) {
+  return (
+    <section className="rounded-md border border-line-subtle bg-surface-raised p-3" aria-label={title}>
+      <h4 className="text-xs font-semibold uppercase tracking-normal text-content-muted">{title}</h4>
+      <div className="mt-2 overflow-x-auto">
+        <Table className="min-w-[56rem]">
+          <TableHeader className="bg-surface text-xs font-semibold uppercase tracking-normal text-content-muted">
+            <TableRow>{headers.map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row) => (
+              <TableRow className="border-b border-line-subtle" key={row.id}>
+                <TableCell>
+                  <p className="font-semibold">{row.name}</p>
+                  <p className="mt-1 font-mono text-xs text-content-muted">{row.id}</p>
+                </TableCell>
+                <TableCell>{row.audience}</TableCell>
+                <TableCell>{row.filters}</TableCell>
+                <TableCell>
+                  <ReportBadge>{row.status}</ReportBadge>
+                  {row.reason ? <p className="mt-1 text-xs text-content-muted">{row.reason}</p> : null}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </section>
+  );
+}
+
+function catalogRowsFrom(catalog: StaffReportCatalog | undefined, fallback: readonly (readonly [string, string, string, unknown])[], t: typeof reportsDashboardText.en, locale: Locale): CatalogRow[] {
   return catalog?.items.map((item) => {
     const translated = fallback.find(([id]) => id === item.id);
     return {
       id: item.id,
       name: translated?.[1] ?? item.name,
       audience: translated?.[2] ?? item.users,
-      filters: item.requiredFilters.map((filter) => reportFilterLabel(filter, t)).join(', '),
-      status: item.status === 'DELIVERED' ? t.badges.delivered : item.signoffRequired ? t.badges.deferredSignoff : t.badges.deferred,
+      filters: item.requiredFilters.length ? item.requiredFilters.map((filter) => reportFilterLabel(filter, t)).join(', ') : t.filters.unavailable,
+      group: item.exportable ? 'export' : item.status === 'DELIVERED' ? 'available' : 'deferred',
+      status: item.signoffRequired ? reportDeliveryStatusLabel(locale, 'SIGNOFF_REQUIRED') : reportDeliveryStatusLabel(locale, item.status),
+      reason: item.unavailableReason ? locale === 'ar' ? t.filters.unavailable : item.unavailableReason : null,
     };
-  }) ?? fallback.map(([id, name, audience]) => ({
-    id,
-    name,
-    audience,
-    filters: t.filters.unavailable,
-    status: t.badges.pending,
-  }));
+  }) ?? [];
 }
 
 function reportFilterLabel(filter: string, t: typeof reportsDashboardText.en): string {
-  return ({ date: t.filters.dateFrom, dateFrom: t.filters.dateFrom, dateTo: t.filters.dateTo, branch: t.filters.branch, category: t.filters.category, severity: t.filters.severity, owner: t.filters.owner, department: t.filters.department } as Record<string, string>)[filter] ?? filter;
+  return ({ action: t.filters.action, actor: t.filters.actor, date: t.filters.dateFrom, dateFrom: t.filters.dateFrom, dateTo: t.filters.dateTo, branch: t.filters.branch, category: t.filters.category, severity: t.filters.severity, owner: t.filters.owner, department: t.filters.department, target: t.filters.target } as Record<string, string>)[filter] ?? t.filters.unavailable;
 }
 
 function rowScopeLabel(row: StaffReportRow, branches: ComplaintFormOption[], staff: AssignableStaff[] | null | undefined, locale: Locale, unavailable: string): string {

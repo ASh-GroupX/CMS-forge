@@ -68,6 +68,7 @@ export function WorkQueue({
             <Input id="work-queue-search" type="search" />
           </Field>
         </FilterBar>
+        <p className="border-b border-line-subtle px-4 pb-3 text-xs text-content-muted">{t.filterHelp}</p>
         {state === 'loading' ? (
           <div className="grid gap-3 p-4" role="status">
             <span className="text-sm text-content-muted">{t.states.loading}</span>

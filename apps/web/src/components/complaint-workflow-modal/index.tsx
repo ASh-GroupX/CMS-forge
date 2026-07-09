@@ -29,6 +29,7 @@ const transitionFields: TransitionField[] = ['reason', 'targetBranchId', 'target
 const reasonRequired = new Set<ComplaintTransitionAction>(['APPROVE_AND_ROUTE', 'SEND_BACK', 'ASSIGN_INVESTIGATION', 'CLOSE', 'REOPEN', 'ROUTE_AGAIN', 'REJECT_AS_INVALID', 'REJECT_AFTER_REVIEW', 'REJECT_AFTER_INVESTIGATION', 'REJECT_RESOLUTION']);
 const ownerRequired = new Set<ComplaintTransitionAction>(['APPROVE_AND_ROUTE', 'ASSIGN_INVESTIGATION']);
 const resolutionRequired = new Set<ComplaintTransitionAction>(['RESOLVE', 'RESOLVE_DIRECTLY']);
+const destructiveActions = new Set<ComplaintTransitionAction>(['CLOSE', 'REJECT_AS_INVALID', 'REJECT_AFTER_REVIEW', 'REJECT_AFTER_INVESTIGATION', 'REJECT_RESOLUTION']);
 
 export function ComplaintWorkflowModal({
   allowedActions,
@@ -67,6 +68,10 @@ export function ComplaintWorkflowModal({
     }
     const form = new FormData(event.currentTarget);
     if (requiredFields(action, vehicleNeedsUnavailableReason).some((field) => !fieldText(form, field))) {
+      setSubmitState('validation');
+      return;
+    }
+    if (destructiveActions.has(action) && form.get('confirmDestructive') !== 'on') {
       setSubmitState('validation');
       return;
     }
@@ -111,15 +116,19 @@ export function ComplaintWorkflowModal({
           </div>
           <form className="mt-3 grid gap-3" onSubmit={(event) => { void submit(event); }}>
             <WorkflowFields action={action} locale={locale} options={options} staff={staff} text={t.workflow} vehicleNeedsUnavailableReason={vehicleNeedsUnavailableReason} />
+            {destructiveActions.has(action) ? (
+              <label className="grid gap-2 rounded-sm border border-status-warning-border bg-status-warning-bg px-3 py-2 text-sm text-content-strong">
+                <span className="font-semibold">{confirm.title}</span>
+                <span>{confirm.body}</span>
+                <span className="flex items-center gap-2">
+                  <input className="size-4" name="confirmDestructive" required type="checkbox" />
+                  {action === 'CLOSE' ? confirm.confirmClose : confirm.confirmReject}
+                </span>
+              </label>
+            ) : null}
             {visibleState === 'validation' ? <span className="text-xs font-semibold text-status-error">{t.workflow.validation}</span> : null}
             <Button disabled={visibleState === 'loading'} type="submit">{t.workflow.submit}</Button>
           </form>
-          {visibleState === 'validation' ? (
-            <section className="mt-3 break-words rounded-sm border border-status-error-border bg-status-error-bg px-3 py-2 text-sm text-status-error" role="alert" aria-label={confirm.title}>
-              <p className="font-semibold">{confirm.title}</p>
-              <p className="mt-1">{confirm.body}</p>
-            </section>
-          ) : null}
         </>
       ) : (
         <StateBlock className="mt-3" message={t.workflow.states.empty} />

@@ -48,19 +48,19 @@ export function ComplaintCommentsPanel({
   }
 
   return (
-    <section className="grid gap-3 md:grid-cols-2" aria-label={`${t.sections.internalComments} / ${t.sections.publicUpdates}`}>
+    <section className="grid gap-3" aria-label={`${t.sections.internalComments} / ${t.sections.publicUpdates}`}>
       {commentsState ? (
-        <StateBlock className="md:col-span-2" message={t.commentStates[commentsState]} tone={commentsState === 'error' ? 'error' : 'neutral'} />
+        <StateBlock message={t.commentStates[commentsState]} tone={commentsState === 'error' ? 'error' : 'neutral'} />
       ) : (
         <>
           <CommentGroup badge={t.badges.internal} comments={grouped.internal} locale={locale} title={t.sections.internalComments} />
           <CommentGroup badge={t.badges.public} comments={grouped.public} locale={locale} title={t.sections.publicUpdates} />
-          <form className="grid gap-3 rounded-md border border-line-subtle bg-surface-raised p-3 md:col-span-2" onSubmit={submit} aria-label={ct.form}>
-            <div className="grid gap-3 md:grid-cols-[12rem_1fr_auto] md:items-end">
+          <form className="grid gap-3 rounded-md border border-line-subtle bg-surface-raised p-3" onSubmit={submit} aria-label={ct.form}>
+            <div className="grid gap-3">
               <Label className="grid gap-1 text-sm font-medium">
                 {t.labels.visibility}
                 <Select value={visibility} onValueChange={(value) => setVisibility(value as StaffComplaintCommentVisibility)}>
-                  <SelectTrigger className="bg-surface"><SelectValue /></SelectTrigger>
+                  <SelectTrigger aria-label={t.labels.visibility} className="bg-surface"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="INTERNAL">{t.badges.internal}</SelectItem>
                     <SelectItem value="PUBLIC">{t.badges.public}</SelectItem>

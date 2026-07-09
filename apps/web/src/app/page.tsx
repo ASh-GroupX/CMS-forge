@@ -24,8 +24,9 @@ import { AppShell, type StaffNavKey } from './app-shell';
 
 type SearchParams = {
   admin?: string | string[]; auth?: string | string[]; attachment?: string | string[]; comments?: string | string[]; create?: string | string[];
-  dashboard?: string | string[]; detail?: string | string[]; locale?: string | string[]; lookup?: string | string[]; notification?: string | string[];
-  complaintId?: string | string[]; preview?: string | string[]; queue?: string | string[]; reports?: string | string[]; role?: string | string[]; reset?: string | string[]; session?: string | string[]; workflow?: string | string[];
+  dashboard?: string | string[]; detail?: string | string[]; locale?: string | string[]; lookup?: string | string[];
+  notification?: string | string[]; complaintId?: string | string[]; preview?: string | string[]; queue?: string | string[];
+  reports?: string | string[]; role?: string | string[]; reset?: string | string[]; session?: string | string[]; workflow?: string | string[];
 };
 
 export default async function StaffShellPage({
@@ -61,7 +62,7 @@ export default async function StaffShellPage({
       adminState={oneOf<AdminFixtureState>(readParam(params?.admin), ['loading', 'empty', 'error', 'success', 'validation', 'conflict'])}
       authError={readParam(params?.auth) === 'error'}
       attachmentState={resolveAttachment(readParam(params?.attachment))}
-      commentsState={resolveDetail(readParam(params?.comments))}
+      commentsState={resolveComments(readParam(params?.comments))}
       createState={resolveCreate(readParam(params?.create))}
       dashboardState={resolveDashboard(readParam(params?.dashboard))}
       dashboardSummary={dashboardSummary ?? undefined}
@@ -113,7 +114,8 @@ function resolveReset(value: string | undefined): ResetFixtureState | undefined 
 
 function resolveDashboard(value: string | undefined): DashboardFixtureState | undefined { return oneOf(value, ['loading', 'empty', 'error']); }
 function resolveQueue(value: string | undefined): QueueFixtureState | undefined { return oneOf(value, ['loading', 'empty', 'error', 'success', 'conflict']); }
-function resolveDetail(value: string | undefined): ComplaintDetailFixtureState | undefined { return oneOf(value, ['loading', 'empty', 'error']); }
+function resolveDetail(value: string | undefined): ComplaintDetailFixtureState | undefined { return oneOf(value, ['loading', 'empty', 'error', 'denied', 'notFound']); }
+function resolveComments(value: string | undefined): ComplaintCommentsFixtureState | undefined { return oneOf(value, ['loading', 'empty', 'error']); }
 function resolveLookup(value: string | undefined): LookupFixtureState | undefined { return oneOf(value, ['loading', 'none', 'error', 'match', 'multiple', 'down', 'disabled', 'validation', 'manual']); }
 
 function resolveCreate(value: string | undefined): CreateFormFixtureState | undefined {
@@ -185,7 +187,7 @@ export function StaffShell({
       <DashboardSummary locale={locale} role={role} state={dashboardState} summary={dashboardSummary ?? undefined} />
       <NotificationCenter locale={locale} state={notificationState} />
       <WorkQueue locale={locale} rows={queueRows} state={queueState} />
-      {role === 'staff' ? null : <ReportsDashboard locale={locale} rows={reportRows} state={reportsState} />}
+      {role === 'staff' ? null : <ReportsDashboard canExport locale={locale} rows={reportRows} state={reportsState} />}
       <ComplaintDetailWorkspace attachmentState={attachmentState} commentsState={commentsState} detail={complaintDetail} locale={locale} lookupState={lookupState} state={detailState} workflowState={workflowState} />
       {role === 'admin' ? <AdminSurfaces locale={locale} state={adminState} /> : null}
       <ComplaintIntakeWorkspace createState={createState} locale={locale} lookupState={lookupState} />

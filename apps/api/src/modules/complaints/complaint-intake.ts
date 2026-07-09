@@ -72,6 +72,7 @@ export function complaintCreatedAudit(input: CreateInternalComplaintInput, compl
       vehicleSource,
       manualVehicle: vehicleSource === 'MANUAL',
       vehicleDataUnavailableReasonPresent: Boolean(optionalText(input.vehicleDataUnavailableReason)),
+      ...(input.manualTriage === true ? { manualTriage: true } : {}),
     },
   };
 }

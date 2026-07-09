@@ -15,7 +15,9 @@ export const portalSurveyText = {
     ratingLabels: ['1 - Very dissatisfied', '2 - Dissatisfied', '3 - Neutral', '4 - Satisfied', '5 - Very satisfied'],
     actions: {
       submit: 'Submit survey',
+      submitComplaint: 'Submit a complaint',
       submitting: 'Submitting survey.',
+      trackComplaint: 'Track complaint',
     },
     states: {
       success: 'Survey submitted. Thank you for your feedback.',
@@ -25,6 +27,12 @@ export const portalSurveyText = {
       loading: 'Submitting survey.',
       error: 'Survey could not be submitted. Try again.',
       missing: 'This survey link is invalid. Use the link sent for your complaint.',
+    },
+    terminal: {
+      success: { title: 'Survey submitted', body: 'Thank you. Your rating was saved for this complaint.' },
+      used: { title: 'This survey link was already used', body: 'Only one survey can be sent for this link. You can still track the complaint status.' },
+      expired: { title: 'This survey link has expired', body: 'The survey is no longer available. You can continue from the complaint tracking page.' },
+      missing: { title: 'Survey link is missing', body: 'Open the survey from the link sent for your complaint, or use complaint tracking instead.' },
     },
     privacy: 'The survey stores only the rating and optional customer comment for this complaint.',
   },
@@ -42,7 +50,9 @@ export const portalSurveyText = {
     ratingLabels: ['1 - غير راضٍ جداً', '2 - غير راضٍ', '3 - محايد', '4 - راضٍ', '5 - راضٍ جداً'],
     actions: {
       submit: 'إرسال الاستبيان',
+      submitComplaint: 'إرسال شكوى',
       submitting: 'جاري إرسال الاستبيان.',
+      trackComplaint: 'متابعة الشكوى',
     },
     states: {
       success: 'تم إرسال الاستبيان. شكراً لملاحظاتك.',
@@ -52,6 +62,12 @@ export const portalSurveyText = {
       loading: 'جاري إرسال الاستبيان.',
       error: 'تعذر إرسال الاستبيان. حاول مرة أخرى.',
       missing: 'رابط الاستبيان غير صالح. استخدم الرابط المرسل لشكواك.',
+    },
+    terminal: {
+      success: { title: 'تم إرسال الاستبيان', body: 'شكرا لك. تم حفظ تقييمك لهذه الشكوى.' },
+      used: { title: 'تم استخدام رابط الاستبيان مسبقا', body: 'لا يمكن إرسال استبيان آخر لهذا الرابط. يمكنك متابعة الشكوى من صفحة متابعة الشكوى.' },
+      expired: { title: 'انتهت صلاحية رابط الاستبيان', body: 'لم يعد نموذج الاستبيان متاحا. يمكنك متابعة الشكوى من صفحة متابعة الشكوى.' },
+      missing: { title: 'رابط الاستبيان غير موجود', body: 'افتح الاستبيان من الرابط المرسل لشكواك، أو تابع الشكوى من صفحة متابعة الشكوى.' },
     },
     privacy: 'يحفظ الاستبيان التقييم وتعليق العميل الاختياري لهذه الشكوى فقط.',
   },

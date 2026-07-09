@@ -5,7 +5,7 @@ import type { AuthenticatedRequest, StaffPrincipal } from '../../core/auth.guard
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { parseCreateDealBody } from './dto/create-deal.dto.js';
 import type { DealHandoffBoardResponseDto } from './dto/deal-response.dto.js';
-import { parseAdvanceDealBody, parseDealBlockerBody } from './dto/update-deal.dto.js';
+import { parseAdvanceDealBody, parseDealBlockerBody, parseDealDetailsBody } from './dto/update-deal.dto.js';
 import { DealsService } from './deals.service.js';
 
 @Controller('deals')
@@ -14,7 +14,7 @@ export class DealsController {
 
   @Get('handoff-board')
   @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
-  @Permissions('REPORT_VIEW')
+  @Permissions('COMPLAINT_ASSIGN')
   @BranchScoped()
   async handoffBoard(@Req() request: AuthenticatedRequest): Promise<DealHandoffBoardResponseDto> {
     const principal = requirePrincipal(request);
@@ -46,7 +46,17 @@ export class DealsController {
   @BranchScoped()
   async blocker(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest): Promise<Record<string, unknown>> {
     const principal = requirePrincipal(request);
-    const deal = await this.dealsService.updateBlockerForActor(id, parseDealBlockerBody(body).blocker, principal, auditContext(request, principal));
+    const deal = await this.dealsService.updateBlockerForActor(id, parseDealBlockerBody(body), principal, auditContext(request, principal));
+    return { deal };
+  }
+
+  @Patch(':id/details')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard, CsrfGuard)
+  @Permissions('COMPLAINT_ASSIGN')
+  @BranchScoped()
+  async details(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest): Promise<Record<string, unknown>> {
+    const principal = requirePrincipal(request);
+    const deal = await this.dealsService.updateDetailsForActor(id, parseDealDetailsBody(body), principal, auditContext(request, principal));
     return { deal };
   }
 }

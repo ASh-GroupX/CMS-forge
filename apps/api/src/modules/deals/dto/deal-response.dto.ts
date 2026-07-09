@@ -13,8 +13,18 @@ export type DealBoardItemDto = {
   stageDueAt: string;
   blocker: string | null;
   delayAgeMinutes: number;
+  lastAction: DealActionHistoryDto | null;
+  history: DealActionHistoryDto[];
   createdAt: string;
   updatedAt: string;
+};
+
+export type DealActionHistoryDto = {
+  id: string;
+  action: string;
+  actor: { id: string | null; name: string | null };
+  createdAt: string;
+  updateNote: string | null;
 };
 
 export type DealStageBucketDto = {

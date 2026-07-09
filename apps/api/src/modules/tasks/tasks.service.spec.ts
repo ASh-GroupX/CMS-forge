@@ -12,7 +12,7 @@ import { AppException } from '../../core/http-kernel.js';
 import { promiseKeptOnTime } from './tasks.promise.js';
 import { TasksRelatedRecordsService } from './tasks.related-records.service.js';
 import { TasksService } from './tasks.service.js';
-import { TasksRepository, type CreateTaskStatusHistoryData, type PromiseTaskRecord, type TaskCommentRecord, type TaskRecord, type UpdateTaskStatusData } from './tasks.repository.js';
+import { TasksRepository, type CreateTaskCommentData, type CreateTaskStatusHistoryData, type PromiseTaskRecord, type TaskCommentRecord, type TaskRecord, type UpdateTaskStatusData } from './tasks.repository.js';
 
 test('open task without next action is rejected', async () => {
   const service = new TasksService(txOnlyRepository(), {} as never);
@@ -119,6 +119,8 @@ test('status Done clears next action and audits inside the transaction', async (
   const seen: { updateInput?: UpdateTaskStatusData } = {};
   let auditClient: unknown;
   let auditAction = '';
+  let commentClient: unknown;
+  let commentInput: CreateTaskCommentData | undefined;
   let historyClient: unknown;
   let historyInput: CreateTaskStatusHistoryData | undefined;
   const repository = {
@@ -132,6 +134,11 @@ test('status Done clears next action and audits inside the transaction', async (
       historyInput = input;
       historyClient = client;
     },
+    createComment: async (input: CreateTaskCommentData, client: unknown) => {
+      commentInput = input;
+      commentClient = client;
+      return {} as TaskCommentRecord;
+    },
   } as unknown as TasksRepository;
   const audit = {
     record: async (input: { action: string }, client: unknown) => {
@@ -141,7 +148,7 @@ test('status Done clears next action and audits inside the transaction', async (
   };
   const service = new TasksService(repository, audit as never);
 
-  const result = await service.updateStatus({ taskId: 'task_1', status: TaskStatus.DONE }, { actorId: 'user_owner' });
+  const result = await service.updateStatus({ taskId: 'task_1', status: TaskStatus.DONE, statusNote: 'Customer confirmed the fix' }, { actorId: 'user_owner' });
 
   assert.equal(result.nextAction, null);
   assert.equal(seen.updateInput?.nextActionWhat, null);
@@ -150,8 +157,23 @@ test('status Done clears next action and audits inside the transaction', async (
   assert.equal(historyInput?.fromStatus, TaskStatus.IN_PROGRESS);
   assert.equal(historyInput?.toStatus, TaskStatus.DONE);
   assert.equal(historyClient, txClient);
+  assert.equal(commentInput?.authorId, 'user_owner');
+  assert.equal(commentInput?.body, 'Status update IN_PROGRESS -> DONE: Customer confirmed the fix');
+  assert.equal(commentClient, txClient);
   assert.equal(auditAction, 'task_status_updated');
   assert.equal(auditClient, txClient);
+});
+
+test('status Done rejects missing outcome note', async () => {
+  const service = new TasksService({
+    transaction: async <T>(work: (client: never) => Promise<T>) => work({} as never),
+    findById: async () => taskRecord({ status: TaskStatus.IN_PROGRESS }),
+  } as unknown as TasksRepository, {} as never);
+
+  await assert.rejects(
+    service.updateStatus({ taskId: 'task_1', status: TaskStatus.DONE }, { actorId: 'user_owner' }),
+    (error) => error instanceof AppException && error.code === 'TASK_STATUS_NOTE_REQUIRED',
+  );
 });
 
 test('participant can read a visible task', async () => {
@@ -173,6 +195,8 @@ test('participant can update task status with history and audit in one transacti
   const txClient = { task: {} };
   let historyClient: unknown;
   let auditClient: unknown;
+  let commentClient: unknown;
+  let commentInput: CreateTaskCommentData | undefined;
   let updateInput: UpdateTaskStatusData | undefined;
   let auditAction = '';
   const repository = {
@@ -185,6 +209,11 @@ test('participant can update task status with history and audit in one transacti
     createStatusHistory: async (_input: CreateTaskStatusHistoryData, client: unknown) => {
       historyClient = client;
     },
+    createComment: async (input: CreateTaskCommentData, client: unknown) => {
+      commentInput = input;
+      commentClient = client;
+      return {} as TaskCommentRecord;
+    },
   } as unknown as TasksRepository;
   const audit = {
     record: async (input: { action: string }, client: unknown) => {
@@ -195,7 +224,7 @@ test('participant can update task status with history and audit in one transacti
   const service = new TasksService(repository, audit as never);
 
   const result = await service.updateForActor(
-    { taskId: 'task_1', status: TaskStatus.DONE },
+    { taskId: 'task_1', status: TaskStatus.DONE, statusNote: 'Inspection complete' },
     { userId: 'user_assignee', roleCode: 'CR_OFFICER', branchId: 'branch_1' },
     { actorId: 'user_assignee', correlationId: 'req_1' },
   );
@@ -205,6 +234,8 @@ test('participant can update task status with history and audit in one transacti
   assert.equal(updateInput?.status, TaskStatus.DONE);
   assert.equal(updateInput?.nextActionWhat, null);
   assert.equal(historyClient, txClient);
+  assert.equal(commentInput?.body, 'Status update IN_PROGRESS -> DONE: Inspection complete');
+  assert.equal(commentClient, txClient);
   assert.equal(auditClient, txClient);
   assert.equal(auditAction, 'task_updated');
 });

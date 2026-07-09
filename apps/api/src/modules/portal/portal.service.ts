@@ -1,6 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { CommentVisibility, ComplaintStatus, ComplaintTransitionRequestSource, NotificationChannel } from '@prisma/client';
-import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
+import { CommentVisibility, ComplaintSeverity, ComplaintStatus, ComplaintTransitionRequestSource, NotificationChannel } from '@prisma/client';
 import { AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import { AttachmentsService } from '../attachments/attachments.service.js';
@@ -8,12 +7,22 @@ import type { AttachmentUploadResult, CreateAttachmentUploadInput } from '../att
 import { ComplaintsService } from '../complaints/complaints.service.js';
 import type { ComplaintCommentResult, ComplaintCreationResult, CreateInternalComplaintInput } from '../complaints/complaints.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { portalAudit, portalUnknownAudit } from './portal-audit.js';
 import { PortalRepository } from './portal.repository.js';
 import type { PortalSessionLookupRecord, PortalVerificationChallengeRecord } from './portal.repository.js';
+import { createSessionToken, generateOtp, hashOtp, hashSessionToken, verifyOtpHash } from './portal-token.js';
 
 export type PortalComplaintAttachmentInput = { fileName: string; contentType: string; sizeBytes: number; contentBase64: string };
 export type PortalAttachmentDto = { id: string; complaintId: string; fileName: string; contentType: string; sizeBytes: number; scanStatus: string; customerVisible: boolean };
-export type SubmitPortalComplaintInput = Omit<CreateInternalComplaintInput, 'actorId' | 'requestSource' | 'customerNumber'> & { attachments?: PortalComplaintAttachmentInput[] };
+type SubmitPortalComplaintBase = Omit<CreateInternalComplaintInput, 'actorId' | 'branchId' | 'categoryId' | 'customerNumber' | 'requestSource' | 'severity' | 'subcategoryId'>;
+export type SubmitPortalComplaintInput = SubmitPortalComplaintBase & {
+  branchId?: string | null;
+  categoryId?: string | null;
+  subcategoryId?: string | null;
+  severity?: ComplaintSeverity | null;
+  manualTriage?: boolean;
+  attachments?: PortalComplaintAttachmentInput[];
+};
 export type PortalAttachmentWarningDto = { code: 'PORTAL_ATTACHMENT_UPLOAD_FAILED'; message: string; failedCount: number; uploadedCount: number };
 export type PortalComplaintSubmissionResult = ComplaintCreationResult & { attachments?: PortalAttachmentDto[]; attachmentWarning?: PortalAttachmentWarningDto };
 export type RequestPortalOtpInput = { referenceNumber: string; customerPhone: string; locale?: 'en' | 'ar'; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
@@ -36,8 +45,9 @@ export class PortalService {
   constructor(private readonly complaintsService: ComplaintsService, private readonly portalRepository: PortalRepository, private readonly notificationsService: NotificationsService, private readonly auditService: AuditService, private readonly attachmentsService?: AttachmentsService) {}
 
   async submitComplaint(input: SubmitPortalComplaintInput): Promise<PortalComplaintSubmissionResult> {
-    const { attachments = [], ...complaintInput } = input;
-    const attachmentInputs = attachments.map((attachment) => this.portalAttachmentInput('__pending__', attachment, input));
+    const { attachments = [], ...submittedInput } = input;
+    const complaintInput = await this.resolveComplaintInput(submittedInput);
+    const attachmentInputs = attachments.map((attachment) => this.portalAttachmentInput('__pending__', attachment, complaintInput));
     const service = attachments.length ? requiredAttachmentsService(this.attachmentsService) : null;
     for (const attachment of attachmentInputs) service?.validateUploadMetadata(attachment);
 
@@ -61,6 +71,22 @@ export class PortalService {
       ...complaint,
       ...(uploaded.length ? { attachments: uploaded.map(portalAttachmentDto) } : {}),
       ...(failedCount ? { attachmentWarning: { code: 'PORTAL_ATTACHMENT_UPLOAD_FAILED' as const, message: 'Complaint submitted, but one or more attachments could not be uploaded.', failedCount, uploadedCount: uploaded.length } } : {}),
+    };
+  }
+
+  private async resolveComplaintInput(input: Omit<SubmitPortalComplaintInput, 'attachments'>): Promise<CreateInternalComplaintInput> {
+    if (input.manualTriage !== true) return input as CreateInternalComplaintInput;
+    const defaults = await this.portalRepository.findManualTriageDefaults();
+    if (!defaults) throw new AppException('PORTAL_OPTIONS_REQUIRED', 'Complaint form options are required before portal submission.', HttpStatus.BAD_REQUEST, [
+      { field: 'manualTriage', code: 'UNAVAILABLE', message: 'Manual triage defaults are not configured.' },
+    ]);
+    return {
+      ...input,
+      branchId: optionalText(input.branchId) ?? defaults.branchId,
+      categoryId: optionalText(input.categoryId) ?? defaults.categoryId,
+      subcategoryId: optionalText(input.subcategoryId) ?? defaults.subcategoryId,
+      severity: input.severity ?? ComplaintSeverity.MEDIUM,
+      manualTriage: true,
     };
   }
 
@@ -115,7 +141,7 @@ export class PortalService {
       throw verificationFailed();
     }
 
-    const sessionToken = randomBytes(32).toString('base64url');
+    const sessionToken = createSessionToken();
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
     const session = await this.portalRepository.transaction(async (client) => {
       await this.portalRepository.markVerified(verification.id, client);
@@ -176,7 +202,7 @@ export class PortalService {
     return { complaintId: session.complaintId, customerId: session.customerId, branchId: complaint.branchId, status: complaint.status };
   }
 
-  private portalAttachmentInput(complaintId: string, attachment: PortalComplaintAttachmentInput, context: SubmitPortalComplaintInput): CreateAttachmentUploadInput {
+  private portalAttachmentInput(complaintId: string, attachment: PortalComplaintAttachmentInput, context: CreateInternalComplaintInput): CreateAttachmentUploadInput {
     const bytes = Buffer.from(attachment.contentBase64, 'base64');
     if (bytes.byteLength !== attachment.sizeBytes) throw invalidPortalAttachment();
     return {
@@ -220,30 +246,17 @@ function publicCommentTimelineItem(comment: ComplaintCommentResult): PortalTimel
 
 function publicTimeline(items: PortalTimelineItem[]): PortalTimelineItem[] { return items.sort((left, right) => left.createdAt.localeCompare(right.createdAt)); }
 
-function generateOtp(): string { return String(randomInt(0, 1_000_000)).padStart(6, '0'); }
 
 function portalOtpPayload(locale: 'en' | 'ar', to: string, referenceNumber: string, otp: string, expiresAt: Date) { const textBody = locale === 'ar' ? `رمز متابعة الشكوى ${referenceNumber} هو ${otp}. ينتهي في ${expiresAt.toISOString()}.` : `Your complaint tracking code for ${referenceNumber} is ${otp}. It expires at ${expiresAt.toISOString()}.`; return { to, textBody, referenceNumber, expiresAt: expiresAt.toISOString() }; }
 
-function hashOtp(otp: string): string {
-  const salt = randomBytes(16).toString('hex');
-  return `sha256:${salt}:${createHash('sha256').update(`${salt}:${otp}`).digest('hex')}`;
-}
-
-function verifyOtpHash(otp: string, hash: string): boolean {
-  const [, salt, digest] = hash.split(':');
-  if (!salt || !digest) return false;
-  const expected = Buffer.from(digest, 'hex');
-  const actual = Buffer.from(createHash('sha256').update(`${salt}:${otp}`).digest('hex'), 'hex');
-  return expected.length === actual.length && timingSafeEqual(expected, actual);
-}
-
-function hashSessionToken(token: string): string {
-  return `sha256:${createHash('sha256').update(token).digest('hex')}`;
-}
 
 function requiredText(value: unknown): string {
   if (typeof value === 'string' && value.trim()) return value.trim();
   throw verificationFailed();
+}
+
+function optionalText(value: string | null | undefined): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function verificationFailed(): AppException {
@@ -266,35 +279,5 @@ function portalAttachmentDto(attachment: AttachmentUploadResult): PortalAttachme
     sizeBytes: attachment.sizeBytes,
     scanStatus: attachment.scanStatus,
     customerVisible: attachment.customerVisible,
-  };
-}
-
-function portalAudit(action: string, verification: PortalVerificationChallengeRecord, input: VerifyPortalOtpInput, metadata: Record<string, unknown>) {
-  return {
-    eventType: 'SECURITY' as const,
-    action,
-    actorId: null,
-    branchId: null,
-    targetType: 'portal_verification',
-    targetId: verification.id,
-    correlationId: input.correlationId ?? null,
-    ipAddress: input.ipAddress ?? null,
-    userAgent: input.userAgent ?? null,
-    metadata: { complaintId: verification.complaintId, customerId: verification.customerId, ...metadata },
-  };
-}
-
-function portalUnknownAudit(verificationId: string, input: VerifyPortalOtpInput, reason: string) {
-  return {
-    eventType: 'SECURITY' as const,
-    action: 'portal_otp_failed',
-    actorId: null,
-    branchId: null,
-    targetType: 'portal_verification',
-    targetId: verificationId,
-    correlationId: input.correlationId ?? null,
-    ipAddress: input.ipAddress ?? null,
-    userAgent: input.userAgent ?? null,
-    metadata: { reason },
   };
 }

@@ -1,6 +1,7 @@
 export type StaffNotification = {
   id: string;
   status: string;
+  readAt: string | null;
   targetHref?: string;
   targetId?: string;
   targetType?: string;
@@ -21,6 +22,7 @@ export type StaffNotification = {
 };
 
 const STAFF_SESSION_COOKIE = 'cms_staff_session';
+const CSRF_COOKIE = 'cms_csrf_token';
 
 export async function getStaffNotifications({
   apiUrl = process.env.API_URL ?? 'http://localhost:3000',
@@ -51,6 +53,7 @@ function notificationFrom(item: Partial<StaffNotification>): StaffNotification |
   return {
     id: item.id,
     status: item.status,
+    readAt: typeof item.readAt === 'string' ? item.readAt : null,
     ...(typeof item.targetHref === 'string' ? { targetHref: item.targetHref } : {}),
     ...(typeof item.targetId === 'string' ? { targetId: item.targetId } : {}),
     ...(typeof item.targetType === 'string' ? { targetType: item.targetType } : {}),
@@ -71,6 +74,14 @@ function notificationFrom(item: Partial<StaffNotification>): StaffNotification |
   };
 }
 
+export async function markStaffNotificationRead(notificationId: string, fetchImpl: typeof fetch = fetch): Promise<boolean> {
+  return notificationWrite(`/notifications/${encodeURIComponent(notificationId)}/read`, fetchImpl);
+}
+
+export async function markAllStaffNotificationsRead(fetchImpl: typeof fetch = fetch): Promise<boolean> {
+  return notificationWrite('/notifications/read-all', fetchImpl);
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -82,4 +93,32 @@ async function incomingCookieHeader(): Promise<string> {
   } catch {
     return '';
   }
+}
+
+async function notificationWrite(path: string, fetchImpl: typeof fetch): Promise<boolean> {
+  const cookies = await incomingCookieHeader();
+  if (!cookies.split(';').some((cookie) => cookie.trim().startsWith(`${STAFF_SESSION_COOKIE}=`))) return false;
+  const csrf = readCookie(cookies, CSRF_COOKIE);
+  try {
+    const response = await fetchImpl(new URL(path, process.env.API_URL ?? 'http://localhost:3000'), {
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+        cookie: cookies,
+        ...(csrf ? { 'x-csrf-token': csrf } : {}),
+      },
+      method: 'POST',
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+function readCookie(cookieHeader: string, name: string): string | null {
+  return cookieHeader
+    .split(';')
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${name}=`))
+    ?.slice(name.length + 1) ?? null;
 }

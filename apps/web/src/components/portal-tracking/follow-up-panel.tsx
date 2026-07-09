@@ -3,10 +3,10 @@
 import React, { useId, useState } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { StateBlock } from '../shared/ui-primitives';
+import { LocalizedFileInput } from '../shared/localized-file-input';
 import { portalTrackingText, type PortalTrackingLocale } from '../../i18n/portal-tracking';
 
 type PortalFollowUpPanelProps = {
@@ -53,18 +53,18 @@ export function PortalFollowUpPanel({
         </form>
 
         <form className="grid gap-3 border-t border-line-subtle pt-4" onSubmit={(event) => { event.preventDefault(); onAttachmentSubmit(file); }} aria-label={t.sections.attachments}>
-          <Label className="grid gap-1 text-sm font-medium">
-            {t.fields.attachment}
-            <Input
+          <div className="grid gap-1 text-sm font-medium">
+            <Label htmlFor="portal-follow-up-attachment">{t.fields.attachment}</Label>
+            <LocalizedFileInput
               accept=".jpg,.jpeg,.png,.webp,.pdf,.mp3,.wav,.ogg,.mp4,.mov,.webm,image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/wav,audio/ogg,video/mp4,video/quicktime,video/webm"
               aria-describedby={helpId}
-              className="min-h-11"
               disabled={closed}
+              id="portal-follow-up-attachment"
+              locale={locale}
               name="attachment"
-              type="file"
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
             />
-          </Label>
+          </div>
           <ul className="grid gap-1 text-xs text-content-muted" id={helpId}>
             {t.attachmentRules.map((rule) => <li key={rule}>{rule}</li>)}
           </ul>

@@ -618,6 +618,11 @@ test('complaint queue service returns explicit branch-scoped response objects', 
     branchName: 'Main Branch',
     ownerId: null,
     ownerName: null,
+    slaState: 'ON_TRACK',
+    slaDueAt: null,
+    slaStage: 'RESOLUTION',
+    slaPercentElapsed: null,
+    nextAction: 'Manager intake review',
     createdAt: '2026-06-18T09:00:00.000Z',
     updatedAt: '2026-06-18T10:00:00.000Z',
   }]);
@@ -658,6 +663,7 @@ test('complaint search service maps required filters into safe branch-scoped row
     categoryId: 'cat_engine',
     ownerId: 'usr_owner',
     ownerName: 'Owner User',
+    nextAction: 'Next response from Owner User',
     customerName: 'Faisal Al-Otaibi',
     customerPhone: '+966500000001',
     customerIdentifier: 'CUST-001',
@@ -674,6 +680,26 @@ test('complaint search service hides out-of-branch rows when branch scope is sup
   } as ComplaintsRepository, { record: async () => undefined } as unknown as AuditService);
 
   assert.deepEqual((await service.search({ branchId: 'branch_main' })).map((row) => row.id), ['cmp_allowed']);
+});
+
+test('complaint search service applies SLA filter before pagination', async () => {
+  const calls: unknown[] = [];
+  const records = [
+    { ...searchRecord('cmp_closed_1', 'branch_main'), status: ComplaintStatus.CLOSED },
+    searchRecord('cmp_open', 'branch_main'),
+    { ...searchRecord('cmp_closed_2', 'branch_main'), status: ComplaintStatus.CLOSED },
+  ];
+  const service = new ComplaintsService({
+    search: async (filter) => {
+      calls.push(filter);
+      return records;
+    },
+  } as ComplaintsRepository, { record: async () => undefined } as unknown as AuditService);
+
+  const rows = await service.search({ branchId: 'branch_main', sla: 'CLOSED', limit: 1, offset: 1 });
+
+  assert.deepEqual(calls[0], { branchId: 'branch_main' });
+  assert.deepEqual(rows.map((row) => row.id), ['cmp_closed_2']);
 });
 
 test('management read-only complaint search masks customer identifiers', async () => {
@@ -1109,6 +1135,11 @@ function validQueueItem() {
     branchName: 'Main Branch',
     ownerId: null,
     ownerName: null,
+    slaState: 'ON_TRACK',
+    slaDueAt: null,
+    slaStage: 'RESOLUTION',
+    slaPercentElapsed: null,
+    nextAction: 'Manager intake review',
     createdAt: '2026-06-18T09:00:00.000Z',
     updatedAt: '2026-06-18T10:00:00.000Z',
   };

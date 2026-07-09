@@ -1,17 +1,17 @@
-import { Body, Controller, Delete, Get, HttpStatus, Inject, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
-import { ComplaintSeverity, ComplaintStatus, ComplaintTransitionAction, RoleCode } from '@prisma/client';
+import { Body, Controller, Delete, Get, Inject, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { RoleCode } from '@prisma/client';
 import { BranchScoped, DynamicPermissionGuard, DynamicPermissions, PermissionGuard, Permissions, RbacGuard, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
-import { AppException } from '../../core/http-kernel.js';
 import { ComplaintFormOptionsService } from './complaint-form-options.service.js';
+import { auditContext, commentPermission, optionalSeverity, optionalSlaState, optionalStatus, optionalText, pageNumber, queueBranchId, requestRole, requiredQuery, searchBranchId, targetComplaintId, transitionPermission } from './complaints.controller-helpers.js';
 import { ComplaintRelationsService } from './complaint-relations.service.js';
 import { ComplaintsService } from './complaints.service.js';
 import type { ComplaintCommentResponseDto, ComplaintCommentsResponseDto, ComplaintPublicCommentsResponseDto } from './dto/complaint-comment.dto.js';
 import { parseComplaintCommentBody, toCommentInput } from './dto/complaint-comment.dto.js';
 import type { ComplaintCorrectionResponseDto } from './dto/complaint-correction.dto.js';
 import { parseComplaintCorrectionBody, toComplaintCorrectionInput } from './dto/complaint-correction.dto.js';
-import type { ComplaintDetailResponseDto, ComplaintDuplicateCandidatesResponseDto, ComplaintQueueResponseDto, ComplaintRelatedResponseDto, ComplaintRelationMutationResponseDto, ComplaintSearchResponseDto } from './dto/complaint-response.dto.js';
+import type { ComplaintDetailResponseDto, ComplaintDuplicateCandidatesResponseDto, ComplaintQueueResponseDto, ComplaintRelatedResponseDto, ComplaintRelationMutationResponseDto, ComplaintSearchResponseDto, ComplaintTimelineResponseDto } from './dto/complaint-response.dto.js';
 import type { CreateComplaintResponseDto } from './dto/create-complaint.dto.js';
 import { parseCreateComplaintBody, toCreateComplaintInput } from './dto/create-complaint.dto.js';
 import type { ComplaintTransitionResponseDto } from './dto/complaint-transition.dto.js';
@@ -43,12 +43,14 @@ export class ComplaintsController {
   async search(@Query() query: Record<string, string | undefined>, @Req() request: AuthenticatedRequest): Promise<ComplaintSearchResponseDto> {
     const limit = pageNumber(query.limit, 'limit', 25, 100);
     const offset = pageNumber(query.offset, 'offset', 0);
+    const sla = optionalSlaState(query.sla);
     const items = await this.complaintsService.search({
       branchId: searchBranchId(query.branchId, request),
       referenceNumber: optionalText(query.referenceNumber),
       customer: optionalText(query.customer),
       status: optionalStatus(query.status),
       severity: optionalSeverity(query.severity),
+      ...(sla ? { sla } : {}),
       ownerId: optionalText(query.ownerId),
       dateFrom: optionalText(query.dateFrom),
       dateTo: optionalText(query.dateTo),
@@ -78,6 +80,18 @@ export class ComplaintsController {
     const complaint = await this.complaintsService.getDetail(id, { branchId: queueBranchId(branchId, request), role: requestRole(request) });
     const principal = request.principal!;
     return { complaint: { ...complaint, allowedActions: this.complaintsService.allowedActionsFor(complaint, { roleCode: principal.roleCode as RoleCode, userId: principal.userId }) } };
+  }
+
+  @Get(':id/timeline')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('COMPLAINT_VIEW_BRANCH')
+  @BranchScoped()
+  async timeline(
+    @Param('id') id: string,
+    @Query('branchId') branchId: string | undefined,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ComplaintTimelineResponseDto> {
+    return { items: await this.complaintsService.timeline(id, { branchId: queueBranchId(branchId, request), role: requestRole(request) }) };
   }
 
   @Get(':id/related')
@@ -201,100 +215,4 @@ export class ComplaintsController {
       ),
     };
   }
-}
-
-function commentPermission(request: AuthenticatedRequest): string[] {
-  const visibility = bodyField(request.body, 'visibility');
-  if (visibility === 'INTERNAL') return ['COMPLAINT_COMMENT_INTERNAL'];
-  if (visibility === 'PUBLIC') return ['COMPLAINT_COMMENT_PUBLIC'];
-  return [];
-}
-
-function transitionPermission(request: AuthenticatedRequest): string[] {
-  const action = bodyField(request.body, 'action');
-  switch (action) {
-    case ComplaintTransitionAction.SUBMIT: return ['COMPLAINT_SUBMIT'];
-    case ComplaintTransitionAction.ACCEPT_INTAKE:
-    case ComplaintTransitionAction.APPROVE_AND_ROUTE:
-    case ComplaintTransitionAction.SEND_BACK: return ['COMPLAINT_APPROVE'];
-    case ComplaintTransitionAction.ASSIGN_INVESTIGATION:
-    case ComplaintTransitionAction.ROUTE_AGAIN: return ['COMPLAINT_ASSIGN'];
-    case ComplaintTransitionAction.RESOLVE:
-    case ComplaintTransitionAction.RESOLVE_DIRECTLY: return ['COMPLAINT_RESOLVE'];
-    case ComplaintTransitionAction.CLOSE: return ['COMPLAINT_CLOSE'];
-    case ComplaintTransitionAction.REOPEN: return ['COMPLAINT_REOPEN'];
-    case ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE: return ['COMPLAINT_COMMENT_INTERNAL'];
-    case ComplaintTransitionAction.REJECT_AS_INVALID:
-    case ComplaintTransitionAction.REJECT_AFTER_REVIEW:
-    case ComplaintTransitionAction.REJECT_AFTER_INVESTIGATION:
-    case ComplaintTransitionAction.REJECT_RESOLUTION: return ['COMPLAINT_REJECT'];
-    default: return [];
-  }
-}
-
-function bodyField(body: unknown, field: string): string | undefined {
-  return body && typeof body === 'object' ? (body as Record<string, unknown>)[field] as string | undefined : undefined;
-}
-
-function auditContext(request: AuthenticatedRequest) {
-  return {
-    actorId: request.principal?.userId ?? null,
-    actorRole: request.principal?.roleCode as RoleCode,
-    sessionId: request.principal?.sessionId ?? null,
-    correlationId: request.correlationId ?? headerValue(request.headers['x-correlation-id']),
-    ipAddress: headerValue(request.headers['x-forwarded-for'])?.split(',')[0]?.trim()
-      ?? request.socket?.remoteAddress
-      ?? null,
-    userAgent: headerValue(request.headers['user-agent']),
-  };
-}
-
-function targetComplaintId(body: unknown): string {
-  const raw = body && typeof body === 'object' ? (body as Record<string, unknown>).targetComplaintId : undefined;
-  const value = typeof raw === 'string' ? raw.trim() : '';
-  if (!value) throw new AppException('VALIDATION_FAILED', 'Invalid complaint relation request', HttpStatus.BAD_REQUEST, [{ field: 'targetComplaintId', code: 'REQUIRED', message: 'targetComplaintId is required.' }]);
-  return value;
-}
-
-function headerValue(value: string | string[] | undefined): string | null {
-  return Array.isArray(value) ? value[0] ?? null : value ?? null;
-}
-
-function requiredQuery(value: string | undefined, field: string): string {
-  if (!value?.trim()) {
-    throw new AppException('VALIDATION_FAILED', 'Invalid complaint request', HttpStatus.BAD_REQUEST, [{ field, code: 'REQUIRED', message: `${field} is required.` }]);
-  }
-  return value.trim();
-}
-
-function queueBranchId(value: string | undefined, request: AuthenticatedRequest): string | null {
-  if (value?.trim()) return value.trim();
-  return request.principal?.roleCode === RoleCode.ADMIN ? null : request.principal?.branchId ?? null;
-}
-
-function searchBranchId(value: string | undefined, request: AuthenticatedRequest): string | null {
-  return request.principal?.roleCode === RoleCode.ADMIN ? optionalText(value) : request.principal?.branchId ?? null;
-}
-
-function optionalText(value: string | undefined): string | null { return value?.trim() || null; }
-
-function requestRole(request: AuthenticatedRequest): RoleCode { return request.principal?.roleCode as RoleCode; }
-
-function optionalStatus(value: string | undefined): ComplaintStatus | null { return optionalEnum(value, ComplaintStatus, 'status') as ComplaintStatus | null; }
-
-function optionalSeverity(value: string | undefined): ComplaintSeverity | null { return optionalEnum(value, ComplaintSeverity, 'severity') as ComplaintSeverity | null; }
-
-function optionalEnum(value: string | undefined, options: Record<string, string>, field: string): string | null {
-  if (!value?.trim()) return null;
-  if (Object.values(options).includes(value)) return value;
-  throw new AppException('VALIDATION_FAILED', 'Invalid complaint search query', HttpStatus.BAD_REQUEST, [{ field, code: 'INVALID', message: `${field} is invalid.` }]);
-}
-
-function pageNumber(value: string | undefined, field: 'limit' | 'offset', fallback: number, max?: number): number {
-  if (!value?.trim()) return fallback;
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < (field === 'limit' ? 1 : 0)) {
-    throw new AppException('VALIDATION_FAILED', 'Invalid complaint search query', HttpStatus.BAD_REQUEST, [{ field, code: 'INVALID', message: `${field} is invalid.` }]);
-  }
-  return max ? Math.min(parsed, max) : parsed;
 }

@@ -22,14 +22,16 @@ export default async function StaffLayout({ children }: { children: ReactNode })
   const t = staffShellText[locale];
   const principal = await getStaffSessionPrincipal();
   const activePath = requestHeaders.get('x-cms-pathname') ?? '';
+  const activeSearch = requestHeaders.get('x-cms-search') ?? '';
   if (shouldRedirectStaffRoute(Boolean(principal), activePath)) {
     redirect(`/?locale=${locale}`);
   }
-  const allowedNav = principal ? (ROLE_NAV[principal.roleCode] ?? STAFF_NAV) : STAFF_NAV;
+  const allowedNav = principal ? navForPrincipal(ROLE_NAV[principal.roleCode] ?? STAFF_NAV, principal.permissions) : STAFF_NAV;
 
   return (
     <AppShell
       activePath={activePath}
+      activeSearch={activeSearch}
       locale={locale}
       navKeys={allowedNav}
       signedIn={Boolean(principal)}
@@ -49,4 +51,16 @@ export default async function StaffLayout({ children }: { children: ReactNode })
 
 export function shouldRedirectStaffRoute(hasPrincipal: boolean, pathname: string): boolean {
   return !hasPrincipal && !pathname.startsWith('/auth/reset');
+}
+
+function navForPrincipal(nav: readonly StaffNavKey[], permissions: readonly string[]): readonly StaffNavKey[] {
+  const has = (permission: string) => permissions.includes(permission);
+  return nav.filter((key) => {
+    if (key === 'admin') return has('USERS_MANAGE') || has('ROLES_MANAGE') || has('MASTER_DATA_MANAGE') || has('NOTIFICATIONS_MANAGE');
+    if (key === 'audit') return has('AUDIT_VIEW');
+    if (key === 'handoff') return has('COMPLAINT_ASSIGN');
+    if (key === 'reports' || key === 'dashboard' || key === 'manager' || key === 'promises') return has('REPORT_VIEW');
+    if (key === 'create') return has('COMPLAINT_CREATE');
+    return true;
+  });
 }

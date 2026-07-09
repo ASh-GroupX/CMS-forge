@@ -1,12 +1,11 @@
 import React from 'react';
 import { PortalShell } from '../../../components/portal-shell';
-import { PortalSurveyScreen, type PortalSurveyFixtureState } from '../../../components/portal-survey';
+import { PortalSurveyScreen } from '../../../components/portal-survey';
 import { portalSurveyText, resolvePortalSurveyLocale } from '../../../i18n/portal-survey';
 
 type SearchParams = {
   key?: string | string[];
   locale?: string | string[];
-  state?: string | string[];
   token?: string | string[];
 };
 
@@ -32,15 +31,11 @@ export default async function PortalSurveyPage({
       switchTarget={t.switchTarget}
       title={t.title}
     >
-      <PortalSurveyScreen locale={locale} state={previewState(readParam(params?.state))} surveyKey={surveyKey} />
+      <PortalSurveyScreen locale={locale} surveyKey={surveyKey} />
     </PortalShell>
   );
 }
 
 function readParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
-}
-
-function previewState(value: string | undefined): PortalSurveyFixtureState | undefined {
-  return value === 'success' || value === 'used' || value === 'expired' || value === 'validation' || value === 'loading' || value === 'error' || value === 'missing' ? value : undefined;
 }

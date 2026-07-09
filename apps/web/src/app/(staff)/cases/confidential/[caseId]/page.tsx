@@ -2,6 +2,7 @@ import React from 'react';
 import { Badge } from '../../../../../components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../../components/ui/table';
+import { caseLifecycleStatusLabel, caseTypeLabel, timelineTypeLabel } from '../../../../../i18n/domain-labels';
 import { confidentialCaseText } from '../../../../../i18n/staff-confidential-cases';
 import { resolveLocale } from '../../../../../i18n/staff-shell';
 import { getStaffConfidentialCaseTimeline } from '../../../../../lib/staff-confidential-cases-api';
@@ -29,39 +30,39 @@ export default async function ConfidentialCasePage({
   });
 
   return (
-    <Card aria-label={t.title} className="rounded-md border-slate-200 bg-white shadow-sm" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
-      <CardHeader className="border-b border-slate-200 p-4">
+    <Card aria-label={t.title} className="rounded-md border-line-subtle bg-surface shadow-sm" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
+      <CardHeader className="border-b border-line-subtle p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
-            <CardDescription className="mt-1 text-sm text-slate-600">{t.subtitle}</CardDescription>
+            <CardDescription className="mt-1 text-sm text-content-muted">{t.subtitle}</CardDescription>
           </div>
           <Badge variant="secondary">{t.privacyBadge}</Badge>
         </div>
       </CardHeader>
       <CardContent className="grid gap-4 p-4">
         {!timeline ? (
-          <p className="rounded-sm border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900" role="alert">{t.states.error}</p>
+          <p className="rounded-sm border border-status-error-border bg-status-error-bg px-3 py-2 text-sm text-status-error" role="alert">{t.states.error}</p>
         ) : (
           <>
-            <section className="rounded-md border border-slate-200 bg-slate-50 p-3" aria-label={t.sections.summary}>
+            <section className="rounded-md border border-line-subtle bg-surface-raised p-3" aria-label={t.sections.summary}>
               <h3 className="text-sm font-semibold">{t.sections.summary}</h3>
               <dl className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                 <Summary label={t.labels.subject} value={timeline.case.subject} />
-                <Summary label={t.labels.type} value={timeline.case.type} />
-                <Summary label={t.labels.status} value={timeline.case.lifecycleStatus} />
+                <Summary label={t.labels.type} value={caseTypeLabel(locale, timeline.case.type)} />
+                <Summary label={t.labels.status} value={caseLifecycleStatusLabel(locale, timeline.case.lifecycleStatus)} />
                 <Summary label={t.labels.branch} value={timeline.case.branchName} />
                 <Summary label={t.labels.owner} value={timeline.case.ownerName ?? '-'} />
                 <Summary label={t.labels.updated} value={timeline.case.updatedAt} />
               </dl>
             </section>
-            <section className="rounded-md border border-slate-200 bg-white p-3" aria-label={t.sections.notes}>
+            <section className="rounded-md border border-line-subtle bg-surface p-3" aria-label={t.sections.notes}>
               <h3 className="text-sm font-semibold">{t.sections.notes}</h3>
               {timeline.restrictedNotes.length === 0 ? (
-                <p className="mt-3 rounded-sm border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700" role="status">{t.states.empty}</p>
+                <p className="mt-3 rounded-sm border border-line-subtle bg-surface-raised px-3 py-2 text-sm text-content-muted" role="status">{t.states.empty}</p>
               ) : (
                 <Table className="mt-3 min-w-[44rem]">
-                  <TableHeader className="bg-slate-50 text-xs font-semibold uppercase tracking-normal text-slate-600">
+                  <TableHeader className="bg-surface-raised text-xs font-semibold uppercase tracking-normal text-content-muted">
                     <TableRow>
                       <TableHead className="text-start">{t.labels.author}</TableHead>
                       <TableHead className="text-start">{t.sections.notes}</TableHead>
@@ -80,10 +81,10 @@ export default async function ConfidentialCasePage({
                 </Table>
               )}
             </section>
-            <section className="rounded-md border border-slate-200 bg-white p-3" aria-label={t.sections.events}>
+            <section className="rounded-md border border-line-subtle bg-surface p-3" aria-label={t.sections.events}>
               <h3 className="text-sm font-semibold">{t.sections.events}</h3>
               <Table className="mt-3 min-w-[34rem]">
-                <TableHeader className="bg-slate-50 text-xs font-semibold uppercase tracking-normal text-slate-600">
+                <TableHeader className="bg-surface-raised text-xs font-semibold uppercase tracking-normal text-content-muted">
                   <TableRow>
                     <TableHead className="text-start">{t.labels.event}</TableHead>
                     <TableHead className="text-start">{t.labels.occurred}</TableHead>
@@ -92,7 +93,7 @@ export default async function ConfidentialCasePage({
                 <TableBody>
                   {timeline.events.map((event) => (
                     <TableRow key={`${event.type}-${event.occurredAt}`}>
-                      <TableCell className="font-semibold">{event.type}</TableCell>
+                      <TableCell className="font-semibold">{timelineTypeLabel(locale, event.type)}</TableCell>
                       <TableCell>{event.occurredAt}</TableCell>
                     </TableRow>
                   ))}
@@ -108,9 +109,9 @@ export default async function ConfidentialCasePage({
 
 function Summary({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-sm border border-slate-200 bg-white px-3 py-2">
-      <dt className="text-xs font-semibold text-slate-600">{label}</dt>
-      <dd className="mt-1 text-sm font-semibold text-slate-950">{value}</dd>
+    <div className="rounded-sm border border-line-subtle bg-surface px-3 py-2">
+      <dt className="text-xs font-semibold text-content-muted">{label}</dt>
+      <dd className="mt-1 text-sm font-semibold text-content-strong">{value}</dd>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import React from 'react';
 import { EmployeeToday } from '../../../../components/employee-today';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { getAssignableStaff } from '../../../../lib/staff-assignable-staff-api';
-import { getEmployeeTodayTasks } from '../../../../lib/staff-tasks-api';
+import { getEmployeeTodayTasksLoadResult } from '../../../../lib/staff-tasks-api';
 import { loadRelatedRecordsAction, quickAddTaskAction, updateTaskAction } from './actions';
 
 type SearchParams = { locale?: string | string[]; task?: string | string[] };
@@ -22,15 +22,15 @@ export default async function EmployeeTodayPage({
     ...(cookieHeader !== undefined ? { cookieHeader } : {}),
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
   };
-  const [data, staff] = await Promise.all([getEmployeeTodayTasks(apiInput), getAssignableStaff(apiInput)]);
-  return <EmployeeToday locale={locale} data={data} loadRelatedRecordsAction={loadRelatedRecordsAction} staff={staff} quickAddAction={quickAddTaskAction} result={readResult(params?.task)} updateAction={updateTaskAction} />;
+  const [data, staff] = await Promise.all([getEmployeeTodayTasksLoadResult(apiInput), getAssignableStaff(apiInput)]);
+  return <EmployeeToday locale={locale} data={data.status === 'ready' ? data.data : null} loadRelatedRecordsAction={loadRelatedRecordsAction} staff={staff} quickAddAction={quickAddTaskAction} result={readResult(params?.task)} state={data.status === 'ready' ? undefined : data.status} updateAction={updateTaskAction} />;
 }
 
 function readParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function readResult(value: string | string[] | undefined): 'error' | 'link-required' | 'success' | undefined {
+function readResult(value: string | string[] | undefined): 'denied' | 'error' | 'link-required' | 'success' | undefined {
   const result = readParam(value);
-  return result === 'success' || result === 'error' || result === 'link-required' ? result : undefined;
+  return result === 'success' || result === 'error' || result === 'denied' || result === 'link-required' ? result : undefined;
 }

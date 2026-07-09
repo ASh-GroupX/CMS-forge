@@ -65,6 +65,16 @@ export class NotificationsService {
     return (await this.notificationsRepository.listForRecipient(requiredText(recipientUserId, 'recipientUserId'))).map(notificationDto);
   }
 
+  async markRead(id: string, recipientUserId: string): Promise<{ id: string; read: boolean }> {
+    const cleanId = requiredText(id, 'id');
+    const read = await this.notificationsRepository.markInAppRead(cleanId, requiredText(recipientUserId, 'recipientUserId'));
+    return { id: cleanId, read };
+  }
+
+  async markAllRead(recipientUserId: string): Promise<{ readCount: number }> {
+    return { readCount: await this.notificationsRepository.markAllInAppRead(requiredText(recipientUserId, 'recipientUserId')) };
+  }
+
   async getCustomerPreference(customerId: string): Promise<NotificationPreferenceDto> {
     return preferenceDto(customerId, await this.notificationsRepository.findCustomerPreference(requiredText(customerId, 'customerId')));
   }

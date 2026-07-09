@@ -74,6 +74,7 @@ test('notifications service lists only current recipient rows', async () => {
     locale: 'en',
     payload: { taskId: 'task_1', title: 'Call customer' },
     queuedAt: '2026-06-21T09:00:00.000Z',
+    readAt: null,
   });
 });
 

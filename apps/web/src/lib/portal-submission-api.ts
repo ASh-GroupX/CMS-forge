@@ -10,13 +10,14 @@ export type PortalComplaintAttachmentRequest = {
 export type PortalComplaintCreateRequest = {
   customerName: string;
   customerPhone: string;
-  categoryId: string;
-  subcategoryId: string;
+  categoryId?: string;
+  subcategoryId?: string;
   description: string;
   incidentAt: string;
-  branchId: string;
+  branchId?: string;
   subject: string;
-  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  severity?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  manualTriage?: boolean;
   vehicleRelated?: boolean;
   vehicleVin?: string | null;
   attachments?: PortalComplaintAttachmentRequest[];

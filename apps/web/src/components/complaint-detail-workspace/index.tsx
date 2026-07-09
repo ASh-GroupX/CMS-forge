@@ -1,7 +1,9 @@
 import React from 'react';
 import { complaintDetailText } from '../../i18n/staff-complaint-detail';
 import { complaintRelationsText } from '../../i18n/staff-complaint-relations';
+import { caseLifecycleStatusLabel, caseTypeLabel, complaintStatusLabel, severityLabel, slaStateLabel } from '../../i18n/domain-labels';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
+import { formatDisplayDate, formatDisplayNumber, missingDisplay } from '../../lib/locale-format';
 import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
 import type { ComplaintFormOptions } from '../../lib/staff-complaint-form-options-api';
 import type { StaffComplaintRelationsView } from '../../lib/staff-complaint-relations-api';
@@ -14,10 +16,11 @@ import { ComplaintWorkflowModal, type ComplaintWorkflowFixtureState } from '../c
 import type { LookupFixtureState } from '../customer-vehicle-lookup';
 import { PageHeader, StateBlock, StatusBadge, Timeline } from '../shared/ui-primitives';
 import { CaseCapaPanel } from './case-capa-panel';
+import { CommunicationTimelinePanel } from './communication-timeline-panel';
 import { ComplaintRelationsPanel } from './complaint-relations-panel';
 import { ProvenanceCorrectionPanel } from './provenance-correction-panel';
 
-export type ComplaintDetailFixtureState = 'loading' | 'empty' | 'error';
+export type ComplaintDetailFixtureState = 'loading' | 'empty' | 'error' | 'denied' | 'notFound';
 export type { ComplaintAttachmentFixtureState };
 export type { ComplaintCommentsFixtureState };
 export type { ComplaintWorkflowFixtureState };
@@ -51,8 +54,7 @@ export function ComplaintDetailWorkspace({
 }) {
   const shell = staffShellText[locale];
   const t = complaintDetailText[locale];
-  const values = detail ? detailValues(detail, t.values) : t.values;
-  const timeline = detail ? detail.timeline : t.timeline.map((label) => ({ at: '', label }));
+  const values = detail ? detailValues(detail, t.values, locale) : t.values;
   const caseTimeline = detail?.caseTimeline ?? [];
   const provenance = detail ? provenanceValues(detail, t) : null;
 
@@ -60,12 +62,17 @@ export function ComplaintDetailWorkspace({
     <section aria-label={t.title} className="grid gap-4" dir={shell.dir}>
       <PageHeader description={t.subtitle} eyebrow={detail ? values.reference : undefined} title={t.title} />
       {state ? (
-        <StateBlock message={t.states[state]} tone={state === 'error' ? 'error' : 'neutral'} />
+        <StateBlock message={t.states[state]} tone={state === 'empty' || state === 'loading' ? 'neutral' : 'error'} />
       ) : (
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)]">
           {detail ? <DetailSummary detail={detail} locale={locale} text={t} values={values} /> : null}
+          {detail ? <CommunicationTimelinePanel detail={detail} locale={locale} text={t} /> : (
+            <DetailPanel title={t.sections.communicationTimeline}>
+              <StateBlock message={t.commentStates.empty} />
+            </DetailPanel>
+          )}
           <div className="grid min-w-0 gap-3">
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3">
               <DetailPanel title={t.sections.facts} rows={[
                 [t.labels.reference, values.reference],
                 [t.labels.status, values.status],
@@ -86,9 +93,6 @@ export function ComplaintDetailWorkspace({
               <DetailPanel title={t.sections.vehicle} rows={vehicleRows(detail, t, provenance)} />
               {detail ? <ProvenanceCorrectionPanel detail={detail} locale={locale} lookupState={lookupState} text={t.correction} /> : null}
             </div>
-            <DetailPanel title={t.sections.timeline}>
-              <Timeline emptyText={t.states.empty} items={timeline.map((item) => ({ meta: '', text: `${item.label} - ${formatDate(item.at, locale)}` }))} />
-            </DetailPanel>
             <ComplaintCommentsPanel comments={comments} commentsState={commentsState} complaintId={detail?.id} locale={locale} />
           </div>
           <aside className="grid min-w-0 content-start gap-3">
@@ -104,9 +108,9 @@ export function ComplaintDetailWorkspace({
             />
             <ComplaintAttachmentControls attachmentState={attachmentState} complaintId={detail?.id} locale={locale} />
             <DetailPanel title={t.sections.caseTimeline} rows={detail?.case ? [
-              [t.labels.caseType, detail.case.type],
-              [t.labels.status, detail.case.status],
-              [t.labels.caseLifecycle, detail.case.lifecycleStatus],
+              [t.labels.caseType, caseTypeLabel(locale, detail.case.type)],
+              [t.labels.status, complaintStatusLabel(locale, detail.case.status)],
+              [t.labels.caseLifecycle, caseLifecycleStatusLabel(locale, detail.case.lifecycleStatus)],
               [t.labels.caseBranch, detail.case.branchName],
               [t.labels.caseOwner, detail.case.ownerName ?? t.values.owner],
             ] : [[t.labels.caseLifecycle, t.states.empty]]}>
@@ -114,7 +118,7 @@ export function ComplaintDetailWorkspace({
             </DetailPanel>
             <CaseCapaPanel caseId={detail?.case?.id} caseOwnerId={detail?.case?.ownerId ?? undefined} items={detail?.capaActions ?? []} locale={locale} staff={staff} text={t.capa} />
             <DetailPanel title={t.sections.survey} rows={surveyRows(surveys, t, locale)} />
-            <ComplaintRelationsPanel complaintId={detail?.id} relations={relations} text={complaintRelationsText[locale]} />
+            <ComplaintRelationsPanel complaintId={detail?.id} locale={locale} relations={relations} text={complaintRelationsText[locale]} />
           </aside>
         </div>
       )}
@@ -130,17 +134,7 @@ function surveyRows(surveys: StaffComplaintSurvey[] | null | undefined, t: typeo
   ];
 }
 
-function DetailSummary({
-  detail,
-  locale,
-  text,
-  values,
-}: {
-  detail: StaffComplaintDetailView;
-  locale: Locale;
-  text: typeof complaintDetailText.en;
-  values: typeof complaintDetailText.en.values;
-}) {
+function DetailSummary({ detail, locale, text, values }: { detail: StaffComplaintDetailView; locale: Locale; text: typeof complaintDetailText.en; values: typeof complaintDetailText.en.values }) {
   const nextAction = detail.allowedActions[0];
   return (
     <section className="grid gap-2 rounded-md border border-line-subtle bg-surface p-3 md:grid-cols-3 xl:col-span-2 xl:grid-cols-6" aria-label={text.sections.facts}>
@@ -148,7 +142,7 @@ function DetailSummary({
       <SummaryItem label={text.labels.severity} value={<StatusBadge tone="danger">{values.severity}</StatusBadge>} />
       <SummaryItem label={text.labels.owner} value={values.owner} />
       <SummaryItem label={text.labels.sla} value={values.sla} />
-      <SummaryItem label={text.labels.nextAction} value={nextAction ? actionLabel(nextAction) : text.workflow.states.empty} />
+      <SummaryItem label={text.labels.nextAction} value={detail.nextAction ? actionDisplay(detail.nextAction, text, locale) : nextAction ? actionDisplay(nextAction, text, locale) : text.workflow.states.empty} />
       <SummaryItem label={text.labels.lastUpdated} value={formatDate(detail.updatedAt, locale)} />
     </section>
   );
@@ -195,16 +189,22 @@ function vehicleRows(detail: StaffComplaintDetailView | undefined, t: typeof com
   ];
 }
 
-function detailValues(detail: StaffComplaintDetailView, fallback: typeof complaintDetailText.en.values): typeof complaintDetailText.en.values {
+function detailValues(detail: StaffComplaintDetailView, fallback: typeof complaintDetailText.en.values, locale: Locale): typeof complaintDetailText.en.values {
   return {
     ...fallback,
     reference: detail.reference,
-    status: detail.status,
-    severity: detail.severity,
+    status: complaintStatusLabel(locale, detail.status),
+    severity: severityLabel(locale, detail.severity),
     category: detail.subject,
     owner: detail.assignee ?? fallback.owner,
-    sla: fallback.sla,
+    sla: slaLabel(detail, fallback, locale),
   };
+}
+
+function slaLabel(detail: StaffComplaintDetailView, fallback: typeof complaintDetailText.en.values, locale: Locale): string {
+  const percent = detail.slaPercentElapsed === null || detail.slaPercentElapsed === undefined ? '' : ` ${formatDisplayNumber(detail.slaPercentElapsed, locale)}%`;
+  const due = detail.slaDueAt ? ` - ${formatDisplayDate(detail.slaDueAt, locale)}` : '';
+  return `${slaStateLabel(locale, detail.slaState)}${percent}${due}` || fallback.sla;
 }
 
 function provenanceValues(detail: StaffComplaintDetailView, t: typeof complaintDetailText.en) {
@@ -218,14 +218,16 @@ function provenanceValues(detail: StaffComplaintDetailView, t: typeof complaintD
   };
 }
 
-function actionLabel(action: string): string {
-  return action.toLowerCase().replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+function actionDisplay(action: string, text: typeof complaintDetailText.en, locale: Locale): string {
+  const key = action.toUpperCase().replaceAll(' ', '_');
+  const labels = text.workflow.actionLabels as Partial<Record<string, string>>;
+  const label = labels[action] ?? labels[key];
+  if (label) return label;
+  return locale === 'ar' && /^[\x00-\x7F]+$/.test(action) ? missingDisplay(locale) : action;
 }
 
 function formatDate(value: string, locale: Locale): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-US', { dateStyle: 'medium', timeZone: 'UTC' }).format(date);
+  return formatDisplayDate(value, locale);
 }
 
 function DetailPanel({ children, rows, title }: { children?: React.ReactNode; rows?: readonly (readonly [string, string])[]; title: string }) {

@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { complaintDetailText } from '../../i18n/staff-complaint-detail';
 import type { Locale } from '../../i18n/staff-shell';
+import { LocalizedFileInput } from '../shared/localized-file-input';
 import { StateBlock, StatusBadge } from '../shared/ui-primitives';
 import {
   downloadStaffAttachment,
@@ -105,10 +105,10 @@ export function ComplaintAttachmentControls({
         </dl>
       )}
       <form className="mt-3 grid gap-2" onSubmit={upload}>
-        <Label className="grid gap-1 text-sm font-medium">
-          {t.attachmentActions.upload}
-          <Input accept=".jpg,.jpeg,.png,.webp,.pdf,.mp3,.wav,.ogg,.mp4,.mov,.webm,image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/wav,audio/ogg,video/mp4,video/quicktime,video/webm" type="file" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
-        </Label>
+        <div className="grid gap-1 text-sm font-medium">
+          <Label htmlFor="complaint-detail-attachment">{t.attachmentActions.upload}</Label>
+          <LocalizedFileInput accept=".jpg,.jpeg,.png,.webp,.pdf,.mp3,.wav,.ogg,.mp4,.mov,.webm,image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/wav,audio/ogg,video/mp4,video/quicktime,video/webm" id="complaint-detail-attachment" locale={locale} onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+        </div>
         <Button disabled={!complaintId || state === 'uploading'} type="submit" variant="outline">{t.attachmentActions.upload}</Button>
       </form>
       {visibleMessage ? <StateBlock className="mt-2" message={visibleMessage} tone={state === 'uploaded' || state === 'downloaded' ? 'success' : 'neutral'} /> : null}

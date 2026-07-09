@@ -3,7 +3,7 @@ import test from 'node:test';
 import { AppException } from '../../core/http-kernel.js';
 import type { AuditRecordInput } from '../../core/audit.service.js';
 import { DealsRepository } from './deals.repository.js';
-import type { UpdateDealStageData } from './deals.repository.js';
+import type { UpdateDealDetailsData, UpdateDealStageData } from './deals.repository.js';
 import { DealsService } from './deals.service.js';
 import type { DealRecord } from './deals.service.js';
 
@@ -92,13 +92,62 @@ test('persisted deal transition shares transaction client for deal, audit, and t
     toStage: 'BOOKING',
     currentHolderId: 'holder_2',
     stageDueAt: '2026-06-22T09:00:00.000Z',
+    updateNote: 'Customer finished booking documents.',
   }, { actorId: 'manager_1', correlationId: 'req_deal' });
 
   assert.equal(result.taskId, 'task_1');
   assert.equal(result.deal.stage, 'BOOKING');
   assert.deepEqual(clients, [txClient, txClient, txClient]);
   assert.equal(auditRecords[0]?.action, 'deal_stage_advanced');
-  assert.deepEqual(auditRecords[0]?.metadata, { fromStage: 'LEAD', toStage: 'BOOKING' });
+  assert.deepEqual(auditRecords[0]?.metadata, { fromStage: 'LEAD', toStage: 'BOOKING', updateNote: 'Customer finished booking documents.' });
+});
+
+test('persisted deal transition rejects missing update note', async () => {
+  const service = new DealsService({} as DealsRepository, { createInTransaction: async () => ({ id: 'task_1' }) } as never);
+
+  await assert.rejects(
+    service.advanceStagePersisted({
+      deal: deal(),
+      toStage: 'BOOKING',
+      currentHolderId: 'holder_2',
+      stageDueAt: '2026-06-22T09:00:00.000Z',
+    }),
+    (error) => error instanceof AppException && error.code === 'VALIDATION_FAILED',
+  );
+});
+
+test('deal details update does not advance stage or create a task', async () => {
+  const txClient = { deal: {}, auditLog: {} };
+  const clients: unknown[] = [];
+  const auditRecords: AuditRecordInput[] = [];
+  const repository = {
+    transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
+    findById: async () => row({ stage: 'LEAD', currentHolderId: 'sales_1' }),
+    updateDetails: async (data: UpdateDealDetailsData, client: unknown) => {
+      clients.push(client);
+      return row({ stage: 'LEAD', currentHolderId: data.currentHolderId, stageDueAt: data.stageDueAt });
+    },
+  } as unknown as DealsRepository;
+  const tasks = { createInTransaction: async () => assert.fail('detail update must not create a task') };
+  const service = new DealsService(repository, tasks as never, {
+    record: async (input: AuditRecordInput, client: unknown) => {
+      auditRecords.push(input);
+      clients.push(client);
+    },
+  } as never);
+
+  const result = await service.updateDetailsForActor('deal_1', {
+    currentHolderId: 'sales_2',
+    stageDueAt: '2026-06-22T09:00:00.000Z',
+    updateNote: 'Moved to sales lead while staying in lead stage.',
+  }, { userId: 'manager_1', roleCode: 'BRANCH_MANAGER', branchId: 'branch_1' }, { actorId: 'manager_1' });
+
+  assert.equal(result.stage, 'LEAD');
+  assert.equal(result.currentHolderId, 'sales_2');
+  assert.equal(result.stageDueAt, '2026-06-22T09:00:00.000Z');
+  assert.deepEqual(clients, [txClient, txClient]);
+  assert.equal(auditRecords[0]?.action, 'deal_details_updated');
+  assert.deepEqual(auditRecords[0]?.metadata, { stage: 'LEAD', updateNote: 'Moved to sales lead while staying in lead stage.' });
 });
 
 test('deal handoff board derives stage, stuck, holder, and delay data from scoped rows', async () => {
@@ -112,6 +161,7 @@ test('deal handoff board derives stage, stuck, holder, and delay data from scope
         row({ id: 'deal_ok', stage: 'PAYMENT', currentHolderId: 'holder_b', stageDueAt: new Date('2026-06-21T08:00:00.000Z') }),
       ];
     },
+    listHandoffHistory: async () => [],
   } as unknown as DealsRepository;
   const service = new DealsService(repository);
 

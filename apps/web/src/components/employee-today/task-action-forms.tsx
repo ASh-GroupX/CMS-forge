@@ -150,8 +150,8 @@ export function TaskActions({ action, locale, staff, task, t }: { action: TaskAc
   return (
     <div className="mt-3 grid gap-2 border-t border-line-subtle pt-3">
       <div className="flex flex-wrap gap-2">
-        <StatusForm action={action} label={t.actions.done} locale={locale} status="DONE" task={task} />
-        <StatusForm action={action} label={t.actions.waiting} locale={locale} nextAction={{ what: nextWhat, whoId: nextWho, when: nextWhen }} status="WAITING" task={task} />
+        <StatusForm action={action} label={t.actions.done} locale={locale} status="DONE" task={task} t={t} />
+        <StatusForm action={action} label={t.actions.waiting} locale={locale} nextAction={{ what: nextWhat, whoId: nextWho, when: nextWhen }} staff={staff} status="WAITING" task={task} t={t} />
       </div>
       <details className="rounded-sm border border-line-subtle bg-surface-raised px-3 py-2">
         <summary className="cursor-pointer text-sm font-semibold text-content-strong">{t.actions.updateDetails}</summary>
@@ -178,29 +178,41 @@ function StatusForm({
   label,
   locale,
   nextAction,
+  staff,
   status,
   task,
+  t,
 }: {
   action: TaskAction;
   label: string;
   locale: Locale;
   nextAction?: { what: string; whoId: string; when: string };
+  staff?: AssignableStaff[] | null | undefined;
   status: StaffTaskStatus;
   task: StaffTask;
+  t: EmployeeTodayText;
 }) {
   return (
-    <form action={action}>
-      <HiddenTaskFields locale={locale} taskId={task.id} />
-      <input name="status" type="hidden" value={status} />
-      {nextAction ? (
-        <>
-          <input name="nextActionWhat" type="hidden" value={nextAction.what} />
-          <input name="nextActionWhoId" type="hidden" value={nextAction.whoId} />
-          <input name="nextActionWhen" type="hidden" value={nextAction.when} />
-        </>
-      ) : null}
-      <Button size="sm" type="submit" variant={status === 'DONE' ? 'default' : 'outline'}>{label}</Button>
-    </form>
+    <details className="rounded-sm border border-line-subtle bg-surface-raised px-3 py-2">
+      <summary className="cursor-pointer text-sm font-semibold text-content-strong">{label}</summary>
+      <form action={action} className="mt-3 grid gap-2">
+        <HiddenTaskFields locale={locale} taskId={task.id} />
+        <input name="status" type="hidden" value={status} />
+        <p className="text-sm text-content-muted">{status === 'DONE' ? t.help.done : t.help.waiting}</p>
+        {nextAction ? (
+          <div className="grid gap-2 md:grid-cols-3">
+            <LabeledInput defaultValue={nextAction.what} label={t.fields.nextAction} name="nextActionWhat" required />
+            <StaffPicker initialUserId={nextAction.whoId} label={t.fields.nextOwner} labelName="nextActionWhoLabel" locale={locale} name="nextActionWhoId" staff={staff} t={t.staffPicker} />
+            <LabeledInput defaultValue={nextAction.when} label={t.fields.when} name="nextActionWhen" required type="datetime-local" />
+          </div>
+        ) : null}
+        <Label className="grid gap-1 text-sm font-medium">
+          {t.fields.statusNote}
+          <Textarea className="min-h-20 bg-surface" name="statusNote" required />
+        </Label>
+        <Button size="sm" type="submit" variant={status === 'DONE' ? 'default' : 'outline'}>{label}</Button>
+      </form>
+    </details>
   );
 }
 

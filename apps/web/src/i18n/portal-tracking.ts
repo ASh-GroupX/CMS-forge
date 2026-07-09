@@ -27,6 +27,7 @@ export const portalTrackingText = {
     },
     actions: {
       request: 'Send code',
+      changeReference: 'Change reference',
       verify: 'Show status',
       followUp: 'Submit follow-up',
       attachment: 'Upload attachment',
@@ -88,6 +89,7 @@ export const portalTrackingText = {
     },
     actions: {
       request: 'إرسال رمز التحقق',
+      changeReference: 'تغيير المرجع',
       verify: 'تحقق واعرض الحالة',
       followUp: 'إرسال المتابعة',
       attachment: 'رفع المرفق',

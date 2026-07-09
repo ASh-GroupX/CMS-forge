@@ -23,7 +23,7 @@ export function AdminMasterDataOverview({
 }) {
   const shell = staffShellText[locale];
   const t = adminUsersText[locale].masterData;
-  const parentName = new Map((options?.categories ?? []).map((category) => [category.id, category.nameEn]));
+  const parentName = new Map((options?.categories ?? []).map((category) => [category.id, localizedName(category, locale)]));
 
   return (
     <Card aria-label={t.title} className="rounded-md shadow-sm" dir={shell.dir}>
@@ -81,7 +81,7 @@ function EditableOptionsTable({
           {rows.length ? rows.map((row) => (
             <TableRow key={`${title}-${row.id}`}>
               <TableCell className="font-semibold">{row.code}</TableCell>
-              <TableCell>{row.nameEn}</TableCell>
+              <TableCell>{localizedName(row, locale)}</TableCell>
               <TableCell>{row.nameAr}</TableCell>
               <TableCell>{row.parentId ? parentName.get(row.parentId) ?? t.root : t.root}</TableCell>
               <TableCell>{action ? (
@@ -139,10 +139,14 @@ function ParentSelect({ currentId, locale, rows, value }: { currentId?: string |
       {t.headers[3]}
       <select className="rounded-md border border-input bg-background px-3 py-2" defaultValue={value} name="parentId">
         <option value="">{t.root}</option>
-        {rows.filter((row) => !row.parentId && row.id !== currentId).map((row) => <option key={row.id} value={row.id}>{row.nameEn}</option>)}
+        {rows.filter((row) => !row.parentId && row.id !== currentId).map((row) => <option key={row.id} value={row.id}>{localizedName(row, locale)}</option>)}
       </select>
     </label>
   );
+}
+
+function localizedName(item: { nameAr?: string | null; nameEn: string }, locale: Locale): string {
+  return locale === 'ar' && item.nameAr ? item.nameAr : item.nameEn;
 }
 
 function Field({ id, label, name, value = '' }: { id: string; label: string; name: string; value?: string | undefined }) {

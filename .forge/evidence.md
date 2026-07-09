@@ -12475,6 +12475,7 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 - Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
 - Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
 - Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check`; CRLF normalization warnings only.
 - Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
 
 ### Notes
@@ -12917,6 +12918,166 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 
 - Existing untracked `.playwright-cli/` scratch artifacts remain intentionally unstaged.
 - Generated `coverage/` visual-review artifacts were regenerated for inspection and remain untracked/unstaged by project convention.
+
+---
+
+## UX Gap Closure Plan - Nontechnical Clarity Layer
+
+Status: Complete
+Date: 2026-07-09
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `REQ-RBAC-001`, `PORTAL-SEC-001`, `CONTRACT-READINESS-002`
+
+### Scope
+
+- Added a plain-language portal success "What happens next?" block with EN/AR copy and kept the manual-review fallback submit path visible when option lists are unavailable.
+- Reworded the portal option-load fallback so nontechnical customers know they can still submit and staff will classify the complaint.
+- Added employee task-action helper copy explaining the difference between `Done` and `Waiting` without adding another modal.
+- Added work queue helper copy below filters so managers use `Due status` to find late or nearly late cases first.
+- Replaced staff-facing complaint detail ownership/SLA labels with `Due status` language outside admin/SLA configuration surfaces.
+- Added a complaint communication timeline legend for `Customer visible` and `Internal only`, plus a `Latest updates` label.
+- Added an accessible name to the complaint comment visibility select trigger after the accessibility proof exposed an unnamed control.
+- Updated shell, localization, visual, and accessibility proof signals for the new EN/AR copy and manual-review fallback behavior.
+
+### Security Self-Check
+
+- No backend API, OpenAPI contract, DB schema, permission model, RBAC, branch scope, audit, workflow state machine, attachment authorization, report, notification, DMS adapter, survey, or portal verification behavior changed.
+- React still does not decide complaint state, role, branch scope, workflow authority, audit visibility, report scope, notification scope, attachment authorization, or portal verification.
+- Portal submission still sends only customer-facing complaint fields and manual triage intent; it does not expose internal comments, audit logs, DMS codes, staff PII, unrelated complaints, secrets, OTPs, tokens, credentials, or public file URLs.
+- Arabic copy was verified through localization tests and a mojibake-marker scan on the touched EN/AR bundles.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (30 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `rg -n "Ø|Ù|�|Â"` over touched i18n/component files returned no mojibake markers.
+- Passed: `git diff --check` on the touched files returned no whitespace errors; CRLF normalization warnings only.
+- Needs Human Review: 6 quick usability tests with 2 customers, 2 employees, and 2 managers. The automated proof supports the 9.2/10 target, but the score should only be finalized after this human validation passes.
+
+### Notes
+
+- `test:e2e -- accessibility` initially exposed one existing unnamed complaint-comment visibility select trigger. The fix added the localized `Visibility` label to the trigger.
+- The portal accessibility proof now uses the manual-review label count because hidden classification controls must stay hidden when option lists fail.
+
+---
+
+## Communication Control Desk - Usability Hardening Follow-up
+
+Status: Complete
+Date: 2026-07-09
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `REQ-RBAC-001`, `PORTAL-SEC-001`, `CONTRACT-READINESS-002`
+
+### Scope
+
+- Repaired the customer portal fallback so unavailable classification data hides unusable selects, keeps the user in context, and submits as manual review with localized EN/AR action copy.
+- Moved the work queue due/SLA filter to the backend search contract so filtered pages are computed before pagination instead of disappearing after the page is loaded.
+- Split complaint detail load failures into distinct denied, not-found, empty, and error states so staff get actionable messages instead of a generic missing-case screen.
+- Reworked the communication timeline to prioritize the latest updates first and collapse secondary groups, reducing overload for nontechnical users.
+- Added pre-submit destructive confirmation for close/reject workflow actions only, and exposed next-action fields when marking employee tasks as waiting.
+- Corrected warning visual treatment to use warning tokens instead of error styling.
+
+### Security Self-Check
+
+- Roles and branch scope still come from the server session; the new search `sla` parameter is parsed server-side and does not let React decide scope.
+- React still does not decide complaint workflow state, audit writes, portal verification, or staff permissions.
+- Portal manual review keeps unavailable internal classification data hidden from the customer and does not expose internal comments, audit logs, DMS codes, staff PII, unrelated complaints, passwords, OTPs, tokens, or credentials.
+- No provider calls, secrets, database schema changes, or frontend-only business authority were added.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm test:api -- search`.
+- Passed: `corepack pnpm test:api -- workflow`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+
+---
+
+## UX/Product Repair Plan Implementation
+
+Status: Complete
+Date: 2026-07-09
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `REQ-RBAC-001`, `PORTAL-SEC-001`, `CONTRACT-READINESS-002`
+
+### Scope
+
+- Implemented backend-supported portal manual triage with optional branch/category/subcategory/severity IDs, default active record resolution, typed unavailable-defaults failure, and audit metadata marking manual triage intake.
+- Updated portal submission UX so option-loading failures preserve entered data, expose retry, and allow manual triage submission; subcategories now filter by selected category and stay disabled until category selection.
+- Changed deal handoff board and staff navigation access from report viewing to complaint assignment while keeping dashboard/report access on `REPORT_VIEW`.
+- Preserved `401`/`403` separately from load failures across queue, reports, tasks, deals, and promises; affected screens now render localized not-allowed states and write actions return denied/error result codes.
+- Removed production query-param fixture controls from complaint create/detail, reports, portal survey, and related proof routes; visual/demo states now render through proof tooling with explicit component props.
+- Corrected operational clarity issues: work queue age uses `createdAt`, workflow destructive confirmation is limited to close/reject actions, reports catalog prioritizes delivered/exportable reports with deferred reports collapsed, and Arabic admin surfaces prefer `nameAr` with `nameEn` fallback.
+
+### Security Self-Check
+
+- Backend remains authoritative for portal complaint creation, default resolution, RBAC, branch scope, workflow actions, audit writes, and report/deal/task permissions.
+- React still does not decide complaint state, role, branch scope, workflow authority, report scope, audit visibility, or portal verification.
+- No passwords, OTPs, tokens, credentials, provider secrets, internal comments, audit logs, DMS codes, unrelated complaints, or public file URLs were added.
+
+### Verification
+
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test:web -- shell`.
+- Passed: `corepack pnpm test:api -- portal`.
+- Passed: `corepack pnpm test:api -- deals`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm test:visual` (30 browser-backed route previews).
+
+### Notes
+
+- Used the repo's `corepack pnpm` scripts rather than `npm run` because this workspace is wired through pnpm/corepack.
+- No new dependencies or database migration were added.
+
+---
+
+## Communication Control Desk Repair
+
+Status: Complete
+Date: 2026-07-09
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `REQ-RBAC-001`, `PORTAL-SEC-001`
+
+### Scope
+
+- Added a shared web domain-label layer for complaint/task/deal/report/SLA/severity/blocker/audit labels and consumed it across staff queue, complaint detail, tasks, deals, reports, admin, portal, and confidential case views.
+- Reworked complaint detail into a unified staff communication stream with tabs for all updates, customer-visible updates, internal updates, files, status, and CAPA; comments/attachments/CAPA failures stay local and retryable.
+- Changed `/admin` into a workspace hub for users, roles, branches/departments, categories/SLA, and notification templates, with labelled workspace links and no master-screen data fetch.
+- Split reports into available now, operational export, and deferred/signoff groups while keeping export affordances permission-aware.
+- Kept desktop sidebar behavior and added/verified mobile module switching for staff surfaces; fixed complaint detail side-column overflow found by browser visual proof.
+- Added safer deal handoff detail updates that do not advance stage, with stage advancement still explicit and audited separately.
+
+### Security Self-Check
+
+- Backend authority remains server-owned: roles, permissions, branch scope, workflow transitions, deal stage gates, audit writes, report exports, notifications, and portal tracking state are not decided by React.
+- Portal tracking remains public-safe and separate from the staff timeline payload.
+- No passwords, OTPs, tokens, provider secrets, internal comments, audit logs, DMS codes, staff PII expansion, unrelated complaints, or public file URLs were added.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm test:api -- complaints` (76/76 TAP tests).
+- Passed: `corepack pnpm test:api -- reports` (32/32 TAP tests).
+- Passed: `corepack pnpm test:api -- auth` (38/38 TAP tests).
+- Passed: `corepack pnpm test:api -- deals` (9/9 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (30 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+
+### Notes
+
+- `test:visual` initially caught stale proof expectations for the renamed communication timeline/admin hub, then caught real staff-shell overflow from two-column comment/fact panels inside a narrow detail column. Both were repaired and the final visual proof passed.
+- Existing untracked `.playwright-cli/` scratch artifacts remain intentionally unstaged.
 
 ---
 

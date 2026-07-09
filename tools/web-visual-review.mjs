@@ -17,10 +17,14 @@ import PortalSubmissionPage from '../apps/web/src/app/portal/page.tsx';
 import PortalSurveyPage from '../apps/web/src/app/portal/survey/page.tsx';
 import PortalTrackingPage from '../apps/web/src/app/portal/track/page.tsx';
 import { StaffAuthLanding } from '../apps/web/src/app/staff-auth-landing.tsx';
+import { ComplaintDetailWorkspace } from '../apps/web/src/components/complaint-detail-workspace/index.tsx';
+import { ComplaintIntakeWorkspace } from '../apps/web/src/components/complaint-intake-workspace/index.tsx';
 import { PortalShell } from '../apps/web/src/components/portal-shell/index.tsx';
 import { PortalSubmissionScreen } from '../apps/web/src/components/portal-submission/index.tsx';
+import { PortalSurveyScreen } from '../apps/web/src/components/portal-survey/index.tsx';
 import { PortalTrackingPreview } from '../apps/web/src/components/portal-tracking/index.tsx';
 import { portalSubmissionText } from '../apps/web/src/i18n/portal-submission.ts';
+import { portalSurveyText } from '../apps/web/src/i18n/portal-survey.ts';
 import { portalTrackingText } from '../apps/web/src/i18n/portal-tracking.ts';
 import { staffShellText } from '../apps/web/src/i18n/staff-shell.ts';
 import { visualCases } from './web-proof-cases.mjs';
@@ -56,8 +60,12 @@ async function routePage(testCase) {
   if (testCase.route === 'staff-admin') return staffFrame(testCase, await AdminPage(staffProps));
   if (testCase.route === 'staff-audit') return staffFrame(testCase, await AuditPage({ searchParams: params }));
   if (testCase.route === 'staff-complaints') return staffFrame(testCase, await ComplaintsPage(staffProps));
-  if (testCase.route === 'staff-complaint-detail') return staffFrame(testCase, await ComplaintDetailPage({ ...staffProps, params: Promise.resolve({ id: 'cmp-proof' }) }));
-  if (testCase.route === 'staff-complaint-new') return staffFrame(testCase, await NewComplaintPage({ searchParams: params }));
+  if (testCase.route === 'staff-complaint-detail') return staffFrame(testCase, hasAnyParam(testCase, ['attachment', 'comments', 'detail', 'lookup', 'sla', 'workflow'])
+    ? await proofComplaintDetail(testCase)
+    : await ComplaintDetailPage({ ...staffProps, params: Promise.resolve({ id: 'cmp-proof' }) }));
+  if (testCase.route === 'staff-complaint-new') return staffFrame(testCase, hasAnyParam(testCase, ['create', 'lookup'])
+    ? React.createElement(ComplaintIntakeWorkspace, { createState: testCase.params.create, locale: testCase.locale, lookupState: testCase.params.lookup, options: await proofJson('/complaints/form-options') })
+    : await NewComplaintPage({ searchParams: params }));
   if (testCase.route === 'staff-dashboard') return staffFrame(testCase, await DashboardPage(staffProps));
   if (testCase.route === 'staff-deal-handoff') return staffFrame(testCase, await DealHandoffPage(staffProps));
   if (testCase.route === 'staff-reports') return staffFrame(testCase, await ReportsPage(staffProps));
@@ -67,8 +75,57 @@ async function routePage(testCase) {
     : PortalSubmissionPage({ searchParams: params });
   if (testCase.route === 'portal-tracking-preview') return portalFrame(testCase, 'track', React.createElement(PortalTrackingPreview, portalTrackingProps(testCase)));
   if (testCase.route === 'portal-tracking') return PortalTrackingPage({ searchParams: params });
-  if (testCase.route === 'portal-survey') return PortalSurveyPage({ searchParams: params });
+  if (testCase.route === 'portal-survey') return testCase.params.state
+    ? portalFrame(testCase, 'survey', React.createElement(PortalSurveyScreen, { locale: testCase.locale, state: testCase.params.state, surveyKey: 'proof-survey' }))
+    : PortalSurveyPage({ searchParams: params });
   return StaffShellPage({ searchParams: params });
+}
+
+async function proofComplaintDetail(testCase) {
+  const [{ complaint }, options, { staff }] = await Promise.all([
+    proofJson('/complaints/cmp-proof'),
+    proofJson('/complaints/form-options'),
+    proofJson('/staff/assignable'),
+  ]);
+  return React.createElement(ComplaintDetailWorkspace, {
+    attachmentState: testCase.params.attachment,
+    commentsState: testCase.params.comments,
+    detail: proofDetail(complaint, testCase),
+    locale: testCase.locale,
+    lookupState: testCase.params.lookup,
+    options,
+    relations: proofRelations(),
+    staff,
+    state: testCase.params.detail,
+    workflowState: testCase.params.workflow,
+  });
+}
+
+async function proofJson(path) {
+  return (await proofFetch(new URL(path, 'http://localhost:3000'))).json();
+}
+
+function hasAnyParam(testCase, names) {
+  return names.some((name) => testCase.params[name]);
+}
+
+function proofRelations() {
+  return {
+    candidates: [{ id: 'cmp_rel', referenceNumber: 'CMP-PROOF-REL-001', status: 'IN_PROGRESS', severity: 'HIGH', subject: 'Related proof complaint', branchName: 'Proof branch', customerName: 'Proof Customer', createdAt: '2026-06-18T00:00:00.000Z', updatedAt: '2026-06-20T00:00:00.000Z' }],
+    related: [],
+    state: 'ready',
+    windowDays: 30,
+  };
+}
+function proofDetail(complaint, testCase) {
+  return {
+    ...complaint,
+    ...(testCase.params.sla === 'missing' ? { slaPercentElapsed: undefined } : {}),
+    allowedActions: complaint.allowedActions ?? ['ACCEPT_INTAKE', 'ASSIGN_INVESTIGATION', 'REJECT_AS_INVALID'],
+    capaActions: complaint.capaActions ?? [],
+    caseTimeline: complaint.caseTimeline ?? [],
+    communicationTimeline: complaint.communicationTimeline ?? [],
+  };
 }
 
 function portalTrackingProps(testCase) {
@@ -86,9 +143,9 @@ function staffFrame(testCase, children) {
 }
 
 function portalFrame(testCase, current, children) {
-  const t = current === 'submit' ? portalSubmissionText[testCase.locale] : portalTrackingText[testCase.locale];
+  const t = current === 'submit' ? portalSubmissionText[testCase.locale] : current === 'track' ? portalTrackingText[testCase.locale] : portalSurveyText[testCase.locale];
   const switchLocale = testCase.locale === 'ar' ? 'en' : 'ar';
-  const switchPath = current === 'submit' ? '/portal' : '/portal/track';
+  const switchPath = current === 'submit' ? '/portal' : current === 'track' ? '/portal/track' : '/portal/survey';
   return React.createElement(PortalShell, {
     current,
     locale: testCase.locale,

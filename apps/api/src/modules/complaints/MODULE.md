@@ -29,7 +29,7 @@ Agent context manifest. Read this before editing the module.
 - `complaint_reference_sequences`
 
 Related tables may be read or coordinated through their owning modules once
-those modules exist: `comments`, `attachments`, `approvals`, `sla_events`,
+those modules exist: `comments`, `attachments`, `audit_logs`, `approvals`, `sla_events`,
 `notifications`, `portal_verifications`, `portal_sessions`, `compensation`,
 `customers`, `vehicles`, `branches`, `categories`, and `departments`.
 
@@ -46,6 +46,8 @@ those modules exist: `comments`, `attachments`, `approvals`, `sla_events`,
   staff case summary reads.
 - SurveysService through modules/surveys and SurveysModule for post-close
   satisfaction survey scheduling.
+- TasksService through TasksModule for task-owned timeline facts on complaint
+  detail.
 - Other modules' public services only. Never import another module repository,
   DTO folder, or Prisma model type.
 

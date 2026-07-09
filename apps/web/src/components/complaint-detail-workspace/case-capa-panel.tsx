@@ -8,9 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Textarea } from '../ui/textarea';
 import { StaffPicker, type StaffPickerText } from '../shared/staff-picker';
 import type { Locale } from '../../i18n/staff-shell';
+import { formatDisplayDate } from '../../lib/locale-format';
 import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
-import type { CaseCapaAction } from '../../lib/staff-detail-api';
-import { createCaseCapa } from '../../lib/staff-detail-api';
+import type { CaseCapaAction } from '../../lib/staff-case-sidecar-api';
+import { createCaseCapa } from '../../lib/staff-case-sidecar-api';
 
 export type CapaText = {
   title: string;
@@ -58,7 +59,7 @@ export function CaseCapaPanel({ caseId, caseOwnerId, items, locale, staff, text 
               <div className="font-medium text-content-strong">{item.rootCause}</div>
               <div>{item.correctiveAction}</div>
               <div>{item.preventiveAction}</div>
-              <div className="mt-1 text-xs text-content-muted">{item.ownerName} - {text.statusLabels[item.status]} - {item.dueAt.slice(0, 10)}</div>
+              <div className="mt-1 text-xs text-content-muted">{item.ownerName} - {text.statusLabels[item.status]} - {formatDisplayDate(item.dueAt, locale)}</div>
             </li>
           ))}
         </ol>

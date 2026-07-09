@@ -9,6 +9,7 @@ export type StaffQueueQuery = {
   pageSize?: number | null;
   search?: string | null;
   severity?: ComplaintSeverity | null;
+  sla?: ComplaintQueueItem['slaState'] | null;
   status?: ComplaintStatus | null;
 };
 
@@ -18,6 +19,7 @@ export type StaffQueueResult = {
   pageSize: number;
   rows: ComplaintQueueItem[];
 };
+export type StaffQueueLoadResult = { status: 'ready'; data: StaffQueueResult } | { status: 'denied' | 'error' };
 
 const STAFF_SESSION_COOKIE = 'cms_staff_session';
 const defaultPageSize = 10;
@@ -50,8 +52,23 @@ export async function getStaffQueueResult({
   fetchImpl?: typeof fetch;
   query?: StaffQueueQuery;
 } = {}): Promise<StaffQueueResult | null> {
+  const result = await getStaffQueueLoadResult({ apiUrl, ...(cookieHeader !== undefined ? { cookieHeader } : {}), fetchImpl, query });
+  return result.status === 'ready' ? result.data : null;
+}
+
+export async function getStaffQueueLoadResult({
+  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  cookieHeader,
+  fetchImpl = fetch,
+  query = {},
+}: {
+  apiUrl?: string;
+  cookieHeader?: string;
+  fetchImpl?: typeof fetch;
+  query?: StaffQueueQuery;
+} = {}): Promise<StaffQueueLoadResult> {
   const cookies = cookieHeader ?? await incomingCookieHeader();
-  if (!hasStaffSessionCookie(cookies)) return null;
+  if (!hasStaffSessionCookie(cookies)) return { status: 'denied' };
 
   try {
     const pageSize = clampPositive(query.pageSize, defaultPageSize, 50);
@@ -63,21 +80,23 @@ export async function getStaffQueueResult({
     append(url.searchParams, 'branchId', query.branchId);
     append(url.searchParams, 'status', query.status);
     append(url.searchParams, 'severity', query.severity);
+    append(url.searchParams, 'sla', query.sla);
     if (search) url.searchParams.set(isReferenceSearch(search) ? 'referenceNumber' : 'customer', search);
 
     const response = await fetchImpl(url, {
       cache: 'no-store',
       headers: { Accept: 'application/json', cookie: cookies },
     });
-    if (!response.ok) return null;
+    if (response.status === 401 || response.status === 403) return { status: 'denied' };
+    if (!response.ok) return { status: 'error' };
     const body = (await response.json()) as SearchResponse;
     const rows = rowsFrom(body);
-    if (!rows) return null;
+    if (!rows) return { status: 'error' };
     const offset = (page - 1) * pageSize;
     const hasNext = typeof body.hasNext === 'boolean' ? body.hasNext : typeof body.total === 'number' ? offset + pageSize < body.total : rows.length > pageSize;
-    return { hasNext, page, pageSize, rows: rows.slice(0, pageSize) };
+    return { status: 'ready', data: { hasNext, page, pageSize, rows: rows.slice(0, pageSize) } };
   } catch {
-    return null;
+    return { status: 'error' };
   }
 }
 
@@ -116,9 +135,18 @@ function rowFrom(row: Partial<ComplaintQueueItem>): ComplaintQueueItem | null {
     ...(branchName ? { branchName } : {}),
     ownerId: typeof row.ownerId === 'string' ? row.ownerId : null,
     ownerName: typeof row.ownerName === 'string' ? row.ownerName : null,
+    slaState: slaState(row.slaState),
+    slaDueAt: typeof row.slaDueAt === 'string' ? row.slaDueAt : null,
+    slaStage: typeof row.slaStage === 'string' ? row.slaStage : null,
+    slaPercentElapsed: typeof row.slaPercentElapsed === 'number' ? row.slaPercentElapsed : null,
+    nextAction: typeof row.nextAction === 'string' ? row.nextAction : null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
+}
+
+function slaState(value: unknown): ComplaintQueueItem['slaState'] {
+  return value === 'WARNING' || value === 'BREACHED' || value === 'CLOSED' ? value : 'ON_TRACK';
 }
 
 function hasStaffSessionCookie(cookieHeader: string): boolean {

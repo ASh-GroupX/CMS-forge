@@ -7,6 +7,7 @@ export type NotificationResponseDto = {
   locale: string;
   payload: unknown;
   queuedAt: string;
+  readAt: string | null;
 };
 
 export type NotificationTemplateResponseDto = {
@@ -31,6 +32,7 @@ export function notificationDto(notification: NotificationRecord): NotificationR
     locale: notification.locale,
     payload: notification.payload,
     queuedAt: notification.queuedAt.toISOString(),
+    readAt: notification.sentAt?.toISOString() ?? null,
   };
 }
 

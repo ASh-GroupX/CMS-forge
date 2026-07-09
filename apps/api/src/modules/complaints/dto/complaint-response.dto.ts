@@ -12,6 +12,11 @@ export type ComplaintQueueItemDto = {
   branchName: string;
   ownerId: string | null;
   ownerName: string | null;
+  slaState: 'ON_TRACK' | 'WARNING' | 'BREACHED' | 'CLOSED';
+  slaDueAt: string | null;
+  slaStage: string | null;
+  slaPercentElapsed: number | null;
+  nextAction: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -96,7 +101,35 @@ export type ComplaintDetailResponseDto = {
   complaint: ComplaintDetailDto;
 };
 
-export type ComplaintRelationItemDto = ComplaintQueueItemDto & {
+export type ComplaintTimelineItemDto = {
+  id: string;
+  type: 'ASSIGNMENT' | 'ATTACHMENT' | 'CAPA' | 'COMMENT' | 'COMPLAINT_STATUS' | 'NOTIFICATION' | 'PUBLIC_UPDATE' | 'SLA' | 'STATUS' | 'TASK' | 'TASK_COMMENT' | 'TASK_STATUS' | 'WORKFLOW';
+  createdAt: string;
+  actor: { id: string | null; name: string | null; role: string | null } | null;
+  visibility: 'INTERNAL' | 'PUBLIC' | 'SYSTEM';
+  customerVisible: boolean;
+  summary: string;
+  body?: string | null;
+  related?: { type: string; id: string; label?: string | null } | null;
+  metadata?: Record<string, string | number | boolean | null>;
+};
+
+export type ComplaintTimelineResponseDto = {
+  items: ComplaintTimelineItemDto[];
+};
+
+export type ComplaintRelationItemDto = {
+  id: string;
+  referenceNumber: string;
+  status: ComplaintStatus;
+  severity: ComplaintSeverity;
+  subject: string;
+  branchId: string;
+  branchName: string;
+  ownerId: string | null;
+  ownerName: string | null;
+  createdAt: string;
+  updatedAt: string;
   customerName: string;
 };
 

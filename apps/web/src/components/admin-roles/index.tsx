@@ -22,8 +22,8 @@ export function AdminRoles({ createAction, data, locale, state, updateAction }: 
       {createAction && data ? <CreateRoleForm action={createAction} data={data} locale={locale} /> : null}
       <section aria-label={t.roleList}><h2 className="mb-3 text-sm font-semibold">{t.roleList}</h2><div className="grid gap-3 md:grid-cols-2">
         {(data?.roles ?? []).map((role) => <article className="rounded-md border bg-muted/20 p-3" key={role.id}>
-          <div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold">{role.nameEn}</h3><p className="text-xs text-muted-foreground">{role.code}</p></div><Badge variant={role.isSystem ? 'secondary' : 'outline'}>{role.isSystem ? t.system : t.custom}</Badge></div>
-          <p className="mt-3 text-sm text-muted-foreground">{role.permissions.map(({ nameEn }) => nameEn).join(', ')}</p>
+          <div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold">{localizedName(role, locale)}</h3><p className="text-xs text-muted-foreground">{role.code}</p></div><Badge variant={role.isSystem ? 'secondary' : 'outline'}>{role.isSystem ? t.system : t.custom}</Badge></div>
+          <p className="mt-3 text-sm text-muted-foreground">{role.permissions.map((permission) => localizedName(permission, locale)).join(', ')}</p>
           {updateAction && data && role.code !== 'CUSTOMER_PORTAL' ? <EditPermissionsForm action={updateAction} data={data} locale={locale} role={role} /> : role.code === 'CUSTOMER_PORTAL' ? <p className="mt-3 text-xs text-muted-foreground">{t.systemLocked}</p> : null}
         </article>)}
       </div>{data && data.roles.length === 0 ? <p className="text-sm text-muted-foreground" role="status">{t.noRoles}</p> : null}</section>
@@ -66,14 +66,18 @@ function PermissionChecklist({ copyEnabled, data, initialCodes, locale, role }: 
     if (source) setSelected(source.permissions.map(({ code }) => code));
   };
   return <div className="grid gap-3 rounded-md border border-input bg-background p-3">
-    {copyEnabled ? <label className="grid gap-1 text-sm font-medium">{t.copyPermissions}<select className="rounded-md border border-input bg-background px-3 py-2" defaultValue="" onChange={(event) => copyFrom(event.target.value)}><option value="">{t.selectRole}</option>{data.roles.filter(({ id, code }) => id !== role?.id && code !== 'CUSTOMER_PORTAL').map((source) => <option key={source.id} value={source.id}>{source.nameEn}</option>)}</select></label> : null}
+    {copyEnabled ? <label className="grid gap-1 text-sm font-medium">{t.copyPermissions}<select className="rounded-md border border-input bg-background px-3 py-2" defaultValue="" onChange={(event) => copyFrom(event.target.value)}><option value="">{t.selectRole}</option>{data.roles.filter(({ id, code }) => id !== role?.id && code !== 'CUSTOMER_PORTAL').map((source) => <option key={source.id} value={source.id}>{localizedName(source, locale)}</option>)}</select></label> : null}
     {Object.entries(permissionGroups(t)).map(([group, codes]) => {
       const groupPermissions = permissions.filter(({ code }) => codes(code));
       return groupPermissions.length ? <fieldset className="grid gap-2" key={group}><legend className="text-sm font-semibold">{group}</legend><div className="grid gap-2 sm:grid-cols-2">
-        {groupPermissions.map((permission) => <label className="flex items-start gap-2 rounded-sm border border-border p-2 text-sm" key={permission.id}><input checked={selected.includes(permission.code)} className="mt-1 size-4 accent-primary" name="permissionCodes" onChange={(event) => setSelected((current) => event.target.checked ? [...current, permission.code] : current.filter((code) => code !== permission.code))} type="checkbox" value={permission.code} /><span><span className="block font-medium">{permission.nameEn}</span><span className="block text-xs text-muted-foreground">{permission.code}</span></span></label>)}
+        {groupPermissions.map((permission) => <label className="flex items-start gap-2 rounded-sm border border-border p-2 text-sm" key={permission.id}><input checked={selected.includes(permission.code)} className="mt-1 size-4 accent-primary" name="permissionCodes" onChange={(event) => setSelected((current) => event.target.checked ? [...current, permission.code] : current.filter((code) => code !== permission.code))} type="checkbox" value={permission.code} /><span><span className="block font-medium">{localizedName(permission, locale)}</span><span className="block text-xs text-muted-foreground">{permission.code}</span></span></label>)}
       </div></fieldset> : null;
     })}
   </div>;
+}
+
+function localizedName(item: { nameAr?: string | null; nameEn: string }, locale: Locale): string {
+  return locale === 'ar' && item.nameAr ? item.nameAr : item.nameEn;
 }
 
 function permissionGroups(t: (typeof adminRolesText)[Locale]) {

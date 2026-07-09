@@ -34,8 +34,28 @@ const taskCommentSelect = {
   author: { select: { nameEn: true } },
 } satisfies Prisma.TaskCommentSelect;
 
+const timelineTaskSelect = {
+  id: true,
+  title: true,
+  status: true,
+  createdAt: true,
+  ownerId: true,
+  assigneeId: true,
+  owner: { select: { nameEn: true } },
+  assignee: { select: { nameEn: true } },
+  statusHistory: {
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, fromStatus: true, toStatus: true, actorId: true, correlationId: true, createdAt: true, actor: { select: { nameEn: true } } },
+  },
+  comments: {
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, authorId: true, body: true, createdAt: true, author: { select: { nameEn: true } } },
+  },
+} satisfies Prisma.TaskSelect;
+
 export type TaskRecord = Prisma.TaskGetPayload<{ select: typeof taskSelect }>;
 export type TaskCommentRecord = Prisma.TaskCommentGetPayload<{ select: typeof taskCommentSelect }>;
+export type TaskTimelineRecord = Prisma.TaskGetPayload<{ select: typeof timelineTaskSelect }>;
 export type PromiseTaskRecord = TaskRecord & { statusHistory: { toStatus: TaskStatus; createdAt: Date }[] };
 type TaskClient = Pick<Prisma.TransactionClient, 'task' | 'taskComment' | 'taskStatusHistory'>;
 
@@ -175,6 +195,14 @@ export class TasksRepository {
       },
       orderBy: [{ status: 'asc' }, { dueAt: 'asc' }, { createdAt: 'asc' }],
       select: { ...taskSelect, statusHistory: { select: { toStatus: true, createdAt: true }, orderBy: { createdAt: 'asc' } } },
+    });
+  }
+
+  async listTimelineForComplaint(complaintId: string): Promise<TaskTimelineRecord[]> {
+    return this.prisma.task.findMany({
+      where: { links: { some: { entityType: TaskLinkEntityType.COMPLAINT, entityId: complaintId } } },
+      orderBy: { createdAt: 'asc' },
+      select: timelineTaskSelect,
     });
   }
 

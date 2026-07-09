@@ -77,6 +77,7 @@ test('complaint search rejects invalid pagination and enums', async () => {
   await assert.rejects(controller.search({ limit: '0' }, request(branchManager)), (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED');
   await assert.rejects(controller.search({ offset: '-1' }, request(branchManager)), (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED');
   await assert.rejects(controller.search({ status: 'BAD' }, request(branchManager)), (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED');
+  await assert.rejects(controller.search({ sla: 'BAD' }, request(branchManager)), (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED');
 });
 
 function row(id: string, branchId = 'branch_main'): ComplaintSearchRow {

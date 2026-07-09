@@ -2375,6 +2375,20 @@
             }
           },
           {
+            "name": "sla",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ON_TRACK",
+                "WARNING",
+                "BREACHED",
+                "CLOSED"
+              ]
+            }
+          },
+          {
             "name": "ownerId",
             "in": "query",
             "required": false,
@@ -4226,6 +4240,87 @@
           },
           "409": {
             "description": "Invalid stage transition or active blocker",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deals/{id}/details": {
+      "patch": {
+        "tags": [
+          "Deals"
+        ],
+        "operationId": "dealDetailsUpdate",
+        "summary": "Update deal holder and due date without advancing stage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DealDetailsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deal details updated without stage change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DealWriteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied, branch scope denied, or invalid CSRF token (CSRF_INVALID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Deal not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -6167,13 +6262,29 @@
         "required": [
           "customerName",
           "customerPhone",
-          "categoryId",
-          "subcategoryId",
           "description",
           "incidentAt",
-          "branchId",
-          "subject",
-          "severity"
+          "subject"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "categoryId",
+              "subcategoryId",
+              "branchId",
+              "severity"
+            ]
+          },
+          {
+            "required": [
+              "manualTriage"
+            ],
+            "properties": {
+              "manualTriage": {
+                "const": true
+              }
+            }
+          }
         ],
         "properties": {
           "customerName": {
@@ -6216,6 +6327,10 @@
               "MEDIUM",
               "LOW"
             ]
+          },
+          "manualTriage": {
+            "type": "boolean",
+            "description": "When true, the API resolves missing branch/category/severity fields to configured manual triage defaults."
           },
           "vehicleRelated": {
             "type": "boolean"
@@ -9282,7 +9397,8 @@
         "type": "object",
         "required": [
           "currentHolderId",
-          "stageDueAt"
+          "stageDueAt",
+          "updateNote"
         ],
         "properties": {
           "currentHolderId": {
@@ -9292,6 +9408,33 @@
           "stageDueAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "updateNote": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "DealDetailsRequest": {
+        "type": "object",
+        "required": [
+          "currentHolderId",
+          "stageDueAt",
+          "updateNote"
+        ],
+        "properties": {
+          "currentHolderId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "stageDueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updateNote": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "additionalProperties": false
@@ -9299,7 +9442,8 @@
       "DealBlockerRequest": {
         "type": "object",
         "required": [
-          "blocker"
+          "blocker",
+          "updateNote"
         ],
         "properties": {
           "blocker": {
@@ -9307,6 +9451,10 @@
               "string",
               "null"
             ]
+          },
+          "updateNote": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "additionalProperties": false

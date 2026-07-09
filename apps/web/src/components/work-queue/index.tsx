@@ -5,7 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { DataTable, Field, FilterBar, StateBlock, StatusBadge as SharedStatusBadge, type PrimitiveTone } from '../shared/ui-primitives';
+import { complaintStatusLabel, severityLabel, slaStateLabel } from '../../i18n/domain-labels';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
+import { formatDisplayDate, formatDisplayNumber } from '../../lib/locale-format';
 import type { ComplaintFormOptions } from '../../lib/staff-complaint-form-options-api';
 import type { ComplaintQueueItem, ComplaintSeverity, ComplaintStatus } from '../../lib/staff-complaints-api';
 import type { StaffQueueQuery, StaffQueueResult } from '../../lib/staff-queue-api';
@@ -16,17 +18,21 @@ export function WorkQueue({
   query = {},
   queue,
   rows,
+  state,
 }: {
   locale: Locale;
   options?: ComplaintFormOptions | null | undefined;
   query?: StaffQueueQuery;
   queue?: StaffQueueResult | null;
   rows?: ComplaintQueueItem[] | null;
+  state?: 'denied' | 'error' | undefined;
 }) {
   const t = staffShellText[locale].workQueue;
   const queueRows = queue?.rows ?? rows ?? null;
-  const isError = queueRows === null;
-  const isEmpty = !isError && queueRows.length === 0;
+  const visibleRows = queueRows;
+  const isError = visibleRows === null;
+  const errorMessage = state === 'denied' ? t.states.denied : t.states.error;
+  const isEmpty = !isError && visibleRows.length === 0;
   const page = queue?.page ?? query.page ?? 1;
   const filters = filterOptions(queueRows ?? [], t, query, options, locale);
 
@@ -61,14 +67,15 @@ export function WorkQueue({
             <Button type="submit">{t.actions.apply}</Button>
           </div>
         </FilterBar>
+        <p className="border-b border-line-subtle px-3 pb-3 text-xs text-content-muted">{t.filterHelp}</p>
         {isError ? (
-          <StateBlock className="m-4" message={t.states.error} tone="error" />
+          <StateBlock className="m-4" message={errorMessage} tone="error" />
         ) : isEmpty ? (
           <StateBlock className="m-4" message={t.states.empty} />
         ) : (
           <>
           <div className="grid gap-2 p-3 md:hidden">
-            {queueRows.map((row) => (
+            {visibleRows.map((row) => (
               <article className="grid gap-3 rounded-sm border border-line-subtle bg-surface p-3" key={row.id}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -83,9 +90,9 @@ export function WorkQueue({
                   </a>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <StatusBadge status={row.status} />
-                  <SeverityBadge severity={row.severity} />
-                  <SharedStatusBadge>{slaUnavailable(t)}</SharedStatusBadge>
+                  <StatusBadge locale={locale} status={row.status} />
+                  <SeverityBadge locale={locale} severity={row.severity} />
+                  <SlaBadge locale={locale} row={row} />
                 </div>
                 <dl className="grid grid-cols-2 gap-2 text-sm text-content-muted">
                   <div>
@@ -98,39 +105,44 @@ export function WorkQueue({
                   </div>
                   <div>
                     <dt className="font-medium text-content-strong">{t.labels.age}</dt>
-                    <dd>{formatAge(row.updatedAt, locale)}</dd>
+                    <dd>{formatAge(row.createdAt, locale)}</dd>
                   </div>
                   <div>
                     <dt className="font-medium text-content-strong">{t.labels.updated}</dt>
                     <dd>{formatDate(row.updatedAt, locale)}</dd>
+                  </div>
+                  <div className="col-span-2">
+                    <dt className="font-medium text-content-strong">{t.headers[7]}</dt>
+                    <dd>{row.nextAction ?? t.actions.open}</dd>
                   </div>
                 </dl>
               </article>
             ))}
           </div>
           <DataTable headers={t.headers} minWidth="58rem">
-                {queueRows.map((row) => (
+                {visibleRows.map((row) => (
                   <TableRow key={row.id} className="hover:bg-surface-raised">
                     <TableCell className="py-2 font-medium text-content-strong">
                       <span className="block">{row.referenceNumber}</span>
                       <span className="block text-xs font-normal text-content-muted">{row.subject}</span>
                     </TableCell>
                     <TableCell className="py-2">
-                      <StatusBadge status={row.status} />
+                      <StatusBadge locale={locale} status={row.status} />
                     </TableCell>
                     <TableCell className="py-2">
-                      <SeverityBadge severity={row.severity} />
+                      <SeverityBadge locale={locale} severity={row.severity} />
                     </TableCell>
                     <TableCell className="py-2">{row.ownerName ?? t.unassigned}</TableCell>
                     <TableCell className="py-2">{row.branchName ?? row.branchId}</TableCell>
                     <TableCell className="py-2">
-                      <SharedStatusBadge>{slaUnavailable(t)}</SharedStatusBadge>
+                      <SlaBadge locale={locale} row={row} />
                     </TableCell>
                     <TableCell className="py-2">
-                      <span className="block font-medium">{formatAge(row.updatedAt, locale)}</span>
+                      <span className="block font-medium">{formatAge(row.createdAt, locale)}</span>
                       <span className="block text-xs text-content-muted">{formatDate(row.updatedAt, locale)}</span>
                     </TableCell>
                     <TableCell className="py-2">
+                      <span className="mb-1 block max-w-56 truncate text-sm text-content-strong">{row.nextAction ?? t.actions.open}</span>
                       <Button asChild size="sm" variant="outline">
                         <a href={caseHref(locale, row.id)}>{t.actions.open}</a>
                       </Button>
@@ -174,22 +186,18 @@ function filterOptions(rows: ComplaintQueueItem[], t: typeof staffShellText[Loca
   for (const row of rows) if (!branches.has(row.branchId)) branches.set(row.branchId, row.branchName ?? row.branchId);
   if (query.branchId && !branches.has(query.branchId)) branches.set(query.branchId, query.branchId);
   return {
-    status: STATUS_OPTIONS.map((status) => ({ label: status, value: status })),
+    status: STATUS_OPTIONS.map((status) => ({ label: complaintStatusLabel(locale, status), value: status })),
     branch: [...branches].map(([value, label]) => ({ label, value })),
-    severity: SEVERITY_OPTIONS.map((severity) => ({ label: severity, value: severity })),
-    sla: [],
+    severity: SEVERITY_OPTIONS.map((severity) => ({ label: severityLabel(locale, severity), value: severity })),
+    sla: ['ON_TRACK', 'WARNING', 'BREACHED', 'CLOSED'].map((value) => ({ label: slaStateLabel(locale, value), value })),
   };
-}
-
-function slaUnavailable(t: typeof staffShellText[Locale]['workQueue']): string {
-  return (t.sla as typeof t.sla & { unavailable?: string }).unavailable ?? t.sla.backendScoped;
 }
 
 function filterValue(key: 'branch' | 'severity' | 'sla' | 'status', query: StaffQueueQuery): string {
   if (key === 'branch') return query.branchId ?? 'all';
   if (key === 'severity') return query.severity ?? 'all';
   if (key === 'status') return query.status ?? 'all';
-  return 'all';
+  return query.sla ?? 'all';
 }
 
 function pageHref(locale: Locale, query: StaffQueueQuery, page: number): string {
@@ -197,6 +205,7 @@ function pageHref(locale: Locale, query: StaffQueueQuery, page: number): string 
   append(params, 'branchId', query.branchId);
   append(params, 'search', query.search);
   append(params, 'severity', query.severity);
+  append(params, 'sla', query.sla);
   append(params, 'status', query.status);
   return `/complaints?${params.toString()}`;
 }
@@ -207,8 +216,7 @@ function caseHref(locale: Locale, id: string): string {
 }
 
 function formatDate(value: string, locale: Locale): string {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-US', { dateStyle: 'medium', timeZone: 'UTC' }).format(date);
+  return formatDisplayDate(value, locale);
 }
 
 function formatAge(value: string, locale: Locale): string {
@@ -240,10 +248,22 @@ const SEVERITY_TONE: Record<ComplaintSeverity, PrimitiveTone> = {
   LOW: 'neutral',
 };
 
-function StatusBadge({ status }: { status: ComplaintStatus }) {
-  return <SharedStatusBadge tone={STATUS_TONE[status] ?? 'neutral'}>{status}</SharedStatusBadge>;
+function StatusBadge({ locale, status }: { locale: Locale; status: ComplaintStatus }) {
+  return <SharedStatusBadge tone={STATUS_TONE[status] ?? 'neutral'}>{complaintStatusLabel(locale, status)}</SharedStatusBadge>;
 }
 
-function SeverityBadge({ severity }: { severity: ComplaintSeverity }) {
-  return <SharedStatusBadge tone={SEVERITY_TONE[severity]}>{severity}</SharedStatusBadge>;
+function SeverityBadge({ locale, severity }: { locale: Locale; severity: ComplaintSeverity }) {
+  return <SharedStatusBadge tone={SEVERITY_TONE[severity]}>{severityLabel(locale, severity)}</SharedStatusBadge>;
 }
+
+function SlaBadge({ locale, row }: { locale: Locale; row: ComplaintQueueItem }) {
+  const detail = row.slaPercentElapsed === null || row.slaPercentElapsed === undefined ? '' : ` ${formatDisplayNumber(row.slaPercentElapsed, locale)}%`;
+  return <SharedStatusBadge tone={SLA_TONE[row.slaState]}>{slaStateLabel(locale, row.slaState)}{detail}</SharedStatusBadge>;
+}
+
+const SLA_TONE: Record<ComplaintQueueItem['slaState'], PrimitiveTone> = {
+  ON_TRACK: 'success',
+  WARNING: 'warning',
+  BREACHED: 'danger',
+  CLOSED: 'neutral',
+};

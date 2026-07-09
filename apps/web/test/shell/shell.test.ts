@@ -26,12 +26,16 @@ import { AdminUsersRoles } from '../../src/components/admin-users-roles';
 import PasswordResetPage from '../../src/app/(staff)/auth/reset/page';
 import NotificationsPage from '../../src/app/(staff)/notifications/page';
 import ReportsPage from '../../src/app/(staff)/reports/page';
+import { ReportsDashboard } from '../../src/app/reports-dashboard';
 import PortalSubmissionPage from '../../src/app/portal/page';
 import PortalSurveyPage from '../../src/app/portal/survey/page';
 import PortalTrackingPage from '../../src/app/portal/track/page';
 import { buildPortalComplaintSubmission, PortalSubmissionScreen } from '../../src/components/portal-submission';
+import { PortalSurveyScreen } from '../../src/components/portal-survey';
 import { PortalTrackingPreview } from '../../src/components/portal-tracking';
 import { ComplaintAttachmentControls } from '../../src/components/complaint-attachment-controls';
+import { ComplaintDetailWorkspace } from '../../src/components/complaint-detail-workspace';
+import { ComplaintIntakeWorkspace } from '../../src/components/complaint-intake-workspace';
 import { ComplaintWorkflowModal } from '../../src/components/complaint-workflow-modal';
 import { AuditViewer } from '../../src/components/audit-viewer';
 import { adminBranchesText } from '../../src/i18n/staff-admin-branches';
@@ -115,7 +119,7 @@ test('staff shell renders app top bar controls', async () => {
   );
 
   assert.match(html, /aria-label="Switch language"/);
-  assert.match(html, /href="\?locale=ar"/);
+  assert.match(html, /href="\/\?locale=ar"/);
   assert.match(html, /aria-label="Toggle theme"/);
   assert.match(html, /aria-pressed="false"/);
   assert.match(html, /Skip to main content/);
@@ -320,7 +324,8 @@ test('portal submission renders English responsive complaint form', async () => 
   assert.match(html, /Incident date/);
   assert.match(html, /Subject/);
   assert.match(html, /What happened\?/);
-  assert.match(html, /Vehicle VIN/);
+  assert.match(html, /This complaint is vehicle-related/);
+  assert.doesNotMatch(html, /Vehicle VIN/);
   assert.match(html, /PDF, PNG, or JPG only/);
   assert.match(html, /Files are optional/);
   assert.match(html, /name="attachments"/);
@@ -343,6 +348,12 @@ test('portal submission keeps Arabic RTL localized labels', async () => {
   assert.ok(html.includes(portalSubmissionText.ar.fields.customerName));
   assert.ok(html.includes(portalSubmissionText.ar.fields.attachment));
   assert.ok(html.includes(portalSubmissionText.ar.validation.required));
+  const success = renderToStaticMarkup(React.createElement(PortalSubmissionScreen, { locale: 'ar', state: 'success' }));
+  assert.ok(success.includes(portalSubmissionText.ar.next.title));
+  assert.ok(success.includes(portalSubmissionText.ar.actions.copyReference));
+  assert.ok(success.includes(portalSubmissionText.ar.actions.track));
+  assert.equal(success.includes(portalSubmissionText.ar.fields.customerName), false);
+  assert.equal(success.includes(portalSubmissionText.ar.fields.description), false);
 });
 
 test('portal submission renders safe success reference result', async () => {
@@ -351,8 +362,11 @@ test('portal submission renders safe success reference result', async () => {
   );
 
   assert.match(html, /Complaint submitted/);
-  assert.match(html, /Reference number: CMP-PORTAL-001/);
+  assert.match(html, /CMP-PORTAL-001/);
+  assert.match(html, /What happens next\?/);
+  assert.match(html, /Keep the reference number to track updates\./);
   assert.match(html, /role="status"/);
+  assert.doesNotMatch(html, /name="customerName"|name="description"|Submit complaint/);
   assert.doesNotMatch(html, /\+966500000001|SEEDDEMO00001|audit|DMS|staff PII/i);
 });
 
@@ -405,7 +419,7 @@ test('portal submission production route ignores preview query strings', async (
   assert.match(html, /Submit complaint/);
 });
 
-test('portal submission option-load failure blocks submit honestly', async () => {
+test('portal submission option-load failure allows manual triage and retry', async () => {
   const html = renderToStaticMarkup(
     await PortalSubmissionPage({
       fetchImpl: async () => new Response('', { status: 503 }),
@@ -413,9 +427,12 @@ test('portal submission option-load failure blocks submit honestly', async () =>
     }),
   );
 
-  assert.match(html, /The form options did not load\. Refresh the page before submitting\./);
+  assert.match(html, /We could not load the list choices\. You can still submit\. Staff will classify it\./);
+  assert.match(html, /name="manualTriage" value="true"/);
+  assert.match(html, /Retry loading options/);
   assert.match(html, /role="alert"/);
-  assert.match(html, /disabled=""/);
+  assert.match(html, /Submit for manual review/);
+  assert.doesNotMatch(html, /name="branchId"|name="categoryId"|name="severity"/);
   assert.doesNotMatch(html, /Service Branch|Vehicle service|Engine noise/);
 });
 
@@ -500,8 +517,8 @@ test('portal tracking proof harness renders verified public status timeline only
   assert.match(html, /Reference number/);
   assert.match(html, /CMP-TRACK-001/);
   assert.match(html, /Updates you can see/);
-  assert.match(html, /SUBMITTED - 2026-06-19/);
-  assert.match(html, /IN_PROGRESS - 2026-06-19/);
+  assert.match(html, /Submitted - 2026-06-19/);
+  assert.match(html, /In progress - 2026-06-19/);
   assert.ok(html.includes(portalTimelineText.en.publicUpdate));
   assert.ok(html.includes(portalTimelineText.en.samplePublicUpdate));
   assert.doesNotMatch(html, /\+966500000001|audit|DMS|staff PII|internal/i);
@@ -611,7 +628,9 @@ test('portal survey renders bounded accessible rating controls', async () => {
 test('portal survey missing key renders invalid-link terminal state', async () => {
   const html = renderToStaticMarkup(await PortalSurveyPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
 
-  assert.match(html, /This survey link is invalid\. Use the link sent for your complaint\./);
+  assert.match(html, /Survey link is missing/);
+  assert.match(html, /Open the survey from the link sent for your complaint/);
+  assert.match(html, /Track complaint/);
   assert.match(html, /role="alert"/);
   assert.doesNotMatch(html, /Submit survey/);
   assert.doesNotMatch(html, /type="radio"/);
@@ -619,7 +638,7 @@ test('portal survey missing key renders invalid-link terminal state', async () =
 
 test('portal survey keeps Arabic RTL localized labels', async () => {
   const html = renderToStaticMarkup(
-    await PortalSurveyPage({ searchParams: Promise.resolve({ locale: 'ar', state: 'validation' }) }),
+    React.createElement(PortalSurveyScreen, { locale: 'ar', state: 'validation' }),
   );
 
   assert.match(html, /dir="rtl"/);
@@ -631,34 +650,50 @@ test('portal survey keeps Arabic RTL localized labels', async () => {
 
 test('portal survey renders success without preserving comment details', async () => {
   const html = renderToStaticMarkup(
-    await PortalSurveyPage({ searchParams: Promise.resolve({ locale: 'en', state: 'success' }) }),
+    React.createElement(PortalSurveyScreen, { locale: 'en', state: 'success' }),
   );
 
-  assert.match(html, /Survey submitted\. Thank you for your feedback\./);
+  assert.match(html, /Survey submitted/);
+  assert.match(html, /Thank you\. Your rating was saved for this complaint\./);
+  assert.match(html, /Track complaint/);
   assert.match(html, /role="status"/);
   assert.doesNotMatch(html, /The issue was resolved clearly|audit|DMS|staff PII/i);
 });
 
 test('portal survey used and expired states prevent resubmission', async () => {
-  const used = renderToStaticMarkup(await PortalSurveyPage({ searchParams: Promise.resolve({ locale: 'en', state: 'used' }) }));
+  const used = renderToStaticMarkup(React.createElement(PortalSurveyScreen, { locale: 'en', state: 'used' }));
   const expired = renderToStaticMarkup(
-    await PortalSurveyPage({ searchParams: Promise.resolve({ locale: 'en', state: 'expired' }) }),
+    React.createElement(PortalSurveyScreen, { locale: 'en', state: 'expired' }),
   );
 
-  assert.match(used, /This survey link has already been used\./);
-  assert.match(expired, /This survey link has expired\./);
+  assert.match(used, /This survey link was already used/);
+  assert.match(used, /Only one survey can be sent for this link/);
+  assert.match(expired, /This survey link has expired/);
+  assert.match(expired, /The survey is no longer available/);
   assert.doesNotMatch(used, /Submit survey/);
   assert.doesNotMatch(expired, /Submit survey/);
 });
 
+test('portal survey Arabic terminal states render complete cards', async () => {
+  for (const state of ['used', 'expired', 'missing'] as const) {
+    const html = renderToStaticMarkup(React.createElement(PortalSurveyScreen, { locale: 'ar', state }));
+    assert.ok(html.includes(portalSurveyText.ar.terminal[state].title));
+    assert.ok(html.includes(portalSurveyText.ar.terminal[state].body));
+    assert.ok(html.includes(portalSurveyText.ar.actions.trackComplaint));
+    assert.match(html, /role="alert"/);
+    assert.doesNotMatch(html, /type="radio"/);
+    assert.doesNotMatch(html, /Submit survey/);
+  }
+});
+
 test('portal survey renders validation loading and error states', async () => {
   const validation = renderToStaticMarkup(
-    await PortalSurveyPage({ searchParams: Promise.resolve({ locale: 'en', state: 'validation' }) }),
+    React.createElement(PortalSurveyScreen, { locale: 'en', state: 'validation' }),
   );
   const loading = renderToStaticMarkup(
-    await PortalSurveyPage({ searchParams: Promise.resolve({ locale: 'en', state: 'loading' }) }),
+    React.createElement(PortalSurveyScreen, { locale: 'en', state: 'loading' }),
   );
-  const error = renderToStaticMarkup(await PortalSurveyPage({ searchParams: Promise.resolve({ locale: 'en', state: 'error' }) }));
+  const error = renderToStaticMarkup(React.createElement(PortalSurveyScreen, { locale: 'en', state: 'error' }));
 
   assert.match(validation, /Choose a rating from 1 to 5\./);
   assert.match(loading, /Submitting survey\./);
@@ -692,6 +727,16 @@ function publicPortalOptions() {
 
 function employeeTodayEmpty() {
   return { dueToday: [], overdue: [], overduePromises: [], assignedToMe: [], waitingOnMe: [] };
+}
+
+function reportCatalogFixture() {
+  return {
+    items: [
+      { id: 'RPT-002', name: 'Overdue complaints', users: 'Managers', requiredFilters: ['branch', 'owner', 'severity'], status: 'DEFERRED', signoffRequired: true, exportable: false, unavailableReason: 'Deferred pending business signoff.' },
+      { id: 'RPT-001', name: 'Open complaints summary', users: 'Managers', requiredFilters: ['date', 'branch', 'category', 'severity', 'owner'], status: 'DELIVERED', signoffRequired: false, exportable: true, unavailableReason: null },
+      { id: 'RPT-017', name: 'Audit activity report', users: 'Admin', requiredFilters: ['actor', 'action', 'date', 'target'], status: 'DELIVERED', signoffRequired: false, exportable: true, unavailableReason: null },
+    ],
+  };
 }
 
 function managerRollupEmpty() {
@@ -811,20 +856,64 @@ function complaintDetailFixture(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function complaintDetailViewFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'cmp_fixture',
+    reference: 'CMP-FIXTURE-001',
+    status: 'IN_PROGRESS',
+    severity: 'LOW',
+    subject: 'Fixture complaint',
+    assignee: null,
+    branch: 'Fixture Branch',
+    updatedAt: '2026-06-19T00:00:00.000Z',
+    nextAction: 'Review customer update',
+    slaState: 'ON_TRACK',
+    slaDueAt: null,
+    slaPercentElapsed: null,
+    customer: { id: 'cust_fixture', name: 'Fixture Customer', phone: null, identifier: null, source: 'LOCAL' },
+    customerSource: 'LOCAL',
+    manualCustomer: false,
+    vehicleRelated: false,
+    vehicle: null,
+    vehicleSource: null,
+    manualVehicle: false,
+    vehicleDataUnavailableReason: null,
+    allowedActions: [],
+    timeline: [],
+    case: null,
+    caseTimeline: [],
+    capaActions: [],
+    communicationTimeline: [
+      { id: 'tl_public', type: 'COMMENT', createdAt: '2026-06-19T09:00:00.000Z', actor: { id: 'usr_1', name: 'CR Officer', role: 'CR_OFFICER' }, visibility: 'PUBLIC', customerVisible: true, summary: 'Customer update sent.', body: 'We are reviewing your complaint.' },
+      { id: 'tl_internal', type: 'COMMENT', createdAt: '2026-06-19T08:00:00.000Z', actor: { id: 'usr_2', name: 'Manager', role: 'CR_MANAGER' }, visibility: 'INTERNAL', customerVisible: false, summary: 'Internal review started.', body: 'Check service visit notes.' },
+    ],
+    ...overrides,
+  };
+}
+
 function workQueueHtml(html: string): string {
   return html.match(/aria-label="Cases"[\s\S]*?aria-label="Complaint detail"/)?.[0] ?? '';
 }
 
-function principal(overrides: { roleCode?: string; branchId?: string | null } = {}) {
+function principal(overrides: { permissions?: string[]; roleCode?: string; branchId?: string | null } = {}) {
+  const roleCode = overrides.roleCode ?? 'CR_OFFICER';
   return {
     sessionId: 'ses_test',
     userId: 'usr_test',
     email: 'staff@cms-auto.test',
     nameEn: 'Staff User',
     nameAr: 'موظف',
-    roleCode: overrides.roleCode ?? 'CR_OFFICER',
+    roleCode,
+    permissions: overrides.permissions ?? permissionsForRole(roleCode),
     branchId: overrides.branchId ?? 'branch_main',
   };
+}
+
+function permissionsForRole(roleCode: string): string[] {
+  if (roleCode === 'ADMIN') return ['STAFF_LOGIN', 'COMPLAINT_CREATE', 'COMPLAINT_ASSIGN', 'REPORT_VIEW', 'REPORT_EXPORT', 'AUDIT_VIEW', 'USERS_MANAGE', 'ROLES_MANAGE', 'MASTER_DATA_MANAGE', 'NOTIFICATIONS_MANAGE'];
+  if (roleCode === 'CR_MANAGER' || roleCode === 'BRANCH_MANAGER') return ['STAFF_LOGIN', 'COMPLAINT_CREATE', 'COMPLAINT_ASSIGN', 'REPORT_VIEW', 'REPORT_EXPORT'];
+  if (roleCode === 'MGMT_READONLY') return ['STAFF_LOGIN', 'REPORT_VIEW'];
+  return ['STAFF_LOGIN', 'COMPLAINT_CREATE', 'REPORT_VIEW'];
 }
 
 test('staff shell exposes password reset entry points', async () => {
@@ -1080,7 +1169,8 @@ test('work queue renders localized headers filters and pagination', async () => 
   assert.match(html, /Reference/);
   assert.match(html, /Severity/);
   assert.match(html, /Owner/);
-  assert.match(html, /SLA state/);
+  assert.match(html, /Due status/);
+  assert.match(html, /Use Due status to find late or nearly late cases first\./);
   assert.match(html, /Next action/);
   assert.match(html, /Status/);
   assert.match(html, /Branch/);
@@ -1231,27 +1321,30 @@ test('English and Arabic render dashboard and queue labels together', async () =
 });
 
 test('complaint detail workspace renders core regions and safe placeholders', async () => {
-  const html = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
+  const html = renderToStaticMarkup(React.createElement(ComplaintDetailWorkspace, { detail: complaintDetailViewFixture() as never, locale: 'en' }));
 
   assert.match(html, /Complaint detail/);
   assert.match(html, /Complaint facts/);
   assert.match(html, /Customer data/);
   assert.match(html, /Vehicle data/);
-  assert.match(html, /Responsible staff and SLA/);
-  assert.match(html, /Timeline/);
+  assert.match(html, /Responsible staff and due status/);
+  assert.match(html, /Case communication/);
+  assert.match(html, /Latest updates/);
+  assert.match(html, /Customer visible means the customer can see it\./);
+  assert.match(html, /Internal only means staff only\./);
   assert.match(html, /Survey results/);
   assert.match(html, /Internal comments/);
   assert.match(html, /Public updates/);
   assert.match(html, /Attachments/);
   assert.match(html, /Related complaints/);
   assert.match(html, /Current responsible staff/);
-  assert.match(html, /SLA timer/);
-  assert.match(html, /Customer data unavailable/);
+  assert.match(html, /Due status/);
+  assert.match(html, /Fixture Customer/);
   assert.match(html, /None/);
 });
 
 test('Arabic complaint detail workspace keeps RTL localized labels', async () => {
-  const html = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ locale: 'ar' }) }));
+  const html = renderToStaticMarkup(React.createElement(ComplaintDetailWorkspace, { detail: complaintDetailViewFixture({ allowedActions: ['ACCEPT_INTAKE'], nextAction: null, slaPercentElapsed: undefined }) as never, locale: 'ar' }));
 
   assert.match(html, /dir="rtl"/);
   assert.ok(html.includes(complaintDetailText.ar.title));
@@ -1260,7 +1353,10 @@ test('Arabic complaint detail workspace keeps RTL localized labels', async () =>
   assert.ok(html.includes(complaintDetailText.ar.sections.survey));
   assert.ok(html.includes(complaintDetailText.ar.sections.internalComments));
   assert.ok(html.includes(complaintDetailText.ar.badges.public));
+  assert.ok(html.includes(complaintDetailText.ar.timelineLegend.latest));
   assert.ok(html.includes(complaintRelationsText.ar.title));
+  assert.ok(html.includes((complaintDetailText.ar.workflow.actionLabels as Record<string, string>).ACCEPT_INTAKE));
+  assert.doesNotMatch(html, /Accept Intake|ACCEPT_INTAKE|undefined%|Review customer update/);
 });
 
 test('complaint detail route renders localized error shell when detail is unavailable', async () => {
@@ -1272,20 +1368,24 @@ test('complaint detail route renders localized error shell when detail is unavai
   );
 
   assert.match(english, /Complaint detail/);
-  assert.match(english, /Complaint detail could not be loaded\. Refresh the page or open the case again\./);
+  assert.match(english, /You do not have permission to view this case\./);
   assert.match(arabic, /dir="rtl"/);
   assert.ok(arabic.includes(complaintDetailText.ar.title));
-  assert.ok(arabic.includes(complaintDetailText.ar.states.error));
+  assert.ok(arabic.includes(complaintDetailText.ar.states.denied));
 });
 
 test('complaint detail workspace preview states render loading empty and error messages', async () => {
-  const loading = renderToStaticMarkup(await ComplaintDetailPage({ params: Promise.resolve({ id: 'cmp_1' }), searchParams: Promise.resolve({ detail: 'loading' }) }));
-  const empty = renderToStaticMarkup(await ComplaintDetailPage({ params: Promise.resolve({ id: 'cmp_1' }), searchParams: Promise.resolve({ detail: 'empty' }) }));
-  const error = renderToStaticMarkup(await ComplaintDetailPage({ params: Promise.resolve({ id: 'cmp_1' }), searchParams: Promise.resolve({ detail: 'error' }) }));
+  const loading = renderToStaticMarkup(React.createElement(ComplaintDetailWorkspace, { locale: 'en', state: 'loading' }));
+  const empty = renderToStaticMarkup(React.createElement(ComplaintDetailWorkspace, { locale: 'en', state: 'empty' }));
+  const error = renderToStaticMarkup(React.createElement(ComplaintDetailWorkspace, { locale: 'en', state: 'error' }));
+  const denied = renderToStaticMarkup(React.createElement(ComplaintDetailWorkspace, { locale: 'en', state: 'denied' }));
+  const notFound = renderToStaticMarkup(React.createElement(ComplaintDetailWorkspace, { locale: 'en', state: 'notFound' }));
 
   assert.match(loading, /Loading complaint detail\./);
   assert.match(empty, /Select a complaint from Cases to view its details\./);
   assert.match(error, /Complaint detail could not be loaded\. Refresh the page or open the case again\./);
+  assert.match(denied, /You do not have permission to view this case\./);
+  assert.match(notFound, /This case was not found\./);
   assert.match(error, /role="alert"/);
 });
 
@@ -1347,6 +1447,9 @@ test('complaint detail route renders real backend facts through the session cook
           ],
         },
       });
+    }
+    if (String(input).endsWith('/complaints/cmp%2Fdetail/timeline')) {
+      return jsonResponse({ items: [{ id: 'audit_att_1', type: 'ATTACHMENT', createdAt: '2026-06-19T11:00:00.000Z', actor: { id: 'usr_staff', name: 'Agent', role: null }, visibility: 'PUBLIC', customerVisible: true, summary: 'Attachment uploaded: invoice.pdf', related: { type: 'attachment', id: 'att_1', label: 'invoice.pdf' } }] });
     }
     if (String(input).endsWith('/complaints/cmp%2Fdetail/duplicate-candidates')) {
       return jsonResponse({
@@ -1450,6 +1553,7 @@ test('complaint detail route renders real backend facts through the session cook
 
   const detailCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail'));
   const commentsCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail/comments'));
+  const timelineCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail/timeline'));
   const surveyCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail/surveys'));
   const duplicateCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail/duplicate-candidates'));
   const relatedCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail/related'));
@@ -1458,6 +1562,7 @@ test('complaint detail route renders real backend facts through the session cook
   const staffCall = calls.find((call) => String(call.input).endsWith('/staff/assignable'));
   assert.ok(detailCall);
   assert.ok(commentsCall);
+  assert.ok(timelineCall);
   assert.ok(surveyCall);
   assert.ok(duplicateCall);
   assert.ok(relatedCall);
@@ -1466,6 +1571,7 @@ test('complaint detail route renders real backend facts through the session cook
   assert.ok(staffCall);
   assert.equal(String(detailCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail');
   assert.equal(String(commentsCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail/comments');
+  assert.equal(String(timelineCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail/timeline');
   assert.equal(String(surveyCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail/surveys');
   assert.equal(String(duplicateCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail/duplicate-candidates');
   assert.equal(String(relatedCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail/related');
@@ -1474,6 +1580,7 @@ test('complaint detail route renders real backend facts through the session cook
   assert.equal(String(staffCall.input), 'http://localhost:3000/staff/assignable');
   assert.doesNotMatch(String(detailCall.input), /role|actor|workflow|branchId/i);
   assert.doesNotMatch(String(commentsCall.input), /role|actor|workflow|branchId|token|credential/i);
+  assert.doesNotMatch(String(timelineCall.input), /role|actor|workflow|branchId|token|credential/i);
   assert.doesNotMatch(String(surveyCall.input), /role|actor|workflow|branchId|token|credential/i);
   assert.doesNotMatch(String(duplicateCall.input), /role|actor|workflow|branchId|token|credential/i);
   assert.doesNotMatch(String(relatedCall.input), /role|actor|workflow|branchId|token|credential/i);
@@ -1485,6 +1592,10 @@ test('complaint detail route renders real backend facts through the session cook
     cookie: 'cms_staff_session=raw-session',
   });
   assert.deepEqual(commentsCall.init?.headers, {
+    Accept: 'application/json',
+    cookie: 'cms_staff_session=raw-session',
+  });
+  assert.deepEqual(timelineCall.init?.headers, {
     Accept: 'application/json',
     cookie: 'cms_staff_session=raw-session',
   });
@@ -1505,6 +1616,7 @@ test('complaint detail route renders real backend facts through the session cook
     cookie: 'cms_staff_session=raw-session',
   });
   assert.match(html, /CMP-DETAIL-001/);
+  assert.match(html, /Attachment uploaded: invoice\.pdf/);
   assert.match(html, /Related complaints/);
   assert.match(html, /Likely duplicates/);
   assert.match(html, /Linked complaints/);
@@ -1513,8 +1625,8 @@ test('complaint detail route renders real backend facts through the session cook
   assert.match(html, /Link as related/);
   assert.match(html, /Unlink/);
   assert.match(html, /Related Customer/);
-  assert.match(html, /IN_PROGRESS/);
-  assert.match(html, /HIGH/);
+  assert.match(html, /In progress/);
+  assert.match(html, /High/);
   assert.match(html, /Engine noise/);
   assert.match(html, /Faisal Al-Otaibi/);
   assert.match(html, /\+966500000002/);
@@ -1528,7 +1640,7 @@ test('complaint detail route renders real backend facts through the session cook
   assert.doesNotMatch(html, />branch_main</);
   assert.match(html, /Case timeline/);
   assert.match(html, /Case status/);
-  assert.match(html, /CUSTOMER_COMPLAINT/);
+  assert.match(html, /Customer complaint/);
   assert.match(html, /Main Branch/);
   assert.match(html, /Owner User/);
   assert.match(html, /CAPA owner/);
@@ -1545,9 +1657,8 @@ test('complaint detail route renders real backend facts through the session cook
   assert.match(html, /Manual entry/);
   assert.match(html, /VIN unavailable on service invoice\./);
   assert.match(html, /Why are you changing this\?/);
-  assert.match(html, /Complaint SUBMITTED - Jun 18, 2026/);
-  assert.match(html, /SUBMITTED - Jun 18, 2026/);
-  assert.match(html, /IN_PROGRESS - Jun 19, 2026/);
+  assert.match(html, /Submitted/);
+  assert.match(html, /In progress/);
   assert.doesNotMatch(html, /usr_mgr|usr_staff|Hidden Staff|\+966500000001|SEEDDEMO00001/);
 });
 
@@ -1562,7 +1673,7 @@ test('complaint detail route renders error when backend denies detail read', asy
     }),
   );
 
-  assert.match(html, /Complaint detail could not be loaded\. Refresh the page or open the case again\./);
+  assert.match(html, /You do not have permission to view this case\./);
   assert.match(html, /role="alert"/);
   assert.doesNotMatch(html, /Complaint facts/);
   assert.doesNotMatch(html, /CMP-2026-001/);
@@ -1771,14 +1882,20 @@ test('complaint workflow modal renders minimal fields for required actions', () 
   assert.match(render('CLOSE', { vehicleNeedsUnavailableReason: true }), /Vehicle data unavailable reason/);
 });
 
-test('complaint detail workflow requires close and reject confirmation UI', async () => {
-  const html = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en', workflow: 'validation' }) }));
+test('complaint detail workflow only shows destructive confirmation for close and reject UI', async () => {
+  const options = { branches: [{ id: 'branch_service', code: 'SERVICE', nameEn: 'Service Branch', nameAr: 'ÙØ±Ø¹ Ø§Ù„ØµÙŠØ§Ù†Ø©' }], categories: [], departments: [{ id: 'dept_service', code: 'SERVICE', nameEn: 'Service', nameAr: 'Ø§Ù„ØµÙŠØ§Ù†Ø©' }], severities: [] };
+  const staff = [{ userId: 'usr_owner', displayName: 'Owner User', displayNameAr: 'Ù…Ø³Ø¤ÙˆÙ„', role: 'CR Manager', roleAr: 'Ù…Ø¯ÙŠØ±', branchLabel: 'Service Branch', branchLabelAr: 'ÙØ±Ø¹ Ø§Ù„ØµÙŠØ§Ù†Ø©' }];
+  const destructive = renderToStaticMarkup(React.createElement(ComplaintWorkflowModal, { allowedActions: ['CLOSE'], complaintId: 'cmp_1', locale: 'en', options, staff, workflowState: 'validation', status: 'RESOLVED' }));
+  const reject = renderToStaticMarkup(React.createElement(ComplaintWorkflowModal, { allowedActions: ['REJECT_AS_INVALID'], complaintId: 'cmp_1', locale: 'en', options, staff, workflowState: 'validation', status: 'SUBMITTED' }));
+  const assignment = renderToStaticMarkup(React.createElement(ComplaintWorkflowModal, { allowedActions: ['ASSIGN_INVESTIGATION'], complaintId: 'cmp_1', locale: 'en', options, staff, workflowState: 'validation', status: 'BRANCH_REVIEW' }));
 
-  assert.ok(html.includes(confirmationText.en.workflowCloseReject.title));
-  assert.ok(html.includes(confirmationText.en.workflowCloseReject.body));
-  assert.ok(html.includes(complaintDetailText.en.workflow.actions[5]));
-  assert.ok(html.includes(complaintDetailText.en.workflow.actions[6]));
-  assert.match(html, /role="alert"/);
+  assert.ok(destructive.includes(confirmationText.en.workflowCloseReject.title));
+  assert.ok(destructive.includes(confirmationText.en.workflowCloseReject.body));
+  assert.ok(destructive.includes(complaintDetailText.en.workflow.actions[5]));
+  assert.ok(reject.includes(confirmationText.en.workflowCloseReject.title));
+  assert.ok(reject.includes(complaintDetailText.en.workflow.actions[6]));
+  assert.doesNotMatch(assignment, new RegExp(confirmationText.en.workflowCloseReject.title));
+  assert.match(destructive, /role="alert"/);
 });
 
 test('complaint detail workflow preview states render safely', async () => {
@@ -1881,25 +1998,28 @@ test('Arabic admin branches departments keeps RTL localized labels', async () =>
   assert.ok(html.includes(adminBranchesText.ar.actions.create));
 });
 
-test('admin overview route renders real admin users surface without preview controls', async () => {
+test('admin overview route renders localized workspace hub without preview controls', async () => {
   const english = renderToStaticMarkup(await AdminPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
   const arabic = renderToStaticMarkup(await AdminPage({ searchParams: Promise.resolve({ locale: 'ar' }) }));
 
   assert.match(english, /dir="ltr"/);
-  assert.match(english, /Users, roles, and branch scope/);
-  assert.match(english, /Admin settings could not be loaded\. Try again\./);
-  assert.match(english, /Complaint intake dropdowns/);
-  assert.match(english, /Intake dropdown values could not be loaded\./);
-  assert.doesNotMatch(english, /Branches and departments/);
-  assert.doesNotMatch(english, /Categories, severities, and SLA policies/);
-  assert.doesNotMatch(english, /Notification templates/);
+  assert.match(english, /Admin hub/);
+  assert.match(english, /Users/);
+  assert.match(english, /Roles and permissions/);
+  assert.match(english, /Branches and departments/);
+  assert.match(english, /Categories and SLA/);
+  assert.match(english, /Notification templates/);
+  assert.match(english, /href="\/admin\/users\?locale=en"/);
+  assert.match(english, /href="\/admin\/roles\?locale=en"/);
+  assert.match(english, /href="\/admin\/branches\?locale=en"/);
   assert.doesNotMatch(english, /Audit viewer/);
+  assert.doesNotMatch(english, /Admin settings could not be loaded/);
+  assert.doesNotMatch(english, /Complaint intake dropdowns/);
   assert.match(arabic, /dir="rtl"/);
-  assert.ok(arabic.includes(adminUsersText.ar.title));
-  assert.ok(arabic.includes(adminUsersText.ar.masterData.title));
+  assert.match(arabic, /href="\/admin\/users\?locale=ar"/);
 });
 
-test('admin overview route renders real intake dropdown values from backend data', async () => {
+test('admin overview route is a hub and does not fetch workspace data', async () => {
   const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
   const fetchImpl: typeof fetch = async (input, init) => {
     calls.push({ input, init });
@@ -1931,21 +2051,17 @@ test('admin overview route renders real intake dropdown values from backend data
     }),
   );
 
-  assert.equal(calls.length, 2);
-  assert.match(html, /Complaint intake dropdowns/);
-  assert.match(html, /Main Branch/);
-  assert.match(html, /Vehicle issue/);
-  assert.match(html, /Engine noise/);
-  assert.match(html, /HIGH/);
-  assert.match(html, /Add/);
-  assert.match(html, /Save/);
+  assert.equal(calls.length, 0);
+  assert.match(html, /Choose one workspace/);
+  assert.match(html, /Open workspace/);
+  assert.doesNotMatch(html, /Main Branch|Vehicle issue|Engine noise/);
   assert.doesNotMatch(html, /disabled=""/);
 });
 
 test('admin overview route does not render disabled preview action buttons', async () => {
   const html = renderToStaticMarkup(await AdminPage({ searchParams: Promise.resolve({ locale: 'en', admin: 'conflict' }) }));
 
-  assert.match(html, /Admin settings could not be loaded\. Try again\./);
+  assert.match(html, /Admin hub/);
   assert.doesNotMatch(html, /Confirm deactivate/);
   assert.doesNotMatch(html, /disabled=""/);
 });
@@ -2533,30 +2649,40 @@ test('notifications route renders loading empty error and conflict states', asyn
   assert.match(conflict, /Notification changed\. Reload before retrying\./);
 });
 
-test('reports dashboard renders RPT-001 through RPT-017 for report-capable roles only', async () => {
-  const management = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'management', session: 'signed-in' }) }));
-  const admin = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'admin', session: 'signed-in' }) }));
+test('reports dashboard shows delivered reports first and defers unavailable reports', async () => {
+  const management = renderToStaticMarkup(React.createElement(ReportsDashboard, {
+    canExport: true,
+    catalog: reportCatalogFixture(),
+    locale: 'en',
+    state: 'ready',
+  }));
   const staff = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'staff', session: 'signed-in' }) }));
 
   assert.match(management, /Reports dashboard/);
-  assert.match(admin, /Reports dashboard/);
-  for (let index = 1; index <= 17; index += 1) {
-    assert.match(management, new RegExp(`RPT-${String(index).padStart(3, '0')}`));
-  }
-  assert.match(management, /Catalog unavailable/);
+  assert.match(management, /RPT-001/);
+  assert.match(management, /RPT-017/);
+  assert.match(management, /Deferred reports/);
+  assert.match(management, /RPT-002/);
+  assert.ok(management.indexOf('RPT-001') < management.indexOf('RPT-002'));
   assert.match(management, /Report data, metrics, filters, and exports remain backend-scoped\./);
   assert.doesNotMatch(staff, /Reports dashboard/);
 });
 
 test('reports dashboard preview states render safely', async () => {
-  const ready = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'management', reports: 'ready' }) }));
-  const loading = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'management', reports: 'loading' }) }));
-  const empty = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'management', reports: 'empty' }) }));
-  const error = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'management', reports: 'error' }) }));
-  const success = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'management', reports: 'success' }) }));
-  const validation = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'management', reports: 'validation' }) }));
-  const denied = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'management', reports: 'denied' }) }));
-  const conflict = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'management', reports: 'conflict' }) }));
+  const render = (state: import('../../src/app/reports-dashboard').ReportsFixtureState) => renderToStaticMarkup(React.createElement(ReportsDashboard, {
+    canExport: true,
+    catalog: reportCatalogFixture(),
+    locale: 'en',
+    state,
+  }));
+  const ready = render('ready');
+  const loading = render('loading');
+  const empty = render('empty');
+  const error = render('error');
+  const success = render('success');
+  const validation = render('validation');
+  const denied = render('denied');
+  const conflict = render('conflict');
 
   assert.match(ready, /Export controls are ready\./);
   assert.match(loading, /Loading report entries\./);
@@ -2564,13 +2690,28 @@ test('reports dashboard preview states render safely', async () => {
   assert.match(error, /Reports dashboard could not be loaded\. Try again\./);
   assert.match(success, /Report entry selected\./);
   assert.match(validation, /Report filters are pending backend validation\./);
-  assert.match(denied, /Export is unavailable for this report or role\./);
+  assert.match(denied, /You do not have permission to view these reports\./);
   assert.match(conflict, /Report catalog changed\. Reload before continuing\./);
 });
 
 test('reports dashboard renders export affordance without file generation', async () => {
-  const html = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'management', reports: 'ready' }) }));
-  const denied = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ role: 'management', reports: 'denied' }) }));
+  const html = renderToStaticMarkup(React.createElement(ReportsDashboard, {
+    canExport: true,
+    catalog: { items: [{ id: 'RPT-001', name: 'Open complaints summary', users: 'Managers', requiredFilters: ['date'], status: 'DELIVERED', signoffRequired: false, exportable: true, unavailableReason: null }] },
+    locale: 'en',
+    state: 'ready',
+  }));
+  const noExport = renderToStaticMarkup(React.createElement(ReportsDashboard, {
+    catalog: { items: [{ id: 'RPT-001', name: 'Open complaints summary', users: 'Managers', requiredFilters: ['date'], status: 'DELIVERED', signoffRequired: false, exportable: true, unavailableReason: null }] },
+    locale: 'en',
+    state: 'ready',
+  }));
+  const denied = renderToStaticMarkup(React.createElement(ReportsDashboard, {
+    canExport: true,
+    catalog: { items: [{ id: 'RPT-001', name: 'Open complaints summary', users: 'Managers', requiredFilters: ['date'], status: 'DELIVERED', signoffRequired: false, exportable: true, unavailableReason: null }] },
+    locale: 'en',
+    state: 'denied',
+  }));
 
   assert.match(html, /Operational row export/);
   assert.match(html, /generic operational rows, not specialized RPT outputs/);
@@ -2578,8 +2719,10 @@ test('reports dashboard renders export affordance without file generation', asyn
   assert.match(html, /Excel/);
   assert.match(html, /href="\/reports\/export\?format=csv"/);
   assert.match(html, /href="\/reports\/export\?format=excel"/);
-  assert.match(denied, /disabled[^>]*>CSV<\/button>/);
-  assert.match(denied, /title="Export is unavailable for this report or role\."/);
+  assert.doesNotMatch(noExport, /href="\/reports\/export\?format=csv"/);
+  assert.match(noExport, /title="Export requires the report export permission\."/);
+  assert.match(denied, /disabled[^>]*>Download CSV<\/button>/);
+  assert.match(denied, /title="You do not have permission to view these reports\."/);
   assert.match(html, /Exports use backend configured row limits\./);
   assert.match(html, /Export data is RBAC-filtered with the same report scope\./);
   assert.match(html, /Successful exports are audit logged by the backend\./);
@@ -2617,9 +2760,27 @@ test('reports dashboard renders real scoped rows from the backend read', async (
     if (url.endsWith('/reports/catalog')) {
       return jsonResponse({
         items: [
-          { id: 'RPT-001', name: 'Open complaints summary', users: 'Managers', requiredFilters: ['date', 'branch', 'category', 'severity', 'owner'], status: 'DELIVERED', signoffRequired: false },
-          { id: 'RPT-017', name: 'Audit activity report', users: 'Admin', requiredFilters: ['actor', 'action', 'date', 'target'], status: 'DELIVERED', signoffRequired: false },
+          { id: 'RPT-001', name: 'Open complaints summary', users: 'Managers', requiredFilters: ['date', 'branch', 'category', 'severity', 'owner'], status: 'DELIVERED', signoffRequired: false, exportable: true, unavailableReason: null },
+          { id: 'RPT-017', name: 'Audit activity report', users: 'Admin', requiredFilters: ['actor', 'action', 'date', 'target'], status: 'DELIVERED', signoffRequired: false, exportable: true, unavailableReason: null },
         ],
+      });
+    }
+    if (url.endsWith('/reports/kpis')) {
+      return jsonResponse({
+        kpis: {
+          onTimeCompletionPercent: 90,
+          activeOverdueCount: 1,
+          averageDelayHours: 2,
+          customerPromiseKeptPercent: 80,
+          reopenedCount: 0,
+          reopenRate: 0,
+          escalationCount: 1,
+          slaBreachRate: 5,
+          medianTatHours: 12,
+          agingBuckets: { zeroToOneDays: 1, twoToThreeDays: 0, fourToSevenDays: 0, overSevenDays: 0 },
+          averageFirstResponseHours: 1,
+          averageResolutionHours: 8,
+        },
       });
     }
     return jsonResponse({
@@ -2638,10 +2799,10 @@ test('reports dashboard renders real scoped rows from the backend read', async (
     });
   };
   const html = renderToStaticMarkup(
-    await StaffShellPage({
+    await ReportsPage({
       cookieHeader: 'cms_staff_session=raw-session',
       fetchImpl,
-      searchParams: Promise.resolve({ role: 'staff', session: 'signed-in' }),
+      searchParams: Promise.resolve({ locale: 'en' }),
     }),
   );
 
@@ -2654,10 +2815,10 @@ test('reports dashboard renders real scoped rows from the backend read', async (
     cookie: 'cms_staff_session=raw-session',
   });
   assert.match(html, /CMP-REAL-001 - Engine noise/);
-  assert.match(html, /Unavailable \/ Unavailable/);
-  assert.match(html, />Unavailable</);
+  assert.match(html, /Main Branch \/ Case Owner - CR Manager/);
+  assert.match(html, />Engine</);
   assert.doesNotMatch(html, />cat_engine<|branch_main \/ usr_owner/);
-  assert.match(html, /IN_PROGRESS/);
+  assert.match(html, /In progress/);
   assert.match(html, /RPT-017/);
 });
 
@@ -2677,10 +2838,10 @@ test('reports dashboard keeps catalog fallback when backend denies report rows',
     return jsonResponse({ error: { code: 'RBAC_FORBIDDEN' } }, 403);
   };
   const html = renderToStaticMarkup(
-    await StaffShellPage({
+    await ReportsPage({
       cookieHeader: 'cms_staff_session=raw-session',
       fetchImpl,
-      searchParams: Promise.resolve({ role: 'management', session: 'signed-in' }),
+      searchParams: Promise.resolve({ locale: 'en' }),
     }),
   );
 
@@ -2706,7 +2867,7 @@ test('reports route renders guarded catalog delivery statuses when rows are unav
   const arabic = renderToStaticMarkup(await ReportsPage({ cookieHeader: 'cms_staff_session=raw-session', fetchImpl, searchParams: Promise.resolve({ locale: 'ar' }) }));
 
   assert.match(html, /RPT-017/);
-  assert.match(html, /Delivered/);
+  assert.match(html, /Available now/);
   assert.match(html, /Deferred - pending business signoff/);
   assert.match(html, /Date from, Branch, Category, Severity, Owner/);
   assert.doesNotMatch(html, /href="\/reports\/export\?format=csv"/);
@@ -2717,29 +2878,33 @@ test('reports route renders guarded catalog delivery statuses when rows are unav
 });
 
 test('Arabic reports dashboard keeps RTL localized labels', async () => {
-  const html = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ locale: 'ar', role: 'management', reports: 'validation' }) }));
+  const html = renderToStaticMarkup(React.createElement(ReportsDashboard, {
+    catalog: reportCatalogFixture(),
+    locale: 'ar',
+    state: 'validation',
+  }));
 
   assert.match(html, /dir="rtl"/);
   assert.ok(html.includes(reportsDashboardText.ar.title));
   assert.ok(html.includes(reportsDashboardText.ar.export.title));
-  assert.ok(html.includes(reportsDashboardText.ar.badges.pending));
   assert.ok(html.includes(reportsDashboardText.ar.states.validation));
+  assert.ok(html.includes(reportsDashboardText.ar.catalog.deferredTitle));
 });
 
 test('reports route renders English and Arabic report labels', async () => {
   const english = renderToStaticMarkup(await ReportsPage({ cookieHeader: '', searchParams: Promise.resolve({ locale: 'en' }) }));
   const arabic = renderToStaticMarkup(
-    await ReportsPage({ cookieHeader: '', searchParams: Promise.resolve({ locale: 'ar', reports: 'validation' }) }),
+    await ReportsPage({ cookieHeader: '', searchParams: Promise.resolve({ locale: 'ar', reports: 'validation' } as never) }),
   );
 
   assert.match(english, /dir="ltr"/);
   assert.match(english, /Reports dashboard/);
   assert.match(english, /Operational row export/);
-  assert.match(english, /RPT-017/);
+  assert.doesNotMatch(english, /RPT-017/);
   assert.match(arabic, /dir="rtl"/);
   assert.ok(arabic.includes(reportsDashboardText.ar.title));
   assert.ok(arabic.includes(reportsDashboardText.ar.export.title));
-  assert.ok(arabic.includes(reportsDashboardText.ar.states.validation));
+  assert.doesNotMatch(arabic, new RegExp(reportsDashboardText.ar.states.validation));
 });
 
 test('reports route renders real scoped rows through the session cookie', async () => {
@@ -2747,6 +2912,7 @@ test('reports route renders real scoped rows through the session cookie', async 
   const fetchImpl: typeof fetch = async (input, init) => {
     calls.push({ input, init });
     const url = String(input);
+    if (url.endsWith('/auth/me')) return jsonResponse({ user: principal({ roleCode: 'ADMIN', branchId: null }) });
     if (url.endsWith('/reports/kpis')) {
       return jsonResponse({
         kpis: {
@@ -2788,8 +2954,8 @@ test('reports route renders real scoped rows through the session cookie', async 
     if (url.endsWith('/reports/catalog')) {
       return jsonResponse({
         items: [
-          { id: 'RPT-001', name: 'Open complaints summary', users: 'Managers', requiredFilters: ['date', 'branch', 'category', 'severity', 'owner'], status: 'DELIVERED', signoffRequired: false },
-          { id: 'RPT-017', name: 'Audit activity report', users: 'Admin', requiredFilters: ['actor', 'action', 'date', 'target'], status: 'DELIVERED', signoffRequired: false },
+          { id: 'RPT-001', name: 'Open complaints summary', users: 'Managers', requiredFilters: ['date', 'branch', 'category', 'severity', 'owner'], status: 'DELIVERED', signoffRequired: false, exportable: true, unavailableReason: null },
+          { id: 'RPT-017', name: 'Audit activity report', users: 'Admin', requiredFilters: ['actor', 'action', 'date', 'target'], status: 'DELIVERED', signoffRequired: false, exportable: true, unavailableReason: null },
         ],
       });
     }
@@ -2849,7 +3015,7 @@ test('reports route renders real scoped rows through the session cookie', async 
   assert.match(html, /name="departmentId"/);
   assert.doesNotMatch(html, /<label[^>]*>Department|>dept_report<\/option>/);
   assert.doesNotMatch(html, /branch_report \/ usr_report|>cat_report</);
-  assert.match(html, /IN_PROGRESS/);
+  assert.match(html, /In progress/);
   assert.match(html, /Accountability KPIs/);
   assert.match(html, /87\.5%/);
   assert.match(html, /SLA breach rate/);
@@ -3046,10 +3212,10 @@ test('complaint new route keeps Arabic RTL lookup labels', async () => {
 
 test('complaint new route renders lookup loading and error roles', async () => {
   const loading = renderToStaticMarkup(
-    await NewComplaintPage({ searchParams: Promise.resolve({ lookup: 'loading' }) }),
+    React.createElement(ComplaintIntakeWorkspace, { locale: 'en', lookupState: 'loading' }),
   );
   const error = renderToStaticMarkup(
-    await NewComplaintPage({ searchParams: Promise.resolve({ lookup: 'error' }) }),
+    React.createElement(ComplaintIntakeWorkspace, { locale: 'en', lookupState: 'error' }),
   );
 
   assert.match(loading, /Searching customer and vehicle records\./);
@@ -3117,7 +3283,7 @@ test('complaint create form preserves visible input values in success and error 
 
   assert.match(success, /Complaint created/);
   assert.match(success, /Reference: CMP-2026-001/);
-  assert.match(success, /Status: SUBMITTED/);
+  assert.match(success, /Status: Submitted/);
   assert.match(success, /Service concern/);
   assert.match(error, /Complaint could not be submitted\. Review the details and try again\./);
   assert.match(error, /Service concern/);
@@ -3149,7 +3315,7 @@ test('Arabic complaint create form keeps RTL localized labels', async () => {
 
 test('complaint new route renders lookup and complaint create form together', async () => {
   const html = renderToStaticMarkup(
-    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'en', create: 'validation' }) }),
+    React.createElement(ComplaintIntakeWorkspace, { locale: 'en', createState: 'validation' }),
   );
 
   assert.match(html, /Customer and vehicle lookup/);
@@ -3196,7 +3362,7 @@ test('complaint new route renders real branch category and severity options from
 
 test('complaint new route keeps Arabic RTL complaint create labels', async () => {
   const html = renderToStaticMarkup(
-    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'ar', create: 'validation' }) }),
+    React.createElement(ComplaintIntakeWorkspace, { locale: 'ar', createState: 'validation' }),
   );
 
   assert.match(html, /dir="rtl"/);
@@ -3207,7 +3373,7 @@ test('complaint new route keeps Arabic RTL complaint create labels', async () =>
 
 test('complaint create validation does not inject sample field values', async () => {
   const html = renderToStaticMarkup(
-    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'en', create: 'validation' }) }),
+    React.createElement(ComplaintIntakeWorkspace, { locale: 'en', createState: 'validation' }),
   );
 
   assert.match(html, /Review the highlighted fields\./);
@@ -3236,13 +3402,13 @@ test('complaint new route renders Arabic option labels from backend data', async
 
 test('complaint new route renders create success loading and network states', async () => {
   const success = renderToStaticMarkup(
-    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'en', create: 'success' }) }),
+    React.createElement(ComplaintIntakeWorkspace, { locale: 'en', createState: 'success' }),
   );
   const loading = renderToStaticMarkup(
-    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'en', create: 'loading' }) }),
+    React.createElement(ComplaintIntakeWorkspace, { locale: 'en', createState: 'loading' }),
   );
   const network = renderToStaticMarkup(
-    await NewComplaintPage({ searchParams: Promise.resolve({ locale: 'en', create: 'network' }) }),
+    React.createElement(ComplaintIntakeWorkspace, { locale: 'en', createState: 'network' }),
   );
 
   assert.match(success, /Complaint created/);
@@ -3484,7 +3650,7 @@ test('complaints route renders English work queue filters and pagination', async
   assert.match(html, /Branch-scoped cases/);
   assert.match(html, /Status/);
   assert.match(html, /Severity/);
-  assert.match(html, /SLA state/);
+  assert.match(html, /Due status/);
   assert.match(html, /Search/);
   assert.match(html, /Page 1/);
   assert.match(html, /Previous/);
@@ -3567,7 +3733,7 @@ test('complaints route renders error state when backend denies queue access', as
     }),
   );
 
-  assert.match(html, /Cases could not be loaded\. Refresh the page or sign in again\./);
+  assert.match(html, /You do not have permission to view these cases\./);
   assert.match(html, /role="alert"/);
 });
 
@@ -3608,8 +3774,8 @@ test('complaints route renders real rows through the session cookie', async () =
   assert.doesNotMatch(String(queueCall.input), /role|actor|branchId/i);
   assert.match(html, /CMP-ROUTE-001/);
   assert.match(html, /Route test complaint/);
-  assert.match(html, /SUBMITTED/);
-  assert.match(html, /MEDIUM/);
+  assert.match(html, /Submitted/);
+  assert.match(html, /Medium/);
   assert.match(html, /Route Owner/);
   assert.match(html, /Route Branch/);
   assert.doesNotMatch(html, /usr_route/);
@@ -3645,16 +3811,16 @@ test('complaints route sends URL-backed queue filters to the scoped search API',
     await ComplaintsPage({
       cookieHeader: 'cms_staff_session=raw-session',
       fetchImpl,
-      searchParams: Promise.resolve({ branchId: 'branch_main', locale: 'en', page: '2', search: 'CMP-FILTER', severity: 'HIGH', status: 'IN_PROGRESS' }),
+      searchParams: Promise.resolve({ branchId: 'branch_main', locale: 'en', page: '2', search: 'CMP-FILTER', severity: 'HIGH', sla: 'BREACHED', status: 'IN_PROGRESS' }),
     }),
   );
 
-  assert.equal(String(calls[0]?.input), 'http://localhost:3000/complaints/search?limit=11&offset=10&branchId=branch_main&status=IN_PROGRESS&severity=HIGH&referenceNumber=CMP-FILTER');
+  assert.equal(String(calls[0]?.input), 'http://localhost:3000/complaints/search?limit=11&offset=10&branchId=branch_main&status=IN_PROGRESS&severity=HIGH&sla=BREACHED&referenceNumber=CMP-FILTER');
   assert.deepEqual(calls[0]?.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
   assert.match(html, /CMP-FILTER-001/);
   assert.match(html, /Page 2/);
   assert.match(html, /href="\/complaints\/cmp_filter_1\?locale=en"/);
-  assert.match(html, /href="\/complaints\?locale=en&amp;page=1&amp;branchId=branch_main&amp;search=CMP-FILTER&amp;severity=HIGH&amp;status=IN_PROGRESS"/);
+  assert.match(html, /href="\/complaints\?locale=en&amp;page=1&amp;branchId=branch_main&amp;search=CMP-FILTER&amp;severity=HIGH&amp;sla=BREACHED&amp;status=IN_PROGRESS"/);
   assert.doesNotMatch(String(calls[0]?.input), /role|actor|workflow|owner/i);
 });
 
@@ -3725,6 +3891,8 @@ test('employee today route renders real task buckets through the session cookie'
   assert.doesNotMatch(String(todayCall.input), /role|actor|branchId/i);
   assert.doesNotMatch(String(staffCall.input), /role|actor|branchId/i);
   assert.match(html, /My tasks/);
+  assert.match(html, /Use this when nobody needs to follow up\./);
+  assert.match(html, /Choose who follows up, what they do, and when\./);
   assert.match(html, /Layla Al-Farsi - CR Manager - Main Branch/);
   assert.match(html, /Related to/);
   assert.ok(html.includes(employeeTodayText.en.recordPicker.loading));
@@ -3766,7 +3934,7 @@ test('employee today route renders empty and denied states safely', async () => 
 
   assert.match(empty, /No tasks need your attention right now\./);
   assert.match(empty, /role="status"/);
-  assert.match(denied, /My tasks could not be loaded\. Refresh the page or sign in again\./);
+  assert.match(denied, /You do not have permission to view or change these tasks\./);
   assert.match(denied, /role="alert"/);
 });
 
@@ -3774,7 +3942,9 @@ test('employee today route keeps Arabic RTL labels', async () => {
   const html = renderToStaticMarkup(
     await EmployeeTodayPage({
       cookieHeader: 'cms_staff_session=raw-session',
-      fetchImpl: async () => jsonResponse(employeeTodayEmpty()),
+      fetchImpl: async (input) => String(input).endsWith('/tasks/today')
+        ? jsonResponse({ ...employeeTodayEmpty(), dueToday: [taskFixture({ id: 'task_ar', title: 'مراجعة حالة العميل' })] })
+        : new Response('', { status: 503 }),
       searchParams: Promise.resolve({ locale: 'ar' }),
     }),
   );
@@ -3783,9 +3953,11 @@ test('employee today route keeps Arabic RTL labels', async () => {
   assert.ok(html.includes(employeeTodayText.ar.title));
   assert.ok(html.includes(employeeTodayText.ar.fields.assignee));
   assert.ok(html.includes(employeeTodayText.ar.fields.relatedTo));
+  assert.ok(html.includes(employeeTodayText.ar.help.waiting));
   assert.ok(html.includes(employeeTodayText.ar.recordPicker.loading));
   assert.ok(html.includes(employeeTodayText.ar.staffPicker.error));
-  assert.ok(html.includes(employeeTodayText.ar.states.empty));
+  assert.match(html, /٢٠.*٠٦.*٢٠٢٦/);
+  assert.doesNotMatch(html, />2026-06-20T|>2026-06-20 12:00/);
 });
 
 // ---- (staff)/tasks/sent route ----
@@ -3920,7 +4092,7 @@ test('promises route renders empty and denied states safely', async () => {
 
   assert.match(empty, /No customer promises are visible right now\./);
   assert.match(empty, /role="status"/);
-  assert.match(denied, /Promises could not be loaded\. Sign in and try again\./);
+  assert.match(denied, /You do not have permission to view or change these promises\./);
   assert.match(denied, /role="alert"/);
 });
 
@@ -3967,7 +4139,7 @@ test('manager control room route renders rollup sections through the session coo
   assert.match(html, /Release delivery gate/);
   assert.match(html, /Confirm customer refund date/);
   assert.match(html, /Customer promise/);
-  assert.match(html, /NEXT_ACTION_OVERDUE, NO_MOVEMENT/);
+  assert.match(html, /Next action overdue, No movement/);
   assert.match(html, /Open promises/);
 });
 
@@ -3989,7 +4161,7 @@ test('manager control room route renders empty and denied states safely', async 
 
   assert.match(empty, /No manager rollup items are active right now\./);
   assert.match(empty, /role="status"/);
-  assert.match(denied, /Manager Control Room could not be loaded\. Sign in with a manager or admin role\./);
+  assert.match(denied, /You do not have permission to view the manager control room\./);
   assert.match(denied, /role="alert"/);
 });
 
@@ -4014,7 +4186,8 @@ test('deal handoff board route renders scoped deal data through the session cook
   const fetchImpl: typeof fetch = async (input, init) => {
     calls.push({ input, init });
     if (String(input).endsWith('/deals/handoff-board')) {
-      const blocked = dealFixture({ id: 'deal_stuck', title: 'Unblock finance approval', blocker: 'Missing bank approval', delayAgeMinutes: 120 });
+      const action = { id: 'audit_deal_stuck', action: 'deal_stage_advanced', actor: { id: 'manager_1', name: 'Manager' }, createdAt: '2026-06-20T09:30:00.000Z', updateNote: 'Customer confirmed finance handoff.' };
+      const blocked = dealFixture({ id: 'deal_stuck', title: 'Unblock finance approval', blocker: 'Missing bank approval', delayAgeMinutes: 120, lastAction: action, history: [action] });
       const delivery = dealFixture({ id: 'deal_delivery', title: 'Prepare customer handoff', stage: 'DELIVERY', currentHolderId: 'usr_delivery', delayAgeMinutes: 0 });
       return jsonResponse({
         byStage: [
@@ -4064,7 +4237,10 @@ test('deal handoff board route renders scoped deal data through the session cook
   assert.match(html, /Prepare customer handoff/);
   assert.match(html, /Delivery Holder - Delivery - Main Branch/);
   assert.match(html, /Missing bank approval/);
-  assert.match(html, /120m/);
+  assert.match(html, /Last action/);
+  assert.match(html, /Customer confirmed finance handoff/);
+  assert.match(html, /120 min/);
+  assert.doesNotMatch(html, /120m|>2026-06-20T/);
 });
 
 test('deal handoff board route renders empty and denied states safely', async () => {
@@ -4085,7 +4261,7 @@ test('deal handoff board route renders empty and denied states safely', async ()
 
   assert.match(empty, /No active deals are waiting here\./);
   assert.match(empty, /role="status"/);
-  assert.match(denied, /Deal handoff could not be loaded\. Refresh the page or sign in with a manager or admin account\./);
+  assert.match(denied, /You do not have permission to view or change deal handoffs\./);
   assert.match(denied, /role="alert"/);
 });
 
@@ -4093,14 +4269,18 @@ test('deal handoff board route keeps Arabic RTL labels', async () => {
   const html = renderToStaticMarkup(
     await DealHandoffPage({
       cookieHeader: 'cms_staff_session=raw-session',
-      fetchImpl: async () => jsonResponse(dealHandoffEmpty()),
+      fetchImpl: async (input) => String(input).endsWith('/deals/handoff-board')
+        ? jsonResponse({ ...dealHandoffEmpty(), byStage: [{ stage: 'BOOKING', count: 1, deals: [dealFixture({ id: 'deal_ar', title: 'متابعة التسليم', delayAgeMinutes: 120 })] }], currentHolder: [{ currentHolderId: 'usr_sales', currentHolderName: 'Sales Holder', count: 1 }] })
+        : jsonResponse({ staff: [], branches: [], categories: [], severities: [] }),
       searchParams: Promise.resolve({ locale: 'ar' }),
     }),
   );
 
   assert.match(html, /dir="rtl"/);
   assert.ok(html.includes(dealHandoffText.ar.title));
-  assert.ok(html.includes(dealHandoffText.ar.states.empty));
+  assert.ok(html.includes(dealHandoffText.ar.actions.advance));
+  assert.match(html, /دقيقة/);
+  assert.doesNotMatch(html, /120m|>2026-06-20T/);
 });
 
 // ---- (staff)/cases/confidential/[caseId] route ----
@@ -4125,13 +4305,13 @@ test('confidential case route renders actor-scoped restricted notes through the 
   assert.deepEqual(caseCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
   assert.doesNotMatch(String(caseCall.input), /role|actor|workflow|branchId|owner|participant|token|credential/i);
   assert.match(html, /Confidential case timeline/);
-  assert.match(html, /EMPLOYEE_GRIEVANCE/);
-  assert.match(html, /HR_REVIEW/);
+  assert.match(html, /Employee grievance/);
+  assert.match(html, /HR review/);
   assert.match(html, /Workplace grievance/);
   assert.match(html, /Main Branch/);
   assert.match(html, /HR Owner/);
   assert.match(html, /Private HR note/);
-  assert.match(html, /CASE_CREATED/);
+  assert.match(html, /Case Created/);
   assert.doesNotMatch(html, /case_hr_1/);
   assert.doesNotMatch(html, /branch_main/);
   assert.doesNotMatch(html, /usr_hr/);
