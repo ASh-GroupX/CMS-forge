@@ -13534,3 +13534,129 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 - Notes:
   - Deployment execution requires setting up repository secrets (`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_KEY`, `DEPLOY_PATH`) in your GitHub repository settings.
 
+
+---
+
+## A2 - GET /tasks/board session-scoped Kanban read
+
+- Date: 2026-07-13
+- Risk: High (RBAC scoping of a new read surface; privacy of task board payload)
+- Status: Passed
+- Requirement IDs: REQ-RBAC-001, UI-SCREEN-001, METHOD-TEST-001
+- Evidence:
+  - New files (kept out of the at-budget `tasks.service.ts`/`tasks.repository.ts`):
+    `apps/api/src/modules/tasks/dto/board.dto.ts`,
+    `apps/api/src/modules/tasks/tasks.board.repository.ts`,
+    `apps/api/src/modules/tasks/tasks.board.service.ts`,
+    `apps/api/test/tasks/board.test.ts`.
+  - `TasksBoardRepository.listStages(TASKS)` returns active (non-archived) stages
+    ordered by position; `listBoardTasks(scope, completedSince)` scopes rows in the
+    Prisma WHERE exactly like `listPromiseTracker` (participants always, managers on
+    NORMAL tasks within their branch, admins everywhere) and includes DONE tasks only
+    when `updatedAt` is within the 14-day completed window.
+  - `TasksBoardService.board` reuses `promiseTrackerQuery(actor)` for scope-flag
+    mapping and computes `completedSince` from the server clock. Pure `buildTaskBoard`
+    projects one column per active stage (empty columns preserved), buckets each card
+    by explicit stage → default stage for its status (isDefault preferred) → first
+    stage, sorts by `boardPosition` then `dueAt`, and derives `daysActive` +
+    `dueState` (OVERDUE/DUE_TODAY/UPCOMING, null when DONE).
+  - Controller `@Get('board')` is registered BEFORE `@Get(':id')` with
+    `SessionAuthGuard + PermissionGuard + @Permissions('COMPLAINT_COMMENT_INTERNAL')`
+    (no CSRF/RbacGuard — read, scoped from session). `TasksBoardService` is an
+    optional `@Inject`-ed constructor arg so existing single-arg controller test
+    construction still compiles; providers wired in `tasks.module.ts`.
+  - `MODULE.md` updated: `board_stages` declared under Owns tables (read-only here;
+    write ownership moves to the Phase B `board-stages` module) and `TasksBoardService`
+    noted as an internal, non-exported board read surface.
+- Verification:
+  - Passed: `corepack pnpm test:api -- tasks` (24/24; 9 new board tests).
+  - Passed: `corepack pnpm typecheck` (all six tsconfig projects).
+  - Passed: `corepack pnpm lint` (boundary, module-manifest truth, wiring, size).
+  - Passed: `corepack pnpm openapi:generate` + `openapi:check`. `GET /tasks/board`
+    is now documented in `tools/openapi-canonical.json` with `TaskBoardResponse` /
+    `BoardStage` / `BoardCard` / `BoardColumn` schemas (pulled forward into A2 to
+    honor the CLAUDE.md "every public route in OpenAPI" non-negotiable rather than
+    deferring to A3; `POST /tasks/:id/move` will be added in A3).
+  - Not Run: live DB scoping (`db:push`/`db:seed`) — no local `DATABASE_URL`.
+- Security Self-Check:
+  - Session-only scoping: cards are filtered in the Prisma WHERE from the session
+    principal's role/branch/participation; the actor→query flag mapping is asserted
+    by the allowed (`manager`/`admin` reach) and denied (`employee` participant-only,
+    no manager/admin reach) unit tests. DB-level SQL enforcement is Assumed here (no
+    local DB); the query-shape assertions are the actual proof.
+  - Same-tx history+audit: N/A — this is a read; no mutation, no audit write.
+  - No secrets logged; the board select omits participant emails/PII (asserted by a
+    test that the serialized board contains no `@`), and carries bilingual
+    (`nameEn`/`nameAr`) owner/assignee names for the RTL board.
+
+---
+
+## A3 - POST /tasks/:id/move (board drag → status transition, same-tx)
+
+- Date: 2026-07-13
+- Risk: High (workflow-adjacent state change; RBAC record-level authorization;
+  same-transaction history + audit)
+- Status: Passed
+- Requirement IDs: REQ-RBAC-001, UI-SCREEN-001, METHOD-TEST-001, METHOD-AUDIT-001
+- Evidence:
+  - Move logic lives in the SAME new board files (no growth of the at-budget
+    `tasks.service.ts` (300) / `tasks.repository.ts`):
+    `tasks.board.repository.ts` gains `findStage` (active TASKS stage only, else
+    null → 404) + `moveTask` (sets stageId/boardPosition/status + next-action
+    fields on the tx client); `tasks.board.service.ts` gains `TasksBoardService.move`;
+    new `dto/move-task.dto.ts` parser; `dto/board.dto.ts` gains `MoveTaskResponseDto`.
+  - `move` runs in one `tasksRepository.transaction`: `findById` (full `TaskRecord`
+    for `assertCanAct`) → `assertCanAct(current, actor)` → status :=
+    `stage.mappedTaskStatus ?? current.status` → the SAME `assertNextAction` /
+    `normalizeNextAction` (exported from `tasks.service.ts`, no line growth) and
+    `requiredStatusNote` invariants as `PATCH /tasks/:id` → `moveTask` →
+    `createStatusHistory` + `statusComment` comment (only when status changed) →
+    `auditService.record('task_moved', metadata {fromStage,toStage,fromStatus,toStatus})`
+    — all on the same tx client. Returns the moved `BoardCardDto`.
+  - Reused canonical helpers rather than reimplementing: `assertCanAct`
+    (`tasks.access.ts`), `requiredStatusNote`/`statusComment` (`tasks.status-note.ts`),
+    `currentNextAction` (`tasks.response.ts`) — so the board move and the existing
+    PATCH cannot diverge on the next-action / outcome-note rules.
+  - Branch-scope guard on the next-action target (parity with `updateForActor`):
+    `TasksBoardService` injects `AdminUsersService` and calls
+    `assertAssignable(actor, nextAction.whoId)` whenever a move sets a next action, so
+    a reopen cannot route the task into another branch's queue via `nextActionWhoId`.
+  - Conflict handling (SSOT A3 "conflict handling"): the rollback surface is
+    `TASK_NEXT_ACTION_REQUIRED` (409) / `TASK_STATUS_NOTE_REQUIRED` (400) /
+    `BRANCH_SCOPE_FORBIDDEN` (403) — the frontend rolls back the optimistic move on
+    these. `Task` has no optimistic `version` column (only `Complaint` does), so there
+    is no stale-move lock to build here; consciously out of scope.
+  - Controller `@Post(':id/move')` guarded by `SessionAuthGuard + PermissionGuard +
+    CsrfGuard` and `@Permissions('COMPLAINT_COMMENT_INTERNAL')`; `TasksBoardService`
+    provider now injects `TasksRepository` + `AuditService`.
+  - `taskSelect` in `tasks.repository.ts` gained the `stageId` scalar (1 line, file
+    at 281) so the audit `fromStage` reads from the authorized record; `TaskRecord`
+    fixtures in `tasks.service.spec.ts` + `manager-rollup.test.ts` updated.
+  - `POST /tasks/{id}/move` (with `TaskMoveRequest` / `MoveTaskResponse` schemas)
+    added to `tools/openapi-canonical.json`; committed contract regenerated.
+- Verification:
+  - Passed: `corepack pnpm test:api -- tasks` (35/35; 11 new move tests covering
+    guards, allowed owner + denied non-participant, BOARD_STAGE_NOT_FOUND,
+    TASK_NOT_FOUND, done-without-note, reopen-without-next-action, in-scope vs
+    out-of-scope next-action assignee, same-tx client identity across
+    move+history+comment+audit, and audit metadata).
+  - Passed: `corepack pnpm typecheck`, `lint`, `openapi:generate` + `openapi:check`.
+  - Not Run: live DB (`db:push`/`db:seed`) — no local `DATABASE_URL`; the tx/audit
+    behavior is proven via stubbed-repo call-order + shared-client assertions.
+  - Pre-existing/unrelated: `corepack pnpm test` (tools suite) reports 58/59 with
+    one failure in the web visual-proof harness (`web-proof.test.mjs`, a Playwright
+    child-process `DEP0190` env issue) that references no api/openapi code and is
+    modified in the working tree independently of this task.
+- Security Self-Check:
+  - Session-only authority: the move is authorized by `assertCanAct` on the
+    server-loaded record (participants / branch-scoped managers on NORMAL tasks /
+    admin); a non-participant, non-manager actor is denied (RBAC_FORBIDDEN) with no
+    writes — asserted by test. The next-action target is additionally branch-scoped
+    via `assertAssignable`, so a move cannot leak the task into another branch's
+    queue (out-of-scope assignee → BRANCH_SCOPE_FORBIDDEN, no writes — asserted).
+  - Same-tx history + audit: `moveTask`, `createStatusHistory`, `createComment`,
+    and `auditService.record` all execute on the one transaction client — asserted
+    by a shared-client-identity test. Audit is append-only; no secrets in metadata.
+  - State machine preserved: status is derived from the stage mapping and gated by
+    the existing note/next-action invariants; the board never sets an arbitrary
+    TaskStatus. (Ticket board over the complaint state machine is Phase B.)

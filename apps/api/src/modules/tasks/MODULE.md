@@ -15,6 +15,8 @@ module's boundary so you can work in a fresh context without scanning the tree.
 - `TasksService` is the only export other modules may import.
 - This module owns the Task atom: next-action invariant, task links, participant
   visibility primitives, and task mutation audit.
+- `TasksBoardService` serves the session-scoped Kanban read (`GET /tasks/board`)
+  inside this module; it is not exported to other modules.
 
 ## Owns tables
 
@@ -24,6 +26,8 @@ module's boundary so you can work in a fresh context without scanning the tree.
 - `task_comments`
 - `task_status_history`
 - `task_comment_mentions`
+- `board_stages` (read-only here for task board columns; write ownership moves to
+  the `board-stages` module in Phase B)
 
 ## May depend on
 

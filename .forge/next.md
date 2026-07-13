@@ -10,14 +10,22 @@ SRS IDs: `REQ-RBAC-001`, `UI-SCREEN-001`, `UI-DESIGN-001`,
 ## Task
 
 Execute Phase A of `docs/CMSS_REVAMP_PLAN.md` (the SSOT — read it first),
-task by task, starting at A1:
+task by task. A1 + A2 + A3 are DONE (backend complete). **Next task: A4.**
 
-- A1: Prisma migration — `BoardStage` model, `Task.stageId?`, `Task.position`,
-  seed default TASKS stages mapped to `TaskStatus`.
-- A2: `GET /tasks/board` session-scoped read endpoint + scoping tests.
-- A3: `POST /tasks/:id/move` (history + audit same-tx) + OpenAPI entries.
-- A4–A8: dnd-kit + shadcn primitives, typed client, `/tasks/board` Kanban
-  page (Trello UX, RTL, all states), mobile pass, visual/a11y/e2e proofs.
+- A1 (done): Prisma migration — `BoardStage`, `Task.stageId?`, `Task.boardPosition`,
+  seed default TASKS stages.
+- A2 (done): `GET /tasks/board` session-scoped read + scoping tests; OpenAPI documented.
+- A3 (done): `POST /tasks/:id/move` — stage→status derivation, same-tx history+audit,
+  PATCH-shared note/next-action invariants, allowed+denied tests; OpenAPI documented.
+  33/33 tasks tests + lint/typecheck/openapi:check Passed.
+- A4 (next): add `@dnd-kit/core` + `@dnd-kit/sortable`; generate the shadcn
+  primitives the board needs (avatar, tooltip, sheet, scroll-area, popover) via the
+  shadcn CLI (`npx shadcn add …` — never hand-roll); add board design tokens to the
+  existing token system. Keep to dependency + primitives + tokens; no board page yet
+  (that is A6).
+- A5–A8: typed `lib/staff-board-api.ts` client + move server action; `/tasks/board`
+  Kanban page (Trello UX, RTL, all states, i18n en+ar, nav entry); mobile pass;
+  visual/a11y/e2e proofs. UI tasks must render + screenshot + self-review before done.
 
 Constraints (locked decisions):
 - Ticket stages (Phase B) are mapped columns over the existing complaint

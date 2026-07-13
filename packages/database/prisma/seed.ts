@@ -1,4 +1,5 @@
 import { ComplaintStatus, PrismaClient, RoleCode } from '@prisma/client';
+import { seedBoardStages } from './board-stages-seed.js';
 import { seedPhase10DealershipDemo } from './phase10-seed.js';
 import { defaultRolePermissions, permissionDefinitions } from './role-permissions.js';
 
@@ -239,7 +240,9 @@ async function main(): Promise<void> {
     complaint1,
   });
 
-  console.log('Seed complete: 2 branches, 6 roles, 4 users, 5 categories, 2 customers, 2 vehicles, 3 complaints, 2 deals, 2 tasks, 1 confidential case.');
+  await seedBoardStages(prisma);
+
+  console.log('Seed complete: 2 branches, 6 roles, 4 users, 5 categories, 2 customers, 2 vehicles, 3 complaints, 2 deals, 2 tasks, 1 confidential case, 4 board stages.');
 }
 
 main()

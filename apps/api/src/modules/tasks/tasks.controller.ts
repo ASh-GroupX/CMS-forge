@@ -8,12 +8,18 @@ import { parseQuickAddTaskBody, toQuickAddTaskInput } from './dto/create-task.dt
 import { parseRelatedRecordLookupQuery, type RelatedRecordLookupResponseDto } from './dto/related-record-lookup.dto.js';
 import { parseTaskCommentBody, parseTaskNudgeBody } from './dto/task-collaboration.dto.js';
 import type { EmployeeTodayResponseDto, ManagerControlRoomResponseDto, ManagerTaskDetailResponseDto, PromiseTrackerResponseDto } from './dto/task-response.dto.js';
+import type { MoveTaskResponseDto, TaskBoardResponseDto } from './dto/board.dto.js';
+import { parseMoveTaskBody } from './dto/move-task.dto.js';
+import { TasksBoardService } from './tasks.board.service.js';
 import { TasksService } from './tasks.service.js';
 import { parseUpdateTaskBody } from './dto/update-task.dto.js';
 
 @Controller('tasks')
 export class TasksController {
-  constructor(@Inject(TasksService) private readonly tasksService: TasksService) {}
+  constructor(
+    @Inject(TasksService) private readonly tasksService: TasksService,
+    @Inject(TasksBoardService) private readonly boardService?: TasksBoardService,
+  ) {}
 
   @Post('quick-add')
   @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
@@ -79,6 +85,13 @@ export class TasksController {
     return this.tasksService.managerTaskDetail(id, taskActor(requirePrincipal(request)));
   }
 
+  @Get('board')
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
+  async board(@Req() request: AuthenticatedRequest): Promise<TaskBoardResponseDto> {
+    return this.boardService!.board(taskActor(requirePrincipal(request)));
+  }
+
   @Get(':id')
   @UseGuards(SessionAuthGuard, PermissionGuard)
   @Permissions('COMPLAINT_COMMENT_INTERNAL')
@@ -141,6 +154,13 @@ export class TasksController {
     const principal = requirePrincipal(request);
     await this.tasksService.nudgeForActor(id, parseTaskNudgeBody(body), { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId }, auditContext(request));
     return { ok: true };
+  }
+
+  @Post(':id/move')
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
+  async move(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest): Promise<MoveTaskResponseDto> {
+    return this.boardService!.move(parseMoveTaskBody(id, body), taskActor(requirePrincipal(request)), auditContext(request));
   }
 
   @Patch(':id')

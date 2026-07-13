@@ -1,0 +1,172 @@
+# CMSS Revamp Plan — Trello-Style Task & Ticket Boards
+
+Single source of truth (SSOT) for the CMSS (Staff Operations) Kanban revamp.
+Mark items `[x]` as they complete. Scope discipline per `.forge/policy.md`:
+each task ≈ 1–5 files + tests; stop and replan if a task grows.
+
+**Priority directive: the Trello-like drag-and-drop task board UI/UX ships
+first (Phase A), end-to-end, before ticket board / admin stages / department
+assignment (Phase B).**
+
+---
+
+## 1. Current State Analysis
+
+### Stack
+
+| Layer | What we have |
+| --- | --- |
+| Backend | NestJS-style modular monolith `apps/api/src/modules/*` (18 modules) |
+| DB | PostgreSQL via Prisma — schema at `packages/database/prisma/schema.prisma` |
+| API contract | `packages/contracts/openapi.json` + canonical `tools/openapi-canonical.json`, checked by `tools/openapi-check.mjs` (`openapi:generate` / `openapi:check`) |
+| Frontend | Next.js 16 App Router, React 19, RSC + server actions (no client state library) |
+| Styling | Tailwind v3 + shadcn/ui (new-york) in `apps/web/src/components/ui/`; tokens in `apps/web/src/globals.css` + `apps/web/src/lib/tokens.ts` |
+| i18n | Hand-rolled: `?locale=` → `apps/web/src/middleware.ts` header → per-surface dictionaries in `apps/web/src/i18n/*.ts` (en+ar); RTL via logical properties; `tools/i18n-lint.mjs` |
+| Data clients | Hand-written `apps/web/src/lib/*-api.ts` returning `{status:'ready'|'denied'|'error'}` unions; mutations via colocated `actions.ts` server actions; CSRF helpers `lib/staff-request-auth.ts` |
+| Shell | `apps/web/src/app/app-shell.tsx` (`staffNavItems`) + role-filtered nav in `apps/web/src/app/(staff)/layout.tsx` |
+| Proofs | `tools/web-proof.mjs` + `tools/web-proof-cases.mjs` + `tools/web-proof-fixtures.mjs` (visual/a11y/perf), Playwright via `tools/e2e-runner.mjs`, `web:visual-review` |
+| DnD | **None installed** — this effort introduces the first drag-drop dependency |
+
+### Domain (what we build on)
+
+- **Task** (`schema.prisma` ~L914): required `assigneeId` (User), `ownerId`,
+  `status: TaskStatus (OPEN|IN_PROGRESS|WAITING|DONE)`, visibility +
+  confidentiality, `TaskStatusHistory`, `TaskComment` (+mentions),
+  `TaskParticipant`, polymorphic `TaskLink`. Record-level access in
+  `apps/api/src/modules/tasks/tasks.access.ts` (ADMIN, participants, branch
+  managers when confidentiality NORMAL). Update endpoint `PATCH /tasks/:id`.
+  **No department assignment today.**
+- **Complaint** (~L508): `status: ComplaintStatus` enum (9 states), `ownerId?`,
+  `branchId`, `departmentId?`, optimistic `version`. Backend state machine =
+  `WORKFLOW_TRANSITIONS` in `apps/api/src/modules/complaints/complaints.service.ts`;
+  transitions only via `POST /complaints/:id/transitions`; some actions require
+  reason/resolution/owner; illegal → 409; role failure → 403 + SECURITY audit.
+- **Same-transaction rule** (everywhere): status history + audit rows are
+  written inside the repository `transaction(client => …)` with
+  `auditService.record(…, client)`; side effects enqueue after commit.
+- **RBAC**: `SessionAuthGuard` / `PermissionGuard` / `RbacGuard`
+  (+`@BranchScoped()`) / `DynamicPermissionGuard` in
+  `apps/api/src/core/auth.guard.ts`; `CsrfGuard` on mutations. Roles and
+  permissions are DB rows; principal comes from the `cms_staff_session` cookie.
+- **Screens being wrapped/replaced**: tasks `apps/web/src/app/(staff)/tasks/*`
+  (`components/employee-today`, `sent-tasks`, `task-conversation`); complaints
+  `(staff)/complaints/*` (`components/work-queue`,
+  `complaint-detail-workspace`). Deals handoff board is static columns —
+  visual reference only.
+- **Reusable for card threading/timeline**: `POST/GET /tasks/:id/comments`,
+  `POST/GET /complaints/:id/comments`, `GET /complaints/:id/timeline`.
+  Days-active derives from `createdAt` + status history.
+- **Golden CRUD module**: `apps/api/src/modules/branches` (copy for new modules).
+
+## 2. Technical Decisions
+
+1. **DnD library: `@dnd-kit/core` + `@dnd-kit/sortable`** — React 19
+   compatible, headless (fits shadcn/tokens), RTL-friendly, keyboard-accessible
+   sensors.
+2. **Stages are DB rows, not enums**: new `BoardStage` model —
+   `id, scope (TASKS|TICKETS), nameEn, nameAr, color, position, isDefault,
+   archivedAt`, plus `mappedTaskStatus?` (TASKS) / `mappedComplaintStatus?`
+   (TICKETS). Tasks get `Task.stageId?` (null → derived from `TaskStatus`
+   default mapping) and `Task.position` for in-column ordering. Seed defaults.
+3. **Ticket board = mapped columns (decision locked)**: admin can rename /
+   recolor / reorder ticket columns, but each maps to an existing
+   `ComplaintStatus`; a drag fires the real workflow transition via the
+   existing `POST /complaints/:id/transitions`; illegal targets are greyed
+   out; transitions requiring reason/resolution open a dialog first. The
+   backend state machine is never bypassed (SRS authority preserved).
+4. **Board reads are server-scoped**: `GET /tasks/board` and
+   `GET /complaints/board` return only what the session principal may see
+   (role, branch, department, participants). The frontend never filters for
+   privacy.
+5. **Task moves**: `POST /tasks/:id/move` (stageId + position) derives
+   `TaskStatus` from the stage mapping, writes `TaskStatusHistory` + audit in
+   the same transaction.
+6. **Frontend architecture**: RSC page loader + `'use client'` Kanban island;
+   optimistic updates via `useOptimistic` + server actions; rollback + toast
+   on 403/409. No new state library.
+7. **Rollout (decision locked)**: boards ship alongside existing screens as
+   the primary nav entries; old list/detail screens stay; the board card
+   drawer reuses existing detail/comments APIs.
+8. **UI discipline**: primitives via shadcn CLI only; Trello-ish look (clean
+   blues/grays, subtle shadows, labels/badges, drag tilt, highlighted drop
+   zones) built on the existing token system; all strings en+ar; every new
+   screen registered in the visual-proof harness.
+
+## 3. Master Task Checklist
+
+### Phase 0 — SSOT
+- [x] **T0**: Create this file; update `.forge/next.md` + `.forge/state.md`.
+
+### Phase A — Task board with Trello-style drag & drop (core deliverable)
+- [x] **A1**: Prisma migration — `BoardStage`, `Task.stageId?`,
+  `Task.boardPosition`; seed default TASKS stages (Open / In Progress /
+  Waiting / Done) mapped to `TaskStatus`. (Schema valid, client generated,
+  lint+typecheck Passed; `db:push`/`db:seed` Not Run — no local DATABASE_URL.)
+- [x] **A2**: `GET /tasks/board` — session-scoped payload (columns, permitted
+  cards, daysActive/due metrics); tests incl. scoping denial. (New
+  `tasks.board.repository.ts` + `tasks.board.service.ts` + `dto/board.dto.ts` +
+  `test/tasks/board.test.ts`; 24/24 tasks tests, lint/typecheck Passed.
+  `GET /tasks/board` documented in OpenAPI — `openapi:generate`+`openapi:check`
+  Passed. `POST /tasks/:id/move` OpenAPI entry lands in A3.)
+- [x] **A3**: `POST /tasks/:id/move` — stage+position, history+audit same-tx,
+  conflict handling, allowed+denied tests; OpenAPI entries for A2/A3. (Move logic
+  in the same board files: `findStage`/`moveTask` in `tasks.board.repository.ts`,
+  `TasksBoardService.move` reusing the PATCH next-action/status-note invariants;
+  `dto/move-task.dto.ts` parser; 11 move tests — guards, allowed/denied,
+  stage-not-found, note & next-action rules, in/out-of-scope next-action assignee
+  (branch-scope guard via `assertAssignable`, parity with PATCH), same-tx client
+  identity, audit metadata. `POST /tasks/{id}/move` + `GET /tasks/board` documented
+  in OpenAPI. 35/35 tasks tests, lint/typecheck/openapi:check Passed.)
+- [ ] **A4**: Add `@dnd-kit/core` + `@dnd-kit/sortable`; shadcn primitives
+  (avatar, tooltip, sheet, scroll-area, popover); board design tokens.
+- [ ] **A5**: Typed client `lib/staff-board-api.ts` + move server action;
+  client-shape tests.
+- [ ] **A6**: `/tasks/board` page — the Trello experience: columns, rich cards
+  (assignee avatar, due badge, days-active, labels), drag tilt, highlighted
+  drop zones, drag overlay, optimistic move + rollback toast, hover/transition
+  animations, RTL, loading/empty/error/denied states, i18n en+ar; nav entry.
+- [ ] **A7**: Mobile board — horizontal snap-scroll columns + list switcher,
+  44px touch targets, touch sensors.
+- [ ] **A8**: Visual + a11y proofs (register in `web-proof-cases.mjs` +
+  fixtures), screenshot self-review en+ar, Playwright e2e drag test.
+
+### Phase B — Ticket board, assignment, dynamic stages
+- [ ] **B1**: `board-stages` module (copy `branches`): CRUD + reorder,
+  ADMIN-manage/staff-read RBAC, audit, DTOs, MODULE.md, OpenAPI,
+  allowed+denied tests; stage delete requires destination; seed TICKETS stages.
+- [ ] **B2**: Admin stage management UI — add/rename/recolor/reorder/archive
+  inline on the board.
+- [ ] **B3**: Task department assignment — `Task.assignedDepartmentId?`
+  migration + DTO + `tasks.access.ts` extension + board assignment controls;
+  allowed/denied tests.
+- [ ] **B4**: `GET /complaints/board` — TICKETS stage columns, queue-scoped
+  cards, per-card `allowedTransitions`; tests.
+- [ ] **B5**: `/complaints/board` page — transition-aware drag,
+  reason/resolution dialog, 409 conflict state.
+- [ ] **B6**: Card detail drawer (both boards) — threaded updates via existing
+  comments APIs, timeline, days-active, assignment controls, link to detail page.
+
+### Phase C — Proof & polish
+- [ ] **C1**: Full visual + a11y registration for both boards; screenshot
+  review vs Trello-style golden.
+- [ ] **C2**: Playwright e2e — task drag, denied-scope case, ticket
+  transition-with-reason case.
+- [ ] **C3**: `openapi:check`, boundary lint, i18n-lint, coverage; update
+  `.forge/evidence.md` (SRS IDs: REQ-RBAC-001, UI-SCREEN-001, UI-DESIGN-001,
+  REQ-LOCALIZATION-001, METHOD-TEST-001), `next.md`, `state.md`.
+
+## 4. Verification (run, never assume; label honestly)
+
+- `corepack pnpm lint` · `typecheck` · `test` · `test:api -- <suite>`
+- `corepack pnpm openapi:generate` + `openapi:check` after route changes
+- `corepack pnpm test:visual` · `test:e2e -- accessibility` ·
+  `web:visual-review` (inspect en + ar board screenshots) · `web:perf`
+- Security self-check for High-risk tasks (A2/A3/B1/B3/B4): session-only
+  scoping, same-tx history+audit, one allowed + one denied boundary test,
+  no secrets logged.
+
+## 5. Execution Protocol
+
+After each task: mark `[x]` here, summarize what changed and what is next,
+update `.forge/next.md` + `.forge/state.md`, record evidence + SRS IDs in
+`.forge/evidence.md`. If a task exceeds ~5 files, stop and replan.

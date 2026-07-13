@@ -235,6 +235,7 @@ function taskRecord(overrides: Partial<TaskRecord> = {}): TaskRecord {
     assigneeId: 'user_a',
     dueAt: new Date('2026-06-21T09:00:00.000Z'),
     status: TaskStatus.OPEN,
+    stageId: null,
     nextActionWhat: 'Call customer',
     nextActionWhoId: 'user_a',
     nextActionWhen: new Date('2026-06-21T08:30:00.000Z'),

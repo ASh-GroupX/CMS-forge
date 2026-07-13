@@ -28,7 +28,7 @@ export type UpdateTaskStatusInput = { taskId: string; status: TaskStatus; nextAc
 export type UpdateTaskInput = { taskId: string; status?: TaskStatus; assigneeId?: string; dueAt?: Date | string; nextAction?: TaskNextActionInput | null; isCustomerPromise?: boolean; statusNote?: string };
 export type TaskActor = { userId: string; roleCode: string; branchId: string | null; permissions?: string[] };
 
-type NormalizedNextAction = { what: string; whoId: string; when: Date };
+export type NormalizedNextAction = { what: string; whoId: string; when: Date };
 type ManagerRollupScope = { roleCode: string; branchId: string | null };
 
 @Injectable()
@@ -258,7 +258,7 @@ export class TasksService {
   }
 }
 
-function assertNextAction(status: TaskStatus, nextAction: NormalizedNextAction | null): void {
+export function assertNextAction(status: TaskStatus, nextAction: NormalizedNextAction | null): void {
   if (status !== TaskStatus.DONE && !nextAction) {
     throw new AppException('TASK_NEXT_ACTION_REQUIRED', 'Open tasks require a next action', HttpStatus.CONFLICT, [
       { field: 'nextAction', code: 'REQUIRED', message: 'nextAction is required for open tasks.' },
@@ -266,7 +266,7 @@ function assertNextAction(status: TaskStatus, nextAction: NormalizedNextAction |
   }
 }
 
-function normalizeNextAction(input: TaskNextActionInput | null | undefined): NormalizedNextAction | null {
+export function normalizeNextAction(input: TaskNextActionInput | null | undefined): NormalizedNextAction | null {
   if (!input) return null;
   return {
     what: requiredText(input.what, 'nextAction.what'),

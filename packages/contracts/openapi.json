@@ -3892,6 +3892,47 @@
         }
       }
     },
+    "/tasks/board": {
+      "get": {
+        "tags": [
+          "Tasks"
+        ],
+        "operationId": "taskBoardGet",
+        "summary": "Session-scoped task Kanban board (stages plus permitted cards)",
+        "responses": {
+          "200": {
+            "description": "Task board columns and cards the session principal may see",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskBoardResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/tasks/today": {
       "get": {
         "tags": [
@@ -5137,6 +5178,87 @@
           },
           "404": {
             "description": "Task not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/{id}/move": {
+      "post": {
+        "tags": [
+          "Tasks"
+        ],
+        "operationId": "taskBoardMove",
+        "summary": "Move a task to a board stage (derives status, writes history+audit)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskMoveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Moved task board card",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoveTaskResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body, missing outcome note, or missing next action",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Task access denied or invalid CSRF token (CSRF_INVALID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task or target board stage not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -8432,6 +8554,294 @@
         "properties": {
           "task": {
             "$ref": "#/components/schemas/Task"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TaskMoveRequest": {
+        "type": "object",
+        "required": [
+          "stageId",
+          "boardPosition"
+        ],
+        "properties": {
+          "stageId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "boardPosition": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "statusNote": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nextAction": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "what",
+                  "whoId",
+                  "when"
+                ],
+                "properties": {
+                  "what": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "whoId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "when": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "MoveTaskResponse": {
+        "type": "object",
+        "required": [
+          "card"
+        ],
+        "properties": {
+          "card": {
+            "$ref": "#/components/schemas/BoardCard"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BoardStage": {
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "nameEn",
+          "nameAr",
+          "color",
+          "position",
+          "mappedTaskStatus"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "position": {
+            "type": "integer"
+          },
+          "mappedTaskStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "OPEN",
+              "IN_PROGRESS",
+              "WAITING",
+              "DONE",
+              null
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "BoardCard": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "ownerId",
+          "ownerName",
+          "ownerNameAr",
+          "assigneeId",
+          "assigneeName",
+          "assigneeNameAr",
+          "branchId",
+          "dueAt",
+          "status",
+          "stageId",
+          "boardPosition",
+          "isCustomerPromise",
+          "visibility",
+          "confidentialityLevel",
+          "daysActive",
+          "dueState",
+          "commentCount",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": "string"
+          },
+          "ownerName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ownerNameAr": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assigneeId": {
+            "type": "string"
+          },
+          "assigneeName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assigneeNameAr": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "branchId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "IN_PROGRESS",
+              "WAITING",
+              "DONE"
+            ]
+          },
+          "stageId": {
+            "type": "string"
+          },
+          "boardPosition": {
+            "type": "integer"
+          },
+          "isCustomerPromise": {
+            "type": "boolean"
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "PARTICIPANTS",
+              "BRANCH",
+              "MANAGEMENT"
+            ]
+          },
+          "confidentialityLevel": {
+            "type": "string",
+            "enum": [
+              "NORMAL",
+              "CONFIDENTIAL",
+              "RESTRICTED"
+            ]
+          },
+          "daysActive": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "dueState": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "OVERDUE",
+              "DUE_TODAY",
+              "UPCOMING",
+              null
+            ]
+          },
+          "commentCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BoardColumn": {
+        "type": "object",
+        "required": [
+          "stageId",
+          "cards"
+        ],
+        "properties": {
+          "stageId": {
+            "type": "string"
+          },
+          "cards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardCard"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "TaskBoardResponse": {
+        "type": "object",
+        "required": [
+          "stages",
+          "columns"
+        ],
+        "properties": {
+          "stages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardStage"
+            }
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardColumn"
+            }
           }
         },
         "additionalProperties": false

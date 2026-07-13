@@ -10,6 +10,7 @@ const taskSelect = {
   assigneeId: true,
   dueAt: true,
   status: true,
+  stageId: true,
   nextActionWhat: true,
   nextActionWhoId: true,
   nextActionWhen: true,

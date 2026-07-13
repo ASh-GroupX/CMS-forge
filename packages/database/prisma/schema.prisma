@@ -172,6 +172,11 @@ enum TaskStatus {
   DONE
 }
 
+enum BoardScope {
+  TASKS
+  TICKETS
+}
+
 enum TaskLinkEntityType {
   CUSTOMER
   VEHICLE
@@ -911,6 +916,26 @@ model PortalSession {
   @@map("portal_sessions")
 }
 
+model BoardStage {
+  id                    String           @id @default(cuid())
+  code                  String           @unique
+  scope                 BoardScope
+  nameEn                String           @map("name_en")
+  nameAr                String           @map("name_ar")
+  color                 String
+  position              Int
+  isDefault             Boolean          @default(false) @map("is_default")
+  mappedTaskStatus      TaskStatus?      @map("mapped_task_status")
+  mappedComplaintStatus ComplaintStatus? @map("mapped_complaint_status")
+  archivedAt            DateTime?        @map("archived_at")
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
+  tasks                 Task[]
+
+  @@index([scope, position])
+  @@map("board_stages")
+}
+
 model Task {
   id                   String                   @id @default(cuid())
   title                String
@@ -918,6 +943,8 @@ model Task {
   assigneeId           String                   @map("assignee_id")
   dueAt                DateTime                 @map("due_at")
   status               TaskStatus               @default(OPEN)
+  stageId              String?                  @map("stage_id")
+  boardPosition        Int                      @default(0) @map("board_position")
   nextActionWhat       String?                  @map("next_action_what")
   nextActionWhoId      String?                  @map("next_action_who_id")
   nextActionWhen       DateTime?                @map("next_action_when")
@@ -929,6 +956,7 @@ model Task {
   owner                User                     @relation("TaskOwner", fields: [ownerId], references: [id])
   assignee             User                     @relation("TaskAssignee", fields: [assigneeId], references: [id])
   nextActionWho        User?                    @relation("TaskNextActionWho", fields: [nextActionWhoId], references: [id])
+  stage                BoardStage?              @relation(fields: [stageId], references: [id])
   links                TaskLink[]
   participants         TaskParticipant[]
   comments             TaskComment[]
@@ -938,6 +966,7 @@ model Task {
   @@index([ownerId])
   @@index([assigneeId])
   @@index([nextActionWhoId])
+  @@index([stageId, boardPosition])
   @@map("tasks")
 }
 
