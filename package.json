@@ -39,6 +39,7 @@
     "@types/node": "^20.17.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "prettier-plugin-tailwindcss": "^0.8.0",
+    "prisma": "^5.22.0",
     "tsx": "^4.19.0",
     "typescript": "5.6.3"
   }
