@@ -6,7 +6,7 @@
 	respond /health "ok"
 }
 
-{$SITE_DOMAIN} {
+http://{$SITE_DOMAIN} {
 	encode zstd gzip
 
 	header {
