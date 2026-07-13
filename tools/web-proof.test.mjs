@@ -16,7 +16,9 @@ test('web proof runner passes visual, accessibility, and performance smoke modes
 });
 
 test('web proof runner rejects unknown suites loudly', () => {
-  const result = spawnSync(process.execPath, [...nodeWithTsx, 'unknown'], { encoding: 'utf8' });
+  const env = { ...process.env };
+  delete env.NODE_V8_COVERAGE;
+  const result = spawnSync(process.execPath, [...nodeWithTsx, 'unknown'], { encoding: 'utf8', env });
 
   assert.equal(result.status, 1);
   assert.match(result.stderr, /Use one of: visual, accessibility, perf, ui-smoke\./);

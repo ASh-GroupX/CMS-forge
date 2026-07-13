@@ -1,37 +1,42 @@
-# Full Staff Visual Cutover
+# CMSS Trello-Style Board Revamp — Phase A
 
-Status: Shared staff redesign passed locally; deployment pending
-Required model tier: GPT-5.5 Extra High or Opus 4.8 Max
-Phase: coordinated staff UI cutover
-Risk: High
-SRS IDs: `REQ-LOCALIZATION-001`, `REQ-RBAC-001`, `UI-SCREEN-001`,
-`UI-DESIGN-001`, `METHOD-TEST-001`
+Status: Plan approved; SSOT created at `docs/CMSS_REVAMP_PLAN.md`
+Required model tier: Opus 4.8 Max or GPT-5.5 Extra High
+Phase: CMSS Kanban revamp — Phase A (task board with drag & drop)
+Risk: High (RBAC scoping, workflow-adjacent state changes, schema migration)
+SRS IDs: `REQ-RBAC-001`, `UI-SCREEN-001`, `UI-DESIGN-001`,
+`REQ-LOCALIZATION-001`, `METHOD-TEST-001`
 
 ## Task
 
-Deploy and smoke-test the approved command-center design across all staff
-routes. The dashboard, tasks, complaints, complaint detail, notifications,
-reports, groups, audit, and administration now share the same authenticated
-shell, surface treatment, operational density, control sizing, and responsive
-behavior.
+Execute Phase A of `docs/CMSS_REVAMP_PLAN.md` (the SSOT — read it first),
+task by task, starting at A1:
+
+- A1: Prisma migration — `BoardStage` model, `Task.stageId?`, `Task.position`,
+  seed default TASKS stages mapped to `TaskStatus`.
+- A2: `GET /tasks/board` session-scoped read endpoint + scoping tests.
+- A3: `POST /tasks/:id/move` (history + audit same-tx) + OpenAPI entries.
+- A4–A8: dnd-kit + shadcn primitives, typed client, `/tasks/board` Kanban
+  page (Trello UX, RTL, all states), mobile pass, visual/a11y/e2e proofs.
+
+Constraints (locked decisions):
+- Ticket stages (Phase B) are mapped columns over the existing complaint
+  state machine — never bypass `POST /complaints/:id/transitions`.
+- Boards ship alongside existing screens; old screens stay.
+- Board reads are scoped from the server session only.
+- Each task ≈ 1–5 files + tests; mark `[x]` in the SSOT after each task.
 
 ## Verification
 
-- Passed: `corepack pnpm lint` and `corepack pnpm typecheck`.
-- Passed: `corepack pnpm test:web` (213/213).
-- Passed: `corepack pnpm test:visual` (100 full-shell route previews).
-- Passed: `corepack pnpm web:visual-review`; representative Arabic tasks,
-  complaints, complaint detail, reports, groups, and admin screens inspected.
-- Passed: `corepack pnpm test:e2e -- accessibility` (22 route previews).
-- Passed: `corepack pnpm web:perf` (5 static route previews).
-- Inspected: `coverage/web-visual-review/ar-complaint-detail-final.png` after
-  correcting the narrow-column collapse found during visual review.
+Per task: `corepack pnpm lint`, `typecheck`, `test`, `test:api -- <suite>`,
+`openapi:generate` + `openapi:check` on route changes; UI tasks additionally
+`test:visual`, `test:e2e -- accessibility`, `web:visual-review` (en + ar).
+High-risk tasks record the security self-check in `.forge/evidence.md`.
 
-## Required Human Gates
+## Carry-Forward (from prior next.md — release automation)
 
-- Needs Human Review: commit and deploy this working tree; production does not
-  contain these uncommitted changes yet.
-- Needs Human Review: authenticated Arabic/English production smoke across
-  employee, manager, and administrator roles.
-- Needs Human Review: representative production data density and deployed Web
-  Vitals.
+- Needs Human Review: add repository deploy secrets (`DEPLOY_HOST`,
+  `DEPLOY_USER`, `DEPLOY_KEY`, `DEPLOY_PATH`) in GitHub settings.
+- Needs Human Review: create the `production` branch to trigger the
+  auto-deploy pipeline (`.github/workflows/deploy.yml`), then run
+  authenticated production smoke.

@@ -13511,3 +13511,26 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
   harness only supplies a fixture principal to the real shell.
 - No workflow mutation, audit behavior, credentials, provider integration, or
   customer-portal response changed.
+
+---
+
+## CI-CD-DEPLOY-001 - Production GitHub Actions Auto-Deployment Workflow
+
+- Date: 2026-07-13
+- Risk: Low (CI/CD tooling and deployment pipeline; no application logic changes)
+- Status: Passed
+- Requirement IDs: METHOD-TEST-001, CONTRACT-READINESS-002
+- Evidence:
+  - Created `.github/workflows/deploy.yml` configured to trigger on pushing code to the `production` branch.
+  - The workflow validates code quality (linter, typecheck, OpenAPI contract validation, and unit tests) before executing deployment commands.
+  - The deployment job connects to the VPS via SSH, pulls the latest production commit, validates the environment configuration, rebuilds docker containers via `docker-compose.prod.yml`, restarts the service containers, and cleans up unused images.
+  - Created `.env.production.example` in the root workspace directory as required by the Hostinger VPS runbook and preflight configuration checks.
+  - Fixed Windows CRLF line ending incompatibilities in `tools/lint.mjs` and `tools/prod-deploy-artifacts.test.mjs` by normalizing CRLF to LF on read, allowing the entire suite of 59 unit/sanity tests to pass successfully on the local development environment.
+- Verification:
+  - Passed: `corepack pnpm lint` (0 errors).
+  - Passed: `corepack pnpm typecheck`.
+  - Passed: `corepack pnpm openapi:check` (after executing `corepack pnpm openapi:generate` to canonicalize the schema).
+  - Passed: `corepack pnpm test` (all 59 checks passed).
+- Notes:
+  - Deployment execution requires setting up repository secrets (`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_KEY`, `DEPLOY_PATH`) in your GitHub repository settings.
+

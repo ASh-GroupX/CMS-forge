@@ -208,7 +208,7 @@ export function checkModuleManifests(root = process.cwd()) {
       errors.push(`apps/api/src/modules/${name}: missing MODULE.md agent context manifest`);
       continue;
     }
-    const text = readFileSync(join(root, manifest), 'utf8');
+    const text = readFileSync(join(root, manifest), 'utf8').replace(/\r\n/g, '\n');
     if (!text.startsWith('---\n')) {
       errors.push(`${manifest}: missing OKF-style YAML frontmatter`);
     } else {

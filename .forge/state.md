@@ -1,9 +1,9 @@
 # Current State
 
-Status: Full staff visual cutover passed locally; deployment pending
-Phase: coordinated staff UI cutover
-Next Task: Commit, deploy, and run authenticated multi-role production smoke
-Model Tier: GPT-5.5 Extra High or Opus 4.8 Max
+Status: CMSS Kanban revamp Phase A started; A1 (schema + seed) complete
+Phase: CMSS Trello-style board revamp — Phase A (task board drag & drop)
+Next Task: A2 — GET /tasks/board session-scoped endpoint + tests
+Model Tier: Opus 4.8 Max or GPT-5.5 Extra High
 
 ## How to use this file
 
@@ -12,28 +12,26 @@ Prior state history is in .forge/archive/state-archive.md.
 
 ## Snapshot
 
-- Branch `codex/user-scoped-ux-redesign` is active with uncommitted redesign
-  changes.
-- Every staff route now renders inside the approved localized command-center
-  shell; visual proofs no longer use a simplified shell-free wrapper.
-- Shared workspace rules provide consistent card geometry, hairline surfaces,
-  operational tables, and 40px desktop/44px mobile controls.
-- Complaint detail now stacks at normal desktop widths and uses its two-column
-  layout only on wide screens, preventing vertical text collapse.
-- Dashboard, tasks, complaints, reports, groups, audit, and admin representative
-  Arabic screenshots were inspected in the real shell.
-- No backend workflow, RBAC, branch scope, audit, or portal behavior changed.
-- Local lint, typecheck, web, visual, accessibility, and static performance
-  proofs pass.
+- SSOT: `docs/CMSS_REVAMP_PLAN.md` (checklist, locked decisions). T0 + A1 done.
+- A1 shipped: `BoardStage` model + `BoardScope` enum + `Task.stageId?` +
+  `Task.boardPosition` in `packages/database/prisma/schema.prisma`;
+  idempotent default TASKS stages seed in
+  `packages/database/prisma/board-stages-seed.ts` (wired into `seed.ts`).
+- A1 proofs: prisma validate + generate Passed; repo lint + typecheck Passed;
+  `db:push`/`db:seed` Not Run (no local DATABASE_URL in this environment).
+- Uncommitted working-tree changes: schema, seed files, docs/CMSS_REVAMP_PLAN.md,
+  .forge chain files (plus pre-existing unrelated modifications:
+  packages/contracts/openapi.json, tools/lint.mjs, tools/web-proof.test.mjs).
 
 ## Current Stop
 
-Implementation and local proof are complete. Changes are not committed, pushed,
-or deployed.
+Handover requested by user mid-Phase A. A2 design is settled (see
+docs/CMSS_REVAMP_PLAN.md + next.md): new `tasks.board.repository.ts` +
+`tasks.board.service.ts` + `dto/board.dto.ts` because `tasks.service.ts`
+(300 lines) and `tasks.repository.ts` (281 lines) are at/near the 300-line
+budget — do NOT extend them.
 
 ## Open Carry-Forward / Known Debt
 
-- Commit and deploy after approval, then run authenticated production smoke.
-- Validate employee, manager, and administrator data density in both locales.
-- Measure deployed LCP, INP, and CLS.
-- Generated visual artifacts under `coverage/` remain intentionally unstaged.
+- A2–A8 of Phase A, then Phases B/C per SSOT.
+- Deploy secrets + `production` branch + production smoke (human gates).

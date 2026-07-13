@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-const compose = readFileSync('docker-compose.prod.yml', 'utf8');
-const caddy = readFileSync('Caddyfile', 'utf8');
-const envExample = readFileSync('.env.production.example', 'utf8');
+const compose = readFileSync('docker-compose.prod.yml', 'utf8').replace(/\r\n/g, '\n');
+const caddy = readFileSync('Caddyfile', 'utf8').replace(/\r\n/g, '\n');
+const envExample = readFileSync('.env.production.example', 'utf8').replace(/\r\n/g, '\n');
 
 test('production deploy artifacts define the required pilot stack', () => {
   for (const service of ['caddy', 'web', 'api', 'migrate', 'worker', 'postgres', 'redis']) {
