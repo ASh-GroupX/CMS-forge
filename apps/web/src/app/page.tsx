@@ -188,7 +188,7 @@ export function StaffShell({
       <NotificationCenter locale={locale} state={notificationState} />
       <WorkQueue locale={locale} rows={queueRows} state={queueState} />
       {role === 'staff' ? null : <ReportsDashboard canExport locale={locale} rows={reportRows} state={reportsState} />}
-      <ComplaintDetailWorkspace attachmentState={attachmentState} commentsState={commentsState} detail={complaintDetail} locale={locale} lookupState={lookupState} state={detailState} workflowState={workflowState} />
+      <ComplaintDetailWorkspace attachmentState={attachmentState} commentsState={commentsState} detail={complaintDetail} initialTab={commentsState ? 'communication' : attachmentState ? 'details' : 'work'} locale={locale} lookupState={lookupState} state={detailState} workflowState={workflowState} />
       {role === 'admin' ? <AdminSurfaces locale={locale} state={adminState} /> : null}
       <ComplaintIntakeWorkspace createState={createState} locale={locale} lookupState={lookupState} />
       <AttachmentUploadPanel locale={locale} state={attachmentState} />

@@ -1004,6 +1004,81 @@ commands:
 - npm run test:api -- comments
 - npm run test:e2e -- complaint-comments
 
+### REQ-COLLAB-001: Staff record collaboration
+type: functional
+lane: T4_ARCHITECTURE
+risk: high
+priority: must
+status: active
+source: approved Arabic-first CC, mentions, and groups change request
+
+#### Intent
+Staff collaborate in the context of an existing complaint or task. A task keeps
+one accountable assignee; CC, mentions, and groups make the right people aware
+without creating a separate chat system or changing workflow authority.
+
+#### Scope Hints
+likelyEdit:
+- apps/api/src/modules/communication-groups/**
+- apps/api/src/modules/complaints/**
+- apps/api/src/modules/tasks/**
+- apps/api/src/modules/notifications/**
+- apps/web/src/app/(staff)/**
+likelyTest:
+- apps/api/src/modules/communication-groups/**.spec.ts
+- apps/api/src/modules/complaints/**.spec.ts
+- apps/api/src/modules/tasks/**.spec.ts
+- apps/web/src/** collaboration proof
+forbidden:
+- standalone chat rooms or inbound email replies
+- client-derived role, branch, group, or permission authority
+- portal exposure of staff collaboration data
+
+#### Acceptance Criteria
+- AC1 [must] A task has one accountable assignee. A `WATCHER` may view and add
+  comments only; it cannot change task state, assignee, deadline, or workflow.
+- AC2 [must] A complaint or task can notify eligible staff through individual
+  CC, direct mention, dynamic role/department mention, and authorized personal
+  or admin-shared custom groups. CC persistence is individual-only.
+- AC3 [must] The backend resolves every target against the record's server
+  scope, role, branch, confidentiality, and access policy. CC and mentions
+  never grant authority. Unauthorized explicit recipients return
+  `COLLABORATION_TARGET_FORBIDDEN`.
+- AC4 [must] Duplicate recipients and the sender are removed. More than 25
+  resolved recipients requires the server-returned count to be confirmed; more
+  than 100 recipients is rejected with `COLLABORATION_RECIPIENT_LIMIT_EXCEEDED`.
+- AC5 [must] An internal complaint comment may create one linked task with one
+  eligible assignee and deadline. The comment, resolved mention snapshots,
+  watcher changes, linked task, task/status history, and audit entries commit
+  atomically; delivery work is queued only after commit.
+- AC6 [must] Public comments and portal responses reject or omit mentions, CC,
+  custom group names, watchers, staff identities, and internal delivery data.
+- AC7 [must] An assignment and direct/group mention create one immediate in-app
+  and email notification per recipient per event. A CC update creates immediate
+  in-app delivery and a per-recipient, per-record email digest after ten minutes.
+  Confidential records use a generic secure-app notice; other emails expose at
+  most a 240-character safe excerpt.
+- AC8 [must] Personal groups are editable only by their owner and limited to
+  that owner's eligible staff scope. Shared groups are managed only through
+  `COMMUNICATION_GROUPS_MANAGE`, contain at most 100 active staff, and retain
+  historical mention snapshots after deactivation.
+- AC9 [must] The staff experience is Arabic-first, RTL-safe, keyboard and
+  screen-reader usable, and uses backend-returned capabilities and audience
+  counts. English remains functional with no raw enum or technical fallback.
+
+#### Proof Requirements
+minimum: L3
+commands:
+- corepack pnpm typecheck
+- corepack pnpm lint
+- corepack pnpm openapi:check
+- corepack pnpm test:api -- communication-groups
+- corepack pnpm test:api -- complaints
+- corepack pnpm test:api -- tasks
+- corepack pnpm test:web -- localization
+- corepack pnpm test:visual
+- corepack pnpm test:e2e -- accessibility
+
 ### REQ-PORTAL-001: Customer complaint submission
 type: functional
 lane: T2_STANDARD
@@ -2930,6 +3005,9 @@ APIs must expose stable request/response shapes and safe error messages.
 | PORTAL_VERIFICATION_FAILED | Portal verification failed |
 | INTEGRATION_PROVIDER_DOWN | External provider unavailable |
 | REPORT_EXPORT_LIMIT_EXCEEDED | Export exceeds configured limit |
+| COLLABORATION_TARGET_FORBIDDEN | Recipient or group is outside the record's eligible staff scope |
+| COLLABORATION_RECIPIENT_LIMIT_EXCEEDED | Resolved collaboration audience exceeds the configured limit |
+| COLLABORATION_AUDIENCE_CONFIRMATION_REQUIRED | A large resolved audience requires explicit confirmation |
 
 ## Required Audit Event Types
 

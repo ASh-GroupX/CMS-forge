@@ -5321,6 +5321,43 @@
           }
         }
       }
+    },
+    "/communication-groups": {
+      "get": {
+        "tags": ["Communication groups"],
+        "operationId": "communicationGroupsList",
+        "summary": "List server-scoped personal and shared communication groups",
+        "responses": { "200": { "description": "Communication groups", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunicationGroupsResponse" } } } }, "401": { "description": "Missing or invalid session" } }
+      },
+      "post": {
+        "tags": ["Communication groups"],
+        "operationId": "communicationGroupsCreate",
+        "summary": "Create a personal group or an Admin-managed shared group",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunicationGroupWrite" } } } },
+        "responses": { "201": { "description": "Communication group created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunicationGroup" } } } }, "400": { "description": "Invalid request" }, "403": { "description": "Role or staff scope denied" } }
+      }
+    },
+    "/communication-groups/{id}": {
+      "patch": { "tags": ["Communication groups"], "operationId": "communicationGroupsUpdate", "summary": "Update an owned personal group or Admin-managed shared group", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunicationGroupWrite" } } } }, "responses": { "200": { "description": "Communication group updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunicationGroup" } } } }, "403": { "description": "Ownership or role denied" } } },
+      "delete": { "tags": ["Communication groups"], "operationId": "communicationGroupsDeactivate", "summary": "Deactivate a communication group without deleting history", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "Group deactivated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } }, "403": { "description": "Ownership or role denied" } } }
+    },
+    "/complaints/{id}/communication-targets": {
+      "get": { "tags": ["Complaints"], "operationId": "complaintCommunicationTargets", "summary": "Search server-authorized employees and mentionable groups for a complaint", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }, { "name": "q", "in": "query", "required": false, "schema": { "type": "string" } }], "responses": { "200": { "description": "Eligible collaboration targets", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunicationTargetsResponse" } } } }, "403": { "description": "Record access denied" } } }
+    },
+    "/complaints/{id}/watchers": {
+      "post": { "tags": ["Complaints"], "operationId": "complaintWatcherAdd", "summary": "Add an eligible individual CC watcher", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WatcherRequest" } } } }, "responses": { "200": { "description": "Watcher added", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } }, "403": { "description": "Record or target denied" } } }
+    },
+    "/complaints/{id}/watchers/{userId}": {
+      "delete": { "tags": ["Complaints"], "operationId": "complaintWatcherRemove", "summary": "Remove a complaint CC watcher", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }, { "name": "userId", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "Watcher removed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } }, "403": { "description": "Record access denied" } } }
+    },
+    "/tasks/{id}/communication-targets": {
+      "get": { "tags": ["Tasks"], "operationId": "taskCommunicationTargets", "summary": "Search server-authorized employees and mentionable groups for a task", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }, { "name": "q", "in": "query", "required": false, "schema": { "type": "string" } }], "responses": { "200": { "description": "Eligible collaboration targets", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunicationTargetsResponse" } } } }, "403": { "description": "Record access denied" } } }
+    },
+    "/tasks/{id}/watchers": {
+      "post": { "tags": ["Tasks"], "operationId": "taskWatcherAdd", "summary": "Add an eligible individual CC watcher", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WatcherRequest" } } } }, "responses": { "200": { "description": "Watcher added", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } }, "403": { "description": "Task manage access or target denied" } } }
+    },
+    "/tasks/{id}/watchers/{userId}": {
+      "delete": { "tags": ["Tasks"], "operationId": "taskWatcherRemove", "summary": "Remove a task CC watcher", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }, { "name": "userId", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "Watcher removed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } }, "403": { "description": "Task manage access denied" } } }
     }
   },
   "components": {
@@ -5383,6 +5420,10 @@
             "items": {
               "$ref": "#/components/schemas/FieldError"
             }
+          },
+          "actualRecipientCount": {
+            "type": "integer",
+            "minimum": 0
           }
         },
         "additionalProperties": false
@@ -7303,76 +7344,42 @@
               "INTERNAL",
               "PUBLIC"
             ]
-          }
+          },
+          "mentionTargets": {
+            "type": "array",
+            "maxItems": 20,
+            "items": { "$ref": "#/components/schemas/CollaborationMentionTarget" }
+          },
+          "ccUserIds": {
+            "type": "array",
+            "maxItems": 100,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "confirmedRecipientCount": { "type": "integer", "minimum": 1, "maximum": 100 },
+          "actionTask": { "$ref": "#/components/schemas/ActionTask" }
         },
+        "additionalProperties": false
+      },
+      "ComplaintCommentMention": {
+        "type": "object",
+        "required": ["userId", "name", "nameAr", "source", "sourceLabel"],
+        "properties": { "userId": { "type": "string" }, "name": { "type": "string" }, "nameAr": { "type": "string" }, "source": { "type": "string" }, "sourceLabel": { "type": "string" } },
         "additionalProperties": false
       },
       "ComplaintComment": {
         "type": "object",
-        "required": [
-          "id",
-          "complaintId",
-          "authorId",
-          "body",
-          "visibility",
-          "createdAt"
-        ],
+        "required": ["id", "complaintId", "authorId", "body", "visibility", "createdAt"],
         "properties": {
-          "id": {
-            "type": "string"
-          },
-          "complaintId": {
-            "type": "string"
-          },
-          "authorId": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "body": {
-            "type": "string"
-          },
-          "visibility": {
-            "type": "string",
-            "enum": [
-              "INTERNAL",
-              "PUBLIC"
-            ]
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          }
+          "id": { "type": "string" }, "complaintId": { "type": "string" }, "authorId": { "type": ["string", "null"] }, "authorName": { "type": "string" }, "authorNameAr": { "type": "string" }, "body": { "type": "string" }, "visibility": { "type": "string", "enum": ["INTERNAL", "PUBLIC"] },
+          "mentions": { "type": "array", "items": { "$ref": "#/components/schemas/ComplaintCommentMention" } }, "createdTaskId": { "type": ["string", "null"] }, "createdAt": { "type": "string", "format": "date-time" }
         },
         "additionalProperties": false
       },
       "ComplaintCommentResponse": {
-        "type": "object",
-        "required": [
-          "comment"
-        ],
-        "properties": {
-          "comment": {
-            "$ref": "#/components/schemas/ComplaintComment"
-          }
-        },
-        "additionalProperties": false
+        "type": "object", "required": ["comment"], "properties": { "comment": { "$ref": "#/components/schemas/ComplaintComment" } }, "additionalProperties": false
       },
       "ComplaintPublicCommentsResponse": {
-        "type": "object",
-        "required": [
-          "items"
-        ],
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ComplaintComment"
-            }
-          }
-        },
-        "additionalProperties": false
+        "type": "object", "required": ["items"], "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/ComplaintComment" } } }, "additionalProperties": false
       },
       "AttachmentUploadRequest": {
         "type": "object",
@@ -9667,6 +9674,7 @@
           "authorId",
           "authorName",
           "body",
+          "mentions",
           "createdAt"
         ],
         "properties": {
@@ -9685,8 +9693,22 @@
               "null"
             ]
           },
+          "authorNameAr": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "body": {
             "type": "string"
+          },
+          "mentions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["userId", "name", "nameAr", "source", "sourceLabel"],
+              "properties": { "userId": { "type": "string" }, "name": { "type": ["string", "null"] }, "nameAr": { "type": ["string", "null"] }, "source": { "type": "string" }, "sourceLabel": { "type": "string" } }
+            }
           },
           "createdAt": {
             "type": "string",
@@ -9720,7 +9742,10 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 2000
-          }
+          },
+          "mentionTargets": { "type": "array", "maxItems": 20, "items": { "$ref": "#/components/schemas/CollaborationMentionTarget" } },
+          "ccUserIds": { "type": "array", "maxItems": 100, "items": { "type": "string", "minLength": 1 } },
+          "confirmedRecipientCount": { "type": "integer", "minimum": 1, "maximum": 100 }
         },
         "additionalProperties": false
       },
@@ -10629,6 +10654,63 @@
             "minimum": 1
           }
         },
+        "additionalProperties": false
+      },
+      "CollaborationMentionTarget": {
+        "type": "object",
+        "required": ["type", "id"],
+        "properties": {
+          "type": { "type": "string", "enum": ["USER", "SYSTEM_ROLE", "SYSTEM_DEPARTMENT", "CUSTOM_GROUP"] },
+          "id": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      },
+      "ActionTask": {
+        "type": "object",
+        "required": ["title", "assigneeId", "dueAt"],
+        "properties": { "title": { "type": "string", "minLength": 1, "maxLength": 240 }, "assigneeId": { "type": "string", "minLength": 1 }, "dueAt": { "type": "string", "format": "date-time" } },
+        "additionalProperties": false
+      },
+      "CommunicationTarget": {
+        "type": "object",
+        "required": ["id", "type", "label", "labelAr", "recipientCount"],
+        "properties": { "id": { "type": "string" }, "type": { "type": "string", "enum": ["USER", "SYSTEM_ROLE", "SYSTEM_DEPARTMENT", "CUSTOM_GROUP"] }, "label": { "type": "string" }, "labelAr": { "type": "string" }, "recipientCount": { "type": "integer", "minimum": 0 } },
+        "additionalProperties": false
+      },
+      "CommunicationTargetsResponse": {
+        "type": "object",
+        "required": ["targets", "recipientLimit", "confirmationRequiredAbove"],
+        "properties": { "targets": { "type": "array", "items": { "$ref": "#/components/schemas/CommunicationTarget" } }, "recipientLimit": { "type": "integer", "minimum": 1 }, "confirmationRequiredAbove": { "type": "integer", "minimum": 1 }, "currentWatchers": { "type": "array", "items": { "type": "object", "required": ["userId", "name", "nameAr"], "properties": { "userId": { "type": "string" }, "name": { "type": "string" }, "nameAr": { "type": "string" } } } }, "capabilities": { "type": "object" } },
+        "additionalProperties": false
+      },
+      "WatcherRequest": {
+        "type": "object",
+        "required": ["userId"],
+        "properties": { "userId": { "type": "string", "minLength": 1 } },
+        "additionalProperties": false
+      },
+      "CommunicationGroupMember": {
+        "type": "object",
+        "required": ["userId", "displayName", "displayNameAr"],
+        "properties": { "userId": { "type": "string" }, "displayName": { "type": "string" }, "displayNameAr": { "type": "string" } },
+        "additionalProperties": false
+      },
+      "CommunicationGroup": {
+        "type": "object",
+        "required": ["id", "name", "visibility", "ownerId", "members", "createdAt", "updatedAt"],
+        "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "visibility": { "type": "string", "enum": ["PERSONAL", "SHARED"] }, "ownerId": { "type": "string" }, "members": { "type": "array", "items": { "$ref": "#/components/schemas/CommunicationGroupMember" } }, "createdAt": { "type": "string", "format": "date-time" }, "updatedAt": { "type": "string", "format": "date-time" } },
+        "additionalProperties": false
+      },
+      "CommunicationGroupWrite": {
+        "type": "object",
+        "required": ["name", "visibility", "memberUserIds"],
+        "properties": { "name": { "type": "string", "minLength": 1, "maxLength": 80 }, "visibility": { "type": "string", "enum": ["PERSONAL", "SHARED"] }, "memberUserIds": { "type": "array", "maxItems": 100, "items": { "type": "string", "minLength": 1 } } },
+        "additionalProperties": false
+      },
+      "CommunicationGroupsResponse": {
+        "type": "object",
+        "required": ["items", "eligibleMembers", "canManageShared"],
+        "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/CommunicationGroup" } }, "eligibleMembers": { "type": "array", "items": { "$ref": "#/components/schemas/CommunicationGroupMember" } }, "canManageShared": { "type": "boolean" } },
         "additionalProperties": false
       }
     }

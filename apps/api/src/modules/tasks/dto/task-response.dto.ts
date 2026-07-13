@@ -1,4 +1,4 @@
-import type { TaskConfidentialityLevel, TaskLinkEntityType, TaskStatus, TaskVisibility } from '@prisma/client';
+import type { TaskConfidentialityLevel, TaskLinkEntityType, TaskParticipantRole, TaskStatus, TaskVisibility } from '@prisma/client';
 
 export type TaskNextActionDto = {
   what: string;
@@ -11,6 +11,9 @@ export type TaskLinkDto = {
   entityType: TaskLinkEntityType;
   entityId: string;
 };
+
+export type TaskParticipantDto = { userId: string; role: TaskParticipantRole; name: string | null; nameAr: string | null };
+export type TaskCapabilitiesDto = { canComment: boolean; canManage: boolean; canManageWatchers: boolean };
 
 export class TaskResponseDto {
   id!: string;
@@ -29,6 +32,8 @@ export class TaskResponseDto {
   confidentialityLevel!: TaskConfidentialityLevel;
   links!: TaskLinkDto[];
   participantUserIds!: string[];
+  participants!: TaskParticipantDto[];
+  capabilities?: TaskCapabilitiesDto;
   createdAt!: string;
   updatedAt!: string;
 }
@@ -51,7 +56,9 @@ export type TaskCommentResponseDto = {
   taskId: string;
   authorId: string;
   authorName?: string | null;
+  authorNameAr?: string | null;
   body: string;
+  mentions: { userId: string; name: string | null; nameAr: string | null; source: string; sourceLabel: string }[];
   createdAt: string;
 };
 

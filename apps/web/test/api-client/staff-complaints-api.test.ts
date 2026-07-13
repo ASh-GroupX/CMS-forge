@@ -8,7 +8,7 @@ import { DELETE as proxyUnlinkRelatedComplaint, POST as proxyLinkRelatedComplain
 import { POST as proxyTransitionComplaint } from '../../src/app/api/complaints/[id]/transitions/route';
 import { POST as proxyCreateComplaint } from '../../src/app/api/complaints/route';
 import { GET as proxyLookupDmsCustomerVehicle } from '../../src/app/api/integrations/dms/customer-vehicle/route';
-import { addStaffComplaintComment } from '../../src/lib/staff-complaint-comments-api';
+import { addStaffComplaintComment, getComplaintCommunicationTargets } from '../../src/lib/staff-complaint-comments-api';
 import { getStaffComplaintDuplicateCandidates, getStaffComplaintRelated, linkStaffComplaintRelation, unlinkStaffComplaintRelation } from '../../src/lib/staff-complaint-relations-api';
 import { downloadStaffAttachment, listStaffComplaintAttachments, staffAttachmentFiles, uploadStaffComplaintAttachment, uploadStaffComplaintAttachments } from '../../src/lib/staff-attachments-api';
 import { correctStaffComplaint, createStaffComplaint, getStaffComplaint, listStaffComplaints, lookupStaffDmsCustomerVehicle, submitStaffComplaintWorkflowAction } from '../../src/lib/staff-complaints-api';
@@ -651,6 +651,37 @@ test('addStaffComplaintComment posts visibility and body without client authorit
   assert.equal(calls[0]?.init?.body, JSON.stringify({ body: 'Visible update', visibility: 'PUBLIC' }));
   assert.deepEqual(calls[0]?.init?.headers, { Accept: 'application/json', 'content-type': 'application/json', 'x-csrf-token': 'csrf_123' });
   assert.doesNotMatch(String(calls[0]?.init?.body), /actor|author|role|branch|credential|token|password/i);
+});
+
+test('complaint collaboration targets preserve server capabilities limits and watchers', async () => {
+  const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
+  const body = {
+    targets: [{ id: 'role_cr', type: 'SYSTEM_ROLE', label: 'Customer relations', labelAr: 'علاقات العملاء', recipientCount: 7 }],
+    currentWatchers: [{ userId: 'usr_1', name: 'Mona', nameAr: 'منى' }],
+    capabilities: { canComment: true, canManage: false, canManageWatchers: true },
+    recipientLimit: 100,
+    confirmationRequiredAbove: 25,
+  };
+  const fetchImpl: typeof fetch = async (input, init) => { calls.push({ input, init }); return jsonResponse(body); };
+
+  const result = await getComplaintCommunicationTargets('cmp/1', 'من', fetchImpl);
+
+  assert.deepEqual(result, body);
+  assert.equal(calls[0]?.input, '/api/complaints/cmp%2F1/communication-targets?q=%D9%85%D9%86');
+  assert.equal(calls[0]?.init?.credentials, 'include');
+});
+
+test('complaint comment client retains exact server audience confirmation count', async () => {
+  const fetchImpl: typeof fetch = async () => jsonResponse({ error: { code: 'COLLABORATION_AUDIENCE_CONFIRMATION_REQUIRED', message: 'Confirm audience.', correlationId: 'corr_1', actualRecipientCount: 37 } }, 409);
+
+  const result = await addStaffComplaintComment('cmp_1', { body: 'Internal update', visibility: 'INTERNAL', mentionTargets: [{ type: 'SYSTEM_ROLE', id: 'role_cr' }] }, fetchImpl);
+
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(result.error.code, 'COLLABORATION_AUDIENCE_CONFIRMATION_REQUIRED');
+    assert.equal(result.error.actualRecipientCount, 37);
+    assert.equal(result.error.correlationId, 'corr_1');
+  }
 });
 
 test('complaint comment proxy forwards body, session cookie, and CSRF to the API', async () => {

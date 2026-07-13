@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { compileTailwind, runBrowserArtifactChecks } from './web-browser-check.mjs';
 import { proofFetch } from './web-proof-fixtures.mjs';
 import StaffShellPage from '../apps/web/src/app/page.tsx';
+import { AppShell, staffNavItems } from '../apps/web/src/app/app-shell.tsx';
 import AdminPage from '../apps/web/src/app/(staff)/admin/page.tsx';
 import AuditPage from '../apps/web/src/app/(staff)/audit/page.tsx';
 import ComplaintsPage from '../apps/web/src/app/(staff)/complaints/page.tsx';
@@ -19,6 +20,8 @@ import PortalTrackingPage from '../apps/web/src/app/portal/track/page.tsx';
 import { StaffAuthLanding } from '../apps/web/src/app/staff-auth-landing.tsx';
 import { ComplaintDetailWorkspace } from '../apps/web/src/components/complaint-detail-workspace/index.tsx';
 import { ComplaintIntakeWorkspace } from '../apps/web/src/components/complaint-intake-workspace/index.tsx';
+import { CommunicationGroups } from '../apps/web/src/components/communication-groups/index.tsx';
+import { TaskConversation } from '../apps/web/src/components/task-conversation/index.tsx';
 import { PortalShell } from '../apps/web/src/components/portal-shell/index.tsx';
 import { PortalSubmissionScreen } from '../apps/web/src/components/portal-submission/index.tsx';
 import { PortalSurveyScreen } from '../apps/web/src/components/portal-survey/index.tsx';
@@ -56,11 +59,12 @@ for (const artifact of artifacts) {
 async function routePage(testCase) {
   const params = Promise.resolve(testCase.params);
   const staffProps = { cookieHeader: 'cms_staff_session=proof', fetchImpl: proofFetch, searchParams: params };
+  if (testCase.route === 'staff-navigation') return React.createElement(AppShell, { activePath: '/tasks/today', locale: testCase.locale, navKeys: staffNavItems.map((item) => item.key), signedIn: true }, React.createElement('section', { className: 'min-w-0', 'aria-label': staffShellText[testCase.locale].title }, staffShellText[testCase.locale].subtitle));
   if (testCase.route === 'staff-auth') return React.createElement(StaffAuthLanding, { authError: false, locale: testCase.locale });
   if (testCase.route === 'staff-admin') return staffFrame(testCase, await AdminPage(staffProps));
   if (testCase.route === 'staff-audit') return staffFrame(testCase, await AuditPage({ searchParams: params }));
   if (testCase.route === 'staff-complaints') return staffFrame(testCase, await ComplaintsPage(staffProps));
-  if (testCase.route === 'staff-complaint-detail') return staffFrame(testCase, hasAnyParam(testCase, ['attachment', 'comments', 'detail', 'lookup', 'sla', 'workflow'])
+  if (testCase.route === 'staff-complaint-detail') return staffFrame(testCase, hasAnyParam(testCase, ['attachment', 'comments', 'commentVisibility', 'detail', 'lookup', 'sla', 'tab', 'workflow'])
     ? await proofComplaintDetail(testCase)
     : await ComplaintDetailPage({ ...staffProps, params: Promise.resolve({ id: 'cmp-proof' }) }));
   if (testCase.route === 'staff-complaint-new') return staffFrame(testCase, hasAnyParam(testCase, ['create', 'lookup'])
@@ -68,8 +72,10 @@ async function routePage(testCase) {
     : await NewComplaintPage({ searchParams: params }));
   if (testCase.route === 'staff-dashboard') return staffFrame(testCase, await DashboardPage(staffProps));
   if (testCase.route === 'staff-deal-handoff') return staffFrame(testCase, await DealHandoffPage(staffProps));
-  if (testCase.route === 'staff-reports') return staffFrame(testCase, await ReportsPage(staffProps));
-  if (testCase.route === 'staff-today') return staffFrame(testCase, await EmployeeTodayPage(staffProps));
+    if (testCase.route === 'staff-reports') return staffFrame(testCase, await ReportsPage(staffProps));
+    if (testCase.route === 'staff-today') return staffFrame(testCase, await EmployeeTodayPage(staffProps));
+    if (testCase.route === 'staff-task-detail') return staffFrame(testCase, React.createElement(TaskConversation, { comments: proofTaskComments(), locale: testCase.locale, task: proofTask() }));
+    if (testCase.route === 'staff-communication-groups') return staffFrame(testCase, React.createElement(CommunicationGroups, { data: proofCommunicationGroups(), loadState: 'ready', locale: testCase.locale }));
   if (testCase.route === 'portal-submission') return testCase.params.state
     ? portalFrame(testCase, 'submit', React.createElement(PortalSubmissionScreen, { locale: testCase.locale, reference: testCase.params.reference, state: testCase.params.state }))
     : PortalSubmissionPage({ searchParams: params });
@@ -89,8 +95,10 @@ async function proofComplaintDetail(testCase) {
   ]);
   return React.createElement(ComplaintDetailWorkspace, {
     attachmentState: testCase.params.attachment,
+    commentVisibility: testCase.params.commentVisibility,
     commentsState: testCase.params.comments,
     detail: proofDetail(complaint, testCase),
+    initialTab: testCase.params.tab,
     locale: testCase.locale,
     lookupState: testCase.params.lookup,
     options,
@@ -117,6 +125,10 @@ function proofRelations() {
     windowDays: 30,
   };
 }
+
+function proofTask() { return { id: 'task-proof', title: 'متابعة العميل', status: 'OPEN', ownerId: 'owner-proof', assigneeId: 'assignee-proof', assigneeName: 'المسؤول', dueAt: '2026-07-14T10:00:00.000Z', nextAction: { what: 'الاتصال بالعميل', whoId: 'assignee-proof', when: '2026-07-14T10:00:00.000Z' }, links: [{ entityType: 'COMPLAINT', entityId: 'cmp-proof' }] }; }
+function proofTaskComments() { return [{ id: 'comment-proof', taskId: 'task-proof', authorId: 'owner-proof', authorName: 'الموظف', body: 'يرجى متابعة العميل اليوم.', mentions: [{ userId: 'assignee-proof', name: 'Employee', nameAr: 'المسؤول', source: 'USER', sourceLabel: 'Employee' }], createdAt: '2026-07-13T09:00:00.000Z' }]; }
+function proofCommunicationGroups() { return { items: [{ id: 'group-proof', name: 'فريق المتابعة', visibility: 'PERSONAL', ownerId: 'owner-proof', members: [{ userId: 'assignee-proof', displayName: 'Employee', displayNameAr: 'المسؤول' }], createdAt: '2026-07-13T00:00:00.000Z', updatedAt: '2026-07-13T00:00:00.000Z' }], eligibleMembers: [{ userId: 'assignee-proof', displayName: 'Employee', displayNameAr: 'المسؤول' }], canManageShared: true }; }
 function proofDetail(complaint, testCase) {
   return {
     ...complaint,

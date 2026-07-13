@@ -27,6 +27,7 @@ Agent context manifest. Read this before editing the module.
 - `complaint_relations`
 - `complaint_status_history`
 - `complaint_reference_sequences`
+- `complaint_watchers`
 
 Related tables may be read or coordinated through their owning modules once
 those modules exist: `comments`, `attachments`, `audit_logs`, `approvals`, `sla_events`,
@@ -48,6 +49,8 @@ those modules exist: `comments`, `attachments`, `audit_logs`, `approvals`, `sla_
   satisfaction survey scheduling.
 - TasksService through TasksModule for task-owned timeline facts on complaint
   detail.
+- CommunicationGroupsService through CommunicationGroupsModule for
+  server-scoped mention and watcher resolution.
 - Other modules' public services only. Never import another module repository,
   DTO folder, or Prisma model type.
 

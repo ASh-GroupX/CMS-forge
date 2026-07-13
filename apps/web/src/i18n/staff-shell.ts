@@ -4,6 +4,8 @@ export function resolveLocale(value: string | string[] | undefined): Locale { re
 export const staffShellText = {
   en: {
     lang: 'en', dir: 'ltr',
+    navSections: { work: 'Work', complaints: 'Complaints', reports: 'Reports', administration: 'Administration' },
+    mobileNav: { title: 'More pages', more: 'More', today: 'Today', cases: 'Cases', create: 'New complaint', notifications: 'Notifications' },
     localeName: 'English',
     switchLabel: 'Switch language',
     switchTarget: 'العربية',
@@ -139,10 +141,13 @@ export const staffShellText = {
       reports: ['Reports', 'Counts and exports for managers'],
       audit: ['Audit', 'Who changed what'],
       notifications: ['Notifications', 'Updates that need attention'],
+      groups: ['Groups', 'People you mention together'],
     },
   },
   ar: {
     lang: 'ar', dir: 'rtl',
+    navSections: { work: 'العمل', complaints: 'الشكاوى', reports: 'التقارير', administration: 'الإدارة' },
+    mobileNav: { title: 'صفحات إضافية', more: 'المزيد', today: 'اليوم', cases: 'الحالات', create: 'إنشاء شكوى', notifications: 'الإشعارات' },
     localeName: 'العربية',
     switchLabel: 'تبديل اللغة',
     switchTarget: 'English',
@@ -277,6 +282,7 @@ export const staffShellText = {
       reports: ['التقارير', 'لوحات المساءلة'],
       audit: ['التدقيق', 'سجل مراجعة الإدارة'],
       notifications: ['الإشعارات', 'مركز إشعارات الموظفين'],
+      groups: ['المجموعات', 'أشخاص تذكرهم معاً'],
     },
   },
 } as const;

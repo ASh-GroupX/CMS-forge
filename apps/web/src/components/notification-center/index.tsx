@@ -118,7 +118,7 @@ function notificationKind(item: StaffNotification): 'sla' | 'task' | 'workflow' 
 }
 
 function notificationHref(item: StaffNotification, kind: 'sla' | 'task' | 'workflow'): string | null {
-  const explicit = scopedHref(item.targetHref ?? item.payload.targetHref);
+  const explicit = scopedHref(item.targetHref ?? item.payload.targetHref ?? item.payload.href);
   if (explicit) return explicit;
   const targetType = item.targetType ?? item.payload.targetType;
   const targetId = item.targetId ?? item.payload.targetId;
@@ -127,7 +127,8 @@ function notificationHref(item: StaffNotification, kind: 'sla' | 'task' | 'workf
   const reference = item.payload.complaintReference ?? item.payload.referenceNumber;
   if (reference) return `/complaints?search=${encodeURIComponent(reference)}`;
   const taskId = item.payload.taskId ?? (targetType === 'TASK' ? targetId : undefined);
-  if (taskId || kind === 'task') return '/tasks/today';
+  if (taskId) return `/tasks/${encodeURIComponent(taskId)}`;
+  if (kind === 'task') return '/tasks/today';
   return null;
 }
 

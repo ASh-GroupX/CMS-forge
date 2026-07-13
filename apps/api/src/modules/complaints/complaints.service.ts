@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { CommentVisibility, ComplaintSeverity, ComplaintStatus, ComplaintTransitionAction, ComplaintTransitionRequestSource, RoleCode } from '@prisma/client';
+import { ComplaintSeverity, ComplaintStatus, ComplaintTransitionAction, ComplaintTransitionRequestSource, RoleCode } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { AuditService } from '../../core/audit.service.js';
 import type { AuditRecordInput } from '../../core/audit.service.js';
@@ -9,6 +9,11 @@ import { NotificationsService } from '../notifications/notifications.service.js'
 import { SlaService } from '../sla/sla.service.js';
 import type { SurveysService } from '../surveys/surveys.service.js';
 import { TasksService } from '../tasks/tasks.service.js';
+import { CommunicationGroupsService } from '../communication-groups/communication-groups.service.js';
+import type { CommunicationActor } from '../communication-groups/communication-groups.service.js';
+import { addComplaintWatcher, complaintCommunicationTargets, createComplaintComment, listComplaintComments, listPublicComplaintComments, removeComplaintWatcher } from './complaint-collaboration.js';
+import type { ComplaintCommentResult, CreateComplaintCommentInput } from './complaint-collaboration.js';
+export type { ComplaintCommentResult, CreateComplaintCommentInput } from './complaint-collaboration.js';
 import { complaintCreatedAudit, createComplaintData, isReferenceConflict, referenceConflictError } from './complaint-intake.js';
 import { complaintCorrectionAudit, complaintCorrectionData, correctionConflictError } from './complaint-correction.js';
 import type { ApplyComplaintCorrectionInput, ApplyComplaintCorrectionResult } from './complaint-correction.js';
@@ -16,7 +21,7 @@ import { detailItem, queueItem, reportItem, searchItem, shouldMask } from './com
 import { timelineItems } from './complaint-timeline.js';
 import { queueComplaintCreationSideEffects, queueWorkflowSideEffects } from './complaint-workflow-side-effects.js';
 import { ComplaintsRepository } from './complaints.repository.js';
-import type { ComplaintCommentRecord, ComplaintReportFilter, ComplaintStatusRecord, ComplaintTransitionSubject, DataSource, PortalVerificationTargetRecord } from './complaints.repository.js';
+import type { ComplaintReportFilter, ComplaintStatusRecord, ComplaintTransitionSubject, DataSource, PortalVerificationTargetRecord } from './complaints.repository.js';
 import type { ComplaintCaseSummaryDto, ComplaintDetailDto, ComplaintQueueItemDto, ComplaintTimelineItemDto } from './dto/complaint-response.dto.js';
 export type ValidateComplaintTransitionInput = { fromStatus: ComplaintStatus; action: ComplaintTransitionAction; actorRole: RoleCode };
 export type ComplaintTransitionDecision = ValidateComplaintTransitionInput & { toStatus: ComplaintStatus };
@@ -46,8 +51,6 @@ export type ComplaintQueueFilter = { branchId?: string | null; role?: RoleCode |
 export type ComplaintReportRow = { id: string; referenceNumber: string; branchId: string; categoryId: string; status: ComplaintStatus; severity: ComplaintSeverity; subject: string; ownerId: string | null; createdAt: string; updatedAt: string };
 export type ComplaintSearchInput = ComplaintReportFilter & { sla?: ComplaintQueueItemDto['slaState'] | null };
 export type ComplaintSearchRow = ComplaintQueueItemDto & { categoryId: string; customerName: string; customerPhone: string; customerIdentifier: string | null };
-export type CreateComplaintCommentInput = { complaintId: string; body: string; visibility: CommentVisibility; actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
-export type ComplaintCommentResult = { id: string; complaintId: string; body: string; visibility: CommentVisibility; authorId: string | null; createdAt: string };
 
 type WorkflowTransition = { fromStatus: ComplaintStatus; action: ComplaintTransitionAction; toStatus: ComplaintStatus; allowedRoles: readonly RoleCode[] };
 
@@ -79,7 +82,7 @@ function transition(fromStatus: ComplaintStatus, action: ComplaintTransitionActi
 
 @Injectable()
 export class ComplaintsService {
-  constructor(private readonly complaintsRepository: ComplaintsRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly casesService?: CasesService, private readonly slaService?: SlaService, private readonly surveysService?: SurveysService, private readonly tasksService?: TasksService) {}
+  constructor(private readonly complaintsRepository: ComplaintsRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly casesService?: CasesService, private readonly slaService?: SlaService, private readonly surveysService?: SurveysService, private readonly tasksService?: TasksService, private readonly groupsService?: CommunicationGroupsService) {}
 
   async createInternal(input: CreateInternalComplaintInput): Promise<ComplaintCreationResult> {
     const data = createComplaintData(input);
@@ -145,17 +148,25 @@ export class ComplaintsService {
 
   async correctProvenance(input: ApplyComplaintCorrectionInput): Promise<ApplyComplaintCorrectionResult> { const data = complaintCorrectionData(input); return this.complaintsRepository.transaction(async (client) => { const complaint = await this.complaintsRepository.updateCorrection(data, client); if (!complaint) throw correctionConflictError(); await this.auditService.record(complaintCorrectionAudit(input, complaint.branchId, data.changedFields), client); return { complaintId: complaint.id, changedFields: data.changedFields }; }); }
 
-  async createComment(input: CreateComplaintCommentInput): Promise<ComplaintCommentResult> { const body = nonEmpty(input.body, 'body');
-    return this.complaintsRepository.transaction(async (client) => {
-      const comment = await this.complaintsRepository.createComment({ complaintId: input.complaintId, authorId: input.actorId ?? null, body, visibility: input.visibility }, client);
-      await this.auditService.record(commentAudit(input, comment), client);
-      return commentItem(comment);
-    });
+  async createComment(input: CreateComplaintCommentInput): Promise<ComplaintCommentResult> {
+    return createComplaintComment({ repository: this.complaintsRepository, audit: this.auditService, notifications: this.notificationsService, tasks: this.tasksService, groups: this.groupsService }, input);
   }
 
-  async listComments(complaintId: string): Promise<ComplaintCommentResult[]> { return (await this.complaintsRepository.listComments(complaintId)).map(commentItem); }
+  async listComments(complaintId: string): Promise<ComplaintCommentResult[]> { return listComplaintComments(this.complaintsRepository, complaintId); }
 
-  async listPublicComments(complaintId: string): Promise<ComplaintCommentResult[]> { return (await this.complaintsRepository.listPublicComments(complaintId)).map(commentItem); }
+  async listPublicComments(complaintId: string): Promise<ComplaintCommentResult[]> { return listPublicComplaintComments(this.complaintsRepository, complaintId); }
+
+  async communicationTargets(complaintId: string, actor: CommunicationActor, query = '') {
+    return complaintCommunicationTargets({ repository: this.complaintsRepository, audit: this.auditService, notifications: this.notificationsService, tasks: this.tasksService, groups: this.groupsService }, complaintId, actor, query);
+  }
+
+  async addWatcher(complaintId: string, userId: string, actor: CommunicationActor, audit: Pick<CreateComplaintCommentInput, 'correlationId' | 'ipAddress' | 'userAgent'> = {}): Promise<void> {
+    return addComplaintWatcher({ repository: this.complaintsRepository, audit: this.auditService, notifications: this.notificationsService, tasks: this.tasksService, groups: this.groupsService }, complaintId, userId, actor, audit);
+  }
+
+  async removeWatcher(complaintId: string, userId: string, actor: CommunicationActor, audit: Pick<CreateComplaintCommentInput, 'correlationId' | 'ipAddress' | 'userAgent'> = {}): Promise<void> {
+    return removeComplaintWatcher({ repository: this.complaintsRepository, audit: this.auditService, notifications: this.notificationsService, tasks: this.tasksService, groups: this.groupsService }, complaintId, userId, actor, audit);
+  }
 
   validateTransition(input: ValidateComplaintTransitionInput): ComplaintTransitionDecision {
     const transition = WORKFLOW_TRANSITIONS.find(
@@ -225,20 +236,8 @@ export class ComplaintsService {
     const item = await this.casesService?.customerComplaintCaseSummary(complaintId);
     return item ? { id: item.id, type: item.type, status: item.status, lifecycleStatus: item.lifecycleStatus, confidentialityLevel: item.confidentialityLevel, branchId: item.branchId, branchName: item.branchName, ownerId: item.ownerId, ownerName: item.ownerName } : null;
   }
+
 }
-
-function commentItem(comment: ComplaintCommentRecord): ComplaintCommentResult { return { ...comment, createdAt: comment.createdAt.toISOString() }; }
-
-function commentAudit(input: CreateComplaintCommentInput, comment: ComplaintCommentRecord): AuditRecordInput {
-  return {
-    eventType: 'COMMENT', action: input.visibility === CommentVisibility.PUBLIC ? 'public_comment_created' : 'internal_comment_created',
-    actorId: input.actorId ?? null, branchId: null, targetType: 'complaint_comment', targetId: comment.id,
-    correlationId: input.correlationId ?? null, ipAddress: input.ipAddress ?? null, userAgent: input.userAgent ?? null,
-    metadata: { complaintId: input.complaintId, visibility: input.visibility },
-  };
-}
-
-function nonEmpty(value: string, field: string): string { const text = value.trim(); if (!text) throw new AppException('VALIDATION_FAILED', 'Invalid complaint comment', HttpStatus.BAD_REQUEST, [{ field, code: 'REQUIRED', message: `${field} is required.` }]); return text; }
 
 function requiredTextError(value: unknown, field: string) { return typeof value === 'string' && value.trim() ? [] : [{ field, code: 'REQUIRED', message: `${field} is required.` }]; }
 

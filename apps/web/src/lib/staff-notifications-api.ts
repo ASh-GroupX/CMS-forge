@@ -10,6 +10,7 @@ export type StaffNotification = {
   payload: {
     complaintId?: string;
     complaintReference?: string;
+    href?: string;
     message?: string;
     referenceNumber?: string;
     status?: string;
@@ -62,6 +63,7 @@ function notificationFrom(item: Partial<StaffNotification>): StaffNotification |
     payload: {
       ...(typeof payload.complaintId === 'string' ? { complaintId: payload.complaintId } : {}),
       ...(typeof payload.complaintReference === 'string' ? { complaintReference: payload.complaintReference } : {}),
+      ...(typeof payload.href === 'string' ? { href: payload.href } : {}),
       ...(typeof payload.referenceNumber === 'string' ? { referenceNumber: payload.referenceNumber } : {}),
       ...(typeof payload.targetHref === 'string' ? { targetHref: payload.targetHref } : {}),
       ...(typeof payload.targetId === 'string' ? { targetId: payload.targetId } : {}),

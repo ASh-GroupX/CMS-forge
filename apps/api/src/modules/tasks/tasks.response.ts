@@ -28,6 +28,7 @@ export function taskToResponse(task: TaskRecord): TaskResponseDto {
     confidentialityLevel: task.confidentialityLevel,
     links: task.links.map((link) => ({ entityType: link.entityType, entityId: link.entityId })),
     participantUserIds: task.participants.map((participant) => participant.userId),
+    participants: task.participants.map((participant) => ({ userId: participant.userId, role: participant.role, name: participant.user.nameEn, nameAr: participant.user.nameAr })),
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
   };

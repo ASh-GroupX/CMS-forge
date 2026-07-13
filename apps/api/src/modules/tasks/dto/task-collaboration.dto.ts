@@ -1,12 +1,18 @@
 import { HttpStatus } from '@nestjs/common';
 import { AppException } from '../../../core/http-kernel.js';
 
-export type CreateTaskCommentInput = { body: string };
+export type CollaborationMentionTarget = { type: 'USER' | 'SYSTEM_ROLE' | 'SYSTEM_DEPARTMENT' | 'CUSTOM_GROUP'; id: string };
+export type CreateTaskCommentInput = { body: string; mentionTargets: CollaborationMentionTarget[]; ccUserIds: string[]; confirmedRecipientCount?: number };
 export type TaskNudgeInput = { message?: string; recipientUserId?: string };
 
 export function parseTaskCommentBody(body: unknown): CreateTaskCommentInput {
   if (!isRecord(body)) throw invalid('body');
-  return { body: limitedText(body.body, 'body', 2000) };
+  return {
+    body: limitedText(body.body, 'body', 2000),
+    mentionTargets: mentionTargets(body.mentionTargets),
+    ccUserIds: userIds(body.ccUserIds),
+    ...(body.confirmedRecipientCount === undefined ? {} : { confirmedRecipientCount: positiveInteger(body.confirmedRecipientCount, 'confirmedRecipientCount') }),
+  };
 }
 
 export function parseTaskNudgeBody(body: unknown): TaskNudgeInput {
@@ -23,6 +29,26 @@ function limitedText(value: unknown, field: string, max: number): string {
   const text = value.trim();
   if (!text || text.length > max) throw invalid(field);
   return text;
+}
+
+function mentionTargets(value: unknown): CollaborationMentionTarget[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > 20) throw invalid('mentionTargets');
+  return value.map((item) => {
+    if (!isRecord(item) || !['USER', 'SYSTEM_ROLE', 'SYSTEM_DEPARTMENT', 'CUSTOM_GROUP'].includes(String(item.type))) throw invalid('mentionTargets');
+    return { type: item.type as CollaborationMentionTarget['type'], id: limitedText(item.id, 'mentionTargets.id', 120) };
+  });
+}
+
+function userIds(value: unknown): string[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > 100) throw invalid('ccUserIds');
+  return [...new Set(value.map((item) => limitedText(item, 'ccUserIds', 120)))];
+}
+
+function positiveInteger(value: unknown, field: string): number {
+  if (!Number.isInteger(value) || Number(value) < 1 || Number(value) > 100) throw invalid(field);
+  return Number(value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

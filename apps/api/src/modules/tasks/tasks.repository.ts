@@ -22,7 +22,7 @@ const taskSelect = {
   assignee: { select: { nameEn: true, branchId: true, branch: { select: { nameEn: true } } } },
   nextActionWho: { select: { nameEn: true, branchId: true } },
   links: { select: { entityType: true, entityId: true } },
-  participants: { select: { userId: true, role: true } },
+  participants: { select: { userId: true, role: true, user: { select: { email: true, nameEn: true, nameAr: true } } } },
 } satisfies Prisma.TaskSelect;
 
 const taskCommentSelect = {
@@ -31,7 +31,8 @@ const taskCommentSelect = {
   authorId: true,
   body: true,
   createdAt: true,
-  author: { select: { nameEn: true } },
+  author: { select: { nameEn: true, nameAr: true } },
+  mentions: { select: { recipientUserId: true, source: true, sourceId: true, sourceLabel: true, recipientUser: { select: { nameEn: true, nameAr: true } } } },
 } satisfies Prisma.TaskCommentSelect;
 
 const timelineTaskSelect = {
@@ -57,7 +58,7 @@ export type TaskRecord = Prisma.TaskGetPayload<{ select: typeof taskSelect }>;
 export type TaskCommentRecord = Prisma.TaskCommentGetPayload<{ select: typeof taskCommentSelect }>;
 export type TaskTimelineRecord = Prisma.TaskGetPayload<{ select: typeof timelineTaskSelect }>;
 export type PromiseTaskRecord = TaskRecord & { statusHistory: { toStatus: TaskStatus; createdAt: Date }[] };
-type TaskClient = Pick<Prisma.TransactionClient, 'task' | 'taskComment' | 'taskStatusHistory'>;
+type TaskClient = Pick<Prisma.TransactionClient, 'task' | 'taskComment' | 'taskCommentMention' | 'taskParticipant' | 'taskStatusHistory'>;
 
 export type CreateTaskData = {
   title: string;
@@ -97,6 +98,7 @@ export type CreateTaskCommentData = {
   taskId: string;
   authorId: string;
   body: string;
+  mentions?: { recipientUserId: string; source: 'USER' | 'SYSTEM_ROLE' | 'SYSTEM_DEPARTMENT' | 'CUSTOM_GROUP'; sourceId: string | null; sourceLabel: string }[];
 };
 
 @Injectable()
@@ -248,8 +250,18 @@ export class TasksRepository {
         taskId: data.taskId,
         authorId: data.authorId,
         body: data.body,
+        ...(data.mentions?.length ? { mentions: { create: data.mentions } } : {}),
       },
       select: taskCommentSelect,
     });
+  }
+
+  async addWatcher(taskId: string, userId: string, client: TaskClient): Promise<void> {
+    await client.taskParticipant.upsert({ where: { taskId_userId: { taskId, userId } }, create: { taskId, userId, role: 'WATCHER' }, update: {} });
+  }
+
+  async removeWatcher(taskId: string, userId: string, client: TaskClient): Promise<boolean> {
+    const result = await client.taskParticipant.deleteMany({ where: { taskId, userId, role: 'WATCHER' } });
+    return result.count === 1;
   }
 }

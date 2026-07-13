@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { BranchScoped, PermissionGuard, Permissions, RbacGuard, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
@@ -95,11 +95,35 @@ export class TasksController {
     return {
       comment: await this.tasksService.createCommentForActor(
         id,
-        parseTaskCommentBody(body).body,
-        { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId },
+        parseTaskCommentBody(body),
+        taskActor(principal),
         auditContext(request),
       ),
     };
+  }
+
+  @Get(':id/communication-targets')
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
+  async communicationTargets(@Param('id') id: string, @Query('q') query: string | undefined, @Req() request: AuthenticatedRequest) {
+    return this.tasksService.communicationTargets(id, taskActor(requirePrincipal(request)), query ?? '');
+  }
+
+  @Post(':id/watchers')
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
+  async addWatcher(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    const userId = watcherUserId(body);
+    await this.tasksService.addWatcher(id, userId, taskActor(requirePrincipal(request)), auditContext(request));
+    return { ok: true };
+  }
+
+  @Delete(':id/watchers/:userId')
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
+  async removeWatcher(@Param('id') id: string, @Param('userId') userId: string, @Req() request: AuthenticatedRequest) {
+    await this.tasksService.removeWatcher(id, userId, taskActor(requirePrincipal(request)), auditContext(request));
+    return { ok: true };
   }
 
   @Post(':id/nudge')
@@ -134,6 +158,17 @@ function requirePrincipal(request: AuthenticatedRequest): StaffPrincipal {
   const userId = request.principal?.userId;
   if (!userId) throw new AppException('AUTH_INVALID_CREDENTIALS', 'Invalid credentials', 401);
   return request.principal!;
+}
+
+function taskActor(principal: StaffPrincipal) {
+  return { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId, permissions: principal.permissions ?? [] };
+}
+
+function watcherUserId(body: unknown): string {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) throw new AppException('VALIDATION_FAILED', 'Invalid watcher request', 400);
+  const userId = (body as Record<string, unknown>).userId;
+  if (typeof userId !== 'string' || !userId.trim()) throw new AppException('VALIDATION_FAILED', 'Invalid watcher request', 400);
+  return userId.trim();
 }
 
 function auditContext(request: AuthenticatedRequest) {

@@ -3,6 +3,7 @@ import { RoleCode } from '@prisma/client';
 import { BranchScoped, DynamicPermissionGuard, DynamicPermissions, PermissionGuard, Permissions, RbacGuard, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
+import { AppException } from '../../core/http-kernel.js';
 import { ComplaintFormOptionsService } from './complaint-form-options.service.js';
 import { auditContext, commentPermission, optionalSeverity, optionalSlaState, optionalStatus, optionalText, pageNumber, queueBranchId, requestRole, requiredQuery, searchBranchId, targetComplaintId, transitionPermission } from './complaints.controller-helpers.js';
 import { ComplaintRelationsService } from './complaint-relations.service.js';
@@ -156,11 +157,41 @@ export class ComplaintsController {
   ): Promise<ComplaintCommentResponseDto> {
     const commentBody = parseComplaintCommentBody(body);
     await this.complaintsService.getDetail(id, { branchId: queueBranchId(branchId, request) });
+    const principal = request.principal!;
     return {
       comment: await this.complaintsService.createComment(
-        toCommentInput(id, commentBody, auditContext(request)),
+        toCommentInput(id, commentBody, { ...auditContext(request), actorRole: principal.roleCode, actorBranchId: principal.branchId, actorPermissions: principal.permissions ?? [] }),
       ),
     };
+  }
+
+  @Get(':id/communication-targets')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
+  @BranchScoped()
+  async communicationTargets(@Param('id') id: string, @Query('q') query: string | undefined, @Query('branchId') branchId: string | undefined, @Req() request: AuthenticatedRequest) {
+    await this.complaintsService.getDetail(id, { branchId: queueBranchId(branchId, request) });
+    return this.complaintsService.communicationTargets(id, communicationActor(request), query ?? '');
+  }
+
+  @Post(':id/watchers')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard, CsrfGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
+  @BranchScoped()
+  async addWatcher(@Param('id') id: string, @Query('branchId') branchId: string | undefined, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    await this.complaintsService.getDetail(id, { branchId: queueBranchId(branchId, request) });
+    await this.complaintsService.addWatcher(id, watcherUserId(body), communicationActor(request), auditContext(request));
+    return { ok: true };
+  }
+
+  @Delete(':id/watchers/:userId')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard, CsrfGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
+  @BranchScoped()
+  async removeWatcher(@Param('id') id: string, @Param('userId') userId: string, @Query('branchId') branchId: string | undefined, @Req() request: AuthenticatedRequest) {
+    await this.complaintsService.getDetail(id, { branchId: queueBranchId(branchId, request) });
+    await this.complaintsService.removeWatcher(id, userId, communicationActor(request), auditContext(request));
+    return { ok: true };
   }
 
   @Get(':id/comments')
@@ -215,4 +246,17 @@ export class ComplaintsController {
       ),
     };
   }
+}
+
+function communicationActor(request: AuthenticatedRequest) {
+  const principal = request.principal;
+  if (!principal?.userId) throw new AppException('AUTH_INVALID_CREDENTIALS', 'Invalid credentials', 401);
+  return { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId, permissions: principal.permissions ?? [] };
+}
+
+function watcherUserId(body: unknown): string {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) throw new AppException('VALIDATION_FAILED', 'Invalid watcher request', 400);
+  const userId = (body as Record<string, unknown>).userId;
+  if (typeof userId !== 'string' || !userId.trim()) throw new AppException('VALIDATION_FAILED', 'Invalid watcher request', 400);
+  return userId.trim();
 }

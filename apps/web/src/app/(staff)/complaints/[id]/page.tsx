@@ -13,6 +13,7 @@ import { getStaffComplaintDetailLoadResult } from '../../../../lib/staff-detail-
 type RouteParams = { id?: string | string[] };
 type SearchParams = {
   locale?: string | string[];
+  tab?: string | string[];
 };
 
 export default async function ComplaintDetailPage({
@@ -50,6 +51,7 @@ export default async function ComplaintDetailPage({
       comments={comments}
       commentsState={commentsState}
       detail={detail ?? undefined}
+      initialTab={tabParam(readParam(query?.tab))}
       locale={resolveLocale(readParam(query?.locale))}
       options={options}
       relations={relations ?? undefined}
@@ -62,4 +64,8 @@ export default async function ComplaintDetailPage({
 
 function readParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
+}
+
+function tabParam(value: string | undefined): 'work' | 'communication' | 'details' {
+  return value === 'communication' || value === 'details' ? value : 'work';
 }

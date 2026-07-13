@@ -7,18 +7,22 @@ export function ActionDialog({
   children,
   description,
   footer,
+  onOpenChange,
+  open,
   title,
   trigger,
 }: {
   children: React.ReactNode;
   description?: string;
   footer?: React.ReactNode;
+  onOpenChange?: (open: boolean) => void;
+  open?: boolean;
   title: string;
-  trigger: React.ReactNode;
+  trigger?: React.ReactNode;
 }) {
   return (
-    <Dialog>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+    <Dialog {...(onOpenChange ? { onOpenChange } : {})} {...(open !== undefined ? { open } : {})}>
+      {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>

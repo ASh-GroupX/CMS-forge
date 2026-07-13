@@ -27,6 +27,7 @@ export const slaEscalationJobName = 'sla.escalation';
 export const notificationEmailJobName = 'notifications.email';
 export const notificationSmsJobName = 'notifications.sms';
 export const notificationWhatsAppJobName = 'notifications.whatsapp';
+export const collaborationDigestJobName = 'notifications.collaboration-digest';
 export const taskEscalationJobName = 'tasks.escalation.scan';
 export const taskNotificationBatchJobName = 'tasks.notification.batch';
 export const attachmentScanJobName = 'attachments.scan';
@@ -35,7 +36,7 @@ type WorkerJob = { id?: string | number; name: string; data?: WorkerJobPayload }
 type WorkerLogger = Pick<Logger, 'log'>;
 type WorkerContext = Pick<INestApplicationContext, 'get'>;
 type SlaRunner = Pick<SlaService, 'runWarningJob' | 'runBreachJob' | 'runEscalationJob'>;
-type NotificationsRunner = Pick<NotificationsService, 'dispatchQueuedEmail' | 'dispatchQueuedSms' | 'dispatchQueuedWhatsApp' | 'queueInternal'>;
+type NotificationsRunner = Pick<NotificationsService, 'dispatchQueuedEmail' | 'dispatchQueuedSms' | 'dispatchQueuedWhatsApp' | 'queueInternal' | 'flushCollaborationDigests'>;
 type AttachmentsRunner = Pick<AttachmentsService, 'transitionScanStatus'>;
 type TaskEscalationRunner = Pick<TasksService, 'managerControlRoom'>;
 type QueueScheduler = Pick<Queue<WorkerJobPayload>, 'upsertJobScheduler' | 'close'>;
@@ -97,6 +98,11 @@ export async function processWorkerJob(
       logger.log(`task notification batch job received name=${job.name} id=${job.id ?? 'unknown'} result=${JSON.stringify(result)}`);
       return result;
     }
+    if (job.name === collaborationDigestJobName) {
+      const result = await app.get(NotificationsService).flushCollaborationDigests(100, new Date());
+      logger.log(`collaboration digest job received id=${job.id ?? 'unknown'} result=${JSON.stringify(result)}`);
+      return result;
+    }
     if (job.name !== notificationEmailJobName && job.name !== notificationSmsJobName && job.name !== notificationWhatsAppJobName) return logNoopJob(queueName, job, logger);
     const result = await runNotificationJob(app.get(NotificationsService), job.name, new Date());
     logger.log(`notification job received name=${job.name} id=${job.id ?? 'unknown'} result=${JSON.stringify(result)}`);
@@ -137,6 +143,7 @@ export async function scheduleNotificationJobs(
   await queue.upsertJobScheduler(notificationEmailJobName, { every: everyMs }, { name: notificationEmailJobName, data: {} });
   await queue.upsertJobScheduler(notificationSmsJobName, { every: everyMs }, { name: notificationSmsJobName, data: {} });
   await queue.upsertJobScheduler(notificationWhatsAppJobName, { every: everyMs }, { name: notificationWhatsAppJobName, data: {} });
+  await queue.upsertJobScheduler(collaborationDigestJobName, { every: everyMs }, { name: collaborationDigestJobName, data: {} });
   await queue.upsertJobScheduler(taskEscalationJobName, { every: everyMs }, { name: taskEscalationJobName, data: {} });
   await queue.upsertJobScheduler(taskNotificationBatchJobName, { every: everyMs }, { name: taskNotificationBatchJobName, data: {} });
 }

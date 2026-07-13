@@ -146,6 +146,7 @@ export class NotificationsRepository {
     return this.findQueued(NotificationChannel.WHATSAPP, limit);
   }
 
+
   async markEmailSent(id: string, result: EmailSendResult, metadataOrNow?: NotificationDeliveryMetadata | Date, now = new Date()): Promise<boolean> {
     const sent = sentAttempt(metadataOrNow, now);
     return this.markSent(id, NotificationChannel.EMAIL, result, sent.metadata, sent.now);

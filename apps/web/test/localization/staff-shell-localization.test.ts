@@ -15,6 +15,9 @@ import { auditViewerText } from '../../src/i18n/staff-audit-viewer';
 import { attachmentText } from '../../src/i18n/staff-attachments';
 import { complaintCreateText } from '../../src/i18n/staff-complaint-create';
 import { complaintDetailText } from '../../src/i18n/staff-complaint-detail';
+import { collaborationText } from '../../src/i18n/staff-collaboration';
+import { communicationGroupsText } from '../../src/i18n/staff-communication-groups';
+import { complaintTabsText } from '../../src/i18n/staff-complaint-tabs';
 import { complaintRelationsText } from '../../src/i18n/staff-complaint-relations';
 import { confirmationText } from '../../src/i18n/staff-confirmations';
 import { employeeTodayText } from '../../src/i18n/staff-employee-today';
@@ -26,6 +29,7 @@ import { portalSubmissionText } from '../../src/i18n/portal-submission';
 import { portalSurveyText } from '../../src/i18n/portal-survey';
 import { portalTrackingText } from '../../src/i18n/portal-tracking';
 import { staffShellText } from '../../src/i18n/staff-shell';
+import { taskConversationText } from '../../src/i18n/staff-task-conversation';
 
 const mojibakeMarkers = /[\u00c2\u00c3\u00d8\u00d9\ufffd]/;
 const arabic = /[\u0600-\u06ff]/;
@@ -167,8 +171,8 @@ test('admin screens render Arabic RTL and English LTR', async () => {
 });
 
 test('remaining staff Arabic text uses real Arabic codepoints', () => {
-  const files = ['staff-audit-viewer', 'staff-employee-today', 'staff-deal-handoff', 'staff-notification-center', 'staff-reports-dashboard', 'staff-sent-tasks'];
-  const bundles = [auditViewerText, employeeTodayText, dealHandoffText, notificationCenterText, reportsDashboardText, reportCatalogText, sentTasksText];
+  const files = ['staff-audit-viewer', 'staff-collaboration', 'staff-communication-groups', 'staff-complaint-tabs', 'staff-employee-today', 'staff-deal-handoff', 'staff-notification-center', 'staff-reports-dashboard', 'staff-sent-tasks', 'staff-task-conversation'];
+  const bundles = [auditViewerText, collaborationText, communicationGroupsText, complaintTabsText, employeeTodayText, dealHandoffText, notificationCenterText, reportsDashboardText, reportCatalogText, sentTasksText, taskConversationText];
 
   for (const file of files) {
     assert.doesNotMatch(readFileSync(`apps/web/src/i18n/${file}.ts`, 'utf8'), mojibakeMarkers);
@@ -183,6 +187,9 @@ test('remaining staff Arabic text uses real Arabic codepoints', () => {
 
   assert.match(reportsDashboardText.en.export.scoped, /RBAC-filtered/);
   assert.match(reportsDashboardText.ar.export.scoped, arabic);
+  assert.equal(collaborationText.ar.publicWarning, 'سيظهر هذا التحديث للعميل.');
+  assert.equal(complaintTabsText.ar.deadlineState, 'حالة الموعد (SLA)');
+  assert.equal(communicationGroupsText.ar.deactivate, 'تعطيل المجموعة');
 });
 
 test('remaining staff screens render Arabic RTL and English LTR', async () => {

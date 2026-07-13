@@ -1,8 +1,8 @@
 # Current State
 
-Status: UX gap closure implementation proof complete; human usability validation pending
-Phase: ui-ux-redesign
-Next Task: Run 6-person usability validation for UX Gap Closure Plan, or record a signed deferral before phase review
+Status: Arabic UX 90+ implementation and local proof complete; human gates open
+Phase: collaboration UX repair
+Next Task: Run Arabic usability UAT and deployed performance validation
 Model Tier: GPT-5.5 Extra High or Opus 4.8 Max
 
 ## How to use this file
@@ -13,38 +13,43 @@ Prior state history is in .forge/archive/state-archive.md.
 ## Snapshot
 
 - Branch `codex/user-scoped-ux-redesign` is active.
-- The old Business Readiness Slice 11 compensation task remains blocked and is now carry-forward debt, not the active Forge task.
-- The full UI/UX refactor packet is stored in `.forge/ui-ux-refactor/README.md`; `.forge/ui-ux-refactor-roadmap.md` is only a compatibility pointer.
-- UI/UX refactor Slice 0 established the browser proof harness and Precision Ops token spine.
-- UI/UX refactor Slice 1B completed shared staff and portal shell primitives.
-- UI/UX refactor Slice 2 completed shared UI primitives and wired them into current duplicated screen patterns.
-- UI/UX refactor Slice 3 completed the staff dashboard and work queue refactor.
-- UI/UX refactor Slice 4 completed complaint create, lookup, and attachments as one structured intake flow.
-- UI/UX refactor Slice 5 completed complaint detail and workflow as an operational workbench.
-- UI/UX refactor Slice 6 completed admin, reports, audit, and notification surfaces.
-- UI/UX refactor Slice 7 completed customer portal surface hardening for submit, tracking, follow-up, attachments, and survey.
-- UI/UX refactor Slice 8 completed cleanup and hardening, including production `PreviewState` removal and raw color ratchet reduction.
-- UI/UX refactor Slice 9 completed the final visual QA gate.
-- Visual Rescue completed after user review found the app still felt visually unchanged: auth landing, staff shell, dashboard summary, work queue, and shared table headers showed a stronger Precision Ops hierarchy.
-- Visual Rescue 2 completed a focused screenshot-led polish pass: staff auth and shell moved from heavy dark chrome to subtler semantic shell surfaces, shared table headers are sentence case, and shared status indicators now use quieter dot-style badges.
-- Visual Rescue 3 completed the user-screenshot-led progressive-disclosure repair: Today tasks, Deal handoff, and Admin surfaces now default to read-first lists/tables, with create/update/add/edit forms closed until intent.
-- Communication Control Desk Repair completed the requested 10/10-target production slice: shared EN/AR domain labels, complaint communication timeline, admin hub, reports delivery groups, permission-aware staff UI, mobile module switching, local panel errors, portal verification reset behavior, and deal handoff detail updates that do not advance stage.
-- UX/Product Repair Plan completed the audit-finding fixes: portal manual triage fallback, deal handoff RBAC correction, denied/error state separation, production preview-query removal, work queue/report/workflow clarity fixes, and Arabic `nameAr` display fallback.
-- Communication Control Usability Hardening completed the follow-up implementation for nontechnical users: portal manual-review fallback controls, server-backed due/SLA filtering before pagination, complaint detail denied/not-found states, latest-first communication timeline, destructive action confirmation, waiting-task next-action fields, and warning-token feedback.
-- UX Gap Closure Plan completed the thin nontechnical clarity layer: portal "What happens next?" guidance, manual-review helper copy, employee Done/Waiting explanations, work queue Due status helper, complaint timeline visibility legend and Latest updates label, EN/AR proof coverage, and one accessibility repair for the comment visibility selector.
-- `web:visual-review` writes English and Arabic HTML plus PNG artifacts for the covered staff and portal surfaces under `coverage/web-visual-review`, including auth landing, full staff shell, today tasks, deal handoff, admin, and portal mobile flows.
-- Latest proof passed for UX Gap Closure Plan: `typecheck`, `lint`, `openapi:check`, `test:web -- shell`, `test:web -- localization`, `test:visual`, `web:visual-review`, and `test:e2e -- accessibility`.
+- Complaint detail now separates immediate work, communication, and supporting
+  details while keeping the complaint summary and next action above the tabs.
+- The shared audience picker explains assignee, mention, and CC; performs
+  server-scoped delayed search; displays current watchers; preserves drafts; and
+  handles exact large-audience confirmation without client-side recipient logic.
+- Public updates remain explicit, customer-facing, and confirmation-gated.
+- Task conversations expose localized context and linked complaints. Group
+  management exposes existing groups first, clear states, confirmed
+  deactivation, and focus restoration.
+- Desktop and mobile navigation now prioritize the routes used for daily work.
+- Backend authority, OpenAPI compatibility, RBAC, branch scope, workflow,
+  transactionality, audit, recipient expansion, and portal privacy remain intact.
+- Passed local proof: typecheck, lint, OpenAPI, migration sanity, focused API and
+  collaboration service tests, 213 shell tests, 11 localization tests, 58 web
+  API-client tests, 82 visual previews, 82 visual-review artifacts, 22
+  accessibility previews, and 5 static performance previews.
+- Representative Arabic screenshots at 390, 430, 768, 1024, and 1440px were
+  inspected with no page overflow, clipped labels, incoherent overlap, or broken
+  RTL hierarchy in the covered surfaces.
 
 ## Current Stop
 
-All code and automated proof for the UX Gap Closure Plan are complete. The plan's score can be finalized only after the 6-person usability validation passes, or after a signed deferral if the project accepts automated proof only. Per Forge policy, run a fresh phase review before starting another phase.
+Implementation and local automated proof are complete. A score of 90+ is not yet
+claimed because the approved release gate requires real Arabic user sessions and
+deployed Core Web Vitals telemetry.
 
 ## Open Carry-Forward / Known Debt
 
-- Exact Slice 11 compensation decision still needed: signed deferral, or approval for minimal compensation metadata and audit.
-- Exact report decision still needed for RPT-002, RPT-003, RPT-005 through RPT-012, RPT-014, and RPT-016: signed MVP deferral or approval to implement missing report-specific outputs.
-- Approved notification channels for remaining pilot/UAT proof still need final signoff.
-- RPT-015 DMS lookup failure reporting is signed-deferred for manual-DMS pilot scope until a live/test provider exists and lookup telemetry is meaningful.
-- The remaining off-token color lint ratchet is 33 matches in `apps/web/src/app` and `apps/web/src/components`; future migrated surfaces should continue shrinking it.
-- UX Gap Closure human validation remains pending: 2 customers, 2 employees, and 2 managers.
-- Generated proof artifacts under `coverage/` and `.playwright-cli/` remain intentionally unstaged.
+- Run two low-tech Arabic validation sessions, then final UAT with two customers,
+  two employees, and two managers.
+- Measure deployed LCP under 2.5s, INP under 200ms, and CLS under 0.1. Local
+  static performance previews do not prove these field metrics.
+- The audit append-only database proof was skipped because Docker is unavailable.
+- Apply the additive migration, seed/activate collaboration templates, and
+  validate notification provider behavior before pilot release.
+- Exact Slice 11 compensation still needs signed deferral or approved metadata.
+- Remaining report requirements still need their recorded deferrals or outputs.
+- The off-token color lint ratchet remains at 33 matches.
+- Generated proof artifacts under `coverage/` and `.playwright-cli/` remain
+  intentionally unstaged.

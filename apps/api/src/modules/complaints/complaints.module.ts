@@ -16,6 +16,8 @@ import { SurveysModule } from '../surveys/surveys.module.js';
 import { SurveysService } from '../surveys/surveys.service.js';
 import { TasksModule } from '../tasks/tasks.module.js';
 import { TasksService } from '../tasks/tasks.service.js';
+import { CommunicationGroupsModule } from '../communication-groups/communication-groups.module.js';
+import { CommunicationGroupsService } from '../communication-groups/communication-groups.service.js';
 import { ComplaintsController } from './complaints.controller.js';
 import { ComplaintFormOptionsService } from './complaint-form-options.service.js';
 import { ComplaintRelationsRepository } from './complaint-relations.repository.js';
@@ -24,7 +26,7 @@ import { ComplaintsRepository } from './complaints.repository.js';
 import { ComplaintsService } from './complaints.service.js';
 
 @Module({
-  imports: [AuthModule, NotificationsModule, CasesModule, SlaModule, TasksModule, forwardRef(() => SurveysModule)],
+  imports: [AuthModule, NotificationsModule, CasesModule, SlaModule, TasksModule, CommunicationGroupsModule, forwardRef(() => SurveysModule)],
   controllers: [ComplaintsController],
   providers: [
     PrismaService,
@@ -55,7 +57,7 @@ import { ComplaintsService } from './complaints.service.js';
     },
     {
       provide: ComplaintsService,
-      inject: [ComplaintsRepository, AuditService, NotificationsService, CasesService, SlaService, SurveysService, TasksService],
+      inject: [ComplaintsRepository, AuditService, NotificationsService, CasesService, SlaService, SurveysService, TasksService, CommunicationGroupsService],
       useFactory: (
         repository: ComplaintsRepository,
         audit: AuditService,
@@ -64,7 +66,8 @@ import { ComplaintsService } from './complaints.service.js';
         sla: SlaService,
         surveys: SurveysService,
         tasks: TasksService,
-      ) => new ComplaintsService(repository, audit, notifications, cases, sla, surveys, tasks),
+        groups: CommunicationGroupsService,
+      ) => new ComplaintsService(repository, audit, notifications, cases, sla, surveys, tasks, groups),
     },
     {
       provide: SESSION_AUTH_SERVICE,

@@ -1,7 +1,11 @@
 import { adminHubText } from '../apps/web/src/i18n/staff-admin-hub.ts';
 import { auditViewerText } from '../apps/web/src/i18n/staff-audit-viewer.ts';
 import { complaintDetailText } from '../apps/web/src/i18n/staff-complaint-detail.ts';
+import { complaintCommentText } from '../apps/web/src/i18n/staff-complaint-detail.ts';
+import { communicationGroupsText } from '../apps/web/src/i18n/staff-communication-groups.ts';
 import { complaintRelationsText } from '../apps/web/src/i18n/staff-complaint-relations.ts';
+import { collaborationText } from '../apps/web/src/i18n/staff-collaboration.ts';
+import { complaintTabsText } from '../apps/web/src/i18n/staff-complaint-tabs.ts';
 import { dealHandoffText } from '../apps/web/src/i18n/staff-deal-handoff.ts';
 import { employeeTodayText } from '../apps/web/src/i18n/staff-employee-today.ts';
 import { portalSubmissionText } from '../apps/web/src/i18n/portal-submission.ts';
@@ -9,13 +13,14 @@ import { portalSurveyText } from '../apps/web/src/i18n/portal-survey.ts';
 import { portalTrackingText } from '../apps/web/src/i18n/portal-tracking.ts';
 import { reportsDashboardText } from '../apps/web/src/i18n/staff-reports-dashboard.ts';
 import { staffShellText } from '../apps/web/src/i18n/staff-shell.ts';
+import { taskConversationText } from '../apps/web/src/i18n/staff-task-conversation.ts';
 
 export const smokeCases = [
   { name: 'English admin shell', locale: 'en', params: { locale: 'en', role: 'admin', session: 'signed-in', admin: 'success', dashboard: 'loading', notification: 'success', reports: 'ready' } },
   { name: 'Arabic management shell', locale: 'ar', params: { locale: 'ar', role: 'management', session: 'signed-in', comments: 'error', queue: 'empty', reports: 'denied' } },
 ];
 
-export const visualCases = ['en', 'ar'].flatMap((locale) => [...buildVisualCases(locale), ...buildPortalVisualCases(locale)]);
+export const visualCases = [...['en', 'ar'].flatMap((locale) => [...buildVisualCases(locale), ...buildPortalVisualCases(locale)]), ...buildArabicResponsiveCases()];
 export const accessibilityCases = buildAccessibilityCases();
 export const performanceCases = buildPerformanceCases();
 
@@ -25,7 +30,7 @@ export function defaultVisualSignals(locale) {
 }
 
 function buildVisualCases(locale) {
-  const t = staffShellText[locale], detail = complaintDetailText[locale], relations = complaintRelationsText[locale];
+  const t = staffShellText[locale], collaboration = collaborationText[locale], detail = complaintDetailText[locale], comment = complaintCommentText[locale], groups = communicationGroupsText[locale], relations = complaintRelationsText[locale], tabs = complaintTabsText[locale], task = taskConversationText[locale];
   const base = { locale, role: 'admin', session: 'signed-in' };
   return [
     visualCase('auth landing', locale, 'staff-auth', { locale }, [t.title, t.auth.loginTitle, t.nav.queue[0]], ['lg:grid-cols-[minmax(0,1fr)_minmax(24rem,32rem)]', 'bg-surface-raised']),
@@ -35,13 +40,34 @@ function buildVisualCases(locale) {
     visualCase('work queue', locale, 'staff-complaints', { ...base }, [t.workQueue.title, t.workQueue.filterHelp, 'CMP-PROOF-001', t.workQueue.pagination.page], ['md:grid-cols-6', 'overflow-x-auto']),
     visualCase('deal handoff', locale, 'staff-deal-handoff', { ...base }, [dealHandoffText[locale].title, dealHandoffText[locale].sections.stuck[0], dealHandoffText[locale].actions.updateDetails, 'DEAL-PROOF-001'], ['<details', 'bg-surface-raised']),
     visualCase('complaint create', locale, 'staff-complaint-new', { ...base, create: 'validation', lookup: 'match' }, [t.createForm.title, t.lookup.states.match, t.lookup.actions.useMatch, t.createForm.validation.vinRequired], ['md:grid-cols-2', 'md:col-span-2']),
-    visualCase('complaint detail', locale, 'staff-complaint-detail', { ...base, attachment: 'clean', lookup: 'multiple' }, [detail.title, detail.sections.customer, detail.sections.communicationTimeline, detail.timelineLegend.latest, detail.sections.attachments, detail.correction.title, t.lookup.states.multiple, relations.title], ['xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)]', 'md:grid-cols-2']),
-    visualCase('complaint detail missing SLA percent', locale, 'staff-complaint-detail', { ...base, sla: 'missing' }, [detail.title, detail.labels.sla, detail.sections.ownership], ['xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)]']),
-    visualCase('workflow action panel', locale, 'staff-complaint-detail', { ...base, workflow: 'validation' }, [detail.sections.workflow, detail.workflow.actions[0], detail.workflow.validation], [`aria-label="${detail.sections.workflow}"`, 'border-line-subtle']),
+    visualCase('complaint detail', locale, 'staff-complaint-detail', { ...base, attachment: 'clean', lookup: 'multiple', tab: 'details' }, [detail.title, tabs.details, detail.sections.customer, detail.sections.attachments, tabs.dms, t.lookup.states.multiple, relations.title], ['lg:grid-cols-2', 'grid-cols-3']),
+    visualCase('complaint collaboration', locale, 'staff-complaint-detail', { ...base, tab: 'communication' }, [detail.title, tabs.communication, collaboration.title, collaboration.mention, collaboration.cc, comment.action], ['xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]', 'border-line-subtle']),
+    visualCase('public complaint composer', locale, 'staff-complaint-detail', { ...base, commentVisibility: 'PUBLIC', tab: 'communication' }, [detail.title, collaboration.publicWarning, collaboration.publicCta], ['bg-status-warning', 'border-line-subtle']),
+    visualCase('task conversation', locale, 'staff-task-detail', { ...base }, [task.title, task.responsible, collaboration.mention, collaboration.cc, collaboration.title], ['bg-surface-raised', 'border-line-subtle']),
+    visualCase('communication groups', locale, 'staff-communication-groups', { ...base }, [groups.title, groups.personal, groups.shared, groups.create], ['bg-surface-raised', 'border-line-subtle']),
+    visualCase('complaint detail missing SLA percent', locale, 'staff-complaint-detail', { ...base, sla: 'missing', tab: 'work' }, [detail.title, tabs.deadlineState, detail.sections.ownership], ['xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.55fr)]']),
+    visualCase('workflow action panel', locale, 'staff-complaint-detail', { ...base, tab: 'work', workflow: 'validation' }, [detail.sections.workflow, detail.workflow.actions[0], detail.workflow.validation], [`aria-label="${detail.sections.workflow}"`, 'border-line-subtle']),
     visualCase('admin surfaces', locale, 'staff-admin', { ...base }, [adminHubText[locale].title, adminHubText[locale].workspaces.users[0], adminHubText[locale].workspaces.roles[0], adminHubText[locale].workspaces.branches[0], adminHubText[locale].workspaces.categories[0], adminHubText[locale].open], ['md:grid-cols-2', 'xl:grid-cols-3']),
     visualCase('reports', locale, 'staff-reports', { ...base }, [reportsDashboardText[locale].title, reportsDashboardText[locale].export.title, reportsDashboardText[locale].kpis.slaBreachRate, reportsDashboardText[locale].kpis.agingOverSeven, 'CMP-PROOF-RPT-001'], ['min-w-[56rem]', 'md:grid-cols-3']),
     visualCase('audit viewer', locale, 'staff-audit', { ...base, admin: 'success' }, [auditViewerText[locale].title, auditViewerText[locale].filters.correlationId, auditViewerText[locale].filters.export], ['xl:grid-cols-5']),
   ];
+}
+
+function buildArabicResponsiveCases() {
+  const locale = 'ar', t = staffShellText.ar, collaboration = collaborationText.ar, detail = complaintDetailText.ar, groups = communicationGroupsText.ar, tabs = complaintTabsText.ar, task = taskConversationText.ar;
+  return [390, 430, 768, 1024, 1440].flatMap((width) => {
+    const base = { locale, role: 'admin', session: 'signed-in' }, viewport = { width };
+    return [
+      { ...visualCase(`navigation ${width}px`, locale, 'staff-navigation', base, [t.mobileNav.today, t.mobileNav.cases, t.mobileNav.create, t.mobileNav.notifications, t.mobileNav.more], []), viewport },
+      { ...visualCase(`complaint tabs ${width}px`, locale, 'staff-complaint-detail', { ...base, tab: 'work' }, [detail.title, tabs.work, tabs.communication, tabs.details, tabs.deadlineState], []), viewport },
+      { ...visualCase(`internal composer ${width}px`, locale, 'staff-complaint-detail', { ...base, tab: 'communication' }, [collaboration.title, collaboration.mentionHelp, collaboration.ccHelp], []), viewport },
+      { ...visualCase(`public composer ${width}px`, locale, 'staff-complaint-detail', { ...base, commentVisibility: 'PUBLIC', tab: 'communication' }, [collaboration.publicWarning, collaboration.publicCta], []), viewport },
+      { ...visualCase(`task conversation ${width}px`, locale, 'staff-task-detail', base, [task.title, task.responsible, collaboration.title], []), viewport },
+      { ...visualCase(`groups ${width}px`, locale, 'staff-communication-groups', base, [groups.title, groups.personal, groups.deactivate], []), viewport },
+      { ...visualCase(`reports ${width}px`, locale, 'staff-reports', base, [reportsDashboardText.ar.title, reportsDashboardText.ar.export.title], []), viewport },
+      { ...visualCase(`audit ${width}px`, locale, 'staff-audit', { ...base, admin: 'success' }, [auditViewerText.ar.title, auditViewerText.ar.headers[3]], []), viewport },
+    ];
+  });
 }
 
 function visualCase(surface, locale, route, params, signals, classes) {
@@ -75,8 +101,13 @@ function buildAccessibilityCases() {
     accessibilityCase('queue status', 'ar', { ...arBase }, [staffShellText.ar.workQueue.title, 'CMP-PROOF-001'], { feedbackRole: false, route: 'staff-complaints' }),
     accessibilityCase('create validation', 'en', { ...enBase, create: 'validation', lookup: 'validation' }, [staffShellText.en.createForm.title, staffShellText.en.lookup.states.validation, staffShellText.en.createForm.validation.vinRequired], { route: 'staff-complaint-new' }),
     accessibilityCase('create network alert', 'ar', { ...arBase, create: 'network', lookup: 'down' }, [staffShellText.ar.createForm.title, staffShellText.ar.lookup.states.down], { route: 'staff-complaint-new' }),
-    accessibilityCase('detail route', 'en', { ...enBase, lookup: 'disabled' }, [complaintDetailText.en.title, complaintDetailText.en.timelineLegend.latest, staffShellText.en.lookup.states.disabled, complaintRelationsText.en.candidates], { feedbackRole: false, route: 'staff-complaint-detail', minLabels: 0 }),
-    accessibilityCase('workflow action panel', 'ar', { ...arBase, workflow: 'validation' }, [complaintDetailText.ar.sections.workflow, complaintDetailText.ar.workflow.noExtraFields, `aria-label="${complaintDetailText.ar.sections.workflow}"`], { route: 'staff-complaint-detail', minButtons: 8, minLabels: 0 }),
+    accessibilityCase('detail route', 'en', { ...enBase, lookup: 'disabled', tab: 'details' }, [complaintDetailText.en.title, complaintTabsText.en.details, staffShellText.en.lookup.states.disabled, complaintRelationsText.en.candidates], { feedbackRole: false, route: 'staff-complaint-detail', minLabels: 0 }),
+    accessibilityCase('workflow action panel', 'ar', { ...arBase, workflow: 'validation' }, [complaintDetailText.ar.sections.workflow, complaintDetailText.ar.workflow.noExtraFields, `aria-label="${complaintDetailText.ar.sections.workflow}"`], { route: 'staff-complaint-detail', minButtons: 7, minLabels: 0 }),
+    accessibilityCase('internal complaint composer', 'ar', { ...arBase, tab: 'communication' }, [complaintTabsText.ar.communication, collaborationText.ar.title, 'role="tablist"'], { route: 'staff-complaint-detail', minButtons: 4, minLabels: 2 }),
+    accessibilityCase('public complaint composer', 'ar', { ...arBase, commentVisibility: 'PUBLIC', tab: 'communication' }, [collaborationText.ar.publicWarning, collaborationText.ar.publicCta], { route: 'staff-complaint-detail', minButtons: 4, minLabels: 2 }),
+    accessibilityCase('task conversation', 'ar', { ...arBase }, [taskConversationText.ar.title, taskConversationText.ar.body, collaborationText.ar.mention, collaborationText.ar.cc], { feedbackRole: false, route: 'staff-task-detail', minButtons: 1, minLabels: 2 }),
+    accessibilityCase('communication groups', 'ar', { ...arBase }, [communicationGroupsText.ar.title, communicationGroupsText.ar.personal, communicationGroupsText.ar.deactivate], { route: 'staff-communication-groups', minAria: 1, minButtons: 3, minFocus: 0, minLabels: 0 }),
+    accessibilityCase('mobile navigation', 'ar', { ...arBase }, [staffShellText.ar.mobileNav.today, staffShellText.ar.mobileNav.more], { route: 'staff-navigation', feedbackRole: false, minAria: 2, minButtons: 1, minFocus: 5, minLabels: 0 }),
     accessibilityCase('admin hub navigation', 'en', { ...enBase }, [adminHubText.en.title, adminHubText.en.workspaces.users[0], adminHubText.en.workspaces.roles[0], adminHubText.en.open], { route: 'staff-admin', feedbackRole: false, minButtons: 0, minLabels: 0 }),
     accessibilityCase('reports route', 'ar', { ...arBase }, [reportsDashboardText.ar.title, 'CMP-PROOF-RPT-001'], { feedbackRole: false, route: 'staff-reports', minLabels: 0 }),
     accessibilityCase('audit status', 'en', { ...enBase, admin: 'success' }, [auditViewerText.en.title, auditViewerText.en.filters.correlationId], { route: 'staff-audit', minAria: 1 }),
@@ -102,9 +133,12 @@ function buildPerformanceCases() {
   return [
     performanceCase('staff dashboard', 'en', { locale: 'en', role: 'staff', session: 'signed-in' }, [staffShellText.en.dashboard.title, staffShellText.en.dashboard.cards.open[0], staffShellText.en.dashboard.cards.warnings[0]], { maxMs: 750, maxHtml: 90000, maxRows: 16, minResponsiveGuards: 4 }),
     performanceCase('staff work queue', 'ar', { locale: 'ar', role: 'staff', session: 'signed-in' }, [staffShellText.ar.workQueue.title, staffShellText.ar.workQueue.filters.search, staffShellText.ar.workQueue.pagination.page], { maxMs: 750, maxHtml: 90000, maxRows: 16, minResponsiveGuards: 4 }),
+    performanceCase('complaint communication', 'ar', { locale: 'ar', role: 'staff', session: 'signed-in', tab: 'communication' }, [complaintTabsText.ar.communication, collaborationText.ar.title], { maxMs: 750, maxHtml: 80000, maxRows: 10, minResponsiveGuards: 0 }, 'staff-complaint-detail'),
+    performanceCase('task conversation', 'ar', { locale: 'ar', role: 'staff', session: 'signed-in' }, [taskConversationText.ar.title, collaborationText.ar.title], { maxMs: 750, maxHtml: 50000, maxRows: 0, minResponsiveGuards: 0 }, 'staff-task-detail'),
+    performanceCase('communication groups', 'ar', { locale: 'ar', role: 'staff', session: 'signed-in' }, [communicationGroupsText.ar.title, communicationGroupsText.ar.personal], { maxMs: 750, maxHtml: 40000, maxRows: 0, minResponsiveGuards: 0 }, 'staff-communication-groups'),
   ];
 }
 
-function performanceCase(surface, locale, params, signals, perf) {
-  return { name: `${locale.toUpperCase()} ${surface} performance`, locale, params, signals, perf };
+function performanceCase(surface, locale, params, signals, perf, route) {
+  return { name: `${locale.toUpperCase()} ${surface} performance`, locale, params, signals, perf, ...(route ? { route } : {}) };
 }

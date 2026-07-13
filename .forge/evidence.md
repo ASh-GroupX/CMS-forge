@@ -13227,3 +13227,108 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 
 - Existing untracked `.playwright-cli/` scratch artifacts remain intentionally unstaged.
 - Generated `coverage/` visual-review artifacts were regenerated for inspection and remain untracked/unstaged by project convention.
+
+---
+
+## COLLAB-001 - Arabic-First CC, Mentions, and Groups
+
+- Date: 2026-07-13
+- Risk: High (staff authorization, audit, notification delivery, and portal privacy)
+- Status: Passed locally; deployment and UAT remain Needs Human Review
+- Requirement IDs: REQ-COLLAB-001, REQ-COMMENTS-001, REQ-RBAC-001,
+  REQ-NOTIFY-001, REQ-LOCALIZATION-001, PORTAL-SEC-001, API-STANDARD-001,
+  METHOD-AUDIT-001, CONTRACT-READINESS-002
+- Evidence:
+  - Added additive Prisma persistence and migration for communication groups,
+    group members, complaint watchers, complaint/task mention snapshots, and
+    notification digest items.
+  - Added server-scoped personal/shared group CRUD, dynamic role/department
+    targets, watcher capabilities, structured comment collaboration fields,
+    recipient limits, same-transaction audit/history/task writes, immediate
+    direct delivery, and ten-minute CC digests.
+  - Added Arabic-first staff complaint composer, task conversation, group
+    management, task notification links, explicit empty/loading labels, and
+    accessibility names for all new selectors/forms.
+  - Updated OpenAPI canonical/generated artifacts and visual/a11y proof cases
+    for Arabic complaint collaboration, task conversation, and group management.
+- Verification:
+  - Passed: `corepack pnpm typecheck`.
+  - Passed: `corepack pnpm lint`.
+  - Passed: `corepack pnpm openapi:check`.
+  - Passed: `corepack pnpm db:migrate:test` (Prisma schema and migration SQL
+    sanity check).
+  - Passed: `corepack pnpm test:api -- communication-groups` (5/5),
+    `complaints` (77/77), `tasks` (12/12), `notifications` (43/43), `rbac`
+    (2/2), `portal` (14/14), and `audit` (8/8).
+  - Passed: direct collaboration service specs (33/33), including group owner
+    denial, public-comment collaboration rejection, watcher authority, direct
+    delivery priority, and digest grouping.
+  - Passed: `corepack pnpm test:web -- shell` (213/213) and
+    `corepack pnpm test:web -- localization` (11/11).
+  - Passed: `corepack pnpm test:visual` (40 route previews),
+    `corepack pnpm web:visual-review`, and
+    `corepack pnpm test:e2e -- accessibility` (19 route previews).
+  - Needs Human Review: `corepack pnpm test:api -- audit` skipped its Docker
+    append-only proof after API audit tests passed because Docker is unavailable.
+  - Needs Human Review: apply migration, seed/activate delivery templates,
+    validate staging email/provider behavior, and complete Arabic collaboration
+    UAT before pilot.
+
+---
+
+## UX90-001 - Arabic UX 90+ Repair
+
+- Date: 2026-07-13
+- Risk: High (public communication, staff comprehension, authorization display)
+- Status: Implementation and local proof passed; release UAT remains open
+- Requirement IDs: REQ-COLLAB-001, REQ-COMMENTS-001, REQ-RBAC-001,
+  REQ-NOTIFY-001, REQ-LOCALIZATION-001, PORTAL-SEC-001,
+  API-STANDARD-001, METHOD-AUDIT-001
+
+### Evidence
+
+- Added the Arabic low-fidelity flows and low-tech usability script in
+  `docs/ARABIC_UX_90_REPAIR.md` without claiming unperformed user validation.
+- Split complaint detail into `work`, `communication`, and `details` tabs while
+  keeping summary and next required action above the tabs.
+- Added a shared, server-scoped audience picker with delayed two-character user
+  search, group-first blank results, current watcher display, draft-safe CC,
+  exact audience confirmation, and Arabic explanations of assignee/mention/CC.
+- Added explicit public-update warning, customer-facing CTA, confirmation dialog,
+  actionable Arabic errors, linked action-task fields, and localized recipient
+  counts. Public comments still reject internal collaboration fields on server.
+- Completed task conversation context, group loading/empty/error/deactivation
+  states, grouped desktop navigation, and five-item mobile navigation with More.
+- Preserved backend-owned capability, workflow, scope, target resolution,
+  recipient-limit, audit, notification, and portal-privacy behavior.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`, `corepack pnpm lint`,
+  `corepack pnpm openapi:check`, and `corepack pnpm db:migrate:test`.
+- Passed focused API suites: communication groups (8/8), complaints/workflow
+  (77/77), tasks (12/12), notifications (43/43), RBAC (2/2), portal (14/14),
+  and API-level audit (8/8).
+- Passed direct complaint/task/notification collaboration specs (42/42).
+- Passed: `corepack pnpm test:web -- shell` (213/213),
+  `corepack pnpm test:web -- localization` (11/11), and
+  `corepack pnpm test:web -- api-client` (58/58).
+- Passed: `corepack pnpm test:visual` (82 route previews),
+  `corepack pnpm web:visual-review` (82 HTML/PNG artifacts), and
+  `corepack pnpm test:e2e -- accessibility` (22 route previews).
+- Passed: `corepack pnpm web:perf` (5 static route previews). This is not a
+  deployed-field measurement of LCP, INP, or CLS.
+- Reviewed representative Arabic screenshots at 390, 430, 768, 1024, and
+  1440px. Covered navigation, complaint tabs, internal/public composers, task
+  conversation, groups, reports, and audit without obvious overflow, clipping,
+  overlap, or RTL ordering defects.
+
+### Open Release Gates
+
+- Needs Human Review: two low-tech Arabic validation sessions and the final
+  six-person UAT. Therefore the requested independent 90+ UX scores are not yet
+  asserted.
+- Needs Human Review: deployed LCP/INP/CLS collection against the approved
+  thresholds.
+- Needs Human Review: Docker-backed audit append-only proof, deployment migration,
+  active bilingual templates, and staging notification-provider validation.

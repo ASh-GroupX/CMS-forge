@@ -18,6 +18,7 @@ type ErrorBody = {
     message: string;
     correlationId: string;
     fieldErrors?: FieldError[];
+    actualRecipientCount?: number;
   };
 };
 
@@ -41,6 +42,7 @@ export class AppException extends HttpException {
     readonly safeMessage: string,
     status: HttpStatus = HttpStatus.BAD_REQUEST,
     readonly fieldErrors: FieldError[] = [],
+    readonly actualRecipientCount?: number,
   ) {
     super({ code, message: safeMessage }, status);
   }
@@ -88,6 +90,9 @@ export class AppExceptionFilter implements ExceptionFilter {
 
     if (appError?.fieldErrors.length) {
       body.error.fieldErrors = appError.fieldErrors;
+    }
+    if (appError?.actualRecipientCount !== undefined) {
+      body.error.actualRecipientCount = appError.actualRecipientCount;
     }
 
     response.status(status).json(body);

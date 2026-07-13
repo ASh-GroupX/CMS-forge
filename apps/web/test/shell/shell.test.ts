@@ -45,6 +45,8 @@ import { adminUsersText } from '../../src/i18n/staff-admin-users';
 import { auditViewerText } from '../../src/i18n/staff-audit-viewer';
 import { attachmentText } from '../../src/i18n/staff-attachments';
 import { complaintDetailText } from '../../src/i18n/staff-complaint-detail';
+import { complaintTabsText } from '../../src/i18n/staff-complaint-tabs';
+import { collaborationText } from '../../src/i18n/staff-collaboration';
 import { complaintRelationsText } from '../../src/i18n/staff-complaint-relations';
 import { complaintCreateText } from '../../src/i18n/staff-complaint-create';
 import { confirmationText } from '../../src/i18n/staff-confirmations';
@@ -1321,7 +1323,8 @@ test('English and Arabic render dashboard and queue labels together', async () =
 });
 
 test('complaint detail workspace renders core regions and safe placeholders', async () => {
-  const html = renderToStaticMarkup(React.createElement(ComplaintDetailWorkspace, { detail: complaintDetailViewFixture() as never, locale: 'en' }));
+  const detail = complaintDetailViewFixture() as never;
+  const html = ['work', 'communication', 'details'].map((initialTab) => renderToStaticMarkup(React.createElement(ComplaintDetailWorkspace, { detail, initialTab: initialTab as never, locale: 'en' }))).join('');
 
   assert.match(html, /Complaint detail/);
   assert.match(html, /Complaint facts/);
@@ -1338,18 +1341,21 @@ test('complaint detail workspace renders core regions and safe placeholders', as
   assert.match(html, /Attachments/);
   assert.match(html, /Related complaints/);
   assert.match(html, /Current responsible staff/);
-  assert.match(html, /Due status/);
+  assert.ok(html.includes(complaintTabsText.en.deadlineState));
   assert.match(html, /Fixture Customer/);
   assert.match(html, /None/);
 });
 
 test('Arabic complaint detail workspace keeps RTL localized labels', async () => {
-  const html = renderToStaticMarkup(React.createElement(ComplaintDetailWorkspace, { detail: complaintDetailViewFixture({ allowedActions: ['ACCEPT_INTAKE'], nextAction: null, slaPercentElapsed: undefined }) as never, locale: 'ar' }));
+  const detail = complaintDetailViewFixture({ allowedActions: ['ACCEPT_INTAKE'], nextAction: null, slaPercentElapsed: undefined }) as never;
+  const html = ['work', 'communication', 'details'].map((initialTab) => renderToStaticMarkup(React.createElement(ComplaintDetailWorkspace, { detail, initialTab: initialTab as never, locale: 'ar' }))).join('');
 
   assert.match(html, /dir="rtl"/);
   assert.ok(html.includes(complaintDetailText.ar.title));
-  assert.ok(html.includes(complaintDetailText.ar.sections.timeline));
-  assert.ok(html.includes(complaintDetailText.ar.labels.sla));
+  assert.ok(html.includes(complaintTabsText.ar.work));
+  assert.ok(html.includes(complaintTabsText.ar.communication));
+  assert.ok(html.includes(complaintTabsText.ar.details));
+  assert.ok(html.includes(complaintTabsText.ar.deadlineState));
   assert.ok(html.includes(complaintDetailText.ar.sections.survey));
   assert.ok(html.includes(complaintDetailText.ar.sections.internalComments));
   assert.ok(html.includes(complaintDetailText.ar.badges.public));
@@ -1542,14 +1548,12 @@ test('complaint detail route renders real backend facts through the session cook
     }
     return jsonResponse({ error: { code: 'RBAC_FORBIDDEN' } }, 403);
   };
-  const html = renderToStaticMarkup(
-    await ComplaintDetailPage({
-      cookieHeader: 'cms_staff_session=raw-session',
-      fetchImpl,
-      params: Promise.resolve({ id: 'cmp/detail' }),
-      searchParams: Promise.resolve({ locale: 'en' }),
-    }),
-  );
+  const html = (await Promise.all(['work', 'communication', 'details'].map((tab) => ComplaintDetailPage({
+    cookieHeader: 'cms_staff_session=raw-session',
+    fetchImpl,
+    params: Promise.resolve({ id: 'cmp/detail' }),
+    searchParams: Promise.resolve({ locale: 'en', tab }),
+  })))).map(renderToStaticMarkup).join('');
 
   const detailCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail'));
   const commentsCall = calls.find((call) => String(call.input).endsWith('/complaints/cmp%2Fdetail/comments'));
@@ -1651,7 +1655,7 @@ test('complaint detail route renders real backend facts through the session cook
   assert.match(html, /Visible customer update\./);
   assert.match(html, /5 \/ 5/);
   assert.match(html, /Jun 20, 2026/);
-  assert.match(html, /Fix customer or vehicle details/);
+  assert.ok(html.includes(complaintTabsText.en.dms));
   assert.match(html, /Customer source/);
   assert.match(html, /DMS match/);
   assert.match(html, /Manual entry/);
@@ -1691,7 +1695,7 @@ test('complaint detail relation panel renders empty denied and Arabic states saf
         return jsonResponse({ items: [] });
       },
       params: Promise.resolve({ id: 'cmp_empty' }),
-      searchParams: Promise.resolve({ locale: 'en' }),
+      searchParams: Promise.resolve({ locale: 'en', tab: 'details' }),
     }),
   );
   const denied = renderToStaticMarkup(
@@ -1701,7 +1705,7 @@ test('complaint detail relation panel renders empty denied and Arabic states saf
         ? jsonResponse({ complaint: complaintDetailFixture({ id: 'cmp_denied' }) })
         : jsonResponse({ error: { code: 'RBAC_FORBIDDEN' } }, 403),
       params: Promise.resolve({ id: 'cmp_denied' }),
-      searchParams: Promise.resolve({ locale: 'en' }),
+      searchParams: Promise.resolve({ locale: 'en', tab: 'details' }),
     }),
   );
   const arabic = renderToStaticMarkup(
@@ -1714,7 +1718,7 @@ test('complaint detail relation panel renders empty denied and Arabic states saf
         return jsonResponse({ items: [] });
       },
       params: Promise.resolve({ id: 'cmp_ar' }),
-      searchParams: Promise.resolve({ locale: 'ar' }),
+      searchParams: Promise.resolve({ locale: 'ar', tab: 'details' }),
     }),
   );
 
@@ -1728,10 +1732,11 @@ test('complaint detail relation panel renders empty denied and Arabic states saf
 });
 
 test('complaint detail workspace keeps responsive detail layout classes', async () => {
-  const html = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
+  const detail = complaintDetailViewFixture() as never;
+  const html = ['work', 'details'].map((initialTab) => renderToStaticMarkup(React.createElement(ComplaintDetailWorkspace, { detail, initialTab: initialTab as never, locale: 'en' }))).join('');
 
-  assert.match(html, /xl:grid-cols-\[minmax\(0,1\.35fr\)_minmax\(22rem,0\.65fr\)\]/);
-  assert.match(html, /md:grid-cols-2/);
+  assert.match(html, /xl:grid-cols-\[minmax\(0,1fr\)_minmax\(20rem,0\.55fr\)\]/);
+  assert.match(html, /lg:grid-cols-2/);
   assert.match(html, /grid-cols-\[minmax\(6rem,8rem\)_minmax\(0,1fr\)\]/);
 });
 
@@ -1752,7 +1757,7 @@ test('complaint detail workspace source is privacy-safe and render-only', () => 
 });
 
 test('complaint detail comments render visibility badges composer and comment rows', async () => {
-  const html = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en' }) }));
+  const html = renderToStaticMarkup(React.createElement(ComplaintDetailWorkspace, { detail: complaintDetailViewFixture() as never, initialTab: 'communication', locale: 'en' }));
 
   assert.match(html, /Internal only/);
   assert.match(html, /Customer visible/);
@@ -1760,9 +1765,9 @@ test('complaint detail comments render visibility badges composer and comment ro
   assert.doesNotMatch(html, /Investigation note for the case team\./);
   assert.doesNotMatch(html, /Your complaint is under review by the customer relations team\./);
   assert.match(html, /Add complaint comment/);
-  assert.match(html, /Add comment/);
-  assert.match(html, /Add complaint comment/);
-  assert.match(html, /Visibility/);
+  assert.ok(html.includes(collaborationText.en.mention));
+  assert.ok(html.includes(collaborationText.en.cc));
+  assert.match(html, /Requires action/);
   assert.match(html, /Visibility/);
 });
 
@@ -1933,8 +1938,16 @@ test('complaint detail workflow source does not decide transitions', () => {
 });
 
 test('English and Arabic render complete detail workspace regions together', async () => {
-  const english = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en', workflow: 'conflict', attachment: 'clean' }) }));
-  const arabic = renderToStaticMarkup(await StaffShellPage({ searchParams: Promise.resolve({ locale: 'ar', workflow: 'conflict', attachment: 'clean' }) }));
+  const english = (await Promise.all([
+    StaffShellPage({ searchParams: Promise.resolve({ locale: 'en', workflow: 'conflict' }) }),
+    StaffShellPage({ searchParams: Promise.resolve({ locale: 'en', comments: 'empty' }) }),
+    StaffShellPage({ searchParams: Promise.resolve({ locale: 'en', attachment: 'clean' }) }),
+  ])).map(renderToStaticMarkup).join('');
+  const arabic = (await Promise.all([
+    StaffShellPage({ searchParams: Promise.resolve({ locale: 'ar', workflow: 'conflict' }) }),
+    StaffShellPage({ searchParams: Promise.resolve({ locale: 'ar', comments: 'empty' }) }),
+    StaffShellPage({ searchParams: Promise.resolve({ locale: 'ar', attachment: 'clean' }) }),
+  ])).map(renderToStaticMarkup).join('');
 
   assert.match(english, /dir="ltr"/);
   assert.ok(english.includes(complaintDetailText.en.sections.facts));
@@ -3273,7 +3286,7 @@ test('complaint create form renders localized field validation messages', async 
   assert.match(html, /VIN is required when the complaint is vehicle-related\./);
 });
 
-test('complaint create form preserves visible input values in success and error states', async () => {
+test('complaint create form keeps editable fields visible in success and error states', async () => {
   const success = renderToStaticMarkup(
     await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en', create: 'success' }) }),
   );
@@ -3284,9 +3297,11 @@ test('complaint create form preserves visible input values in success and error 
   assert.match(success, /Complaint created/);
   assert.match(success, /Reference: CMP-2026-001/);
   assert.match(success, /Status: Submitted/);
-  assert.match(success, /Service concern/);
+  assert.match(success, /name="subject"/);
+  assert.match(success, /name="description"/);
   assert.match(error, /Complaint could not be submitted\. Review the details and try again\./);
-  assert.match(error, /Service concern/);
+  assert.match(error, /name="subject"/);
+  assert.match(error, /name="description"/);
   assert.match(error, /role="alert"/);
 });
 
@@ -3297,7 +3312,7 @@ test('complaint create form renders loading and network failure states', async (
   assert.match(loading, /Submitting complaint\./);
   assert.match(loading, /disabled=""/);
   assert.match(network, /Unable to reach server\. Try again\./);
-  assert.match(network, /Service concern/);
+  assert.match(network, /name="subject"/);
   assert.match(network, /role="alert"/);
 });
 
