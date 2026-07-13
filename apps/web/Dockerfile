@@ -26,4 +26,4 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/apps/web/node_modules ./apps/web/node_modules
 WORKDIR /app/apps/web
 EXPOSE 4000
-CMD ["pnpm", "start", "-p", "4000"]
+CMD ["node", "node_modules/next/dist/bin/next", "start", "-p", "4000"]
