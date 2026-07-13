@@ -1,6 +1,6 @@
 # Coordinated Staff UI Redesign
 
-Status: Search Startup Hotfix Ready; Production Redeploy Pending
+Status: Search Startup Hotfix Deployed; Production UAT Pending
 Required model tier: GPT-5.5 Extra High or Opus 4.8 Max
 Phase: coordinated staff UI cutover
 Risk: High
@@ -17,7 +17,8 @@ branch scope, audit behavior, and portal privacy.
 The first production promotion of `ca40feb1` failed because `SearchModule` did
 not register its runtime dependencies. Production was rolled back successfully
 to `68e27039`; the first hotfix preflight found the remaining audit dependency
-before live replacement. Redeploy the corrected hotfix artifact before UAT.
+before live replacement. Corrected artifact `c73cfdbc` is now deployed and
+healthy; continue with authenticated production smoke and UAT.
 
 ## Verification
 
@@ -30,14 +31,17 @@ before live replacement. Redeploy the corrected hotfix artifact before UAT.
   (82 route previews and rendered artifacts).
 - Passed: `corepack pnpm test:e2e -- accessibility` (22 route previews).
 - Passed: `corepack pnpm web:perf` (5 static route previews).
+- Passed in production: isolated API startup, `/search` route mapping, live API
+  health, API/web container recreation, and external HTTPS reachability for
+  `c73cfdbc`.
 
 ## Required Human Gates
 
-- Needs Human Review: deploy the hotfix artifact and verify API health, web
-  reachability, login, global search, and the staff dashboard on production.
+- Needs Human Review: verify login, global search, and the staff dashboard with
+  an authenticated production session.
 - Needs Human Review: employee and manager staging UAT against the agreed
   role/scope, urgent-item, and collaboration-comprehension thresholds.
 - Needs Human Review: deployed LCP, INP, and CLS telemetry; the local proof does
   not establish field performance.
-- Needs Human Review: production promotion or rollback decision using the same
-  staged artifact.
+- Needs Human Review: final production acceptance after authenticated smoke and
+  employee/manager UAT.

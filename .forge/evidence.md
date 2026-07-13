@@ -13379,7 +13379,7 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 
 - Date: 2026-07-13
 - Risk: Critical (production API startup blocker)
-- Status: Local proof passed; production redeploy pending
+- Status: Deployed; infrastructure health passed; authenticated UAT pending
 - Requirement IDs: REQ-SEARCH-001, REQ-RBAC-001, API-STANDARD-001,
   METHOD-TEST-001
 
@@ -13395,15 +13395,20 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
   Prisma, audit, `AuthModule`, session auth, and permission guards.
 - The regression test now boots the Nest module with database lifecycle calls
   stubbed, resolving the actual dependency graph without requiring a test DB.
+- Corrected artifact `c73cfdbc` passed a disposable production-container boot,
+  mapped `/search`, and returned `status=ok` with database and Redis configured.
+- The live API and web containers were recreated successfully and remained up;
+  live API health and external HTTPS reachability passed.
 
 ### Verification
 
 - Passed: `corepack pnpm test:api -- search` (5/5).
 - Passed: `corepack pnpm typecheck`, `corepack pnpm lint`, and
   `git diff --check`.
-- Not Run: local production Docker startup because Docker Desktop is unavailable.
-- Needs Human Review: redeploy the hotfix image and verify `/health`, login,
-  global search, and dashboard API requests.
+- Passed on production: disposable API startup, live `/health`, container state,
+  and external HTTPS reachability.
+- Needs Human Review: authenticated login, global search, dashboard requests,
+  employee/manager UAT, and deployed Web Vitals.
 
 ### Security Self-Check
 
