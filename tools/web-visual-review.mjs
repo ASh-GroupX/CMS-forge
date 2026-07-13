@@ -37,6 +37,7 @@ import { visualCases } from './web-proof-cases.mjs';
 const webRequire = createRequire(new URL('../apps/web/package.json', import.meta.url));
 const React = webRequire('react');
 const { renderToStaticMarkup } = webRequire('react-dom/server');
+const STAFF_PROOF_PATHS = { 'staff-admin': '/admin', 'staff-audit': '/audit', 'staff-complaints': '/complaints', 'staff-complaint-detail': '/complaints/cmp-proof', 'staff-complaint-new': '/complaints/new', 'staff-deal-handoff': '/deals/handoff', 'staff-manager': '/tasks/manager', 'staff-manager-detail': '/tasks/manager/task_manager_proof', 'staff-reports': '/reports', 'staff-today': '/tasks/today', 'staff-task-detail': '/tasks/today/task-proof', 'staff-communication-groups': '/communication-groups' };
 const outDir = join('coverage', 'web-visual-review');
 
 rmSync(outDir, { recursive: true, force: true });
@@ -61,7 +62,7 @@ for (const artifact of artifacts) {
 async function routePage(testCase) {
   const params = Promise.resolve(testCase.params);
   const staffProps = { cookieHeader: 'cms_staff_session=proof', fetchImpl: proofFetch, searchParams: params };
-  if (testCase.route === 'staff-navigation') return React.createElement(AppShell, { activePath: '/tasks/today', locale: testCase.locale, navKeys: staffNavItems.map((item) => item.key), signedIn: true }, React.createElement('section', { className: 'min-w-0', 'aria-label': staffShellText[testCase.locale].title }, staffShellText[testCase.locale].subtitle));
+  if (testCase.route === 'staff-navigation') return React.createElement(AppShell, { activePath: '/tasks/today', locale: testCase.locale, navKeys: staffNavItems.map((item) => item.key), principal: (await proofJson('/auth/me')).user }, React.createElement('section', { className: 'min-w-0', 'aria-label': staffShellText[testCase.locale].title }, staffShellText[testCase.locale].subtitle));
   if (testCase.route === 'staff-auth') return React.createElement(StaffAuthLanding, { authError: false, locale: testCase.locale });
   if (testCase.route === 'staff-admin') return staffFrame(testCase, await AdminPage(staffProps));
   if (testCase.route === 'staff-audit') return staffFrame(testCase, await AuditPage({ searchParams: params }));
@@ -72,7 +73,7 @@ async function routePage(testCase) {
   if (testCase.route === 'staff-complaint-new') return staffFrame(testCase, hasAnyParam(testCase, ['create', 'lookup'])
     ? React.createElement(ComplaintIntakeWorkspace, { createState: testCase.params.create, locale: testCase.locale, lookupState: testCase.params.lookup, options: await proofJson('/complaints/form-options') })
     : await NewComplaintPage({ searchParams: params }));
-  if (testCase.route === 'staff-dashboard') return staffFrame(testCase, await DashboardPage(staffProps));
+  if (testCase.route === 'staff-dashboard') return React.createElement(AppShell, { activePath: '/dashboard', locale: testCase.locale, navKeys: staffNavItems.map((item) => item.key), principal: (await proofJson('/auth/me')).user }, await DashboardPage(staffProps));
   if (testCase.route === 'staff-deal-handoff') return staffFrame(testCase, await DealHandoffPage(staffProps));
   if (testCase.route === 'staff-manager') return staffFrame(testCase, await ManagerControlRoomPage(staffProps));
   if (testCase.route === 'staff-manager-detail') return staffFrame(testCase, await ManagerTaskDetailPage({ ...staffProps, params: Promise.resolve({ id: 'task_manager_proof' }) }));
@@ -152,10 +153,9 @@ function portalTrackingProps(testCase) {
   };
 }
 
-function staffFrame(testCase, children) {
-  const t = staffShellText[testCase.locale];
-  return React.createElement('div', { className: 'min-h-screen bg-neutral p-4 text-neutral-foreground md:p-6', dir: t.dir, lang: t.lang },
-    React.createElement('section', { className: 'grid min-w-0 content-start gap-4' }, children));
+async function staffFrame(testCase, children) {
+  const activePath = STAFF_PROOF_PATHS[testCase.route] ?? '/dashboard';
+  return React.createElement(AppShell, { activePath, locale: testCase.locale, navKeys: staffNavItems.map((item) => item.key), principal: (await proofJson('/auth/me')).user }, children);
 }
 
 function portalFrame(testCase, current, children) {

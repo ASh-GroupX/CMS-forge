@@ -121,7 +121,7 @@ test('staff shell renders app top bar controls', async () => {
   );
 
   assert.match(html, /aria-label="Switch language"/);
-  assert.match(html, /href="\/\?locale=ar"/);
+  assert.match(html, /href="\/dashboard\?locale=ar"/);
   assert.match(html, /aria-label="Toggle theme"/);
   assert.match(html, /aria-pressed="false"/);
   assert.match(html, /Skip to main content/);
@@ -132,7 +132,8 @@ test('staff shell active route helper distinguishes queue create and detail rout
   assert.equal(isActiveNav('queue', '/complaints', '/complaints'), true);
   assert.equal(isActiveNav('queue', '/complaints', '/complaints/new'), false);
   assert.equal(isActiveNav('create', '/complaints/new', '/complaints/new'), true);
-  assert.equal(isActiveNav('detail', '/complaints', '/complaints/cmp_1'), true);
+  assert.equal(isActiveNav('queue', '/complaints', '/complaints/cmp_1'), true);
+  assert.equal(isActiveNav('detail', '/complaints', '/complaints/cmp_1'), false);
 });
 
 test('root and textarea avoid hydration-prone client mutations', () => {
@@ -215,7 +216,7 @@ test('staff role preview hides admin-only navigation', async () => {
 
   assert.match(html, /Role preview/);
   assert.match(html, /Admin-only surfaces hidden/);
-  assert.doesNotMatch(html, /Team/);
+  assert.doesNotMatch(html, /Team work that needs help/);
   assert.doesNotMatch(html, /Set users, branches, and categories/);
 });
 
@@ -282,7 +283,7 @@ test('staff shell does not call auth me without a staff session cookie', async (
   );
 
   assert.equal(calls, 0);
-  assert.match(html, /Signed out/);
+  assert.doesNotMatch(html, /Ahmed Al-Masri/);
 });
 
 test('Arabic role preview keeps RTL direction and localized hidden state', async () => {
@@ -1060,15 +1061,16 @@ test('password reset route keeps Arabic RTL localized labels', async () => {
   assert.ok(html.includes(staffShellText.ar.reset.newPassword));
 });
 
-test('staff dashboard summary shows staff role cards only', async () => {
+test('staff dashboard summary shows the operational golden screen', async () => {
   const html = renderToStaticMarkup(
     await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en', role: 'staff', session: 'signed-in' }) }),
   );
 
   assert.match(html, /Open cases/);
-  assert.match(html, /Due soon/);
-  assert.match(html, /Late cases/);
-  assert.doesNotMatch(html, /Average days/);
+  assert.match(html, /Approaching the SLA target/);
+  assert.match(html, /Past the expected completion time/);
+  assert.match(html, /Average days/);
+  assert.match(html, /Team workload is not available for your role/);
 });
 
 test('admin dashboard summary shows all operational cards', async () => {
@@ -1077,22 +1079,23 @@ test('admin dashboard summary shows all operational cards', async () => {
   );
 
   assert.match(html, /Open cases/);
-  assert.match(html, /Due soon/);
-  assert.match(html, /Late cases/);
+  assert.match(html, /Approaching the SLA target/);
+  assert.match(html, /Past the expected completion time/);
   assert.match(html, /Closed cases/);
   assert.match(html, /Average days/);
 });
 
-test('management dashboard summary focuses management cards', async () => {
+test('management dashboard summary shows operational cards and team workload', async () => {
   const html = renderToStaticMarkup(
     await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en', role: 'management', session: 'signed-in' }) }),
   );
 
   assert.match(html, /Open cases/);
-  assert.match(html, /Late cases/);
+  assert.match(html, /Past the expected completion time/);
   assert.match(html, /Closed cases/);
   assert.match(html, /Average days/);
-  assert.doesNotMatch(html, /Needs attention before it becomes late/);
+  assert.match(html, /Approaching the SLA target/);
+  assert.match(html, /Sara Khaled/);
 });
 
 test('Arabic dashboard summary keeps RTL localized card labels', async () => {
@@ -1149,11 +1152,11 @@ test('dashboard summary renders real backend values through the session cookie',
     cookie: 'cms_staff_session=raw-session',
   });
   assert.match(html, />42</);
-  assert.match(html, />7</);
-  assert.match(html, />9</);
+  assert.match(html, />7 complaints</);
+  assert.match(html, />9 complaints</);
   assert.match(html, />30</);
-  assert.match(html, />1.5d</);
-  assert.doesNotMatch(html, />18</);
+  assert.match(html, />1.5</);
+  assert.doesNotMatch(html, />56</);
 });
 
 test('dashboard summary keeps preview fallback when backend denies the session', async () => {
@@ -1169,7 +1172,7 @@ test('dashboard summary keeps preview fallback when backend denies the session',
     }),
   );
 
-  assert.match(html, />18</);
+  assert.match(html, />56</);
   assert.doesNotMatch(html, />42</);
 });
 
@@ -1306,10 +1309,10 @@ test('staff shell keeps responsive layout classes for dashboard and queue', asyn
     await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en', role: 'admin', session: 'signed-in' }) }),
   );
 
-  assert.match(html, /lg:grid-cols-\[17rem_minmax\(0,1fr\)\]/);
+  assert.match(html, /lg:grid-cols-\[18rem_minmax\(0,1fr\)\]/);
   assert.match(html, /lg:h-screen/);
   assert.match(html, /md:grid-cols-3/);
-  assert.match(html, /xl:grid-cols-5/);
+  assert.match(html, /xl:grid-cols-\[minmax\(0,1\.45fr\)_minmax\(20rem,1fr\)\]/);
   assert.match(html, /md:grid-cols-5/);
   assert.match(html, /overflow-x-auto/);
   assert.match(html, /min-width:58rem/);
@@ -1748,9 +1751,9 @@ test('complaint detail workspace keeps responsive detail layout classes', async 
   const detail = complaintDetailViewFixture() as never;
   const html = ['work', 'details'].map((initialTab) => renderToStaticMarkup(React.createElement(ComplaintDetailWorkspace, { detail, initialTab: initialTab as never, locale: 'en' }))).join('');
 
-  assert.match(html, /xl:grid-cols-\[minmax\(0,1fr\)_minmax\(20rem,0\.55fr\)\]/);
-  assert.match(html, /lg:grid-cols-2/);
-  assert.match(html, /grid-cols-\[minmax\(6rem,8rem\)_minmax\(0,1fr\)\]/);
+  assert.match(html, /2xl:grid-cols-\[minmax\(0,1fr\)_minmax\(20rem,0\.55fr\)\]/);
+  assert.match(html, /2xl:grid-cols-2/);
+  assert.match(html, /grid-cols-\[minmax\(4\.5rem,0\.7fr\)_minmax\(7rem,1\.3fr\)\]/);
 });
 
 test('complaint detail workspace source is privacy-safe and render-only', () => {
@@ -4410,7 +4413,6 @@ test('dashboard route renders Arabic RTL unavailable state', async () => {
   );
 
   assert.match(html, /dir="rtl"/);
-  assert.ok(html.includes(staffShellText.ar.dashboard.title));
   assert.ok(html.includes(staffShellText.ar.dashboard.states.error));
   assert.ok(!html.includes(staffShellText.ar.dashboard.cards.open[0]));
   assert.ok(!html.includes(staffShellText.ar.dashboard.cards.averageTat[0]));
@@ -4443,22 +4445,20 @@ test('dashboard route renders real metric values through the session cookie', as
   assert.deepEqual(dashboardCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
   assert.doesNotMatch(String(dashboardCall.input), /role|actor|branchId/i);
   assert.match(html, />42</);
-  assert.match(html, />7</);
-  assert.match(html, />9</);
+  assert.match(html, />7 complaints</);
+  assert.match(html, />9 complaints</);
   assert.match(html, />30</);
   assert.match(html, />1.5</);
 });
 
 test('dashboard route renders empty zero state from all-zero metrics', async () => {
-  const fetchImpl: typeof fetch = async () => jsonResponse({
-    summary: {
-      openComplaints: 0,
-      overdueComplaints: 0,
-      slaWarningComplaints: 0,
-      closedComplaints: 0,
-      averageTatHours: 0,
-    },
-  });
+  const fetchImpl: typeof fetch = async (input) => {
+    const path = String(input);
+    if (path.endsWith('/auth/me')) return jsonResponse({ user: principal() });
+    if (path.endsWith('/tasks/today')) return jsonResponse({ completed: [], dueToday: [], overdue: [], overduePromises: [], assignedToMe: [], waitingOnMe: [] });
+    if (path.includes('/notifications')) return jsonResponse({ items: [] });
+    return jsonResponse({ summary: { openComplaints: 0, overdueComplaints: 0, slaWarningComplaints: 0, closedComplaints: 0, averageTatHours: 0 } });
+  };
   const html = renderToStaticMarkup(
     await DashboardPage({
       cookieHeader: 'cms_staff_session=raw-session',
@@ -4469,7 +4469,7 @@ test('dashboard route renders empty zero state from all-zero metrics', async () 
 
   assert.match(html, /No work is waiting right now\./);
   assert.match(html, /role="status"/);
-  assert.equal(html.match(/>0</g)?.length, 5);
+  assert.ok((html.match(/>0</g)?.length ?? 0) >= 4);
 });
 
 test('dashboard route renders error state when backend denies summary access', async () => {

@@ -13416,3 +13416,98 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
   focused suite includes allowed scoped search and denied branch-scope cases.
 - No workflow state, audit behavior, secrets, logs, or portal response shapes
   changed in this dependency-wiring hotfix.
+
+---
+
+## UI-GOLDEN-DASHBOARD-001 - Approved Command-Center Screen
+
+- Date: 2026-07-13
+- Risk: High (authenticated staff navigation and operational visibility)
+- Status: Implementation and local proof passed; deployment pending
+- Requirement IDs: REQ-REPORT-001, REQ-LOCALIZATION-001, REQ-RBAC-001,
+  UI-SCREEN-001, UI-DESIGN-001, METHOD-TEST-001
+
+### Evidence
+
+- Rebuilt the authenticated staff shell to reproduce the supplied design's
+  compact Arabic command-center layout with an RTL right rail, localized
+  identity/role/branch scope, search, notifications, language, theme, and account
+  controls. English mirrors the structure in LTR.
+- Replaced the previous dashboard presentation with the supplied two-column
+  operational composition: attention items, four honest scoped KPI tiles, recent
+  record activity, manager workload, and primary bottom actions.
+- Changed authenticated root navigation from `/tasks/today` to `/dashboard`, so
+  staff now land on the redesigned screen instead of the legacy task view.
+- Reused existing server-scoped `/reports/dashboard`, `/tasks/today`,
+  `/tasks/manager-rollup`, `/notifications`, and `/auth/me` reads. No placeholder
+  production data or new API authority was added.
+- Updated proof fixtures to render the real dashboard inside the real staff shell;
+  inspected `coverage/web-visual-review/ar-dashboard-final.png`
+  against the user's supplied golden image.
+
+### Verification
+
+- Passed: `corepack pnpm lint`, `corepack pnpm typecheck`, and
+  `git diff --check`.
+- Passed: `corepack pnpm test:web` (213/213).
+- Passed: `corepack pnpm test:visual` and `corepack pnpm web:visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (22 route previews); an
+  initially detected avatar contrast issue was corrected and the full gate rerun.
+- Passed: `corepack pnpm web:perf` (5 static route previews).
+- Needs Human Review: production deployment, authenticated Arabic/English smoke,
+  representative data density, and deployed field Web Vitals.
+
+### Security Self-Check
+
+- Navigation and manager sections remain permission-filtered from the
+  server-derived session principal; no client role or branch selector was added.
+- The dashboard performs read-only scoped API calls and introduces no workflow
+  mutations, audit changes, secret handling, or customer-portal exposure.
+
+---
+
+## UI-STAFF-SURFACES-001 - Full Command-Center Visual Cutover
+
+- Date: 2026-07-13
+- Risk: High (all authenticated staff surfaces)
+- Status: Implementation and local proof passed; deployment pending
+- Requirement IDs: REQ-LOCALIZATION-001, REQ-RBAC-001, UI-SCREEN-001,
+  UI-DESIGN-001, METHOD-TEST-001
+
+### Evidence
+
+- Applied the approved dashboard's surface, radius, shadow, table, density, and
+  touch-target rules through the shared staff workspace and existing shadcn card
+  primitive, so staff routes consume one visual system without route-specific
+  behavior changes.
+- Changed the common data-table header from the legacy dark band to the light
+  hairline operational treatment used by the reference design.
+- Replaced shell-free visual fixtures with the real authenticated `AppShell` for
+  tasks, queues, complaint detail/create, reports, groups, admin, audit, manager,
+  and deal routes.
+- Visual inspection exposed unreadable vertical wrapping in complaint detail;
+  the screen now stacks at normal desktop widths and returns to two columns only
+  at the wide breakpoint. The final artifact is
+  `coverage/web-visual-review/ar-complaint-detail-final.png`.
+
+### Verification
+
+- Passed: `corepack pnpm lint` and `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test:web` (213/213).
+- Passed: `corepack pnpm test:visual` (100 full-shell route previews).
+- Passed: `corepack pnpm web:visual-review`; representative Arabic staff screens
+  were inspected after rendering.
+- Passed: `corepack pnpm test:e2e -- accessibility` (22 route previews).
+- Passed: `corepack pnpm web:perf` (5 static route previews).
+- Not Run: the redesign skill's referenced standalone contrast/hardcode scripts
+  are absent from the installed skill package; project-native Axe, lint, visual,
+  and performance gates ran instead.
+- Needs Human Review: deployment, authenticated multi-role production smoke, and
+  deployed field Web Vitals.
+
+### Security Self-Check
+
+- Server-session permission filtering and branch scope are unchanged; the proof
+  harness only supplies a fixture principal to the real shell.
+- No workflow mutation, audit behavior, credentials, provider integration, or
+  customer-portal response changed.

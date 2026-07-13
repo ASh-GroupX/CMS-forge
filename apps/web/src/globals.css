@@ -178,3 +178,38 @@
     }
   }
 }
+
+@layer components {
+  .staff-workspace > section,
+  .staff-workspace > article {
+    border: 1px solid hsl(var(--line-subtle));
+    border-radius: var(--radius-lg);
+    background: hsl(var(--surface));
+    padding: 1rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .staff-workspace [data-slot="card"] {
+    border-color: hsl(var(--line-subtle));
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .staff-workspace :is(article, details) {
+    border-radius: var(--radius-md);
+  }
+
+  .staff-workspace button,
+  .staff-workspace input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  .staff-workspace select {
+    min-height: 2.5rem;
+  }
+
+  @media (max-width: 63.999rem) {
+    .staff-workspace button,
+    .staff-workspace input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+    .staff-workspace select {
+      min-height: 2.75rem;
+    }
+  }
+}
