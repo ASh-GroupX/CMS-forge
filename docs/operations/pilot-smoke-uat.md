@@ -9,6 +9,8 @@ but not production-proven. It records non-secret proof only.
 - `corepack pnpm prod:config:check -- --env-file .env.production` passes.
 - `docker compose --env-file .env.production -f docker-compose.prod.yml ps`
   shows API, web, worker, Postgres, Redis, and Caddy healthy/running.
+- `ATTACHMENT_STORAGE_DRIVER=s3` is set for UAT/demo; `memory` is only a dev/test
+  double and cannot produce browser-downloadable signed URLs.
 - `migrate` completed successfully for the deployed revision.
 - `curl -fsS "https://$SITE_DOMAIN/api/health"` returns `status: ok`.
 - `curl -fsS "https://$SITE_DOMAIN/"` returns the web app.

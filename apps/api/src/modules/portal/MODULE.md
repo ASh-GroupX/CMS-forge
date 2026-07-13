@@ -20,6 +20,8 @@ Agent context manifest. Read this before editing the module.
 
 - `portal_verifications`
 - `portal_sessions`
+- `branches`
+- `categories`
 
 ## May depend on
 
@@ -27,6 +29,10 @@ Agent context manifest. Read this before editing the module.
 - `core/audit.service` for portal verification/security audit entries.
 - `core/rate-limit.guard` for public portal abuse protection.
 - ComplaintsService through ComplaintsModule for complaint creation and tracking reads.
+- ComplaintFormOptionsService through ComplaintsModule for public-safe branch,
+  category, and severity option catalogs.
+- AttachmentsService through AttachmentsModule for initial and verified portal
+  complaint attachment uploads.
 - NotificationsService through NotificationsModule for portal OTP and customer notifications.
 - Other modules' public services only. Never import another module repository,
   DTO folder, or Prisma model type.

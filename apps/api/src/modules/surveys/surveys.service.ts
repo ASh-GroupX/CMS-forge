@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { SurveyStatus } from '@prisma/client';
 import { createHash, randomBytes } from 'node:crypto';
 import { AppException } from '../../core/http-kernel.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
@@ -76,15 +77,17 @@ export class SurveysService {
 
   async submitPortalSurvey(input: SubmitSurveyInput): Promise<SubmittedSurvey> {
     const now = input.now ?? new Date();
-    const survey = await this.surveysRepository.findPendingByTokenHash(hashToken(requiredText(input.surveyToken, 'surveyToken')));
-    if (!survey || survey.expiresAt <= now) throw portalDenied();
+    const survey = await this.surveysRepository.findByTokenHash(hashToken(requiredText(input.surveyToken, 'surveyToken')));
+    if (!survey) throw portalDenied('PORTAL_VERIFICATION_FAILED');
+    if (survey.status !== SurveyStatus.PENDING || survey.submittedAt) throw portalDenied('SURVEY_TOKEN_USED');
+    if (survey.expiresAt <= now) throw portalDenied('SURVEY_TOKEN_EXPIRED');
 
     const submitted = await this.surveysRepository.submitPending(survey.id, {
       rating: rating(input.rating),
       comment: optionalText(input.comment, 'comment'),
       submittedAt: now,
     });
-    if (!submitted?.submittedAt || submitted.rating === null) throw portalDenied();
+    if (!submitted?.submittedAt || submitted.rating === null) throw portalDenied('SURVEY_TOKEN_USED');
     return { survey: { id: submitted.id, rating: submitted.rating, submittedAt: submitted.submittedAt.toISOString() } };
   }
 
@@ -105,7 +108,7 @@ function surveyDto(survey: SurveyRecord, surveyToken: string | null, created: bo
 }
 
 function staffSurveyDto(survey: SurveyRecord): StaffSurveyResult {
-  if (!survey.submittedAt || survey.rating === null) throw portalDenied();
+  if (!survey.submittedAt || survey.rating === null) throw portalDenied('PORTAL_VERIFICATION_FAILED');
   return {
     id: survey.id,
     complaintId: survey.complaintId,
@@ -145,6 +148,6 @@ function invalid(field: string): AppException {
   ]);
 }
 
-function portalDenied(): AppException {
-  return new AppException('PORTAL_VERIFICATION_FAILED', 'Portal verification failed', 400);
+function portalDenied(code: 'PORTAL_VERIFICATION_FAILED' | 'SURVEY_TOKEN_EXPIRED' | 'SURVEY_TOKEN_USED'): AppException {
+  return new AppException(code, 'Portal verification failed', 400);
 }

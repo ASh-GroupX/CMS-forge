@@ -2,6 +2,7 @@ export type ComplaintFormOption = { id: string; code: string; nameEn: string; na
 export type ComplaintFormOptions = {
   branches: ComplaintFormOption[];
   categories: ComplaintFormOption[];
+  departments: ComplaintFormOption[];
   severities: Array<'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>;
 };
 

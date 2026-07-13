@@ -61,6 +61,10 @@ export class AttachmentsRepository {
     return client.attachment.findUnique({ where: { id }, select: attachmentSelect });
   }
 
+  async listForComplaint(complaintId: string, client: AttachmentClient = this.prisma): Promise<AttachmentRecord[]> {
+    return client.attachment.findMany({ orderBy: { createdAt: 'desc' }, select: attachmentSelect, where: { complaintId } });
+  }
+
   async updateScanStatus(data: UpdateAttachmentScanStatusData, client: AttachmentClient = this.prisma): Promise<AttachmentRecord | null> {
     const updated = await client.attachment.updateMany({
       where: { id: data.id, scanStatus: 'PENDING' },

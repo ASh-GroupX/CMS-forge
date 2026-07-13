@@ -5,11 +5,15 @@ import { getAssignableStaff, type AssignableStaff } from '../../../../lib/staff-
 import { getQuickAddRelatedRecords, type RelatedRecordType, type StaffRelatedRecord } from '../../../../lib/staff-related-records-api';
 import { quickAddTask, updateTask, type StaffTaskStatus } from '../../../../lib/staff-tasks-api';
 
+export async function loadRelatedRecordsAction() {
+  return getQuickAddRelatedRecords();
+}
+
 export async function quickAddTaskAction(formData: FormData): Promise<void> {
   const locale = safeLocale(formData.get('locale'));
   const link = await linkFrom(formData);
   if (formData.get('isCustomerPromise') === 'on' && !isPromiseLink(link)) redirect(`/tasks/today?locale=${locale}&task=link-required`);
-  const ok = await quickAddTask({
+  const result = await quickAddTask({
     title: text(formData, 'title'),
     what: text(formData, 'what'),
     whoId: await staffIdFrom(formData, 'whoId', 'assigneeLabel'),
@@ -18,7 +22,7 @@ export async function quickAddTaskAction(formData: FormData): Promise<void> {
     ...(optionalText(formData, 'dueAt') ? { dueAt: text(formData, 'dueAt') } : {}),
     ...(link ? { links: [link] } : {}),
   });
-  redirect(`/tasks/today?locale=${locale}&task=${ok ? 'success' : 'error'}`);
+  redirect(`/tasks/today?locale=${locale}&task=${result}`);
 }
 
 async function staffIdFrom(formData: FormData, idName: string, labelName: string): Promise<string> {
@@ -37,15 +41,16 @@ export async function updateTaskAction(formData: FormData): Promise<void> {
   const assigneeId = await staffIdFrom(formData, 'assigneeId', 'assigneeLabel');
   const nextActionWhoId = await staffIdFrom(formData, 'nextActionWhoId', 'nextActionWhoLabel');
   const nextActionWhen = optionalText(formData, 'nextActionWhen');
-  const ok = await updateTask(taskId, {
+  const result = await updateTask(taskId, {
     ...(status ? { status } : {}),
+    ...(optionalText(formData, 'statusNote') ? { statusNote: text(formData, 'statusNote') } : {}),
     ...(assigneeId ? { assigneeId } : {}),
     ...(optionalText(formData, 'dueAt') ? { dueAt: text(formData, 'dueAt') } : {}),
     ...(nextActionWhat && nextActionWhoId && nextActionWhen
       ? { nextAction: { what: nextActionWhat, whoId: nextActionWhoId, when: nextActionWhen } }
       : {}),
   });
-  redirect(`/tasks/today?locale=${locale}&task=${ok ? 'success' : 'error'}`);
+  redirect(`/tasks/today?locale=${locale}&task=${result}`);
 }
 
 function staffLabels(person: AssignableStaff): string[] {

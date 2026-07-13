@@ -1,8 +1,28 @@
-import type { ComplaintQueueItem } from './staff-complaints-api';
+import type { ComplaintQueueItem, ComplaintSeverity, ComplaintStatus } from './staff-complaints-api';
 
 type QueueResponse = { items?: Partial<ComplaintQueueItem>[] };
+type SearchResponse = QueueResponse & { hasNext?: boolean; limit?: number; offset?: number; total?: number };
+
+export type StaffQueueQuery = {
+  branchId?: string | null;
+  page?: number | null;
+  pageSize?: number | null;
+  search?: string | null;
+  severity?: ComplaintSeverity | null;
+  sla?: ComplaintQueueItem['slaState'] | null;
+  status?: ComplaintStatus | null;
+};
+
+export type StaffQueueResult = {
+  hasNext: boolean;
+  page: number;
+  pageSize: number;
+  rows: ComplaintQueueItem[];
+};
+export type StaffQueueLoadResult = { status: 'ready'; data: StaffQueueResult } | { status: 'denied' | 'error' };
 
 const STAFF_SESSION_COOKIE = 'cms_staff_session';
+const defaultPageSize = 10;
 
 export async function getStaffQueueItems({
   apiUrl = process.env.API_URL ?? 'http://localhost:3000',
@@ -13,18 +33,70 @@ export async function getStaffQueueItems({
   cookieHeader?: string;
   fetchImpl?: typeof fetch;
 } = {}): Promise<ComplaintQueueItem[] | null> {
+  const result = await getStaffQueueResult({
+    apiUrl,
+    ...(cookieHeader !== undefined ? { cookieHeader } : {}),
+    fetchImpl,
+  });
+  return result?.rows ?? null;
+}
+
+export async function getStaffQueueResult({
+  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  cookieHeader,
+  fetchImpl = fetch,
+  query = {},
+}: {
+  apiUrl?: string;
+  cookieHeader?: string;
+  fetchImpl?: typeof fetch;
+  query?: StaffQueueQuery;
+} = {}): Promise<StaffQueueResult | null> {
+  const result = await getStaffQueueLoadResult({ apiUrl, ...(cookieHeader !== undefined ? { cookieHeader } : {}), fetchImpl, query });
+  return result.status === 'ready' ? result.data : null;
+}
+
+export async function getStaffQueueLoadResult({
+  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  cookieHeader,
+  fetchImpl = fetch,
+  query = {},
+}: {
+  apiUrl?: string;
+  cookieHeader?: string;
+  fetchImpl?: typeof fetch;
+  query?: StaffQueueQuery;
+} = {}): Promise<StaffQueueLoadResult> {
   const cookies = cookieHeader ?? await incomingCookieHeader();
-  if (!hasStaffSessionCookie(cookies)) return null;
+  if (!hasStaffSessionCookie(cookies)) return { status: 'denied' };
 
   try {
-    const response = await fetchImpl(new URL('/complaints', apiUrl), {
+    const pageSize = clampPositive(query.pageSize, defaultPageSize, 50);
+    const page = clampPositive(query.page, 1, 1000);
+    const url = new URL('/complaints/search', apiUrl);
+    const search = query.search?.trim();
+    url.searchParams.set('limit', String(pageSize + 1));
+    url.searchParams.set('offset', String((page - 1) * pageSize));
+    append(url.searchParams, 'branchId', query.branchId);
+    append(url.searchParams, 'status', query.status);
+    append(url.searchParams, 'severity', query.severity);
+    append(url.searchParams, 'sla', query.sla);
+    if (search) url.searchParams.set(isReferenceSearch(search) ? 'referenceNumber' : 'customer', search);
+
+    const response = await fetchImpl(url, {
       cache: 'no-store',
       headers: { Accept: 'application/json', cookie: cookies },
     });
-    if (!response.ok) return null;
-    return rowsFrom((await response.json()) as QueueResponse);
+    if (response.status === 401 || response.status === 403) return { status: 'denied' };
+    if (!response.ok) return { status: 'error' };
+    const body = (await response.json()) as SearchResponse;
+    const rows = rowsFrom(body);
+    if (!rows) return { status: 'error' };
+    const offset = (page - 1) * pageSize;
+    const hasNext = typeof body.hasNext === 'boolean' ? body.hasNext : typeof body.total === 'number' ? offset + pageSize < body.total : rows.length > pageSize;
+    return { status: 'ready', data: { hasNext, page, pageSize, rows: rows.slice(0, pageSize) } };
   } catch {
-    return null;
+    return { status: 'error' };
   }
 }
 
@@ -63,13 +135,35 @@ function rowFrom(row: Partial<ComplaintQueueItem>): ComplaintQueueItem | null {
     ...(branchName ? { branchName } : {}),
     ownerId: typeof row.ownerId === 'string' ? row.ownerId : null,
     ownerName: typeof row.ownerName === 'string' ? row.ownerName : null,
+    slaState: slaState(row.slaState),
+    slaDueAt: typeof row.slaDueAt === 'string' ? row.slaDueAt : null,
+    slaStage: typeof row.slaStage === 'string' ? row.slaStage : null,
+    slaPercentElapsed: typeof row.slaPercentElapsed === 'number' ? row.slaPercentElapsed : null,
+    nextAction: typeof row.nextAction === 'string' ? row.nextAction : null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
 }
 
+function slaState(value: unknown): ComplaintQueueItem['slaState'] {
+  return value === 'WARNING' || value === 'BREACHED' || value === 'CLOSED' ? value : 'ON_TRACK';
+}
+
 function hasStaffSessionCookie(cookieHeader: string): boolean {
   return cookieHeader.split(';').some((cookie) => cookie.trim().startsWith(`${STAFF_SESSION_COOKIE}=`));
+}
+
+function append(params: URLSearchParams, key: string, value: string | null | undefined): void {
+  const text = value?.trim();
+  if (text && text !== 'all') params.set(key, text);
+}
+
+function clampPositive(value: number | null | undefined, fallback: number, max: number): number {
+  return Number.isInteger(value) && value && value > 0 ? Math.min(value, max) : fallback;
+}
+
+function isReferenceSearch(value: string): boolean {
+  return /^(CMS|CMP|DRAFT)-/i.test(value);
 }
 
 async function incomingCookieHeader(): Promise<string> {

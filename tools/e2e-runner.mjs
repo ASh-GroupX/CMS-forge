@@ -19,7 +19,32 @@ if (mode === 'runtime-smoke') {
   process.exit(0);
 }
 
-console.error('Use one of: visual, accessibility, perf, ui-smoke, runtime-smoke.');
+if (mode === 'customer-portal-track') {
+  run('node', ['--import', 'tsx', 'tools/customer-portal-track-proof.mjs']);
+  process.exit(0);
+}
+
+if (mode === 'customer-portal-submit') {
+  run('node', ['--import', 'tsx', 'tools/customer-portal-submit-proof.mjs']);
+  process.exit(0);
+}
+
+if (mode === 'complaint-workflow') {
+  run('node', ['--import', 'tsx', 'tools/complaint-workflow-proof.mjs']);
+  process.exit(0);
+}
+
+if (mode === 'attachments') {
+  run('node', ['--import', 'tsx', 'tools/attachments-proof.mjs']);
+  process.exit(0);
+}
+
+if (mode === 'work-queues') {
+  run('node', ['--import', 'tsx', 'tools/work-queues-proof.mjs']);
+  process.exit(0);
+}
+
+console.error('Use one of: visual, accessibility, perf, ui-smoke, runtime-smoke, customer-portal-track, customer-portal-submit, complaint-workflow, attachments, work-queues.');
 process.exit(1);
 
 function run(command, args) {

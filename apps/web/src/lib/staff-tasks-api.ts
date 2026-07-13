@@ -1,3 +1,5 @@
+import { CSRF_COOKIE, hasStaffSessionCookie, incomingCookieHeader, readCookie } from './staff-request-auth';
+
 type TaskSectionKey = 'completed' | 'dueToday' | 'overdue' | 'overduePromises' | 'assignedToMe' | 'waitingOnMe';
 type ManagerTaskSectionKey = 'dueToday' | 'overduePromises' | 'escalated';
 
@@ -33,6 +35,8 @@ export type ManagerControlRoomTasks = Record<ManagerTaskSectionKey, StaffTask[]>
   workloadByAssignee: ManagerRollupCount[];
   promiseKpi: { openPromiseCount: number; overduePromiseCount: number };
 };
+export type StaffTaskLoadResult<T> = { status: 'ready'; data: T } | { status: 'denied' | 'error' };
+export type StaffWriteResult = 'success' | 'denied' | 'error';
 
 type EmployeeTodayBody = Partial<Record<TaskSectionKey, Partial<StaffTask>[]>>;
 type ManagerControlRoomBody = Partial<Record<ManagerTaskSectionKey, Partial<StaffTask>[]>> & {
@@ -42,9 +46,7 @@ type ManagerControlRoomBody = Partial<Record<ManagerTaskSectionKey, Partial<Staf
   promiseKpi?: Partial<ManagerControlRoomTasks['promiseKpi']>;
 };
 
-const STAFF_SESSION_COOKIE = 'cms_staff_session';
 const TASK_SECTIONS: readonly TaskSectionKey[] = ['completed', 'dueToday', 'overdue', 'overduePromises', 'assignedToMe', 'waitingOnMe'];
-const CSRF_COOKIE = 'cms_csrf_token';
 
 export async function getEmployeeTodayTasks({
   apiUrl = process.env.API_URL ?? 'http://localhost:3000',
@@ -55,18 +57,33 @@ export async function getEmployeeTodayTasks({
   cookieHeader?: string;
   fetchImpl?: typeof fetch;
 } = {}): Promise<EmployeeTodayTasks | null> {
+  const result = await getEmployeeTodayTasksLoadResult({ apiUrl, ...(cookieHeader !== undefined ? { cookieHeader } : {}), fetchImpl });
+  return result.status === 'ready' ? result.data : null;
+}
+
+export async function getEmployeeTodayTasksLoadResult({
+  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  cookieHeader,
+  fetchImpl = fetch,
+}: {
+  apiUrl?: string;
+  cookieHeader?: string;
+  fetchImpl?: typeof fetch;
+} = {}): Promise<StaffTaskLoadResult<EmployeeTodayTasks>> {
   const cookies = cookieHeader ?? await incomingCookieHeader();
-  if (!hasStaffSessionCookie(cookies)) return null;
+  if (!hasStaffSessionCookie(cookies)) return { status: 'denied' };
 
   try {
     const response = await fetchImpl(new URL('/tasks/today', apiUrl), {
       cache: 'no-store',
       headers: { Accept: 'application/json', cookie: cookies },
     });
-    if (!response.ok) return null;
-    return tasksFrom((await response.json()) as EmployeeTodayBody);
+    if (response.status === 401 || response.status === 403) return { status: 'denied' };
+    if (!response.ok) return { status: 'error' };
+    const data = tasksFrom((await response.json()) as EmployeeTodayBody);
+    return data ? { status: 'ready', data } : { status: 'error' };
   } catch {
-    return null;
+    return { status: 'error' };
   }
 }
 
@@ -79,18 +96,33 @@ export async function getManagerControlRoomTasks({
   cookieHeader?: string;
   fetchImpl?: typeof fetch;
 } = {}): Promise<ManagerControlRoomTasks | null> {
+  const result = await getManagerControlRoomTasksLoadResult({ apiUrl, ...(cookieHeader !== undefined ? { cookieHeader } : {}), fetchImpl });
+  return result.status === 'ready' ? result.data : null;
+}
+
+export async function getManagerControlRoomTasksLoadResult({
+  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  cookieHeader,
+  fetchImpl = fetch,
+}: {
+  apiUrl?: string;
+  cookieHeader?: string;
+  fetchImpl?: typeof fetch;
+} = {}): Promise<StaffTaskLoadResult<ManagerControlRoomTasks>> {
   const cookies = cookieHeader ?? await incomingCookieHeader();
-  if (!hasStaffSessionCookie(cookies)) return null;
+  if (!hasStaffSessionCookie(cookies)) return { status: 'denied' };
 
   try {
     const response = await fetchImpl(new URL('/tasks/manager-rollup', apiUrl), {
       cache: 'no-store',
       headers: { Accept: 'application/json', cookie: cookies },
     });
-    if (!response.ok) return null;
-    return managerRollupFrom((await response.json()) as ManagerControlRoomBody);
+    if (response.status === 401 || response.status === 403) return { status: 'denied' };
+    if (!response.ok) return { status: 'error' };
+    const data = managerRollupFrom((await response.json()) as ManagerControlRoomBody);
+    return data ? { status: 'ready', data } : { status: 'error' };
   } catch {
-    return null;
+    return { status: 'error' };
   }
 }
 
@@ -106,17 +138,18 @@ export type QuickAddTaskPayload = {
 
 export type UpdateTaskPayload = {
   status?: StaffTaskStatus;
+  statusNote?: string;
   assigneeId?: string;
   dueAt?: string;
   nextAction?: { what: string; whoId: string; when: string } | null;
   isCustomerPromise?: boolean;
 };
 
-export async function quickAddTask(payload: QuickAddTaskPayload, fetchImpl: typeof fetch = fetch): Promise<boolean> {
+export async function quickAddTask(payload: QuickAddTaskPayload, fetchImpl: typeof fetch = fetch): Promise<StaffWriteResult> {
   return taskWrite('/tasks/quick-add', payload, 'POST', fetchImpl);
 }
 
-export async function updateTask(taskId: string, payload: UpdateTaskPayload, fetchImpl: typeof fetch = fetch): Promise<boolean> {
+export async function updateTask(taskId: string, payload: UpdateTaskPayload, fetchImpl: typeof fetch = fetch): Promise<StaffWriteResult> {
   return taskWrite(`/tasks/${encodeURIComponent(taskId)}`, payload, 'PATCH', fetchImpl);
 }
 
@@ -239,22 +272,9 @@ function isTaskStatus(value: unknown): value is StaffTaskStatus {
   return value === 'OPEN' || value === 'IN_PROGRESS' || value === 'WAITING' || value === 'DONE';
 }
 
-function hasStaffSessionCookie(cookieHeader: string): boolean {
-  return cookieHeader.split(';').some((cookie) => cookie.trim().startsWith(`${STAFF_SESSION_COOKIE}=`));
-}
-
-async function incomingCookieHeader(): Promise<string> {
-  try {
-    const { cookies } = await import('next/headers');
-    return (await cookies()).toString();
-  } catch {
-    return '';
-  }
-}
-
-async function taskWrite(path: string, payload: unknown, method: 'PATCH' | 'POST', fetchImpl: typeof fetch): Promise<boolean> {
+async function taskWrite(path: string, payload: unknown, method: 'PATCH' | 'POST', fetchImpl: typeof fetch): Promise<StaffWriteResult> {
   const cookies = await incomingCookieHeader();
-  if (!hasStaffSessionCookie(cookies)) return false;
+  if (!hasStaffSessionCookie(cookies)) return 'denied';
   const csrf = readCookie(cookies, CSRF_COOKIE);
   try {
     const response = await fetchImpl(new URL(path, process.env.API_URL ?? 'http://localhost:3000'), {
@@ -268,16 +288,9 @@ async function taskWrite(path: string, payload: unknown, method: 'PATCH' | 'POST
       },
       method,
     });
-    return response.ok;
+    if (response.status === 401 || response.status === 403) return 'denied';
+    return response.ok ? 'success' : 'error';
   } catch {
-    return false;
+    return 'error';
   }
-}
-
-function readCookie(cookieHeader: string, name: string): string | null {
-  return cookieHeader
-    .split(';')
-    .map((cookie) => cookie.trim())
-    .find((cookie) => cookie.startsWith(`${name}=`))
-    ?.slice(name.length + 1) ?? null;
 }

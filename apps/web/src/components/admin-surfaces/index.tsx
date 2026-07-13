@@ -4,13 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { confirmationText } from '../../i18n/staff-confirmations';
 import type { Locale } from '../../i18n/staff-shell';
 import { AdminBranchesDepartments } from '../admin-branches-departments';
-import { AdminCategoriesSla, type AdminConfigPreviewState } from '../admin-categories-sla';
+import { AdminCategoriesSla, type AdminConfigFixtureState } from '../admin-categories-sla';
 import { AdminNotificationTemplates } from '../admin-notification-templates';
 import { AdminUsersRoles } from '../admin-users-roles';
 
-export type AdminPreviewState = AdminConfigPreviewState;
+export type AdminFixtureState = AdminConfigFixtureState;
 
-export function AdminSurfaces({ locale, state }: { locale: Locale; state?: AdminPreviewState | undefined }) {
+export function AdminSurfaces({ locale, state }: { locale: Locale; state?: AdminFixtureState | undefined }) {
   const confirm = confirmationText[locale].deactivate;
   return (
     <>

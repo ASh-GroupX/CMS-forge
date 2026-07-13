@@ -3,11 +3,12 @@ import test from 'node:test';
 import 'reflect-metadata';
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import type { ExecutionContext } from '@nestjs/common';
-import { ComplaintStatus, PortalVerificationStatus } from '@prisma/client';
+import { ComplaintStatus, NotificationChannel, PortalVerificationStatus } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
 import { InMemoryLoginRateLimitStore, LOGIN_RATE_LIMIT_ATTEMPTS, PortalTrackingOtpRateLimitGuard } from '../../src/core/rate-limit.guard.ts';
+import type { ComplaintFormOptionsService } from '../../src/modules/complaints/complaint-form-options.service.ts';
 import type { NotificationsService } from '../../src/modules/notifications/notifications.service.ts';
 import { PortalController } from '../../src/modules/portal/portal.controller.ts';
 import { PortalRepository } from '../../src/modules/portal/portal.repository.ts';
@@ -17,12 +18,12 @@ type PortalRequest = { body?: unknown; headers: Record<string, string | string[]
 
 test('portal tracking OTP route delegates only reference, phone, and request context', async () => {
   const calls: unknown[] = [];
-  const controller = new PortalController({
+  const controller = controllerWith({
     requestTrackingOtp: async (input) => {
       calls.push(input);
-      return { ok: true };
+      return { ok: true, verificationId: 'ver_1', expiresAt: '2026-06-19T10:05:00.000Z' };
     },
-  } as PortalService);
+  });
 
   const response = await controller.requestTrackingOtp({
     referenceNumber: ' CMP-000010 ',
@@ -31,10 +32,11 @@ test('portal tracking OTP route delegates only reference, phone, and request con
     auditLogs: true,
   }, request());
 
-  assert.deepEqual(response, { ok: true });
+  assert.deepEqual(response, { ok: true, verificationId: 'ver_1', expiresAt: '2026-06-19T10:05:00.000Z' });
   assert.deepEqual(calls[0], {
     referenceNumber: 'CMP-000010',
     customerPhone: '+966500000001',
+    locale: 'en',
     correlationId: 'req_portal_otp',
     ipAddress: '203.0.113.91',
     userAgent: 'node:test',
@@ -47,7 +49,7 @@ test('portal tracking OTP route uses the tracking rate limit guard', () => {
   assert.deepEqual(guards.map((guard) => guard.name), ['PortalTrackingOtpRateLimitGuard']);
 });
 
-test('portal tracking OTP request persists hash before queueing notification metadata', async () => {
+test('portal tracking OTP request persists hash before queueing customer SMS', async () => {
   const events: string[] = [];
   const writes: Array<{ otpHash: string; attempts?: number; ipAddress?: string | null }> = [];
   const notifications: unknown[] = [];
@@ -58,19 +60,47 @@ test('portal tracking OTP request persists hash before queueing notification met
     { record: async () => undefined } as AuditService,
   );
 
-  await assert.doesNotReject(service.requestTrackingOtp({ referenceNumber: 'CMP-000010', customerPhone: '+966500000001', ipAddress: '203.0.113.91' }));
+  const response = await service.requestTrackingOtp({ referenceNumber: 'CMP-000010', customerPhone: '+966500000001', ipAddress: '203.0.113.91' });
 
   assert.deepEqual(events, ['lookup', 'persist', 'queue']);
+  assert.deepEqual(response, { ok: true, verificationId: 'ver_1', expiresAt: response.expiresAt });
+  assert.equal(response.expiresAt, (notifications[0] as { payload: { expiresAt: string } }).payload.expiresAt);
+  assert.equal(JSON.stringify(response).includes('otp'), false);
+  assert.equal(JSON.stringify(response).includes('Hash'), false);
+  assert.equal(JSON.stringify(response).includes('session'), false);
   assert.match(writes[0].otpHash, /^sha256:[a-f0-9]{32}:[a-f0-9]{64}$/);
   assert.doesNotMatch(writes[0].otpHash, /^\d{6}$/);
   assert.equal(writes[0].ipAddress, '203.0.113.91');
+  const sentCode = otpFromText((notifications[0] as { payload: { textBody: string } }).payload.textBody);
+  assert.equal(otpMatchesHash(sentCode, writes[0].otpHash), true);
   assert.deepEqual(notifications[0], {
     complaintId: 'cmp_1',
-    templateCode: 'portal.verification.requested.internal',
+    channel: NotificationChannel.SMS,
+    templateCode: 'portal.verification.otp.customer',
     locale: 'en',
-    payload: { verificationId: 'ver_1', referenceNumber: 'CMP-000010', expiresAt: (notifications[0] as { payload: { expiresAt: string } }).payload.expiresAt },
+    payload: {
+      to: '+966500000001',
+      textBody: (notifications[0] as { payload: { textBody: string } }).payload.textBody,
+      referenceNumber: 'CMP-000010',
+      expiresAt: (notifications[0] as { payload: { expiresAt: string } }).payload.expiresAt,
+    },
   });
   assert.equal(JSON.stringify(notifications[0]).includes('otpHash'), false);
+});
+
+test('portal tracking OTP request queues Arabic SMS when requested', async () => {
+  const notifications: unknown[] = [];
+  const service = new PortalService(
+    { findPortalVerificationTarget: async () => ({ complaintId: 'cmp_1', customerId: 'cus_1', phone: '+966500000001' }) } as never,
+    { createVerification: async (data) => ({ ...data, id: 'ver_1', status: PortalVerificationStatus.PENDING, attempts: 0, createdAt: new Date('2026-06-19T10:00:00.000Z') }) } as never,
+    { queueInternal: async (input) => { notifications.push(input); return {} as never; } } as NotificationsService,
+    { record: async () => undefined } as AuditService,
+  );
+
+  await service.requestTrackingOtp({ referenceNumber: 'CMP-000010', customerPhone: '+966500000001', locale: 'ar' });
+
+  assert.equal((notifications[0] as { locale: string }).locale, 'ar');
+  assert.match((notifications[0] as { payload: { textBody: string } }).payload.textBody, /رمز متابعة الشكوى/);
 });
 
 test('portal tracking OTP denial does not persist or queue notification', async () => {
@@ -148,14 +178,21 @@ function context(req: PortalRequest): ExecutionContext {
   return { switchToHttp: () => ({ getRequest: () => req }), getHandler: () => PortalController.prototype.requestTrackingOtp, getClass: () => PortalController } as ExecutionContext;
 }
 
+function controllerWith(service: Partial<PortalService>): PortalController {
+  return new PortalController(
+    service as PortalService,
+    { listPublic: async () => ({ branches: [], categories: [], severities: [] }) } as ComplaintFormOptionsService,
+  );
+}
+
 test('portal tracking OTP verify route delegates only verification id, OTP, and request context', async () => {
   const calls: unknown[] = [];
-  const controller = new PortalController({
+  const controller = controllerWith({
     verifyTrackingOtp: async (input) => {
       calls.push(input);
       return { sessionToken: 'portal_token', expiresAt: '2026-06-19T10:30:00.000Z' };
     },
-  } as PortalService);
+  });
 
   const response = await controller.verifyTrackingOtp({ verificationId: ' ver_1 ', otp: ' 123456 ', customerNumber: 'DMS-SECRET' }, request());
 
@@ -347,12 +384,12 @@ test('portal repository creates session rows with hash-only token persistence', 
 
 test('portal tracking route delegates only portal session token and request context', async () => {
   const calls: unknown[] = [];
-  const controller = new PortalController({
+  const controller = controllerWith({
     getTracking: async (input) => {
       calls.push(input);
       return { referenceNumber: 'CMP-000010', status: ComplaintStatus.SUBMITTED, createdAt: '2026-06-19T10:00:00.000Z', updatedAt: '2026-06-19T10:10:00.000Z', timeline: [] };
     },
-  } as PortalService);
+  });
 
   const response = await controller.getTracking(' portal_token ', request({ body: { referenceNumber: 'CMP-000010' } }));
 
@@ -363,7 +400,7 @@ test('portal tracking route delegates only portal session token and request cont
 
 test('portal privacy regression rejects reference-only tracking and follow-up route input', async () => {
   const calls: unknown[] = [];
-  const controller = new PortalController({
+  const controller = controllerWith({
     getTracking: async (input) => {
       calls.push(input);
       throw verificationFailed();
@@ -372,7 +409,7 @@ test('portal privacy regression rejects reference-only tracking and follow-up ro
       calls.push(input);
       throw verificationFailed();
     },
-  } as PortalService);
+  });
 
   await assert.rejects(
     controller.getTracking(undefined, request({ body: { referenceNumber: 'CMP-000010' } })),
@@ -410,6 +447,12 @@ test('portal tracking returns only portal-safe complaint fields for a valid sess
           updatedAt: '2026-06-19T10:10:00.000Z',
           description: 'Customer description',
           incidentAt: '2026-06-19T09:00:00.000Z',
+          customerSource: 'DMS',
+          manualCustomer: false,
+          vehicleRelated: true,
+          vehicleSource: 'DMS',
+          manualVehicle: false,
+          vehicleDataUnavailableReason: 'internal provenance note',
           statusHistory: [{
             fromStatus: null,
             toStatus: ComplaintStatus.SUBMITTED,
@@ -431,6 +474,17 @@ test('portal tracking returns only portal-safe complaint fields for a valid sess
           sessionHash: 'sha256:session',
         };
       },
+      listPublicComments: async (id) => {
+        assert.equal(id, 'cmp_1');
+        return [{
+          id: 'cmt_public',
+          complaintId: id,
+          body: 'Visible customer update',
+          visibility: 'PUBLIC',
+          authorId: 'usr_staff',
+          createdAt: '2026-06-19T10:08:00.000Z',
+        }];
+      },
     } as never,
     {
       findValidSession: async (sessionHash) => {
@@ -450,8 +504,13 @@ test('portal tracking returns only portal-safe complaint fields for a valid sess
     status: ComplaintStatus.IN_PROGRESS,
     createdAt: '2026-06-19T10:00:00.000Z',
     updatedAt: '2026-06-19T10:10:00.000Z',
-    timeline: [{ fromStatus: null, toStatus: ComplaintStatus.SUBMITTED, action: 'SUBMIT', createdAt: '2026-06-19T10:01:00.000Z' }],
+    timeline: [
+      { fromStatus: null, toStatus: ComplaintStatus.SUBMITTED, action: 'SUBMIT', createdAt: '2026-06-19T10:01:00.000Z', type: 'STATUS' },
+      { fromStatus: null, toStatus: 'PUBLIC_UPDATE', action: 'PUBLIC_UPDATE', createdAt: '2026-06-19T10:08:00.000Z', type: 'PUBLIC_UPDATE', body: 'Visible customer update' },
+    ],
   });
+  assert.match(JSON.stringify(result), /Visible customer update/);
+  assert.doesNotMatch(JSON.stringify(result), /staff only note|internal note/);
   assertPortalTrackingSafe(result);
 });
 
@@ -496,12 +555,12 @@ test('portal repository validates sessions by hash without selecting stored hash
 
 test('portal follow-up route delegates only portal session token, body, and request context', async () => {
   const calls: unknown[] = [];
-  const controller = new PortalController({
+  const controller = controllerWith({
     submitFollowUp: async (input) => {
       calls.push(input);
       return { ok: true };
     },
-  } as PortalService);
+  });
 
   const response = await controller.submitFollowUp(' portal_token ', { body: ' Customer update ', referenceNumber: 'CMP-000010', visibility: 'INTERNAL', actorId: 'usr_staff', authorId: 'usr_staff', staffEmail: 'staff@example.test' }, request());
 
@@ -581,6 +640,17 @@ function testOtpHash(otp: string): string {
   return `sha256:${salt}:${createHash('sha256').update(`${salt}:${otp}`).digest('hex')}`;
 }
 
+function otpFromText(text: string): string {
+  const match = text.match(/\bis (\d{6})\b/);
+  assert.ok(match);
+  return match[1];
+}
+
+function otpMatchesHash(otp: string, hash: string): boolean {
+  const [, salt, digest] = hash.split(':');
+  return createHash('sha256').update(`${salt}:${otp}`).digest('hex') === digest;
+}
+
 function challenge(overrides: Partial<{ otpHash: string; status: PortalVerificationStatus; attempts: number; expiresAt: Date }> = {}) {
   return {
     id: 'ver_1',
@@ -608,7 +678,7 @@ function assertSafePortalAudit(record: AuditRecordInput, otp: string): void {
 
 function assertPortalTrackingSafe(record: unknown): void {
   const body = JSON.stringify(record);
-  for (const blocked of ['description', 'statusHistory', 'actorId', 'reason', 'ownerId', 'branchId', 'DMS', 'audit', 'internalComments', 'staff@example.test', 'unrelatedComplaints', 'CMP-000011', 'sessionToken', 'sessionHash', 'otpHash', '123456']) {
+  for (const blocked of ['description', 'statusHistory', 'actorId', 'reason', 'ownerId', 'branchId', 'DMS', 'customerSource', 'vehicleSource', 'manualVehicle', 'vehicleDataUnavailableReason', 'audit', 'internalComments', 'staff@example.test', 'unrelatedComplaints', 'CMP-000011', 'sessionToken', 'sessionHash', 'otpHash', '123456']) {
     assert.equal(body.includes(blocked), false);
   }
 }

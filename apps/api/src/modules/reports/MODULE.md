@@ -12,9 +12,10 @@ Agent context manifest. Read this before editing the module.
 ## Public surface
 
 - `ReportsService` is the only service exported by `ReportsModule`.
-- This scaffold intentionally has no report behavior yet. Dashboard reads,
-  filtered report reads, scoped exports, RBAC, branch scope, and export audit
-  begin in later F7-01 tasks.
+- GET /reports/catalog exposes the RPT-001 through RPT-017 delivery/defer
+  matrix for signed-scope reconciliation.
+- Dashboard reads, filtered report reads, KPI summaries, scoped exports, RBAC,
+  branch scope, and export audit are implemented in this module.
 
 ## Owns tables
 

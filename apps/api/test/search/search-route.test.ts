@@ -17,7 +17,7 @@ test('complaint search route derives scoped filters and paginates safe rows', as
   const controller = new ComplaintsController({
     search: async (input) => {
       calls.push(input);
-      return [row('cmp_1'), row('cmp_2')];
+      return [row('cmp_1'), row('cmp_2')].slice(input.offset ?? 0, (input.offset ?? 0) + (input.limit ?? 25));
     },
   } as ComplaintsService);
 
@@ -43,6 +43,9 @@ test('complaint search route derives scoped filters and paginates safe rows', as
     ownerId: 'usr_owner',
     dateFrom: '2026-06-18T00:00:00.000Z',
     dateTo: '2026-06-19T00:00:00.000Z',
+    limit: 1,
+    offset: 1,
+    role: RoleCode.BRANCH_MANAGER,
   });
   assert.deepEqual(response, { items: [row('cmp_2')], limit: 1, offset: 1 });
 });
@@ -74,6 +77,7 @@ test('complaint search rejects invalid pagination and enums', async () => {
   await assert.rejects(controller.search({ limit: '0' }, request(branchManager)), (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED');
   await assert.rejects(controller.search({ offset: '-1' }, request(branchManager)), (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED');
   await assert.rejects(controller.search({ status: 'BAD' }, request(branchManager)), (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED');
+  await assert.rejects(controller.search({ sla: 'BAD' }, request(branchManager)), (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED');
 });
 
 function row(id: string, branchId = 'branch_main'): ComplaintSearchRow {

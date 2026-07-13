@@ -14,7 +14,7 @@ import { AppException, PrismaService } from '../../src/core/http-kernel.ts';
 import { DealsController } from '../../src/modules/deals/deals.controller.ts';
 import { DealsModule } from '../../src/modules/deals/deals.module.ts';
 import { DealsRepository } from '../../src/modules/deals/deals.repository.ts';
-import type { UpdateDealStageData } from '../../src/modules/deals/deals.repository.ts';
+import type { DealAuditRow, UpdateDealStageData } from '../../src/modules/deals/deals.repository.ts';
 import { DealsService } from '../../src/modules/deals/deals.service.ts';
 import type { DealRecord } from '../../src/modules/deals/deals.service.ts';
 
@@ -101,11 +101,13 @@ test('deal persisted transition writes deal, audit, and task in one transaction'
     toStage: 'BOOKING',
     currentHolderId: 'sales_lead_a',
     stageDueAt: '2026-06-22T09:00:00.000Z',
+    updateNote: 'Booking handoff confirmed.',
   }, { actorId: 'manager_a' });
 
   assert.equal(result.taskId, 'task_deal_next');
   assert.deepEqual(clients, [txClient, txClient, txClient]);
   assert.equal(auditRecords[0]?.action, 'deal_stage_advanced');
+  assert.equal(auditRecords[0]?.metadata.updateNote, 'Booking handoff confirmed.');
 });
 
 test('deal writes are branch scoped and blocker updates audit in the transaction', async () => {
@@ -137,19 +139,21 @@ test('deal writes are branch scoped and blocker updates audit in the transaction
   } as never);
 
   await service.createForActor({ title: 'New delivery', branchId: 'branch_spoof', currentHolderId: 'sales_a', stageDueAt: '2026-06-21T09:00:00.000Z' }, branchManager);
-  await service.updateBlockerForActor('deal_a', 'Missing docs', branchManager);
+  await service.updateBlockerForActor('deal_a', { blocker: 'Missing docs', updateNote: 'Customer has not sent documents.' }, branchManager);
   await assert.rejects(
-    service.updateBlockerForActor('deal_a', null, { ...branchManager, branchId: 'branch_b' }),
+    service.updateBlockerForActor('deal_a', { blocker: null, updateNote: 'Clearing after document review.' }, { ...branchManager, branchId: 'branch_b' }),
     (error) => error instanceof AppException && error.code === 'BRANCH_SCOPE_FORBIDDEN',
   );
 
   assert.equal((created[0] as { branchId: string }).branchId, 'branch_a');
   assert.equal(auditRecords.at(-1)?.action, 'deal_blocker_set');
+  assert.equal(auditRecords.at(-1)?.metadata.updateNote, 'Customer has not sent documents.');
   assert.deepEqual(clients, [txClient, txClient, txClient, txClient, txClient, txClient]);
 });
 
 test('manager sees scoped deal handoff board derived from deal data', async () => {
   let scopedBranch: string | null | undefined;
+  let historyIds: string[] = [];
   const service = new DealsService({
     listHandoffBoard: async (branchId: string | null) => {
       scopedBranch = branchId;
@@ -158,11 +162,17 @@ test('manager sees scoped deal handoff board derived from deal data', async () =
         row({ id: 'blocked', currentHolderId: 'holder_b', blocker: 'Missing docs' }),
       ];
     },
+    listHandoffHistory: async (dealIds: string[]) => {
+      historyIds = dealIds;
+      return [dealAudit({ targetId: 'late', updateNote: 'Customer confirmed booking handoff.' })];
+    },
   } as unknown as DealsRepository);
 
   const result = await service.handoffBoard({ roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a' }, new Date('2026-06-20T10:00:00.000Z'));
 
   assert.equal(scopedBranch, 'branch_a');
+  assert.deepEqual(historyIds, ['late', 'blocked']);
+  assert.equal(result.stuck[0]?.lastAction?.updateNote, 'Customer confirmed booking handoff.');
   assert.deepEqual(result.stuck.map((item) => item.id), ['late', 'blocked']);
   assert.deepEqual(result.currentHolder, [
     { currentHolderId: 'holder_a', currentHolderName: null, count: 1 },
@@ -175,14 +185,15 @@ test('deal routes require permissions and keep CSRF/branch-scope guards', async 
   assert.deepEqual(guardNames('create'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard', 'CsrfGuard']);
   assert.deepEqual(guardNames('advance'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard', 'CsrfGuard']);
   assert.deepEqual(guardNames('blocker'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('details'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard', 'CsrfGuard']);
 
   const auditRecords: AuditRecordInput[] = [];
   const guard = new PermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
-  assert.equal(await guard.canActivate(context(request({ ...employee, permissions: ['REPORT_VIEW'] }), 'handoffBoard')), true);
+  assert.equal(await guard.canActivate(context(request({ ...branchManager, permissions: ['COMPLAINT_ASSIGN'] }), 'handoffBoard')), true);
   assert.equal(await guard.canActivate(context(request({ ...branchManager, permissions: ['COMPLAINT_ASSIGN'] }, '/deals'), 'create')), true);
 
   await assert.rejects(
-    guard.canActivate(context(request({ ...branchManager, permissions: [] }, '/deals'), 'create')),
+    guard.canActivate(context(request({ ...employee, permissions: ['REPORT_VIEW'] }), 'handoffBoard')),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
   );
   assert.equal(auditRecords[0]?.action, 'permission_forbidden');
@@ -243,6 +254,10 @@ function context(req: AuthenticatedRequest, handler: keyof DealsController = 'ha
     getHandler: () => DealsController.prototype[handler],
     getClass: () => DealsController,
   } as ExecutionContext;
+}
+
+function dealAudit({ targetId, updateNote }: { targetId: string; updateNote: string }): DealAuditRow {
+  return { id: `audit_${targetId}`, action: 'deal_stage_advanced', actorId: 'manager_a', targetId, metadata: { updateNote }, createdAt: new Date('2026-06-20T09:30:00.000Z'), actor: { nameEn: 'Manager' } } as DealAuditRow;
 }
 
 function guardNames(handler: keyof DealsController): string[] {

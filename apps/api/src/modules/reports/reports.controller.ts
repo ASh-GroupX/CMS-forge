@@ -3,6 +3,7 @@ import { ComplaintSeverity, RoleCode } from '@prisma/client';
 import { BranchScoped, PermissionGuard, Permissions, RbacGuard, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { AppException } from '../../core/http-kernel.js';
+import type { ReportCatalogResponse } from './report-matrix.js';
 import { ReportsService } from './reports.service.js';
 import type { DashboardSummary, FilteredReportRow, ReportExportFormat, ReportsKpiSummary } from './reports.service.js';
 
@@ -14,6 +15,14 @@ export class ReportsController {
 
   constructor(@Inject(ReportsService) reportsService: ReportsService) {
     ReportsController.reportsService = reportsService;
+  }
+
+  @Get('catalog')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('REPORT_VIEW')
+  @BranchScoped()
+  catalog(): ReportCatalogResponse {
+    return ReportsController.reportsService.reportCatalog();
   }
 
   @Get('dashboard')
@@ -37,16 +46,21 @@ export class ReportsController {
   @Permissions('REPORT_VIEW')
   @BranchScoped()
   async filteredReport(@Query() query: Record<string, string | undefined>, @Req() request: AuthenticatedRequest): Promise<{ items: FilteredReportRow[] }> {
+    const limit = pageNumber(query.limit, 'limit', 25, 100);
+    const offset = pageNumber(query.offset, 'offset', 0);
     return {
       items: await ReportsController.reportsService.filteredReport({
         role: requestRole(request),
         branchId: scopedBranchId(undefined, request),
         filterBranchId: optionalText(query.branchId),
         categoryId: optionalText(query.categoryId),
+        departmentId: optionalText(query.departmentId),
         ownerId: optionalText(query.ownerId),
         severity: optionalSeverity(query.severity),
         dateFrom: optionalText(query.dateFrom),
         dateTo: optionalText(query.dateTo),
+        limit,
+        offset,
       }),
     };
   }
@@ -71,6 +85,7 @@ function reportInput(query: Record<string, string | undefined>, request: Authent
     branchId: scopedBranchId(undefined, request),
     filterBranchId: optionalText(query.branchId),
     categoryId: optionalText(query.categoryId),
+    departmentId: optionalText(query.departmentId),
     ownerId: optionalText(query.ownerId),
     severity: optionalSeverity(query.severity),
     dateFrom: optionalText(query.dateFrom),
@@ -122,6 +137,17 @@ function exportFormat(value: string | undefined): ReportExportFormat {
   throw new AppException('VALIDATION_FAILED', 'Invalid report query', HttpStatus.BAD_REQUEST, [
     { field: 'format', code: 'INVALID', message: 'format must be csv or excel.' },
   ]);
+}
+
+function pageNumber(value: string | undefined, field: 'limit' | 'offset', fallback: number, max?: number): number {
+  if (!value?.trim()) return fallback;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < (field === 'limit' ? 1 : 0)) {
+    throw new AppException('VALIDATION_FAILED', 'Invalid report query', HttpStatus.BAD_REQUEST, [
+      { field, code: 'INVALID', message: `${field} is invalid.` },
+    ]);
+  }
+  return max ? Math.min(parsed, max) : parsed;
 }
 
 function headerValue(value: string | string[] | undefined): string | null {

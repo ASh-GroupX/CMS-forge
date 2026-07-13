@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 const formats = new Set(['csv', 'excel']);
-const filterKeys = ['branchId', 'categoryId', 'ownerId', 'severity', 'dateFrom', 'dateTo'] as const;
+const filterKeys = ['branchId', 'categoryId', 'departmentId', 'ownerId', 'severity', 'dateFrom', 'dateTo'] as const;
 
 export async function GET(request: Request): Promise<Response> {
   const source = new URL(request.url);

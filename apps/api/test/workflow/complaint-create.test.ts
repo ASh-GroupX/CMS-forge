@@ -11,6 +11,7 @@ import {
   ComplaintTransitionAction,
   ComplaintTransitionRequestSource,
   RoleCode,
+  SlaStage,
 } from '@prisma/client';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
 import { PermissionGuard, RbacGuard } from '../../src/core/auth.guard.ts';
@@ -124,12 +125,18 @@ test('complaint creation persists complaint, initial history, and audit in one t
         customerName: 'Faisal Al-Otaibi',
         customerPhone: '+966500000001',
         customerNumber: null,
+        customerDataSource: 'MANUAL',
+        manualCustomerFlag: true,
         vehicleId: 'veh_1',
         vehicleVin: 'SEEDDEMO00001',
         vehiclePlate: null,
         vehicleBrand: null,
         vehicleModel: null,
         vehicleModelYear: null,
+        vehicleDataSource: 'LOCAL',
+        manualVehicleFlag: false,
+        vehicleRelated: true,
+        vehicleDataUnavailableReason: null,
         departmentId: null,
         createdById: 'usr_1',
         descriptionEn: 'Engine makes a knocking noise.',
@@ -160,6 +167,59 @@ test('complaint creation persists complaint, initial history, and audit in one t
     referenceNumber: 'CMS-2026-MAIN-000001',
     status: ComplaintStatus.SUBMITTED,
     severity: ComplaintSeverity.HIGH,
+    customerSource: 'MANUAL',
+    manualCustomer: true,
+    vehicleSource: 'LOCAL',
+    manualVehicle: false,
+    vehicleDataUnavailableReasonPresent: false,
+  });
+});
+
+test('submitted complaint creation queues submit notification and SLA only after commit', async () => {
+  const calls: string[] = [];
+  const queued: unknown[] = [];
+  const deadlines: unknown[] = [];
+  const service = new ComplaintsService({
+    transaction: async <T>(work: (client: never) => Promise<T>) => {
+      const result = await work({} as never);
+      calls.push('commit');
+      return result;
+    },
+    nextReferenceNumber: async () => 'CMS-2026-MAIN-000009',
+    create: async (data) => {
+      calls.push('create');
+      return { id: 'cmp_1', referenceNumber: data.referenceNumber, branchId: data.branchId, status: data.status, subject: data.subject, severity: data.severity, categoryId: data.categoryId, departmentId: data.departmentId ?? null };
+    },
+    createStatusHistory: async () => { calls.push('history'); },
+  } as ComplaintsRepository, { record: async () => { calls.push('audit'); } } as unknown as AuditService, {
+    queueInternal: async (input: unknown) => { calls.push('queue'); queued.push(input); return {}; },
+  } as never, undefined, {
+    recordDeadlineEvent: async (input: unknown) => { calls.push('sla'); deadlines.push(input); return {}; },
+  } as never);
+
+  await service.createInternal({
+    ...validBody(),
+    branchId: 'branch_main',
+    actorId: null,
+    requestSource: ComplaintTransitionRequestSource.CUSTOMER_PORTAL,
+    correlationId: 'req_portal_submit',
+  });
+
+  assert.deepEqual(calls, ['create', 'history', 'audit', 'commit', 'queue', 'sla']);
+  assert.deepEqual(queued, [{
+    complaintId: 'cmp_1',
+    templateCode: 'complaint.submitted.internal',
+    payload: { complaintId: 'cmp_1', fromStatus: ComplaintStatus.DRAFT, toStatus: ComplaintStatus.SUBMITTED, action: ComplaintTransitionAction.SUBMIT, actorId: null },
+  }]);
+  assert.equal((deadlines[0] as { enteredAt?: unknown }).enteredAt instanceof Date, true);
+  assert.deepEqual({ ...(deadlines[0] as Record<string, unknown>), enteredAt: 'date' }, {
+    complaintId: 'cmp_1',
+    severity: ComplaintSeverity.HIGH,
+    stage: SlaStage.INTAKE,
+    branchId: 'branch_main',
+    departmentId: 'dep_service',
+    categoryId: 'cat_engine',
+    enteredAt: 'date',
   });
 });
 
@@ -167,6 +227,8 @@ test('staff can save a complaint draft without a customer-facing CMS reference',
   const txClient = {};
   const calls: unknown[] = [];
   const auditRecords: AuditRecordInput[] = [];
+  const queued: unknown[] = [];
+  const deadlines: unknown[] = [];
   const service = new ComplaintsService({
     transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
     nextReferenceNumber: async () => {
@@ -181,7 +243,11 @@ test('staff can save a complaint draft without a customer-facing CMS reference',
       assert.equal(client, txClient);
       calls.push({ history: data });
     },
-  } as ComplaintsRepository, { record: async (input) => auditRecords.push(input) } as unknown as AuditService);
+  } as ComplaintsRepository, { record: async (input) => auditRecords.push(input) } as unknown as AuditService, {
+    queueInternal: async (input: unknown) => { queued.push(input); return {}; },
+  } as never, undefined, {
+    recordDeadlineEvent: async (input: unknown) => { deadlines.push(input); return {}; },
+  } as never);
 
   const result = await service.createInternal({ ...validBody(), branchId: 'branch_main', saveAsDraft: true, actorId: 'usr_1' });
 
@@ -194,7 +260,14 @@ test('staff can save a complaint draft without a customer-facing CMS reference',
     referenceNumber: null,
     status: ComplaintStatus.DRAFT,
     severity: ComplaintSeverity.HIGH,
+    customerSource: 'MANUAL',
+    manualCustomer: true,
+    vehicleSource: 'MANUAL',
+    manualVehicle: true,
+    vehicleDataUnavailableReasonPresent: false,
   });
+  assert.deepEqual(queued, []);
+  assert.deepEqual(deadlines, []);
 });
 
 test('complaint creation links a customer complaint case in the same transaction', async () => {
@@ -251,10 +324,10 @@ test('reference allocator uses branch code and independent branch/year sequences
   assert.equal(await repository.nextReferenceNumber('branch_main', new Date('2027-01-01T09:00:00.000Z')), 'CMS-2027-MAIN-000001');
 });
 
-test('complaint repository persists department and upserts vehicle from VIN intake', async () => {
+test('complaint repository persists department and provenance from manual and DMS-shaped intake', async () => {
   const calls: unknown[] = [];
   const repository = new ComplaintsRepository({
-    customer: { upsert: async () => ({ id: 'cust_1' }) },
+    customer: { upsert: async (input: unknown) => { calls.push({ customer: input }); return { id: 'cust_1' }; } },
     vehicle: {
       upsert: async (input: unknown) => {
         calls.push({ vehicle: input });
@@ -285,26 +358,71 @@ test('complaint repository persists department and upserts vehicle from VIN inta
     categoryId: 'cat_engine',
     customerName: 'Faisal Al-Otaibi',
     customerPhone: '+966500000001',
+    customerNumber: 'DMS-CUST-1',
+    customerDataSource: 'DMS',
+    manualCustomerFlag: false,
     vehicleVin: 'VIN123',
     vehiclePlate: 'ABC123',
     vehicleBrand: 'Nissan',
     vehicleModel: 'Patrol',
     vehicleModelYear: 2024,
+    vehicleDataSource: 'MANUAL',
+    manualVehicleFlag: true,
+    vehicleRelated: true,
+    vehicleDataUnavailableReason: null,
     departmentId: 'dep_service',
     descriptionEn: 'Engine noise',
     incidentAt: new Date('2026-06-18T09:00:00.000Z'),
   });
 
-  assert.deepEqual((calls[0] as { vehicle: { create: unknown } }).vehicle.create, {
+  assert.deepEqual((calls[0] as { customer: { create: unknown } }).customer.create, {
+    phone: '+966500000001',
+    dmsCode: 'DMS-CUST-1',
+    dataSource: 'DMS',
+    nameEn: 'Faisal Al-Otaibi',
+    nameAr: 'Faisal Al-Otaibi',
+  });
+  assert.deepEqual((calls[1] as { vehicle: { create: unknown } }).vehicle.create, {
     vin: 'VIN123',
     plate: 'ABC123',
     makeEn: 'Nissan',
     modelEn: 'Patrol',
     year: 2024,
+    dataSource: 'MANUAL',
     customerId: 'cust_1',
   });
-  assert.equal((calls[1] as { complaint: { vehicleId: string } }).complaint.vehicleId, 'veh_vin');
-  assert.equal((calls[1] as { complaint: { departmentId: string } }).complaint.departmentId, 'dep_service');
+  assert.equal((calls[2] as { complaint: { vehicleId: string } }).complaint.vehicleId, 'veh_vin');
+  assert.equal((calls[2] as { complaint: { departmentId: string } }).complaint.departmentId, 'dep_service');
+  assert.equal((calls[2] as { complaint: { customerDataSource: string } }).complaint.customerDataSource, 'DMS');
+  assert.equal((calls[2] as { complaint: { manualVehicleFlag: boolean } }).complaint.manualVehicleFlag, true);
+});
+
+test('manual vehicle-related complaint creation works with an unavailable data reason', async () => {
+  const calls: unknown[] = [];
+  const service = new ComplaintsService({
+    transaction: async <T>(work: (client: never) => Promise<T>) => work({} as never),
+    nextReferenceNumber: async () => 'CMS-2026-MAIN-000010',
+    create: async (data) => {
+      calls.push(data);
+      return { id: 'cmp_manual_vehicle', referenceNumber: data.referenceNumber, branchId: data.branchId, status: data.status, subject: data.subject, severity: data.severity };
+    },
+    createStatusHistory: async () => undefined,
+  } as ComplaintsRepository, { record: async () => undefined } as unknown as AuditService);
+
+  await service.createInternal({
+    ...validBody(),
+    branchId: 'branch_main',
+    vehicleId: null,
+    vehicleVin: null,
+    vehiclePlate: null,
+    vehicleSource: 'MANUAL',
+    vehicleDataUnavailableReason: 'Customer did not have vehicle documents at intake',
+  });
+
+  assert.equal((calls[0] as { vehicleRelated: boolean }).vehicleRelated, true);
+  assert.equal((calls[0] as { vehicleDataSource: string }).vehicleDataSource, 'MANUAL');
+  assert.equal((calls[0] as { manualVehicleFlag: boolean }).manualVehicleFlag, true);
+  assert.equal((calls[0] as { vehicleDataUnavailableReason: string }).vehicleDataUnavailableReason, 'Customer did not have vehicle documents at intake');
 });
 
 test('draft submit assigns one CMS reference inside the status transaction', async () => {
@@ -359,6 +477,9 @@ test('complaint creation route delegates with guarded branch and server actor co
     branchId: 'branch_main',
     actorId: 'usr_officer',
     saveAsDraft: false,
+    customerSource: null,
+    vehicleSource: null,
+    vehicleDataUnavailableReason: null,
     correlationId: 'req_create_route',
     ipAddress: '203.0.113.66',
     userAgent: 'node:test',
@@ -379,6 +500,7 @@ test('complaint create/read routes use permission guards and keep CSRF/branch sc
   assert.deepEqual(guardNames('search'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
   assert.deepEqual(guardNames('formOptionsForCreate'), ['SessionAuthGuard', 'PermissionGuard']);
   assert.deepEqual(guardNames('get'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
+  assert.deepEqual(guardNames('listComments'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
   assert.deepEqual(guardNames('listPublicComments'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
   assert.deepEqual(guardNames('create'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard', 'CsrfGuard']);
 
@@ -496,6 +618,11 @@ test('complaint queue service returns explicit branch-scoped response objects', 
     branchName: 'Main Branch',
     ownerId: null,
     ownerName: null,
+    slaState: 'ON_TRACK',
+    slaDueAt: null,
+    slaStage: 'RESOLUTION',
+    slaPercentElapsed: null,
+    nextAction: 'Manager intake review',
     createdAt: '2026-06-18T09:00:00.000Z',
     updatedAt: '2026-06-18T10:00:00.000Z',
   }]);
@@ -536,6 +663,7 @@ test('complaint search service maps required filters into safe branch-scoped row
     categoryId: 'cat_engine',
     ownerId: 'usr_owner',
     ownerName: 'Owner User',
+    nextAction: 'Next response from Owner User',
     customerName: 'Faisal Al-Otaibi',
     customerPhone: '+966500000001',
     customerIdentifier: 'CUST-001',
@@ -554,6 +682,40 @@ test('complaint search service hides out-of-branch rows when branch scope is sup
   assert.deepEqual((await service.search({ branchId: 'branch_main' })).map((row) => row.id), ['cmp_allowed']);
 });
 
+test('complaint search service applies SLA filter before pagination', async () => {
+  const calls: unknown[] = [];
+  const records = [
+    { ...searchRecord('cmp_closed_1', 'branch_main'), status: ComplaintStatus.CLOSED },
+    searchRecord('cmp_open', 'branch_main'),
+    { ...searchRecord('cmp_closed_2', 'branch_main'), status: ComplaintStatus.CLOSED },
+  ];
+  const service = new ComplaintsService({
+    search: async (filter) => {
+      calls.push(filter);
+      return records;
+    },
+  } as ComplaintsRepository, { record: async () => undefined } as unknown as AuditService);
+
+  const rows = await service.search({ branchId: 'branch_main', sla: 'CLOSED', limit: 1, offset: 1 });
+
+  assert.deepEqual(calls[0], { branchId: 'branch_main' });
+  assert.deepEqual(rows.map((row) => row.id), ['cmp_closed_2']);
+});
+
+test('management read-only complaint search masks customer identifiers', async () => {
+  const service = new ComplaintsService({
+    search: async () => [searchRecord('cmp_1', 'branch_main')],
+  } as ComplaintsRepository, { record: async () => undefined } as unknown as AuditService);
+
+  const [readonlyRow] = await service.search({ branchId: 'branch_main', role: RoleCode.MGMT_READONLY });
+  const [managerRow] = await service.search({ branchId: 'branch_main', role: RoleCode.CR_MANAGER });
+
+  assert.equal(readonlyRow?.customerPhone, '[masked]');
+  assert.equal(readonlyRow?.customerIdentifier, '[masked]');
+  assert.equal(managerRow?.customerPhone, '+966500000001');
+  assert.equal(managerRow?.customerIdentifier, 'CUST-001');
+});
+
 test('complaint queue route derives branch scope from query or server principal', async () => {
   const calls: unknown[] = [];
   const controller = new ComplaintsController({
@@ -565,7 +727,7 @@ test('complaint queue route derives branch scope from query or server principal'
 
   assert.deepEqual(await controller.list(undefined, request(RoleCode.CR_OFFICER)), { items: [] });
   assert.deepEqual(await controller.list('branch_any', request(RoleCode.ADMIN)), { items: [] });
-  assert.deepEqual(calls, [{ branchId: 'branch_main' }, { branchId: 'branch_any' }]);
+  assert.deepEqual(calls, [{ branchId: 'branch_main', role: RoleCode.CR_OFFICER }, { branchId: 'branch_any', role: RoleCode.ADMIN }]);
 });
 
 test('complaint detail service returns explicit timeline and hides missing scoped complaints', async () => {
@@ -576,14 +738,46 @@ test('complaint detail service returns explicit timeline and hides missing scope
   const detail = await service.getDetail('cmp_1', { branchId: 'branch_main' });
   assert.equal(detail.referenceNumber, 'CMP-000001');
   assert.equal(detail.description, 'Engine makes a knocking noise.');
+  assert.deepEqual(detail.customer, {
+    id: 'cust_1',
+    name: 'Faisal Al-Otaibi',
+    phone: '+966500000001',
+    identifier: 'CUST-001',
+    source: 'MANUAL',
+  });
+  assert.deepEqual(detail.vehicle, {
+    id: 'veh_1',
+    vin: 'SEEDDEMO00001',
+    plate: 'ABC123',
+    make: 'Nissan',
+    model: 'Patrol',
+    year: 2024,
+    source: 'MANUAL',
+  });
   assert.equal(detail.statusHistory[0]?.toStatus, ComplaintStatus.SUBMITTED);
   assert.equal(detail.statusHistory[0]?.createdAt, '2026-06-18T09:01:00.000Z');
-  assert.equal('customer' in detail, false);
+  assert.deepEqual(detail.allowedActions, []);
 
   await assert.rejects(
     service.getDetail('cmp_1', { branchId: 'branch_other' }),
     (error: unknown) => error instanceof AppException && error.code === 'COMPLAINT_NOT_FOUND',
   );
+});
+
+test('management read-only complaint detail masks customer and vehicle identifiers', async () => {
+  const service = new ComplaintsService({
+    findDetail: async () => detailRecord,
+  } as ComplaintsRepository, { record: async () => undefined } as unknown as AuditService);
+
+  const readonlyDetail = await service.getDetail('cmp_1', { branchId: 'branch_main', role: RoleCode.MGMT_READONLY });
+  const managerDetail = await service.getDetail('cmp_1', { branchId: 'branch_main', role: RoleCode.CR_MANAGER });
+
+  assert.equal(readonlyDetail.customer.phone, '[masked]');
+  assert.equal(readonlyDetail.customer.identifier, '[masked]');
+  assert.equal(readonlyDetail.vehicle?.vin, '[masked]');
+  assert.equal(readonlyDetail.vehicle?.plate, '[masked]');
+  assert.equal(managerDetail.customer.phone, '+966500000001');
+  assert.equal(managerDetail.vehicle?.vin, 'SEEDDEMO00001');
 });
 
 test('complaint detail route delegates with server-derived branch scope', async () => {
@@ -596,12 +790,26 @@ test('complaint detail route delegates with server-derived branch scope', async 
         description: 'Engine makes a knocking noise.',
         incidentAt: '2026-06-18T09:00:00.000Z',
         statusHistory: [],
+        customerSource: 'MANUAL',
+        manualCustomer: true,
+        vehicleRelated: true,
+        vehicleSource: 'MANUAL',
+        manualVehicle: true,
+        vehicleDataUnavailableReason: null,
+        allowedActions: [],
       };
+    },
+    allowedActionsFor: (complaint, actor) => {
+      calls.push({ allowedActionsFor: { status: complaint.status, actor } });
+      return [ComplaintTransitionAction.ACCEPT_INTAKE];
     },
   } as ComplaintsService);
 
-  assert.equal((await controller.get('cmp_1', undefined, request(RoleCode.CR_OFFICER))).complaint.id, 'cmp_1');
-  assert.deepEqual(calls[0], { id: 'cmp_1', filter: { branchId: 'branch_main' } });
+  const response = await controller.get('cmp_1', undefined, request(RoleCode.CR_OFFICER));
+  assert.equal(response.complaint.id, 'cmp_1');
+  assert.deepEqual(response.complaint.allowedActions, [ComplaintTransitionAction.ACCEPT_INTAKE]);
+  assert.deepEqual(calls[0], { id: 'cmp_1', filter: { branchId: 'branch_main', role: RoleCode.CR_OFFICER } });
+  assert.deepEqual(calls[1], { allowedActionsFor: { status: ComplaintStatus.SUBMITTED, actor: { roleCode: RoleCode.CR_OFFICER, userId: 'usr_officer' } } });
 });
 
 test('complaint comments validate body and audit creation in one transaction', async () => {
@@ -680,6 +888,23 @@ test('public comment reads exclude internal comments', async () => {
     visibility: CommentVisibility.PUBLIC,
     createdAt: '2026-06-18T11:10:00.000Z',
   }]);
+});
+
+test('staff comment reads include internal and public comments', async () => {
+  const service = new ComplaintsService({
+    listComments: async (complaintId) => {
+      assert.equal(complaintId, 'cmp_1');
+      return [
+        { id: 'cmt_internal', complaintId, authorId: 'usr_officer', body: 'Staff note', visibility: CommentVisibility.INTERNAL, createdAt: new Date('2026-06-18T11:05:00.000Z') },
+        { id: 'cmt_public', complaintId, authorId: 'usr_officer', body: 'Visible update', visibility: CommentVisibility.PUBLIC, createdAt: new Date('2026-06-18T11:10:00.000Z') },
+      ];
+    },
+  } as ComplaintsRepository, { record: async () => undefined } as unknown as AuditService);
+
+  assert.deepEqual(await service.listComments('cmp_1'), [
+    { id: 'cmt_internal', complaintId: 'cmp_1', authorId: 'usr_officer', body: 'Staff note', visibility: CommentVisibility.INTERNAL, createdAt: '2026-06-18T11:05:00.000Z' },
+    { id: 'cmt_public', complaintId: 'cmp_1', authorId: 'usr_officer', body: 'Visible update', visibility: CommentVisibility.PUBLIC, createdAt: '2026-06-18T11:10:00.000Z' },
+  ]);
 });
 
 test('customer portal public follow-up comment audits safely in the complaint transaction', async () => {
@@ -795,6 +1020,28 @@ test('public comment route verifies scope and returns only public comments', asy
   assert.deepEqual(calls[0], { method: 'getDetail', id: 'cmp_1', filter: { branchId: 'branch_main' } });
 });
 
+test('staff comment route verifies scope and returns internal and public comments', async () => {
+  const calls: unknown[] = [];
+  const controller = new ComplaintsController({
+    getDetail: async (id, filter) => {
+      calls.push({ method: 'getDetail', id, filter });
+      return { ...validQueueItem(), description: 'Engine noise', incidentAt: null, statusHistory: [] };
+    },
+    listComments: async (id) => {
+      calls.push({ method: 'listComments', id });
+      return [
+        { id: 'cmt_internal', complaintId: id, authorId: 'usr_officer', body: 'Staff note', visibility: CommentVisibility.INTERNAL, createdAt: '2026-06-18T11:05:00.000Z' },
+        { id: 'cmt_public', complaintId: id, authorId: 'usr_officer', body: 'Visible update', visibility: CommentVisibility.PUBLIC, createdAt: '2026-06-18T11:10:00.000Z' },
+      ];
+    },
+  } as ComplaintsService);
+
+  const response = await controller.listComments('cmp_1', 'branch_main', request());
+  assert.deepEqual(response.items.map((item) => item.visibility), [CommentVisibility.INTERNAL, CommentVisibility.PUBLIC]);
+  assert.deepEqual(calls[0], { method: 'getDetail', id: 'cmp_1', filter: { branchId: 'branch_main' } });
+  assert.deepEqual(calls[1], { method: 'listComments', id: 'cmp_1' });
+});
+
 function validBody() {
   return {
     customerName: 'Faisal Al-Otaibi',
@@ -835,6 +1082,14 @@ const detailRecord: ComplaintDetailRecord = {
   ...queueRecord,
   descriptionEn: 'Engine makes a knocking noise.',
   incidentAt: new Date('2026-06-18T09:00:00.000Z'),
+  customer: { id: 'cust_1', nameEn: 'Faisal Al-Otaibi', phone: '+966500000001', dmsCode: 'CUST-001', dataSource: 'MANUAL' },
+  vehicle: { id: 'veh_1', vin: 'SEEDDEMO00001', plate: 'ABC123', makeEn: 'Nissan', modelEn: 'Patrol', year: 2024, dataSource: 'MANUAL' },
+  customerDataSource: 'MANUAL',
+  manualCustomerFlag: true,
+  vehicleRelated: true,
+  vehicleDataSource: 'MANUAL',
+  manualVehicleFlag: true,
+  vehicleDataUnavailableReason: null,
   statusHistory: [{
     id: 'hist_1',
     fromStatus: null,
@@ -880,6 +1135,11 @@ function validQueueItem() {
     branchName: 'Main Branch',
     ownerId: null,
     ownerName: null,
+    slaState: 'ON_TRACK',
+    slaDueAt: null,
+    slaStage: 'RESOLUTION',
+    slaPercentElapsed: null,
+    nextAction: 'Manager intake review',
     createdAt: '2026-06-18T09:00:00.000Z',
     updatedAt: '2026-06-18T10:00:00.000Z',
   };

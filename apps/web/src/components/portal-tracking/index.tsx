@@ -1,113 +1,191 @@
-import React from 'react';
-import { Badge } from '../ui/badge';
+'use client';
+
+import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
-import { portalTrackingText, type PortalTrackingLocale } from '../../i18n/portal-tracking';
+import { StateBlock, StatusBadge } from '../shared/ui-primitives';
+import { complaintStatusLabel } from '../../i18n/domain-labels';
+import { portalTimelineText, portalTrackingText, type PortalTrackingLocale } from '../../i18n/portal-tracking';
+import {
+  getPortalTracking,
+  requestPortalOtp,
+  submitPortalFollowUp,
+  uploadPortalAttachment,
+  verifyPortalOtp,
+  type PortalTrackingComplaint,
+} from '../../lib/portal-tracking-api';
+import { PortalFollowUpPanel } from './follow-up-panel';
 
-export type PortalTrackingPreviewState = 'loading' | 'requested' | 'verified' | 'validation' | 'invalid' | 'expired' | 'error' | 'followup';
+export type PortalTrackingFixtureState = 'loading' | 'requested' | 'verified' | 'validation' | 'requestValidation' | 'codeValidation' | 'requestError' | 'trackingError' | 'invalid' | 'expired' | 'error' | 'followup' | 'attachment' | 'closed';
+type Feedback = PortalTrackingFixtureState | 'denied' | undefined;
 
-export function PortalTrackingScreen({
-  locale,
-  reference,
-  state,
-}: {
-  locale: PortalTrackingLocale;
-  reference: string;
-  state?: PortalTrackingPreviewState | undefined;
-}) {
+export function PortalTrackingScreen({ initialReference = '', locale }: { initialReference?: string; locale: PortalTrackingLocale }) {
+  return <PortalTrackingView initialFeedback={undefined} initialFollowUp="" initialPhone="" initialReference={initialReference} initialTracking={null} locale={locale} />;
+}
+
+export function PortalTrackingPreview({ locale, reference, state }: { locale: PortalTrackingLocale; reference: string; state?: PortalTrackingFixtureState | undefined }) {
   const t = portalTrackingText[locale];
-  const switchLocale = locale === 'ar' ? 'en' : 'ar';
-  const hasVerification = state === 'verified' || state === 'followup';
-  const preserve = Boolean(state && !hasVerification);
-
   return (
-    <main lang={t.lang} dir={t.dir} className="min-h-screen bg-neutral p-4 text-neutral-foreground md:p-6">
-      <div className="mx-auto grid max-w-5xl gap-4">
-        <Card className="rounded-md border-slate-200 bg-white shadow-sm">
-          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0 p-4">
-            <div>
-              <CardTitle className="text-2xl tracking-normal">{t.title}</CardTitle>
-              <p className="mt-1 max-w-2xl text-sm text-slate-600">{t.subtitle}</p>
-            </div>
-            <Button asChild size="sm" variant="outline" className="focus:ring-2 focus:ring-ring">
-              <a href={`/portal/track?locale=${switchLocale}`} aria-label={t.switchLabel}>{t.switchTarget}</a>
-            </Button>
-          </CardHeader>
-        </Card>
-
-        <PortalTrackingMessage locale={locale} state={state} />
-
-        <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="grid content-start gap-4">
-            <Card className="rounded-md border-slate-200 bg-white shadow-sm">
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-sm">{t.sections.request}</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <form className="grid gap-3" method="post" aria-label={t.sections.request}>
-                  <TextField label={t.fields.reference} name="referenceNumber" value={preserve ? reference : ''} />
-                  <TextField label={t.fields.phone} name="customerPhone" type="tel" value={preserve ? t.sample.phone : ''} />
-                  {state === 'validation' ? <span className="text-xs font-semibold text-red-700">{t.states.validation}</span> : null}
-                  <Button className="focus:ring-2 focus:ring-ring" type="submit">{t.actions.request}</Button>
-                </form>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-md border-slate-200 bg-white shadow-sm">
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-sm">{t.sections.verify}</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <form className="grid gap-3" method="post" aria-label={t.sections.verify}>
-                  <TextField label={t.fields.code} name="verificationCode" type="text" value="" />
-                  <Button className="focus:ring-2 focus:ring-ring" disabled={state === 'loading'} type="submit">{t.actions.verify}</Button>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid content-start gap-4">
-            {hasVerification ? <VerifiedTracking locale={locale} reference={reference} /> : <PrivacyPanel locale={locale} />}
-            {hasVerification ? <FollowUpPanel locale={locale} submitted={state === 'followup'} /> : null}
-          </div>
-        </section>
-      </div>
-    </main>
+    <PortalTrackingView
+      initialFeedback={state}
+      initialFollowUp={state === 'followup' || state === 'attachment' ? t.sample.followUp : ''}
+      initialPhone={state && state !== 'verified' && state !== 'followup' && state !== 'attachment' && state !== 'closed' ? t.sample.phone : ''}
+      initialReference={state ? reference : ''}
+      initialTracking={sampleTracking(locale, reference, state)}
+      locale={locale}
+    />
   );
 }
 
-function VerifiedTracking({ locale, reference }: { locale: PortalTrackingLocale; reference: string }) {
+function PortalTrackingView({ initialFeedback, initialFollowUp, initialPhone, initialReference, initialTracking, locale }: { initialFeedback: Feedback; initialFollowUp: string; initialPhone: string; initialReference: string; initialTracking: PortalTrackingComplaint | null; locale: PortalTrackingLocale }) {
   const t = portalTrackingText[locale];
+  const [referenceNumber, setReferenceNumber] = useState(initialReference);
+  const [customerPhone, setCustomerPhone] = useState(initialPhone);
+  const [otp, setOtp] = useState('');
+  const [verificationId, setVerificationId] = useState<string | null>(null);
+  const [portalSession, setPortalSession] = useState<string | null>(null);
+  const [tracking, setTracking] = useState<PortalTrackingComplaint | null>(initialTracking);
+  const [followUp, setFollowUp] = useState(initialFollowUp);
+  const [feedback, setFeedback] = useState<Feedback>(initialFeedback);
+  const [busy, setBusy] = useState(false);
+  const referenceLocked = Boolean(verificationId || portalSession || tracking);
+
+  function changeReference() {
+    setVerificationId(null);
+    setPortalSession(null);
+    setTracking(null);
+    setOtp('');
+    setFollowUp('');
+    setFeedback(undefined);
+  }
+
+  async function requestCode(event: React.FormEvent) {
+    event.preventDefault();
+    if (!referenceNumber.trim() || !customerPhone.trim()) return setFeedback('requestValidation');
+    setBusy(true);
+    const result = await requestPortalOtp({ referenceNumber, customerPhone, locale });
+    setBusy(false);
+    if (!result.ok) return setFeedback('requestError');
+    setVerificationId(result.data.verificationId);
+    setPortalSession(null);
+    setTracking(null);
+    setFeedback('requested');
+  }
+
+  async function verifyCode(event: React.FormEvent) {
+    event.preventDefault();
+    if (!verificationId || !otp.trim()) return setFeedback('codeValidation');
+    setBusy(true);
+    const verified = await verifyPortalOtp({ verificationId, otp });
+    if (!verified.ok) {
+      setBusy(false);
+      return setFeedback(feedbackFromCode(verified.error.code));
+    }
+    setPortalSession(verified.data.session.sessionToken);
+    const nextTracking = await getPortalTracking(verified.data.session.sessionToken);
+    setBusy(false);
+    if (!nextTracking.ok) return setFeedback('trackingError');
+    setTracking(nextTracking.data.complaint);
+    setFeedback('verified');
+  }
+
+  async function sendFollowUp(event: React.FormEvent) {
+    event.preventDefault();
+    if (!portalSession || !followUp.trim()) return setFeedback('validation');
+    if (tracking && isTerminal(tracking.status)) return setFeedback('closed');
+    setBusy(true);
+    const result = await submitPortalFollowUp(portalSession, followUp);
+    setBusy(false);
+    if (!result.ok) return setFeedback(tracking && isTerminal(tracking.status) ? 'denied' : feedbackFromCode(result.error.code));
+    setFeedback('followup');
+  }
+
+  async function sendAttachment(file: File | null) {
+    if (!portalSession || !file) return setFeedback('validation');
+    if (tracking && isTerminal(tracking.status)) return setFeedback('closed');
+    setBusy(true);
+    const result = await uploadPortalAttachment(portalSession, file);
+    setBusy(false);
+    if (!result.ok) return setFeedback(tracking && isTerminal(tracking.status) ? 'denied' : feedbackFromCode(result.error.code));
+    setFeedback('attachment');
+  }
+
   return (
-    <Card className="rounded-md border-slate-200 bg-white shadow-sm" aria-label={t.sections.status}>
-      <CardHeader className="p-4 pb-2">
-        <CardTitle className="text-sm">{t.sections.status}</CardTitle>
-      </CardHeader>
+    <section lang={t.lang} dir={t.dir} className="grid gap-4" aria-label={t.title}>
+      <PortalTrackingMessage locale={locale} state={busy ? 'loading' : feedback} />
+
+      <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="grid content-start gap-4">
+            <Card className="rounded-md border-line-subtle bg-surface shadow-sm">
+              <CardHeader className="p-4 pb-2"><CardTitle className="text-sm">{t.sections.request}</CardTitle></CardHeader>
+              <CardContent className="p-4 pt-0">
+                <form className="grid gap-3" onSubmit={requestCode} aria-label={t.sections.request}>
+                  <TextField disabled={referenceLocked} label={t.fields.reference} name="referenceNumber" value={referenceNumber} onChange={setReferenceNumber} autoComplete="off" />
+                  <TextField disabled={referenceLocked} label={t.fields.phone} name="customerPhone" type="tel" value={customerPhone} onChange={setCustomerPhone} autoComplete="tel" />
+                  {referenceLocked ? <Button className="min-h-11 focus:ring-2 focus:ring-ring" disabled={busy} onClick={changeReference} type="button" variant="outline">{t.actions.changeReference}</Button> : null}
+                  <Button className="min-h-11 focus:ring-2 focus:ring-ring" disabled={busy} type="submit">{t.actions.request}</Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-md border-line-subtle bg-surface shadow-sm">
+              <CardHeader className="p-4 pb-2"><CardTitle className="text-sm">{t.sections.verify}</CardTitle></CardHeader>
+              <CardContent className="p-4 pt-0">
+                <form className="grid gap-3" onSubmit={verifyCode} aria-label={t.sections.verify}>
+                  <TextField label={t.fields.code} name="verificationCode" type="text" value={otp} onChange={setOtp} autoComplete="one-time-code" />
+                  <Button className="min-h-11 focus:ring-2 focus:ring-ring" disabled={busy || !verificationId} type="submit">{t.actions.verify}</Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid content-start gap-4">
+            {tracking ? <VerifiedTracking locale={locale} tracking={tracking} /> : <PrivacyPanel locale={locale} />}
+            {tracking ? (
+              <PortalFollowUpPanel
+                attachmentSubmitted={feedback === 'attachment'}
+                busy={busy}
+                closed={isTerminal(tracking.status)}
+                locale={locale}
+                onAttachmentSubmit={sendAttachment}
+                onTextChange={setFollowUp}
+                onTextSubmit={sendFollowUp}
+                textSubmitted={feedback === 'followup'}
+                textValue={followUp}
+              />
+            ) : null}
+          </div>
+      </section>
+    </section>
+  );
+}
+
+function VerifiedTracking({ locale, tracking }: { locale: PortalTrackingLocale; tracking: PortalTrackingComplaint }) {
+  const t = portalTrackingText[locale];
+  const timelineLabels = portalTimelineText[locale];
+  const statusDisplay = complaintStatusLabel(locale, tracking.status);
+  return (
+    <Card className="rounded-md border-line-subtle bg-surface shadow-sm" aria-label={t.sections.status}>
+      <CardHeader className="p-4 pb-2"><CardTitle className="text-sm">{t.sections.status}</CardTitle></CardHeader>
       <CardContent className="grid gap-3 p-4 pt-0">
         <dl className="grid gap-2 text-sm md:grid-cols-2">
-          {[
-            [t.fields.reference, reference],
-            [t.sections.status, t.sample.status],
-            [t.fields.created, t.sample.created],
-            [t.fields.updated, t.sample.updated],
-          ].map(([label, value]) => (
-            <div className="rounded-sm bg-slate-50 px-3 py-2" key={label}>
-              <dt className="text-slate-500">{label}</dt>
-              <dd className="font-semibold text-slate-800">{label === t.sections.status ? <Badge variant="secondary">{value}</Badge> : value}</dd>
+          {[[t.fields.reference, tracking.referenceNumber], [t.sections.status, statusDisplay], [t.fields.created, tracking.createdAt], [t.fields.updated, tracking.updatedAt]].map(([label, value]) => (
+            <div className="rounded-sm bg-surface-raised px-3 py-2" key={label}>
+              <dt className="text-content-muted">{label}</dt>
+              <dd className="break-words font-semibold text-content-strong">{label === t.sections.status ? <StatusBadge tone="info">{value}</StatusBadge> : value}</dd>
             </div>
           ))}
         </dl>
-        <section className="rounded-md border border-slate-200 bg-slate-50 p-3" aria-label={t.sections.timeline}>
+        <section className="rounded-md border border-line-subtle bg-surface-raised p-3" aria-label={t.sections.timeline}>
           <h3 className="text-sm font-semibold">{t.sections.timeline}</h3>
-          <ol className="mt-3 grid gap-2 text-sm text-slate-700">
-            {t.sample.timeline.map((item) => (
-              <li className="rounded-sm border border-slate-200 bg-white px-3 py-2" key={item}>
-                {item}
+          <ol className="mt-3 grid gap-2 text-sm text-content-muted">
+            {tracking.timeline.length ? tracking.timeline.map((item) => (
+              <li className="rounded-sm border border-line-subtle bg-surface px-3 py-2" key={`${item.type ?? item.toStatus}-${item.createdAt}-${item.body ?? ''}`}>
+                {timelineText(item, timelineLabels, locale)}
               </li>
-            ))}
+            )) : <li className="rounded-sm border border-line-subtle bg-surface px-3 py-2">{t.states.empty}</li>}
           </ol>
         </section>
       </CardContent>
@@ -115,53 +193,51 @@ function VerifiedTracking({ locale, reference }: { locale: PortalTrackingLocale;
   );
 }
 
-function FollowUpPanel({ locale, submitted }: { locale: PortalTrackingLocale; submitted: boolean }) {
-  const t = portalTrackingText[locale];
-  return (
-    <Card className="rounded-md border-slate-200 bg-white shadow-sm">
-      <CardHeader className="p-4 pb-2">
-        <CardTitle className="text-sm">{t.sections.followUp}</CardTitle>
-      </CardHeader>
-      <CardContent className="p-4 pt-0">
-        <form className="grid gap-3" method="post" aria-label={t.sections.followUp}>
-          {submitted ? <p className="rounded-sm border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900" role="status">{t.states.followup}</p> : null}
-          <Label className="grid gap-1 text-sm font-medium">
-            {t.fields.followUp}
-            <Textarea className="min-h-24" defaultValue={submitted ? t.sample.followUp : ''} name="body" />
-          </Label>
-          <Button className="focus:ring-2 focus:ring-ring" type="submit">{t.actions.followUp}</Button>
-        </form>
-      </CardContent>
-    </Card>
-  );
-}
-
 function PrivacyPanel({ locale }: { locale: PortalTrackingLocale }) {
   const t = portalTrackingText[locale];
-  return (
-    <Card className="rounded-md border-slate-200 bg-white text-sm text-slate-700 shadow-sm" aria-label={t.sections.status}>
-      <CardContent className="p-4">{t.privacy}</CardContent>
-    </Card>
-  );
+  return <Card className="rounded-md border-line-subtle bg-surface text-sm text-content-muted shadow-sm" aria-label={t.sections.status}><CardContent className="p-4"><StateBlock message={t.privacy} /></CardContent></Card>;
 }
 
-function PortalTrackingMessage({ locale, state }: { locale: PortalTrackingLocale; state?: PortalTrackingPreviewState | undefined }) {
+function PortalTrackingMessage({ locale, state }: { locale: PortalTrackingLocale; state: Feedback }) {
   const t = portalTrackingText[locale];
   if (!state) return null;
-  const isSafe = state === 'requested' || state === 'verified' || state === 'followup';
-  const message = state === 'followup' ? t.states.followup : t.states[state];
-  return (
-    <p className={`rounded-md border px-4 py-3 text-sm font-medium ${isSafe ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-red-200 bg-red-50 text-red-800'}`} role={isSafe || state === 'loading' ? 'status' : 'alert'}>
-      {message}
-    </p>
-  );
+  const isSafe = state === 'requested' || state === 'verified' || state === 'followup' || state === 'attachment';
+  const message = state === 'denied' ? t.states.denied : state === 'followup' ? t.states.followup : state === 'attachment' ? t.states.attachment : t.states[state];
+  return <StateBlock message={message} tone={isSafe ? 'success' : state === 'loading' ? 'neutral' : 'error'} />;
 }
 
-function TextField({ label, name, type = 'text', value }: { label: string; name: string; type?: string; value: string }) {
-  return (
-    <Label className="grid gap-1 text-sm font-medium">
-      {label}
-      <Input defaultValue={value} name={name} type={type} />
-    </Label>
-  );
+function TextField({ autoComplete, disabled = false, label, name, onChange, type = 'text', value }: { autoComplete: string; disabled?: boolean; label: string; name: string; onChange: (value: string) => void; type?: string; value: string }) {
+  return <Label className="grid gap-1 text-sm font-medium">{label}<Input autoComplete={autoComplete} className="min-h-11" disabled={disabled} name={name} type={type} value={value} onChange={(event) => onChange(event.target.value)} /></Label>;
+}
+
+function sampleTracking(locale: PortalTrackingLocale, reference: string, state?: PortalTrackingFixtureState): PortalTrackingComplaint | null {
+  if (state !== 'verified' && state !== 'followup' && state !== 'attachment' && state !== 'closed') return null;
+  const t = portalTrackingText[locale];
+  const timelineLabels = portalTimelineText[locale];
+  return {
+    referenceNumber: reference,
+    status: state === 'closed' ? 'CLOSED' : 'IN_PROGRESS',
+    createdAt: t.sample.created,
+    updatedAt: t.sample.updated,
+    timeline: [
+      { fromStatus: null, toStatus: 'SUBMITTED', action: null, createdAt: t.sample.created, type: 'STATUS' as const },
+      { fromStatus: null, toStatus: 'IN_PROGRESS', action: null, createdAt: t.sample.updated, type: 'STATUS' as const },
+      { fromStatus: null, toStatus: 'PUBLIC_UPDATE', action: 'PUBLIC_UPDATE', createdAt: t.sample.updated, type: 'PUBLIC_UPDATE' as const, body: timelineLabels.samplePublicUpdate },
+    ],
+  };
+}
+
+function timelineText(item: PortalTrackingComplaint['timeline'][number], labels: typeof portalTimelineText.en, locale: PortalTrackingLocale): string {
+  if (item.type === 'PUBLIC_UPDATE' || item.body) return [labels.publicUpdate, item.body, item.createdAt].filter(Boolean).join(' - ');
+  return [complaintStatusLabel(locale, item.toStatus), item.createdAt].filter(Boolean).join(' - ');
+}
+
+function feedbackFromCode(code: string): Feedback {
+  if (code === 'PORTAL_VERIFICATION_FAILED') return 'invalid';
+  if (code === 'PORTAL_VERIFICATION_EXPIRED') return 'expired';
+  return 'error';
+}
+
+function isTerminal(status: string): boolean {
+  return status === 'CLOSED' || status === 'REJECTED';
 }

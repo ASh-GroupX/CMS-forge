@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AuditService } from '../../core/audit.service.js';
 import { PermissionGuard, RbacGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
@@ -13,7 +13,7 @@ import { AttachmentsRepository } from './attachments.repository.js';
 import { AttachmentsService } from './attachments.service.js';
 
 @Module({
-  imports: [AuthModule, ComplaintsModule, PortalModule],
+  imports: [AuthModule, ComplaintsModule, forwardRef(() => PortalModule)],
   controllers: [AttachmentsController, PortalAttachmentsController],
   providers: [
     PrismaService,

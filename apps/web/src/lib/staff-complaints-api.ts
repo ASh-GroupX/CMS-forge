@@ -1,15 +1,7 @@
-export type ComplaintStatus =
-  | 'DRAFT'
-  | 'SUBMITTED'
-  | 'MANAGER_REVIEW'
-  | 'BRANCH_REVIEW'
-  | 'IN_PROGRESS'
-  | 'RESOLVED'
-  | 'CLOSED'
-  | 'REOPENED'
-  | 'REJECTED';
+export type ComplaintStatus = 'DRAFT' | 'SUBMITTED' | 'MANAGER_REVIEW' | 'BRANCH_REVIEW' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' | 'REOPENED' | 'REJECTED';
 
 export type ComplaintSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+export type ComplaintTransitionAction = 'SUBMIT' | 'ACCEPT_INTAKE' | 'REJECT_AS_INVALID' | 'APPROVE_AND_ROUTE' | 'SEND_BACK' | 'ASSIGN_INVESTIGATION' | 'RESOLVE_DIRECTLY' | 'REJECT_AFTER_REVIEW' | 'ADD_INVESTIGATION_UPDATE' | 'RESOLVE' | 'REJECT_AFTER_INVESTIGATION' | 'CLOSE' | 'REJECT_RESOLUTION' | 'REOPEN' | 'ROUTE_AGAIN';
 
 export type ComplaintQueueItem = {
   id: string;
@@ -21,6 +13,11 @@ export type ComplaintQueueItem = {
   branchName?: string;
   ownerId: string | null;
   ownerName?: string | null;
+  slaState: 'ON_TRACK' | 'WARNING' | 'BREACHED' | 'CLOSED';
+  slaDueAt: string | null;
+  slaStage: string | null;
+  slaPercentElapsed: number | null;
+  nextAction: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -50,11 +47,23 @@ export type ComplaintCaseSummary = {
   ownerName: string | null;
 };
 
+export type ComplaintCustomerDetail = { id: string; name: string; phone: string | null; identifier: string | null; source: 'LOCAL' | 'MANUAL' | 'DMS' };
+export type ComplaintVehicleDetail = { id: string; vin: string; plate: string; make: string; model: string; year: number; source: 'LOCAL' | 'MANUAL' | 'DMS' };
+
 export type ComplaintDetail = ComplaintQueueItem & {
   description: string;
   incidentAt: string | null;
+  customer: ComplaintCustomerDetail;
+  vehicle: ComplaintVehicleDetail | null;
+  customerSource: 'LOCAL' | 'MANUAL' | 'DMS';
+  manualCustomer: boolean;
+  vehicleRelated: boolean;
+  vehicleSource: 'LOCAL' | 'MANUAL' | 'DMS' | null;
+  manualVehicle: boolean;
+  vehicleDataUnavailableReason: string | null;
   statusHistory: ComplaintStatusTimelineItem[];
   caseSummary: ComplaintCaseSummary | null;
+  allowedActions: ComplaintTransitionAction[];
 };
 
 export type StaffApiError = {
@@ -78,6 +87,7 @@ export type StaffComplaintCreateRequest = {
   customerName: string;
   customerPhone?: string | null;
   customerNumber?: string | null;
+  customerSource?: ComplaintDetail['customerSource'];
   categoryId: string;
   subcategoryId: string;
   description: string;
@@ -87,14 +97,84 @@ export type StaffComplaintCreateRequest = {
   vehicleRelated?: boolean;
   vehicleVin?: string | null;
   vehicleId?: string | null;
+  vehiclePlate?: string | null;
+  vehicleBrand?: string | null;
+  vehicleModel?: string | null;
+  vehicleModelYear?: number | null;
+  vehicleSource?: ComplaintDetail['vehicleSource'];
+  vehicleDataUnavailableReason?: string | null;
 };
 
 export type StaffComplaintCreateResponse = {
   complaint: Pick<ComplaintQueueItem, 'id' | 'referenceNumber' | 'status'>;
 };
 
+export type StaffComplaintCorrectionRequest = {
+  expectedUpdatedAt: string;
+  reason: string;
+  customerId?: string;
+  customerSource?: ComplaintDetail['customerSource'];
+  manualCustomer?: boolean;
+  vehicleId?: string | null;
+  vehicleSource?: ComplaintDetail['vehicleSource'];
+  manualVehicle?: boolean;
+  vehicleRelated?: boolean;
+  vehicleDataUnavailableReason?: string | null;
+};
+
+export type StaffComplaintCorrectionResponse = {
+  correction: {
+    complaintId: string;
+    changedFields: Array<keyof Omit<StaffComplaintCorrectionRequest, 'expectedUpdatedAt' | 'reason'>>;
+  };
+};
+
+export type StaffComplaintTransitionRequest = { status: ComplaintStatus; action: ComplaintTransitionAction; reason?: string | null; targetBranchId?: string | null; targetDepartmentId?: string | null; ownerId?: string | null; resolutionType?: string | null; resolutionSummary?: string | null; customerCommunicationStatus?: string | null; vehicleDataUnavailableReason?: string | null };
+
+export type StaffComplaintTransitionResponse = {
+  transition: {
+    complaintId: string;
+    fromStatus: ComplaintStatus;
+    action: ComplaintTransitionAction;
+    actorRole: string;
+    toStatus: ComplaintStatus;
+  };
+};
+
+export type DmsLookupStatus = 'MATCH' | 'MULTIPLE_MATCHES' | 'NOT_FOUND' | 'PROVIDER_DOWN' | 'DISABLED';
+export const DMS_DOWN_STATUS: DmsLookupStatus = 'PROVIDER_DOWN';
+
+export type DmsCustomerVehicleMatch = {
+  customerId?: string;
+  customerCode?: string;
+  customerName: string;
+  primaryPhone: string;
+  secondaryPhone?: string;
+  vehicleId?: string;
+  vin?: string;
+  plateNumber?: string;
+  brand?: string;
+  model?: string;
+  modelYear?: number;
+  saleDate?: string;
+  warrantyStatus?: string;
+  serviceBranch?: string;
+  salesBranch?: string;
+  source: 'DMS';
+};
+
+export type DmsLookupResult = { action: 'customerVehicleLookup'; result: DmsLookupStatus; latencyMs: number; correlationId: string; manualFallbackAllowed: boolean; matches: DmsCustomerVehicleMatch[] };
+
+export type StaffDmsLookupQuery = {
+  phone?: string | null;
+  customerNumber?: string | null;
+  vin?: string | null;
+  name?: string | null;
+};
+
 type ComplaintQueueResponse = { items: ComplaintQueueItem[] };
 type ComplaintDetailResponse = { complaint: ComplaintDetail };
+type DmsLookupResponse = { lookup: DmsLookupResult };
 type ErrorEnvelope = { error?: { code?: string; message?: string; correlationId?: string | null; fieldErrors?: StaffApiFieldError[] } };
 
 export function listStaffComplaints(fetchImpl: typeof fetch = fetch): Promise<StaffApiResult<ComplaintQueueResponse>> {
@@ -118,6 +198,44 @@ export function createStaffComplaint(
     headers: csrfHeaders(),
     method: 'POST',
   });
+}
+
+export function correctStaffComplaint(
+  complaintId: string,
+  correction: StaffComplaintCorrectionRequest,
+  fetchImpl: typeof fetch = fetch,
+): Promise<StaffApiResult<StaffComplaintCorrectionResponse>> {
+  return requestJson(`/api/complaints/${encodeURIComponent(complaintId)}/corrections`, fetchImpl, {
+    body: JSON.stringify(correction),
+    headers: csrfHeaders(),
+    method: 'POST',
+  });
+}
+
+export function submitStaffComplaintWorkflowAction(
+  complaintId: string,
+  request: StaffComplaintTransitionRequest,
+  fetchImpl: typeof fetch = fetch,
+): Promise<StaffApiResult<StaffComplaintTransitionResponse>> {
+  const { status, ...body } = request;
+  return requestJson(`/api/complaints/${encodeURIComponent(complaintId)}/transitions`, fetchImpl, {
+    body: JSON.stringify({ fromStatus: status, ...body }),
+    headers: csrfHeaders(),
+    method: 'POST',
+  });
+}
+
+export function lookupStaffDmsCustomerVehicle(
+  query: StaffDmsLookupQuery,
+  fetchImpl: typeof fetch = fetch,
+): Promise<StaffApiResult<DmsLookupResponse>> {
+  const params = new URLSearchParams();
+  appendQuery(params, 'phone', query.phone);
+  appendQuery(params, 'customerNumber', query.customerNumber);
+  appendQuery(params, 'vin', query.vin);
+  appendQuery(params, 'name', query.name);
+  const suffix = params.size ? `?${params.toString()}` : '';
+  return requestJson(`/api/integrations/dms/customer-vehicle${suffix}`, fetchImpl);
 }
 
 async function requestJson<T>(path: string, fetchImpl: typeof fetch, init?: RequestInit): Promise<StaffApiResult<T>> {
@@ -145,6 +263,11 @@ async function requestJson<T>(path: string, fetchImpl: typeof fetch, init?: Requ
 function csrfHeaders(): HeadersInit {
   const csrfToken = readableCookie('cms_csrf_token');
   return csrfToken ? { 'content-type': 'application/json', 'x-csrf-token': csrfToken } : { 'content-type': 'application/json' };
+}
+
+function appendQuery(params: URLSearchParams, key: keyof StaffDmsLookupQuery, value: string | null | undefined) {
+  const text = typeof value === 'string' ? value.trim() : '';
+  if (text) params.set(key, text);
 }
 
 function readableCookie(name: string): string | null {

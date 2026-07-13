@@ -19,6 +19,24 @@ export class NotificationsController {
     return { items: await this.notificationsService.listForRecipient(userId) };
   }
 
+  @Post(':id/read')
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('STAFF_LOGIN')
+  async markRead(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    const userId = request.principal?.userId;
+    if (!userId) throw new AppException('AUTH_INVALID_CREDENTIALS', 'Invalid credentials', 401);
+    return this.notificationsService.markRead(id, userId);
+  }
+
+  @Post('read-all')
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('STAFF_LOGIN')
+  async markAllRead(@Req() request: AuthenticatedRequest) {
+    const userId = request.principal?.userId;
+    if (!userId) throw new AppException('AUTH_INVALID_CREDENTIALS', 'Invalid credentials', 401);
+    return this.notificationsService.markAllRead(userId);
+  }
+
   @Get('templates')
   @UseGuards(SessionAuthGuard, PermissionGuard)
   @Permissions('NOTIFICATIONS_MANAGE')

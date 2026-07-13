@@ -1,8 +1,10 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { taskStatusLabel } from '../../i18n/domain-labels';
 import { employeeTodayText } from '../../i18n/staff-employee-today';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
+import { formatDisplayDate } from '../../lib/locale-format';
 import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
 import type { StaffRelatedRecordOptions } from '../../lib/staff-related-records-api';
 import type { EmployeeTodayTasks, StaffTask, StaffTaskStatus } from '../../lib/staff-tasks-api';
@@ -24,22 +26,28 @@ export function EmployeeToday({
   data,
   locale,
   quickAddAction,
+  loadRelatedRecordsAction,
   relatedRecords,
   result,
   staff,
+  state,
   updateAction,
 }: {
   data: EmployeeTodayTasks | null;
   locale: Locale;
+  loadRelatedRecordsAction?: (() => Promise<StaffRelatedRecordOptions | null>) | undefined;
   quickAddAction?: TaskAction;
   relatedRecords?: StaffRelatedRecordOptions | null | undefined;
-  result?: 'error' | 'link-required' | 'success' | undefined;
+  result?: 'denied' | 'error' | 'link-required' | 'success' | undefined;
   staff?: AssignableStaff[] | null | undefined;
+  state?: 'denied' | 'error' | undefined;
   updateAction?: TaskAction | undefined;
 }) {
   const shell = staffShellText[locale];
   const t = employeeTodayText[locale];
   const total = data ? SECTION_KEYS.reduce((sum, key) => sum + data[key].length, 0) : 0;
+  const activeSections = data ? SECTION_KEYS.filter((key) => data[key].length > 0) : [];
+  const emptySections = data ? SECTION_KEYS.filter((key) => data[key].length === 0) : [];
 
   return (
     <Card aria-label={t.title} className="rounded-md border-border bg-card text-card-foreground shadow-sm" dir={shell.dir}>
@@ -59,13 +67,13 @@ export function EmployeeToday({
       <CardContent className="p-4">
         {result ? (
           <p className={result === 'success' ? 'mb-3 rounded-sm border border-status-success bg-status-success/10 px-3 py-2 text-sm text-status-success' : 'mb-3 rounded-sm border border-status-error bg-status-error/10 px-3 py-2 text-sm text-status-error'} role="status">
-            {result === 'success' ? t.states.saved : result === 'link-required' ? t.states.linkRequired : t.states.saveFailed}
+            {result === 'success' ? t.states.saved : result === 'denied' ? t.states.denied : result === 'link-required' ? t.states.linkRequired : t.states.saveFailed}
           </p>
         ) : null}
-        {quickAddAction ? <QuickAddForm action={quickAddAction} locale={locale} relatedRecords={relatedRecords} staff={staff} t={t} /> : null}
+        {quickAddAction ? <QuickAddForm action={quickAddAction} loadRelatedRecordsAction={loadRelatedRecordsAction} locale={locale} relatedRecords={relatedRecords} staff={staff} t={t} /> : null}
         {data === null ? (
           <p className="rounded-sm border border-status-error bg-status-error/10 px-3 py-2 text-sm text-status-error" role="alert">
-            {t.states.error}
+            {state === 'denied' ? t.states.denied : t.states.error}
           </p>
         ) : total === 0 ? (
           <p className="rounded-sm border border-border bg-muted px-3 py-2 text-sm text-muted-foreground" role="status">
@@ -73,9 +81,10 @@ export function EmployeeToday({
           </p>
         ) : (
           <div className="grid items-start gap-3 xl:grid-cols-2">
-            {SECTION_KEYS.map((key) => (
+            {activeSections.map((key) => (
               <TaskSection key={key} locale={locale} sectionKey={key} staff={staff} tasks={data[key]} t={t} updateAction={updateAction} />
             ))}
+            {emptySections.length ? <EmptySections locale={locale} sectionKeys={emptySections} t={t} /> : null}
           </div>
         )}
       </CardContent>
@@ -99,6 +108,26 @@ export function EmployeeTodayLoading({ locale }: { locale: Locale }) {
         ))}
       </CardContent>
     </Card>
+  );
+}
+
+function EmptySections({ locale, sectionKeys, t }: { locale: Locale; sectionKeys: SectionKey[]; t: EmployeeTodayText }) {
+  return (
+    <details className="rounded-md border border-line-subtle bg-surface-raised p-3 xl:col-span-2">
+      <summary className="cursor-pointer text-sm font-semibold text-content-strong">{t.states.sectionEmpty}</summary>
+      <ul className="mt-3 grid gap-2 text-sm text-content-muted md:grid-cols-2">
+        {sectionKeys.map((key) => {
+          const [title, description] = t.sections[key];
+          return (
+            <li className="rounded-sm border border-line-subtle bg-surface px-3 py-2" key={key}>
+              <span className="font-semibold text-content-strong">{title}</span>
+              <span className="ms-2 text-xs">{description}</span>
+              <span className="ms-2 text-xs">{formatNumber(locale, 0)}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </details>
   );
 }
 
@@ -141,29 +170,34 @@ function TaskSection({
 
 function TaskCard({ locale, staff, task, t, updateAction }: { locale: Locale; staff?: AssignableStaff[] | null | undefined; task: StaffTask; t: EmployeeTodayText; updateAction?: TaskAction | undefined }) {
   return (
-    <article className="rounded-md border border-border bg-card p-3 shadow-sm">
+    <article className="rounded-sm border border-line-subtle bg-surface p-3 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="break-words text-sm font-semibold">{task.title}</h3>
+          <h3 className="break-words text-base font-semibold text-content-strong">{task.title}</h3>
         </div>
         <div className="flex flex-wrap gap-1">
-          <Badge className={STATUS_CLASS[task.status]} variant="outline">{task.status}</Badge>
+          <Badge className={STATUS_CLASS[task.status]} title={task.status} variant="outline">{taskStatusLabel(locale, task.status)}</Badge>
           {task.isCustomerPromise ? <Badge variant="secondary">{t.promise}</Badge> : null}
         </div>
       </div>
-      <dl className="mt-3 grid gap-2 text-sm md:grid-cols-2">
+      <dl className="mt-3 grid gap-2 rounded-sm bg-surface-raised p-3 text-sm md:grid-cols-2">
         <Field label={t.fields.assignee} value={task.assigneeName ?? '-'} />
-        <Field label={t.fields.due} value={formatDate(task.dueAt)} />
+        <Field label={t.fields.due} value={formatDate(task.dueAt, locale)} />
+      </dl>
+      <details className="mt-2 text-sm">
+        <summary className="cursor-pointer font-semibold text-content-muted">{t.fields.moreInfo}</summary>
+        <dl className="mt-2 grid gap-2 rounded-sm border border-line-subtle bg-surface px-3 py-2 md:grid-cols-3">
         <Field label={t.fields.owner} value={task.ownerName ?? '-'} />
         <Field label={t.fields.branch} value={task.branchName ?? '-'} />
-        <Field label={t.fields.updated} value={formatDate(task.updatedAt)} />
-      </dl>
+        <Field label={t.fields.updated} value={formatDate(task.updatedAt, locale)} />
+        </dl>
+      </details>
       {task.nextAction ? (
-        <div className="mt-3 rounded-sm border border-border bg-muted px-3 py-2 text-sm">
+        <div className="mt-3 rounded-sm border border-line-subtle bg-surface-raised px-3 py-2 text-sm">
           <p className="font-semibold">{t.fields.nextAction}</p>
           <p className="mt-1 break-words text-muted-foreground">{task.nextAction.what}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {t.fields.nextOwner}: <span>{task.nextAction.whoName ?? '-'}</span> - {formatDate(task.nextAction.when)}
+            {t.fields.nextOwner}: <span>{task.nextAction.whoName ?? '-'}</span> - {formatDate(task.nextAction.when, locale)}
           </p>
         </div>
       ) : null}
@@ -198,8 +232,8 @@ function formatNumber(locale: Locale, value: number): string {
   return new Intl.NumberFormat(locale).format(value);
 }
 
-function formatDate(value: string): string {
-  return value.slice(0, 16).replace('T', ' ');
+function formatDate(value: string, locale: Locale): string {
+  return formatDisplayDate(value, locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' });
 }
 
 function linkTypeLabel(entityType: string, t: EmployeeTodayText): string {

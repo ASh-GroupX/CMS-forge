@@ -277,6 +277,41 @@ test('staff upload route denies branch-hidden complaints before upload', async (
   );
 });
 
+test('staff list route verifies scoped complaint and returns safe attachment metadata', async () => {
+  const calls: unknown[] = [];
+  const controller = new AttachmentsController({
+    listForComplaint: async (complaintId) => {
+      calls.push({ list: complaintId });
+      return [{ ...attachmentResult(complaintId), scanStatus: AttachmentScanStatus.CLEAN }];
+    },
+  } as AttachmentsService, {
+    getDetail: async (id, filter) => {
+      calls.push({ detail: { id, filter } });
+      return complaintDetail('branch_main');
+    },
+  } as ComplaintsService);
+
+  const response = await controller.list('cmp_1', 'branch_main', request());
+  const json = JSON.stringify(response);
+
+  assert.deepEqual(response, {
+    items: [{
+      id: 'att_1',
+      complaintId: 'cmp_1',
+      fileName: 'photo.png',
+      contentType: 'image/png',
+      sizeBytes: 10,
+      scanStatus: 'CLEAN',
+      customerVisible: false,
+    }],
+  });
+  assert.deepEqual(calls, [
+    { detail: { id: 'cmp_1', filter: { branchId: 'branch_main' } } },
+    { list: 'cmp_1' },
+  ]);
+  assert.equal(/storageKey|token|url|downloadUrl|credential|bucket/i.test(json), false);
+});
+
 test('staff upload route rejects invalid file metadata before storage persistence or audit', async () => {
   let storageCalled = false;
   const uploadService = new AttachmentsService({} as AttachmentsRepository, { record: async () => undefined } as unknown as AuditService, {
@@ -300,6 +335,7 @@ test('staff upload route rejects invalid file metadata before storage persistenc
 });
 
 test('staff attachment routes require permissions and keep branch scope/CSRF', async () => {
+  assert.deepEqual(guardNames('list'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
   assert.deepEqual(guardNames('create'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard', 'CsrfGuard']);
   assert.deepEqual(guardNames('prepareDownload'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
   const providers = Reflect.getMetadata(MODULE_METADATA.PROVIDERS, AttachmentsModule) as unknown[];
@@ -318,6 +354,10 @@ test('staff attachment routes require permissions and keep branch scope/CSRF', a
   assert.equal(await guard.canActivate(context(
     request(RoleCode.MGMT_READONLY, ['ATTACHMENT_DOWNLOAD'], '/complaints/cmp_1/attachments/att_1/download?branchId=branch_main'),
     'prepareDownload',
+  )), true);
+  assert.equal(await guard.canActivate(context(
+    request(RoleCode.MGMT_READONLY, ['ATTACHMENT_DOWNLOAD'], '/complaints/cmp_1/attachments?branchId=branch_main'),
+    'list',
   )), true);
   await assert.rejects(
     guard.canActivate(context(request(RoleCode.ADMIN, [], '/complaints/cmp_1/attachments?password=leaked&sessionToken=leaked'))),

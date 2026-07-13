@@ -57,6 +57,7 @@ export type CustomerNotificationPreferenceRecord = Prisma.CustomerNotificationPr
 export type QueueInternalNotificationData = {
   complaintId?: string | null;
   recipientUserId?: string | null;
+  channel?: NotificationChannel;
   templateCode: string;
   locale: string;
   payload: Prisma.InputJsonValue;
@@ -88,7 +89,7 @@ export class NotificationsRepository {
       data: {
         complaintId: data.complaintId ?? null,
         recipientUserId: data.recipientUserId ?? null,
-        channel: NotificationChannel.IN_APP,
+        channel: data.channel ?? NotificationChannel.IN_APP,
         status: NotificationStatus.QUEUED,
         templateCode: data.templateCode,
         locale: data.locale,
@@ -101,7 +102,7 @@ export class NotificationsRepository {
   async queueInternalOnce(data: QueueInternalNotificationOnceData): Promise<NotificationRecord> {
     const existing = await this.prisma.notification.findFirst({
       where: {
-        channel: NotificationChannel.IN_APP,
+        channel: data.channel ?? NotificationChannel.IN_APP,
         templateCode: data.templateCode,
         recipientUserId: data.recipientUserId ?? null,
         payload: { path: ['idempotencyKey'], equals: data.idempotencyKey },
@@ -145,6 +146,7 @@ export class NotificationsRepository {
     return this.findQueued(NotificationChannel.WHATSAPP, limit);
   }
 
+
   async markEmailSent(id: string, result: EmailSendResult, metadataOrNow?: NotificationDeliveryMetadata | Date, now = new Date()): Promise<boolean> {
     const sent = sentAttempt(metadataOrNow, now);
     return this.markSent(id, NotificationChannel.EMAIL, result, sent.metadata, sent.now);
@@ -187,6 +189,22 @@ export class NotificationsRepository {
       take: limit,
       select: notificationSelect,
     });
+  }
+
+  async markInAppRead(id: string, recipientUserId: string, now = new Date()): Promise<boolean> {
+    const update = await this.prisma.notification.updateMany({
+      where: { id, channel: NotificationChannel.IN_APP, recipientUserId, status: NotificationStatus.QUEUED },
+      data: { status: NotificationStatus.SENT, sentAt: now },
+    });
+    return update.count === 1;
+  }
+
+  async markAllInAppRead(recipientUserId: string, now = new Date()): Promise<number> {
+    const update = await this.prisma.notification.updateMany({
+      where: { channel: NotificationChannel.IN_APP, recipientUserId, status: NotificationStatus.QUEUED },
+      data: { status: NotificationStatus.SENT, sentAt: now },
+    });
+    return update.count;
   }
 
   async listTemplates(): Promise<NotificationTemplateRecord[]> {

@@ -12,6 +12,7 @@ import { AuthModule } from './modules/auth/auth.module.js';
 import { BranchesModule } from './modules/branches/branches.module.js';
 import { CasesModule } from './modules/cases/cases.module.js';
 import { DealsModule } from './modules/deals/deals.module.js';
+import { CommunicationGroupsModule } from './modules/communication-groups/communication-groups.module.js';
 import { IntegrationsModule } from './modules/integrations/integrations.module.js';
 import { PortalModule } from './modules/portal/portal.module.js';
 import { ReportsModule } from './modules/reports/reports.module.js';
@@ -50,6 +51,7 @@ class HealthController {
     SurveysModule,
     TasksModule,
     DealsModule,
+    CommunicationGroupsModule,
   ],
   controllers: [HealthController],
 })

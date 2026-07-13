@@ -3,54 +3,20 @@ import { RoleCode, TaskLinkEntityType } from '@prisma/client';
 import { AuditService } from '../../core/audit.service.js';
 import type { AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
-import type { DealBoardItemDto, DealHandoffBoardResponseDto } from './dto/deal-response.dto.js';
+import type { DealActionHistoryDto, DealBoardItemDto, DealHandoffBoardResponseDto } from './dto/deal-response.dto.js';
 import { DealsRepository } from './deals.repository.js';
-import type { DealRow } from './deals.repository.js';
+import type { DealAuditRow, DealRow } from './deals.repository.js';
 import { TasksService } from '../tasks/tasks.service.js';
 
 export const dealStages = ['LEAD', 'BOOKING', 'PAYMENT', 'FINANCE', 'INSURANCE', 'REGISTRATION', 'PDI', 'DELIVERY', 'POST_DELIVERY'] as const;
 export type DealStageCode = (typeof dealStages)[number];
 
-export type DealRecord = {
-  id: string;
-  title: string;
-  branchId: string;
-  branchName: string | null;
-  ownerId: string;
-  ownerName: string | null;
-  currentHolderId: string;
-  currentHolderName: string | null;
-  stage: DealStageCode;
-  stageDueAt: string;
-  blocker: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
+export type DealRecord = { id: string; title: string; branchId: string; branchName: string | null; ownerId: string; ownerName: string | null; currentHolderId: string; currentHolderName: string | null; stage: DealStageCode; stageDueAt: string; blocker: string | null; createdAt: string; updatedAt: string };
 
-export type CreateDealInput = {
-  title: string;
-  branchId: string;
-  ownerId: string;
-  currentHolderId: string;
-  stageDueAt: Date | string;
-  stage?: DealStageCode;
-  blocker?: string | null;
-};
+export type CreateDealInput = { title: string; branchId: string; ownerId: string; currentHolderId: string; stageDueAt: Date | string; stage?: DealStageCode; blocker?: string | null };
+export type AdvanceDealStageInput = { deal: DealRecord; toStage: DealStageCode; currentHolderId: string; stageDueAt: Date | string; blocker?: string | null; updateNote?: string | null };
 
-export type AdvanceDealStageInput = {
-  deal: DealRecord;
-  toStage: DealStageCode;
-  currentHolderId: string;
-  stageDueAt: Date | string;
-  blocker?: string | null;
-};
-
-type DealAuditContext = {
-  actorId?: string | null;
-  correlationId?: string | null;
-  ipAddress?: string | null;
-  userAgent?: string | null;
-};
+type DealAuditContext = { actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 type DealBoardScope = { roleCode: string; branchId: string | null };
 export type DealWriteActor = { userId: string; roleCode: string; branchId: string | null };
 
@@ -104,7 +70,7 @@ export class DealsService {
     return this.createPersisted({ ...input, branchId, ownerId: actor.userId }, audit);
   }
 
-  async advanceForActor(id: string, input: { currentHolderId: string; stageDueAt: Date | string }, actor: DealWriteActor, audit: DealAuditContext = {}): Promise<{ deal: DealRecord; taskId: string }> {
+  async advanceForActor(id: string, input: { currentHolderId: string; stageDueAt: Date | string; updateNote: string }, actor: DealWriteActor, audit: DealAuditContext = {}): Promise<{ deal: DealRecord; taskId: string }> {
     const deal = await this.dealsRepository.findById(requiredText(id, 'id'));
     if (!deal) throw new AppException('DEAL_NOT_FOUND', 'Deal was not found', HttpStatus.NOT_FOUND);
     const current = toResponse(deal);
@@ -114,17 +80,36 @@ export class DealsService {
       toStage: nextStage(current.stage),
       currentHolderId: input.currentHolderId,
       stageDueAt: input.stageDueAt,
+      updateNote: input.updateNote,
     }, audit);
   }
 
-  async updateBlockerForActor(id: string, blocker: string | null, actor: DealWriteActor, audit: DealAuditContext = {}): Promise<DealRecord> {
+  async updateBlockerForActor(id: string, input: { blocker: string | null; updateNote: string }, actor: DealWriteActor, audit: DealAuditContext = {}): Promise<DealRecord> {
+    const updateNote = requiredText(input.updateNote, 'updateNote');
     return this.dealsRepository.transaction(async (client) => {
       const current = await this.dealsRepository.findById(requiredText(id, 'id'), client);
       if (!current) throw new AppException('DEAL_NOT_FOUND', 'Deal was not found', HttpStatus.NOT_FOUND);
       const existing = toResponse(current);
       assertDealWriteAllowed(existing, actor);
-      const deal = toResponse(await this.dealsRepository.updateBlocker({ id: existing.id, blocker: optionalText(blocker) }, client));
-      await this.auditService?.record(dealAudit(deal.blocker ? 'deal_blocker_set' : 'deal_blocker_cleared', deal, audit, { stage: deal.stage }), client);
+      const deal = toResponse(await this.dealsRepository.updateBlocker({ id: existing.id, blocker: optionalText(input.blocker) }, client));
+      await this.auditService?.record(dealAudit(deal.blocker ? 'deal_blocker_set' : 'deal_blocker_cleared', deal, audit, { stage: deal.stage, updateNote }), client);
+      return deal;
+    });
+  }
+
+  async updateDetailsForActor(id: string, input: { currentHolderId: string; stageDueAt: Date | string; updateNote: string }, actor: DealWriteActor, audit: DealAuditContext = {}): Promise<DealRecord> {
+    const updateNote = requiredText(input.updateNote, 'updateNote');
+    return this.dealsRepository.transaction(async (client) => {
+      const current = await this.dealsRepository.findById(requiredText(id, 'id'), client);
+      if (!current) throw new AppException('DEAL_NOT_FOUND', 'Deal was not found', HttpStatus.NOT_FOUND);
+      const existing = toResponse(current);
+      assertDealWriteAllowed(existing, actor);
+      const deal = toResponse(await this.dealsRepository.updateDetails({
+        id: existing.id,
+        currentHolderId: requiredText(input.currentHolderId, 'currentHolderId'),
+        stageDueAt: validDate(input.stageDueAt, 'stageDueAt'),
+      }, client));
+      await this.auditService?.record(dealAudit('deal_details_updated', deal, audit, { stage: deal.stage, updateNote }), client);
       return deal;
     });
   }
@@ -141,6 +126,7 @@ export class DealsService {
   async advanceStagePersisted(input: AdvanceDealStageInput, audit: DealAuditContext = {}): Promise<{ deal: DealRecord; taskId: string }> {
     const tasksService = this.tasksService;
     if (!tasksService) throw new AppException('VALIDATION_FAILED', 'Tasks service is required', HttpStatus.BAD_REQUEST);
+    const updateNote = requiredText(input.updateNote ?? '', 'updateNote');
     const next = this.advanceStage(input);
     return this.dealsRepository.transaction(async (client) => {
       const deal = toResponse(await this.dealsRepository.updateStage({
@@ -150,7 +136,7 @@ export class DealsService {
         stageDueAt: new Date(next.stageDueAt),
         blocker: next.blocker,
       }, client));
-      await this.auditService?.record(dealAudit('deal_stage_advanced', deal, audit, { fromStage: input.deal.stage, toStage: deal.stage }), client);
+      await this.auditService?.record(dealAudit('deal_stage_advanced', deal, audit, { fromStage: input.deal.stage, toStage: deal.stage, updateNote }), client);
       const task = await tasksService.createInTransaction({
         title: `Complete deal ${deal.stage}`,
         ownerId: deal.ownerId,
@@ -165,7 +151,8 @@ export class DealsService {
 
   async handoffBoard(scope: DealBoardScope, now: Date = new Date()): Promise<DealHandoffBoardResponseDto> {
     const rows = await this.dealsRepository.listHandoffBoard(managerBranchId(scope));
-    const deals = rows.map((deal) => boardItem(deal, now));
+    const history = groupHistory(await this.dealsRepository.listHandoffHistory(rows.map((deal) => deal.id)));
+    const deals = rows.map((deal) => boardItem(deal, now, history.get(deal.id) ?? []));
     return {
       byStage: dealStages.map((stage) => {
         const stageDeals = deals.filter((deal) => deal.stage === stage);
@@ -205,12 +192,21 @@ function nextStage(stage: DealStageCode): DealStageCode {
   return next;
 }
 
-function boardItem(deal: DealRow, now: Date): DealBoardItemDto {
+function boardItem(deal: DealRow, now: Date, historyRows: DealAuditRow[]): DealBoardItemDto {
   const response = toResponse(deal);
-  return {
-    ...response,
-    delayAgeMinutes: Math.max(0, Math.floor((now.getTime() - deal.stageDueAt.getTime()) / 60_000)),
-  };
+  const history = historyRows.slice(0, 5).map(historyItem);
+  return { ...response, delayAgeMinutes: Math.max(0, Math.floor((now.getTime() - deal.stageDueAt.getTime()) / 60_000)), lastAction: history[0] ?? null, history };
+}
+
+function groupHistory(rows: DealAuditRow[]): Map<string, DealAuditRow[]> {
+  const grouped = new Map<string, DealAuditRow[]>();
+  for (const row of rows) if (row.targetId) grouped.set(row.targetId, [...(grouped.get(row.targetId) ?? []), row]);
+  return grouped;
+}
+
+function historyItem(row: DealAuditRow): DealActionHistoryDto {
+  const metadata = row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata) ? row.metadata as Record<string, unknown> : {};
+  return { id: row.id, action: row.action, actor: { id: row.actorId, name: row.actor?.nameEn ?? null }, createdAt: row.createdAt.toISOString(), updateNote: typeof metadata.updateNote === 'string' ? metadata.updateNote : null };
 }
 
 function holderCounts(deals: DealBoardItemDto[]) {

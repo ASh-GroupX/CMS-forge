@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Headers, Inject, Post, Req, UseGuards } from '@nestjs/common';
 import type { IncomingMessage } from 'node:http';
 import { PortalSubmissionRateLimitGuard, PortalTrackingOtpRateLimitGuard } from '../../core/rate-limit.guard.js';
+import { ComplaintFormOptionsService, type PublicComplaintFormOptions } from '../complaints/complaint-form-options.service.js';
 import { parsePortalComplaintBody, toPortalComplaintInput } from './dto/create-portal.dto.js';
 import { parsePortalFollowUpBody, parsePortalTrackingOtpBody, parsePortalTrackingOtpVerifyBody, toPortalOtpInput, toPortalOtpVerifyInput } from './dto/portal-tracking.dto.js';
 import type { PortalComplaintResponseDto, PortalFollowUpResponseDto, PortalOtpRequestResponseDto, PortalSessionResponseDto, PortalTrackingResponseDto } from './dto/portal-response.dto.js';
@@ -8,7 +9,15 @@ import { PortalService } from './portal.service.js';
 
 @Controller('portal')
 export class PortalController {
-  constructor(@Inject(PortalService) private readonly portalService: PortalService) {}
+  constructor(
+    @Inject(PortalService) private readonly portalService: PortalService,
+    @Inject(ComplaintFormOptionsService) private readonly formOptions: ComplaintFormOptionsService,
+  ) {}
+
+  @Get('options')
+  async options(): Promise<PublicComplaintFormOptions> {
+    return this.formOptions.listPublic();
+  }
 
   @Post('complaints')
   @UseGuards(PortalSubmissionRateLimitGuard)

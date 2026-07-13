@@ -32,6 +32,7 @@ export async function upsertVehicle(data: CreateComplaintData, customerId: strin
       makeEn: data.vehicleBrand ?? 'UNKNOWN',
       modelEn: data.vehicleModel ?? 'UNKNOWN',
       year: data.vehicleModelYear ?? 0,
+      dataSource: data.vehicleDataSource ?? 'MANUAL',
       customerId,
     },
     select: { id: true },

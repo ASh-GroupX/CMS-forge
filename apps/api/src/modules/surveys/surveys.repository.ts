@@ -28,6 +28,13 @@ export class SurveysRepository {
     });
   }
 
+  async findByTokenHash(tokenHash: string): Promise<SurveyRecord | null> {
+    return this.prisma.survey.findFirst({
+      where: { tokenHash },
+      select: surveySelect,
+    });
+  }
+
   async submitPending(id: string, data: SubmitSurveyData): Promise<SurveyRecord | null> {
     return this.prisma.$transaction(async (client) => {
       const updated = await client.survey.updateMany({

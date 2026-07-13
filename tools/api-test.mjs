@@ -3,14 +3,14 @@ import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const suite = process.argv.slice(2).find((arg) => arg !== '--');
-const allowedSuites = new Set(['auth', 'audit', 'admin', 'security', 'rbac', 'workflow', 'complaints', 'search', 'sla', 'notifications', 'portal', 'portal.tracking', 'attachments', 'integrations', 'surveys', 'reports', 'tasks', 'deals', 'cases']);
+const allowedSuites = new Set(['auth', 'audit', 'admin', 'security', 'rbac', 'workflow', 'complaints', 'complaints.related', 'complaints.drafts', 'search', 'sla', 'worker', 'notifications', 'portal', 'portal.tracking', 'attachments', 'integrations', 'surveys', 'reports', 'tasks', 'deals', 'cases', 'communication-groups']);
 
 if (!suite || !allowedSuites.has(suite)) {
   console.error(`Unknown API test suite: ${suite ?? '(missing)'}`);
   process.exit(1);
 }
 
-const resolvedSuite = suite === 'complaints' ? 'workflow' : suite;
+const resolvedSuite = suite === 'complaints' || suite === 'complaints.drafts' ? 'workflow' : suite;
 const suiteDir = join('apps', 'api', 'test', resolvedSuite);
 const moduleDir = join('apps', 'api', 'src', 'modules', resolvedSuite);
 const files = existsSync(suiteDir)
@@ -38,6 +38,15 @@ if (result.status !== 0) {
 }
 
 if (suite === 'audit') {
+  const docker = spawnSync('docker', ['info'], {
+    stdio: 'ignore',
+  });
+
+  if (docker.status !== 0) {
+    console.log('Audit append-only proof skipped: Docker is unavailable');
+    process.exit(0);
+  }
+
   const proof = spawnSync(process.execPath, ['tools/audit-append-only-proof.mjs'], {
     stdio: 'inherit',
   });

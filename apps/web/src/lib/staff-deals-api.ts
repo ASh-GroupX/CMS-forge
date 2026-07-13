@@ -13,13 +13,18 @@ export type DealBoardItem = {
   stageDueAt: string;
   blocker: string | null;
   delayAgeMinutes: number;
+  lastAction: DealActionHistory | null;
+  history: DealActionHistory[];
   createdAt: string;
   updatedAt: string;
 };
 
+export type DealActionHistory = { id: string; action: string; actor: { id: string | null; name: string | null }; createdAt: string; updateNote: string | null };
 export type DealStageBucket = { stage: DealStage; count: number; deals: DealBoardItem[] };
 export type DealHolderBucket = { currentHolderId: string; currentHolderName: string | null; count: number };
 export type DealHandoffBoard = { byStage: DealStageBucket[]; stuck: DealBoardItem[]; currentHolder: DealHolderBucket[] };
+export type DealLoadResult = { status: 'ready'; data: DealHandoffBoard } | { status: 'denied' | 'error' };
+export type DealWriteResult = 'success' | 'denied' | 'error';
 
 type DealHandoffBody = {
   byStage?: (Partial<DealStageBucket> & { deals?: Partial<DealBoardItem>[] })[];
@@ -40,31 +45,50 @@ export async function getDealHandoffBoard({
   cookieHeader?: string;
   fetchImpl?: typeof fetch;
 } = {}): Promise<DealHandoffBoard | null> {
+  const result = await getDealHandoffBoardLoadResult({ apiUrl, ...(cookieHeader !== undefined ? { cookieHeader } : {}), fetchImpl });
+  return result.status === 'ready' ? result.data : null;
+}
+
+export async function getDealHandoffBoardLoadResult({
+  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  cookieHeader,
+  fetchImpl = fetch,
+}: {
+  apiUrl?: string;
+  cookieHeader?: string;
+  fetchImpl?: typeof fetch;
+} = {}): Promise<DealLoadResult> {
   const cookies = cookieHeader ?? await incomingCookieHeader();
-  if (!hasStaffSessionCookie(cookies)) return null;
+  if (!hasStaffSessionCookie(cookies)) return { status: 'denied' };
 
   try {
     const response = await fetchImpl(new URL('/deals/handoff-board', apiUrl), {
       cache: 'no-store',
       headers: { Accept: 'application/json', cookie: cookies },
     });
-    if (!response.ok) return null;
-    return handoffFrom((await response.json()) as DealHandoffBody);
+    if (response.status === 401 || response.status === 403) return { status: 'denied' };
+    if (!response.ok) return { status: 'error' };
+    const data = handoffFrom((await response.json()) as DealHandoffBody);
+    return data ? { status: 'ready', data } : { status: 'error' };
   } catch {
-    return null;
+    return { status: 'error' };
   }
 }
 
-export async function createDeal(input: { title: string; branchId?: string; currentHolderId: string; stageDueAt: string; blocker?: string | null }): Promise<boolean> {
+export async function createDeal(input: { title: string; branchId?: string; currentHolderId: string; stageDueAt: string; blocker?: string | null }): Promise<DealWriteResult> {
   return dealWrite('/deals', 'POST', input);
 }
 
-export async function advanceDeal(id: string, input: { currentHolderId: string; stageDueAt: string }): Promise<boolean> {
+export async function advanceDeal(id: string, input: { currentHolderId: string; stageDueAt: string; updateNote: string }): Promise<DealWriteResult> {
   return dealWrite(`/deals/${encodeURIComponent(id)}/advance`, 'POST', input);
 }
 
-export async function updateDealBlocker(id: string, blocker: string | null): Promise<boolean> {
-  return dealWrite(`/deals/${encodeURIComponent(id)}/blocker`, 'PATCH', { blocker });
+export async function updateDealBlocker(id: string, input: { blocker: string | null; updateNote: string }): Promise<DealWriteResult> {
+  return dealWrite(`/deals/${encodeURIComponent(id)}/blocker`, 'PATCH', input);
+}
+
+export async function updateDealDetails(id: string, input: { currentHolderId: string; stageDueAt: string; updateNote: string }): Promise<DealWriteResult> {
+  return dealWrite(`/deals/${encodeURIComponent(id)}/details`, 'PATCH', input);
 }
 
 function handoffFrom(body: DealHandoffBody): DealHandoffBoard | null {
@@ -101,7 +125,16 @@ function dealFrom(deal: Partial<DealBoardItem>): DealBoardItem | null {
     typeof deal.createdAt !== 'string' ||
     typeof deal.updatedAt !== 'string'
   ) return null;
-  return { id: deal.id, title: deal.title, branchId: deal.branchId, branchName: deal.branchName ?? null, ownerId: deal.ownerId, ownerName: deal.ownerName ?? null, currentHolderId: deal.currentHolderId, currentHolderName: deal.currentHolderName ?? null, stage, stageDueAt: deal.stageDueAt, blocker: deal.blocker, delayAgeMinutes: deal.delayAgeMinutes, createdAt: deal.createdAt, updatedAt: deal.updatedAt };
+  const history = Array.isArray(deal.history) ? deal.history.map(actionFrom).filter((item): item is DealActionHistory => item !== null) : [];
+  return { id: deal.id, title: deal.title, branchId: deal.branchId, branchName: deal.branchName ?? null, ownerId: deal.ownerId, ownerName: deal.ownerName ?? null, currentHolderId: deal.currentHolderId, currentHolderName: deal.currentHolderName ?? null, stage, stageDueAt: deal.stageDueAt, blocker: deal.blocker, delayAgeMinutes: deal.delayAgeMinutes, lastAction: actionFrom(deal.lastAction) ?? history[0] ?? null, history, createdAt: deal.createdAt, updatedAt: deal.updatedAt };
+}
+
+function actionFrom(value: unknown): DealActionHistory | null {
+  const row = value as Partial<DealActionHistory> | null | undefined;
+  const actor = row?.actor as Partial<DealActionHistory['actor']> | null | undefined;
+  return row && typeof row.id === 'string' && typeof row.action === 'string' && typeof row.createdAt === 'string' && (row.updateNote === null || typeof row.updateNote === 'string') && (actor === null || (typeof actor?.id === 'string' || actor?.id === null) && (typeof actor?.name === 'string' || actor?.name === null))
+    ? { id: row.id, action: row.action, actor: { id: actor?.id ?? null, name: actor?.name ?? null }, createdAt: row.createdAt, updateNote: row.updateNote ?? null }
+    : null;
 }
 
 function holderBucketsFrom(rows: Partial<DealHolderBucket>[]): DealHolderBucket[] | null {
@@ -109,22 +142,27 @@ function holderBucketsFrom(rows: Partial<DealHolderBucket>[]): DealHolderBucket[
   return buckets.length === rows.length ? buckets : null;
 }
 
-async function dealWrite(path: string, method: 'PATCH' | 'POST', body: unknown): Promise<boolean> {
+async function dealWrite(path: string, method: 'PATCH' | 'POST', body: unknown): Promise<DealWriteResult> {
   const cookies = await incomingCookieHeader();
-  if (!hasStaffSessionCookie(cookies)) return false;
+  if (!hasStaffSessionCookie(cookies)) return 'denied';
   const csrf = readCookie(cookies, CSRF_COOKIE);
-  const response = await fetch(new URL(path, process.env.API_URL ?? 'http://localhost:3000'), {
-    body: JSON.stringify(body),
-    cache: 'no-store',
-    headers: {
-      Accept: 'application/json',
-      'content-type': 'application/json',
-      cookie: cookies,
-      ...(csrf ? { 'x-csrf-token': csrf } : {}),
-    },
-    method,
-  });
-  return response.ok;
+  try {
+    const response = await fetch(new URL(path, process.env.API_URL ?? 'http://localhost:3000'), {
+      body: JSON.stringify(body),
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+        'content-type': 'application/json',
+        cookie: cookies,
+        ...(csrf ? { 'x-csrf-token': csrf } : {}),
+      },
+      method,
+    });
+    if (response.status === 401 || response.status === 403) return 'denied';
+    return response.ok ? 'success' : 'error';
+  } catch {
+    return 'error';
+  }
 }
 
 function stageFrom(value: unknown): DealStage | null {

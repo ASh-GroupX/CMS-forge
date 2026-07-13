@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { PermissionGuard, Permissions, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
@@ -9,6 +9,13 @@ import type { AdminCategoryInput } from './admin-categories.service.js';
 @Controller('admin/categories')
 export class AdminCategoriesController {
   constructor(private readonly categories: AdminCategoriesService) {}
+
+  @Get()
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('MASTER_DATA_MANAGE')
+  list() {
+    return this.categories.list();
+  }
 
   @Post()
   @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
@@ -22,6 +29,13 @@ export class AdminCategoriesController {
   @Permissions('MASTER_DATA_MANAGE')
   update(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
     return this.categories.update(id, parseCategory(body), auditContext(request));
+  }
+
+  @Post(':id/deactivate')
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('MASTER_DATA_MANAGE')
+  deactivate(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    return this.categories.deactivate(id, auditContext(request));
   }
 }
 

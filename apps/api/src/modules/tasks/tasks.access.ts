@@ -1,5 +1,5 @@
 import { HttpStatus } from '@nestjs/common';
-import { RoleCode, TaskConfidentialityLevel } from '@prisma/client';
+import { RoleCode, TaskConfidentialityLevel, TaskParticipantRole } from '@prisma/client';
 import { AppException } from '../../core/http-kernel.js';
 import type { TaskRecord } from './tasks.repository.js';
 import type { TaskActor } from './tasks.service.js';
@@ -17,7 +17,7 @@ export function managerBranchId(scope: ManagerRollupScope): string | null {
   return scope.branchId;
 }
 
-export function assertCanAct(task: TaskRecord, actor: TaskActor): void {
+export function assertCanView(task: TaskRecord, actor: TaskActor): void {
   if (actor.roleCode === RoleCode.ADMIN) return;
   if (isParticipant(task, actor.userId)) return;
   if (!managerRoles.has(actor.roleCode) || !actor.branchId) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
@@ -25,6 +25,22 @@ export function assertCanAct(task: TaskRecord, actor: TaskActor): void {
   const taskBranches = new Set([task.owner?.branchId, task.assignee?.branchId, task.nextActionWho?.branchId].filter(Boolean));
   if (!taskBranches.has(actor.branchId)) throw new AppException('BRANCH_SCOPE_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
 }
+
+export function assertCanComment(task: TaskRecord, actor: TaskActor): void {
+  assertCanView(task, actor);
+}
+
+export function assertCanManage(task: TaskRecord, actor: TaskActor): void {
+  if (actor.roleCode === RoleCode.ADMIN) return;
+  const membership = task.participants.find((participant) => participant.userId === actor.userId);
+  if (task.ownerId === actor.userId || task.assigneeId === actor.userId || task.nextActionWhoId === actor.userId || membership?.role === TaskParticipantRole.PARTICIPANT) return;
+  if (!managerRoles.has(actor.roleCode) || !actor.branchId) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
+  if (task.confidentialityLevel !== TaskConfidentialityLevel.NORMAL) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
+  const taskBranches = new Set([task.owner?.branchId, task.assignee?.branchId, task.nextActionWho?.branchId].filter(Boolean));
+  if (!taskBranches.has(actor.branchId)) throw new AppException('BRANCH_SCOPE_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
+}
+
+export const assertCanAct = assertCanManage;
 
 function isParticipant(task: TaskRecord, userId: string): boolean {
   return task.ownerId === userId || task.assigneeId === userId || task.nextActionWhoId === userId || task.participants.some((participant) => participant.userId === userId);

@@ -1,28 +1,19 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StateBlock, type PrimitiveTone } from '../shared/ui-primitives';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import type { StaffDashboardSummary } from '../../lib/staff-dashboard-api';
 
 type SummaryKey = 'open' | 'overdue' | 'warnings' | 'closed' | 'averageTat';
 
-const SUMMARY_KEYS: readonly SummaryKey[] = ['open', 'overdue', 'warnings', 'closed', 'averageTat'];
-
-const VALUE_CLASS: Record<SummaryKey, string> = {
-  open: 'text-slate-900',
-  overdue: 'text-status-error',
-  warnings: 'text-status-warning',
-  closed: 'text-slate-900',
-  averageTat: 'text-brand',
+const VALUE_TONE: Record<SummaryKey, PrimitiveTone | undefined> = {
+  open: undefined,
+  overdue: 'danger',
+  warnings: 'warning',
+  closed: undefined,
+  averageTat: 'brand',
 };
-
-const EMPTY_SUMMARY: StaffDashboardSummary = {
-  openComplaints: 0,
-  overdueComplaints: 0,
-  slaWarningComplaints: 0,
-  closedComplaints: 0,
-  averageTatHours: 0,
-};
+const SECONDARY_KEYS: readonly SummaryKey[] = ['overdue', 'warnings', 'closed', 'averageTat'];
 
 export function DashboardSummary({
   locale,
@@ -33,36 +24,30 @@ export function DashboardSummary({
 }) {
   const shell = staffShellText[locale];
   const t = shell.dashboard;
-  const values = valuesFromSummary(locale, data ?? EMPTY_SUMMARY);
+  const values = data ? valuesFromSummary(locale, data) : null;
   const isEmpty = data !== null && Object.values(data).every((value) => value === 0);
 
   return (
-    <Card aria-label={t.title} className="rounded-md border-slate-200 bg-white shadow-sm" dir={shell.dir}>
-      <CardHeader className="border-b border-slate-200 p-4">
-        <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
+    <section aria-label={t.title} className="rounded-sm border border-line-subtle bg-surface" dir={shell.dir}>
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line-subtle bg-surface-raised px-3 py-2">
+        <h2 className="text-base font-semibold tracking-normal">{t.title}</h2>
         {data === null ? (
-          <p className="text-sm text-slate-600" role="alert">
-            {t.states.error}
-          </p>
+          <StateBlock className="mt-2" message={t.states.error} tone="error" />
         ) : isEmpty ? (
-          <p className="text-sm text-slate-600" role="status">
-            {t.states.empty}
-          </p>
+          <StateBlock className="mt-2" message={t.states.empty} />
         ) : null}
-      </CardHeader>
-      <CardContent className="grid gap-3 p-4 md:grid-cols-3 xl:grid-cols-5">
-        {SUMMARY_KEYS.map((key) => {
-          const [label, description] = t.cards[key];
-          return (
-            <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm" key={key}>
-              <p className="text-sm font-medium text-slate-600">{label}</p>
-              <p className={`mt-2 text-3xl font-semibold tracking-normal ${VALUE_CLASS[key]}`}>{values[key]}</p>
-              <p className="mt-1 text-xs text-slate-500">{description}</p>
+      </header>
+      <div className="p-3">
+        {values ? (
+          <div className="grid gap-2 lg:grid-cols-[1.1fr_2fr]">
+            <MetricCard item={metric('open', t, values)} primary />
+            <div className="grid gap-2 md:grid-cols-2">
+              {SECONDARY_KEYS.map((key) => <MetricCard item={metric(key, t, values)} key={key} />)}
             </div>
-          );
-        })}
-      </CardContent>
-    </Card>
+          </div>
+        ) : null}
+      </div>
+    </section>
   );
 }
 
@@ -71,16 +56,36 @@ export function DashboardSummaryLoading({ locale }: { locale: Locale }) {
   const t = shell.dashboard;
 
   return (
-    <Card aria-label={t.title} className="rounded-md border-slate-200 bg-white shadow-sm" dir={shell.dir}>
-      <CardHeader className="border-b border-slate-200 p-4">
-        <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4" role="status" aria-label={t.states.loading}>
+    <section aria-label={t.title} className="rounded-sm border border-line-subtle bg-surface" dir={shell.dir}>
+      <header className="border-b border-line-subtle bg-surface-raised px-3 py-2">
+        <h2 className="text-base font-semibold tracking-normal">{t.title}</h2>
+      </header>
+      <div className="grid gap-2 p-3 md:grid-cols-2 xl:grid-cols-4" role="status" aria-label={t.states.loading}>
         {Array.from({ length: 4 }).map((_, index) => (
-          <Skeleton className="h-28 rounded-md" key={index} />
+          <Skeleton className="h-24 rounded-sm" key={index} />
         ))}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
+  );
+}
+
+type MetricItem = { description: string; label: string; tone?: PrimitiveTone | undefined; value: string };
+
+function metric(key: SummaryKey, t: typeof staffShellText[Locale]['dashboard'], values: Record<SummaryKey, string>): MetricItem {
+  const [label, description] = t.cards[key];
+  return { description, label, tone: VALUE_TONE[key], value: values[key] };
+}
+
+function MetricCard({ item, primary = false }: { item: MetricItem; primary?: boolean }) {
+  const valueClass = item.tone === 'brand' ? 'text-brand' : item.tone === 'danger' ? 'text-status-error' : item.tone === 'warning' ? 'text-status-warning' : 'text-content-strong';
+  return (
+    <div className={`rounded-sm border border-line-subtle ${primary ? 'bg-content-strong text-brand-foreground lg:min-h-28' : 'bg-surface'} p-3`}>
+      <p className={`text-sm font-medium ${primary ? 'text-brand-foreground/70' : 'text-content-muted'}`}>{item.label}</p>
+      <p className={`${primary ? 'text-4xl text-brand-foreground' : 'text-2xl'} mt-2 font-semibold tracking-normal ${primary ? '' : valueClass}`}>{item.value}</p>
+      <p className={`mt-1 text-xs ${primary ? 'text-brand-foreground/65' : 'text-content-muted'}`}>
+        {item.description}
+      </p>
+    </div>
   );
 }
 

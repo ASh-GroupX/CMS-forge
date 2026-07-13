@@ -457,6 +457,45 @@
             }
           }
         }
+      },
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "adminCategoryList",
+        "summary": "List complaint categories including inactive records",
+        "responses": {
+          "200": {
+            "description": "Complaint categories",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCategoryListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/admin/users/{id}/deactivate": {
@@ -903,6 +942,91 @@
         }
       }
     },
+    "/integrations/dms/customer-vehicle": {
+      "get": {
+        "tags": [
+          "Integrations"
+        ],
+        "operationId": "integrationDmsCustomerVehicleLookup",
+        "summary": "Look up customer and vehicle data through the read-only DMS adapter",
+        "parameters": [
+          {
+            "name": "phone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "customerNumber",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vin",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "DMS lookup result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DmsLookupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid lookup query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/notifications/templates": {
       "get": {
         "tags": [
@@ -1265,6 +1389,95 @@
         }
       }
     },
+    "/complaints/{id}/corrections": {
+      "post": {
+        "tags": [
+          "Complaints"
+        ],
+        "operationId": "complaintCorrectionCreate",
+        "summary": "Correct staff complaint customer and vehicle provenance",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComplaintCorrectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Complaint correction applied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintCorrectionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role, branch scope, or CSRF denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Complaint correction conflict (COMPLAINT_INVALID_TRANSITION)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/complaints/{id}": {
       "get": {
         "tags": [
@@ -1297,6 +1510,308 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ComplaintDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or branch scope denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Complaint not found (COMPLAINT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/complaints/{id}/related": {
+      "get": {
+        "tags": [
+          "Complaints"
+        ],
+        "operationId": "complaintRelatedList",
+        "summary": "List related complaints for a staff complaint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Related complaints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintRelatedResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or branch scope denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Complaint not found (COMPLAINT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Complaints"
+        ],
+        "operationId": "complaintRelatedLink",
+        "summary": "Link a related complaint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComplaintRelationLinkRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Complaint relation linked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintRelationMutation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role, branch scope, or CSRF denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Complaint not found (COMPLAINT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/complaints/{id}/related/{targetId}": {
+      "delete": {
+        "tags": [
+          "Complaints"
+        ],
+        "operationId": "complaintRelatedUnlink",
+        "summary": "Unlink a related complaint",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "targetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complaint relation unlinked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintRelationMutation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role, branch scope, or CSRF denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Complaint not found (COMPLAINT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/complaints/{id}/duplicate-candidates": {
+      "get": {
+        "tags": [
+          "Complaints"
+        ],
+        "operationId": "complaintDuplicateCandidates",
+        "summary": "List likely duplicate complaint candidates",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Duplicate candidates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintDuplicateCandidatesResponse"
                 }
               }
             }
@@ -1491,6 +2006,73 @@
           },
           "403": {
             "description": "Role, branch scope, or CSRF denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Complaint not found (COMPLAINT_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Attachments"
+        ],
+        "operationId": "complaintAttachmentList",
+        "summary": "List staff complaint attachments",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Staff complaint attachments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or branch scope denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -1793,6 +2375,20 @@
             }
           },
           {
+            "name": "sla",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ON_TRACK",
+                "WARNING",
+                "BREACHED",
+                "CLOSED"
+              ]
+            }
+          },
+          {
             "name": "ownerId",
             "in": "query",
             "required": false,
@@ -2043,6 +2639,47 @@
         }
       }
     },
+    "/reports/catalog": {
+      "get": {
+        "tags": [
+          "Reports"
+        ],
+        "operationId": "reportsCatalog",
+        "summary": "Return report delivery and deferral catalog",
+        "responses": {
+          "200": {
+            "description": "Report delivery matrix",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportCatalogResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role or branch scope denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/reports/dashboard": {
       "get": {
         "tags": [
@@ -2188,6 +2825,14 @@
             }
           },
           {
+            "name": "departmentId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "severity",
             "in": "query",
             "required": false,
@@ -2302,6 +2947,14 @@
           },
           {
             "name": "categoryId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "departmentId",
             "in": "query",
             "required": false,
             "schema": {
@@ -2427,6 +3080,27 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/portal/options": {
+      "get": {
+        "tags": [
+          "Portal"
+        ],
+        "operationId": "portalOptionsList",
+        "summary": "List public-safe portal submission options",
+        "responses": {
+          "200": {
+            "description": "Public-safe portal submission options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalOptionsResponse"
                 }
               }
             }
@@ -3577,6 +4251,87 @@
         }
       }
     },
+    "/deals/{id}/details": {
+      "patch": {
+        "tags": [
+          "Deals"
+        ],
+        "operationId": "dealDetailsUpdate",
+        "summary": "Update deal holder and due date without advancing stage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DealDetailsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deal details updated without stage change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DealWriteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied, branch scope denied, or invalid CSRF token (CSRF_INVALID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Deal not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/cases/{caseId}/confidential-timeline": {
       "get": {
         "tags": [
@@ -4332,6 +5087,277 @@
           }
         }
       }
+    },
+    "/sla/policies/{id}/escalation": {
+      "patch": {
+        "tags": [
+          "SLA"
+        ],
+        "operationId": "slaPolicyEscalationUpdate",
+        "summary": "Update SLA policy escalation configuration",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlaPolicyEscalationConfigRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SLA policy escalation configuration updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlaPolicyWriteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing SLA_MANAGE permission or invalid CSRF token (RBAC_FORBIDDEN/CSRF_INVALID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/categories/{id}/deactivate": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "adminCategoryDeactivate",
+        "summary": "Deactivate a complaint category",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complaint category deactivated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCategory"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied or invalid CSRF token (CSRF_INVALID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sla/policies": {
+      "get": {
+        "tags": [
+          "SLA"
+        ],
+        "operationId": "slaPolicyList",
+        "summary": "List SLA policies for admin configuration",
+        "responses": {
+          "200": {
+            "description": "SLA policies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlaPolicyListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sla/policies/{id}": {
+      "patch": {
+        "tags": [
+          "SLA"
+        ],
+        "operationId": "slaPolicyUpdate",
+        "summary": "Update SLA policy duration warning timezone calendar and escalation configuration",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlaPolicyConfigRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SLA policy configuration updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlaPolicyWriteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body (VALIDATION_FAILED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied or invalid CSRF token (CSRF_INVALID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/communication-groups": {
+      "get": {
+        "tags": ["Communication groups"],
+        "operationId": "communicationGroupsList",
+        "summary": "List server-scoped personal and shared communication groups",
+        "responses": { "200": { "description": "Communication groups", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunicationGroupsResponse" } } } }, "401": { "description": "Missing or invalid session" } }
+      },
+      "post": {
+        "tags": ["Communication groups"],
+        "operationId": "communicationGroupsCreate",
+        "summary": "Create a personal group or an Admin-managed shared group",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunicationGroupWrite" } } } },
+        "responses": { "201": { "description": "Communication group created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunicationGroup" } } } }, "400": { "description": "Invalid request" }, "403": { "description": "Role or staff scope denied" } }
+      }
+    },
+    "/communication-groups/{id}": {
+      "patch": { "tags": ["Communication groups"], "operationId": "communicationGroupsUpdate", "summary": "Update an owned personal group or Admin-managed shared group", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunicationGroupWrite" } } } }, "responses": { "200": { "description": "Communication group updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunicationGroup" } } } }, "403": { "description": "Ownership or role denied" } } },
+      "delete": { "tags": ["Communication groups"], "operationId": "communicationGroupsDeactivate", "summary": "Deactivate a communication group without deleting history", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "Group deactivated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } }, "403": { "description": "Ownership or role denied" } } }
+    },
+    "/complaints/{id}/communication-targets": {
+      "get": { "tags": ["Complaints"], "operationId": "complaintCommunicationTargets", "summary": "Search server-authorized employees and mentionable groups for a complaint", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }, { "name": "q", "in": "query", "required": false, "schema": { "type": "string" } }], "responses": { "200": { "description": "Eligible collaboration targets", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunicationTargetsResponse" } } } }, "403": { "description": "Record access denied" } } }
+    },
+    "/complaints/{id}/watchers": {
+      "post": { "tags": ["Complaints"], "operationId": "complaintWatcherAdd", "summary": "Add an eligible individual CC watcher", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WatcherRequest" } } } }, "responses": { "200": { "description": "Watcher added", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } }, "403": { "description": "Record or target denied" } } }
+    },
+    "/complaints/{id}/watchers/{userId}": {
+      "delete": { "tags": ["Complaints"], "operationId": "complaintWatcherRemove", "summary": "Remove a complaint CC watcher", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }, { "name": "userId", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "Watcher removed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } }, "403": { "description": "Record access denied" } } }
+    },
+    "/tasks/{id}/communication-targets": {
+      "get": { "tags": ["Tasks"], "operationId": "taskCommunicationTargets", "summary": "Search server-authorized employees and mentionable groups for a task", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }, { "name": "q", "in": "query", "required": false, "schema": { "type": "string" } }], "responses": { "200": { "description": "Eligible collaboration targets", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunicationTargetsResponse" } } } }, "403": { "description": "Record access denied" } } }
+    },
+    "/tasks/{id}/watchers": {
+      "post": { "tags": ["Tasks"], "operationId": "taskWatcherAdd", "summary": "Add an eligible individual CC watcher", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WatcherRequest" } } } }, "responses": { "200": { "description": "Watcher added", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } }, "403": { "description": "Task manage access or target denied" } } }
+    },
+    "/tasks/{id}/watchers/{userId}": {
+      "delete": { "tags": ["Tasks"], "operationId": "taskWatcherRemove", "summary": "Remove a task CC watcher", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }, { "name": "userId", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "Watcher removed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } }, "403": { "description": "Task manage access denied" } } }
     }
   },
   "components": {
@@ -4394,6 +5420,10 @@
             "items": {
               "$ref": "#/components/schemas/FieldError"
             }
+          },
+          "actualRecipientCount": {
+            "type": "integer",
+            "minimum": 0
           }
         },
         "additionalProperties": false
@@ -4414,6 +5444,139 @@
           },
           "message": {
             "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DmsLookupStatus": {
+        "type": "string",
+        "enum": [
+          "MATCH",
+          "MULTIPLE_MATCHES",
+          "NOT_FOUND",
+          "PROVIDER_DOWN",
+          "DISABLED"
+        ]
+      },
+      "DmsCustomerVehicleMatch": {
+        "type": "object",
+        "required": [
+          "customerName",
+          "primaryPhone",
+          "source"
+        ],
+        "properties": {
+          "customerId": {
+            "type": "string"
+          },
+          "customerCode": {
+            "type": "string"
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "primaryPhone": {
+            "type": "string"
+          },
+          "secondaryPhone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "vehicleId": {
+            "type": "string"
+          },
+          "vin": {
+            "type": "string"
+          },
+          "plateNumber": {
+            "type": "string"
+          },
+          "brand": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "modelYear": {
+            "type": "integer"
+          },
+          "saleDate": {
+            "type": "string"
+          },
+          "warrantyStatus": {
+            "type": "string"
+          },
+          "serviceBranch": {
+            "type": "string"
+          },
+          "salesBranch": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "DMS"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "DmsLookupResult": {
+        "type": "object",
+        "required": [
+          "provider",
+          "action",
+          "result",
+          "latencyMs",
+          "correlationId",
+          "manualFallbackAllowed",
+          "matches"
+        ],
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "in-memory"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "customerVehicleLookup"
+            ]
+          },
+          "result": {
+            "$ref": "#/components/schemas/DmsLookupStatus"
+          },
+          "latencyMs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "correlationId": {
+            "type": "string"
+          },
+          "manualFallbackAllowed": {
+            "type": "boolean"
+          },
+          "matches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DmsCustomerVehicleMatch"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "DmsLookupResponse": {
+        "type": "object",
+        "required": [
+          "lookup"
+        ],
+        "properties": {
+          "lookup": {
+            "$ref": "#/components/schemas/DmsLookupResult"
           }
         },
         "additionalProperties": false
@@ -4943,6 +6106,18 @@
             ],
             "minLength": 1
           },
+          "customerSource": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "LOCAL",
+              "MANUAL",
+              "DMS",
+              null
+            ]
+          },
           "categoryId": {
             "type": "string",
             "minLength": 1
@@ -4988,6 +6163,62 @@
               "null"
             ],
             "minLength": 1
+          },
+          "vehiclePlate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "vehicleBrand": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "vehicleModel": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "vehicleModelYear": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "vehicleSource": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "LOCAL",
+              "MANUAL",
+              "DMS",
+              null
+            ]
+          },
+          "vehicleDataUnavailableReason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "departmentId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "saveAsDraft": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -5025,6 +6256,41 @@
                   "REOPENED",
                   "REJECTED"
                 ]
+              },
+              "attachments": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Attachment"
+                }
+              },
+              "attachmentWarning": {
+                "type": "object",
+                "required": [
+                  "code",
+                  "message",
+                  "failedCount",
+                  "uploadedCount"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "enum": [
+                      "PORTAL_ATTACHMENT_UPLOAD_FAILED"
+                    ]
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "failedCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "uploadedCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "additionalProperties": false
               }
             },
             "additionalProperties": false
@@ -5037,13 +6303,29 @@
         "required": [
           "customerName",
           "customerPhone",
-          "categoryId",
-          "subcategoryId",
           "description",
           "incidentAt",
-          "branchId",
-          "subject",
-          "severity"
+          "subject"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "categoryId",
+              "subcategoryId",
+              "branchId",
+              "severity"
+            ]
+          },
+          {
+            "required": [
+              "manualTriage"
+            ],
+            "properties": {
+              "manualTriage": {
+                "const": true
+              }
+            }
+          }
         ],
         "properties": {
           "customerName": {
@@ -5087,6 +6369,10 @@
               "LOW"
             ]
           },
+          "manualTriage": {
+            "type": "boolean",
+            "description": "When true, the API resolves missing branch/category/severity fields to configured manual triage defaults."
+          },
           "vehicleRelated": {
             "type": "boolean"
           },
@@ -5103,6 +6389,12 @@
               "null"
             ],
             "minLength": 1
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttachmentUploadRequest"
+            }
           }
         },
         "additionalProperties": false
@@ -5128,11 +6420,21 @@
       "PortalOtpRequestResponse": {
         "type": "object",
         "required": [
-          "ok"
+          "ok",
+          "verificationId",
+          "expiresAt"
         ],
         "properties": {
           "ok": {
             "const": true
+          },
+          "verificationId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "additionalProperties": false
@@ -5470,6 +6772,7 @@
         "required": [
           "branches",
           "categories",
+          "departments",
           "severities"
         ],
         "properties": {
@@ -5480,6 +6783,12 @@
             }
           },
           "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplaintFormOption"
+            }
+          },
+          "departments": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ComplaintFormOption"
@@ -5850,6 +7159,14 @@
                 "required": [
                   "description",
                   "incidentAt",
+                  "customer",
+                  "vehicle",
+                  "customerSource",
+                  "manualCustomer",
+                  "vehicleRelated",
+                  "vehicleSource",
+                  "manualVehicle",
+                  "vehicleDataUnavailableReason",
                   "statusHistory",
                   "caseSummary"
                 ],
@@ -5863,6 +7180,128 @@
                       "null"
                     ],
                     "format": "date-time"
+                  },
+                  "customer": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "name",
+                      "phone",
+                      "identifier",
+                      "source"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "phone": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "identifier": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "source": {
+                        "type": "string",
+                        "enum": [
+                          "LOCAL",
+                          "MANUAL",
+                          "DMS"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "vehicle": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "vin",
+                          "plate",
+                          "make",
+                          "model",
+                          "year",
+                          "source"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "vin": {
+                            "type": "string"
+                          },
+                          "plate": {
+                            "type": "string"
+                          },
+                          "make": {
+                            "type": "string"
+                          },
+                          "model": {
+                            "type": "string"
+                          },
+                          "year": {
+                            "type": "integer"
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "LOCAL",
+                              "MANUAL",
+                              "DMS"
+                            ]
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "customerSource": {
+                    "type": "string",
+                    "enum": [
+                      "LOCAL",
+                      "MANUAL",
+                      "DMS"
+                    ]
+                  },
+                  "manualCustomer": {
+                    "type": "boolean"
+                  },
+                  "vehicleRelated": {
+                    "type": "boolean"
+                  },
+                  "vehicleSource": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "LOCAL",
+                      "MANUAL",
+                      "DMS",
+                      null
+                    ]
+                  },
+                  "manualVehicle": {
+                    "type": "boolean"
+                  },
+                  "vehicleDataUnavailableReason": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
                   },
                   "statusHistory": {
                     "type": "array",
@@ -5905,76 +7344,42 @@
               "INTERNAL",
               "PUBLIC"
             ]
-          }
+          },
+          "mentionTargets": {
+            "type": "array",
+            "maxItems": 20,
+            "items": { "$ref": "#/components/schemas/CollaborationMentionTarget" }
+          },
+          "ccUserIds": {
+            "type": "array",
+            "maxItems": 100,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "confirmedRecipientCount": { "type": "integer", "minimum": 1, "maximum": 100 },
+          "actionTask": { "$ref": "#/components/schemas/ActionTask" }
         },
+        "additionalProperties": false
+      },
+      "ComplaintCommentMention": {
+        "type": "object",
+        "required": ["userId", "name", "nameAr", "source", "sourceLabel"],
+        "properties": { "userId": { "type": "string" }, "name": { "type": "string" }, "nameAr": { "type": "string" }, "source": { "type": "string" }, "sourceLabel": { "type": "string" } },
         "additionalProperties": false
       },
       "ComplaintComment": {
         "type": "object",
-        "required": [
-          "id",
-          "complaintId",
-          "authorId",
-          "body",
-          "visibility",
-          "createdAt"
-        ],
+        "required": ["id", "complaintId", "authorId", "body", "visibility", "createdAt"],
         "properties": {
-          "id": {
-            "type": "string"
-          },
-          "complaintId": {
-            "type": "string"
-          },
-          "authorId": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "body": {
-            "type": "string"
-          },
-          "visibility": {
-            "type": "string",
-            "enum": [
-              "INTERNAL",
-              "PUBLIC"
-            ]
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          }
+          "id": { "type": "string" }, "complaintId": { "type": "string" }, "authorId": { "type": ["string", "null"] }, "authorName": { "type": "string" }, "authorNameAr": { "type": "string" }, "body": { "type": "string" }, "visibility": { "type": "string", "enum": ["INTERNAL", "PUBLIC"] },
+          "mentions": { "type": "array", "items": { "$ref": "#/components/schemas/ComplaintCommentMention" } }, "createdTaskId": { "type": ["string", "null"] }, "createdAt": { "type": "string", "format": "date-time" }
         },
         "additionalProperties": false
       },
       "ComplaintCommentResponse": {
-        "type": "object",
-        "required": [
-          "comment"
-        ],
-        "properties": {
-          "comment": {
-            "$ref": "#/components/schemas/ComplaintComment"
-          }
-        },
-        "additionalProperties": false
+        "type": "object", "required": ["comment"], "properties": { "comment": { "$ref": "#/components/schemas/ComplaintComment" } }, "additionalProperties": false
       },
       "ComplaintPublicCommentsResponse": {
-        "type": "object",
-        "required": [
-          "items"
-        ],
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ComplaintComment"
-            }
-          }
-        },
-        "additionalProperties": false
+        "type": "object", "required": ["items"], "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/ComplaintComment" } } }, "additionalProperties": false
       },
       "AttachmentUploadRequest": {
         "type": "object",
@@ -6155,6 +7560,13 @@
             "minLength": 1
           },
           "customerCommunicationStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "vehicleDataUnavailableReason": {
             "type": [
               "string",
               "null"
@@ -7184,7 +8596,11 @@
           "averageDelayHours",
           "customerPromiseKeptPercent",
           "reopenedCount",
+          "reopenRate",
           "escalationCount",
+          "slaBreachRate",
+          "medianTatHours",
+          "agingBuckets",
           "averageFirstResponseHours",
           "averageResolutionHours"
         ],
@@ -7209,9 +8625,49 @@
             "type": "integer",
             "minimum": 0
           },
+          "reopenRate": {
+            "type": "number",
+            "minimum": 0
+          },
           "escalationCount": {
             "type": "integer",
             "minimum": 0
+          },
+          "slaBreachRate": {
+            "type": "number",
+            "minimum": 0
+          },
+          "medianTatHours": {
+            "type": "number",
+            "minimum": 0
+          },
+          "agingBuckets": {
+            "type": "object",
+            "required": [
+              "zeroToOneDays",
+              "twoToThreeDays",
+              "fourToSevenDays",
+              "overSevenDays"
+            ],
+            "properties": {
+              "zeroToOneDays": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "twoToThreeDays": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "fourToSevenDays": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "overSevenDays": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": false
           },
           "averageFirstResponseHours": {
             "type": "number",
@@ -7948,7 +9404,8 @@
         "type": "object",
         "required": [
           "currentHolderId",
-          "stageDueAt"
+          "stageDueAt",
+          "updateNote"
         ],
         "properties": {
           "currentHolderId": {
@@ -7958,6 +9415,33 @@
           "stageDueAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "updateNote": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "DealDetailsRequest": {
+        "type": "object",
+        "required": [
+          "currentHolderId",
+          "stageDueAt",
+          "updateNote"
+        ],
+        "properties": {
+          "currentHolderId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "stageDueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updateNote": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "additionalProperties": false
@@ -7965,7 +9449,8 @@
       "DealBlockerRequest": {
         "type": "object",
         "required": [
-          "blocker"
+          "blocker",
+          "updateNote"
         ],
         "properties": {
           "blocker": {
@@ -7973,6 +9458,10 @@
               "string",
               "null"
             ]
+          },
+          "updateNote": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "additionalProperties": false
@@ -8185,6 +9674,7 @@
           "authorId",
           "authorName",
           "body",
+          "mentions",
           "createdAt"
         ],
         "properties": {
@@ -8203,8 +9693,22 @@
               "null"
             ]
           },
+          "authorNameAr": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "body": {
             "type": "string"
+          },
+          "mentions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["userId", "name", "nameAr", "source", "sourceLabel"],
+              "properties": { "userId": { "type": "string" }, "name": { "type": ["string", "null"] }, "nameAr": { "type": ["string", "null"] }, "source": { "type": "string" }, "sourceLabel": { "type": "string" } }
+            }
           },
           "createdAt": {
             "type": "string",
@@ -8238,7 +9742,10 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 2000
-          }
+          },
+          "mentionTargets": { "type": "array", "maxItems": 20, "items": { "$ref": "#/components/schemas/CollaborationMentionTarget" } },
+          "ccUserIds": { "type": "array", "maxItems": 100, "items": { "type": "string", "minLength": 1 } },
+          "confirmedRecipientCount": { "type": "integer", "minimum": 1, "maximum": 100 }
         },
         "additionalProperties": false
       },
@@ -8395,6 +9902,815 @@
             }
           }
         },
+        "additionalProperties": false
+      },
+      "SlaPolicy": {
+        "type": "object",
+        "required": [
+          "id",
+          "severity",
+          "stage",
+          "branchId",
+          "departmentId",
+          "categoryId",
+          "escalationLevel1",
+          "escalationLevel2",
+          "escalationLevel3",
+          "escalationLevel2AfterBreachMinutes",
+          "escalationLevel3AfterBreachMinutes",
+          "durationMinutes",
+          "warningPercent",
+          "branchTimezone",
+          "workingCalendarMode",
+          "pausePolicy",
+          "totalTargetMinutes",
+          "isActive"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH",
+              "CRITICAL"
+            ]
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "INTAKE",
+              "MANAGER_REVIEW",
+              "BRANCH_REVIEW",
+              "INVESTIGATION",
+              "RESOLUTION",
+              "CLOSURE"
+            ]
+          },
+          "branchId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "departmentId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "categoryId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "escalationLevel1": {
+            "type": "string"
+          },
+          "escalationLevel2": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "escalationLevel3": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "escalationLevel2AfterBreachMinutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "escalationLevel3AfterBreachMinutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "warningPercent": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "branchTimezone": {
+            "type": "string"
+          },
+          "workingCalendarMode": {
+            "type": "string",
+            "enum": [
+              "CALENDAR_HOURS",
+              "ALWAYS_ON"
+            ]
+          },
+          "pausePolicy": {
+            "type": "string"
+          },
+          "totalTargetMinutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SlaPolicyEscalationConfigRequest": {
+        "type": "object",
+        "required": [
+          "escalationLevel1"
+        ],
+        "properties": {
+          "escalationLevel1": {
+            "type": "string",
+            "minLength": 1
+          },
+          "escalationLevel2": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "escalationLevel3": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "escalationLevel2AfterBreachMinutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "escalationLevel3AfterBreachMinutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "SlaPolicyWriteResponse": {
+        "type": "object",
+        "required": [
+          "policy"
+        ],
+        "properties": {
+          "policy": {
+            "$ref": "#/components/schemas/SlaPolicy"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintRelatedResponse": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplaintRelationItem"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintDuplicateCandidatesResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "windowDays"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplaintRelationItem"
+            }
+          },
+          "windowDays": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintRelationLinkRequest": {
+        "type": "object",
+        "required": [
+          "targetComplaintId"
+        ],
+        "properties": {
+          "targetComplaintId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintRelationMutation": {
+        "type": "object",
+        "required": [
+          "relation"
+        ],
+        "properties": {
+          "relation": {
+            "type": "object",
+            "required": [
+              "sourceComplaintId",
+              "targetComplaintId",
+              "changed"
+            ],
+            "properties": {
+              "sourceComplaintId": {
+                "type": "string"
+              },
+              "targetComplaintId": {
+                "type": "string"
+              },
+              "changed": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintCorrectionRequest": {
+        "type": "object",
+        "required": [
+          "expectedUpdatedAt",
+          "reason"
+        ],
+        "properties": {
+          "expectedUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "customerId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "customerSource": {
+            "type": "string",
+            "enum": [
+              "LOCAL",
+              "MANUAL",
+              "DMS"
+            ]
+          },
+          "manualCustomer": {
+            "type": "boolean"
+          },
+          "vehicleId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "vehicleSource": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "LOCAL",
+              "MANUAL",
+              "DMS",
+              null
+            ]
+          },
+          "manualVehicle": {
+            "type": "boolean"
+          },
+          "vehicleRelated": {
+            "type": "boolean"
+          },
+          "vehicleDataUnavailableReason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintCorrection": {
+        "type": "object",
+        "required": [
+          "complaintId",
+          "changedFields"
+        ],
+        "properties": {
+          "complaintId": {
+            "type": "string"
+          },
+          "changedFields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "customerId",
+                "customerSource",
+                "manualCustomer",
+                "vehicleId",
+                "vehicleSource",
+                "manualVehicle",
+                "vehicleRelated",
+                "vehicleDataUnavailableReason"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintCorrectionResponse": {
+        "type": "object",
+        "required": [
+          "correction"
+        ],
+        "properties": {
+          "correction": {
+            "$ref": "#/components/schemas/ComplaintCorrection"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReportCatalogItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "users",
+          "mvp",
+          "requiredFilters",
+          "requiredOutputs",
+          "status",
+          "implemented",
+          "deferred",
+          "signoffRequired"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^RPT-[0-9]{3}$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "users": {
+            "type": "string"
+          },
+          "mvp": {
+            "type": "string",
+            "enum": [
+              "YES",
+              "SHOULD"
+            ]
+          },
+          "requiredFilters": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requiredOutputs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DELIVERED",
+              "DEFERRED"
+            ]
+          },
+          "implemented": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "deferred": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "signoffRequired": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReportCatalogSummary": {
+        "type": "object",
+        "required": [
+          "total",
+          "delivered",
+          "deferred",
+          "signoffRequired"
+        ],
+        "properties": {
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "delivered": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "deferred": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "signoffRequired": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReportCatalogResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "summary"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportCatalogItem"
+            }
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ReportCatalogSummary"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AttachmentListResponse": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Attachment"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintRelationItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "referenceNumber",
+          "status",
+          "severity",
+          "subject",
+          "branchId",
+          "branchName",
+          "ownerId",
+          "ownerName",
+          "createdAt",
+          "updatedAt",
+          "customerName"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "referenceNumber": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "MANAGER_REVIEW",
+              "BRANCH_REVIEW",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED",
+              "REOPENED",
+              "REJECTED"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "CRITICAL",
+              "HIGH",
+              "MEDIUM",
+              "LOW"
+            ]
+          },
+          "subject": {
+            "type": "string"
+          },
+          "branchId": {
+            "type": "string"
+          },
+          "branchName": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ownerName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "customerName": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortalPublicOption": {
+        "type": "object",
+        "required": [
+          "id",
+          "nameEn",
+          "nameAr"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortalPublicCategoryOption": {
+        "type": "object",
+        "required": [
+          "id",
+          "nameEn",
+          "nameAr",
+          "parentId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "PortalOptionsResponse": {
+        "type": "object",
+        "required": [
+          "branches",
+          "categories",
+          "severities"
+        ],
+        "properties": {
+          "branches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortalPublicOption"
+            }
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortalPublicCategoryOption"
+            }
+          },
+          "severities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "CRITICAL",
+                "HIGH",
+                "MEDIUM",
+                "LOW"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "AdminCategoryListResponse": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminCategory"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "SlaPolicyListResponse": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SlaPolicy"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "SlaPolicyConfigRequest": {
+        "type": "object",
+        "required": [
+          "durationMinutes",
+          "warningPercent",
+          "branchTimezone",
+          "workingCalendarMode",
+          "escalationLevel1"
+        ],
+        "properties": {
+          "durationMinutes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "warningPercent": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "branchTimezone": {
+            "type": "string",
+            "minLength": 1
+          },
+          "workingCalendarMode": {
+            "type": "string",
+            "enum": [
+              "CALENDAR_HOURS",
+              "ALWAYS_ON"
+            ]
+          },
+          "escalationLevel1": {
+            "type": "string",
+            "minLength": 1
+          },
+          "escalationLevel2": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "escalationLevel3": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "escalationLevel2AfterBreachMinutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "escalationLevel3AfterBreachMinutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "CollaborationMentionTarget": {
+        "type": "object",
+        "required": ["type", "id"],
+        "properties": {
+          "type": { "type": "string", "enum": ["USER", "SYSTEM_ROLE", "SYSTEM_DEPARTMENT", "CUSTOM_GROUP"] },
+          "id": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      },
+      "ActionTask": {
+        "type": "object",
+        "required": ["title", "assigneeId", "dueAt"],
+        "properties": { "title": { "type": "string", "minLength": 1, "maxLength": 240 }, "assigneeId": { "type": "string", "minLength": 1 }, "dueAt": { "type": "string", "format": "date-time" } },
+        "additionalProperties": false
+      },
+      "CommunicationTarget": {
+        "type": "object",
+        "required": ["id", "type", "label", "labelAr", "recipientCount"],
+        "properties": { "id": { "type": "string" }, "type": { "type": "string", "enum": ["USER", "SYSTEM_ROLE", "SYSTEM_DEPARTMENT", "CUSTOM_GROUP"] }, "label": { "type": "string" }, "labelAr": { "type": "string" }, "recipientCount": { "type": "integer", "minimum": 0 } },
+        "additionalProperties": false
+      },
+      "CommunicationTargetsResponse": {
+        "type": "object",
+        "required": ["targets", "recipientLimit", "confirmationRequiredAbove"],
+        "properties": { "targets": { "type": "array", "items": { "$ref": "#/components/schemas/CommunicationTarget" } }, "recipientLimit": { "type": "integer", "minimum": 1 }, "confirmationRequiredAbove": { "type": "integer", "minimum": 1 }, "currentWatchers": { "type": "array", "items": { "type": "object", "required": ["userId", "name", "nameAr"], "properties": { "userId": { "type": "string" }, "name": { "type": "string" }, "nameAr": { "type": "string" } } } }, "capabilities": { "type": "object" } },
+        "additionalProperties": false
+      },
+      "WatcherRequest": {
+        "type": "object",
+        "required": ["userId"],
+        "properties": { "userId": { "type": "string", "minLength": 1 } },
+        "additionalProperties": false
+      },
+      "CommunicationGroupMember": {
+        "type": "object",
+        "required": ["userId", "displayName", "displayNameAr"],
+        "properties": { "userId": { "type": "string" }, "displayName": { "type": "string" }, "displayNameAr": { "type": "string" } },
+        "additionalProperties": false
+      },
+      "CommunicationGroup": {
+        "type": "object",
+        "required": ["id", "name", "visibility", "ownerId", "members", "createdAt", "updatedAt"],
+        "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "visibility": { "type": "string", "enum": ["PERSONAL", "SHARED"] }, "ownerId": { "type": "string" }, "members": { "type": "array", "items": { "$ref": "#/components/schemas/CommunicationGroupMember" } }, "createdAt": { "type": "string", "format": "date-time" }, "updatedAt": { "type": "string", "format": "date-time" } },
+        "additionalProperties": false
+      },
+      "CommunicationGroupWrite": {
+        "type": "object",
+        "required": ["name", "visibility", "memberUserIds"],
+        "properties": { "name": { "type": "string", "minLength": 1, "maxLength": 80 }, "visibility": { "type": "string", "enum": ["PERSONAL", "SHARED"] }, "memberUserIds": { "type": "array", "maxItems": 100, "items": { "type": "string", "minLength": 1 } } },
+        "additionalProperties": false
+      },
+      "CommunicationGroupsResponse": {
+        "type": "object",
+        "required": ["items", "eligibleMembers", "canManageShared"],
+        "properties": { "items": { "type": "array", "items": { "$ref": "#/components/schemas/CommunicationGroup" } }, "eligibleMembers": { "type": "array", "items": { "$ref": "#/components/schemas/CommunicationGroupMember" } }, "canManageShared": { "type": "boolean" } },
         "additionalProperties": false
       }
     }

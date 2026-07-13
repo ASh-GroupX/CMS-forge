@@ -31,6 +31,7 @@ test('notifications service queues one internal in-app row', async () => {
   assert.deepEqual(writes[0], {
     complaintId: 'cmp_1',
     recipientUserId: 'usr_1',
+    channel: NotificationChannel.IN_APP,
     templateCode: 'sla.breach.internal',
     locale: 'en',
     payload: { breachId: 'breach_1', severity: 'HIGH' },
@@ -73,6 +74,7 @@ test('notifications service lists only current recipient rows', async () => {
     locale: 'en',
     payload: { taskId: 'task_1', title: 'Call customer' },
     queuedAt: '2026-06-21T09:00:00.000Z',
+    readAt: null,
   });
 });
 
@@ -101,6 +103,7 @@ test('notifications service queues idempotent internal rows with payload key', a
   assert.deepEqual(writes[0], {
     complaintId: null,
     recipientUserId: 'usr_1',
+    channel: NotificationChannel.IN_APP,
     templateCode: 'task.escalation.internal',
     locale: 'en',
     payload: {
@@ -112,28 +115,30 @@ test('notifications service queues idempotent internal rows with payload key', a
   });
 });
 
-test('notifications service accepts portal verification request metadata without secret payload keys', async () => {
+test('notifications service queues portal OTP SMS body without secret payload keys', async () => {
   const writes: unknown[] = [];
   const service = new NotificationsService({
     queueInternal: async (data) => {
       writes.push(data);
-      return { id: 'notif_portal', ...data, channel: NotificationChannel.IN_APP, status: NotificationStatus.QUEUED };
+      return { id: 'notif_portal', ...data, status: NotificationStatus.QUEUED };
     },
   } as NotificationsRepository, {} as IntegrationsService, {} as never);
 
   await service.queueInternal({
     complaintId: 'cmp_1',
-    templateCode: 'portal.verification.requested.internal',
+    channel: NotificationChannel.SMS,
+    templateCode: 'portal.verification.otp.customer',
     locale: 'en',
-    payload: { verificationId: 'ver_1', referenceNumber: 'CMP-000010', expiresAt: '2026-06-19T10:05:00.000Z' },
+    payload: { to: '+966500000001', textBody: 'Your complaint tracking code for CMP-000010 is 123456.', referenceNumber: 'CMP-000010', expiresAt: '2026-06-19T10:05:00.000Z' },
   });
 
   assert.deepEqual(writes[0], {
     complaintId: 'cmp_1',
     recipientUserId: null,
-    templateCode: 'portal.verification.requested.internal',
+    channel: NotificationChannel.SMS,
+    templateCode: 'portal.verification.otp.customer',
     locale: 'en',
-    payload: { verificationId: 'ver_1', referenceNumber: 'CMP-000010', expiresAt: '2026-06-19T10:05:00.000Z' },
+    payload: { to: '+966500000001', textBody: 'Your complaint tracking code for CMP-000010 is 123456.', referenceNumber: 'CMP-000010', expiresAt: '2026-06-19T10:05:00.000Z' },
   });
 });
 

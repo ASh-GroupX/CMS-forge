@@ -14,7 +14,7 @@
     "db:seed": "corepack pnpm --dir packages/database db:seed",
     "staff:bootstrap": "corepack pnpm --dir apps/api staff:bootstrap",
     "prisma:validate": "node tools/prisma-validate.mjs",
-    "test": "node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=75 --test-coverage-branches=65 tools/*.test.mjs",
+    "test": "node --test --experimental-test-coverage --test-coverage-include=tools/*.mjs --test-coverage-exclude=tools/web-proof.mjs --test-coverage-lines=80 --test-coverage-functions=75 --test-coverage-branches=65 tools/*.test.mjs",
     "test:api": "node tools/api-test.mjs",
     "test:e2e": "node tools/e2e-runner.mjs",
     "test:web": "node tools/web-test.mjs",

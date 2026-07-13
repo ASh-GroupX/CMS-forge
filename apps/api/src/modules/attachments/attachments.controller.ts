@@ -7,8 +7,8 @@ import { CsrfGuard } from '../../core/csrf.guard.js';
 import { ComplaintsService } from '../complaints/complaints.service.js';
 import { PortalService } from '../portal/portal.service.js';
 import { AttachmentsService } from './attachments.service.js';
-import type { AttachmentDownloadResponseDto, AttachmentUploadResponseDto } from './dto/attachment-response.dto.js';
-import { attachmentDownloadDto, attachmentDto } from './dto/attachment-response.dto.js';
+import type { AttachmentDownloadResponseDto, AttachmentListResponseDto, AttachmentUploadResponseDto } from './dto/attachment-response.dto.js';
+import { attachmentDownloadDto, attachmentDto, attachmentListDto } from './dto/attachment-response.dto.js';
 import { parseCreateAttachmentBody, toCreateAttachmentInput } from './dto/create-attachment.dto.js';
 
 @Controller('complaints/:complaintId/attachments')
@@ -17,6 +17,19 @@ export class AttachmentsController {
     private readonly attachmentsService: AttachmentsService,
     private readonly complaintsService: ComplaintsService,
   ) {}
+
+  @Get()
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('ATTACHMENT_DOWNLOAD')
+  @BranchScoped()
+  async list(
+    @Param('complaintId') complaintId: string,
+    @Query('branchId') branchId: string | undefined,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<AttachmentListResponseDto> {
+    await this.complaintsService.getDetail(complaintId, { branchId: queueBranchId(branchId, request) });
+    return { items: attachmentListDto(await this.attachmentsService.listForComplaint(complaintId)) };
+  }
 
   @Post()
   @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard, CsrfGuard)

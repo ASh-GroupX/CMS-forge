@@ -3,34 +3,38 @@ import { TaskConfidentialityLevel, TaskLinkEntityType, TaskParticipantRole, Role
 import { AuditService, type AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { CommunicationGroupsService } from '../communication-groups/communication-groups.service.js';
 import type { AdminUsersService, StaffLookupActor } from '../admin/admin-users.service.js';
 import type { EmployeeTodayResponseDto, ManagerControlRoomResponseDto, PromiseTrackerResponseDto, SentTasksResponseDto, TaskCommentsResponseDto, TaskResponseDto } from './dto/task-response.dto.js';
-import type { TaskNudgeInput } from './dto/task-collaboration.dto.js';
+import type { CreateTaskCommentInput, TaskNudgeInput } from './dto/task-collaboration.dto.js';
 import type { RelatedRecordLookupQueryDto, RelatedRecordLookupResponseDto } from './dto/related-record-lookup.dto.js';
 import { createCommentForActor, listCommentsForActor, nudgeForActor, sentByMe } from './tasks.collaboration.js';
-import { assertCanAct, managerBranchId } from './tasks.access.js';
+import { assertCanAct, assertCanView, managerBranchId } from './tasks.access.js';
+import { addTaskWatcher, removeTaskWatcher, taskCapabilities, taskCommunicationTargets } from './tasks.collaboration-service.js';
 import { selectTaskEscalations } from './tasks.escalation.js';
 import { assertPromiseLink } from './tasks.promise.js';
 import { buildPromiseTracker, promiseTrackerQuery } from './tasks.promise-tracker.js';
 import { TasksRelatedRecordsService } from './tasks.related-records.service.js';
 import { TasksRepository } from './tasks.repository.js';
-import type { TaskRecord } from './tasks.repository.js';
+import type { TaskRecord, TaskTimelineRecord } from './tasks.repository.js';
 import { currentNextAction, taskCounts, taskToResponse } from './tasks.response.js';
+import { requiredStatusNote, statusComment } from './tasks.status-note.js';
+import { requiredText, utcDay, validDate, validEnum } from './tasks.validation.js';
 
 export type TaskAuditContext = { actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 
 export type TaskNextActionInput = { what: string; whoId: string; when: Date | string };
 export type CreateTaskInput = { title: string; ownerId: string; assigneeId: string; dueAt: Date | string; status?: TaskStatus; nextAction?: TaskNextActionInput | null; isCustomerPromise?: boolean; visibility?: TaskVisibility; confidentialityLevel?: TaskConfidentialityLevel; links?: { entityType: TaskLinkEntityType; entityId: string }[]; participantUserIds?: string[] };
-export type UpdateTaskStatusInput = { taskId: string; status: TaskStatus; nextAction?: TaskNextActionInput | null };
-export type UpdateTaskInput = { taskId: string; status?: TaskStatus; assigneeId?: string; dueAt?: Date | string; nextAction?: TaskNextActionInput | null; isCustomerPromise?: boolean };
-export type TaskActor = { userId: string; roleCode: string; branchId: string | null };
+export type UpdateTaskStatusInput = { taskId: string; status: TaskStatus; nextAction?: TaskNextActionInput | null; statusNote?: string };
+export type UpdateTaskInput = { taskId: string; status?: TaskStatus; assigneeId?: string; dueAt?: Date | string; nextAction?: TaskNextActionInput | null; isCustomerPromise?: boolean; statusNote?: string };
+export type TaskActor = { userId: string; roleCode: string; branchId: string | null; permissions?: string[] };
 
 type NormalizedNextAction = { what: string; whoId: string; when: Date };
 type ManagerRollupScope = { roleCode: string; branchId: string | null };
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly tasksRepository: TasksRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly usersService?: Pick<AdminUsersService, 'assertAssignable'>, private readonly relatedRecordsService?: TasksRelatedRecordsService) {}
+  constructor(private readonly tasksRepository: TasksRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly usersService?: Pick<AdminUsersService, 'assertAssignable'>, private readonly relatedRecordsService?: TasksRelatedRecordsService, private readonly groupsService?: CommunicationGroupsService) {}
 
   async create(input: CreateTaskInput, audit: TaskAuditContext = {}): Promise<TaskResponseDto> {
     return this.tasksRepository.transaction((client) => this.createInTransaction(input, audit, client));
@@ -82,6 +86,7 @@ export class TasksService {
       const nextAction =
         input.status === TaskStatus.DONE ? null : normalizeNextAction(input.nextAction === undefined ? currentNextAction(current) : input.nextAction);
       assertNextAction(input.status, nextAction);
+      const statusNote = requiredStatusNote(current.status, input.status, input.statusNote);
       const task = await this.tasksRepository.updateStatus(
         {
           id: current.id,
@@ -93,6 +98,9 @@ export class TasksService {
         client,
       );
       await this.tasksRepository.createStatusHistory(historyInput(task.id, current.status, task.status, audit), client);
+      if (statusNote && audit.actorId) {
+        await this.tasksRepository.createComment({ taskId: task.id, authorId: audit.actorId, body: statusComment(current.status, task.status, statusNote) }, client);
+      }
       await this.auditService.record(taskAudit('task_status_updated', task, audit, { fromStatus: current.status, toStatus: task.status }), client);
       return taskToResponse(task);
     });
@@ -109,6 +117,7 @@ export class TasksService {
       const nextAction =
         status === TaskStatus.DONE ? null : normalizeNextAction(input.nextAction === undefined ? currentNextAction(current) : input.nextAction);
       assertNextAction(status, nextAction);
+      const statusNote = requiredStatusNote(current.status, status, input.statusNote);
       if (nextAction) await this.usersService?.assertAssignable(actor, nextAction.whoId);
       assertPromiseLink(input.isCustomerPromise ?? current.isCustomerPromise, current.links);
 
@@ -127,6 +136,9 @@ export class TasksService {
       );
       if (current.status !== task.status) {
         await this.tasksRepository.createStatusHistory(historyInput(task.id, current.status, task.status, audit), client);
+        if (statusNote) {
+          await this.tasksRepository.createComment({ taskId: task.id, authorId: actor.userId, body: statusComment(current.status, task.status, statusNote) }, client);
+        }
       }
       await this.auditService.record(taskAudit('task_updated', task, audit, { fromStatus: current.status, toStatus: task.status }), client);
       return taskToResponse(task);
@@ -142,8 +154,8 @@ export class TasksService {
   async getForActor(taskId: string, actor: TaskActor): Promise<TaskResponseDto> {
     const task = await this.tasksRepository.findById(requiredText(taskId, 'taskId'));
     if (!task) throw new AppException('TASK_NOT_FOUND', 'Task was not found', HttpStatus.NOT_FOUND);
-    assertCanAct(task, actor);
-    return taskToResponse(task);
+    assertCanView(task, actor);
+    return { ...taskToResponse(task), capabilities: taskCapabilities(task, actor) };
   }
 
   async sentByMe(actor: TaskActor, now: Date = new Date()): Promise<SentTasksResponseDto> {
@@ -154,9 +166,15 @@ export class TasksService {
     return listCommentsForActor(this.tasksRepository, this.auditService, taskId, actor, audit);
   }
 
-  async createCommentForActor(taskId: string, body: string, actor: TaskActor, audit: TaskAuditContext = {}) {
-    return createCommentForActor(this.tasksRepository, this.auditService, this.notificationsService, taskId, body, actor, audit);
+  async createCommentForActor(taskId: string, input: CreateTaskCommentInput, actor: TaskActor, audit: TaskAuditContext = {}) {
+    return createCommentForActor(this.tasksRepository, this.auditService, this.notificationsService, this.groupsService, taskId, input, actor, audit);
   }
+
+  async communicationTargets(taskId: string, actor: TaskActor, query = '') { return taskCommunicationTargets(this.tasksRepository, this.groupsService, taskId, actor, query); }
+
+  async addWatcher(taskId: string, userId: string, actor: TaskActor, audit: TaskAuditContext = {}): Promise<void> { return addTaskWatcher(this.tasksRepository, this.auditService, this.groupsService, taskId, userId, actor, audit); }
+
+  async removeWatcher(taskId: string, userId: string, actor: TaskActor, audit: TaskAuditContext = {}): Promise<void> { return removeTaskWatcher(this.tasksRepository, this.auditService, taskId, userId, actor, audit); }
 
   async nudgeForActor(taskId: string, input: TaskNudgeInput, actor: TaskActor, audit: TaskAuditContext = {}): Promise<void> {
     await nudgeForActor(this.tasksRepository, this.auditService, this.notificationsService, taskId, input, actor, audit);
@@ -208,6 +226,10 @@ export class TasksService {
       escalated: tasks.filter((task) => escalatedIds.has(task.id)).map(taskToResponse),
       promiseKpi: { openPromiseCount: promises.length, overduePromiseCount: overduePromises.length },
     };
+  }
+
+  async timelineForComplaint(complaintId: string): Promise<TaskTimelineRecord[]> {
+    return this.tasksRepository.listTimelineForComplaint(requiredText(complaintId, 'complaintId'));
   }
 
   private async assertAssignable(input: CreateTaskInput, actor: StaffLookupActor): Promise<void> {
@@ -265,33 +287,4 @@ function taskAudit(action: string, task: TaskRecord, context: TaskAuditContext, 
 
 function historyInput(taskId: string, fromStatus: TaskStatus | null, toStatus: TaskStatus, context: TaskAuditContext) {
   return { taskId, fromStatus, toStatus, actorId: context.actorId ?? null, correlationId: context.correlationId ?? null };
-}
-
-function requiredText(value: string, field: string): string {
-  const text = value.trim();
-  if (!text) throw invalid(field);
-  return text;
-}
-
-function validDate(value: Date | string, field: string): Date {
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.valueOf())) throw invalid(field);
-  return date;
-}
-
-function validEnum<T extends Record<string, string>>(value: string, options: T, field: string): T[keyof T] {
-  if (!Object.values(options).includes(value)) throw invalid(field);
-  return value as T[keyof T];
-}
-
-function utcDay(value: Date): [Date, Date] {
-  const start = new Date(value);
-  start.setUTCHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setUTCDate(end.getUTCDate() + 1);
-  return [start, end];
-}
-
-function invalid(field: string): AppException {
-  return new AppException('VALIDATION_FAILED', 'Invalid task request', HttpStatus.BAD_REQUEST, [{ field, code: 'REQUIRED', message: `${field} is required or invalid.` }]);
 }

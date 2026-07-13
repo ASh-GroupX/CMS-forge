@@ -22,6 +22,7 @@ Agent context manifest. Read this before editing the module.
 - `notification_delivery_attempts`
 - `notification_templates`
 - `customer_notification_preferences`
+- `notification_digest_items`
 
 ## May depend on
 

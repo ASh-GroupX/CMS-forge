@@ -68,6 +68,12 @@ enum ComplaintSource {
   DMS
 }
 
+enum DataSource {
+  LOCAL
+  MANUAL
+  DMS
+}
+
 enum ComplaintType {
   COMPLAINT
   INQUIRY
@@ -192,6 +198,23 @@ enum TaskConfidentialityLevel {
   NORMAL
   CONFIDENTIAL
   RESTRICTED
+}
+
+enum CommunicationGroupVisibility {
+  PERSONAL
+  SHARED
+}
+
+enum CollaborationMentionSource {
+  USER
+  SYSTEM_ROLE
+  SYSTEM_DEPARTMENT
+  CUSTOM_GROUP
+}
+
+enum CollaborationRecordType {
+  COMPLAINT
+  TASK
 }
 
 enum DealStage {
@@ -377,6 +400,13 @@ model User {
   taskParticipants     TaskParticipant[]
   taskComments         TaskComment[]             @relation("TaskCommentAuthor")
   taskStatusHistory    TaskStatusHistory[]
+  communicationGroups  CommunicationGroup[]      @relation("CommunicationGroupOwner")
+  communicationGroupMembers CommunicationGroupMember[]
+  complaintWatchers    ComplaintWatcher[]        @relation("ComplaintWatcherUser")
+  complaintWatcherAdds ComplaintWatcher[]        @relation("ComplaintWatcherAddedBy")
+  complaintCommentMentions ComplaintCommentMention[]
+  taskCommentMentions  TaskCommentMention[]
+  notificationDigestItems NotificationDigestItem[]
   ownedDeals           Deal[]                    @relation("DealOwner")
   currentDealHandoffs  Deal[]                    @relation("DealCurrentHolder")
   ownedCases           Case[]                    @relation("CaseOwner")
@@ -444,6 +474,7 @@ model Customer {
   phone                  String                          @unique
   email                  String?
   dmsCode                String?                         @map("dms_code")
+  dataSource             DataSource                      @default(LOCAL) @map("data_source")
   createdAt              DateTime                        @default(now()) @map("created_at")
   updatedAt              DateTime                        @updatedAt @map("updated_at")
   vehicles               Vehicle[]
@@ -463,6 +494,7 @@ model Vehicle {
   makeEn     String      @map("make_en")
   modelEn    String      @map("model_en")
   year       Int
+  dataSource DataSource  @default(LOCAL) @map("data_source")
   customerId String?     @map("customer_id")
   createdAt  DateTime    @default(now()) @map("created_at")
   updatedAt  DateTime    @updatedAt @map("updated_at")
@@ -480,6 +512,12 @@ model Complaint {
   type                ComplaintType            @default(COMPLAINT)
   severity            ComplaintSeverity        @default(MEDIUM)
   source              ComplaintSource          @default(STAFF)
+  customerDataSource  DataSource               @default(LOCAL) @map("customer_data_source")
+  vehicleDataSource   DataSource?              @map("vehicle_data_source")
+  manualCustomerFlag  Boolean                  @default(false) @map("manual_customer_flag")
+  manualVehicleFlag   Boolean                  @default(false) @map("manual_vehicle_flag")
+  vehicleRelated      Boolean                  @default(false) @map("vehicle_related")
+  vehicleDataUnavailableReason String?         @map("vehicle_data_unavailable_reason")
   subject             String                   @default("General complaint")
   branchId            String                   @map("branch_id")
   categoryId          String                   @map("category_id")
@@ -514,6 +552,9 @@ model Complaint {
   compensation        Compensation[]
   portalVerifications PortalVerification[]
   portalSessions      PortalSession[]
+  relatedSources      ComplaintRelation[]      @relation("ComplaintRelationSource")
+  relatedTargets      ComplaintRelation[]      @relation("ComplaintRelationTarget")
+  watchers            ComplaintWatcher[]
 
   @@index([status])
   @@index([branchId, status])
@@ -553,6 +594,19 @@ model ComplaintReferenceSequence {
 
   @@id([branchId, year])
   @@map("complaint_reference_sequences")
+}
+
+model ComplaintRelation {
+  id                String    @id @default(cuid())
+  sourceComplaintId String    @map("source_complaint_id")
+  targetComplaintId String    @map("target_complaint_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  sourceComplaint   Complaint @relation("ComplaintRelationSource", fields: [sourceComplaintId], references: [id], onDelete: Cascade)
+  targetComplaint   Complaint @relation("ComplaintRelationTarget", fields: [targetComplaintId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceComplaintId, targetComplaintId])
+  @@index([targetComplaintId])
+  @@map("complaint_relations")
 }
 
 model Approval {
@@ -602,10 +656,42 @@ model Comment {
   createdAt   DateTime          @default(now()) @map("created_at")
   complaint   Complaint         @relation(fields: [complaintId], references: [id])
   author      User?             @relation(fields: [authorId], references: [id])
+  mentions    ComplaintCommentMention[]
 
   @@index([complaintId, createdAt])
   @@index([visibility])
   @@map("comments")
+}
+
+model ComplaintWatcher {
+  id        String    @id @default(cuid())
+  complaintId String  @map("complaint_id")
+  userId    String    @map("user_id")
+  addedById String    @map("added_by_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  complaint Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  user      User      @relation("ComplaintWatcherUser", fields: [userId], references: [id])
+  addedBy   User      @relation("ComplaintWatcherAddedBy", fields: [addedById], references: [id])
+
+  @@unique([complaintId, userId])
+  @@index([userId])
+  @@map("complaint_watchers")
+}
+
+model ComplaintCommentMention {
+  id              String                    @id @default(cuid())
+  commentId       String                    @map("comment_id")
+  recipientUserId String                    @map("recipient_user_id")
+  source          CollaborationMentionSource
+  sourceId        String?                   @map("source_id")
+  sourceLabel     String                    @map("source_label")
+  createdAt       DateTime                  @default(now()) @map("created_at")
+  comment         Comment                   @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  recipientUser   User                      @relation(fields: [recipientUserId], references: [id])
+
+  @@unique([commentId, recipientUserId])
+  @@index([recipientUserId])
+  @@map("complaint_comment_mentions")
 }
 
 model SlaPolicy {
@@ -623,6 +709,8 @@ model SlaPolicy {
   escalationLevel1    String              @map("escalation_level_1")
   escalationLevel2    String?             @map("escalation_level_2")
   escalationLevel3    String?             @map("escalation_level_3")
+  escalationLevel2AfterBreachMinutes Int? @map("escalation_level_2_after_breach_minutes")
+  escalationLevel3AfterBreachMinutes Int? @map("escalation_level_3_after_breach_minutes")
   totalTargetMinutes  Int?                @map("total_target_minutes")
   isActive            Boolean             @default(true) @map("is_active")
   createdAt           DateTime            @default(now()) @map("created_at")
@@ -675,6 +763,21 @@ model Notification {
   @@index([complaintId])
   @@index([recipientUserId, status])
   @@map("notifications")
+}
+
+model NotificationDigestItem {
+  id              String                  @id @default(cuid())
+  recipientUserId String                  @map("recipient_user_id")
+  recordType      CollaborationRecordType @map("record_type")
+  recordId        String                  @map("record_id")
+  eventKey        String                  @unique @map("event_key")
+  payload         Json
+  createdAt       DateTime                @default(now()) @map("created_at")
+  deliveredAt     DateTime?               @map("delivered_at")
+  recipientUser   User                    @relation(fields: [recipientUserId], references: [id])
+
+  @@index([recipientUserId, recordType, recordId, deliveredAt])
+  @@map("notification_digest_items")
 }
 
 model NotificationDeliveryAttempt {
@@ -887,10 +990,56 @@ model TaskComment {
   createdAt DateTime @default(now()) @map("created_at")
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   author    User     @relation("TaskCommentAuthor", fields: [authorId], references: [id])
+  mentions  TaskCommentMention[]
 
   @@index([taskId, createdAt])
   @@index([authorId])
   @@map("task_comments")
+}
+
+model TaskCommentMention {
+  id              String                    @id @default(cuid())
+  taskCommentId   String                    @map("task_comment_id")
+  recipientUserId String                    @map("recipient_user_id")
+  source          CollaborationMentionSource
+  sourceId        String?                   @map("source_id")
+  sourceLabel     String                    @map("source_label")
+  createdAt       DateTime                  @default(now()) @map("created_at")
+  taskComment     TaskComment               @relation(fields: [taskCommentId], references: [id], onDelete: Cascade)
+  recipientUser   User                      @relation(fields: [recipientUserId], references: [id])
+
+  @@unique([taskCommentId, recipientUserId])
+  @@index([recipientUserId])
+  @@map("task_comment_mentions")
+}
+
+model CommunicationGroup {
+  id        String                       @id @default(cuid())
+  name      String
+  visibility CommunicationGroupVisibility @default(PERSONAL)
+  ownerId   String                       @map("owner_id")
+  isActive  Boolean                      @default(true) @map("is_active")
+  createdAt DateTime                     @default(now()) @map("created_at")
+  updatedAt DateTime                     @updatedAt @map("updated_at")
+  owner     User                         @relation("CommunicationGroupOwner", fields: [ownerId], references: [id])
+  members   CommunicationGroupMember[]
+
+  @@unique([ownerId, name])
+  @@index([visibility, isActive])
+  @@map("communication_groups")
+}
+
+model CommunicationGroupMember {
+  id        String             @id @default(cuid())
+  groupId   String             @map("group_id")
+  userId    String             @map("user_id")
+  createdAt DateTime           @default(now()) @map("created_at")
+  group     CommunicationGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User               @relation(fields: [userId], references: [id])
+
+  @@unique([groupId, userId])
+  @@index([userId])
+  @@map("communication_group_members")
 }
 
 model Deal {

@@ -11,7 +11,10 @@ Agent context manifest. Read this before editing the module.
 
 ## Public surface
 
-- `ComplaintsService` is the only service exported by `ComplaintsModule`.
+- `ComplaintsService` is the primary exported service.
+- `ComplaintFormOptionsService` is exported only for form option catalogs; public
+  callers must use `listPublic()` so staff-only department and scope metadata is
+  not exposed.
 - This module owns complaint lifecycle behavior: creation, backend-owned
   workflow transitions, complaint read models, and same-transaction status
   history plus audit writes.
@@ -21,11 +24,13 @@ Agent context manifest. Read this before editing the module.
 ## Owns tables
 
 - `complaints`
+- `complaint_relations`
 - `complaint_status_history`
 - `complaint_reference_sequences`
+- `complaint_watchers`
 
 Related tables may be read or coordinated through their owning modules once
-those modules exist: `comments`, `attachments`, `approvals`, `sla_events`,
+those modules exist: `comments`, `attachments`, `audit_logs`, `approvals`, `sla_events`,
 `notifications`, `portal_verifications`, `portal_sessions`, `compensation`,
 `customers`, `vehicles`, `branches`, `categories`, and `departments`.
 
@@ -37,8 +42,15 @@ those modules exist: `comments`, `attachments`, `approvals`, `sla_events`,
 - `core/csrf.guard` for session-authenticated mutation routes.
 - AuthService through AuthModule for session validation guard wiring.
 - NotificationsService through NotificationsModule for workflow notifications.
+- SlaService through SlaModule for workflow deadline events.
 - CasesService through CasesModule for complaint-to-case wrapper creation and
   staff case summary reads.
+- SurveysService through modules/surveys and SurveysModule for post-close
+  satisfaction survey scheduling.
+- TasksService through TasksModule for task-owned timeline facts on complaint
+  detail.
+- CommunicationGroupsService through CommunicationGroupsModule for
+  server-scoped mention and watcher resolution.
 - Other modules' public services only. Never import another module repository,
   DTO folder, or Prisma model type.
 
@@ -48,6 +60,7 @@ those modules exist: `comments`, `attachments`, `approvals`, `sla_events`,
 - ARCH-WORKFLOW-001
 - WORKFLOW-MATRIX-001
 - METHOD-AUDIT-001
+- REQ-COMPLAINT-003
 - METHOD-MODULAR-001
 - METHOD-TEST-001
 - NFR-MAINT-001

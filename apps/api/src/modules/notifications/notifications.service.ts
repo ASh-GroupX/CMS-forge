@@ -5,6 +5,9 @@ import { AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import { IntegrationsService } from '../integrations/integrations.service.js';
 import { NotificationsRepository } from './notifications.repository.js';
+import { NotificationDigestRepository } from './notification-digest.repository.js';
+import { flushCollaborationDigests, queueCollaboration } from './notifications.collaboration.js';
+export type { CollaborationNotificationInput, CollaborationRecipient } from './notifications.collaboration.js';
 import type { NotificationDeliveryMetadata, NotificationRecord } from './notifications.repository.js';
 import { dispatchSkipReason, emailMessage, failureReason, quietHourBypassReason, smsMessage, whatsAppMessage } from './notification-dispatch.rules.js';
 import { preferenceData, preferenceDto } from './notification-preference.rules.js';
@@ -16,37 +19,11 @@ import type { NotificationTemplateAuditContext } from './notification-template.a
 import { notificationDto, notificationTemplateDto } from './dto/notification-response.dto.js';
 import type { NotificationResponseDto, NotificationTemplateResponseDto } from './dto/notification-response.dto.js';
 
-export type QueueInternalNotificationInput = {
-  complaintId?: string | null;
-  recipientUserId?: string | null;
-  templateCode?: string;
-  locale?: string;
-  payload?: unknown;
-  idempotencyKey?: string;
-};
 
-export type DispatchEmailNotificationsResult = {
-  attempted: number;
-  sent: number;
-  failed: number;
-  skipped: number;
-};
-
-export type ResolveNotificationTemplateInput = {
-  templateCode?: string;
-  channel?: NotificationChannel | string;
-  locale?: string;
-  payload?: unknown;
-};
-
-export type ResolvedNotificationTemplate = {
-  templateId: string;
-  templateCode: string;
-  channel: NotificationChannel;
-  locale: string;
-  subject: string | null;
-  body: string;
-};
+export type QueueInternalNotificationInput = { complaintId?: string | null; recipientUserId?: string | null; channel?: NotificationChannel | string; templateCode?: string; locale?: string; payload?: unknown; idempotencyKey?: string };
+export type DispatchEmailNotificationsResult = { attempted: number; sent: number; failed: number; skipped: number };
+export type ResolveNotificationTemplateInput = { templateCode?: string; channel?: NotificationChannel | string; locale?: string; payload?: unknown };
+export type ResolvedNotificationTemplate = { templateId: string; templateCode: string; channel: NotificationChannel; locale: string; subject: string | null; body: string };
 
 @Injectable()
 export class NotificationsService {
@@ -54,6 +31,7 @@ export class NotificationsService {
     private readonly notificationsRepository: NotificationsRepository,
     private readonly integrationsService: IntegrationsService,
     private readonly auditService: AuditService,
+    private readonly digestRepository?: NotificationDigestRepository,
   ) {}
 
   async listTemplates(): Promise<NotificationTemplateResponseDto[]> {
@@ -62,6 +40,16 @@ export class NotificationsService {
 
   async listForRecipient(recipientUserId: string): Promise<NotificationResponseDto[]> {
     return (await this.notificationsRepository.listForRecipient(requiredText(recipientUserId, 'recipientUserId'))).map(notificationDto);
+  }
+
+  async markRead(id: string, recipientUserId: string): Promise<{ id: string; read: boolean }> {
+    const cleanId = requiredText(id, 'id');
+    const read = await this.notificationsRepository.markInAppRead(cleanId, requiredText(recipientUserId, 'recipientUserId'));
+    return { id: cleanId, read };
+  }
+
+  async markAllRead(recipientUserId: string): Promise<{ readCount: number }> {
+    return { readCount: await this.notificationsRepository.markAllInAppRead(requiredText(recipientUserId, 'recipientUserId')) };
   }
 
   async getCustomerPreference(customerId: string): Promise<NotificationPreferenceDto> {
@@ -103,12 +91,14 @@ export class NotificationsService {
   async queueInternal(input: QueueInternalNotificationInput): Promise<NotificationRecord> {
     const templateCode = requiredText(input.templateCode, 'templateCode');
     const locale = requiredText(input.locale ?? 'en', 'locale');
+    const channel = input.channel === undefined ? NotificationChannel.IN_APP : notificationChannel(input.channel);
     const payload = safePayload(input.payload ?? {});
     const idempotencyKey = input.idempotencyKey === undefined ? null : requiredText(input.idempotencyKey, 'idempotencyKey');
 
     const data = {
       complaintId: optionalText(input.complaintId),
       recipientUserId: optionalText(input.recipientUserId),
+      channel,
       templateCode,
       locale,
       payload: idempotencyKey ? payloadWithIdempotency(payload, idempotencyKey) : payload,
@@ -117,6 +107,10 @@ export class NotificationsService {
       ? this.notificationsRepository.queueInternalOnce({ ...data, idempotencyKey })
       : this.notificationsRepository.queueInternal(data);
   }
+
+  async queueCollaboration(input: import('./notifications.collaboration.js').CollaborationNotificationInput): Promise<void> { return queueCollaboration(this, this.requiredDigestRepository(), input); }
+
+  async flushCollaborationDigests(limit = 100, now = new Date()): Promise<{ queued: number; delivered: number }> { return flushCollaborationDigests(this, this.requiredDigestRepository(), limit, now); }
 
   async dispatchQueuedEmail(limit = 25, now = new Date()): Promise<DispatchEmailNotificationsResult> {
     const queued = await this.notificationsRepository.findQueuedEmail(limit);
@@ -217,6 +211,11 @@ export class NotificationsService {
     const bypassReason = quietHourBypassReason(notification, preference, now);
     const decision = { skipReason: dispatchSkipReason(notification, preference, now) };
     return bypassReason ? { ...decision, metadata: { quietHourBypassReason: bypassReason } } : decision;
+  }
+
+  private requiredDigestRepository(): NotificationDigestRepository {
+    if (!this.digestRepository) throw new AppException('INTEGRATION_PROVIDER_DOWN', 'Notification digest repository is unavailable', HttpStatus.SERVICE_UNAVAILABLE);
+    return this.digestRepository;
   }
 }
 

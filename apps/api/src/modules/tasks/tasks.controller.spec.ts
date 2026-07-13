@@ -214,7 +214,7 @@ test('task comments derive actor and audit from the staff session', async () => 
 
   assert.equal(list.comments[0]?.id, 'comment_1');
   assert.equal(created.comment.id, 'comment_2');
-  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'BRANCH_MANAGER', branchId: 'branch_1' });
+  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'BRANCH_MANAGER', branchId: 'branch_1', permissions: [] });
   assert.equal(capturedAudit?.actorId, 'user_owner');
   assert.equal(capturedAudit?.correlationId, 'req_test');
 });
@@ -253,6 +253,7 @@ test('update task derives actor and audit from the staff session', async () => {
     'task_1',
     {
       status: 'WAITING',
+      statusNote: 'Waiting for customer payment.',
       nextAction: { what: 'Wait for payment', whoId: 'user_assignee', when: '2026-06-22T09:00:00.000Z' },
     },
     request('BRANCH_MANAGER'),
@@ -262,6 +263,7 @@ test('update task derives actor and audit from the staff session', async () => {
   assert.deepEqual(capturedInput, {
     taskId: 'task_1',
     status: TaskStatus.WAITING,
+    statusNote: 'Waiting for customer payment.',
     nextAction: { what: 'Wait for payment', whoId: 'user_assignee', when: '2026-06-22T09:00:00.000Z' },
   });
   assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'BRANCH_MANAGER', branchId: 'branch_1' });
@@ -312,6 +314,7 @@ function taskResponseBase(): TaskResponseDto {
     confidentialityLevel: TaskConfidentialityLevel.NORMAL,
     links: [],
     participantUserIds: ['user_owner', 'user_assignee'],
+    participants: [],
     createdAt: '2026-06-20T08:00:00.000Z',
     updatedAt: '2026-06-20T08:00:00.000Z',
   };

@@ -15,35 +15,48 @@ import type { StaffTask, StaffTaskStatus } from '../../lib/staff-tasks-api';
 
 type EmployeeTodayText = (typeof employeeTodayText)[Locale];
 export type TaskAction = (formData: FormData) => void | Promise<void>;
+type RelatedRecordsAction = () => Promise<StaffRelatedRecordOptions | null>;
 
 const RELATED_RECORD_TYPES: RelatedRecordType[] = ['CUSTOMER', 'COMPLAINT', 'CASE', 'DEAL'];
 
-export function QuickAddForm({ action, locale, relatedRecords, staff, t }: { action: TaskAction; locale: Locale; relatedRecords?: StaffRelatedRecordOptions | null | undefined; staff?: AssignableStaff[] | null | undefined; t: EmployeeTodayText }) {
+export function QuickAddForm({ action, loadRelatedRecordsAction, locale, relatedRecords, staff, t }: { action: TaskAction; loadRelatedRecordsAction?: RelatedRecordsAction | undefined; locale: Locale; relatedRecords?: StaffRelatedRecordOptions | null | undefined; staff?: AssignableStaff[] | null | undefined; t: EmployeeTodayText }) {
+  const [loadedRecords, setLoadedRecords] = React.useState<StaffRelatedRecordOptions | null | undefined>(relatedRecords);
+  const [loadingRecords, setLoadingRecords] = React.useState(false);
+
+  async function loadRecords(event: React.SyntheticEvent<HTMLDetailsElement>) {
+    if (!event.currentTarget.open || loadedRecords !== undefined || loadingRecords || !loadRelatedRecordsAction) return;
+    setLoadingRecords(true);
+    setLoadedRecords(await loadRelatedRecordsAction());
+    setLoadingRecords(false);
+  }
+
   return (
-    <form action={action} className="mb-4 grid gap-3 rounded-md border border-border bg-muted/40 p-3">
-      <input name="locale" type="hidden" value={locale} />
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-semibold tracking-normal">{t.actions.quickAdd}</h2>
-        <label className="flex items-center gap-2 text-sm">
-          <input className="size-4 rounded border-border" name="isCustomerPromise" type="checkbox" />
-          {t.actions.customerPromise}
-        </label>
-      </div>
-      <div className="grid gap-3 md:grid-cols-2">
-        <LabeledInput label={t.fields.title} name="title" required />
-        <StaffPicker label={t.fields.assignee} labelName="assigneeLabel" locale={locale} name="whoId" staff={staff} t={t.staffPicker} />
-        <LabeledInput label={t.fields.when} name="when" required type="datetime-local" />
-        <LabeledInput label={t.fields.due} name="dueAt" type="datetime-local" />
-        <RelatedRecordPicker locale={locale} relatedRecords={relatedRecords} t={t} />
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="quick-add-what">{t.fields.what}</Label>
-        <Textarea id="quick-add-what" name="what" required />
-      </div>
-      <div>
-        <Button type="submit">{t.actions.add}</Button>
-      </div>
-    </form>
+    <details className="mb-4 rounded-sm border border-line-subtle bg-surface-raised" onToggle={(event) => { void loadRecords(event); }}>
+      <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-content-strong">{t.actions.quickAdd}</summary>
+      <form action={action} className="grid gap-3 border-t border-line-subtle p-3">
+        <input name="locale" type="hidden" value={locale} />
+        <div className="flex justify-end">
+          <label className="flex items-center gap-2 text-sm">
+            <input className="size-4 rounded border-border" name="isCustomerPromise" type="checkbox" />
+            {t.actions.customerPromise}
+          </label>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <LabeledInput label={t.fields.title} name="title" required />
+          <StaffPicker label={t.fields.assignee} labelName="assigneeLabel" locale={locale} name="whoId" staff={staff} t={t.staffPicker} />
+          <LabeledInput label={t.fields.when} name="when" required type="datetime-local" />
+          <LabeledInput label={t.fields.due} name="dueAt" type="datetime-local" />
+          <RelatedRecordPicker locale={locale} relatedRecords={loadingRecords ? undefined : loadedRecords} t={t} />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="quick-add-what">{t.fields.what}</Label>
+          <Textarea id="quick-add-what" name="what" required />
+        </div>
+        <div>
+          <Button type="submit">{t.actions.add}</Button>
+        </div>
+      </form>
+    </details>
   );
 }
 
@@ -51,9 +64,10 @@ function RelatedRecordPicker({ locale, relatedRecords, t }: { locale: Locale; re
   const listId = React.useId();
   const selectRef = React.useRef<HTMLSelectElement>(null);
   const [type, setType] = React.useState<RelatedRecordType>('CUSTOMER');
-  const [selectedLabel, setSelectedLabel] = React.useState('');
-  const options = relatedRecords?.[type] ?? [];
-  const selected = options.find((option) => relatedRecordLabel(option, locale) === selectedLabel);
+  const [selectedValue, setSelectedValue] = React.useState('');
+  const options = (relatedRecords?.[type] ?? []).map((record, index) => ({ record, value: String(index) }));
+  const selected = options.find((option) => option.value === selectedValue)?.record;
+  const selectedLabel = selected ? relatedRecordLabel(selected, locale) : '';
 
   return (
     <div className="grid gap-2 md:col-span-2">
@@ -64,7 +78,7 @@ function RelatedRecordPicker({ locale, relatedRecords, t }: { locale: Locale; re
             className="flex h-9 w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
             id={`${listId}-type`}
             name="relatedRecordType"
-            onChange={(event) => { setType(event.currentTarget.value as RelatedRecordType); setSelectedLabel(''); }}
+            onChange={(event) => { setType(event.currentTarget.value as RelatedRecordType); setSelectedValue(''); }}
             value={type}
           >
             {RELATED_RECORD_TYPES.map((recordType) => <option key={recordType} value={recordType}>{t.recordTypes[recordType]}</option>)}
@@ -84,18 +98,17 @@ function RelatedRecordPicker({ locale, relatedRecords, t }: { locale: Locale; re
                 aria-describedby={`${listId}-selected`}
                 className="flex h-9 min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
                 id={`${listId}-record`}
-                name="relatedRecordLabel"
-                onChange={(event) => setSelectedLabel(event.currentTarget.value)}
+                onChange={(event) => setSelectedValue(event.currentTarget.value)}
                 ref={selectRef}
-                value={selectedLabel}
+                value={selectedValue}
               >
                 <option value="">{t.recordPicker.placeholder}</option>
                 {options.map((option) => {
-                  const label = relatedRecordLabel(option, locale);
-                  return <option key={option.recordId} value={label}>{label}</option>;
+                  const label = relatedRecordLabel(option.record, locale);
+                  return <option key={option.record.recordId} value={option.value}>{label}</option>;
                 })}
               </select>
-              <Button aria-label={t.recordPicker.clear} onClick={() => { setSelectedLabel(''); if (selectRef.current) selectRef.current.value = ''; }} type="button" variant="outline">
+              <Button aria-label={t.recordPicker.clear} onClick={() => { setSelectedValue(''); if (selectRef.current) selectRef.current.value = ''; }} type="button" variant="outline">
                 <X className="size-4" aria-hidden="true" />
               </Button>
             </div>
@@ -107,6 +120,7 @@ function RelatedRecordPicker({ locale, relatedRecords, t }: { locale: Locale; re
       </div>
       <input name="linkEntityType" type="hidden" value={selected ? selected.recordType : ''} />
       <input name="linkEntityId" type="hidden" value={selected?.recordId ?? ''} />
+      <input name="relatedRecordLabel" type="hidden" value={selectedLabel} />
     </div>
   );
 }
@@ -134,24 +148,27 @@ export function TaskActions({ action, locale, staff, task, t }: { action: TaskAc
   const nextWhen = toDateTimeLocal(task.nextAction?.when ?? task.dueAt);
 
   return (
-    <div className="mt-3 grid gap-2 border-t border-border pt-3">
+    <div className="mt-3 grid gap-2 border-t border-line-subtle pt-3">
       <div className="flex flex-wrap gap-2">
-        <StatusForm action={action} label={t.actions.done} locale={locale} status="DONE" task={task} />
-        <StatusForm action={action} label={t.actions.waiting} locale={locale} nextAction={{ what: nextWhat, whoId: nextWho, when: nextWhen }} status="WAITING" task={task} />
+        <StatusForm action={action} label={t.actions.done} locale={locale} status="DONE" task={task} t={t} />
+        <StatusForm action={action} label={t.actions.waiting} locale={locale} nextAction={{ what: nextWhat, whoId: nextWho, when: nextWhen }} staff={staff} status="WAITING" task={task} t={t} />
       </div>
-      <form action={action} className="grid gap-2 md:grid-cols-[1fr_1fr_1fr_auto]">
-        <HiddenTaskFields locale={locale} taskId={task.id} />
-        <StaffPicker initialUserId={task.assigneeId} label={t.fields.assignee} labelName="assigneeLabel" locale={locale} name="assigneeId" staff={staff} t={t.staffPicker} />
-        <LabeledInput defaultValue={nextWhat} label={t.fields.nextAction} name="nextActionWhat" required />
-        <StaffPicker initialUserId={nextWho} label={t.fields.nextOwner} labelName="nextActionWhoLabel" locale={locale} name="nextActionWhoId" staff={staff} t={t.staffPicker} />
-        <div className="grid gap-2">
-          <Label htmlFor={`next-when-${task.id}`}>{t.fields.when}</Label>
-          <Input defaultValue={nextWhen} id={`next-when-${task.id}`} name="nextActionWhen" required type="datetime-local" />
-        </div>
-        <div className="md:col-span-4">
-          <Button size="sm" type="submit" variant="outline">{t.actions.update}</Button>
-        </div>
-      </form>
+      <details className="rounded-sm border border-line-subtle bg-surface-raised px-3 py-2">
+        <summary className="cursor-pointer text-sm font-semibold text-content-strong">{t.actions.updateDetails}</summary>
+        <form action={action} className="mt-3 grid gap-2 md:grid-cols-[1fr_1fr_1fr_auto]">
+          <HiddenTaskFields locale={locale} taskId={task.id} />
+          <StaffPicker initialUserId={task.assigneeId} label={t.fields.assignee} labelName="assigneeLabel" locale={locale} name="assigneeId" staff={staff} t={t.staffPicker} />
+          <LabeledInput defaultValue={nextWhat} label={t.fields.nextAction} name="nextActionWhat" required />
+          <StaffPicker initialUserId={nextWho} label={t.fields.nextOwner} labelName="nextActionWhoLabel" locale={locale} name="nextActionWhoId" staff={staff} t={t.staffPicker} />
+          <div className="grid gap-2">
+            <Label htmlFor={`next-when-${task.id}`}>{t.fields.when}</Label>
+            <Input defaultValue={nextWhen} id={`next-when-${task.id}`} name="nextActionWhen" required type="datetime-local" />
+          </div>
+          <div className="md:col-span-4">
+            <Button size="sm" type="submit" variant="outline">{t.actions.update}</Button>
+          </div>
+        </form>
+      </details>
     </div>
   );
 }
@@ -161,29 +178,41 @@ function StatusForm({
   label,
   locale,
   nextAction,
+  staff,
   status,
   task,
+  t,
 }: {
   action: TaskAction;
   label: string;
   locale: Locale;
   nextAction?: { what: string; whoId: string; when: string };
+  staff?: AssignableStaff[] | null | undefined;
   status: StaffTaskStatus;
   task: StaffTask;
+  t: EmployeeTodayText;
 }) {
   return (
-    <form action={action}>
-      <HiddenTaskFields locale={locale} taskId={task.id} />
-      <input name="status" type="hidden" value={status} />
-      {nextAction ? (
-        <>
-          <input name="nextActionWhat" type="hidden" value={nextAction.what} />
-          <input name="nextActionWhoId" type="hidden" value={nextAction.whoId} />
-          <input name="nextActionWhen" type="hidden" value={nextAction.when} />
-        </>
-      ) : null}
-      <Button size="sm" type="submit" variant={status === 'DONE' ? 'default' : 'outline'}>{label}</Button>
-    </form>
+    <details className="rounded-sm border border-line-subtle bg-surface-raised px-3 py-2">
+      <summary className="cursor-pointer text-sm font-semibold text-content-strong">{label}</summary>
+      <form action={action} className="mt-3 grid gap-2">
+        <HiddenTaskFields locale={locale} taskId={task.id} />
+        <input name="status" type="hidden" value={status} />
+        <p className="text-sm text-content-muted">{status === 'DONE' ? t.help.done : t.help.waiting}</p>
+        {nextAction ? (
+          <div className="grid gap-2 md:grid-cols-3">
+            <LabeledInput defaultValue={nextAction.what} label={t.fields.nextAction} name="nextActionWhat" required />
+            <StaffPicker initialUserId={nextAction.whoId} label={t.fields.nextOwner} labelName="nextActionWhoLabel" locale={locale} name="nextActionWhoId" staff={staff} t={t.staffPicker} />
+            <LabeledInput defaultValue={nextAction.when} label={t.fields.when} name="nextActionWhen" required type="datetime-local" />
+          </div>
+        ) : null}
+        <Label className="grid gap-1 text-sm font-medium">
+          {t.fields.statusNote}
+          <Textarea className="min-h-20 bg-surface" name="statusNote" required />
+        </Label>
+        <Button size="sm" type="submit" variant={status === 'DONE' ? 'default' : 'outline'}>{label}</Button>
+      </form>
+    </details>
   );
 }
 

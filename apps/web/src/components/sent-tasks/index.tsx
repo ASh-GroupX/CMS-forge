@@ -3,8 +3,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { taskStatusLabel } from '../../i18n/domain-labels';
 import { sentTasksText } from '../../i18n/staff-sent-tasks';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
+import { formatDisplayDate } from '../../lib/locale-format';
 import type { SentTask } from '../../lib/staff-sent-tasks-api';
 import type { StaffTaskStatus } from '../../lib/staff-tasks-api';
 
@@ -72,14 +74,14 @@ function SentTaskCard({ commentAction, locale, nudgeAction, task, t }: { comment
           <h2 className="break-words text-sm font-semibold">{task.title}</h2>
         </div>
         <div className="flex flex-wrap gap-1">
-          <Badge className={STATUS_CLASS[task.status]} variant="outline">{task.status}</Badge>
+          <Badge className={STATUS_CLASS[task.status]} title={task.status} variant="outline">{taskStatusLabel(locale, task.status)}</Badge>
           {task.isCustomerPromise ? <Badge variant="secondary">{t.promise}</Badge> : null}
         </div>
       </div>
       <dl className="mt-3 grid gap-2 text-sm md:grid-cols-2">
         <Field label={t.fields.assignee} value={task.assigneeName ?? '-'} />
-        <Field label={t.fields.due} value={formatDate(task.dueAt)} />
-        <Field label={t.fields.updated} value={formatDate(task.updatedAt)} />
+        <Field label={t.fields.due} value={formatDate(task.dueAt, locale)} />
+        <Field label={t.fields.updated} value={formatDate(task.updatedAt, locale)} />
         <Field label={t.fields.branch} value={task.branchName ?? '-'} />
       </dl>
       {task.nextAction ? (
@@ -87,7 +89,7 @@ function SentTaskCard({ commentAction, locale, nudgeAction, task, t }: { comment
           <p className="font-semibold">{t.fields.nextAction}</p>
           <p className="mt-1 break-words text-muted-foreground">{task.nextAction.what}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {t.fields.nextOwner}: <span>{task.nextAction.whoName ?? '-'}</span> - {formatDate(task.nextAction.when)}
+            {t.fields.nextOwner}: <span>{task.nextAction.whoName ?? '-'}</span> - {formatDate(task.nextAction.when, locale)}
           </p>
         </div>
       ) : null}
@@ -101,7 +103,7 @@ function SentTaskCard({ commentAction, locale, nudgeAction, task, t }: { comment
           <article className="rounded-sm border border-border bg-card px-3 py-2 text-sm" key={comment.id}>
             <p className="font-semibold">{comment.authorName ?? '-'}</p>
             <p className="mt-1 break-words text-muted-foreground">{comment.body}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{formatDate(comment.createdAt)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{formatDate(comment.createdAt, locale)}</p>
           </article>
         ))}
         {commentAction ? (
@@ -140,8 +142,8 @@ function formatNumber(locale: Locale, value: number): string {
   return new Intl.NumberFormat(locale).format(value);
 }
 
-function formatDate(value: string): string {
-  return value.slice(0, 16).replace('T', ' ');
+function formatDate(value: string, locale: Locale): string {
+  return formatDisplayDate(value, locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' });
 }
 
 function linkTypeLabel(entityType: string, t: Text): string {

@@ -12,7 +12,7 @@ import { AppException } from '../../core/http-kernel.js';
 import { promiseKeptOnTime } from './tasks.promise.js';
 import { TasksRelatedRecordsService } from './tasks.related-records.service.js';
 import { TasksService } from './tasks.service.js';
-import { TasksRepository, type CreateTaskStatusHistoryData, type PromiseTaskRecord, type TaskCommentRecord, type TaskRecord, type UpdateTaskStatusData } from './tasks.repository.js';
+import { TasksRepository, type CreateTaskCommentData, type CreateTaskStatusHistoryData, type PromiseTaskRecord, type TaskCommentRecord, type TaskRecord, type UpdateTaskStatusData } from './tasks.repository.js';
 
 test('open task without next action is rejected', async () => {
   const service = new TasksService(txOnlyRepository(), {} as never);
@@ -119,6 +119,8 @@ test('status Done clears next action and audits inside the transaction', async (
   const seen: { updateInput?: UpdateTaskStatusData } = {};
   let auditClient: unknown;
   let auditAction = '';
+  let commentClient: unknown;
+  let commentInput: CreateTaskCommentData | undefined;
   let historyClient: unknown;
   let historyInput: CreateTaskStatusHistoryData | undefined;
   const repository = {
@@ -132,6 +134,11 @@ test('status Done clears next action and audits inside the transaction', async (
       historyInput = input;
       historyClient = client;
     },
+    createComment: async (input: CreateTaskCommentData, client: unknown) => {
+      commentInput = input;
+      commentClient = client;
+      return {} as TaskCommentRecord;
+    },
   } as unknown as TasksRepository;
   const audit = {
     record: async (input: { action: string }, client: unknown) => {
@@ -141,7 +148,7 @@ test('status Done clears next action and audits inside the transaction', async (
   };
   const service = new TasksService(repository, audit as never);
 
-  const result = await service.updateStatus({ taskId: 'task_1', status: TaskStatus.DONE }, { actorId: 'user_owner' });
+  const result = await service.updateStatus({ taskId: 'task_1', status: TaskStatus.DONE, statusNote: 'Customer confirmed the fix' }, { actorId: 'user_owner' });
 
   assert.equal(result.nextAction, null);
   assert.equal(seen.updateInput?.nextActionWhat, null);
@@ -150,15 +157,30 @@ test('status Done clears next action and audits inside the transaction', async (
   assert.equal(historyInput?.fromStatus, TaskStatus.IN_PROGRESS);
   assert.equal(historyInput?.toStatus, TaskStatus.DONE);
   assert.equal(historyClient, txClient);
+  assert.equal(commentInput?.authorId, 'user_owner');
+  assert.equal(commentInput?.body, 'Status update IN_PROGRESS -> DONE: Customer confirmed the fix');
+  assert.equal(commentClient, txClient);
   assert.equal(auditAction, 'task_status_updated');
   assert.equal(auditClient, txClient);
+});
+
+test('status Done rejects missing outcome note', async () => {
+  const service = new TasksService({
+    transaction: async <T>(work: (client: never) => Promise<T>) => work({} as never),
+    findById: async () => taskRecord({ status: TaskStatus.IN_PROGRESS }),
+  } as unknown as TasksRepository, {} as never);
+
+  await assert.rejects(
+    service.updateStatus({ taskId: 'task_1', status: TaskStatus.DONE }, { actorId: 'user_owner' }),
+    (error) => error instanceof AppException && error.code === 'TASK_STATUS_NOTE_REQUIRED',
+  );
 });
 
 test('participant can read a visible task', async () => {
   const repository = {
     findForParticipant: async (taskId: string, actorId: string) =>
       taskId === 'task_1' && actorId === 'user_participant'
-        ? taskRecord({ participants: [{ userId: 'user_participant', role: TaskParticipantRole.PARTICIPANT }] })
+        ? taskRecord({ participants: [{ userId: 'user_participant', role: TaskParticipantRole.PARTICIPANT, user: { email: 'participant@example.test', nameEn: 'Participant', nameAr: 'مشارك' } }] })
         : null,
   } as unknown as TasksRepository;
   const service = new TasksService(repository, {} as never);
@@ -169,10 +191,30 @@ test('participant can read a visible task', async () => {
   assert.deepEqual(result.participantUserIds, ['user_participant']);
 });
 
+test('watcher can read and comment but cannot manage task workflow', async () => {
+  const watcher = { userId: 'user_watcher', role: TaskParticipantRole.WATCHER, user: { email: 'watcher@example.test', nameEn: 'Watcher', nameAr: 'مراقب' } };
+  const repository = {
+    transaction: async <T>(work: (client: never) => Promise<T>) => work({} as never),
+    findById: async () => taskRecord({ participants: [watcher] }),
+  } as unknown as TasksRepository;
+  const service = new TasksService(repository, { record: async () => undefined } as never);
+  const actor = { userId: 'user_watcher', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_1' };
+
+  const task = await service.getForActor('task_1', actor);
+  assert.equal(task.capabilities?.canComment, true);
+  assert.equal(task.capabilities?.canManage, false);
+  await assert.rejects(
+    service.updateForActor({ taskId: 'task_1', status: TaskStatus.DONE, statusNote: 'Completed' }, actor),
+    (error) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
+});
+
 test('participant can update task status with history and audit in one transaction', async () => {
   const txClient = { task: {} };
   let historyClient: unknown;
   let auditClient: unknown;
+  let commentClient: unknown;
+  let commentInput: CreateTaskCommentData | undefined;
   let updateInput: UpdateTaskStatusData | undefined;
   let auditAction = '';
   const repository = {
@@ -185,6 +227,11 @@ test('participant can update task status with history and audit in one transacti
     createStatusHistory: async (_input: CreateTaskStatusHistoryData, client: unknown) => {
       historyClient = client;
     },
+    createComment: async (input: CreateTaskCommentData, client: unknown) => {
+      commentInput = input;
+      commentClient = client;
+      return {} as TaskCommentRecord;
+    },
   } as unknown as TasksRepository;
   const audit = {
     record: async (input: { action: string }, client: unknown) => {
@@ -195,7 +242,7 @@ test('participant can update task status with history and audit in one transacti
   const service = new TasksService(repository, audit as never);
 
   const result = await service.updateForActor(
-    { taskId: 'task_1', status: TaskStatus.DONE },
+    { taskId: 'task_1', status: TaskStatus.DONE, statusNote: 'Inspection complete' },
     { userId: 'user_assignee', roleCode: 'CR_OFFICER', branchId: 'branch_1' },
     { actorId: 'user_assignee', correlationId: 'req_1' },
   );
@@ -205,6 +252,8 @@ test('participant can update task status with history and audit in one transacti
   assert.equal(updateInput?.status, TaskStatus.DONE);
   assert.equal(updateInput?.nextActionWhat, null);
   assert.equal(historyClient, txClient);
+  assert.equal(commentInput?.body, 'Status update IN_PROGRESS -> DONE: Inspection complete');
+  assert.equal(commentClient, txClient);
   assert.equal(auditClient, txClient);
   assert.equal(auditAction, 'task_updated');
 });
@@ -284,7 +333,7 @@ test('sent by me lists tasks owned by the actor', async () => {
   assert.deepEqual(result.tasks.map((task) => task.id), ['sent_1']);
 });
 
-test('task comment create writes row and audit in one transaction then notifies owner', async () => {
+test('task comment create writes row and audit in one transaction then queues collaboration delivery', async () => {
   const txClient = { task: {}, taskComment: {} };
   let commentClient: unknown;
   let auditClient: unknown;
@@ -301,12 +350,12 @@ test('task comment create writes row and audit in one transaction then notifies 
   const service = new TasksService(
     repository,
     { record: async (input: { metadata: unknown }, client: unknown) => { auditMetadata = input.metadata; auditClient = client; } } as never,
-    { queueInternal: async (input: unknown) => { queued.push(input); } } as never,
+    { queueCollaboration: async (input: unknown) => { queued.push(input); } } as never,
   );
 
   const result = await service.createCommentForActor(
     'task_1',
-    'I updated this.',
+    { body: 'I updated this.', mentionTargets: [], ccUserIds: [] },
     { userId: 'user_assignee', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_1' },
     { actorId: 'user_assignee' },
   );
@@ -314,12 +363,17 @@ test('task comment create writes row and audit in one transaction then notifies 
   assert.equal(result.id, 'comment_1');
   assert.equal(commentClient, txClient);
   assert.equal(auditClient, txClient);
-  assert.deepEqual(auditMetadata, { commentId: 'comment_1' });
+  assert.deepEqual(auditMetadata, { commentId: 'comment_1', mentionCount: 0, ccCount: 0 });
   assert.deepEqual(queued[0], {
-    recipientUserId: 'user_owner',
-    templateCode: 'task.comment.internal',
-    locale: 'en',
-    payload: { taskId: 'task_1', title: 'Call customer', status: TaskStatus.OPEN, commentId: 'comment_1' },
+    recordType: 'TASK',
+    recordId: 'task_1',
+    href: '/tasks/task_1',
+    title: 'Call customer',
+    excerpt: 'Please update.',
+    confidential: false,
+    eventKey: 'task-comment:comment_1',
+    mentions: [],
+    watchers: [],
   });
 });
 
@@ -347,7 +401,7 @@ test('task nudge audits in transaction and queues notification for next action u
   const queued: unknown[] = [];
   const repository = {
     transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
-    findById: async () => taskRecord({ nextActionWhoId: 'user_next', participants: [{ userId: 'user_next', role: TaskParticipantRole.PARTICIPANT }] }),
+    findById: async () => taskRecord({ nextActionWhoId: 'user_next', participants: [{ userId: 'user_next', role: TaskParticipantRole.PARTICIPANT, user: { email: 'next@example.test', nameEn: 'Next', nameAr: 'التالي' } }] }),
   } as unknown as TasksRepository;
   const service = new TasksService(
     repository,
@@ -570,7 +624,8 @@ function taskCommentRecord(overrides: Partial<TaskCommentRecord> = {}): TaskComm
     id: 'comment_1',
     taskId: 'task_1',
     authorId: 'user_owner',
-    author: { nameEn: 'Owner User' },
+    author: { nameEn: 'Owner User', nameAr: 'المالك' },
+    mentions: [],
     body: 'Please update.',
     createdAt: new Date('2026-06-20T09:00:00.000Z'),
     ...overrides,

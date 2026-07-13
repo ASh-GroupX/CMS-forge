@@ -37,11 +37,10 @@ export function StaffPicker({
   t: StaffPickerText;
 }) {
   const listId = React.useId();
-  const options = staff?.map((person) => ({ id: person.userId, label: staffLabel(person, locale) })) ?? [];
+  const options = staff?.map((person, index) => ({ id: person.userId, label: staffLabel(person, locale), value: String(index) })) ?? [];
   const selectRef = React.useRef<HTMLSelectElement>(null);
-  const initialLabel = options.find((option) => option.id === initialUserId)?.label ?? '';
-  const [selectedLabel, setSelectedLabel] = React.useState(initialLabel);
-  const selected = options.find((option) => option.label === selectedLabel);
+  const [selectedValue, setSelectedValue] = React.useState(options.find((option) => option.id === initialUserId)?.value ?? '');
+  const selected = options.find((option) => option.value === selectedValue);
 
   if (staff === undefined) return <PickerState label={label} message={t.loading} />;
   if (staff === null) return <PickerState alert label={label} message={t.error} />;
@@ -55,20 +54,20 @@ export function StaffPicker({
           aria-describedby={`${listId}-selected`}
           className="flex h-9 min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
           id={`${listId}-input`}
-          name={labelName}
-          onChange={(event) => setSelectedLabel(event.currentTarget.value)}
+          onChange={(event) => setSelectedValue(event.currentTarget.value)}
           ref={selectRef}
           required={required}
-          value={selectedLabel}
+          value={selectedValue}
         >
           <option value="" disabled={required}>{t.placeholder}</option>
-          {options.map((option) => <option key={option.id} value={option.label}>{option.label}</option>)}
+          {options.map((option) => <option key={option.id} value={option.value}>{option.label}</option>)}
         </select>
-        <Button aria-label={t.clear} onClick={() => { setSelectedLabel(''); if (selectRef.current) selectRef.current.value = ''; }} type="button" variant="outline">
+        <Button aria-label={t.clear} onClick={() => { setSelectedValue(''); if (selectRef.current) selectRef.current.value = ''; }} type="button" variant="outline">
           <X className="size-4" aria-hidden="true" />
         </Button>
       </div>
       <input name={name} type="hidden" value={selected?.id ?? ''} />
+      {labelName ? <input name={labelName} type="hidden" value={selected?.label ?? ''} /> : null}
       <p className="break-words text-xs text-muted-foreground" id={`${listId}-selected`}>
         {selected ? t.selected.replace('{name}', selected.label) : t.prompt}
       </p>

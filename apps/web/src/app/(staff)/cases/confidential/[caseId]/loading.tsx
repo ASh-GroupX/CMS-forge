@@ -6,12 +6,12 @@ import { confidentialCaseText } from '../../../../../i18n/staff-confidential-cas
 export default function ConfidentialCaseLoading() {
   const t = confidentialCaseText.en;
   return (
-    <Card aria-label={t.title} className="rounded-md border-slate-200 bg-white shadow-sm">
-      <CardHeader className="border-b border-slate-200 p-4">
+    <Card aria-label={t.title} className="rounded-md border-line-subtle bg-surface shadow-sm">
+      <CardHeader className="border-b border-line-subtle p-4">
         <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3 p-4" role="status">
-        <p className="text-sm text-slate-700">{t.states.loading}</p>
+        <p className="text-sm text-content-muted">{t.states.loading}</p>
         <Skeleton className="h-24 rounded-sm" />
         <Skeleton className="h-32 rounded-sm" />
       </CardContent>

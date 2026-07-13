@@ -25,6 +25,9 @@ export type TaskPromiseKpis = {
 export type ComplaintCaseKpiRow = {
   id: string;
   createdAt: Date;
+  closedAt?: Date | null;
+  status?: ComplaintStatus;
+  hasSlaObligation?: boolean;
 };
 
 export type ComplaintCaseStatusEvent = {
@@ -42,7 +45,11 @@ export type ComplaintCaseSlaEvent = {
 
 export type ComplaintCaseKpis = {
   reopenedCount: number;
+  reopenRate: number;
   escalationCount: number;
+  slaBreachRate: number;
+  medianTatHours: number;
+  agingBuckets: { zeroToOneDays: number; twoToThreeDays: number; fourToSevenDays: number; overSevenDays: number };
   averageFirstResponseHours: number;
   averageResolutionHours: number;
 };
@@ -60,10 +67,19 @@ export function taskPromiseKpis(tasks: TaskKpiRow[], events: TaskKpiStatusEvent[
   };
 }
 
-export function complaintCaseKpis(records: ComplaintCaseKpiRow[], statusEvents: ComplaintCaseStatusEvent[], slaEvents: ComplaintCaseSlaEvent[]): ComplaintCaseKpis {
+export function complaintCaseKpis(records: ComplaintCaseKpiRow[], statusEvents: ComplaintCaseStatusEvent[], slaEvents: ComplaintCaseSlaEvent[], now = new Date()): ComplaintCaseKpis {
+  const reopenedCount = statusEvents.filter(isReopened).length;
+  const closedRecords = records.filter((record) => closureAt(record, statusEvents));
+  const closedRecordIds = new Set(closedRecords.map((record) => record.id));
+  const reopenedRecordIds = new Set(statusEvents.filter(isReopened).map((event) => event.recordId));
+  const slaRecords = records.filter((record) => record.hasSlaObligation !== false);
   return {
-    reopenedCount: statusEvents.filter(isReopened).length,
+    reopenedCount,
+    reopenRate: percent([...reopenedRecordIds].filter((id) => closedRecordIds.has(id)).length, closedRecords.length),
     escalationCount: slaEvents.filter((event) => event.type === SlaEventType.BREACH).length,
+    slaBreachRate: percent(new Set(slaEvents.filter((event) => event.type === SlaEventType.BREACH).map((event) => event.recordId)).size, slaRecords.length),
+    medianTatHours: median(closedRecords.map((record) => Math.max(0, closureAt(record, statusEvents)!.getTime() - record.createdAt.getTime()) / HOUR_MS)),
+    agingBuckets: agingBuckets(records, now),
     averageFirstResponseHours: averageFirstEventHours(records, statusEvents, isFirstResponse),
     averageResolutionHours: averageFirstEventHours(records, statusEvents, isResolution),
   };
@@ -87,6 +103,13 @@ function average(values: number[]): number {
   return values.length === 0 ? 0 : round(values.reduce((sum, value) => sum + value, 0) / values.length);
 }
 
+function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  return round(sorted.length % 2 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2);
+}
+
 function round(value: number): number {
   return Math.round(value * 100) / 100;
 }
@@ -107,9 +130,28 @@ function isReopened(event: ComplaintCaseStatusEvent): boolean {
 }
 
 function isFirstResponse(event: ComplaintCaseStatusEvent): boolean {
-  return event.action !== ComplaintTransitionAction.SUBMIT;
+  return event.action !== ComplaintTransitionAction.SUBMIT && event.action !== ComplaintTransitionAction.REOPEN;
 }
 
 function isResolution(event: ComplaintCaseStatusEvent): boolean {
   return event.toStatus === ComplaintStatus.RESOLVED;
+}
+
+function closureAt(record: ComplaintCaseKpiRow, events: ComplaintCaseStatusEvent[]): Date | null {
+  if (record.closedAt) return record.closedAt;
+  return events.filter((event) => event.recordId === record.id && event.toStatus === ComplaintStatus.CLOSED).sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())[0]?.createdAt ?? null;
+}
+
+function agingBuckets(records: ComplaintCaseKpiRow[], now: Date): ComplaintCaseKpis['agingBuckets'] {
+  const buckets = { zeroToOneDays: 0, twoToThreeDays: 0, fourToSevenDays: 0, overSevenDays: 0 };
+  for (const record of records) {
+    if (record.hasSlaObligation === false) continue;
+    if (record.status === ComplaintStatus.CLOSED || record.status === ComplaintStatus.REJECTED) continue;
+    const days = Math.floor(Math.max(0, now.getTime() - record.createdAt.getTime()) / (24 * HOUR_MS));
+    if (days <= 1) buckets.zeroToOneDays += 1;
+    else if (days <= 3) buckets.twoToThreeDays += 1;
+    else if (days <= 7) buckets.fourToSevenDays += 1;
+    else buckets.overSevenDays += 1;
+  }
+  return buckets;
 }

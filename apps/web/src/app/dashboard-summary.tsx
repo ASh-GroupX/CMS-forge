@@ -1,9 +1,10 @@
 import React from 'react';
+import { StateBlock, type PrimitiveTone } from '../components/shared/ui-primitives';
 import { staffShellText, type Locale } from '../i18n/staff-shell';
 import type { StaffDashboardSummary } from '../lib/staff-dashboard-api';
 
 type RolePreview = 'staff' | 'admin' | 'management';
-export type DashboardPreviewState = 'loading' | 'empty' | 'error';
+export type DashboardFixtureState = 'loading' | 'empty' | 'error';
 
 type SummaryKey = 'open' | 'overdue' | 'warnings' | 'closed' | 'averageTat';
 
@@ -20,6 +21,7 @@ const values: Record<SummaryKey, string> = {
   closed: '11',
   averageTat: '3.4d',
 };
+const tone: Record<SummaryKey, PrimitiveTone | undefined> = { open: undefined, overdue: 'danger', warnings: 'warning', closed: undefined, averageTat: 'brand' };
 
 export function DashboardSummary({
   locale,
@@ -29,7 +31,7 @@ export function DashboardSummary({
 }: {
   locale: Locale;
   role: RolePreview;
-  state?: DashboardPreviewState | undefined;
+  state?: DashboardFixtureState | undefined;
   summary?: StaffDashboardSummary | undefined;
 }) {
   const t = staffShellText[locale].dashboard;
@@ -37,28 +39,45 @@ export function DashboardSummary({
 
   if (state) {
     return (
-      <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm" aria-label={t.title}>
-        <h2 className="text-lg font-semibold tracking-normal">{t.title}</h2>
-        <p className="mt-2 text-sm text-slate-600" role={state === 'error' ? 'alert' : 'status'}>
-          {t.states[state]}
-        </p>
+      <section className="rounded-sm border border-line-subtle bg-surface" aria-label={t.title}>
+        <header className="border-b border-line-subtle bg-surface-raised px-3 py-2">
+          <h2 className="text-base font-semibold tracking-normal">{t.title}</h2>
+        </header>
+        <StateBlock className="m-3" message={t.states[state]} tone={state === 'error' ? 'error' : 'neutral'} />
       </section>
     );
   }
 
+  const primary = roleCards[role][0] ?? 'open';
+  const secondary = roleCards[role].slice(1);
   return (
-    <section aria-label={t.title} className="grid gap-3 md:grid-cols-3 xl:grid-cols-5">
-      {roleCards[role].map((key) => {
-        const [label, description] = t.cards[key];
-        return (
-          <div key={key} className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-slate-600">{label}</p>
-            <p className="mt-2 text-3xl font-semibold tracking-normal">{cardValues[key]}</p>
-            <p className="mt-1 text-xs text-slate-500">{description}</p>
-          </div>
-        );
-      })}
+    <section aria-label={t.title} className="rounded-sm border border-line-subtle bg-surface">
+      <header className="border-b border-line-subtle bg-surface-raised px-3 py-2">
+        <h2 className="text-base font-semibold tracking-normal">{t.title}</h2>
+      </header>
+      <div className="grid gap-2 p-3 lg:grid-cols-[1.1fr_2fr]">
+        <MetricCard item={metric(primary, t, cardValues)} primary />
+        <div className="grid gap-2 md:grid-cols-2">
+          {secondary.map((key) => <MetricCard item={metric(key, t, cardValues)} key={key} />)}
+        </div>
+      </div>
     </section>
+  );
+}
+
+function metric(key: SummaryKey, t: typeof staffShellText[Locale]['dashboard'], values: Record<SummaryKey, string>) {
+  const [label, description] = t.cards[key];
+  return { description, label, tone: tone[key], value: values[key] };
+}
+
+function MetricCard({ item, primary = false }: { item: { description: string; label: string; tone?: PrimitiveTone | undefined; value: string }; primary?: boolean }) {
+  const valueClass = item.tone === 'brand' ? 'text-brand' : item.tone === 'danger' ? 'text-status-error' : item.tone === 'warning' ? 'text-status-warning' : 'text-content-strong';
+  return (
+    <div className={`rounded-sm border border-line-subtle ${primary ? 'bg-content-strong text-brand-foreground lg:min-h-28' : 'bg-surface'} p-3`}>
+      <p className={`text-sm font-medium ${primary ? 'text-brand-foreground/70' : 'text-content-muted'}`}>{item.label}</p>
+      <p className={`${primary ? 'text-4xl text-brand-foreground' : 'text-2xl'} mt-2 font-semibold tracking-normal ${primary ? '' : valueClass}`}>{item.value}</p>
+      <p className={`mt-1 text-xs ${primary ? 'text-brand-foreground/65' : 'text-content-muted'}`}>{item.description}</p>
+    </div>
   );
 }
 

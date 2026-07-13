@@ -2,9 +2,11 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { blockerReasonLabel, taskStatusLabel } from '../../../../i18n/domain-labels';
 import { managerControlRoomText } from '../../../../i18n/staff-manager-control-room';
 import { resolveLocale, staffShellText, type Locale } from '../../../../i18n/staff-shell';
-import { getManagerControlRoomTasks, type ManagerControlRoomTasks, type ManagerRollupCount, type ManagerStuckTask, type StaffTask, type StaffTaskStatus } from '../../../../lib/staff-tasks-api';
+import { formatDisplayDate } from '../../../../lib/locale-format';
+import { getManagerControlRoomTasksLoadResult, type ManagerControlRoomTasks, type ManagerRollupCount, type ManagerStuckTask, type StaffTask, type StaffTaskStatus } from '../../../../lib/staff-tasks-api';
 
 type SearchParams = { locale?: string | string[] };
 type Copy = (typeof managerControlRoomText)[Locale];
@@ -30,14 +32,14 @@ export default async function ManagerControlRoomPage({
 }) {
   const params = await searchParams;
   const locale = resolveLocale(readParam(params?.locale));
-  const data = await getManagerControlRoomTasks({
+  const data = await getManagerControlRoomTasksLoadResult({
     ...(cookieHeader !== undefined ? { cookieHeader } : {}),
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
   });
-  return <ManagerControlRoom data={data} locale={locale} />;
+  return <ManagerControlRoom data={data.status === 'ready' ? data.data : null} locale={locale} state={data.status === 'ready' ? undefined : data.status} />;
 }
 
-export function ManagerControlRoom({ data, locale }: { data: ManagerControlRoomTasks | null; locale: Locale }) {
+export function ManagerControlRoom({ data, locale, state }: { data: ManagerControlRoomTasks | null; locale: Locale; state?: 'denied' | 'error' | undefined }) {
   const shell = staffShellText[locale];
   const t = managerControlRoomText[locale];
   const total = data ? totalSignals(data) : 0;
@@ -55,7 +57,7 @@ export function ManagerControlRoom({ data, locale }: { data: ManagerControlRoomT
       </CardHeader>
       <CardContent className="p-4">
         {data === null ? (
-          <p className="rounded-sm border border-status-error bg-status-error/10 px-3 py-2 text-sm text-status-error" role="alert">{t.states.error}</p>
+          <p className="rounded-sm border border-status-error bg-status-error/10 px-3 py-2 text-sm text-status-error" role="alert">{state === 'denied' ? t.states.denied : t.states.error}</p>
         ) : total === 0 ? (
           <p className="rounded-sm border border-border bg-muted px-3 py-2 text-sm text-muted-foreground" role="status">{t.states.empty}</p>
         ) : (
@@ -151,25 +153,25 @@ function TaskCard({ locale, task, t }: { locale: Locale; task: StaffTask | Manag
           <p className="mt-1 text-xs text-muted-foreground">{task.id}</p>
         </div>
         <div className="flex flex-wrap gap-1">
-          <Badge className={STATUS_CLASS[task.status]} variant="outline">{task.status}</Badge>
+          <Badge className={STATUS_CLASS[task.status]} title={task.status} variant="outline">{taskStatusLabel(locale, task.status)}</Badge>
           {task.isCustomerPromise ? <Badge variant="secondary">{t.promise}</Badge> : null}
         </div>
       </div>
       <dl className="mt-3 grid gap-2 text-sm md:grid-cols-2">
         <Field label={t.fields.assignee} title={task.assigneeId} value={task.assigneeName ?? shortId(task.assigneeId)} />
-        <Field label={t.fields.due} value={formatDate(task.dueAt)} />
+        <Field label={t.fields.due} value={formatDate(task.dueAt, locale)} />
         <Field label={t.fields.owner} title={task.ownerId} value={task.ownerName ?? shortId(task.ownerId)} />
         <Field label={t.fields.branch} title={task.branchId ?? undefined} value={task.branchName ?? (task.branchId ? shortId(task.branchId) : '-')} />
-        <Field label={t.fields.updated} value={formatDate(task.updatedAt)} />
+        <Field label={t.fields.updated} value={formatDate(task.updatedAt, locale)} />
       </dl>
       {task.nextAction ? (
         <div className="mt-3 rounded-sm border border-border bg-muted px-3 py-2 text-sm">
           <p className="font-semibold">{t.fields.nextAction}</p>
           <p className="mt-1 break-words text-muted-foreground">{task.nextAction.what}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{t.fields.nextOwner}: <span title={task.nextAction.whoId}>{task.nextAction.whoName ?? shortId(task.nextAction.whoId)}</span> - {formatDate(task.nextAction.when)}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t.fields.nextOwner}: <span title={task.nextAction.whoId}>{task.nextAction.whoName ?? shortId(task.nextAction.whoId)}</span> - {formatDate(task.nextAction.when, locale)}</p>
         </div>
       ) : null}
-      {reasons.length ? <p className="mt-3 text-xs font-semibold text-status-warning">{t.fields.reasons}: {reasons.join(', ')}</p> : null}
+      {reasons.length ? <p className="mt-3 text-xs font-semibold text-status-warning">{t.fields.reasons}: {reasons.map((reason) => blockerReasonLabel(locale, reason)).join(', ')}</p> : null}
       {task.links.length ? (
         <div className="mt-3 flex flex-wrap gap-1" aria-label={t.fields.links}>
           {task.links.map((link) => <Badge key={`${link.entityType}-${link.entityId}`} variant="outline">{link.entityType}: <span title={link.entityId}>{shortId(link.entityId)}</span></Badge>)}
@@ -211,8 +213,8 @@ function formatNumber(locale: Locale, value: number): string {
   return new Intl.NumberFormat(locale).format(value);
 }
 
-function formatDate(value: string): string {
-  return value.slice(0, 16).replace('T', ' ');
+function formatDate(value: string, locale: Locale): string {
+  return formatDisplayDate(value, locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' });
 }
 
 function shortId(value: string): string {

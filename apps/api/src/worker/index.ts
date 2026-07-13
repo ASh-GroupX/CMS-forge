@@ -23,9 +23,11 @@ class WorkerModule {}
 
 export const slaWarningJobName = 'sla.warning';
 export const slaBreachJobName = 'sla.breach';
+export const slaEscalationJobName = 'sla.escalation';
 export const notificationEmailJobName = 'notifications.email';
 export const notificationSmsJobName = 'notifications.sms';
 export const notificationWhatsAppJobName = 'notifications.whatsapp';
+export const collaborationDigestJobName = 'notifications.collaboration-digest';
 export const taskEscalationJobName = 'tasks.escalation.scan';
 export const taskNotificationBatchJobName = 'tasks.notification.batch';
 export const attachmentScanJobName = 'attachments.scan';
@@ -33,8 +35,8 @@ export const attachmentScanJobName = 'attachments.scan';
 type WorkerJob = { id?: string | number; name: string; data?: WorkerJobPayload };
 type WorkerLogger = Pick<Logger, 'log'>;
 type WorkerContext = Pick<INestApplicationContext, 'get'>;
-type SlaRunner = Pick<SlaService, 'runWarningJob' | 'runBreachJob'>;
-type NotificationsRunner = Pick<NotificationsService, 'dispatchQueuedEmail' | 'dispatchQueuedSms' | 'dispatchQueuedWhatsApp' | 'queueInternal'>;
+type SlaRunner = Pick<SlaService, 'runWarningJob' | 'runBreachJob' | 'runEscalationJob'>;
+type NotificationsRunner = Pick<NotificationsService, 'dispatchQueuedEmail' | 'dispatchQueuedSms' | 'dispatchQueuedWhatsApp' | 'queueInternal' | 'flushCollaborationDigests'>;
 type AttachmentsRunner = Pick<AttachmentsService, 'transitionScanStatus'>;
 type TaskEscalationRunner = Pick<TasksService, 'managerControlRoom'>;
 type QueueScheduler = Pick<Queue<WorkerJobPayload>, 'upsertJobScheduler' | 'close'>;
@@ -79,7 +81,7 @@ export async function processWorkerJob(
   logger: WorkerLogger = new Logger('Worker'),
 ): Promise<unknown> {
   if (queueName === 'sla') {
-    if (job.name !== slaWarningJobName && job.name !== slaBreachJobName) return logNoopJob(queueName, job, logger);
+    if (job.name !== slaWarningJobName && job.name !== slaBreachJobName && job.name !== slaEscalationJobName) return logNoopJob(queueName, job, logger);
     const result = await runSlaJob(app.get(SlaService), job.name, new Date());
     logger.log(`sla job received name=${job.name} id=${job.id ?? 'unknown'} result=${JSON.stringify(result)}`);
     return result;
@@ -94,6 +96,11 @@ export async function processWorkerJob(
     if (job.name === taskNotificationBatchJobName) {
       const result = await runTaskNotificationBatchJob(app.get(TasksService), app.get(NotificationsService), new Date());
       logger.log(`task notification batch job received name=${job.name} id=${job.id ?? 'unknown'} result=${JSON.stringify(result)}`);
+      return result;
+    }
+    if (job.name === collaborationDigestJobName) {
+      const result = await app.get(NotificationsService).flushCollaborationDigests(100, new Date());
+      logger.log(`collaboration digest job received id=${job.id ?? 'unknown'} result=${JSON.stringify(result)}`);
       return result;
     }
     if (job.name !== notificationEmailJobName && job.name !== notificationSmsJobName && job.name !== notificationWhatsAppJobName) return logNoopJob(queueName, job, logger);
@@ -122,6 +129,7 @@ export async function scheduleSlaJobs(
 
   await queue.upsertJobScheduler(slaWarningJobName, { every: everyMs }, { name: slaWarningJobName, data: {} });
   await queue.upsertJobScheduler(slaBreachJobName, { every: everyMs }, { name: slaBreachJobName, data: {} });
+  await queue.upsertJobScheduler(slaEscalationJobName, { every: everyMs }, { name: slaEscalationJobName, data: {} });
 }
 
 export async function scheduleNotificationJobs(
@@ -135,6 +143,7 @@ export async function scheduleNotificationJobs(
   await queue.upsertJobScheduler(notificationEmailJobName, { every: everyMs }, { name: notificationEmailJobName, data: {} });
   await queue.upsertJobScheduler(notificationSmsJobName, { every: everyMs }, { name: notificationSmsJobName, data: {} });
   await queue.upsertJobScheduler(notificationWhatsAppJobName, { every: everyMs }, { name: notificationWhatsAppJobName, data: {} });
+  await queue.upsertJobScheduler(collaborationDigestJobName, { every: everyMs }, { name: collaborationDigestJobName, data: {} });
   await queue.upsertJobScheduler(taskEscalationJobName, { every: everyMs }, { name: taskEscalationJobName, data: {} });
   await queue.upsertJobScheduler(taskNotificationBatchJobName, { every: everyMs }, { name: taskNotificationBatchJobName, data: {} });
 }
@@ -145,6 +154,9 @@ async function runSlaJob(slaService: SlaRunner, jobName: string, now: Date): Pro
   }
   if (jobName === slaBreachJobName) {
     return slaService.runBreachJob(now);
+  }
+  if (jobName === slaEscalationJobName) {
+    return slaService.runEscalationJob(now);
   }
   return { ok: true };
 }

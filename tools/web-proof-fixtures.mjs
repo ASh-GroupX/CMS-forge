@@ -1,0 +1,142 @@
+export async function proofFetch(input) {
+  const path = new URL(String(input)).pathname;
+  if (path === '/staff/assignable') return json({ staff: proofStaff() });
+  if (path === '/tasks/today') return json({
+    completed: [],
+    dueToday: [],
+    overdue: [proofTask('task_proof_1', 'TASK-PROOF-001 Prepare customer callback', { status: 'IN_PROGRESS' })],
+    overduePromises: [],
+    assignedToMe: [proofTask('task_proof_2', 'TASK-PROOF-002 Confirm owner handoff', { status: 'OPEN', nextAction: null })],
+    waitingOnMe: [],
+  });
+  if (path === '/tasks/related-records') return json({ records: [{ recordType: 'CUSTOMER', recordId: 'cust_proof', label: 'Proof Customer', labelAr: 'Proof Customer AR', context: 'Main Branch', contextAr: 'Main Branch AR' }] });
+  if (path === '/deals/handoff-board') return json({
+    byStage: [
+      { stage: 'BOOKING', count: 1, deals: [proofDeal('deal_proof_1', 'DEAL-PROOF-001 Delivery handoff', { blocker: null, delayAgeMinutes: 90 })] },
+      { stage: 'PAYMENT', count: 0, deals: [] },
+    ],
+    stuck: [proofDeal('deal_proof_2', 'DEAL-PROOF-002 Payment blocker', { blocker: 'Finance approval missing', delayAgeMinutes: 240 })],
+    currentHolder: [{ currentHolderId: 'usr_proof', currentHolderName: 'Proof Admin', count: 2 }],
+  });
+  if (path === '/reports/dashboard') return json({ summary: { openComplaints: 9, overdueComplaints: 2, slaWarningComplaints: 3, closedComplaints: 7, averageTatHours: 18 } });
+  if (path === '/reports/kpis') return json({ kpis: proofKpis() });
+  if (path === '/reports/catalog') return json({ items: [
+    { id: 'RPT-001', name: 'Open complaints summary', users: 'Managers', requiredFilters: ['date', 'branch'], status: 'DELIVERED', signoffRequired: false, exportable: true, unavailableReason: null },
+    { id: 'RPT-002', name: 'Overdue complaints', users: 'Managers', requiredFilters: ['branch', 'owner'], status: 'DEFERRED', signoffRequired: true, exportable: false, unavailableReason: 'Deferred pending business signoff.' },
+    { id: 'RPT-017', name: 'Audit activity report', users: 'Admin', requiredFilters: ['actor', 'action'], status: 'DELIVERED', signoffRequired: false, exportable: true, unavailableReason: null },
+  ] });
+  if (path === '/admin/users') return json({
+    users: [{ id: 'usr_proof', email: 'proof@example.test', nameEn: 'Proof Admin', nameAr: 'Proof Admin AR', roleCode: 'ADMIN', roleName: 'Admin', branchId: null, branchName: null, isActive: true }],
+    roles: [{ id: 'role_admin', code: 'ADMIN', nameEn: 'Admin', nameAr: 'Admin AR' }],
+    branches: [{ id: 'branch_proof', code: 'PROOF', nameEn: 'Proof branch', nameAr: 'Proof branch AR' }],
+  });
+  if (path === '/complaints/form-options') return json({
+    branches: [{ id: 'branch_proof', code: 'PROOF', nameEn: 'Proof branch', nameAr: 'Proof branch AR' }],
+    categories: [{ id: 'cat_proof', code: 'PROOF', nameEn: 'Proof category', nameAr: 'Proof category AR', parentId: null }],
+    severities: ['HIGH', 'MEDIUM', 'LOW'],
+  });
+  if (path === '/complaints/search') return json({ items: [proofRow('CMP-PROOF-001', 'Proof queue row')] });
+  if (path === '/reports') return json({ items: [proofRow('CMP-PROOF-RPT-001', 'Proof report row', { categoryId: 'cat_proof' })] });
+  if (path.endsWith('/duplicate-candidates')) return json({ items: [proofRow('CMP-PROOF-DUP-001', 'Proof duplicate row')], windowDays: 30 });
+  if (path.endsWith('/related')) return json({ items: [proofRow('CMP-PROOF-REL-001', 'Proof related row')] });
+  if (path.startsWith('/complaints/')) return json({
+    complaint: {
+      ...proofRow('CMP-PROOF-DETAIL', 'Proof detail row'),
+      description: 'Proof detail description.',
+      incidentAt: '2026-06-19T00:00:00.000Z',
+      customer: proofCustomer(),
+      customerSource: 'DMS',
+      manualCustomer: false,
+      vehicleRelated: true,
+      vehicle: proofVehicle(),
+      vehicleSource: 'LOCAL',
+      manualVehicle: false,
+      vehicleDataUnavailableReason: null,
+      statusHistory: [{ id: 'hist_1', toStatus: 'SUBMITTED', createdAt: '2026-06-19T00:00:00.000Z' }],
+    },
+  });
+  return json({}, 404);
+}
+
+function proofRow(referenceNumber, subject, extra = {}) {
+  return { id: 'proof_1', referenceNumber, status: 'IN_PROGRESS', severity: 'HIGH', subject, branchId: 'branch_proof', ownerId: 'usr_proof', createdAt: '2026-06-20T00:00:00.000Z', updatedAt: '2026-06-20T10:00:00.000Z', ...extra };
+}
+
+function proofTask(id, title, extra = {}) {
+  return {
+    id,
+    title,
+    ownerId: 'usr_proof',
+    ownerName: 'Proof Admin',
+    assigneeId: 'usr_proof',
+    assigneeName: 'Proof Admin',
+    branchId: 'branch_proof',
+    branchName: 'Proof branch',
+    dueAt: '2026-06-19T09:00:00.000Z',
+    status: 'OPEN',
+    nextAction: { what: 'Call customer with next step', whoId: 'usr_proof', whoName: 'Proof Admin', when: '2026-06-19T10:00:00.000Z' },
+    isCustomerPromise: false,
+    visibility: 'INTERNAL',
+    confidentialityLevel: 'NORMAL',
+    links: [{ entityType: 'CUSTOMER', entityId: 'cust_proof' }],
+    participantUserIds: ['usr_proof'],
+    createdAt: '2026-06-18T08:00:00.000Z',
+    updatedAt: '2026-06-20T10:00:00.000Z',
+    ...extra,
+  };
+}
+
+function proofDeal(id, title, extra = {}) {
+  return {
+    id,
+    title,
+    branchId: 'branch_proof',
+    branchName: 'Proof branch',
+    ownerId: 'usr_proof',
+    ownerName: 'Proof Admin',
+    currentHolderId: 'usr_proof',
+    currentHolderName: 'Proof Admin',
+    stage: 'BOOKING',
+    stageDueAt: '2026-06-21T09:00:00.000Z',
+    blocker: null,
+    delayAgeMinutes: 120,
+    createdAt: '2026-06-18T08:00:00.000Z',
+    updatedAt: '2026-06-20T10:00:00.000Z',
+    ...extra,
+  };
+}
+
+function proofStaff() {
+  return [
+    { userId: 'usr_proof', displayName: 'Proof Admin', displayNameAr: 'Proof Admin AR', role: 'CR Officer', roleAr: 'CR Officer AR', branchLabel: 'Proof branch', branchLabelAr: 'Proof branch AR' },
+  ];
+}
+
+function proofKpis() {
+  return {
+    onTimeCompletionPercent: 88,
+    activeOverdueCount: 2,
+    averageDelayHours: 1.5,
+    customerPromiseKeptPercent: 91,
+    reopenedCount: 3,
+    reopenRate: 43,
+    escalationCount: 5,
+    slaBreachRate: 14,
+    medianTatHours: 22,
+    agingBuckets: { zeroToOneDays: 1, twoToThreeDays: 2, fourToSevenDays: 3, overSevenDays: 4 },
+    averageFirstResponseHours: 0.75,
+    averageResolutionHours: 16,
+  };
+}
+
+function proofCustomer() {
+  return { id: 'cust_proof', name: 'Proof Customer', phone: '+966500000099', identifier: 'CUST-PROOF', source: 'DMS' };
+}
+
+function proofVehicle() {
+  return { id: 'veh_proof', vin: 'PROOFVIN00001', plate: 'PRF123', make: 'Nissan', model: 'Patrol', year: 2024, source: 'LOCAL' };
+}
+
+function json(body, status = 200) {
+  return new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' }, status });
+}

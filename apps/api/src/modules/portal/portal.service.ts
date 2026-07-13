@@ -1,23 +1,39 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { CommentVisibility, ComplaintStatus, ComplaintTransitionRequestSource } from '@prisma/client';
-import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
+import { CommentVisibility, ComplaintSeverity, ComplaintStatus, ComplaintTransitionRequestSource, NotificationChannel } from '@prisma/client';
 import { AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
+import { AttachmentsService } from '../attachments/attachments.service.js';
+import type { AttachmentUploadResult, CreateAttachmentUploadInput } from '../attachments/attachments.service.js';
 import { ComplaintsService } from '../complaints/complaints.service.js';
-import type { ComplaintCreationResult, CreateInternalComplaintInput } from '../complaints/complaints.service.js';
+import type { ComplaintCommentResult, ComplaintCreationResult, CreateInternalComplaintInput } from '../complaints/complaints.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { portalAudit, portalUnknownAudit } from './portal-audit.js';
 import { PortalRepository } from './portal.repository.js';
 import type { PortalSessionLookupRecord, PortalVerificationChallengeRecord } from './portal.repository.js';
+import { createSessionToken, generateOtp, hashOtp, hashSessionToken, verifyOtpHash } from './portal-token.js';
 
-export type SubmitPortalComplaintInput = Omit<CreateInternalComplaintInput, 'actorId' | 'requestSource' | 'customerNumber'>;
-export type RequestPortalOtpInput = { referenceNumber: string; customerPhone: string; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
+export type PortalComplaintAttachmentInput = { fileName: string; contentType: string; sizeBytes: number; contentBase64: string };
+export type PortalAttachmentDto = { id: string; complaintId: string; fileName: string; contentType: string; sizeBytes: number; scanStatus: string; customerVisible: boolean };
+type SubmitPortalComplaintBase = Omit<CreateInternalComplaintInput, 'actorId' | 'branchId' | 'categoryId' | 'customerNumber' | 'requestSource' | 'severity' | 'subcategoryId'>;
+export type SubmitPortalComplaintInput = SubmitPortalComplaintBase & {
+  branchId?: string | null;
+  categoryId?: string | null;
+  subcategoryId?: string | null;
+  severity?: ComplaintSeverity | null;
+  manualTriage?: boolean;
+  attachments?: PortalComplaintAttachmentInput[];
+};
+export type PortalAttachmentWarningDto = { code: 'PORTAL_ATTACHMENT_UPLOAD_FAILED'; message: string; failedCount: number; uploadedCount: number };
+export type PortalComplaintSubmissionResult = ComplaintCreationResult & { attachments?: PortalAttachmentDto[]; attachmentWarning?: PortalAttachmentWarningDto };
+export type RequestPortalOtpInput = { referenceNumber: string; customerPhone: string; locale?: 'en' | 'ar'; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type VerifyPortalOtpInput = { verificationId: string; otp: string; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type PortalTrackingInput = { sessionToken: string; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type PortalFollowUpInput = PortalTrackingInput & { body: string };
 export type PortalAttachmentUploadContext = { complaintId: string; customerId: string; branchId: string; status: string };
-export type PortalOtpRequestResult = { ok: true };
+export type PortalOtpRequestResult = { ok: true; verificationId: string; expiresAt: string };
 export type PortalSessionResult = { sessionToken: string; expiresAt: string };
-export type PortalTrackingResult = { referenceNumber: string; status: string; createdAt: string; updatedAt: string; timeline: Array<{ fromStatus: string | null; toStatus: string; action: string | null; createdAt: string }> };
+export type PortalTimelineItem = { fromStatus: string | null; toStatus: string; action: string | null; createdAt: string; type: 'STATUS' | 'PUBLIC_UPDATE'; body?: string };
+export type PortalTrackingResult = { referenceNumber: string; status: string; createdAt: string; updatedAt: string; timeline: PortalTimelineItem[] };
 export type PortalFollowUpResult = { ok: true };
 
 const OTP_TTL_MS = 5 * 60 * 1000;
@@ -26,21 +42,52 @@ const MAX_OTP_ATTEMPTS = 5;
 
 @Injectable()
 export class PortalService {
-  constructor(
-    private readonly complaintsService: ComplaintsService,
-    private readonly portalRepository: PortalRepository,
-    private readonly notificationsService: NotificationsService,
-    private readonly auditService: AuditService,
-  ) {}
+  constructor(private readonly complaintsService: ComplaintsService, private readonly portalRepository: PortalRepository, private readonly notificationsService: NotificationsService, private readonly auditService: AuditService, private readonly attachmentsService?: AttachmentsService) {}
 
-  async submitComplaint(input: SubmitPortalComplaintInput): Promise<ComplaintCreationResult> {
-    return this.complaintsService.createInternal({
-      ...input,
+  async submitComplaint(input: SubmitPortalComplaintInput): Promise<PortalComplaintSubmissionResult> {
+    const { attachments = [], ...submittedInput } = input;
+    const complaintInput = await this.resolveComplaintInput(submittedInput);
+    const attachmentInputs = attachments.map((attachment) => this.portalAttachmentInput('__pending__', attachment, complaintInput));
+    const service = attachments.length ? requiredAttachmentsService(this.attachmentsService) : null;
+    for (const attachment of attachmentInputs) service?.validateUploadMetadata(attachment);
+
+    const complaint = await this.complaintsService.createInternal({
+      ...complaintInput,
       actorId: null,
       customerNumber: null,
       saveAsDraft: false,
       requestSource: ComplaintTransitionRequestSource.CUSTOMER_PORTAL,
     });
+    const uploaded: AttachmentUploadResult[] = [];
+    let failedCount = 0;
+    for (const attachment of attachmentInputs) {
+      try {
+        uploaded.push(await service!.createUpload({ ...attachment, complaintId: complaint.id }));
+      } catch {
+        failedCount += 1;
+      }
+    }
+    return {
+      ...complaint,
+      ...(uploaded.length ? { attachments: uploaded.map(portalAttachmentDto) } : {}),
+      ...(failedCount ? { attachmentWarning: { code: 'PORTAL_ATTACHMENT_UPLOAD_FAILED' as const, message: 'Complaint submitted, but one or more attachments could not be uploaded.', failedCount, uploadedCount: uploaded.length } } : {}),
+    };
+  }
+
+  private async resolveComplaintInput(input: Omit<SubmitPortalComplaintInput, 'attachments'>): Promise<CreateInternalComplaintInput> {
+    if (input.manualTriage !== true) return input as CreateInternalComplaintInput;
+    const defaults = await this.portalRepository.findManualTriageDefaults();
+    if (!defaults) throw new AppException('PORTAL_OPTIONS_REQUIRED', 'Complaint form options are required before portal submission.', HttpStatus.BAD_REQUEST, [
+      { field: 'manualTriage', code: 'UNAVAILABLE', message: 'Manual triage defaults are not configured.' },
+    ]);
+    return {
+      ...input,
+      branchId: optionalText(input.branchId) ?? defaults.branchId,
+      categoryId: optionalText(input.categoryId) ?? defaults.categoryId,
+      subcategoryId: optionalText(input.subcategoryId) ?? defaults.subcategoryId,
+      severity: input.severity ?? ComplaintSeverity.MEDIUM,
+      manualTriage: true,
+    };
   }
 
   async requestTrackingOtp(input: RequestPortalOtpInput): Promise<PortalOtpRequestResult> {
@@ -49,22 +96,24 @@ export class PortalService {
     const target = await this.complaintsService.findPortalVerificationTarget(referenceNumber, customerPhone);
     if (!target) throw verificationFailed();
 
+    const otp = generateOtp();
     const verification = await this.portalRepository.createVerification({
       complaintId: target.complaintId,
       customerId: target.customerId,
       phone: target.phone,
-      otpHash: hashOtp(generateOtp()),
+      otpHash: hashOtp(otp),
       ipAddress: input.ipAddress ?? null,
       expiresAt: new Date(Date.now() + OTP_TTL_MS),
     });
 
     await this.notificationsService.queueInternal({
       complaintId: target.complaintId,
-      templateCode: 'portal.verification.requested.internal',
-      locale: 'en',
-      payload: { verificationId: verification.id, referenceNumber, expiresAt: verification.expiresAt.toISOString() },
+      channel: NotificationChannel.SMS,
+      templateCode: 'portal.verification.otp.customer',
+      locale: input.locale ?? 'en',
+      payload: portalOtpPayload(input.locale ?? 'en', target.phone, referenceNumber, otp, verification.expiresAt),
     });
-    return { ok: true };
+    return { ok: true, verificationId: verification.id, expiresAt: verification.expiresAt.toISOString() };
   }
 
   async verifyTrackingOtp(input: VerifyPortalOtpInput): Promise<PortalSessionResult> {
@@ -92,7 +141,7 @@ export class PortalService {
       throw verificationFailed();
     }
 
-    const sessionToken = randomBytes(32).toString('base64url');
+    const sessionToken = createSessionToken();
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
     const session = await this.portalRepository.transaction(async (client) => {
       await this.portalRepository.markVerified(verification.id, client);
@@ -107,12 +156,16 @@ export class PortalService {
     const session = await this.requireSession(input.sessionToken);
     try {
       const complaint = await this.complaintsService.getDetail(session.complaintId);
+      const comments = await this.complaintsService.listPublicComments(session.complaintId);
       return {
         referenceNumber: complaint.referenceNumber,
         status: complaint.status,
         createdAt: complaint.createdAt,
         updatedAt: complaint.updatedAt,
-        timeline: complaint.statusHistory.map(({ fromStatus, toStatus, action, createdAt }) => ({ fromStatus, toStatus, action, createdAt })),
+        timeline: publicTimeline([
+          ...complaint.statusHistory.map(({ fromStatus, toStatus, action, createdAt }) => ({ fromStatus, toStatus, action, createdAt, type: 'STATUS' as const })),
+          ...comments.map(publicCommentTimelineItem),
+        ]),
       };
     } catch (error) {
       if (error instanceof AppException && error.code === 'COMPLAINT_NOT_FOUND') throw verificationFailed();
@@ -149,6 +202,25 @@ export class PortalService {
     return { complaintId: session.complaintId, customerId: session.customerId, branchId: complaint.branchId, status: complaint.status };
   }
 
+  private portalAttachmentInput(complaintId: string, attachment: PortalComplaintAttachmentInput, context: CreateInternalComplaintInput): CreateAttachmentUploadInput {
+    const bytes = Buffer.from(attachment.contentBase64, 'base64');
+    if (bytes.byteLength !== attachment.sizeBytes) throw invalidPortalAttachment();
+    return {
+      complaintId,
+      fileName: attachment.fileName,
+      contentType: attachment.contentType,
+      sizeBytes: attachment.sizeBytes,
+      bytes,
+      uploadedById: null,
+      actorId: null,
+      branchId: context.branchId,
+      customerVisible: true,
+      correlationId: context.correlationId ?? null,
+      ipAddress: context.ipAddress ?? null,
+      userAgent: context.userAgent ?? null,
+    };
+  }
+
   private async expireVerification(verification: PortalVerificationChallengeRecord, input: VerifyPortalOtpInput): Promise<void> {
     await this.portalRepository.transaction(async (client) => {
       const result = await this.portalRepository.markExpired(verification.id, client);
@@ -170,60 +242,42 @@ export class PortalService {
   }
 }
 
-function generateOtp(): string { return String(randomInt(0, 1_000_000)).padStart(6, '0'); }
+function publicCommentTimelineItem(comment: ComplaintCommentResult): PortalTimelineItem { return { fromStatus: null, toStatus: 'PUBLIC_UPDATE', action: 'PUBLIC_UPDATE', createdAt: comment.createdAt, type: 'PUBLIC_UPDATE', body: comment.body }; }
 
-function hashOtp(otp: string): string {
-  const salt = randomBytes(16).toString('hex');
-  return `sha256:${salt}:${createHash('sha256').update(`${salt}:${otp}`).digest('hex')}`;
-}
+function publicTimeline(items: PortalTimelineItem[]): PortalTimelineItem[] { return items.sort((left, right) => left.createdAt.localeCompare(right.createdAt)); }
 
-function verifyOtpHash(otp: string, hash: string): boolean {
-  const [, salt, digest] = hash.split(':');
-  if (!salt || !digest) return false;
-  const expected = Buffer.from(digest, 'hex');
-  const actual = Buffer.from(createHash('sha256').update(`${salt}:${otp}`).digest('hex'), 'hex');
-  return expected.length === actual.length && timingSafeEqual(expected, actual);
-}
 
-function hashSessionToken(token: string): string {
-  return `sha256:${createHash('sha256').update(token).digest('hex')}`;
-}
+function portalOtpPayload(locale: 'en' | 'ar', to: string, referenceNumber: string, otp: string, expiresAt: Date) { const textBody = locale === 'ar' ? `رمز متابعة الشكوى ${referenceNumber} هو ${otp}. ينتهي في ${expiresAt.toISOString()}.` : `Your complaint tracking code for ${referenceNumber} is ${otp}. It expires at ${expiresAt.toISOString()}.`; return { to, textBody, referenceNumber, expiresAt: expiresAt.toISOString() }; }
+
 
 function requiredText(value: unknown): string {
   if (typeof value === 'string' && value.trim()) return value.trim();
   throw verificationFailed();
 }
 
+function optionalText(value: string | null | undefined): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
 function verificationFailed(): AppException {
   return new AppException('PORTAL_VERIFICATION_FAILED', 'Portal verification failed', HttpStatus.BAD_REQUEST);
 }
 
-function portalAudit(action: string, verification: PortalVerificationChallengeRecord, input: VerifyPortalOtpInput, metadata: Record<string, unknown>) {
-  return {
-    eventType: 'SECURITY' as const,
-    action,
-    actorId: null,
-    branchId: null,
-    targetType: 'portal_verification',
-    targetId: verification.id,
-    correlationId: input.correlationId ?? null,
-    ipAddress: input.ipAddress ?? null,
-    userAgent: input.userAgent ?? null,
-    metadata: { complaintId: verification.complaintId, customerId: verification.customerId, ...metadata },
-  };
+function requiredAttachmentsService(service: AttachmentsService | undefined): AttachmentsService {
+  if (service) return service;
+  throw new AppException('VALIDATION_FAILED', 'Portal attachment upload is unavailable', HttpStatus.BAD_REQUEST, [{ field: 'attachments', code: 'REQUIRED', message: 'attachments is invalid.' }]);
 }
 
-function portalUnknownAudit(verificationId: string, input: VerifyPortalOtpInput, reason: string) {
+function invalidPortalAttachment(): AppException { return new AppException('VALIDATION_FAILED', 'Invalid portal attachment request', HttpStatus.BAD_REQUEST, [{ field: 'attachments', code: 'REQUIRED', message: 'attachments is invalid.' }]); }
+
+function portalAttachmentDto(attachment: AttachmentUploadResult): PortalAttachmentDto {
   return {
-    eventType: 'SECURITY' as const,
-    action: 'portal_otp_failed',
-    actorId: null,
-    branchId: null,
-    targetType: 'portal_verification',
-    targetId: verificationId,
-    correlationId: input.correlationId ?? null,
-    ipAddress: input.ipAddress ?? null,
-    userAgent: input.userAgent ?? null,
-    metadata: { reason },
+    id: attachment.id,
+    complaintId: attachment.complaintId,
+    fileName: attachment.fileName,
+    contentType: attachment.contentType,
+    sizeBytes: attachment.sizeBytes,
+    scanStatus: attachment.scanStatus,
+    customerVisible: attachment.customerVisible,
   };
 }

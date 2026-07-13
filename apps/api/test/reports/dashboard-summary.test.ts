@@ -5,7 +5,7 @@ import 'reflect-metadata';
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
 import type { ExecutionContext } from '@nestjs/common';
-import { ComplaintSeverity, ComplaintStatus, RoleCode, WorkingCalendarMode } from '@prisma/client';
+import { ComplaintSeverity, ComplaintStatus, ComplaintTransitionAction, RoleCode, SlaEventType, WorkingCalendarMode } from '@prisma/client';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
 import { PermissionGuard, RbacGuard } from '../../src/core/auth.guard.ts';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
@@ -13,6 +13,7 @@ import { AppException } from '../../src/core/http-kernel.ts';
 import { ReportsController } from '../../src/modules/reports/reports.controller.ts';
 import { ReportsRepository } from '../../src/modules/reports/reports.repository.js';
 import { ReportsService } from '../../src/modules/reports/reports.service.js';
+import type { DashboardReadRows } from '../../src/modules/reports/reports.repository.js';
 import type { ReportsKpiSummary } from '../../src/modules/reports/reports.service.js';
 import type { ComplaintsService } from '../../src/modules/complaints/complaints.service.js';
 import type { SlaService } from '../../src/modules/sla/sla.service.js';
@@ -20,10 +21,10 @@ import type { SurveysService } from '../../src/modules/surveys/surveys.service.j
 
 const now = '2026-01-05T00:00:00.000Z';
 const complaints = [
-  complaint('a-overdue', 'branch-a', ComplaintStatus.IN_PROGRESS, ComplaintSeverity.CRITICAL, '2026-01-04T21:00:00.000Z', '2026-01-04T21:00:00.000Z', 'cat-powertrain', 'owner-a'),
-  complaint('a-warning', 'branch-a', ComplaintStatus.SUBMITTED, ComplaintSeverity.MEDIUM, '2026-01-04T04:30:00.000Z', '2026-01-04T04:30:00.000Z', 'cat-service', 'owner-b'),
-  complaint('a-closed', 'branch-a', ComplaintStatus.CLOSED, ComplaintSeverity.LOW, '2026-01-01T00:00:00.000Z', '2026-01-03T00:00:00.000Z', 'cat-service', 'owner-b'),
-  complaint('b-hidden', 'branch-b', ComplaintStatus.IN_PROGRESS, ComplaintSeverity.CRITICAL, '2026-01-04T20:00:00.000Z', '2026-01-04T20:00:00.000Z', 'cat-powertrain', 'owner-a'),
+  complaint('a-overdue', 'branch-a', ComplaintStatus.IN_PROGRESS, ComplaintSeverity.CRITICAL, '2026-01-04T21:00:00.000Z', '2026-01-04T21:00:00.000Z', 'cat-powertrain', 'owner-a', 'dept-service'),
+  complaint('a-warning', 'branch-a', ComplaintStatus.SUBMITTED, ComplaintSeverity.MEDIUM, '2026-01-04T04:30:00.000Z', '2026-01-04T04:30:00.000Z', 'cat-service', 'owner-b', 'dept-service'),
+  complaint('a-closed', 'branch-a', ComplaintStatus.CLOSED, ComplaintSeverity.LOW, '2026-01-01T00:00:00.000Z', '2026-01-04T12:00:00.000Z', 'cat-service', 'owner-b', 'dept-sales', '2026-01-03T00:00:00.000Z'),
+  complaint('b-hidden', 'branch-b', ComplaintStatus.IN_PROGRESS, ComplaintSeverity.CRITICAL, '2026-01-04T20:00:00.000Z', '2026-01-04T20:00:00.000Z', 'cat-powertrain', 'owner-a', 'dept-service'),
 ];
 
 test('dashboard summary counts branch-scoped allowed data', async () => {
@@ -61,6 +62,18 @@ test('filtered report applies date, branch, category, severity, and owner filter
   assert.deepEqual(rows.map((row) => row.id), ['a-warning']);
 });
 
+test('filtered report applies department filter when the report model has department data', async () => {
+  const service = reportsService();
+
+  const rows = await service.filteredReport({
+    role: RoleCode.ADMIN,
+    filterBranchId: 'branch-a',
+    departmentId: 'dept-sales',
+  });
+
+  assert.deepEqual(rows.map((row) => row.id), ['a-closed']);
+});
+
 test('filtered report denies out-of-branch rows for scoped users', async () => {
   const service = reportsService();
 
@@ -80,7 +93,12 @@ test('filtered export denies out-of-branch rows for scoped users', async () => {
 
   assert.equal(exported.rowCount, 0);
   assert.equal(exported.body.split('\n').filter(Boolean).length, 1);
-  assert.deepEqual(auditRecords[0]?.metadata, { format: 'csv', rowCount: 0, rowLimit: 1000 });
+  assert.deepEqual(auditRecords[0]?.metadata, {
+    format: 'csv',
+    rowCount: 0,
+    rowLimit: 1000,
+    filters: { filterBranchId: 'branch-b', categoryId: null, departmentId: null, severity: null, ownerId: null, dateFrom: null, dateTo: null },
+  });
 });
 
 test('reports route derives role and branch scope from the request principal', async () => {
@@ -114,6 +132,44 @@ test('reports KPI route derives scope from the principal and returns aggregate v
   assert.equal('closedCountLeaderboard' in result.kpis, false);
 });
 
+test('report catalog reconciles RPT-001 through RPT-017 with signed deferrals', () => {
+  const catalog = reportsService().reportCatalog();
+  const expectedIds = Array.from({ length: 17 }, (_value, index) => `RPT-${String(index + 1).padStart(3, '0')}`);
+
+  assert.deepEqual(catalog.items.map((item) => item.id), expectedIds);
+  assert.deepEqual(catalog.summary, { total: 17, delivered: 4, deferred: 13, signoffRequired: 12 });
+  for (const item of catalog.items) {
+    assert.ok(item.requiredFilters.length > 0);
+    assert.ok(item.requiredOutputs.length > 0);
+    if (item.status === 'DELIVERED') {
+      assert.equal(item.signoffRequired, false);
+      assert.deepEqual(item.deferred, []);
+    } else if (item.id === 'RPT-015') {
+      assert.equal(item.signoffRequired, false);
+      assert.ok(item.deferred.length > 0);
+    } else {
+      assert.equal(item.signoffRequired, true);
+      assert.ok(item.deferred.length > 0);
+    }
+  }
+  const dmsReport = catalog.items.find((item) => item.id === 'RPT-015');
+  assert.equal(dmsReport?.status, 'DEFERRED');
+  assert.match(dmsReport?.implemented.join(' ') ?? '', /Manual-DMS pilot lookup/);
+  assert.match(dmsReport?.deferred.join(' ') ?? '', /live\/test provider exists/);
+  assert.equal(catalog.items.find((item) => item.id === 'RPT-017')?.status, 'DELIVERED');
+  const catalogJson = JSON.stringify(catalog).toLowerCase();
+  for (const forbidden of ['password', 'otp', 'sessiontoken', 'credential', 'secret', 'storagekey', 'publicurl', 'customerphone', 'customeremail']) {
+    assert.equal(catalogJson.includes(forbidden), false);
+  }
+});
+
+test('reports catalog route returns the public matrix from the guarded report service', () => {
+  const catalog = reportsService().reportCatalog();
+  const controller = new ReportsController({ reportCatalog: () => catalog } as ReportsService);
+
+  assert.deepEqual(controller.catalog(), catalog);
+});
+
 test('reports export route keeps controller binding and preserves filters', async () => {
   const calls: unknown[] = [];
   const headers: Record<string, string> = {};
@@ -121,7 +177,7 @@ test('reports export route keeps controller binding and preserves filters', asyn
     exportReport: async (input: unknown) => {
       calls.push(input);
       return {
-        fileName: 'reports.csv',
+        fileName: 'operational-report-rows.csv',
         contentType: 'text/csv; charset=utf-8',
         body: 'referenceNumber\nCMP-1\n',
         rowCount: 1,
@@ -139,13 +195,14 @@ test('reports export route keeps controller binding and preserves filters', asyn
 
   assert.equal(body, 'referenceNumber\nCMP-1\n');
   assert.equal(headers['content-type'], 'text/csv; charset=utf-8');
-  assert.equal(headers['content-disposition'], 'attachment; filename="reports.csv"');
+  assert.equal(headers['content-disposition'], 'attachment; filename="operational-report-rows.csv"');
   assert.equal(headers['x-report-row-count'], '1');
   assert.deepEqual(calls[0], {
     role: RoleCode.BRANCH_MANAGER,
     branchId: 'branch-a',
     filterBranchId: 'branch-a',
     categoryId: 'cat-service',
+    departmentId: null,
     ownerId: 'owner-b',
     severity: null,
     dateFrom: null,
@@ -154,8 +211,76 @@ test('reports export route keeps controller binding and preserves filters', asyn
   });
 });
 
+test('filtered report rows match the public ReportRow contract exactly', async () => {
+  const [row] = await reportsService().filteredReport({ role: RoleCode.ADMIN, filterBranchId: 'branch-a' });
+
+  assert.deepEqual(Object.keys(row!).sort(), ['branchId', 'categoryId', 'createdAt', 'id', 'ownerId', 'referenceNumber', 'severity', 'status', 'subject', 'updatedAt']);
+  const rowJson = JSON.stringify(row).toLowerCase();
+  for (const forbidden of ['branchname', 'ownername', 'customerphone', 'customeremail', 'vin', 'plate', 'dms', 'audit', 'provider', 'portal', 'secret', 'token', 'credential']) {
+    assert.equal(rowJson.includes(forbidden), false);
+  }
+});
+
+test('management read-only report rows stay scoped and contain no sensitive fields', async () => {
+  const calls: unknown[] = [];
+  const service = reportsService(undefined, calls);
+
+  const [row] = await service.filteredReport({ role: RoleCode.MGMT_READONLY, branchId: 'branch-a', filterBranchId: 'branch-a' });
+
+  assert.deepEqual(calls[0], {
+    branchId: 'branch-a',
+    dateFrom: null,
+    dateTo: null,
+    categoryId: null,
+    departmentId: null,
+    severity: null,
+    ownerId: null,
+    role: RoleCode.MGMT_READONLY,
+  });
+  assert.deepEqual(Object.keys(row!).sort(), ['branchId', 'categoryId', 'createdAt', 'id', 'ownerId', 'referenceNumber', 'severity', 'status', 'subject', 'updatedAt']);
+  for (const forbidden of ['customerPhone', 'customerEmail', 'vin', 'plate', 'compensation', 'fileName']) {
+    assert.equal(JSON.stringify(row).includes(forbidden), false);
+  }
+});
+
+test('report export audit metadata uses only the allowlisted filter snapshot', async () => {
+  const auditRecords: AuditRecordInput[] = [];
+  const service = reportsService({ record: async (input) => auditRecords.push(input) } as AuditService);
+
+  await service.exportReport({
+    role: RoleCode.ADMIN,
+    filterBranchId: 'branch-a',
+    categoryId: 'cat-service',
+    departmentId: 'dept-service',
+    severity: ComplaintSeverity.MEDIUM,
+    ownerId: 'owner-b',
+    dateFrom: '2026-01-04T00:00:00.000Z',
+    dateTo: '2026-01-05T00:00:00.000Z',
+    format: 'csv',
+  });
+
+  assert.deepEqual(auditRecords[0]?.metadata, {
+    format: 'csv',
+    rowCount: 1,
+    rowLimit: 1000,
+    filters: {
+      filterBranchId: 'branch-a',
+      categoryId: 'cat-service',
+      departmentId: 'dept-service',
+      severity: ComplaintSeverity.MEDIUM,
+      ownerId: 'owner-b',
+      dateFrom: '2026-01-04T00:00:00.000Z',
+      dateTo: '2026-01-05T00:00:00.000Z',
+    },
+  });
+  const auditJson = JSON.stringify(auditRecords).toLowerCase();
+  for (const forbidden of ['password', 'otp', 'token', 'credential', 'secret', 'rawurl', 'body']) {
+    assert.equal(auditJson.includes(forbidden), false);
+  }
+});
+
 test('report routes use permission guard and keep branch scope guard', () => {
-  for (const handler of ['dashboard', 'kpis', 'filteredReport'] as Array<keyof ReportsController>) {
+  for (const handler of ['catalog', 'dashboard', 'kpis', 'filteredReport'] as Array<keyof ReportsController>) {
     assert.deepEqual(guardNames(handler), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
   }
   assert.deepEqual(guardNames('exportReport'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
@@ -165,7 +290,7 @@ test('report view permission allows dashboard, kpis, and list, and denies missin
   const auditRecords: AuditRecordInput[] = [];
   const guard = new PermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
 
-  for (const handler of [ReportsController.prototype.dashboard, ReportsController.prototype.kpis, ReportsController.prototype.filteredReport]) {
+  for (const handler of [ReportsController.prototype.catalog, ReportsController.prototype.dashboard, ReportsController.prototype.kpis, ReportsController.prototype.filteredReport]) {
     assert.equal(await guard.canActivate(context(request(branchManager, '/reports'), handler)), true);
   }
 
@@ -181,6 +306,10 @@ test('report export permission allows export and denies missing permission safel
   const guard = new PermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
 
   assert.equal(await guard.canActivate(context(request(branchManager, '/reports/export'), ReportsController.prototype.exportReport)), true);
+  await assert.rejects(
+    guard.canActivate(context(request({ ...branchManager, roleCode: RoleCode.MGMT_READONLY, permissions: ['REPORT_VIEW'] }, '/reports/export'), ReportsController.prototype.exportReport)),
+    (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
   await assert.rejects(
     guard.canActivate(context(request({ ...branchManager, permissions: [] }, '/reports/export?password=leaked&sessionToken=leaked'), ReportsController.prototype.exportReport)),
     (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
@@ -221,6 +350,15 @@ test('reports KPI route cross-branch request is denied and audited', async () =>
   assert.deepEqual(auditRecords[0]?.metadata, { deniedBranchId: 'branch-b' });
 });
 
+test('reports catalog OpenAPI documents the delivery matrix response', () => {
+  const openapi = JSON.parse(readFileSync('packages/contracts/openapi.json', 'utf8'));
+
+  assert.ok(openapi.paths['/reports/catalog']?.get);
+  assert.equal(openapi.paths['/reports/catalog'].get.operationId, 'reportsCatalog');
+  assert.ok(openapi.components.schemas.ReportCatalogResponse);
+  assert.ok(JSON.stringify(openapi.components.schemas.ReportCatalogItem).includes('signoffRequired'));
+});
+
 test('reports KPI OpenAPI documents aggregate-only response', () => {
   const openapi = JSON.parse(readFileSync('packages/contracts/openapi.json', 'utf8'));
 
@@ -240,14 +378,20 @@ test('report export is row-limited and writes REPORT audit', async () => {
 
   assert.equal(exported.rowCount, 1);
   assert.equal(exported.rowLimit, 1);
-  assert.equal(exported.fileName, 'reports.csv');
+  assert.equal(exported.fileName, 'operational-report-rows.csv');
   assert.equal(exported.body.split('\n').filter(Boolean).length, 2);
   assert.equal(auditRecords[0]?.eventType, 'REPORT');
   assert.equal(auditRecords[0]?.action, 'report_exported');
-  assert.deepEqual(auditRecords[0]?.metadata, { format: 'csv', rowCount: 1, rowLimit: 1 });
+  assert.equal(auditRecords[0]?.targetId, 'operational_report_rows');
+  assert.deepEqual(auditRecords[0]?.metadata, {
+    format: 'csv',
+    rowCount: 1,
+    rowLimit: 1,
+    filters: { filterBranchId: null, categoryId: null, departmentId: null, severity: null, ownerId: null, dateFrom: null, dateTo: null },
+  });
 });
 
-function reportsService(auditService?: AuditService): ReportsService {
+function reportsService(auditService?: AuditService, complaintCalls: unknown[] = []): ReportsService {
   const complaintsService = {
     async listQueue({ branchId }: { branchId?: string | null } = {}) {
       return branchId ? complaints.filter((item) => item.branchId === branchId) : complaints;
@@ -257,18 +401,22 @@ function reportsService(auditService?: AuditService): ReportsService {
       dateFrom?: Date | string | null;
       dateTo?: Date | string | null;
       categoryId?: string | null;
+      departmentId?: string | null;
       severity?: ComplaintSeverity | null;
       ownerId?: string | null;
+      role?: RoleCode | null;
     } = {}) {
+      complaintCalls.push(filter);
       return complaints.filter((item) => {
         const createdAt = new Date(item.createdAt).getTime();
         return (!filter.branchId || item.branchId === filter.branchId)
           && (!filter.categoryId || item.categoryId === filter.categoryId)
+          && (!filter.departmentId || item.departmentId === filter.departmentId)
           && (!filter.severity || item.severity === filter.severity)
           && (!filter.ownerId || item.ownerId === filter.ownerId)
           && (!filter.dateFrom || createdAt >= new Date(filter.dateFrom).getTime())
           && (!filter.dateTo || createdAt <= new Date(filter.dateTo).getTime());
-      });
+      }).map(reportRow);
     },
   } as ComplaintsService;
 
@@ -293,7 +441,23 @@ function reportsService(auditService?: AuditService): ReportsService {
     },
   } as SlaService;
 
-  return new ReportsService(new ReportsRepository(), complaintsService, slaService, {} as SurveysService, auditService);
+  const repository = {
+    async listDashboardRows(branchId: string | null): Promise<DashboardReadRows> {
+      return complaints.filter((item) => !branchId || item.branchId === branchId).map((item) => ({
+        id: item.id,
+        branchId: item.branchId,
+        status: item.status,
+        severity: item.severity,
+        createdAt: new Date(item.createdAt),
+        updatedAt: new Date(item.updatedAt),
+        closedAt: item.closedAt ? new Date(item.closedAt) : null,
+        statusHistory: item.closedAt ? [statusEvent(item.id, ComplaintStatus.CLOSED, ComplaintTransitionAction.CLOSE, item.closedAt)] : [],
+        slaEvents: item.id === 'a-overdue' ? [slaEvent(item.id, SlaEventType.BREACH, '2026-01-04T23:30:00.000Z')] : [],
+      }));
+    },
+  } as ReportsRepository;
+
+  return new ReportsService(repository, complaintsService, slaService, {} as SurveysService, auditService);
 }
 
 function complaint(
@@ -305,6 +469,8 @@ function complaint(
   updatedAt = createdAt,
   categoryId = 'cat-service',
   ownerId: string | null = null,
+  departmentId: string | null = null,
+  closedAt: string | null = null,
 ) {
   return {
     id,
@@ -313,11 +479,36 @@ function complaint(
     status,
     severity,
     categoryId,
+    departmentId,
     subject: id,
     ownerId,
     createdAt,
     updatedAt,
+    closedAt,
   };
+}
+
+function reportRow(item: ReturnType<typeof complaint>) {
+  return {
+    id: item.id,
+    referenceNumber: item.referenceNumber,
+    branchId: item.branchId,
+    categoryId: item.categoryId,
+    status: item.status,
+    severity: item.severity,
+    subject: item.subject,
+    ownerId: item.ownerId,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  };
+}
+
+function statusEvent(recordId: string, toStatus: ComplaintStatus, action: ComplaintTransitionAction | null, createdAt: string) {
+  return { recordId, toStatus, action, createdAt: new Date(createdAt) };
+}
+
+function slaEvent(recordId: string, type: SlaEventType, occurredAt: string) {
+  return { recordId, type, occurredAt: new Date(occurredAt) };
 }
 
 const branchManager: StaffPrincipal = {
@@ -340,7 +531,11 @@ const kpiSummary = {
   averageDelayHours: 0,
   customerPromiseKeptPercent: 100,
   reopenedCount: 0,
+  reopenRate: 0,
   escalationCount: 0,
+  slaBreachRate: 0,
+  medianTatHours: 0,
+  agingBuckets: { zeroToOneDays: 0, twoToThreeDays: 0, fourToSevenDays: 0, overSevenDays: 0 },
   averageFirstResponseHours: 1,
   averageResolutionHours: 2,
 } satisfies ReportsKpiSummary;
@@ -358,7 +553,7 @@ function request(principal: StaffPrincipal, url: string): AuthenticatedRequest {
 
 function context(
   req: AuthenticatedRequest,
-  handler: typeof ReportsController.prototype.dashboard | typeof ReportsController.prototype.kpis | typeof ReportsController.prototype.filteredReport | typeof ReportsController.prototype.exportReport,
+  handler: typeof ReportsController.prototype.catalog | typeof ReportsController.prototype.dashboard | typeof ReportsController.prototype.kpis | typeof ReportsController.prototype.filteredReport | typeof ReportsController.prototype.exportReport,
 ): ExecutionContext {
   return {
     switchToHttp: () => ({ getRequest: () => req }),

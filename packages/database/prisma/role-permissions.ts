@@ -25,6 +25,7 @@ export const permissionDefinitions = [
   ['MASTER_DATA_MANAGE', 'Manage master data', 'إدارة البيانات المرجعية'],
   ['SLA_MANAGE', 'Manage SLA policy', 'إدارة سياسة اتفاقية مستوى الخدمة'],
   ['NOTIFICATIONS_MANAGE', 'Manage notification templates', 'إدارة قوالب الإشعارات'],
+  ['COMMUNICATION_GROUPS_MANAGE', 'Manage shared communication groups', 'إدارة مجموعات التواصل المشتركة'],
   ['REPORT_VIEW', 'View operational reports', 'عرض التقارير التشغيلية'],
   ['REPORT_EXPORT', 'Export reports', 'تصدير التقارير'],
   ['AUDIT_VIEW', 'View audit log', 'عرض سجل التدقيق'],

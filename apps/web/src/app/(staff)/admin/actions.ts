@@ -32,7 +32,34 @@ export async function saveCategoryAction(formData: FormData): Promise<void> {
     }),
     method: id ? 'PATCH' : 'POST',
   });
-  redirect(`/admin?locale=${locale}&admin=${state(response)}`);
+  redirect(`${returnTo(formData, '/admin')}?locale=${locale}&admin=${state(response)}`);
+}
+
+export async function deactivateCategoryAction(formData: FormData): Promise<void> {
+  const locale = safeLocale(formData.get('locale'));
+  const id = text(formData, 'id');
+  const response = await adminFetch(`/admin/categories/${encodeURIComponent(id)}/deactivate`, { method: 'POST' });
+  redirect(`${returnTo(formData, '/admin/categories')}?locale=${locale}&admin=${state(response)}`);
+}
+
+export async function saveSlaPolicyAction(formData: FormData): Promise<void> {
+  const locale = safeLocale(formData.get('locale'));
+  const id = text(formData, 'id');
+  const response = await adminFetch(`/sla/policies/${encodeURIComponent(id)}`, {
+    body: JSON.stringify({
+      durationMinutes: number(formData, 'durationMinutes'),
+      warningPercent: number(formData, 'warningPercent'),
+      branchTimezone: text(formData, 'branchTimezone'),
+      workingCalendarMode: text(formData, 'workingCalendarMode'),
+      escalationLevel1: text(formData, 'escalationLevel1'),
+      escalationLevel2: optionalText(formData, 'escalationLevel2'),
+      escalationLevel3: optionalText(formData, 'escalationLevel3'),
+      escalationLevel2AfterBreachMinutes: optionalNumber(formData, 'escalationLevel2AfterBreachMinutes'),
+      escalationLevel3AfterBreachMinutes: optionalNumber(formData, 'escalationLevel3AfterBreachMinutes'),
+    }),
+    method: 'PATCH',
+  });
+  redirect(`${returnTo(formData, '/admin/categories')}?locale=${locale}&admin=${state(response)}`);
 }
 
 async function adminFetch(path: string, init: RequestInit): Promise<Response> {
@@ -64,4 +91,21 @@ function state(response: Response): 'error' | 'success' | 'validation' {
 
 function text(formData: FormData, name: string): string {
   return String(formData.get(name) ?? '').trim();
+}
+
+function optionalText(formData: FormData, name: string): string | null {
+  return text(formData, name) || null;
+}
+
+function number(formData: FormData, name: string): number {
+  return Number(text(formData, name));
+}
+
+function optionalNumber(formData: FormData, name: string): number | null {
+  const value = text(formData, name);
+  return value ? Number(value) : null;
+}
+
+function returnTo(formData: FormData, fallback: '/admin' | '/admin/categories'): string {
+  return String(formData.get('returnTo') ?? '') === '/admin/categories' ? '/admin/categories' : fallback;
 }

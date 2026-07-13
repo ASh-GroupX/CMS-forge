@@ -9,6 +9,7 @@ import { IntegrationsModule } from '../integrations/integrations.module.js';
 import { IntegrationsService } from '../integrations/integrations.service.js';
 import { NotificationsController } from './notifications.controller.js';
 import { NotificationsRepository } from './notifications.repository.js';
+import { NotificationDigestRepository } from './notification-digest.repository.js';
 import { NotificationsService } from './notifications.service.js';
 
 @Module({
@@ -22,10 +23,11 @@ import { NotificationsService } from './notifications.service.js';
       inject: [PrismaService],
       useFactory: (prisma: PrismaService) => new NotificationsRepository(prisma),
     },
+    NotificationDigestRepository,
     {
       provide: NotificationsService,
-      inject: [NotificationsRepository, IntegrationsService, AuditService],
-      useFactory: (repository: NotificationsRepository, integrations: IntegrationsService, audit: AuditService) => new NotificationsService(repository, integrations, audit),
+      inject: [NotificationsRepository, IntegrationsService, AuditService, NotificationDigestRepository],
+      useFactory: (repository: NotificationsRepository, integrations: IntegrationsService, audit: AuditService, digest: NotificationDigestRepository) => new NotificationsService(repository, integrations, audit, digest),
     },
     {
       provide: SESSION_AUTH_SERVICE,

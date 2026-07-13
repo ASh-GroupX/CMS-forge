@@ -5,9 +5,12 @@ import { ComplaintsService } from '../complaints/complaints.service.js';
 import type { ComplaintReportRow } from '../complaints/complaints.service.js';
 import { SlaService } from '../sla/sla.service.js';
 import { SurveysService } from '../surveys/surveys.service.js';
+import { reportCatalogResponse } from './report-matrix.js';
+import type { ReportCatalogResponse } from './report-matrix.js';
 import { complaintCaseKpis as deriveComplaintCaseKpis, taskPromiseKpis as deriveTaskPromiseKpis } from './reports.kpi.js';
 import type { ComplaintCaseKpis, TaskPromiseKpis } from './reports.kpi.js';
 import { ReportsRepository } from './reports.repository.js';
+import type { DashboardReadRow } from './reports.repository.js';
 
 export type DashboardReportScope = {
   role: RoleCode;
@@ -26,8 +29,11 @@ export type DashboardSummary = {
 export type FilteredReportInput = DashboardReportScope & {
   dateFrom?: Date | string | null;
   dateTo?: Date | string | null;
+  limit?: number | null;
+  offset?: number | null;
   filterBranchId?: string | null;
   categoryId?: string | null;
+  departmentId?: string | null;
   severity?: ComplaintSeverity | null;
   ownerId?: string | null;
 };
@@ -37,14 +43,6 @@ export type ReportExportFormat = 'csv' | 'excel';
 export type ReportExportAudit = { actorId?: string | null; branchId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 export type ReportExportResult = { fileName: string; contentType: string; body: string; rowCount: number; rowLimit: number };
 export type ReportsKpiSummary = TaskPromiseKpis & ComplaintCaseKpis;
-
-type DashboardComplaint = {
-  branchId: string;
-  status: ComplaintStatus;
-  severity: ComplaintSeverity;
-  createdAt: string;
-  updatedAt: string;
-};
 
 const CLOSED_STATUSES = new Set<ComplaintStatus>([ComplaintStatus.CLOSED, ComplaintStatus.REJECTED]);
 const SLA_WARNING_PERCENT = 80;
@@ -67,9 +65,13 @@ export class ReportsService {
     private readonly auditService?: AuditService,
   ) {}
 
+  reportCatalog(): ReportCatalogResponse {
+    return reportCatalogResponse();
+  }
+
   async dashboardSummary(scope: DashboardReportScope): Promise<DashboardSummary> {
     const branchId = scopedBranchId(scope);
-    const complaints = await this.complaintsService.listQueue({ branchId });
+    const complaints = await this.reportsRepository.listDashboardRows(branchId);
     const now = dateValue(scope.now ?? new Date());
 
     let overdueComplaints = 0;
@@ -91,7 +93,7 @@ export class ReportsService {
         warningPercent: SLA_WARNING_PERCENT,
         branchTimezone: 'UTC',
         workingCalendarMode: WorkingCalendarMode.ALWAYS_ON,
-        enteredAt: complaint.createdAt,
+        enteredAt: complaint.createdAt.toISOString(),
       });
 
       if (new Date(deadline.dueAt).getTime() <= now.getTime()) {
@@ -118,8 +120,12 @@ export class ReportsService {
       dateFrom: input.dateFrom ?? null,
       dateTo: input.dateTo ?? null,
       categoryId: input.categoryId ?? null,
+      departmentId: input.departmentId ?? null,
       severity: input.severity ?? null,
       ownerId: input.ownerId ?? null,
+      role: input.role,
+      ...(input.limit === null || input.limit === undefined ? {} : { limit: input.limit }),
+      ...(input.offset === null || input.offset === undefined ? {} : { offset: input.offset }),
     });
     return branchFilter(rows, branchId);
   }
@@ -138,24 +144,24 @@ export class ReportsService {
     ]);
     return {
       ...deriveTaskPromiseKpis(taskRows.tasks, taskRows.events, now),
-      ...deriveComplaintCaseKpis(complaintCaseRows.records, complaintCaseRows.statusEvents, complaintCaseRows.slaEvents),
+      ...deriveComplaintCaseKpis(complaintCaseRows.records, complaintCaseRows.statusEvents, complaintCaseRows.slaEvents, now),
     };
   }
 
   async exportReport(input: FilteredReportInput & { format: ReportExportFormat; rowLimit?: number }, audit: ReportExportAudit = {}): Promise<ReportExportResult> {
     const rowLimit = input.rowLimit ?? MAX_REPORT_EXPORT_ROWS;
-    const rows = (await this.filteredReport(input)).slice(0, rowLimit);
+    const rows = (await this.filteredReport({ ...input, limit: rowLimit, offset: 0 })).slice(0, rowLimit);
     await this.auditService?.record({
       eventType: 'REPORT',
       action: 'report_exported',
       actorId: audit.actorId ?? null,
       branchId: audit.branchId ?? null,
       targetType: 'report',
-      targetId: 'operational_reports',
+      targetId: 'operational_report_rows',
       correlationId: audit.correlationId ?? null,
       ipAddress: audit.ipAddress ?? null,
       userAgent: audit.userAgent ?? null,
-      metadata: { format: input.format, rowCount: rows.length, rowLimit },
+      metadata: { format: input.format, rowCount: rows.length, rowLimit, filters: reportAuditFilters(input) },
     });
     return serializeExport(input.format, rows, rowLimit);
   }
@@ -183,8 +189,9 @@ function branchFilter<T extends { branchId: string }>(complaints: T[], branchId:
   return branchId ? complaints.filter((complaint) => complaint.branchId === branchId) : complaints;
 }
 
-function tatHours(complaint: Pick<DashboardComplaint, 'createdAt' | 'updatedAt'>): number {
-  return Math.max(0, (new Date(complaint.updatedAt).getTime() - new Date(complaint.createdAt).getTime()) / HOUR_MS);
+function tatHours(complaint: Pick<DashboardReadRow, 'createdAt' | 'closedAt' | 'statusHistory'>): number {
+  const closedAt = complaint.closedAt ?? complaint.statusHistory.find((event) => event.toStatus === ComplaintStatus.CLOSED)?.createdAt;
+  return closedAt ? Math.max(0, (closedAt.getTime() - complaint.createdAt.getTime()) / HOUR_MS) : 0;
 }
 
 function average(values: number[]): number {
@@ -198,11 +205,23 @@ function dateValue(value: Date | string): Date {
   return value instanceof Date ? value : new Date(value);
 }
 
+function reportAuditFilters(input: FilteredReportInput) {
+  return {
+    filterBranchId: input.filterBranchId ?? null,
+    categoryId: input.categoryId ?? null,
+    departmentId: input.departmentId ?? null,
+    severity: input.severity ?? null,
+    ownerId: input.ownerId ?? null,
+    dateFrom: input.dateFrom ?? null,
+    dateTo: input.dateTo ?? null,
+  };
+}
+
 function serializeExport(format: ReportExportFormat, rows: FilteredReportRow[], rowLimit: number): ReportExportResult {
   const separator = format === 'csv' ? ',' : '\t';
   const body = [exportHeaders, ...rows.map(exportRow)].map((row) => row.map((cell) => quoteCell(cell, separator)).join(separator)).join('\n');
   return {
-    fileName: format === 'csv' ? 'reports.csv' : 'reports.xls',
+    fileName: format === 'csv' ? 'operational-report-rows.csv' : 'operational-report-rows.xls',
     contentType: format === 'csv' ? 'text/csv; charset=utf-8' : 'application/vnd.ms-excel; charset=utf-8',
     body: `${body}\n`,
     rowCount: rows.length,

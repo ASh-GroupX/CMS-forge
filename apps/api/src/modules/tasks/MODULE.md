@@ -23,6 +23,7 @@ module's boundary so you can work in a fresh context without scanning the tree.
 - `task_participants`
 - `task_comments`
 - `task_status_history`
+- `task_comment_mentions`
 
 ## May depend on
 
@@ -31,6 +32,8 @@ module's boundary so you can work in a fresh context without scanning the tree.
 - `AuthModule` / `AuthService` for staff session guard wiring on task routes.
 - `modules/admin` / `AdminUsersService` public surface for assignable staff scope checks.
 - `NotificationsService` public surface for task nudge/comment in-app rows.
+- `CommunicationGroupsService` public surface for server-scoped collaboration
+  targets and recipient resolution.
 - Other modules' public services only. Never import another module repository,
   `dto/`, or Prisma model type.
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { AdminNotificationTemplates } from '../../../../components/admin-notification-templates';
-import type { AdminConfigPreviewState } from '../../../../components/admin-categories-sla';
+import type { AdminConfigFixtureState } from '../../../../components/admin-categories-sla';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 
 type SearchParams = { admin?: string | string[]; locale?: string | string[] };
@@ -16,7 +16,7 @@ function readParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function resolveState(value: string | undefined): AdminConfigPreviewState | undefined {
+function resolveState(value: string | undefined): AdminConfigFixtureState | undefined {
   return value === 'loading' || value === 'empty' || value === 'error' || value === 'success' || value === 'validation' || value === 'conflict'
     ? value
     : undefined;

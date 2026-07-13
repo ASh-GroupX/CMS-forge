@@ -8,17 +8,17 @@ test('report export route proxies valid formats with staff cookies', async () =>
   process.env.API_URL = 'http://api.test';
   try {
     globalThis.fetch = async (input, init) => {
-      assert.equal(String(input), 'http://api.test/reports/export?format=csv&branchId=branch_report&categoryId=cat_report&ownerId=usr_report');
+      assert.equal(String(input), 'http://api.test/reports/export?format=csv&branchId=branch_report&categoryId=cat_report&departmentId=dept_report&ownerId=usr_report&severity=HIGH&dateFrom=2026-06-01&dateTo=2026-06-30');
       assert.equal((init?.headers as Record<string, string>).cookie, 'cms_staff_session=session');
       return new Response('id\n1\n', {
         headers: {
-          'content-disposition': 'attachment; filename="reports.csv"',
+          'content-disposition': 'attachment; filename="operational-report-rows.csv"',
           'content-type': 'text/csv',
         },
       });
     };
 
-    const response = await GET(new Request('http://web.test/reports/export?format=csv&branchId=branch_report&categoryId=cat_report&ownerId=usr_report', {
+    const response = await GET(new Request('http://web.test/reports/export?format=csv&branchId=branch_report&categoryId=cat_report&departmentId=dept_report&ownerId=usr_report&severity=HIGH&dateFrom=2026-06-01&dateTo=2026-06-30', {
       headers: { cookie: 'cms_staff_session=session' },
     }));
 

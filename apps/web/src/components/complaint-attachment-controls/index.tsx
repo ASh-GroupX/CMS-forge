@@ -1,57 +1,140 @@
-import React from 'react';
-import { Badge } from '../ui/badge';
+'use client';
+
+import React, { useEffect, useState } from 'react';
 import { Button } from '../ui/button';
+import { Label } from '../ui/label';
 import { complaintDetailText } from '../../i18n/staff-complaint-detail';
 import type { Locale } from '../../i18n/staff-shell';
+import { LocalizedFileInput } from '../shared/localized-file-input';
+import { StateBlock, StatusBadge } from '../shared/ui-primitives';
+import {
+  downloadStaffAttachment,
+  listStaffComplaintAttachments,
+  uploadStaffComplaintAttachment,
+  type StaffAttachment,
+} from '../../lib/staff-attachments-api';
 
-export type ComplaintAttachmentPreviewState = 'loading' | 'empty' | 'error' | 'pending' | 'clean' | 'rejected';
+export type ComplaintAttachmentFixtureState = 'loading' | 'empty' | 'error' | 'pending' | 'clean' | 'rejected' | 'download-error';
+type LocalState = ComplaintAttachmentFixtureState | 'uploading' | 'uploaded' | 'downloaded' | undefined;
 
 export function ComplaintAttachmentControls({
   attachmentState,
+  complaintId,
   locale,
 }: {
-  attachmentState?: ComplaintAttachmentPreviewState | undefined;
+  attachmentState?: ComplaintAttachmentFixtureState | undefined;
+  complaintId?: string | undefined;
   locale: Locale;
 }) {
   const t = complaintDetailText[locale];
-  const scanState = attachmentState === 'clean' || attachmentState === 'rejected' ? attachmentState : 'pending';
+  const [items, setItems] = useState<StaffAttachment[]>([]);
+  const [file, setFile] = useState<File | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [state, setState] = useState<LocalState>(attachmentState);
+
+  useEffect(() => {
+    if (!complaintId) return;
+    let active = true;
+    setState('loading');
+    setMessage(null);
+    void listStaffComplaintAttachments(complaintId).then((result) => {
+      if (!active) return;
+      if (result.ok) {
+        setItems(result.data.items);
+        setState(result.data.items.length ? undefined : 'empty');
+      } else {
+        setState('error');
+      }
+    });
+    return () => { active = false; };
+  }, [complaintId]);
+
+  const preview = items.length ? items : previewItems(attachmentState, t.values.file);
+  const scanState = scanBadge(preview[0]?.scanStatus ?? attachmentState);
+  const visibleState = state === 'uploading' ? 'loading' : state === 'uploaded' || state === 'downloaded' ? undefined : state;
+  const visibleMessage = message ?? (attachmentState === 'download-error' ? t.attachmentUploadMessages.downloadUnavailable : null);
+
+  async function upload(event: React.FormEvent) {
+    event.preventDefault();
+    if (!complaintId) return setState('error');
+    setState('uploading');
+    setMessage(null);
+    const result = await uploadStaffComplaintAttachment(complaintId, file);
+    if (!result.ok) {
+      setMessage(uploadMessage(result.error.code, t.attachmentUploadMessages));
+      return setState(result.error.kind === 'validation' ? undefined : 'error');
+    }
+    setItems((current) => [result.data.attachment, ...current.filter((item) => item.id !== result.data.attachment.id)]);
+    setFile(null);
+    setMessage(t.attachmentUploadMessages.uploaded);
+    return setState('uploaded');
+  }
+
+  async function download(item: StaffAttachment) {
+    if (!complaintId || item.scanStatus !== 'CLEAN') return setState('error');
+    setMessage(null);
+    const result = await downloadStaffAttachment(complaintId, item.id);
+    if (!result.ok) {
+      setMessage(t.attachmentUploadMessages.downloadUnavailable);
+      return;
+    }
+    setMessage(t.attachmentUploadMessages.downloaded);
+    setState('downloaded');
+  }
 
   return (
-    <section className="rounded-md border border-slate-200 bg-slate-50 p-3" aria-label={t.sections.attachments}>
+    <section className="rounded-md border border-line-subtle bg-surface p-3" aria-label={t.sections.attachments}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">{t.sections.attachments}</h3>
-        <Badge className="bg-slate-200 text-slate-700 hover:bg-slate-200">{t.badges[scanState]}</Badge>
+        <StatusBadge tone={scanState === 'clean' ? 'success' : scanState === 'rejected' ? 'danger' : 'warning'}>{t.badges[scanState]}</StatusBadge>
       </div>
-      {attachmentState === 'loading' || attachmentState === 'empty' || attachmentState === 'error' ? (
-        <p className="mt-3 text-sm text-slate-600" role={attachmentState === 'error' ? 'alert' : 'status'}>
-          {t.attachmentStates[attachmentState]}
-        </p>
+      {visibleState === 'loading' || visibleState === 'empty' || visibleState === 'error' ? (
+        <StateBlock className="mt-3" message={t.attachmentStates[visibleState]} tone={visibleState === 'error' ? 'error' : 'neutral'} />
       ) : (
         <dl className="mt-3 grid gap-2 text-sm">
-          {[
-            [t.labels.file, t.values.file],
-            [t.labels.scan, t.badges[scanState]],
-          ].map(([label, value]) => (
-            <div className="grid grid-cols-[8rem_1fr] gap-2 rounded-sm bg-white px-3 py-2" key={label}>
-              <dt className="text-slate-500">{label}</dt>
-              <dd className="font-medium text-slate-800">{value}</dd>
+          {(preview.length ? preview : previewItems('empty', t.values.file)).map((item) => (
+            <div className="grid grid-cols-[8rem_1fr] gap-2 rounded-sm bg-surface-raised px-3 py-2" key={item.id || item.fileName}>
+              <dt className="text-content-muted">{t.labels.file}</dt>
+              <dd className="break-words font-medium text-content-strong">{item.fileName}</dd>
+              <dt className="text-content-muted">{t.labels.scan}</dt>
+              <dd className="font-medium text-content-strong">{t.badges[scanBadge(item.scanStatus)]}</dd>
+              <dt className="text-content-muted">{t.attachmentActions.download}</dt>
+              <dd><Button disabled={item.scanStatus !== 'CLEAN' || !complaintId || !item.id} size="sm" type="button" variant="outline" onClick={() => { void download(item); }}>{t.attachmentActions.download}</Button></dd>
             </div>
           ))}
         </dl>
       )}
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Button type="button" variant="outline">
-          {t.attachmentActions.upload}
-        </Button>
-        <Button type="button" variant="outline">
-          {t.attachmentActions.download}
-        </Button>
-      </div>
-      <ul className="mt-3 grid gap-1 text-sm text-slate-600">
+      <form className="mt-3 grid gap-2" onSubmit={upload}>
+        <div className="grid gap-1 text-sm font-medium">
+          <Label htmlFor="complaint-detail-attachment">{t.attachmentActions.upload}</Label>
+          <LocalizedFileInput accept=".jpg,.jpeg,.png,.webp,.pdf,.mp3,.wav,.ogg,.mp4,.mov,.webm,image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/wav,audio/ogg,video/mp4,video/quicktime,video/webm" id="complaint-detail-attachment" locale={locale} onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+        </div>
+        <Button disabled={!complaintId || state === 'uploading'} type="submit" variant="outline">{t.attachmentActions.upload}</Button>
+      </form>
+      {visibleMessage ? <StateBlock className="mt-2" message={visibleMessage} tone={state === 'uploaded' || state === 'downloaded' ? 'success' : 'neutral'} /> : null}
+      <ul className="mt-3 grid gap-1 text-sm text-content-muted">
         {t.attachmentActions.rules.map((rule) => (
           <li key={rule}>{rule}</li>
         ))}
       </ul>
     </section>
   );
+}
+
+function scanBadge(value: string | undefined): 'pending' | 'clean' | 'rejected' {
+  if (value === 'CLEAN' || value === 'clean') return 'clean';
+  if (value === 'REJECTED' || value === 'rejected') return 'rejected';
+  return 'pending';
+}
+
+function previewItems(state: ComplaintAttachmentFixtureState | undefined, fileName: string): StaffAttachment[] {
+  if (state !== 'pending' && state !== 'clean' && state !== 'rejected' && state !== 'download-error') return [];
+  const scanStatus = state === 'clean' || state === 'download-error' ? 'CLEAN' : state === 'rejected' ? 'REJECTED' : 'PENDING';
+  return [{ id: '', complaintId: '', fileName, contentType: 'application/pdf', sizeBytes: 0, scanStatus, customerVisible: false }];
+}
+
+function uploadMessage(code: string, messages: { required: string; size: string; type: string }): string {
+  if (code === 'ATTACHMENT_REQUIRED') return messages.required;
+  if (code === 'ATTACHMENT_SIZE_EXCEEDED') return messages.size;
+  return messages.type;
 }

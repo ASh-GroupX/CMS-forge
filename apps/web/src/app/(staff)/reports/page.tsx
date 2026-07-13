@@ -1,11 +1,12 @@
 import React from 'react';
-import { ReportsDashboard, type ReportsPreviewState } from '../../../components/reports-dashboard';
+import { ReportsDashboard } from '../../../components/reports-dashboard';
 import { resolveLocale } from '../../../i18n/staff-shell';
 import { getAssignableStaff } from '../../../lib/staff-assignable-staff-api';
 import { getComplaintFormOptions } from '../../../lib/staff-complaint-form-options-api';
-import { getStaffReportKpis, getStaffReportRows } from '../../../lib/staff-reports-api';
+import { getStaffReportCatalogLoadResult, getStaffReportKpisLoadResult, getStaffReportRowsLoadResult } from '../../../lib/staff-reports-api';
+import { getStaffSessionPrincipal } from '../../../lib/staff-session-api';
 
-type SearchParams = { locale?: string | string[]; reports?: string | string[]; branchId?: string | string[]; categoryId?: string | string[]; ownerId?: string | string[] };
+type SearchParams = { locale?: string | string[]; branchId?: string | string[]; categoryId?: string | string[]; dateFrom?: string | string[]; dateTo?: string | string[]; departmentId?: string | string[]; ownerId?: string | string[]; severity?: string | string[] };
 
 export default async function ReportsPage({
   cookieHeader,
@@ -24,33 +25,36 @@ export default async function ReportsPage({
   const filters = {
     branchId: readParam(params?.branchId) ?? '',
     categoryId: readParam(params?.categoryId) ?? '',
+    dateFrom: readParam(params?.dateFrom) ?? '',
+    dateTo: readParam(params?.dateTo) ?? '',
+    departmentId: readParam(params?.departmentId) ?? '',
     ownerId: readParam(params?.ownerId) ?? '',
+    severity: readParam(params?.severity) ?? '',
   };
-  const [rows, kpis, options, staff] = await Promise.all([
-    getStaffReportRows({ ...apiInput, filters }),
-    getStaffReportKpis(apiInput),
+  const [rows, kpis, catalog, options, staff, principal] = await Promise.all([
+    getStaffReportRowsLoadResult({ ...apiInput, filters }),
+    getStaffReportKpisLoadResult(apiInput),
+    getStaffReportCatalogLoadResult(apiInput),
     getComplaintFormOptions(apiInput),
     getAssignableStaff(apiInput),
+    getStaffSessionPrincipal(apiInput),
   ]);
+  const loadState = [rows, kpis, catalog].some((item) => item.status === 'denied') ? 'denied' : [rows, kpis, catalog].some((item) => item.status === 'error') ? 'error' : undefined;
   return (
     <ReportsDashboard
+      canExport={principal?.permissions.includes('REPORT_EXPORT') ?? false}
+      catalog={catalog.status === 'ready' ? catalog.data : undefined}
       filters={filters}
-      kpis={kpis ?? undefined}
+      kpis={kpis.status === 'ready' ? kpis.data : undefined}
       locale={resolveLocale(readParam(params?.locale))}
       options={options}
-      rows={rows ?? undefined}
+      rows={rows.status === 'ready' ? rows.data : undefined}
       staff={staff}
-      state={resolveState(readParam(params?.reports))}
+      state={loadState}
     />
   );
 }
 
 function readParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
-}
-
-function resolveState(value: string | undefined): ReportsPreviewState | undefined {
-  return value === 'ready' || value === 'loading' || value === 'empty' || value === 'error' || value === 'success' || value === 'validation' || value === 'denied' || value === 'conflict'
-    ? value
-    : undefined;
 }

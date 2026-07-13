@@ -1,5 +1,6 @@
 import React from 'react';
-import { PortalTrackingScreen, type PortalTrackingPreviewState } from '../../../components/portal-tracking';
+import { PortalShell } from '../../../components/portal-shell';
+import { PortalTrackingScreen } from '../../../components/portal-tracking';
 import { portalTrackingText, resolvePortalTrackingLocale } from '../../../i18n/portal-tracking';
 
 type SearchParams = {
@@ -15,15 +16,26 @@ export default async function PortalTrackingPage({
 }) {
   const params = await searchParams;
   const locale = resolvePortalTrackingLocale(params?.locale);
-  const state = previewState(readParam(params?.state));
-  const reference = readParam(params?.reference) || portalTrackingText[locale].sample.reference;
-  return <PortalTrackingScreen locale={locale} reference={reference} state={state} />;
+  const reference = readParam(params?.reference) ?? '';
+  const t = portalTrackingText[locale];
+  const switchLocale = locale === 'ar' ? 'en' : 'ar';
+  const switchHref = `/portal/track?locale=${switchLocale}${reference ? `&reference=${encodeURIComponent(reference)}` : ''}`;
+  return (
+    <PortalShell
+      current="track"
+      locale={locale}
+      privacy={t.privacy}
+      subtitle={t.subtitle}
+      switchHref={switchHref}
+      switchLabel={t.switchLabel}
+      switchTarget={t.switchTarget}
+      title={t.title}
+    >
+      <PortalTrackingScreen initialReference={reference} locale={locale} />
+    </PortalShell>
+  );
 }
 
-function readParam(value: string | string[] | undefined): string | undefined {
+function readParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
-}
-
-function previewState(value: string | undefined): PortalTrackingPreviewState | undefined {
-  return value === 'loading' || value === 'requested' || value === 'verified' || value === 'validation' || value === 'invalid' || value === 'expired' || value === 'error' || value === 'followup' ? value : undefined;
 }

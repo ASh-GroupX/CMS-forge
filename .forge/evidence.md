@@ -7691,3 +7691,5644 @@ Implemented the scoped server-side permission guard foundation:
   and denied permission paths.
 - SRS coverage: ARCH-WORKFLOW-001, WORKFLOW-MATRIX-001, METHOD-AUDIT-001,
   NFR-SEC-002, API-STANDARD-001.
+
+## 2026-06-29 - P14B Assigned Owner Workflow Authority
+
+### Scope
+
+- Identified the smallest failing workflow state path before source edits:
+  `IN_PROGRESS` / `ADD_INVESTIGATION_UPDATE` rejected a `CR_OFFICER` assigned
+  owner before persisted ownership could be checked.
+- Allowed assigned-owner authority for owner-scoped `IN_PROGRESS` actions while
+  keeping Branch Manager, CR Manager, and Admin authority unchanged.
+- Kept the persisted status update, owner check, status history, and workflow
+  audit in the existing transition transaction. Non-owner staff denial rolls
+  back before history/audit and writes a `SECURITY` audit denial after rollback.
+
+### Changed Files
+
+- `apps/api/src/modules/complaints/complaints.repository.ts`
+- `apps/api/src/modules/complaints/complaints.service.ts`
+- `apps/api/test/workflow/transition-matrix.test.ts`
+- `.forge/evidence.md`
+- `.forge/state.md`
+- `.forge/next.md`
+
+### Verification
+
+- Failed as expected before source fix: `corepack pnpm test:api -- workflow`
+  (48/49; assigned owner investigation update returned `RBAC_FORBIDDEN`).
+- Passed: `corepack pnpm test:api -- workflow` (49/49).
+- Passed: `corepack pnpm test:api -- audit` (8/8 plus append-only proof).
+- Passed: `corepack pnpm test:api -- rbac` (2/2).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Security Self-Check
+
+- Roles, permissions, and branch scope come from the server session: Passed.
+  The controller still derives `actorRole` and `actorId` from the server
+  principal; no client-owned role/actor fields are accepted.
+- Each state change writes status history and audit in the same transaction;
+  side effects enqueue after commit: Passed. The assigned-owner allowed case
+  records status/history/audit/commit; the denied non-owner case records no
+  history and no commit.
+- No passwords, OTPs, tokens, hashes, provider secrets, credentials,
+  attachment contents, or portal verification data are logged or returned:
+  Passed. The denial audit uses existing safe workflow denial metadata.
+- Customer portal exposure rules hold: Passed. No portal route or response
+  shape changed.
+- Trust boundaries are tested: Passed. The new workflow test covers one
+  assigned-owner allowed case and one non-owner denied case with
+  `RBAC_FORBIDDEN`.
+- SRS coverage: ARCH-WORKFLOW-001, WORKFLOW-MATRIX-001, METHOD-AUDIT-001,
+  NFR-SEC-002, API-STANDARD-001.
+
+## 2026-06-29 - P14C Workflow Route/Owner Business-State Repair
+
+### Scope
+
+- Extended complaint transition input with `targetBranchId`,
+  `targetDepartmentId`, and `ownerId`.
+- Required `APPROVE_AND_ROUTE` routing data before transaction:
+  `reason`, `targetBranchId`, `targetDepartmentId`, and `ownerId`.
+- Persisted `APPROVE_AND_ROUTE` branch, department, and owner in the same
+  transaction as status, history, and audit.
+- Required `ASSIGN_INVESTIGATION` assignment data before transaction:
+  `reason` and `ownerId`.
+- Persisted `ASSIGN_INVESTIGATION` owner in the same transaction as status,
+  history, and audit.
+- Required `ROUTE_AGAIN` routing comment through existing `reason`.
+- Set `resolvedAt` for `RESOLVE` / `RESOLVE_DIRECTLY` and `closedAt` for
+  `CLOSE` in the status transaction.
+- Preserved P13 draft submit reference assignment, P14A safe audit target
+  behavior, P14B assigned-owner authority, and after-commit side effects.
+
+### Changed Files
+
+- `apps/api/src/modules/complaints/dto/complaint-transition.dto.ts`
+- `apps/api/src/modules/complaints/complaints.service.ts`
+- `apps/api/src/modules/complaints/complaints.repository.ts`
+- `apps/api/test/workflow/transition-matrix.test.ts`
+- `.forge/evidence.md`
+- `.forge/state.md`
+- `.forge/next.md`
+
+### Verification
+
+- Failed as expected before source fix: `corepack pnpm test:api -- workflow`
+  (47/53; missing route/owner validation and persistence, timestamp updates,
+  and DTO forwarding failed).
+- Passed: `corepack pnpm test:api -- workflow` (53/53).
+- Passed: `corepack pnpm test:api -- complaints` (53/53).
+- Passed: `corepack pnpm test:api -- audit` (8/8 plus append-only proof).
+- Passed: `corepack pnpm test:api -- rbac` (2/2).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Security Self-Check
+
+- Roles, permissions, branch scope, actor id, actor role, and request source
+  still come from the server session. Client body actor fields remain ignored.
+- Each tested workflow state change writes status, history, and audit in the
+  same transaction; route, owner, and terminal timestamp updates are part of
+  the status update payload.
+- Side effects remain after commit.
+- No passwords, OTPs, tokens, hashes, provider secrets, credentials,
+  attachment contents, or portal verification data are logged or returned.
+- Customer portal exposure rules hold. No portal route or response shape
+  changed.
+- Trust boundaries are tested: route/assignment required data fails before a
+  transaction; assigned-owner investigation update still passes; non-owner
+  staff still deny with `RBAC_FORBIDDEN`.
+- SRS coverage: ARCH-WORKFLOW-001, WORKFLOW-MATRIX-001, METHOD-AUDIT-001,
+  NFR-SEC-002, API-STANDARD-001.
+
+## 2026-06-29 - P14D Workflow After-Commit Notification and SLA Hooks
+
+### Scope
+
+- Added a focused complaint workflow side-effect helper so
+  `ComplaintsService` stays under the 300-line source cap.
+- Preserved same-transaction complaint status, history, and audit writes; the
+  helper runs only after `complaintsRepository.transaction(...)` returns.
+- Added deterministic internal notification queueing for submitted,
+  approved/routed, investigation assigned, resolved, rejected, resolution
+  rejected, sent back, close survey, and reopen lifecycle actions.
+- Wired `SlaService.recordDeadlineEvent(...)` through `SlaModule` for active
+  workflow stages using the P14D action-to-`SlaStage` map.
+- Expanded the post-update complaint select only with fields required by the
+  side-effect hooks: `ownerId`, `severity`, `categoryId`, and `departmentId`.
+- Left terminal stop-SLA behavior out of this slice because there is no
+  existing `SlaService` stop/pause API; existing breach scanning skips
+  terminal complaint statuses, but no terminal stop event is recorded.
+
+### Changed Files
+
+- `apps/api/src/modules/complaints/complaint-workflow-side-effects.ts`
+- `apps/api/src/modules/complaints/complaints.service.ts`
+- `apps/api/src/modules/complaints/complaints.repository.ts`
+- `apps/api/src/modules/complaints/complaints.module.ts`
+- `apps/api/src/modules/complaints/MODULE.md`
+- `apps/api/test/workflow/transition-matrix.test.ts`
+- `.forge/evidence.md`
+- `.forge/state.md`
+- `.forge/next.md`
+
+### Verification
+
+- Failed as expected before source fix:
+  `$env:TSX_TSCONFIG_PATH='apps/api/tsconfig.json'; node --import tsx --test --test-name-pattern "workflow approve and route queues" apps/api/test/workflow/transition-matrix.test.ts`
+  (call order stopped at `status`, `history`, `audit`, `commit`; missing
+  `queue` and `sla`).
+- Timed out before source fix: `corepack pnpm test:api -- workflow`
+  (124s, no TAP output before timeout; orphaned test child processes stopped).
+- Passed: `corepack pnpm test:api -- workflow` (56/56).
+- Passed: `corepack pnpm test:api -- complaints` (56/56).
+- Passed: `corepack pnpm test:api -- sla` (16/16).
+- Passed: `corepack pnpm test:api -- notifications` (42/42).
+- Passed: `corepack pnpm openapi:check`.
+- Passed after one type-shape fix: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Security Self-Check
+
+- Roles, permissions, branch scope, actor id, actor role, and request source
+  still come from the server session. The controller route test still proves
+  client-owned actor fields are ignored.
+- Each successful workflow state change writes status, history, and audit in
+  the same transaction. New tests prove notification and SLA side effects occur
+  only after the fake commit marker.
+- No side effects run for validation failure, invalid transition, stale status,
+  or transaction failure.
+- No passwords, OTPs, tokens, hashes, provider secrets, credentials,
+  attachment contents, or portal verification data are logged or returned.
+  New notification payloads contain only ids, statuses, action, actor id,
+  target owner/route ids, and resolution type where needed; no template body or
+  provider dispatch is added.
+- Customer portal exposure rules hold. No portal route or response shape
+  changed.
+- Trust boundaries are tested: route scope/permission tests remain in the
+  workflow suite, and the new side-effect tests cover both successful
+  after-commit execution and denied/failing no-side-effect paths.
+- SRS coverage: ARCH-WORKFLOW-001, WORKFLOW-MATRIX-001, REQ-NOTIFY-001,
+  REQ-SLA-001, METHOD-AUDIT-001, NFR-SEC-002, API-STANDARD-001.
+
+## 2026-06-29 - P14E Terminal SLA Stop and Reopen Lifecycle
+
+### Scope
+
+- Added a minimal `SlaService.recordLifecycleEvent(...)` public API for
+  `SlaEventType.PAUSED` and `SlaEventType.RESUMED` only.
+- Added idempotent lifecycle event creation in `SlaRepository` using existing
+  `SlaEvent` rows with `policyId: null` and `dueAt: null`; no schema or
+  due-date columns were added.
+- Updated SLA warning and breach jobs to skip terminal complaints and skip
+  deadline rows with a later PAUSED event for the same complaint and stage.
+  New deadline rows created after a pause remain eligible.
+- Wired workflow side effects so `CLOSE`, `REJECT_AS_INVALID`,
+  `REJECT_AFTER_REVIEW`, and `REJECT_AFTER_INVESTIGATION` record PAUSED after
+  commit, while `REOPEN` records RESUMED after commit.
+- Preserved P14D notification payloads and deadline-stage mapping.
+- Kept source files under 300 lines: `sla.service.ts` is 299 lines,
+  `sla.repository.ts` is 142 lines, `sla-job-rules.ts` is 21 lines, and
+  `complaint-workflow-side-effects.ts` is 149 lines.
+
+### Changed Files
+
+- `apps/api/src/modules/sla/sla.service.ts`
+- `apps/api/src/modules/sla/sla.repository.ts`
+- `apps/api/src/modules/sla/sla-job-rules.ts`
+- `apps/api/src/modules/complaints/complaint-workflow-side-effects.ts`
+- `apps/api/test/sla/deadline-calculator.test.ts`
+- `apps/api/test/workflow/transition-matrix.test.ts`
+- `.forge/evidence.md`
+- `.forge/state.md`
+- `.forge/next.md`
+
+### Verification
+
+- Failed as expected before source fix:
+  `$env:TSX_TSCONFIG_PATH='apps/api/tsconfig.json'; node --import tsx --test --test-name-pattern "SLA service records lifecycle" apps/api/test/sla/deadline-calculator.test.ts`
+  (`recordLifecycleEvent is not a function`).
+- Failed as expected before source fix:
+  `$env:TSX_TSCONFIG_PATH='apps/api/tsconfig.json'; node --import tsx --test --test-name-pattern "workflow close records paused" apps/api/test/workflow/transition-matrix.test.ts`
+  (call order missed `slaLifecycle` after `queue`).
+- Passed: `corepack pnpm test:api -- workflow` (59/59).
+- Passed: `corepack pnpm test:api -- sla` (21/21).
+- Passed: `corepack pnpm test:api -- complaints` (59/59).
+- Passed: `corepack pnpm openapi:check`.
+- Passed after one enum-literal type fix: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Security Self-Check
+
+- Roles, permissions, branch scope, actor id, actor role, and request source
+  still come from the server session. No client-owned workflow authority was
+  added.
+- Each successful workflow state change still writes status, history, and
+  audit in the same transaction. New lifecycle tests prove PAUSED/RESUMED SLA
+  side effects occur only after the fake commit marker.
+- No side effects run for validation failure, invalid transition, stale status,
+  or transaction failure.
+- No passwords, OTPs, tokens, hashes, provider secrets, credentials,
+  attachment contents, or portal verification data are logged or returned.
+  Lifecycle events persist complaint id, SLA stage, type, timestamps, and an
+  idempotency key only.
+- Customer portal exposure rules hold. No portal route or response shape
+  changed.
+- Trust boundaries are tested: workflow permission/branch-scope route tests
+  remain in the suite, and side-effect tests cover both successful after-commit
+  lifecycle execution and denied/failing no-side-effect paths.
+- SRS coverage: ARCH-WORKFLOW-001, WORKFLOW-MATRIX-001, REQ-SLA-001,
+  METHOD-AUDIT-001, NFR-SEC-002, API-STANDARD-001.
+
+## 2026-06-29 - Phase 14 Reviewer Pass
+
+### Scope
+
+- Reviewed P14A through P14E against ARCH-WORKFLOW-001,
+  WORKFLOW-MATRIX-001, METHOD-AUDIT-001, REQ-SLA-001, REQ-NOTIFY-001,
+  NFR-SEC-002, and API-STANDARD-001.
+- `.spec` was absent.
+- Included untracked helper files in review:
+  `apps/api/src/modules/complaints/complaint-workflow-side-effects.ts` and
+  `apps/api/src/modules/sla/sla-job-rules.ts`.
+- No product code was changed during review.
+
+### Finding
+
+- Failed: Phase 14 reviewer audit-safety gate.
+- `apps/api/src/modules/complaints/complaints.service.ts`
+  `workflowAuditInput(...)` stores request `resolutionSummary` in workflow
+  audit metadata.
+- `apps/api/src/core/audit.service.ts` persists metadata unchanged.
+- `apps/api/src/modules/audit/audit.service.ts` redacts sensitive key names on
+  read/export, but not sensitive strings inside a benign key such as
+  `resolutionSummary`.
+- Result: a successful workflow transition can persist passwords, OTPs, tokens,
+  secrets, credentials, or provider data if entered in resolution free text.
+
+### Verification
+
+- Passed: `git status --short` showed the expected dirty Phase 14 worktree and
+  the two untracked helper files.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- workflow` (59/59).
+- Passed: `corepack pnpm test:api -- sla` (21/21).
+- Passed: `corepack pnpm test:api -- complaints` (59/59).
+- Passed after standalone rerun: `corepack pnpm test:api -- audit` (8/8 plus
+  append-only proof). The first parallel run timed out at 120s.
+- Passed: `corepack pnpm test:api -- rbac` (2/2).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Review Notes
+
+- Backend workflow authority remains server-side; controller actor role/id and
+  branch-scope context come from `request.principal`.
+- Successful workflow transitions still write status, history, and audit in one
+  transaction before side effects.
+- Permission and branch-scope denial audit targets are path-only and avoid raw
+  query strings.
+- P14B assigned-owner behavior remains covered.
+- P14E deadline/lifecycle idempotency, terminal skips, paused old deadline
+  skips, and reopened/new deadline behavior remain covered.
+- Phase 14 is not reviewed complete until P14R1 repairs workflow audit
+  free-text metadata.
+
+## 2026-06-29 - P14R1 Workflow Audit Free-Text Safety Repair
+
+### Scope
+
+- Removed `resolutionSummary` from successful workflow audit metadata.
+- Kept structured workflow audit metadata only: from status, to status, action,
+  actor role, request source, resolution type, and customer communication
+  status.
+- Added one workflow regression for `RESOLVE` with
+  `resolutionSummary: "password hunter2 sessionToken leaked"`.
+- Did not change status history, notification payloads, SLA side effects,
+  schema, UI, or broad audit behavior.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- workflow` (60/60).
+- Passed: `corepack pnpm test:api -- audit` (8/8 plus append-only proof).
+- Passed: `corepack pnpm test:api -- complaints` (60/60).
+- Passed: `corepack pnpm test:api -- rbac` (2/2).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Security Self-Check
+
+- Roles, permissions, branch scope, actor id, actor role, and request source
+  still come from the server session.
+- Successful workflow state changes still write status, history, and audit in
+  one transaction before side effects.
+- Workflow audit metadata no longer persists `resolutionSummary`; the new test
+  proves `hunter2`, `sessionToken`, and `password` are absent from the audit
+  record.
+- Customer portal exposure rules hold. No portal route or response shape
+  changed.
+- Trust boundaries remain covered by workflow permission/branch-scope tests and
+  RBAC tests.
+- SRS coverage: METHOD-AUDIT-001, ARCH-WORKFLOW-001, WORKFLOW-MATRIX-001,
+  NFR-SEC-002.
+
+## 2026-06-29 - Phase 14 Reviewer Rerun
+
+### Scope
+
+- Ran a fresh Phase 14 reviewer pass for P14A through P14E plus P14R1 against
+  ARCH-WORKFLOW-001, WORKFLOW-MATRIX-001, METHOD-AUDIT-001, REQ-SLA-001,
+  REQ-NOTIFY-001, NFR-SEC-002, and API-STANDARD-001.
+- `.spec` was absent.
+- Included untracked Phase 14 helper files in review:
+  `apps/api/src/modules/complaints/complaint-workflow-side-effects.ts` and
+  `apps/api/src/modules/sla/sla-job-rules.ts`.
+- No product code was changed during review.
+
+### Findings
+
+- No blocking findings.
+- P14R1 audit-safety repair is holding: workflow audit metadata excludes
+  `resolutionSummary`, and the regression proves
+  `password hunter2 sessionToken leaked` is absent from the audit record.
+
+### Verification
+
+- Passed: `git status --short` showed the expected dirty Phase 14 worktree and
+  both untracked helper files.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- workflow` (60/60).
+- Passed: `corepack pnpm test:api -- sla` (21/21).
+- Passed: `corepack pnpm test:api -- complaints` (60/60).
+- Passed: `corepack pnpm test:api -- audit` (8/8 plus append-only proof).
+- Passed: `corepack pnpm test:api -- rbac` (2/2).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Review Notes
+
+- Backend workflow authority remains in the API service/controller boundary.
+  The transition route derives actor role/id and branch-scope context from the
+  server principal and ignores client-owned actor/request-source fields.
+- Successful workflow transitions still write complaint status, status history,
+  and WORKFLOW audit in one repository transaction.
+- Workflow notifications, SLA deadline events, and PAUSED/RESUMED lifecycle
+  events are queued/recorded only after the transaction commits; validation,
+  invalid transition, stale status, and transaction failure paths do not run
+  side effects.
+- Workflow audit metadata remains structured: from status, to status, action,
+  actor role, request source, resolution type, and customer communication
+  status. It no longer persists request free-text `resolutionSummary`.
+- Permission, role, branch-scope, and assigned-owner denials produce safe
+  SECURITY audit records without raw query strings or request free text.
+- SLA warning/breach jobs skip terminal complaints, skip deadline rows paused
+  after creation, allow newer post-resume deadlines, and keep warning/breach
+  writes idempotent.
+- Notification payloads reviewed in this phase carry backend-owned ids,
+  statuses, actions, owner/route ids, resolution type, and close/reopen
+  workflow context; queueing remains after commit.
+- OpenAPI, typecheck, lint, and evidence labels are honest for the commands
+  that actually ran.
+
+### Security Self-Check
+
+- Roles, permissions, branch scope, actor id, actor role, and request source
+  come from the server session, never client-owned workflow authority.
+- Status changes write status history and audit in the same transaction; side
+  effects run only after commit.
+- Workflow audit records do not include `resolutionSummary`, passwords, OTPs,
+  tokens, hashes, provider secrets, credentials, attachment contents, or portal
+  verification data.
+- Customer portal exposure rules hold. No portal route or response shape
+  changed in Phase 14 review.
+- Trust boundaries are covered by workflow route tests, assigned-owner tests,
+  branch-scope denial tests, and RBAC tests.
+- SRS coverage: ARCH-WORKFLOW-001, WORKFLOW-MATRIX-001, METHOD-AUDIT-001,
+  REQ-SLA-001, REQ-NOTIFY-001, NFR-SEC-002, API-STANDARD-001.
+
+## 2026-06-29 - Next Phase Planning / Audit
+
+### Scope
+
+- Planned the next phase only; no product source or tests were intentionally
+  changed.
+- Read `.forge/next.md`, `.forge/project.md`, `.forge/policy.md`,
+  `.forge/state.md`, latest Phase 14 evidence, latest relevant trust notes,
+  `docs/ARCHITECTURE.md`, and the requested SRS sections.
+- `.spec` is absent.
+- Current dirty Phase 14 worktree was preserved. The planning snapshot includes
+  the untracked helper files:
+  `apps/api/src/modules/complaints/complaint-workflow-side-effects.ts` and
+  `apps/api/src/modules/sla/sla-job-rules.ts`.
+
+### Gap Audit
+
+- `REQ-SLA-001` / `REQ-NOTIFY-001`: Phase 14 records deadline/lifecycle events
+  and breach notifications, but `SlaService.runWarningJob(...)` currently only
+  creates warning events. It does not queue the AC5 current-owner warning
+  notification.
+- `REQ-SLA-001` AC6: breach events queue an internal breach notification, but
+  configured escalation-level routing remains a separate follow-up gap.
+- `REQ-PORTAL-001`, `REQ-PORTAL-002`, `PORTAL-SEC-001`: portal submission,
+  OTP verification, tracking, follow-up, and privacy tests exist; the remaining
+  gap is stronger L3/customer-journey proof rather than a smaller backend
+  prerequisite.
+- `REQ-REPORT-001`, `REPORT-MATRIX-001`: reports and KPI endpoints exist with
+  RBAC/branch-scope proof, but full matrix reconciliation for RPT-001 through
+  RPT-017 is broader than one first backend slice.
+- `REQ-COMPLAINT-003`, `DATA-AUTO-001`: drafts and vehicle intake exist, but
+  related complaint linking, duplicate warning UI, and manual/DMS provenance
+  flags remain future data/UI slices.
+- `UI-DESIGN-001`: UI proof exists for several staff/portal routes, but the
+  next highest dependency is backend SLA business behavior, not UI polish.
+
+### Candidate Ranking
+
+1. **Phase 15 SLA notification and escalation completion**: highest value and
+   risk because SLA warning/escalation is an MVP gate. Dependency order is good
+   because Phase 14 just stabilized workflow/SLA lifecycle. First slice is
+   small: owner warning notification after a new warning event.
+2. **Portal verified tracking/follow-up proof**: high privacy value, but less
+   blocking for backend correctness because the API/session model and UI are
+   already present. Likely needs E2E/proof setup rather than core service work.
+3. **Report formula/matrix reconciliation**: strong management value, but
+   broader. `REPORT-MATRIX-001` spans many reports and UAT reconciliation, so
+   it should be split after the SLA notification hole is closed.
+
+### Decision
+
+- Chosen next phase objective: Phase 15 - SLA notification and escalation
+  completion.
+- First buildable slice: P15A - SLA owner warning notifications.
+- Exact first-slice SRS IDs: REQ-SLA-001, REQ-NOTIFY-001, NFR-SEC-002,
+  API-STANDARD-001.
+
+### Assumptions
+
+- P15A can use the existing `NotificationsService.queueInternal(...)` safe
+  payload guard and does not need a live provider.
+- P15A should not add schema unless owner data cannot be read from the existing
+  complaint relation. The current likely change is to include `ownerId` in the
+  SLA warning deadline read model.
+- If a warning event has no current owner, P15A should not create an unscoped
+  notification; the warning event remains deterministic and escalation routing
+  is left to P15B.
+
+### Verification
+
+- Passed: `git status --short` confirmed the dirty Phase 14 worktree and both
+  untracked helper files.
+- Not Run: product test suites, OpenAPI, typecheck, and lint. This was a
+  planning-only task with no product source/test changes.
+
+## 2026-06-29 - P15A SLA Owner Warning Notifications
+
+### Scope
+
+- Implemented P15A only: a newly created SLA warning event now queues one
+  internal notification to the complaint current owner.
+- `.spec` is absent.
+- Extended the warning deadline read model with `complaint.ownerId`; no schema,
+  UI, provider, portal, report, DMS, duplicate/related complaint, or workflow
+  behavior changes were made.
+- Kept `SlaService` under the 300-line cap: 297 lines after the change.
+
+### Changes
+
+- `SlaService.runWarningJob(...)` queues the warning notification only after
+  `createWarningEvent(...)` returns `true`.
+- Duplicate retries, skipped warnings, terminal complaints, paused old
+  deadlines, invalid policies, future warnings, and missing owners do not queue
+  warning notifications.
+- Missing owner behavior is deterministic: the WARNING event is still created,
+  but no unscoped notification is queued.
+- Notification input uses `templateCode: sla.warning.internal`,
+  `recipientUserId: complaint.ownerId`, `complaintId: deadline.complaintId`,
+  `locale: en`, `idempotencyKey: warning idempotency key`, and a safe payload
+  of complaint id, policy id, SLA stage, due timestamp, and warning idempotency
+  key only.
+
+### Failing-First Proof
+
+- Failed as expected before implementation: `corepack pnpm test:api -- sla`
+  failed 1/24 on `SLA warning job queues one owner notification only for a new
+  warning event` because the warning event was created but no notification was
+  queued.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- sla` (24/24).
+- Passed: `corepack pnpm test:api -- notifications` (42/42).
+- Passed: `corepack pnpm test:api -- workflow` (60/60).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Security Self-Check
+
+- Roles and branch scope remain server-owned; P15A does not add client input or
+  route authority.
+- Complaint state changes remain in the workflow transaction with status
+  history and audit; P15A only adds SLA job notification queueing after a new
+  warning event write.
+- The warning payload contains backend-owned ids/enums/timestamps only. No
+  passwords, OTPs, tokens, hashes, credentials, provider data, staff PII,
+  customer PII, free text, or secrets are logged or queued.
+- Customer portal exposure rules hold. No portal route, portal DTO, public
+  comment, tracking, or customer-visible response changed.
+- Trust boundaries were covered by workflow allowed/denied route tests and
+  notification unsafe-payload denial tests.
+- SRS coverage: REQ-SLA-001 AC5, REQ-NOTIFY-001 AC3, NFR-SEC-002,
+  API-STANDARD-001.
+
+### Assumptions
+
+- If a due warning has no current owner, P15A should not create an unscoped
+  notification; P15B can decide escalation routing for ownerless breached
+  complaints if needed.
+
+## 2026-06-29 - P15B SLA Breach Escalation Route Token
+
+### Scope
+
+- Implemented P15B only: a newly created SLA BREACH event now queues the
+  existing internal breach notification with the configured
+  `SlaPolicy.escalationLevel1` route token in the payload.
+- `.spec` is absent.
+- Extended the breach deadline read model with
+  `policy.escalationLevel1`, `policy.escalationLevel2`, and
+  `policy.escalationLevel3`; no schema, UI, provider, portal, report, DMS,
+  duplicate/related complaint, vehicle provenance, or workflow behavior
+  changed.
+- Kept `SlaService` under the 300-line cap: 292 lines after the change.
+
+### Changes
+
+- Replaced inline breach notification queueing in `SlaService.runBreachJob(...)`
+  with `queueSlaBreachNotification(...)` in `sla-job-rules.ts`.
+- Queueing still happens only after `createBreachEvent(...)` returns `true`.
+- Duplicate breach retries, skipped breach paths, terminal complaints, paused
+  old deadlines, future breaches, missing policy, and missing
+  `escalationLevel1` do not queue escalation notifications.
+- Missing policy/config behavior is deterministic: the BREACH event is still
+  created, but no unscoped escalation notification is queued.
+- Notification input uses `templateCode: sla.breach.internal`, `locale: en`,
+  `idempotencyKey: breach idempotency key`, and a safe payload of complaint id,
+  policy id, SLA stage, due timestamp, breach idempotency key, and
+  `escalationLevel: policy.escalationLevel1`.
+
+### Failing-First Proof
+
+- Failed as expected before implementation: `corepack pnpm test:api -- sla`
+  failed 3/26. The breach read model did not select policy escalation fields,
+  the queued breach notification lacked `idempotencyKey` and
+  `escalationLevel`, and missing escalation config still queued a notification.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- sla` (26/26).
+- Passed: `corepack pnpm test:api -- notifications` (42/42).
+- Passed: `corepack pnpm test:api -- workflow` (60/60).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Security Self-Check
+
+- Roles and branch scope remain server-owned; P15B does not add client input or
+  route authority.
+- Complaint state changes remain in the workflow transaction with status
+  history and audit; P15B only changes SLA job notification queueing after a new
+  breach event write.
+- The breach payload contains backend-owned ids/enums/timestamps and the
+  configured escalation route token only. No passwords, OTPs, tokens, hashes,
+  credentials, provider data, staff PII, customer PII, free text, or secrets
+  are logged or queued.
+- Customer portal exposure rules hold. No portal route, portal DTO, public
+  comment, tracking, or customer-visible response changed.
+- Trust boundaries were covered by workflow allowed/denied route tests and
+  notification unsafe-payload denial tests.
+- SRS coverage: REQ-SLA-001 AC6, REQ-NOTIFY-001 AC3, NFR-SEC-002,
+  API-STANDARD-001.
+
+### Assumptions
+
+- `SlaPolicy.escalationLevel1` is treated as a configured escalation route
+  token/code for this slice, not as a `User.id`.
+- If `policy` or `escalationLevel1` is missing/blank on a due breach, P15B
+  creates the BREACH event but does not queue an unscoped escalation
+  notification.
+- P15B intentionally does not implement timed level2/level3 scans. That remains
+  a separate slice only if existing configuration supports timing semantics.
+
+## 2026-06-29 - P15C SLA Level2/Level3 Timing Config Audit
+
+### Scope
+
+- Ran P15C as an audit-first slice.
+- `.spec` is absent.
+- No app source or tests were changed in this slice.
+- No timed level2/level3 escalation was implemented because no existing timing
+  semantics were found.
+
+### Files / Areas Searched
+
+- Required Forge context: `.forge/next.md`, `.forge/project.md`,
+  `.forge/policy.md`, `.forge/state.md`.
+- Architecture/SRS context: `docs/ARCHITECTURE.md` sections 6.4-6.6 and
+  `docs/CMS_AUTO_SRS.md` sections `REQ-SLA-001`, `REQ-NOTIFY-001`,
+  `NFR-SEC-002`, `API-STANDARD-001`.
+- Schema/migrations/seeds:
+  `packages/database/prisma/schema.prisma`,
+  `packages/database/prisma/seed.ts`,
+  `packages/database/prisma/phase10-seed.ts`, and all files under
+  `packages/database/prisma/migrations/`.
+- SLA source/tests:
+  `apps/api/src/modules/sla/sla.repository.ts`,
+  `apps/api/src/modules/sla/sla.service.ts`,
+  `apps/api/src/modules/sla/sla-job-rules.ts`,
+  `apps/api/src/modules/sla/*.ts`,
+  `apps/api/test/sla/deadline-calculator.test.ts`.
+- Worker/job source/tests/tools:
+  `apps/api/src/worker/index.ts`,
+  `apps/api/src/worker/task-notification-batches.ts`,
+  `apps/api/test/worker/sla-runner.test.ts`,
+  `apps/api/test/worker/notification-runner.test.ts`,
+  `apps/api/test/worker/task-escalation-runner.test.ts`,
+  `tools/job-runtime-check.mjs`,
+  `tools/runtime-smoke.mjs`.
+
+### Search Terms / Commands
+
+- Searched for `escalationLevel2`, `escalationLevel3`, `totalTargetMinutes`,
+  `total_target_minutes`, escalation delay/threshold/timing/minute/hour/after
+  patterns, `level2`, `level3`, SLA escalation, SLA warning/breach job behavior,
+  and direct `slaPolicy` usage.
+- Exact search commands run:
+  - `rg -n -i "escalationLevel2|escalationLevel3|totalTargetMinutes|escalation.*(delay|threshold|timing|minute|hour|after|at)|level2|level3|SLA.*escalat|escalat.*SLA" packages/database/prisma packages/database apps/api/src/modules/sla apps/api/src/worker apps/api/test/sla apps/api/test/worker tools`
+  - `rg -n -i "escalation_level|escalationLevel|total_target_minutes|totalTargetMinutes|delay|threshold|timing|elapsed|overdue|after|minutes" packages/database/prisma packages/database -g "*.prisma" -g "*.sql" -g "*.ts" -g "*.js" -g "*.mjs"`
+  - `rg -n -i "sla|breach|warning|escalation|totalTargetMinutes|total_target_minutes|delay|threshold|timing|elapsed|overdue|after|minutes" apps/api/src/modules/sla apps/api/src/worker apps/api/test/sla apps/api/test/worker`
+  - `rg -n "slaPolicy|SlaPolicy|escalationLevel1|escalationLevel2|escalationLevel3|totalTargetMinutes|total_target_minutes" packages/database/prisma/seed.ts packages/database/prisma/phase10-seed.ts packages/database/prisma/role-permissions.ts apps/api/src apps/api/test tools`
+  - `rg -n -i "sla.*(delay|threshold|timing|after|minutes|level)|level(2|3).*(delay|threshold|timing|after|minutes)|escalation.*(delay|threshold|timing|after|minutes)" apps/api/src packages/database/prisma apps/api/test tools`
+
+### Findings
+
+- Schema/migration fields exist:
+  `SlaPolicy.escalationLevel1`, `SlaPolicy.escalationLevel2`,
+  `SlaPolicy.escalationLevel3`, and optional `SlaPolicy.totalTargetMinutes`.
+- `escalationLevel1/2/3` are stored as route-token strings. P15B uses
+  `escalationLevel1` as a breach route token.
+- `totalTargetMinutes` exists in schema/migration only. It is not selected by
+  the SLA repository, seeded, exposed through DTOs, used by `SlaService`, or
+  referenced by worker/job tests.
+- The only SLA worker behavior is `sla.warning` -> `runWarningJob(...)` and
+  `sla.breach` -> `runBreachJob(...)` on the shared
+  `SLA_JOB_INTERVAL_MS` schedule. There is no separate SLA escalation job or
+  level2/level3 scan.
+- Timed escalation behavior exists only for tasks
+  (`taskEscalationJobName`, `selectTaskEscalations(...)`), not for SLA policy
+  levels.
+
+### Decision
+
+- Level2/level3 timing semantics do not currently exist.
+- Stopped without app/test implementation. Adding implicit delay rules would
+  invent product semantics and risk double-firing escalations.
+- Smallest follow-up is a schema/config planning task to define explicit
+  level2/level3 escalation timing fields and acceptance criteria before any
+  runner implementation.
+
+### Verification
+
+- Passed: `git status --short` captured the intentionally dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Not Run: `corepack pnpm test:api -- sla` because no product code or tests
+  changed in P15C.
+- Not Run: `corepack pnpm test:api -- notifications` because no product code or
+  tests changed in P15C.
+- Not Run: `corepack pnpm test:api -- workflow` because no product code or
+  tests changed in P15C.
+- Not Run: `corepack pnpm openapi:check` because no API/OpenAPI product code
+  changed in P15C.
+- Not Run: `corepack pnpm typecheck` because no TypeScript product code changed
+  in P15C.
+- Not Run: `corepack pnpm lint` because no product code changed in P15C.
+
+### Security Self-Check
+
+- Roles and branch scope remain server-owned; P15C changed no code.
+- Complaint state changes, status history, audit transaction behavior, and
+  after-commit side effects remain unchanged.
+- No passwords, OTPs, tokens, hashes, credentials, provider data, staff PII,
+  customer PII, free text, or secrets were added to logs or payloads.
+- Customer portal exposure rules hold. No portal route, portal DTO, public
+  comment, tracking, or customer-visible response changed.
+- Trust-boundary tests were not run in P15C because no product code changed;
+  P15A/P15B proof remains the current behavioral coverage.
+- SRS coverage audited: REQ-SLA-001 AC6, REQ-NOTIFY-001 AC3, NFR-SEC-002,
+  API-STANDARD-001.
+
+### Follow-Up
+
+- P15C1 should define explicit schema/config semantics for level2/level3 SLA
+  escalation timing before implementation. Candidate fields should name
+  whether thresholds are absolute minutes after stage start, minutes after
+  breach, or percentages of `durationMinutes`/`totalTargetMinutes`.
+
+## 2026-06-29 - P15C1 SLA Level2/Level3 Timing Schema Config Planning
+
+### Scope
+
+- Planned P15C1 only. No schema, app source, tests, UI, providers, workflow,
+  portal, reports, DMS, duplicate/related complaint, or vehicle provenance code
+  changed.
+- `.spec` is absent.
+- Read latest P15 evidence, required Forge files, architecture sections 6.4-6.6,
+  SRS sections `REQ-SLA-001`, `REQ-NOTIFY-001`, `NFR-SEC-002`,
+  `API-STANDARD-001`, and the SRS SLA data dictionary around
+  `escalation_level_1/2/3` and `total_complaint_target_minutes`.
+
+### Decision
+
+- Level1 remains the breach-time escalation already implemented by P15B.
+- Level2 fires a configured number of minutes after breach.
+- Level3 fires a configured number of minutes after breach.
+- Future schema fields:
+  - `escalationLevel2AfterBreachMinutes Int? @map("escalation_level_2_after_breach_minutes")`
+  - `escalationLevel3AfterBreachMinutes Int? @map("escalation_level_3_after_breach_minutes")`
+
+### Why `totalTargetMinutes` Is Not Enough
+
+- SRS data dictionary describes `total_complaint_target_minutes` as an
+  end-to-end target from submission to closure, used for total age reporting
+  and escalation.
+- It does not say whether level2/level3 thresholds are measured from stage
+  start, from breach, from submission, or as percentages.
+- Using it for level2/level3 would mix total complaint age with per-stage SLA
+  breach escalation and would make idempotency/timing ambiguous.
+- P15C1 therefore chooses explicit after-breach delay fields instead of
+  inferring level timing from `totalTargetMinutes`.
+
+### Validation Rules
+
+- `escalationLevel2AfterBreachMinutes` and
+  `escalationLevel3AfterBreachMinutes` are nullable positive integers.
+- If `escalationLevel2` is set, `escalationLevel2AfterBreachMinutes` must be
+  set and positive for level2 timed escalation to queue.
+- If `escalationLevel3` is set, `escalationLevel3AfterBreachMinutes` must be
+  set and positive for level3 timed escalation to queue.
+- If a delay is set without its matching route token, the future implementation
+  must not queue an unscoped notification.
+- If both level2 and level3 are configured, level3 delay must be greater than
+  level2 delay. Equal or earlier level3 timing is invalid policy config.
+- Missing route token or missing delay means no notification for that step,
+  not a fallback to level1.
+
+### Idempotency Keys
+
+- Level2: `sla:escalation:{deadlineKey}:LEVEL2`
+- Level3: `sla:escalation:{deadlineKey}:LEVEL3`
+- `deadlineKey` is the original deadline event idempotency key, matching the
+  existing warning/breach key pattern:
+  `sla:warning:{deadlineKey}` and `sla:breach:{deadlineKey}`.
+
+### Safe Payload
+
+- `complaintId`
+- `policyId`
+- `stage`
+- `dueAt`
+- `breachIdempotencyKey`
+- `escalationLevel`
+- `escalationStep`: `LEVEL2` or `LEVEL3`
+- `escalationIdempotencyKey`
+
+### Future Acceptance Tests
+
+- Level2 due queues exactly once with `escalationLevel2` and
+  `escalationStep: LEVEL2`.
+- Level3 due queues exactly once with `escalationLevel3` and
+  `escalationStep: LEVEL3`.
+- Duplicate retry queues no second level2/level3 notification.
+- Missing route token queues no notification.
+- Missing delay queues no notification.
+- Terminal complaint, paused old deadline, and future escalation paths queue no
+  notification.
+- Level3 configured at or before level2 is rejected as invalid SLA policy
+  config.
+
+### Verification
+
+- Passed: `git status --short` captured the intentionally dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Not Run: `corepack pnpm test:api -- sla` because P15C1 is planning-only and
+  changed no product code or tests.
+- Not Run: `corepack pnpm test:api -- notifications` because P15C1 is
+  planning-only and changed no product code or tests.
+- Not Run: `corepack pnpm test:api -- workflow` because P15C1 is planning-only
+  and changed no product code or tests.
+- Not Run: `corepack pnpm openapi:check` because P15C1 changed no API/OpenAPI
+  product code.
+- Not Run: `corepack pnpm typecheck` because P15C1 changed no TypeScript
+  product code.
+- Not Run: `corepack pnpm lint` because P15C1 changed no product code.
+
+### Security Self-Check
+
+- Roles and branch scope remain server-owned; P15C1 changed no code.
+- Complaint state changes, status history, audit transaction behavior, and
+  after-commit side effects remain unchanged.
+- Planned payload fields are backend-owned ids/enums/timestamps/route tokens
+  only. No passwords, OTPs, tokens, hashes, credentials, provider data, staff
+  PII, customer PII, free text, or secrets are planned.
+- Customer portal exposure rules hold. No portal route, portal DTO, public
+  comment, tracking, or customer-visible response changed.
+- Trust-boundary tests were not run in P15C1 because no product code changed;
+  future P15C2 implementation must include missing-token and missing-delay
+  denial/no-queue tests.
+- SRS coverage planned: REQ-SLA-001 AC6, REQ-NOTIFY-001 AC3, NFR-SEC-002,
+  API-STANDARD-001.
+
+## 2026-06-29 - P15C2 SLA Level2/Level3 Timing Schema Config
+
+### Scope
+
+- Implemented P15C2 schema/config only. No timed level2/level3 runner was
+  implemented.
+- `.spec` is absent.
+- Read required Forge files, architecture sections 6.4-6.6, and SRS sections
+  `REQ-SLA-001`, `REQ-NOTIFY-001`, `NFR-SEC-002`, and
+  `API-STANDARD-001`.
+- Added nullable Prisma fields on `SlaPolicy`:
+  - `escalationLevel2AfterBreachMinutes Int? @map("escalation_level_2_after_breach_minutes")`
+  - `escalationLevel3AfterBreachMinutes Int? @map("escalation_level_3_after_breach_minutes")`
+- Added migration:
+  `packages/database/prisma/migrations/20260629120000_sla_escalation_delays/migration.sql`.
+- Included the new fields in the existing SLA policy read model and resolver
+  return shape.
+
+### Write Path / Validation Audit
+
+- Verified no real SLA policy create/update path currently exists:
+  - `apps/api/src/modules/sla/sla.controller.ts` has no endpoints.
+  - `apps/api/src/modules/sla/dto/create-sla.dto.ts`,
+    `apps/api/src/modules/sla/dto/update-sla.dto.ts`, and
+    `apps/api/src/modules/sla/dto/sla-response.dto.ts` are empty.
+  - Searches found no SLA policy create/update route or repository write path
+    where config validation can be attached.
+- Because there is no write path, P15C2 did not add an unattached validation
+  helper and did not invent admin endpoints.
+- Assumption/follow-up: P15C3 should add the smallest real backend SLA policy
+  config write path and enforce:
+  - each delay is null/undefined or a positive integer,
+  - `escalationLevel2` requires `escalationLevel2AfterBreachMinutes`,
+  - `escalationLevel3` requires `escalationLevel3AfterBreachMinutes`,
+  - level3 delay is greater than level2 delay when both are configured,
+  - delay without route token does not configure an unscoped queued escalation.
+
+### Verification
+
+- Passed: `git status --short` captured the intentionally dirty worktree,
+  including unrelated Phase 14/P15 changes and the new P15C2 migration folder.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm prisma:validate`.
+- Passed: `corepack pnpm --dir packages/database generate`.
+- Passed: `corepack pnpm db:migrate:test`.
+- Passed: `corepack pnpm test:api -- sla` (26/26 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Security Self-Check
+
+- Roles and branch scope remain server-owned.
+- Complaint state changes, status history, audit transaction behavior, and
+  after-commit side effects remain unchanged.
+- P15C2 added only backend-owned policy timing config fields and an ALTER TABLE
+  migration. No passwords, OTPs, tokens, hashes, credentials, provider data,
+  staff PII, customer PII, free text, or secrets were added.
+- Customer portal exposure rules hold. No portal route, portal DTO, public
+  comment, tracking, or customer-visible response changed.
+- SRS coverage: REQ-SLA-001 AC6, REQ-NOTIFY-001 AC3, NFR-SEC-002,
+  API-STANDARD-001.
+
+## 2026-06-29 - P15C3 SLA Policy Escalation Delay Config Write Path
+
+### Scope
+
+- Implemented P15C3 only. No timed level2/level3 runner was implemented.
+- `.spec` is absent.
+- Added protected backend route `PATCH /sla/policies/:id/escalation`.
+- Route guards are `SessionAuthGuard`, `PermissionGuard`, and `CsrfGuard`.
+- Route permission is `SLA_MANAGE`; no branch scope is applied.
+- Added request parsing/validation for:
+  - required non-empty `escalationLevel1`,
+  - optional string/null `escalationLevel2` and `escalationLevel3`,
+  - optional positive integer/null level2 and level3 after-breach delays,
+  - matching route token/delay pairs,
+  - level3 delay greater than level2 delay when both are configured.
+- Added repository transaction/update path that persists only escalation config
+  fields.
+- Added same-transaction `CONFIG` audit with metadata limited to
+  `changedFields`; route-token values are not recorded in audit metadata.
+- Added small response DTO with policy ids, severity/stage, escalation route
+  tokens, and delay fields.
+- Updated canonical and committed OpenAPI documents for the new route.
+- `SlaService` is 299 lines; response/audit formatting lives in
+  `apps/api/src/modules/sla/sla-policy-config.ts`.
+
+### Verification
+
+- Passed: `git status --short` captured the intentionally dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- sla` (30/30 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session. P15C3 uses
+  `SessionAuthGuard` and `PermissionGuard`; no client-supplied branch scope is
+  accepted, and no branch scope is applied to this admin config route.
+- Config state change and audit happen inside one Prisma transaction.
+- No passwords, OTPs, tokens, hashes, credentials, provider data, staff PII,
+  customer PII, free text, or secrets are logged or returned by the new path.
+- Audit metadata contains only `changedFields`; route-token values are excluded.
+- Customer portal exposure rules hold. No portal route, portal DTO, public
+  comment, tracking, or customer-visible response changed.
+- Trust boundaries are tested: `SLA_MANAGE` allow, missing permission deny with
+  safe `SECURITY` audit, validation denials, guard metadata, module wiring, and
+  OpenAPI route presence.
+- SRS coverage: REQ-SLA-001 AC6, REQ-NOTIFY-001 AC3, NFR-SEC-002,
+  API-STANDARD-001.
+
+## 2026-06-29 - P15C4 SLA Timed Level2/Level3 Escalation Runner
+
+### Scope
+
+- Implemented P15C4 only. No schema, UI, portal, reports, DMS, workflow,
+  duplicate/related complaint, vehicle provenance, or provider code changed.
+- `.spec` is absent.
+- Added `SlaService.runEscalationJob(now)` as the public runner.
+- Added repository read for existing `BREACH` SLA events as escalation
+  candidates.
+- Added timed level2/level3 after-breach selection using
+  `escalationLevel2AfterBreachMinutes` and
+  `escalationLevel3AfterBreachMinutes`.
+- Preserved existing terminal complaint and pause skip semantics.
+- Skips missing/blank route tokens, missing delay config, and future paths.
+- Queues idempotent internal notifications with keys:
+  - `sla:escalation:{deadlineKey}:LEVEL2`
+  - `sla:escalation:{deadlineKey}:LEVEL3`
+- Derives `deadlineKey` by stripping `sla:breach:` from the existing breach
+  idempotency key.
+- Escalation payload is limited to:
+  `complaintId`, `policyId`, `stage`, `dueAt`, `breachIdempotencyKey`,
+  `escalationLevel`, `escalationStep`, and `escalationIdempotencyKey`.
+- Added worker job name `sla.escalation`; `scheduleSlaJobs` now schedules
+  warning, breach, and escalation; `processWorkerJob` dispatches escalation to
+  `SlaService.runEscalationJob`.
+- Added `worker` to `tools/api-test.mjs` suite allow-list so the required
+  `corepack pnpm test:api -- worker` command runs the existing worker tests.
+- `SlaService` remains under the agentic file budget at 299 lines.
+
+### Verification
+
+- Passed: `git status --short` captured the intentionally dirty worktree,
+  including existing Phase 14/P15 changes and P15C4 changes.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- sla` (35/35 TAP tests passed).
+- Passed: `corepack pnpm test:api -- worker` (19/19 TAP tests passed).
+- Passed: `corepack pnpm test:api -- notifications` (42/42 TAP tests passed).
+- Passed: `corepack pnpm test:api -- workflow` (60/60 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Security Self-Check
+
+- Roles and branch scope remain server-owned. P15C4 adds no public route and
+  the worker dispatch uses backend-owned job names and `SlaService`.
+- Complaint state changes, status history, audit transaction behavior, and
+  after-commit workflow side effects remain unchanged; P15C4 only reads existing
+  breach events and queues notifications.
+- No passwords, OTPs, secret tokens, hashes, credentials, provider data, staff
+  PII, customer PII, free text, or secrets are included in the escalation
+  payload.
+- Customer portal exposure rules hold. No portal route, portal DTO, public
+  comment, tracking, or customer-visible response changed.
+- Trust boundaries are tested: existing SLA config route still covers
+  `SLA_MANAGE` allow/deny; worker tests cover unknown SLA job noop; SLA runner
+  tests cover due level2/level3, duplicate retry, missing route token, missing
+  delay, terminal, paused, and future no-notification paths.
+- SRS coverage: REQ-SLA-001 AC6, REQ-NOTIFY-001 AC3, NFR-SEC-002,
+  API-STANDARD-001.
+
+## 2026-06-29 - Phase 15 Reviewer Stop - SLA Notification And Escalation Completion
+
+### Scope
+
+- Ran a strict reviewer pass only. No product source, tests, schema, OpenAPI,
+  UI, provider, portal, report, DMS, duplicate/related complaint, or vehicle
+  provenance behavior was implemented or changed.
+- `.spec` is absent.
+- Reviewed required Forge files, latest Phase 15 evidence, architecture
+  sections 6.2-6.6, and SRS sections `REQ-SLA-001`, `REQ-NOTIFY-001`,
+  `NFR-SEC-002`, and `API-STANDARD-001`.
+- Included untracked review files:
+  `apps/api/src/modules/complaints/complaint-workflow-side-effects.ts`,
+  `apps/api/src/modules/sla/sla-job-rules.ts`,
+  `apps/api/src/modules/sla/sla-policy-config.ts`, and
+  `packages/database/prisma/migrations/20260629120000_sla_escalation_delays/`.
+
+### Reviewer Findings
+
+- No blocking findings.
+- P15A warning notifications queue only after a newly created `WARNING` event,
+  skip duplicate/skipped/missing-owner notification paths, and use safe payload
+  fields with deterministic idempotency keys.
+- P15B breach notifications queue only after a newly created `BREACH` event,
+  treat `escalationLevel1` as a backend route token, and queue nothing when the
+  route token is missing or blank.
+- P15C2/C3 schema/config fields are nullable, the config route is guarded by
+  `SessionAuthGuard`, `PermissionGuard`, and `CsrfGuard`, permission is
+  `SLA_MANAGE`, validation rejects unsafe route/delay shapes, the `CONFIG`
+  audit is recorded in the same transaction, and audit metadata contains only
+  `changedFields`.
+- P15C4 timed escalation uses breach `occurredAt` plus configured after-breach
+  minutes, skips terminal/paused/future/missing config paths, uses
+  `sla:escalation:{deadlineKey}:LEVEL2` and
+  `sla:escalation:{deadlineKey}:LEVEL3`, and keeps payloads backend-owned.
+- Worker scheduling and dispatch cover `sla.warning`, `sla.breach`, and
+  `sla.escalation`; unknown SLA jobs remain no-ops.
+- P14 workflow/audit/after-commit behavior still holds by code review and the
+  workflow suite. No UI/provider/portal/report behavior changed.
+- `SlaService` remains under the 300-line budget; the new SLA helper source
+  files are also under budget.
+- `tools/api-test.mjs` change is narrow: it only admits the existing `worker`
+  suite name so the required worker proof command can run.
+
+### Dirty Worktree Snapshot
+
+- Modified Forge files: `.forge/evidence.md`, `.forge/next.md`,
+  `.forge/state.md`.
+- Modified app/tool/schema/OpenAPI/test files from Phase 14/P15 remain dirty.
+- Untracked Phase 15 files remain present:
+  `complaint-workflow-side-effects.ts`, `sla-job-rules.ts`,
+  `sla-policy-config.ts`, and the
+  `20260629120000_sla_escalation_delays` migration folder.
+
+### Verification
+
+- Passed: `git status --short` captured the intentionally dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- sla` (35/35 TAP tests passed).
+- Passed: `corepack pnpm test:api -- worker` (19/19 TAP tests passed).
+- Passed: `corepack pnpm test:api -- notifications` (42/42 TAP tests passed).
+- Passed: `corepack pnpm test:api -- workflow` (60/60 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Security Self-Check
+
+- Roles and branch scope remain server-owned. The P15C3 config route uses
+  session, permission, and CSRF guards; SLA workers add no client-owned
+  authority.
+- Complaint state changes still write status history and audit in one
+  transaction; workflow side effects remain after commit.
+- No passwords, OTPs, tokens, hashes, provider secrets, credentials, customer
+  free text, staff PII, or provider data were added to SLA notification payloads
+  or audit metadata.
+- Customer portal exposure rules hold. No portal route, portal DTO,
+  customer-visible response, public comment, tracking, or related complaint
+  behavior changed.
+- Trust boundaries are covered by `SLA_MANAGE` allow/deny tests, worker unknown
+  job no-op tests, SLA duplicate/missing-token/missing-delay skip tests, and
+  workflow branch-scope/RBAC tests.
+
+### Follow-Up
+
+- Phase 15 is reviewed complete. Do not start another product slice from this
+  reviewer stop.
+- Next step is a planning/audit stop for the next phase, carrying forward:
+  portal tracking/follow-up L3 proof, report formula/business-fit proof, related
+  complaint linking, duplicate warning UI, and vehicle manual/DMS provenance
+  flags.
+
+## 2026-06-29 - Phase 16 Planning/Audit - Portal Verified Tracking
+
+### Scope
+
+- Planned only. No product source, tests, schema, OpenAPI, UI, provider, portal
+  behavior, report behavior, complaint linking, duplicate UI, or vehicle/DMS
+  provenance code was changed.
+- `.spec` is absent.
+- Read required Forge files, latest Phase 15 evidence, full
+  `docs/ARCHITECTURE.md`, and SRS sections `REQ-PORTAL-002`,
+  `PORTAL-SEC-001`, `REQ-REPORT-001`, `REPORT-MATRIX-001`,
+  `REQ-COMPLAINT-003`, `REQ-CUSTOMER-001`, `DATA-AUTO-001`, and
+  `UI-DESIGN-001`.
+- Audited existing portal, report, complaint, vehicle/DMS, and proof-tooling
+  surfaces enough to choose the next phase.
+
+### Candidate Ranking
+
+1. Portal verified tracking/follow-up L3 proof. Highest value because it is
+   customer-facing, high privacy risk, required by `PORTAL-SEC-001`, and the
+   backend APIs already exist but lack the named L3 proof command.
+2. Report formula/business-fit proof and matrix reconciliation. High management
+   value and backend/business-fit focused, but less immediate privacy risk than
+   portal tracking.
+3. Related complaint linking. Useful backend capability, but less urgent than
+   portal privacy proof and likely should precede duplicate UI.
+4. Vehicle manual/DMS provenance flags. Important data-quality work, but it can
+   touch schema, intake, reports, and UI; defer until after the customer-facing
+   portal proof.
+5. Duplicate warning UI. Lowest now because it is UI polish unless paired with
+   backend duplicate/related complaint behavior.
+
+### Chosen Phase
+
+- Phase 16: Portal verified tracking and follow-up proof.
+- SRS IDs: `REQ-PORTAL-002`, `PORTAL-SEC-001`, `UI-DESIGN-001`.
+- Rationale: Existing backend routes cover OTP request, OTP verification,
+  session-gated tracking, and public follow-up. Existing tests cover many
+  privacy cases, but the missing proof is a coherent L3 customer portal journey:
+  reference alone denied, verified session reads only safe fields, follow-up
+  writes public comments only, and closed/rejected complaints deny follow-up.
+
+### Larger Buildable Slices
+
+1. P16A - Portal verified tracking and follow-up L3 proof. Add the missing
+   `corepack pnpm test:e2e -- customer-portal-track` proof command and harden
+   any portal privacy or follow-up behavior gap it exposes.
+2. P16B - Portal tracking UI real-flow wiring and visual/accessibility proof.
+   Replace preview-only tracking behavior with the real API-backed verification,
+   tracking, and follow-up flow if P16A confirms backend behavior is sound.
+3. P16C - Portal attachment follow-up proof. Add only if needed to satisfy
+   `REQ-PORTAL-002` AC3 after text follow-up is proven.
+
+### Assumptions
+
+- The first slice should target 5-10 files because it is one coherent portal
+  capability: API privacy proof, public follow-up behavior, and L3 command
+  wiring.
+- The `customer-portal-track` proof command does not currently exist in
+  `tools/e2e-runner.mjs`; creating it is part of P16A.
+- Live SMS/WhatsApp/email providers are not required; existing notification
+  doubles/proof paths are enough for MVP L3 proof.
+- Portal attachments are not part of P16A unless text follow-up proof cannot
+  satisfy the slice without them.
+
+### Verification
+
+- Passed: `git status --short` captured the intentionally dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Not Run: `corepack pnpm test:api -- portal.tracking` because this was
+  planning-only.
+- Not Run: `corepack pnpm test:e2e -- customer-portal-track` because this was
+  planning-only and the command is planned for P16A.
+- Not Run: `corepack pnpm openapi:check`, `corepack pnpm typecheck`, and
+  `corepack pnpm lint` because no product code changed in this planning stop.
+
+## 2026-06-29 - Phase 16A - Portal Verified Tracking And Follow-Up L3 Proof
+
+### Scope
+
+- Implemented the missing `corepack pnpm test:e2e -- customer-portal-track`
+  command path for SRS IDs `REQ-PORTAL-002`, `PORTAL-SEC-001`, and
+  `UI-DESIGN-001`.
+- `.spec` is absent.
+- Added deterministic L3 proof in `tools/customer-portal-track-proof.mjs` and
+  wired it from `tools/e2e-runner.mjs`.
+- No portal product controller, service, repository, DTO, schema, OpenAPI,
+  provider, or UI code changed; existing backend behavior was sufficient.
+- Tool source file line budget holds: `tools/customer-portal-track-proof.mjs`
+  is 197 lines.
+
+### Proof Assertions
+
+- Reference number alone cannot retrieve tracking details or write follow-ups;
+  the proof rejects before complaint read/comment write.
+- Missing, invalid, and expired portal sessions cannot read tracking or create
+  follow-ups.
+- OTP request/verify gates tracking access; wrong OTP does not create a session,
+  and valid verification returns only the raw session token response.
+- Valid portal session tracking response contains only public-safe fields:
+  reference number, status, created/updated timestamps, and public timeline
+  fields.
+- Negative privacy assertions check for absence of internal comments, audit
+  metadata, DMS/customer codes, staff PII, OTP value/hash, session token/hash,
+  unrelated complaint details, and internal-only timeline data.
+- Valid non-closed complaint session creates a `PUBLIC` follow-up comment with
+  backend-owned authority fields only.
+- CLOSED and REJECTED complaint follow-up attempts are rejected before comment
+  write.
+
+### Changed Files
+
+- `tools/e2e-runner.mjs`
+- `tools/customer-portal-track-proof.mjs`
+- `.forge/evidence.md`
+- `.forge/state.md`
+- `.forge/next.md`
+
+### Verification
+
+- Passed: `git status --short` captured the intentionally dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- customer-portal-track`.
+- Passed: `corepack pnpm security:check`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Security Self-Check
+
+- Backend remains authoritative for portal tracking and follow-up behavior.
+- Portal session verification is required before tracking read or comment write;
+  reference numbers are not sufficient.
+- OTPs, OTP hashes, session hashes, staff PII, DMS/customer codes, provider
+  data, internal comments, audit logs, and unrelated complaint details are not
+  exposed by the proof payloads.
+- Audit records in the exercised flow do not include OTPs, token material, DMS
+  identifiers, or staff PII.
+- Existing dirty Phase 14/P15 worktree entries were preserved and not cleaned,
+  staged, or reverted.
+
+### Skipped Scope
+
+- P16B portal tracking UI real-flow wiring was not started.
+- P16C portal attachment follow-up proof was not started; text follow-up proof
+  passed without attachment work.
+- No live SMS/WhatsApp/email provider integration was added.
+
+## 2026-06-29 - Phase 16B - Portal Tracking UI Real-Flow Wiring And Proof
+
+### Scope
+
+- Implemented P16B for SRS IDs `REQ-PORTAL-002`, `PORTAL-SEC-001`, and
+  `UI-DESIGN-001`.
+- `.spec` is absent.
+- Wired the customer portal tracking screen to the real verified flow:
+  OTP request, OTP verify, tracking read with `x-portal-session`, and public
+  follow-up submission.
+- Repaired a real backend contract gap: OTP request now returns only the opaque
+  `verificationId`, `expiresAt`, and `ok`, matching the documented flow needed
+  by OTP verify.
+- Added one allowlisted Next proxy for the four public portal tracking paths.
+- Preserved preview states only as initial visual/accessibility proof states.
+- Added a small CAPA select accessible name and refreshed stale web proof
+  fixtures/signals because required accessibility/visual checks exposed
+  unrelated proof failures.
+
+### Failing-First Proof
+
+- Failed as expected before backend repair:
+  `corepack pnpm test:api -- portal.tracking` failed because
+  `requestTrackingOtp(...)` returned only `{ ok: true }`.
+- Failed as expected before web helper/proxy implementation:
+  `corepack pnpm test:web -- api-client` failed with missing
+  `apps/web/src/app/api/portal/[...path]/route`.
+- Failed before proof/a11y repair:
+  `corepack pnpm test:e2e -- accessibility` exposed an unnamed CAPA select
+  trigger; `corepack pnpm test:visual` exposed stale admin proof signals.
+
+### Changed Files
+
+- `apps/api/src/modules/portal/portal.service.ts`
+- `apps/api/src/modules/portal/dto/portal-response.dto.ts`
+- `apps/api/test/portal.tracking/otp-request.test.ts`
+- `apps/web/src/app/api/portal/[...path]/route.ts`
+- `apps/web/src/lib/portal-tracking-api.ts`
+- `apps/web/src/components/portal-tracking/index.tsx`
+- `apps/web/src/i18n/portal-tracking.ts`
+- `apps/web/test/api-client/portal-tracking-api.test.ts`
+- `apps/web/test/shell/shell.test.ts`
+- `apps/web/src/components/complaint-detail-workspace/case-capa-panel.tsx`
+- `tools/web-proof.mjs`
+- `tools/web-proof-cases.mjs`
+- `tools/customer-portal-track-proof.mjs`
+- `packages/contracts/openapi.json`
+- `tools/openapi-canonical.json`
+- `.forge/evidence.md`
+- `.forge/state.md`
+- `.forge/next.md`
+
+### Verification
+
+- Passed: `git status --short` captured the intentionally dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- customer-portal-track`.
+- Passed: `corepack pnpm test:web -- api-client` (15/15 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (189/189 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Security Self-Check
+
+- Backend remains authoritative for portal tracking and follow-up behavior.
+  React calls the portal APIs and renders responses; it does not decide
+  complaint workflow state.
+- Portal session verification is required before tracking read or comment write;
+  reference number alone is still denied by API and e2e proof.
+- OTP request returns only `ok`, `verificationId`, and `expiresAt`. OTP values,
+  OTP hashes, session hashes, audit metadata, DMS/customer codes, staff PII,
+  provider data, and unrelated complaint details are not exposed.
+- The UI stores only `verificationId` and the returned session token in React
+  state. Shell tests prove proof renders do not include challenge/session
+  material, and the source guard rejects browser persistence/logging paths.
+- The Next proxy allowlists only public portal tracking paths and forwards only
+  JSON plus `x-portal-session` where required. It does not forward staff cookies,
+  staff CSRF, roles, branch scope, actor IDs, workflow inputs, or provider data.
+- Existing API tests still cover allowed valid follow-up and denied invalid,
+  CLOSED, and REJECTED follow-up paths before comment write.
+
+### Skipped Scope
+
+- Portal attachment follow-up was not started; text follow-up is wired and
+  proven.
+- No live SMS/WhatsApp/email provider integration was added.
+- No report, related complaint, duplicate warning UI, or vehicle/DMS provenance
+  work was started.
+
+## 2026-06-29 - Phase 16 Reviewer Stop - Blocked
+
+### Scope
+
+- Strict review only for P16A + P16B, SRS IDs `REQ-PORTAL-002`,
+  `PORTAL-SEC-001`, and `UI-DESIGN-001`.
+- No product code was changed.
+- Reviewed the required portal API, Next proxy, client, UI, i18n, proof tools,
+  OpenAPI artifacts, and the changed CAPA panel.
+
+### Findings
+
+- Blocker: `apps/web/src/app/portal/track/page.tsx:18` accepts `state` from the
+  public query string and passes it to the production portal tracking component.
+  `apps/web/src/components/portal-tracking/index.tsx:37` then seeds tracking
+  from `sampleTracking(...)`; `index.tsx:203` through `index.tsx:212` renders a
+  verified/follow-up tracking view with sample public status/timeline when the
+  URL contains `?state=verified` or `?state=followup`. This violates the Phase
+  16 rule that preview/query states remain only for visual/accessibility proof
+  and cannot bypass real tracking in production interaction.
+
+### Review Notes
+
+- API tracking reads require a valid hashed portal session before complaint
+  lookup (`apps/api/src/modules/portal/portal.service.ts:106` through
+  `portal.service.ts:116`, with session validation at `portal.service.ts:166`
+  through `portal.service.ts:170`).
+- OTP request response shape is limited to `{ ok, verificationId, expiresAt }`
+  (`portal.service.ts:61` through `portal.service.ts:67` and
+  `portal-response.dto.ts`).
+- OTP verify creates a session only after successful hash verification
+  (`portal.service.ts:90` through `portal.service.ts:103`).
+- Follow-up writes use `CommentVisibility.PUBLIC` and deny CLOSED/REJECTED
+  before comment creation (`portal.service.ts:123` through
+  `portal.service.ts:139`).
+- Next proxy allowlist is limited to the four public tracking paths and forwards
+  only JSON plus `x-portal-session` for tracking/follow-up
+  (`apps/web/src/app/api/portal/[...path]/route.ts:5` through `route.ts:10`,
+  `route.ts:28` through `route.ts:36`).
+- `case-capa-panel.tsx` changed only to add an accessible label/placeholder to
+  the existing status select; unrelated to portal tracking and low risk.
+- Diff review did not show new Phase 16 portal attachment, report, related
+  complaint, duplicate UI, or vehicle/DMS provenance work. Existing
+  `/portal/attachments` contract/service surface predates this reviewed diff.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- customer-portal-track`.
+- Passed: `corepack pnpm test:web -- api-client` (15/15 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (189/189 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: Blocked.
+- Smallest repair: remove query-driven `state`/sample tracking from the
+  production portal tracking route/component, keep proof-only states in the
+  visual/accessibility proof harness, and add a regression proving
+  `/portal/track?state=verified&reference=...` does not render tracking details
+  without real verification.
+
+## 2026-06-29 - P16 Repair - Portal Tracking Proof State Isolation
+
+### Scope
+
+- Repaired the Phase 16 reviewer blocker for SRS IDs `REQ-PORTAL-002`,
+  `PORTAL-SEC-001`, and `UI-DESIGN-001`.
+- Production `/portal/track` now ignores `state` and `reference` query
+  parameters for tracking state and always starts at the verification gate.
+- Split proof-only preview rendering into `PortalTrackingPreview`; visual and
+  accessibility proof tools use the preview harness instead of public route
+  query parameters.
+- Added a shell regression proving
+  `/portal/track?state=verified&reference=CMP-BYPASS` does not render public
+  timeline, the bypass reference, sample status, or follow-up form.
+- No backend, OpenAPI, report, attachment, related complaint, duplicate UI, or
+  vehicle/DMS provenance work was changed.
+
+### Changed Files
+
+- `apps/web/src/app/portal/track/page.tsx`
+- `apps/web/src/components/portal-tracking/index.tsx`
+- `apps/web/test/shell/shell.test.ts`
+- `tools/web-proof.mjs`
+- `tools/web-proof-cases.mjs`
+- `tools/web-visual-review.mjs`
+- `.forge/evidence.md`
+- `.forge/state.md`
+- `.forge/next.md`
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:web -- shell` (190/190 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm test:e2e -- customer-portal-track`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Security Self-Check
+
+- Production tracking details still require successful OTP verification followed
+  by real `GET /api/portal/tracking` with `x-portal-session`.
+- Reference number and query proof state alone cannot render tracking details.
+- UI token handling remains React state only for `verificationId` and
+  `sessionToken`; no URL, DOM text, localStorage, sessionStorage, cookie, or log
+  persistence was added.
+- Proof states remain available only through the proof/test harness.
+
+## 2026-06-29 - Phase 16 Reviewer Stop - Clean
+
+### Scope
+
+- Strict review only for P16A, P16B, and the proof-state repair for SRS IDs
+  `REQ-PORTAL-002`, `PORTAL-SEC-001`, and `UI-DESIGN-001`.
+- No product code was changed.
+- Inspected the required portal API service/DTO/tests, Next proxy, portal
+  tracking route/client/UI/i18n/tests, proof tools, OpenAPI artifacts, and the
+  changed CAPA panel.
+
+### Findings
+
+- No blocking findings.
+
+### Review Notes
+
+- Reference-only tracking and follow-up are denied: controller tests strip
+  reference input from tracking/follow-up calls, and service reads begin with
+  `requireSession(...)` before complaint lookup.
+- OTP request response is limited to `{ ok, verificationId, expiresAt }`;
+  contracts and DTOs do not expose OTP values, OTP hashes, session hashes,
+  audit data, DMS IDs, staff fields, provider data, staff PII, or unrelated
+  complaint data.
+- OTP verification issues a portal session only after successful OTP hash
+  verification; failed, expired, exhausted, unknown, and non-pending
+  verification paths do not create sessions.
+- Tracking requires `x-portal-session` and returns/renders only public-safe
+  reference, status, created/updated timestamps, and public timeline fields.
+- Follow-up writes only `PUBLIC` comments with `actorId: null` for valid
+  non-closed portal sessions; invalid sessions and CLOSED/REJECTED complaints
+  deny before comment creation.
+- Portal tracking UI stores `verificationId` and `sessionToken` only in React
+  state. No URL, DOM text, localStorage, sessionStorage, cookie, or log
+  persistence was found.
+- Production `/portal/track` ignores `state` and `reference` query params for
+  tracking state and renders the verification gate only. `PortalTrackingPreview`
+  is used by tests/proof tools, not the production route.
+- Next proxy allowlist remains limited to the four public tracking paths and
+  forwards only JSON plus `x-portal-session` for tracking/follow-up.
+- `case-capa-panel.tsx` changed only to add an accessible label/placeholder to
+  the existing status select; no portal/security workflow impact.
+- No Phase 16 attachment, report, related complaint, duplicate UI, or
+  vehicle/DMS provenance work was started. Existing portal attachment and other
+  non-P16 surfaces predate this reviewer stop and were not changed here.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- customer-portal-track`.
+- Passed: `corepack pnpm test:web -- api-client` (15/15 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (190/190 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: Phase 16 reviewed complete.
+- Next: next-phase planning/audit stop only; do not start implementation.
+
+## 2026-06-29 - Next-Phase Planning/Audit Stop
+
+### Scope
+
+- Planning only. No product code was changed.
+- Read `.forge/next.md`, `.forge/project.md`, `.forge/policy.md`,
+  `.forge/state.md`, latest `.forge/evidence.md`, `docs/ARCHITECTURE.md`, and
+  candidate SRS sections for reports, related/duplicate complaints, portal
+  follow-up attachments, complaint attachments, and vehicle/DMS provenance.
+
+### Candidate Ranking
+
+1. **Report formula/business-fit proof and matrix reconciliation**:
+   highest next backend value. `REQ-REPORT-001` makes operational dashboards a
+   must-have, and `REPORT-MATRIX-001` requires RPT-001 through RPT-017
+   definitions, formulas, scoped exports, and reconciliation against complaint
+   records. Existing evidence says report/KPI endpoints exist, but full matrix
+   reconciliation remains open.
+2. **Related complaint linking**: useful backend capability under
+   `REQ-COMPLAINT-003` and should precede duplicate UI, but it is priority
+   `should` and less central to MVP acceptance than report reconciliation.
+3. **Portal attachment follow-up**: `REQ-PORTAL-002` AC3 mentions attachments,
+   but prior attachment evidence already covers portal-session upload-only
+   behavior and no portal download token shape. Text follow-up is proven; this
+   is not the highest uncovered backend value.
+4. **Vehicle manual/DMS provenance flags**: important under `DATA-AUTO-001` and
+   `DMS-MAP-001`, but broad if it touches schema, intake, reports, and UI in one
+   pass. It should be split later.
+5. **Duplicate warning UI**: deliberately last because UI-only duplicate work
+   should wait until backend related/duplicate behavior is solid.
+
+### Decision
+
+- Chosen phase: Phase 17 - Report formula/business-fit proof and matrix
+  reconciliation.
+- First slice: P17A - backend report KPI formula and matrix reconciliation.
+- Selected SRS IDs: `REQ-REPORT-001`, `REPORT-MATRIX-001`, `NFR-SEC-002`,
+  `API-STANDARD-001`.
+
+### First Slice Rationale
+
+- Keep the slice larger than a repair but still reviewable: prove formulas,
+  filters, branch/RBAC scope, and the RPT-001 through RPT-017 reconciliation
+  ledger before UI polish.
+- Backend report correctness has direct MVP acceptance value: UAT requires
+  management report export and report numbers that reconcile with sample
+  complaint data.
+- The slice should start with focused API/report tests and only repair the
+  backend read-model/formula gaps those tests expose.
+
+### Assumptions
+
+- Existing report endpoints and export routes are the starting point; do not
+  replace the report module shape.
+- UI polish should wait until backend formulas and report definitions are
+  stable.
+- If formula repair needs broad schema, intake, report, and UI changes at once,
+  the builder should stop and replan instead of expanding P17A.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Not Run: product tests. This was a planning-only stop by request.
+
+## 2026-06-29 - P17A Report KPI Formula And Matrix Reconciliation
+
+### Scope
+
+- Implemented backend-only report formula and filter repair for SRS IDs
+  `REQ-REPORT-001`, `REPORT-MATRIX-001`, `NFR-SEC-002`, and
+  `API-STANDARD-001`.
+- No UI polish, related complaints, duplicate UI, vehicle/DMS provenance,
+  portal attachments, schema migration, or unbounded export work was started.
+
+### Changes
+
+- Added failing-first report tests for:
+  - dashboard average TAT from closure timestamp rather than `updatedAt`;
+  - department filtering through the existing complaint `departmentId` field;
+  - KPI formulas for SLA breach rate, median TAT, aging buckets, and reopen
+    rate;
+  - first response time from the first non-submit/non-reopen status event.
+- Added a report dashboard read model that reads existing complaint
+  `closedAt`, status history, and SLA events without exposing private fields.
+- Added `departmentId` as a report list/export query filter.
+- Extended the aggregate KPI response contract with `reopenRate`,
+  `slaBreachRate`, `medianTatHours`, and `agingBuckets`.
+
+### RPT-001 Through RPT-017 Matrix After P17A
+
+| Report | Status | P17A note |
+|---|---|---|
+| RPT-001 Open complaints summary | Proven | Dashboard count, aging buckets, SLA warning/overdue, filters, and branch scope are covered. |
+| RPT-002 Overdue complaints | Not Covered | Specific overdue list, overdue duration, and current-owner output remain absent. |
+| RPT-003 SLA warning complaints | Not Covered | Warning count exists, but list/percent elapsed/deadline output remains absent. |
+| RPT-004 Average TAT | Proven | Average and median closure duration now use closure status timestamp/current `closedAt` data. |
+| RPT-005 Closure performance by branch | Deferred | Branch filter, closed count, breach rate, and avg TAT formulas exist; branch-grouped output is not implemented. |
+| RPT-006 Complaints by category | Deferred | Category filter exists; count/percentage/trend grouping remains future work. |
+| RPT-007 Complaints by brand/model | Not Covered | Brand/model report output remains blocked on vehicle/report provenance work. |
+| RPT-008 Complaints by department | Deferred | Department filter exists; department-grouped counts/open/closed/overdue/avg TAT remain future work. |
+| RPT-009 Owner workload | Deferred | Owner filter and scoped rows exist; assigned/overdue/closed/avg handling aggregate remains future work. |
+| RPT-010 Reopened complaints | Deferred | Reopened count and reopen rate are proven; reason list remains future work. |
+| RPT-011 Rejected complaints | Not Covered | Rejection count/list/reason summary remains absent. |
+| RPT-012 Customer satisfaction | Not Covered | CSAT formula/report remains absent from this backend slice. |
+| RPT-013 Aging report | Proven | Aging bucket formula is covered for non-terminal complaint records. |
+| RPT-014 Compensation tracking | Deferred | Should-level MVP row; not touched in P17A. |
+| RPT-015 DMS lookup failure report | Not Covered | DMS provider result report remains future integration/report work. |
+| RPT-016 Notification delivery report | Not Covered | Notification delivery aggregate remains future report work. |
+| RPT-017 Audit activity report | Deferred | Existing audit/report surfaces remain outside P17A formula repair. |
+
+### Security Self-Check
+
+- Roles and branch scope still come from the server session through report route
+  guards; controller tests prove branch query spoofing is ignored for scoped
+  users and RBAC/branch denial is audited.
+- State-change transaction/audit rule: not applicable. P17A added report reads
+  and formulas only; no complaint workflow state changes were added.
+- No passwords, OTPs, tokens, hashes, provider credentials, DMS codes, customer
+  phone/email, VIN, plate, audit internals, staff PII, or portal secrets were
+  added to report responses/exports.
+- Customer portal exposure rules: not applicable to this backend report slice;
+  portal routes were not changed.
+- Trust boundaries are tested: allowed report reads/exports and denied
+  out-of-scope/missing-permission report access are covered in the reports API
+  tests.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Failed first as expected: `corepack pnpm test:api -- reports` failed on
+  `updatedAt`-based TAT, missing department filter propagation, and missing KPI
+  fields.
+- Passed: `corepack pnpm test:api -- reports` (26/26 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P17A complete.
+- Next: P17A reviewer stop before any report UI polish.
+
+## 2026-06-29 - P17A Reviewer Stop
+
+### Scope
+
+- Ran a strict reviewer pass for P17A backend report KPI/formula/matrix work
+  against `REQ-REPORT-001`, `REPORT-MATRIX-001`, `NFR-SEC-002`, and
+  `API-STANDARD-001`.
+- Reviewed the report service, KPI helper, repository read models, controller
+  query handling, report tests, OpenAPI/canonical contract, and P17A matrix
+  evidence.
+- No product code was changed during review.
+
+### Finding
+
+- Blocked: reopen rate can exceed 100% and the regression test blesses the bad
+  value.
+- `apps/api/src/modules/reports/reports.kpi.ts:71` counts reopen status
+  events, not distinct reopened complaints.
+- `apps/api/src/modules/reports/reports.kpi.ts:76` divides that event count by
+  closed records, so repeated reopen events or reopen events for records not in
+  the closed denominator can produce impossible rates.
+- `apps/api/test/reports/kpi-read-model.test.ts:145` through
+  `apps/api/test/reports/kpi-read-model.test.ts:148` currently expect
+  `reopenRate: 200`.
+- `docs/CMS_AUTO_SRS.md:2629` defines reopen rate as reopened complaints /
+  closed complaints x 100, and the reviewer stop explicitly required flagging
+  impossible percentages unless justified. No justification is present.
+- The RPT matrix is therefore not honest at `.forge/evidence.md:9365`, where
+  RPT-010 says reopened count and reopen rate are proven.
+
+### Review Notes
+
+- Dashboard average TAT uses `closedAt` or a CLOSED status-history event rather
+  than incidental `updatedAt`.
+- SLA breach rate uses unique breached complaint ids over complaint rows with
+  an SLA obligation.
+- Median TAT uses closed records only.
+- Aging buckets skip terminal CLOSED/REJECTED complaints.
+- First-response timing excludes submit and reopen actions, within current
+  status-history data limits.
+- The department filter uses existing complaint `departmentId` and does not add
+  schema.
+- Report list/export scope is still derived from server-session role and branch
+  context; scoped users cannot broaden branch output through query params.
+- Report response/export schemas and export columns do not add customer phone,
+  email, VIN, plate, DMS codes, audit internals, staff PII, provider
+  credentials, or portal secrets.
+- Export remains row-limited and writes safe REPORT audit metadata.
+- No UI polish, related complaint linking, duplicate UI, vehicle/DMS
+  provenance, portal attachment work, schema migration, staging, cleanup, or
+  unrelated revert was done in this review.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- reports` (26/26 TAP tests passed, but one
+  passing test encodes the blocked 200% reopen-rate behavior).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: Blocked.
+- Next: P17A repair for reopen-rate formula and focused regression only.
+
+## 2026-06-29 - P17A Reopen Rate Repair
+
+### Scope
+
+- Repaired only the P17A reviewer blocker for `REPORT-MATRIX-001` reopen-rate
+  formula.
+- Kept `reopenedCount` as the existing reopen event count.
+- Changed `reopenRate` to use distinct reopened closed complaint records over
+  the closed-record denominator.
+- Did not start reviewer rerun, P17B UI polish, related complaints, duplicate
+  UI, vehicle/DMS provenance, portal attachments, schema migration, cleanup,
+  staging, or unrelated edits.
+
+### Changes
+
+- `apps/api/src/modules/reports/reports.kpi.ts:73` now builds closed record ids.
+- `apps/api/src/modules/reports/reports.kpi.ts:74` now builds distinct reopened
+  record ids.
+- `apps/api/src/modules/reports/reports.kpi.ts:78` now calculates
+  `reopenRate` from distinct reopened ids that are also in the closed
+  denominator.
+- `apps/api/test/reports/kpi-read-model.test.ts:137` through
+  `apps/api/test/reports/kpi-read-model.test.ts:148` now proves repeated reopen
+  events keep `reopenedCount` at 3 while `reopenRate` remains 100.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- reports` (26/26 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P17A repair complete.
+- Next: P17A reviewer rerun.
+
+## 2026-06-29 - P17A Reviewer Rerun
+
+### Scope
+
+- Ran a strict reviewer rerun for P17A plus the reopen-rate repair against
+  `REQ-REPORT-001`, `REPORT-MATRIX-001`, `NFR-SEC-002`, and
+  `API-STANDARD-001`.
+- Reviewed report service, KPI helper, repository read models, controller query
+  handling, complaint report mapping, report tests, OpenAPI/canonical contract,
+  and P17A matrix evidence.
+- No product code was changed during this reviewer rerun.
+
+### Findings
+
+- No blocking findings.
+
+### Review Notes
+
+- Dashboard average TAT uses closure data: `reports.service.ts` pushes TAT only
+  for CLOSED complaints and `tatHours(...)` uses `closedAt` or a CLOSED
+  status-history event, not incidental `updatedAt`.
+- KPI formulas are sane after repair:
+  - `slaBreachRate` uses unique breached complaint ids over complaint records
+    with an SLA obligation.
+  - `medianTatHours` uses closed records only.
+  - Aging buckets skip terminal CLOSED/REJECTED complaints.
+  - `reopenedCount` remains the existing reopen event count.
+  - `reopenRate` now uses distinct reopened closed complaint records over the
+    closed-record denominator.
+  - First-response timing excludes submit and reopen actions.
+- The repeated-reopen regression proves `reopenedCount: 3` with
+  `reopenRate: 100`, so repeated reopen events no longer create impossible
+  percentages.
+- Department filtering uses the existing complaint `departmentId` field.
+- Report list/export routes derive role and branch scope from the server
+  principal and keep `SessionAuthGuard`, `PermissionGuard`, `RbacGuard`, and
+  `@BranchScoped()`.
+- Report rows and export columns avoid customer phone, email, VIN, plate, DMS
+  codes, audit internals, staff PII, provider credentials, and portal secrets.
+  The complaint repository has broader search data internally, but
+  `ComplaintsService.listForReports(...)` maps to `ComplaintReportRow` before
+  reports return/export rows.
+- Export remains row-limited and writes safe REPORT audit metadata.
+- OpenAPI and canonical contract match, document `departmentId`, and keep
+  report rows/KPI responses aggregate-only without private fields.
+- RPT-001 through RPT-017 reconciliation remains honest after repair: RPT-010 is
+  still Deferred because reason-list output is not covered, while reopened
+  event count and bounded reopen-rate formula are now proven.
+- No UI polish, related complaint linking, duplicate UI, vehicle/DMS
+  provenance, portal attachment work, schema migration, cleanup, staging, or
+  unrelated revert was done in this reviewer rerun.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- reports` (26/26 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P17A reviewed complete.
+- Next: P17B report UI polish/visual proof.
+
+## 2026-06-29 - P17B Report UI Polish And Visual Proof
+
+### Scope
+
+- Implemented UI-only report polish and visual proof for SRS IDs
+  `REQ-REPORT-001`, `REPORT-MATRIX-001`, and `UI-DESIGN-001`.
+- Backend report formulas were already reviewed complete in P17A and were not
+  rewritten.
+- No related complaint linking, duplicate UI, vehicle/DMS provenance, portal
+  attachment, schema migration, staging, cleanup, or unrelated revert was
+  started.
+
+### Changes
+
+- Updated the staff reports web API parser/type contract to accept the reviewed
+  P17A KPI fields: `reopenRate`, `slaBreachRate`, `medianTatHours`, and
+  `agingBuckets`.
+- Surfaced SLA breach rate, median TAT, aging buckets, and reopen rate in the
+  existing reports dashboard.
+- Kept `reopenedCount` visible with explicit event-count semantics through the
+  `Reopen events` label.
+- Added `departmentId` pass-through for report row reads and export links.
+- Deferred a visible department picker because no existing department option
+  source is available in this slice; the UI does not show raw department IDs as
+  picker labels.
+- Updated EN/AR report dashboard strings and proof signals for the new KPI
+  cards.
+
+### Security And Privacy Self-Check
+
+- Report UI still relies on staff server-session routes; no client-owned role,
+  branch authority, actor id, token, credential, or workflow input was added.
+- Report rows/export UI remain free of customer phone, email, VIN, plate, DMS
+  codes, audit internals, staff PII, provider credentials, and portal secrets.
+- `departmentId` is query/export pass-through only and does not broaden
+  server-side RBAC or branch scope.
+- Arabic RTL and English LTR report strings remain covered by localization and
+  visual/accessibility proof.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:web -- shell` (190/190 TAP tests passed).
+- Passed: `corepack pnpm test:web -- api-client` (15/15 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P17B complete.
+- Next: Phase 17 reviewer stop.
+
+## 2026-06-29 - Phase 17 Reviewer Stop
+
+### Scope
+
+- Ran a strict reviewer pass over P17A backend, P17A reopen-rate repair, and
+  P17B report UI work for `REQ-REPORT-001`, `REPORT-MATRIX-001`,
+  `UI-DESIGN-001`, `NFR-SEC-002`, and `API-STANDARD-001`.
+- Reviewed the named report backend, complaint report mapper, report UI, export
+  route, i18n, proof tooling, OpenAPI/canonical contract, and active Phase 17
+  evidence.
+- No product code was changed during review.
+
+### Findings
+
+- Blocked: report list runtime rows do not match the committed safe
+  `ReportRow` contract and include staff display data.
+  - `apps/api/src/modules/complaints/complaints.service.ts:204` maps queue rows
+    with `branchName` and `ownerName`.
+  - `apps/api/src/modules/complaints/complaints.service.ts:208` builds
+    `ComplaintReportRow` by spreading that queue row.
+  - `apps/api/src/modules/reports/reports.service.ts:108` through
+    `apps/api/src/modules/reports/reports.service.ts:120` returns those mapped
+    report rows from `/reports`.
+  - `packages/contracts/openapi.json:6396` through
+    `packages/contracts/openapi.json:6464` defines `ReportRow` without
+    `branchName` or `ownerName` and with `additionalProperties: false`.
+  - This violates the reviewer focus for contract match and avoiding staff PII
+    in report responses/rows.
+- Blocked: report export audit metadata omits the filter set required by
+  `REPORT-MATRIX-001`.
+  - `docs/CMS_AUTO_SRS.md:2638` requires export audit entries to include user,
+    filters, row count, file type, and timestamp.
+  - `apps/api/src/modules/reports/reports.service.ts:153` records only
+    `{ format, rowCount, rowLimit }`.
+  - `apps/api/test/reports/dashboard-summary.test.ts:96` and
+    `apps/api/test/reports/dashboard-summary.test.ts:261` currently assert the
+    incomplete metadata shape, so the gap is encoded as passing behavior.
+
+### Review Notes
+
+- Dashboard average TAT uses `closedAt` or a CLOSED status-history event rather
+  than incidental `updatedAt`.
+- KPI formulas are bounded within the current report read model: SLA breach
+  rate uses unique breached complaint ids over SLA-obligated records, median TAT
+  uses closed records only, aging buckets skip CLOSED/REJECTED records,
+  `reopenedCount` is an event count, `reopenRate` uses distinct reopened closed
+  records over closed records, and first response excludes submit/reopen events.
+- Department filtering uses existing complaint `departmentId` and the UI does
+  not add a visible raw-ID department picker.
+- Report list/export routes derive role and branch scope from the server
+  principal and keep session/permission/RBAC/branch-scope guards.
+- Export output is row-limited, but the REPORT audit metadata is incomplete
+  until filters are recorded safely.
+- OpenAPI/canonical files match each other, but the runtime `/reports` row shape
+  is broader than the committed `ReportRow` schema.
+- UI parses and renders `reopenRate`, `slaBreachRate`, `medianTatHours`, and
+  `agingBuckets`; EN LTR and AR RTL proof passed.
+- RPT-001 through RPT-017 evidence remains mostly honest, but Phase 17 cannot be
+  accepted until the two reviewer blockers are repaired.
+- No related complaint linking, duplicate UI, vehicle/DMS provenance, portal
+  attachment, schema migration, cleanup, staging, or unrelated revert was done in
+  this review.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- reports` (26/26 TAP tests passed).
+- Passed: `corepack pnpm test:web -- api-client` (15/15 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (190/190 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: Blocked.
+- Next: P17 reviewer repair for report row contract/privacy and safe export
+  audit filters only.
+
+## 2026-06-29 - P17 Reviewer Repair - Report Row Contract And Export Audit Filters
+
+### Scope
+
+- Repaired only the two Phase 17 reviewer blockers for `REQ-REPORT-001`,
+  `REPORT-MATRIX-001`, `NFR-SEC-002`, and `API-STANDARD-001`.
+- Did not start reviewer rerun, next-phase planning, related complaint linking,
+  duplicate UI, vehicle/DMS provenance, portal attachments, schema migration,
+  cleanup, staging, or unrelated edits.
+
+### Changes
+
+- Made `apps/api/src/modules/complaints/complaints.service.ts` report row
+  mapping explicit instead of spreading `queueItem(...)`.
+- `ComplaintReportRow` now omits queue display fields and `/reports` rows return
+  only the committed safe `ReportRow` fields: `id`, `referenceNumber`,
+  `branchId`, `categoryId`, `status`, `severity`, `subject`, `ownerId`,
+  `createdAt`, and `updatedAt`.
+- Kept complaint search separate from report rows so existing search/controller
+  DTOs still get their expected queue/search display fields.
+- Added safe REPORT export audit filter metadata in
+  `apps/api/src/modules/reports/reports.service.ts` using only
+  `filterBranchId`, `categoryId`, `departmentId`, `severity`, `ownerId`,
+  `dateFrom`, and `dateTo`.
+- Updated report tests to prove exact public report row keys, absence of
+  private/undocumented report fields, and allowlisted export audit filters.
+
+### Security And Privacy Self-Check
+
+- Roles and branch scope still come from server-session report guards; no client
+  role, branch authority, actor id, workflow input, token, or credential trust
+  was added.
+- Report rows no longer return `branchName` or `ownerName` and tests reject
+  customer phone/email, VIN, plate, DMS, audit, provider, portal, secret, token,
+  credential, and undocumented row fields.
+- REPORT export audit metadata includes the required filter snapshot without raw
+  URLs, request bodies, passwords, OTPs, tokens, credentials, or free-form query
+  text.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Failed then repaired: `corepack pnpm test:api -- reports` initially caught the
+  report test double still returning old `closedAt` and `departmentId` fixture
+  extras; repaired by making the test double emit the public `ReportRow` shape.
+- Passed: `corepack pnpm test:api -- reports` (28/28 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Failed then repaired: `corepack pnpm typecheck` initially caught complaint
+  search still sharing the narrowed report row type; repaired by separating the
+  search row type/mapper from the report row type/mapper.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P17 repair complete.
+- Next: Phase 17 reviewer rerun.
+
+## 2026-06-29 - Phase 17 Reviewer Rerun
+
+### Scope
+
+- Ran a strict reviewer rerun for Phase 17 after the report row
+  contract/privacy and export audit filter repair.
+- Reviewed the scoped report backend, complaint report/search mappers, report UI,
+  export proxy, i18n, proof tooling, OpenAPI/canonical contract, and active
+  Phase 17 evidence against `REQ-REPORT-001`, `REPORT-MATRIX-001`,
+  `UI-DESIGN-001`, `NFR-SEC-002`, and `API-STANDARD-001`.
+- No product code was changed, staged, reverted, cleaned, or advanced to the
+  next phase during this review.
+
+### Findings
+
+- No blocking findings.
+
+### Review Notes
+
+- `/reports` runtime rows now match committed `ReportRow`: `id`,
+  `referenceNumber`, `branchId`, `categoryId`, `status`, `severity`, `subject`,
+  `ownerId`, `createdAt`, and `updatedAt` only.
+- Report rows exclude `branchName`, `ownerName`, customer phone/email, VIN,
+  plate, DMS codes, audit internals, provider/portal secrets, staff PII, and
+  undocumented fields.
+- Complaint queue/search/detail mappers remain separate from the report mapper,
+  so the report repair did not remove display data from non-report surfaces.
+- REPORT export audit metadata is exactly `{ format, rowCount, rowLimit,
+  filters }`; `filters` is allowlisted to `filterBranchId`, `categoryId`,
+  `departmentId`, `severity`, `ownerId`, `dateFrom`, and `dateTo`.
+- No raw URL, request body, password, OTP, token, credential, provider secret, or
+  arbitrary query object is audited by the report export path.
+- Dashboard TAT and KPI formulas remain bounded: closure timestamp/current
+  `closedAt`, closed-only median TAT, distinct reopened closed complaint
+  `reopenRate`, reopen event `reopenedCount`, SLA-obligation breach
+  denominator, non-terminal aging buckets, and first-response exclusions.
+- Department filtering uses existing `departmentId`; the UI keeps it as
+  pass-through only and does not show a raw-ID department picker.
+- Report list/export scope still comes from server-session guards/principal, and
+  export remains row-limited.
+- OpenAPI and canonical contract match implementation, including the safe
+  `ReportRow` and new KPI fields.
+- UI parses/renders `reopenRate`, `slaBreachRate`, `medianTatHours`, and
+  `agingBuckets` in English LTR and Arabic RTL proof.
+- RPT-001 through RPT-017 evidence remains honest after P17A/P17B and the
+  repair.
+- No related complaint linking, duplicate UI, vehicle/DMS provenance, portal
+  attachment, schema migration, cleanup, staging, or unrelated revert was done.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- reports` (28/28 TAP tests passed).
+- Passed: `corepack pnpm test:web -- api-client` (15/15 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (190/190 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: Phase 17 reviewed complete.
+- Next: Next-phase planning/audit stop.
+
+## 2026-06-29 - Phase 18 Planning/Audit Stop
+
+### Scope
+
+- Planning only. No product code was changed.
+- Confirmed Phase 17 is reviewed complete and has no remaining repair task.
+- Read current Forge context, latest Phase 17 evidence, architecture rules, and
+  selected Phase 18 SRS sections: `REQ-COMPLAINT-003`, `NFR-SEC-002`,
+  `METHOD-AUDIT-001`, and `API-STANDARD-001`.
+
+### Candidate Ranking
+
+1. **Related complaint linking and duplicate backend foundation**: selected.
+   `REQ-COMPLAINT-003` requires authorized users to link related complaints
+   while preserving separate histories, and this backend behavior must exist
+   before duplicate warning UI is useful.
+2. **Duplicate warning UI**: deferred until backend related/duplicate behavior is
+   solid.
+3. **Vehicle manual/DMS provenance flags**: important data-quality work, but it
+   is broader and does not unblock related complaint linking.
+4. **Portal attachment follow-up**: still out of this phase; current priority is
+   backend complaint relationship behavior.
+
+### Decision
+
+- Chosen phase: Phase 18 - Related complaint linking and duplicate foundation.
+- First slice: P18A - Related complaint linking and duplicate candidate API.
+- Selected SRS IDs: `REQ-COMPLAINT-003`, `NFR-SEC-002`,
+  `METHOD-AUDIT-001`, `API-STANDARD-001`.
+
+### Assumptions
+
+- Current Prisma complaint model has no related-complaint relation table, so
+  P18A may need a small `complaint_relations` model and migration.
+- Existing complaint fields likely support a basic duplicate-candidate read:
+  `customerId`, `categoryId`, `branchId`, and `createdAt`.
+- Existing permissions should be reused where possible: `COMPLAINT_VIEW_BRANCH`
+  for reads and `COMPLAINT_EDIT` for link/unlink.
+- Branch/RBAC scope must be checked for both source and target complaints.
+
+### Skipped Work
+
+- Duplicate warning UI.
+- Advanced/AI duplicate matching.
+- Destructive merge, deletion, or shared complaint history.
+- Vehicle manual/DMS provenance flags.
+- Portal attachment follow-up.
+- Product tests; this was a planning-only stop.
+
+### Verification
+
+- Passed: `git status --short`.
+- Passed: `git diff --check`.
+- Not Run: product tests (`test:api`, `test:web`, `test:e2e`, `test:visual`,
+  `web:perf`, `openapi:check`, `typecheck`, `lint`) because this was
+  planning-only.
+
+### Outcome
+
+- Status: Phase 18 planned.
+- Next: P18A related complaint linking and duplicate candidate API build.
+
+## 2026-06-30 - P18A Related Complaint Linking And Duplicate Candidate API
+
+### Scope
+
+- Implemented backend-only related complaint linking and duplicate-candidate read
+  behavior for `REQ-COMPLAINT-003`, `NFR-SEC-002`, `METHOD-AUDIT-001`, and
+  `API-STANDARD-001`.
+- Added complaint-owned `complaint_relations` persistence and migration instead
+  of reusing `case_links`.
+- Added staff routes for listing related complaints, linking, unlinking, and
+  reading duplicate candidates.
+- Updated OpenAPI canonical/contract files and the complaints module manifest.
+
+### Evidence
+
+- Related links are normalized and idempotent: repeated or reverse link attempts
+  do not duplicate persistence rows.
+- Related complaint list filters returned related complaints through the same
+  server-session branch scope used for complaint detail reads.
+- Link/unlink check both source and target visibility under server-session branch
+  scope before writing.
+- Duplicate candidates use existing complaint fields only:
+  `customerId`, `categoryId`, `branchId`, and a 30-day window around source
+  `createdAt`; self is excluded.
+- Relation operations do not write complaint status history, merge histories, or
+  mutate complaint status.
+- Link/unlink audit rows are recorded in the same transaction as relation
+  writes and contain only complaint ids, relation action, actor role/session, and
+  standard request context.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session via existing
+  `SessionAuthGuard`, `PermissionGuard`, `RbacGuard`, `@BranchScoped`, and
+  server-derived `branchId`.
+- Relation writes audit in the same transaction as the relation insert/delete.
+  No complaint status change occurs, so no status-history row is created.
+- No passwords, OTPs, tokens, hashes, provider secrets, customer phone/email,
+  VIN, plate, DMS codes, raw URLs, request bodies, or free-form query strings
+  are logged or returned by relation metadata or response DTOs.
+- Customer portal exposure is unchanged; all new routes are staff guarded.
+- Trust boundaries are tested with allowed link/list/unlink, denied source
+  scope, denied target scope, and edit-permission denial cases.
+
+### Skipped Work
+
+- Duplicate warning UI.
+- Advanced/AI duplicate matching.
+- Destructive merge, deletion, or shared audit/status history.
+- Vehicle manual/DMS provenance flags.
+- Portal attachment follow-up.
+- Cleanup, staging, or unrelated revert.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- complaints.related` (7/7 TAP tests passed).
+- Passed: `corepack pnpm test:api -- complaints.drafts` (60/60 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm prisma:validate`.
+- Passed: `corepack pnpm --dir packages/database generate`.
+- Passed: `corepack pnpm db:migrate:test`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P18A build complete.
+- Next: P18A reviewer stop.
+
+## 2026-06-30 - P18A Reviewer Stop
+
+### Scope
+
+- Ran a strict reviewer pass over the P18A backend-only related complaint linking
+  and duplicate-candidate API for `REQ-COMPLAINT-003`, `NFR-SEC-002`,
+  `METHOD-AUDIT-001`, and `API-STANDARD-001`.
+- Reviewed the complaint relation schema/migration, complaints module manifest,
+  controller, module wiring, relation DTOs, relation repository/service, related
+  tests, API test runner, OpenAPI contract, and canonical OpenAPI.
+- No product code was changed, staged, cleaned, reverted, or advanced to UI
+  implementation during review.
+
+### Findings
+
+- No blocking findings.
+
+### Review Notes
+
+- `complaint_relations` is complaint-owned and is not reusing `case_links`.
+- Relation pairs are normalized before persistence and use `createMany` with
+  `skipDuplicates`, so reverse link attempts are idempotent.
+- Link/list/unlink preserve separate complaint records and histories; no merge,
+  status mutation, status-history mutation, deletion, destructive cleanup, or
+  workflow side effect was added.
+- Source and target complaint visibility is enforced from server-session branch
+  scope before link/unlink writes; related list and duplicate-candidate reads are
+  scoped through the visible source complaint and branch-matched result reads.
+- Read routes keep `SessionAuthGuard`, `PermissionGuard`, `RbacGuard`, and
+  `COMPLAINT_VIEW_BRANCH`; link/unlink keep those guards plus `CsrfGuard` and
+  `COMPLAINT_EDIT`.
+- The controller uses server-derived actor/session/branch context and ignores
+  spoofed actor authority from the request body.
+- Duplicate candidates use only `customerId`, `categoryId`, `branchId`, a
+  30-day window around source `createdAt`, and self exclusion.
+- Link/unlink audit metadata contains complaint ids, relation action, and
+  actor/session context only, with no customer contact data, VIN, plate, DMS
+  codes, credentials, raw URLs, request bodies, or free-form query strings.
+- OpenAPI/canonical routes and schemas match the implementation and keep
+  relation mutation responses limited to source id, target id, and changed flag.
+- No duplicate warning UI, advanced/AI matching, destructive merge,
+  vehicle/DMS provenance, portal attachment, cleanup, staging, or unrelated
+  revert was done.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty P18A worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- complaints.related` (7/7 TAP tests passed).
+- Passed: `corepack pnpm test:api -- complaints.drafts` (60/60 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm prisma:validate`.
+- Passed: `corepack pnpm --dir packages/database generate`.
+- Passed: `corepack pnpm db:migrate:test`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P18A reviewed complete.
+- Next: P18B duplicate warning UI foundation.
+
+## 2026-06-30 - P18B Duplicate Warning UI Foundation
+
+### Scope
+
+- Built the duplicate warning UI foundation on the staff complaint detail page
+  for `REQ-COMPLAINT-003`, `NFR-SEC-002`, `API-STANDARD-001`, and
+  `UI-DESIGN-001`.
+- Added typed web API helpers for duplicate-candidate reads, related-complaint
+  reads, and linking related complaints through the reviewed P18A backend.
+- Kept backend relation semantics unchanged.
+
+### Changes
+
+- Added a safe complaint relations API helper that reads
+  `/complaints/:id/duplicate-candidates` and `/complaints/:id/related` with the
+  staff session cookie only, and posts link requests through an app proxy with
+  the existing CSRF/session pattern.
+- Added a complaint detail relation panel showing likely duplicates and linked
+  complaints using safe fields only: reference number, status, severity,
+  subject, branch id, created/updated timestamps.
+- Wired the existing staff complaint detail route to fetch relation data beside
+  complaint detail data and render the relation panel only on the existing
+  detail page.
+- Added EN/AR i18n for loading, empty, error, denied, success, candidates, and
+  related states.
+- Updated API-client, shell, localization, accessibility, and visual proof
+  coverage for safe-field filtering, server-session scope, CSRF forwarding,
+  denial states, and RTL/LTR rendering.
+
+### Security And Privacy Self-Check
+
+- No client-owned role, branch, actor, workflow, token, credential, or branch
+  scope input was added.
+- Relation reads forward only the server staff session cookie; link writes
+  forward only the body target id plus CSRF/session context.
+- The UI does not show customer phone/email, VIN, plate, DMS codes, audit
+  internals, staff PII, provider data, portal data, tokens, credentials, raw
+  URLs, request bodies, or unrelated out-of-scope data.
+- Link behavior remains non-destructive: no merge, no status mutation, no
+  status-history mutation, no shared audit/status history, and no deletion of
+  complaint data.
+
+### Skipped Work
+
+- Advanced/AI duplicate matching.
+- Destructive merge, cleanup, or backend relation semantics changes.
+- Vehicle manual/DMS provenance flags.
+- Portal attachment follow-up.
+- Staging, commit, or unrelated revert.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty P18A/P18B worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:web -- api-client` (18/18 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (191/191 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Failed then repaired: `corepack pnpm typecheck` initially caught a
+  discriminated-union narrowing issue in the new relation API helper; repaired
+  by narrowing denied relation reads explicitly.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P18B complete.
+- Next: Phase 18 reviewer stop.
+
+## 2026-06-30 - Phase 18 Reviewer Stop Skipped By User
+
+### Scope
+
+- User explicitly skipped the Phase 18 reviewer stop before Phase 19A.
+- Do not claim Phase 18 is reviewed.
+
+### Outcome
+
+- Status: P18 built, review skipped by user.
+- Next: P19A vehicle manual/DMS provenance backend foundation.
+
+## 2026-06-30 - P19A Vehicle Manual/DMS Provenance Backend Foundation
+
+### Scope
+
+- Built the backend-first customer/vehicle provenance slice for
+  `REQ-CUSTOMER-001`, `DATA-AUTO-001`, `DMS-MAP-001`,
+  `REQ-COMPLAINT-001`, `NFR-SEC-002`, and `API-STANDARD-001`.
+- Phase 18 reviewer stop was skipped by user. Phase 18 is P18 built, review
+  skipped by user; do not claim it is reviewed.
+- No live DMS provider integration, DMS writeback, broad UI, reports, portal
+  attachments, cleanup, staging, or unrelated revert was done.
+
+### Changes
+
+- Added `DataSource` (`LOCAL`, `MANUAL`, `DMS`) plus customer, vehicle, and
+  complaint provenance fields in Prisma and migration
+  `20260630143000_vehicle_provenance`.
+- Complaint intake now persists manual customer/vehicle flags, customer/vehicle
+  source metadata, vehicle-related marker, and vehicle-data-unavailable reason.
+- Manual vehicle-related complaint creation remains allowed when no confirmed
+  vehicle exists if staff documents the unavailable data reason.
+- Staff complaint detail response exposes safe provenance metadata only:
+  source enum, manual flags, vehicle-related flag, and unavailable reason.
+- Close transition now rejects vehicle-related complaints without a confirmed
+  vehicle or documented unavailable reason before status update, history, audit,
+  or side effects.
+- Portal tracking privacy proof includes provenance-shaped internal fields and
+  confirms they are not returned.
+- OpenAPI/canonical were updated only for changed staff create/detail/transition
+  contracts.
+
+### Gaps
+
+- No dedicated customer/vehicle correction or provenance update workflow exists.
+  The gap is recorded instead of inventing a broad admin workflow in P19A.
+- Existing complaint intake can upsert vehicle details by VIN; P19A did not
+  expand that into a correction workflow.
+
+### Security And Privacy Self-Check
+
+- Roles and branch scope still come from server-session guards and principal
+  context; no client-owned role, branch, actor, workflow, token, credential, or
+  branch-scope authority was added.
+- Complaint creation and workflow state changes still write domain data, status
+  history, and audit in the same transaction; workflow side effects remain
+  after commit.
+- Close vehicle-data validation runs before status update/history/audit/side
+  effects, so rejected closes leave no workflow write.
+- Audit metadata records safe source/manual flags and reason presence only; it
+  does not log VIN, plate, DMS identifiers, provider secrets, credentials,
+  passwords, OTPs, tokens, hashes, raw URLs, or request bodies.
+- Customer portal exposure rules hold: portal tracking tests reject provenance
+  internals, DMS, VIN/plate-shaped private fields, staff PII, audit internals,
+  and unrelated complaints.
+- Trust boundaries remain covered by allowed create/close, denied missing
+  vehicle provenance close, branch-scope denial, permission denial, and portal
+  privacy tests.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty P18/P19A worktree.
+- Passed: `git diff --check` (line-ending warnings only).
+- Failed then repaired: `corepack pnpm test:api -- complaints` initially caught
+  stale audit expectations, a missing branch id in a new manual fallback test,
+  and workflow call-order expectations. Repaired.
+- Passed: `corepack pnpm test:api -- complaints` (63/63 TAP tests passed).
+- Failed then repaired: `corepack pnpm test:api -- workflow` same failures as
+  the complaints alias. Repaired.
+- Passed: `corepack pnpm test:api -- workflow` (63/63 TAP tests passed).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm prisma:validate`.
+- Passed: `corepack pnpm --dir packages/database generate`.
+- Passed: `corepack pnpm db:migrate:test`.
+- Passed: `corepack pnpm typecheck`.
+- Failed then repaired: `corepack pnpm lint` initially caught
+  `complaints.repository.ts` and `complaints.service.ts` over the 300-line
+  budget. Repaired by local formatting compression only.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P19A complete.
+- Next: P19A reviewer stop.
+
+## 2026-06-30 - P19A Reviewer Stop
+
+### Findings
+
+- No blocking findings.
+
+### Review Notes
+
+- Phase 18 is recorded as built with reviewer stop skipped by user, not
+  reviewed; this review did not retro-review Phase 18 except where portal and
+  relation work touched the P19A privacy surface.
+- Manual complaint creation still supports no-provider/manual paths:
+  `complaint-intake.ts` defaults customer source to `MANUAL` without a customer
+  number and vehicle source to `MANUAL` when no local vehicle id is present;
+  `complaints.repository.ts` persists those fields with the complaint.
+- DMS-shaped P19A fields are provenance metadata only. Review found enum/source
+  persistence and OpenAPI schema changes, but no live DMS provider call, DMS
+  writeback endpoint, provider secret handling, or frontend DMS call in the
+  P19A path.
+- Vehicle-related close validation is in the shared backend transition path:
+  `complaints.service.ts` checks the complaint before `updateStatus`, history,
+  audit, or after-commit side effects. Close with an input or already-persisted
+  unavailable reason is allowed.
+- Audit metadata remains bounded to reference/status/severity/source/manual
+  flags and unavailable-reason presence; workflow audit metadata does not carry
+  the free-text unavailable reason, VIN, plate, DMS code, raw request body, OTP,
+  token, credentials, or provider payload.
+- Portal tracking projects only reference/status/timestamps/public timeline
+  fields from `portal.service.ts`; the portal regression fixture includes
+  provenance internals, DMS-shaped fields, staff PII, audit internals, tokens,
+  and unrelated complaints and confirms they are not returned.
+- Staff-facing create/detail/transition DTOs and OpenAPI/canonical contracts
+  include the changed provenance fields. Portal contracts do not expose them.
+- The missing customer/vehicle correction workflow is recorded as a gap and was
+  not invented in P19A.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty P19A worktree at review start;
+  after the proof run, the worktree was clean before Forge-only review updates.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- complaints` (63/63 TAP tests passed).
+- Passed: `corepack pnpm test:api -- workflow` (63/63 TAP tests passed).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm prisma:validate`.
+- Passed: `corepack pnpm --dir packages/database generate`.
+- Passed: `corepack pnpm db:migrate:test`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P19A reviewed complete.
+- Next: Next-phase planning/audit stop.
+
+## 2026-06-30 - Next-Phase Planning After P19A Review
+
+### Scope
+
+- Planned the next phase after P19A reviewed complete.
+- Product code was not changed.
+- Phase 18 remains built with reviewer stop skipped by user; it is not called
+  reviewed.
+
+### Ranking
+
+1. Staff customer/vehicle correction workflow using P19A provenance fields.
+   Chosen as P19B because `DATA-AUTO-001` requires customer/vehicle corrections
+   after submission to be audit logged, `REQ-RESOLUTION-001` allows authorized
+   administrative correction flows even when closed complaints are otherwise
+   read-only, and P19A already supplied the provenance data needed for the
+   workflow.
+2. Portal attachment follow-up completion. This is still MVP-relevant through
+   `REQ-PORTAL-001`, `REQ-PORTAL-002`, `REQ-FILES-001`, and `PORTAL-SEC-001`,
+   but it is less directly enabled by P19A and parts of the backend attachment
+   surface already exist.
+3. Staff UI provenance visibility/edit proof. Important for `DATA-AUTO-001` AC4
+   and `UI-007`, but UI should follow a reviewed backend correction authority,
+   not invent workflow logic in React.
+4. Phase 18 reviewer catch-up. Useful process debt, but not a larger product
+   slice and not a stronger business-fit gap than audited correction.
+5. Live DMS adapter planning/build foundation. Valuable later for
+   `DMS-MAP-001`, but higher integration risk and not as immediate as making
+   stored provenance correctable. DMS writeback is explicitly not allowed in MVP.
+6. Remaining reports/duplicate/business-fit work. Reports are important
+   (`REQ-REPORT-001`), but correction is narrower and closes a known P19A/SRS
+   gap first. Advanced duplicate matching remains a non-goal.
+
+### Chosen Phase
+
+- Name: P19B - Staff customer/vehicle correction workflow backend.
+- Risk: High.
+- Required model tier: GPT-5.5 Extra High.
+- SRS IDs: `REQ-CUSTOMER-001`, `DATA-AUTO-001`, `DMS-MAP-001`,
+  `REQ-RESOLUTION-001`, `REQ-AUDIT-001`, `NFR-SEC-002`,
+  `API-STANDARD-001`.
+
+### Assumptions
+
+- P19B should be backend-only: staff API, service/repository behavior,
+  DTO/contract update, audit, and tests.
+- The correction workflow should use server-session role and branch scope only.
+- Manual fallback remains valid; no DMS/provider data is required to correct a
+  complaint.
+- Correction audit metadata should record changed field names and reason
+  presence, not raw free text, identifiers, provider payloads, or request bodies.
+- Optimistic concurrency is required for correction writes because
+  `API-STANDARD-001` forbids silent last-write-wins complaint updates.
+
+### Skipped Work
+
+- No product implementation.
+- No staff UI.
+- No live DMS provider call or writeback.
+- No broad customer/vehicle master-data admin workflow.
+- No Phase 18 retro-review.
+- No portal attachment work.
+
+### Verification
+
+- Passed: `git status --short` showed only Forge files modified.
+- Passed: `git diff --check` (line-ending warnings only).
+
+### Outcome
+
+- Status: P19B planned.
+- Next: Build P19B backend correction workflow.
+
+## 2026-06-30 - P19B Staff Customer/Vehicle Correction Workflow Backend Build
+
+### Scope
+
+- Implemented backend-only staff correction workflow for complaint
+  customer/vehicle links and P19A provenance metadata.
+- Added `POST /complaints/{id}/corrections` with existing staff session,
+  `COMPLAINT_EDIT`, RBAC, CSRF, and branch-scope guard patterns.
+- Added DTO parsing for `expectedUpdatedAt`, non-empty correction reason, and
+  allowed correction fields only.
+- Added service/repository correction persistence with optimistic concurrency on
+  `updatedAt`.
+- Persisted complaint correction and `COMPLAINT/complaint_updated` audit entry
+  in the same transaction.
+- Audit metadata is limited to `changedFields`; raw request bodies, free-text
+  reasons, VIN, plate, DMS codes, provider payloads, tokens, OTPs, and secrets
+  are not included.
+- Updated staff OpenAPI/canonical contracts for the correction request and
+  response.
+
+### SRS Coverage
+
+- `DATA-AUTO-001`: customer/vehicle correction after submission is audit logged;
+  manual/local/DMS provenance fields remain distinguishable.
+- `REQ-CUSTOMER-001`: correction supports complaint customer association without
+  inventing broad master-data administration.
+- `REQ-RESOLUTION-001`: implemented an authorized administrative correction
+  flow without changing resolution workflow rules.
+- `REQ-AUDIT-001` and `NFR-SEC-002`: correction audit is in-transaction and safe.
+- `API-STANDARD-001`: staff API contract updated and optimistic concurrency used
+  to prevent silent overwrite.
+- `DMS-MAP-001`: DMS-shaped fields remain provenance metadata only; no provider
+  call or writeback was added.
+
+### Failing-First
+
+- Failed as expected: `corepack pnpm test:api -- complaints` after adding the
+  focused correction tests and before implementation. The new tests failed on
+  missing `service.correctProvenance` and `controller.correct`.
+
+### Skipped Work
+
+- No staff UI.
+- No live DMS lookup adapter, provider calls, provider credentials, or DMS
+  writeback.
+- No broad customer/vehicle master-data admin.
+- No portal response shape changes; portal privacy regression was still run.
+- No Phase 18 retro-review.
+- No Prisma schema or migration changes, so Prisma proof was not required.
+
+### Verification
+
+- Passed: `git status --short` showed product changes plus pre-existing Forge
+  planning files before final Forge updates.
+- Passed: `git diff --check` (line-ending warnings only).
+- Passed: `corepack pnpm test:api -- complaints` (69/69 TAP tests passed).
+- Passed: `corepack pnpm test:api -- workflow` (69/69 TAP tests passed).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Outcome
+
+- Status: P19B complete.
+- Next: P19B reviewer stop.
+
+## 2026-06-30 - P19B Reviewer Skipped And P19C Planning
+
+### Scope
+
+- User explicitly skipped the P19B reviewer stop.
+- Product code was not changed during this planning stop.
+- Forge was updated only for bookkeeping and the next build plan.
+
+### Status Bookkeeping
+
+- P19B is recorded as built.
+- P19B reviewer was skipped by user and is not claimed reviewed.
+- Phase 18 status is preserved: P18B reviewer was also skipped by user, so
+  Phase 18 is built but not fully reviewed.
+- P19A remains reviewed complete.
+
+### Ranking
+
+1. Staff UI for P19B correction workflow. Chosen as P19C because it is the
+   largest coherent slice directly enabled by P19B and satisfies
+   `DATA-AUTO-001` AC4 staff-visible manual/DMS distinction while reusing the
+   backend correction authority from P19B.
+2. DMS adapter/writeback foundation. DMS read adapter/test-double foundation is
+   still valuable for `REQ-CUSTOMER-001` and `DMS-MAP-001`, but writeback is
+   explicitly not allowed in MVP without a separate approved change request.
+3. Portal attachment follow-up completion. Still open for `REQ-PORTAL-002`,
+   `REQ-FILES-001`, and `PORTAL-SEC-001`, but text follow-up and portal privacy
+   proof already exist, so it is less immediate than making P19B usable by
+   staff.
+4. Phase 18/P19B reviewer catch-up. Important process debt, but not a product
+   build slice and not required to build UI on top of the already recorded P19B
+   backend.
+5. Larger remaining SRS business-fit gap. No larger coherent gap was found in
+   the reviewed Forge/SRS context that should displace P19C.
+
+### Chosen Phase
+
+- Name: P19C - Staff customer/vehicle correction UI.
+- Risk: High.
+- Required model tier: GPT-5.5 Extra High.
+- SRS IDs: `REQ-CUSTOMER-001`, `DATA-AUTO-001`, `DMS-MAP-001`,
+  `REQ-RESOLUTION-001`, `REQ-AUDIT-001`, `NFR-SEC-002`,
+  `API-STANDARD-001`, `UI-DESIGN-001`.
+
+### Assumptions
+
+- P19C may depend on the P19B backend being built, but must not depend on P19B
+  being reviewed.
+- The staff UI should use existing complaint detail, staff API helper, i18n, and
+  shadcn/ui patterns.
+- Backend remains the only authority for correction permission, branch scope,
+  audit, and optimistic concurrency.
+- Staff UI can display provenance fields and submit corrections, but must not
+  expose P19A/P19B internals to the customer portal.
+
+### Skipped Work
+
+- No P18 reviewer catch-up.
+- No P19B reviewer catch-up.
+- No product implementation during this planning stop.
+- No live DMS provider integration, frontend DMS calls, provider credentials, or
+  DMS writeback.
+- No broad customer/vehicle master-data administration.
+- No portal attachment follow-up.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree, including existing
+  P19B product changes plus Forge files.
+- Passed: `git diff --check`.
+
+### Outcome
+
+- Status: P19C planned.
+- Next: Build P19C staff customer/vehicle correction UI.
+
+## 2026-06-30 - P19C Staff Customer/Vehicle Correction UI Build
+
+### Scope
+
+- Built the staff UI slice for the P19B correction workflow.
+- Added staff complaint-detail provenance display for customer/vehicle source,
+  manual flags, vehicle-related flag, and vehicle-data-unavailable reason.
+- Added a client correction panel that submits `expectedUpdatedAt`, correction
+  reason, and changed fields only.
+- Added `correctStaffComplaint` and a same-origin Next proxy for
+  `/api/complaints/{id}/corrections`.
+- Added English and Arabic i18n copy for correction labels and states.
+- Added focused API-client/proxy and shell rendering/source-safety tests.
+
+### SRS Coverage
+
+- `DATA-AUTO-001`: manual/local/DMS provenance is visible to staff; customer or
+  vehicle corrections flow through the backend correction endpoint.
+- `REQ-CUSTOMER-001`: staff can correct local/manual/DMS customer and vehicle
+  association metadata without frontend DMS calls.
+- `REQ-RESOLUTION-001`: UI uses the authorized administrative correction path
+  and does not change workflow closure rules.
+- `REQ-AUDIT-001`: audit remains backend-owned by P19B; the UI does not spoof
+  audit entries.
+- `NFR-SEC-002`: UI/proxy do not accept role, branch, actor, workflow, token, or
+  credential authority from the client.
+- `API-STANDARD-001`: conflict envelopes are preserved distinctly for optimistic
+  concurrency recovery.
+- `UI-DESIGN-001`: correction UI uses existing shadcn/Radix primitives, i18n,
+  RTL/LTR labels, and visible loading/success/error/conflict/denied/validation
+  states.
+- `DMS-MAP-001`: DMS remains source metadata only; no live provider or writeback
+  was added.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input:
+  Passed. `correctStaffComplaint` and the correction proxy accept no role,
+  branch, actor, or workflow authority; API-client tests assert those fields are
+  absent from the request body and URL.
+- Correction audit remains backend-owned: Passed. P19C only posts the correction
+  request to P19B; no frontend audit write path was added.
+- No passwords, OTPs, tokens, hashes, provider secrets, raw provider payloads, VIN,
+  plate, or DMS codes are logged or exposed to the portal: Passed. The staff UI
+  shows source labels only; portal code was not changed.
+- Customer portal exposure rules hold: Passed by scope and source review; P19C
+  changed only staff complaint-detail files and staff proxy/helper tests.
+- Trust boundaries are tested: Passed. API-client tests cover an allowed
+  correction request and a conflict/denied-safe error mapping path; shell tests
+  assert no client authority fields in the correction panel source.
+
+### Skipped Work
+
+- No P18 reviewer catch-up.
+- No P19B reviewer catch-up.
+- No live DMS provider integration, frontend DMS calls, provider credentials, or
+  DMS writeback.
+- No broad customer/vehicle master-data administration.
+- No portal attachment follow-up.
+- No backend correction rule changes.
+
+### Verification
+
+- Failed as planned-command mismatch: `corepack pnpm test:web -- staff-complaints-api`
+  returned `Unknown web test suite: staff-complaints-api`; the repo runner only
+  supports `shell`, `api-client`, and `localization`.
+- Passed: `corepack pnpm test:web -- api-client` (21/21 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (191/191 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm web:visual-review`; generated English and Arabic
+  complaint-detail review artifacts under `coverage/web-visual-review/`.
+- Passed: review artifact grep found the correction panel in English and Arabic
+  complaint-detail artifacts.
+
+### Outcome
+
+- Status: P19C complete.
+- Next: P19C reviewer stop.
+
+## 2026-06-30 - P19C Reviewer Skipped And P20A Planning
+
+### Scope
+
+- User explicitly skipped the P19C reviewer stop.
+- Product code was not changed during this planning stop.
+- Forge was updated only for bookkeeping and the next build plan.
+
+### Status Bookkeeping
+
+- P19C is recorded as built.
+- P19C reviewer was skipped by user and is not claimed reviewed.
+- P18B remains built, but its reviewer stop was skipped by user and is not
+  claimed reviewed.
+- P19B remains built, but its reviewer stop was skipped by user and is not
+  claimed reviewed.
+- Phase 18 is not claimed fully reviewed.
+- Phase 19 is not claimed fully reviewed.
+
+### Ranking
+
+1. DMS adapter/writeback foundation. Chosen as P20A, narrowed to a read-oriented
+   DMS lookup adapter foundation because `REQ-CUSTOMER-001`,
+   `ARCH-INTEGRATION-001`, and `DMS-MAP-001` require testable DMS lookup
+   success/failure paths, while `DMS-MAP-001` explicitly forbids writeback in
+   MVP.
+2. Portal attachment follow-up completion. Still open for `REQ-PORTAL-002` and
+   `REQ-FILES-001`, but prior Forge evidence shows portal tracking/follow-up and
+   attachment foundations already exist, so DMS lookup is the larger business-fit
+   gap.
+3. Phase 18/P19B/P19C reviewer catch-up. Important process debt, but it is not a
+   build slice and the selected DMS adapter foundation does not depend on skipped
+   reviews being reviewed.
+4. Remaining high-value SRS business-fit gap. Reviewed Forge/SRS context did not
+   show a larger coherent MVP gap than DMS lookup adapter foundation.
+
+### Chosen Phase
+
+- Name: P20A - DMS lookup adapter foundation.
+- Risk: High.
+- Required model tier: GPT-5.5 Extra High.
+- SRS IDs: `ARCH-INTEGRATION-001`, `REQ-CUSTOMER-001`, `DMS-MAP-001`,
+  `DATA-AUTO-001`, `NFR-SEC-002`.
+
+### Assumptions
+
+- P20A can reuse the existing `integrations` module and its provider-port/test
+  double pattern.
+- P20A must be backend-only and read-oriented.
+- DMS provider call diagnostics can be held at the adapter boundary first; durable
+  persistence can be planned later if needed.
+- The task may depend on prior customer/vehicle provenance work being built, but
+  must not depend on P18B, P19B, or P19C reviewer catch-up.
+
+### Skipped Work
+
+- No P18 reviewer catch-up.
+- No P19B reviewer catch-up.
+- No P19C reviewer catch-up.
+- No live DMS provider integration, network call, provider SDK, or provider
+  credentials.
+- No DMS writeback endpoint; writeback remains absent or disabled for MVP.
+- No customer lookup UI, frontend DMS call, customer portal exposure, schema
+  migration, reports, or persistence tables.
+- No portal attachment follow-up.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree, including existing
+  P19 product changes plus Forge files.
+- Passed: `git diff --check` completed with line-ending warnings only.
+
+### Outcome
+
+- Status: P20A planned.
+- Next: Build P20A DMS lookup adapter foundation.
+
+## 2026-06-30 - P20A DMS Lookup Adapter Foundation Build
+
+### Scope
+
+- Built the backend-only DMS lookup adapter foundation in the existing
+  `integrations` module.
+- Added a DMS provider port and in-memory test double.
+- Added `IntegrationsService.lookupDmsCustomerVehicle` with normalized outcomes
+  for match, multiple matches, not found, provider down, and disabled.
+- Added safe adapter diagnostics: provider, action, result, latency, and
+  correlation ID.
+- Updated the integrations module manifest for the DMS boundary.
+- Added focused integration tests for success, multiple matches, not-found,
+  disabled, provider-down, validation, and no-secret exposure.
+
+### SRS Coverage
+
+- `ARCH-INTEGRATION-001`: DMS is behind a backend adapter boundary with an
+  in-memory test double; provider failure is visible without corrupting complaint
+  state.
+- `REQ-CUSTOMER-001`: lookup accepts phone, customer number, VIN, or name and
+  preserves manual fallback for unavailable DMS outcomes.
+- `DMS-MAP-001`: read-oriented lookup returns safe normalized customer/vehicle
+  fields, multiple-match selections, provider-down/disabled outcomes, safe
+  diagnostics, and no writeback path.
+- `DATA-AUTO-001`: DMS matches carry automotive customer/vehicle fields and
+  source `DMS` for later staff-visible distinction.
+- `NFR-SEC-002`: no provider credentials, tokens, passwords, raw provider payloads,
+  or frontend authority were added.
+
+### Security Self-Check
+
+- DMS provider credentials never reach the browser, logs, API output, or tests:
+  Passed. P20A has no frontend route and tests assert DMS results do not expose
+  secret-shaped values.
+- Frontend and portal code do not call DMS directly: Passed by scope. Only
+  `apps/api/src/modules/integrations/**` and `apps/api/test/integrations/**`
+  were changed for product behavior.
+- Manual fallback remains possible for outage/not-found/disabled outcomes:
+  Passed. Integration tests assert `manualFallbackAllowed` for not-found,
+  disabled, and provider-down results.
+- DMS writeback endpoints are absent or disabled: Passed by scope and code shape.
+  No route, controller method, OpenAPI path, writeback method, or persistence
+  table was added.
+- Provider call diagnostics include provider, action, result, latency, and
+  correlation ID without raw secrets or raw provider payloads: Passed. The service
+  returns only normalized safe diagnostics and tests cover safe provider-down
+  behavior.
+- Trust boundaries are tested: Passed. Integration tests cover allowed lookup
+  requests plus denied invalid/empty requests before provider access.
+
+### Skipped Work
+
+- No P18 reviewer catch-up.
+- No P19B reviewer catch-up.
+- No P19C reviewer catch-up.
+- No live DMS provider integration, network call, provider SDK, or provider
+  credentials.
+- No DMS writeback endpoint or writeback service method.
+- No customer lookup UI, frontend DMS call, customer portal exposure, schema
+  migration, reports, OpenAPI route, or persistence table.
+- No portal attachment follow-up.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- integrations` (21/21 TAP tests passed).
+- Failed then fixed: `corepack pnpm typecheck` initially caught
+  `exactOptionalPropertyTypes` issues in the new DMS port; the DMS optional field
+  types were corrected.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm security:check`.
+- Passed: `git status --short` captured the dirty worktree, including existing
+  P19 product changes plus P20A/Forge files.
+- Passed: `git diff --check` completed with line-ending warnings only.
+
+### Outcome
+
+- Status: P20A complete.
+- Next: P20A reviewer stop.
+
+## 2026-06-30 - P20A Reviewer Stop
+
+### Scope
+
+- Reviewed P20A only.
+- Product code was inspected but not changed during this reviewer stop.
+- Forge was updated only after the review passed.
+- P18B, P19B, and P19C remain built but not reviewed.
+
+### Findings
+
+- No blocking P20A findings.
+
+### Review Notes
+
+- P20A is backend-only and scoped to the existing `integrations` module plus
+  focused integration tests.
+- The DMS adapter foundation is read-only. It adds no writeback method, mutation,
+  sync job, persistence table, schema change, live provider, provider SDK,
+  provider credential, frontend call, customer portal surface, or DMS OpenAPI
+  route.
+- Lookup behavior is deterministic for match, multiple-match, not-found,
+  disabled, provider-down, and validation paths.
+- Provider failure is normalized to a safe `PROVIDER_DOWN` result with manual
+  fallback.
+- Validation errors use `VALIDATION_FAILED` with safe field names only.
+- The result shape carries safe diagnostics: provider, action, result, latency,
+  and correlation ID. No logging or audit path was added, so there is no new
+  log/audit sink for raw provider data.
+- The current dirty OpenAPI files contain pre-existing P19 complaint-correction
+  route changes; P20A did not add an OpenAPI route and this review did not
+  retro-review P19B or P19C.
+
+### SRS Coverage Reviewed
+
+- `DMS-MAP-001`: read-oriented lookup, mocked success/failure paths, manual
+  fallback for unavailable DMS outcomes, no writeback endpoint.
+- `DATA-AUTO-001`: normalized customer/vehicle DMS fields include source `DMS`
+  for later staff-visible distinction.
+- `NFR-SEC-002`: no frontend or customer portal exposure was added, and no
+  plaintext provider secrets are returned in DMS results or errors.
+- `API-STANDARD-001`: validation failures use the standard `VALIDATION_FAILED`
+  path and safe field errors.
+
+### Verification
+
+- Passed: `git status --short` captured the dirty worktree, including existing
+  P19 product changes plus P20A/Forge files.
+- Passed: `git diff --check` completed with line-ending warnings only.
+- Passed: `corepack pnpm test:api -- integrations` (21/21 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm security:check`.
+
+### Outcome
+
+- Status: P20A reviewed complete.
+- Next: next-phase planning/audit stop.
+
+## 2026-06-30 - MVP Business-Fit Roadmap Planning Stop
+
+### Scope
+
+- Planned the remaining CMS-Auto MVP/business-fit work from the current Forge
+  state.
+- Product code was not changed.
+- P17 and P20A remain the latest reviewed completions.
+- P18B, P19B, and P19C remain built but not reviewed because their reviewer
+  stops were skipped by user.
+
+### Chosen First Slice
+
+- P20B - Staff DMS Lookup API.
+- Commit name: `P20B: add staff DMS lookup API`.
+- Rationale: P20A provides the reviewed adapter foundation; the smallest useful
+  next step is a staff-only OpenAPI-documented backend route. This does not
+  depend on skipped P18B/P19B/P19C reviews and keeps frontend/customer portal
+  trust boundaries unchanged.
+
+### Roadmap Summary
+
+1. P20B: staff-only read-only DMS lookup API.
+2. P20B reviewer stop.
+3. P20C: staff DMS lookup UI in intake/correction flow.
+4. P20C reviewer stop.
+5. P18B/P19B/P19C reviewer catch-up.
+6. Portal attachment follow-up completion.
+7. Duplicate/related complaint UX hardening if still required after P18B review.
+8. Reports/business-fit gap closure.
+9. Final SRS/business-fit audit and stabilization.
+
+### Skipped Work
+
+- No product implementation.
+- No staging or commit.
+- No live DMS provider, DMS writeback, provider credentials, or frontend DMS
+  direct calls.
+- No claim that skipped reviews are reviewed.
+
+### Verification
+
+- Passed: `git status --short` returned no output before Forge planning edits.
+- Passed: `git diff --check` returned no output before Forge planning edits.
+- Passed: `git status --short` after Forge planning edits showed only
+  `.forge/evidence.md`, `.forge/next.md`, and `.forge/state.md`.
+- Passed with line-ending warnings only: `git diff --check` after Forge planning
+  edits warned that Git will replace LF with CRLF in the three edited Forge
+  files when it next touches them.
+
+### Outcome
+
+- Status: Roadmap planned.
+- Next: Build P20B Staff DMS Lookup API.
+
+## 2026-06-30 - P20B Staff DMS Lookup API Build
+
+### Scope
+
+- Added a staff-only, read-only `GET /integrations/dms/customer-vehicle` route
+  over the reviewed P20A DMS adapter foundation.
+- Protected the route with server-session auth and `COMPLAINT_CREATE`
+  permission checks.
+- Added safe query DTO parsing that accepts phone, customer number, VIN, or name
+  and derives correlation ID from the server request.
+- Added OpenAPI contract entries for the route and safe DMS lookup response
+  schemas.
+- Added integration tests for route delegation, guard metadata, allowed staff,
+  denied missing permission, missing session, OpenAPI coverage, and safe output.
+- Updated the integrations module manifest to declare the auth module dependency.
+
+### SRS Coverage
+
+- `ARCH-INTEGRATION-001`: DMS lookup remains behind the backend adapter boundary;
+  provider failure still normalizes to safe provider-down behavior.
+- `ARCH-API-001` and `API-STANDARD-001`: the new route is documented in the
+  canonical OpenAPI contract and returns stable validation/auth error envelopes.
+- `REQ-CUSTOMER-001` and `DMS-MAP-001`: staff can search by the required lookup
+  fields and get match, multiple-match, not-found, provider-down, or disabled
+  outcomes with manual fallback where required.
+- `DATA-AUTO-001`: response matches include safe automotive customer/vehicle
+  fields and source `DMS` for staff-visible distinction.
+- `NFR-SEC-002` and `RBAC-MATRIX-001`: route authority comes from the staff
+  session and permission guard, not client input.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input:
+  Passed. The route uses `SessionAuthGuard` and `PermissionGuard`; tests cover
+  allowed staff and denied missing permission.
+- State changes, status history, and audit transaction: Not applicable. P20B is
+  read-only and writes no complaint state.
+- No passwords, OTPs, tokens, hashes, provider secrets, or credentials are logged
+  or returned: Passed. Tests assert safe DMS output and safe permission-denial
+  audit metadata.
+- Customer portal exposure rules hold: Passed by scope. P20B added only a staff
+  route under `integrations`; no portal or frontend route was added.
+- Trust boundaries are tested: Passed. Integration tests cover an allowed staff
+  request, a missing permission denial, and missing session denial.
+
+### Skipped Work
+
+- No live DMS provider, provider SDK, network call, or provider credentials.
+- No DMS writeback endpoint or writeback service method.
+- No frontend/customer portal DMS call.
+- No customer lookup UI; that remains P20C.
+- No schema migration, DMS persistence table, or portal attachment work.
+- No reviewer catch-up for P18B, P19B, or P19C.
+
+### Verification
+
+- Passed: `corepack pnpm openapi:generate`.
+- Failed then fixed: `corepack pnpm test:api -- integrations` initially caught
+  a test expectation that did not account for existing VIN uppercase
+  normalization.
+- Passed: `corepack pnpm test:api -- integrations` (26/26 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Failed then fixed: `corepack pnpm lint` required
+  `apps/api/src/modules/integrations/MODULE.md` to declare the new
+  `modules/auth` dependency.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm security:check`.
+- Passed: `git status --short` showed the P20B product/contract/Forge files and
+  the new DMS lookup DTO file.
+- Passed with line-ending warnings only: `git diff --check` warned that Git will
+  replace LF with CRLF in edited files when it next touches them.
+
+### Outcome
+
+- Status: P20B built, reviewer pending.
+- Next: P20B reviewer stop.
+
+## 2026-06-30 - P20B Reviewer Stop
+
+### Scope
+
+- Reviewed P20B only.
+- Product code was inspected but not changed during this reviewer stop.
+- P18B, P19B, and P19C remain built but not reviewed.
+
+### Findings
+
+- No blocking P20B findings.
+
+### Review Notes
+
+- P20B adds one staff-only, read-only route:
+  `GET /integrations/dms/customer-vehicle`.
+- The route uses `SessionAuthGuard` and `PermissionGuard` with
+  `COMPLAINT_CREATE`; default CR Officer and CR Manager roles have both
+  `COMPLAINT_CREATE` and `COMPLAINT_EDIT`, so the planned P20C intake and
+  correction UI can use the same route without widening permissions.
+- The route derives correlation ID from the server request, not a client query
+  field.
+- Response data is the safe normalized P20A lookup result: provider/action/result
+  diagnostics, manual fallback flag, and normalized customer/vehicle matches.
+- No live provider, provider SDK, provider credential, DMS writeback method,
+  mutation route, schema migration, persistence table, frontend call, or customer
+  portal surface was introduced.
+- OpenAPI documents the route, query fields, auth/error responses, and safe DMS
+  lookup schemas.
+
+### SRS Coverage Reviewed
+
+- `ARCH-INTEGRATION-001`: backend adapter boundary is preserved; DMS remains
+  read-only and provider failures remain safe.
+- `ARCH-API-001` and `API-STANDARD-001`: OpenAPI contains the new route and safe
+  response/error contracts.
+- `REQ-CUSTOMER-001` and `DMS-MAP-001`: lookup supports phone, customer number,
+  VIN, and name with match, multiple-match, not-found, provider-down, disabled,
+  and manual fallback paths.
+- `DATA-AUTO-001`: safe automotive customer/vehicle fields and source `DMS` are
+  visible to staff.
+- `NFR-SEC-002` and `RBAC-MATRIX-001`: authority comes from the staff session and
+  permission guard; denied cases are audited safely by existing guard behavior.
+
+### Verification
+
+- Passed: inspected `git show --stat --oneline HEAD` for the P20B commit.
+- Passed: `git status --short` returned no output before reviewer Forge edits.
+- Passed: `corepack pnpm test:api -- integrations` (26/26 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm security:check`.
+- Passed: `git diff --check` returned no output before reviewer Forge edits.
+
+### Outcome
+
+- Status: P20B reviewed complete.
+- Next: P20C Staff DMS Lookup UI.
+
+## 2026-06-30 - P20C Staff DMS Lookup UI Build
+
+### Scope
+
+- Wired the P20B staff DMS lookup API into the staff complaint intake and
+  provenance correction UI.
+- Added a same-origin web proxy for
+  `/api/integrations/dms/customer-vehicle` that forwards only `phone`,
+  `customerNumber`, `vin`, and `name` plus the staff session cookie.
+- Rebuilt the customer/vehicle lookup surface as an interactive client
+  component with loading, idle, match, multiple-match, not-found,
+  provider-down, disabled, validation, denied, error, selected, and manual
+  fallback states.
+- Added a staff intake workspace so selected DMS matches prefill safe visible
+  customer/vehicle fields and submit source metadata through the existing staff
+  complaint create contract.
+- Embedded the lookup in the provenance correction panel while keeping DMS
+  values as source metadata only. The correction UI still writes through the
+  reviewed P19B correction endpoint with reason and `expectedUpdatedAt`.
+- Updated English and Arabic copy, API-client tests, shell tests, visual cases,
+  and accessibility cases for the lookup outcomes.
+
+### SRS Coverage
+
+- `REQ-CUSTOMER-001`: staff can search by phone, customer number, VIN, or name
+  and can keep manual fallback when no usable DMS match is selected.
+- `DMS-MAP-001`: lookup outcomes distinguish DMS/local/manual provenance and
+  expose read-only DMS matches without writeback.
+- `DATA-AUTO-001`: selected DMS matches carry safe automotive customer/vehicle
+  fields into intake metadata and correction provenance.
+- `UI-SCREEN-001` and `UI-DESIGN-001`: intake and correction screens include
+  localized, RTL/LTR aware lookup states with visible success, warning,
+  validation, error, and fallback handling.
+- `NFR-SEC-002`: frontend code has no provider credentials, no direct DMS
+  provider calls, no raw provider payload handling, and no role/branch/workflow
+  authority.
+- `API-STANDARD-001`: API-client/proxy tests cover the same-origin route and
+  validation/denial/error state mapping.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input:
+  Passed. The lookup proxy accepts no role, branch, actor, or workflow query
+  fields, and tests assert spoofed fields are dropped.
+- State changes, status history, and audit transaction: Passed by boundary. P20C
+  adds no DMS mutation or writeback. Intake and correction continue to use the
+  existing backend routes for writes.
+- No passwords, OTPs, tokens, hashes, provider secrets, or credentials are
+  logged or returned: Passed. The proxy only forwards the staff session cookie
+  to the backend and tests cover dropped password/credential-shaped query data.
+- Customer portal exposure rules hold: Passed by scope. No portal route or
+  portal component was changed.
+- Trust boundaries are tested: Passed. API-client tests cover same-origin lookup
+  and proxy allowlisting; shell tests cover no client authority and source
+  metadata behavior.
+
+### Skipped Work
+
+- No live DMS provider, provider SDK, provider credentials, or direct browser
+  DMS call.
+- No DMS writeback endpoint, DMS mutation, sync job, schema migration, or DMS
+  persistence table.
+- No customer portal DMS exposure.
+- No backend workflow/correction rule changes.
+- No P18B/P19B/P19C reviewer catch-up inside this build commit.
+- No claim that P20C is reviewed.
+
+### Verification
+
+- Passed: `corepack pnpm test:web -- api-client` (23/23 TAP tests passed).
+- Failed then fixed: `corepack pnpm test:web -- shell` initially caught a
+  password-reset text assertion collision and hidden-input attribute-order test
+  expectations; both were repaired.
+- Passed: `corepack pnpm test:web -- shell` (192/192 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Failed then fixed: `corepack pnpm typecheck` initially caught exact optional
+  type and vehicle-source sentinel issues; the affected types were corrected.
+- Passed: `corepack pnpm typecheck`.
+- Failed then fixed: `corepack pnpm lint` caught
+  `apps/web/src/i18n/staff-shell.ts` above the 300-line source budget; the new
+  lookup copy was compressed without changing behavior.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm web:visual-review`; generated English and Arabic
+  complaint create/detail review artifacts under `coverage/web-visual-review/`.
+- Passed: Playwright rendered the visual-review complaint create/detail
+  artifacts through a temporary local static server; console noise was limited
+  to missing `favicon.ico` on the temporary server.
+- Passed: `corepack pnpm security:check`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `git diff --check` completed with line-ending warnings only.
+- Passed: `git status --short` showed only P20C product/test/Forge files plus
+  temporary Playwright artifacts before cleanup.
+
+### Outcome
+
+- Status: P20C built, reviewer pending.
+- Next: P20C reviewer stop.
+
+## 2026-06-30 - P20C Reviewer Stop
+
+### Scope
+
+- Reviewed P20C only.
+- Product code was inspected but not changed during this reviewer stop.
+- P18B, P19B, and P19C remain built but not reviewed until their separate
+  catch-up reviewer pass runs.
+
+### Findings
+
+- No blocking P20C findings.
+
+### Review Notes
+
+- The staff lookup UI calls the P20B route only through the typed web helper and
+  same-origin proxy.
+- The proxy forwards only `phone`, `customerNumber`, `vin`, and `name` plus the
+  staff session cookie. Spoofed role, branch, actor, workflow, password, token,
+  and credential-shaped query values are dropped before the backend request.
+- Intake displays DMS/local/manual source labels and selected DMS matches can
+  prefill safe visible customer/vehicle fields plus source metadata.
+- Provenance correction embeds the lookup but does not map DMS customer codes or
+  VINs into local foreign keys. Correction still submits through the P19B
+  correction endpoint with reason and `expectedUpdatedAt`.
+- P20C adds no live provider, provider SDK, provider credential, DMS writeback,
+  schema migration, persistence table, backend workflow rule, or customer portal
+  surface.
+- Visual/accessibility proof cases cover English and Arabic complaint intake and
+  detail lookup appearances.
+
+### SRS Coverage Reviewed
+
+- `REQ-CUSTOMER-001`: lookup fields and manual fallback are present in staff
+  intake/correction UI.
+- `DMS-MAP-001`: DMS remains read-only source metadata with no writeback path.
+- `DATA-AUTO-001`: safe DMS customer/vehicle fields are visible to staff and
+  stay distinct from local/manual provenance.
+- `UI-SCREEN-001` and `UI-DESIGN-001`: lookup states are included in the staff
+  intake/detail surfaces and covered by visual/accessibility proof cases.
+- `NFR-SEC-002`: no frontend provider credential, direct DMS call, client-owned
+  role/branch/workflow authority, or portal exposure was added.
+- `API-STANDARD-001`: validation, denied, network, and success paths are routed
+  through the existing API-client result shape.
+
+### Verification
+
+- Passed: `git show --stat --oneline HEAD` inspected the P20C build commit.
+- Passed: `git status --short` returned no output before reviewer Forge edits.
+- Passed: `git diff --check` returned no output before reviewer Forge edits.
+- Passed: `corepack pnpm test:web -- api-client` (23/23 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (192/192 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm web:visual-review`; generated English and Arabic
+  complaint create/detail review artifacts under `coverage/web-visual-review/`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm security:check`.
+- Passed: review grep and `git show` inspection confirmed the same-origin proxy
+  allowlist, no direct provider/browser DMS call, no DMS writeback, and no portal
+  exposure.
+
+### Outcome
+
+- Status: P20C reviewed complete.
+- Next: P18B/P19B/P19C reviewer catch-up.
+
+## 2026-06-30 - P18B/P19B/P19C Reviewer Catch-Up
+
+### Scope
+
+- Ran the skipped reviewer passes for P18B duplicate warning UI foundation,
+  P19B staff customer/vehicle correction backend, and P19C staff
+  customer/vehicle correction UI.
+- Product code was inspected but not changed during this reviewer catch-up.
+- Used the recorded build evidence and file history because
+  `git log --oneline --grep="P18B\\|P19B\\|P19C"` returned no matching commit
+  subjects; the relevant generic build commits are `026476f3` and `afb25292`.
+
+### Findings
+
+- No blocking P18B, P19B, or P19C findings.
+
+### Review Notes
+
+- P18B duplicate/related complaint UI stays staff-scoped and safe-field only.
+  Link/unlink behavior remains non-destructive, runs through backend complaint
+  relation services, and does not merge histories or expose portal-private data.
+- P19B correction backend keeps authority server-side with staff session guards,
+  permission checks, branch scope, CSRF, optimistic concurrency, and same
+  transaction correction/audit writes. Audit metadata records changed field names
+  only, not reason text, VINs, plates, DMS codes, or credentials.
+- P19C correction UI submits only through the P19B correction contract with
+  reason, `expectedUpdatedAt`, and changed fields. Conflict, denied,
+  validation, and generic error states remain visible.
+- The current P19C surface now includes the reviewed P20C DMS lookup, but that
+  does not widen P19C authority: DMS lookup stays read-only through the P20B/P20C
+  staff route/proxy, and correction still writes only through the P19B backend.
+
+### SRS Coverage Reviewed
+
+- `REQ-COMPLAINT-003`: duplicate/related complaint warnings and links are
+  staff-scoped, reversible, and do not perform destructive merges.
+- `REQ-CUSTOMER-001`, `DATA-AUTO-001`, and `DMS-MAP-001`: customer/vehicle
+  correction and source provenance stay explicit and staff-only.
+- `REQ-RESOLUTION-001` and `REQ-AUDIT-001`: correction state changes keep audit
+  ownership in the backend transaction and preserve optimistic conflict behavior.
+- `API-STANDARD-001` and `NFR-SEC-002`: route contracts, CSRF/session authority,
+  branch scope, and privacy boundaries remain intact.
+- `UI-SCREEN-001` and `UI-DESIGN-001`: staff UI states are localized and covered
+  by visual/accessibility proof.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input:
+  Passed. P18B relation reads/writes and P19B correction writes use backend
+  scoped complaint access and guarded staff routes.
+- State changes and audit transaction: Passed. P19B correction repository and
+  audit writes run in the same Prisma transaction; P18B relation changes audit
+  link/unlink actions.
+- No secrets or sensitive provider data logged or returned: Passed. Reviewed
+  audit metadata, proxy/client boundaries, and tests for dropped credential-like
+  input.
+- Customer portal privacy: Passed. The reviewed slices add no portal route and
+  do not expose internal comments, audit logs, DMS codes, staff PII, or unrelated
+  complaints to portal users.
+
+### Verification
+
+- Passed: `git log --oneline --grep="P18B\\|P19B\\|P19C"` returned no matching
+  commit subjects; reviewer used evidence and file history for the relevant
+  generic commits.
+- Passed: `git status --short` returned no output before reviewer Forge edits.
+- Passed: `git diff --check` returned no output before reviewer Forge edits.
+- Passed: `corepack pnpm test:api -- complaints` (69/69 TAP tests passed).
+- Passed: `corepack pnpm test:api -- workflow` (69/69 TAP tests passed).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm test:web -- api-client` (23/23 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (192/192 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm web:visual-review`; generated review artifacts stayed
+  under ignored coverage output.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm prisma:validate`.
+- Passed: `corepack pnpm --dir packages/database generate`.
+- Passed: `corepack pnpm db:migrate:test`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm security:check`.
+- Passed: final `git status --short` returned no output before Forge edits.
+- Passed: final `git diff --check` returned no output before Forge edits.
+
+### Outcome
+
+- Status: P18B, P19B, and P19C reviewed complete.
+- Next: Portal attachment follow-up completion.
+
+## 2026-06-30 - Portal Attachment Follow-Up Completion Build
+
+### Scope
+
+- Completed the customer portal tracking UI path for verified follow-up
+  attachment upload.
+- Reused the existing backend `POST /portal/attachments` route and attachment
+  policy instead of adding a new attachment API.
+- Added the same-origin web proxy allowlist entry for `POST /api/portal/attachments`.
+- Added a typed portal attachment upload helper that sends `fileName`,
+  `contentType`, `sizeBytes`, and `contentBase64` with only the portal session
+  header.
+- Extended the portal tracking follow-up panel with localized file input,
+  attachment policy rules, success, validation, and closed-complaint states.
+- Updated visual/accessibility proof cases to include the portal tracking
+  attachment state.
+
+### SRS Coverage
+
+- `REQ-PORTAL-002`: verified customers can add follow-up attachments when the
+  complaint is not closed.
+- `REQ-FILES-001`: UI exposes the documented MVP limits while backend tests
+  enforce type/size policy and portal upload privacy.
+- `PORTAL-SEC-001` and `NFR-SEC-002`: portal upload still requires a verified
+  portal session and exposes no internal comments, audit logs, staff PII, DMS
+  codes, storage keys, public URLs, or download tokens.
+- `REQ-AUDIT-001`: backend attachment upload audit behavior remains covered by
+  the existing attachment service tests.
+- `API-STANDARD-001`: no backend route shape changed; OpenAPI drift check passed.
+- `UI-SCREEN-001` and `UI-DESIGN-001`: portal tracking now shows localized
+  follow-up attachment controls with mobile visual and accessibility proof.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input:
+  Passed by boundary. Portal attachment upload uses verified portal session
+  context, not staff role or branch data from the browser.
+- State changes and audit transaction: Passed. Existing attachment service tests
+  prove metadata and audit are written in the same transaction; this slice reused
+  that backend path.
+- No passwords, OTPs, tokens, hashes, provider secrets, storage keys, public URLs,
+  or download tokens are logged or returned: Passed. Web tests assert the proxy
+  drops staff cookies/CSRF headers and portal source tests reject private data
+  paths.
+- Customer portal exposure rules hold: Passed. Backend attachment tests prove
+  portal upload has no portal download route/token shape and tracking responses
+  remain public-safe.
+- Trust boundaries are tested: Passed. API-client tests cover allowed portal
+  attachment proxying and denied non-portal/download paths; backend attachment
+  tests cover invalid sessions and terminal complaints.
+
+### Skipped Work
+
+- No backend attachment route rewrite, staff attachment rewrite, portal download
+  route, public attachment link, download token, storage key exposure, malware
+  provider integration, schema migration, DMS work, duplicate UX work, reports
+  work, or final audit work.
+- No reviewer claim for this build slice.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- attachments` (32/32 TAP tests passed).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm test:web -- api-client` (24/24 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (192/192 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm security:check`.
+- Failed then rerun outside sandbox: `corepack pnpm test:visual` initially hit
+  sandbox `spawn EPERM` from `tsx`/esbuild. Passed on rerun (22 route previews).
+- Failed then rerun outside sandbox: `corepack pnpm test:e2e -- accessibility`
+  initially hit sandbox `spawn EPERM` from `tsx`/esbuild. Passed on rerun (17
+  route previews).
+- Failed then rerun outside sandbox: `corepack pnpm web:visual-review` initially
+  hit sandbox `spawn EPERM` from `tsx`/esbuild. Passed on rerun and wrote
+  portal tracking review artifacts under `coverage/web-visual-review/`.
+- Passed: inspected generated English and Arabic portal tracking mobile visual
+  review artifacts for the request and attachment states.
+- Passed: `git diff --check` returned no errors; CRLF warnings only.
+
+### Outcome
+
+- Status: Portal attachment follow-up built, reviewer pending.
+- Next: Portal attachment follow-up reviewer stop.
+
+## 2026-06-30 - Portal Attachment Follow-Up Reviewer Stop
+
+### Scope
+
+- Reviewed the portal attachment follow-up build against
+  `REQ-PORTAL-002`, `REQ-FILES-001`, `PORTAL-SEC-001`, `REQ-AUDIT-001`,
+  `API-STANDARD-001`, `NFR-SEC-002`, `UI-SCREEN-001`, and
+  `UI-DESIGN-001`.
+- Product code was inspected but not changed during this reviewer stop.
+- Confirmed duplicate/related complaint work is not re-opened by current
+  Forge/SRS evidence because P18A and P18B are built and reviewed.
+
+### Findings
+
+- No blocking findings.
+
+### Review Notes
+
+- Portal attachment upload remains reachable only through a verified portal
+  session, not a reference number alone.
+- Closed and rejected complaints are denied by the backend portal attachment
+  context before storage, persistence, or audit writes.
+- The web proxy allowlist exposes only `POST /api/portal/attachments` and
+  forwards portal-safe headers, not staff cookies, CSRF, role, branch, actor, or
+  workflow authority.
+- The UI sends only the existing attachment upload contract:
+  `fileName`, `contentType`, `sizeBytes`, and `contentBase64` plus the portal
+  session header.
+- Portal responses and source checks expose no internal comments, audit entries,
+  staff PII, DMS codes, unrelated complaint details, storage keys, public URLs,
+  download tokens, provider fields, or credentials.
+- Attachment type/size policy, executable blocking, terminal-complaint denial,
+  and attachment audit behavior remain backend-owned and tested.
+- English LTR and Arabic RTL visual/accessibility proof covers the portal
+  tracking follow-up attachment state.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input:
+  Passed by boundary. Portal upload uses verified portal session context, and
+  the web proxy does not forward staff authority headers.
+- State changes and audit transaction: Passed. Existing attachment service tests
+  prove metadata and `ATTACHMENT attachment_uploaded` audit are written in the
+  same transaction.
+- No passwords, OTPs, tokens, hashes, provider secrets, storage keys, public
+  URLs, download tokens, or staff credentials are logged or returned: Passed by
+  source review and attachment/portal tests.
+- Customer portal exposure rules hold: Passed. Portal tracking and attachment
+  responses remain public-safe and expose no internal comments, audit logs, DMS
+  codes, staff PII, unrelated complaints, or provider fields.
+- Trust boundaries are tested: Passed. Proof covers allowed verified portal
+  upload plus denied invalid-session, terminal-complaint, non-portal proxy, and
+  download-path cases.
+
+### Verification
+
+- Passed: `git status --short` returned no output before reviewer Forge edits.
+- Passed: `git diff --check` returned no output before reviewer Forge edits.
+- Passed: `corepack pnpm test:api -- attachments` (32/32 TAP tests passed).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm test:web -- api-client` (24/24 TAP tests passed; rerun
+  outside sandbox after `spawn EPERM` from the Node child-process sandbox).
+- Passed: `corepack pnpm test:web -- shell` (192/192 TAP tests passed; rerun
+  outside sandbox).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed;
+  rerun outside sandbox after `spawn EPERM`).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm web:visual-review`; generated English and Arabic portal
+  tracking review artifacts under ignored `coverage/web-visual-review/`.
+- Passed: inspected the generated English and Arabic portal tracking mobile
+  visual review artifacts for request and attachment states.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm security:check` (38 auth/session, 30 admin RBAC/CSRF,
+  4 CSRF/rate-limit, 8 audit/RBAC, 6 portal submission, 23 portal tracking, 32
+  attachment authorization/scan policy, and 28 report authorization/export
+  security tests passed).
+- Passed: source review confirmed no `localStorage`, `sessionStorage`,
+  `document.cookie`, object URL, download route, storage key, public URL,
+  provider credential, DMS code, staff PII, internal comment, audit log, or
+  unrelated complaint exposure was added to portal tracking source.
+
+### Skipped Work
+
+- No product feature work beyond review.
+- No staff attachment management rewrite, portal download route, public link,
+  download token, storage key exposure, malware provider integration, schema
+  migration, DMS work, duplicate UX work, report work, or final audit work.
+
+### Outcome
+
+- Status: Portal attachment follow-up reviewed complete.
+- Next: Reports/business-fit gap closure.
+
+## 2026-06-30 - Reports/Business-Fit Gap Closure Build
+
+### Scope
+
+- Added a guarded backend report catalog/status contract for `REPORT-MATRIX-001`
+  RPT-001 through RPT-017.
+- Added `GET /reports/catalog`, protected by the same staff session,
+  `REPORT_VIEW`, RBAC, and branch-scope guard pattern used by other reports.
+- Added `apps/api/src/modules/reports/report-matrix.ts` with explicit required
+  filters, required outputs, delivery status, implemented notes, deferred scope,
+  and `signoffRequired` for each report ID.
+- Updated the canonical OpenAPI contract for the catalog route and response
+  schemas.
+- Added focused report tests proving all RPT-001 through RPT-017 IDs are present,
+  delivered/deferred counts reconcile, sensitive fields are absent, the catalog
+  route is guarded, and OpenAPI documents the route.
+- Updated the reports module manifest to reflect current implemented behavior.
+
+### Report Matrix Outcome
+
+- Delivered in code: RPT-001, RPT-004, RPT-013, and RPT-017.
+- Explicitly deferred with signed-scope requirement: RPT-002, RPT-003, RPT-005,
+  RPT-006, RPT-007, RPT-008, RPT-009, RPT-010, RPT-011, RPT-012, RPT-014,
+  RPT-015, and RPT-016.
+- This slice closes the hidden business-fit gap by making every remaining report
+  gap explicit and contract-visible instead of implying all specialized reports
+  are complete.
+
+### SRS Coverage
+
+- `REQ-REPORT-001` and `REPORT-MATRIX-001`: report filters, output definitions,
+  delivered items, and signed-scope deferrals are now represented in a guarded
+  API response and tested.
+- `REQ-AUDIT-001`: RPT-017 remains delivered by the existing audit search/export
+  module; report export audit behavior was not weakened and the audit
+  append-only proof passed.
+- `NFR-SEC-002`: report catalog access is staff-session and permission guarded;
+  report row/export RBAC and branch-scope tests still pass.
+- `API-STANDARD-001`: the new route is documented in the canonical OpenAPI
+  contract with standard auth/forbidden error responses.
+- `UI-SCREEN-001` and `UI-DESIGN-001`: no web UI changed in this slice; existing
+  reports dashboard shell, localization, and role visibility tests still pass.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input:
+  Passed. `/reports/catalog` uses `SessionAuthGuard`, `PermissionGuard`,
+  `RbacGuard`, `@Permissions('REPORT_VIEW')`, and `@BranchScoped()`.
+- State changes and audit transaction: Passed/not applicable. The catalog route
+  is read-only. Existing report export audit and audit append-only proof still
+  pass.
+- No passwords, OTPs, tokens, hashes, provider secrets, customer phone/email,
+  VIN, plate, storage keys, public URLs, or credentials are logged or returned:
+  Passed by catalog source/test checks and existing report export redaction
+  tests.
+- Customer portal exposure rules hold: Passed. No portal route or customer
+  surface changed, and the catalog contains only staff report metadata.
+- Trust boundaries are tested: Passed. Tests cover allowed report catalog access
+  through `REPORT_VIEW`, denied missing permission, branch-scope denial on report
+  routes, safe catalog content, and OpenAPI coverage.
+
+### Skipped Work
+
+- No specialized implementations for the deferred reports in this slice.
+- No DMS telemetry persistence, live DMS provider integration, DMS writeback,
+  provider credentials, notification aggregate report, CSAT report, compensation
+  report, report warehouse, async export worker, schema migration, or customer
+  portal report exposure.
+- No web reports UI changes; visual/accessibility proof was not required by
+  `.forge/next.md` for this backend-only change.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- reports` (31/31 TAP tests passed).
+- Failed then passed: `corepack pnpm test:api -- audit` initially passed the
+  audit TAP tests (8/8) but failed the Docker-backed append-only proof because
+  Docker Desktop was not running. After Docker Desktop was started with approval,
+  sandboxed Docker access was permission-denied, then the escalated rerun passed
+  the audit TAP tests (8/8), applied migrations, and passed the append-only SQL
+  proof.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- api-client` (24/24 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (192/192 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm security:check`, including the report authorization and
+  scoped export security suite with the new catalog tests.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization
+  warnings only.
+
+### Outcome
+
+- Status: Reports/business-fit gap closure built, reviewer pending.
+- Next: Reports/business-fit gap closure reviewer stop.
+
+## 2026-06-30 - Reports/Business-Fit Gap Closure Reviewer Stop
+
+### Scope
+
+- Reviewed the built reports/business-fit closure without adding product feature code.
+- Confirmed `GET /reports/catalog` is protected by `SessionAuthGuard`, `PermissionGuard`, `RbacGuard`, `REPORT_VIEW`, and `@BranchScoped()`.
+- Confirmed the catalog includes RPT-001 through RPT-017 exactly once, with filters, outputs, status, implementation notes, deferred scope, and `signoffRequired` on every deferral.
+- Confirmed delivered status is limited to RPT-001, RPT-004, RPT-013, and RPT-017.
+- Confirmed all other report matrix entries are explicit signed-scope deferrals and are not claimed as fully delivered.
+- Confirmed OpenAPI documents `/reports/catalog` and the catalog response schemas.
+- Confirmed no web UI changed, so visual/accessibility proof was not required for this reviewer slice.
+
+### Findings
+
+- No blocking reviewer findings.
+
+### SRS Coverage
+
+- `REQ-REPORT-001` and `REPORT-MATRIX-001`: reviewed catalog coverage for all report IDs and honest delivered/deferred status.
+- `REQ-AUDIT-001`: reviewed that report export audit behavior and audit append-only proof still pass.
+- `NFR-SEC-002`: reviewed staff-session authorization, `REPORT_VIEW`, RBAC, branch-scope guard coverage, and safe catalog content.
+- `API-STANDARD-001`: reviewed canonical OpenAPI documentation for the new route and schemas.
+- `UI-SCREEN-001` and `UI-DESIGN-001`: reviewed no UI changed in this backend-only catalog slice.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input: Passed.
+- State changes and same-transaction audit: Passed/not applicable. The catalog route is read-only; existing export audit and append-only proof still pass.
+- No passwords, OTPs, tokens, hashes, provider credentials, customer phone/email, VIN, plate, DMS codes, portal data, storage keys, public URLs, staff PII, or arbitrary audit metadata are returned by the catalog: Passed.
+- Customer portal privacy: Passed. No portal route or customer surface changed.
+- Trust boundaries are tested: Passed. Tests cover allowed report catalog access, denied missing permission, branch-scope behavior on report routes, safe content, and OpenAPI coverage.
+
+### Skipped Work
+
+- No product feature work beyond review.
+- No specialized implementations for deferred reports.
+- No DMS telemetry persistence, live DMS provider integration, DMS writeback, provider credentials, notification aggregate report, CSAT report, compensation report, report warehouse, async export worker, schema migration, customer portal report exposure, or web reports UI work.
+
+### Verification
+
+- Passed: `git status --short` returned clean before reviewer Forge edits.
+- Passed: `git diff --check` returned no whitespace errors before reviewer Forge edits.
+- Passed: `corepack pnpm test:api -- reports` (31/31 TAP tests passed).
+- Passed: `corepack pnpm test:api -- audit` (8/8 TAP tests passed plus Docker-backed audit append-only SQL proof; escalated rerun was required for Docker named-pipe access).
+- Passed: `corepack pnpm test:web -- api-client` (24/24 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (192/192 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm security:check`, including report authorization and scoped export security.
+- Not Run: `corepack pnpm test:visual`, `corepack pnpm test:e2e -- accessibility`, and `corepack pnpm web:visual-review` were not required because no web UI changed in this reviewer slice.
+
+### Outcome
+
+- Status: Reports/business-fit closure reviewed complete.
+- Next: Final SRS/business-fit audit and stabilization.
+
+## 2026-06-30 - Final SRS/Business-Fit Audit And Stabilization
+
+### Scope
+
+- Ran the final MVP/business-fit audit against Forge, the current code, the current commit history, `docs/ARCHITECTURE.md`, and the relevant SRS requirements.
+- Reconciled the task's placeholder IDs with the actual SRS IDs. `MVP-BUSINESS-FIT-001`, `REQ-COMPLAINT-004`, `REQ-PORTAL-003`, `REQ-ATTACH-001`, `REQ-DMS-001`, and `DMS-MVP-001` are not headings in `docs/CMS_AUTO_SRS.md`; the audited SRS coverage is `CONTRACT-READINESS-003`, `REQ-COMPLAINT-001`, `REQ-COMPLAINT-002`, `REQ-COMPLAINT-003`, `REQ-CUSTOMER-001`, `REQ-PORTAL-001`, `REQ-PORTAL-002`, `REQ-FILES-001`, `ARCH-INTEGRATION-001`, `ARCH-FILES-001`, `DMS-MAP-001`, `REQ-REPORT-001`, `REPORT-MATRIX-001`, `REQ-AUDIT-001`, `NFR-SEC-002`, `API-STANDARD-001`, `UI-SCREEN-001`, and `UI-DESIGN-001`.
+- Confirmed the recent goal commits are coherent and revertable: planning, P20B build/review, P20C build/review, P18B/P19B/P19C catch-up review, portal attachment build/review, reports catalog build/review, and this final audit.
+- Confirmed skipped reviewer stops are not still overclaimed: P18B, P19B, and P19C were originally skipped, then covered by the committed catch-up reviewer pass.
+- Confirmed no product code stabilization was needed in this final slice.
+
+### Audit Results
+
+- P17, P18A/P18B, P19A/P19B/P19C, P20A/P20B/P20C, portal attachment follow-up, and reports/business-fit closure are all recorded as reviewed complete after actual reviewer or catch-up passes.
+- DMS remains read-oriented for MVP. The API exposes `GET /integrations/dms/customer-vehicle`; the web route is a same-origin proxy that allowlists only `phone`, `customerNumber`, `vin`, and `name`, and no DMS writeback route was found.
+- No provider credentials or direct provider calls are present in frontend DMS flow; provider failure paths and credential redaction are covered by integration tests.
+- Portal tracking still requires a verified portal session before complaint data is read. Reference-only tracking and follow-up are denied.
+- Portal follow-up attachments expose upload metadata only. The portal has no download route, public URL, storage key, or download-token response.
+- Portal responses remain public-safe: no internal comments, audit logs, DMS codes, staff PII, unrelated complaints, OTP hashes, or session hashes are returned.
+- Duplicate/related complaint UX is not re-opened. P18A/P18B coverage plus catch-up review and final complaint/web proof found no concrete blocker.
+- Reports/business-fit gaps are explicit. RPT-001, RPT-004, RPT-013, and RPT-017 are delivered; RPT-002, RPT-003, RPT-005, RPT-006, RPT-007, RPT-008, RPT-009, RPT-010, RPT-011, RPT-012, RPT-014, RPT-015, and RPT-016 are marked `DEFERRED` with `signoffRequired: true` in the guarded catalog.
+- OpenAPI contract coverage holds. `openapi:check` passed after all route work, including DMS lookup, portal attachment upload, and reports catalog.
+- UI quality gates passed for Arabic RTL and English LTR shell/localization, visual previews, accessibility previews, visual-review artifacts, and supplemental performance proof.
+- Backup/restore readiness is covered by the deterministic local ops check and runbook validation. The command passed for development and retained the expected warning that local `POSTGRES_HOST_AUTH_METHOD=trust` is development-only.
+
+### SRS Coverage
+
+- `CONTRACT-READINESS-003`: architecture, security, portal privacy, reports, Arabic/English UI, UI quality, performance, and backup posture proof ran locally. Human UAT sign-off and real staging backup restore remain operational sign-off activities, not product code changes in this slice.
+- `REQ-COMPLAINT-001`, `REQ-COMPLAINT-002`, and `REQ-COMPLAINT-003`: complaint creation, classification, drafts, duplicate warning foundation, related linking, corrections, and workflow authority remain backend-owned and tested.
+- `REQ-CUSTOMER-001`, `ARCH-INTEGRATION-001`, and `DMS-MAP-001`: staff DMS lookup has success, multiple-match, not-found, disabled, and provider-down paths; manual fallback remains available; provider credentials stay out of the browser; no writeback route exists.
+- `REQ-PORTAL-001` and `REQ-PORTAL-002`: portal submission, verified tracking, public follow-up, and follow-up attachments remain privacy-safe and tested.
+- `REQ-FILES-001` and `ARCH-FILES-001`: attachment validation, scan states, staff download authorization, portal upload-only behavior, audit, and no public URLs are tested.
+- `REQ-REPORT-001` and `REPORT-MATRIX-001`: operational reports remain RBAC/branch scoped; catalog reconciles RPT-001 through RPT-017 with delivered/deferred status and signed-scope deferrals.
+- `REQ-AUDIT-001`: audit search/export, safe metadata redaction, and Docker-backed append-only proof passed.
+- `NFR-SEC-002`: RBAC, branch scope, report export scope, portal privacy, attachment authorization, and sensitive-field logging protections passed.
+- `API-STANDARD-001`: stable error envelopes, OpenAPI coverage, and route contracts passed.
+- `UI-SCREEN-001` and `UI-DESIGN-001`: staff/portal screen coverage, role visibility, Arabic/English localization, visual, accessibility, and performance proof passed.
+
+### Security Self-Check
+
+- Roles and branch scope come from the server session, never client input: Passed by complaint, reports, admin, attachment, and web API-client tests.
+- Every state change writes status/history/audit in the same transaction and side effects enqueue after commit: Passed by complaint creation/workflow, correction, attachment, comment, admin, and audit proof suites.
+- No passwords, OTPs, tokens, hashes, provider secrets, storage keys, public URLs, DMS codes, or credentials are logged or returned: Passed by source review plus security, portal, integration, attachment, report, and web source-safety tests. Portal session tokens are returned only by OTP verification as the designed customer session bearer and are not persisted in browser storage.
+- Customer portal exposure rules hold: Passed. Portal tracking requires verified session; portal responses expose only public status/timeline/follow-up/upload metadata; no internal comments, audit logs, DMS codes, staff PII, or unrelated complaints are exposed.
+- Trust boundaries are tested: Passed. Proof covers allowed and denied cases for staff RBAC/branch scope, report view/export, DMS lookup permission, portal verification, portal upload, attachment download, audit access, and CSRF/rate-limit behavior.
+
+### Verification
+
+- Passed: `git status --short` returned clean before final Forge edits.
+- Passed: `git diff --check` returned no whitespace errors before final Forge edits.
+- Passed: `corepack pnpm test:api -- complaints` (69/69 TAP tests passed).
+- Passed: `corepack pnpm test:api -- portal.tracking` (23/23 TAP tests passed).
+- Passed: `corepack pnpm test:api -- attachments` (32/32 TAP tests passed).
+- Passed: `corepack pnpm test:api -- integrations` (26/26 TAP tests passed).
+- Passed: `corepack pnpm test:api -- reports` (31/31 TAP tests passed).
+- Passed: `corepack pnpm test:api -- audit` (8/8 TAP tests passed plus Docker-backed audit append-only SQL proof; escalated Docker access was required).
+- Passed: `corepack pnpm test:web -- api-client` (24/24 TAP tests passed).
+- Passed: `corepack pnpm test:web -- shell` (192/192 TAP tests passed).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests passed).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm web:visual-review`; regenerated 22 ignored EN/AR visual review artifacts under `coverage/web-visual-review/`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm security:check` (38 auth/session, 30 admin RBAC/CSRF, 4 CSRF/rate-limit, 8 audit/RBAC, 6 portal submission, 23 portal tracking, 32 attachment authorization/scan policy, and 31 report authorization/export security tests passed).
+- Supplemental Passed: `corepack pnpm web:perf` (2 route previews).
+- Supplemental Passed: `corepack pnpm ops:backup:check`; development backup posture passed with the expected local trust warning.
+
+### Skipped Work
+
+- No product code changes were made in the final audit slice.
+- No DMS writeback, live DMS provider credentials, provider calls from frontend, or frontend secrets were added.
+- No portal download route, public attachment links, storage key exposure, or unverified tracking by reference number alone was added.
+- No specialized implementation was added for report catalog entries currently marked as signed-scope deferrals.
+- No advanced/AI matching work was added.
+- No claim is made that human UAT sign-off, commercial acceptance of report deferrals, or real staging/production backup restore has occurred in this local Codex run.
+
+### Outcome
+
+- Status: Final SRS/business-fit audit and stabilization complete.
+- Blockers: None found in the audited local product scope.
+- Next: Done for the current Codex goal; future work requires a new scoped task or human pilot/UAT sign-off activity.
+
+---
+
+## User-Scoped UX Redesign - Slice 1 Customer Portal Submission
+
+Status: Complete
+SRS IDs: `REQ-PORTAL-001`, `REQ-PORTAL-002`, `PORTAL-SEC-001`, `REQ-LOCALIZATION-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `NFR-SEC-002`
+
+### Scope
+
+- Removed production query-string success/error/loading preview behavior from `/portal`.
+- Wired customer submission through the same-origin portal proxy to `POST /portal/complaints`.
+- Added localized field validation, loading, error, and real success reference feedback.
+- Kept staff authority, session, CSRF, workflow, and credential data out of the portal client request.
+- Left attachment upload deferred to verified tracking/attachment slices instead of silently dropping selected files.
+
+### Security Self-Check
+
+- Roles and branch scope remain backend-owned; portal submission sends no actor, role, workflow, or branch-scope authority.
+- Complaint creation still enters the backend portal service, which delegates to complaint creation with status history and audit in the existing transaction path.
+- No passwords, OTPs, tokens, provider secrets, storage keys, DMS codes, staff PII, audit logs, or internal comments are exposed in the portal submission UI.
+- Portal verification/privacy rules remain unchanged: submission returns only the generated complaint reference/status envelope, and tracking data still requires verification.
+- Trust boundaries are tested by portal API submission tests, web client/proxy tests, and the customer portal submit proof.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- portal`.
+- Passed: `corepack pnpm test:e2e -- customer-portal-submit`.
+- Passed: `corepack pnpm test:web -- shell`.
+- Passed: `corepack pnpm test:web -- api-client`.
+- Passed: `corepack pnpm test:web -- localization`.
+- Passed: `corepack pnpm test:visual`.
+- Passed: `corepack pnpm test:e2e -- accessibility`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check`.
+- Visual review screenshots: `output/playwright/slice1-portal-en-desktop.png`, `output/playwright/slice1-portal-en-mobile.png`, `output/playwright/slice1-portal-ar-desktop.png`, `output/playwright/slice1-portal-ar-mobile.png`.
+
+### Notes
+
+- Arabic browser-native empty date placeholder remains Chrome-controlled and is left for Slice 9 date/locale cleanup.
+
+---
+
+## User-Scoped UX Redesign - Slice 2 Staff Workflow Actions
+
+Status: Complete
+SRS IDs: `REQ-COMPLAINT-001`, `REQ-COMPLAINT-002`, `RBAC-MATRIX-001`, `REQ-LOCALIZATION-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `NFR-SEC-002`, `API-STANDARD-001`
+
+### Scope
+
+- Added backend-derived `allowedActions` to complaint detail responses for the current server session principal.
+- Kept workflow authorization in the API service/transition validator; React only renders and submits actions the backend returned.
+- Added a same-origin staff transition proxy and typed web client helper for `POST /complaints/:id/transitions`.
+- Reworked the workflow panel to submit action + required comment, show success/validation/error/conflict states, and offer reload/retry on conflicts.
+- Tightened workflow panel mobile sizing so English LTR and Arabic RTL controls fit narrow screens.
+
+### Security Self-Check
+
+- Roles, owner checks, and branch scope remain backend-owned and derive from the server session.
+- Workflow transitions still write status history and audit in the existing backend transaction path, with side effects queued after commit.
+- The web client sends only `fromStatus`, `action`, and `reason`; it sends no role, actor, owner, branch-scope, credential, token, or workflow-authority fields.
+- Customer portal privacy is unchanged; no portal route or portal data exposure changed in this slice.
+- Trust boundaries are tested by complaint API workflow tests, web API/proxy tests, source-safety shell tests, and the complaint workflow e2e proof.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- complaints`.
+- Passed: `corepack pnpm test:web -- api-client`.
+- Passed: `corepack pnpm test:web -- shell`.
+- Passed: `corepack pnpm test:e2e -- complaint-workflow`.
+- Passed: `corepack pnpm test:e2e -- accessibility`.
+- Passed: `corepack pnpm test:visual`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check`.
+- Visual review screenshots: `output/playwright/slice2-workflow-en-desktop.png`, `output/playwright/slice2-workflow-en-mobile.png`, `output/playwright/slice2-workflow-ar-desktop.png`, `output/playwright/slice2-workflow-ar-mobile.png`.
+
+### Notes
+
+- Temporary proof route used only for screenshots was deleted before staging.
+
+---
+
+## User-Scoped UX Redesign - Slice 3 Make Attachments Usable
+
+Status: Complete
+SRS IDs: `REQ-FILES-001`, `ARCH-FILES-001`, `REQ-PORTAL-002`, `UI-SCREEN-001`, `UI-DESIGN-001`, `NFR-SEC-002`
+
+### Scope
+
+- Added a server-scoped staff attachment list route so detail screens can show uploaded files and scan state without exposing storage keys or URLs.
+- Wired staff attachment controls to list, validate, upload, and request authorized downloads through same-origin web proxies and typed web client helpers.
+- Added shared browser-side file validation for staff and verified portal uploads; backend validation remains authoritative.
+- Kept portal upload-only behavior: portal attachments still expose no download route, storage key, public URL, internal files, or staff-only metadata.
+- Added localized upload/download feedback and preserved pending/clean/rejected/empty/error states.
+
+### Security Self-Check
+
+- Staff attachment list/upload/download remains authorized by server session guards, permissions, branch scope, CSRF where required, scan policy, and backend audit paths.
+- React sends no role, actor, branch-scope, workflow, storage, credential, or provider authority fields.
+- Download preparation returns only the existing backend token envelope from the API; the browser component does not create or display storage URLs.
+- Customer portal privacy holds: verified portal upload forwards only `x-portal-session` and file metadata/body, with no staff cookies or CSRF headers forwarded.
+- Trust boundaries are tested by attachment API tests, portal tracking tests, web API/proxy tests, source-safety shell tests, and the attachments e2e proof.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- attachments`.
+- Passed: `corepack pnpm test:api -- portal.tracking`.
+- Passed: `corepack pnpm test:web -- api-client`.
+- Passed: `corepack pnpm test:web -- shell`.
+- Passed: `corepack pnpm test:e2e -- attachments`.
+- Passed: `corepack pnpm test:e2e -- accessibility`.
+- Passed: `corepack pnpm test:visual`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+- Visual review screenshots: `output/playwright/slice3-attachments-en-desktop.png`, `output/playwright/slice3-attachments-en-mobile.png`, `output/playwright/slice3-attachments-ar-desktop.png`, `output/playwright/slice3-attachments-ar-mobile.png`.
+
+### Notes
+
+- Temporary proof route used only for screenshots was deleted before staging.
+- Browser-native file input text remains controlled by Chrome and may appear in English on Arabic screenshots; left for Slice 9 responsive/localization cleanup.
+
+---
+
+## User-Scoped UX Redesign - Slice 7 Complete Related And Duplicate Complaint UX
+
+Status: Complete
+SRS IDs: `REQ-COMPLAINT-001`, `REQ-COMPLAINT-002`, `REQ-LOCALIZATION-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `NFR-SEC-002`
+
+### Scope
+
+- Added a relation-specific complaint item response that includes safe customer and branch display names for duplicate candidates and linked complaints.
+- Kept duplicate matching, branch scope, relation writes, unlink writes, audit entries, permissions, and CSRF enforcement backend-owned.
+- Added same-origin web DELETE proxy and typed client support for unlinking related complaints without sending role, actor, branch scope, workflow, token, or credential inputs.
+- Updated the relation panel to show reference, customer, status, branch name, severity, created date, updated date, link action, and confirmed unlink action.
+- Refreshed relation UI state after link/unlink by moving the item between candidate and linked lists; no destructive merge behavior was added.
+- Replaced mojibake relation Arabic strings with real Arabic labels for the touched UI.
+
+### Security Self-Check
+
+- React still does not decide complaint state, authorization, branch scope, duplicate matching, workflow transitions, audit behavior, portal privacy, or attachment authority.
+- Relation writes still use backend scoped routes with the server session principal, permission guards, branch-scope checks, CSRF, and relation audit records.
+- Relation responses expose customer display name and branch display name only; tests continue to reject unsafe phone, VIN, token, credential, role, actor, and workflow leakage.
+- Customer portal privacy is unchanged; no portal route changed in this slice.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- complaints.related` (7/7 TAP tests).
+- Passed: `corepack pnpm test:api -- complaints` (69/69 TAP tests).
+- Passed: `corepack pnpm test:web -- api-client` (33/33 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (196/196 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+- Not Run/Unavailable: `corepack pnpm test:e2e -- complaint-related` because `tools/e2e-runner.mjs` does not register a `complaint-related` suite.
+- Visual review screenshots: `output/playwright/slice7-related-en-desktop.png`, `output/playwright/slice7-related-en-mobile.png`, `output/playwright/slice7-related-ar-desktop.png`, `output/playwright/slice7-related-ar-mobile.png`.
+
+### Notes
+
+- Temporary proof route used only for screenshots was deleted before staging.
+- Existing unrelated dirty integration module change and untracked output artifacts were left unstaged.
+
+---
+
+## User-Scoped UX Redesign - Slice 4 Simplify Staff Home, Queue, And Mobile Navigation
+
+Status: Complete
+SRS IDs: `REQ-COMPLAINT-001`, `REQ-COMPLAINT-002`, `RBAC-MATRIX-001`, `REQ-LOCALIZATION-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `NFR-SEC-002`
+
+### Scope
+
+- Made the staff complaints queue filters, search, and pagination URL-backed and API-backed through the existing `/complaints/search` route.
+- Kept queue scope backend-owned: the web request forwards only filter/search/page criteria with the staff session cookie, never role, actor, owner, workflow, or authorization inputs.
+- Preserved the existing unfiltered default as the backend/session-scoped queue and used branch names where available instead of raw branch IDs.
+- Added skip-to-main to the staff layout and ordered the staff main content before sidebar navigation on mobile.
+- Replaced the mobile table dependency with compact queue cards so English LTR and Arabic RTL views fit narrow screens without horizontal table scrolling.
+- Added a dedicated work-queue e2e proof mode and updated visual proof fixtures to use the real search route.
+
+### Security Self-Check
+
+- Roles, branch scope, ownership, and queue visibility remain derived by the backend session and `/complaints/search` guard behavior.
+- React does not decide complaint state, authorization, ownership, or workflow transitions; it only renders returned rows and submits filters.
+- No passwords, OTPs, tokens, provider secrets, storage keys, DMS codes, staff PII beyond returned safe queue labels, portal data, audit logs, or internal comments are exposed by the queue UI.
+- Customer portal privacy is unchanged; no portal route changed in this slice.
+- Trust boundaries are tested by shell route tests, the work-queues e2e proof, accessibility/visual proofs, and OpenAPI/type/lint checks.
+
+### Verification
+
+- Passed: `corepack pnpm test:web -- shell` (195/195 TAP tests).
+- Passed: `corepack pnpm test:e2e -- work-queues`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+- Visual review screenshots: `output/playwright/slice4-queue-en-desktop.png`, `output/playwright/slice4-queue-en-mobile.png`, `output/playwright/slice4-queue-ar-desktop.png`, `output/playwright/slice4-queue-ar-mobile.png`.
+
+### Notes
+
+- Temporary proof route used only for screenshots was deleted before staging.
+- Existing unrelated dirty integration module change and untracked output artifacts were left unstaged.
+
+---
+
+## User-Scoped UX Redesign - Slice 6 Fix DMS Lookup And Provenance Correction
+
+Status: Complete
+SRS IDs: `REQ-CUSTOMER-001`, `ARCH-INTEGRATION-001`, `DMS-MAP-001`, `REQ-LOCALIZATION-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `NFR-SEC-002`
+
+### Scope
+
+- Added optional local `customerId` and `vehicleId` fields to DMS lookup matches and documented them in OpenAPI.
+- Normalized those optional IDs through the backend DMS adapter result without changing provider authority or adding DMS writeback.
+- Showed matched customer and vehicle IDs in DMS lookup result cards when present.
+- Updated provenance correction so a selected DMS match fills correction `customerId`/`vehicleId` only when local IDs are present; DMS customer codes and VINs are not submitted as database IDs.
+- Kept manual fallback and required correction reason behavior in place.
+
+### Security Self-Check
+
+- DMS provider calls remain backend-only through the integration adapter and same-origin proxy; no credentials or provider-specific logic moved into React.
+- The web proxy still allowlists only `phone`, `customerNumber`, `vin`, and `name`, and forwards only the staff session cookie.
+- Provenance correction still submits through the backend scoped correction route with optimistic precondition, CSRF, permission, branch-scope, and audit enforcement.
+- Customer portal routes were not changed and still do not expose DMS codes, provider metadata, internal comments, audit logs, staff PII, or unrelated complaints.
+
+### Verification
+
+- Failed as written in plan: `corepack pnpm test:api -- dms-adapter` and `corepack pnpm test:api -- customers` because those suite names are not registered by `tools/api-test.mjs`.
+- Passed replacement coverage: `corepack pnpm test:api -- integrations` (26/26 TAP tests), covering DMS adapter lookup and route guards.
+- Passed replacement coverage: `corepack pnpm test:api -- complaints` (69/69 TAP tests), covering provenance correction/audit authority.
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (196/196 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+- Visual review screenshots: `output/playwright/slice6-dms-en-desktop.png`, `output/playwright/slice6-dms-en-mobile.png`, `output/playwright/slice6-dms-ar-desktop.png`, `output/playwright/slice6-dms-ar-mobile.png`.
+
+### Notes
+
+- Temporary proof route used only for screenshots was deleted before staging.
+- Existing unrelated dirty integration module change and untracked output artifacts were left unstaged.
+
+---
+
+## User-Scoped UX Redesign - Slice 5 Make Complaint Detail Understandable
+
+Status: Complete
+SRS IDs: `REQ-COMPLAINT-001`, `REQ-COMPLAINT-002`, `REQ-LOCALIZATION-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `NFR-SEC-002`
+
+### Scope
+
+- Added role-safe customer and vehicle detail fields to the backend complaint detail response and OpenAPI contract.
+- Rendered real customer, contact, customer number, vehicle, VIN, plate, and provenance values in the complaint detail workspace.
+- Added a summary header for status, severity, owner, SLA, next backend-provided action, and locale-aware last-updated date.
+- Changed staff detail timelines from raw timestamp strings to locale-aware English/Arabic dates.
+- Kept workflow actions, branch scope, authorization, portal privacy, audit, comments, and attachment authority backend-owned; React only renders returned detail data and backend-provided actions.
+
+### Security Self-Check
+
+- Complaint detail reads still flow through the backend scoped detail route and server session; no role, actor, branch scope, or authorization input was added to the client.
+- Workflow state and allowed actions remain backend-derived; React formats the next-action label only.
+- Customer portal exposure is unchanged and no portal response includes internal comments, audit logs, DMS codes, staff PII, or unrelated complaints.
+- Trust boundaries are covered by complaint API tests, shell route tests, localization/visual proof, OpenAPI check, typecheck, lint, and diff hygiene.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- complaints` (69/69 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (195/195 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+- Visual review screenshots: `output/playwright/slice5-detail-en-desktop.png`, `output/playwright/slice5-detail-en-mobile.png`, `output/playwright/slice5-detail-ar-desktop.png`, `output/playwright/slice5-detail-ar-mobile.png`.
+
+### Notes
+
+- Temporary proof route used only for screenshots was deleted before staging.
+- Existing unrelated dirty integration module change and untracked output artifacts were left unstaged.
+
+---
+
+## User-Scoped UX Redesign - Slice 8 Make Reports Honest And Scoped
+
+Status: Complete
+SRS IDs: `REQ-REPORT-001`, `REPORT-MATRIX-001`, `RBAC-MATRIX-001`, `REQ-LOCALIZATION-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `NFR-SEC-002`
+
+### Scope
+
+- Added report filters for date range, branch, category, severity, owner, and department where the existing API supports it.
+- Loaded the guarded report catalog and rendered delivered/deferred/signoff-required status plainly when real report rows are unavailable.
+- Disabled CSV/Excel export buttons until real scoped report rows load.
+- Kept export links on the same filter set as the visible report view.
+- Preserved backend-owned report authorization, branch scope, row limits, export generation, and export audit with filters and row count.
+- Contained the report table in a local horizontal scroll area so mobile views do not create page-level overflow.
+
+### Security Self-Check
+
+- React sends only report filter criteria and never sends role, actor, branch-scope authority, permissions, row limits, audit data, tokens, credentials, workflow state, portal data, or attachment authority.
+- Report view/export routes still derive authority from the server session and backend guards.
+- Export audit remains backend-owned and covered by the reports API tests.
+- Customer portal privacy, DMS adapters, complaint workflow transitions, and attachment security were not changed in this slice.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- reports` (31/31 TAP tests).
+- Passed: `corepack pnpm test:web -- api-client` (33/33 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (197/197 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+- Not Run/Unavailable: `corepack pnpm test:e2e -- reports` because `tools/e2e-runner.mjs` does not register a `reports` suite.
+- Visual review screenshots: `output/playwright/slice8-reports-en-desktop.png`, `output/playwright/slice8-reports-en-mobile.png`, `output/playwright/slice8-reports-ar-desktop.png`, `output/playwright/slice8-reports-ar-mobile.png`.
+
+### Notes
+
+- Temporary proof route used only for screenshots was deleted before staging.
+- Playwright dev-server console showed Next HMR websocket errors during screenshot capture only; route rendering and saved screenshots were verified.
+- Existing unrelated dirty integration module change and untracked output artifacts were left unstaged.
+
+---
+
+## User-Scoped UX Redesign - Slice 9 Arabic Accessibility Responsive Cleanup
+
+Status: Complete
+SRS IDs: `REQ-LOCALIZATION-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `NFR-SEC-002`
+
+### Scope
+
+- Localized guarded report catalog rows by matching known report IDs to the existing English/Arabic report catalog text.
+- Localized report required-filter keys for date, branch, category, severity, owner, and department.
+- Added explicit unavailable reasons to disabled report export buttons through `aria-label` and `title`.
+- Kept related/duplicate complaint list headings visible even when there are no rows, so keyboard and assistive-tech users can find the empty related sections.
+- Constrained the reports dashboard card so its table scroll remains local on narrow viewports instead of creating page-level horizontal overflow.
+
+### Security Self-Check
+
+- No RBAC, branch-scope, workflow, portal privacy, report/export, DMS, or attachment authority moved into React.
+- Report catalog localization is presentation-only; report delivery status, export readiness, filter scope, and row limits remain backend-owned.
+- Related complaint writes and visibility remain backend-owned; the UI change only keeps section headings visible in empty states.
+
+### Verification
+
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `corepack pnpm test:web -- shell` (197/197 TAP tests).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+- Visual review screenshots:
+  `output/playwright/slice9-rtl-en-390.png`,
+  `output/playwright/slice9-rtl-en-430.png`,
+  `output/playwright/slice9-rtl-en-768.png`,
+  `output/playwright/slice9-rtl-en-1024.png`,
+  `output/playwright/slice9-rtl-en-1280.png`,
+  `output/playwright/slice9-rtl-en-1440.png`,
+  `output/playwright/slice9-rtl-ar-390.png`,
+  `output/playwright/slice9-rtl-ar-430.png`,
+  `output/playwright/slice9-rtl-ar-768.png`,
+  `output/playwright/slice9-rtl-ar-1024.png`,
+  `output/playwright/slice9-rtl-ar-1280.png`,
+  `output/playwright/slice9-rtl-ar-1440.png`.
+
+### Notes
+
+- Temporary proof route used only for screenshots was deleted before staging.
+- Playwright dev-server console showed Next HMR websocket errors during screenshot capture only; route rendering and saved screenshots were verified.
+- Browser-native date/file input chrome remains browser-controlled; product labels and surrounding values are localized.
+- Existing unrelated dirty integration module change and untracked output artifacts were left unstaged.
+
+---
+
+## Business Readiness - Slice 1 Customer OTP Delivery
+
+Status: Complete
+SRS IDs: `REQ-PORTAL-002`, `PORTAL-SEC-001`, `REQ-NOTIFY-001`, `METHOD-AUDIT-001`
+
+### Scope
+
+- Portal tracking now generates one OTP, stores only its salted hash in the portal verification row, and queues the plaintext code through the existing notification queue as a customer SMS.
+- OTP customer messages support English and Arabic text through the portal tracking locale.
+- The portal tracking UI forwards locale when requesting a code.
+- OTP SMS dispatch bypasses customer notification preference and quiet-hour skips because the OTP is customer-requested and the MVP method is the complaint primary phone.
+
+### Security Self-Check
+
+- Roles and branch scope still come from the server session; this public portal route does not accept role, actor, branch-scope, permission, workflow, or staff authority input.
+- OTP verification state changes and OTP success/failure audit behavior remain backend-owned and covered by `portal.tracking`.
+- The portal verification table persists only `otpHash`; the OTP is not returned in API responses, audit records, session records, portal tracking data, or web storage.
+- Customer portal exposure remains safe: no internal comments, audit logs, DMS codes, staff PII, unrelated complaints, session hashes, or OTP hashes reach the portal.
+- Trust boundary tests cover allowed OTP request/verification and denied wrong, expired, exhausted, unknown, non-pending, invalid-session, and reference-only cases.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- portal.tracking` (24/24 TAP tests).
+- Passed: `corepack pnpm test:api -- notifications` (43/43 TAP tests).
+- Passed: `corepack pnpm test:web -- api-client` (39/39 TAP tests).
+- Passed: `corepack pnpm test:e2e -- customer-portal-track`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Not Run: live browser screenshots for wrong-code, expired, and exhausted OTP states; the registered visual proof renders route previews, and `customer-portal-track` covers those states without a browser.
+
+### Notes
+
+- Slice 0 still lacks human signoff for report deferrals, DMS mode, compensation scope, and approved notification channels. Slice 1 used the existing SMS provider path because SRS states the default MVP OTP method is the complaint primary phone.
+- Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.
+
+---
+
+## Business Readiness - Slice 7 Staff Comments And Public Portal Updates
+
+Status: Complete
+SRS IDs: `REQ-COMMENTS-001`, `PORTAL-SEC-001`, `REQ-RBAC-001`, `METHOD-AUDIT-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
+
+### Scope
+
+- Added a staff-only branch-scoped comment read route returning both internal and public complaint comments.
+- Kept staff comment creation on the existing guarded comment route with dynamic internal/public permissions, CSRF, branch scope, and same-transaction comment audit.
+- Wired staff detail to load real comments through the staff session cookie and added a visibility-aware comment composer.
+- Added a same-origin staff comment proxy and browser helper that send only body and visibility, with no client role, actor, branch, or workflow authority.
+- Updated verified portal tracking to merge status history with public complaint comments only; internal comments remain excluded from the portal response.
+- Rendered portal public updates as explicit public timeline entries after verification.
+
+### Security Self-Check
+
+- Internal comments require staff session, branch scope, and `COMPLAINT_COMMENT_INTERNAL`; public comment creation requires `COMPLAINT_COMMENT_PUBLIC`.
+- Portal tracking still requires a valid portal session token and does not accept reference-only reads.
+- Portal tracking uses `listPublicComments`; internal comments, audit data, staff PII, DMS codes, unrelated complaints, OTPs, session hashes, and credentials are not returned.
+- UI payloads do not include actor, role, branch scope, audit metadata, credentials, OTPs, tokens, provider data, or staff authority fields.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- workflow` (75/75 TAP tests).
+- Passed: `corepack pnpm test:api -- portal.tracking` (24/24 TAP tests).
+- Passed: `corepack pnpm test:web -- api-client` (47/47 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (202/202 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Notes
+
+- Staff comment screenshots were captured at `output/playwright/slice7-staff-comments-en.png` and `output/playwright/slice7-staff-comments-ar.png` and visually checked.
+- Portal tracking screenshots were captured at `output/playwright/slice7-portal-tracking-en.png` and `output/playwright/slice7-portal-tracking-ar.png` and visually checked.
+- Screenshot proof used component-rendered HTML with proof data because live staff and portal routes correctly require real sessions.
+- Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.
+
+---
+
+## Business Readiness - Slice 2 Submission SLA and Acknowledgement
+
+Status: Complete
+SRS IDs: `ARCH-WORKFLOW-001`, `REQ-SLA-001`, `REQ-NOTIFY-001`, `METHOD-AUDIT-001`
+
+### Scope
+
+- Submitted complaint creation now reuses the workflow side-effect path after the creation transaction commits.
+- Staff and portal submitted complaints enqueue the submit notification and create the intake SLA deadline event.
+- Draft complaints still create no active SLA deadline and no submit notification.
+- Complaint creation selects the minimal workflow fields needed for SLA scope and notification recipient handling.
+
+### Security Self-Check
+
+- Roles and branch scope still come from server session/controller context; no frontend or client-owned workflow authority was added.
+- Complaint creation still writes complaint, initial status history, case wrapper, and audit inside the same transaction; notifications/SLA enqueue only after that transaction returns.
+- No passwords, OTPs, tokens, hashes, provider secrets, or credentials are logged or returned.
+- Customer portal exposure rules remain unchanged; portal submission delegates to backend-owned complaint creation and returns only the complaint reference/status plus safe attachment warning data.
+- Trust boundaries are covered by workflow route tests for server-derived role/branch scope, allowed submission, denied branch scope, invalid transitions, draft no-SLA behavior, and portal submission parsing.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- workflow` (71/71 TAP tests).
+- Passed: `corepack pnpm test:api -- portal` (12/12 TAP tests).
+- Passed: `corepack pnpm test:api -- sla` (35/35 TAP tests).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+
+### Notes
+
+- `test:api -- sla` is the closest registered SLA warning/breach seeded proof and includes warning, breach, and escalation job coverage.
+- Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.
+
+---
+
+## Business Readiness - Slice 3 Management-Readonly Masking
+
+Status: Complete
+SRS IDs: `NFR-SEC-002`, `REQ-RBAC-001`, `REQ-REPORT-001`, `PORTAL-SEC-001`
+
+### Scope
+
+- Threaded the server session role into complaint queue/search/detail read shaping.
+- Masked management-readonly complaint search customer phone and DMS identifier as `[masked]`.
+- Masked management-readonly complaint detail customer phone/identifier and vehicle VIN/plate as `[masked]`.
+- Kept CR/manager/admin roles on their existing unmasked complaint detail/search behavior.
+- Kept report rows/export on the existing safe report contract; report rows do not include customer phone/email, VIN, plate, compensation notes, or attachment filenames.
+- Added explicit proof that management-readonly report reads remain scoped and sensitive export is denied without `REPORT_EXPORT`.
+
+### Security Self-Check
+
+- Masking is enforced in the backend service response layer using the server-derived role; React does not decide masking, role, branch scope, export permission, or workflow state.
+- Default `MGMT_READONLY` permissions still include `REPORT_VIEW` only, not `REPORT_EXPORT` or `ATTACHMENT_DOWNLOAD`.
+- Attachment filenames remain unavailable to management-readonly by default through existing attachment permissions; `security:check` covered attachment authorization.
+- No passwords, OTPs, tokens, hashes, provider secrets, storage keys, credentials, audit internals, internal comments, or portal-only data were added to responses.
+
+### Verification
+
+- Passed: `corepack pnpm security:check`.
+- Passed: `corepack pnpm test:api -- reports` (32/32 TAP tests).
+- Passed focused masking proof: `corepack pnpm test:api -- workflow` (73/73 TAP tests), including management-readonly search/detail masking and CR manager allowed unmasked reads.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Notes
+
+- No web UI edit was needed for masking: staff screens render the backend-returned values, and the API now returns `[masked]` for management-readonly sensitive values.
+- Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.
+
+---
+
+## Business Readiness - Slice 4 Real Audit Viewer
+
+Status: Complete
+SRS IDs: `METHOD-AUDIT-001`, `NFR-SEC-002`, `REQ-RBAC-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
+
+### Scope
+
+- Replaced placeholder audit rows with backend `/audit/logs` search results loaded through the staff session cookie.
+- Added the staff audit API client and same-origin export proxy that forwards only allowed audit filters plus the staff session cookie.
+- Wired audit filters for event, actor, target, correlation ID, date range, page, and page size.
+- Added localized empty, loading, error, validation, conflict, denied, success, and metadata states for English LTR and Arabic RTL.
+- Kept audit access, export permission, redaction, and append-only enforcement backend-owned; the UI renders backend-returned redacted metadata only.
+
+### Security Self-Check
+
+- React does not decide audit authorization, export permission, branch scope, redaction, or append-only behavior.
+- The export proxy does not accept client role, actor authority, branch scope, permission, workflow state, credentials, or arbitrary backend paths.
+- Metadata values matching password, token, OTP, secret, credential, or hash remain redacted by backend audit search/export services before reaching the UI.
+- Audit export still writes its own backend audit entry and requires the backend `AUDIT_EXPORT` permission.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- audit` (8/8 TAP tests); Docker append-only proof skipped with explicit runner message because Docker is unavailable.
+- Passed: `corepack pnpm test:web -- api-client` (43/43 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (201/201 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Notes
+
+- English and Arabic screenshots were captured at `output/playwright/slice4-audit-en.png` and `output/playwright/slice4-audit-ar.png` and visually checked.
+- `tools/api-test.mjs` now runs the Docker append-only proof only when `docker info` succeeds, preserving the proof on Docker-enabled machines while matching the slice plan on this machine.
+- Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.
+
+---
+
+## Business Readiness - Slice 5 Admin Category and SLA UI
+
+Status: Complete
+SRS IDs: `REQ-COMPLAINT-002`, `REQ-SLA-001`, `METHOD-AUDIT-001`, `REQ-RBAC-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
+
+### Scope
+
+- Added guarded category list and deactivate endpoints beside the existing create/update category endpoints.
+- Added guarded SLA policy list and full MVP policy update endpoints for duration, warning percent, timezone, calendar mode, and escalation route values.
+- Kept category and SLA configuration writes inside backend transactions with CONFIG audit entries.
+- Replaced the admin category/SLA placeholder UI with backend-loaded category and SLA policy rows through the staff session cookie.
+- Added server actions for category create/edit/deactivate and SLA policy updates; the UI sends no role, actor, branch, or workflow authority.
+- Added localized English LTR and Arabic RTL labels for the real category/SLA fields and config audit feedback.
+- Updated OpenAPI canonical contract for new category and SLA policy routes and schemas.
+
+### Security Self-Check
+
+- RBAC, CSRF, SLA truth, branch/scope context, and CONFIG audit remain backend-owned.
+- Category/SLA reads forward only the staff session cookie; writes forward the staff session cookie plus CSRF token.
+- No passwords, OTPs, tokens, hashes, provider secrets, credentials, portal data, DMS data, or staff authority fields were added to the UI payloads or audit metadata.
+- SLA deadlines remain calculated by the backend service using stored policy values; the UI only renders and submits policy fields.
+
+### Verification
+
+- Passed: `corepack pnpm security:check`.
+- Passed: `corepack pnpm test:api -- admin` (30/30 TAP tests).
+- Passed: `corepack pnpm test:api -- sla` (37/37 TAP tests).
+- Passed: `corepack pnpm test:web -- api-client` (45/45 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (202/202 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews).
+- Passed: `corepack pnpm test:visual` (22 route previews).
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Notes
+
+- English and Arabic admin screenshots were captured at `output/playwright/slice5-admin-en.png` and `output/playwright/slice5-admin-ar.png` and visually checked.
+- Slice 6 can proceed by implementing missing reports; selecting signed deferrals still needs the unresolved Slice 0 human signoff.
+- Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.
+
+---
+
+## Business Readiness - Slice 6 Report Matrix Completion Or Signed Deferral
+
+Status: Code complete with human signoff caveat
+SRS IDs: `REQ-REPORT-001`, `REQ-RBAC-001`, `METHOD-AUDIT-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
+
+### Scope
+
+- Kept the guarded RPT-001 through RPT-017 catalog as the always-visible report delivery matrix on the reports dashboard.
+- Labeled incomplete reports as `Deferred - pending business signoff` in English and Arabic rather than implying that commercial signoff already exists.
+- Renamed the generic export surface to `Operational row export` and added copy stating CSV/Excel exports contain generic operational rows, not specialized RPT outputs.
+- Renamed generated export filenames to `operational-report-rows.csv` / `operational-report-rows.xls` and changed the report export audit target to `operational_report_rows`.
+- Split the reports UI table into the report delivery matrix and operational report rows so loaded rows no longer hide the RPT delivery status.
+
+### Security Self-Check
+
+- Backend report view/export permissions, branch scope, row limits, filter handling, and export audit remain backend-owned.
+- React sends only report filters; it does not send role, actor, permissions, branch-scope authority, audit metadata, row limits, workflow state, portal data, or credentials.
+- The unresolved report deferrals are not claimed as signed in code or evidence.
+- No passwords, OTPs, tokens, hashes, provider secrets, credentials, customer phone/email, VIN, plate, audit internals, or portal-only data were added to report rows or export metadata.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- reports` (32/32 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:web -- api-client` (45/45 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (202/202 TAP tests).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Notes
+
+- English and Arabic report screenshots were captured at `output/playwright/slice6-reports-en.png` and `output/playwright/slice6-reports-ar.png` and visually checked.
+- The live `/reports` route correctly redirects without a real API-backed staff session; screenshots used the actual `ReportsDashboard` server-rendered component with the dev stylesheet and proof data, matching the repo's visual-proof style.
+- Exact human decision still needed for final Slice 6 acceptance: either sign MVP deferral for RPT-002, RPT-003, RPT-005 through RPT-012, RPT-014, RPT-015, and RPT-016, or approve implementation of those missing report-specific outputs.
+- Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.
+
+---
+
+## Business Readiness - Slice 8 Closure Survey
+
+Status: Complete
+SRS IDs: `REQ-SURVEY-001`, `REQ-COMPLAINT-004`, `REQ-NOTIFICATION-001`, `PORTAL-SEC-001`, `REQ-RBAC-001`, `METHOD-AUDIT-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
+
+### Scope
+
+- Complaint close now calls the existing survey scheduler only after the workflow transaction commits.
+- The scheduler creates the pending survey token hash and queues the tokenized `survey.link.customer` notification through the existing notification path.
+- Portal survey submission is wired through the public portal proxy and browser helper, with backend-owned invalid, used, and expired token states.
+- Staff complaint detail loads submitted CSAT results from the guarded branch-scoped survey route and renders the latest authorized rating/submission date.
+- Module boundaries were kept through `SurveysModule`/`SurveysService`; complaints do not import survey repositories.
+
+### Security Self-Check
+
+- Workflow state, RBAC, branch scope, status history, audit, SLA lifecycle, survey scheduling, token validation, and notification enqueueing remain backend-owned.
+- Survey tokens are hashed at rest, not returned in staff reads, and are not rendered by the portal survey component.
+- Staff CSAT reads require the existing staff session, `REPORT_VIEW`, and branch-scope visibility check before survey rows are returned.
+- Portal survey submission accepts only the tokenized survey link payload and rating/comment; no role, actor, branch-scope, workflow, staff authority, credentials, or audit metadata were added to browser payloads.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- surveys` (15/15 TAP tests).
+- Passed: `corepack pnpm test:api -- workflow` (75/75 TAP tests), including close-to-survey after-commit proof.
+- Passed: `corepack pnpm test:web -- api-client` (50/50 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (202/202 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Notes
+
+- Portal survey screenshots were captured and visually checked at `output/playwright/slice8-survey-valid.png`, `output/playwright/slice8-survey-success.png`, `output/playwright/slice8-survey-used.png`, and `output/playwright/slice8-survey-expired-ar.png`.
+- Screenshot proof used component-rendered HTML over a temporary localhost static server; the only console message was a missing favicon from the proof server.
+- Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.
+
+---
+
+## Business Readiness - Slice 9 Staff Intake Attachments
+
+Status: Complete
+SRS IDs: `REQ-COMPLAINT-001`, `REQ-ATTACHMENT-001`, `PORTAL-SEC-001`, `REQ-RBAC-001`, `METHOD-AUDIT-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
+
+### Scope
+
+- Staff complaint create now accepts intake evidence files and uploads them only after the complaint create request succeeds.
+- Intake uploads reuse the existing staff attachment API helper, same-origin proxy, CSRF header handling, and backend attachment route.
+- Upload success and partial failure counts are shown in the create success message.
+- The existing detail-page attachment controls remain available as the retry path.
+- File validation, scan state, storage path generation, audit, RBAC, branch scope, and portal privacy remain backend-owned.
+
+### Security Self-Check
+
+- React sends only selected files to the existing attachment helper after the backend returns a created complaint ID; it does not send role, actor, branch-scope authority, workflow state, audit metadata, storage paths, credentials, tokens, or provider data.
+- Staff attachment upload authorization still comes from the backend staff session, permission checks, CSRF guard, and branch-scoped complaint lookup.
+- Invalid attachment file types are blocked before upload, and backend attachment policy still rejects invalid metadata before storage, persistence, or audit.
+- Portal attachment behavior was not widened; staff intake uploads use staff-only routes.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- attachments` (33/33 TAP tests).
+- Passed: `corepack pnpm test:web -- api-client` (51/51 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (203/203 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Notes
+
+- Staff intake screenshot was captured and visually checked at `output/playwright/slice9-staff-intake-styled.png`; the browser proof confirmed one `input[name="attachments"][type="file"]`.
+- Live staff routes correctly require a real session, so the screenshot used route-rendered proof HTML with the compiled app Tailwind CSS and the same component tree used by the visual-review workflow.
+- Slice 10 is blocked until the Slice 0 DMS mode decision is signed: either manual-DMS pilot scope, or live/test provider integration through the existing DMS port.
+- Existing unrelated dirty `apps/api/src/modules/integrations/integrations.module.ts` and untracked proof artifacts were left unstaged.
+
+---
+
+## Business Readiness - Slice 10 DMS Pilot Mode
+
+Status: Complete
+SRS IDs: `REQ-INTEGRATION-001`, `REQ-REPORT-001`, `REQ-RBAC-001`, `METHOD-AUDIT-001`, `UI-SCREEN-001`, `UI-DESIGN-001`
+
+### Scope
+
+- Recorded the signed manual-DMS pilot decision in the integrations module boundary: no live/test DMS provider, provider SDK, credential, writeback, or lookup telemetry persistence exists in this slice.
+- Kept the Nest integrations module on the in-memory DMS adapter with an explicit `DISABLED` response.
+- Marked RPT-015 as signed-deferred until a live/test provider exists and lookup telemetry is meaningful; other incomplete report deferrals still require business signoff.
+- Updated staff lookup copy to state that DMS lookup is disabled for pilot manual scope and that manual fallback should be used.
+- Added web proof that complaint creation remains available when lookup is disabled, with exactly one real intake attachment input.
+
+### Security Self-Check
+
+- Backend remains the authority for DMS adapter behavior, lookup result normalization, RBAC, session validation, branch scope, and report catalog status.
+- No frontend provider calls, provider credentials, DMS writeback, or fake telemetry were added.
+- The DMS lookup route remains guarded by the staff session and `COMPLAINT_CREATE` permission.
+- RPT-015 telemetry/reporting remains deferred rather than populated from disabled in-memory lookups.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- integrations` (27/27 TAP tests).
+- Passed: `corepack pnpm test:api -- reports` (32/32 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (204/204 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+- Passed: `corepack pnpm web:visual-review`; standard visual artifacts were written under `coverage/web-visual-review`.
+
+### Notes
+
+- Focused disabled/manual fallback screenshot proof was captured at `output/playwright/slice10-dms-disabled-manual.png`; the browser DOM proof confirmed the disabled message, manual fallback, create form, and one `input[type="file"]`.
+- Screenshot proof used route-rendered HTML over a temporary localhost static server with compiled app Tailwind CSS; the temporary server was stopped after capture.
+- Slice 11 is blocked until compensation scope is signed: deferral, or approval for minimal compensation metadata and audit.
+
+---
+
+## UI/UX Redesign - Slice 0 Proof Harness and Token Spine
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `NFR-PERF-001`
+
+### Scope
+
+- Replaced the UI proof path's string-only confidence with browser-backed route artifact checks using compiled Tailwind CSS.
+- Kept the existing script names: `test:visual`, `web:visual-review`, `test:e2e -- accessibility`, and `web:perf`.
+- Added shared browser proof utilities that compile `apps/web/src/globals.css`, open each rendered artifact in Chromium, check nonblank output, page-level horizontal overflow, keyboard focus visibility, and optional axe serious/critical violations.
+- Extended `web:visual-review` to generate HTML and PNG artifacts for English and Arabic staff/portal surfaces under `coverage/web-visual-review`.
+- Added the Precision Ops token spine for surfaces, content, line, status, conflict, loading/empty, density, portal spacing, radius, shadow, and focus.
+- Removed global dark-mode raw slate/white patch selectors so migrated components must consume semantic tokens.
+- Added a frontend color-utility lint ratchet for `apps/web/src/app` and `apps/web/src/components`, excluding generated shadcn primitives. The current baseline is 455 matches and must shrink in later migration slices.
+
+### Security Self-Check
+
+- No backend API, schema, RBAC, branch-scope, audit, workflow, attachment, report, notification, or portal verification behavior changed.
+- React still does not decide complaint state, role, branch scope, audit visibility, portal verification, or workflow authority.
+- Browser proof fixtures remain local generated artifacts and do not introduce credentials, tokens, OTPs, provider secrets, or staff/customer private data.
+- Customer portal exposure rules remain unchanged; the slice only improved proof and token infrastructure.
+
+### Verification
+
+- Passed: `node --test tools/lint.test.mjs` (21/21 TAP tests).
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (210/210 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check`; CRLF normalization warnings only.
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Notes
+
+- Axe initially caught insufficient contrast for the info status token; `--color-info` was darkened before the final accessibility pass.
+- Sampled generated PNGs for EN dashboard, AR work queue, EN portal submission mobile, and AR portal tracking mobile; no blank output or obvious page-level overflow was visible in those samples.
+- The `design-qa` skill referenced a missing `workflows/design-qa.md` file, so the implementation used the available local UI proof scripts and added browser gates directly.
+- Existing unrelated dirty files and untracked proof artifacts were left untouched.
+- The next active Forge task is `UI/UX Refactor - Slice 1B Shared Shell Primitives`.
+
+---
+
+## UI/UX Redesign - Roadmap Packet
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`
+
+### Scope
+
+- Added `.forge/ui-ux-refactor/README.md` as the canonical detailed roadmap packet.
+- Recorded the applied skills: `ui-ux-pro-max`, `redesign`, `design-qa`, and supporting `design-taste-frontend`.
+- Preserved `.forge/ui-ux-refactor-roadmap.md` as a pointer for older references.
+- Updated `.forge/state.md` and `.forge/next.md` to reference the packet and active skills.
+
+### Verification
+
+- Passed: `git diff --check -- .forge/ui-ux-refactor/README.md .forge/ui-ux-refactor-roadmap.md .forge/state.md .forge/next.md .forge/evidence.md`.
+
+---
+
+## UI/UX Redesign - Slice 1B Shared Shell Primitives
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`
+
+### Scope
+
+- Consolidated shared authenticated staff shell behavior around server-session authority, role-aware navigation, active route matching, skip link, compact topbar/sidebar, and focus-visible keyboard paths.
+- Added a shared `PortalShell` for public portal routes with localized navigation, language switch, skip link, mobile-first touch targets, and trust/privacy footer.
+- Moved touched shell surfaces to semantic tokens and kept remaining raw screen-level utility debt for later migration slices.
+- Updated portal visual and accessibility fixtures so generated browser artifacts include the shared portal shell, not bare child components.
+
+### Security Self-Check
+
+- No backend API, RBAC, branch scope, audit, workflow, attachment, report, notification, or portal verification behavior changed.
+- Staff role and branch scope still come from the server session on production staff routes; preview query role stays test/demo-only and is ignored when a real principal exists.
+- Customer portal pages still show only customer-safe submission, verification, tracking, follow-up, attachment, and survey content.
+- No passwords, OTPs, tokens, provider secrets, staff PII, internal comments, audit logs, or DMS codes were added to shell copy or browser artifacts.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (211/211 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`. First run hit a transient Chromium file-read miss for an artifact that existed on disk; immediate rerun passed.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Visual Review
+
+- Sampled generated PNGs for EN portal submission mobile, AR portal tracking mobile, EN dashboard, and AR work queue.
+- Portal shell rendered localized navigation, language switch, and trust/privacy footer. RTL/LTR framing was correct in sampled artifacts.
+- The visible skip link in sampled PNGs is expected because the browser artifact check tabs once before screenshot capture to prove keyboard focus visibility.
+
+### Notes
+
+- The `redesign` and `design-qa` skills reference workflow files that are not present in the installed skill folders; local repo proof scripts were used as the design QA source.
+- The `ui-ux-pro-max` design-system query was run for a regulated operational SaaS dashboard, but the repo's Precision Ops packet and semantic tokens remained the source of truth.
+- Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.
+
+---
+
+## UI/UX Redesign - Visual Rescue Staff Operations Shell
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `PORTAL-SEC-001`
+Skills used: `redesign`, `design-qa`, `ui-ux-pro-max`, `design-taste-frontend`
+
+### Scope
+
+- Responded to user visual review that the completed redesign still felt too close to the old generic card layout.
+- Strengthened the visible Precision Ops hierarchy on the unauthenticated staff landing, staff shell, dashboard summary, work queue, and shared table headers.
+- Replaced the centered generic login card with a split operational auth landing using the same graphite/porcelain direction.
+- Moved staff navigation into a fixed dark left rail, tightened the topbar, and reduced decorative card weight.
+- Promoted dashboard open workload into a dark primary metric and gave work queue tables dark operational headers.
+- Added English and Arabic visual-review coverage for auth landing and full staff shell.
+
+### Security Self-Check
+
+- No backend API, OpenAPI contract, RBAC, branch scope, audit, workflow state machine, attachment authorization, report, notification, DMS adapter, survey, or portal verification behavior changed.
+- React still does not decide complaint state, role, branch scope, workflow authority, audit visibility, report scope, notification scope, attachment authorization, or portal verification.
+- Auth still submits through the existing staff login/logout server actions; no browser storage, credentials, tokens, OTPs, provider secrets, internal comments, audit logs, DMS codes, unrelated complaints, or public file URLs were added.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (26 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe serious/critical violations at zero).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Visual Review
+
+- Reviewed `coverage/web-visual-review/en-auth-landing-visual-regression.png` and `ar-auth-landing-visual-regression.png`.
+- Reviewed `coverage/web-visual-review/en-staff-shell-visual-regression.png` and `ar-staff-shell-visual-regression.png`.
+- Reviewed `coverage/web-visual-review/en-dashboard-visual-regression.png`, `ar-dashboard-visual-regression.png`, and `en-work-queue-visual-regression.png`.
+- Auth landing, staff shell, dashboard, and work queue now show a visibly different operational SaaS direction while preserving English LTR and Arabic RTL.
+
+### Notes
+
+- Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.
+
+---
+
+## UI/UX Redesign - Slice 3 Staff Dashboard and Work Queue
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`
+
+### Scope
+
+- Reworked the staff dashboard into a compact accountability summary with active workload as the primary metric and supporting overdue, warning, closed, and TAT metrics grouped beside it.
+- Reworked the work queue to keep status, severity, SLA, owner, branch, age, and next action visible in the desktop table and mobile cards.
+- Reused Slice 2 primitives for state messaging, filters, fields, tables, and badges instead of adding new wrappers or UI dependencies.
+- Kept queue filters URL-backed and preserved the existing scoped staff search API behavior.
+- Moved touched dashboard and queue surfaces further onto semantic tokens and dictionary-backed EN/AR copy.
+- Updated visual proof expectations and visual-review proof fixtures to match the Slice 3 layout and `/complaints/search` scoped queue endpoint.
+
+### Security Self-Check
+
+- No backend API, RBAC, branch scope, audit, workflow state machine, reports, notifications, or portal verification behavior changed.
+- React still does not decide complaint state, role, branch scope, workflow authority, audit visibility, portal verification, or SLA truth.
+- Work queue actions remain links to scoped complaint detail routes; no empty `href`, browser storage, direct provider calls, or client-side authority was added.
+- No passwords, OTPs, tokens, provider secrets, staff PII, internal comments, audit logs, DMS codes, or portal-only data were added to dashboard or queue artifacts.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Visual Review
+
+- Sampled generated PNGs for EN dashboard, AR dashboard, EN work queue, and AR work queue.
+- Dashboard rendered the intended primary/supporting accountability hierarchy without blank output, overlap, or clipped Arabic text.
+- Work queue artifacts rendered the proof row through `/complaints/search`; status, severity, SLA, owner, branch, age, and next action were visible in EN and AR.
+
+### Notes
+
+- The `redesign` and `design-qa` skill workflow files remain missing locally; repo proof scripts were used as the design QA source.
+- The `ui-ux-pro-max` design-system query was refreshed for regulated operational SaaS dashboard/work queue density, but the Precision Ops packet and semantic tokens remained the source of truth.
+- Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.
+
+---
+
+## UI/UX Redesign - Slice 2 Shared UI Primitives
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`
+
+### Scope
+
+- Added small shared UI wrappers for `PageHeader`, `StateBlock`, `Field`, `FilterBar`, `DataTable`, `StatusBadge`, `MetricStrip`, `Timeline`, `AttachmentDropzone`, and a client-only `ActionDialog`.
+- Reused the wrappers in current screens where they removed real duplication: dashboard metrics/states, work queue filters/table/badges, intake attachment upload, and admin active/status/form fields.
+- Preserved URL-backed queue filters, typed API usage, server-session authority, branch scope, RBAC, audit boundaries, portal privacy, and OpenAPI route behavior.
+- Removed the fake `role="dialog"` from the inline workflow action panel and replaced empty conflict-recovery links with localized complaint-detail links.
+- Updated browser proof cases from "workflow dialog" to "workflow action panel" semantics.
+
+### Security Self-Check
+
+- No backend API, RBAC, branch scope, audit, workflow state machine, attachment authorization, reports, notifications, or portal verification behavior changed.
+- React still renders available workflow actions from backend/API data and submits through the existing staff transition helper; it does not decide complaint state or authority.
+- Conflict recovery links reload the complaint detail route without adding browser storage, direct provider calls, or client-side authority.
+- No passwords, OTPs, tokens, provider secrets, staff PII, internal comments, audit logs, or DMS codes were added to shared primitives or browser artifacts.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Visual Review
+
+- Sampled generated PNGs for EN work queue, EN workflow action panel, EN complaint create, AR admin surfaces, and EN dashboard after the contrast fix.
+- No blank output, page-level horizontal overflow, obvious overlap, clipped Arabic text, or modal/focus semantic mismatch was visible in the sampled artifacts.
+- Axe initially caught a dashboard contrast regression in shared metric helper text; `MetricStrip` now uses the stronger muted text token and the final accessibility pass passed.
+
+### Notes
+
+- The `redesign` and `design-qa` skill workflow files remain missing locally; repo proof scripts were used as the design QA source.
+- The `ui-ux-pro-max` design-system query was refreshed for regulated operational SaaS shared primitives, but the Precision Ops packet and semantic tokens remained the source of truth.
+- Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.
+
+---
+
+## UI/UX Redesign - Slice 4 Complaint Create, Lookup, and Attachments
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `REQ-COMPLAINT-001`, `REQ-ATTACHMENT-001`
+
+### Scope
+
+- Rebuilt complaint intake as one structured staff flow with a localized page header, step rail, customer/vehicle lookup, manual fallback, complaint facts, intake attachments, validation summary, and submit result.
+- Reused Slice 2 primitives for fields, state messaging, badges, and headers where they removed duplication without changing route behavior.
+- Kept the real typed staff lookup, complaint create, and attachment helpers; no frontend workflow, role, branch-scope, audit, or attachment-authorization authority was added.
+- Made attachment policy expectations visible in dictionary-backed EN/AR copy while preserving backend validation and scan-state ownership.
+- Moved touched complaint create, lookup, and attachment surfaces toward semantic tokens and kept Arabic RTL plus English LTR rendering.
+
+### Security Self-Check
+
+- No backend API, OpenAPI contract, RBAC, branch scope, audit, workflow, notification, report, DMS adapter, or portal behavior changed.
+- React still does not decide complaint state, role, branch scope, workflow authority, audit visibility, attachment authorization, or portal verification.
+- Customer lookup and complaint create still use existing staff API helpers and session-backed backend authority; no browser storage, provider calls, credentials, tokens, OTPs, staff PII expansion, internal comments, audit logs, or DMS codes were added.
+- Intake attachment files are still uploaded only after backend complaint creation succeeds through the existing staff attachment helper.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Visual Review
+
+- Sampled generated PNGs for EN complaint create and AR complaint create under `coverage/web-visual-review`.
+- The intake step rail, lookup/manual fallback, validation summary, complaint facts, attachment rules, and submit action were visible without blank output, overlap, or clipped Arabic text.
+- RTL and LTR direction held for the redesigned intake flow.
+
+### Notes
+
+- The `redesign` and `design-qa` skill workflow files remain missing locally; repo proof scripts were used as the design QA source.
+- Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.
+
+---
+
+## UI/UX Redesign - Slice 5 Complaint Detail and Workflow
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `REQ-COMPLAINT-001`, `REQ-WORKFLOW-001`, `REQ-ATTACHMENT-001`, `METHOD-AUDIT-001`
+
+### Scope
+
+- Converted complaint detail into a two-column operational workbench with a summary strip, facts/customer/vehicle panels, timeline, comments, workflow next action, attachments, case/CAPA, survey, and related complaints.
+- Kept workflow actions as a clear inline action panel driven by backend-provided `allowedActions` and the existing typed transition helper.
+- Kept conflict recovery visible with reload-latest and retry controls; no fake `role="dialog"` or empty `href` was added.
+- Reused Slice 2 primitives for page header, state blocks, badges, fields, and timeline where they fit.
+- Moved touched detail, workflow, comments, attachment, and relation surfaces toward semantic tokens while preserving Arabic RTL and English LTR rendering.
+
+### Security Self-Check
+
+- No backend API, OpenAPI contract, RBAC, branch scope, audit, workflow state machine, attachment authorization, notification, report, DMS adapter, or portal behavior changed.
+- React still does not decide complaint state, role, branch scope, workflow authority, audit visibility, attachment authorization, or portal verification.
+- Workflow transitions still submit through `submitStaffComplaintWorkflowAction` with backend status validation and backend-owned transition rules.
+- Attachment upload/download still goes through existing staff attachment helpers; no public storage links, browser file readers, credentials, tokens, OTPs, provider secrets, internal comments, audit logs, or DMS codes were added.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Visual Review
+
+- Sampled generated PNGs for EN complaint detail, AR complaint detail, EN workflow action panel, and AR workflow action panel under `coverage/web-visual-review`.
+- Detail rendered the summary strip, primary facts/timeline/comments region, and action rail with workflow, attachments, case, survey, and related complaints.
+- Workflow validation and conflict states remained visible and accessible without fake modal semantics, overlap, or clipped Arabic text.
+
+### Notes
+
+- The SRS attachment requirement is detailed as `REQ-FILES-001`; Slice 5 retained the roadmap's `REQ-ATTACHMENT-001` label while applying the secure attachment constraints from the SRS.
+- Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.
+
+---
+
+## UI/UX Redesign - Slice 6 Admin, Reports, Audit, and Notifications
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `REQ-ADMIN-001`, `REQ-REPORT-001`, `REQ-AUDIT-001`, `METHOD-AUDIT-001`, `REQ-NOTIFY-001`
+
+### Scope
+
+- Migrated touched admin, reports, audit, and notification surfaces toward shared state blocks, badges, fields, and semantic Precision Ops tokens.
+- Refined reports around one primary KPI, supporting metrics, report catalog, scoped filters, and existing scoped export affordances.
+- Kept the audit viewer dense, searchable, backend-redacted, export-scoped, and accessible by wiring filter inputs to their labels.
+- Made notification read/unread and task/complaint state clearer with shared badges while preserving the existing render-only scoped-link behavior.
+- Fixed shared success `StateBlock` contrast after axe identified a 4.17:1 success-message contrast failure.
+
+### Security Self-Check
+
+- No backend API, OpenAPI contract, RBAC, branch scope, audit, workflow, report, notification, DMS adapter, attachment, or portal behavior changed.
+- React still does not decide complaint state, role, branch scope, workflow authority, audit visibility, report scope, export authority, notification scope, or portal verification.
+- Reports still use existing typed helpers and server-scoped export URLs; audit export still uses the existing backend-owned export href helper.
+- Notification center remains render-only and does not add browser storage, direct navigation authority, provider calls, credentials, tokens, OTPs, staff PII expansion, internal comments, audit logs, or DMS codes.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Visual Review
+
+- Sampled generated PNGs for EN admin surfaces, AR admin surfaces, EN reports, AR reports, EN audit viewer, and AR audit viewer under `coverage/web-visual-review`.
+- Admin, reports, and audit surfaces rendered without blank output, obvious overlap, clipped Arabic text, or RTL/LTR direction problems.
+- Reports retained scoped filters/export affordances and the catalog table while making the KPI area less equal-weight.
+
+### Notes
+
+- Accessibility initially failed on nested report `dl` markup and an audit success-message contrast issue; both were fixed and the final accessibility pass passed.
+- Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.
+
+---
+
+## UI/UX Redesign - Slice 7 Customer Portal
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `REQ-PORTAL-001`, `REQ-PORTAL-002`, `REQ-SURVEY-001`, `PORTAL-SEC-001`
+
+### Scope
+
+- Hardened portal submission, tracking, follow-up, attachment, and survey surfaces with shared state blocks, semantic tokens, and larger mobile touch targets.
+- Kept existing localized privacy and verification messaging visible without adding hardcoded user-facing strings.
+- Kept tracking status behind the existing OTP verification flow; reference number alone still does not render customer complaint details.
+- Preserved existing portal submission, tracking, attachment, follow-up, and survey typed API helpers and route behavior.
+
+### Security Self-Check
+
+- No backend API, OpenAPI contract, RBAC, branch scope, audit, workflow, report, notification, DMS adapter, attachment authorization, survey, or portal verification behavior changed.
+- React still does not decide complaint state, role, branch scope, workflow authority, audit visibility, report scope, notification scope, or portal verification.
+- Portal tracking still requires backend verification before public status and timeline details render.
+- Portal screens still do not expose internal comments, audit logs, DMS codes, staff private names/emails/phones, unrelated complaints, credentials, tokens, OTPs, or provider secrets.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Visual Review
+
+- Sampled generated PNGs for EN portal submission mobile, AR portal submission mobile, EN portal tracking mobile, AR portal tracking mobile, and EN portal survey mobile under `coverage/web-visual-review`.
+- Portal forms retained mobile containment, readable touch targets, visible privacy/status messaging, and Arabic RTL without obvious overlap or clipped labels.
+- Tracking still showed only verification request UI before verification and public-safe tracking/follow-up content in proof fixtures.
+
+### Notes
+
+- Existing visual-review screenshots show the skip link focused during keyboard-path proof; this is expected from the browser proof harness and not a portal layout regression.
+- Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.
+
+---
+
+---
+
+## UI/UX Redesign - Visual Rescue 2 Dense Shell Polish
+
+Status: Complete
+Date: 2026-07-06
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `PORTAL-SEC-001`
+
+### Scope
+
+- Used installed skills: `redesign`, `design-qa`, `ui-ux-pro-max`, `design-taste-frontend`, and `ui-craft-dense-dashboard`.
+- Audited the existing generated EN/AR visual-review screenshots for auth landing, staff shell, dashboard, work queue, complaint create, complaint detail/workflow, admin/reports/audit/notifications, and customer portal submit/track/survey before editing.
+- Refined the staff auth landing and staff shell from heavy dark chrome to a subtler operational shell using existing semantic surface/content tokens.
+- Changed shared table headers from uppercase to sentence case and changed shared status badges to dot-style indicators to reduce badge noise in dense staff/admin tables.
+- Updated visual proof expectations to assert the new shell treatment.
+- No backend API, OpenAPI contract, RBAC, branch scope, audit, workflow, reports, notifications, attachments, DMS adapter, survey, localization authority, or portal verification behavior changed.
+
+### Security Self-Check
+
+- Roles and branch scope still come from the server session; React still only renders scoped API results and navigation affordances.
+- React still does not decide complaint workflow state, status transitions, audit writes, report scope, notification scope, attachment authorization, or portal verification.
+- No state-changing backend behavior was touched, so status history, audit transactionality, and after-commit side effects remain under the existing backend implementation.
+- No passwords, OTPs, tokens, hashes, provider secrets, staff PII expansion, internal comments, audit logs, DMS codes, unrelated complaints, or public file URLs were added.
+- Customer portal exposure rules remain unchanged: portal tracking still requires verification and does not expose internal staff/audit/DMS details.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (26 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check`; CRLF normalization warnings only.
+
+### Visual Review
+
+- Opened refreshed EN auth landing, EN staff shell, AR staff shell, EN work queue, and AR portal submission mobile PNGs under `coverage/web-visual-review`.
+- Auth and staff shell now share a lighter operational SaaS chrome instead of a full-dark sidebar/landing panel.
+- Work queue now shows sentence-case headers and quieter dot-style status/severity indicators.
+- Arabic staff shell remained RTL-aligned without obvious clipping or overlap.
+- Portal mobile stayed calm, contained, and privacy-forward; visible skip-link focus remains a proof-harness accessibility artifact.
+
+### Notes
+
+- Existing untracked `.playwright-cli/` scratch artifacts remain intentionally unstaged.
+- Generated `coverage/` visual-review artifacts were regenerated for inspection and remain untracked/unstaged by project convention.
+
+---
+
+## UX Gap Closure Plan - Nontechnical Clarity Layer
+
+Status: Complete
+Date: 2026-07-09
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `REQ-RBAC-001`, `PORTAL-SEC-001`, `CONTRACT-READINESS-002`
+
+### Scope
+
+- Added a plain-language portal success "What happens next?" block with EN/AR copy and kept the manual-review fallback submit path visible when option lists are unavailable.
+- Reworded the portal option-load fallback so nontechnical customers know they can still submit and staff will classify the complaint.
+- Added employee task-action helper copy explaining the difference between `Done` and `Waiting` without adding another modal.
+- Added work queue helper copy below filters so managers use `Due status` to find late or nearly late cases first.
+- Replaced staff-facing complaint detail ownership/SLA labels with `Due status` language outside admin/SLA configuration surfaces.
+- Added a complaint communication timeline legend for `Customer visible` and `Internal only`, plus a `Latest updates` label.
+- Added an accessible name to the complaint comment visibility select trigger after the accessibility proof exposed an unnamed control.
+- Updated shell, localization, visual, and accessibility proof signals for the new EN/AR copy and manual-review fallback behavior.
+
+### Security Self-Check
+
+- No backend API, OpenAPI contract, DB schema, permission model, RBAC, branch scope, audit, workflow state machine, attachment authorization, report, notification, DMS adapter, survey, or portal verification behavior changed.
+- React still does not decide complaint state, role, branch scope, workflow authority, audit visibility, report scope, notification scope, attachment authorization, or portal verification.
+- Portal submission still sends only customer-facing complaint fields and manual triage intent; it does not expose internal comments, audit logs, DMS codes, staff PII, unrelated complaints, secrets, OTPs, tokens, credentials, or public file URLs.
+- Arabic copy was verified through localization tests and a mojibake-marker scan on the touched EN/AR bundles.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (30 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `rg -n "Ø|Ù|�|Â"` over touched i18n/component files returned no mojibake markers.
+- Passed: `git diff --check` on the touched files returned no whitespace errors; CRLF normalization warnings only.
+- Needs Human Review: 6 quick usability tests with 2 customers, 2 employees, and 2 managers. The automated proof supports the 9.2/10 target, but the score should only be finalized after this human validation passes.
+
+### Notes
+
+- `test:e2e -- accessibility` initially exposed one existing unnamed complaint-comment visibility select trigger. The fix added the localized `Visibility` label to the trigger.
+- The portal accessibility proof now uses the manual-review label count because hidden classification controls must stay hidden when option lists fail.
+
+---
+
+## Communication Control Desk - Usability Hardening Follow-up
+
+Status: Complete
+Date: 2026-07-09
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `REQ-RBAC-001`, `PORTAL-SEC-001`, `CONTRACT-READINESS-002`
+
+### Scope
+
+- Repaired the customer portal fallback so unavailable classification data hides unusable selects, keeps the user in context, and submits as manual review with localized EN/AR action copy.
+- Moved the work queue due/SLA filter to the backend search contract so filtered pages are computed before pagination instead of disappearing after the page is loaded.
+- Split complaint detail load failures into distinct denied, not-found, empty, and error states so staff get actionable messages instead of a generic missing-case screen.
+- Reworked the communication timeline to prioritize the latest updates first and collapse secondary groups, reducing overload for nontechnical users.
+- Added pre-submit destructive confirmation for close/reject workflow actions only, and exposed next-action fields when marking employee tasks as waiting.
+- Corrected warning visual treatment to use warning tokens instead of error styling.
+
+### Security Self-Check
+
+- Roles and branch scope still come from the server session; the new search `sla` parameter is parsed server-side and does not let React decide scope.
+- React still does not decide complaint workflow state, audit writes, portal verification, or staff permissions.
+- Portal manual review keeps unavailable internal classification data hidden from the customer and does not expose internal comments, audit logs, DMS codes, staff PII, unrelated complaints, passwords, OTPs, tokens, or credentials.
+- No provider calls, secrets, database schema changes, or frontend-only business authority were added.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm test:api -- search`.
+- Passed: `corepack pnpm test:api -- workflow`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+
+---
+
+## UX/Product Repair Plan Implementation
+
+Status: Complete
+Date: 2026-07-09
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `REQ-RBAC-001`, `PORTAL-SEC-001`, `CONTRACT-READINESS-002`
+
+### Scope
+
+- Implemented backend-supported portal manual triage with optional branch/category/subcategory/severity IDs, default active record resolution, typed unavailable-defaults failure, and audit metadata marking manual triage intake.
+- Updated portal submission UX so option-loading failures preserve entered data, expose retry, and allow manual triage submission; subcategories now filter by selected category and stay disabled until category selection.
+- Changed deal handoff board and staff navigation access from report viewing to complaint assignment while keeping dashboard/report access on `REPORT_VIEW`.
+- Preserved `401`/`403` separately from load failures across queue, reports, tasks, deals, and promises; affected screens now render localized not-allowed states and write actions return denied/error result codes.
+- Removed production query-param fixture controls from complaint create/detail, reports, portal survey, and related proof routes; visual/demo states now render through proof tooling with explicit component props.
+- Corrected operational clarity issues: work queue age uses `createdAt`, workflow destructive confirmation is limited to close/reject actions, reports catalog prioritizes delivered/exportable reports with deferred reports collapsed, and Arabic admin surfaces prefer `nameAr` with `nameEn` fallback.
+
+### Security Self-Check
+
+- Backend remains authoritative for portal complaint creation, default resolution, RBAC, branch scope, workflow actions, audit writes, and report/deal/task permissions.
+- React still does not decide complaint state, role, branch scope, workflow authority, report scope, audit visibility, or portal verification.
+- No passwords, OTPs, tokens, credentials, provider secrets, internal comments, audit logs, DMS codes, unrelated complaints, or public file URLs were added.
+
+### Verification
+
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test:web -- shell`.
+- Passed: `corepack pnpm test:api -- portal`.
+- Passed: `corepack pnpm test:api -- deals`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm test:visual` (30 browser-backed route previews).
+
+### Notes
+
+- Used the repo's `corepack pnpm` scripts rather than `npm run` because this workspace is wired through pnpm/corepack.
+- No new dependencies or database migration were added.
+
+---
+
+## Communication Control Desk Repair
+
+Status: Complete
+Date: 2026-07-09
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `REQ-RBAC-001`, `PORTAL-SEC-001`
+
+### Scope
+
+- Added a shared web domain-label layer for complaint/task/deal/report/SLA/severity/blocker/audit labels and consumed it across staff queue, complaint detail, tasks, deals, reports, admin, portal, and confidential case views.
+- Reworked complaint detail into a unified staff communication stream with tabs for all updates, customer-visible updates, internal updates, files, status, and CAPA; comments/attachments/CAPA failures stay local and retryable.
+- Changed `/admin` into a workspace hub for users, roles, branches/departments, categories/SLA, and notification templates, with labelled workspace links and no master-screen data fetch.
+- Split reports into available now, operational export, and deferred/signoff groups while keeping export affordances permission-aware.
+- Kept desktop sidebar behavior and added/verified mobile module switching for staff surfaces; fixed complaint detail side-column overflow found by browser visual proof.
+- Added safer deal handoff detail updates that do not advance stage, with stage advancement still explicit and audited separately.
+
+### Security Self-Check
+
+- Backend authority remains server-owned: roles, permissions, branch scope, workflow transitions, deal stage gates, audit writes, report exports, notifications, and portal tracking state are not decided by React.
+- Portal tracking remains public-safe and separate from the staff timeline payload.
+- No passwords, OTPs, tokens, provider secrets, internal comments, audit logs, DMS codes, staff PII expansion, unrelated complaints, or public file URLs were added.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm test:api -- complaints` (76/76 TAP tests).
+- Passed: `corepack pnpm test:api -- reports` (32/32 TAP tests).
+- Passed: `corepack pnpm test:api -- auth` (38/38 TAP tests).
+- Passed: `corepack pnpm test:api -- deals` (9/9 TAP tests).
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (30 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+
+### Notes
+
+- `test:visual` initially caught stale proof expectations for the renamed communication timeline/admin hub, then caught real staff-shell overflow from two-column comment/fact panels inside a narrow detail column. Both were repaired and the final visual proof passed.
+- Existing untracked `.playwright-cli/` scratch artifacts remain intentionally unstaged.
+
+---
+
+## UI/UX Redesign - Slice 8 Cleanup and Hardening
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `PORTAL-SEC-001`
+
+### Scope
+
+- Renamed production `*PreviewState` type names under `apps/web/src` to `*FixtureState`, preserving existing proof fixture behavior while removing production `PreviewState` names.
+- Kept route/query behavior unchanged; no backend authority, RBAC, branch scope, workflow, audit, OpenAPI, attachment, report, notification, or portal verification behavior moved into React.
+- Replaced remaining raw slate/white utilities in migrated admin category/SLA and complaint detail CAPA/correction panels with existing semantic surface, border, and content tokens.
+- Reused the existing `StateBlock` in the admin category/SLA state row.
+- Tightened the frontend off-token color lint ratchet from 455 to 33 current matches and updated the lint unit test.
+- Confirmed production source scans find no `PreviewState`, fake `role="dialog"`, or empty `href` under `apps/web/src`.
+
+### Security Self-Check
+
+- No backend API, OpenAPI contract, RBAC, branch scope, audit, workflow state machine, attachment authorization, report, notification, DMS adapter, survey, or portal verification behavior changed.
+- React still does not decide complaint state, role, branch scope, workflow authority, audit visibility, report scope, notification scope, attachment authorization, or portal verification.
+- Portal verification and privacy behavior stayed behind the existing backend-owned OTP/session flow.
+- No passwords, OTPs, tokens, credentials, provider secrets, staff PII expansion, internal comments, audit logs, DMS codes, unrelated complaints, or public file URLs were added.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+- Passed: `node --test tools/lint.test.mjs` (21/21 focused lint-tool tests).
+- Not blocking: `corepack pnpm test` ran all 59 tool tests successfully but failed the global coverage threshold; this command is outside the Slice 8 proof set.
+
+### Visual Review
+
+- Sampled generated PNGs for EN admin surfaces, AR admin surfaces, EN complaint detail, and AR complaint detail under `coverage/web-visual-review`.
+- Admin artifacts rendered stable LTR/RTL layout, visible state rows, and no obvious overflow or overlap.
+- Complaint detail artifacts kept the correction and CAPA panels readable and contained in both English LTR and Arabic RTL.
+
+### Notes
+
+- Existing proof/test copy still uses the word preview in test names and review labels, but production `apps/web/src` no longer contains `PreviewState`.
+- Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.
+
+---
+
+## UI/UX Redesign - Slice 9 Final Visual QA Gate
+
+Status: Complete
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `PORTAL-SEC-001`
+
+### Scope
+
+- Completed the final browser-backed visual QA gate for the redesigned staff and portal proof surfaces.
+- Reviewed the generated 22 English/Arabic visual-review PNG artifacts under `coverage/web-visual-review`.
+- Added responsive containment where the final breakpoint sweep found tablet-width page overflow:
+  staff shell main content, shared table wrapper, feature work queue, audit viewer, admin user/category cards, and the visual proof frame.
+- Preserved existing route behavior, typed API helpers, RBAC, branch scope, audit, reports, notifications, attachments, portal privacy, Arabic RTL, and English LTR.
+
+### Security Self-Check
+
+- No backend API, OpenAPI contract, RBAC, branch scope, audit, workflow state machine, attachment authorization, report, notification, DMS adapter, survey, or portal verification behavior changed.
+- React still does not decide complaint state, role, branch scope, workflow authority, audit visibility, report scope, notification scope, attachment authorization, or portal verification.
+- Portal tracking still requires backend verification before public status/timeline content renders; reference number alone remains insufficient.
+- No passwords, OTPs, tokens, credentials, provider secrets, staff PII expansion, internal comments, audit logs, DMS codes, unrelated complaints, or public file URLs were added.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (22 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: viewport sweep over generated visual-review artifacts:
+  - Staff artifacts: 768, 1024, 1280, and 1440px.
+  - Portal artifacts: 390, 430, 768, and 1440px.
+  - Checks: nonblank body, no page-level horizontal overflow, and visible keyboard focus on first tabbable control.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe serious/critical violations at zero).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check` returned no whitespace errors; CRLF normalization warnings only.
+
+### Visual Review
+
+- Generated and reviewed `coverage/web-visual-review/contact-sheet.png` for all 22 screenshots.
+- Opened higher-detail PNGs for EN work queue, EN audit viewer, and EN admin surfaces after fixing the initial overflow findings.
+- The final reviewed artifacts showed no blank output, page-level horizontal overflow, incoherent overlap, or clipped Arabic text in the covered proof surfaces.
+
+### Notes
+
+- The initial Slice 9 viewport sweep exposed page-level overflow in EN admin, audit, and work queue artifacts at tablet widths; the final sweep passed after `min-w-0` and width containment fixes.
+- Production source scans after the final changes found no `PreviewState`, fake `role="dialog"`, or empty `href` under `apps/web/src`.
+- The raw color lint ratchet remains at 33 matches.
+- Existing untracked Playwright console/page artifacts under `.playwright-cli/` and generated `coverage/` artifacts remain intentionally unstaged.
+
+---
+
+## UI/UX Redesign - Visual Rescue 3 Progressive Disclosure Repair
+
+Status: Complete
+Date: 2026-07-06
+SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCALIZATION-001`, `PORTAL-SEC-001`
+
+### Scope
+
+- Used installed skills: `redesign`, `design-qa`, `ui-ux-pro-max`, `design-taste-frontend`, and `ui-craft-dense-dashboard`.
+- Re-audited the user-provided screenshots for Employee Today, Deal Handoff, and Admin intake dropdowns; the rejected pattern was too many always-open forms and empty sections fighting the primary task list.
+- Repaired Employee Today so quick add, extra task metadata, and detailed update fields are closed by default; active task buckets render first and empty buckets collapse into one disclosure.
+- Repaired Deal Handoff so create-deal and detailed holder/blocker editing are closed by default; simple advance remains visible and empty pipeline stages collapse into one disclosure.
+- Repaired Admin so create-user, add-value, and edit-value forms are intent-revealed instead of always open; removed the duplicate hardcoded English manage-roles action from the admin route.
+- Added direct EN/AR browser visual proof coverage for Today tasks and Deal handoff, plus shared proof fixtures so `test:visual` and `web:visual-review` render the same real route data.
+- No backend API, OpenAPI contract, RBAC, branch scope, audit, workflow, reports, notifications, attachments, DMS adapter, survey, localization authority, or portal verification behavior changed.
+
+### Security Self-Check
+
+- Roles and branch scope still come from the server session; React still only renders scoped API results and action affordances.
+- React still does not decide complaint workflow state, task/deal authority, status transitions, audit writes, report scope, notification scope, attachment authorization, or portal verification.
+- Task and deal mutations still submit through the existing server actions and typed backend helpers; no client-side workflow authority was added.
+- No passwords, OTPs, tokens, hashes, provider secrets, staff PII expansion, internal comments, audit logs, DMS codes, unrelated complaints, or public file URLs were added.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm test:web -- shell` (212/212 TAP tests).
+- Passed: `corepack pnpm test:web -- localization` (11/11 TAP tests).
+- Passed: `corepack pnpm test:visual` (30 browser-backed route previews).
+- Passed: `corepack pnpm web:visual-review`; English/Arabic HTML and PNG artifacts written under `coverage/web-visual-review`.
+- Passed: `corepack pnpm test:e2e -- accessibility` (17 route previews with axe).
+- Passed: `corepack pnpm web:perf` (2 route previews).
+- Passed: `git diff --check`; CRLF normalization warnings only.
+
+### Visual Review
+
+- Opened refreshed PNGs for EN Today tasks, EN Deal handoff, EN Admin surfaces, AR Today tasks, and AR Admin surfaces under `coverage/web-visual-review`.
+- Employee Today now opens as two active work buckets with quick add, detailed edits, and empty buckets collapsed.
+- Deal Handoff now opens on stage/current-holder/stuck-deal status with create and detailed blocker/holder edits collapsed.
+- Admin now opens on existing users and intake data tables; create/add/edit forms are collapsed and the duplicate hardcoded English action is gone.
+- Arabic RTL remained aligned without obvious clipped labels, overlap, or page-level horizontal overflow in the sampled artifacts.
+
+### Notes
+
+- Existing untracked `.playwright-cli/` scratch artifacts remain intentionally unstaged.
+- Generated `coverage/` visual-review artifacts were regenerated for inspection and remain untracked/unstaged by project convention.
+
+---
+
+## COLLAB-001 - Arabic-First CC, Mentions, and Groups
+
+- Date: 2026-07-13
+- Risk: High (staff authorization, audit, notification delivery, and portal privacy)
+- Status: Passed locally; deployment and UAT remain Needs Human Review
+- Requirement IDs: REQ-COLLAB-001, REQ-COMMENTS-001, REQ-RBAC-001,
+  REQ-NOTIFY-001, REQ-LOCALIZATION-001, PORTAL-SEC-001, API-STANDARD-001,
+  METHOD-AUDIT-001, CONTRACT-READINESS-002
+- Evidence:
+  - Added additive Prisma persistence and migration for communication groups,
+    group members, complaint watchers, complaint/task mention snapshots, and
+    notification digest items.
+  - Added server-scoped personal/shared group CRUD, dynamic role/department
+    targets, watcher capabilities, structured comment collaboration fields,
+    recipient limits, same-transaction audit/history/task writes, immediate
+    direct delivery, and ten-minute CC digests.
+  - Added Arabic-first staff complaint composer, task conversation, group
+    management, task notification links, explicit empty/loading labels, and
+    accessibility names for all new selectors/forms.
+  - Updated OpenAPI canonical/generated artifacts and visual/a11y proof cases
+    for Arabic complaint collaboration, task conversation, and group management.
+- Verification:
+  - Passed: `corepack pnpm typecheck`.
+  - Passed: `corepack pnpm lint`.
+  - Passed: `corepack pnpm openapi:check`.
+  - Passed: `corepack pnpm db:migrate:test` (Prisma schema and migration SQL
+    sanity check).
+  - Passed: `corepack pnpm test:api -- communication-groups` (5/5),
+    `complaints` (77/77), `tasks` (12/12), `notifications` (43/43), `rbac`
+    (2/2), `portal` (14/14), and `audit` (8/8).
+  - Passed: direct collaboration service specs (33/33), including group owner
+    denial, public-comment collaboration rejection, watcher authority, direct
+    delivery priority, and digest grouping.
+  - Passed: `corepack pnpm test:web -- shell` (213/213) and
+    `corepack pnpm test:web -- localization` (11/11).
+  - Passed: `corepack pnpm test:visual` (40 route previews),
+    `corepack pnpm web:visual-review`, and
+    `corepack pnpm test:e2e -- accessibility` (19 route previews).
+  - Needs Human Review: `corepack pnpm test:api -- audit` skipped its Docker
+    append-only proof after API audit tests passed because Docker is unavailable.
+  - Needs Human Review: apply migration, seed/activate delivery templates,
+    validate staging email/provider behavior, and complete Arabic collaboration
+    UAT before pilot.
+
+---
+
+## UX90-001 - Arabic UX 90+ Repair
+
+- Date: 2026-07-13
+- Risk: High (public communication, staff comprehension, authorization display)
+- Status: Implementation and local proof passed; release UAT remains open
+- Requirement IDs: REQ-COLLAB-001, REQ-COMMENTS-001, REQ-RBAC-001,
+  REQ-NOTIFY-001, REQ-LOCALIZATION-001, PORTAL-SEC-001,
+  API-STANDARD-001, METHOD-AUDIT-001
+
+### Evidence
+
+- Added the Arabic low-fidelity flows and low-tech usability script in
+  `docs/ARABIC_UX_90_REPAIR.md` without claiming unperformed user validation.
+- Split complaint detail into `work`, `communication`, and `details` tabs while
+  keeping summary and next required action above the tabs.
+- Added a shared, server-scoped audience picker with delayed two-character user
+  search, group-first blank results, current watcher display, draft-safe CC,
+  exact audience confirmation, and Arabic explanations of assignee/mention/CC.
+- Added explicit public-update warning, customer-facing CTA, confirmation dialog,
+  actionable Arabic errors, linked action-task fields, and localized recipient
+  counts. Public comments still reject internal collaboration fields on server.
+- Completed task conversation context, group loading/empty/error/deactivation
+  states, grouped desktop navigation, and five-item mobile navigation with More.
+- Preserved backend-owned capability, workflow, scope, target resolution,
+  recipient-limit, audit, notification, and portal-privacy behavior.
+
+### Verification
+
+- Passed: `corepack pnpm typecheck`, `corepack pnpm lint`,
+  `corepack pnpm openapi:check`, and `corepack pnpm db:migrate:test`.
+- Passed focused API suites: communication groups (8/8), complaints/workflow
+  (77/77), tasks (12/12), notifications (43/43), RBAC (2/2), portal (14/14),
+  and API-level audit (8/8).
+- Passed direct complaint/task/notification collaboration specs (42/42).
+- Passed: `corepack pnpm test:web -- shell` (213/213),
+  `corepack pnpm test:web -- localization` (11/11), and
+  `corepack pnpm test:web -- api-client` (58/58).
+- Passed: `corepack pnpm test:visual` (82 route previews),
+  `corepack pnpm web:visual-review` (82 HTML/PNG artifacts), and
+  `corepack pnpm test:e2e -- accessibility` (22 route previews).
+- Passed: `corepack pnpm web:perf` (5 static route previews). This is not a
+  deployed-field measurement of LCP, INP, or CLS.
+- Reviewed representative Arabic screenshots at 390, 430, 768, 1024, and
+  1440px. Covered navigation, complaint tabs, internal/public composers, task
+  conversation, groups, reports, and audit without obvious overflow, clipping,
+  overlap, or RTL ordering defects.
+
+### Open Release Gates
+
+- Needs Human Review: two low-tech Arabic validation sessions and the final
+  six-person UAT. Therefore the requested independent 90+ UX scores are not yet
+  asserted.
+- Needs Human Review: deployed LCP/INP/CLS collection against the approved
+  thresholds.
+- Needs Human Review: Docker-backed audit append-only proof, deployment migration,
+  active bilingual templates, and staging notification-provider validation.

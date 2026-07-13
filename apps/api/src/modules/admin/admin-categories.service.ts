@@ -15,6 +15,10 @@ type AdminAudit = { actorId?: string | null; correlationId?: string | null; ipAd
 export class AdminCategoriesService {
   constructor(private readonly repository: AdminCategoriesRepository, private readonly audit: AuditService) {}
 
+  async list(): Promise<{ items: AdminCategoryDto[] }> {
+    return { items: (await this.repository.list()).map(dto) };
+  }
+
   async create(input: AdminCategoryInput, audit: AdminAudit = {}): Promise<AdminCategoryDto> {
     const data = await this.data(input);
     return this.repository.transaction(async (client) => {
@@ -29,6 +33,14 @@ export class AdminCategoriesService {
     return this.repository.transaction(async (client) => {
       const category = await this.repository.update(id, data, client);
       await this.audit.record(auditInput('admin_category_updated', category, audit, data), client);
+      return dto(category);
+    });
+  }
+
+  async deactivate(id: string, audit: AdminAudit = {}): Promise<AdminCategoryDto> {
+    return this.repository.transaction(async (client) => {
+      const category = await this.repository.deactivate(nonEmpty(id, 'id'), client);
+      await this.audit.record(auditInput('admin_category_deactivated', category, audit, { isActive: false }), client);
       return dto(category);
     });
   }
