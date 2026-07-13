@@ -112,21 +112,29 @@ jobs:
             # Clean up old unused images
             docker image prune -f
 
-            # Health Check Verification (matches CRM validation pattern)
+            # Health Check Verification (checks Docker container health status)
             echo "Waiting for services to become healthy..."
-            HEALTH_OK=0
+            API_HEALTHY=0
+            WEB_HEALTHY=0
             for i in $(seq 1 30); do
-              if curl -fsS "http://127.0.0.1:3000/health" >/dev/null 2>&1; then
-                HEALTH_OK=1
+              if [ "$API_HEALTHY" -eq 0 ] && docker inspect --format='{{.State.Health.Status}}' cms-auto-prod-api-1 2>/dev/null | grep -q "healthy"; then
                 echo "API is healthy!"
+                API_HEALTHY=1
+              fi
+              if [ "$WEB_HEALTHY" -eq 0 ] && docker inspect --format='{{.State.Health.Status}}' cms-auto-prod-web-1 2>/dev/null | grep -q "healthy"; then
+                echo "Web UI is healthy!"
+                WEB_HEALTHY=1
+              fi
+              if [ "$API_HEALTHY" -eq 1 ] && [ "$WEB_HEALTHY" -eq 1 ]; then
                 break
               fi
               sleep 2
             done
 
-            if [ "$HEALTH_OK" != "1" ]; then
-              echo "Deployment failed: API did not become healthy in time."
-              docker compose --env-file .env.production -f docker-compose.prod.yml logs api
+            if [ "$API_HEALTHY" -ne 1 ] || [ "$WEB_HEALTHY" -ne 1 ]; then
+              echo "Deployment failed: API or Web did not become healthy in time."
+              docker compose --env-file .env.production -f docker-compose.prod.yml logs api || true
+              docker compose --env-file .env.production -f docker-compose.prod.yml logs web || true
               exit 1
             fi
 
