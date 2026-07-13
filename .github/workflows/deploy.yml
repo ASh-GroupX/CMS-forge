@@ -67,7 +67,9 @@ jobs:
           timeout 15 bash -c "until nc -zvw5 \"$VPS_HOST\" \"$VPS_PORT\"; do sleep 1; done"
 
       - name: Create release tarball
-        run: tar -czf release.tar.gz --exclude=node_modules --exclude=.git --exclude=.github --exclude=release.tar.gz .
+        run: |
+          tar -czf ../release.tar.gz --exclude=node_modules --exclude=.git --exclude=.github .
+          mv ../release.tar.gz .
 
       - name: Upload release tarball to VPS
         uses: appleboy/scp-action@v0.1.7
