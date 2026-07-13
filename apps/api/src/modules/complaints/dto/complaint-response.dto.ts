@@ -10,6 +10,7 @@ export type ComplaintQueueItemDto = {
   subject: string;
   branchId: string;
   branchName: string;
+  displayTimeZone: string;
   ownerId: string | null;
   ownerName: string | null;
   slaState: 'ON_TRACK' | 'WARNING' | 'BREACHED' | 'CLOSED';
@@ -82,6 +83,9 @@ export type ComplaintVehicleDetailDto = {
 };
 
 export type ComplaintDetailDto = ComplaintQueueItemDto & {
+  categoryId: string;
+  categoryName: string;
+  categoryNameAr: string;
   description: string;
   incidentAt: string | null;
   customer: ComplaintCustomerDetailDto;

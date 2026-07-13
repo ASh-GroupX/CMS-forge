@@ -74,6 +74,7 @@ export const reportsDashboardText: Record<Locale, typeof enReportsDashboardText>
       agingOverSeven: 'Aging 7+ days',
       firstResponse: 'First response',
       resolution: 'Resolution timing',
+      secondary: 'Additional diagnostic KPIs',
     },
     hours: (value: number) => `${value} h`,
     export: {
@@ -157,6 +158,7 @@ export const reportsDashboardText: Record<Locale, typeof enReportsDashboardText>
       agingOverSeven: 'التقادم 7+ أيام',
       firstResponse: 'أول استجابة',
       resolution: 'وقت الحل',
+      secondary: 'مؤشرات تشخيصية إضافية',
     },
     hours: (value: number) => `${value} ساعة`,
     export: {
@@ -237,7 +239,7 @@ const enReportsDashboardText = {
     agingFourToSeven: '',
     agingOverSeven: '',
     firstResponse: '',
-    resolution: '',
+    resolution: '', secondary: '',
   },
   hours: (_value: number) => '',
   export: { title: '', subtitle: '', csv: '', excel: '', permissionDenied: '', rowLimit: '', scoped: '', audit: '' },

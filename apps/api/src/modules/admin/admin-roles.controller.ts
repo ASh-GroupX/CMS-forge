@@ -24,11 +24,17 @@ export class AdminRolesController {
   @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
   @Permissions('ROLES_MANAGE')
   updatePermissions(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) { return this.roles.updatePermissions(id, parsePermissions(body), auditContext(request)); }
+
+  @Post(':id/permissions/preview')
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('ROLES_MANAGE')
+  previewPermissions(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) { return this.roles.previewPermissions(id, parsePermissions(body), auditContext(request)); }
 }
 
 function parsePermissions(body: unknown): UpdateAdminRolePermissionsInput {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw badBody('body');
-  return { permissionCodes: texts((body as Record<string, unknown>).permissionCodes, 'permissionCodes') };
+  const input = body as Record<string, unknown>;
+  return { permissionCodes: texts(input.permissionCodes, 'permissionCodes'), expectedUpdatedAt: text(input.expectedUpdatedAt, 'expectedUpdatedAt') };
 }
 
 function parseRole(body: unknown): CreateAdminRoleInput {

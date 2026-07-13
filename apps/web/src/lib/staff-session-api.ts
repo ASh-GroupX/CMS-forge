@@ -7,6 +7,9 @@ export type StaffSessionPrincipal = {
   roleCode: string;
   permissions: string[];
   branchId: string | null;
+  branchName: string | null;
+  branchNameAr: string | null;
+  branchTimezone: string | null;
 };
 
 type AuthMeResponse = { user?: Partial<StaffSessionPrincipal> };
@@ -63,6 +66,9 @@ function principalFrom(body: AuthMeResponse): StaffSessionPrincipal | null {
     roleCode: user.roleCode,
     permissions: Array.isArray(user.permissions) ? user.permissions.filter((permission): permission is string => typeof permission === 'string') : [],
     branchId: typeof user.branchId === 'string' ? user.branchId : null,
+    branchName: typeof user.branchName === 'string' ? user.branchName : null,
+    branchNameAr: typeof user.branchNameAr === 'string' ? user.branchNameAr : null,
+    branchTimezone: typeof user.branchTimezone === 'string' ? user.branchTimezone : null,
   };
 }
 

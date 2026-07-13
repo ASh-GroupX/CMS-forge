@@ -80,11 +80,17 @@ export function Field({
   id: string;
   label: string;
 }) {
+  const errorId = `${id}-error`;
+  const control = React.isValidElement<Record<string, unknown>>(children)
+    ? React.cloneElement(children, {
+        ...(error ? { 'aria-invalid': true, 'aria-describedby': [children.props['aria-describedby'], errorId].filter(Boolean).join(' ') } : {}),
+      })
+    : children;
   return (
     <div className={cn('grid min-w-0 gap-1 text-sm font-medium', className)}>
       <Label htmlFor={id}>{label}</Label>
-      {children}
-      {error ? <p className="text-xs font-semibold text-status-error">{error}</p> : null}
+      {control}
+      {error ? <p className="text-xs font-semibold text-status-error" id={errorId} role="alert">{error}</p> : null}
     </div>
   );
 }

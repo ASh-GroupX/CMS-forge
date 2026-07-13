@@ -15,6 +15,7 @@ const baseUser: StaffAuthRecord = {
   nameAr: 'System Admin',
   passwordHash: null,
   branchId: 'branch_main',
+  branch: { nameEn: 'Main Branch', nameAr: 'الفرع الرئيسي', timezone: 'Asia/Riyadh' },
   isActive: true,
   lockedAt: null,
   role: { code: 'ADMIN', permissions: [] },
@@ -55,6 +56,9 @@ test('valid active staff credentials return safe auth claims', async () => {
     roleCode: 'ADMIN',
     permissions: [],
     branchId: 'branch_main',
+    branchName: 'Main Branch',
+    branchNameAr: 'الفرع الرئيسي',
+    branchTimezone: 'Asia/Riyadh',
   });
   assert.equal('passwordHash' in claims, false);
 });

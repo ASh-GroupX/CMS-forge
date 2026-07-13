@@ -11,6 +11,7 @@ export type ComplaintQueueItem = {
   subject: string;
   branchId: string;
   branchName?: string;
+  displayTimeZone: string;
   ownerId: string | null;
   ownerName?: string | null;
   slaState: 'ON_TRACK' | 'WARNING' | 'BREACHED' | 'CLOSED';
@@ -51,6 +52,9 @@ export type ComplaintCustomerDetail = { id: string; name: string; phone: string 
 export type ComplaintVehicleDetail = { id: string; vin: string; plate: string; make: string; model: string; year: number; source: 'LOCAL' | 'MANUAL' | 'DMS' };
 
 export type ComplaintDetail = ComplaintQueueItem & {
+  categoryId: string;
+  categoryName: string;
+  categoryNameAr: string;
   description: string;
   incidentAt: string | null;
   customer: ComplaintCustomerDetail;

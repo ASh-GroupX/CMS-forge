@@ -9,6 +9,35 @@ export async function proofFetch(input) {
     assignedToMe: [proofTask('task_proof_2', 'TASK-PROOF-002 Confirm owner handoff', { status: 'OPEN', nextAction: null })],
     waitingOnMe: [],
   });
+  if (path === '/tasks/manager-rollup') return json({
+    overdueByEmployee: [{ assigneeId: 'usr_proof', assigneeName: 'Proof Admin', count: 2 }],
+    dueToday: [proofTask('task_manager_proof', 'TASK-MANAGER-PROOF Release delivery gate')],
+    overduePromises: [],
+    stuck: [proofTask('task_manager_stuck', 'TASK-MANAGER-STUCK Follow up blocked case', { stuckReasons: ['NEXT_ACTION_OVERDUE'] })],
+    workloadByAssignee: [{ assigneeId: 'usr_proof', assigneeName: 'Proof Admin', count: 2 }],
+    escalated: [],
+    promiseKpi: { openPromiseCount: 0, overduePromiseCount: 0 },
+  });
+  if (path === '/tasks/task_manager_proof/manager-detail') return json({ task: {
+    id: 'task_manager_proof',
+    title: 'TASK-MANAGER-PROOF Release delivery gate',
+    ownerId: 'usr_owner',
+    ownerName: 'Proof Owner',
+    assigneeId: 'usr_proof',
+    assigneeName: 'Proof Admin',
+    branchId: 'branch_proof',
+    branchName: 'Proof branch',
+    displayTimeZone: 'Asia/Riyadh',
+    dueAt: '2026-06-21T09:00:00.000Z',
+    status: 'IN_PROGRESS',
+    nextAction: { what: 'Confirm the delivery release', whoId: 'usr_proof', whoName: 'Proof Admin', when: '2026-06-21T08:30:00.000Z' },
+    isCustomerPromise: false,
+    links: [{ entityType: 'COMPLAINT', entityId: 'cmp-proof' }],
+    stuckReasons: ['NO_MOVEMENT'],
+    createdAt: '2026-06-18T08:00:00.000Z',
+    updatedAt: '2026-06-20T10:00:00.000Z',
+    capabilities: { canOpenInteractive: true },
+  } });
   if (path === '/tasks/related-records') return json({ records: [{ recordType: 'CUSTOMER', recordId: 'cust_proof', label: 'Proof Customer', labelAr: 'Proof Customer AR', context: 'Main Branch', contextAr: 'Main Branch AR' }] });
   if (path === '/deals/handoff-board') return json({
     byStage: [
@@ -42,6 +71,9 @@ export async function proofFetch(input) {
   if (path.startsWith('/complaints/')) return json({
     complaint: {
       ...proofRow('CMP-PROOF-DETAIL', 'Proof detail row'),
+      categoryId: 'cat_proof',
+      categoryName: 'Proof category',
+      categoryNameAr: 'تصنيف الاختبار',
       description: 'Proof detail description.',
       incidentAt: '2026-06-19T00:00:00.000Z',
       customer: proofCustomer(),
@@ -59,7 +91,7 @@ export async function proofFetch(input) {
 }
 
 function proofRow(referenceNumber, subject, extra = {}) {
-  return { id: 'proof_1', referenceNumber, status: 'IN_PROGRESS', severity: 'HIGH', subject, branchId: 'branch_proof', ownerId: 'usr_proof', createdAt: '2026-06-20T00:00:00.000Z', updatedAt: '2026-06-20T10:00:00.000Z', ...extra };
+  return { id: 'proof_1', referenceNumber, status: 'IN_PROGRESS', severity: 'HIGH', subject, branchId: 'branch_proof', displayTimeZone: 'Asia/Riyadh', ownerId: 'usr_proof', createdAt: '2026-06-20T00:00:00.000Z', updatedAt: '2026-06-20T10:00:00.000Z', ...extra };
 }
 
 function proofTask(id, title, extra = {}) {
@@ -72,6 +104,7 @@ function proofTask(id, title, extra = {}) {
     assigneeName: 'Proof Admin',
     branchId: 'branch_proof',
     branchName: 'Proof branch',
+    displayTimeZone: 'Asia/Riyadh',
     dueAt: '2026-06-19T09:00:00.000Z',
     status: 'OPEN',
     nextAction: { what: 'Call customer with next step', whoId: 'usr_proof', whoName: 'Proof Admin', when: '2026-06-19T10:00:00.000Z' },

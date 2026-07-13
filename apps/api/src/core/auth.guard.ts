@@ -28,6 +28,9 @@ export type StaffPrincipal = {
   roleCode: string;
   permissions?: string[];
   branchId: string | null;
+  branchName?: string | null;
+  branchNameAr?: string | null;
+  branchTimezone?: string | null;
 };
 
 export type AuthenticatedRequest = RequestLike & {

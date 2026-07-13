@@ -68,7 +68,7 @@ export function ComplaintDetailWorkspace({
 
   return (
     <section aria-label={t.title} className="grid gap-4" dir={shell.dir}>
-      <PageHeader description={t.subtitle} eyebrow={detail ? values.reference : undefined} title={t.title} />
+      <PageHeader description={t.subtitle} eyebrow={detail ? values.reference : undefined} title={detail?.subject ?? t.title} />
       {effectiveState ? (
         <StateBlock message={t.states[effectiveState]} tone={effectiveState === 'empty' || effectiveState === 'loading' ? 'neutral' : 'error'} />
       ) : (
@@ -82,11 +82,11 @@ export function ComplaintDetailWorkspace({
             </TabsContent>
             <TabsContent className="grid gap-3 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" value="communication">
               {detail ? <CommunicationTimelinePanel detail={detail} locale={locale} text={t} /> : <DetailPanel title={t.sections.communicationTimeline}><StateBlock message={t.commentStates.empty} /></DetailPanel>}
-              <ComplaintCommentsPanel comments={comments} commentsState={commentsState} complaintId={detail?.id} initialVisibility={commentVisibility} locale={locale} />
+              <ComplaintCommentsPanel comments={comments} commentsState={commentsState} complaintId={detail?.id} initialVisibility={commentVisibility} locale={locale} timeZone={detail?.displayTimeZone ?? 'UTC'} />
             </TabsContent>
             <TabsContent className="grid gap-3 lg:grid-cols-2" value="details">
               <div className="grid min-w-0 content-start gap-3">
-                <DetailPanel title={t.sections.facts} rows={[[t.labels.reference, values.reference], [t.labels.status, values.status], [t.labels.severity, values.severity], [t.labels.category, values.category]]} />
+                <DetailPanel title={t.sections.facts} rows={[[t.labels.reference, values.reference], [t.labels.status, values.status], [t.labels.severity, values.severity]]} />
                 <DetailPanel title={t.sections.customer} rows={[[t.labels.customer, detail?.customer.name ?? t.values.customer], [t.labels.contact, detail?.customer.phone ?? t.values.contact], [t.labels.customerNumber, detail?.customer.identifier ?? t.values.none], [t.labels.customerSource, provenance?.customerSource ?? t.values.customerSource], [t.labels.manualCustomer, provenance?.manualCustomer ?? t.values.manualCustomer]]} />
                 <DetailPanel title={t.sections.vehicle} rows={vehicleRows(detail, t, provenance)} />
                 {detail ? <ProvenanceCorrectionPanel detail={detail} locale={locale} lookupState={lookupState} text={{ ...t.correction, title: tabs.dms }} /> : null}
@@ -115,15 +115,15 @@ function surveyRows(surveys: StaffComplaintSurvey[] | null | undefined, t: typeo
 }
 
 function DetailSummary({ deadlineLabel, detail, locale, text, values }: { deadlineLabel: string; detail: StaffComplaintDetailView; locale: Locale; text: typeof complaintDetailText.en; values: typeof complaintDetailText.en.values }) {
-  const nextAction = detail.allowedActions[0];
   return (
-    <section className="grid gap-2 rounded-md border border-line-subtle bg-surface p-3 md:grid-cols-3 xl:grid-cols-6" aria-label={text.sections.facts}>
+    <section className="grid gap-2 rounded-md border border-line-subtle bg-surface p-3 md:grid-cols-3 xl:grid-cols-7" aria-label={text.sections.facts}>
       <SummaryItem label={text.labels.status} value={<StatusBadge tone="brand">{values.status}</StatusBadge>} />
       <SummaryItem label={text.labels.severity} value={<StatusBadge tone="danger">{values.severity}</StatusBadge>} />
+      <SummaryItem label={text.labels.category} value={<bdi>{values.category}</bdi>} />
       <SummaryItem label={text.labels.owner} value={values.owner} />
       <SummaryItem label={deadlineLabel} value={values.sla} />
-      <SummaryItem label={text.labels.nextAction} value={detail.nextAction ? actionDisplay(detail.nextAction, text, locale) : nextAction ? actionDisplay(nextAction, text, locale) : text.workflow.states.empty} />
-      <SummaryItem label={text.labels.lastUpdated} value={formatDate(detail.updatedAt, locale)} />
+      <SummaryItem label={text.labels.nextAction} value={detail.nextAction ? actionDisplay(detail.nextAction, text, locale) : text.workflow.states.empty} />
+      <SummaryItem label={text.labels.lastUpdated} value={formatDate(detail.updatedAt, locale, detail.displayTimeZone)} />
     </section>
   );
 }
@@ -175,7 +175,7 @@ function detailValues(detail: StaffComplaintDetailView, fallback: typeof complai
     reference: detail.reference,
     status: complaintStatusLabel(locale, detail.status),
     severity: severityLabel(locale, detail.severity),
-    category: detail.subject,
+    category: locale === 'ar' ? detail.categoryNameAr || detail.categoryName : detail.categoryName || detail.categoryNameAr,
     owner: detail.assignee ?? fallback.owner,
     sla: slaLabel(detail, fallback, locale),
   };
@@ -183,7 +183,7 @@ function detailValues(detail: StaffComplaintDetailView, fallback: typeof complai
 
 function slaLabel(detail: StaffComplaintDetailView, fallback: typeof complaintDetailText.en.values, locale: Locale): string {
   const percent = detail.slaPercentElapsed === null || detail.slaPercentElapsed === undefined ? '' : ` ${formatDisplayNumber(detail.slaPercentElapsed, locale)}%`;
-  const due = detail.slaDueAt ? ` - ${formatDisplayDate(detail.slaDueAt, locale)}` : '';
+  const due = detail.slaDueAt ? ` - ${formatDisplayDate(detail.slaDueAt, locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: detail.displayTimeZone })} (${detail.displayTimeZone})` : '';
   return `${slaStateLabel(locale, detail.slaState)}${percent}${due}` || fallback.sla;
 }
 
@@ -206,8 +206,8 @@ function actionDisplay(action: string, text: typeof complaintDetailText.en, loca
   return locale === 'ar' && /^[\x00-\x7F]+$/.test(action) ? missingDisplay(locale) : action;
 }
 
-function formatDate(value: string, locale: Locale): string {
-  return formatDisplayDate(value, locale);
+function formatDate(value: string, locale: Locale, timeZone = 'UTC'): string {
+  return `${formatDisplayDate(value, locale, { dateStyle: 'medium', timeStyle: 'short', timeZone })} (${timeZone})`;
 }
 
 function DetailPanel({ children, rows, title }: { children?: React.ReactNode; rows?: readonly (readonly [string, string])[]; title: string }) {

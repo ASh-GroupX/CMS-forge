@@ -12,6 +12,8 @@ import ComplaintDetailPage from '../apps/web/src/app/(staff)/complaints/[id]/pag
 import DashboardPage from '../apps/web/src/app/(staff)/dashboard/page.tsx';
 import DealHandoffPage from '../apps/web/src/app/(staff)/deals/handoff/page.tsx';
 import EmployeeTodayPage from '../apps/web/src/app/(staff)/tasks/today/page.tsx';
+import ManagerControlRoomPage from '../apps/web/src/app/(staff)/tasks/manager/page.tsx';
+import ManagerTaskDetailPage from '../apps/web/src/app/(staff)/tasks/manager/[id]/page.tsx';
 import NewComplaintPage from '../apps/web/src/app/(staff)/complaints/new/page.tsx';
 import ReportsPage from '../apps/web/src/app/(staff)/reports/page.tsx';
 import PortalSubmissionPage from '../apps/web/src/app/portal/page.tsx';
@@ -72,6 +74,8 @@ async function routePage(testCase) {
     : await NewComplaintPage({ searchParams: params }));
   if (testCase.route === 'staff-dashboard') return staffFrame(testCase, await DashboardPage(staffProps));
   if (testCase.route === 'staff-deal-handoff') return staffFrame(testCase, await DealHandoffPage(staffProps));
+  if (testCase.route === 'staff-manager') return staffFrame(testCase, await ManagerControlRoomPage(staffProps));
+  if (testCase.route === 'staff-manager-detail') return staffFrame(testCase, await ManagerTaskDetailPage({ ...staffProps, params: Promise.resolve({ id: 'task_manager_proof' }) }));
     if (testCase.route === 'staff-reports') return staffFrame(testCase, await ReportsPage(staffProps));
     if (testCase.route === 'staff-today') return staffFrame(testCase, await EmployeeTodayPage(staffProps));
     if (testCase.route === 'staff-task-detail') return staffFrame(testCase, React.createElement(TaskConversation, { comments: proofTaskComments(), locale: testCase.locale, task: proofTask() }));

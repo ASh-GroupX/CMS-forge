@@ -1,5 +1,5 @@
 export type AdminPermission = { id: string; code: string; nameEn: string; nameAr: string };
-export type AdminRole = AdminPermission & { isActive: boolean; isSystem: boolean; permissions: AdminPermission[] };
+export type AdminRole = AdminPermission & { isActive: boolean; isSystem: boolean; permissions: AdminPermission[]; updatedAt: string; affectedActiveUserCount: number };
 export type AdminRolesData = { roles: AdminRole[]; permissions: AdminPermission[] };
 
 const STAFF_SESSION_COOKIE = 'cms_staff_session';

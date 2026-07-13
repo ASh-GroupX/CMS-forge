@@ -3,7 +3,12 @@ export type StaffAuditLog = {
   eventType: string;
   action: string;
   actorId: string | null;
+  actorName: string | null;
+  actorNameAr: string | null;
   branchId: string | null;
+  branchName: string | null;
+  branchNameAr: string | null;
+  displayTimeZone: string;
   targetType: string;
   targetId: string | null;
   correlationId: string | null;
@@ -83,7 +88,12 @@ function logFrom(item: unknown): StaffAuditLog | null {
     eventType: value.eventType,
     action: value.action,
     actorId: typeof value.actorId === 'string' ? value.actorId : null,
+    actorName: typeof value.actorName === 'string' ? value.actorName : null,
+    actorNameAr: typeof value.actorNameAr === 'string' ? value.actorNameAr : null,
     branchId: typeof value.branchId === 'string' ? value.branchId : null,
+    branchName: typeof value.branchName === 'string' ? value.branchName : null,
+    branchNameAr: typeof value.branchNameAr === 'string' ? value.branchNameAr : null,
+    displayTimeZone: typeof value.displayTimeZone === 'string' ? value.displayTimeZone : 'UTC',
     targetType: value.targetType,
     targetId: typeof value.targetId === 'string' ? value.targetId : null,
     correlationId: typeof value.correlationId === 'string' ? value.correlationId : null,

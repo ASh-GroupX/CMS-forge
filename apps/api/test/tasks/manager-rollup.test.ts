@@ -80,6 +80,7 @@ test('task routes require permissions and keep CSRF/branch-scope guards', async 
   assert.deepEqual(guardNames('today'), ['SessionAuthGuard', 'PermissionGuard']);
   assert.deepEqual(guardNames('sentByMe'), ['SessionAuthGuard', 'PermissionGuard']);
   assert.deepEqual(guardNames('managerRollup'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
+  assert.deepEqual(guardNames('managerDetail'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
   assert.deepEqual(guardNames('promises'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
   assert.deepEqual(guardNames('relatedRecords'), ['SessionAuthGuard', 'PermissionGuard', 'RbacGuard']);
   assert.deepEqual(guardNames('get'), ['SessionAuthGuard', 'PermissionGuard']);
@@ -99,6 +100,49 @@ test('task routes require permissions and keep CSRF/branch-scope guards', async 
   );
   assert.equal(auditRecords[0]?.action, 'permission_forbidden');
   assert.deepEqual(auditRecords[0]?.metadata?.requiredPermissions, ['REPORT_VIEW']);
+});
+
+test('management read-only can open an in-scope normal task without collaboration data', async () => {
+  const calls: unknown[] = [];
+  const service = new TasksService({
+    findManagerDetail: async (id, branchId, includeConfidential) => {
+      calls.push({ id, branchId, includeConfidential });
+      return taskRecord({ participants: [{ userId: 'user_private', role: 'WATCHER', user: { email: 'private@example.test', nameEn: 'Private User', nameAr: 'Private User' } }] });
+    },
+  } as unknown as TasksRepository, {} as never);
+
+  const result = await service.managerTaskDetail('task_1', {
+    userId: 'user_readonly', roleCode: RoleCode.MGMT_READONLY, branchId: 'branch_a', permissions: ['REPORT_VIEW'],
+  }, new Date('2026-06-20T12:00:00.000Z'));
+
+  assert.deepEqual(calls, [{ id: 'task_1', branchId: 'branch_a', includeConfidential: false }]);
+  assert.equal(result.task.capabilities.canOpenInteractive, false);
+  assert.equal('participants' in result.task, false);
+  assert.equal(JSON.stringify(result).includes('private@example.test'), false);
+});
+
+test('manager detail fails closed when the scoped or confidentiality query finds no task', async () => {
+  const service = new TasksService({ findManagerDetail: async () => null } as unknown as TasksRepository, {} as never);
+
+  await assert.rejects(
+    service.managerTaskDetail('task_other_branch', { userId: 'user_manager', roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a' }),
+    (error: unknown) => error instanceof AppException && error.code === 'TASK_NOT_FOUND',
+  );
+});
+
+test('administrator manager detail may query confidential tasks without a branch override', async () => {
+  let received: unknown;
+  const service = new TasksService({
+    findManagerDetail: async (id, branchId, includeConfidential) => {
+      received = { id, branchId, includeConfidential };
+      return taskRecord({ confidentialityLevel: TaskConfidentialityLevel.CONFIDENTIAL });
+    },
+  } as unknown as TasksRepository, {} as never);
+
+  await service.managerTaskDetail('task_confidential', {
+    userId: 'user_admin', roleCode: RoleCode.ADMIN, branchId: null, permissions: ['REPORT_VIEW', 'COMPLAINT_COMMENT_INTERNAL'],
+  });
+  assert.deepEqual(received, { id: 'task_confidential', branchId: null, includeConfidential: true });
 });
 
 test('tasks module wires audit service and permission guard for runtime denies', () => {

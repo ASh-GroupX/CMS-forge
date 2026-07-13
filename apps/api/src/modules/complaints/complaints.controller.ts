@@ -45,6 +45,7 @@ export class ComplaintsController {
     const limit = pageNumber(query.limit, 'limit', 25, 100);
     const offset = pageNumber(query.offset, 'offset', 0);
     const sla = optionalSlaState(query.sla);
+    const owner = ownerSearchFilter(query.ownerScope, query.ownerId, request);
     const items = await this.complaintsService.search({
       branchId: searchBranchId(query.branchId, request),
       referenceNumber: optionalText(query.referenceNumber),
@@ -52,7 +53,7 @@ export class ComplaintsController {
       status: optionalStatus(query.status),
       severity: optionalSeverity(query.severity),
       ...(sla ? { sla } : {}),
-      ownerId: optionalText(query.ownerId),
+      ...owner,
       dateFrom: optionalText(query.dateFrom),
       dateTo: optionalText(query.dateTo),
       limit,
@@ -246,6 +247,19 @@ export class ComplaintsController {
       ),
     };
   }
+}
+
+function ownerSearchFilter(ownerScope: string | undefined, ownerId: string | undefined, request: AuthenticatedRequest): { ownerId?: string; ownerUnassigned?: boolean } {
+  if (ownerScope !== undefined && ownerScope !== 'ME' && ownerScope !== 'UNASSIGNED') {
+    throw new AppException('VALIDATION_FAILED', 'Invalid owner scope', 400, [{ field: 'ownerScope', code: 'INVALID', message: 'ownerScope must be ME or UNASSIGNED.' }]);
+  }
+  if (ownerScope && ownerId) {
+    throw new AppException('VALIDATION_FAILED', 'Invalid owner filters', 400, [{ field: 'ownerScope', code: 'CONFLICT', message: 'ownerScope cannot be combined with ownerId.' }]);
+  }
+  if (ownerScope === 'ME') return { ownerId: request.principal!.userId };
+  if (ownerScope === 'UNASSIGNED') return { ownerUnassigned: true };
+  const explicitOwner = optionalText(ownerId);
+  return explicitOwner ? { ownerId: explicitOwner } : {};
 }
 
 function communicationActor(request: AuthenticatedRequest) {

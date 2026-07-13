@@ -72,6 +72,7 @@ export default async function StaffShellPage({
       locale={locale}
       lookupState={resolveLookup(readParam(params?.lookup))}
       notificationState={oneOf<NotificationFixtureState>(readParam(params?.notification), ['loading', 'empty', 'error', 'success', 'validation', 'conflict'])}
+      principal={principal}
       queueState={resolveQueue(readParam(params?.queue))}
       queueRows={queueRows ?? undefined}
       reportsState={oneOf<ReportsFixtureState>(readParam(params?.reports), ['ready', 'loading', 'empty', 'error', 'success', 'validation', 'denied', 'conflict'])}
@@ -144,6 +145,7 @@ export function StaffShell({
   locale,
   lookupState,
   notificationState,
+  principal,
   queueState,
   queueRows,
   reportsState,
@@ -165,6 +167,7 @@ export function StaffShell({
   locale: Locale;
   lookupState?: LookupFixtureState | undefined;
   notificationState?: NotificationFixtureState | undefined;
+  principal?: import('../lib/staff-session-api').StaffSessionPrincipal | null | undefined;
   queueState?: QueueFixtureState | undefined;
   queueRows?: import('../lib/staff-complaints-api').ComplaintQueueItem[] | undefined;
   reportsState?: ReportsFixtureState | undefined;
@@ -180,7 +183,7 @@ export function StaffShell({
     <AppShell
       locale={locale}
       navKeys={visibleNav}
-      signedIn={isSignedIn}
+      principal={principal ?? null}
       sidebarAfter={visibleNav.includes('admin') ? null : <p className="mt-3 rounded-sm bg-brand-foreground/5 px-2 py-2 text-xs font-semibold text-brand-foreground/65">{t.role.adminHidden}</p>}
       sidebarBefore={<><AuthPanel authError={authError} isSignedIn={isSignedIn} locale={locale} resetState={resetState} /><RolePanel locale={locale} role={role} /></>}
     >

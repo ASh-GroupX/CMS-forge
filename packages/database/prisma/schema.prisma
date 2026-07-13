@@ -756,12 +756,14 @@ model Notification {
   queuedAt         DateTime                      @default(now()) @map("queued_at")
   sentAt           DateTime?                     @map("sent_at")
   failedAt         DateTime?                     @map("failed_at")
+  readAt           DateTime?                     @map("read_at")
   complaint        Complaint?                    @relation(fields: [complaintId], references: [id])
   recipientUser    User?                         @relation("NotificationRecipient", fields: [recipientUserId], references: [id])
   deliveryAttempts NotificationDeliveryAttempt[]
 
   @@index([complaintId])
   @@index([recipientUserId, status])
+  @@index([recipientUserId, channel, readAt, queuedAt])
   @@map("notifications")
 }
 

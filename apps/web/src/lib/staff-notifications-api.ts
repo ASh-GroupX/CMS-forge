@@ -29,15 +29,22 @@ export async function getStaffNotifications({
   apiUrl = process.env.API_URL ?? 'http://localhost:3000',
   cookieHeader,
   fetchImpl = fetch,
+  limit,
+  view,
 }: {
   apiUrl?: string;
   cookieHeader?: string;
   fetchImpl?: typeof fetch;
+  limit?: number;
+  view?: 'all' | 'unread' | 'mentions';
 } = {}): Promise<StaffNotification[] | null> {
   const cookies = cookieHeader ?? await incomingCookieHeader();
   if (!cookies.split(';').some((cookie) => cookie.trim().startsWith(`${STAFF_SESSION_COOKIE}=`))) return null;
   try {
-    const response = await fetchImpl(new URL('/notifications', apiUrl), { cache: 'no-store', headers: { Accept: 'application/json', cookie: cookies } });
+    const url = new URL('/notifications', apiUrl);
+    if (view) url.searchParams.set('view', view);
+    if (limit !== undefined) url.searchParams.set('limit', String(limit));
+    const response = await fetchImpl(url, { cache: 'no-store', headers: { Accept: 'application/json', cookie: cookies } });
     if (!response.ok) return null;
     const body = (await response.json()) as { items?: Partial<StaffNotification>[] };
     if (!Array.isArray(body.items)) return null;

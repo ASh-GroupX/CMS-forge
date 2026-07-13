@@ -14,6 +14,7 @@ export type StaffTask = {
   assigneeName: string | null;
   branchId: string | null;
   branchName: string | null;
+  displayTimeZone: string;
   dueAt: string;
   status: StaffTaskStatus;
   nextAction: { what: string; whoId: string; whoName: string | null; when: string } | null;
@@ -213,6 +214,7 @@ export function staffTaskFrom(task: Partial<StaffTask>): StaffTask | null {
     typeof task.ownerId !== 'string' ||
     typeof task.assigneeId !== 'string' ||
     typeof task.dueAt !== 'string' ||
+    typeof task.displayTimeZone !== 'string' ||
     !isTaskStatus(task.status) ||
     typeof task.isCustomerPromise !== 'boolean' ||
     typeof task.visibility !== 'string' ||
@@ -241,6 +243,7 @@ export function staffTaskFrom(task: Partial<StaffTask>): StaffTask | null {
     assigneeName: typeof task.assigneeName === 'string' ? task.assigneeName : null,
     branchId: typeof task.branchId === 'string' ? task.branchId : null,
     branchName: typeof task.branchName === 'string' ? task.branchName : null,
+    displayTimeZone: task.displayTimeZone,
     dueAt: task.dueAt,
     status: task.status,
     nextAction,

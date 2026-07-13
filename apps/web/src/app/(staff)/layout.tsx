@@ -34,7 +34,7 @@ export default async function StaffLayout({ children }: { children: ReactNode })
       activeSearch={activeSearch}
       locale={locale}
       navKeys={allowedNav}
-      signedIn={Boolean(principal)}
+      principal={principal}
       sidebarBefore={principal ? (
         <form action={logoutStaffAction} className="mb-4">
           <input name="locale" type="hidden" value={locale} />

@@ -1,7 +1,22 @@
 const STAFF_SESSION_COOKIE = 'cms_staff_session';
 
 export type StaffComplaintCommentVisibility = 'INTERNAL' | 'PUBLIC';
-export type CollaborationTarget = { id: string; type: 'USER' | 'SYSTEM_ROLE' | 'SYSTEM_DEPARTMENT' | 'CUSTOM_GROUP'; label: string; labelAr: string; recipientCount: number };
+export type CollaborationTarget = {
+  id: string;
+  type: 'USER' | 'SYSTEM_ROLE' | 'SYSTEM_DEPARTMENT' | 'CUSTOM_GROUP';
+  label: string;
+  labelAr: string;
+  recipientCount: number;
+  roleCode?: string;
+  roleName?: string;
+  roleNameAr?: string;
+  departmentId?: string | null;
+  departmentName?: string | null;
+  departmentNameAr?: string | null;
+  branchId?: string | null;
+  branchName?: string | null;
+  branchNameAr?: string | null;
+};
 export type CollaborationMentionTarget = Pick<CollaborationTarget, 'id' | 'type'>;
 export type CollaborationWatcher = { userId: string; name: string; nameAr: string };
 export type CollaborationCapabilities = { canComment: boolean; canManage: boolean; canManageWatchers: boolean };

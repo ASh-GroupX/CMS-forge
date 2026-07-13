@@ -32,7 +32,7 @@ export function notificationDto(notification: NotificationRecord): NotificationR
     locale: notification.locale,
     payload: notification.payload,
     queuedAt: notification.queuedAt.toISOString(),
-    readAt: notification.sentAt?.toISOString() ?? null,
+    readAt: notification.readAt?.toISOString() ?? null,
   };
 }
 

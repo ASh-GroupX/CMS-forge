@@ -204,6 +204,7 @@ test('notifications repository returns an existing idempotent internal row', asy
       queuedAt: true,
       sentAt: true,
       failedAt: true,
+      readAt: true,
       complaint: { select: { customerId: true, severity: true } },
     },
   });
@@ -260,9 +261,52 @@ test('notifications repository persists queued in-app rows only', async () => {
       queuedAt: true,
       sentAt: true,
       failedAt: true,
+      readAt: true,
       complaint: { select: { customerId: true, severity: true } },
     },
   });
+});
+
+test('notification read state is recipient-scoped and does not alter delivery fields', async () => {
+  const updates: unknown[] = [];
+  const repository = new NotificationsRepository({
+    notification: {
+      updateMany: async (input: unknown) => {
+        updates.push(input);
+        return { count: 1 };
+      },
+    },
+  } as never);
+  const changed = await repository.markInAppRead('notif_1', 'usr_1', new Date('2026-07-13T12:00:00.000Z'));
+  assert.equal(changed, true);
+  assert.deepEqual(updates[0], {
+    where: { id: 'notif_1', channel: NotificationChannel.IN_APP, recipientUserId: 'usr_1', readAt: null },
+    data: { readAt: new Date('2026-07-13T12:00:00.000Z') },
+  });
+});
+
+test('notification read mutation audits only an actual state change in the same transaction', async () => {
+  const audits: unknown[] = [];
+  let changed = true;
+  const client = { notification: {}, auditLog: {} };
+  const service = new NotificationsService({
+    transaction: async (work: (transaction: typeof client) => Promise<unknown>) => work(client),
+    markInAppRead: async (_id: string, _recipient: string, _now: Date, transaction: unknown) => {
+      assert.equal(transaction, client);
+      const result = changed;
+      changed = false;
+      return result;
+    },
+  } as unknown as NotificationsRepository, {} as IntegrationsService, {
+    record: async (input: unknown, transaction: unknown) => {
+      assert.equal(transaction, client);
+      audits.push(input);
+    },
+  } as never);
+  assert.equal((await service.markRead('notif_1', 'usr_1', { actorId: 'usr_1' })).read, true);
+  assert.equal((await service.markRead('notif_1', 'usr_1', { actorId: 'usr_1' })).read, false);
+  assert.equal(audits.length, 1);
+  assert.equal((audits[0] as { action: string }).action, 'notification_read');
 });
 
 test('notifications service denies blank template code before write', async () => {

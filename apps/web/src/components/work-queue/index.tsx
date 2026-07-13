@@ -7,6 +7,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { DataTable, Field, FilterBar, StateBlock, StatusBadge as SharedStatusBadge, type PrimitiveTone } from '../shared/ui-primitives';
 import { complaintStatusLabel, severityLabel, slaStateLabel } from '../../i18n/domain-labels';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
+import { modernUiText } from '../../i18n/staff-modern-ui';
 import { formatDisplayDate, formatDisplayNumber } from '../../lib/locale-format';
 import type { ComplaintFormOptions } from '../../lib/staff-complaint-form-options-api';
 import type { ComplaintQueueItem, ComplaintSeverity, ComplaintStatus } from '../../lib/staff-complaints-api';
@@ -28,6 +29,7 @@ export function WorkQueue({
   state?: 'denied' | 'error' | undefined;
 }) {
   const t = staffShellText[locale].workQueue;
+  const quick = modernUiText[locale].queue;
   const queueRows = queue?.rows ?? rows ?? null;
   const visibleRows = queueRows;
   const isError = visibleRows === null;
@@ -35,6 +37,7 @@ export function WorkQueue({
   const isEmpty = !isError && visibleRows.length === 0;
   const page = queue?.page ?? query.page ?? 1;
   const filters = filterOptions(queueRows ?? [], t, query, options, locale);
+  const activeFilters = activeFilterLabels(query, filters, quick);
 
   return (
     <Card className="w-full min-w-0 max-w-full overflow-hidden rounded-sm border-line-subtle bg-surface shadow-none" aria-label={t.title}>
@@ -43,6 +46,13 @@ export function WorkQueue({
         <p className="text-sm text-content-muted">{t.status}</p>
       </CardHeader>
       <CardContent className="min-w-0 p-0">
+        <div className="flex flex-wrap items-center gap-2 border-b border-line-subtle p-3" aria-label={quick.title}>
+          <span className="me-1 text-xs font-semibold text-content-muted">{quick.title}</span>
+          <Button asChild size="sm" variant={query.ownerScope === 'ME' ? 'default' : 'outline'}><a href={quickFilterHref(locale, 'ownerScope', 'ME')}>{quick.mine}</a></Button>
+          <Button asChild size="sm" variant={query.ownerScope === 'UNASSIGNED' ? 'default' : 'outline'}><a href={quickFilterHref(locale, 'ownerScope', 'UNASSIGNED')}>{quick.unassigned}</a></Button>
+          <Button asChild size="sm" variant={query.sla === 'BREACHED' ? 'default' : 'outline'}><a href={quickFilterHref(locale, 'sla', 'BREACHED')}>{quick.overdue}</a></Button>
+          {activeFilters.length ? <Button asChild className="ms-auto" size="sm" variant="ghost"><a href={`/complaints?locale=${locale}`}>{quick.clear}</a></Button> : null}
+        </div>
         <FilterBar action="/complaints" className="md:grid-cols-6">
           <input name="locale" type="hidden" value={locale} />
           {(['status', 'branch', 'severity', 'sla'] as const).map((key) => (
@@ -67,7 +77,7 @@ export function WorkQueue({
             <Button type="submit">{t.actions.apply}</Button>
           </div>
         </FilterBar>
-        <p className="border-b border-line-subtle px-3 pb-3 text-xs text-content-muted">{t.filterHelp}</p>
+        <div className="flex flex-wrap items-center gap-2 border-b border-line-subtle px-3 pb-3 text-xs text-content-muted"><span>{formatDisplayNumber(visibleRows?.length ?? 0, locale)} {quick.results}</span>{activeFilters.length ? <><span aria-hidden="true">·</span><span>{quick.active}:</span>{activeFilters.map((label) => <span className="rounded-full border border-line-subtle bg-surface-raised px-2 py-1 text-content-strong" key={label}>{label}</span>)}</> : <span>{t.filterHelp}</span>}</div>
         {isError ? (
           <StateBlock className="m-4" message={errorMessage} tone="error" />
         ) : isEmpty ? (
@@ -207,7 +217,22 @@ function pageHref(locale: Locale, query: StaffQueueQuery, page: number): string 
   append(params, 'severity', query.severity);
   append(params, 'sla', query.sla);
   append(params, 'status', query.status);
+  append(params, 'ownerScope', query.ownerScope);
   return `/complaints?${params.toString()}`;
+}
+
+function quickFilterHref(locale: Locale, key: 'ownerScope' | 'sla', value: string): string { return `/complaints?${new URLSearchParams({ locale, [key]: value }).toString()}`; }
+
+function activeFilterLabels(query: StaffQueueQuery, filters: Record<'status' | 'branch' | 'severity' | 'sla', FilterOption[]>, quick: typeof modernUiText[Locale]['queue']): string[] {
+  const labels = [
+    query.ownerScope === 'ME' ? quick.mine : query.ownerScope === 'UNASSIGNED' ? quick.unassigned : null,
+    query.status ? filters.status.find((item) => item.value === query.status)?.label : null,
+    query.branchId ? filters.branch.find((item) => item.value === query.branchId)?.label : null,
+    query.severity ? filters.severity.find((item) => item.value === query.severity)?.label : null,
+    query.sla ? filters.sla.find((item) => item.value === query.sla)?.label : null,
+    query.search,
+  ];
+  return labels.filter((value): value is string => Boolean(value));
 }
 
 function caseHref(locale: Locale, id: string): string {

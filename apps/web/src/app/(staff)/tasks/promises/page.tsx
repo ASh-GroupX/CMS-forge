@@ -86,11 +86,11 @@ function PromiseCard({ locale, task, t }: { locale: Locale; task: StaffPromiseTa
       <dl className="mt-3 grid gap-2 text-sm md:grid-cols-3">
         <Field label={t.fields.customer} value={task.customerLabel ?? '-'} />
         <Field label={t.fields.deal} value={task.dealLabel ?? '-'} />
-        <Field label={t.fields.due} value={formatDate(task.dueAt, locale)} />
+        <Field label={t.fields.due} value={formatDate(task.dueAt, locale, task.displayTimeZone)} />
         <Field label={t.fields.owner} value={task.ownerName ?? '-'} />
         <Field label={t.fields.assignee} value={task.assigneeName ?? '-'} />
       </dl>
-      {task.nextAction ? <p className="mt-3 rounded-sm border border-border bg-muted px-3 py-2 text-sm"><span className="font-semibold">{t.fields.nextAction}: </span>{task.nextAction.what} <span className="text-muted-foreground">({task.nextAction.whoName ?? '-'} - {formatDate(task.nextAction.when, locale)})</span></p> : null}
+      {task.nextAction ? <p className="mt-3 rounded-sm border border-border bg-muted px-3 py-2 text-sm"><span className="font-semibold">{t.fields.nextAction}: </span>{task.nextAction.what} <span className="text-muted-foreground">({task.nextAction.whoName ?? '-'} - {formatDate(task.nextAction.when, locale, task.displayTimeZone)})</span></p> : null}
       {task.status !== 'DONE' ? <DoneForm locale={locale} taskId={task.id} t={t} /> : null}
       {task.links.length ? <div className="mt-3 flex flex-wrap gap-1" aria-label={t.fields.links}>{task.links.map((link) => <Badge key={`${link.entityType}-${link.entityId}`} variant="outline">{linkTypeLabel(link.entityType, t)}</Badge>)}</div> : null}
     </article>
@@ -123,7 +123,7 @@ function Field({ label, value }: { label: string; value: string }) {
 }
 
 function formatNumber(locale: Locale, value: number): string { return new Intl.NumberFormat(locale).format(value); }
-function formatDate(value: string, locale: Locale): string { return formatDisplayDate(value, locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' }); }
+function formatDate(value: string, locale: Locale, timeZone: string): string { return `${formatDisplayDate(value, locale, { dateStyle: 'medium', timeStyle: 'short', timeZone })} (${timeZone})`; }
 function linkTypeLabel(entityType: string, t: Copy): string {
   return entityType in t.recordTypes ? t.recordTypes[entityType as keyof typeof t.recordTypes] : entityType;
 }

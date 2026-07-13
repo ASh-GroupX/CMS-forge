@@ -1,4 +1,4 @@
-import type { ManagerRollupCountDto, TaskResponseDto } from './dto/task-response.dto.js';
+import type { ManagerRollupCountDto, ManagerTaskDetailResponseDto, TaskResponseDto } from './dto/task-response.dto.js';
 import type { TaskRecord } from './tasks.repository.js';
 
 export function taskCounts(tasks: TaskRecord[]): ManagerRollupCountDto[] {
@@ -20,6 +20,7 @@ export function taskToResponse(task: TaskRecord): TaskResponseDto {
     assigneeName: task.assignee?.nameEn ?? null,
     branchId: task.assignee?.branchId ?? task.owner?.branchId ?? null,
     branchName: task.assignee?.branch?.nameEn ?? task.owner?.branch?.nameEn ?? null,
+    displayTimeZone: task.assignee?.branch?.timezone ?? task.owner?.branch?.timezone ?? 'UTC',
     dueAt: task.dueAt.toISOString(),
     status: task.status,
     nextAction: currentNextAction(task)?.toDto ?? null,
@@ -31,6 +32,35 @@ export function taskToResponse(task: TaskRecord): TaskResponseDto {
     participants: task.participants.map((participant) => ({ userId: participant.userId, role: participant.role, name: participant.user.nameEn, nameAr: participant.user.nameAr })),
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
+  };
+}
+
+export function managerTaskDetailResponse(task: TaskRecord, now: Date, canOpenInteractive: boolean): ManagerTaskDetailResponseDto {
+  const response = taskToResponse(task);
+  return {
+    task: {
+      id: response.id,
+      title: response.title,
+      ownerId: response.ownerId,
+      ownerName: response.ownerName ?? null,
+      assigneeId: response.assigneeId,
+      assigneeName: response.assigneeName ?? null,
+      branchId: response.branchId ?? null,
+      branchName: response.branchName ?? null,
+      displayTimeZone: response.displayTimeZone,
+      dueAt: response.dueAt,
+      status: response.status,
+      nextAction: response.nextAction,
+      isCustomerPromise: response.isCustomerPromise,
+      links: response.links,
+      stuckReasons: [
+        ...(task.nextActionWhen && task.nextActionWhen < now ? ['NEXT_ACTION_OVERDUE' as const] : []),
+        ...(task.updatedAt < new Date(now.getTime() - 72 * 60 * 60 * 1000) ? ['NO_MOVEMENT' as const] : []),
+      ],
+      createdAt: response.createdAt,
+      updatedAt: response.updatedAt,
+      capabilities: { canOpenInteractive },
+    },
   };
 }
 

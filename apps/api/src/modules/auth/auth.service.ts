@@ -43,6 +43,7 @@ export type StaffAuthClaims = {
   roleCode: StaffAuthRecord['role']['code'];
   permissions: string[];
   branchId: string | null;
+  branchName: string | null; branchNameAr: string | null; branchTimezone: string | null;
 };
 
 export type CreateStaffSessionInput = {
@@ -87,6 +88,7 @@ export class AuthService {
         roleCode: user.role.code,
         permissions: permissionCodes(user),
         branchId: user.branchId,
+        branchName: user.branch?.nameEn ?? null, branchNameAr: user.branch?.nameAr ?? null, branchTimezone: user.branch?.timezone ?? null,
       };
     } catch (error) {
       await this.recordAuthAudit({
@@ -158,6 +160,7 @@ export class AuthService {
       roleCode: session.user.role.code,
       permissions: permissionCodes(session.user),
       branchId: session.user.branchId,
+      branchName: session.user.branch?.nameEn ?? null, branchNameAr: session.user.branch?.nameAr ?? null, branchTimezone: session.user.branch?.timezone ?? null,
     };
   }
 

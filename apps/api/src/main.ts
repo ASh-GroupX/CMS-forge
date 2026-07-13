@@ -18,6 +18,7 @@ import { PortalModule } from './modules/portal/portal.module.js';
 import { ReportsModule } from './modules/reports/reports.module.js';
 import { SurveysModule } from './modules/surveys/surveys.module.js';
 import { TasksModule } from './modules/tasks/tasks.module.js';
+import { SearchModule } from './modules/search/search.module.js';
 
 @Controller()
 class HealthController {
@@ -52,6 +53,7 @@ class HealthController {
     TasksModule,
     DealsModule,
     CommunicationGroupsModule,
+    SearchModule,
   ],
   controllers: [HealthController],
 })

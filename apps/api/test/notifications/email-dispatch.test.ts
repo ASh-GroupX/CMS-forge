@@ -487,6 +487,7 @@ function notificationSelect() {
     queuedAt: true,
     sentAt: true,
     failedAt: true,
+    readAt: true,
     complaint: { select: { customerId: true, severity: true } },
   };
 }

@@ -1,53 +1,36 @@
-# Arabic UX 90+ Repair
+# Coordinated Staff UI Redesign
 
-Status: Implementation Complete; Human UAT Pending
+Status: Implementation Complete; Staging UAT Pending
 Required model tier: GPT-5.5 Extra High or Opus 4.8 Max
-Phase: collaboration UX repair
+Phase: coordinated staff UI cutover
 Risk: High
-SRS IDs: `REQ-COLLAB-001`, `REQ-COMMENTS-001`, `REQ-RBAC-001`,
-`REQ-NOTIFY-001`, `REQ-LOCALIZATION-001`, `PORTAL-SEC-001`,
-`API-STANDARD-001`, `METHOD-AUDIT-001`
+SRS IDs: `REQ-SEARCH-001`, `REQ-LOCALIZATION-001`, `REQ-RBAC-001`,
+`REQ-NOTIFY-001`, `REQ-COLLAB-001`, `REQ-COMMENTS-001`,
+`API-STANDARD-001`, `METHOD-TEST-001`
 
 ## Task
 
-Make Arabic complaint and task collaboration understandable and safe for
-low-technology staff:
-
-- Separate complaint work, communication, and details into three focused tabs.
-- Explain assignee, mention, CC, and public customer updates before users act.
-- Preserve server-returned collaboration capabilities, watcher state, audience
-  thresholds, exact confirmation counts, and recipient limits.
-- Provide one server-scoped audience picker for complaint and task updates.
-- Complete task conversation, communication-group management, grouped desktop
-  navigation, five-item mobile navigation, and Arabic error/empty/loading states.
-- Keep backend workflow, RBAC, branch scope, recipient resolution, audit, and
-  portal privacy authoritative and unchanged.
+Ship the approved staff redesign from `docs/MODERN_UI_REDESIGN.md` as one
+coordinated shell and workflow update while preserving backend authority, RBAC,
+branch scope, audit behavior, and portal privacy.
 
 ## Verification
 
-- Passed: `corepack pnpm typecheck`.
-- Passed: `corepack pnpm lint`.
-- Passed: `corepack pnpm openapi:check`.
-- Passed: `corepack pnpm db:migrate:test`.
-- Passed: focused groups, complaints, tasks, notifications, RBAC, portal, and
-  API-level audit tests.
-- Passed: `corepack pnpm test:web -- shell` (213/213).
-- Passed: `corepack pnpm test:web -- localization` (11/11).
-- Passed: `corepack pnpm test:web -- api-client` (58/58).
-- Passed: `corepack pnpm test:visual` (82 route previews).
-- Passed: `corepack pnpm web:visual-review` (82 HTML/PNG artifacts).
+- Passed: `corepack pnpm lint`, `corepack pnpm typecheck`, and
+  `corepack pnpm openapi:check`.
+- Passed: auth (38/38), complaint/workflow (77/77), search (4/4), and
+  notification API suites.
+- Passed: `corepack pnpm test:web` (213/213).
+- Passed: `corepack pnpm test:visual` and `corepack pnpm web:visual-review`
+  (82 route previews and rendered artifacts).
 - Passed: `corepack pnpm test:e2e -- accessibility` (22 route previews).
 - Passed: `corepack pnpm web:perf` (5 static route previews).
 
 ## Required Human Gates
 
-- Needs Human Review: two low-tech Arabic users must distinguish assignee,
-  mention, CC, and public customer updates using the scripts in
-  `docs/ARABIC_UX_90_REPAIR.md`.
-- Needs Human Review: final UAT with two customers, two employees, and two
-  managers must meet the approved completion and comprehension thresholds.
-- Needs Human Review: collect deployed LCP, INP, and CLS telemetry. The local
-  performance proof validates render/static budgets, not field Web Vitals.
-- Needs Human Review: run the Docker-backed audit append-only proof, apply the
-  additive migration, activate templates, and validate provider delivery in
-  staging before pilot release.
+- Needs Human Review: employee and manager staging UAT against the agreed
+  role/scope, urgent-item, and collaboration-comprehension thresholds.
+- Needs Human Review: deployed LCP, INP, and CLS telemetry; the local proof does
+  not establish field performance.
+- Needs Human Review: production promotion or rollback decision using the same
+  staged artifact.

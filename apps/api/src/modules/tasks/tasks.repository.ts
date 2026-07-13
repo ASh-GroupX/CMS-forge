@@ -18,8 +18,8 @@ const taskSelect = {
   confidentialityLevel: true,
   createdAt: true,
   updatedAt: true,
-  owner: { select: { nameEn: true, branchId: true, branch: { select: { nameEn: true } } } },
-  assignee: { select: { nameEn: true, branchId: true, branch: { select: { nameEn: true } } } },
+  owner: { select: { nameEn: true, branchId: true, branch: { select: { nameEn: true, timezone: true } } } },
+  assignee: { select: { nameEn: true, branchId: true, branch: { select: { nameEn: true, timezone: true } } } },
   nextActionWho: { select: { nameEn: true, branchId: true } },
   links: { select: { entityType: true, entityId: true } },
   participants: { select: { userId: true, role: true, user: { select: { email: true, nameEn: true, nameAr: true } } } },
@@ -197,6 +197,19 @@ export class TasksRepository {
       },
       orderBy: [{ status: 'asc' }, { dueAt: 'asc' }, { createdAt: 'asc' }],
       select: { ...taskSelect, statusHistory: { select: { toStatus: true, createdAt: true }, orderBy: { createdAt: 'asc' } } },
+    });
+  }
+
+  async findManagerDetail(id: string, branchId: string | null, includeConfidential = false): Promise<TaskRecord | null> {
+    return this.prisma.task.findFirst({
+      where: {
+        id,
+        ...(includeConfidential ? {} : { confidentialityLevel: 'NORMAL' }),
+        ...(branchId
+          ? { OR: [{ owner: { branchId } }, { assignee: { branchId } }, { nextActionWho: { branchId } }] }
+          : {}),
+      },
+      select: taskSelect,
     });
   }
 

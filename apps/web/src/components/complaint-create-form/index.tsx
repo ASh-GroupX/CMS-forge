@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -47,6 +47,13 @@ export function ComplaintCreateForm({
   const [submitState, setSubmitState] = useState<SubmitState>({ kind: 'idle' });
   const visibleState = submitState.kind === 'idle' ? previewState(state, locale) : submitState;
   const fieldErrors = visibleState.kind === 'validation' ? visibleState.fieldErrors : [];
+  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    const field = fieldErrors[0]?.field;
+    if (!field) return;
+    const control = formRef.current?.elements.namedItem(field);
+    if (control instanceof HTMLElement) control.focus();
+  }, [fieldErrors]);
   const selectedMatch = lookupSelection?.source === 'DMS' ? lookupSelection.match : null;
   const sourceState = selectedMatch ? 'dms' : lookupSelection?.source === 'MANUAL' ? 'manual' : 'none';
   const defaults = formDefaults(selectedMatch);
@@ -89,7 +96,7 @@ export function ComplaintCreateForm({
       <CreateSubmitMessage locale={locale} state={visibleState} />
       <CardContent className="grid gap-4 p-4">
         <StateBlock message={extra.source[sourceState]} title={extra.source.title} />
-        <form className="grid gap-3 md:grid-cols-2" key={defaults.key} onSubmit={onSubmit}>
+        <form className="grid gap-3 md:grid-cols-2" key={defaults.key} onSubmit={onSubmit} ref={formRef}>
           <input name="customerSource" type="hidden" value={defaults.customerSource} />
           {defaults.vehicleSource ? <input name="vehicleSource" type="hidden" value={defaults.vehicleSource} /> : null}
           <input name="vehiclePlate" type="hidden" value={defaults.vehiclePlate} />
@@ -213,7 +220,7 @@ function CreateSubmitMessage({ locale, state }: { locale: Locale; state: SubmitS
         <p className="font-semibold">{t.errorSummary}</p>
         <p className="mt-1">{message}</p>
         <ul className="mt-2 grid gap-1">
-          {state.fieldErrors.map((error) => <li key={`${error.field}-${error.code}`}>{error.message}</li>)}
+          {state.fieldErrors.map((error) => <li key={`${error.field}-${error.code}`}><a className="underline" href={`#${error.field}`}>{error.message}</a></li>)}
         </ul>
       </section>
     );

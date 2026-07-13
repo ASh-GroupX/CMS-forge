@@ -16,6 +16,7 @@ export const auditViewerText: Record<Locale, typeof enAuditViewerText> = {
       to: 'To',
       apply: 'Apply filters',
       export: 'Export results',
+      advanced: 'Search filters',
     },
     headers: ['Timestamp', 'Actor', 'Event', 'Action', 'Target', 'Correlation ID'],
     states: {
@@ -45,6 +46,7 @@ export const auditViewerText: Record<Locale, typeof enAuditViewerText> = {
       to: 'إلى',
       apply: 'تطبيق الفلاتر',
       export: 'تصدير النتائج',
+      advanced: 'فلاتر البحث',
     },
     headers: ['الوقت', 'المستخدم', 'الحدث', 'الإجراء', 'السجل', 'رقم التتبع'],
     states: {
@@ -64,7 +66,7 @@ export const auditViewerText: Record<Locale, typeof enAuditViewerText> = {
 const enAuditViewerText = {
   title: '',
   subtitle: '',
-  filters: { actorId: '', correlationId: '', eventType: '', from: '', page: '', pageSize: '', targetId: '', targetType: '', to: '', apply: '', export: '' },
+  filters: { actorId: '', correlationId: '', eventType: '', from: '', page: '', pageSize: '', targetId: '', targetType: '', to: '', apply: '', export: '', advanced: '' },
   headers: [''],
   states: { denied: '', empty: '', error: '', loading: '', success: '', validation: '', conflict: '' },
   metadata: '',

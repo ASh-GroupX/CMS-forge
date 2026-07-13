@@ -1,5 +1,6 @@
 import React from 'react';
 import { staffShellText, type Locale } from '../i18n/staff-shell';
+import { modernUiText } from '../i18n/staff-modern-ui';
 import { AuthPanel } from './staff-shell-panels';
 import type { ResetFixtureState } from './password-reset-panel';
 import { StaffTopBar } from './staff-top-bar';
@@ -17,7 +18,11 @@ export function StaffAuthLanding({
   return (
     <main lang={t.lang} dir={t.dir} className="min-h-screen bg-surface-canvas text-content-strong">
       <StaffTopBar
+        isRtl={locale === 'ar'}
         languageHref={`?locale=${locale === 'ar' ? 'en' : 'ar'}`}
+        locale={locale}
+        search={modernUiText[locale].search}
+        showSearch={false}
         signedIn={t.auth.signedOut}
         subtitle={t.subtitle}
         switchLabel={t.switchLabel}

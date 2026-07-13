@@ -9,6 +9,10 @@ const STAFF_SESSION_COOKIE = 'cms_staff_session';
 export type StaffComplaintDetailView = {
   assignee: string | null;
   branch: string;
+  displayTimeZone: string;
+  categoryId: string;
+  categoryName: string;
+  categoryNameAr: string;
   case: {
     id: string;
     type: string;
@@ -103,6 +107,10 @@ function viewFromDetail(detail: ComplaintDetail, caseTimeline: DetailTimelineIte
   return {
     assignee: detail.ownerName ?? null,
     branch: detail.branchName ?? '',
+    displayTimeZone: detail.displayTimeZone,
+    categoryId: detail.categoryId,
+    categoryName: detail.categoryName,
+    categoryNameAr: detail.categoryNameAr,
     case: detail.caseSummary ? {
       id: detail.caseSummary.id,
       type: detail.caseSummary.type,
@@ -148,9 +156,13 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
     typeof complaint.severity !== 'string' ||
     typeof complaint.subject !== 'string' ||
     typeof complaint.branchId !== 'string' ||
+    typeof complaint.displayTimeZone !== 'string' ||
     typeof complaint.createdAt !== 'string' ||
     typeof complaint.updatedAt !== 'string' ||
     typeof complaint.description !== 'string' ||
+    typeof complaint.categoryId !== 'string' ||
+    typeof complaint.categoryName !== 'string' ||
+    typeof complaint.categoryNameAr !== 'string' ||
     !customer ||
     !Array.isArray(complaint.statusHistory)
   ) {
@@ -166,6 +178,7 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
     severity: complaint.severity,
     subject: complaint.subject,
     branchId: complaint.branchId,
+    displayTimeZone: complaint.displayTimeZone,
     ownerId: typeof complaint.ownerId === 'string' ? complaint.ownerId : null,
     ownerName: typeof complaint.ownerName === 'string' ? complaint.ownerName : null,
     slaState: complaint.slaState === 'WARNING' || complaint.slaState === 'BREACHED' || complaint.slaState === 'CLOSED' ? complaint.slaState : 'ON_TRACK',
@@ -176,6 +189,9 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
     createdAt: complaint.createdAt,
     updatedAt: complaint.updatedAt,
     description: complaint.description,
+    categoryId: complaint.categoryId,
+    categoryName: complaint.categoryName,
+    categoryNameAr: complaint.categoryNameAr,
     incidentAt: typeof complaint.incidentAt === 'string' ? complaint.incidentAt : null,
     customer,
     vehicle,

@@ -15,7 +15,8 @@ import type { AdminPermissionRecord, AdminRoleRecord } from '../../src/modules/a
 import { AdminRolesService } from '../../src/modules/admin/admin-roles.service.ts';
 
 const login: AdminPermissionRecord = { id: 'per_login', code: 'STAFF_LOGIN', nameEn: 'Log in', nameAr: 'تسجيل الدخول' };
-const role: AdminRoleRecord = { id: 'role_custom', code: 'SERVICE_LEAD', nameEn: 'Service lead', nameAr: 'قائد الخدمة', isActive: true, isSystem: false, permissions: [{ permission: login }] };
+const updatedAt = new Date('2026-07-13T12:00:00.000Z');
+const role: AdminRoleRecord = { id: 'role_custom', code: 'SERVICE_LEAD', nameEn: 'Service lead', nameAr: 'قائد الخدمة', isActive: true, isSystem: false, updatedAt, permissions: [{ permission: login }] };
 const admin: StaffPrincipal = { sessionId: 'ses_admin', userId: 'usr_admin', email: 'admin@cms-auto.test', nameEn: 'Admin', nameAr: 'مدير', roleCode: RoleCode.ADMIN, permissions: ['ROLES_MANAGE'], branchId: null };
 
 test('admin role service creates a selectable role and CONFIG audit in one transaction', async () => {
@@ -58,6 +59,8 @@ test('admin role service replaces selected permissions and audits the change in 
   const audits: Array<{ input: AuditRecordInput; client: unknown }> = [];
   const service = new AdminRolesService({
     findById: async () => role,
+    countActiveUsersForRole: async () => 2,
+    activeUserRoleId: async () => 'role_admin',
     activePermissionIds: async (codes) => codes.map((code) => `per_${code}`),
     transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
     replacePermissions: async (id, ids, client) => {
@@ -68,7 +71,7 @@ test('admin role service replaces selected permissions and audits the change in 
     },
   } as AdminRolesRepository, { record: async (input: AuditRecordInput, client?: unknown) => audits.push({ input, client }) } as AuditService);
 
-  const updated = await service.updatePermissions(role.id, { permissionCodes: ['STAFF_LOGIN', 'REPORT_VIEW'] }, auditContext());
+  const updated = await service.updatePermissions(role.id, { permissionCodes: ['STAFF_LOGIN', 'REPORT_VIEW'], expectedUpdatedAt: updatedAt.toISOString() }, auditContext());
 
   assert.deepEqual(updated.permissions.map(({ code }) => code), ['STAFF_LOGIN', 'REPORT_VIEW']);
   assert.equal(audits[0]?.client, txClient);
@@ -76,11 +79,36 @@ test('admin role service replaces selected permissions and audits the change in 
   assert.deepEqual(audits[0]?.input.metadata?.previousPermissionCodes, ['STAFF_LOGIN']);
 });
 
+test('admin role service blocks stale edits, self lockout, and removal of the last role manager', async () => {
+  const manage = { ...login, id: 'per_manage', code: 'ROLES_MANAGE', nameEn: 'Manage roles' };
+  const managedRole: AdminRoleRecord = { ...role, permissions: [{ permission: login }, { permission: manage }] };
+  const repository = {
+    findById: async () => managedRole,
+    activePermissionIds: async (codes: string[]) => codes.map((code) => `per_${code}`),
+    countActiveUsersForRole: async () => 1,
+    activeUserRoleId: async () => managedRole.id,
+    countOtherActiveRoleManagers: async () => 0,
+  } as unknown as AdminRolesRepository;
+  const service = new AdminRolesService(repository, noopAudit());
+  await assert.rejects(
+    service.previewPermissions(managedRole.id, { permissionCodes: ['STAFF_LOGIN'], expectedUpdatedAt: '2026-07-12T00:00:00.000Z' }, auditContext()),
+    (error: unknown) => error instanceof AppException && error.code === 'ROLE_VERSION_CONFLICT',
+  );
+  const selfLockout = await service.previewPermissions(managedRole.id, { permissionCodes: ['STAFF_LOGIN'], expectedUpdatedAt: updatedAt.toISOString() }, auditContext());
+  assert.equal(selfLockout.allowed, false);
+  assert.equal(selfLockout.denialReason, 'ROLE_SELF_LOCKOUT');
+  repository.activeUserRoleId = async () => 'role_other';
+  const lastManager = await service.previewPermissions(managedRole.id, { permissionCodes: ['STAFF_LOGIN'], expectedUpdatedAt: updatedAt.toISOString() }, auditContext());
+  assert.equal(lastManager.allowed, false);
+  assert.equal(lastManager.denialReason, 'ROLE_LAST_MANAGER');
+});
+
 test('admin role controller routes require ROLES_MANAGE permission and CSRF for writes', async () => {
   assert.deepEqual(guardNames('list'), ['SessionAuthGuard', 'PermissionGuard']);
   assert.deepEqual(guardNames('create'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
   assert.deepEqual(guardNames('updatePermissions'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
-  for (const handler of ['list', 'create', 'updatePermissions'] as Array<keyof AdminRolesController>) {
+  assert.deepEqual(guardNames('previewPermissions'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  for (const handler of ['list', 'create', 'updatePermissions', 'previewPermissions'] as Array<keyof AdminRolesController>) {
     assert.equal(guardNames(handler).includes('RbacGuard'), false);
   }
   const audits: AuditRecordInput[] = [];

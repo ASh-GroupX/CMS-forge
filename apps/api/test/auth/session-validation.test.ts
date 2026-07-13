@@ -17,6 +17,7 @@ const validSession: StaffSessionRecord = {
     nameEn: 'System Admin',
     nameAr: 'System Admin',
     branchId: 'branch_main',
+    branch: { nameEn: 'Main Branch', nameAr: 'الفرع الرئيسي', timezone: 'Asia/Riyadh' },
     isActive: true,
     lockedAt: null,
     role: {
@@ -61,6 +62,9 @@ test('valid staff session returns safe server-derived claims', async () => {
     roleCode: 'ADMIN',
     permissions: ['ROLES_MANAGE'],
     branchId: 'branch_main',
+    branchName: 'Main Branch',
+    branchNameAr: 'الفرع الرئيسي',
+    branchTimezone: 'Asia/Riyadh',
   });
 });
 

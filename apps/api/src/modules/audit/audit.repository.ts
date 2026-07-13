@@ -1,6 +1,14 @@
 import type { AuditEventType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
 
+const auditSelect = {
+  id: true, eventType: true, action: true, actorId: true, branchId: true, targetType: true, targetId: true,
+  correlationId: true, ipAddress: true, userAgent: true, metadata: true, createdAt: true,
+  actor: { select: { nameEn: true, nameAr: true } },
+  branch: { select: { nameEn: true, nameAr: true, timezone: true } },
+} satisfies Prisma.AuditLogSelect;
+export type AuditSearchRecord = Prisma.AuditLogGetPayload<{ select: typeof auditSelect }>;
+
 export type AuditSearchFilters = {
   eventType?: AuditEventType;
   actorId?: string;
@@ -40,6 +48,7 @@ export class AuditRepository {
       orderBy: { createdAt: 'desc' },
       skip: (page.page - 1) * page.pageSize,
       take: page.pageSize,
+      select: auditSelect,
     });
   }
 }

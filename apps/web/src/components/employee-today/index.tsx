@@ -31,6 +31,7 @@ export function EmployeeToday({
   result,
   staff,
   state,
+  timeZone = 'UTC',
   updateAction,
 }: {
   data: EmployeeTodayTasks | null;
@@ -41,6 +42,7 @@ export function EmployeeToday({
   result?: 'denied' | 'error' | 'link-required' | 'success' | undefined;
   staff?: AssignableStaff[] | null | undefined;
   state?: 'denied' | 'error' | undefined;
+  timeZone?: string;
   updateAction?: TaskAction | undefined;
 }) {
   const shell = staffShellText[locale];
@@ -70,7 +72,7 @@ export function EmployeeToday({
             {result === 'success' ? t.states.saved : result === 'denied' ? t.states.denied : result === 'link-required' ? t.states.linkRequired : t.states.saveFailed}
           </p>
         ) : null}
-        {quickAddAction ? <QuickAddForm action={quickAddAction} loadRelatedRecordsAction={loadRelatedRecordsAction} locale={locale} relatedRecords={relatedRecords} staff={staff} t={t} /> : null}
+        {quickAddAction ? <QuickAddForm action={quickAddAction} loadRelatedRecordsAction={loadRelatedRecordsAction} locale={locale} relatedRecords={relatedRecords} staff={staff} t={t} timeZone={timeZone} /> : null}
         {data === null ? (
           <p className="rounded-sm border border-status-error bg-status-error/10 px-3 py-2 text-sm text-status-error" role="alert">
             {state === 'denied' ? t.states.denied : t.states.error}
@@ -182,14 +184,14 @@ function TaskCard({ locale, staff, task, t, updateAction }: { locale: Locale; st
       </div>
       <dl className="mt-3 grid gap-2 rounded-sm bg-surface-raised p-3 text-sm md:grid-cols-2">
         <Field label={t.fields.assignee} value={task.assigneeName ?? '-'} />
-        <Field label={t.fields.due} value={formatDate(task.dueAt, locale)} />
+        <Field label={t.fields.due} value={formatDate(task.dueAt, locale, task.displayTimeZone)} />
       </dl>
       <details className="mt-2 text-sm">
         <summary className="cursor-pointer font-semibold text-content-muted">{t.fields.moreInfo}</summary>
         <dl className="mt-2 grid gap-2 rounded-sm border border-line-subtle bg-surface px-3 py-2 md:grid-cols-3">
         <Field label={t.fields.owner} value={task.ownerName ?? '-'} />
         <Field label={t.fields.branch} value={task.branchName ?? '-'} />
-        <Field label={t.fields.updated} value={formatDate(task.updatedAt, locale)} />
+        <Field label={t.fields.updated} value={formatDate(task.updatedAt, locale, task.displayTimeZone)} />
         </dl>
       </details>
       {task.nextAction ? (
@@ -197,7 +199,7 @@ function TaskCard({ locale, staff, task, t, updateAction }: { locale: Locale; st
           <p className="font-semibold">{t.fields.nextAction}</p>
           <p className="mt-1 break-words text-muted-foreground">{task.nextAction.what}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {t.fields.nextOwner}: <span>{task.nextAction.whoName ?? '-'}</span> - {formatDate(task.nextAction.when, locale)}
+            {t.fields.nextOwner}: <span>{task.nextAction.whoName ?? '-'}</span> - {formatDate(task.nextAction.when, locale, task.displayTimeZone)}
           </p>
         </div>
       ) : null}
@@ -232,8 +234,8 @@ function formatNumber(locale: Locale, value: number): string {
   return new Intl.NumberFormat(locale).format(value);
 }
 
-function formatDate(value: string, locale: Locale): string {
-  return formatDisplayDate(value, locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' });
+function formatDate(value: string, locale: Locale, timeZone: string): string {
+  return `${formatDisplayDate(value, locale, { dateStyle: 'medium', timeStyle: 'short', timeZone })} (${timeZone})`;
 }
 
 function linkTypeLabel(entityType: string, t: EmployeeTodayText): string {

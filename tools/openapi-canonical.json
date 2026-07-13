@@ -298,6 +298,62 @@
         }
       }
     },
+    "/admin/roles": {
+      "get": {
+        "tags": ["Admin"],
+        "operationId": "adminRolesList",
+        "summary": "List roles, permissions, versions, and affected active-user counts",
+        "responses": {
+          "200": { "description": "Roles and permissions", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminRolesResponse" } } } },
+          "401": { "description": "Missing or invalid session", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Role denied", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      },
+      "post": {
+        "tags": ["Admin"],
+        "operationId": "adminRoleCreate",
+        "summary": "Create a staff role",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminRoleCreateRequest" } } } },
+        "responses": {
+          "201": { "description": "Role created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminRole" } } } },
+          "400": { "description": "Invalid role request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "401": { "description": "Missing or invalid session", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Role denied or invalid CSRF token", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/admin/roles/{id}/permissions": {
+      "patch": {
+        "tags": ["Admin"],
+        "operationId": "adminRolePermissionsUpdate",
+        "summary": "Replace role permissions using optimistic concurrency and lockout safeguards",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminRolePermissionsRequest" } } } },
+        "responses": {
+          "200": { "description": "Role permissions updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminRole" } } } },
+          "400": { "description": "Invalid permission request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "401": { "description": "Missing or invalid session", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Role denied or invalid CSRF token", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "Stale version, self-lockout, or last role-manager conflict", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/admin/roles/{id}/permissions/preview": {
+      "post": {
+        "tags": ["Admin"],
+        "operationId": "adminRolePermissionsPreview",
+        "summary": "Preview role permission impact without mutation",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminRolePermissionsRequest" } } } },
+        "responses": {
+          "200": { "description": "Permission impact preview", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminRolePermissionPreview" } } } },
+          "400": { "description": "Invalid permission request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "401": { "description": "Missing or invalid session", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Role denied or invalid CSRF token", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "Stale version conflict", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
     "/admin/users": {
       "get": {
         "tags": [
@@ -2397,6 +2453,18 @@
             }
           },
           {
+            "name": "ownerScope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ME",
+                "UNASSIGNED"
+              ]
+            }
+          },
+          {
             "name": "dateFrom",
             "in": "query",
             "required": false,
@@ -3906,6 +3974,20 @@
         }
       }
     },
+    "/tasks/{id}/manager-detail": {
+      "get": {
+        "tags": ["Tasks"],
+        "operationId": "taskManagerDetailGet",
+        "summary": "Get a safe branch-scoped manager task summary",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Manager task summary", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ManagerTaskDetailResponse" } } } },
+          "401": { "description": "Missing or invalid session", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Role denied or branch scope denied", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "Task not found or outside authorized scope", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
     "/tasks/promises": {
       "get": {
         "tags": [
@@ -4744,6 +4826,79 @@
         }
       }
     },
+    "/search": {
+      "get": {
+        "tags": [
+          "Search"
+        ],
+        "operationId": "staffGlobalSearch",
+        "summary": "Search authorized staff records",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated COMPLAINT, TASK, CASE, DEAL, or CUSTOMER values"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 8,
+              "minimum": 1,
+              "maximum": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid search query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/notifications": {
       "get": {
         "tags": [
@@ -4751,6 +4906,33 @@
         ],
         "operationId": "notificationListMine",
         "summary": "List current staff in-app notifications",
+        "parameters": [
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "all",
+              "enum": [
+                "all",
+                "unread",
+                "mentions"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Current staff notifications",
@@ -5608,6 +5790,9 @@
           "nameAr",
           "roleCode",
           "branchId"
+          ,"branchName"
+          ,"branchNameAr"
+          ,"branchTimezone"
         ],
         "properties": {
           "userId": {
@@ -5627,6 +5812,24 @@
             "type": "string"
           },
           "branchId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "branchName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "branchNameAr": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "branchTimezone": {
             "type": [
               "string",
               "null"
@@ -6819,6 +7022,7 @@
           "subject",
           "branchId",
           "branchName",
+          "displayTimeZone",
           "ownerId",
           "ownerName",
           "createdAt",
@@ -6861,6 +7065,9 @@
             "type": "string"
           },
           "branchName": {
+            "type": "string"
+          },
+          "displayTimeZone": {
             "type": "string"
           },
           "ownerId": {
@@ -7157,6 +7364,9 @@
               {
                 "type": "object",
                 "required": [
+                  "categoryId",
+                  "categoryName",
+                  "categoryNameAr",
                   "description",
                   "incidentAt",
                   "customer",
@@ -7171,6 +7381,15 @@
                   "caseSummary"
                 ],
                 "properties": {
+                  "categoryId": {
+                    "type": "string"
+                  },
+                  "categoryName": {
+                    "type": "string"
+                  },
+                  "categoryNameAr": {
+                    "type": "string"
+                  },
                   "description": {
                     "type": "string"
                   },
@@ -7719,6 +7938,7 @@
           "severity",
           "subject",
           "ownerId",
+          "displayTimeZone",
           "createdAt",
           "updatedAt"
         ],
@@ -7767,6 +7987,9 @@
               "null"
             ]
           },
+          "displayTimeZone": {
+            "type": "string"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -7800,7 +8023,12 @@
           "eventType",
           "action",
           "actorId",
+          "actorName",
+          "actorNameAr",
           "branchId",
+          "branchName",
+          "branchNameAr",
+          "displayTimeZone",
           "targetType",
           "targetId",
           "correlationId",
@@ -7826,7 +8054,8 @@
               "NOTIFICATION",
               "REPORT",
               "CONFIG",
-              "SECURITY"
+              "SECURITY",
+              "TASK"
             ]
           },
           "action": {
@@ -7838,11 +8067,26 @@
               "null"
             ]
           },
+          "actorName": {
+            "type": ["string", "null"]
+          },
+          "actorNameAr": {
+            "type": ["string", "null"]
+          },
           "branchId": {
             "type": [
               "string",
               "null"
             ]
+          },
+          "branchName": {
+            "type": ["string", "null"]
+          },
+          "branchNameAr": {
+            "type": ["string", "null"]
+          },
+          "displayTimeZone": {
+            "type": "string"
           },
           "targetType": {
             "type": "string"
@@ -8007,6 +8251,7 @@
           "confidentialityLevel",
           "links",
           "participantUserIds",
+          "displayTimeZone",
           "createdAt",
           "updatedAt"
         ],
@@ -8108,6 +8353,9 @@
               "string",
               "null"
             ]
+          },
+          "displayTimeZone": {
+            "type": "string"
           }
         },
         "additionalProperties": false
@@ -9610,7 +9858,8 @@
           "templateCode",
           "locale",
           "payload",
-          "queuedAt"
+          "queuedAt",
+          "readAt"
         ],
         "properties": {
           "id": {
@@ -9632,6 +9881,10 @@
           "queuedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "readAt": {
+            "type": ["string", "null"],
+            "format": "date-time"
           }
         },
         "additionalProperties": false
@@ -9648,6 +9901,54 @@
               "$ref": "#/components/schemas/Notification"
             }
           }
+        },
+        "additionalProperties": false
+      },
+      "SearchResult": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "label",
+          "labelAr",
+          "context",
+          "contextAr",
+          "href"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "COMPLAINT",
+              "TASK",
+              "CASE",
+              "DEAL",
+              "CUSTOMER"
+            ]
+          },
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "labelAr": { "type": "string" },
+          "context": { "type": "string" },
+          "contextAr": { "type": "string" },
+          "href": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "SearchResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "query",
+          "limit"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/SearchResult" }
+          },
+          "query": { "type": "string" },
+          "limit": { "type": "integer" }
         },
         "additionalProperties": false
       },
@@ -10656,6 +10957,54 @@
         },
         "additionalProperties": false
       },
+      "AdminPermission": {
+        "type": "object",
+        "required": ["id", "code", "nameEn", "nameAr"],
+        "properties": { "id": { "type": "string" }, "code": { "type": "string" }, "nameEn": { "type": "string" }, "nameAr": { "type": "string" } },
+        "additionalProperties": false
+      },
+      "AdminRole": {
+        "type": "object",
+        "required": ["id", "code", "nameEn", "nameAr", "isActive", "isSystem", "permissions", "updatedAt", "affectedActiveUserCount"],
+        "properties": { "id": { "type": "string" }, "code": { "type": "string" }, "nameEn": { "type": "string" }, "nameAr": { "type": "string" }, "isActive": { "type": "boolean" }, "isSystem": { "type": "boolean" }, "permissions": { "type": "array", "items": { "$ref": "#/components/schemas/AdminPermission" } }, "updatedAt": { "type": "string", "format": "date-time" }, "affectedActiveUserCount": { "type": "integer", "minimum": 0 } },
+        "additionalProperties": false
+      },
+      "AdminRolesResponse": {
+        "type": "object",
+        "required": ["roles", "permissions"],
+        "properties": { "roles": { "type": "array", "items": { "$ref": "#/components/schemas/AdminRole" } }, "permissions": { "type": "array", "items": { "$ref": "#/components/schemas/AdminPermission" } } },
+        "additionalProperties": false
+      },
+      "AdminRoleCreateRequest": {
+        "type": "object",
+        "required": ["code", "nameEn", "nameAr", "permissionCodes"],
+        "properties": { "code": { "type": "string", "minLength": 3 }, "nameEn": { "type": "string", "minLength": 1 }, "nameAr": { "type": "string", "minLength": 1 }, "permissionCodes": { "type": "array", "items": { "type": "string" } } },
+        "additionalProperties": false
+      },
+      "AdminRolePermissionsRequest": {
+        "type": "object",
+        "required": ["permissionCodes", "expectedUpdatedAt"],
+        "properties": { "permissionCodes": { "type": "array", "items": { "type": "string" } }, "expectedUpdatedAt": { "type": "string", "format": "date-time" } },
+        "additionalProperties": false
+      },
+      "AdminRolePermissionPreview": {
+        "type": "object",
+        "required": ["addedPermissionCodes", "removedPermissionCodes", "affectedActiveUserCount", "wouldRemoveActorAccess", "wouldRemoveLastRoleManager", "allowed", "denialReason", "updatedAt"],
+        "properties": { "addedPermissionCodes": { "type": "array", "items": { "type": "string" } }, "removedPermissionCodes": { "type": "array", "items": { "type": "string" } }, "affectedActiveUserCount": { "type": "integer", "minimum": 0 }, "wouldRemoveActorAccess": { "type": "boolean" }, "wouldRemoveLastRoleManager": { "type": "boolean" }, "allowed": { "type": "boolean" }, "denialReason": { "type": ["string", "null"], "enum": ["ROLE_SELF_LOCKOUT", "ROLE_LAST_MANAGER", null] }, "updatedAt": { "type": "string", "format": "date-time" } },
+        "additionalProperties": false
+      },
+      "ManagerTaskDetail": {
+        "type": "object",
+        "required": ["id", "title", "ownerId", "ownerName", "assigneeId", "assigneeName", "branchId", "branchName", "displayTimeZone", "dueAt", "status", "nextAction", "isCustomerPromise", "links", "stuckReasons", "createdAt", "updatedAt", "capabilities"],
+        "properties": { "id": { "type": "string" }, "title": { "type": "string" }, "ownerId": { "type": "string" }, "ownerName": { "type": ["string", "null"] }, "assigneeId": { "type": "string" }, "assigneeName": { "type": ["string", "null"] }, "branchId": { "type": ["string", "null"] }, "branchName": { "type": ["string", "null"] }, "displayTimeZone": { "type": "string" }, "dueAt": { "type": "string", "format": "date-time" }, "status": { "type": "string", "enum": ["OPEN", "IN_PROGRESS", "WAITING", "DONE"] }, "nextAction": { "oneOf": [{ "$ref": "#/components/schemas/TaskNextAction" }, { "type": "null" }] }, "isCustomerPromise": { "type": "boolean" }, "links": { "type": "array", "items": { "$ref": "#/components/schemas/TaskLink" } }, "stuckReasons": { "type": "array", "items": { "type": "string", "enum": ["NEXT_ACTION_OVERDUE", "NO_MOVEMENT"] } }, "createdAt": { "type": "string", "format": "date-time" }, "updatedAt": { "type": "string", "format": "date-time" }, "capabilities": { "type": "object", "required": ["canOpenInteractive"], "properties": { "canOpenInteractive": { "type": "boolean" } }, "additionalProperties": false } },
+        "additionalProperties": false
+      },
+      "ManagerTaskDetailResponse": {
+        "type": "object",
+        "required": ["task"],
+        "properties": { "task": { "$ref": "#/components/schemas/ManagerTaskDetail" } },
+        "additionalProperties": false
+      },
       "CollaborationMentionTarget": {
         "type": "object",
         "required": ["type", "id"],
@@ -10674,7 +11023,7 @@
       "CommunicationTarget": {
         "type": "object",
         "required": ["id", "type", "label", "labelAr", "recipientCount"],
-        "properties": { "id": { "type": "string" }, "type": { "type": "string", "enum": ["USER", "SYSTEM_ROLE", "SYSTEM_DEPARTMENT", "CUSTOM_GROUP"] }, "label": { "type": "string" }, "labelAr": { "type": "string" }, "recipientCount": { "type": "integer", "minimum": 0 } },
+        "properties": { "id": { "type": "string" }, "type": { "type": "string", "enum": ["USER", "SYSTEM_ROLE", "SYSTEM_DEPARTMENT", "CUSTOM_GROUP"] }, "label": { "type": "string" }, "labelAr": { "type": "string" }, "recipientCount": { "type": "integer", "minimum": 0 }, "roleCode": { "type": "string" }, "roleName": { "type": "string" }, "roleNameAr": { "type": "string" }, "departmentId": { "type": ["string", "null"] }, "departmentName": { "type": ["string", "null"] }, "departmentNameAr": { "type": ["string", "null"] }, "branchId": { "type": ["string", "null"] }, "branchName": { "type": ["string", "null"] }, "branchNameAr": { "type": ["string", "null"] } },
         "additionalProperties": false
       },
       "CommunicationTargetsResponse": {
@@ -10691,8 +11040,8 @@
       },
       "CommunicationGroupMember": {
         "type": "object",
-        "required": ["userId", "displayName", "displayNameAr"],
-        "properties": { "userId": { "type": "string" }, "displayName": { "type": "string" }, "displayNameAr": { "type": "string" } },
+        "required": ["userId", "displayName", "displayNameAr", "roleCode", "roleName", "roleNameAr", "departmentId", "departmentName", "departmentNameAr", "branchId", "branchName", "branchNameAr"],
+        "properties": { "userId": { "type": "string" }, "displayName": { "type": "string" }, "displayNameAr": { "type": "string" }, "roleCode": { "type": "string" }, "roleName": { "type": "string" }, "roleNameAr": { "type": "string" }, "departmentId": { "type": ["string", "null"] }, "departmentName": { "type": ["string", "null"] }, "departmentNameAr": { "type": ["string", "null"] }, "branchId": { "type": ["string", "null"] }, "branchName": { "type": ["string", "null"] }, "branchNameAr": { "type": ["string", "null"] } },
         "additionalProperties": false
       },
       "CommunicationGroup": {
