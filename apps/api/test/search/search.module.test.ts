@@ -1,18 +1,22 @@
-import { MODULE_METADATA } from '@nestjs/common/constants.js';
+import { NestFactory } from '@nestjs/core';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { PermissionGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../src/core/auth.guard.js';
 import { PrismaService } from '../../src/core/http-kernel.js';
-import { AuthModule } from '../../src/modules/auth/auth.module.js';
+import { SearchRepository } from '../../src/modules/search/search.repository.js';
 import { SearchModule } from '../../src/modules/search/search.module.js';
 
-test('search module wires its database and authentication dependencies', () => {
-  const imports = Reflect.getMetadata(MODULE_METADATA.IMPORTS, SearchModule) as unknown[];
-  const providers = Reflect.getMetadata(MODULE_METADATA.PROVIDERS, SearchModule) as unknown[];
+test('search module resolves its runtime dependency graph', async () => {
+  const onModuleInit = PrismaService.prototype.onModuleInit;
+  const onModuleDestroy = PrismaService.prototype.onModuleDestroy;
+  PrismaService.prototype.onModuleInit = async () => {};
+  PrismaService.prototype.onModuleDestroy = async () => {};
 
-  assert.ok(imports.includes(AuthModule));
-  assert.ok(providers.includes(PrismaService));
-  assert.ok(providers.includes(SessionAuthGuard));
-  assert.ok(providers.includes(PermissionGuard));
-  assert.ok(providers.some((provider) => (provider as { provide?: unknown }).provide === SESSION_AUTH_SERVICE));
+  const app = await NestFactory.createApplicationContext(SearchModule, { logger: false });
+  try {
+    assert.ok(app.get(SearchRepository));
+  } finally {
+    await app.close();
+    PrismaService.prototype.onModuleInit = onModuleInit;
+    PrismaService.prototype.onModuleDestroy = onModuleDestroy;
+  }
 });

@@ -13388,10 +13388,13 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 - Production logs for `ca40feb1` showed Nest could not resolve
   `PrismaService` for `SearchRepository`; the API container exited with code 1.
 - Production rollback to `68e27039` completed and `/health` returned `status=ok`.
-- `SearchModule` now follows the existing authenticated-module wiring for
-  Prisma, `AuthModule`, session auth, and permission guards.
-- Added a regression test under the normal search suite so CI checks the module
-  metadata that caused the startup failure.
+- The first disposable-container preflight for `485ab15d` safely stopped before
+  live replacement and exposed `AuditService` as the remaining dependency of
+  `PermissionGuard`; production stayed on the healthy rollback.
+- `SearchModule` now follows the complete authenticated-module wiring for
+  Prisma, audit, `AuthModule`, session auth, and permission guards.
+- The regression test now boots the Nest module with database lifecycle calls
+  stubbed, resolving the actual dependency graph without requiring a test DB.
 
 ### Verification
 

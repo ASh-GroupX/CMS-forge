@@ -21,8 +21,9 @@ Prior state history is in .forge/archive/state-archive.md.
   notification views/limits, and session-resolved complaint owner shortcuts.
 - The first production promotion of `ca40feb1` exposed missing dependency
   registration in `SearchModule`; production was restored to `68e27039`.
-- The hotfix now registers Prisma, auth, and guard providers and adds a
-  CI-visible module-wiring regression test.
+- The first hotfix preflight safely found the guard's missing audit dependency
+  before live replacement. The corrected hotfix registers the complete runtime
+  graph and boots the Nest module in its CI regression test.
 - Backend workflow authority, RBAC, branch scope, audit behavior, and customer
   portal privacy remain unchanged.
 - Local lint, typecheck, OpenAPI, API, web, visual, accessibility, and static

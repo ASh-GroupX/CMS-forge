@@ -15,8 +15,9 @@ coordinated shell and workflow update while preserving backend authority, RBAC,
 branch scope, audit behavior, and portal privacy.
 
 The first production promotion of `ca40feb1` failed because `SearchModule` did
-not register its Prisma and authentication dependencies. Production was rolled
-back successfully to `68e27039`; redeploy the hotfix artifact before UAT.
+not register its runtime dependencies. Production was rolled back successfully
+to `68e27039`; the first hotfix preflight found the remaining audit dependency
+before live replacement. Redeploy the corrected hotfix artifact before UAT.
 
 ## Verification
 
