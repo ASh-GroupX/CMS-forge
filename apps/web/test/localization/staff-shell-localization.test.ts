@@ -30,9 +30,24 @@ import { portalSurveyText } from '../../src/i18n/portal-survey';
 import { portalTrackingText } from '../../src/i18n/portal-tracking';
 import { staffShellText } from '../../src/i18n/staff-shell';
 import { taskConversationText } from '../../src/i18n/staff-task-conversation';
+import { formatZonedDateTimeLocal, zonedDateTimeToIso } from '../../src/lib/locale-format';
+import { localeHref } from '../../src/lib/locale-href';
 
 const mojibakeMarkers = /[\u00c2\u00c3\u00d8\u00d9\ufffd]/;
 const arabic = /[\u0600-\u06ff]/;
+
+test('localized internal links preserve filters and fragments', () => {
+  assert.equal(localeHref('/audit?eventType=TASK#event-1', 'ar'), '/audit?eventType=TASK&locale=ar#event-1');
+  assert.equal(localeHref('/notifications?locale=ar&view=unread', 'en'), '/notifications?locale=en&view=unread');
+  assert.equal(localeHref('https://example.test/help', 'ar'), 'https://example.test/help');
+});
+
+test('branch-local task inputs round-trip across a midnight timezone boundary', () => {
+  const instant = '2026-06-18T21:30:00.000Z';
+  const local = formatZonedDateTimeLocal(instant, 'Asia/Riyadh');
+  assert.equal(local, '2026-06-19T00:30');
+  assert.equal(zonedDateTimeToIso(local, 'Asia/Riyadh'), instant);
+});
 
 test('staff shell Arabic text uses real Arabic codepoints', () => {
   const source = readFileSync('apps/web/src/i18n/staff-shell.ts', 'utf8');

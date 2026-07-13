@@ -2,7 +2,20 @@ import type { StaffCommentApiResult } from './staff-complaint-comments-api';
 import { staffRequestJson } from './staff-complaint-comments-api';
 import { hasStaffSessionCookie, incomingCookieHeader } from './staff-request-auth';
 
-export type StaffGroupMember = { userId: string; displayName: string; displayNameAr: string };
+export type StaffGroupMember = {
+  userId: string;
+  displayName: string;
+  displayNameAr: string;
+  roleCode: string;
+  roleName: string;
+  roleNameAr: string;
+  departmentId: string | null;
+  departmentName: string | null;
+  departmentNameAr: string | null;
+  branchId: string | null;
+  branchName: string | null;
+  branchNameAr: string | null;
+};
 export type StaffCommunicationGroup = { id: string; name: string; visibility: 'PERSONAL' | 'SHARED'; ownerId: string; members: StaffGroupMember[]; createdAt: string; updatedAt: string };
 export type StaffCommunicationGroups = { items: StaffCommunicationGroup[]; eligibleMembers: StaffGroupMember[]; canManageShared: boolean };
 export type StaffGroupWrite = { name: string; visibility: 'PERSONAL' | 'SHARED'; memberUserIds: string[] };
@@ -31,5 +44,6 @@ export function deactivateCommunicationGroup(id: string, fetchImpl: typeof fetch
 
 function groups(value: Partial<StaffCommunicationGroups>): value is StaffCommunicationGroups { return Array.isArray(value.items) && value.items.every(group) && Array.isArray(value.eligibleMembers) && value.eligibleMembers.every(member) && typeof value.canManageShared === 'boolean'; }
 function group(value: unknown): value is StaffCommunicationGroup { const row = value as Partial<StaffCommunicationGroup>; return typeof row?.id === 'string' && typeof row.name === 'string' && (row.visibility === 'PERSONAL' || row.visibility === 'SHARED') && typeof row.ownerId === 'string' && Array.isArray(row.members) && row.members.every(member) && typeof row.createdAt === 'string' && typeof row.updatedAt === 'string'; }
-function member(value: unknown): value is StaffGroupMember { const row = value as Partial<StaffGroupMember>; return typeof row?.userId === 'string' && typeof row.displayName === 'string' && typeof row.displayNameAr === 'string'; }
+function member(value: unknown): value is StaffGroupMember { const row = value as Partial<StaffGroupMember>; return typeof row?.userId === 'string' && typeof row.displayName === 'string' && typeof row.displayNameAr === 'string' && typeof row.roleCode === 'string' && typeof row.roleName === 'string' && typeof row.roleNameAr === 'string' && nullableString(row.departmentId) && nullableString(row.departmentName) && nullableString(row.departmentNameAr) && nullableString(row.branchId) && nullableString(row.branchName) && nullableString(row.branchNameAr); }
+function nullableString(value: unknown): value is string | null { return typeof value === 'string' || value === null; }
 function csrfHeaders(): HeadersInit { const token = typeof document === 'undefined' ? null : document.cookie.split(';').map((item) => item.trim()).find((item) => item.startsWith('cms_csrf_token='))?.slice('cms_csrf_token='.length) ?? null; return token ? { Accept: 'application/json', 'content-type': 'application/json', 'x-csrf-token': token } : { Accept: 'application/json', 'content-type': 'application/json' }; }

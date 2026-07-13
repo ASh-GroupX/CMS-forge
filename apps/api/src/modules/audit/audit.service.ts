@@ -1,10 +1,10 @@
-import type { AuditEventType, Prisma } from '@prisma/client';
+import type { AuditEventType } from '@prisma/client';
 import { AuditService } from '../../core/audit.service.js';
 import type { AuditRecordInput } from '../../core/audit.service.js';
 import type { StaffPrincipal } from '../../core/auth.guard.js';
 import { AppException } from '../../core/http-kernel.js';
 import { AuditRepository } from './audit.repository.js';
-import type { AuditSearchFilters } from './audit.repository.js';
+import type { AuditSearchFilters, AuditSearchRecord } from './audit.repository.js';
 
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
@@ -21,6 +21,7 @@ const AUDIT_EVENT_TYPES: AuditEventType[] = [
   'REPORT',
   'CONFIG',
   'SECURITY',
+  'TASK',
 ];
 
 export type AuditSearchInput = AuditSearchFilters & {
@@ -45,14 +46,17 @@ export type AuditExportResult = {
   rowCount: number;
 };
 
-type AuditLogRow = Prisma.AuditLogGetPayload<Record<string, never>>;
-
 type AuditLogResponse = {
   id: string;
   eventType: AuditEventType;
   action: string;
   actorId: string | null;
+  actorName: string | null;
+  actorNameAr: string | null;
   branchId: string | null;
+  branchName: string | null;
+  branchNameAr: string | null;
+  displayTimeZone: string;
   targetType: string;
   targetId: string | null;
   correlationId: string | null;
@@ -153,13 +157,18 @@ export function parseAuditSearchQuery(query: Record<string, unknown>): AuditSear
   return parsed;
 }
 
-function toResponse(row: AuditLogRow): AuditLogResponse {
+function toResponse(row: AuditSearchRecord): AuditLogResponse {
   return {
     id: row.id,
     eventType: row.eventType,
     action: row.action,
     actorId: row.actorId,
+    actorName: row.actor?.nameEn ?? null,
+    actorNameAr: row.actor?.nameAr ?? null,
     branchId: row.branchId,
+    branchName: row.branch?.nameEn ?? null,
+    branchNameAr: row.branch?.nameAr ?? null,
+    displayTimeZone: row.branch?.timezone ?? 'UTC',
     targetType: row.targetType,
     targetId: row.targetId,
     correlationId: row.correlationId,

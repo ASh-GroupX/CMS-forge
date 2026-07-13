@@ -11,6 +11,7 @@ const staffSelect = {
   departmentId: true,
   role: { select: { id: true, code: true, nameEn: true, nameAr: true } },
   department: { select: { id: true, nameEn: true, nameAr: true } },
+  branch: { select: { id: true, nameEn: true, nameAr: true } },
 } satisfies Prisma.UserSelect;
 
 const groupSelect = {

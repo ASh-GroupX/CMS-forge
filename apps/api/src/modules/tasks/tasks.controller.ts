@@ -7,7 +7,7 @@ import type { QuickAddTaskResponseDto } from './dto/create-task.dto.js';
 import { parseQuickAddTaskBody, toQuickAddTaskInput } from './dto/create-task.dto.js';
 import { parseRelatedRecordLookupQuery, type RelatedRecordLookupResponseDto } from './dto/related-record-lookup.dto.js';
 import { parseTaskCommentBody, parseTaskNudgeBody } from './dto/task-collaboration.dto.js';
-import type { EmployeeTodayResponseDto, ManagerControlRoomResponseDto, PromiseTrackerResponseDto } from './dto/task-response.dto.js';
+import type { EmployeeTodayResponseDto, ManagerControlRoomResponseDto, ManagerTaskDetailResponseDto, PromiseTrackerResponseDto } from './dto/task-response.dto.js';
 import { TasksService } from './tasks.service.js';
 import { parseUpdateTaskBody } from './dto/update-task.dto.js';
 
@@ -69,6 +69,14 @@ export class TasksController {
   relatedRecords(@Query() query: Record<string, unknown>, @Req() request: AuthenticatedRequest): Promise<RelatedRecordLookupResponseDto> {
     const principal = requirePrincipal(request);
     return this.tasksService.relatedRecords(parseRelatedRecordLookupQuery(query), { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId });
+  }
+
+  @Get(':id/manager-detail')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('REPORT_VIEW')
+  @BranchScoped()
+  async managerDetail(@Param('id') id: string, @Req() request: AuthenticatedRequest): Promise<ManagerTaskDetailResponseDto> {
+    return this.tasksService.managerTaskDetail(id, taskActor(requirePrincipal(request)));
   }
 
   @Get(':id')

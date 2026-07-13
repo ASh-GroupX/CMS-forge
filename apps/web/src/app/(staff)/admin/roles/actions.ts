@@ -16,8 +16,8 @@ export async function createAdminRoleAction(formData: FormData): Promise<void> {
 export async function updateAdminRolePermissionsAction(formData: FormData): Promise<void> {
   const locale = formData.get('locale') === 'ar' ? 'ar' : 'en';
   const id = encodeURIComponent(String(formData.get('id') ?? ''));
-  const response = await roleFetch(`/admin/roles/${id}/permissions`, 'PATCH', { permissionCodes: formData.getAll('permissionCodes').map(String) });
-  redirect(`/admin/roles?locale=${locale}&role=${response.ok ? 'success' : response.status === 400 ? 'validation' : 'error'}`);
+  const response = await roleFetch(`/admin/roles/${id}/permissions`, 'PATCH', { permissionCodes: formData.getAll('permissionCodes').map(String), expectedUpdatedAt: String(formData.get('expectedUpdatedAt') ?? '') });
+  redirect(`/admin/roles?locale=${locale}&role=${response.ok ? 'success' : response.status === 400 ? 'validation' : response.status === 409 ? 'conflict' : 'error'}`);
 }
 
 async function roleFetch(path: string, method: 'PATCH', body: Record<string, unknown>): Promise<Response> {

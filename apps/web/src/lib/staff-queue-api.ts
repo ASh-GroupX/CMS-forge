@@ -11,6 +11,7 @@ export type StaffQueueQuery = {
   severity?: ComplaintSeverity | null;
   sla?: ComplaintQueueItem['slaState'] | null;
   status?: ComplaintStatus | null;
+  ownerScope?: 'ME' | 'UNASSIGNED' | null;
 };
 
 export type StaffQueueResult = {
@@ -81,6 +82,7 @@ export async function getStaffQueueLoadResult({
     append(url.searchParams, 'status', query.status);
     append(url.searchParams, 'severity', query.severity);
     append(url.searchParams, 'sla', query.sla);
+    append(url.searchParams, 'ownerScope', query.ownerScope);
     if (search) url.searchParams.set(isReferenceSearch(search) ? 'referenceNumber' : 'customer', search);
 
     const response = await fetchImpl(url, {
@@ -119,6 +121,7 @@ function rowFrom(row: Partial<ComplaintQueueItem>): ComplaintQueueItem | null {
     typeof row.severity !== 'string' ||
     typeof row.subject !== 'string' ||
     typeof row.branchId !== 'string' ||
+    typeof row.displayTimeZone !== 'string' ||
     typeof row.createdAt !== 'string' ||
     typeof row.updatedAt !== 'string'
   ) {
@@ -132,6 +135,7 @@ function rowFrom(row: Partial<ComplaintQueueItem>): ComplaintQueueItem | null {
     severity: row.severity,
     subject: row.subject,
     branchId: row.branchId,
+    displayTimeZone: row.displayTimeZone,
     ...(branchName ? { branchName } : {}),
     ownerId: typeof row.ownerId === 'string' ? row.ownerId : null,
     ownerName: typeof row.ownerName === 'string' ? row.ownerName : null,

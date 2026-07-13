@@ -12,6 +12,7 @@ import type { Locale } from '../../i18n/staff-shell';
 import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
 import type { RelatedRecordType, StaffRelatedRecord, StaffRelatedRecordOptions } from '../../lib/staff-related-records-api';
 import type { StaffTask, StaffTaskStatus } from '../../lib/staff-tasks-api';
+import { formatZonedDateTimeLocal } from '../../lib/locale-format';
 
 type EmployeeTodayText = (typeof employeeTodayText)[Locale];
 export type TaskAction = (formData: FormData) => void | Promise<void>;
@@ -19,7 +20,7 @@ type RelatedRecordsAction = () => Promise<StaffRelatedRecordOptions | null>;
 
 const RELATED_RECORD_TYPES: RelatedRecordType[] = ['CUSTOMER', 'COMPLAINT', 'CASE', 'DEAL'];
 
-export function QuickAddForm({ action, loadRelatedRecordsAction, locale, relatedRecords, staff, t }: { action: TaskAction; loadRelatedRecordsAction?: RelatedRecordsAction | undefined; locale: Locale; relatedRecords?: StaffRelatedRecordOptions | null | undefined; staff?: AssignableStaff[] | null | undefined; t: EmployeeTodayText }) {
+export function QuickAddForm({ action, loadRelatedRecordsAction, locale, relatedRecords, staff, t, timeZone }: { action: TaskAction; loadRelatedRecordsAction?: RelatedRecordsAction | undefined; locale: Locale; relatedRecords?: StaffRelatedRecordOptions | null | undefined; staff?: AssignableStaff[] | null | undefined; t: EmployeeTodayText; timeZone: string }) {
   const [loadedRecords, setLoadedRecords] = React.useState<StaffRelatedRecordOptions | null | undefined>(relatedRecords);
   const [loadingRecords, setLoadingRecords] = React.useState(false);
 
@@ -44,8 +45,8 @@ export function QuickAddForm({ action, loadRelatedRecordsAction, locale, related
         <div className="grid gap-3 md:grid-cols-2">
           <LabeledInput label={t.fields.title} name="title" required />
           <StaffPicker label={t.fields.assignee} labelName="assigneeLabel" locale={locale} name="whoId" staff={staff} t={t.staffPicker} />
-          <LabeledInput label={t.fields.when} name="when" required type="datetime-local" />
-          <LabeledInput label={t.fields.due} name="dueAt" type="datetime-local" />
+          <LabeledInput label={`${t.fields.when} (${timeZone})`} name="when" required type="datetime-local" />
+          <LabeledInput label={`${t.fields.due} (${timeZone})`} name="dueAt" type="datetime-local" />
           <RelatedRecordPicker locale={locale} relatedRecords={loadingRecords ? undefined : loadedRecords} t={t} />
         </div>
         <div className="grid gap-2">
@@ -145,7 +146,7 @@ function relatedRecordLabel(record: StaffRelatedRecord, locale: Locale): string 
 export function TaskActions({ action, locale, staff, task, t }: { action: TaskAction; locale: Locale; staff?: AssignableStaff[] | null | undefined; task: StaffTask; t: EmployeeTodayText }) {
   const nextWhat = task.nextAction?.what ?? task.title;
   const nextWho = task.nextAction?.whoId ?? task.assigneeId;
-  const nextWhen = toDateTimeLocal(task.nextAction?.when ?? task.dueAt);
+  const nextWhen = formatZonedDateTimeLocal(task.nextAction?.when ?? task.dueAt, task.displayTimeZone);
 
   return (
     <div className="mt-3 grid gap-2 border-t border-line-subtle pt-3">
@@ -161,7 +162,7 @@ export function TaskActions({ action, locale, staff, task, t }: { action: TaskAc
           <LabeledInput defaultValue={nextWhat} label={t.fields.nextAction} name="nextActionWhat" required />
           <StaffPicker initialUserId={nextWho} label={t.fields.nextOwner} labelName="nextActionWhoLabel" locale={locale} name="nextActionWhoId" staff={staff} t={t.staffPicker} />
           <div className="grid gap-2">
-            <Label htmlFor={`next-when-${task.id}`}>{t.fields.when}</Label>
+            <Label htmlFor={`next-when-${task.id}`}>{t.fields.when} ({task.displayTimeZone})</Label>
             <Input defaultValue={nextWhen} id={`next-when-${task.id}`} name="nextActionWhen" required type="datetime-local" />
           </div>
           <div className="md:col-span-4">
@@ -203,7 +204,7 @@ function StatusForm({
           <div className="grid gap-2 md:grid-cols-3">
             <LabeledInput defaultValue={nextAction.what} label={t.fields.nextAction} name="nextActionWhat" required />
             <StaffPicker initialUserId={nextAction.whoId} label={t.fields.nextOwner} labelName="nextActionWhoLabel" locale={locale} name="nextActionWhoId" staff={staff} t={t.staffPicker} />
-            <LabeledInput defaultValue={nextAction.when} label={t.fields.when} name="nextActionWhen" required type="datetime-local" />
+            <LabeledInput defaultValue={nextAction.when} label={`${t.fields.when} (${task.displayTimeZone})`} name="nextActionWhen" required type="datetime-local" />
           </div>
         ) : null}
         <Label className="grid gap-1 text-sm font-medium">
@@ -233,8 +234,4 @@ function LabeledInput({ label, name, ...props }: { label: string; name: string }
       <Input id={id} name={name} {...props} />
     </div>
   );
-}
-
-function toDateTimeLocal(value: string): string {
-  return value.slice(0, 16);
 }

@@ -13332,3 +13332,43 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
   thresholds.
 - Needs Human Review: Docker-backed audit append-only proof, deployment migration,
   active bilingual templates, and staging notification-provider validation.
+
+---
+
+## UI-CUTOVER-001 - Coordinated Staff UI Redesign
+
+- Date: 2026-07-13
+- Risk: High (staff authorization display, scoped search, communication clarity)
+- Status: Implementation and local proof passed; staging UAT remains open
+- Requirement IDs: REQ-SEARCH-001, REQ-LOCALIZATION-001, REQ-RBAC-001,
+  REQ-NOTIFY-001, REQ-COLLAB-001, REQ-COMMENTS-001, API-STANDARD-001,
+  METHOD-TEST-001
+
+### Evidence
+
+- Added a semantic light/dark token layer, locally hosted Arabic/Latin variable
+  fonts, responsive staff shell, localized identity/scope, and permission-filtered
+  desktop and mobile navigation.
+- Rebuilt the staff dashboard around urgent work, honest scoped indicators,
+  recent notifications, authorized manager exceptions, and real drill-down links.
+- Added generated, server-authorized global search; additive auth branch labels;
+  bounded notification filters; and session-resolved complaint owner shortcuts.
+- Added queue quick filters and progressive complaint/task composers with a
+  plain-language audience summary while preserving server audience resolution,
+  confirmation counts, drafts, recipient limits, and public-update confirmation.
+- Updated canonical/generated OpenAPI artifacts and typed web clients. No
+  customer-portal, workflow-authority, RBAC, audit, or privacy behavior changed.
+
+### Verification
+
+- Passed: `corepack pnpm lint`, `corepack pnpm typecheck`, and
+  `corepack pnpm openapi:check`.
+- Passed API suites: auth (38/38), complaint/workflow (77/77), search (4/4),
+  notifications, plus generated search module service/controller specs.
+- Passed: `corepack pnpm test:web` (213/213), `corepack pnpm test:visual`
+  (82 route previews), and `corepack pnpm web:visual-review` (82 HTML/PNG
+  artifacts inspected in representative EN/AR desktop/mobile states).
+- Passed: `corepack pnpm test:e2e -- accessibility` (22 route previews) and
+  `corepack pnpm web:perf` (5 static route previews).
+- Needs Human Review: staging employee/manager UAT, deployed field Web Vitals,
+  and the final promote-or-rollback decision.

@@ -4,14 +4,14 @@ import { PrismaService } from '../../core/http-kernel.js';
 
 const permissionSelect = { id: true, code: true, nameEn: true, nameAr: true } satisfies Prisma.PermissionSelect;
 const roleSelect = {
-  id: true, code: true, nameEn: true, nameAr: true, isActive: true, isSystem: true,
+  id: true, code: true, nameEn: true, nameAr: true, isActive: true, isSystem: true, updatedAt: true,
   permissions: { select: { permission: { select: permissionSelect } }, orderBy: { permission: { code: 'asc' } } },
 } satisfies Prisma.RoleSelect;
 
 export type AdminRoleRecord = Prisma.RoleGetPayload<{ select: typeof roleSelect }>;
 export type AdminPermissionRecord = Prisma.PermissionGetPayload<{ select: typeof permissionSelect }>;
 export type CreateAdminRoleData = { code: string; nameEn: string; nameAr: string; permissionIds: string[] };
-type RoleClient = Pick<Prisma.TransactionClient, 'role'>;
+type RoleClient = Pick<Prisma.TransactionClient, 'role' | 'user'>;
 
 @Injectable()
 export class AdminRolesRepository {
@@ -34,8 +34,32 @@ export class AdminRolesRepository {
     return permissions.map(({ id }) => id);
   }
 
-  async findById(id: string): Promise<AdminRoleRecord | null> {
-    return this.prisma.role.findUnique({ where: { id }, select: roleSelect });
+  async findById(id: string, client: RoleClient = this.prisma): Promise<AdminRoleRecord | null> {
+    return client.role.findUnique({ where: { id }, select: roleSelect });
+  }
+
+  async activeUserCounts(): Promise<Map<string, number>> {
+    const rows = await this.prisma.user.groupBy({ by: ['roleId'], where: { isActive: true, lockedAt: null }, _count: { _all: true } });
+    return new Map(rows.map((row) => [row.roleId, row._count._all]));
+  }
+
+  async activeUserRoleId(userId: string, client: RoleClient = this.prisma): Promise<string | null> {
+    return (await client.user.findFirst({ where: { id: userId, isActive: true, lockedAt: null }, select: { roleId: true } }))?.roleId ?? null;
+  }
+
+  async countActiveUsersForRole(roleId: string, client: RoleClient = this.prisma): Promise<number> {
+    return client.user.count({ where: { roleId, isActive: true, lockedAt: null } });
+  }
+
+  async countOtherActiveRoleManagers(roleId: string, client: RoleClient = this.prisma): Promise<number> {
+    return client.user.count({
+      where: {
+        isActive: true,
+        lockedAt: null,
+        roleId: { not: roleId },
+        role: { permissions: { some: { permission: { code: 'ROLES_MANAGE', isActive: true } } } },
+      },
+    });
   }
 
   async create(data: CreateAdminRoleData, client: RoleClient = this.prisma): Promise<AdminRoleRecord> {

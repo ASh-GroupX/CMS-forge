@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -9,9 +9,10 @@ import { Label } from '../ui/label';
 import { adminRolesText } from '../../i18n/staff-admin-roles';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import type { AdminRolesData } from '../../lib/staff-admin-roles-api';
+import { ActionDialog } from '../shared/action-dialog';
 
 type RoleAction = (formData: FormData) => void | Promise<void>;
-type RoleState = 'success' | 'validation' | 'error';
+type RoleState = 'success' | 'validation' | 'conflict' | 'error';
 
 export function AdminRoles({ createAction, data, locale, state, updateAction }: { createAction?: RoleAction; data?: AdminRolesData | null; locale: Locale; state?: RoleState | undefined; updateAction?: RoleAction }) {
   const t = adminRolesText[locale];
@@ -33,12 +34,26 @@ export function AdminRoles({ createAction, data, locale, state, updateAction }: 
 
 function EditPermissionsForm({ action, data, locale, role }: { action: RoleAction; data: AdminRolesData; locale: Locale; role: AdminRolesData['roles'][number] }) {
   const t = adminRolesText[locale];
+  const formRef = useRef<HTMLFormElement>(null);
+  const initialCodes = role.permissions.map(({ code }) => code);
+  const [selected, setSelected] = useState(initialCodes);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const added = selected.filter((code) => !initialCodes.includes(code));
+  const removed = initialCodes.filter((code) => !selected.includes(code));
   return <details className="mt-3 rounded-sm border bg-background p-2"><summary className="cursor-pointer text-sm font-semibold">{t.editPermissions}</summary>
-    <form action={action} className="mt-3 grid gap-2"><input name="id" type="hidden" value={role.id} /><input name="locale" type="hidden" value={locale} />
-      <PermissionChecklist copyEnabled data={data} initialCodes={role.permissions.map(({ code }) => code)} locale={locale} role={role} />
-      <Button size="sm" type="submit">{t.savePermissions}</Button>
+    <form action={action} className="mt-3 grid gap-2" ref={formRef}><input name="id" type="hidden" value={role.id} /><input name="locale" type="hidden" value={locale} /><input name="expectedUpdatedAt" type="hidden" value={role.updatedAt} />
+      <PermissionChecklist copyEnabled data={data} initialCodes={initialCodes} locale={locale} onSelectedChange={setSelected} role={role} selected={selected} />
+      <Button onClick={() => setReviewOpen(true)} size="sm" type="button">{t.savePermissions}</Button>
     </form>
+    <ActionDialog description={t.reviewDescription} footer={<><Button onClick={() => setReviewOpen(false)} type="button" variant="outline">{t.cancel}</Button><Button disabled={!added.length && !removed.length} onClick={() => { setReviewOpen(false); formRef.current?.requestSubmit(); }} type="button">{t.confirm}</Button></>} onOpenChange={setReviewOpen} open={reviewOpen} title={t.reviewTitle}>
+      <dl className="grid gap-2 text-sm"><div><dt className="font-semibold">{t.affectedUsers}</dt><dd>{new Intl.NumberFormat(locale).format(role.affectedActiveUserCount)}</dd></div><ChangeList label={t.added} locale={locale} codes={added} data={data} /><ChangeList label={t.removed} locale={locale} codes={removed} data={data} /></dl>
+      {!added.length && !removed.length ? <p className="mt-2 text-sm text-muted-foreground">{t.noChanges}</p> : null}
+    </ActionDialog>
   </details>;
+}
+
+function ChangeList({ codes, data, label, locale }: { codes: string[]; data: AdminRolesData; label: string; locale: Locale }) {
+  return <div><dt className="font-semibold">{label}</dt><dd>{codes.length ? codes.map((code) => localizedName(data.permissions.find((permission) => permission.code === code) ?? { nameEn: code }, locale)).join(', ') : '—'}</dd></div>;
 }
 
 function CreateRoleForm({ action, data, locale }: { action: RoleAction; data: AdminRolesData; locale: Locale }) {
@@ -57,9 +72,11 @@ function Field({ label, name, pattern }: { label: string; name: string; pattern?
   return <div className="grid gap-1"><Label htmlFor={name}>{label}</Label><Input id={name} name={name} pattern={pattern} required /></div>;
 }
 
-function PermissionChecklist({ copyEnabled, data, initialCodes, locale, role }: { copyEnabled?: boolean; data: AdminRolesData; initialCodes: string[]; locale: Locale; role?: AdminRolesData['roles'][number] }) {
+function PermissionChecklist({ copyEnabled, data, initialCodes, locale, onSelectedChange, role, selected: controlledSelected }: { copyEnabled?: boolean; data: AdminRolesData; initialCodes: string[]; locale: Locale; onSelectedChange?: (codes: string[]) => void; role?: AdminRolesData['roles'][number]; selected?: string[] }) {
   const t = adminRolesText[locale];
-  const [selected, setSelected] = useState(initialCodes);
+  const [localSelected, setLocalSelected] = useState(initialCodes);
+  const selected = controlledSelected ?? localSelected;
+  const setSelected = (value: string[]) => { setLocalSelected(value); onSelectedChange?.(value); };
   const permissions = data.permissions.filter(({ code }) => code !== 'PORTAL_SUBMIT');
   const copyFrom = (roleId: string) => {
     const source = data.roles.find(({ id }) => id === roleId);
@@ -70,7 +87,7 @@ function PermissionChecklist({ copyEnabled, data, initialCodes, locale, role }: 
     {Object.entries(permissionGroups(t)).map(([group, codes]) => {
       const groupPermissions = permissions.filter(({ code }) => codes(code));
       return groupPermissions.length ? <fieldset className="grid gap-2" key={group}><legend className="text-sm font-semibold">{group}</legend><div className="grid gap-2 sm:grid-cols-2">
-        {groupPermissions.map((permission) => <label className="flex items-start gap-2 rounded-sm border border-border p-2 text-sm" key={permission.id}><input checked={selected.includes(permission.code)} className="mt-1 size-4 accent-primary" name="permissionCodes" onChange={(event) => setSelected((current) => event.target.checked ? [...current, permission.code] : current.filter((code) => code !== permission.code))} type="checkbox" value={permission.code} /><span><span className="block font-medium">{localizedName(permission, locale)}</span><span className="block text-xs text-muted-foreground">{permission.code}</span></span></label>)}
+        {groupPermissions.map((permission) => <label className="flex items-start gap-2 rounded-sm border border-border p-2 text-sm" key={permission.id}><input checked={selected.includes(permission.code)} className="mt-1 size-4 accent-primary" name="permissionCodes" onChange={(event) => setSelected(event.target.checked ? [...selected, permission.code] : selected.filter((code) => code !== permission.code))} type="checkbox" value={permission.code} /><span><span className="block font-medium">{localizedName(permission, locale)}</span><span className="block text-xs text-muted-foreground"><bdi>{permission.code}</bdi></span></span></label>)}
       </div></fieldset> : null;
     })}
   </div>;

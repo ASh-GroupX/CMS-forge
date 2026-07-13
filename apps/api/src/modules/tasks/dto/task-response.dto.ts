@@ -24,6 +24,7 @@ export class TaskResponseDto {
   assigneeName?: string | null;
   branchId?: string | null;
   branchName?: string | null;
+  displayTimeZone!: string;
   dueAt!: string;
   status!: TaskStatus;
   nextAction!: TaskNextActionDto | null;
@@ -88,6 +89,29 @@ export type ManagerControlRoomResponseDto = {
     overduePromiseCount: number;
   };
 };
+
+export type ManagerTaskDetailDto = {
+  id: string;
+  title: string;
+  ownerId: string;
+  ownerName: string | null;
+  assigneeId: string;
+  assigneeName: string | null;
+  branchId: string | null;
+  branchName: string | null;
+  displayTimeZone: string;
+  dueAt: string;
+  status: TaskStatus;
+  nextAction: TaskNextActionDto | null;
+  isCustomerPromise: boolean;
+  links: TaskLinkDto[];
+  stuckReasons: ('NEXT_ACTION_OVERDUE' | 'NO_MOVEMENT')[];
+  createdAt: string;
+  updatedAt: string;
+  capabilities: { canOpenInteractive: boolean };
+};
+
+export type ManagerTaskDetailResponseDto = { task: ManagerTaskDetailDto };
 
 export type PromiseTrackerTaskDto = TaskResponseDto & {
   customerLabel?: string | null;

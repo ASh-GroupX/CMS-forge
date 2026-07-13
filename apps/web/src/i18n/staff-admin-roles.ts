@@ -6,7 +6,8 @@ const en = {
   editPermissions: 'Edit permissions', savePermissions: 'Save permissions', systemLocked: 'Portal role permissions are managed by the system.',
   copyPermissions: 'Copy permissions from another role', selectRole: 'Choose a role', permissionGroups: { complaints: 'Complaint access', operations: 'Operational actions', administration: 'Administration', reporting: 'Reports and audit' },
   roleList: 'Configured roles', system: 'System role', custom: 'Custom role', noRoles: 'No roles are configured.',
-  states: { success: 'Role created.', validation: 'Review the role details and permission selection.', error: 'The role could not be saved. Try again.' },
+  reviewTitle: 'Review permission impact', reviewDescription: 'Confirm the exact permission changes before applying them.', added: 'Added', removed: 'Removed', affectedUsers: 'Active users affected', noChanges: 'No permission changes.', cancel: 'Cancel', confirm: 'Apply changes',
+  states: { success: 'Role saved.', validation: 'Review the role details and permission selection.', conflict: 'This role changed or the update would remove required administrator access. Reload and review it.', error: 'The role could not be saved. Try again.' },
 };
 const ar: typeof en = {
   title: 'الأدوار والصلاحيات', subtitle: 'أنشئ أدوار الموظفين القابلة للتعيين. يفرض الخادم الصلاحيات من جلسة المستخدم.',
@@ -14,6 +15,7 @@ const ar: typeof en = {
   editPermissions: 'تعديل الصلاحيات', savePermissions: 'حفظ الصلاحيات', systemLocked: 'صلاحيات دور البوابة يديرها النظام.',
   copyPermissions: 'نسخ الصلاحيات من دور آخر', selectRole: 'اختر دوراً', permissionGroups: { complaints: 'الوصول إلى الشكاوى', operations: 'الإجراءات التشغيلية', administration: 'الإدارة', reporting: 'التقارير والتدقيق' },
   roleList: 'الأدوار المهيأة', system: 'دور نظام', custom: 'دور مخصص', noRoles: 'لا توجد أدوار مهيأة.',
-  states: { success: 'تم إنشاء الدور.', validation: 'راجع تفاصيل الدور واختيار الصلاحيات.', error: 'تعذر حفظ الدور. حاول مرة أخرى.' },
+  reviewTitle: 'مراجعة أثر الصلاحيات', reviewDescription: 'تأكد من تغييرات الصلاحيات الدقيقة قبل تطبيقها.', added: 'مضافة', removed: 'محذوفة', affectedUsers: 'المستخدمون النشطون المتأثرون', noChanges: 'لا توجد تغييرات في الصلاحيات.', cancel: 'إلغاء', confirm: 'تطبيق التغييرات',
+  states: { success: 'تم حفظ الدور.', validation: 'راجع تفاصيل الدور واختيار الصلاحيات.', conflict: 'تغير هذا الدور أو سيؤدي التحديث إلى إزالة وصول إداري مطلوب. أعد التحميل وراجع التغيير.', error: 'تعذر حفظ الدور. حاول مرة أخرى.' },
 };
 export const adminRolesText: Record<Locale, typeof en> = { en, ar };

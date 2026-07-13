@@ -5,7 +5,7 @@ import { AppException } from '../../core/http-kernel.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { CommunicationGroupsService } from '../communication-groups/communication-groups.service.js';
 import type { AdminUsersService, StaffLookupActor } from '../admin/admin-users.service.js';
-import type { EmployeeTodayResponseDto, ManagerControlRoomResponseDto, PromiseTrackerResponseDto, SentTasksResponseDto, TaskCommentsResponseDto, TaskResponseDto } from './dto/task-response.dto.js';
+import type { EmployeeTodayResponseDto, ManagerControlRoomResponseDto, ManagerTaskDetailResponseDto, PromiseTrackerResponseDto, SentTasksResponseDto, TaskCommentsResponseDto, TaskResponseDto } from './dto/task-response.dto.js';
 import type { CreateTaskCommentInput, TaskNudgeInput } from './dto/task-collaboration.dto.js';
 import type { RelatedRecordLookupQueryDto, RelatedRecordLookupResponseDto } from './dto/related-record-lookup.dto.js';
 import { createCommentForActor, listCommentsForActor, nudgeForActor, sentByMe } from './tasks.collaboration.js';
@@ -17,10 +17,9 @@ import { buildPromiseTracker, promiseTrackerQuery } from './tasks.promise-tracke
 import { TasksRelatedRecordsService } from './tasks.related-records.service.js';
 import { TasksRepository } from './tasks.repository.js';
 import type { TaskRecord, TaskTimelineRecord } from './tasks.repository.js';
-import { currentNextAction, taskCounts, taskToResponse } from './tasks.response.js';
+import { currentNextAction, managerTaskDetailResponse, taskCounts, taskToResponse } from './tasks.response.js';
 import { requiredStatusNote, statusComment } from './tasks.status-note.js';
 import { requiredText, utcDay, validDate, validEnum } from './tasks.validation.js';
-
 export type TaskAuditContext = { actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 
 export type TaskNextActionInput = { what: string; whoId: string; when: Date | string };
@@ -226,6 +225,17 @@ export class TasksService {
       escalated: tasks.filter((task) => escalatedIds.has(task.id)).map(taskToResponse),
       promiseKpi: { openPromiseCount: promises.length, overduePromiseCount: overduePromises.length },
     };
+  }
+
+  async managerTaskDetail(taskId: string, actor: TaskActor, now: Date = new Date()): Promise<ManagerTaskDetailResponseDto> {
+    const branchId = managerBranchId(actor);
+    const task = await this.tasksRepository.findManagerDetail(
+      requiredText(taskId, 'taskId'),
+      branchId,
+      actor.roleCode === RoleCode.ADMIN,
+    );
+    if (!task) throw new AppException('TASK_NOT_FOUND', 'Task was not found', HttpStatus.NOT_FOUND);
+    return managerTaskDetailResponse(task, now, (actor.permissions ?? []).includes('COMPLAINT_COMMENT_INTERNAL'));
   }
 
   async timelineForComplaint(complaintId: string): Promise<TaskTimelineRecord[]> {

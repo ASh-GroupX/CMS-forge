@@ -1,6 +1,5 @@
 'use client';
-
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -17,9 +16,7 @@ import {
   type PortalSubmissionOption,
   type PortalSubmissionOptions,
 } from '../../lib/portal-submission-api';
-
 export type PortalSubmissionFixtureState = 'loading' | 'validation' | 'success' | 'error';
-
 type SubmitState = { kind: 'idle' | 'loading' | 'options' }
   | { kind: 'success'; referenceNumber: string; attachmentCount: number; attachmentWarning?: PortalAttachmentWarning }
   | { kind: 'validation'; fieldErrors: PortalFieldError[] }
@@ -50,7 +47,13 @@ export function PortalSubmissionScreen({
   const messageState = visibleState;
   const fieldErrors = visibleState.kind === 'validation' ? visibleState.fieldErrors : [];
   const submitted = visibleState.kind === 'success';
-
+  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    const field = fieldErrors[0]?.field;
+    if (!field) return;
+    const control = formRef.current?.elements.namedItem(field);
+    if (control instanceof HTMLElement) control.focus();
+  }, [fieldErrors]);
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -63,7 +66,6 @@ export function PortalSubmissionScreen({
       return;
     }
     if (!attachmentResult.ok) return;
-
     setSubmitState({ kind: 'loading' });
     const result = await submitPortalComplaint(attachmentResult.attachments.length ? { ...complaint, attachments: attachmentResult.attachments } : complaint);
     if (result.ok) {
@@ -81,19 +83,18 @@ export function PortalSubmissionScreen({
     }
     setSubmitState({ kind: 'error', network: result.error.kind === 'network' });
   }
-
   return (
     <section lang={t.lang} dir={t.dir} className="grid gap-4" aria-label={t.title}>
       <PortalSubmissionMessage locale={locale} state={messageState} />
 
       {submitted ? null : (
-      <form className="grid gap-4 rounded-md border border-line-subtle bg-surface p-portal-card shadow-sm md:grid-cols-2" onSubmit={onSubmit}>
+      <form className="grid gap-4 rounded-md border border-line-subtle bg-surface p-portal-card shadow-sm md:grid-cols-2" onSubmit={onSubmit} ref={formRef}>
           <StateBlock className="md:col-span-2" message={t.privacy} />
+          {fieldErrors.length ? <section className="rounded-sm border border-status-error-border bg-status-error-bg p-3 text-sm text-status-error md:col-span-2" role="alert"><p className="font-semibold">{t.states.validation}</p><ul className="mt-2 grid gap-1">{fieldErrors.map((error) => <li key={`${error.field}-${error.code}`}><a className="underline" href={`#${error.field}`}>{fieldError(fieldErrors, error.field, locale)}</a></li>)}</ul></section> : null}
           <FieldGroup title={t.sections.contact}>
             <TextField error={fieldError(fieldErrors, 'customerName', locale)} label={t.fields.customerName} name="customerName" />
             <TextField error={fieldError(fieldErrors, 'customerPhone', locale)} label={t.fields.customerPhone} name="customerPhone" type="tel" />
           </FieldGroup>
-
           <FieldGroup title={t.sections.complaint}>
             <input name="manualTriage" type="hidden" value={optionsUnavailable ? 'true' : 'false'} />
             {optionsUnavailable ? (
@@ -109,19 +110,18 @@ export function PortalSubmissionScreen({
                 <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'severity', locale)} label={t.fields.severity} name="severity" options={resolvedOptions.severities.map((value) => ({ label: t.severityLabels[value], value }))} />
               </>
             )}
-            <Label className="grid gap-1 text-sm font-medium">
+            <Label className="grid gap-1 text-sm font-medium" htmlFor="incidentAt">
               {t.fields.incidentAt}
-              <Input className="min-h-11" name="incidentAt" type="date" />
-              <FieldError message={fieldError(fieldErrors, 'incidentAt', locale)} />
+              <Input aria-describedby={fieldError(fieldErrors, 'incidentAt', locale) ? 'incidentAt-error' : undefined} aria-invalid={Boolean(fieldError(fieldErrors, 'incidentAt', locale))} className="min-h-11" id="incidentAt" name="incidentAt" type="date" />
+              <FieldError id="incidentAt-error" message={fieldError(fieldErrors, 'incidentAt', locale)} />
             </Label>
             <TextField error={fieldError(fieldErrors, 'subject', locale)} label={t.fields.subject} name="subject" />
-            <Label className="grid gap-1 text-sm font-medium md:col-span-2">
+            <Label className="grid gap-1 text-sm font-medium md:col-span-2" htmlFor="description">
               {t.fields.description}
-              <Textarea className="min-h-28" name="description" />
-              <FieldError message={fieldError(fieldErrors, 'description', locale)} />
+              <Textarea aria-describedby={fieldError(fieldErrors, 'description', locale) ? 'description-error' : undefined} aria-invalid={Boolean(fieldError(fieldErrors, 'description', locale))} className="min-h-28" id="description" name="description" />
+              <FieldError id="description-error" message={fieldError(fieldErrors, 'description', locale)} />
             </Label>
           </FieldGroup>
-
           <FieldGroup title={t.sections.vehicle}>
             <Label className="flex items-center gap-2 text-sm font-medium">
               <Input className="size-4" name="vehicleRelated" onChange={(event) => setVehicleRelated(event.currentTarget.checked)} type="checkbox" />
@@ -129,7 +129,6 @@ export function PortalSubmissionScreen({
             </Label>
             {vehicleRelated ? <TextField error={fieldError(fieldErrors, 'vehicleVin', locale)} label={t.fields.vehicleVin} name="vehicleVin" /> : null}
           </FieldGroup>
-
           <FieldGroup title={t.sections.attachments}>
             <details className="rounded-sm border border-line-subtle bg-surface px-3 py-2 md:col-span-2">
               <summary className="cursor-pointer text-sm font-semibold text-content-strong">{t.fields.attachment}</summary>
@@ -234,23 +233,23 @@ function FieldGroup({ children, title }: { children: React.ReactNode; title: str
 }
 
 function TextField({ error, label, name, type = 'text' }: { error?: string | undefined; label: string; name: string; type?: string }) {
-  return <Label className="grid gap-1 text-sm font-medium">{label}<Input className="min-h-11" name={name} type={type} /><FieldError message={error} /></Label>;
+  return <Label className="grid gap-1 text-sm font-medium" htmlFor={name}>{label}<Input aria-describedby={error ? `${name}-error` : undefined} aria-invalid={Boolean(error)} className="min-h-11" id={name} name={name} type={type} /><FieldError id={`${name}-error`} message={error} /></Label>;
 }
 
 function SelectField({ choose, disabled = false, error, label, name, onChange, options }: { choose: string; disabled?: boolean; error?: string | undefined; label: string; name: string; onChange?: (value: string) => void; options: Array<{ label: string; value: string }> }) {
   return (
-    <Label className="grid gap-1 text-sm font-medium">
+    <Label className="grid gap-1 text-sm font-medium" htmlFor={name}>
       {label}
-      <select className="min-h-11 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring" defaultValue="" disabled={disabled} name={name} onChange={(event) => onChange?.(event.currentTarget.value)}>
+      <select aria-describedby={error ? `${name}-error` : undefined} aria-invalid={Boolean(error)} className="min-h-11 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring" defaultValue="" disabled={disabled} id={name} name={name} onChange={(event) => onChange?.(event.currentTarget.value)}>
         <option value="">{choose}</option>
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
-      <FieldError message={error} />
+      <FieldError id={`${name}-error`} message={error} />
     </Label>
   );
 }
 
-function FieldError({ message }: { message?: string | undefined }) { return message ? <span className="text-xs font-semibold text-status-error">{message}</span> : null; }
+function FieldError({ id, message }: { id?: string; message?: string | undefined }) { return message ? <span className="text-xs font-semibold text-status-error" id={id} role="alert">{message}</span> : null; }
 
 function validateSubmission(input: PortalComplaintCreateRequest): PortalFieldError[] {
   const required = input.manualTriage ? ['customerName', 'customerPhone', 'description', 'incidentAt', 'subject'] : ['customerName', 'customerPhone', 'categoryId', 'subcategoryId', 'description', 'incidentAt', 'branchId', 'subject', 'severity'];

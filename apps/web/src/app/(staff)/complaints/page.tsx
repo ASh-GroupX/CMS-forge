@@ -5,7 +5,7 @@ import { getStaffQueueLoadResult, type StaffQueueQuery } from '../../../lib/staf
 import { WorkQueue } from '../../../components/work-queue';
 import type { ComplaintSeverity, ComplaintStatus } from '../../../lib/staff-complaints-api';
 
-type SearchParams = { branchId?: string | string[]; locale?: string | string[]; page?: string | string[]; search?: string | string[]; severity?: string | string[]; sla?: string | string[]; status?: string | string[] };
+type SearchParams = { branchId?: string | string[]; locale?: string | string[]; ownerScope?: string | string[]; page?: string | string[]; search?: string | string[]; severity?: string | string[]; sla?: string | string[]; status?: string | string[] };
 
 export default async function ComplaintsPage({
   cookieHeader,
@@ -43,6 +43,7 @@ function queueQuery(params: SearchParams | undefined): StaffQueueQuery {
     severity: severity(readParam(params?.severity)),
     sla: sla(readParam(params?.sla)),
     status: status(readParam(params?.status)),
+    ownerScope: ownerScope(readParam(params?.ownerScope)),
   };
 }
 
@@ -67,3 +68,5 @@ function severity(value: string | undefined): ComplaintSeverity | null {
 function sla(value: string | undefined): NonNullable<StaffQueueQuery['sla']> | null {
   return value === 'ON_TRACK' || value === 'WARNING' || value === 'BREACHED' || value === 'CLOSED' ? value : null;
 }
+
+function ownerScope(value: string | undefined): NonNullable<StaffQueueQuery['ownerScope']> | null { return value === 'ME' || value === 'UNASSIGNED' ? value : null; }

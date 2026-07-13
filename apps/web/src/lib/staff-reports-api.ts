@@ -9,6 +9,7 @@ export type StaffReportRow = {
   severity: string;
   subject: string;
   ownerId: string | null;
+  displayTimeZone: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -203,6 +204,7 @@ function rowFrom(row: Partial<StaffReportRow>): StaffReportRow | null {
     typeof row.status !== 'string' ||
     typeof row.severity !== 'string' ||
     typeof row.subject !== 'string' ||
+    typeof row.displayTimeZone !== 'string' ||
     typeof row.createdAt !== 'string' ||
     typeof row.updatedAt !== 'string'
   ) {
@@ -217,6 +219,7 @@ function rowFrom(row: Partial<StaffReportRow>): StaffReportRow | null {
     severity: row.severity,
     subject: row.subject,
     ownerId: typeof row.ownerId === 'string' ? row.ownerId : null,
+    displayTimeZone: row.displayTimeZone,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

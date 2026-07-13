@@ -775,6 +775,7 @@ function taskFixture(overrides: Record<string, unknown> = {}) {
     confidentialityLevel: 'NORMAL',
     links: [],
     participantUserIds: ['usr_owner', 'usr_staff'],
+    displayTimeZone: 'Asia/Riyadh',
     createdAt: '2026-06-19T08:00:00.000Z',
     updatedAt: '2026-06-20T09:00:00.000Z',
     ...overrides,
@@ -837,6 +838,10 @@ function complaintDetailFixture(overrides: Record<string, unknown> = {}) {
     severity: 'LOW',
     subject: 'Fixture complaint',
     branchId: 'branch_fixture',
+    displayTimeZone: 'Asia/Riyadh',
+    categoryId: 'cat_fixture',
+    categoryName: 'Service',
+    categoryNameAr: 'الخدمة',
     ownerId: null,
     ownerName: null,
     createdAt: '2026-06-18T00:00:00.000Z',
@@ -867,6 +872,9 @@ function complaintDetailViewFixture(overrides: Record<string, unknown> = {}) {
     subject: 'Fixture complaint',
     assignee: null,
     branch: 'Fixture Branch',
+    displayTimeZone: 'Asia/Riyadh',
+    categoryName: 'Service',
+    categoryNameAr: 'الخدمة',
     updatedAt: '2026-06-19T00:00:00.000Z',
     nextAction: 'Review customer update',
     slaState: 'ON_TRACK',
@@ -1237,6 +1245,7 @@ test('work queue renders real complaint rows through the session cookie', async 
           subject: 'Engine noise',
           branchId: 'branch_main',
           branchName: 'Main Branch',
+          displayTimeZone: 'Asia/Riyadh',
           ownerId: 'usr_owner',
           ownerName: 'Owner User',
           createdAt: '2026-06-18T00:00:00.000Z',
@@ -1297,7 +1306,7 @@ test('staff shell keeps responsive layout classes for dashboard and queue', asyn
     await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en', role: 'admin', session: 'signed-in' }) }),
   );
 
-  assert.match(html, /lg:grid-cols-\[16rem_minmax\(0,1fr\)\]/);
+  assert.match(html, /lg:grid-cols-\[17rem_minmax\(0,1fr\)\]/);
   assert.match(html, /lg:h-screen/);
   assert.match(html, /md:grid-cols-3/);
   assert.match(html, /xl:grid-cols-5/);
@@ -1408,6 +1417,10 @@ test('complaint detail route renders real backend facts through the session cook
           severity: 'HIGH',
           subject: 'Engine noise',
           branchId: 'branch_main',
+          displayTimeZone: 'Asia/Riyadh',
+          categoryId: 'cat_engine',
+          categoryName: 'Engine',
+          categoryNameAr: 'المحرك',
           ownerId: 'usr_owner',
           createdAt: '2026-06-18T00:00:00.000Z',
           updatedAt: '2026-06-19T09:30:00.000Z',
@@ -1765,9 +1778,8 @@ test('complaint detail comments render visibility badges composer and comment ro
   assert.doesNotMatch(html, /Investigation note for the case team\./);
   assert.doesNotMatch(html, /Your complaint is under review by the customer relations team\./);
   assert.match(html, /Add complaint comment/);
-  assert.ok(html.includes(collaborationText.en.mention));
-  assert.ok(html.includes(collaborationText.en.cc));
-  assert.match(html, /Requires action/);
+  assert.ok(html.includes(collaborationText.en.additions));
+  assert.doesNotMatch(html, /Requires action/);
   assert.match(html, /Visibility/);
 });
 
@@ -2730,8 +2742,8 @@ test('reports dashboard renders export affordance without file generation', asyn
   assert.match(html, /generic operational rows, not specialized RPT outputs/);
   assert.match(html, /CSV/);
   assert.match(html, /Excel/);
-  assert.match(html, /href="\/reports\/export\?format=csv"/);
-  assert.match(html, /href="\/reports\/export\?format=excel"/);
+  assert.match(html, /href="\/reports\/export\?format=csv&amp;locale=en"/);
+  assert.match(html, /href="\/reports\/export\?format=excel&amp;locale=en"/);
   assert.doesNotMatch(noExport, /href="\/reports\/export\?format=csv"/);
   assert.match(noExport, /title="Export requires the report export permission\."/);
   assert.match(denied, /disabled[^>]*>Download CSV<\/button>/);
@@ -2806,6 +2818,7 @@ test('reports dashboard renders real scoped rows from the backend read', async (
         severity: 'HIGH',
         subject: 'Engine noise',
         ownerId: 'usr_owner',
+        displayTimeZone: 'Asia/Riyadh',
         createdAt: '2026-06-19T00:00:00.000Z',
         updatedAt: '2026-06-19T01:00:00.000Z',
       }],
@@ -2827,7 +2840,8 @@ test('reports dashboard renders real scoped rows from the backend read', async (
     Accept: 'application/json',
     cookie: 'cms_staff_session=raw-session',
   });
-  assert.match(html, /CMP-REAL-001 - Engine noise/);
+  assert.match(html, /CMP-REAL-001/);
+  assert.match(html, /Engine noise/);
   assert.match(html, /Main Branch \/ Case Owner - CR Manager/);
   assert.match(html, />Engine</);
   assert.doesNotMatch(html, />cat_engine<|branch_main \/ usr_owner/);
@@ -2982,6 +2996,7 @@ test('reports route renders real scoped rows through the session cookie', async 
         severity: 'HIGH',
         subject: 'Route report row',
         ownerId: 'usr_report',
+        displayTimeZone: 'Asia/Riyadh',
         createdAt: '2026-06-20T00:00:00.000Z',
         updatedAt: '2026-06-20T10:00:00.000Z',
       }],
@@ -3016,12 +3031,13 @@ test('reports route renders real scoped rows through the session cookie', async 
   assert.match(String(reportsCall.input), /severity=HIGH/);
   assert.doesNotMatch(String(reportsCall.input), /role|actor|token|credential/i);
   assert.doesNotMatch(String(kpisCall.input), /role|actor|branchId|owner|token|credential/i);
-  assert.match(html, /CMP-RPT-ROUTE-001 - Route report row/);
+  assert.match(html, /CMP-RPT-ROUTE-001/);
+  assert.match(html, /Route report row/);
   assert.match(html, /Reports Branch \/ Reports Owner - CR Manager/);
   assert.match(html, /Reports Category/);
   assert.match(html, /Owner filter: Reports Owner - CR Manager - Reports Branch/);
   assert.doesNotMatch(html, /name="ownerLabel"/);
-  assert.match(html, /href="\/reports\/export\?format=csv&amp;branchId=branch_report&amp;categoryId=cat_report&amp;dateFrom=2026-06-01&amp;dateTo=2026-06-30&amp;departmentId=dept_report&amp;ownerId=usr_report&amp;severity=HIGH"/);
+  assert.match(html, /href="\/reports\/export\?format=csv&amp;branchId=branch_report&amp;categoryId=cat_report&amp;dateFrom=2026-06-01&amp;dateTo=2026-06-30&amp;departmentId=dept_report&amp;ownerId=usr_report&amp;severity=HIGH&amp;locale=en"/);
   assert.match(html, /name="severity"/);
   assert.match(html, /name="dateFrom"/);
   assert.match(html, /value="2026-06-01"/);
@@ -3693,6 +3709,7 @@ test('complaints route renders colored severity and status badges for real rows'
           severity: 'HIGH',
           subject: 'Engine noise badge test',
           branchId: 'branch_main',
+          displayTimeZone: 'Asia/Riyadh',
           ownerId: null,
           createdAt: '2026-06-20T00:00:00.000Z',
           updatedAt: '2026-06-20T00:00:00.000Z',
@@ -3764,9 +3781,10 @@ test('complaints route renders real rows through the session cookie', async () =
           status: 'SUBMITTED',
           severity: 'MEDIUM',
           subject: 'Route test complaint',
-          branchId: 'branch_route',
-          branchName: 'Route Branch',
-          ownerId: 'usr_route',
+        branchId: 'branch_route',
+        branchName: 'Route Branch',
+        displayTimeZone: 'Asia/Riyadh',
+        ownerId: 'usr_route',
           ownerName: 'Route Owner',
           createdAt: '2026-06-20T00:00:00.000Z',
           updatedAt: '2026-06-20T10:00:00.000Z',
@@ -3812,6 +3830,7 @@ test('complaints route sends URL-backed queue filters to the scoped search API',
         subject: 'Filtered queue complaint',
         branchId: 'branch_main',
         branchName: 'Main Branch',
+        displayTimeZone: 'Asia/Riyadh',
         ownerId: null,
         ownerName: null,
         createdAt: '2026-06-20T00:00:00.000Z',

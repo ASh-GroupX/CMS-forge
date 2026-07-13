@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { PermissionGuard, Permissions, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
@@ -13,10 +13,10 @@ export class NotificationsController {
   @Get()
   @UseGuards(SessionAuthGuard, PermissionGuard)
   @Permissions('STAFF_LOGIN')
-  async listMine(@Req() request: AuthenticatedRequest) {
+  async listMine(@Req() request: AuthenticatedRequest, @Query() query: Record<string, unknown>) {
     const userId = request.principal?.userId;
     if (!userId) throw new AppException('AUTH_INVALID_CREDENTIALS', 'Invalid credentials', 401);
-    return { items: await this.notificationsService.listForRecipient(userId) };
+    return { items: await this.notificationsService.listForRecipient(userId, notificationListQuery(query)) };
   }
 
   @Post(':id/read')
@@ -25,7 +25,7 @@ export class NotificationsController {
   async markRead(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
     const userId = request.principal?.userId;
     if (!userId) throw new AppException('AUTH_INVALID_CREDENTIALS', 'Invalid credentials', 401);
-    return this.notificationsService.markRead(id, userId);
+    return this.notificationsService.markRead(id, userId, auditContext(request));
   }
 
   @Post('read-all')
@@ -34,7 +34,7 @@ export class NotificationsController {
   async markAllRead(@Req() request: AuthenticatedRequest) {
     const userId = request.principal?.userId;
     if (!userId) throw new AppException('AUTH_INVALID_CREDENTIALS', 'Invalid credentials', 401);
-    return this.notificationsService.markAllRead(userId);
+    return this.notificationsService.markAllRead(userId, auditContext(request));
   }
 
   @Get('templates')
@@ -71,6 +71,17 @@ export class NotificationsController {
   async deactivateTemplate(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
     return { template: await this.notificationsService.setTemplateActive(id, false, auditContext(request)) };
   }
+}
+
+function notificationListQuery(query: Record<string, unknown>): { limit: number; view: 'all' | 'unread' | 'mentions' } {
+  const view = query.view === undefined ? 'all' : query.view;
+  const limit = query.limit === undefined ? 50 : Number(query.limit);
+  if (!['all', 'unread', 'mentions'].includes(String(view)) || !Number.isInteger(limit) || limit < 1 || limit > 100) {
+    throw new AppException('VALIDATION_FAILED', 'Invalid notification filters', 400, [
+      { field: 'view', code: 'INVALID', message: 'view or limit is invalid.' },
+    ]);
+  }
+  return { limit, view: view as 'all' | 'unread' | 'mentions' };
 }
 
 function auditContext(request: AuthenticatedRequest) {

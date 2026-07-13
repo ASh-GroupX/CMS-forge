@@ -12,6 +12,7 @@ import { formatDisplayNumber, formatDurationHours, formatPercent } from '../../l
 import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
 import type { ComplaintFormOption, ComplaintFormOptions } from '../../lib/staff-complaint-form-options-api';
 import type { StaffReportCatalog, StaffReportKpis, StaffReportRow } from '../../lib/staff-reports-api';
+import { localeHref } from '../../lib/locale-href';
 
 export type ReportsFixtureState = 'ready' | 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'denied' | 'conflict';
 export type ReportsFilters = { branchId: string; categoryId: string; dateFrom: string; dateTo: string; departmentId: string; ownerId: string; severity: string };
@@ -70,8 +71,8 @@ export function ReportsDashboard({
     [t.kpis.firstResponse, formatDurationHours(kpis.averageFirstResponseHours, locale)],
     [t.kpis.resolution, formatDurationHours(kpis.averageResolutionHours, locale)],
   ] as const : null;
-  const primaryKpi = kpiCards?.[0];
-  const supportingKpis = kpiCards?.slice(1);
+  const primaryKpis = kpiCards?.slice(0, 6);
+  const secondaryKpis = kpiCards?.slice(6);
   return (
     <Card aria-label={t.title} className="max-w-full overflow-hidden rounded-md border-line-subtle bg-surface shadow-sm" dir={shell.dir}>
       <CardHeader className="border-b border-line-subtle p-4">
@@ -95,7 +96,7 @@ export function ReportsDashboard({
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button size="sm" type="submit">{t.filters.apply}</Button>
-            <Button asChild size="sm" type="button" variant="outline"><a href={`/reports?locale=${locale}`}>{t.filters.clear}</a></Button>
+            <Button asChild size="sm" type="button" variant="outline"><a href={localeHref('/reports', locale)}>{t.filters.clear}</a></Button>
           </div>
         </form>
         <section className="mb-3 rounded-md border border-line-subtle bg-surface p-3" aria-label={t.kpis.title}>
@@ -106,20 +107,10 @@ export function ReportsDashboard({
             </div>
             <ReportBadge>{kpis ? t.kpis.backend : t.kpis.unavailable}</ReportBadge>
           </div>
-          {primaryKpi ? (
-            <div className="mt-3 grid gap-2 xl:grid-cols-[minmax(14rem,1fr)_minmax(0,3fr)]">
-              <dl className="rounded-sm border border-line-subtle bg-brand-soft px-4 py-3">
-                <dt className="text-xs font-semibold text-brand">{primaryKpi[0]}</dt>
-                <dd className="mt-1 text-3xl font-semibold tracking-normal text-content-strong">{primaryKpi[1]}</dd>
-              </dl>
-              <dl className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                {supportingKpis?.map(([label, value]) => (
-                  <div className="rounded-sm border border-line-subtle bg-surface-raised px-3 py-2" key={label}>
-                    <dt className="text-xs font-semibold text-content-muted">{label}</dt>
-                    <dd className="mt-1 text-lg font-semibold tracking-normal text-content-strong">{value}</dd>
-                  </div>
-                ))}
-              </dl>
+          {primaryKpis ? (
+            <div className="mt-3 grid gap-3">
+              <dl className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{primaryKpis.map(([label, value], index) => <div className={index === 0 ? 'rounded-sm border border-line-subtle bg-brand-soft px-4 py-3' : 'rounded-sm border border-line-subtle bg-surface-raised px-3 py-2'} key={label}><dt className={index === 0 ? 'text-xs font-semibold text-brand' : 'text-xs font-semibold text-content-muted'}>{label}</dt><dd className={index === 0 ? 'mt-1 text-3xl font-semibold tracking-normal text-content-strong' : 'mt-1 text-lg font-semibold tracking-normal text-content-strong'}>{value}</dd></div>)}</dl>
+              {secondaryKpis?.length ? <details className="rounded-sm border border-line-subtle bg-surface-raised p-3"><summary className="cursor-pointer text-sm font-semibold">{t.kpis.secondary}</summary><dl className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{secondaryKpis.map(([label, value]) => <div className="rounded-sm border border-line-subtle bg-surface px-3 py-2" key={label}><dt className="text-xs font-semibold text-content-muted">{label}</dt><dd className="mt-1 text-lg font-semibold">{value}</dd></div>)}</dl></details> : null}
             </div>
           ) : (
             <StateBlock className="mt-3" message={t.kpis.empty} />
@@ -134,8 +125,8 @@ export function ReportsDashboard({
             <div className="flex flex-wrap gap-2">
               {exportEnabled ? (
                 <>
-                  <Button asChild size="sm" type="button" variant="outline"><a href={`/reports/export?format=csv${exportQuery}`}>{t.export.csv}</a></Button>
-                  <Button asChild size="sm" type="button" variant="outline"><a href={`/reports/export?format=excel${exportQuery}`}>{t.export.excel}</a></Button>
+                  <Button asChild size="sm" type="button" variant="outline"><a href={localeHref(`/reports/export?format=csv${exportQuery}`, locale)}>{t.export.csv}</a></Button>
+                  <Button asChild size="sm" type="button" variant="outline"><a href={localeHref(`/reports/export?format=excel${exportQuery}`, locale)}>{t.export.excel}</a></Button>
                 </>
               ) : (
                 <>
@@ -163,9 +154,9 @@ export function ReportsDashboard({
             ) : null}
           </div>
         </section>
-        <div className="overflow-x-auto">
+        <section>
           <h3 className="mb-2 text-sm font-semibold">{t.operationalRows.title}</h3>
-          <Table className="min-w-[56rem]">
+          <div className="hidden overflow-x-auto md:block"><Table className="min-w-[56rem]">
             <TableHeader className="bg-surface-raised text-xs font-semibold uppercase tracking-normal text-content-muted">
               <TableRow>{t.operationalRows.headers.map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>
             </TableHeader>
@@ -173,7 +164,7 @@ export function ReportsDashboard({
               {operationalRows?.length
                 ? operationalRows.map((row) => (
                     <TableRow className="border-b border-line-subtle" key={row.id}>
-                      <TableCell className="font-semibold">{row.referenceNumber} - {row.subject}</TableCell>
+                      <TableCell className="font-semibold"><a className="text-brand underline-offset-4 hover:underline" href={localeHref(`/complaints/${row.id}`, locale)}><bdi>{row.referenceNumber}</bdi> - {row.subject}</a></TableCell>
                       <TableCell>{rowScopeLabel(row, branches, staff, locale, t.filters.unavailable)}</TableCell>
                       <TableCell><ReportBadge>{optionLabel(categories, row.categoryId, locale) ?? t.filters.unavailable}</ReportBadge></TableCell>
                       <TableCell><ReportBadge>{complaintStatusLabel(locale, row.status)}</ReportBadge></TableCell>
@@ -185,8 +176,9 @@ export function ReportsDashboard({
                     </TableRow>
                   )}
             </TableBody>
-          </Table>
-        </div>
+          </Table></div>
+          <div className="grid gap-2 md:hidden">{operationalRows?.length ? operationalRows.map((row) => <article className="grid gap-2 rounded-sm border border-line-subtle bg-surface-raised p-3 text-sm" key={row.id}><a className="font-semibold text-brand underline-offset-4 hover:underline" href={localeHref(`/complaints/${row.id}`, locale)}><bdi>{row.referenceNumber}</bdi> - {row.subject}</a><p>{rowScopeLabel(row, branches, staff, locale, t.filters.unavailable)}</p><div className="flex flex-wrap gap-2"><ReportBadge>{optionLabel(categories, row.categoryId, locale) ?? t.filters.unavailable}</ReportBadge><ReportBadge>{complaintStatusLabel(locale, row.status)}</ReportBadge></div></article>) : <StateBlock message={t.operationalRows.empty} />}</div>
+        </section>
         <StateBlock className="mt-3" message={t.safeNote} />
       </CardContent>
     </Card>
@@ -232,7 +224,7 @@ function CatalogTable({ headers, rows, title }: { headers: readonly string[]; ro
   return (
     <section className="rounded-md border border-line-subtle bg-surface-raised p-3" aria-label={title}>
       <h4 className="text-xs font-semibold uppercase tracking-normal text-content-muted">{title}</h4>
-      <div className="mt-2 overflow-x-auto">
+      <div className="mt-2 hidden overflow-x-auto md:block">
         <Table className="min-w-[56rem]">
           <TableHeader className="bg-surface text-xs font-semibold uppercase tracking-normal text-content-muted">
             <TableRow>{headers.map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>
@@ -255,6 +247,7 @@ function CatalogTable({ headers, rows, title }: { headers: readonly string[]; ro
           </TableBody>
         </Table>
       </div>
+      <div className="mt-2 grid gap-2 md:hidden">{rows.map((row) => <article className="grid gap-2 rounded-sm border border-line-subtle bg-surface p-3 text-sm" key={row.id}><div><p className="font-semibold">{row.name}</p><p className="font-mono text-xs text-content-muted"><bdi>{row.id}</bdi></p></div><p>{row.audience}</p><p>{row.filters}</p><div><ReportBadge>{row.status}</ReportBadge>{row.reason ? <p className="mt-1 text-xs text-content-muted">{row.reason}</p> : null}</div></article>)}</div>
     </section>
   );
 }

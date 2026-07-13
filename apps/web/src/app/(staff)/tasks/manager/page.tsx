@@ -6,6 +6,7 @@ import { blockerReasonLabel, taskStatusLabel } from '../../../../i18n/domain-lab
 import { managerControlRoomText } from '../../../../i18n/staff-manager-control-room';
 import { resolveLocale, staffShellText, type Locale } from '../../../../i18n/staff-shell';
 import { formatDisplayDate } from '../../../../lib/locale-format';
+import { localeHref } from '../../../../lib/locale-href';
 import { getManagerControlRoomTasksLoadResult, type ManagerControlRoomTasks, type ManagerRollupCount, type ManagerStuckTask, type StaffTask, type StaffTaskStatus } from '../../../../lib/staff-tasks-api';
 
 type SearchParams = { locale?: string | string[] };
@@ -149,8 +150,8 @@ function TaskCard({ locale, task, t }: { locale: Locale; task: StaffTask | Manag
     <article className="rounded-md border border-border bg-card p-3 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="break-words text-sm font-semibold">{task.title}</h3>
-          <p className="mt-1 text-xs text-muted-foreground">{task.id}</p>
+          <h3 className="break-words text-sm font-semibold"><a className="underline-offset-4 hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href={localeHref(`/tasks/manager/${task.id}`, locale)}>{task.title}</a></h3>
+          <p className="mt-1 text-xs text-muted-foreground"><bdi>{task.id}</bdi></p>
         </div>
         <div className="flex flex-wrap gap-1">
           <Badge className={STATUS_CLASS[task.status]} title={task.status} variant="outline">{taskStatusLabel(locale, task.status)}</Badge>
@@ -159,19 +160,20 @@ function TaskCard({ locale, task, t }: { locale: Locale; task: StaffTask | Manag
       </div>
       <dl className="mt-3 grid gap-2 text-sm md:grid-cols-2">
         <Field label={t.fields.assignee} title={task.assigneeId} value={task.assigneeName ?? shortId(task.assigneeId)} />
-        <Field label={t.fields.due} value={formatDate(task.dueAt, locale)} />
+        <Field label={t.fields.due} value={formatDate(task.dueAt, locale, task.displayTimeZone)} />
         <Field label={t.fields.owner} title={task.ownerId} value={task.ownerName ?? shortId(task.ownerId)} />
         <Field label={t.fields.branch} title={task.branchId ?? undefined} value={task.branchName ?? (task.branchId ? shortId(task.branchId) : '-')} />
-        <Field label={t.fields.updated} value={formatDate(task.updatedAt, locale)} />
+        <Field label={t.fields.updated} value={formatDate(task.updatedAt, locale, task.displayTimeZone)} />
       </dl>
       {task.nextAction ? (
         <div className="mt-3 rounded-sm border border-border bg-muted px-3 py-2 text-sm">
           <p className="font-semibold">{t.fields.nextAction}</p>
           <p className="mt-1 break-words text-muted-foreground">{task.nextAction.what}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{t.fields.nextOwner}: <span title={task.nextAction.whoId}>{task.nextAction.whoName ?? shortId(task.nextAction.whoId)}</span> - {formatDate(task.nextAction.when, locale)}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t.fields.nextOwner}: <span title={task.nextAction.whoId}>{task.nextAction.whoName ?? shortId(task.nextAction.whoId)}</span> - {formatDate(task.nextAction.when, locale, task.displayTimeZone)}</p>
         </div>
       ) : null}
       {reasons.length ? <p className="mt-3 text-xs font-semibold text-status-warning">{t.fields.reasons}: {reasons.map((reason) => blockerReasonLabel(locale, reason)).join(', ')}</p> : null}
+      <a className="mt-3 inline-flex min-h-11 items-center rounded-sm border border-border px-3 text-sm font-semibold text-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href={localeHref(`/tasks/manager/${task.id}`, locale)}>{t.openDetail}</a>
       {task.links.length ? (
         <div className="mt-3 flex flex-wrap gap-1" aria-label={t.fields.links}>
           {task.links.map((link) => <Badge key={`${link.entityType}-${link.entityId}`} variant="outline">{link.entityType}: <span title={link.entityId}>{shortId(link.entityId)}</span></Badge>)}
@@ -213,8 +215,8 @@ function formatNumber(locale: Locale, value: number): string {
   return new Intl.NumberFormat(locale).format(value);
 }
 
-function formatDate(value: string, locale: Locale): string {
-  return formatDisplayDate(value, locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' });
+function formatDate(value: string, locale: Locale, timeZone: string): string {
+  return `${formatDisplayDate(value, locale, { dateStyle: 'medium', timeStyle: 'short', timeZone })} (${timeZone})`;
 }
 
 function shortId(value: string): string {

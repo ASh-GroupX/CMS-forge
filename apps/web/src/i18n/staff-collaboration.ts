@@ -3,6 +3,9 @@ import type { Locale } from './staff-shell';
 const en = {
   title: 'Who should receive this update?',
   intro: 'Choose only the people who need this information.',
+  additions: 'Add recipients or linked task',
+  hideAdditions: 'Hide additional options',
+  internalAudience: 'Internal update · {mentions} mentions · {cc} in CC',
   search: 'Search by employee or group name',
   searchHint: 'Type at least two characters to search for an employee.',
   groupHint: 'Available roles, departments, and groups are shown first.',
@@ -55,6 +58,9 @@ export const collaborationText: Record<Locale, typeof en> = {
   ar: {
     title: 'من يحتاج استلام هذا التحديث؟',
     intro: 'اختر فقط الأشخاص الذين يحتاجون هذه المعلومة.',
+    additions: 'إضافة مستلمين أو مهمة مرتبطة',
+    hideAdditions: 'إخفاء الخيارات الإضافية',
+    internalAudience: 'تحديث داخلي · {mentions} مذكورون · {cc} في نسخة',
     search: 'ابحث باسم الموظف أو المجموعة',
     searchHint: 'اكتب حرفين على الأقل للبحث عن موظف.',
     groupHint: 'تظهر الأدوار والأقسام والمجموعات المتاحة أولاً.',

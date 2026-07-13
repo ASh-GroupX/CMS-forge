@@ -1,7 +1,7 @@
 'use client';
 
 import { Pencil, Plus, Power, X } from 'lucide-react';
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { communicationGroupsText } from '../../i18n/staff-communication-groups';
 import type { Locale } from '../../i18n/staff-shell';
 import { formatDisplayNumber } from '../../lib/locale-format';
@@ -26,10 +26,12 @@ export function CommunicationGroups({ data, loadState, locale }: { data: StaffCo
   const [query, setQuery] = useState('');
   const [state, setState] = useState<UiState>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
   const eligible = data?.eligibleMembers ?? [];
   const available = useMemo(() => eligible.filter((member) => !members.some((selected) => selected.userId === member.userId) && (!query.trim() || `${member.displayName} ${member.displayNameAr}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))), [eligible, members, query]);
   const personal = groups.filter((group) => group.visibility === 'PERSONAL');
   const shared = groups.filter((group) => group.visibility === 'SHARED');
+  useEffect(() => { if (formOpen) nameRef.current?.focus(); }, [formOpen]);
 
   function begin(group: StaffCommunicationGroup | null, trigger: HTMLElement) {
     returnFocus.current = trigger; setEditing(group); setName(group?.name ?? ''); setVisibility(group?.visibility ?? 'PERSONAL'); setMembers(group?.members ?? []); setQuery(''); setState(null); setFormOpen(true);
@@ -62,8 +64,8 @@ export function CommunicationGroups({ data, loadState, locale }: { data: StaffCo
     <GroupSection canManage groups={personal} label={t.personal} locale={locale} onDeactivate={deactivate} onEdit={begin} t={t} />
     <GroupSection canManage={data.canManageShared} groups={shared} label={t.shared} locale={locale} onDeactivate={deactivate} onEdit={begin} t={t} />
     {formOpen ? <form className="grid gap-3 border-t border-line-subtle pt-4" onSubmit={save} aria-label={editing ? fill(t.editTitle, editing.name) : t.createTitle}>
-      <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-base font-semibold">{editing ? fill(t.editTitle, editing.name) : t.createTitle}</h2><Button aria-label={t.cancel} className="size-9 p-0" onClick={closeForm} title={t.cancel} type="button" variant="ghost"><X aria-hidden="true" className="size-4" /></Button></div>
-      <Label className="grid gap-1 text-sm font-medium">{t.name}<Input onChange={(event) => setName(event.target.value)} value={name} /></Label>
+      <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-base font-semibold">{editing ? fill(t.editTitle, editing.name) : t.createTitle}</h2><Button aria-label={t.cancel} className="size-11 p-0" onClick={closeForm} title={t.cancel} type="button" variant="ghost"><X aria-hidden="true" className="size-4" /></Button></div>
+      <Label className="grid gap-1 text-sm font-medium">{t.name}<Input onChange={(event) => setName(event.target.value)} ref={nameRef} value={name} /></Label>
       <Label className="grid gap-1 text-sm font-medium">{t.visibility}<Select disabled={Boolean(editing)} onValueChange={(value) => setVisibility(value as 'PERSONAL' | 'SHARED')} value={visibility}><SelectTrigger aria-label={t.visibility}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="PERSONAL">{t.personalOption}</SelectItem>{data.canManageShared ? <SelectItem value="SHARED">{t.sharedOption}</SelectItem> : null}</SelectContent></Select></Label>
       <Label className="grid gap-1 text-sm font-medium">{t.search}<Input onChange={(event) => setQuery(event.target.value)} value={query} /></Label>
       <p className="text-sm font-medium">{t.members}</p>
@@ -79,7 +81,11 @@ function GroupSection({ canManage, groups, label, locale, onDeactivate, onEdit, 
 }
 function MemberPreview({ group, locale, t }: { group: StaffCommunicationGroup; locale: Locale; t: typeof communicationGroupsText.en }) { const preview = group.members.slice(0, 3).map((member) => displayMember(member, locale)); const remaining = group.members.length - preview.length; return <p className="text-sm text-content-muted">{preview.join(locale === 'ar' ? '، ' : ', ')}{remaining > 0 ? ` ${fill(t.previewMore, formatDisplayNumber(remaining, locale))}` : ''}</p>; }
 function MemberChoices({ add, locale, members, onAdd }: { add: string; locale: Locale; members: StaffGroupMember[]; onAdd: (member: StaffGroupMember) => void }) { return <div className="grid max-h-48 gap-1 overflow-y-auto border border-line-subtle bg-surface p-2">{members.map((member) => <div className="flex items-center justify-between gap-2 text-sm" key={member.userId}><span className="min-w-0 break-words">{displayMember(member, locale)}</span><Button onClick={() => onAdd(member)} size="sm" type="button" variant="outline"><Plus aria-hidden="true" className="size-4" />{add}</Button></div>)}</div>; }
-function MemberChips({ label, locale, members, onRemove, remove }: { label: string; locale: Locale; members: StaffGroupMember[]; onRemove: (id: string) => void; remove: string }) { return members.length ? <div className="flex flex-wrap gap-2" aria-label={label}>{members.map((member) => <span className="inline-flex max-w-full items-center gap-1 rounded-sm border border-line-subtle bg-surface px-2 py-1 text-sm" key={member.userId}><span className="truncate">{displayMember(member, locale)}</span><Button aria-label={`${remove} ${displayMember(member, locale)}`} className="size-7 p-0" onClick={() => onRemove(member.userId)} title={remove} type="button" variant="ghost"><X aria-hidden="true" className="size-4" /></Button></span>)}</div> : null; }
-function displayMember(member: StaffGroupMember, locale: Locale): string { return locale === 'ar' ? member.displayNameAr || member.displayName : member.displayName || member.displayNameAr; }
+function MemberChips({ label, locale, members, onRemove, remove }: { label: string; locale: Locale; members: StaffGroupMember[]; onRemove: (id: string) => void; remove: string }) { return members.length ? <div className="flex flex-wrap gap-2" aria-label={label}>{members.map((member) => <span className="inline-flex max-w-full items-center gap-1 rounded-sm border border-line-subtle bg-surface px-2 py-1 text-sm" key={member.userId}><span className="truncate"><bdi>{displayMember(member, locale)}</bdi></span><Button aria-label={`${remove} ${displayMember(member, locale)}`} className="size-11 p-0" onClick={() => onRemove(member.userId)} title={remove} type="button" variant="ghost"><X aria-hidden="true" className="size-4" /></Button></span>)}</div> : null; }
+function displayMember(member: StaffGroupMember, locale: Locale): string {
+  const name = locale === 'ar' ? member.displayNameAr || member.displayName : member.displayName || member.displayNameAr;
+  const details = [locale === 'ar' ? member.roleNameAr || member.roleName : member.roleName || member.roleNameAr, locale === 'ar' ? member.departmentNameAr || member.departmentName : member.departmentName || member.departmentNameAr, locale === 'ar' ? member.branchNameAr || member.branchName : member.branchName || member.branchNameAr].filter(Boolean);
+  return details.length ? `${name} · ${details.join(' · ')}` : name;
+}
 function fill(value: string, replacement: string): string { return value.replace('{count}', replacement).replace('{name}', replacement); }
 function groupError(code: string, t: typeof communicationGroupsText.en): string { if (code === 'RBAC_FORBIDDEN' || code === 'BRANCH_SCOPE_FORBIDDEN') return t.permissionError; if (code === 'NETWORK_ERROR') return t.networkError; return t.error; }

@@ -9,7 +9,7 @@ import { CommunicationGroupsRepository, type CommunicationGroupRecord, type Comm
 export type CommunicationActor = { userId: string; roleCode: string; branchId: string | null; permissions: string[] };
 export type MentionTarget = { type: 'USER' | 'SYSTEM_ROLE' | 'SYSTEM_DEPARTMENT' | 'CUSTOM_GROUP'; id: string };
 export type ResolvedMention = { userId: string; email: string; nameEn: string; nameAr: string; source: CollaborationMentionSource; sourceId: string | null; sourceLabel: string };
-export type CommunicationTargetDto = { id: string; type: MentionTarget['type']; label: string; labelAr: string; recipientCount: number };
+export type CommunicationTargetDto = { id: string; type: MentionTarget['type']; label: string; labelAr: string; recipientCount: number } & Partial<ReturnType<typeof staffContext>>;
 export type CommunicationTargetsResponse = { targets: CommunicationTargetDto[]; recipientLimit: number; confirmationRequiredAbove: number };
 type AuditContext = { actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 
@@ -25,7 +25,7 @@ export class CommunicationGroupsService {
     const [groups, staff] = await Promise.all([this.repository.listVisible(actor.userId), this.repository.listStaffForBranch(canManageShared ? null : actor.branchId)]);
     return {
       items: groups.map(groupDto),
-      eligibleMembers: staff.map((person) => ({ userId: person.id, displayName: person.nameEn, displayNameAr: person.nameAr })),
+      eligibleMembers: staff.map(memberDto),
       canManageShared,
     };
   }
@@ -65,7 +65,7 @@ export class CommunicationGroupsService {
     const [staff, groups] = await Promise.all([this.eligibleStaff(branchId), this.repository.listVisible(actor.userId)]);
     const normalizedQuery = query.trim().toLocaleLowerCase();
     const eligibleIds = new Set(staff.map((person) => person.id));
-    const direct = staff.map((person) => target(person.id, 'USER', person.nameEn, person.nameAr, 1));
+    const direct = staff.map((person) => target(person.id, 'USER', person.nameEn, person.nameAr, 1, staffContext(person)));
     const roles = uniqueGroups(staff, (person) => person.role.id).map((people) => target(people[0]!.role.id, 'SYSTEM_ROLE', people[0]!.role.nameEn, people[0]!.role.nameAr, people.length));
     const departments = uniqueGroups(staff.filter((person) => person.department), (person) => person.departmentId!).map((people) => target(people[0]!.departmentId!, 'SYSTEM_DEPARTMENT', people[0]!.department!.nameEn, people[0]!.department!.nameAr, people.length));
     const custom = groups.map((group) => target(group.id, 'CUSTOM_GROUP', group.name, group.name, group.members.filter(({ user }) => eligibleIds.has(user.id)).length)).filter((item) => item.recipientCount > 0);
@@ -159,12 +159,30 @@ function mention(person: CommunicationStaffRecord, source: CollaborationMentionS
   return { userId: person.id, email: person.email, nameEn: person.nameEn, nameAr: person.nameAr, source, sourceId, sourceLabel };
 }
 
-function target(id: string, type: MentionTarget['type'], label: string, labelAr: string, recipientCount: number): CommunicationTargetDto {
-  return { id, type, label, labelAr, recipientCount };
+function target(id: string, type: MentionTarget['type'], label: string, labelAr: string, recipientCount: number, context: Partial<ReturnType<typeof staffContext>> = {}): CommunicationTargetDto {
+  return { id, type, label, labelAr, recipientCount, ...context };
 }
 
 function groupDto(group: CommunicationGroupRecord): CommunicationGroupDto {
-  return { id: group.id, name: group.name, visibility: group.visibility, ownerId: group.ownerId, members: group.members.map(({ user }) => ({ userId: user.id, displayName: user.nameEn, displayNameAr: user.nameAr })), createdAt: group.createdAt.toISOString(), updatedAt: group.updatedAt.toISOString() };
+  return { id: group.id, name: group.name, visibility: group.visibility, ownerId: group.ownerId, members: group.members.map(({ user }) => memberDto(user)), createdAt: group.createdAt.toISOString(), updatedAt: group.updatedAt.toISOString() };
+}
+
+function memberDto(person: CommunicationStaffRecord) {
+  return { userId: person.id, displayName: person.nameEn, displayNameAr: person.nameAr, ...staffContext(person) };
+}
+
+function staffContext(person: CommunicationStaffRecord) {
+  return {
+    roleCode: person.role.code,
+    roleName: person.role.nameEn,
+    roleNameAr: person.role.nameAr,
+    departmentId: person.departmentId,
+    departmentName: person.department?.nameEn ?? null,
+    departmentNameAr: person.department?.nameAr ?? null,
+    branchId: person.branchId,
+    branchName: person.branch?.nameEn ?? null,
+    branchNameAr: person.branch?.nameAr ?? null,
+  };
 }
 
 function groupAudit(action: string, group: CommunicationGroupRecord, context: AuditContext): AuditRecordInput {

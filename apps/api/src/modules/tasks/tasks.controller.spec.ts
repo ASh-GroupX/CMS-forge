@@ -301,6 +301,7 @@ function taskResponseBase(): TaskResponseDto {
     assigneeName: 'Assignee',
     branchId: 'branch_1',
     branchName: 'Main Branch',
+    displayTimeZone: 'Asia/Riyadh',
     dueAt: '2026-06-21T09:00:00.000Z',
     status: TaskStatus.OPEN,
     nextAction: {

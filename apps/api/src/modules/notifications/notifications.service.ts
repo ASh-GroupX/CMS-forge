@@ -18,12 +18,14 @@ import { templateAudit } from './notification-template.audit.js';
 import type { NotificationTemplateAuditContext } from './notification-template.audit.js';
 import { notificationDto, notificationTemplateDto } from './dto/notification-response.dto.js';
 import type { NotificationResponseDto, NotificationTemplateResponseDto } from './dto/notification-response.dto.js';
+import { notificationReadAudit, type NotificationReadAuditContext } from './notification-read.audit.js';
 
 
 export type QueueInternalNotificationInput = { complaintId?: string | null; recipientUserId?: string | null; channel?: NotificationChannel | string; templateCode?: string; locale?: string; payload?: unknown; idempotencyKey?: string };
 export type DispatchEmailNotificationsResult = { attempted: number; sent: number; failed: number; skipped: number };
 export type ResolveNotificationTemplateInput = { templateCode?: string; channel?: NotificationChannel | string; locale?: string; payload?: unknown };
 export type ResolvedNotificationTemplate = { templateId: string; templateCode: string; channel: NotificationChannel; locale: string; subject: string | null; body: string };
+export type { NotificationReadAuditContext } from './notification-read.audit.js';
 
 @Injectable()
 export class NotificationsService {
@@ -38,18 +40,27 @@ export class NotificationsService {
     return (await this.notificationsRepository.listTemplates()).map(notificationTemplateDto);
   }
 
-  async listForRecipient(recipientUserId: string): Promise<NotificationResponseDto[]> {
-    return (await this.notificationsRepository.listForRecipient(requiredText(recipientUserId, 'recipientUserId'))).map(notificationDto);
+  async listForRecipient(recipientUserId: string, filters: { limit: number; view: 'all' | 'unread' | 'mentions' } = { limit: 50, view: 'all' }): Promise<NotificationResponseDto[]> {
+    return (await this.notificationsRepository.listForRecipient(requiredText(recipientUserId, 'recipientUserId'), filters)).map(notificationDto);
   }
 
-  async markRead(id: string, recipientUserId: string): Promise<{ id: string; read: boolean }> {
+  async markRead(id: string, recipientUserId: string, audit: NotificationReadAuditContext = {}): Promise<{ id: string; read: boolean }> {
     const cleanId = requiredText(id, 'id');
-    const read = await this.notificationsRepository.markInAppRead(cleanId, requiredText(recipientUserId, 'recipientUserId'));
-    return { id: cleanId, read };
+    const userId = requiredText(recipientUserId, 'recipientUserId');
+    return this.notificationsRepository.transaction(async (client) => {
+      const read = await this.notificationsRepository.markInAppRead(cleanId, userId, new Date(), client);
+      if (read) await this.auditService.record(notificationReadAudit('notification_read', cleanId, audit), client);
+      return { id: cleanId, read };
+    });
   }
 
-  async markAllRead(recipientUserId: string): Promise<{ readCount: number }> {
-    return { readCount: await this.notificationsRepository.markAllInAppRead(requiredText(recipientUserId, 'recipientUserId')) };
+  async markAllRead(recipientUserId: string, audit: NotificationReadAuditContext = {}): Promise<{ readCount: number }> {
+    const userId = requiredText(recipientUserId, 'recipientUserId');
+    return this.notificationsRepository.transaction(async (client) => {
+      const readCount = await this.notificationsRepository.markAllInAppRead(userId, new Date(), client);
+      if (readCount > 0) await this.auditService.record(notificationReadAudit('notifications_read_all', null, audit, readCount), client);
+      return { readCount };
+    });
   }
 
   async getCustomerPreference(customerId: string): Promise<NotificationPreferenceDto> {

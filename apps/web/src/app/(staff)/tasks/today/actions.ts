@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation';
 import { getAssignableStaff, type AssignableStaff } from '../../../../lib/staff-assignable-staff-api';
 import { getQuickAddRelatedRecords, type RelatedRecordType, type StaffRelatedRecord } from '../../../../lib/staff-related-records-api';
 import { quickAddTask, updateTask, type StaffTaskStatus } from '../../../../lib/staff-tasks-api';
+import { getStaffSessionPrincipal } from '../../../../lib/staff-session-api';
+import { zonedDateTimeToIso } from '../../../../lib/locale-format';
 
 export async function loadRelatedRecordsAction() {
   return getQuickAddRelatedRecords();
@@ -11,15 +13,16 @@ export async function loadRelatedRecordsAction() {
 
 export async function quickAddTaskAction(formData: FormData): Promise<void> {
   const locale = safeLocale(formData.get('locale'));
+  const timeZone = await sessionTimeZone();
   const link = await linkFrom(formData);
   if (formData.get('isCustomerPromise') === 'on' && !isPromiseLink(link)) redirect(`/tasks/today?locale=${locale}&task=link-required`);
   const result = await quickAddTask({
     title: text(formData, 'title'),
     what: text(formData, 'what'),
     whoId: await staffIdFrom(formData, 'whoId', 'assigneeLabel'),
-    when: text(formData, 'when'),
+    when: zonedDateTimeToIso(text(formData, 'when'), timeZone),
     isCustomerPromise: formData.get('isCustomerPromise') === 'on',
-    ...(optionalText(formData, 'dueAt') ? { dueAt: text(formData, 'dueAt') } : {}),
+    ...(optionalText(formData, 'dueAt') ? { dueAt: zonedDateTimeToIso(text(formData, 'dueAt'), timeZone) } : {}),
     ...(link ? { links: [link] } : {}),
   });
   redirect(`/tasks/today?locale=${locale}&task=${result}`);
@@ -35,6 +38,7 @@ async function staffIdFrom(formData: FormData, idName: string, labelName: string
 
 export async function updateTaskAction(formData: FormData): Promise<void> {
   const locale = safeLocale(formData.get('locale'));
+  const timeZone = await sessionTimeZone();
   const taskId = text(formData, 'taskId');
   const status = optionalStatus(formData.get('status'));
   const nextActionWhat = optionalText(formData, 'nextActionWhat');
@@ -45,12 +49,16 @@ export async function updateTaskAction(formData: FormData): Promise<void> {
     ...(status ? { status } : {}),
     ...(optionalText(formData, 'statusNote') ? { statusNote: text(formData, 'statusNote') } : {}),
     ...(assigneeId ? { assigneeId } : {}),
-    ...(optionalText(formData, 'dueAt') ? { dueAt: text(formData, 'dueAt') } : {}),
+    ...(optionalText(formData, 'dueAt') ? { dueAt: zonedDateTimeToIso(text(formData, 'dueAt'), timeZone) } : {}),
     ...(nextActionWhat && nextActionWhoId && nextActionWhen
-      ? { nextAction: { what: nextActionWhat, whoId: nextActionWhoId, when: nextActionWhen } }
+      ? { nextAction: { what: nextActionWhat, whoId: nextActionWhoId, when: zonedDateTimeToIso(nextActionWhen, timeZone) } }
       : {}),
   });
   redirect(`/tasks/today?locale=${locale}&task=${result}`);
+}
+
+async function sessionTimeZone(): Promise<string> {
+  return (await getStaffSessionPrincipal())?.branchTimezone ?? 'UTC';
 }
 
 function staffLabels(person: AssignableStaff): string[] {

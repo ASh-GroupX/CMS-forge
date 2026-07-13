@@ -22,6 +22,7 @@ const notificationSelect = {
   queuedAt: true,
   sentAt: true,
   failedAt: true,
+  readAt: true,
   complaint: { select: { customerId: true, severity: true } },
 } satisfies Prisma.NotificationSelect;
 
@@ -75,6 +76,7 @@ export type NotificationDeliveryMetadata = { quietHourBypassReason?: string };
 type ProviderSendResult = EmailSendResult | SmsSendResult | WhatsAppSendResult;
 type TemplateClient = Pick<Prisma.TransactionClient, 'notificationTemplate'>;
 type NotificationWriteClient = Pick<Prisma.TransactionClient, 'notification' | 'notificationDeliveryAttempt'>;
+type NotificationReadClient = Pick<Prisma.TransactionClient, 'notification'>;
 
 @Injectable()
 export class NotificationsRepository {
@@ -182,27 +184,32 @@ export class NotificationsRepository {
     });
   }
 
-  async listForRecipient(recipientUserId: string, limit = 20): Promise<NotificationRecord[]> {
+  async listForRecipient(recipientUserId: string, filters: { limit: number; view: 'all' | 'unread' | 'mentions' } = { limit: 50, view: 'all' }): Promise<NotificationRecord[]> {
     return this.prisma.notification.findMany({
-      where: { channel: NotificationChannel.IN_APP, recipientUserId },
+      where: {
+        channel: NotificationChannel.IN_APP,
+        recipientUserId,
+        ...(filters.view === 'unread' ? { readAt: null } : {}),
+        ...(filters.view === 'mentions' ? { templateCode: { endsWith: '.mention' } } : {}),
+      },
       orderBy: { queuedAt: 'desc' },
-      take: limit,
+      take: filters.limit,
       select: notificationSelect,
     });
   }
 
-  async markInAppRead(id: string, recipientUserId: string, now = new Date()): Promise<boolean> {
-    const update = await this.prisma.notification.updateMany({
-      where: { id, channel: NotificationChannel.IN_APP, recipientUserId, status: NotificationStatus.QUEUED },
-      data: { status: NotificationStatus.SENT, sentAt: now },
+  async markInAppRead(id: string, recipientUserId: string, now = new Date(), client: NotificationReadClient = this.prisma): Promise<boolean> {
+    const update = await client.notification.updateMany({
+      where: { id, channel: NotificationChannel.IN_APP, recipientUserId, readAt: null },
+      data: { readAt: now },
     });
     return update.count === 1;
   }
 
-  async markAllInAppRead(recipientUserId: string, now = new Date()): Promise<number> {
-    const update = await this.prisma.notification.updateMany({
-      where: { channel: NotificationChannel.IN_APP, recipientUserId, status: NotificationStatus.QUEUED },
-      data: { status: NotificationStatus.SENT, sentAt: now },
+  async markAllInAppRead(recipientUserId: string, now = new Date(), client: NotificationReadClient = this.prisma): Promise<number> {
+    const update = await client.notification.updateMany({
+      where: { channel: NotificationChannel.IN_APP, recipientUserId, readAt: null },
+      data: { readAt: now },
     });
     return update.count;
   }

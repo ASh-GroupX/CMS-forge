@@ -3,6 +3,8 @@ import { headers } from 'next/headers';
 import Script from 'next/script';
 import React from 'react';
 import type { ReactNode } from 'react';
+import '@fontsource-variable/noto-sans/wght.css';
+import '@fontsource-variable/noto-sans-arabic/wght.css';
 import { resolveLocale, staffShellText, type Locale } from '../i18n/staff-shell';
 import '../globals.css';
 

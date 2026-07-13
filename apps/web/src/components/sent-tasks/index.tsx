@@ -80,8 +80,8 @@ function SentTaskCard({ commentAction, locale, nudgeAction, task, t }: { comment
       </div>
       <dl className="mt-3 grid gap-2 text-sm md:grid-cols-2">
         <Field label={t.fields.assignee} value={task.assigneeName ?? '-'} />
-        <Field label={t.fields.due} value={formatDate(task.dueAt, locale)} />
-        <Field label={t.fields.updated} value={formatDate(task.updatedAt, locale)} />
+        <Field label={t.fields.due} value={formatDate(task.dueAt, locale, task.displayTimeZone)} />
+        <Field label={t.fields.updated} value={formatDate(task.updatedAt, locale, task.displayTimeZone)} />
         <Field label={t.fields.branch} value={task.branchName ?? '-'} />
       </dl>
       {task.nextAction ? (
@@ -89,7 +89,7 @@ function SentTaskCard({ commentAction, locale, nudgeAction, task, t }: { comment
           <p className="font-semibold">{t.fields.nextAction}</p>
           <p className="mt-1 break-words text-muted-foreground">{task.nextAction.what}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {t.fields.nextOwner}: <span>{task.nextAction.whoName ?? '-'}</span> - {formatDate(task.nextAction.when, locale)}
+            {t.fields.nextOwner}: <span>{task.nextAction.whoName ?? '-'}</span> - {formatDate(task.nextAction.when, locale, task.displayTimeZone)}
           </p>
         </div>
       ) : null}
@@ -103,7 +103,7 @@ function SentTaskCard({ commentAction, locale, nudgeAction, task, t }: { comment
           <article className="rounded-sm border border-border bg-card px-3 py-2 text-sm" key={comment.id}>
             <p className="font-semibold">{comment.authorName ?? '-'}</p>
             <p className="mt-1 break-words text-muted-foreground">{comment.body}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{formatDate(comment.createdAt, locale)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{formatDate(comment.createdAt, locale, task.displayTimeZone)}</p>
           </article>
         ))}
         {commentAction ? (
@@ -142,8 +142,8 @@ function formatNumber(locale: Locale, value: number): string {
   return new Intl.NumberFormat(locale).format(value);
 }
 
-function formatDate(value: string, locale: Locale): string {
-  return formatDisplayDate(value, locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' });
+function formatDate(value: string, locale: Locale, timeZone: string): string {
+  return `${formatDisplayDate(value, locale, { dateStyle: 'medium', timeStyle: 'short', timeZone })} (${timeZone})`;
 }
 
 function linkTypeLabel(entityType: string, t: Text): string {

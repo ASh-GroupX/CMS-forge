@@ -3,6 +3,7 @@ import { EmployeeToday } from '../../../../components/employee-today';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { getAssignableStaff } from '../../../../lib/staff-assignable-staff-api';
 import { getEmployeeTodayTasksLoadResult } from '../../../../lib/staff-tasks-api';
+import { getStaffSessionPrincipal } from '../../../../lib/staff-session-api';
 import { loadRelatedRecordsAction, quickAddTaskAction, updateTaskAction } from './actions';
 
 type SearchParams = { locale?: string | string[]; task?: string | string[] };
@@ -22,8 +23,8 @@ export default async function EmployeeTodayPage({
     ...(cookieHeader !== undefined ? { cookieHeader } : {}),
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
   };
-  const [data, staff] = await Promise.all([getEmployeeTodayTasksLoadResult(apiInput), getAssignableStaff(apiInput)]);
-  return <EmployeeToday locale={locale} data={data.status === 'ready' ? data.data : null} loadRelatedRecordsAction={loadRelatedRecordsAction} staff={staff} quickAddAction={quickAddTaskAction} result={readResult(params?.task)} state={data.status === 'ready' ? undefined : data.status} updateAction={updateTaskAction} />;
+  const [data, staff, principal] = await Promise.all([getEmployeeTodayTasksLoadResult(apiInput), getAssignableStaff(apiInput), getStaffSessionPrincipal(apiInput)]);
+  return <EmployeeToday locale={locale} data={data.status === 'ready' ? data.data : null} loadRelatedRecordsAction={loadRelatedRecordsAction} staff={staff} quickAddAction={quickAddTaskAction} result={readResult(params?.task)} state={data.status === 'ready' ? undefined : data.status} timeZone={principal?.branchTimezone ?? 'UTC'} updateAction={updateTaskAction} />;
 }
 
 function readParam(value: string | string[] | undefined) {
