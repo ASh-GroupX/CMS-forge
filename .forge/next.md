@@ -1,6 +1,6 @@
 # Full Staff Visual Cutover
 
-Status: Shared staff redesign passed locally; deployment pending
+Status: Web runtime hotfix ready; visual cutover deployment pending
 Required model tier: GPT-5.5 Extra High or Opus 4.8 Max
 Phase: coordinated staff UI cutover
 Risk: High
@@ -29,8 +29,8 @@ behavior.
 
 ## Required Human Gates
 
-- Needs Human Review: commit and deploy this working tree; production does not
-  contain these uncommitted changes yet.
+- Needs Human Review: deploy the web runtime hotfix and confirm the isolated
+  container plus live web health before production UI smoke.
 - Needs Human Review: authenticated Arabic/English production smoke across
   employee, manager, and administrator roles.
 - Needs Human Review: representative production data density and deployed Web

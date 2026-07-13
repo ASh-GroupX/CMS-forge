@@ -13511,3 +13511,32 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
   harness only supplies a fixture principal to the real shell.
 - No workflow mutation, audit behavior, credentials, provider integration, or
   customer-portal response changed.
+
+---
+
+## OPS-WEB-STARTUP-001 - Remove Runtime Package-Manager Download
+
+- Date: 2026-07-13
+- Risk: High (production web startup blocker)
+- Status: Fix verified locally; production redeploy pending
+- Requirement IDs: UI-DESIGN-001, METHOD-TEST-001
+
+### Evidence
+
+- The isolated `fa267b23` web preflight attempted to download pnpm through
+  Corepack and did not listen on port 4000 before the health check. The live web
+  container was not replaced.
+- The runtime image now starts Next directly with Node using dependencies copied
+  during image build; startup no longer requires npm registry access.
+
+### Verification
+
+- Passed: the copied Next CLI path resolves and executes locally.
+- Passed: `corepack pnpm lint` and `git diff --check`.
+- Needs Human Review: production image build, isolated web smoke, live web
+  replacement, authenticated multi-role smoke, and deployed Web Vitals.
+
+### Security Self-Check
+
+- This changes only the web process entrypoint; session authority, RBAC, branch
+  scope, audit behavior, secrets, and portal response handling are unchanged.
