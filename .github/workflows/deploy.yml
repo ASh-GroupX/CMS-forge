@@ -44,6 +44,9 @@ jobs:
       - name: Check OpenAPI contract consistency
         run: pnpm openapi:check
 
+      - name: Install Playwright Browsers
+        run: npx playwright install chromium
+
       - name: Run unit and sanity tests
         run: pnpm test
 
