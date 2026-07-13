@@ -47,7 +47,7 @@ export default async function StaffShellPage({
   const complaintId = readParam(params?.complaintId);
   const principal = await getStaffSessionPrincipal(apiInput);
   if (await isNextRequest()) {
-    if (principal) redirect(withLocale(principal.roleCode === 'MGMT_READONLY' ? '/dashboard' : '/tasks/today', locale));
+    if (principal) redirect(withLocale('/dashboard', locale));
     return <StaffAuthLanding authError={readParam(params?.auth) === 'error'} locale={locale} resetState={resolveReset(readParam(params?.reset))} />;
   }
 
@@ -178,12 +178,14 @@ export function StaffShell({
 }) {
   const t = staffShellText[locale];
   const visibleNav = roleNav[role] as readonly StaffNavKey[];
+  const shellPrincipal = principal ?? (isSignedIn ? previewPrincipal(role) : null);
 
   return (
     <AppShell
+      activePath="/dashboard"
       locale={locale}
       navKeys={visibleNav}
-      principal={principal ?? null}
+      principal={shellPrincipal}
       sidebarAfter={visibleNav.includes('admin') ? null : <p className="mt-3 rounded-sm bg-brand-foreground/5 px-2 py-2 text-xs font-semibold text-brand-foreground/65">{t.role.adminHidden}</p>}
       sidebarBefore={<><AuthPanel authError={authError} isSignedIn={isSignedIn} locale={locale} resetState={resetState} /><RolePanel locale={locale} role={role} /></>}
     >
@@ -197,4 +199,8 @@ export function StaffShell({
       <AttachmentUploadPanel locale={locale} state={attachmentState} />
     </AppShell>
   );
+}
+
+function previewPrincipal(role: RolePreview): import('../lib/staff-session-api').StaffSessionPrincipal {
+  return { sessionId: 'visual-session', userId: 'visual-user', email: 'visual@example.invalid', nameEn: 'Ahmed Al-Masri', nameAr: 'أحمد المصري', roleCode: role === 'admin' ? 'ADMIN' : role === 'management' ? 'CR_MANAGER' : 'STAFF', permissions: ['COMPLAINT_CREATE', 'REPORT_VIEW'], branchId: 'visual-branch', branchName: 'Cairo Branch', branchNameAr: 'فرع القاهرة', branchTimezone: 'Africa/Cairo' };
 }

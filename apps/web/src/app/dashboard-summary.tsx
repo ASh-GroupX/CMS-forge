@@ -1,92 +1,48 @@
 import React from 'react';
-import { StateBlock, type PrimitiveTone } from '../components/shared/ui-primitives';
-import { staffShellText, type Locale } from '../i18n/staff-shell';
+import { DashboardSummary as GoldenDashboard, DashboardSummaryLoading } from '../components/dashboard-summary';
+import type { Locale } from '../i18n/staff-shell';
 import type { StaffDashboardSummary } from '../lib/staff-dashboard-api';
+import type { StaffNotification } from '../lib/staff-notifications-api';
+import type { StaffSessionPrincipal } from '../lib/staff-session-api';
+import type { EmployeeTodayTasks, ManagerControlRoomTasks, StaffTask } from '../lib/staff-tasks-api';
 
 type RolePreview = 'staff' | 'admin' | 'management';
 export type DashboardFixtureState = 'loading' | 'empty' | 'error';
 
-type SummaryKey = 'open' | 'overdue' | 'warnings' | 'closed' | 'averageTat';
-
-const roleCards: Record<RolePreview, readonly SummaryKey[]> = {
-  staff: ['open', 'warnings', 'overdue'],
-  admin: ['open', 'warnings', 'overdue', 'closed', 'averageTat'],
-  management: ['open', 'overdue', 'closed', 'averageTat'],
-};
-
-const values: Record<SummaryKey, string> = {
-  open: '18',
-  overdue: '2',
-  warnings: '6',
-  closed: '11',
-  averageTat: '3.4d',
-};
-const tone: Record<SummaryKey, PrimitiveTone | undefined> = { open: undefined, overdue: 'danger', warnings: 'warning', closed: undefined, averageTat: 'brand' };
-
-export function DashboardSummary({
-  locale,
-  role,
-  state,
-  summary,
-}: {
-  locale: Locale;
-  role: RolePreview;
-  state?: DashboardFixtureState | undefined;
-  summary?: StaffDashboardSummary | undefined;
-}) {
-  const t = staffShellText[locale].dashboard;
-  const cardValues = summary ? valuesFromSummary(summary) : values;
-
-  if (state) {
-    return (
-      <section className="rounded-sm border border-line-subtle bg-surface" aria-label={t.title}>
-        <header className="border-b border-line-subtle bg-surface-raised px-3 py-2">
-          <h2 className="text-base font-semibold tracking-normal">{t.title}</h2>
-        </header>
-        <StateBlock className="m-3" message={t.states[state]} tone={state === 'error' ? 'error' : 'neutral'} />
-      </section>
-    );
-  }
-
-  const primary = roleCards[role][0] ?? 'open';
-  const secondary = roleCards[role].slice(1);
-  return (
-    <section aria-label={t.title} className="rounded-sm border border-line-subtle bg-surface">
-      <header className="border-b border-line-subtle bg-surface-raised px-3 py-2">
-        <h2 className="text-base font-semibold tracking-normal">{t.title}</h2>
-      </header>
-      <div className="grid gap-2 p-3 lg:grid-cols-[1.1fr_2fr]">
-        <MetricCard item={metric(primary, t, cardValues)} primary />
-        <div className="grid gap-2 md:grid-cols-2">
-          {secondary.map((key) => <MetricCard item={metric(key, t, cardValues)} key={key} />)}
-        </div>
-      </div>
-    </section>
-  );
+export function DashboardSummary({ locale, role, state, summary }: { locale: Locale; role: RolePreview; state?: DashboardFixtureState | undefined; summary?: StaffDashboardSummary | undefined }) {
+  if (state === 'loading') return <DashboardSummaryLoading locale={locale} />;
+  const empty = state === 'empty';
+  return <GoldenDashboard
+    data={state === 'error' ? null : summary ?? (empty ? zeroSummary : fixtureSummary)}
+    locale={locale}
+    manager={role === 'staff' ? null : empty ? emptyManager : fixtureManager(locale)}
+    notifications={empty ? [] : fixtureNotifications(locale)}
+    principal={fixturePrincipal(locale, role)}
+    tasks={state === 'error' ? null : empty ? emptyTasks : fixtureTasks}
+  />;
 }
 
-function metric(key: SummaryKey, t: typeof staffShellText[Locale]['dashboard'], values: Record<SummaryKey, string>) {
-  const [label, description] = t.cards[key];
-  return { description, label, tone: tone[key], value: values[key] };
+const zeroSummary: StaffDashboardSummary = { openComplaints: 0, overdueComplaints: 0, slaWarningComplaints: 0, closedComplaints: 0, averageTatHours: 0 };
+const fixtureSummary: StaffDashboardSummary = { openComplaints: 56, overdueComplaints: 3, slaWarningComplaints: 2, closedComplaints: 128, averageTatHours: 57.6 };
+const emptyTasks: EmployeeTodayTasks = { completed: [], dueToday: [], overdue: [], overduePromises: [], assignedToMe: [], waitingOnMe: [] };
+const emptyManager: ManagerControlRoomTasks = { dueToday: [], overduePromises: [], escalated: [], overdueByEmployee: [], stuck: [], workloadByAssignee: [], promiseKpi: { openPromiseCount: 0, overduePromiseCount: 0 } };
+const fixtureTasks: EmployeeTodayTasks = { completed: tasks(8), dueToday: tasks(4), overdue: tasks(5), overduePromises: tasks(2), assignedToMe: tasks(5), waitingOnMe: tasks(3) };
+
+function fixturePrincipal(locale: Locale, role: RolePreview): StaffSessionPrincipal {
+  return { sessionId: 'visual-session', userId: 'visual-user', email: 'visual@example.invalid', nameEn: 'Ahmed Al-Masri', nameAr: 'أحمد المصري', roleCode: role === 'admin' ? 'ADMIN' : role === 'management' ? 'CR_MANAGER' : 'STAFF', permissions: ['COMPLAINT_CREATE', 'REPORT_VIEW'], branchId: 'visual-branch', branchName: 'Cairo Branch', branchNameAr: 'فرع القاهرة', branchTimezone: 'Africa/Cairo' };
 }
 
-function MetricCard({ item, primary = false }: { item: { description: string; label: string; tone?: PrimitiveTone | undefined; value: string }; primary?: boolean }) {
-  const valueClass = item.tone === 'brand' ? 'text-brand' : item.tone === 'danger' ? 'text-status-error' : item.tone === 'warning' ? 'text-status-warning' : 'text-content-strong';
-  return (
-    <div className={`rounded-sm border border-line-subtle ${primary ? 'bg-content-strong text-brand-foreground lg:min-h-28' : 'bg-surface'} p-3`}>
-      <p className={`text-sm font-medium ${primary ? 'text-brand-foreground/70' : 'text-content-muted'}`}>{item.label}</p>
-      <p className={`${primary ? 'text-4xl text-brand-foreground' : 'text-2xl'} mt-2 font-semibold tracking-normal ${primary ? '' : valueClass}`}>{item.value}</p>
-      <p className={`mt-1 text-xs ${primary ? 'text-brand-foreground/65' : 'text-content-muted'}`}>{item.description}</p>
-    </div>
-  );
+function fixtureNotifications(locale: Locale): StaffNotification[] {
+  const ar = locale === 'ar';
+  return [
+    note('1', ar ? 'سارة خالد' : 'Sara Khaled', ar ? 'تم التواصل مع العميل وتحديد موعد الحل' : 'Customer contacted and resolution date confirmed', false),
+    note('2', ar ? 'محمد ياسر' : 'Mohamed Yasser', ar ? 'تمت إضافة ملاحظة داخلية على الشكوى' : 'Added an internal complaint note', false),
+    note('3', ar ? 'نورهان علي' : 'Norhan Ali', ar ? 'تم إغلاق الشكوى وإرسال استبيان رضا العميل' : 'Complaint closed and survey sent', true),
+    note('4', ar ? 'نظام التنبيهات' : 'Alert system', ar ? 'تم تعيين وعد جديد للعميل' : 'New customer promise assigned', true),
+    note('5', ar ? 'عميل سعيد' : 'Happy customer', ar ? 'شكراً لكم على سرعة الاستجابة' : 'Thank you for the quick response', true),
+  ];
 }
 
-function valuesFromSummary(summary: StaffDashboardSummary): Record<SummaryKey, string> {
-  return {
-    open: String(summary.openComplaints),
-    overdue: String(summary.overdueComplaints),
-    warnings: String(summary.slaWarningComplaints),
-    closed: String(summary.closedComplaints),
-    averageTat: `${Math.round((summary.averageTatHours / 24) * 10) / 10}d`,
-  };
-}
+function note(id: string, title: string, message: string, read: boolean): StaffNotification { return { id, status: 'SENT', readAt: read ? '2026-06-20T09:00:00.000Z' : null, targetHref: '/notifications', templateCode: 'visual.update', queuedAt: `2026-06-20T0${id}:00:00.000Z`, payload: { title, message } }; }
+function fixtureManager(locale: Locale): ManagerControlRoomTasks { const names = locale === 'ar' ? ['سارة خالد', 'محمد ياسر', 'نورهان علي', 'أحمد رضا'] : ['Sara Khaled', 'Mohamed Yasser', 'Norhan Ali', 'Ahmed Reda']; return { ...emptyManager, workloadByAssignee: names.map((name, index) => ({ assigneeId: `user-${index}`, assigneeName: name, count: [18, 12, 9, 5][index]! })) }; }
+function tasks(count: number): StaffTask[] { return Array.from({ length: count }, (_, index) => ({ id: `visual-task-${count}-${index}`, title: 'Visual task', ownerId: 'visual-owner', ownerName: null, assigneeId: 'visual-user', assigneeName: null, branchId: 'visual-branch', branchName: null, displayTimeZone: 'Africa/Cairo', dueAt: '2026-06-20T09:00:00.000Z', status: 'OPEN', nextAction: null, isCustomerPromise: false, visibility: 'INTERNAL', confidentialityLevel: 'NORMAL', links: [], participantUserIds: [], createdAt: '2026-06-20T09:00:00.000Z', updatedAt: '2026-06-20T09:00:00.000Z' })); }

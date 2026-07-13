@@ -1,5 +1,7 @@
 export async function proofFetch(input) {
   const path = new URL(String(input)).pathname;
+  if (path === '/auth/me') return json({ user: proofPrincipal() });
+  if (path === '/notifications') return json({ items: proofNotifications() });
   if (path === '/staff/assignable') return json({ staff: proofStaff() });
   if (path === '/tasks/today') return json({
     completed: [],
@@ -143,6 +145,24 @@ function proofStaff() {
   return [
     { userId: 'usr_proof', displayName: 'Proof Admin', displayNameAr: 'Proof Admin AR', role: 'CR Officer', roleAr: 'CR Officer AR', branchLabel: 'Proof branch', branchLabelAr: 'Proof branch AR' },
   ];
+}
+
+function proofPrincipal() {
+  return { sessionId: 'proof-session', userId: 'usr_proof', email: 'proof@example.test', nameEn: 'Ahmed Al-Masri', nameAr: 'أحمد المصري', roleCode: 'ADMIN', permissions: ['COMPLAINT_CREATE', 'REPORT_VIEW'], branchId: 'branch_proof', branchName: 'Cairo Branch', branchNameAr: 'فرع القاهرة', branchTimezone: 'Africa/Cairo' };
+}
+
+function proofNotifications() {
+  return [
+    proofNotification('1', 'Sara Khaled', 'Customer contacted and resolution date confirmed', null),
+    proofNotification('2', 'Mohamed Yasser', 'Added an internal complaint note', null),
+    proofNotification('3', 'Norhan Ali', 'Complaint closed and survey sent', '2026-06-20T09:00:00.000Z'),
+    proofNotification('4', 'Alert system', 'New customer promise assigned', '2026-06-20T09:00:00.000Z'),
+    proofNotification('5', 'Happy customer', 'Thank you for the quick response', '2026-06-20T09:00:00.000Z'),
+  ];
+}
+
+function proofNotification(id, title, message, readAt) {
+  return { id: `notification_${id}`, status: 'SENT', readAt, targetHref: '/notifications', templateCode: 'proof.update', queuedAt: `2026-06-20T0${id}:00:00.000Z`, payload: { title, message } };
 }
 
 function proofKpis() {

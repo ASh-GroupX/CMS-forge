@@ -28,7 +28,7 @@ export function PageHeader({
   title: string;
 }) {
   return (
-    <header className="flex flex-wrap items-start justify-between gap-3">
+    <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line-subtle pb-4">
       <div className="min-w-0">
         {eyebrow ? <p className="text-xs font-semibold text-content-muted">{eyebrow}</p> : null}
         <h1 className="text-xl font-semibold tracking-normal text-content-strong">{title}</h1>
@@ -127,10 +127,10 @@ export function DataTable({
   return (
     <div className="hidden w-full min-w-0 max-w-full overflow-x-auto border-t border-line-subtle md:block">
       <Table style={{ minWidth }}>
-        <TableHeader className="bg-content-strong text-xs font-semibold tracking-normal text-brand-foreground">
+        <TableHeader className="bg-surface-raised text-xs font-semibold tracking-normal text-content-muted">
           <TableRow>
             {headers.map((header) => (
-              <TableHead className="text-start text-brand-foreground" key={header}>{header}</TableHead>
+              <TableHead className="text-start text-content-muted" key={header}>{header}</TableHead>
             ))}
           </TableRow>
         </TableHeader>

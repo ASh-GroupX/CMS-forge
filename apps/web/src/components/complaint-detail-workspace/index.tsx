@@ -76,15 +76,15 @@ export function ComplaintDetailWorkspace({
           {detail ? <DetailSummary deadlineLabel={tabs.deadlineState} detail={detail} locale={locale} text={t} values={values} /> : null}
           <Tabs defaultValue={initialTab} dir={shell.dir}>
             <TabsList className="grid h-auto w-full grid-cols-3"><TabsTrigger value="work">{tabs.work}</TabsTrigger><TabsTrigger value="communication">{tabs.communication}</TabsTrigger><TabsTrigger value="details">{tabs.details}</TabsTrigger></TabsList>
-            <TabsContent className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.55fr)]" value="work">
+            <TabsContent className="grid gap-3 2xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.55fr)]" value="work">
               <ComplaintWorkflowModal allowedActions={detail?.allowedActions} complaintId={detail?.id} locale={locale} options={options} staff={staff} status={detail?.status} vehicleNeedsUnavailableReason={Boolean(detail?.vehicleRelated && !detail.vehicle && !detail.vehicleDataUnavailableReason)} workflowState={workflowState} />
               <DetailPanel title={t.sections.ownership} rows={[[t.labels.owner, values.owner], [tabs.deadlineState, values.sla], [t.labels.nextAction, detail?.nextAction ? actionDisplay(detail.nextAction, t, locale) : t.workflow.states.empty]]} />
             </TabsContent>
-            <TabsContent className="grid gap-3 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" value="communication">
+            <TabsContent className="grid gap-3 2xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" value="communication">
               {detail ? <CommunicationTimelinePanel detail={detail} locale={locale} text={t} /> : <DetailPanel title={t.sections.communicationTimeline}><StateBlock message={t.commentStates.empty} /></DetailPanel>}
               <ComplaintCommentsPanel comments={comments} commentsState={commentsState} complaintId={detail?.id} initialVisibility={commentVisibility} locale={locale} timeZone={detail?.displayTimeZone ?? 'UTC'} />
             </TabsContent>
-            <TabsContent className="grid gap-3 lg:grid-cols-2" value="details">
+            <TabsContent className="grid gap-3 2xl:grid-cols-2" value="details">
               <div className="grid min-w-0 content-start gap-3">
                 <DetailPanel title={t.sections.facts} rows={[[t.labels.reference, values.reference], [t.labels.status, values.status], [t.labels.severity, values.severity]]} />
                 <DetailPanel title={t.sections.customer} rows={[[t.labels.customer, detail?.customer.name ?? t.values.customer], [t.labels.contact, detail?.customer.phone ?? t.values.contact], [t.labels.customerNumber, detail?.customer.identifier ?? t.values.none], [t.labels.customerSource, provenance?.customerSource ?? t.values.customerSource], [t.labels.manualCustomer, provenance?.manualCustomer ?? t.values.manualCustomer]]} />
@@ -116,7 +116,7 @@ function surveyRows(surveys: StaffComplaintSurvey[] | null | undefined, t: typeo
 
 function DetailSummary({ deadlineLabel, detail, locale, text, values }: { deadlineLabel: string; detail: StaffComplaintDetailView; locale: Locale; text: typeof complaintDetailText.en; values: typeof complaintDetailText.en.values }) {
   return (
-    <section className="grid gap-2 rounded-md border border-line-subtle bg-surface p-3 md:grid-cols-3 xl:grid-cols-7" aria-label={text.sections.facts}>
+    <section className="grid gap-2 rounded-md border border-line-subtle bg-surface p-3 md:grid-cols-3 2xl:grid-cols-7" aria-label={text.sections.facts}>
       <SummaryItem label={text.labels.status} value={<StatusBadge tone="brand">{values.status}</StatusBadge>} />
       <SummaryItem label={text.labels.severity} value={<StatusBadge tone="danger">{values.severity}</StatusBadge>} />
       <SummaryItem label={text.labels.category} value={<bdi>{values.category}</bdi>} />
@@ -224,7 +224,7 @@ function DetailRows({ rows }: { rows: readonly (readonly [string, string])[] }) 
   return (
     <dl className="mt-3 grid gap-2 text-sm">
       {rows.map(([label, value]) => (
-        <div className="grid grid-cols-[minmax(6rem,8rem)_minmax(0,1fr)] gap-2 rounded-sm bg-surface px-3 py-2" key={label}>
+        <div className="grid grid-cols-[minmax(4.5rem,0.7fr)_minmax(7rem,1.3fr)] gap-2 rounded-sm bg-surface px-3 py-2" key={label}>
           <dt className="text-content-muted">{label}</dt>
           <dd className="break-words font-medium text-content-strong">{value}</dd>
         </div>
