@@ -13372,3 +13372,39 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
   `corepack pnpm web:perf` (5 static route previews).
 - Needs Human Review: staging employee/manager UAT, deployed field Web Vitals,
   and the final promote-or-rollback decision.
+
+---
+
+## UI-CUTOVER-HOTFIX-001 - Search Module Startup Wiring
+
+- Date: 2026-07-13
+- Risk: Critical (production API startup blocker)
+- Status: Local proof passed; production redeploy pending
+- Requirement IDs: REQ-SEARCH-001, REQ-RBAC-001, API-STANDARD-001,
+  METHOD-TEST-001
+
+### Evidence
+
+- Production logs for `ca40feb1` showed Nest could not resolve
+  `PrismaService` for `SearchRepository`; the API container exited with code 1.
+- Production rollback to `68e27039` completed and `/health` returned `status=ok`.
+- `SearchModule` now follows the existing authenticated-module wiring for
+  Prisma, `AuthModule`, session auth, and permission guards.
+- Added a regression test under the normal search suite so CI checks the module
+  metadata that caused the startup failure.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- search` (5/5).
+- Passed: `corepack pnpm typecheck`, `corepack pnpm lint`, and
+  `git diff --check`.
+- Not Run: local production Docker startup because Docker Desktop is unavailable.
+- Needs Human Review: redeploy the hotfix image and verify `/health`, login,
+  global search, and dashboard API requests.
+
+### Security Self-Check
+
+- Search scope still comes only from the authenticated server principal; the
+  focused suite includes allowed scoped search and denied branch-scope cases.
+- No workflow state, audit behavior, secrets, logs, or portal response shapes
+  changed in this dependency-wiring hotfix.
