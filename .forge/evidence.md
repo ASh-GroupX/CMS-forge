@@ -13372,3 +13372,47 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
   `corepack pnpm web:perf` (5 static route previews).
 - Needs Human Review: staging employee/manager UAT, deployed field Web Vitals,
   and the final promote-or-rollback decision.
+
+---
+
+## UI-CUTOVER-HOTFIX-001 - Search Module Startup Wiring
+
+- Date: 2026-07-13
+- Risk: Critical (production API startup blocker)
+- Status: Deployed; infrastructure health passed; authenticated UAT pending
+- Requirement IDs: REQ-SEARCH-001, REQ-RBAC-001, API-STANDARD-001,
+  METHOD-TEST-001
+
+### Evidence
+
+- Production logs for `ca40feb1` showed Nest could not resolve
+  `PrismaService` for `SearchRepository`; the API container exited with code 1.
+- Production rollback to `68e27039` completed and `/health` returned `status=ok`.
+- The first disposable-container preflight for `485ab15d` safely stopped before
+  live replacement and exposed `AuditService` as the remaining dependency of
+  `PermissionGuard`; production stayed on the healthy rollback.
+- `SearchModule` now follows the complete authenticated-module wiring for
+  Prisma, audit, `AuthModule`, session auth, and permission guards.
+- The regression test now boots the Nest module with database lifecycle calls
+  stubbed, resolving the actual dependency graph without requiring a test DB.
+- Corrected artifact `c73cfdbc` passed a disposable production-container boot,
+  mapped `/search`, and returned `status=ok` with database and Redis configured.
+- The live API and web containers were recreated successfully and remained up;
+  live API health and external HTTPS reachability passed.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- search` (5/5).
+- Passed: `corepack pnpm typecheck`, `corepack pnpm lint`, and
+  `git diff --check`.
+- Passed on production: disposable API startup, live `/health`, container state,
+  and external HTTPS reachability.
+- Needs Human Review: authenticated login, global search, dashboard requests,
+  employee/manager UAT, and deployed Web Vitals.
+
+### Security Self-Check
+
+- Search scope still comes only from the authenticated server principal; the
+  focused suite includes allowed scoped search and denied branch-scope cases.
+- No workflow state, audit behavior, secrets, logs, or portal response shapes
+  changed in this dependency-wiring hotfix.
