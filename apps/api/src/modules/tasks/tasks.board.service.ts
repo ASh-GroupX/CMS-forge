@@ -44,6 +44,12 @@ export class TasksBoardService {
     return buildTaskBoard(stages, tasks, now);
   }
 
+  // Public hook for the board-stages module: when an admin archives a stage with
+  // a destination, its cards follow on the archive transaction's client.
+  async reassignStage(fromStageId: string, toStageId: string, client: Prisma.TransactionClient): Promise<number> {
+    return this.boardRepository.reassignStage(fromStageId, toStageId, client);
+  }
+
   // Drag a card to a column: derive TaskStatus from the target stage, enforce the
   // same next-action / status-note invariants as PATCH /tasks/:id, then write the
   // move + status history + outcome comment + audit in ONE transaction.

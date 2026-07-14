@@ -13801,3 +13801,48 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
   accessibility 24, task-board-dnd — all Passed.
 - Not Run: drag against a live API/DB (no local DATABASE_URL) — the
   server-side move contract is covered by the 35 tasks API tests (A2/A3).
+
+## B1 — board-stages CRUD module + TICKETS seed (2026-07-14)
+
+- SRS: REQ-ADMIN-001, REQ-RBAC-001, METHOD-MODULAR-001, METHOD-AUDIT-001,
+  METHOD-API-001, METHOD-TEST-001.
+- Module (copied from the golden `branches` structure):
+  `apps/api/src/modules/board-stages/` — repository (owned table
+  `board_stages`), service, controller, module, MODULE.md,
+  `dto/board-stage-response.dto.ts` + `dto/board-stage-write.dto.ts`.
+  Registered in `main.ts`.
+- Routes: `GET /board-stages[?scope=]` staff read
+  (COMPLAINT_COMMENT_INTERNAL); `POST /board-stages`, `PATCH
+  /board-stages/:id`, `POST /board-stages/reorder`, `POST
+  /board-stages/:id/archive` under MASTER_DATA_MANAGE + CsrfGuard.
+- Rules: create validates color against the frontend stage tokens and
+  scope-specific mappings (TICKETS requires mappedComplaintStatus; TASKS may
+  map a TaskStatus; cross-scope mappings rejected) and appends at the end of
+  the scope. Reorder is all-or-nothing: orderedIds must equal the active
+  stage set exactly (else 409 BOARD_STAGE_ORDER_MISMATCH) so a stale admin
+  screen cannot drop columns. Archive always names a destination: same scope,
+  active, different id; TASKS cards are reassigned through the public
+  `TasksBoardService.reassignStage` on the archive transaction's client
+  (never direct task-table writes from this module); a TICKETS destination
+  must carry a mappedComplaintStatus. Every mutation writes its CONFIG audit
+  entry on the same transaction (asserted via shared-client identity).
+- Tasks module additions: `TasksBoardRepository.reassignStage` (updateMany on
+  the caller's tx client), `TasksBoardService.reassignStage` passthrough,
+  `TasksBoardService` added to TasksModule exports.
+- Seed: 9 TICKETS stages (one per ComplaintStatus in workflow order, en+ar
+  names, token colors) added to `board-stages-seed.ts`, idempotent upserts.
+- OpenAPI: 5 operations + 7 schemas spliced additively into
+  `tools/openapi-canonical.json` (610-line additive diff, no reformat);
+  regenerated committed document.
+- Verification:
+  - Passed: `test:api -- board-stages` 8/8 (guard wiring incl. CSRF on all
+    mutations; staff-read allowed / non-admin write denied + SECURITY audit;
+    same-tx create/reorder/archive assertions incl. reassignment client
+    identity; scope/mapping/color/duplicate validation; 409 reorder mismatch;
+    response shape). `test:api -- tasks` 35/35. `lint`, full `typecheck`,
+    `openapi:generate`+`openapi:check`.
+  - Not Run: live DB seed (no local DATABASE_URL); upserts mirror the proven
+    A1 pattern.
+- Security self-check: manage routes are permission-gated + CSRF; reads
+  expose only stage configuration (no cards, no customer data); audit
+  metadata carries configuration values only — no secrets, no PII.

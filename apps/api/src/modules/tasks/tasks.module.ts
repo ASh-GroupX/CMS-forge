@@ -68,6 +68,6 @@ import { TasksService } from './tasks.service.js';
     },
     CsrfGuard,
   ],
-  exports: [TasksService],
+  exports: [TasksService, TasksBoardService],
 })
 export class TasksModule {}

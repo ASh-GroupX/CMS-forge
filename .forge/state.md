@@ -1,8 +1,8 @@
 # Current State
 
-Status: CMSS Kanban revamp — PHASE A COMPLETE (A1–A8): Trello task board shipped end-to-end with proofs
-Phase: CMSS Trello-style board revamp — Phase B next (ticket board, admin stages, dept assignment)
-Next Task: B1 — board-stages CRUD module (copy golden branches module); seed TICKETS stages
+Status: CMSS Kanban revamp — Phase A committed (ff41d62); Phase B started: B1 (board-stages module) complete
+Phase: CMSS Trello-style board revamp — Phase B (ticket board, admin stages, dept assignment)
+Next Task: B2 — admin stage management UI (add/rename/recolor/reorder/archive inline on the board)
 Model Tier: Opus 4.8 Max or GPT-5.5 Extra High
 
 ## How to use this file
@@ -81,17 +81,27 @@ Prior state history is in .forge/archive/state-archive.md.
   (`test:e2e -- task-board-dnd`) — real Chromium pointer drag over the
   hydrated island asserting DOM move + committed payload + toast.
 
+- Phase A committed: d85d76e (A1–A3 backend) + ff41d62 (A4–A8 frontend).
+- B1 shipped (uncommitted): `modules/board-stages/` CRUD module (staff-read
+  GET; MASTER_DATA_MANAGE+CSRF create/update/reorder/archive; all-or-nothing
+  reorder 409; archive requires same-scope destination, TASKS cards follow via
+  `TasksBoardService.reassignStage` same-tx, TICKETS destination must map a
+  status; CONFIG audit same-tx). TasksModule now exports TasksBoardService;
+  `reassignStage` added to tasks.board.{repository,service}. 9 TICKETS stages
+  seeded (one per ComplaintStatus, workflow order). OpenAPI: 5 ops + 7 schemas
+  (additive splice — do NOT full-rewrite openapi-canonical.json, it is
+  hand-formatted; splice fragments instead). `board-stages` suite registered
+  in tools/api-test.mjs. Proofs: board-stages 8/8, tasks 35/35, lint, full
+  typecheck, openapi:check Passed.
+
 ## Current Stop
 
-PHASE A COMPLETE. All proofs Passed: lint, typecheck, test:web 213/213,
-test:api tasks 35/35, test:visual 108, accessibility 24, task-board-dnd,
-openapi:check, i18n-lint. Not Run: live DB (`db:push`/`db:seed`) and drag
-against a live API — no local DATABASE_URL.
-A4–A8 are uncommitted in the working tree (A1–A3 committed in d85d76e).
-Next: Phase B per the SSOT — B1 `board-stages` CRUD module (copy `branches`
-golden module; ADMIN-manage/staff-read RBAC; seed TICKETS stages mapped to
-ComplaintStatus), then B2 admin stage UI, B3 task department assignment,
-B4/B5 the complaints board, B6 card detail drawer; Phase C final proofs.
+B1 complete and verified. Next per SSOT: B2 admin stage management UI
+(add/rename/recolor/reorder/archive inline on the task board for admins,
+wired to /board-stages; shadcn primitives; en+ar; visual+a11y cases), then
+B3 task department assignment, B4 GET /complaints/board (queue-scoped cards +
+per-card allowedTransitions), B5 /complaints/board page (transition-aware
+drag over POST /complaints/:id/transitions), B6 card detail drawer, Phase C.
 
 ## Open Carry-Forward / Known Debt
 

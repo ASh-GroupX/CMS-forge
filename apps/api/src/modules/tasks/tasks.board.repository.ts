@@ -90,6 +90,13 @@ export class TasksBoardRepository {
     });
   }
 
+  // Bulk stage reassignment used when an admin archives a stage with a
+  // destination (board-stages module) — runs on the caller's transaction.
+  async reassignStage(fromStageId: string, toStageId: string, client: Prisma.TransactionClient): Promise<number> {
+    const result = await client.task.updateMany({ where: { stageId: fromStageId }, data: { stageId: toStageId } });
+    return result.count;
+  }
+
   async listBoardTasks(scope: BoardScopeQuery, completedSince: Date): Promise<BoardTaskRecord[]> {
     return this.prisma.task.findMany({
       where: {

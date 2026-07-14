@@ -161,9 +161,17 @@ assignment (Phase B).**
   toast. All Passed.)
 
 ### Phase B — Ticket board, assignment, dynamic stages
-- [ ] **B1**: `board-stages` module (copy `branches`): CRUD + reorder,
+- [x] **B1**: `board-stages` module (copy `branches`): CRUD + reorder,
   ADMIN-manage/staff-read RBAC, audit, DTOs, MODULE.md, OpenAPI,
   allowed+denied tests; stage delete requires destination; seed TICKETS stages.
+  (`modules/board-stages/{repository,service,controller,module,MODULE.md,dto/*}`;
+  GET staff-read + POST/PATCH/reorder/archive under MASTER_DATA_MANAGE+CSRF;
+  all-or-nothing reorder (409 on stale sets); archive requires a same-scope
+  destination — TASKS cards follow via `TasksBoardService.reassignStage` on the
+  SAME transaction, TICKETS destination must map a status; CONFIG audit same-tx.
+  9 TICKETS stages seeded (one per ComplaintStatus, workflow order). 5 routes +
+  7 schemas in OpenAPI (additive splice). `test:api -- board-stages` 8/8,
+  tasks 35/35, lint, full typecheck, openapi:check Passed.)
 - [ ] **B2**: Admin stage management UI — add/rename/recolor/reorder/archive
   inline on the board.
 - [ ] **B3**: Task department assignment — `Task.assignedDepartmentId?`

@@ -5,6 +5,363 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/board-stages": {
+      "get": {
+        "tags": [
+          "BoardStages"
+        ],
+        "operationId": "boardStagesList",
+        "summary": "List active board stages (staff read; optional scope filter)",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "TASKS",
+                "TICKETS"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Active board stages in position order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardStageAdminListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "BoardStages"
+        ],
+        "operationId": "boardStageCreate",
+        "summary": "Create a board stage (admin master data)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBoardStageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created stage appended at the end of its scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardStageAdminResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/board-stages/{id}": {
+      "patch": {
+        "tags": [
+          "BoardStages"
+        ],
+        "operationId": "boardStageUpdate",
+        "summary": "Rename or recolor a board stage (admin master data)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBoardStageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated stage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardStageAdminResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Stage not found or archived",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/board-stages/reorder": {
+      "post": {
+        "tags": [
+          "BoardStages"
+        ],
+        "operationId": "boardStagesReorder",
+        "summary": "Reorder all active stages of a scope (admin master data; all-or-nothing)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderBoardStagesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stages in the new position order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardStageAdminListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "orderedIds does not match the active stage set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/board-stages/{id}/archive": {
+      "post": {
+        "tags": [
+          "BoardStages"
+        ],
+        "operationId": "boardStageArchive",
+        "summary": "Archive a stage, moving its cards to a destination stage (admin master data)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArchiveBoardStageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Archived stage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardStageAdminResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Stage or destination not found or archived",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "tags": [
@@ -5666,6 +6023,259 @@
   },
   "components": {
     "schemas": {
+      "BoardStageAdmin": {
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "scope",
+          "nameEn",
+          "nameAr",
+          "color",
+          "position",
+          "isDefault",
+          "mappedTaskStatus",
+          "mappedComplaintStatus",
+          "archivedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "TASKS",
+              "TICKETS"
+            ]
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string",
+            "enum": [
+              "slate",
+              "blue",
+              "amber",
+              "green",
+              "red",
+              "violet"
+            ]
+          },
+          "position": {
+            "type": "integer"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "mappedTaskStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "OPEN",
+              "IN_PROGRESS",
+              "WAITING",
+              "DONE",
+              null
+            ]
+          },
+          "mappedComplaintStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "MANAGER_REVIEW",
+              "BRANCH_REVIEW",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED",
+              "REOPENED",
+              "REJECTED",
+              null
+            ]
+          },
+          "archivedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BoardStageAdminListResponse": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardStageAdmin"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "BoardStageAdminResponse": {
+        "type": "object",
+        "required": [
+          "stage"
+        ],
+        "properties": {
+          "stage": {
+            "$ref": "#/components/schemas/BoardStageAdmin"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateBoardStageRequest": {
+        "type": "object",
+        "required": [
+          "code",
+          "scope",
+          "nameEn",
+          "nameAr",
+          "color"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "TASKS",
+              "TICKETS"
+            ]
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string",
+            "enum": [
+              "slate",
+              "blue",
+              "amber",
+              "green",
+              "red",
+              "violet"
+            ]
+          },
+          "mappedTaskStatus": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "IN_PROGRESS",
+              "WAITING",
+              "DONE"
+            ]
+          },
+          "mappedComplaintStatus": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "MANAGER_REVIEW",
+              "BRANCH_REVIEW",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED",
+              "REOPENED",
+              "REJECTED"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateBoardStageRequest": {
+        "type": "object",
+        "minProperties": 1,
+        "properties": {
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string",
+            "enum": [
+              "slate",
+              "blue",
+              "amber",
+              "green",
+              "red",
+              "violet"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReorderBoardStagesRequest": {
+        "type": "object",
+        "required": [
+          "scope",
+          "orderedIds"
+        ],
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "TASKS",
+              "TICKETS"
+            ]
+          },
+          "orderedIds": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ArchiveBoardStageRequest": {
+        "type": "object",
+        "required": [
+          "destinationStageId"
+        ],
+        "properties": {
+          "destinationStageId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "HealthResponse": {
         "type": "object",
         "required": [

@@ -242,7 +242,7 @@ async function main(): Promise<void> {
 
   await seedBoardStages(prisma);
 
-  console.log('Seed complete: 2 branches, 6 roles, 4 users, 5 categories, 2 customers, 2 vehicles, 3 complaints, 2 deals, 2 tasks, 1 confidential case, 4 board stages.');
+  console.log('Seed complete: 2 branches, 6 roles, 4 users, 5 categories, 2 customers, 2 vehicles, 3 complaints, 2 deals, 2 tasks, 1 confidential case, 13 board stages (4 tasks + 9 tickets).');
 }
 
 main()

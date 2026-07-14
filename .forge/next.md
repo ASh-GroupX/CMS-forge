@@ -10,12 +10,12 @@ SRS IDs: `REQ-RBAC-001`, `UI-SCREEN-001`, `UI-DESIGN-001`,
 ## Task
 
 Execute `docs/CMSS_REVAMP_PLAN.md` (the SSOT — read it first) task by task.
-**Phase A (A1–A8) is DONE — the Trello task board ships end-to-end with
-proofs. Next task: B1** (`board-stages` CRUD module — copy the golden
-`branches` module: CRUD + reorder, ADMIN-manage/staff-read RBAC, audit,
-DTOs, MODULE.md, OpenAPI, allowed+denied tests; stage delete requires a
-destination; seed TICKETS stages mapped to ComplaintStatus in workflow
-order).
+**Phase A (A1–A8) is DONE and committed (d85d76e + ff41d62). B1 is DONE
+(uncommitted). Next task: B2** — admin stage management UI: manage columns
+(add/rename/recolor/reorder/archive-with-destination) inline on the board,
+admin-only entry point, wired to the /board-stages routes via a typed
+`lib/staff-board-stages-api.ts` client + server actions; shadcn primitives
+only; en+ar; register visual + a11y cases; screenshot self-review.
 
 - A1 (done): Prisma migration — `BoardStage`, `Task.stageId?`, `Task.boardPosition`,
   seed default TASKS stages.
