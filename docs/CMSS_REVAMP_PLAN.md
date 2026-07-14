@@ -172,8 +172,16 @@ assignment (Phase B).**
   9 TICKETS stages seeded (one per ComplaintStatus, workflow order). 5 routes +
   7 schemas in OpenAPI (additive splice). `test:api -- board-stages` 8/8,
   tasks 35/35, lint, full typecheck, openapi:check Passed.)
-- [ ] **B2**: Admin stage management UI — add/rename/recolor/reorder/archive
-  inline on the board.
+- [x] **B2**: Admin stage management UI — add/rename/recolor/reorder/archive
+  inline on the board. (`components/task-board/stage-manager.tsx` sheet —
+  per-stage rename en+ar, token-color radio picker, up/down reorder (sends the
+  full ordered set), archive with destination select, add-stage form with
+  optional status mapping; wired via `lib/staff-board-stages-api.ts` typed
+  client + 4 server actions; rendered only for principals with
+  MASTER_DATA_MANAGE (server-checked in page.tsx). 3 client-shape tests
+  (api-client 67/67); visual proof 108 with manage-trigger signal; hydrated
+  open-sheet screenshots self-reviewed en LTR + ar RTL (start-side sheet).
+  lint/tsc/i18n-lint Passed.)
 - [ ] **B3**: Task department assignment — `Task.assignedDepartmentId?`
   migration + DTO + `tasks.access.ts` extension + board assignment controls;
   allowed/denied tests.

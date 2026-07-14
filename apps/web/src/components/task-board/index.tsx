@@ -5,7 +5,7 @@ import {
   type Announcements, type DragEndEvent, type DragOverEvent, type DragStartEvent, type UniqueIdentifier,
 } from '@dnd-kit/core';
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import React, { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react';
 import { toast, Toaster } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -21,10 +21,11 @@ export type MoveTaskCardAction = (taskId: string, payload: MoveTaskCardPayload) 
 type Columns = Record<string, BoardCard[]>;
 type PendingNote = { taskId: string; stageId: string; boardPosition: number; stageName: string; snapshot: Columns };
 
-export function TaskBoardScreen({ board, locale, moveAction, state }: {
+export function TaskBoardScreen({ board, locale, moveAction, stageManager, state }: {
   board: TaskBoard | null;
   locale: Locale;
   moveAction: MoveTaskCardAction;
+  stageManager?: ReactNode;
   state?: 'denied' | 'error' | undefined;
 }) {
   const t = taskBoardText[locale];
@@ -136,12 +137,15 @@ export function TaskBoardScreen({ board, locale, moveAction, state }: {
           <h2 className="text-lg font-bold tracking-tight text-content-strong">{t.title}</h2>
           <p className="mt-1 text-sm text-content-muted">{t.subtitle}</p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+        {stageManager}
         <div aria-label={t.view.label} className="flex rounded-lg border border-line-subtle bg-surface p-0.5 lg:hidden" role="group">
           {(['board', 'list'] as const).map((mode) => (
             <button aria-pressed={view === mode} className={`min-h-11 min-w-16 rounded-md px-3 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-brand ${view === mode ? 'bg-brand text-brand-foreground shadow-sm' : 'text-content-muted'}`} key={mode} onClick={() => setView(mode)} type="button">
               {t.view[mode]}
             </button>
           ))}
+        </div>
         </div>
       </header>
       <DndContext accessibility={{ announcements, screenReaderInstructions: { draggable: t.a11y.instructions } }} collisionDetection={closestCorners} onDragCancel={() => { if (dragSnapshot.current) setColumns(dragSnapshot.current); dragSnapshot.current = null; setActiveCard(null); }} onDragEnd={onDragEnd} onDragOver={onDragOver} onDragStart={onDragStart} sensors={sensors}>

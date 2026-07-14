@@ -196,7 +196,7 @@ function proofStaff() {
 }
 
 function proofPrincipal() {
-  return { sessionId: 'proof-session', userId: 'usr_proof', email: 'proof@example.test', nameEn: 'Ahmed Al-Masri', nameAr: 'أحمد المصري', roleCode: 'ADMIN', permissions: ['COMPLAINT_CREATE', 'REPORT_VIEW'], branchId: 'branch_proof', branchName: 'Cairo Branch', branchNameAr: 'فرع القاهرة', branchTimezone: 'Africa/Cairo' };
+  return { sessionId: 'proof-session', userId: 'usr_proof', email: 'proof@example.test', nameEn: 'Ahmed Al-Masri', nameAr: 'أحمد المصري', roleCode: 'ADMIN', permissions: ['COMPLAINT_CREATE', 'REPORT_VIEW', 'MASTER_DATA_MANAGE'], branchId: 'branch_proof', branchName: 'Cairo Branch', branchNameAr: 'فرع القاهرة', branchTimezone: 'Africa/Cairo' };
 }
 
 function proofNotifications() {

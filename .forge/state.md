@@ -1,8 +1,8 @@
 # Current State
 
-Status: CMSS Kanban revamp — Phase A committed (ff41d62); Phase B started: B1 (board-stages module) complete
+Status: CMSS Kanban revamp — Phase A committed (d85d76e+ff41d62); B1 committed (21f5fa9); B2 complete (uncommitted)
 Phase: CMSS Trello-style board revamp — Phase B (ticket board, admin stages, dept assignment)
-Next Task: B2 — admin stage management UI (add/rename/recolor/reorder/archive inline on the board)
+Next Task: B3 — task department assignment (Task.assignedDepartmentId?, access extension, board controls)
 Model Tier: Opus 4.8 Max or GPT-5.5 Extra High
 
 ## How to use this file
@@ -94,12 +94,23 @@ Prior state history is in .forge/archive/state-archive.md.
   in tools/api-test.mjs. Proofs: board-stages 8/8, tasks 35/35, lint, full
   typecheck, openapi:check Passed.
 
+- B2 shipped (uncommitted): `lib/staff-board-stages-api.ts` typed client +
+  4 stage server actions in `(staff)/tasks/board/actions.ts`;
+  `components/task-board/stage-manager.tsx` Sheet (rename en+ar, token-color
+  radio, up/down reorder with full ordered set, archive w/ destination
+  select, add form with optional status mapping); island `stageManager` slot;
+  page renders it only when the server principal has MASTER_DATA_MANAGE;
+  `manage.*` i18n en+ar; proof principal got MASTER_DATA_MANAGE and the
+  board visual case asserts the manage trigger. NOTE: no `useRouter` in
+  proof-rendered client components (breaks static render — no app router).
+  Proofs: api-client 67/67, visual 108, lint, tsc, i18n-lint Passed.
+
 ## Current Stop
 
-B1 complete and verified. Next per SSOT: B2 admin stage management UI
-(add/rename/recolor/reorder/archive inline on the task board for admins,
-wired to /board-stages; shadcn primitives; en+ar; visual+a11y cases), then
-B3 task department assignment, B4 GET /complaints/board (queue-scoped cards +
+B1 committed (21f5fa9); B2 complete and verified in the working tree. Next
+per SSOT: B3 task department assignment (Task.assignedDepartmentId?
+migration + DTO + tasks.access.ts extension + board assignment controls,
+allowed/denied tests), then B4 GET /complaints/board (queue-scoped cards +
 per-card allowedTransitions), B5 /complaints/board page (transition-aware
 drag over POST /complaints/:id/transitions), B6 card detail drawer, Phase C.
 

@@ -13846,3 +13846,32 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 - Security self-check: manage routes are permission-gated + CSRF; reads
   expose only stage configuration (no cards, no customer data); audit
   metadata carries configuration values only — no secrets, no PII.
+
+## B2 — Admin stage management UI (2026-07-14)
+
+- SRS: REQ-ADMIN-001, REQ-RBAC-001, UI-SCREEN-001, UI-DESIGN-001,
+  REQ-LOCALIZATION-001, METHOD-TEST-001.
+- Files: `apps/web/src/lib/staff-board-stages-api.ts` (149 lines — typed
+  client for /board-stages list/create/update/reorder/archive; CSRF header;
+  outcomes success/invalid{fields}/denied/conflict/not_found/error);
+  4 stage server actions added to `(staff)/tasks/board/actions.ts`
+  (revalidatePath on success); `components/task-board/stage-manager.tsx`
+  (217 lines — shadcn Sheet, per-stage rename en+ar + token-color radio
+  picker + up/down reorder sending the full ordered set + archive with
+  destination select, add-stage form with optional TaskStatus mapping,
+  sonner toasts incl. 409 conflict copy); island accepts a `stageManager`
+  slot; `page.tsx` renders it only when the SERVER session principal has
+  MASTER_DATA_MANAGE (client never decides); `manage.*` copy en+ar.
+- Verification:
+  - Passed: web api-client tests 67/67 (3 new stage-client tests: endpoint/
+    CSRF/payload mapping, outcome mapping incl. 409, denied-before-fetch);
+    `test:visual` 108 previews (manage trigger signal, admin proof
+    principal); hydrated open-sheet screenshots en LTR + ar RTL (start-side
+    sheet) self-reviewed and sent to user; `lint`; web `tsc`; `i18n-lint`.
+  - Not Run: writes against a live API (no local DATABASE_URL) — covered by
+    the B1 API suite + client-shape stubs. Board a11y axe cases from A8
+    cover the trigger; the open sheet is client-portal-only and is not in
+    the static axe pass (buttons carry aria labels + focus rings).
+- Security self-check: manage affordance gated by the server-loaded
+  principal's permissions; every write goes through the CSRF client and the
+  B1 admin-guarded routes; no secrets in toasts or logs.
