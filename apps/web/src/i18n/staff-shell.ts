@@ -129,6 +129,7 @@ export const staffShellText = {
     },
     nav: {
       today: ['Today', 'Your work for today'],
+      board: ['Board', 'Drag tasks between stages'],
       sent: ['Sent tasks', 'Work you gave to others'],
       promises: ['Promises', 'Customer promises and due dates'],
       manager: ['Team', 'Team work that needs help'],
@@ -270,6 +271,7 @@ export const staffShellText = {
     },
     nav: {
       today: ['اليوم', 'المهام المستحقة والمتأخرة والعالقة'],
+      board: ['اللوحة', 'اسحب المهام بين المراحل'],
       sent: ['المهام المرسلة', 'مهام أسندتها إلى زملاء'],
       promises: ['الوعود', 'التزامات العملاء ومواعيدها'],
       manager: ['الفريق', 'المهام المتأخرة والعالقة ووعود العملاء'],

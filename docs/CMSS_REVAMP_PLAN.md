@@ -117,18 +117,48 @@ assignment (Phase B).**
   (branch-scope guard via `assertAssignable`, parity with PATCH), same-tx client
   identity, audit metadata. `POST /tasks/{id}/move` + `GET /tasks/board` documented
   in OpenAPI. 35/35 tasks tests, lint/typecheck/openapi:check Passed.)
-- [ ] **A4**: Add `@dnd-kit/core` + `@dnd-kit/sortable`; shadcn primitives
+- [x] **A4**: Add `@dnd-kit/core` + `@dnd-kit/sortable`; shadcn primitives
   (avatar, tooltip, sheet, scroll-area, popover); board design tokens.
-- [ ] **A5**: Typed client `lib/staff-board-api.ts` + move server action;
-  client-shape tests.
-- [ ] **A6**: `/tasks/board` page — the Trello experience: columns, rich cards
+  (`@dnd-kit/core@6.3.1` + `sortable@10` + `utilities@3.2.2` installed;
+  5 primitives generated via shadcn CLI; board tokens — column/card/drop
+  surfaces, `shadow-drag`, `stage-{slate,blue,amber,green,red,violet}` accents
+  with dark variants — in `globals.css` + `tailwind.config.ts` + `lib/tokens.ts`.
+  lint + web typecheck Passed.)
+- [x] **A5**: Typed client `lib/staff-board-api.ts` + move server action;
+  client-shape tests. (`getTaskBoardLoadResult` + `moveTaskCard` mirroring
+  `dto/board.dto.ts`; move surfaces `invalid` (400 + field list, for the A6
+  note dialog), `denied`, `not_found`, `error`; CSRF header from cookie;
+  `tasks/board/actions.ts` `moveTaskCardAction` with revalidate;
+  `test/api-client/staff-board-api.test.ts` — 213/213 web tests, lint +
+  typecheck Passed.)
+- [x] **A6**: `/tasks/board` page — the Trello experience: columns, rich cards
   (assignee avatar, due badge, days-active, labels), drag tilt, highlighted
   drop zones, drag overlay, optimistic move + rollback toast, hover/transition
   animations, RTL, loading/empty/error/denied states, i18n en+ar; nav entry.
-- [ ] **A7**: Mobile board — horizontal snap-scroll columns + list switcher,
-  44px touch targets, touch sensors.
-- [ ] **A8**: Visual + a11y proofs (register in `web-proof-cases.mjs` +
+  (`components/task-board/{index,board-card,board-column,board-loading}.tsx`,
+  `(staff)/tasks/board/{page,loading}.tsx`, `i18n/staff-task-board.ts`; dnd-kit
+  island with optimistic cross-column move + snapshot rollback, status-note
+  dialog on 400, sonner toasts, keyboard sensors + SR announcements; 'board'
+  nav entry (KanbanSquare) for all staff roles. Registered `staff-board` in the
+  proof harness (fixture + en/ar visual cases) — visual proof 102 previews
+  Passed; screenshots self-reviewed en LTR + ar RTL. lint/typecheck/test:web
+  213/213/i18n-lint Passed.)
+- [x] **A7**: Mobile board — horizontal snap-scroll columns + list switcher,
+  44px touch targets, touch sensors. (Board/List toggle (`min-h-11`, mobile
+  only, `aria-pressed`) in the island; list layout stacks full-width columns
+  (`w-full lg:w-72`); snap-scroll + TouchSensor were in A6. en 390px + ar
+  390–1440px visual cases registered — 108 previews Passed; 390px screenshots
+  self-reviewed en+ar. lint/tsc Passed.)
+- [x] **A8**: Visual + a11y proofs (register in `web-proof-cases.mjs` +
   fixtures), screenshot self-review en+ar, Playwright e2e drag test.
+  (Visual cases + fixture landed with A6/A7 — 108 previews. Accessibility
+  cases en+ar registered — 24 previews with axe; fixed 2 serious violations
+  (sortable role=button moved off the `<li>`; avatar/badge/empty-hint
+  contrast). New `tools/task-board-dnd-proof.mjs` via `test:e2e --
+  task-board-dnd`: esbuild-bundles the real island + fixture, hydrates in
+  Chromium, performs a genuine pointer drag Open→In Progress, asserts the
+  DOM move, the committed `{stageId, boardPosition}` payload, and the success
+  toast. All Passed.)
 
 ### Phase B — Ticket board, assignment, dynamic stages
 - [ ] **B1**: `board-stages` module (copy `branches`): CRUD + reorder,

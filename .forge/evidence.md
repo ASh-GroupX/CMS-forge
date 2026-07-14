@@ -13660,3 +13660,144 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
   - State machine preserved: status is derived from the stage mapping and gated by
     the existing note/next-action invariants; the board never sets an arbitrary
     TaskStatus. (Ticket board over the complaint state machine is Phase B.)
+
+## A4 — Board frontend groundwork: dnd-kit, shadcn primitives, board tokens (2026-07-14)
+
+- SRS: UI-DESIGN-001 (token system, no ad-hoc colors), UI-SCREEN-001 (primitives
+  via shadcn CLI, never hand-rolled).
+- Scope (deps + generated primitives + tokens, no board page yet):
+  - `apps/web/package.json`: `@dnd-kit/core@^6.3.1`, `@dnd-kit/sortable@^10.0.0`,
+    `@dnd-kit/utilities@^3.2.2` (+ Radix deps pulled by the shadcn CLI:
+    avatar, tooltip, scroll-area, popover).
+  - shadcn CLI (`npx shadcn@latest add avatar tooltip sheet scroll-area popover`)
+    generated `apps/web/src/components/ui/{avatar,tooltip,sheet,scroll-area,popover}.tsx`.
+  - Board tokens: `--board-column-bg`, `--board-column-border`, `--board-card-bg`,
+    `--board-drop-bg`, `--board-drop-ring`, `--board-drag-shadow`, and stage accents
+    `--stage-{slate,blue,amber,green,red,violet}[-bg]` with `.dark` overrides in
+    `apps/web/src/globals.css`; exposed as `board.*` / `stage.*` colors and
+    `shadow-drag` in `tailwind.config.ts`; mirrored in `lib/tokens.ts`.
+    Stage color names match `BoardStage.color` seed values (slate/blue/amber/green)
+    plus red/violet headroom for Phase B admin-defined stages.
+- Verification:
+  - Passed: `corepack pnpm lint`; full `typecheck` (all 6 projects);
+    `test:api -- tasks` 35/35 (re-verified after install); `openapi:check`.
+  - Not Run: visual proofs — no screen consumes the tokens yet (A6/A8).
+- Environment notes: shadcn CLI requires `pnpm` on PATH; created corepack shims via
+  `corepack enable --install-directory <scratchpad>/corepack-shims`. Fresh Windows
+  checkouts (`core.autocrlf=true`) break byte-exact `openapi:check` until
+  `openapi:generate` rewrites LF endings (content-identical).
+
+## A5 — Typed board client + move server action + client-shape tests (2026-07-14)
+
+- SRS: REQ-RBAC-001 (session-cookie-only authority, no client-side privacy
+  filtering), METHOD-TEST-001 (client-shape tests incl. denied boundary).
+- Files:
+  - `apps/web/src/lib/staff-board-api.ts` (220 lines): `getTaskBoardLoadResult`
+    (GET /tasks/board → `{status:'ready',data}|{status:'denied'|'error'}`) and
+    `moveTaskCard` (POST /tasks/:id/move with `x-csrf-token` from the cookie →
+    `success{card}` / `invalid{fields}` (400 VALIDATION_FAILED detail fields,
+    consumed by the A6 status-note dialog) / `denied` / `not_found` / `error`).
+    Shapes mirror `apps/api/src/modules/tasks/dto/board.dto.ts`; every payload
+    is runtime-validated before use (malformed → error, never partial data).
+  - `apps/web/src/app/(staff)/tasks/board/actions.ts`: `moveTaskCardAction`
+    ('use server') — calls `moveTaskCard`, `revalidatePath('/tasks/board')` on
+    success, returns the serializable result union for optimistic rollback.
+  - `apps/web/test/api-client/staff-board-api.test.ts`: 4 tests — scoped GET
+    with session cookie; denied (no session + 403) / error (500) / malformed
+    payload; POST body + CSRF header assertion; outcome mapping incl. 404 and
+    field-level 400.
+- Verification:
+  - Passed: `corepack pnpm test:web` 213/213; `lint`; web `tsc --noEmit`.
+  - Not Run: live API round-trip (no local DATABASE_URL/API) — covered by
+    fetch-stub shape tests, same as every other `*-api.ts` client.
+- Security self-check: requests authorized only by the forwarded session
+  cookie; no session/CSRF values logged or persisted; denied paths return
+  before any fetch; the client renders nothing the server did not scope.
+
+## A6 — /tasks/board Kanban page (Trello UX, en+ar, nav) (2026-07-14)
+
+- SRS: UI-SCREEN-001 (states, a11y), UI-DESIGN-001 (tokens only),
+  REQ-LOCALIZATION-001 (en LTR + ar RTL), REQ-RBAC-001 (server-scoped read;
+  nav entry visible to all staff roles, data still session-scoped).
+- Files:
+  - `apps/web/src/components/task-board/index.tsx` (216): 'use client' dnd-kit
+    island — DndContext (pointer/touch/keyboard sensors, closestCorners),
+    cross-column onDragOver preview, onDragEnd optimistic commit with
+    snapshot rollback, DragOverlay tilt (`rotate-3 shadow-drag`), status-note
+    dialog on `invalid:statusNote` (retries the move with the note),
+    nextAction-required and denied/not_found/error toasts (sonner), SR
+    announcements + keyboard instructions, empty/error/denied states.
+  - `apps/web/src/components/task-board/board-card.tsx` (82): card visual —
+    due-state/promise badges, days-active, comment count, assignee avatar
+    initials (ar name preferred in ar locale); sortable wrapper.
+  - `apps/web/src/components/task-board/board-column.tsx` (61): droppable
+    column — stage color dot + tinted header (stage-* tokens), drop highlight
+    (board-drop tokens + ring), dashed empty drop target.
+  - `apps/web/src/components/task-board/board-loading.tsx` + route
+    `loading.tsx`: skeleton board.
+  - `apps/web/src/app/(staff)/tasks/board/page.tsx`: RSC loader (locale +
+    getTaskBoardLoadResult), passes moveTaskCardAction.
+  - `apps/web/src/i18n/staff-task-board.ts`: full en+ar copy incl. a11y.
+  - Nav: `app-shell.tsx` 'board' item (KanbanSquare, work section),
+    `staff-shell.ts` nav.board en+ar, `(staff)/layout.tsx` all role lists.
+  - Proof harness registration: `/tasks/board` fixture (4 stages, cards
+    covering overdue/due-today/promise/done/empty column) in
+    `web-proof-fixtures.mjs`; `staff-board` route in `web-proof.mjs`; en+ar
+    visual cases in `web-proof-cases.mjs`.
+- Verification:
+  - Passed: `test:visual` (102 previews incl. 2 board cases); screenshots
+    rendered via Playwright and self-reviewed for en LTR + ar RTL (columns
+    flow RTL, Arabic badges/counts, drop target, active nav) — sent to user;
+    `lint` (all files within 300-line budget); web `tsc --noEmit`;
+    `test:web` 213/213; `i18n-lint`.
+  - Not Run: live drag against a running API (no local DATABASE_URL); the
+    optimistic flow is exercised through the server-action result contract.
+    Playwright e2e drag test is A8.
+- Security self-check: page renders only the server-scoped board payload; the
+  move action goes through the session+CSRF client; failures roll the UI back
+  and reveal nothing beyond the localized error copy.
+
+## A7 — Mobile board pass (2026-07-14)
+
+- SRS: UI-SCREEN-001 (mobile states + touch targets), REQ-LOCALIZATION-001.
+- Changes: Board/List view toggle in `components/task-board/index.tsx`
+  (mobile-only `lg:hidden`, `min-h-11` ≥44px targets, `aria-pressed`,
+  focus ring); `layout` prop in `board-column.tsx` — list mode stacks
+  full-width columns (`w-full lg:w-72`); `view.{label,board,list}` copy en+ar
+  in `i18n/staff-task-board.ts`. Horizontal snap-scroll (`snap-x
+  snap-mandatory overflow-x-auto`) and the dnd-kit TouchSensor (150ms delay)
+  shipped in A6. Visual cases: en `task board 390px` + ar `task board
+  {390,430,768,1024,1440}px` in `web-proof-cases.mjs`.
+- Verification:
+  - Passed: `test:visual` 108 previews; 390px screenshots self-reviewed en+ar
+    (switcher, single swipeable column, bottom nav, RTL) — sent to user;
+    `lint`; web `tsc --noEmit`.
+  - Not Run: real-device touch drag (no device); TouchSensor is dnd-kit's
+    supported path and the e2e drag test lands in A8.
+
+## A8 — Visual/a11y proofs + drag e2e for the task board (2026-07-14)
+
+- SRS: METHOD-TEST-001, UI-SCREEN-001 (a11y), UI-DESIGN-001.
+- Visual: `staff-board` fixture + en/ar cases (A6) + responsive cases (A7) —
+  `test:visual` 108 previews Passed; screenshots self-reviewed en+ar,
+  desktop + 390px, delivered to the user.
+- Accessibility: en+ar `task board` cases in `web-proof-cases.mjs`;
+  `test:e2e -- accessibility` 24 previews with axe Passed after fixing the
+  two serious violations it caught: (1) dnd-kit's `role="button"` landed on
+  the `<li>` (axe `list` + `aria-allowed-role`) — sortable attributes moved
+  to an inner div; (2) contrast — avatar initials now `bg-brand
+  text-brand-foreground`, DUE_TODAY badge text `text-content-strong` on the
+  warning tint, empty-column hint `text-content-muted`.
+- Drag e2e: `tools/task-board-dnd-proof.mjs` (95 lines), runner mode
+  `test:e2e -- task-board-dnd`. esbuild-bundles the real `TaskBoardScreen`
+  with the proof board and a recording move action, hydrates in headless
+  Chromium with compiled Tailwind, executes a real pointer drag
+  (activation-constraint clearing + 20-step glide) of BOARD-PROOF-002 from
+  Open into In Progress, then asserts: exactly one committed move for
+  `task_board_2` with `stageId=stage_in_progress` and integer
+  `boardPosition >= 0`; the card's article renders inside the target column;
+  the localized success toast appears. Passed.
+- Full sweep after A8: lint, web tsc, test:web 213/213, test:visual 108,
+  accessibility 24, task-board-dnd — all Passed.
+- Not Run: drag against a live API/DB (no local DATABASE_URL) — the
+  server-side move contract is covered by the 35 tasks API tests (A2/A3).

@@ -89,6 +89,28 @@
 
     --focus-ring: var(--color-brand);
 
+    /* Board (Kanban) component tokens. */
+    --board-column-bg: var(--surface-sunken);
+    --board-column-border: var(--line-subtle);
+    --board-card-bg: var(--surface);
+    --board-drop-bg: var(--primitive-blue-50);
+    --board-drop-ring: var(--color-brand);
+    --board-drag-shadow: 0 16px 36px -14px rgb(15 23 42 / 0.38);
+
+    /* Stage accents keyed by BoardStage.color names from the API. */
+    --stage-slate: 215 16% 47%;
+    --stage-slate-bg: 216 28% 95%;
+    --stage-blue: 221 83% 53%;
+    --stage-blue-bg: 214 100% 97%;
+    --stage-amber: 38 92% 43%;
+    --stage-amber-bg: 42 90% 94%;
+    --stage-green: 153 64% 32%;
+    --stage-green-bg: 151 58% 94%;
+    --stage-red: 352 72% 45%;
+    --stage-red-bg: 350 82% 96%;
+    --stage-violet: 262 60% 47%;
+    --stage-violet-bg: 262 60% 96%;
+
     --font-sans: "Noto Sans Variable", "Noto Sans Arabic Variable", "Segoe UI", Tahoma, Arial, ui-sans-serif, system-ui, sans-serif;
   }
 
@@ -135,6 +157,21 @@
     --ring: 217.2 91.2% 59.8%;
     --color-loading: var(--surface-raised);
     --color-empty: var(--surface-raised);
+
+    --board-drag-shadow: 0 16px 36px -14px rgb(0 0 0 / 0.6);
+
+    --stage-slate: 215 16% 62%;
+    --stage-slate-bg: 222 32% 15%;
+    --stage-blue: 217 91% 64%;
+    --stage-blue-bg: 218 36% 18%;
+    --stage-amber: 40 90% 60%;
+    --stage-amber-bg: 40 40% 16%;
+    --stage-green: 152 55% 52%;
+    --stage-green-bg: 152 40% 14%;
+    --stage-red: 352 80% 62%;
+    --stage-red-bg: 350 45% 16%;
+    --stage-violet: 262 80% 70%;
+    --stage-violet-bg: 262 40% 18%;
   }
 
   * {

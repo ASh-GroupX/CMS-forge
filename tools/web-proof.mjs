@@ -12,7 +12,7 @@ import ComplaintsPage from '../apps/web/src/app/(staff)/complaints/page.tsx';
 import ComplaintDetailPage from '../apps/web/src/app/(staff)/complaints/[id]/page.tsx';
 import DashboardPage from '../apps/web/src/app/(staff)/dashboard/page.tsx';
 import DealHandoffPage from '../apps/web/src/app/(staff)/deals/handoff/page.tsx';
-import EmployeeTodayPage from '../apps/web/src/app/(staff)/tasks/today/page.tsx';
+import EmployeeTodayPage from '../apps/web/src/app/(staff)/tasks/today/page.tsx'; import TaskBoardPage from '../apps/web/src/app/(staff)/tasks/board/page.tsx';
 import ManagerControlRoomPage from '../apps/web/src/app/(staff)/tasks/manager/page.tsx';
 import ManagerTaskDetailPage from '../apps/web/src/app/(staff)/tasks/manager/[id]/page.tsx';
 import NewComplaintPage from '../apps/web/src/app/(staff)/complaints/new/page.tsx';
@@ -37,7 +37,7 @@ import { accessibilityCases, defaultVisualSignals, performanceCases, smokeCases,
 const webRequire = createRequire(new URL('../apps/web/package.json', import.meta.url));
 const React = webRequire('react');
 const { renderToStaticMarkup } = webRequire('react-dom/server');
-const STAFF_PROOF_PATHS = { 'staff-admin': '/admin', 'staff-audit': '/audit', 'staff-complaints': '/complaints', 'staff-complaint-detail': '/complaints/cmp-proof', 'staff-complaint-new': '/complaints/new', 'staff-deal-handoff': '/deals/handoff', 'staff-manager': '/tasks/manager', 'staff-manager-detail': '/tasks/manager/task_manager_proof', 'staff-reports': '/reports', 'staff-today': '/tasks/today', 'staff-task-detail': '/tasks/today/task-proof', 'staff-communication-groups': '/communication-groups' };
+const STAFF_PROOF_PATHS = { 'staff-admin': '/admin', 'staff-audit': '/audit', 'staff-complaints': '/complaints', 'staff-complaint-detail': '/complaints/cmp-proof', 'staff-complaint-new': '/complaints/new', 'staff-deal-handoff': '/deals/handoff', 'staff-manager': '/tasks/manager', 'staff-manager-detail': '/tasks/manager/task_manager_proof', 'staff-reports': '/reports', 'staff-today': '/tasks/today', 'staff-board': '/tasks/board', 'staff-task-detail': '/tasks/today/task-proof', 'staff-communication-groups': '/communication-groups' };
 const mode = process.argv.slice(2).find((arg) => arg !== '--');
 const modes = new Set(['visual', 'accessibility', 'perf', 'ui-smoke']);
 if (!modes.has(mode)) {
@@ -95,6 +95,7 @@ async function routePage(testCase) {
   }));
     if (testCase.route === 'staff-reports') return staffFrame(testCase, await ReportsPage(staffProps));
     if (testCase.route === 'staff-today') return staffFrame(testCase, await EmployeeTodayPage(staffProps));
+    if (testCase.route === 'staff-board') return staffFrame(testCase, await TaskBoardPage(staffProps));
     if (testCase.route === 'staff-task-detail') return staffFrame(testCase, React.createElement(TaskConversation, { comments: proofTaskComments(), locale: testCase.locale, task: proofTask() }));
     if (testCase.route === 'staff-communication-groups') return staffFrame(testCase, React.createElement(CommunicationGroups, { data: proofCommunicationGroups(), loadState: 'ready', locale: testCase.locale }));
   if (testCase.route === 'portal-submission') return testCase.params.state

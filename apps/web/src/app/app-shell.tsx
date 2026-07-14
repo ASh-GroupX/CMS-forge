@@ -1,4 +1,4 @@
-import { Bell, Building2, CheckSquare2, ClipboardList, FilePlus2, FolderCog, Gauge, GitBranch, Handshake, History, Inbox, Menu, Search, Send, ShieldCheck, UsersRound } from 'lucide-react';
+import { Bell, Building2, CheckSquare2, ClipboardList, FilePlus2, FolderCog, Gauge, GitBranch, Handshake, History, Inbox, KanbanSquare, Menu, Search, Send, ShieldCheck, UsersRound } from 'lucide-react';
 import React, { type ReactNode } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { modernUiText } from '../i18n/staff-modern-ui';
@@ -9,6 +9,7 @@ import { StaffTopBar } from './staff-top-bar';
 export const staffNavItems = [
   { key: 'dashboard', Icon: Gauge, href: '/dashboard' },
   { key: 'today', Icon: CheckSquare2, href: '/tasks/today' },
+  { key: 'board', Icon: KanbanSquare, href: '/tasks/board' },
   { key: 'sent', Icon: Send, href: '/tasks/sent' },
   { key: 'notifications', Icon: Bell, href: '/notifications' },
   { key: 'queue', Icon: Inbox, href: '/complaints' },
@@ -27,7 +28,7 @@ export type StaffNavKey = (typeof staffNavItems)[number]['key'];
 export type StaffIdentity = { branch: string; initials: string; name: string; role: string };
 
 const desktopSections = [
-  { key: 'work', items: ['dashboard', 'today', 'sent', 'notifications'] },
+  { key: 'work', items: ['dashboard', 'today', 'board', 'sent', 'notifications'] },
   { key: 'complaints', items: ['queue', 'manager', 'reports', 'promises', 'handoff', 'create'] },
   { key: 'administration', items: ['groups', 'admin', 'audit'] },
 ] as const;

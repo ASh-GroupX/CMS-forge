@@ -15,6 +15,7 @@ import { portalSurveyText } from '../apps/web/src/i18n/portal-survey.ts';
 import { portalTrackingText } from '../apps/web/src/i18n/portal-tracking.ts';
 import { reportsDashboardText } from '../apps/web/src/i18n/staff-reports-dashboard.ts';
 import { staffShellText } from '../apps/web/src/i18n/staff-shell.ts';
+import { taskBoardText } from '../apps/web/src/i18n/staff-task-board.ts';
 import { taskConversationText } from '../apps/web/src/i18n/staff-task-conversation.ts';
 
 export const smokeCases = [
@@ -38,6 +39,7 @@ function buildVisualCases(locale) {
     visualCase('auth landing', locale, 'staff-auth', { locale }, [t.title, t.auth.loginTitle, t.nav.queue[0]], ['lg:grid-cols-[minmax(0,1fr)_minmax(24rem,32rem)]', 'bg-surface-raised']),
     visualCase('staff shell', locale, 'staff', { ...base }, [t.title, t.nav.today[0], t.workQueue.title], ['lg:grid-cols-[18rem_minmax(0,1fr)]', 'bg-surface-raised']),
     visualCase('today tasks', locale, 'staff-today', { ...base }, [employeeTodayText[locale].title, employeeTodayText[locale].sections.overdue[0], employeeTodayText[locale].help.waiting, employeeTodayText[locale].actions.updateDetails, 'TASK-PROOF-001'], ['<details', 'bg-surface-raised']),
+    visualCase('task board', locale, 'staff-board', { ...base }, [taskBoardText[locale].title, taskBoardText[locale].subtitle, taskBoardText[locale].columnEmpty, taskBoardText[locale].card.promise, taskBoardText[locale].card.dueStates.OVERDUE, 'BOARD-PROOF-001', 'BOARD-PROOF-004'], ['bg-board-column', 'bg-board-card', 'overflow-x-auto', 'snap-x']),
     visualCase('manager control room', locale, 'staff-manager', { ...base }, [managerControlRoomText[locale].title, managerControlRoomText[locale].sections.dueToday[0], managerControlRoomText[locale].openDetail, 'TASK-MANAGER-PROOF'], ['xl:grid-cols-2', 'min-h-11']),
     visualCase('manager task detail', locale, 'staff-manager-detail', { ...base }, ['TASK-MANAGER-PROOF', managerControlRoomText[locale].fields.nextAction, managerControlRoomText[locale].back], ['sm:grid-cols-2', 'min-h-11']),
     visualCase('dashboard', locale, 'staff-dashboard', { ...base }, [modernUiText[locale].dashboard.attention, modernUiText[locale].dashboard.mainIndicators, modernUiText[locale].dashboard.recentUpdates], ['xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,1fr)]', 'sm:grid-cols-2']),
@@ -63,6 +65,7 @@ function buildEnglishResponsiveCases() {
     { ...visualCase('reports 390px', locale, 'staff-reports', base, [reportsDashboardText.en.title, reportsDashboardText.en.export.title, 'CMP-PROOF-RPT-001'], []), viewport },
     { ...visualCase('audit 390px', locale, 'staff-audit', { ...base, admin: 'success' }, [auditViewerText.en.title, auditViewerText.en.filters.export], []), viewport },
     { ...visualCase('manager control room 390px', locale, 'staff-manager', base, [managerControlRoomText.en.title, 'TASK-MANAGER-PROOF'], []), viewport },
+    { ...visualCase('task board 390px', locale, 'staff-board', base, [taskBoardText.en.title, taskBoardText.en.view.list, 'BOARD-PROOF-001'], ['snap-x', 'min-h-11']), viewport },
     { ...visualCase('manager task detail 390px', locale, 'staff-manager-detail', base, ['TASK-MANAGER-PROOF', managerControlRoomText.en.back], []), viewport },
   ];
 }
@@ -81,6 +84,7 @@ function buildArabicResponsiveCases() {
       { ...visualCase(`reports ${width}px`, locale, 'staff-reports', base, [reportsDashboardText.ar.title, reportsDashboardText.ar.export.title], []), viewport },
       { ...visualCase(`audit ${width}px`, locale, 'staff-audit', { ...base, admin: 'success' }, [auditViewerText.ar.title, auditViewerText.ar.headers[3]], []), viewport },
       { ...visualCase(`manager control room ${width}px`, locale, 'staff-manager', base, [managerControlRoomText.ar.title, 'TASK-MANAGER-PROOF'], []), viewport },
+      { ...visualCase(`task board ${width}px`, locale, 'staff-board', base, [taskBoardText.ar.title, taskBoardText.ar.view.list, 'BOARD-PROOF-001'], []), viewport },
       { ...visualCase(`manager task detail ${width}px`, locale, 'staff-manager-detail', base, ['TASK-MANAGER-PROOF', managerControlRoomText.ar.back], []), viewport },
     ];
   });
@@ -122,6 +126,8 @@ function buildAccessibilityCases() {
     accessibilityCase('internal complaint composer', 'ar', { ...arBase, tab: 'communication' }, [complaintTabsText.ar.communication, collaborationText.ar.additions, 'role="tablist"'], { route: 'staff-complaint-detail', minButtons: 4, minLabels: 2 }),
     accessibilityCase('public complaint composer', 'ar', { ...arBase, commentVisibility: 'PUBLIC', tab: 'communication' }, [collaborationText.ar.publicWarning, collaborationText.ar.publicCta], { route: 'staff-complaint-detail', minButtons: 4, minLabels: 2 }),
     accessibilityCase('task conversation', 'ar', { ...arBase }, [taskConversationText.ar.title, taskConversationText.ar.body, collaborationText.ar.additions], { feedbackRole: false, route: 'staff-task-detail', minAria: 1, minButtons: 1, minLabels: 1 }),
+    accessibilityCase('task board', 'en', { ...enBase }, [taskBoardText.en.title, taskBoardText.en.boardLabel, taskBoardText.en.columnEmpty, 'BOARD-PROOF-001'], { feedbackRole: false, route: 'staff-board', minAria: 5, minButtons: 2, minLabels: 0 }),
+    accessibilityCase('task board', 'ar', { ...arBase }, [taskBoardText.ar.title, taskBoardText.ar.boardLabel, 'BOARD-PROOF-001'], { feedbackRole: false, route: 'staff-board', minAria: 5, minButtons: 2, minLabels: 0 }),
     accessibilityCase('communication groups', 'ar', { ...arBase }, [communicationGroupsText.ar.title, communicationGroupsText.ar.personal, communicationGroupsText.ar.deactivate], { route: 'staff-communication-groups', minAria: 1, minButtons: 3, minFocus: 0, minLabels: 0 }),
     accessibilityCase('mobile navigation', 'ar', { ...arBase }, [staffShellText.ar.mobileNav.today, staffShellText.ar.mobileNav.more], { route: 'staff-navigation', feedbackRole: false, minAria: 2, minButtons: 1, minFocus: 5, minLabels: 0 }),
     accessibilityCase('admin hub navigation', 'en', { ...enBase }, [adminHubText.en.title, adminHubText.en.workspaces.users[0], adminHubText.en.workspaces.roles[0], adminHubText.en.open], { route: 'staff-admin', feedbackRole: false, minButtons: 0, minLabels: 0 }),

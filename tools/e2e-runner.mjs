@@ -44,7 +44,12 @@ if (mode === 'work-queues') {
   process.exit(0);
 }
 
-console.error('Use one of: visual, accessibility, perf, ui-smoke, runtime-smoke, customer-portal-track, customer-portal-submit, complaint-workflow, attachments, work-queues.');
+if (mode === 'task-board-dnd') {
+  run('node', ['--import', 'tsx', 'tools/task-board-dnd-proof.mjs']);
+  process.exit(0);
+}
+
+console.error('Use one of: visual, accessibility, perf, ui-smoke, runtime-smoke, customer-portal-track, customer-portal-submit, complaint-workflow, attachments, work-queues, task-board-dnd.');
 process.exit(1);
 
 function run(command, args) {
