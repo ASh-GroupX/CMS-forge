@@ -2,13 +2,14 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { CalendarClock, Handshake, MessageSquare } from 'lucide-react';
-import React from 'react';
+import { CalendarClock, GripVertical, Handshake, MessageSquare } from 'lucide-react';
+import React, { type ReactNode } from 'react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatBoardCount, formatBoardText, type TaskBoardText } from '../../i18n/staff-task-board';
 import type { Locale } from '../../i18n/staff-shell';
-import type { BoardCard } from '../../lib/staff-board-api';
+import type { BoardCard, BoardDepartment } from '../../lib/staff-board-api';
+import { CardDepartmentBadge, CardDepartmentControl, type AssignDepartmentHandler } from './board-card-department';
 
 const DUE_BADGE_CLASS: Record<NonNullable<BoardCard['dueState']>, string> = {
   OVERDUE: 'border-status-error-border bg-status-error-bg text-status-error',
@@ -25,15 +26,19 @@ export function initialsOf(name: string, locale: Locale): string {
   return name.split(/\s+/).slice(0, 2).map((part) => part[0] ?? '').join('').toLocaleUpperCase(locale);
 }
 
-export function BoardCardView({ card, dragging, locale, t }: { card: BoardCard; dragging?: boolean; locale: Locale; t: TaskBoardText }) {
+export function BoardCardView({ card, departmentSlot, dragging, dragHandle, locale, t }: { card: BoardCard; departmentSlot?: ReactNode; dragging?: boolean; dragHandle?: ReactNode; locale: Locale; t: TaskBoardText }) {
   const assignee = assigneeLabel(card, locale, t.card.assigneeFallback);
   return (
     <article
       aria-label={card.title}
       className={`grid gap-2 rounded-lg border border-line-subtle bg-board-card p-3 text-start transition-shadow ${dragging ? 'rotate-3 shadow-drag' : 'shadow-sm hover:shadow-md'}`}
     >
-      <p className="text-sm font-semibold leading-snug text-content-strong">{card.title}</p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-semibold leading-snug text-content-strong">{card.title}</p>
+        {dragHandle}
+      </div>
       <div className="flex flex-wrap items-center gap-1.5">
+        {departmentSlot ?? <CardDepartmentBadge card={card} locale={locale} />}
         {card.dueState ? (
           <Badge className={`gap-1 border px-1.5 py-0.5 text-[11px] font-semibold ${DUE_BADGE_CLASS[card.dueState]}`} variant="outline">
             <CalendarClock aria-hidden="true" className="size-3" />
@@ -65,18 +70,35 @@ export function BoardCardView({ card, dragging, locale, t }: { card: BoardCard; 
   );
 }
 
-export function SortableBoardCard({ card, locale, t }: { card: BoardCard; locale: Locale; t: TaskBoardText }) {
+export function SortableBoardCard({ card, departments, locale, onAssignDepartment, t }: {
+  card: BoardCard;
+  departments?: BoardDepartment[] | undefined;
+  locale: Locale;
+  onAssignDepartment?: AssignDepartmentHandler | undefined;
+  t: TaskBoardText;
+}) {
   const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({ id: card.id });
+  const departmentSlot = departments && onAssignDepartment
+    ? <CardDepartmentControl card={card} departments={departments} locale={locale} onAssign={onAssignDepartment} t={t} />
+    : undefined;
+  // Pointer/touch drags start anywhere on the card (listeners on the wrapper),
+  // but the keyboard + screen-reader drag semantics live on a dedicated handle
+  // button so interactive card controls are never nested inside role="button".
+  const dragHandle = (
+    <button
+      aria-label={formatBoardText(t.card.dragHandle, { title: card.title })}
+      className="-me-1 -mt-1 shrink-0 cursor-grab rounded-md p-1 text-content-subtle transition-colors hover:text-content-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      type="button"
+      {...attributes}
+      {...listeners}
+    >
+      <GripVertical aria-hidden="true" className="size-4" />
+    </button>
+  );
   return (
     <li className={isDragging ? 'opacity-40' : undefined}>
-      <div
-        ref={setNodeRef}
-        style={{ transform: CSS.Transform.toString(transform), transition }}
-        {...attributes}
-        {...listeners}
-        aria-roledescription={formatBoardText(t.card.dragHandle, { title: card.title })}
-      >
-        <BoardCardView card={card} locale={locale} t={t} />
+      <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} {...listeners}>
+        <BoardCardView card={card} departmentSlot={departmentSlot} dragHandle={dragHandle} locale={locale} t={t} />
       </div>
     </li>
   );

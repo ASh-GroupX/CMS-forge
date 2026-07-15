@@ -182,9 +182,31 @@ assignment (Phase B).**
   (api-client 67/67); visual proof 108 with manage-trigger signal; hydrated
   open-sheet screenshots self-reviewed en LTR + ar RTL (start-side sheet).
   lint/tsc/i18n-lint Passed.)
-- [ ] **B3**: Task department assignment — `Task.assignedDepartmentId?`
+- [x] **B3**: Task department assignment — `Task.assignedDepartmentId?`
   migration + DTO + `tasks.access.ts` extension + board assignment controls;
   allowed/denied tests.
+  (Done: `Task.assignedDepartmentId?` + `Department.tasks` relation + index in
+  schema.prisma — prisma validate/generate Passed, db:push Not Run (no local
+  DB). Session principal now carries `departmentId` end-to-end: auth repository
+  selects it, `staffClaims` helper dedupes login/session claims, StaffPrincipal
+  + TaskActor extended, controller `taskActor()` reused on every task route.
+  `tasks.access.ts` grants dept members view/act on NORMAL tasks assigned to
+  their department (confidential stays participant-only), mirrored in the board
+  OR-clause. PATCH + quick-add DTOs accept `assignedDepartmentId` (null clears),
+  validated against active departments in new `tasks.update.ts` (updateForActor
+  extracted there — tasks.service.ts was AT the 300 budget) with from/to
+  department audit metadata same-tx. `GET /tasks/board` cards carry department
+  names + response gains the active `departments` reference list. OpenAPI
+  spliced additively (Task, TaskQuickAddRequest, TaskUpdateRequest, BoardCard,
+  TaskBoardResponse, BoardDepartment). Frontend: `assignTaskDepartment` client
+  + server action; card department chip opens a popover picker (optimistic
+  update + rollback, en+ar toasts); dnd-kit `attributes` moved to a grip-handle
+  button so no interactive control nests inside role="button" (axe
+  nested-interactive fix; whole-card pointer drag preserved).
+  Proofs: tasks 42/42 (7 new incl. dept allowed+denied), auth 38/38,
+  board-stages 8/8, api-client 69/69, test:web 213/213, visual 108, axe 24,
+  task-board-dnd e2e, lint, typecheck, openapi:check, i18n-lint — all Passed;
+  hydrated popover screenshots self-reviewed en LTR + ar RTL.)
 - [ ] **B4**: `GET /complaints/board` — TICKETS stage columns, queue-scoped
   cards, per-card `allowedTransitions`; tests.
 - [ ] **B5**: `/complaints/board` page — transition-aware drag,

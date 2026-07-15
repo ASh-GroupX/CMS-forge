@@ -23,6 +23,7 @@ export function taskToResponse(task: TaskRecord): TaskResponseDto {
     displayTimeZone: task.assignee?.branch?.timezone ?? task.owner?.branch?.timezone ?? 'UTC',
     dueAt: task.dueAt.toISOString(),
     status: task.status,
+    assignedDepartmentId: task.assignedDepartmentId,
     nextAction: currentNextAction(task)?.toDto ?? null,
     isCustomerPromise: task.isCustomerPromise,
     visibility: task.visibility,

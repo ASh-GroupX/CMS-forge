@@ -6,6 +6,7 @@ import { getTaskBoardLoadResult } from '../../../../lib/staff-board-api';
 import { getStaffSessionPrincipal } from '../../../../lib/staff-session-api';
 import {
   archiveBoardStageAction,
+  assignTaskDepartmentAction,
   createBoardStageAction,
   moveTaskCardAction,
   reorderBoardStagesAction,
@@ -33,6 +34,7 @@ export default async function TaskBoardPage({
   const canManageStages = principal?.permissions.includes('MASTER_DATA_MANAGE') ?? false;
   return (
     <TaskBoardScreen
+      assignDepartmentAction={assignTaskDepartmentAction}
       board={result.status === 'ready' ? result.data : null}
       locale={locale}
       moveAction={moveTaskCardAction}

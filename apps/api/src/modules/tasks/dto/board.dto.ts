@@ -16,6 +16,8 @@ export type BoardStageDto = {
 
 export type BoardCardDueState = 'OVERDUE' | 'DUE_TODAY' | 'UPCOMING';
 
+export type BoardDepartmentDto = { id: string; nameEn: string; nameAr: string };
+
 export type BoardCardDto = {
   id: string;
   title: string;
@@ -25,6 +27,9 @@ export type BoardCardDto = {
   assigneeId: string;
   assigneeName: string | null;
   assigneeNameAr: string | null;
+  assignedDepartmentId: string | null;
+  departmentName: string | null;
+  departmentNameAr: string | null;
   branchId: string | null;
   dueAt: string;
   status: TaskStatus;
@@ -48,6 +53,8 @@ export type BoardColumnDto = {
 export type TaskBoardResponseDto = {
   stages: BoardStageDto[];
   columns: BoardColumnDto[];
+  // Active departments for the board's assignment control (reference data, no PII).
+  departments: BoardDepartmentDto[];
 };
 
 export type MoveTaskResponseDto = {

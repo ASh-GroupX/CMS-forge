@@ -21,7 +21,7 @@ export async function proofFetch(input) {
     columns: [
       { stageId: 'stage_open', cards: [
         proofBoardCard('task_board_1', 'BOARD-PROOF-001 Call customer about delivery date', 'stage_open', 0, { dueState: 'OVERDUE', daysActive: 5, commentCount: 2 }),
-        proofBoardCard('task_board_2', 'BOARD-PROOF-002 Review warranty claim documents', 'stage_open', 1, { dueState: 'UPCOMING', daysActive: 1, commentCount: 0 }),
+        proofBoardCard('task_board_2', 'BOARD-PROOF-002 Review warranty claim documents', 'stage_open', 1, { dueState: 'UPCOMING', daysActive: 1, commentCount: 0, assignedDepartmentId: 'dept_service', departmentName: 'Service', departmentNameAr: 'الصيانة' }),
       ] },
       { stageId: 'stage_in_progress', cards: [
         proofBoardCard('task_board_3', 'BOARD-PROOF-003 Confirm paint shop booking', 'stage_in_progress', 0, { status: 'IN_PROGRESS', dueState: 'DUE_TODAY', daysActive: 3, commentCount: 4, isCustomerPromise: true }),
@@ -30,6 +30,10 @@ export async function proofFetch(input) {
       { stageId: 'stage_done', cards: [
         proofBoardCard('task_board_4', 'BOARD-PROOF-004 Close out survey follow-up', 'stage_done', 0, { status: 'DONE', dueState: null, daysActive: 8, commentCount: 1 }),
       ] },
+    ],
+    departments: [
+      { id: 'dept_service', nameEn: 'Service', nameAr: 'الصيانة' },
+      { id: 'dept_sales', nameEn: 'Sales', nameAr: 'المبيعات' },
     ],
   });
   if (path === '/tasks/manager-rollup') return json({
@@ -152,6 +156,9 @@ function proofBoardCard(id, title, stageId, boardPosition, extra = {}) {
     assigneeId: 'usr_proof',
     assigneeName: 'Proof Admin',
     assigneeNameAr: 'مشرف الاختبار',
+    assignedDepartmentId: null,
+    departmentName: null,
+    departmentNameAr: null,
     branchId: 'branch_proof',
     dueAt: '2026-06-19T09:00:00.000Z',
     status: 'OPEN',

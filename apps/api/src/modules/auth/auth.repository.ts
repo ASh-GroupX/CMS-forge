@@ -9,6 +9,7 @@ export type StaffAuthRecord = {
   nameAr: string;
   passwordHash: string | null;
   branchId: string | null;
+  departmentId: string | null;
   branch?: { nameEn: string; nameAr: string; timezone: string } | null;
   isActive: boolean;
   lockedAt: Date | null;
@@ -61,6 +62,7 @@ export class AuthRepository {
         nameAr: true,
         passwordHash: true,
         branchId: true,
+        departmentId: true,
         branch: { select: { nameEn: true, nameAr: true, timezone: true } },
         isActive: true,
         lockedAt: true,
@@ -136,6 +138,7 @@ export class AuthRepository {
             nameEn: true,
             nameAr: true,
             branchId: true,
+            departmentId: true,
             branch: { select: { nameEn: true, nameAr: true, timezone: true } },
             isActive: true,
             lockedAt: true,

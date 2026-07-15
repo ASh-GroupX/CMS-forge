@@ -1,8 +1,8 @@
 # Current State
 
-Status: CMSS Kanban revamp — Phase A committed (d85d76e+ff41d62); B1 committed (21f5fa9); B2 complete (uncommitted)
+Status: CMSS Kanban revamp — Phase A committed (d85d76e+ff41d62); B1 (21f5fa9) + B2 (d21a8f7) committed; B3 complete (uncommitted)
 Phase: CMSS Trello-style board revamp — Phase B (ticket board, admin stages, dept assignment)
-Next Task: B3 — task department assignment (Task.assignedDepartmentId?, access extension, board controls)
+Next Task: B4 — GET /complaints/board (TICKETS columns, queue-scoped cards, per-card allowedTransitions)
 Model Tier: Opus 4.8 Max or GPT-5.5 Extra High
 
 ## How to use this file
@@ -105,13 +105,32 @@ Prior state history is in .forge/archive/state-archive.md.
   proof-rendered client components (breaks static render — no app router).
   Proofs: api-client 67/67, visual 108, lint, tsc, i18n-lint Passed.
 
+- B3 shipped (uncommitted): `Task.assignedDepartmentId?` + relation + index
+  (prisma generate Passed; db:push Not Run). Session principal carries
+  `departmentId` (auth repo selects ×2; `staffClaims` helper dedupes claims
+  and keeps auth.service.ts under 300; StaffPrincipal/TaskActor extended;
+  controller `taskActor()` on all task routes). `tasks.access.ts`
+  `isDepartmentMember` grants dept view/act on NORMAL tasks only; the board
+  OR-clause mirrors it. `updateForActor` EXTRACTED to new `tasks.update.ts`
+  (tasks.service.ts was at 300) + PATCH/quick-add accept assignedDepartmentId
+  (null clears; validated vs active departments → 400 field error; from/to
+  dept audit metadata same-tx). Board response: card dept fields +
+  `departments` reference list. OpenAPI spliced additively (6 schema edits).
+  Web: `assignTaskDepartment` client + action; card dept chip → popover
+  picker (optimistic + rollback); dnd `attributes` moved to a grip-handle
+  button — fixes axe nested-interactive, pointer drag still whole-card;
+  fixture board now includes `departments` (client rejects payloads without
+  it). Proofs: tasks 42/42, auth 38/38, board-stages 8/8, api-client 69/69,
+  test:web 213/213, visual 108, axe 24, task-board-dnd, lint, typecheck,
+  openapi:check, i18n-lint — Passed. Screenshots self-reviewed en+ar.
+
 ## Current Stop
 
-B1 committed (21f5fa9); B2 complete and verified in the working tree. Next
-per SSOT: B3 task department assignment (Task.assignedDepartmentId?
-migration + DTO + tasks.access.ts extension + board assignment controls,
-allowed/denied tests), then B4 GET /complaints/board (queue-scoped cards +
-per-card allowedTransitions), B5 /complaints/board page (transition-aware
+B3 complete and verified in the working tree (uncommitted). Next per SSOT:
+B4 GET /complaints/board (TICKETS stage columns + queue-scoped cards +
+per-card allowedTransitions from WORKFLOW_TRANSITIONS; copy the tasks board
+repo/service pattern into the complaints module — complaints.service.ts is
+large, use new small files), B5 /complaints/board page (transition-aware
 drag over POST /complaints/:id/transitions), B6 card detail drawer, Phase C.
 
 ## Open Carry-Forward / Known Debt

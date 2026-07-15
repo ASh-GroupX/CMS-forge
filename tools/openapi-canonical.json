@@ -9086,6 +9086,12 @@
               "null"
             ]
           },
+          "assignedDepartmentId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "displayTimeZone": {
             "type": "string"
           }
@@ -9152,6 +9158,10 @@
           },
           "isCustomerPromise": {
             "type": "boolean"
+          },
+          "assignedDepartmentId": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "additionalProperties": false
@@ -9289,6 +9299,9 @@
           "assigneeId",
           "assigneeName",
           "assigneeNameAr",
+          "assignedDepartmentId",
+          "departmentName",
+          "departmentNameAr",
           "branchId",
           "dueAt",
           "status",
@@ -9335,6 +9348,24 @@
             ]
           },
           "assigneeNameAr": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assignedDepartmentId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "departmentName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "departmentNameAr": {
             "type": [
               "string",
               "null"
@@ -9438,7 +9469,8 @@
         "type": "object",
         "required": [
           "stages",
-          "columns"
+          "columns",
+          "departments"
         ],
         "properties": {
           "stages": {
@@ -9452,6 +9484,32 @@
             "items": {
               "$ref": "#/components/schemas/BoardColumn"
             }
+          },
+          "departments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardDepartment"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "BoardDepartment": {
+        "type": "object",
+        "required": [
+          "id",
+          "nameEn",
+          "nameAr"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
           }
         },
         "additionalProperties": false
@@ -10510,6 +10568,13 @@
           },
           "isCustomerPromise": {
             "type": "boolean"
+          },
+          "assignedDepartmentId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
           }
         },
         "additionalProperties": false

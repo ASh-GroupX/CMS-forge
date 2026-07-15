@@ -28,6 +28,8 @@ module's boundary so you can work in a fresh context without scanning the tree.
 - `task_comment_mentions`
 - `board_stages` (read-only here for task board columns; write ownership moves to
   the `board-stages` module in Phase B)
+- `departments` (read-only shared reference data: B3 department-assignment
+  validation and the board's assignment options — never written here)
 
 ## May depend on
 

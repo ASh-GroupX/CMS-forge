@@ -43,24 +43,29 @@ test('board route derives the actor from the staff session', async () => {
 
   await controller.board(request(branchManager, '/tasks/board'));
 
-  assert.deepEqual(capturedActor, { userId: 'user_manager', roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a', permissions: [] });
+  assert.deepEqual(capturedActor, { userId: 'user_manager', roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a', departmentId: null, permissions: [] });
 });
 
 test('employee board query is participant-scoped (no manager or admin reach)', async () => {
   const captured = await captureBoardQuery({ userId: 'user_employee', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_a' });
 
   assert.equal(captured.stagesScope, BoardScope.TASKS);
-  assert.deepEqual(captured.scope, { userId: 'user_employee', branchId: 'branch_a', isAdmin: false, isManager: false });
+  assert.deepEqual(captured.scope, { userId: 'user_employee', branchId: 'branch_a', departmentId: null, isAdmin: false, isManager: false });
   // 14-day completed window computed on the server clock, passed to the repository.
   assert.equal(captured.completedSince?.toISOString(), new Date(NOW.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString());
 });
 
 test('manager board query carries branch scope; admin board query is unrestricted', async () => {
   const manager = await captureBoardQuery({ userId: 'user_manager', roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_a' });
-  assert.deepEqual(manager.scope, { userId: 'user_manager', branchId: 'branch_a', isAdmin: false, isManager: true });
+  assert.deepEqual(manager.scope, { userId: 'user_manager', branchId: 'branch_a', departmentId: null, isAdmin: false, isManager: true });
 
   const admin = await captureBoardQuery({ userId: 'user_admin', roleCode: RoleCode.ADMIN, branchId: null });
-  assert.deepEqual(admin.scope, { userId: 'user_admin', branchId: null, isAdmin: true, isManager: true });
+  assert.deepEqual(admin.scope, { userId: 'user_admin', branchId: null, departmentId: null, isAdmin: true, isManager: true });
+});
+
+test('department members are scoped to their own department only, from the session', async () => {
+  const member = await captureBoardQuery({ userId: 'user_member', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_a', departmentId: 'dept_service' });
+  assert.deepEqual(member.scope, { userId: 'user_member', branchId: 'branch_a', departmentId: 'dept_service', isAdmin: false, isManager: false });
 });
 
 test('board groups cards into every active stage, keeping empty columns and sorting by position', () => {
@@ -124,7 +129,7 @@ test('board cards omit staff PII (emails) and expose bilingual names', () => {
   assert.equal(JSON.stringify(board).includes('@'), false);
 });
 
-async function captureBoardQuery(actor: { userId: string; roleCode: string; branchId: string | null }) {
+async function captureBoardQuery(actor: { userId: string; roleCode: string; branchId: string | null; departmentId?: string | null }) {
   const captured: { stagesScope?: BoardScope; scope?: BoardScopeQuery; completedSince?: Date } = {};
   const service = new TasksBoardService({
     listStages: async (scope: BoardScope) => {
@@ -136,6 +141,7 @@ async function captureBoardQuery(actor: { userId: string; roleCode: string; bran
       captured.completedSince = completedSince;
       return [];
     },
+    listActiveDepartments: async () => [],
   } as unknown as TasksBoardRepository);
 
   await service.board(actor, NOW);
@@ -205,6 +211,8 @@ function taskRecord(overrides: Partial<BoardTaskRecord> = {}): BoardTaskRecord {
     status: TaskStatus.OPEN,
     stageId: null,
     boardPosition: 0,
+    assignedDepartmentId: null,
+    assignedDepartment: null,
     isCustomerPromise: false,
     visibility: TaskVisibility.PARTICIPANTS,
     confidentialityLevel: TaskConfidentialityLevel.NORMAL,

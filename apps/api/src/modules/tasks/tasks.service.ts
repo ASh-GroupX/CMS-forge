@@ -9,31 +9,35 @@ import type { EmployeeTodayResponseDto, ManagerControlRoomResponseDto, ManagerTa
 import type { CreateTaskCommentInput, TaskNudgeInput } from './dto/task-collaboration.dto.js';
 import type { RelatedRecordLookupQueryDto, RelatedRecordLookupResponseDto } from './dto/related-record-lookup.dto.js';
 import { createCommentForActor, listCommentsForActor, nudgeForActor, sentByMe } from './tasks.collaboration.js';
-import { assertCanAct, assertCanView, managerBranchId } from './tasks.access.js';
+import { assertCanView, managerBranchId } from './tasks.access.js';
 import { addTaskWatcher, removeTaskWatcher, taskCapabilities, taskCommunicationTargets } from './tasks.collaboration-service.js';
 import { selectTaskEscalations } from './tasks.escalation.js';
 import { assertPromiseLink } from './tasks.promise.js';
 import { buildPromiseTracker, promiseTrackerQuery } from './tasks.promise-tracker.js';
 import { TasksRelatedRecordsService } from './tasks.related-records.service.js';
+import type { TasksBoardRepository } from './tasks.board.repository.js';
 import { TasksRepository } from './tasks.repository.js';
 import type { TaskRecord, TaskTimelineRecord } from './tasks.repository.js';
 import { currentNextAction, managerTaskDetailResponse, taskCounts, taskToResponse } from './tasks.response.js';
 import { requiredStatusNote, statusComment } from './tasks.status-note.js';
-import { requiredText, utcDay, validDate, validEnum } from './tasks.validation.js';
+import { assertAssignedDepartment, updateTaskForActor } from './tasks.update.js';
+import { assertNextAction, normalizeNextAction, requiredText, utcDay, validDate, validEnum } from './tasks.validation.js';
+import type { NormalizedNextAction } from './tasks.validation.js';
+export { assertNextAction, normalizeNextAction } from './tasks.validation.js';
+export type { NormalizedNextAction } from './tasks.validation.js';
 export type TaskAuditContext = { actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 
 export type TaskNextActionInput = { what: string; whoId: string; when: Date | string };
-export type CreateTaskInput = { title: string; ownerId: string; assigneeId: string; dueAt: Date | string; status?: TaskStatus; nextAction?: TaskNextActionInput | null; isCustomerPromise?: boolean; visibility?: TaskVisibility; confidentialityLevel?: TaskConfidentialityLevel; links?: { entityType: TaskLinkEntityType; entityId: string }[]; participantUserIds?: string[] };
+export type CreateTaskInput = { title: string; ownerId: string; assigneeId: string; dueAt: Date | string; status?: TaskStatus; nextAction?: TaskNextActionInput | null; isCustomerPromise?: boolean; visibility?: TaskVisibility; confidentialityLevel?: TaskConfidentialityLevel; links?: { entityType: TaskLinkEntityType; entityId: string }[]; participantUserIds?: string[]; assignedDepartmentId?: string | null };
 export type UpdateTaskStatusInput = { taskId: string; status: TaskStatus; nextAction?: TaskNextActionInput | null; statusNote?: string };
-export type UpdateTaskInput = { taskId: string; status?: TaskStatus; assigneeId?: string; dueAt?: Date | string; nextAction?: TaskNextActionInput | null; isCustomerPromise?: boolean; statusNote?: string };
-export type TaskActor = { userId: string; roleCode: string; branchId: string | null; permissions?: string[] };
+export type UpdateTaskInput = { taskId: string; status?: TaskStatus; assigneeId?: string; dueAt?: Date | string; nextAction?: TaskNextActionInput | null; isCustomerPromise?: boolean; statusNote?: string; assignedDepartmentId?: string | null };
+export type TaskActor = { userId: string; roleCode: string; branchId: string | null; departmentId?: string | null; permissions?: string[] };
 
-export type NormalizedNextAction = { what: string; whoId: string; when: Date };
 type ManagerRollupScope = { roleCode: string; branchId: string | null };
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly tasksRepository: TasksRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly usersService?: Pick<AdminUsersService, 'assertAssignable'>, private readonly relatedRecordsService?: TasksRelatedRecordsService, private readonly groupsService?: CommunicationGroupsService) {}
+  constructor(private readonly tasksRepository: TasksRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly usersService?: Pick<AdminUsersService, 'assertAssignable'>, private readonly relatedRecordsService?: TasksRelatedRecordsService, private readonly groupsService?: CommunicationGroupsService, private readonly boardRepository?: TasksBoardRepository) {}
 
   async create(input: CreateTaskInput, audit: TaskAuditContext = {}): Promise<TaskResponseDto> {
     return this.tasksRepository.transaction((client) => this.createInTransaction(input, audit, client));
@@ -42,6 +46,7 @@ export class TasksService {
   async createForActor(input: CreateTaskInput, actor: StaffLookupActor, audit: TaskAuditContext = {}): Promise<TaskResponseDto> {
     await this.assertAssignable(input, actor);
     await this.assertRelatedRecords(input, actor);
+    if (input.assignedDepartmentId) await assertAssignedDepartment(this.boardRepository, input.assignedDepartmentId);
     return this.create(input, audit);
   }
 
@@ -69,6 +74,7 @@ export class TasksService {
       confidentialityLevel: input.confidentialityLevel ?? TaskConfidentialityLevel.NORMAL,
       links: taskLinks,
       participants: participants(input, nextAction),
+      assignedDepartmentId: input.assignedDepartmentId ?? null,
     };
 
     const task = await this.tasksRepository.create(data, client);
@@ -106,42 +112,7 @@ export class TasksService {
   }
 
   async updateForActor(input: UpdateTaskInput, actor: TaskActor, audit: TaskAuditContext = {}): Promise<TaskResponseDto> {
-    return this.tasksRepository.transaction(async (client) => {
-      const current = await this.tasksRepository.findById(requiredText(input.taskId, 'taskId'), client);
-      if (!current) throw new AppException('TASK_NOT_FOUND', 'Task was not found', HttpStatus.NOT_FOUND);
-      assertCanAct(current, actor);
-      if (input.assigneeId) await this.usersService?.assertAssignable(actor, input.assigneeId);
-
-      const status = input.status ?? current.status;
-      const nextAction =
-        status === TaskStatus.DONE ? null : normalizeNextAction(input.nextAction === undefined ? currentNextAction(current) : input.nextAction);
-      assertNextAction(status, nextAction);
-      const statusNote = requiredStatusNote(current.status, status, input.statusNote);
-      if (nextAction) await this.usersService?.assertAssignable(actor, nextAction.whoId);
-      assertPromiseLink(input.isCustomerPromise ?? current.isCustomerPromise, current.links);
-
-      const task = await this.tasksRepository.updateStatus(
-        {
-          id: current.id,
-          status,
-          ...(input.assigneeId !== undefined ? { assigneeId: requiredText(input.assigneeId, 'assigneeId') } : {}),
-          ...(input.dueAt !== undefined ? { dueAt: validDate(input.dueAt, 'dueAt') } : {}),
-          nextActionWhat: nextAction?.what ?? null,
-          nextActionWhoId: nextAction?.whoId ?? null,
-          nextActionWhen: nextAction?.when ?? null,
-          ...(input.isCustomerPromise !== undefined ? { isCustomerPromise: input.isCustomerPromise } : {}),
-        },
-        client,
-      );
-      if (current.status !== task.status) {
-        await this.tasksRepository.createStatusHistory(historyInput(task.id, current.status, task.status, audit), client);
-        if (statusNote) {
-          await this.tasksRepository.createComment({ taskId: task.id, authorId: actor.userId, body: statusComment(current.status, task.status, statusNote) }, client);
-        }
-      }
-      await this.auditService.record(taskAudit('task_updated', task, audit, { fromStatus: current.status, toStatus: task.status }), client);
-      return taskToResponse(task);
-    });
+    return updateTaskForActor(this.tasksRepository, this.auditService, this.usersService, this.boardRepository, input, actor, audit);
   }
 
   async getForParticipant(taskId: string, actorId: string): Promise<TaskResponseDto> {
@@ -256,23 +227,6 @@ export class TasksService {
       }
     }
   }
-}
-
-export function assertNextAction(status: TaskStatus, nextAction: NormalizedNextAction | null): void {
-  if (status !== TaskStatus.DONE && !nextAction) {
-    throw new AppException('TASK_NEXT_ACTION_REQUIRED', 'Open tasks require a next action', HttpStatus.CONFLICT, [
-      { field: 'nextAction', code: 'REQUIRED', message: 'nextAction is required for open tasks.' },
-    ]);
-  }
-}
-
-export function normalizeNextAction(input: TaskNextActionInput | null | undefined): NormalizedNextAction | null {
-  if (!input) return null;
-  return {
-    what: requiredText(input.what, 'nextAction.what'),
-    whoId: requiredText(input.whoId, 'nextAction.whoId'),
-    when: validDate(input.when, 'nextAction.when'),
-  };
 }
 
 function participants(input: CreateTaskInput, nextAction: NormalizedNextAction | null) {

@@ -323,6 +323,7 @@ model Department {
   complaints  Complaint[]
   slaPolicies SlaPolicy[]
   capaActions CapaAction[]
+  tasks       Task[]
 
   @@index([branchId])
   @@map("departments")
@@ -945,6 +946,7 @@ model Task {
   status               TaskStatus               @default(OPEN)
   stageId              String?                  @map("stage_id")
   boardPosition        Int                      @default(0) @map("board_position")
+  assignedDepartmentId String?                  @map("assigned_department_id")
   nextActionWhat       String?                  @map("next_action_what")
   nextActionWhoId      String?                  @map("next_action_who_id")
   nextActionWhen       DateTime?                @map("next_action_when")
@@ -957,6 +959,7 @@ model Task {
   assignee             User                     @relation("TaskAssignee", fields: [assigneeId], references: [id])
   nextActionWho        User?                    @relation("TaskNextActionWho", fields: [nextActionWhoId], references: [id])
   stage                BoardStage?              @relation(fields: [stageId], references: [id])
+  assignedDepartment   Department?              @relation(fields: [assignedDepartmentId], references: [id])
   links                TaskLink[]
   participants         TaskParticipant[]
   comments             TaskComment[]
@@ -967,6 +970,7 @@ model Task {
   @@index([assigneeId])
   @@index([nextActionWhoId])
   @@index([stageId, boardPosition])
+  @@index([assignedDepartmentId])
   @@map("tasks")
 }
 

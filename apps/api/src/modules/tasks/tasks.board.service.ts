@@ -37,11 +37,12 @@ export class TasksBoardService {
   ) {}
 
   async board(actor: TaskActor, now: Date = new Date()): Promise<TaskBoardResponseDto> {
-    const [stages, tasks] = await Promise.all([
+    const [stages, tasks, departments] = await Promise.all([
       this.boardRepository.listStages(BoardScope.TASKS),
       this.boardRepository.listBoardTasks(promiseTrackerQuery(actor), new Date(now.getTime() - COMPLETED_WINDOW_MS)),
+      this.boardRepository.listActiveDepartments(),
     ]);
-    return buildTaskBoard(stages, tasks, now);
+    return { ...buildTaskBoard(stages, tasks, now), departments };
   }
 
   // Public hook for the board-stages module: when an admin archives a stage with
@@ -103,7 +104,7 @@ function moveAudit(taskId: string, context: TaskAuditContext, metadata: Prisma.I
 // each card bucketed by its explicit stage, else the default stage mapped to its
 // TaskStatus, else the first stage. Card metrics (daysActive/dueState) derive from
 // the server clock so the UI renders no business logic.
-export function buildTaskBoard(stages: BoardStageRecord[], tasks: BoardTaskRecord[], now: Date): TaskBoardResponseDto {
+export function buildTaskBoard(stages: BoardStageRecord[], tasks: BoardTaskRecord[], now: Date): Omit<TaskBoardResponseDto, 'departments'> {
   const activeStageIds = new Set(stages.map((stage) => stage.id));
   const defaultStageByStatus = new Map<TaskStatus, string>();
   for (const stage of stages) {
@@ -156,6 +157,9 @@ function toCardDto(task: BoardTaskRecord, stageId: string, now: Date): BoardCard
     assigneeId: task.assigneeId,
     assigneeName: task.assignee?.nameEn ?? null,
     assigneeNameAr: task.assignee?.nameAr ?? null,
+    assignedDepartmentId: task.assignedDepartmentId,
+    departmentName: task.assignedDepartment?.nameEn ?? null,
+    departmentNameAr: task.assignedDepartment?.nameAr ?? null,
     branchId: task.assignee?.branchId ?? task.owner?.branchId ?? null,
     dueAt: task.dueAt.toISOString(),
     status: task.status,

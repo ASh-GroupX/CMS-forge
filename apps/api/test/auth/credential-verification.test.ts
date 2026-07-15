@@ -56,6 +56,7 @@ test('valid active staff credentials return safe auth claims', async () => {
     roleCode: 'ADMIN',
     permissions: [],
     branchId: 'branch_main',
+    departmentId: null,
     branchName: 'Main Branch',
     branchNameAr: 'الفرع الرئيسي',
     branchTimezone: 'Asia/Riyadh',

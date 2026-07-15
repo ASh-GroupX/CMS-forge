@@ -40,6 +40,18 @@ export const taskBoardText = {
       stageMissing: 'That column no longer exists. Refresh the board.',
       nextActionRequired: 'Reopening a finished task needs a next action. Open the task from Today to set it.',
     },
+    assign: {
+      label: 'Department',
+      trigger: 'Set the department for task {title}',
+      none: 'No department',
+      help: 'Members of the assigned department can see and work this task.',
+      toasts: {
+        assigned: 'Task assigned to {name}.',
+        cleared: 'Department assignment removed.',
+        denied: 'You do not have permission to assign this task.',
+        failed: 'The department assignment could not be saved. Try again.',
+      },
+    },
     manage: {
       open: 'Manage stages',
       title: 'Board stages',
@@ -114,6 +126,18 @@ export const taskBoardText = {
       moveDenied: 'ليس لديك صلاحية لنقل هذه المهمة.',
       stageMissing: 'هذا العمود لم يعد موجوداً. حدّث اللوحة.',
       nextActionRequired: 'إعادة فتح مهمة منجزة تتطلب إجراءً تالياً. افتح المهمة من صفحة اليوم لتحديده.',
+    },
+    assign: {
+      label: 'القسم',
+      trigger: 'حدد القسم للمهمة {title}',
+      none: 'بدون قسم',
+      help: 'أعضاء القسم المسند إليه يمكنهم رؤية هذه المهمة والعمل عليها.',
+      toasts: {
+        assigned: 'أُسندت المهمة إلى {name}.',
+        cleared: 'أُزيل إسناد القسم.',
+        denied: 'ليس لديك صلاحية لإسناد هذه المهمة.',
+        failed: 'تعذر حفظ إسناد القسم. حاول مرة أخرى.',
+      },
     },
     manage: {
       open: 'إدارة المراحل',

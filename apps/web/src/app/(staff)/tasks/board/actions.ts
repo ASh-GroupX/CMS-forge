@@ -1,7 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { moveTaskCard, type MoveTaskCardPayload, type MoveTaskCardResult } from '../../../../lib/staff-board-api';
+import {
+  assignTaskDepartment,
+  moveTaskCard,
+  type AssignTaskDepartmentResult,
+  type MoveTaskCardPayload,
+  type MoveTaskCardResult,
+} from '../../../../lib/staff-board-api';
 import {
   archiveBoardStage,
   createBoardStage,
@@ -15,6 +21,12 @@ import {
 
 export async function moveTaskCardAction(taskId: string, payload: MoveTaskCardPayload): Promise<MoveTaskCardResult> {
   const result = await moveTaskCard(taskId, payload);
+  if (result.status === 'success') revalidatePath('/tasks/board');
+  return result;
+}
+
+export async function assignTaskDepartmentAction(taskId: string, departmentId: string | null): Promise<AssignTaskDepartmentResult> {
+  const result = await assignTaskDepartment(taskId, departmentId);
   if (result.status === 'success') revalidatePath('/tasks/board');
   return result;
 }

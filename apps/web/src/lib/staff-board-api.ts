@@ -26,6 +26,9 @@ export type BoardCard = {
   assigneeId: string;
   assigneeName: string | null;
   assigneeNameAr: string | null;
+  assignedDepartmentId: string | null;
+  departmentName: string | null;
+  departmentNameAr: string | null;
   branchId: string | null;
   dueAt: string;
   status: StaffTaskStatus;
@@ -42,7 +45,8 @@ export type BoardCard = {
 };
 
 export type BoardColumn = { stageId: string; cards: BoardCard[] };
-export type TaskBoard = { stages: BoardStage[]; columns: BoardColumn[] };
+export type BoardDepartment = { id: string; nameEn: string; nameAr: string };
+export type TaskBoard = { stages: BoardStage[]; columns: BoardColumn[]; departments: BoardDepartment[] };
 
 export type TaskBoardLoadResult = { status: 'ready'; data: TaskBoard } | { status: 'denied' | 'error' };
 
@@ -55,6 +59,11 @@ export type MoveTaskCardPayload = {
 
 export type MoveTaskCardResult =
   | { status: 'success'; card: BoardCard }
+  | { status: 'invalid'; fields: string[] }
+  | { status: 'denied' | 'not_found' | 'error' };
+
+export type AssignTaskDepartmentResult =
+  | { status: 'success' }
   | { status: 'invalid'; fields: string[] }
   | { status: 'denied' | 'not_found' | 'error' };
 
@@ -114,13 +123,52 @@ export async function moveTaskCard(
   }
 }
 
+// PATCH /tasks/:id limited to the board's department-assignment control.
+// departmentId null clears the assignment; the API validates and audits.
+export async function assignTaskDepartment(
+  taskId: string,
+  departmentId: string | null,
+  { apiUrl = process.env.API_URL ?? 'http://localhost:3000', cookieHeader, fetchImpl = fetch }: RequestOptions = {},
+): Promise<AssignTaskDepartmentResult> {
+  const cookies = cookieHeader ?? await incomingCookieHeader();
+  if (!hasStaffSessionCookie(cookies)) return { status: 'denied' };
+  const csrf = readCookie(cookies, CSRF_COOKIE);
+
+  try {
+    const response = await fetchImpl(new URL(`/tasks/${encodeURIComponent(taskId)}`, apiUrl), {
+      body: JSON.stringify({ assignedDepartmentId: departmentId }),
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+        'content-type': 'application/json',
+        cookie: cookies,
+        ...(csrf ? { 'x-csrf-token': csrf } : {}),
+      },
+      method: 'PATCH',
+    });
+    if (response.status === 401 || response.status === 403) return { status: 'denied' };
+    if (response.status === 404) return { status: 'not_found' };
+    if (response.status === 400) return { status: 'invalid', fields: await invalidFieldsFrom(response) };
+    if (!response.ok) return { status: 'error' };
+    return { status: 'success' };
+  } catch {
+    return { status: 'error' };
+  }
+}
+
 function taskBoardFrom(body: unknown): TaskBoard | null {
   if (!body || typeof body !== 'object') return null;
-  const { stages: rawStages, columns: rawColumns } = body as { stages?: unknown; columns?: unknown };
-  if (!Array.isArray(rawStages) || !Array.isArray(rawColumns)) return null;
+  const { stages: rawStages, columns: rawColumns, departments: rawDepartments } = body as { stages?: unknown; columns?: unknown; departments?: unknown };
+  if (!Array.isArray(rawStages) || !Array.isArray(rawColumns) || !Array.isArray(rawDepartments)) return null;
 
   const stages = rawStages.map((stage) => boardStageFrom(stage as Partial<BoardStage>));
   if (stages.some((stage) => stage === null)) return null;
+
+  const departments: BoardDepartment[] = [];
+  for (const rawDepartment of rawDepartments as Partial<BoardDepartment>[]) {
+    if (typeof rawDepartment?.id !== 'string' || typeof rawDepartment.nameEn !== 'string' || typeof rawDepartment.nameAr !== 'string') return null;
+    departments.push({ id: rawDepartment.id, nameEn: rawDepartment.nameEn, nameAr: rawDepartment.nameAr });
+  }
 
   const columns: BoardColumn[] = [];
   for (const rawColumn of rawColumns as Partial<BoardColumn>[]) {
@@ -129,7 +177,7 @@ function taskBoardFrom(body: unknown): TaskBoard | null {
     if (cards.some((card) => card === null)) return null;
     columns.push({ stageId: rawColumn.stageId, cards: cards as BoardCard[] });
   }
-  return { stages: stages as BoardStage[], columns };
+  return { stages: stages as BoardStage[], columns, departments };
 }
 
 function boardStageFrom(stage: Partial<BoardStage>): BoardStage | null {
@@ -187,6 +235,9 @@ export function boardCardFrom(card: Partial<BoardCard>): BoardCard | null {
     assigneeId: card.assigneeId,
     assigneeName: typeof card.assigneeName === 'string' ? card.assigneeName : null,
     assigneeNameAr: typeof card.assigneeNameAr === 'string' ? card.assigneeNameAr : null,
+    assignedDepartmentId: typeof card.assignedDepartmentId === 'string' ? card.assignedDepartmentId : null,
+    departmentName: typeof card.departmentName === 'string' ? card.departmentName : null,
+    departmentNameAr: typeof card.departmentNameAr === 'string' ? card.departmentNameAr : null,
     branchId: typeof card.branchId === 'string' ? card.branchId : null,
     dueAt: card.dueAt,
     status: card.status,

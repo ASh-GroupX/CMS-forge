@@ -11,6 +11,7 @@ const taskSelect = {
   dueAt: true,
   status: true,
   stageId: true,
+  assignedDepartmentId: true,
   nextActionWhat: true,
   nextActionWhoId: true,
   nextActionWhen: true,
@@ -75,6 +76,7 @@ export type CreateTaskData = {
   confidentialityLevel: TaskConfidentialityLevel;
   links: { entityType: TaskLinkEntityType; entityId: string }[];
   participants: { userId: string; role: TaskParticipantRole }[];
+  assignedDepartmentId?: string | null;
 };
 
 export type UpdateTaskStatusData = {
@@ -86,6 +88,7 @@ export type UpdateTaskStatusData = {
   nextActionWhoId?: string | null;
   nextActionWhen?: Date | null;
   isCustomerPromise?: boolean;
+  assignedDepartmentId?: string | null;
 };
 
 export type CreateTaskStatusHistoryData = {
@@ -124,6 +127,7 @@ export class TasksRepository {
       assignee: { connect: { id: data.assigneeId } },
     };
     if (data.nextActionWhoId) createData.nextActionWho = { connect: { id: data.nextActionWhoId } };
+    if (data.assignedDepartmentId) createData.assignedDepartment = { connect: { id: data.assignedDepartmentId } };
     if (data.links.length) createData.links = { create: data.links };
     if (data.participants.length) createData.participants = { create: data.participants };
     return client.task.create({ data: createData, select: taskSelect });
@@ -233,6 +237,9 @@ export class TasksRepository {
         ...(data.nextActionWhoId !== undefined ? { nextActionWho: data.nextActionWhoId ? { connect: { id: data.nextActionWhoId } } : { disconnect: true } } : {}),
         ...(data.nextActionWhen !== undefined ? { nextActionWhen: data.nextActionWhen } : {}),
         ...(data.isCustomerPromise !== undefined ? { isCustomerPromise: data.isCustomerPromise } : {}),
+        ...(data.assignedDepartmentId !== undefined
+          ? { assignedDepartment: data.assignedDepartmentId ? { connect: { id: data.assignedDepartmentId } } : { disconnect: true } }
+          : {}),
       },
       select: taskSelect,
     });

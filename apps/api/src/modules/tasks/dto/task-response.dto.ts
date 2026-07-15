@@ -27,6 +27,7 @@ export class TaskResponseDto {
   displayTimeZone!: string;
   dueAt!: string;
   status!: TaskStatus;
+  assignedDepartmentId?: string | null;
   nextAction!: TaskNextActionDto | null;
   isCustomerPromise!: boolean;
   visibility!: TaskVisibility;

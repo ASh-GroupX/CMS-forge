@@ -1,5 +1,9 @@
 import { HttpStatus } from '@nestjs/common';
+import { TaskStatus } from '@prisma/client';
 import { AppException } from '../../core/http-kernel.js';
+import type { TaskNextActionInput } from './tasks.service.js';
+
+export type NormalizedNextAction = { what: string; whoId: string; when: Date };
 
 export function requiredText(value: string, field: string): string {
   const text = value.trim();
@@ -24,6 +28,23 @@ export function utcDay(value: Date): [Date, Date] {
   const end = new Date(start);
   end.setUTCDate(end.getUTCDate() + 1);
   return [start, end];
+}
+
+export function assertNextAction(status: TaskStatus, nextAction: NormalizedNextAction | null): void {
+  if (status !== TaskStatus.DONE && !nextAction) {
+    throw new AppException('TASK_NEXT_ACTION_REQUIRED', 'Open tasks require a next action', HttpStatus.CONFLICT, [
+      { field: 'nextAction', code: 'REQUIRED', message: 'nextAction is required for open tasks.' },
+    ]);
+  }
+}
+
+export function normalizeNextAction(input: TaskNextActionInput | null | undefined): NormalizedNextAction | null {
+  if (!input) return null;
+  return {
+    what: requiredText(input.what, 'nextAction.what'),
+    whoId: requiredText(input.whoId, 'nextAction.whoId'),
+    when: validDate(input.when, 'nextAction.when'),
+  };
 }
 
 function invalid(field: string): AppException {

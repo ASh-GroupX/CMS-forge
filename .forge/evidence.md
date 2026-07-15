@@ -13875,3 +13875,63 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 - Security self-check: manage affordance gated by the server-loaded
   principal's permissions; every write goes through the CSRF client and the
   B1 admin-guarded routes; no secrets in toasts or logs.
+
+## B3 — Task department assignment (2026-07-15)
+
+- SRS: REQ-RBAC-001, UI-SCREEN-001, UI-DESIGN-001, REQ-LOCALIZATION-001,
+  METHOD-AUDIT-001, METHOD-TEST-001.
+- Schema: `Task.assignedDepartmentId?` (+ `assignedDepartment` relation,
+  `@@index`, `Department.tasks` back-relation) in
+  `packages/database/prisma/schema.prisma`. `prisma validate` + `generate`
+  Passed with placeholder DATABASE_URL; `db:push`/`db:seed` Not Run (no
+  local DB).
+- Session authority: `departmentId` now flows server-side only —
+  `auth.repository.ts` selects it for credential + session lookups,
+  `auth.service.ts` returns it in claims via a new `staffClaims` helper
+  (dedupes the login/session claim shape; file back under the 300 budget),
+  `StaffPrincipal` + `TaskActor` extended, and `tasks.controller.ts` builds
+  every actor through `taskActor(principal)` (inline literals removed).
+- Access rule: `tasks.access.ts` `isDepartmentMember` — members of the
+  assigned department may view/act on the task, but ONLY at NORMAL
+  confidentiality (mirrors the manager-rollup precedent; confidential tasks
+  stay with named participants/admins). The board read mirrors the same
+  predicate in the Prisma OR-clause (`tasks.board.repository.ts`), so the
+  frontend never filters for privacy.
+- Update path: `updateForActor` extracted to new `tasks.update.ts`
+  (tasks.service.ts was AT the 300-line budget) and extended:
+  `assignedDepartmentId` accepted on PATCH (null clears), validated against
+  active departments (`findActiveDepartment`) as a 400 field error, written
+  with from/to department metadata on the `task_updated` audit entry in the
+  SAME transaction as the update/history/comment. Quick-add create accepts
+  the field too (validated in `createForActor`).
+- Board read: cards carry `assignedDepartmentId`/`departmentName(Ar)`;
+  `GET /tasks/board` returns the active `departments` reference list
+  (id + bilingual names only — no PII) for the assignment control.
+- OpenAPI: additive text splices — Task, TaskQuickAddRequest,
+  TaskUpdateRequest, BoardCard, TaskBoardResponse, new BoardDepartment.
+  `openapi:generate` + `openapi:check` Passed.
+- Frontend: `assignTaskDepartment` in `lib/staff-board-api.ts` (PATCH with
+  CSRF; success/invalid/denied/not_found/error union),
+  `assignTaskDepartmentAction` server action (revalidates /tasks/board);
+  `components/task-board/board-card-department.tsx` — department chip on the
+  card opens a popover picker (active departments + "No department",
+  selected state, help text); optimistic badge update with snapshot rollback
+  and en+ar toasts. A11y: dnd-kit `attributes` moved off the card wrapper
+  onto a dedicated grip-handle button (axe `nested-interactive` fix) while
+  pointer/touch drags still start anywhere on the card.
+- Verification:
+  - Passed: `test:api -- tasks` 42/42 (7 new: dept member allowed view/act,
+    other-department denied, confidential/unassigned denied, same-tx assign
+    + audit metadata, unknown department 400 with no writes, null clear,
+    session-scoped board query); `test:api -- auth` 38/38; `test:api --
+    board-stages` 8/8; web api-client 69/69 (2 new PATCH/outcome tests);
+    `test:web` 213/213; `test:visual` 108; `test:e2e -- accessibility` 24;
+    `test:e2e -- task-board-dnd`; `lint`; full `typecheck`;
+    `openapi:check`; `i18n-lint`. Hydrated popover screenshots
+    self-reviewed en LTR + ar RTL.
+  - Not Run: live-DB migration/seed (no local DATABASE_URL).
+- Security self-check: departmentId derives from the staff session row only
+  (never client input); one allowed + one denied boundary test per new rule;
+  the department grant is confidentiality-gated so it never widens access to
+  CONFIDENTIAL/RESTRICTED tasks; audit metadata carries ids only — no
+  secrets, no PII; the departments list exposes reference names only.

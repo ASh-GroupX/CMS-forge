@@ -4,7 +4,7 @@ import { promiseKeptOnTime } from './tasks.promise.js';
 import type { PromiseTaskRecord } from './tasks.repository.js';
 import { taskToResponse } from './tasks.response.js';
 
-export type PromiseTrackerScope = { userId: string; roleCode: string; branchId: string | null };
+export type PromiseTrackerScope = { userId: string; roleCode: string; branchId: string | null; departmentId?: string | null };
 
 const managerRoles = new Set<string>([RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN, RoleCode.MGMT_READONLY]);
 
@@ -12,6 +12,7 @@ export function promiseTrackerQuery(scope: PromiseTrackerScope) {
   return {
     userId: scope.userId,
     branchId: scope.branchId,
+    departmentId: scope.departmentId ?? null,
     isAdmin: scope.roleCode === RoleCode.ADMIN,
     isManager: managerRoles.has(scope.roleCode),
   };

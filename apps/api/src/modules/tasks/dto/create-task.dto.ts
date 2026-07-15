@@ -15,6 +15,7 @@ export type QuickAddTaskRequestDto = {
   participantUserIds?: string[];
   visibility?: TaskVisibility;
   confidentialityLevel?: TaskConfidentialityLevel;
+  assignedDepartmentId?: string;
 };
 
 export type QuickAddTaskResponseDto = {
@@ -36,6 +37,8 @@ export function parseQuickAddTaskBody(body: unknown): QuickAddTaskRequestDto {
   const participantUserIds = optionalStringArray(input.participantUserIds, 'participantUserIds');
   const visibility = optionalEnum(input.visibility, TaskVisibility, 'visibility');
   const confidentialityLevel = optionalEnum(input.confidentialityLevel, TaskConfidentialityLevel, 'confidentialityLevel');
+  const assignedDepartmentId = optionalText(input.assignedDepartmentId, 'assignedDepartmentId');
+  if (assignedDepartmentId !== undefined) result.assignedDepartmentId = assignedDepartmentId;
   if (dueAt !== undefined) result.dueAt = dueAt;
   if (isCustomerPromise !== undefined) result.isCustomerPromise = isCustomerPromise;
   if (links !== undefined) result.links = links;
@@ -58,6 +61,7 @@ export function toQuickAddTaskInput(body: QuickAddTaskRequestDto, ownerId: strin
   if (body.participantUserIds !== undefined) input.participantUserIds = body.participantUserIds;
   if (body.visibility !== undefined) input.visibility = body.visibility;
   if (body.confidentialityLevel !== undefined) input.confidentialityLevel = body.confidentialityLevel;
+  if (body.assignedDepartmentId !== undefined) input.assignedDepartmentId = body.assignedDepartmentId;
   return input;
 }
 

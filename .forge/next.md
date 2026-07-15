@@ -10,13 +10,15 @@ SRS IDs: `REQ-RBAC-001`, `UI-SCREEN-001`, `UI-DESIGN-001`,
 ## Task
 
 Execute `docs/CMSS_REVAMP_PLAN.md` (the SSOT — read it first) task by task.
-**Phase A committed (d85d76e + ff41d62); B1 committed (21f5fa9); B2 DONE
-(uncommitted). Next task: B3** — task department assignment:
-`Task.assignedDepartmentId?` schema addition + prisma generate; extend
-create/update DTOs + `tasks.access.ts` (department members see
-dept-assigned tasks); board assignment controls; one allowed + one denied
-test. Keep tasks.service.ts (300) and tasks.repository.ts (282) within
-budget — put new logic in the board files or a new small file.
+**Phase A committed (d85d76e + ff41d62); B1 committed (21f5fa9); B2 committed
+(d21a8f7); B3 DONE (uncommitted). Next task: B4** — `GET /complaints/board`:
+TICKETS stage columns from `board_stages`, cards scoped by the existing
+queue rules (server session only), per-card `allowedTransitions` derived
+from `WORKFLOW_TRANSITIONS` in `complaints.service.ts`. Copy the tasks
+board pattern (`tasks.board.{repository,service}.ts` + `dto/board.dto.ts`)
+into the complaints module as new small files (complaints.service.ts is
+large — do NOT grow it); document the read in OpenAPI (additive splice);
+scoping allowed+denied tests.
 
 - A1 (done): Prisma migration — `BoardStage`, `Task.stageId?`, `Task.boardPosition`,
   seed default TASKS stages.
@@ -36,9 +38,16 @@ budget — put new logic in the board files or a new small file.
 - A7 (done): mobile Board/List switcher + responsive visual cases.
 - A8 (done): board accessibility cases (axe, en+ar) + `test:e2e --
   task-board-dnd` real pointer-drag proof over the hydrated island.
-- B2–B6 then follow the SSOT: admin stage UI, task department assignment,
-  `GET /complaints/board` + `/complaints/board` page (mapped columns over the
-  existing transition endpoint), card detail drawer.
+- B1 (done, 21f5fa9): board-stages CRUD module + 9 TICKETS stage seed.
+- B2 (done, d21a8f7): admin stage manager sheet on the board.
+- B3 (done, uncommitted): `Task.assignedDepartmentId?`; session principal
+  carries departmentId; dept members view/act on NORMAL dept-assigned tasks
+  (access rule + board OR-clause); PATCH/quick-add DTO + validation + audit
+  in new `tasks.update.ts`; board returns departments list; card popover
+  assignment control + grip drag handle (axe fix). tasks 42/42.
+- B4–B6 then follow the SSOT: `GET /complaints/board` + `/complaints/board`
+  page (mapped columns over the existing transition endpoint), card detail
+  drawer.
 
 Constraints (locked decisions):
 - Ticket stages (Phase B) are mapped columns over the existing complaint

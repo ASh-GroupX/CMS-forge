@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getTaskBoardLoadResult, moveTaskCard } from '../../src/lib/staff-board-api';
+import { assignTaskDepartment, getTaskBoardLoadResult, moveTaskCard } from '../../src/lib/staff-board-api';
 
 const stage = {
   id: 'stage_open',
@@ -12,6 +12,8 @@ const stage = {
   mappedTaskStatus: 'OPEN',
 };
 
+const department = { id: 'dept_service', nameEn: 'Service', nameAr: 'الصيانة' };
+
 const card = {
   id: 'task_1',
   title: 'Call the customer back',
@@ -21,6 +23,9 @@ const card = {
   assigneeId: 'usr_assignee',
   assigneeName: 'Assignee',
   assigneeNameAr: 'المكلف',
+  assignedDepartmentId: null,
+  departmentName: null,
+  departmentNameAr: null,
   branchId: 'branch_1',
   dueAt: '2026-07-15T10:00:00.000Z',
   status: 'OPEN',
@@ -43,12 +48,12 @@ test('task board load calls the scoped endpoint with the session cookie only', a
     cookieHeader: 'cms_staff_session=session',
     fetchImpl: async (input, init) => {
       calls.push({ url: String(input), cookie: new Headers(init?.headers).get('cookie') ?? '', method: init?.method ?? 'GET' });
-      return jsonResponse({ stages: [stage], columns: [{ stageId: 'stage_open', cards: [card] }] });
+      return jsonResponse({ stages: [stage], columns: [{ stageId: 'stage_open', cards: [card] }], departments: [department] });
     },
   });
 
   assert.deepEqual(calls, [{ url: 'http://api.test/tasks/board', cookie: 'cms_staff_session=session', method: 'GET' }]);
-  assert.deepEqual(result, { status: 'ready', data: { stages: [stage], columns: [{ stageId: 'stage_open', cards: [card] }] } });
+  assert.deepEqual(result, { status: 'ready', data: { stages: [stage], columns: [{ stageId: 'stage_open', cards: [card] }], departments: [department] } });
 });
 
 test('task board load distinguishes denied, error, and malformed payloads', async () => {
@@ -61,11 +66,16 @@ test('task board load distinguishes denied, error, and malformed payloads', asyn
   }), { status: 'error' });
   assert.deepEqual(await getTaskBoardLoadResult({
     cookieHeader: 'cms_staff_session=x',
-    fetchImpl: async () => jsonResponse({ stages: [stage], columns: [{ stageId: 'stage_open', cards: [{ id: 'task_1' }] }] }),
+    fetchImpl: async () => jsonResponse({ stages: [stage], columns: [{ stageId: 'stage_open', cards: [{ id: 'task_1' }] }], departments: [] }),
   }), { status: 'error' });
   assert.deepEqual(await getTaskBoardLoadResult({
     cookieHeader: 'cms_staff_session=x',
-    fetchImpl: async () => jsonResponse({ stages: [{ ...stage, position: 'first' }], columns: [] }),
+    fetchImpl: async () => jsonResponse({ stages: [{ ...stage, position: 'first' }], columns: [], departments: [] }),
+  }), { status: 'error' });
+  // A board payload without the departments reference list is malformed.
+  assert.deepEqual(await getTaskBoardLoadResult({
+    cookieHeader: 'cms_staff_session=x',
+    fetchImpl: async () => jsonResponse({ stages: [stage], columns: [] }),
   }), { status: 'error' });
 });
 
@@ -107,6 +117,41 @@ test('move distinguishes denied, stage-not-found, validation, and error outcomes
   );
   assert.deepEqual(await move(async () => jsonResponse({}, 500)), { status: 'error' });
   assert.deepEqual(await move(async () => jsonResponse({ card: { id: 'task_1' } })), { status: 'error' });
+});
+
+test('department assignment PATCHes the task with the CSRF token and null clears', async () => {
+  const calls: Array<{ url: string; method: string; csrf: string; body: unknown }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({
+      url: String(input),
+      method: init?.method ?? '',
+      csrf: new Headers(init?.headers).get('x-csrf-token') ?? '',
+      body: JSON.parse(String(init?.body)),
+    });
+    return jsonResponse({ task: { id: 'task 1' } });
+  };
+  const options = { apiUrl: 'http://api.test', cookieHeader: 'cms_staff_session=session; cms_csrf_token=csrf-token', fetchImpl };
+
+  assert.deepEqual(await assignTaskDepartment('task 1', 'dept_service', options), { status: 'success' });
+  assert.deepEqual(await assignTaskDepartment('task 1', null, options), { status: 'success' });
+  assert.deepEqual(calls, [
+    { url: 'http://api.test/tasks/task%201', method: 'PATCH', csrf: 'csrf-token', body: { assignedDepartmentId: 'dept_service' } },
+    { url: 'http://api.test/tasks/task%201', method: 'PATCH', csrf: 'csrf-token', body: { assignedDepartmentId: null } },
+  ]);
+});
+
+test('department assignment distinguishes denied, not-found, validation, and error outcomes', async () => {
+  const assign = (fetchImpl: typeof fetch) =>
+    assignTaskDepartment('task_1', 'dept_ghost', { cookieHeader: 'cms_staff_session=x', fetchImpl });
+
+  assert.deepEqual(await assignTaskDepartment('task_1', 'dept_service', { cookieHeader: '' }), { status: 'denied' });
+  assert.deepEqual(await assign(async () => jsonResponse({}, 403)), { status: 'denied' });
+  assert.deepEqual(await assign(async () => jsonResponse({}, 404)), { status: 'not_found' });
+  assert.deepEqual(
+    await assign(async () => jsonResponse({ details: [{ field: 'assignedDepartmentId', code: 'REQUIRED' }] }, 400)),
+    { status: 'invalid', fields: ['assignedDepartmentId'] },
+  );
+  assert.deepEqual(await assign(async () => jsonResponse({}, 500)), { status: 'error' });
 });
 
 function jsonResponse(body: unknown, status = 200): Response {

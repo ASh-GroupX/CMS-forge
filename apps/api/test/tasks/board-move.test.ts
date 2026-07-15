@@ -31,7 +31,7 @@ test('move route parses the body and derives the actor from the staff session', 
   await controller.move('task_1', { stageId: 'stage_done', boardPosition: 3 }, request(owner));
 
   assert.deepEqual(captured?.input, { taskId: 'task_1', stageId: 'stage_done', boardPosition: 3 });
-  assert.deepEqual(captured?.actor, { userId: 'user_owner', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_a', permissions: [] });
+  assert.deepEqual(captured?.actor, { userId: 'user_owner', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_a', departmentId: null, permissions: [] });
   assert.equal((captured?.audit as { actorId?: string }).actorId, 'user_owner');
 });
 
@@ -224,6 +224,8 @@ function movedRecord(data: MoveTaskData): BoardTaskRecord {
     status: data.status,
     stageId: data.stageId,
     boardPosition: data.boardPosition,
+    assignedDepartmentId: null,
+    assignedDepartment: null,
     isCustomerPromise: false,
     visibility: TaskVisibility.PARTICIPANTS,
     confidentialityLevel: TaskConfidentialityLevel.NORMAL,
@@ -245,6 +247,7 @@ function fullTask(overrides: Partial<TaskRecord> = {}): TaskRecord {
     dueAt: new Date('2026-06-21T09:00:00.000Z'),
     status: TaskStatus.OPEN,
     stageId: 'stage_open',
+    assignedDepartmentId: null,
     nextActionWhat: 'Call customer',
     nextActionWhoId: 'user_assignee',
     nextActionWhen: new Date('2026-06-21T08:30:00.000Z'),

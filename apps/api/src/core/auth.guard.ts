@@ -28,6 +28,7 @@ export type StaffPrincipal = {
   roleCode: string;
   permissions?: string[];
   branchId: string | null;
+  departmentId?: string | null;
   branchName?: string | null;
   branchNameAr?: string | null;
   branchTimezone?: string | null;

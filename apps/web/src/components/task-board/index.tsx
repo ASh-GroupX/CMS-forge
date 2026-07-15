@@ -13,15 +13,17 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import { formatBoardCount, formatBoardText, taskBoardText } from '../../i18n/staff-task-board';
-import type { BoardCard, BoardStage, MoveTaskCardPayload, MoveTaskCardResult, TaskBoard } from '../../lib/staff-board-api';
+import type { AssignTaskDepartmentResult, BoardCard, BoardStage, MoveTaskCardPayload, MoveTaskCardResult, TaskBoard } from '../../lib/staff-board-api';
 import { BoardCardView, SortableBoardCard } from './board-card';
 import { BoardColumnShell } from './board-column';
 
 export type MoveTaskCardAction = (taskId: string, payload: MoveTaskCardPayload) => Promise<MoveTaskCardResult>;
+export type AssignTaskDepartmentAction = (taskId: string, departmentId: string | null) => Promise<AssignTaskDepartmentResult>;
 type Columns = Record<string, BoardCard[]>;
 type PendingNote = { taskId: string; stageId: string; boardPosition: number; stageName: string; snapshot: Columns };
 
-export function TaskBoardScreen({ board, locale, moveAction, stageManager, state }: {
+export function TaskBoardScreen({ assignDepartmentAction, board, locale, moveAction, stageManager, state }: {
+  assignDepartmentAction?: AssignTaskDepartmentAction;
   board: TaskBoard | null;
   locale: Locale;
   moveAction: MoveTaskCardAction;
@@ -91,6 +93,25 @@ export function TaskBoardScreen({ board, locale, moveAction, stageManager, state
     });
   };
 
+  // B3: department assignment — optimistic badge update with snapshot rollback;
+  // the server action validates, audits, and revalidates the board on success.
+  const assignDepartment = assignDepartmentAction
+    ? (taskId: string, departmentId: string | null, departmentName: string) => {
+        const snapshot = columns;
+        const department = board.departments.find((candidate) => candidate.id === departmentId) ?? null;
+        setColumns(withDepartment(columns, taskId, department));
+        startTransition(async () => {
+          const result = await assignDepartmentAction(taskId, departmentId);
+          if (result.status === 'success') {
+            toast.success(departmentId ? formatBoardText(t.assign.toasts.assigned, { name: departmentName }) : t.assign.toasts.cleared);
+            return;
+          }
+          setColumns(snapshot);
+          toast.error(result.status === 'denied' ? t.assign.toasts.denied : t.assign.toasts.failed);
+        });
+      }
+    : undefined;
+
   const onDragStart = ({ active }: DragStartEvent) => {
     dragSnapshot.current = columns;
     const columnId = findColumn(active.id);
@@ -155,7 +176,7 @@ export function TaskBoardScreen({ board, locale, moveAction, stageManager, state
             return (
               <BoardColumnShell cards={cards} key={stage.id} label={formatBoardText(t.columnLabel, { name: stageName(stage), count: cards.length })} layout={view} stage={stage} count={formatBoardCount(cards.length, t.cardCount)} emptyText={t.columnEmpty} title={stageName(stage)}>
                 <SortableContext items={cards.map((card) => card.id)} strategy={verticalListSortingStrategy}>
-                  {cards.map((card) => <SortableBoardCard card={card} key={card.id} locale={locale} t={t} />)}
+                  {cards.map((card) => <SortableBoardCard card={card} departments={board.departments} key={card.id} locale={locale} onAssignDepartment={assignDepartment} t={t} />)}
                 </SortableContext>
               </BoardColumnShell>
             );
@@ -227,4 +248,16 @@ function cardTitle(columns: Columns, id: UniqueIdentifier): string {
 
 function sameOrder(before: BoardCard[], after: BoardCard[]): boolean {
   return before.length === after.length && before.every((card, index) => card.id === after[index]!.id);
+}
+
+function withDepartment(columns: Columns, taskId: string, department: { id: string; nameEn: string; nameAr: string } | null): Columns {
+  const next: Columns = {};
+  for (const [stageId, cards] of Object.entries(columns)) {
+    next[stageId] = cards.map((card) =>
+      card.id === taskId
+        ? { ...card, assignedDepartmentId: department?.id ?? null, departmentName: department?.nameEn ?? null, departmentNameAr: department?.nameAr ?? null }
+        : card,
+    );
+  }
+  return next;
 }

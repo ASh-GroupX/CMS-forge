@@ -40,14 +40,14 @@ import { TasksService } from './tasks.service.js';
       useFactory: (prisma: PrismaService) => new TasksRelatedRecordsService(prisma),
     },
     {
-      provide: TasksService,
-      inject: [TasksRepository, AuditService, NotificationsService, AdminUsersService, TasksRelatedRecordsService, CommunicationGroupsService],
-      useFactory: (repository: TasksRepository, audit: AuditService, notifications: NotificationsService, users: AdminUsersService, relatedRecords: TasksRelatedRecordsService, groups: CommunicationGroupsService) => new TasksService(repository, audit, notifications, users, relatedRecords, groups),
-    },
-    {
       provide: TasksBoardRepository,
       inject: [PrismaService],
       useFactory: (prisma: PrismaService) => new TasksBoardRepository(prisma),
+    },
+    {
+      provide: TasksService,
+      inject: [TasksRepository, AuditService, NotificationsService, AdminUsersService, TasksRelatedRecordsService, CommunicationGroupsService, TasksBoardRepository],
+      useFactory: (repository: TasksRepository, audit: AuditService, notifications: NotificationsService, users: AdminUsersService, relatedRecords: TasksRelatedRecordsService, groups: CommunicationGroupsService, boardRepository: TasksBoardRepository) => new TasksService(repository, audit, notifications, users, relatedRecords, groups, boardRepository),
     },
     {
       provide: TasksBoardService,

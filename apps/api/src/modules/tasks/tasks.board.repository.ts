@@ -29,6 +29,8 @@ const boardTaskSelect = {
   status: true,
   stageId: true,
   boardPosition: true,
+  assignedDepartmentId: true,
+  assignedDepartment: { select: { nameEn: true, nameAr: true } },
   isCustomerPromise: true,
   visibility: true,
   confidentialityLevel: true,
@@ -45,7 +47,8 @@ export type BoardStageRecord = Prisma.BoardStageGetPayload<{ select: typeof boar
 export type BoardStageTarget = Prisma.BoardStageGetPayload<{ select: typeof boardStageTargetSelect }>;
 export type BoardTaskRecord = Prisma.TaskGetPayload<{ select: typeof boardTaskSelect }>;
 
-export type BoardScopeQuery = { userId: string; branchId: string | null; isManager: boolean; isAdmin: boolean };
+export type BoardScopeQuery = { userId: string; branchId: string | null; departmentId: string | null; isManager: boolean; isAdmin: boolean };
+export type BoardDepartmentRecord = { id: string; nameEn: string; nameAr: string };
 export type MoveTaskData = {
   id: string;
   stageId: string;
@@ -90,6 +93,20 @@ export class TasksBoardRepository {
     });
   }
 
+  // Departments are shared reference data (see MODULE.md): read-only lookups for
+  // B3 assignment validation and the board's assignment control options.
+  async findActiveDepartment(id: string): Promise<{ id: string } | null> {
+    return this.prisma.department.findFirst({ where: { id, isActive: true }, select: { id: true } });
+  }
+
+  async listActiveDepartments(): Promise<BoardDepartmentRecord[]> {
+    return this.prisma.department.findMany({
+      where: { isActive: true },
+      orderBy: { nameEn: 'asc' },
+      select: { id: true, nameEn: true, nameAr: true },
+    });
+  }
+
   // Bulk stage reassignment used when an admin archives a stage with a
   // destination (board-stages module) — runs on the caller's transaction.
   async reassignStage(fromStageId: string, toStageId: string, client: Prisma.TransactionClient): Promise<number> {
@@ -107,6 +124,9 @@ export class TasksBoardRepository {
           { assigneeId: scope.userId },
           { nextActionWhoId: scope.userId },
           { participants: { some: { userId: scope.userId } } },
+          // B3: department members see NORMAL tasks assigned to their department
+          // (mirrors tasks.access.ts isDepartmentMember — keep the two in sync).
+          ...(scope.departmentId ? [{ confidentialityLevel: 'NORMAL' as const, assignedDepartmentId: scope.departmentId }] : []),
           ...(scope.isManager && scope.branchId
             ? [{ confidentialityLevel: 'NORMAL' as const, OR: [{ owner: { branchId: scope.branchId } }, { assignee: { branchId: scope.branchId } }, { nextActionWho: { branchId: scope.branchId } }] }]
             : []),
