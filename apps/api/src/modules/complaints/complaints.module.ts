@@ -22,6 +22,8 @@ import { ComplaintsController } from './complaints.controller.js';
 import { ComplaintFormOptionsService } from './complaint-form-options.service.js';
 import { ComplaintRelationsRepository } from './complaint-relations.repository.js';
 import { ComplaintRelationsService } from './complaint-relations.service.js';
+import { ComplaintsBoardRepository } from './complaints.board.repository.js';
+import { ComplaintsBoardService } from './complaints.board.service.js';
 import { ComplaintsRepository } from './complaints.repository.js';
 import { ComplaintsService } from './complaints.service.js';
 
@@ -68,6 +70,16 @@ import { ComplaintsService } from './complaints.service.js';
         tasks: TasksService,
         groups: CommunicationGroupsService,
       ) => new ComplaintsService(repository, audit, notifications, cases, sla, surveys, tasks, groups),
+    },
+    {
+      provide: ComplaintsBoardRepository,
+      inject: [PrismaService],
+      useFactory: (prisma: PrismaService) => new ComplaintsBoardRepository(prisma),
+    },
+    {
+      provide: ComplaintsBoardService,
+      inject: [ComplaintsBoardRepository, ComplaintsService],
+      useFactory: (repository: ComplaintsBoardRepository, complaints: ComplaintsService) => new ComplaintsBoardService(repository, complaints),
     },
     {
       provide: SESSION_AUTH_SERVICE,

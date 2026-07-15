@@ -11,14 +11,18 @@ SRS IDs: `REQ-RBAC-001`, `UI-SCREEN-001`, `UI-DESIGN-001`,
 
 Execute `docs/CMSS_REVAMP_PLAN.md` (the SSOT — read it first) task by task.
 **Phase A committed (d85d76e + ff41d62); B1 committed (21f5fa9); B2 committed
-(d21a8f7); B3 DONE (uncommitted). Next task: B4** — `GET /complaints/board`:
-TICKETS stage columns from `board_stages`, cards scoped by the existing
-queue rules (server session only), per-card `allowedTransitions` derived
-from `WORKFLOW_TRANSITIONS` in `complaints.service.ts`. Copy the tasks
-board pattern (`tasks.board.{repository,service}.ts` + `dto/board.dto.ts`)
-into the complaints module as new small files (complaints.service.ts is
-large — do NOT grow it); document the read in OpenAPI (additive splice);
-scoping allowed+denied tests.
+(d21a8f7); B3 committed (39bfd82); B4 DONE (uncommitted). Next task: B5** —
+`/complaints/board` page: a transition-aware ticket board that drives the
+existing `POST /complaints/:id/transitions` (never a new state machine).
+Consume `GET /complaints/board` (from B4: `stages`, `columns`, and per-card
+`allowedTransitions: { action, toStatus }[]`). On drag to a column, resolve
+the target column's `mappedComplaintStatus`, find the card's allowed
+transition whose `toStatus` matches, and fire that action; grey columns with
+no matching allowed transition; open a reason/resolution dialog for actions
+that require it (REASON_REQUIRED / RESOLUTION_REQUIRED sets in
+`complaints.service.ts`); surface a 409 conflict state on stale transitions.
+Reuse `apps/web/src/components/task-board/*`; typed client + server action;
+i18n en+ar; visual + a11y proofs + screenshot self-review (en LTR + ar RTL).
 
 - A1 (done): Prisma migration — `BoardStage`, `Task.stageId?`, `Task.boardPosition`,
   seed default TASKS stages.
@@ -40,14 +44,20 @@ scoping allowed+denied tests.
   task-board-dnd` real pointer-drag proof over the hydrated island.
 - B1 (done, 21f5fa9): board-stages CRUD module + 9 TICKETS stage seed.
 - B2 (done, d21a8f7): admin stage manager sheet on the board.
-- B3 (done, uncommitted): `Task.assignedDepartmentId?`; session principal
-  carries departmentId; dept members view/act on NORMAL dept-assigned tasks
-  (access rule + board OR-clause); PATCH/quick-add DTO + validation + audit
-  in new `tasks.update.ts`; board returns departments list; card popover
-  assignment control + grip drag handle (axe fix). tasks 42/42.
-- B4–B6 then follow the SSOT: `GET /complaints/board` + `/complaints/board`
-  page (mapped columns over the existing transition endpoint), card detail
-  drawer.
+- B3 (done, 39bfd82): `Task.assignedDepartmentId?`; session principal carries
+  departmentId; dept members view/act on NORMAL dept-assigned tasks (access rule
+  + board OR-clause); PATCH/quick-add DTO + validation + audit in new
+  `tasks.update.ts`; board returns departments list; card popover assignment
+  control + grip drag handle (axe fix). tasks 42/42.
+- B4 (done, uncommitted): `GET /complaints/board` — new
+  `complaints.board.{repository,service}.ts` + `dto/complaint-board.dto.ts` +
+  controller route (queue guards, session scoping). Reuses `listQueue`
+  (scoping) + `allowedActionsFor` (per-card actions tagged with `toStatus` via a
+  `WORKFLOW_TRANSITIONS` index); TICKETS columns from `board_stages`; terminal
+  columns windowed 14d. OpenAPI spliced; complaints suite 86/86, typecheck,
+  lint, openapi:check Passed. `test/workflow/complaint-board.test.ts`.
+- B5–B6 then follow the SSOT: `/complaints/board` page (mapped columns over the
+  existing transition endpoint), card detail drawer.
 
 Constraints (locked decisions):
 - Ticket stages (Phase B) are mapped columns over the existing complaint

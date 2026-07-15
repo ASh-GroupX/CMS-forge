@@ -13935,3 +13935,64 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
   the department grant is confidentiality-gated so it never widens access to
   CONFIDENTIAL/RESTRICTED tasks; audit metadata carries ids only — no
   secrets, no PII; the departments list exposes reference names only.
+
+
+## B4 — GET /complaints/board (ticket Kanban read) (2026-07-15)
+
+- SRS: REQ-RBAC-001, REQ-COMPLAINT-001, ARCH-WORKFLOW-001,
+  WORKFLOW-MATRIX-001, METHOD-MODULAR-001, METHOD-API-001, METHOD-TEST-001.
+- New files (small, complaints module — complaints.service.ts is large and was
+  NOT grown): `dto/complaint-board.dto.ts` (ComplaintBoardStage /
+  ComplaintBoardTransition{action,toStatus} / ComplaintBoardCard =
+  ComplaintQueueItem + stageId + allowedTransitions / Column / Response);
+  `complaints.board.repository.ts` (`listStages` → active TICKETS `board_stages`,
+  read-only shared reference data, same pattern tasks.board.repository uses);
+  `complaints.board.service.ts` (`ComplaintsBoardService.board` + pure
+  `buildComplaintBoard`).
+- Scoping (server session only): `board()` calls the existing
+  `ComplaintsService.listQueue({ branchId, role })` — identical branch/role
+  scoping as `GET /complaints`; the controller derives branch via
+  `queueBranchId` (ADMIN unrestricted, else the principal branch), role via the
+  principal, and userId from the session. React never filters for privacy.
+- Columns: one per active TICKETS stage from `board_stages`; each complaint is
+  bucketed by the stage mapping its status (preferring `isDefault`, else lowest
+  `position`, else the first stage as fallback so no card is dropped). Column
+  placement is cosmetic — `allowedTransitions` derive from the card's real
+  status, so the backend state machine stays authoritative.
+- Per-card transitions: `allowedActionsFor(card, actor)` (role + owner rules
+  enforced in ComplaintsService) mapped to `{ action, toStatus }` via a
+  module-level `WORKFLOW_TRANSITIONS` index — so B5's board can grey illegal
+  columns and map a drop to the right action without reconstructing the state
+  machine (React never decides complaint state; a drop drives the existing
+  `POST /complaints/:id/transitions`).
+- Terminal columns (CLOSED/REJECTED) are windowed to the last 14 days by
+  `updatedAt` in the board projection so they never grow unbounded; the
+  complaint queue itself is unchanged and keeps every complaint.
+- Route: `@Get('board')` declared BEFORE `@Get(':id')` (route-order shadowing),
+  guards `SessionAuthGuard, PermissionGuard, RbacGuard` +
+  `@Permissions('COMPLAINT_VIEW_BRANCH')` + `@BranchScoped()` (no CSRF on a
+  GET) — the same guard set as the queue `list`. Module wires
+  ComplaintsBoardRepository + ComplaintsBoardService; MODULE.md records the
+  board service and read-only `board_stages`.
+- OpenAPI: additive text splices (never a full rewrite of the hand-formatted
+  canonical) — `/complaints/board` operation + ComplaintBoardStage,
+  ComplaintBoardTransition, ComplaintBoardCard, ComplaintBoardColumn,
+  ComplaintBoardResponse schemas. `openapi:generate` + `openapi:check` Passed.
+- Verification:
+  - Passed: `test:api -- complaints` 86/86 (9 new in
+    `test/workflow/complaint-board.test.ts`: guard metadata; session
+    branch-scope vs admin-unrestricted; queue-filter pass-through;
+    status→stage grouping with default / lowest-position / first-stage
+    fallback and preserved empty columns; manager-allowed vs officer-denied
+    allowedTransitions carrying target statuses; terminal 14-day window;
+    no-`@`/no-PII projection); full `typecheck`; `lint`; `openapi:check`.
+    Fixed the pre-existing `complaints.controller.spec.ts` constructor (4th
+    board-service arg).
+  - Not Run: live server / DB drive (no local DATABASE_URL) — the projection,
+    scoping, transition derivation, and window are covered by unit tests.
+- Security self-check: branch/role/userId derive from the staff session only
+  (never client input); one allowed (branch manager) + one denied (CR officer)
+  transition boundary test; the board reuses the audited queue scoping so it
+  cannot widen reach beyond `GET /complaints`; cards carry no customer PII and
+  only owner `nameEn` (no emails — asserted); reads only, no state change, no
+  secrets logged.

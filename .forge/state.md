@@ -1,8 +1,8 @@
 # Current State
 
-Status: CMSS Kanban revamp — Phase A committed (d85d76e+ff41d62); B1 (21f5fa9) + B2 (d21a8f7) committed; B3 complete (uncommitted)
+Status: CMSS Kanban revamp — Phase A committed (d85d76e+ff41d62); B1 (21f5fa9) + B2 (d21a8f7) + B3 (39bfd82) committed; B4 complete (uncommitted)
 Phase: CMSS Trello-style board revamp — Phase B (ticket board, admin stages, dept assignment)
-Next Task: B4 — GET /complaints/board (TICKETS columns, queue-scoped cards, per-card allowedTransitions)
+Next Task: B5 — /complaints/board page (transition-aware drag over POST /complaints/:id/transitions)
 Model Tier: Opus 4.8 Max or GPT-5.5 Extra High
 
 ## How to use this file
@@ -105,7 +105,7 @@ Prior state history is in .forge/archive/state-archive.md.
   proof-rendered client components (breaks static render — no app router).
   Proofs: api-client 67/67, visual 108, lint, tsc, i18n-lint Passed.
 
-- B3 shipped (uncommitted): `Task.assignedDepartmentId?` + relation + index
+- B3 shipped (39bfd82): `Task.assignedDepartmentId?` + relation + index
   (prisma generate Passed; db:push Not Run). Session principal carries
   `departmentId` (auth repo selects ×2; `staffClaims` helper dedupes claims
   and keeps auth.service.ts under 300; StaffPrincipal/TaskActor extended;
@@ -124,14 +124,39 @@ Prior state history is in .forge/archive/state-archive.md.
   test:web 213/213, visual 108, axe 24, task-board-dnd, lint, typecheck,
   openapi:check, i18n-lint — Passed. Screenshots self-reviewed en+ar.
 
+- B4 shipped (uncommitted): `GET /complaints/board`. New
+  `complaints.board.repository.ts` (`listStages` → active TICKETS
+  `board_stages`, read-only shared reference data) +
+  `complaints.board.service.ts` (`ComplaintsBoardService.board` reuses
+  `ComplaintsService.listQueue` for identical branch/role session scoping and
+  `allowedActionsFor` for per-card actions; pure `buildComplaintBoard` groups
+  by `mappedComplaintStatus` — default, else lowest position, else first stage
+  fallback; terminal CLOSED/REJECTED windowed 14d by `updatedAt`; each action
+  tagged with `toStatus` via a module-level `WORKFLOW_TRANSITIONS` index —
+  complaints.service.ts NOT grown) + `dto/complaint-board.dto.ts`. Controller
+  `@Get('board')` placed BEFORE `@Get(':id')` (route-order shadowing), same
+  guards as queue `list` (`SessionAuthGuard, PermissionGuard, RbacGuard`,
+  `COMPLAINT_VIEW_BRANCH`, `@BranchScoped()`, no CSRF on GET); actor from the
+  session (branch via `queueBranchId` → admins unrestricted, role, userId).
+  Module wires both providers. OpenAPI additive splice (`/complaints/board` +
+  ComplaintBoardStage/Transition/Card/Column/Response). MODULE.md notes the
+  board service + read-only `board_stages`. Tests:
+  `test/workflow/complaint-board.test.ts` (guard metadata, session
+  branch/admin scoping, queue-filter pass-through, status→stage grouping
+  variants, manager-allowed vs officer-denied allowedTransitions with target
+  statuses, terminal window, no-PII). Fixed `complaints.controller.spec.ts`
+  ctor (4th arg). Proofs: complaints suite 86/86, typecheck, lint,
+  openapi:check Passed. Backend read only — no UI (B5).
+
 ## Current Stop
 
-B3 complete and verified in the working tree (uncommitted). Next per SSOT:
-B4 GET /complaints/board (TICKETS stage columns + queue-scoped cards +
-per-card allowedTransitions from WORKFLOW_TRANSITIONS; copy the tasks board
-repo/service pattern into the complaints module — complaints.service.ts is
-large, use new small files), B5 /complaints/board page (transition-aware
-drag over POST /complaints/:id/transitions), B6 card detail drawer, Phase C.
+B4 complete and verified in the working tree (uncommitted; B3 committed as
+39bfd82). Next per SSOT: B5 `/complaints/board` page — transition-aware drag
+that drives the existing `POST /complaints/:id/transitions` (resolve target
+column's `mappedComplaintStatus` → the card's allowed transition whose
+`toStatus` matches → fire; grey columns with no matching transition;
+reason/resolution dialog; 409 conflict state; reuse `components/task-board/*`),
+then B6 card detail drawer, Phase C.
 
 ## Open Carry-Forward / Known Debt
 

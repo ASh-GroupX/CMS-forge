@@ -12,6 +12,10 @@ Agent context manifest. Read this before editing the module.
 ## Public surface
 
 - `ComplaintsService` is the primary exported service.
+- `ComplaintsBoardService` serves the session-scoped ticket Kanban read
+  (`GET /complaints/board`): TICKETS columns from `board_stages`, complaints
+  scoped by the same queue rules, and per-card `allowedTransitions` derived from
+  the backend workflow (never a client state machine).
 - `ComplaintFormOptionsService` is exported only for form option catalogs; public
   callers must use `listPublic()` so staff-only department and scope metadata is
   not exposed.
@@ -33,6 +37,8 @@ Related tables may be read or coordinated through their owning modules once
 those modules exist: `comments`, `attachments`, `audit_logs`, `approvals`, `sla_events`,
 `notifications`, `portal_verifications`, `portal_sessions`, `compensation`,
 `customers`, `vehicles`, `branches`, `categories`, and `departments`.
+`board_stages` is read-only here for ticket board columns (write ownership lives
+in the `board-stages` module).
 
 ## May depend on
 

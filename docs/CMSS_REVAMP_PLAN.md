@@ -207,8 +207,27 @@ assignment (Phase B).**
   board-stages 8/8, api-client 69/69, test:web 213/213, visual 108, axe 24,
   task-board-dnd e2e, lint, typecheck, openapi:check, i18n-lint — all Passed;
   hydrated popover screenshots self-reviewed en LTR + ar RTL.)
-- [ ] **B4**: `GET /complaints/board` — TICKETS stage columns, queue-scoped
+- [x] **B4**: `GET /complaints/board` — TICKETS stage columns, queue-scoped
   cards, per-card `allowedTransitions`; tests.
+  (New `complaints.board.{repository,service}.ts` + `dto/complaint-board.dto.ts`;
+  route added to `complaints.controller.ts` with the same guards as the queue
+  `list` (`SessionAuthGuard, PermissionGuard, RbacGuard`, `COMPLAINT_VIEW_BRANCH`,
+  `@BranchScoped()` — no CSRF on a GET). Board service reuses
+  `ComplaintsService.listQueue` for identical branch/role session scoping and
+  `allowedActionsFor` for per-card actions, each tagged with its target status
+  via a `WORKFLOW_TRANSITIONS` index — so `complaints.service.ts` does not grow
+  and React never reconstructs the state machine. Columns come from active
+  TICKETS `board_stages` (read-only; grouping prefers the default stage, else
+  lowest position, else the first stage as fallback so no card is dropped).
+  Terminal columns (CLOSED/REJECTED) windowed to 14 days by last activity so they
+  never grow unbounded. OpenAPI additive splice (`/complaints/board` +
+  ComplaintBoardStage/Transition/Card/Column/Response), `openapi:generate` +
+  `openapi:check` Passed. Tests in `test/workflow/complaint-board.test.ts`:
+  guard metadata, session branch/admin scoping, queue-filter pass-through,
+  status→stage grouping (default/lowest-position/fallback), manager-allowed vs
+  officer-denied `allowedTransitions` with target statuses, terminal window,
+  no-PII projection — complaints suite 86/86, typecheck, lint, openapi:check
+  Passed. Backend read only — no UI (that is B5).)
 - [ ] **B5**: `/complaints/board` page — transition-aware drag,
   reason/resolution dialog, 409 conflict state.
 - [ ] **B6**: Card detail drawer (both boards) — threaded updates via existing

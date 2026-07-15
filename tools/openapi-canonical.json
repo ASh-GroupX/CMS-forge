@@ -1891,6 +1891,47 @@
         }
       }
     },
+    "/complaints/board": {
+      "get": {
+        "tags": [
+          "Complaints"
+        ],
+        "operationId": "complaintBoardGet",
+        "summary": "Session-scoped ticket Kanban board (stages plus permitted complaints)",
+        "responses": {
+          "200": {
+            "description": "Ticket board columns and cards the session principal may see",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintBoardResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/complaints/{id}": {
       "get": {
         "tags": [
@@ -7835,6 +7876,273 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ComplaintQueueItem"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintBoardStage": {
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "nameEn",
+          "nameAr",
+          "color",
+          "position",
+          "mappedComplaintStatus"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "position": {
+            "type": "integer"
+          },
+          "mappedComplaintStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "MANAGER_REVIEW",
+              "BRANCH_REVIEW",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED",
+              "REOPENED",
+              "REJECTED",
+              null
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintBoardTransition": {
+        "type": "object",
+        "required": [
+          "action",
+          "toStatus"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "SUBMIT",
+              "ACCEPT_INTAKE",
+              "REJECT_AS_INVALID",
+              "APPROVE_AND_ROUTE",
+              "SEND_BACK",
+              "ASSIGN_INVESTIGATION",
+              "RESOLVE_DIRECTLY",
+              "REJECT_AFTER_REVIEW",
+              "ADD_INVESTIGATION_UPDATE",
+              "RESOLVE",
+              "REJECT_AFTER_INVESTIGATION",
+              "CLOSE",
+              "REJECT_RESOLUTION",
+              "REOPEN",
+              "ROUTE_AGAIN"
+            ]
+          },
+          "toStatus": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "MANAGER_REVIEW",
+              "BRANCH_REVIEW",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED",
+              "REOPENED",
+              "REJECTED"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintBoardCard": {
+        "type": "object",
+        "required": [
+          "id",
+          "referenceNumber",
+          "status",
+          "severity",
+          "subject",
+          "branchId",
+          "branchName",
+          "displayTimeZone",
+          "ownerId",
+          "ownerName",
+          "slaState",
+          "slaDueAt",
+          "slaStage",
+          "slaPercentElapsed",
+          "nextAction",
+          "createdAt",
+          "updatedAt",
+          "stageId",
+          "allowedTransitions"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "referenceNumber": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "MANAGER_REVIEW",
+              "BRANCH_REVIEW",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED",
+              "REOPENED",
+              "REJECTED"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "CRITICAL",
+              "HIGH",
+              "MEDIUM",
+              "LOW"
+            ]
+          },
+          "subject": {
+            "type": "string"
+          },
+          "branchId": {
+            "type": "string"
+          },
+          "branchName": {
+            "type": "string"
+          },
+          "displayTimeZone": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ownerName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "slaState": {
+            "type": "string",
+            "enum": [
+              "ON_TRACK",
+              "WARNING",
+              "BREACHED",
+              "CLOSED"
+            ]
+          },
+          "slaDueAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "slaStage": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "slaPercentElapsed": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "nextAction": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stageId": {
+            "type": "string"
+          },
+          "allowedTransitions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplaintBoardTransition"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintBoardColumn": {
+        "type": "object",
+        "required": [
+          "stageId",
+          "cards"
+        ],
+        "properties": {
+          "stageId": {
+            "type": "string"
+          },
+          "cards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplaintBoardCard"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintBoardResponse": {
+        "type": "object",
+        "required": [
+          "stages",
+          "columns"
+        ],
+        "properties": {
+          "stages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplaintBoardStage"
+            }
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplaintBoardColumn"
             }
           }
         },
