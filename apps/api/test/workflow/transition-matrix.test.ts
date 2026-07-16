@@ -359,6 +359,32 @@ test('workflow approve and route persists route fields with history and audit', 
   assert.equal(audits[0]?.branchId, 'branch_service');
 });
 
+test('a failing post-commit side effect never fails the committed transition', async () => {
+  const calls: string[] = [];
+  const throwingSla = {
+    recordDeadlineEvent: async () => { calls.push('sla-attempt'); throw new Error('SLA policy not found'); },
+    recordLifecycleEvent: async () => { calls.push('slaLifecycle'); return {}; },
+  } as never;
+  const service = complaintService(
+    {
+      transaction: async <T>(work: (client: never) => Promise<T>) => { const result = await work({} as never); calls.push('commit'); return result; },
+      updateStatus: async (data) => { calls.push('status'); return { ...complaintStatus({ status: ComplaintStatus.MANAGER_REVIEW }), status: data.toStatus }; },
+      createStatusHistory: async () => { calls.push('history'); },
+    } as unknown as ComplaintsRepository,
+    { record: async () => { calls.push('audit'); } } as unknown as AuditService,
+    notificationSink(calls, []),
+    undefined,
+    throwingSla,
+  );
+
+  // ACCEPT_INTAKE maps to an SLA deadline stage; the SLA write throws AFTER commit.
+  const result = await service.applyTransition(transitionInput(ComplaintStatus.SUBMITTED, ComplaintTransitionAction.ACCEPT_INTAKE, RoleCode.ADMIN));
+
+  assert.equal(result.toStatus, ComplaintStatus.MANAGER_REVIEW); // transition still succeeds
+  assert.ok(calls.includes('commit'), 'transaction committed');
+  assert.ok(calls.includes('sla-attempt'), 'the failing side effect was attempted');
+});
+
 test('workflow approve and route queues notification and SLA only after commit', async () => {
   const calls: string[] = [];
   const queued: unknown[] = [];
