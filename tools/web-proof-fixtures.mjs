@@ -1,3 +1,5 @@
+import { complaintBoardFixture } from './web-proof-board-fixtures.mjs';
+
 export async function proofFetch(input) {
   const path = new URL(String(input)).pathname;
   if (path === '/auth/me') return json({ user: proofPrincipal() });
@@ -36,6 +38,7 @@ export async function proofFetch(input) {
       { id: 'dept_sales', nameEn: 'Sales', nameAr: 'المبيعات' },
     ],
   });
+  if (path === '/complaints/board') return json(complaintBoardFixture());
   if (path === '/tasks/manager-rollup') return json({
     overdueByEmployee: [{ assigneeId: 'usr_proof', assigneeName: 'Proof Admin', count: 2 }],
     dueToday: [proofTask('task_manager_proof', 'TASK-MANAGER-PROOF Release delivery gate')],

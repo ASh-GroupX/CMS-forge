@@ -1,4 +1,4 @@
-import { Bell, Building2, CheckSquare2, ClipboardList, FilePlus2, FolderCog, Gauge, GitBranch, Handshake, History, Inbox, KanbanSquare, Menu, Search, Send, ShieldCheck, UsersRound } from 'lucide-react';
+import { Bell, Building2, CheckSquare2, ClipboardList, Columns3, FilePlus2, FolderCog, Gauge, GitBranch, Handshake, History, Inbox, KanbanSquare, Menu, Search, Send, ShieldCheck, UsersRound } from 'lucide-react';
 import React, { type ReactNode } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { modernUiText } from '../i18n/staff-modern-ui';
@@ -13,6 +13,7 @@ export const staffNavItems = [
   { key: 'sent', Icon: Send, href: '/tasks/sent' },
   { key: 'notifications', Icon: Bell, href: '/notifications' },
   { key: 'queue', Icon: Inbox, href: '/complaints' },
+  { key: 'ticketBoard', Icon: Columns3, href: '/complaints/board' },
   { key: 'manager', Icon: UsersRound, href: '/tasks/manager' },
   { key: 'reports', Icon: ClipboardList, href: '/reports' },
   { key: 'promises', Icon: Handshake, href: '/tasks/promises' },
@@ -29,7 +30,7 @@ export type StaffIdentity = { branch: string; initials: string; name: string; ro
 
 const desktopSections = [
   { key: 'work', items: ['dashboard', 'today', 'board', 'sent', 'notifications'] },
-  { key: 'complaints', items: ['queue', 'manager', 'reports', 'promises', 'handoff', 'create'] },
+  { key: 'complaints', items: ['queue', 'ticketBoard', 'manager', 'reports', 'promises', 'handoff', 'create'] },
   { key: 'administration', items: ['groups', 'admin', 'audit'] },
 ] as const;
 const mobileKeys = ['dashboard', 'today', 'queue', 'notifications'] as const satisfies readonly StaffNavKey[];
@@ -109,4 +110,4 @@ function greetingFor(principal: StaffSessionPrincipal | null, locale: Locale, na
 }
 
 function languageHref(pathname: string, search: string, locale: Locale): string { const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search); params.set('locale', locale); const query = params.toString(); return `${pathname || '/'}${query ? `?${query}` : ''}`; }
-export function isActiveNav(key: StaffNavKey, href: string, activePath: string): boolean { if (!activePath) return false; if (key === 'create') return activePath === '/complaints/new'; if (key === 'detail') return false; if (key === 'queue') return activePath === '/complaints' || (activePath.startsWith('/complaints/') && activePath !== '/complaints/new'); return activePath === href || activePath.startsWith(`${href}/`); }
+export function isActiveNav(key: StaffNavKey, href: string, activePath: string): boolean { if (!activePath) return false; if (key === 'create') return activePath === '/complaints/new'; if (key === 'detail') return false; if (key === 'queue') return activePath === '/complaints' || (activePath.startsWith('/complaints/') && activePath !== '/complaints/new' && activePath !== '/complaints/board'); return activePath === href || activePath.startsWith(`${href}/`); }

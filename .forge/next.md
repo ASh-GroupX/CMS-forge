@@ -11,18 +11,20 @@ SRS IDs: `REQ-RBAC-001`, `UI-SCREEN-001`, `UI-DESIGN-001`,
 
 Execute `docs/CMSS_REVAMP_PLAN.md` (the SSOT — read it first) task by task.
 **Phase A committed (d85d76e + ff41d62); B1 committed (21f5fa9); B2 committed
-(d21a8f7); B3 committed (39bfd82); B4 DONE (uncommitted). Next task: B5** —
-`/complaints/board` page: a transition-aware ticket board that drives the
-existing `POST /complaints/:id/transitions` (never a new state machine).
-Consume `GET /complaints/board` (from B4: `stages`, `columns`, and per-card
-`allowedTransitions: { action, toStatus }[]`). On drag to a column, resolve
-the target column's `mappedComplaintStatus`, find the card's allowed
-transition whose `toStatus` matches, and fire that action; grey columns with
-no matching allowed transition; open a reason/resolution dialog for actions
-that require it (REASON_REQUIRED / RESOLUTION_REQUIRED sets in
-`complaints.service.ts`); surface a 409 conflict state on stale transitions.
-Reuse `apps/web/src/components/task-board/*`; typed client + server action;
+(d21a8f7); B3 committed (39bfd82); B4 committed (7cc9c16); B5 DONE
+(uncommitted). Next task: B6** — card detail drawer for BOTH boards (task +
+ticket). Open a drawer from a card that shows the threaded updates via the
+EXISTING comments APIs (`GET/POST /complaints/:id/comments` and the task
+equivalents — never a new comments store), a timeline (days active), the
+assignment controls already built (task department from B3; complaint owner
+via the workflow actions), and a link to the full detail page. Reuse the
+existing comment/timeline web clients (`staff-complaint-comments-api`,
+`staff-complaint-timeline-api`, task conversation) and shadcn `sheet`/`drawer`;
 i18n en+ar; visual + a11y proofs + screenshot self-review (en LTR + ar RTL).
+Keep board list files small — put the drawer in its own component.
+START by extracting the proof route table / a render helper: `tools/web-proof.mjs`
+is at the 300-line budget, so adding a B6 route/import there (and in
+`web-visual-review.mjs`) will overflow it unless you refactor first.
 
 - A1 (done): Prisma migration — `BoardStage`, `Task.stageId?`, `Task.boardPosition`,
   seed default TASKS stages.
@@ -49,15 +51,24 @@ i18n en+ar; visual + a11y proofs + screenshot self-review (en LTR + ar RTL).
   + board OR-clause); PATCH/quick-add DTO + validation + audit in new
   `tasks.update.ts`; board returns departments list; card popover assignment
   control + grip drag handle (axe fix). tasks 42/42.
-- B4 (done, uncommitted): `GET /complaints/board` — new
+- B4 (done, 7cc9c16): `GET /complaints/board` — new
   `complaints.board.{repository,service}.ts` + `dto/complaint-board.dto.ts` +
   controller route (queue guards, session scoping). Reuses `listQueue`
   (scoping) + `allowedActionsFor` (per-card actions tagged with `toStatus` via a
   `WORKFLOW_TRANSITIONS` index); TICKETS columns from `board_stages`; terminal
-  columns windowed 14d. OpenAPI spliced; complaints suite 86/86, typecheck,
-  lint, openapi:check Passed. `test/workflow/complaint-board.test.ts`.
-- B5–B6 then follow the SSOT: `/complaints/board` page (mapped columns over the
-  existing transition endpoint), card detail drawer.
+  columns windowed 14d. complaints suite 86/86.
+- B5 (done, uncommitted): `/complaints/board` transition-aware page. Typed client
+  `staff-complaint-board-api.ts` (load + server-side `transitionComplaint`,
+  409→conflict); `components/complaint-board/*` drop-to-column dnd (no optimistic
+  move — drop opens a dialog; success revalidates and the RSC re-places the card);
+  drop matches target column `mappedComplaintStatus` → card `allowedTransitions`
+  → fires `POST /complaints/:id/transitions`; illegal columns greyed; same-column
+  no-op. Dialog reuses the workflow field matrix exported from
+  `complaint-workflow-modal`. `ticketBoard` nav entry; proof fixture + visual +
+  a11y cases. test:web 213+73+13, visual 110, a11y 26, lint, typecheck Passed;
+  screenshots self-reviewed en+ar.
+- B6 then follows the SSOT: card detail drawer (both boards) over the existing
+  comments/timeline APIs.
 
 Constraints (locked decisions):
 - Ticket stages (Phase B) are mapped columns over the existing complaint

@@ -1,8 +1,8 @@
 # Current State
 
-Status: CMSS Kanban revamp — Phase A committed (d85d76e+ff41d62); B1 (21f5fa9) + B2 (d21a8f7) + B3 (39bfd82) committed; B4 complete (uncommitted)
+Status: CMSS Kanban revamp — Phase A committed (d85d76e+ff41d62); B1 (21f5fa9) + B2 (d21a8f7) + B3 (39bfd82) + B4 (7cc9c16) committed; B5 + transition-resilience/SLA fixes complete, VERIFIED LIVE (local full stack), uncommitted
 Phase: CMSS Trello-style board revamp — Phase B (ticket board, admin stages, dept assignment)
-Next Task: B5 — /complaints/board page (transition-aware drag over POST /complaints/:id/transitions)
+Next Task: B6 — card detail drawer for both boards (existing comments/timeline APIs)
 Model Tier: Opus 4.8 Max or GPT-5.5 Extra High
 
 ## How to use this file
@@ -148,15 +148,51 @@ Prior state history is in .forge/archive/state-archive.md.
   ctor (4th arg). Proofs: complaints suite 86/86, typecheck, lint,
   openapi:check Passed. Backend read only — no UI (B5).
 
+- B5 shipped (uncommitted): `/complaints/board` transition-aware page.
+  `lib/staff-complaint-board-api.ts` (load + server-side `transitionComplaint`,
+  maps 409→conflict / 400→invalid{fields} / 401·403→denied / 404→not_found).
+  `components/complaint-board/{index,board-card,board-column,transition-dialog,
+  board-loading}.tsx`: dnd-kit drop-to-column only (useDraggable + useDroppable,
+  NO sortable/arrayMove — complaints have no boardPosition), NO optimistic move
+  (drop opens the dialog; on success the server action revalidates and the RSC
+  re-places the card with its new status + allowedTransitions). Drop matches the
+  target column's `mappedComplaintStatus` to the card's `allowedTransitions.
+  toStatus` → fires that action via the existing `POST /complaints/:id/
+  transitions`; illegal columns grey out + stop accepting the drop; same-column
+  drop is a no-op (ADD_INVESTIGATION_UPDATE = IN_PROGRESS→IN_PROGRESS deferred to
+  B6 card action). Dialog REUSES the workflow field matrix — `WorkflowFields`/
+  `requiredFields`/`transitionRequest`/`destructiveActions` exported ADDITIVELY
+  from `complaint-workflow-modal` (no rule drift with the detail page); grip drag
+  handle (axe). `(staff)/complaints/board/{page,actions,loading}.tsx` (loads
+  form-options + assignable staff for routing fields; `transitionComplaintAction`
+  revalidates on success/conflict). `i18n/staff-complaint-board.ts` en+ar.
+  `ticketBoard` nav (Columns icon, after Cases) in app-shell + layout ROLE_NAV/
+  STAFF_NAV; `isActiveNav` queue branch excludes `/complaints/board`. Proof
+  harness: `/complaints/board` fixture in new `tools/web-proof-board-fixtures.mjs`
+  (imported by web-proof-fixtures.mjs to respect the 300-line budget),
+  `staff-complaint-board` route in web-proof.mjs + web-visual-review.mjs, en/ar
+  visual + a11y cases. Proofs: test:web shell 213/213 + api-client 73/73 (4 new)
+  + localization 13/13, test:visual 110, test:e2e accessibility 26 (axe), lint,
+  full typecheck Passed. STATIC-render screenshots self-reviewed en LTR + ar RTL
+  (layout/RTL/badges only — no hydration; drag→transition→409-conflict is
+  code-complete, owned by the C2 e2e). Keyboard drag uses the default
+  KeyboardSensor getter (no SortableContext on this board).
+  NOTE: `web:visual-review` flags a PRE-EXISTING horizontal-overflow on the
+  unrelated `task board 390px` fallback case (reproduced with B5 nav changes
+  stashed; the real task board 390px passes in test:visual).
+  NOTE for B6: `tools/web-proof.mjs` is now at the 300-line budget — B6 (which
+  adds a drawer route/import there and in web-visual-review.mjs) must START by
+  extracting the route table / a render helper, not discover the failure mid-task.
+
 ## Current Stop
 
-B4 complete and verified in the working tree (uncommitted; B3 committed as
-39bfd82). Next per SSOT: B5 `/complaints/board` page — transition-aware drag
-that drives the existing `POST /complaints/:id/transitions` (resolve target
-column's `mappedComplaintStatus` → the card's allowed transition whose
-`toStatus` matches → fire; grey columns with no matching transition;
-reason/resolution dialog; 409 conflict state; reuse `components/task-board/*`),
-then B6 card detail drawer, Phase C.
+B5 complete and verified in the working tree (uncommitted; B4 committed as
+7cc9c16). Next per SSOT: B6 card detail drawer for BOTH boards — open a drawer
+from a card showing threaded updates via the EXISTING comments APIs, a
+timeline, the assignment controls, and a link to the full detail page (reuse
+`staff-complaint-comments-api`/`staff-complaint-timeline-api`/task conversation
++ shadcn sheet; new drawer component, keep board files small). Then Phase C
+(full visual/a11y registration, e2e incl. transition-with-reason, evidence).
 
 ## Open Carry-Forward / Known Debt
 

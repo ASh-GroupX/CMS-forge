@@ -228,8 +228,32 @@ assignment (Phase B).**
   officer-denied `allowedTransitions` with target statuses, terminal window,
   no-PII projection — complaints suite 86/86, typecheck, lint, openapi:check
   Passed. Backend read only — no UI (that is B5).)
-- [ ] **B5**: `/complaints/board` page — transition-aware drag,
+- [x] **B5**: `/complaints/board` page — transition-aware drag,
   reason/resolution dialog, 409 conflict state.
+  (New `lib/staff-complaint-board-api.ts` typed client — `getComplaintBoardLoadResult`
+  + server-side `transitionComplaint` (direct API call, 409→conflict) so a server
+  action can revalidate. `components/complaint-board/{index,board-card,board-column,
+  transition-dialog,board-loading}.tsx`: drop-to-column dnd-kit (useDraggable +
+  useDroppable, no sortable reorder — complaints have no in-column order), no
+  optimistic move (drop opens the dialog; on success the RSC refetches and re-places
+  the card with fresh status + transitions). On drop the target column's
+  `mappedComplaintStatus` is matched to the card's `allowedTransitions.toStatus` →
+  fires that action via the existing `POST /complaints/:id/transitions`; illegal
+  columns grey out and stop accepting the drop; same-column drop is a no-op
+  (ADD_INVESTIGATION_UPDATE stays a B6 card action). The dialog REUSES the workflow
+  field matrix (`WorkflowFields`/`requiredFields`/`transitionRequest`/
+  `destructiveActions` exported additively from `complaint-workflow-modal`) so the
+  reason/resolution/routing rules never drift; 409 shows the conflict state.
+  `(staff)/complaints/board/{page,actions,loading}.tsx` (loads form-options + staff
+  for routing fields; `transitionComplaintAction` revalidates on success/conflict).
+  `i18n/staff-complaint-board.ts` en+ar; `ticketBoard` nav entry (Columns icon,
+  after Cases) with queue active-match fixed. Proof harness: `/complaints/board`
+  fixture (`web-proof-board-fixtures.mjs`), `staff-complaint-board` route +
+  en/ar visual + a11y cases. Proofs: test:web shell 213/213 + api-client 73/73
+  (4 new) + localization 13/13, test:visual 110, test:e2e accessibility 26 (axe),
+  lint, full typecheck — Passed. STATIC-render screenshots self-reviewed en LTR +
+  ar RTL (layout/RTL/badges); the interactive drag→transition→409-conflict flow is
+  code-complete and owned by the C2 Playwright e2e (ticket transition-with-reason).)
 - [ ] **B6**: Card detail drawer (both boards) — threaded updates via existing
   comments APIs, timeline, days-active, assignment controls, link to detail page.
 

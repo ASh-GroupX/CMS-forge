@@ -22,14 +22,16 @@ import {
 export type ComplaintWorkflowFixtureState = 'loading' | 'empty' | 'error' | 'success' | 'conflict' | 'validation';
 
 type SubmitState = ComplaintWorkflowFixtureState | undefined;
-type TransitionField = Exclude<keyof StaffComplaintTransitionRequest, 'status' | 'action'>;
+// Exported so the ticket board's drop dialog (B5) reuses the exact per-action
+// field matrix and i18n instead of drifting a second copy of the workflow rules.
+export type TransitionField = Exclude<keyof StaffComplaintTransitionRequest, 'status' | 'action'>;
 
 const previewActions: ComplaintTransitionAction[] = ['ACCEPT_INTAKE', 'APPROVE_AND_ROUTE', 'SEND_BACK', 'ASSIGN_INVESTIGATION', 'ADD_INVESTIGATION_UPDATE', 'RESOLVE', 'CLOSE', 'REJECT_AS_INVALID', 'REOPEN'];
 const transitionFields: TransitionField[] = ['reason', 'targetBranchId', 'targetDepartmentId', 'ownerId', 'resolutionType', 'resolutionSummary', 'customerCommunicationStatus', 'vehicleDataUnavailableReason'];
 const reasonRequired = new Set<ComplaintTransitionAction>(['APPROVE_AND_ROUTE', 'SEND_BACK', 'ASSIGN_INVESTIGATION', 'CLOSE', 'REOPEN', 'ROUTE_AGAIN', 'REJECT_AS_INVALID', 'REJECT_AFTER_REVIEW', 'REJECT_AFTER_INVESTIGATION', 'REJECT_RESOLUTION']);
 const ownerRequired = new Set<ComplaintTransitionAction>(['APPROVE_AND_ROUTE', 'ASSIGN_INVESTIGATION']);
 const resolutionRequired = new Set<ComplaintTransitionAction>(['RESOLVE', 'RESOLVE_DIRECTLY']);
-const destructiveActions = new Set<ComplaintTransitionAction>(['CLOSE', 'REJECT_AS_INVALID', 'REJECT_AFTER_REVIEW', 'REJECT_AFTER_INVESTIGATION', 'REJECT_RESOLUTION']);
+export const destructiveActions = new Set<ComplaintTransitionAction>(['CLOSE', 'REJECT_AS_INVALID', 'REJECT_AFTER_REVIEW', 'REJECT_AFTER_INVESTIGATION', 'REJECT_RESOLUTION']);
 
 export function ComplaintWorkflowModal({
   allowedActions,
@@ -137,7 +139,7 @@ export function ComplaintWorkflowModal({
   );
 }
 
-function WorkflowFields({ action, locale, options, staff, text, vehicleNeedsUnavailableReason }: { action: ComplaintTransitionAction; locale: Locale; options?: ComplaintFormOptions | null | undefined; staff?: AssignableStaff[] | null | undefined; text: typeof complaintDetailText.en.workflow; vehicleNeedsUnavailableReason: boolean }) {
+export function WorkflowFields({ action, locale, options, staff, text, vehicleNeedsUnavailableReason }: { action: ComplaintTransitionAction; locale: Locale; options?: ComplaintFormOptions | null | undefined; staff?: AssignableStaff[] | null | undefined; text: typeof complaintDetailText.en.workflow; vehicleNeedsUnavailableReason: boolean }) {
   const fields = requiredFields(action, vehicleNeedsUnavailableReason);
   if (fields.length === 0) return <StateBlock message={text.noExtraFields} />;
   return (
@@ -153,7 +155,7 @@ function WorkflowFields({ action, locale, options, staff, text, vehicleNeedsUnav
   );
 }
 
-function requiredFields(action: ComplaintTransitionAction, vehicleNeedsUnavailableReason: boolean): TransitionField[] {
+export function requiredFields(action: ComplaintTransitionAction, vehicleNeedsUnavailableReason: boolean): TransitionField[] {
   return [
     ...(reasonRequired.has(action) ? ['reason' as const] : []),
     ...(action === 'APPROVE_AND_ROUTE' ? ['targetBranchId' as const, 'targetDepartmentId' as const] : []),
@@ -164,7 +166,7 @@ function requiredFields(action: ComplaintTransitionAction, vehicleNeedsUnavailab
   ];
 }
 
-function transitionRequest(action: ComplaintTransitionAction, status: ComplaintStatus, form: FormData): StaffComplaintTransitionRequest {
+export function transitionRequest(action: ComplaintTransitionAction, status: ComplaintStatus, form: FormData): StaffComplaintTransitionRequest {
   const fields: Partial<Record<TransitionField, string>> = {};
   for (const field of transitionFields) {
     const value = fieldText(form, field);

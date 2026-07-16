@@ -12,6 +12,7 @@ import ComplaintDetailPage from '../apps/web/src/app/(staff)/complaints/[id]/pag
 import DashboardPage from '../apps/web/src/app/(staff)/dashboard/page.tsx';
 import DealHandoffPage from '../apps/web/src/app/(staff)/deals/handoff/page.tsx';
 import EmployeeTodayPage from '../apps/web/src/app/(staff)/tasks/today/page.tsx';
+import ComplaintBoardPage from '../apps/web/src/app/(staff)/complaints/board/page.tsx';
 import ManagerControlRoomPage from '../apps/web/src/app/(staff)/tasks/manager/page.tsx';
 import ManagerTaskDetailPage from '../apps/web/src/app/(staff)/tasks/manager/[id]/page.tsx';
 import NewComplaintPage from '../apps/web/src/app/(staff)/complaints/new/page.tsx';
@@ -37,7 +38,7 @@ import { visualCases } from './web-proof-cases.mjs';
 const webRequire = createRequire(new URL('../apps/web/package.json', import.meta.url));
 const React = webRequire('react');
 const { renderToStaticMarkup } = webRequire('react-dom/server');
-const STAFF_PROOF_PATHS = { 'staff-admin': '/admin', 'staff-audit': '/audit', 'staff-complaints': '/complaints', 'staff-complaint-detail': '/complaints/cmp-proof', 'staff-complaint-new': '/complaints/new', 'staff-deal-handoff': '/deals/handoff', 'staff-manager': '/tasks/manager', 'staff-manager-detail': '/tasks/manager/task_manager_proof', 'staff-reports': '/reports', 'staff-today': '/tasks/today', 'staff-task-detail': '/tasks/today/task-proof', 'staff-communication-groups': '/communication-groups' };
+const STAFF_PROOF_PATHS = { 'staff-admin': '/admin', 'staff-audit': '/audit', 'staff-complaints': '/complaints', 'staff-complaint-detail': '/complaints/cmp-proof', 'staff-complaint-new': '/complaints/new', 'staff-deal-handoff': '/deals/handoff', 'staff-manager': '/tasks/manager', 'staff-manager-detail': '/tasks/manager/task_manager_proof', 'staff-reports': '/reports', 'staff-today': '/tasks/today', 'staff-complaint-board': '/complaints/board', 'staff-task-detail': '/tasks/today/task-proof', 'staff-communication-groups': '/communication-groups' };
 const outDir = join('coverage', 'web-visual-review');
 
 rmSync(outDir, { recursive: true, force: true });
@@ -79,6 +80,7 @@ async function routePage(testCase) {
   if (testCase.route === 'staff-manager-detail') return staffFrame(testCase, await ManagerTaskDetailPage({ ...staffProps, params: Promise.resolve({ id: 'task_manager_proof' }) }));
     if (testCase.route === 'staff-reports') return staffFrame(testCase, await ReportsPage(staffProps));
     if (testCase.route === 'staff-today') return staffFrame(testCase, await EmployeeTodayPage(staffProps));
+    if (testCase.route === 'staff-complaint-board') return staffFrame(testCase, await ComplaintBoardPage(staffProps));
     if (testCase.route === 'staff-task-detail') return staffFrame(testCase, React.createElement(TaskConversation, { comments: proofTaskComments(), locale: testCase.locale, task: proofTask() }));
     if (testCase.route === 'staff-communication-groups') return staffFrame(testCase, React.createElement(CommunicationGroups, { data: proofCommunicationGroups(), loadState: 'ready', locale: testCase.locale }));
   if (testCase.route === 'portal-submission') return testCase.params.state

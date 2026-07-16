@@ -13996,3 +13996,141 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
   cannot widen reach beyond `GET /complaints`; cards carry no customer PII and
   only owner `nameEn` (no emails — asserted); reads only, no state change, no
   secrets logged.
+
+
+## B5 — /complaints/board transition-aware ticket page (2026-07-15)
+
+- SRS: REQ-RBAC-001, UI-SCREEN-001, UI-DESIGN-001, REQ-LOCALIZATION-001,
+  ARCH-WORKFLOW-001, WORKFLOW-MATRIX-001, METHOD-TEST-001.
+- Typed client `apps/web/src/lib/staff-complaint-board-api.ts`:
+  `getComplaintBoardLoadResult` (GET /complaints/board, ready/denied/error union,
+  full runtime validation incl. rejecting an unknown transition `toStatus`) and a
+  server-side `transitionComplaint` (direct API call with the forwarded session +
+  CSRF, so a server action can revalidate) mapping 409→`conflict`,
+  400→`invalid{fields}`, 401/403→`denied`, 404→`not_found`.
+- Board components `apps/web/src/components/complaint-board/*`: dnd-kit
+  drop-to-column only (`useDraggable` + `useDroppable`, no sortable/`arrayMove` —
+  complaints carry no in-column order). NO optimistic move: a drop opens the
+  transition dialog; on success the server action revalidates `/complaints/board`
+  and the RSC re-places the card with its new status and `allowedTransitions`
+  (an optimistic move would strand the card with stale transitions, since
+  `allowedTransitions` are a function of status). On drop the target column's
+  `mappedComplaintStatus` is matched to the card's `allowedTransitions.toStatus`
+  → that action fires through the EXISTING `POST /complaints/:id/transitions`
+  (backend state machine never bypassed). Illegal columns grey out and stop
+  accepting the drop; same-column drop is a no-op (ADD_INVESTIGATION_UPDATE,
+  IN_PROGRESS→IN_PROGRESS, is left to the B6 card action, not a board drag).
+- Dialog reuse: `WorkflowFields`, `requiredFields`, `transitionRequest`,
+  `destructiveActions` are exported ADDITIVELY from the committed
+  `complaint-workflow-modal` and reused by the board's transition dialog, so the
+  reason/resolution/routing/owner field matrix and its i18n never drift a second
+  copy. 409 renders the board's conflict state; destructive actions keep the
+  confirmation checkbox. Card keyboard/SR drag lives on a dedicated grip-handle
+  button (no interactive control nested in role="button").
+- Page `apps/web/src/app/(staff)/complaints/board/{page,actions,loading}.tsx`:
+  RSC loader fetches the board + reuses the complaint-detail form-options and
+  assignable-staff catalogs for routing fields; `transitionComplaintAction`
+  ('use server') revalidates on success or conflict. `ticketBoard` nav entry
+  (Columns icon, after Cases) in app-shell groups + layout ROLE_NAV/STAFF_NAV;
+  `isActiveNav` queue branch excludes `/complaints/board`. i18n en+ar in
+  `staff-complaint-board.ts` (RTL-ready; field/action labels reuse
+  staff-complaint-detail's workflow copy).
+- Proof harness: `/complaints/board` fixture in new
+  `tools/web-proof-board-fixtures.mjs` (imported by web-proof-fixtures.mjs to keep
+  it within the 300-line budget), `staff-complaint-board` route in web-proof.mjs
+  and web-visual-review.mjs, en/ar visual + accessibility cases in
+  web-proof-cases.mjs.
+- Verification:
+  - Passed: `test:web` shell 213/213, api-client 73/73 (4 new: scoped GET,
+    denied/error/malformed, transition CSRF+payload, conflict/denied/not-found/
+    validation outcomes), localization 13/13; `test:visual` 110 previews (en+ar
+    ticket board); `test:e2e -- accessibility` 26 previews with axe (en+ar
+    ticket board); `lint`; full `typecheck`.
+  - Screenshots reviewed en LTR + ar RTL are STATIC renders
+    (`renderToStaticMarkup`, no hydration): they verify layout, RTL mirroring,
+    colored stage columns, severity/SLA badges, owner + next-action, grip
+    handles, and horizontal snap-scroll. Keyboard drag uses the default
+    `KeyboardSensor` getter (not the sortable one — this board has no
+    SortableContext).
+  - LIVE browser verification (2026-07-16, local full stack: isolated Docker
+    Postgres+Redis, real API+web, seeded DB, admin login, Chrome automation):
+    the hydrated board rendered real complaints; a real pointer drag
+    Submitted→Manager review resolved to ACCEPT_INTAKE ("Approve" dialog,
+    "Nothing else is needed"); a drag Manager review→Draft resolved to SEND_BACK
+    ("Send back" dialog with the required Reason field) → Confirm → HTTP 201 →
+    success toast "moved to Draft" and the card RE-PLACED in Draft by the RSC
+    revalidate (proving the no-optimism loop end-to-end, the key B5 design).
+    Illegal columns are disabled droppables (a DRAFT card dragged toward Branch
+    review snapped to Submitted, the only legal target). The 409 CONFLICT-state
+    render and the automated transition e2e remain C2 (409 was reproduced over
+    curl but the conflict UI has not been rendered).
+  - BACKEND BUG surfaced by live testing (NOT B5, reproduced via curl with zero
+    B5 involvement): forward SLA-stage transitions (SUBMIT/ACCEPT_INTAKE/…) return
+    HTTP 500 because a post-commit side-effect (`slaService.recordDeadlineEvent`)
+    throws — yet the transition COMMITS first, so the board shows "could not be
+    moved" while the DB state changed (and, since the board only revalidates on
+    success/conflict, the stale card stays). SEND_BACK (skips SLA) returns 201.
+    Contributing: (a) the seed creates no SLA policies → `resolvePolicy` throws;
+    (b) even after inserting matching active policies SUBMIT still 500s (deeper
+    SLA resolve/calculate issue — not chased) and `GET /sla/policies` also 500s;
+    (c) architectural: `await queueWorkflowSideEffects` runs after commit and its
+    errors propagate to the caller, so a post-commit side-effect failure 500s the
+    request despite the committed state — this violates the "side effects enqueue
+    after commit" intent and is the real defect the test exposed, in the EXISTING
+    complaints.service flow. Flagged as separate follow-up tasks (out of B5 scope).
+  - Minor: dnd-kit emits a React hydration mismatch on the drag handle's
+    `aria-describedby` (`DndDescribedBy-0` vs `-1`) under SSR — shared with the
+    committed task board, functionally harmless, fixable via a stable
+    `DndContext id`.
+  - Needs Human Review (pre-existing, not B5): `web:visual-review` flags a
+    horizontal-overflow on the unrelated `task board 390px` fallback case —
+    reproduced with the B5 nav changes stashed; the real task board 390px passes
+    in `test:visual`.
+- Security self-check: the board read and every transition are authorized by the
+  server session (branch/role scoping inherited from B4's `GET /complaints/board`
+  and the existing `POST /complaints/:id/transitions` RBAC); the client never
+  decides state — a drop only proposes an action the backend already listed as
+  allowed, and the backend re-validates role + workflow on apply; CSRF token sent
+  on the transition; no secrets or customer PII on the board cards (owner name
+  only). No new state machine, no client-side privacy filtering.
+
+
+## B5 follow-up — transition resilience + SLA fixes (2026-07-16, from live testing)
+
+Live browser testing of B5 surfaced backend/seed defects (all reproduced via
+curl with no B5 involvement); fixed in order, each verified live end-to-end:
+
+1. Post-commit side effects made NON-FATAL (`complaint-workflow-side-effects.ts`):
+   each notification/SLA/survey effect is isolated behind `safely()` and logged
+   (no payloads — PII), never propagated. A transition that has already committed
+   can no longer 5xx on a post-commit side-effect failure (docs/ARCHITECTURE.md —
+   "side effects enqueue AFTER commit"). Test:
+   `test/workflow/transition-matrix.test.ts` "a failing post-commit side effect
+   never fails the committed transition". complaints 87/87.
+2. SLA module DI fixed (`sla.module.ts`, `sla.controller.ts`): it was the lone
+   module using bare type-based constructor injection (`SlaController.slaService`,
+   `SlaRepository.prisma`), which resolves to `undefined` under esbuild/tsx dev
+   runtimes (no `design:paramtypes` emitted) — the cause of the `GET /sla/policies`
+   500 and the transition side-effect 500. Converted to the codebase's explicit
+   `useFactory`/`inject` + `@Inject` convention (8 other modules already do this).
+   Production (tsc build, emitDecoratorMetadata: true) was unaffected; dev now
+   works. Verified live: `GET /sla/policies` 200 (24 items); `SUBMIT`/
+   `ACCEPT_INTAKE` 201 with a real `DEADLINE_SET`/`INTAKE` sla_event recorded
+   (policy resolved + deadline persisted). sla 37/37.
+3. Default SLA policies seeded (`sla-policies-seed.ts`, wired into `seed.ts`): one
+   global unscoped policy per severity x stage (idempotent), so forward
+   transitions resolve a deadline out of the box; scoped policies override by
+   specificity. Seed now reports "24 SLA policies".
+4. Board self-heals (`(staff)/complaints/board/actions.ts`): `transitionComplaint
+   Action` now also revalidates on `error` (not just success/conflict), so if the
+   backend ever commits-then-5xx the board refetches server truth instead of
+   showing a stale card. web api-client 73/73.
+5. Diagnosability (`core/http-kernel.ts`): `AppExceptionFilter` now logs the stack
+   + correlation id for unexpected (non-domain) errors that were previously
+   swallowed into an opaque 500 — no request data logged. This is what made the
+   above root causes findable.
+
+Live end-to-end proof: the exact `img.png` failure (drag a SUBMITTED ticket to
+Manager review → ACCEPT_INTAKE) now shows the success toast "moved to Manager
+review" and the card re-places via revalidate. Proofs re-run: full typecheck,
+lint, complaints 87/87, sla 37/37, rbac 2/2, web api-client 73/73 — all Passed.
