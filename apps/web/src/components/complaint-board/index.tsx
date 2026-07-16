@@ -14,12 +14,14 @@ import type { ComplaintFormOptions } from '../../lib/staff-complaint-form-option
 import type { ComplaintBoard, ComplaintBoardCard, ComplaintBoardStage, ComplaintTransitionPayload, TransitionComplaintResult } from '../../lib/staff-complaint-board-api';
 import { ComplaintCardView, DraggableComplaintCard } from './board-card';
 import { ComplaintColumnShell } from './board-column';
+import { ComplaintDetailDrawer, type ComplaintCardDetailAction } from './detail-drawer';
 import { TransitionDialog, type PendingDrop } from './transition-dialog';
 
 export type TransitionComplaintAction = (complaintId: string, payload: ComplaintTransitionPayload) => Promise<TransitionComplaintResult>;
 
-export function ComplaintBoardScreen({ board, locale, options, staff, state, transitionAction }: {
+export function ComplaintBoardScreen({ board, detailAction, locale, options, staff, state, transitionAction }: {
   board: ComplaintBoard | null;
+  detailAction: ComplaintCardDetailAction;
   locale: Locale;
   options?: ComplaintFormOptions | null | undefined;
   staff?: AssignableStaff[] | null | undefined;
@@ -32,6 +34,7 @@ export function ComplaintBoardScreen({ board, locale, options, staff, state, tra
   const cardsById = useMemo(() => cardIndex(board), [board]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingDrop | null>(null);
+  const [detailCard, setDetailCard] = useState<ComplaintBoardCard | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -96,7 +99,7 @@ export function ComplaintBoardScreen({ board, locale, options, staff, state, tra
             const { dimmed, disabled } = columnState(stage);
             return (
               <ComplaintColumnShell count={formatBoardCount(cards.length, t.ticketCount)} dimmed={dimmed} disabled={disabled} empty={cards.length === 0} emptyText={t.columnEmpty} key={stage.id} label={formatBoardText(t.columnLabel, { name: stageName(stage), count: cards.length })} stage={stage} title={stageName(stage)}>
-                {cards.map((card) => <DraggableComplaintCard card={card} key={card.id} t={t} />)}
+                {cards.map((card) => <DraggableComplaintCard card={card} key={card.id} onOpen={setDetailCard} t={t} />)}
               </ComplaintColumnShell>
             );
           })}
@@ -112,6 +115,7 @@ export function ComplaintBoardScreen({ board, locale, options, staff, state, tra
         staff={staff}
         submit={transitionAction}
       />
+      <ComplaintDetailDrawer card={detailCard} detailAction={detailAction} locale={locale} onClose={() => setDetailCard(null)} t={t} />
     </section>
   );
 }

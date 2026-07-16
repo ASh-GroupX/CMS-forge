@@ -254,8 +254,26 @@ assignment (Phase B).**
   lint, full typecheck — Passed. STATIC-render screenshots self-reviewed en LTR +
   ar RTL (layout/RTL/badges); the interactive drag→transition→409-conflict flow is
   code-complete and owned by the C2 Playwright e2e (ticket transition-with-reason).)
-- [ ] **B6**: Card detail drawer (both boards) — threaded updates via existing
+- [x] **B6**: Card detail drawer (both boards) — threaded updates via existing
   comments APIs, timeline, days-active, assignment controls, link to detail page.
+  (Done. Shared presentational `CardDetailSheet` shell + two per-board adapters
+  (`complaint-board/detail-drawer`, `task-board/detail-drawer`); the card title is
+  a keyboard-accessible quick-look trigger, distinct from the drag surface (pointer
+  drag only starts past the 6px sensor threshold). Fetch-on-open via read-only
+  server actions (`complaintCardDetailAction`, `taskCardDetailAction`) reusing the
+  already-authorized timeline / task-comments clients — no new read path bypasses
+  scope. Ticket drawer shows status/severity/SLA/owner/branch/days-active + the
+  unified timeline; task drawer shows status/assignee/owner/department/days-active/
+  due + comments; both link to the full detail page for heavy actions (the drop
+  workflow and B3 department control stay on the board). days-active is display
+  arithmetic (ticket) / server-computed (task). i18n en+ar. Proof groundwork:
+  `tools/web-proof-routes.mjs` extracted first so web-proof.mjs (300→169) had room.
+  Passed: web typecheck, `test:web -- api-client` (79, incl. 6 new detail-client
+  cases), `test:visual` (110), accessibility (26), `lint`. Deferred to Phase C: the
+  OPEN drawer renders in a Radix portal that `renderToStaticMarkup` cannot mount,
+  so the open-drawer visual/a11y registration and the click-opens / drag-does-not-
+  open interaction are owned by C1 (visual) + C2 (Playwright e2e) — not yet driven
+  live in this session.)
 
 ### Phase C — Proof & polish
 - [ ] **C1**: Full visual + a11y registration for both boards; screenshot

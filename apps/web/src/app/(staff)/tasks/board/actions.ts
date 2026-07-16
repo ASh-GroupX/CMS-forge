@@ -18,6 +18,7 @@ import {
   type StageWriteResult,
   type UpdateStagePayload,
 } from '../../../../lib/staff-board-stages-api';
+import { getTaskCardDetail, type TaskCardDetail } from '../../../../lib/staff-task-board-detail-api';
 
 export async function moveTaskCardAction(taskId: string, payload: MoveTaskCardPayload): Promise<MoveTaskCardResult> {
   const result = await moveTaskCard(taskId, payload);
@@ -29,6 +30,12 @@ export async function assignTaskDepartmentAction(taskId: string, departmentId: s
   const result = await assignTaskDepartment(taskId, departmentId);
   if (result.status === 'success') revalidatePath('/tasks/board');
   return result;
+}
+
+// Read-only fetch-on-open for the task quick-look drawer (B6). No revalidation —
+// it never mutates; the forwarded session scopes which comments are returned.
+export async function taskCardDetailAction(taskId: string): Promise<TaskCardDetail> {
+  return getTaskCardDetail(taskId);
 }
 
 export async function createBoardStageAction(payload: CreateStagePayload): Promise<StageWriteResult> {

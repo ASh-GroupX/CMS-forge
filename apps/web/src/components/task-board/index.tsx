@@ -16,15 +16,17 @@ import { formatBoardCount, formatBoardText, taskBoardText } from '../../i18n/sta
 import type { AssignTaskDepartmentResult, BoardCard, BoardStage, MoveTaskCardPayload, MoveTaskCardResult, TaskBoard } from '../../lib/staff-board-api';
 import { BoardCardView, SortableBoardCard } from './board-card';
 import { BoardColumnShell } from './board-column';
+import { TaskDetailDrawer, type TaskCardDetailAction } from './detail-drawer';
 
 export type MoveTaskCardAction = (taskId: string, payload: MoveTaskCardPayload) => Promise<MoveTaskCardResult>;
 export type AssignTaskDepartmentAction = (taskId: string, departmentId: string | null) => Promise<AssignTaskDepartmentResult>;
 type Columns = Record<string, BoardCard[]>;
 type PendingNote = { taskId: string; stageId: string; boardPosition: number; stageName: string; snapshot: Columns };
 
-export function TaskBoardScreen({ assignDepartmentAction, board, locale, moveAction, stageManager, state }: {
+export function TaskBoardScreen({ assignDepartmentAction, board, detailAction, locale, moveAction, stageManager, state }: {
   assignDepartmentAction?: AssignTaskDepartmentAction;
   board: TaskBoard | null;
+  detailAction: TaskCardDetailAction;
   locale: Locale;
   moveAction: MoveTaskCardAction;
   stageManager?: ReactNode;
@@ -37,6 +39,7 @@ export function TaskBoardScreen({ assignDepartmentAction, board, locale, moveAct
   const [view, setView] = useState<'board' | 'list'>('board');
   const [activeCard, setActiveCard] = useState<BoardCard | null>(null);
   const [pendingNote, setPendingNote] = useState<PendingNote | null>(null);
+  const [detailCard, setDetailCard] = useState<BoardCard | null>(null);
   const [, startTransition] = useTransition();
   const dragSnapshot = useRef<Columns | null>(null);
 
@@ -176,7 +179,7 @@ export function TaskBoardScreen({ assignDepartmentAction, board, locale, moveAct
             return (
               <BoardColumnShell cards={cards} key={stage.id} label={formatBoardText(t.columnLabel, { name: stageName(stage), count: cards.length })} layout={view} stage={stage} count={formatBoardCount(cards.length, t.cardCount)} emptyText={t.columnEmpty} title={stageName(stage)}>
                 <SortableContext items={cards.map((card) => card.id)} strategy={verticalListSortingStrategy}>
-                  {cards.map((card) => <SortableBoardCard card={card} departments={board.departments} key={card.id} locale={locale} onAssignDepartment={assignDepartment} t={t} />)}
+                  {cards.map((card) => <SortableBoardCard card={card} departments={board.departments} key={card.id} locale={locale} onAssignDepartment={assignDepartment} onOpen={setDetailCard} t={t} />)}
                 </SortableContext>
               </BoardColumnShell>
             );
@@ -185,6 +188,7 @@ export function TaskBoardScreen({ assignDepartmentAction, board, locale, moveAct
         <DragOverlay>{activeCard ? <BoardCardView card={activeCard} dragging locale={locale} t={t} /> : null}</DragOverlay>
       </DndContext>
       <MoveNoteDialog locale={locale} pending={pendingNote} onCancel={() => { if (pendingNote) setColumns(pendingNote.snapshot); setPendingNote(null); }} onConfirm={(note) => { if (!pendingNote) return; const { taskId, stageId, boardPosition, snapshot } = pendingNote; setPendingNote(null); commitMove(taskId, stageId, boardPosition, snapshot, note); }} />
+      <TaskDetailDrawer card={detailCard} detailAction={detailAction} locale={locale} onClose={() => setDetailCard(null)} t={t} />
     </section>
   );
 }

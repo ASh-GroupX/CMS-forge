@@ -1,8 +1,8 @@
 # Current State
 
-Status: CMSS Kanban revamp — Phase A committed (d85d76e+ff41d62); B1 (21f5fa9) + B2 (d21a8f7) + B3 (39bfd82) + B4 (7cc9c16) committed; B5 + transition-resilience/SLA fixes complete, VERIFIED LIVE (local full stack), uncommitted
-Phase: CMSS Trello-style board revamp — Phase B (ticket board, admin stages, dept assignment)
-Next Task: B6 — card detail drawer for both boards (existing comments/timeline APIs)
+Status: CMSS Kanban revamp — Phase A (d85d76e+ff41d62); B1 (21f5fa9) + B2 (d21a8f7) + B3 (39bfd82) + B4 (7cc9c16) + B5 (b77ed9a) + SLA/side-effect fixes (ec54efb) committed; B6.0 route-table extraction committed; B6 card detail drawer complete, uncommitted. PHASE B COMPLETE.
+Phase: CMSS Trello-style board revamp — Phase B DONE → next is Phase C (proof & polish: C1 visual/a11y, C2 Playwright e2e, C3 openapi/lint/coverage + evidence)
+Next Task: C1 — full visual + a11y registration for both boards incl. the OPEN drawer (see .forge/handover-phase-c.md)
 Model Tier: Opus 4.8 Max or GPT-5.5 Extra High
 
 ## How to use this file
@@ -184,15 +184,47 @@ Prior state history is in .forge/archive/state-archive.md.
   adds a drawer route/import there and in web-visual-review.mjs) must START by
   extracting the route table / a render helper, not discover the failure mid-task.
 
+- B6.0 shipped (committed): `tools/web-proof-routes.mjs` — shared route→React
+  element map + fixture helpers extracted from web-proof.mjs (300→169) and
+  web-visual-review.mjs (227→78), both now import `routePage`. De-duplicated a
+  drifted routePage (visual-review had lost the task-board branch). Visual proof
+  110 Passed; lint Passed.
+
+- B6 shipped (uncommitted): card detail quick-look drawer for BOTH boards.
+  Shared presentational `components/board-detail/card-detail-sheet.tsx` (Radix
+  Sheet; header ref+title+badges, 2-col meta grid, read-only updates section,
+  footer link to full detail) + two adapters:
+  `components/complaint-board/detail-drawer.tsx` (status/severity/SLA/owner/
+  branch/days-active + unified timeline via `complaintCardDetailAction` →
+  `lib/staff-complaint-board-detail-api.ts` reusing `fetchComplaintTimeline`) and
+  `components/task-board/detail-drawer.tsx` (status/assignee/owner/department/
+  days-active/due + comments via `taskCardDetailAction` →
+  `lib/staff-task-board-detail-api.ts` reusing `getStaffTaskComments`). Both
+  server actions are read-only (no revalidate), session-scoped — no new read path
+  bypasses authorization. Card TITLE became a keyboard-accessible quick-look
+  trigger button (distinct from the grip/drag surface; pointer drag only starts
+  past the 6px sensor threshold, so a click opens without moving). days-active =
+  display arithmetic (ticket, from card.createdAt) / server-computed (task
+  card.daysActive). i18n `detail.*` en+ar in both board i18n files. Links:
+  ticket → `/complaints/:id`, task → `/tasks/:id` (general, not manager-only).
+  Proofs: web typecheck, `test:web -- api-client` 79/79 (+6 new detail-client
+  cases in `staff-complaint-board-detail-api.test.ts` +
+  `staff-task-board-detail-api.test.ts`), `test:visual` 110, accessibility 26,
+  `lint` — all Passed. NOT driven live this session (stack was down).
+  DEFERRED to Phase C: the OPEN drawer is a Radix portal `renderToStaticMarkup`
+  cannot mount, so open-drawer visual/a11y + click-opens/drag-doesn't-open
+  interaction proofs belong to C1 (visual) + C2 (Playwright e2e).
+
 ## Current Stop
 
-B5 complete and verified in the working tree (uncommitted; B4 committed as
-7cc9c16). Next per SSOT: B6 card detail drawer for BOTH boards — open a drawer
-from a card showing threaded updates via the EXISTING comments APIs, a
-timeline, the assignment controls, and a link to the full detail page (reuse
-`staff-complaint-comments-api`/`staff-complaint-timeline-api`/task conversation
-+ shadcn sheet; new drawer component, keep board files small). Then Phase C
-(full visual/a11y registration, e2e incl. transition-with-reason, evidence).
+Phase B is COMPLETE (B6 done in the working tree, uncommitted at time of
+writing; committed with the B6 push). Next per SSOT: Phase C — C1 full visual +
+a11y registration for both boards incl. the open drawer (drive live or via
+Playwright since the portal won't static-render), C2 Playwright e2e (task drag,
+denied-scope, ticket transition-with-reason, AND the B6 drawer interaction), C3
+openapi:check/boundary lint/i18n-lint/coverage + append evidence.md (SRS IDs
+REQ-RBAC-001, UI-SCREEN-001, UI-DESIGN-001, REQ-LOCALIZATION-001,
+METHOD-TEST-001). Full handover: `.forge/handover-phase-c.md`.
 
 ## Open Carry-Forward / Known Debt
 

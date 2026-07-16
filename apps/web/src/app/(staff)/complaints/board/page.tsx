@@ -4,7 +4,7 @@ import { resolveLocale } from '../../../../i18n/staff-shell';
 import { getAssignableStaff } from '../../../../lib/staff-assignable-staff-api';
 import { getComplaintBoardLoadResult } from '../../../../lib/staff-complaint-board-api';
 import { getComplaintFormOptions } from '../../../../lib/staff-complaint-form-options-api';
-import { transitionComplaintAction } from './actions';
+import { complaintCardDetailAction, transitionComplaintAction } from './actions';
 
 type SearchParams = { locale?: string | string[] };
 
@@ -32,6 +32,7 @@ export default async function ComplaintBoardPage({
   return (
     <ComplaintBoardScreen
       board={result.status === 'ready' ? result.data : null}
+      detailAction={complaintCardDetailAction}
       locale={locale}
       options={options}
       staff={staff}

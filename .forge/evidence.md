@@ -14134,3 +14134,59 @@ Live end-to-end proof: the exact `img.png` failure (drag a SUBMITTED ticket to
 Manager review → ACCEPT_INTAKE) now shows the success toast "moved to Manager
 review" and the card re-places via revalidate. Proofs re-run: full typecheck,
 lint, complaints 87/87, sla 37/37, rbac 2/2, web api-client 73/73 — all Passed.
+
+## B6 — Card detail quick-look drawer, both boards (2026-07-16)
+
+SRS: UI-SCREEN-001, UI-DESIGN-001, REQ-LOCALIZATION-001, REQ-RBAC-001, METHOD-TEST-001
+
+Prerequisite (B6.0, its own commit): `tools/web-proof.mjs` sat at the 300-line
+agentic budget, so the B6 route/import would overflow it. Extracted the shared
+route→React-element map + fixture helpers into `tools/web-proof-routes.mjs`
+(exports `routePage`), imported by both `web-proof.mjs` (300→169) and
+`web-visual-review.mjs` (227→78). This de-duplicated a routePage that had already
+drifted — visual-review had lost the task-board branch. `test:visual` 110 Passed;
+`lint` Passed.
+
+Feature: a read-only quick-look drawer on both Kanban boards — the plain reading
+of the SSOT's "link to detail page" (a quick-look, not a second detail page).
+- Shared presentational shell `components/board-detail/card-detail-sheet.tsx`
+  (shadcn Radix `Sheet`): reference + title + status badge, a 2-column meta grid,
+  a read-only "updates" section (children), and a footer link to the full detail
+  page. Owns no fetching and makes no state decisions (UI-DESIGN-001 — no business
+  logic in components).
+- Two per-board adapters own fetch-on-open + meta:
+  `components/complaint-board/detail-drawer.tsx` (status/severity/SLA/owner/branch/
+  days-active + the unified timeline) and `components/task-board/detail-drawer.tsx`
+  (status/assignee/owner/department/days-active/due + task comments).
+- Fetch-on-open via read-only server actions `complaintCardDetailAction` /
+  `taskCardDetailAction`, backed by thin wrappers
+  `lib/staff-complaint-board-detail-api.ts` (reuses the tested
+  `fetchComplaintTimeline`) and `lib/staff-task-board-detail-api.ts` (reuses
+  `getStaffTaskComments`). Both require the staff session and go through the
+  already-authorized, branch/visibility-scoped endpoints — no new read path
+  bypasses scope (REQ-RBAC-001). Neither action revalidates (pure read).
+- Trigger: the card TITLE became a keyboard-accessible `<button>` quick-look
+  trigger, kept distinct from the grip/drag surface. The dnd-kit PointerSensor
+  uses `activationConstraint.distance: 6`, so a click (no move) opens the drawer
+  while a real drag (move > 6px) suppresses the click — click-opens vs
+  drag-doesn't-open. The drop workflow (ticket) and the B3 department control
+  (task) stay on the board; heavy actions live on the linked detail page.
+- days-active: display arithmetic over the card's `createdAt` (ticket) / the
+  server-computed `card.daysActive` (task). i18n `detail.*` en + ar added to both
+  board i18n files (REQ-LOCALIZATION-001). Links: ticket → `/complaints/:id`,
+  task → `/tasks/:id` (general route, not the manager-only one).
+
+Tests (METHOD-TEST-001): new detail-client unit tests
+`apps/web/test/api-client/staff-complaint-board-detail-api.test.ts` and
+`…/staff-task-board-detail-api.test.ts` — scoped-endpoint + session-cookie
+forwarding, an allowed (ready) case, a denied (no-session, API never called)
+case, and a failed-read (error) / malformed (filtered-empty) case each.
+
+Proofs run: web typecheck, `test:web -- api-client` 79/79 (+6 new), `test:visual`
+110, accessibility 26 (axe), `lint` — all Passed.
+
+Deferred to Phase C (honest label — NOT driven live this session): the OPEN
+drawer renders in a Radix portal that `renderToStaticMarkup` cannot mount, so the
+open-drawer visual + a11y registration and the click-opens / completed-drag-does-
+not-open interaction are owned by C1 (visual/screenshot) and C2 (Playwright e2e).
+The static proofs already exercise the closed board with the new trigger button.

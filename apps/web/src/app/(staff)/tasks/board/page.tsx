@@ -10,6 +10,7 @@ import {
   createBoardStageAction,
   moveTaskCardAction,
   reorderBoardStagesAction,
+  taskCardDetailAction,
   updateBoardStageAction,
 } from './actions';
 
@@ -36,6 +37,7 @@ export default async function TaskBoardPage({
     <TaskBoardScreen
       assignDepartmentAction={assignTaskDepartmentAction}
       board={result.status === 'ready' ? result.data : null}
+      detailAction={taskCardDetailAction}
       locale={locale}
       moveAction={moveTaskCardAction}
       stageManager={canManageStages && result.status === 'ready' ? (

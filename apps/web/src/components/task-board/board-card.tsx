@@ -26,15 +26,24 @@ export function initialsOf(name: string, locale: Locale): string {
   return name.split(/\s+/).slice(0, 2).map((part) => part[0] ?? '').join('').toLocaleUpperCase(locale);
 }
 
-export function BoardCardView({ card, departmentSlot, dragging, dragHandle, locale, t }: { card: BoardCard; departmentSlot?: ReactNode; dragging?: boolean; dragHandle?: ReactNode; locale: Locale; t: TaskBoardText }) {
+export function BoardCardView({ card, departmentSlot, dragging, dragHandle, locale, onOpen, t }: { card: BoardCard; departmentSlot?: ReactNode; dragging?: boolean; dragHandle?: ReactNode; locale: Locale; onOpen?: () => void; t: TaskBoardText }) {
   const assignee = assigneeLabel(card, locale, t.card.assigneeFallback);
+  // The title is the quick-look trigger (keyboard-accessible, distinct from the
+  // drag surface). A pointer drag starts only past the sensor's distance
+  // threshold, so a click here opens the drawer without moving the card (B6).
   return (
     <article
       aria-label={card.title}
       className={`grid gap-2 rounded-lg border border-line-subtle bg-board-card p-3 text-start transition-shadow ${dragging ? 'rotate-3 shadow-drag' : 'shadow-sm hover:shadow-md'}`}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-semibold leading-snug text-content-strong">{card.title}</p>
+        {onOpen ? (
+          <button aria-label={formatBoardText(t.detail.trigger, { title: card.title })} className="min-w-0 text-start text-sm font-semibold leading-snug text-content-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" onClick={onOpen} type="button">
+            {card.title}
+          </button>
+        ) : (
+          <p className="text-sm font-semibold leading-snug text-content-strong">{card.title}</p>
+        )}
         {dragHandle}
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
@@ -70,11 +79,12 @@ export function BoardCardView({ card, departmentSlot, dragging, dragHandle, loca
   );
 }
 
-export function SortableBoardCard({ card, departments, locale, onAssignDepartment, t }: {
+export function SortableBoardCard({ card, departments, locale, onAssignDepartment, onOpen, t }: {
   card: BoardCard;
   departments?: BoardDepartment[] | undefined;
   locale: Locale;
   onAssignDepartment?: AssignDepartmentHandler | undefined;
+  onOpen: (card: BoardCard) => void;
   t: TaskBoardText;
 }) {
   const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({ id: card.id });
@@ -98,7 +108,7 @@ export function SortableBoardCard({ card, departments, locale, onAssignDepartmen
   return (
     <li className={isDragging ? 'opacity-40' : undefined}>
       <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} {...listeners}>
-        <BoardCardView card={card} departmentSlot={departmentSlot} dragHandle={dragHandle} locale={locale} t={t} />
+        <BoardCardView card={card} departmentSlot={departmentSlot} dragHandle={dragHandle} locale={locale} onOpen={() => onOpen(card)} t={t} />
       </div>
     </li>
   );

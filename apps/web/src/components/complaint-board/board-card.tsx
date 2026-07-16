@@ -27,17 +27,29 @@ export function ownerLabel(card: ComplaintBoardCard, fallback: string): string {
   return card.ownerName?.trim() || fallback;
 }
 
-export function ComplaintCardView({ card, dragHandle, dragging, t }: { card: ComplaintBoardCard; dragHandle?: ReactNode; dragging?: boolean; t: ComplaintBoardText }) {
+export function ComplaintCardView({ card, dragHandle, dragging, onOpen, t }: { card: ComplaintBoardCard; dragHandle?: ReactNode; dragging?: boolean; onOpen?: () => void; t: ComplaintBoardText }) {
+  // The reference/subject is the quick-look trigger (keyboard-accessible, distinct
+  // from the drag surface). A pointer drag starts only past the sensor's distance
+  // threshold, so a click here opens the drawer without moving the card (B6).
+  const heading = (
+    <>
+      <p className="font-mono text-xs font-bold text-content-muted">{card.referenceNumber}</p>
+      <p className="mt-0.5 text-sm font-semibold leading-snug text-content-strong">{card.subject}</p>
+    </>
+  );
   return (
     <article
       aria-label={card.referenceNumber}
       className={`grid gap-2 rounded-lg border border-line-subtle bg-board-card p-3 text-start transition-shadow ${dragging ? 'rotate-3 shadow-drag' : 'shadow-sm hover:shadow-md'}`}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="font-mono text-xs font-bold text-content-muted">{card.referenceNumber}</p>
-          <p className="mt-0.5 text-sm font-semibold leading-snug text-content-strong">{card.subject}</p>
-        </div>
+        {onOpen ? (
+          <button aria-label={formatBoardText(t.detail.trigger, { reference: card.referenceNumber })} className="min-w-0 text-start focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" onClick={onOpen} type="button">
+            {heading}
+          </button>
+        ) : (
+          <div className="min-w-0">{heading}</div>
+        )}
         {dragHandle}
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
@@ -60,7 +72,7 @@ export function ComplaintCardView({ card, dragHandle, dragging, t }: { card: Com
   );
 }
 
-export function DraggableComplaintCard({ card, t }: { card: ComplaintBoardCard; t: ComplaintBoardText }) {
+export function DraggableComplaintCard({ card, onOpen, t }: { card: ComplaintBoardCard; onOpen: (card: ComplaintBoardCard) => void; t: ComplaintBoardText }) {
   const { attributes, isDragging, listeners, setNodeRef, transform } = useDraggable({ id: card.id });
   // Pointer/touch drags start anywhere on the card; the keyboard + screen-reader
   // drag semantics live on a dedicated handle button so interactive controls are
@@ -79,7 +91,7 @@ export function DraggableComplaintCard({ card, t }: { card: ComplaintBoardCard; 
   return (
     <li className={isDragging ? 'opacity-40' : undefined}>
       <div ref={setNodeRef} style={{ transform: CSS.Translate.toString(transform) }} {...listeners}>
-        <ComplaintCardView card={card} dragHandle={dragHandle} t={t} />
+        <ComplaintCardView card={card} dragHandle={dragHandle} onOpen={() => onOpen(card)} t={t} />
       </div>
     </li>
   );
