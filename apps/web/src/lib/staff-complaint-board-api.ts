@@ -1,3 +1,4 @@
+import { fieldErrorsFrom } from './staff-error-envelope';
 import { CSRF_COOKIE, hasStaffSessionCookie, incomingCookieHeader, readCookie } from './staff-request-auth';
 import type { ComplaintSeverity, ComplaintStatus, ComplaintTransitionAction } from './staff-complaints-api';
 
@@ -117,7 +118,7 @@ export async function transitionComplaint(
     if (response.status === 401 || response.status === 403) return { status: 'denied' };
     if (response.status === 404) return { status: 'not_found' };
     if (response.status === 409) return { status: 'conflict' };
-    if (response.status === 400) return { status: 'invalid', fields: await invalidFieldsFrom(response) };
+    if (response.status === 400) return { status: 'invalid', fields: await fieldErrorsFrom(response) };
     if (!response.ok) return { status: 'error' };
     return { status: 'success' };
   } catch {
@@ -213,16 +214,6 @@ export function boardCardFrom(card: Partial<ComplaintBoardCard>): ComplaintBoard
 function boardTransitionFrom(item: Partial<ComplaintBoardTransition>): ComplaintBoardTransition | null {
   if (typeof item?.action !== 'string' || !isComplaintStatus(item.toStatus)) return null;
   return { action: item.action as ComplaintTransitionAction, toStatus: item.toStatus };
-}
-
-async function invalidFieldsFrom(response: Response): Promise<string[]> {
-  try {
-    const body = (await response.json()) as { details?: { field?: unknown }[] };
-    if (!Array.isArray(body.details)) return [];
-    return body.details.map((detail) => detail?.field).filter((field): field is string => typeof field === 'string');
-  } catch {
-    return [];
-  }
 }
 
 function isComplaintStatus(value: unknown): value is ComplaintStatus {

@@ -61,7 +61,7 @@ test('stage writes distinguish denied, conflict, not-found, validation, and erro
   assert.deepEqual(await write(async () => jsonResponse({}, 403)), { status: 'denied' });
   assert.deepEqual(await write(async () => jsonResponse({}, 404)), { status: 'not_found' });
   assert.deepEqual(await write(async () => jsonResponse({}, 409)), { status: 'conflict' });
-  assert.deepEqual(await write(async () => jsonResponse({ details: [{ field: 'color' }] }, 400)), { status: 'invalid', fields: ['color'] });
+  assert.deepEqual(await write(async () => jsonResponse({ error: { code: 'VALIDATION_FAILED', message: 'invalid', correlationId: 'req_1', fieldErrors: [{ field: 'color' }] } }, 400)), { status: 'invalid', fields: ['color'] });
   assert.deepEqual(await write(async () => jsonResponse({}, 500)), { status: 'error' });
 });
 

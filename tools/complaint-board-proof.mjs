@@ -85,6 +85,9 @@ try {
   await reasonDialog.waitFor();
   await reasonDialog.locator('textarea[name="reason"]').fill('Routing to service for on-site inspection.');
   await reasonDialog.locator('select').selectOption({ index: 1 }); // first real staff option
+  // Wait for the StaffPicker's onChange to propagate to its hidden ownerId input before
+  // submitting — otherwise, under load, the form can read an empty owner and fail validation.
+  await page.waitForFunction(() => document.querySelector('input[name="ownerId"]')?.value === 'usr_owner');
   await reasonDialog.locator('button[type="submit"]').click();
   await page.waitForFunction(() => window.__transitions.length === 2);
   const assign = (await page.evaluate(() => window.__transitions))[1];

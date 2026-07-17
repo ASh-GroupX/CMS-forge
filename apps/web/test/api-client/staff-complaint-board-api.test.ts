@@ -95,7 +95,7 @@ test('transition distinguishes conflict, denied, not-found, validation, and erro
   // A stale status is a 409 → conflict, the board's conflict state.
   assert.deepEqual(await run(async () => jsonResponse({ code: 'COMPLAINT_INVALID_TRANSITION' }, 409)), { status: 'conflict' });
   assert.deepEqual(
-    await run(async () => jsonResponse({ details: [{ field: 'reason', code: 'REQUIRED' }] }, 400)),
+    await run(async () => jsonResponse({ error: { code: 'VALIDATION_FAILED', message: 'invalid', correlationId: 'req_1', fieldErrors: [{ field: 'reason', code: 'REQUIRED' }] } }, 400)),
     { status: 'invalid', fields: ['reason'] },
   );
   assert.deepEqual(await run(async () => jsonResponse({}, 500)), { status: 'error' });

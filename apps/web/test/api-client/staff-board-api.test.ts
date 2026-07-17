@@ -111,8 +111,10 @@ test('move distinguishes denied, stage-not-found, validation, and error outcomes
   assert.deepEqual(await moveTaskCard('task_1', { stageId: 's', boardPosition: 0 }, { cookieHeader: '' }), { status: 'denied' });
   assert.deepEqual(await move(async () => jsonResponse({}, 403)), { status: 'denied' });
   assert.deepEqual(await move(async () => jsonResponse({}, 404)), { status: 'not_found' });
+  // A WAITING/DONE move without a note returns the real API envelope; the board reads
+  // error.fieldErrors so the island can open the status-note dialog (regression guard).
   assert.deepEqual(
-    await move(async () => jsonResponse({ details: [{ field: 'statusNote', code: 'REQUIRED' }] }, 400)),
+    await move(async () => jsonResponse({ error: { code: 'TASK_STATUS_NOTE_REQUIRED', message: 'note required', correlationId: 'req_1', fieldErrors: [{ field: 'statusNote', code: 'REQUIRED' }] } }, 400)),
     { status: 'invalid', fields: ['statusNote'] },
   );
   assert.deepEqual(await move(async () => jsonResponse({}, 500)), { status: 'error' });
@@ -148,7 +150,7 @@ test('department assignment distinguishes denied, not-found, validation, and err
   assert.deepEqual(await assign(async () => jsonResponse({}, 403)), { status: 'denied' });
   assert.deepEqual(await assign(async () => jsonResponse({}, 404)), { status: 'not_found' });
   assert.deepEqual(
-    await assign(async () => jsonResponse({ details: [{ field: 'assignedDepartmentId', code: 'REQUIRED' }] }, 400)),
+    await assign(async () => jsonResponse({ error: { code: 'VALIDATION_FAILED', message: 'invalid', correlationId: 'req_2', fieldErrors: [{ field: 'assignedDepartmentId', code: 'REQUIRED' }] } }, 400)),
     { status: 'invalid', fields: ['assignedDepartmentId'] },
   );
   assert.deepEqual(await assign(async () => jsonResponse({}, 500)), { status: 'error' });

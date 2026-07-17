@@ -1,3 +1,4 @@
+import { fieldErrorsFrom } from './staff-error-envelope';
 import { CSRF_COOKIE, hasStaffSessionCookie, incomingCookieHeader, readCookie } from './staff-request-auth';
 import type { StaffTaskStatus } from './staff-tasks-api';
 
@@ -104,7 +105,7 @@ async function stageWrite(
     if (response.status === 401 || response.status === 403) return { status: 'denied' };
     if (response.status === 404) return { status: 'not_found' };
     if (response.status === 409) return { status: 'conflict' };
-    if (response.status === 400) return { status: 'invalid', fields: await invalidFieldsFrom(response) };
+    if (response.status === 400) return { status: 'invalid', fields: await fieldErrorsFrom(response) };
     return response.ok ? { status: 'success' } : { status: 'error' };
   } catch {
     return { status: 'error' };
@@ -136,14 +137,4 @@ function adminStageFrom(stage: Partial<AdminBoardStage>): AdminBoardStage | null
     mappedTaskStatus: stage.mappedTaskStatus ?? null,
     mappedComplaintStatus: stage.mappedComplaintStatus ?? null,
   };
-}
-
-async function invalidFieldsFrom(response: Response): Promise<string[]> {
-  try {
-    const body = (await response.json()) as { details?: { field?: unknown }[] };
-    if (!Array.isArray(body.details)) return [];
-    return body.details.map((detail) => detail?.field).filter((field): field is string => typeof field === 'string');
-  } catch {
-    return [];
-  }
 }
