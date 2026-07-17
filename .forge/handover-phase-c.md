@@ -106,6 +106,19 @@ The local stack was down at B6 handoff. To bring it up (all disposable localhost
   `apps/web/src/i18n/staff-task-board.ts` (en + ar).
 - Unit tests: `apps/web/test/api-client/staff-{complaint,task}-board-detail-api.test.ts`
 
+## 4b. Known minor notes for C1 (non-blocking, flag in the screenshot pass)
+
+- **Task drawer header reference slot shows the localized status** ("Open"), because
+  tasks have no reference number. Reads fine in English; check it in the Arabic
+  (mono, RTL) screenshot and adjust the label if it looks odd.
+- **Complaint drawer `error` state is effectively dead code**: `fetchComplaintTimeline`
+  swallows failures → `[]` → `getComplaintCardDetail` always returns `ready`, so the
+  ticket drawer shows "No updates recorded yet." on a failed read while the task
+  drawer shows an explicit error. Asymmetric but intentional-ish; decide in C
+  whether to make the ticket path surface errors too.
+- Live drive already confirmed click-opens / drag-doesn't-open and fetch-on-open on
+  both boards (see evidence.md 2026-07-17) — C2 only needs to formalise it in e2e.
+
 ## 5. Locked conventions (do not relitigate)
 
 - Backend owns all authority; React never decides complaint/task state.
