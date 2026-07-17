@@ -145,8 +145,8 @@ export function WorkflowFields({ action, locale, options, staff, text, vehicleNe
   return (
     <div className="grid gap-3 md:grid-cols-2">
       {fields.map((field) => {
-        if (field === 'targetBranchId') return <OptionField key={field} label={text.fields.targetBranchId} name={field} options={options?.branches ?? []} locale={locale} />;
-        if (field === 'targetDepartmentId') return <OptionField key={field} label={text.fields.targetDepartmentId} name={field} options={options?.departments ?? []} locale={locale} />;
+        if (field === 'targetBranchId') return <OptionField key={field} emptyHint={text.noOptions} label={text.fields.targetBranchId} name={field} options={options?.branches ?? []} locale={locale} />;
+        if (field === 'targetDepartmentId') return <OptionField key={field} emptyHint={text.noOptions} label={text.fields.targetDepartmentId} name={field} options={options?.departments ?? []} locale={locale} />;
         if (field === 'ownerId') return <StaffPicker key={field} label={text.fields.ownerId} locale={locale} name={field} staff={staff} t={text.ownerPicker} />;
         if (field === 'reason' || field === 'resolutionSummary' || field === 'vehicleDataUnavailableReason') return <TextField area key={field} label={text.fields[field]} name={field} />;
         return <TextField key={field} label={text.fields[field]} name={field} />;
@@ -184,8 +184,19 @@ function TextField({ area = false, label, name }: { area?: boolean; label: strin
   );
 }
 
-function OptionField({ label, locale, name, options }: { label: string; locale: Locale; name: TransitionField; options: ComplaintFormOption[] }) {
+function OptionField({ emptyHint, label, locale, name, options }: { emptyHint: string; label: string; locale: Locale; name: TransitionField; options: ComplaintFormOption[] }) {
   const id = `workflow-${name}`;
+  // Graceful empty state: with no options there is nothing to select, so show a
+  // clear hint instead of an unfillable required dropdown. The action's own
+  // validation still blocks submit until a value exists.
+  if (options.length === 0) {
+    return (
+      <div className="grid min-w-0 gap-1">
+        <span className="text-sm font-medium">{label}</span>
+        <p className="rounded-md border border-line-subtle bg-surface-raised px-3 py-2 text-xs text-content-muted" role="status">{emptyHint}</p>
+      </div>
+    );
+  }
   return (
     <Label className="grid min-w-0 gap-1" htmlFor={id}>
       {label}

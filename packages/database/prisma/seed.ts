@@ -28,6 +28,25 @@ async function main(): Promise<void> {
     }),
   ]);
 
+  // ── Departments ──────────────────────────────────────────────────────────
+  // Global (branchId null) so every branch/role can route to them — the ticket
+  // board's APPROVE_AND_ROUTE and the task board's department picker read these.
+  const departmentDefs: { code: string; nameEn: string; nameAr: string }[] = [
+    { code: 'SALES',         nameEn: 'Sales',         nameAr: 'المبيعات' },
+    { code: 'SERVICE',       nameEn: 'Service',       nameAr: 'الصيانة' },
+    { code: 'PARTS',         nameEn: 'Parts',         nameAr: 'قطع الغيار' },
+    { code: 'BODY_PAINT',    nameEn: 'Body & Paint',  nameAr: 'السمكرة والدهان' },
+    { code: 'FINANCE',       nameEn: 'Finance',       nameAr: 'المالية' },
+    { code: 'CUSTOMER_CARE', nameEn: 'Customer Care', nameAr: 'خدمة العملاء' },
+  ];
+  for (const def of departmentDefs) {
+    await prisma.department.upsert({
+      where: { code: def.code },
+      update: {},
+      create: { ...def, isActive: true },
+    });
+  }
+
   // ── Roles ─────────────────────────────────────────────────────────────────
   const roleDefs: { code: RoleCode; nameEn: string; nameAr: string }[] = [
     { code: RoleCode.CR_OFFICER,      nameEn: 'CR Officer',           nameAr: 'موظف علاقات العملاء' },
