@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { formatBoardText, type TaskBoardText } from '../../i18n/staff-task-board';
 import type { Locale } from '../../i18n/staff-shell';
 import type { BoardCard } from '../../lib/staff-board-api';
@@ -50,6 +51,7 @@ export function TaskDetailDrawer({ card, locale, t, detailAction, onClose }: {
 
   return (
     <CardDetailSheet
+      badges={<Badge className="border border-line-subtle bg-surface-raised px-1.5 py-0.5 text-[11px] font-semibold text-content-strong" variant="outline">{t.manage.statuses[card.status]}</Badge>}
       closeLabel={t.detail.close}
       description={t.detail.description}
       detailHref={`/tasks/${card.id}`}
@@ -58,7 +60,6 @@ export function TaskDetailDrawer({ card, locale, t, detailAction, onClose }: {
       meta={meta}
       onOpenChange={(open) => { if (!open) onClose(); }}
       open
-      reference={t.manage.statuses[card.status]}
       title={card.title}
       updatesLabel={t.detail.updates}
     >

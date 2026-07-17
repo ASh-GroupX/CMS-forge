@@ -1,5 +1,5 @@
 import { hasStaffSessionCookie, incomingCookieHeader } from './staff-request-auth';
-import { fetchComplaintTimeline, type ComplaintTimelineItem } from './staff-complaint-timeline-api';
+import { fetchComplaintTimelineResult, type ComplaintTimelineItem } from './staff-complaint-timeline-api';
 
 // Fetch-on-open payload for the ticket board's quick-look drawer (B6). Reuses the
 // authorized timeline endpoint (which already unifies comments, status changes and
@@ -18,12 +18,10 @@ export async function getComplaintCardDetail(
 ): Promise<ComplaintCardDetail> {
   const cookies = cookieHeader ?? await incomingCookieHeader();
   if (!hasStaffSessionCookie(cookies)) return { status: 'denied' };
-  try {
-    const timeline = await fetchComplaintTimeline({ apiUrl, complaintId, cookies, fetchImpl });
-    return { status: 'ready', timeline };
-  } catch {
-    return { status: 'error' };
-  }
+  // A transport/parse failure surfaces as the drawer's error state; a valid-but-empty
+  // timeline stays 'ready' (mirrors the task drawer via getStaffTaskComments → null).
+  const result = await fetchComplaintTimelineResult({ apiUrl, complaintId, cookies, fetchImpl });
+  return result.ok ? { status: 'ready', timeline: result.items } : { status: 'error' };
 }
 
 export type { ComplaintTimelineItem };

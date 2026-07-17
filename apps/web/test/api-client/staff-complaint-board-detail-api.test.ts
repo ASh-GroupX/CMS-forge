@@ -38,12 +38,23 @@ test('card detail denies without a session and never calls the API', async () =>
   assert.deepEqual(result, { status: 'denied' });
 });
 
-test('card detail returns an empty timeline on a non-ok or malformed response (never throws)', async () => {
+test('card detail surfaces an error on a transport/non-ok response (never throws)', async () => {
   assert.deepEqual(
     await getComplaintCardDetail('cmp_1', { cookieHeader: 'cms_staff_session=x', fetchImpl: async () => jsonResponse({}, 500) }),
+    { status: 'error' },
+  );
+  assert.deepEqual(
+    await getComplaintCardDetail('cmp_1', { cookieHeader: 'cms_staff_session=x', fetchImpl: async () => { throw new Error('network'); } }),
+    { status: 'error' },
+  );
+});
+
+test('card detail stays ready with an empty timeline on a valid-but-empty response', async () => {
+  assert.deepEqual(
+    await getComplaintCardDetail('cmp_1', { cookieHeader: 'cms_staff_session=x', fetchImpl: async () => jsonResponse({ items: [] }) }),
     { status: 'ready', timeline: [] },
   );
-  // Non-timeline rows are filtered out by the shared validator.
+  // A valid 200 whose rows all fail the timeline validator is still a successful read.
   assert.deepEqual(
     await getComplaintCardDetail('cmp_1', { cookieHeader: 'cms_staff_session=x', fetchImpl: async () => jsonResponse({ items: [{ id: 'x' }] }) }),
     { status: 'ready', timeline: [] },

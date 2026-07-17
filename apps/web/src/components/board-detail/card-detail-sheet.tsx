@@ -21,7 +21,7 @@ export function CardDetailSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   dir: 'rtl' | 'ltr';
-  reference: string;
+  reference?: string;
   title: string;
   badges?: ReactNode;
   meta: CardDetailMeta[];
@@ -41,7 +41,7 @@ export function CardDetailSheet({
         side={dir === 'rtl' ? 'left' : 'right'}
       >
         <SheetHeader className="space-y-1 border-b border-line-subtle p-5 text-start">
-          <p className="font-mono text-xs font-bold text-content-muted">{reference}</p>
+          {reference ? <p className="font-mono text-xs font-bold text-content-muted">{reference}</p> : null}
           <SheetTitle className="text-base font-bold leading-snug text-content-strong">{title}</SheetTitle>
           <SheetDescription className="text-xs text-content-subtle">{description}</SheetDescription>
           {badges ? <div className="flex flex-wrap items-center gap-1.5 pt-1">{badges}</div> : null}
