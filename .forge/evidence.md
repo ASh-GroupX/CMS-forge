@@ -14185,8 +14185,24 @@ case, and a failed-read (error) / malformed (filtered-empty) case each.
 Proofs run: web typecheck, `test:web -- api-client` 79/79 (+6 new), `test:visual`
 110, accessibility 26 (axe), `lint` — all Passed.
 
-Deferred to Phase C (honest label — NOT driven live this session): the OPEN
-drawer renders in a Radix portal that `renderToStaticMarkup` cannot mount, so the
-open-drawer visual + a11y registration and the click-opens / completed-drag-does-
-not-open interaction are owned by C1 (visual/screenshot) and C2 (Playwright e2e).
-The static proofs already exercise the closed board with the new trigger button.
+Live drive (2026-07-17, real full stack — Postgres:5433 + Redis:6380 + API tsx:3000
++ web next:4000, seeded + bootstrapped admin.local): the open-drawer behaviour was
+driven live in a real browser on BOTH boards and passed:
+- Ticket board `/complaints/board`: clicking CMP-SEED-001's title (not the grip)
+  opened the drawer; fetch-on-open resolved (loading→ready) showing the meta grid
+  (status/severity/SLA/owner/branch/days-active/last-updated) + the timeline
+  empty-state ("No updates recorded yet." — this seed has no timeline events) + the
+  "Open full ticket" link. API mapped `/complaints/:id/timeline`.
+- Task board `/tasks/board`: after reassigning one seed task to admin + inserting a
+  real task comment, clicking the card title opened the drawer; fetch-on-open
+  rendered the actual threaded update (comment body + author + timestamp) alongside
+  the meta grid (status/assignee/owner/department/days-active + due date shown in
+  red for the overdue task) + "Open full task" link.
+- Click-vs-drag: a 342px drag gesture on a card was treated as a drag (past the 6px
+  sensor threshold) and did NOT open the drawer — confirming click-opens /
+  drag-does-not-open.
+
+Still owned by Phase C (unchanged): the STATIC visual + a11y *registration* of the
+open drawer — `renderToStaticMarkup` cannot mount the Radix portal, so C1 must
+capture it via live/Playwright screenshots, and C2 formalises the interaction in
+the e2e suite. The static proofs already exercise the closed board + trigger button.

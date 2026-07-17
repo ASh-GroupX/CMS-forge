@@ -210,10 +210,14 @@ Prior state history is in .forge/archive/state-archive.md.
   Proofs: web typecheck, `test:web -- api-client` 79/79 (+6 new detail-client
   cases in `staff-complaint-board-detail-api.test.ts` +
   `staff-task-board-detail-api.test.ts`), `test:visual` 110, accessibility 26,
-  `lint` — all Passed. NOT driven live this session (stack was down).
-  DEFERRED to Phase C: the OPEN drawer is a Radix portal `renderToStaticMarkup`
-  cannot mount, so open-drawer visual/a11y + click-opens/drag-doesn't-open
-  interaction proofs belong to C1 (visual) + C2 (Playwright e2e).
+  `lint` — all Passed. VERIFIED LIVE (2026-07-17, real stack pg:5433/redis:6380/
+  api tsx:3000/web:4000, seeded + bootstrapped admin.local): both boards' drawers
+  open on card-title click (not drag); fetch-on-open resolves (ticket → timeline
+  empty-state; task → a real inserted comment renders); overdue due-date shows red;
+  a 342px drag does NOT open the drawer.
+  STILL Phase C: the STATIC visual/a11y *registration* of the open drawer (Radix
+  portal can't be `renderToStaticMarkup`-mounted) → C1 (live/Playwright screenshot)
+  + C2 (e2e formalisation).
 
 ## Current Stop
 

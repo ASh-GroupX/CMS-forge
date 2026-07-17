@@ -269,11 +269,13 @@ assignment (Phase B).**
   arithmetic (ticket) / server-computed (task). i18n en+ar. Proof groundwork:
   `tools/web-proof-routes.mjs` extracted first so web-proof.mjs (300→169) had room.
   Passed: web typecheck, `test:web -- api-client` (79, incl. 6 new detail-client
-  cases), `test:visual` (110), accessibility (26), `lint`. Deferred to Phase C: the
-  OPEN drawer renders in a Radix portal that `renderToStaticMarkup` cannot mount,
-  so the open-drawer visual/a11y registration and the click-opens / drag-does-not-
-  open interaction are owned by C1 (visual) + C2 (Playwright e2e) — not yet driven
-  live in this session.)
+  cases), `test:visual` (110), accessibility (26), `lint`. VERIFIED LIVE (real
+  stack): both boards' drawers open on card-title click (not drag), fetch-on-open
+  resolves (ticket → timeline empty-state; task → a real comment renders), overdue
+  due-date shows red, and a drag does not open the drawer. Still owned by Phase C:
+  the STATIC visual/a11y *registration* of the open drawer — `renderToStaticMarkup`
+  cannot mount the Radix portal, so C1 captures it via live/Playwright screenshot
+  and C2 formalises the interaction in the e2e suite.)
 
 ### Phase C — Proof & polish
 - [ ] **C1**: Full visual + a11y registration for both boards; screenshot
