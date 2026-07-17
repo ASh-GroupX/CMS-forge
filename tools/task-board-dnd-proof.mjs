@@ -1,20 +1,14 @@
-// Task board drag & drop e2e proof (docs/CMSS_REVAMP_PLAN.md A8).
-// Bundles the real TaskBoardScreen client island with the proof-board fixture
-// and a recording move action, hydrates it in Chromium, performs a genuine
-// pointer drag between columns, and asserts both the DOM move and the payload
-// the island commits to the server action.
+// Task board drag & drop e2e proof (docs/CMSS_REVAMP_PLAN.md A8; kept as Phase C's
+// "task drag" case). Bundles the real TaskBoardScreen island with the proof-board
+// fixture and a recording move action via the shared hermetic harness, hydrates it
+// in Chromium, performs a genuine pointer drag between columns, and asserts both the
+// DOM move and the payload the island commits to the server action.
 import assert from 'node:assert/strict';
-import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { join, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { compileTailwind } from './web-browser-check.mjs';
+import { join } from 'node:path';
+import { bundleIsland, loadPlaywright, writeBoardPage } from './board-island-harness.mjs';
 import { proofFetch } from './web-proof-fixtures.mjs';
 
 const outDir = join('coverage', 'task-board-dnd');
-rmSync(outDir, { recursive: true, force: true });
-mkdirSync(outDir, { recursive: true });
-
 const board = await (await proofFetch('http://localhost:3000/tasks/board')).json();
 const entry = `
 import React from 'react';
@@ -27,30 +21,18 @@ const moveAction = async (taskId, payload) => {
   const card = board.columns.flatMap((column) => column.cards).find((candidate) => candidate.id === taskId);
   return { status: 'success', card: { ...card, stageId: payload.stageId, boardPosition: payload.boardPosition } };
 };
+const detailAction = async () => ({ status: 'ready', comments: [] });
 createRoot(document.getElementById('root')).render(
-  React.createElement(TaskBoardScreen, { board, locale: 'en', moveAction }),
+  React.createElement(TaskBoardScreen, { board, locale: 'en', moveAction, detailAction }),
 );
 `;
 
-const esbuild = createRequire(import.meta.url)(esbuildPath());
-const bundle = await esbuild.build({
-  bundle: true,
-  define: { 'process.env.NODE_ENV': '"production"' },
-  format: 'iife',
-  jsx: 'automatic',
-  stdin: { contents: entry, loader: 'tsx', resolveDir: resolve('apps/web') },
-  write: false,
-});
-compileTailwind(outDir);
-writeFileSync(join(outDir, 'board.html'), `<!doctype html>
-<html lang="en"><head><meta charset="utf-8" /><title>task board dnd proof</title><link rel="stylesheet" href="./proof.css" /></head>
-<body><div id="root"></div><script>${bundle.outputFiles[0].text}</script></body></html>`);
-
+const url = writeBoardPage(outDir, await bundleIsland(entry), { lang: 'en', dir: 'ltr' });
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 try {
-  await page.goto(pathToFileURL(join(outDir, 'board.html')).href);
+  await page.goto(url);
   const card = page.locator('li', { has: page.getByText('BOARD-PROOF-002', { exact: false }) }).last();
   const targetColumn = page.locator('section', { has: page.getByRole('heading', { name: 'In Progress' }) }).last();
   await card.waitFor();
@@ -79,17 +61,3 @@ try {
   await browser.close();
 }
 console.log('task board dnd proof passed: pointer drag moved the card and committed stage_in_progress');
-
-function esbuildPath() {
-  const pnpmDir = resolve('node_modules', '.pnpm');
-  const entryDir = readdirSync(pnpmDir).find((name) => name.startsWith('esbuild@'));
-  assert.ok(entryDir, 'esbuild package must be installed');
-  return join(pnpmDir, entryDir, 'node_modules', 'esbuild', 'lib', 'main.js');
-}
-
-async function loadPlaywright() {
-  const pnpmDir = resolve('node_modules', '.pnpm');
-  const entryDir = readdirSync(pnpmDir).find((name) => name.startsWith('playwright-core@'));
-  assert.ok(entryDir, 'playwright-core package must be installed');
-  return import(pathToFileURL(join(pnpmDir, entryDir, 'node_modules', 'playwright-core', 'index.mjs')).href);
-}

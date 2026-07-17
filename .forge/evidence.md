@@ -14206,3 +14206,76 @@ Still owned by Phase C (unchanged): the STATIC visual + a11y *registration* of t
 open drawer — `renderToStaticMarkup` cannot mount the Radix portal, so C1 must
 capture it via live/Playwright screenshots, and C2 formalises the interaction in
 the e2e suite. The static proofs already exercise the closed board + trigger button.
+
+---
+
+## Phase C — Proof & polish (2026-07-17)
+SRS: REQ-RBAC-001, UI-SCREEN-001, UI-DESIGN-001, REQ-LOCALIZATION-001, METHOD-TEST-001
+
+### Cosmetic fixes (flagged in the Phase C handover)
+- **Task drawer header:** was passing the localized status into the shared sheet's
+  mono *reference* slot (tasks have no reference number), duplicating the meta-grid
+  status. Made `reference` optional in `components/board-detail/card-detail-sheet.tsx`
+  (the `<p>` renders only when present) and gave the task drawer a status **Badge**
+  (`components/task-board/detail-drawer.tsx`) — visual parity with the ticket drawer.
+  Verified in the ar RTL screenshot: badge "مفتوحة", no orphan mono slot.
+- **Ticket drawer error state was dead code:** `fetchComplaintTimeline` swallowed
+  transport failures → `[]` → `getComplaintCardDetail` always returned `ready`.
+  Added `fetchComplaintTimelineResult` ({ ok:true; items } | { ok:false }) in
+  `lib/staff-complaint-timeline-api.ts`; `fetchComplaintTimeline` now wraps it
+  (existing callers, incl. the full detail page `lib/staff-detail-api.ts`, unchanged).
+  `getComplaintCardDetail` uses the result variant → transport/parse failure now
+  surfaces the drawer's `error` state, mirroring the task drawer's null→error path.
+  Unit test split (`test/api-client/staff-complaint-board-detail-api.test.ts`):
+  transport failure/throw → `error`; valid-but-empty (200, filtered-out rows) → `ready`.
+
+### C1 — visual + a11y registration of the OPEN drawer (both boards, en + ar)
+`tools/board-drawer-proof.mjs` (`test:e2e -- board-drawer`). The B6 drawer is a Radix
+Sheet portal that `renderToStaticMarkup` cannot mount; a hermetic Playwright run
+hydrates the REAL island so the portal mounts for real. For task + complaint × en LTR
++ ar RTL it clicks the card title, asserts the fetch-on-open payload renders, screenshots
+the open drawer (`coverage/board-drawer/<board>-<locale>.png`), and runs live axe
+(no serious/critical). All four screenshots were reviewed: RTL mirrored (drawer on the
+left, meta grid mirrored), status badge correct, overdue due-date red, timeline/comment
+rendered. Passed: task-en, task-ar, complaint-en, complaint-ar.
+
+### C2 — Playwright e2e (hermetic island harness)
+Shared `tools/board-island-harness.mjs` (esbuild-bundles a real island + fixture +
+recording stub actions; shims `process` so `next/link`/client-api imports don't throw;
+compiles the proof Tailwind; hydrates in Chromium). Cases:
+- **Task drag** — `tools/task-board-dnd-proof.mjs` (`test:e2e -- task-board-dnd`):
+  real pointer drag moves the card and commits `stage_in_progress` + a non-negative
+  position. (Migrated onto the shared harness; it was silently broken since B6 added
+  `next/link` to the bundle graph without the `process` shim — now fixed + passing.)
+- **Denied-scope** — `tools/complaint-board-proof.mjs` (`test:e2e -- complaint-board`):
+  a SUBMITTED ticket may only go to MANAGER_REVIEW/REJECTED. During a real drag the
+  IN_PROGRESS column is `aria-disabled` and never shows the drop highlight (inert,
+  driven by the card's server-computed `allowedTransitions`, not an ad-hoc flag),
+  while the one legal column stays enabled; invariant asserted that the scoped ticket
+  only ever commits its allowed transition. NOTE (honest scope): this proves the client
+  HONOURS server-scoped permissions; that the server COMPUTES/withholds transitions by
+  role/branch is proven in the API suite (`apps/api .../workflow/complaint-board.test.ts`
+  — manager-allowed vs officer-denied allowedTransitions; board session scoping).
+- **Ticket transition-with-reason** — same file: dragging a BRANCH_REVIEW ticket to
+  IN_PROGRESS opens the ASSIGN_INVESTIGATION dialog; filling the reason textarea +
+  picking an owner commits `{ action: ASSIGN_INVESTIGATION, reason, ownerId }` through
+  the existing `POST /complaints/:id/transitions` server-action path (client never
+  decides state). Paired legal ACCEPT_INTAKE drop on the SAME board opens + commits.
+- **Drawer interaction** — `tools/board-drawer-proof.mjs`: click-a-card-title OPENS the
+  drawer and renders fetch-on-open; a completed DRAG (past the 6px sensor threshold)
+  does NOT open the drawer (asserted via absence of the drawer's fetch-on-open payload,
+  since a complaint drag legitimately opens the transition dialog — the precise
+  discriminator for "the trigger click was suppressed").
+
+### C3 — gates (run 2026-07-17, labelled honestly)
+- `typecheck` — Passed. `lint` (boundary + budget; new tool files 70/109/103 lines) — Passed.
+- `openapi:check` — Passed (no route changes in Phase C).
+- `test` (tools coverage) — 59/59 Passed; overall 93.11% lines / 83.77% functions /
+  91.83% branches (thresholds 80/75/65). e2e proof scripts aren't loaded by the unit
+  runner so they don't enter the coverage denominator.
+- `test:web` — 213/213 Passed (includes the localization suite). `test:visual` — 110 Passed.
+  `test:e2e -- accessibility` (static axe) — 26 Passed.
+- e2e: `task-board-dnd`, `complaint-board`, `board-drawer` — all Passed.
+- i18n-lint: no separate script exists; no user-facing strings were added or changed
+  (fixes reuse existing `t.manage.statuses` / `t.detail.*` keys). Localization coverage
+  via `test:web`. Labelled: Not Run (no such script) / covered by `test:web`.

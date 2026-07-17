@@ -278,13 +278,21 @@ assignment (Phase B).**
   and C2 formalises the interaction in the e2e suite.)
 
 ### Phase C — Proof & polish
-- [ ] **C1**: Full visual + a11y registration for both boards; screenshot
-  review vs Trello-style golden.
-- [ ] **C2**: Playwright e2e — task drag, denied-scope case, ticket
-  transition-with-reason case.
-- [ ] **C3**: `openapi:check`, boundary lint, i18n-lint, coverage; update
-  `.forge/evidence.md` (SRS IDs: REQ-RBAC-001, UI-SCREEN-001, UI-DESIGN-001,
-  REQ-LOCALIZATION-001, METHOD-TEST-001), `next.md`, `state.md`.
+- [x] **C1**: Full visual + a11y registration for both boards incl. the OPEN
+  drawer (hermetic Playwright hydrates the real island so the Radix Sheet portal
+  mounts — `tools/board-drawer-proof.mjs`); en LTR + ar RTL screenshots reviewed
+  vs the Trello-style golden + live axe on the open drawer. Cosmetic fixes landed:
+  task drawer now shows a status **badge** (was a mono reference-slot label);
+  ticket drawer now surfaces a real fetch error state (was dead code).
+- [x] **C2**: Playwright e2e (hermetic island harness `tools/board-island-harness.mjs`):
+  task drag (`task-board-dnd`), denied-scope + ticket transition-with-reason
+  (`complaint-board`), and the drawer interaction — click-opens / drag-does-NOT-open /
+  fetch-on-open (`board-drawer`). Denial flows through server-computed
+  `allowedTransitions`; server-side scope withholding stays proven in the API suite.
+- [x] **C3**: `openapi:check`, boundary lint, coverage `test`, `typecheck`,
+  `test:web`, `test:visual`, static `accessibility` — all Passed; evidence appended
+  (SRS IDs: REQ-RBAC-001, UI-SCREEN-001, UI-DESIGN-001, REQ-LOCALIZATION-001,
+  METHOD-TEST-001), `next.md` + `state.md` refreshed.
 
 ## 4. Verification (run, never assume; label honestly)
 

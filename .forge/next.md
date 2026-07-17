@@ -1,8 +1,8 @@
 # CMSS Trello-Style Board Revamp — Phase A
 
-Status: Plan approved; SSOT created at `docs/CMSS_REVAMP_PLAN.md`
+Status: Phases A + B + C COMPLETE (uncommitted working tree). SSOT `docs/CMSS_REVAMP_PLAN.md` fully ticked.
 Required model tier: Opus 4.8 Max or GPT-5.5 Extra High
-Phase: CMSS Kanban revamp — Phase A (task board with drag & drop)
+Phase: CMSS Kanban revamp — Phase C (proof & polish) DONE. Next: commit the branch / open PR (human gate), then deploy carry-forward.
 Risk: High (RBAC scoping, workflow-adjacent state changes, schema migration)
 SRS IDs: `REQ-RBAC-001`, `UI-SCREEN-001`, `UI-DESIGN-001`,
 `REQ-LOCALIZATION-001`, `METHOD-TEST-001`
@@ -13,7 +13,17 @@ Execute `docs/CMSS_REVAMP_PLAN.md` (the SSOT — read it first) task by task.
 **Phase A committed (d85d76e + ff41d62); B1 (21f5fa9); B2 (d21a8f7); B3
 (39bfd82); B4 (7cc9c16); B5 (b77ed9a); img.png SLA-DI + side-effect fixes
 (ec54efb); B6.0 proof route-table extraction (committed); B6 card detail
-drawer DONE (uncommitted). Phase B is COMPLETE. Next: Phase C (C1/C2/C3).**
+drawer + f8f6b54 handover committed. Phase C (C1/C2/C3) DONE — cosmetic fixes
+committed as 175e22a; proof tooling + docs uncommitted. PHASES A + B + C ALL COMPLETE.**
+
+Phase C delivered (uncommitted): two handover cosmetic fixes (task drawer status
+badge; ticket drawer live error state) + hermetic Playwright e2e via new
+`tools/board-island-harness.mjs` — `board-drawer-proof.mjs` (C1 open-drawer
+screenshots en+ar both boards + live axe; C2 click-opens/drag-doesn't-open/
+fetch-on-open), `complaint-board-proof.mjs` (denied-scope + transition-with-reason),
+and `task-board-dnd-proof.mjs` migrated onto the harness (fixes a silent post-B6
+`process`/next-link bundle break). All gates Passed; evidence appended. See below
+for the historical Phase A/B task log.
 
 Phase C is proof & polish only — no new feature code:
 - **C1**: full visual + a11y registration for BOTH boards (task + ticket),

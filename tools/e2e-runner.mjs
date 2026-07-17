@@ -49,7 +49,17 @@ if (mode === 'task-board-dnd') {
   process.exit(0);
 }
 
-console.error('Use one of: visual, accessibility, perf, ui-smoke, runtime-smoke, customer-portal-track, customer-portal-submit, complaint-workflow, attachments, work-queues, task-board-dnd.');
+if (mode === 'complaint-board') {
+  run('node', ['--import', 'tsx', 'tools/complaint-board-proof.mjs']);
+  process.exit(0);
+}
+
+if (mode === 'board-drawer') {
+  run('node', ['--import', 'tsx', 'tools/board-drawer-proof.mjs']);
+  process.exit(0);
+}
+
+console.error('Use one of: visual, accessibility, perf, ui-smoke, runtime-smoke, customer-portal-track, customer-portal-submit, complaint-workflow, attachments, work-queues, task-board-dnd, complaint-board, board-drawer.');
 process.exit(1);
 
 function run(command, args) {

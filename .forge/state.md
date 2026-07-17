@@ -1,8 +1,8 @@
 # Current State
 
-Status: CMSS Kanban revamp — Phase A (d85d76e+ff41d62); B1 (21f5fa9) + B2 (d21a8f7) + B3 (39bfd82) + B4 (7cc9c16) + B5 (b77ed9a) + SLA/side-effect fixes (ec54efb) committed; B6.0 route-table extraction committed; B6 card detail drawer complete, uncommitted. PHASE B COMPLETE.
-Phase: CMSS Trello-style board revamp — Phase B DONE → next is Phase C (proof & polish: C1 visual/a11y, C2 Playwright e2e, C3 openapi/lint/coverage + evidence)
-Next Task: C1 — full visual + a11y registration for both boards incl. the OPEN drawer (see .forge/handover-phase-c.md)
+Status: CMSS Kanban revamp — Phase A (d85d76e+ff41d62); B1–B6 + handover committed through f8f6b54; PHASE C (C1/C2/C3) COMPLETE in the working tree (uncommitted). PHASES A + B + C ALL DONE.
+Phase: CMSS Trello-style board revamp — Phase C (proof & polish) DONE → next is a human gate (commit branch / open PR), then the deploy carry-forward.
+Next Task: Commit `feat/cmss-task-board` / open PR (human decision), then deploy secrets + `production` branch + prod smoke.
 Model Tier: Opus 4.8 Max or GPT-5.5 Extra High
 
 ## How to use this file
@@ -219,16 +219,41 @@ Prior state history is in .forge/archive/state-archive.md.
   portal can't be `renderToStaticMarkup`-mounted) → C1 (live/Playwright screenshot)
   + C2 (e2e formalisation).
 
+- Phase C shipped: proof & polish, no new feature routes. The two handover
+  cosmetic fixes are COMMITTED as 175e22a (5 apps/web files); the proof tooling +
+  docs/evidence/state/next remain uncommitted in the working tree.
+  Two handover cosmetic fixes: (1) task drawer header now renders a status
+  **Badge** instead of stuffing the status into the shared sheet's mono
+  reference slot — `reference` made optional in
+  `components/board-detail/card-detail-sheet.tsx`, badge added in
+  `components/task-board/detail-drawer.tsx`; (2) ticket drawer error state was
+  dead code — added `fetchComplaintTimelineResult` in
+  `lib/staff-complaint-timeline-api.ts` ({ok:true;items}|{ok:false}),
+  `fetchComplaintTimeline` now wraps it (full detail page path unchanged),
+  `getComplaintCardDetail` surfaces transport failure as `error` (test split:
+  failure→error, valid-empty→ready). Hermetic Playwright e2e on a new shared
+  harness `tools/board-island-harness.mjs` (esbuild-bundles a real island +
+  fixture + recording stub actions, shims `process` so `next/link` imports don't
+  throw, hydrates in Chromium so the Radix Sheet portal actually mounts):
+  `board-drawer-proof.mjs` (C1 open-drawer screenshots en+ar both boards + live
+  axe; C2 click-opens/drag-doesn't-open/fetch-on-open), `complaint-board-proof.mjs`
+  (denied-scope via server-computed `allowedTransitions` + transition-with-reason
+  ASSIGN_INVESTIGATION), and `task-board-dnd-proof.mjs` migrated onto the harness
+  (this also fixed a silent post-B6 `process is not defined` bundle break — B6
+  added `next/link` via the drawer but never re-ran the dnd proof). Screenshots
+  self-reviewed en LTR + ar RTL. Gates: typecheck, lint, openapi:check, test 59/59
+  (93.11% lines), test:web 213/213, test:visual 110, static accessibility 26, and
+  e2e task-board-dnd + complaint-board + board-drawer — all Passed. Evidence
+  appended (Phase C section). Denied-scope caveat: the e2e proves the client
+  HONOURS server scope; server withholding by role/branch stays proven in the API
+  suite (workflow/complaint-board.test.ts).
+
 ## Current Stop
 
-Phase B is COMPLETE (B6 done in the working tree, uncommitted at time of
-writing; committed with the B6 push). Next per SSOT: Phase C — C1 full visual +
-a11y registration for both boards incl. the open drawer (drive live or via
-Playwright since the portal won't static-render), C2 Playwright e2e (task drag,
-denied-scope, ticket transition-with-reason, AND the B6 drawer interaction), C3
-openapi:check/boundary lint/i18n-lint/coverage + append evidence.md (SRS IDs
-REQ-RBAC-001, UI-SCREEN-001, UI-DESIGN-001, REQ-LOCALIZATION-001,
-METHOD-TEST-001). Full handover: `.forge/handover-phase-c.md`.
+PHASES A + B + C ALL COMPLETE. Phase C is done in the working tree (uncommitted).
+Next is a human gate: commit `feat/cmss-task-board` / open the PR, then the
+long-standing deploy carry-forward (deploy secrets + `production` branch + prod
+smoke). No open feature work remains on the CMSS Kanban revamp.
 
 ## Open Carry-Forward / Known Debt
 
