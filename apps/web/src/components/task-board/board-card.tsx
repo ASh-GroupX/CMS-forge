@@ -79,22 +79,26 @@ export function BoardCardView({ card, departmentSlot, dragging, dragHandle, loca
   );
 }
 
-export function SortableBoardCard({ card, departments, locale, onAssignDepartment, onOpen, t }: {
+export function SortableBoardCard({ card, departments, dragDisabled = false, locale, onAssignDepartment, onOpen, t }: {
   card: BoardCard;
   departments?: BoardDepartment[] | undefined;
+  dragDisabled?: boolean;
   locale: Locale;
   onAssignDepartment?: AssignDepartmentHandler | undefined;
   onOpen: (card: BoardCard) => void;
   t: TaskBoardText;
 }) {
-  const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({ id: card.id });
+  const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({ id: card.id, disabled: dragDisabled });
   const departmentSlot = departments && onAssignDepartment
     ? <CardDepartmentControl card={card} departments={departments} locale={locale} onAssign={onAssignDepartment} t={t} />
     : undefined;
   // Pointer/touch drags start anywhere on the card (listeners on the wrapper),
   // but the keyboard + screen-reader drag semantics live on a dedicated handle
   // button so interactive card controls are never nested inside role="button".
-  const dragHandle = (
+  // Done cards are drag-locked (dragDisabled): reopening a completed task needs a
+  // fresh next action, which is set from the task detail page — so the grip and
+  // pointer listeners are omitted; the title (quick-look) and controls still work.
+  const dragHandle = dragDisabled ? undefined : (
     <button
       aria-label={formatBoardText(t.card.dragHandle, { title: card.title })}
       className="-me-1 -mt-1 shrink-0 cursor-grab rounded-md p-1 text-content-subtle transition-colors hover:text-content-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
@@ -107,7 +111,7 @@ export function SortableBoardCard({ card, departments, locale, onAssignDepartmen
   );
   return (
     <li className={isDragging ? 'opacity-40' : undefined}>
-      <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} {...listeners}>
+      <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} {...(dragDisabled ? {} : listeners)}>
         <BoardCardView card={card} departmentSlot={departmentSlot} dragHandle={dragHandle} locale={locale} onOpen={() => onOpen(card)} t={t} />
       </div>
     </li>

@@ -5,7 +5,7 @@ import {
   type Announcements, type DragEndEvent, type DragOverEvent, type DragStartEvent, type UniqueIdentifier,
 } from '@dnd-kit/core';
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import React, { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState, useTransition, type ReactNode } from 'react';
 import { toast, Toaster } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -42,6 +42,9 @@ export function TaskBoardScreen({ assignDepartmentAction, board, detailAction, l
   const [detailCard, setDetailCard] = useState<BoardCard | null>(null);
   const [, startTransition] = useTransition();
   const dragSnapshot = useRef<Columns | null>(null);
+  // Stable DndContext id so dnd-kit's DndDescribedBy aria id matches between the
+  // server render and hydration (its fallback is a module counter → mismatch).
+  const dndContextId = useId();
 
   useEffect(() => { setColumns(columnsFrom(board)); }, [board]);
 
@@ -172,14 +175,14 @@ export function TaskBoardScreen({ assignDepartmentAction, board, detailAction, l
         </div>
         </div>
       </header>
-      <DndContext accessibility={{ announcements, screenReaderInstructions: { draggable: t.a11y.instructions } }} collisionDetection={closestCorners} onDragCancel={() => { if (dragSnapshot.current) setColumns(dragSnapshot.current); dragSnapshot.current = null; setActiveCard(null); }} onDragEnd={onDragEnd} onDragOver={onDragOver} onDragStart={onDragStart} sensors={sensors}>
+      <DndContext accessibility={{ announcements, screenReaderInstructions: { draggable: t.a11y.instructions } }} collisionDetection={closestCorners} id={dndContextId} onDragCancel={() => { if (dragSnapshot.current) setColumns(dragSnapshot.current); dragSnapshot.current = null; setActiveCard(null); }} onDragEnd={onDragEnd} onDragOver={onDragOver} onDragStart={onDragStart} sensors={sensors}>
         <ol aria-label={t.boardLabel} className={view === 'list' ? 'grid gap-4 lg:flex lg:snap-x lg:snap-mandatory lg:gap-4 lg:overflow-x-auto lg:pb-3' : 'flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3'}>
           {stages.map((stage) => {
             const cards = columns[stage.id] ?? [];
             return (
               <BoardColumnShell cards={cards} key={stage.id} label={formatBoardText(t.columnLabel, { name: stageName(stage), count: cards.length })} layout={view} stage={stage} count={formatBoardCount(cards.length, t.cardCount)} emptyText={t.columnEmpty} title={stageName(stage)}>
                 <SortableContext items={cards.map((card) => card.id)} strategy={verticalListSortingStrategy}>
-                  {cards.map((card) => <SortableBoardCard card={card} departments={board.departments} key={card.id} locale={locale} onAssignDepartment={assignDepartment} onOpen={setDetailCard} t={t} />)}
+                  {cards.map((card) => <SortableBoardCard card={card} departments={board.departments} dragDisabled={stage.mappedTaskStatus === 'DONE'} key={card.id} locale={locale} onAssignDepartment={assignDepartment} onOpen={setDetailCard} t={t} />)}
                 </SortableContext>
               </BoardColumnShell>
             );

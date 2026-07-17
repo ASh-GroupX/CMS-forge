@@ -4,7 +4,7 @@ import {
   DndContext, DragOverlay, KeyboardSensor, PointerSensor, TouchSensor, closestCorners, useSensor, useSensors,
   type Announcements, type DragEndEvent, type DragStartEvent, type UniqueIdentifier,
 } from '@dnd-kit/core';
-import React, { useMemo, useState } from 'react';
+import React, { useId, useMemo, useState } from 'react';
 import { toast, Toaster } from 'sonner';
 import { complaintBoardText } from '../../i18n/staff-complaint-board';
 import { formatBoardText } from '../../i18n/staff-task-board';
@@ -35,6 +35,9 @@ export function ComplaintBoardScreen({ board, detailAction, locale, options, sta
   const [activeId, setActiveId] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingDrop | null>(null);
   const [detailCard, setDetailCard] = useState<ComplaintBoardCard | null>(null);
+  // Stable DndContext id so dnd-kit's DndDescribedBy aria id matches between the
+  // server render and hydration (its fallback is a module counter → mismatch).
+  const dndContextId = useId();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -92,7 +95,7 @@ export function ComplaintBoardScreen({ board, detailAction, locale, options, sta
         <h2 className="text-lg font-bold tracking-tight text-content-strong">{t.title}</h2>
         <p className="mt-1 text-sm text-content-muted">{t.subtitle}</p>
       </header>
-      <DndContext accessibility={{ announcements, screenReaderInstructions: { draggable: t.a11y.instructions } }} collisionDetection={closestCorners} onDragCancel={() => setActiveId(null)} onDragEnd={onDragEnd} onDragStart={onDragStart} sensors={sensors}>
+      <DndContext accessibility={{ announcements, screenReaderInstructions: { draggable: t.a11y.instructions } }} collisionDetection={closestCorners} id={dndContextId} onDragCancel={() => setActiveId(null)} onDragEnd={onDragEnd} onDragStart={onDragStart} sensors={sensors}>
         <ol aria-label={t.boardLabel} className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3">
           {stages.map((stage) => {
             const cards = board.columns.find((column) => column.stageId === stage.id)?.cards ?? [];
