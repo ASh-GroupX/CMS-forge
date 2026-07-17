@@ -14279,3 +14279,94 @@ compiles the proof Tailwind; hydrates in Chromium). Cases:
 - i18n-lint: no separate script exists; no user-facing strings were added or changed
   (fixes reuse existing `t.manage.statuses` / `t.detail.*` keys). Localization coverage
   via `test:web`. Labelled: Not Run (no such script) / covered by `test:web`.
+
+---
+
+## Bugfix + live DB verification — board "move failed" on WAITING/DONE (2026-07-17)
+SRS: REQ-RBAC-001, UI-SCREEN-001, METHOD-TEST-001
+
+### Root cause + fix
+Dragging a task IN_PROGRESS→WAITING showed a generic "move failed" toast instead of the
+status-note dialog. Root cause: three board clients parsed a non-existent top-level
+`body.details`, but the API error envelope is `{ error: { fieldErrors:[{field}] } }`
+(`apps/api/src/core/http-kernel.ts:87-96`). So a `400 TASK_STATUS_NOTE_REQUIRED`
+(`tasks.status-note.ts`, WAITING/DONE require an outcome note) yielded `fields:[]`, the
+island's `fields.includes('statusNote')` was false, and it fell through to the error toast.
+Shipped because the hermetic e2e stubs the move action and the unit tests used a fabricated
+`{ details: [...] }` fixture the API never emits.
+Fix: new shared `apps/web/src/lib/staff-error-envelope.ts` `fieldErrorsFrom` reads
+`error.fieldErrors` (the pattern already used by `staff-complaints-api.ts`/`portal-submission-api.ts`);
+adopted by `staff-board-api.ts`, `staff-complaint-board-api.ts`, `staff-board-stages-api.ts`
+(all three had the bug). Real-envelope regression tests added (`staff-error-envelope.test.ts`,
+4) and the three client-test fixtures corrected to the real shape. No backend change — the
+note requirement is SRS-intended; the frontend just surfaces it.
+Gates: typecheck, lint Passed; `test:web -- api-client` 84/84 (was 80).
+
+### Live end-to-end verification (real stack, DB user cms_auto @ pg:5433)
+Task board (card `seed_task_overdue_promise`, driven via keyboard dnd in-browser):
+- IN_PROGRESS→WAITING: note dialog now appears ("Moving this task to Waiting needs a short
+  note"); entered a note + committed. DB (all atomic @13:14:55): `tasks` status=WAITING +
+  Waiting stage + updated_at; `task_status_history` IN_PROGRESS→WAITING (+actor+correlationId);
+  `task_comments` "Status update IN_PROGRESS -> WAITING: VERIFY-MOVE-2026…"; `audit_logs`
+  task_moved (3→4) with from/to stage+status metadata.
+- WAITING→DONE: note dialog appears; committed. DB @13:17:13: status=DONE + Done stage;
+  next_action_what / next_action_who_id CLEARED (DONE nulls the next action); history
+  WAITING→DONE; DONE note comment; audit task_moved (4→5). Overdue badge disappears (DONE
+  has no dueState).
+- Same-column reorder not exercised (single card on the board).
+Analytics/downstream after the move (read-time):
+- `/tasks/today`: task now in `completed`; gone from `overdue` + `overduePromises`.
+- `/tasks/manager-rollup`: `promiseKpi` → {openPromiseCount:0, overduePromiseCount:0} (the
+  overdue customer-promise closed); a different employee's overdue task still counted.
+- `/tasks/board`: task now in TASKS_DONE, dueState=null.
+
+Ticket board (CMP-SEED-001 SUBMITTED, before: 0 history / 0 audit / 0 sla_events / 0 notif):
+- ACCEPT_INTAKE SUBMITTED→MANAGER_REVIEW via drop→dialog→confirm. Illegal Draft column was
+  dimmed during drag; Manager review highlighted. DB: complaints.status=MANAGER_REVIEW;
+  `complaint_status_history` SUBMITTED→MANAGER_REVIEW (+actor+correlationId) @13:21:15;
+  `audit_logs` transition_accept_intake @13:21:15 (same tx); `sla_events` DEADLINE_SET
+  @13:21:16 (after-commit side effect, one second later); `notifications` none — correct,
+  ACCEPT_INTAKE is an internal step with no owner assignment / customer-facing change.
+Result: the state machine is never bypassed; status history + audit are written in the same
+transaction and SLA/side-effects enqueue after commit, exactly as designed.
+
+### Second bug (from img_1.png): dnd-kit SSR hydration mismatch on both boards
+The dev overlay flagged a React hydration error on /complaints/board (and /tasks/board):
+"some attributes of the server rendered HTML didn't match" — the only differing attribute
+was dnd-kit's `aria-describedby` (`DndDescribedBy-3` server vs `DndDescribedBy-0` client).
+Root cause: `<DndContext>` was rendered with no `id`, so dnd-kit's `useUniqueId('DndDescribedBy', id)`
+fell back to a module-global counter (`@dnd-kit/utilities` `useUniqueId`), which differs between
+the SSR pass and client hydration. Confirmed in the installed source (@dnd-kit/core@6.3.1 line
+~2900 + utilities useUniqueId returns the passed value verbatim, else `prefix-<counter>`).
+Fix: pass a stable `id={useId()}` (React 19 useId is SSR-stable) to `<DndContext>` in both
+`components/task-board/index.tsx` and `components/complaint-board/index.tsx`. The hermetic e2e
+never caught this because it renders client-only (createRoot, no SSR/hydration).
+Verified live: reloaded both boards (fresh SSR+hydration) — the dev overlay "1 Issue" badge is
+gone and no hydration error appears in the console. Gates after fix: typecheck, lint, test:visual
+110, accessibility 26, e2e (task-board-dnd, board-drawer, complaint-board [passes in isolation;
+flakes only under back-to-back Chromium contention]) — all Passed.
+
+### Third + fourth bugs (img_2, img_3): reopen-from-Done + empty target department
+- **img_2 (Done→Waiting → generic "could not be moved"):** `assertNextAction` (tasks.validation.ts)
+  requires a next action for any non-DONE status and throws **409 TASK_NEXT_ACTION_REQUIRED**;
+  completing a task to DONE clears its next action, so reopening 409s. The board move client
+  maps only 400→invalid, so 409 fell through to the generic error toast, and the board never
+  collected a next action. Decision (user): **block dragging out of Done** — reopen only from
+  the task detail page. Fix: `SortableBoardCard` takes `dragDisabled`; `task-board/index.tsx`
+  passes `dragDisabled={stage.mappedTaskStatus === 'DONE'}`; Done cards render with no grip
+  handle and no drag listeners (useSortable disabled), while the title quick-look + department
+  controls still work. Verified in the authenticated SSR HTML: the Done card has zero
+  "Drag task" buttons and keeps its "Open task … details" button; `task-board-dnd` still passes
+  (non-Done cards remain draggable + hydration OK).
+- **img_3 (Target department dropdown empty in APPROVE_AND_ROUTE):** the `departments` table was
+  empty (0 rows) — the seed never created any — so `/complaints/form-options` returned
+  `departments: []` and the required dropdown was unfillable. Decision (user): **seed standard
+  departments + graceful empty-state.** Fix: seed 6 global departments (Sales, Service, Parts,
+  Body & Paint, Finance, Customer Care; bilingual, branchId null) in
+  `packages/database/prisma/seed.ts`; `OptionField` (complaint-workflow-modal) now shows a
+  bilingual "None configured yet…" hint (`workflow.noOptions`, en+ar) instead of an empty
+  required select when a list is empty. Verified: DB now has 6 departments and
+  `/complaints/form-options` returns all 6, so the dropdown is populated.
+NOTE: heavy local machine load during this session intermittently froze the browser renderer
+(CDP Page.captureScreenshot) and flaked the interaction-heavy complaint-board e2e; both recover
+when load settles (the proof passes in isolation). Not a code regression.
