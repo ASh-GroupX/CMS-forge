@@ -7,8 +7,11 @@ export type DealBoardItemDto = {
   branchName: string | null;
   ownerId: string;
   ownerName: string | null;
-  currentHolderId: string;
+  currentHolderId: string | null;
   currentHolderName: string | null;
+  assignedDepartmentId: string | null;
+  assignedDepartmentName: string | null;
+  assignedDepartmentNameAr: string | null;
   stage: DealStageCode;
   stageDueAt: string;
   blocker: string | null;

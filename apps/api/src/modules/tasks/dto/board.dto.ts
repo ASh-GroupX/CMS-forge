@@ -24,7 +24,7 @@ export type BoardCardDto = {
   ownerId: string;
   ownerName: string | null;
   ownerNameAr: string | null;
-  assigneeId: string;
+  assigneeId: string | null;
   assigneeName: string | null;
   assigneeNameAr: string | null;
   assignedDepartmentId: string | null;

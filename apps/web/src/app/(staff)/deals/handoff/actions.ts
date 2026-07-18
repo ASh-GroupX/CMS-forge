@@ -7,7 +7,8 @@ export async function createDealAction(formData: FormData): Promise<void> {
   const locale = safeLocale(formData.get('locale'));
   const result = await createDeal({
     title: text(formData, 'title'),
-    currentHolderId: text(formData, 'currentHolderId'),
+    currentHolderId: optionalText(formData, 'currentHolderId'),
+    assignedDepartmentId: optionalText(formData, 'assignedDepartmentId'),
     stageDueAt: text(formData, 'stageDueAt'),
     ...(optionalText(formData, 'branchId') ? { branchId: text(formData, 'branchId') } : {}),
     ...(optionalText(formData, 'blocker') ? { blocker: text(formData, 'blocker') } : {}),
@@ -18,7 +19,8 @@ export async function createDealAction(formData: FormData): Promise<void> {
 export async function advanceDealAction(formData: FormData): Promise<void> {
   const locale = safeLocale(formData.get('locale'));
   const result = await advanceDeal(text(formData, 'dealId'), {
-    currentHolderId: text(formData, 'currentHolderId'),
+    currentHolderId: optionalText(formData, 'currentHolderId'),
+    assignedDepartmentId: optionalText(formData, 'assignedDepartmentId'),
     stageDueAt: text(formData, 'stageDueAt'),
     updateNote: text(formData, 'updateNote'),
   });
@@ -34,7 +36,8 @@ export async function setDealBlockerAction(formData: FormData): Promise<void> {
 export async function updateDealDetailsAction(formData: FormData): Promise<void> {
   const locale = safeLocale(formData.get('locale'));
   const result = await updateDealDetails(text(formData, 'dealId'), {
-    currentHolderId: text(formData, 'currentHolderId'),
+    currentHolderId: optionalText(formData, 'currentHolderId'),
+    assignedDepartmentId: optionalText(formData, 'assignedDepartmentId'),
     stageDueAt: text(formData, 'stageDueAt'),
     updateNote: text(formData, 'updateNote'),
   });

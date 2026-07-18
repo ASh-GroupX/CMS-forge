@@ -30,8 +30,8 @@ export function utcDay(value: Date): [Date, Date] {
   return [start, end];
 }
 
-export function assertNextAction(status: TaskStatus, nextAction: NormalizedNextAction | null): void {
-  if (status !== TaskStatus.DONE && !nextAction) {
+export function assertNextAction(status: TaskStatus, nextAction: NormalizedNextAction | null, departmentAssigned = false): void {
+  if (status !== TaskStatus.DONE && !nextAction && !departmentAssigned) {
     throw new AppException('TASK_NEXT_ACTION_REQUIRED', 'Open tasks require a next action', HttpStatus.CONFLICT, [
       { field: 'nextAction', code: 'REQUIRED', message: 'nextAction is required for open tasks.' },
     ]);

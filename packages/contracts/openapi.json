@@ -6060,10 +6060,82 @@
     },
     "/tasks/{id}/watchers/{userId}": {
       "delete": { "tags": ["Tasks"], "operationId": "taskWatcherRemove", "summary": "Remove a task CC watcher", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }, { "name": "userId", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "Watcher removed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } }, "403": { "description": "Task manage access denied" } } }
+    },
+    "/assignments/options": {
+      "get": {
+        "tags": ["Assignments"],
+        "operationId": "assignmentOptionsList",
+        "summary": "List active user and department assignment targets in the server-session scope",
+        "responses": {
+          "200": { "description": "Assignment targets", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssignmentOptionsResponse" } } } },
+          "401": { "description": "Missing or invalid staff session", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/cases/{caseId}/assignment": {
+      "patch": {
+        "tags": ["Cases", "Assignments"],
+        "operationId": "caseAssignmentUpdate",
+        "summary": "Assign or forward a case to a user, department, or both",
+        "parameters": [{ "name": "caseId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CaseAssignmentRequest" } } } },
+        "responses": {
+          "200": { "description": "Case assignment updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CaseAssignmentResponse" } } } },
+          "400": { "description": "A user or department is required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Case assignment denied or invalid CSRF token", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "Case not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AssignmentOption": {
+        "type": "object",
+        "required": ["id", "nameEn", "nameAr", "branchId"],
+        "properties": {
+          "id": { "type": "string" },
+          "nameEn": { "type": "string" },
+          "nameAr": { "type": "string" },
+          "branchId": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      },
+      "AssignmentUserOption": {
+        "allOf": [
+          { "$ref": "#/components/schemas/AssignmentOption" },
+          { "type": "object", "required": ["departmentId", "roleCode"], "properties": { "departmentId": { "type": ["string", "null"] }, "roleCode": { "type": "string" } } }
+        ]
+      },
+      "AssignmentOptionsResponse": {
+        "type": "object",
+        "required": ["users", "departments"],
+        "properties": {
+          "users": { "type": "array", "items": { "$ref": "#/components/schemas/AssignmentUserOption" } },
+          "departments": { "type": "array", "items": { "$ref": "#/components/schemas/AssignmentOption" } }
+        },
+        "additionalProperties": false
+      },
+      "CaseAssignmentRequest": {
+        "type": "object",
+        "required": ["assignedUserId", "assignedDepartmentId"],
+        "properties": {
+          "assignedUserId": { "type": ["string", "null"] },
+          "assignedDepartmentId": { "type": ["string", "null"] },
+          "reason": { "type": ["string", "null"] }
+        },
+        "anyOf": [
+          { "properties": { "assignedUserId": { "type": "string", "minLength": 1 } } },
+          { "properties": { "assignedDepartmentId": { "type": "string", "minLength": 1 } } }
+        ],
+        "additionalProperties": false
+      },
+      "CaseAssignmentResponse": {
+        "type": "object",
+        "required": ["case"],
+        "properties": { "case": { "$ref": "#/components/schemas/CaseResponse" } },
+        "additionalProperties": false
+      },
       "BoardStageAdmin": {
         "type": "object",
         "required": [
@@ -7855,6 +7927,15 @@
               "null"
             ]
           },
+          "assignedDepartmentId": {
+            "type": ["string", "null"]
+          },
+          "assignedDepartmentName": {
+            "type": ["string", "null"]
+          },
+          "assignedDepartmentNameAr": {
+            "type": ["string", "null"]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -9306,7 +9387,10 @@
             "type": "string"
           },
           "assigneeId": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "dueAt": {
             "type": "string",
@@ -9400,6 +9484,12 @@
               "null"
             ]
           },
+          "assignedDepartmentName": {
+            "type": ["string", "null"]
+          },
+          "assignedDepartmentNameAr": {
+            "type": ["string", "null"]
+          },
           "displayTimeZone": {
             "type": "string"
           }
@@ -9468,8 +9558,10 @@
             "type": "boolean"
           },
           "assignedDepartmentId": {
-            "type": "string",
-            "minLength": 1
+            "type": ["string", "null"]
+          },
+          "assignedUserId": {
+            "type": ["string", "null"]
           }
         },
         "additionalProperties": false
@@ -9873,8 +9965,7 @@
         ],
         "properties": {
           "assigneeId": {
-            "type": "string",
-            "minLength": 1
+            "type": ["string", "null"]
           },
           "count": {
             "type": "integer",
@@ -10098,7 +10189,7 @@
             ]
           },
           "currentHolderId": {
-            "type": "string"
+            "type": ["string", "null"]
           },
           "currentHolderName": {
             "type": [
@@ -10106,6 +10197,9 @@
               "null"
             ]
           },
+          "assignedDepartmentId": { "type": ["string", "null"] },
+          "assignedDepartmentName": { "type": ["string", "null"] },
+          "assignedDepartmentNameAr": { "type": ["string", "null"] },
           "stage": {
             "type": "string",
             "enum": [
@@ -10385,6 +10479,9 @@
               "null"
             ]
           },
+          "assignedDepartmentId": {
+            "type": ["string", "null"]
+          },
           "subject": {
             "type": "string"
           },
@@ -10419,6 +10516,12 @@
               "string",
               "null"
             ]
+          },
+          "assignedDepartmentName": {
+            "type": ["string", "null"]
+          },
+          "assignedDepartmentNameAr": {
+            "type": ["string", "null"]
           }
         }
       },
@@ -10965,7 +11068,7 @@
             ]
           },
           "currentHolderId": {
-            "type": "string"
+            "type": ["string", "null"]
           },
           "currentHolderName": {
             "type": [
@@ -10973,6 +11076,9 @@
               "null"
             ]
           },
+          "assignedDepartmentId": { "type": ["string", "null"] },
+          "assignedDepartmentName": { "type": ["string", "null"] },
+          "assignedDepartmentNameAr": { "type": ["string", "null"] },
           "stage": {
             "type": "string",
             "enum": [
@@ -11025,8 +11131,10 @@
             "minLength": 1
           },
           "currentHolderId": {
-            "type": "string",
-            "minLength": 1
+            "type": ["string", "null"]
+          },
+          "assignedDepartmentId": {
+            "type": ["string", "null"]
           },
           "stageDueAt": {
             "type": "string",
@@ -11050,8 +11158,10 @@
         ],
         "properties": {
           "currentHolderId": {
-            "type": "string",
-            "minLength": 1
+            "type": ["string", "null"]
+          },
+          "assignedDepartmentId": {
+            "type": ["string", "null"]
           },
           "stageDueAt": {
             "type": "string",
@@ -11073,8 +11183,10 @@
         ],
         "properties": {
           "currentHolderId": {
-            "type": "string",
-            "minLength": 1
+            "type": ["string", "null"]
+          },
+          "assignedDepartmentId": {
+            "type": ["string", "null"]
           },
           "stageDueAt": {
             "type": "string",

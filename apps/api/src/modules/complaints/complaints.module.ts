@@ -6,6 +6,8 @@ import { CsrfGuard } from '../../core/csrf.guard.js';
 import { PrismaService } from '../../core/http-kernel.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { AuthService } from '../auth/auth.service.js';
+import { AssignmentsModule } from '../assignments/assignments.module.js';
+import { AssignmentsService } from '../assignments/assignments.service.js';
 import { CasesModule } from '../cases/cases.module.js';
 import { CasesService } from '../cases/cases.service.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
@@ -28,7 +30,7 @@ import { ComplaintsRepository } from './complaints.repository.js';
 import { ComplaintsService } from './complaints.service.js';
 
 @Module({
-  imports: [AuthModule, NotificationsModule, CasesModule, SlaModule, TasksModule, CommunicationGroupsModule, forwardRef(() => SurveysModule)],
+  imports: [AuthModule, AssignmentsModule, NotificationsModule, CasesModule, SlaModule, TasksModule, CommunicationGroupsModule, forwardRef(() => SurveysModule)],
   controllers: [ComplaintsController],
   providers: [
     PrismaService,
@@ -59,7 +61,7 @@ import { ComplaintsService } from './complaints.service.js';
     },
     {
       provide: ComplaintsService,
-      inject: [ComplaintsRepository, AuditService, NotificationsService, CasesService, SlaService, SurveysService, TasksService, CommunicationGroupsService],
+      inject: [ComplaintsRepository, AuditService, NotificationsService, CasesService, SlaService, SurveysService, TasksService, CommunicationGroupsService, AssignmentsService],
       useFactory: (
         repository: ComplaintsRepository,
         audit: AuditService,
@@ -69,7 +71,8 @@ import { ComplaintsService } from './complaints.service.js';
         surveys: SurveysService,
         tasks: TasksService,
         groups: CommunicationGroupsService,
-      ) => new ComplaintsService(repository, audit, notifications, cases, sla, surveys, tasks, groups),
+        assignments: AssignmentsService,
+      ) => new ComplaintsService(repository, audit, notifications, cases, sla, surveys, tasks, groups, assignments),
     },
     {
       provide: ComplaintsBoardRepository,

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { WorkflowFields, destructiveActions, requiredFields, transitionRequest } from '../complaint-workflow-modal';
+import { WorkflowFields, destructiveActions, requiredFields, requiresAssignment, transitionRequest } from '../complaint-workflow-modal';
 import { complaintBoardText } from '../../i18n/staff-complaint-board';
 import { complaintDetailText } from '../../i18n/staff-complaint-detail';
 import { confirmationText } from '../../i18n/staff-confirmations';
@@ -42,7 +42,9 @@ export function TransitionDialog({ locale, onClose, onSuccess, options, pending,
     event.preventDefault();
     if (!pending || !action) return;
     const form = new FormData(event.currentTarget);
-    if (requiredFields(action, false).some((field) => !fieldText(form, field)) || (destructiveActions.has(action) && form.get('confirmDestructive') !== 'on')) {
+    if (requiredFields(action, false).some((field) => !fieldText(form, field))
+      || (requiresAssignment(action) && !fieldText(form, 'ownerId') && !fieldText(form, 'targetDepartmentId'))
+      || (destructiveActions.has(action) && form.get('confirmDestructive') !== 'on')) {
       setState('validation');
       return;
     }
@@ -74,7 +76,7 @@ export function TransitionDialog({ locale, onClose, onSuccess, options, pending,
           </DialogFooter>
         ) : (
           <form className="grid gap-3" onSubmit={onSubmit}>
-            {action ? <WorkflowFields action={action} locale={locale} options={options} staff={staff} text={wf} vehicleNeedsUnavailableReason={false} /> : null}
+            {action ? <WorkflowFields action={action} assignmentOptions={legacyAssignmentOptions(staff, options)} locale={locale} options={options} text={wf} vehicleNeedsUnavailableReason={false} /> : null}
             {action && destructiveActions.has(action) ? (
               <label className="grid gap-1 rounded-sm border border-status-warning-border bg-status-warning-bg px-3 py-2 text-sm text-content-strong">
                 <span className="font-semibold">{confirm.title}</span>
@@ -99,4 +101,20 @@ export function TransitionDialog({ locale, onClose, onSuccess, options, pending,
 function fieldText(form: FormData, field: string): string {
   const value = form.get(field);
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function legacyAssignmentOptions(staff: AssignableStaff[] | null | undefined, options: ComplaintFormOptions | null | undefined) {
+  if (staff === undefined || options === undefined) return undefined;
+  if (staff === null || options === null) return null;
+  return {
+    users: staff.map((person) => ({
+      id: person.userId,
+      nameEn: person.displayName,
+      nameAr: person.displayNameAr,
+      branchId: null,
+      departmentId: null,
+      roleCode: person.role,
+    })),
+    departments: options.departments.map((department) => ({ ...department, branchId: null })),
+  };
 }

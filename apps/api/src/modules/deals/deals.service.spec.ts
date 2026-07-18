@@ -202,6 +202,9 @@ function deal(): DealRecord {
     branchName: null,
     createdAt: '2026-06-20T08:00:00.000Z',
     currentHolderName: null,
+    assignedDepartmentId: null,
+    assignedDepartmentName: null,
+    assignedDepartmentNameAr: null,
     ownerName: null,
     updatedAt: '2026-06-20T08:00:00.000Z',
   };

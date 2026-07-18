@@ -1,13 +1,18 @@
 import React from 'react';
 import { Badge } from '../../../../../components/ui/badge';
+import { Button } from '../../../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../../components/ui/card';
+import { Input } from '../../../../../components/ui/input';
+import { AssignmentPicker } from '../../../../../components/shared/assignment-picker';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../../../components/ui/table';
 import { caseLifecycleStatusLabel, caseTypeLabel, timelineTypeLabel } from '../../../../../i18n/domain-labels';
 import { confidentialCaseText } from '../../../../../i18n/staff-confidential-cases';
 import { resolveLocale } from '../../../../../i18n/staff-shell';
 import { getStaffConfidentialCaseTimeline } from '../../../../../lib/staff-confidential-cases-api';
+import { getStaffAssignmentOptions } from '../../../../../lib/staff-assignment-options-api';
+import { assignCaseAction } from './actions';
 
-type SearchParams = { locale?: string | string[] };
+type SearchParams = { locale?: string | string[]; assignment?: string | string[] };
 
 export default async function ConfidentialCasePage({
   cookieHeader,
@@ -23,11 +28,15 @@ export default async function ConfidentialCasePage({
   const [routeParams, query] = await Promise.all([params, searchParams]);
   const locale = resolveLocale(readParam(query?.locale));
   const t = confidentialCaseText[locale];
-  const timeline = await getStaffConfidentialCaseTimeline({
-    caseId: routeParams.caseId,
+  const apiInput = {
     ...(cookieHeader === undefined ? {} : { cookieHeader }),
     ...(fetchImpl === undefined ? {} : { fetchImpl }),
-  });
+  };
+  const [timeline, assignmentOptions] = await Promise.all([getStaffConfidentialCaseTimeline({
+    caseId: routeParams.caseId,
+    ...apiInput,
+  }), getStaffAssignmentOptions(apiInput)]);
+  const assignmentFeedback = readParam(query?.assignment);
 
   return (
     <Card aria-label={t.title} className="rounded-md border-line-subtle bg-surface shadow-sm" dir={locale === 'ar' ? 'rtl' : 'ltr'}>
@@ -53,8 +62,20 @@ export default async function ConfidentialCasePage({
                 <Summary label={t.labels.status} value={caseLifecycleStatusLabel(locale, timeline.case.lifecycleStatus)} />
                 <Summary label={t.labels.branch} value={timeline.case.branchName} />
                 <Summary label={t.labels.owner} value={timeline.case.ownerName ?? '-'} />
+                <Summary label={t.labels.department} value={locale === 'ar' ? timeline.case.assignedDepartmentNameAr ?? timeline.case.assignedDepartmentName ?? '-' : timeline.case.assignedDepartmentName ?? timeline.case.assignedDepartmentNameAr ?? '-'} />
                 <Summary label={t.labels.updated} value={timeline.case.updatedAt} />
               </dl>
+            </section>
+            <section className="rounded-md border border-line-subtle bg-surface p-3" aria-label={t.sections.assignment}>
+              <h3 className="text-sm font-semibold">{t.sections.assignment}</h3>
+              {assignmentFeedback ? <p className={`mt-3 rounded-md border px-3 py-2 text-sm ${assignmentFeedback === 'success' ? 'border-status-success text-status-success' : 'border-status-error text-status-error'}`} role="status">{assignmentFeedback === 'success' ? t.states.assignmentSuccess : assignmentFeedback === 'denied' ? t.states.assignmentDenied : t.states.assignmentError}</p> : null}
+              <form action={assignCaseAction} className="mt-3 grid gap-3">
+                <input name="caseId" type="hidden" value={timeline.case.id} />
+                <input name="locale" type="hidden" value={locale} />
+                <AssignmentPicker initialDepartmentId={timeline.case.assignedDepartmentId ?? ''} initialUserId={timeline.case.ownerId ?? ''} locale={locale} options={assignmentOptions} />
+                <label className="grid gap-2 text-sm font-medium">{t.labels.reason}<Input name="reason" /></label>
+                <Button className="w-fit" type="submit">{t.actions.assign}</Button>
+              </form>
             </section>
             <section className="rounded-md border border-line-subtle bg-surface p-3" aria-label={t.sections.notes}>
               <h3 className="text-sm font-semibold">{t.sections.notes}</h3>

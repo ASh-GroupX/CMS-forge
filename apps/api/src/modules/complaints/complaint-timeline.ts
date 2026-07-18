@@ -9,7 +9,7 @@ type TimelineTask = {
   status: string;
   createdAt: Date;
   ownerId: string;
-  assigneeId: string;
+  assigneeId: string | null;
   owner: { nameEn: string } | null;
   assignee: { nameEn: string } | null;
   statusHistory: Array<{ id: string; fromStatus: string | null; toStatus: string; actorId: string | null; correlationId: string | null; createdAt: Date; actor: { nameEn: string } | null }>;

@@ -108,6 +108,7 @@ function commentToResponse(comment: TaskCommentRecord): TaskCommentResponseDto {
 
 function nudgeRecipient(task: TaskRecord, requestedRecipientId?: string): string {
   const recipientId = requestedRecipientId ?? task.nextActionWhoId ?? task.assigneeId;
+  if (!recipientId) throw new AppException('VALIDATION_FAILED', 'A user recipient is required for this department-assigned task', HttpStatus.BAD_REQUEST);
   if (!participantIds(task).has(recipientId)) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
   return recipientId;
 }

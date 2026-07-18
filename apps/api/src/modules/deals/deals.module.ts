@@ -8,12 +8,14 @@ import { AuthModule } from '../auth/auth.module.js';
 import { AuthService } from '../auth/auth.service.js';
 import { TasksModule } from '../tasks/tasks.module.js';
 import { TasksService } from '../tasks/tasks.service.js';
+import { AssignmentsModule } from '../assignments/assignments.module.js';
+import { AssignmentsService } from '../assignments/assignments.service.js';
 import { DealsController } from './deals.controller.js';
 import { DealsRepository } from './deals.repository.js';
 import { DealsService } from './deals.service.js';
 
 @Module({
-  imports: [AuthModule, TasksModule],
+  imports: [AuthModule, TasksModule, AssignmentsModule],
   controllers: [DealsController],
   providers: [
     PrismaService,
@@ -29,8 +31,8 @@ import { DealsService } from './deals.service.js';
     },
     {
       provide: DealsService,
-      inject: [DealsRepository, TasksService, AuditService],
-      useFactory: (repository: DealsRepository, tasks: TasksService, audit: AuditService) => new DealsService(repository, tasks, audit),
+      inject: [DealsRepository, TasksService, AuditService, AssignmentsService],
+      useFactory: (repository: DealsRepository, tasks: TasksService, audit: AuditService, assignments: AssignmentsService) => new DealsService(repository, tasks, audit, assignments),
     },
     {
       provide: SESSION_AUTH_SERVICE,

@@ -14370,3 +14370,83 @@ flakes only under back-to-back Chromium contention]) — all Passed.
 NOTE: heavy local machine load during this session intermittently froze the browser renderer
 (CDP Page.captureScreenshot) and flaked the interaction-heavy complaint-board e2e; both recover
 when load settles (the proof passes in isolation). Not a code regression.
+
+---
+
+## Universal assignment and forwarding — complete on `nour` (2026-07-18)
+
+SRS: REQ-RBAC-001, REQ-COLLAB-001, REQ-WORKFLOW-002,
+REQ-SEARCH-001, REQ-REPORT-001, REQ-AUDIT-001,
+REQ-LOCALIZATION-001, RBAC-MATRIX-001, METHOD-MODULAR-001,
+METHOD-AUDIT-001, METHOD-API-001, METHOD-TEST-001, UI-DESIGN-001
+
+### Delivered
+
+- Created isolated branch `nour` from clean `feat/cmss-task-board` commit
+  `e7435c0` after `git fetch --prune origin`; source was 0 ahead/behind its
+  remote at branch creation. No merge, push, or protected-branch write occurred.
+- Added generic `assignments` current state and append-only
+  `assignment_history`, with a database check requiring a user, department, or
+  both. Migration `20260718120000_universal_assignments` is additive and
+  idempotently backfills Tasks/Promises, Complaints, Deals/Leads, and
+  Cases/Requests while retaining legacy columns.
+- Generated a canonical assignments module. Owning domain modules authorize
+  records; the generic service validates active, branch-compatible targets and
+  writes current state, forwarding history, and audit in the owning transaction.
+- Domain services dual-write generic and legacy assignment state. Complaint
+  workflow status authority remains in the complaint state machine. Assignment
+  notifications resolve explicit users plus active department members and queue
+  only after commit.
+- Added `GET /assignments/options` and case assignment API, expanded task,
+  complaint, deal, and case contracts, and regenerated OpenAPI.
+- Added one reusable shadcn-based assignment picker to Task/Promise,
+  Complaint, Deal/Lead, and Case/Request forms. EN LTR and Arabic RTL support
+  user-only, department-only, and combined assignments.
+- Updated nullable/department ownership projections used by queues, search,
+  reports, task/deal dashboards, and notification batches. Legacy payloads with
+  missing department fields normalize safely.
+
+### Security self-check
+
+- Passed: actor role, branch, and department are taken only from the server
+  session; client role/branch spoof fields are ignored.
+- Passed: owning modules keep workflow and confidential-record authorization;
+  assignment target scope is validated by the shared backend service.
+- Passed: legacy record changes, current assignment, history, and audit use one
+  Prisma transaction; notification work happens after commit.
+- Passed: audit metadata contains IDs/version only, never credentials, tokens,
+  OTPs, message bodies, or assignment free text.
+- Passed: customer portal routes were not expanded and never expose internal
+  assignment options/history or staff PII.
+- Passed: one allowed and one denied case-assignment path are covered, plus
+  shared branch-scope denial and complaint workflow authorization tests.
+
+### Verification (ran; Passed)
+
+- `corepack pnpm lint` — Passed.
+- `corepack pnpm typecheck` — Passed across API, web, database, Prisma,
+  contracts, and config.
+- `corepack pnpm openapi:check` — Passed; canonical/generated contracts match.
+- `corepack pnpm test` — 62/62 Passed; 93.21% lines, 83.95% branches,
+  91.95% functions.
+- `corepack pnpm db:migrate:test` — Passed Prisma validation and migration SQL
+  sanity; a clean disposable database replay also applied all 29 migrations.
+- Assignment migration focus — 3/3 Passed (schema, compatibility constraint,
+  idempotent aggregate backfill).
+- API: assignments 6/6; tasks 42/42; deals 9/9; cases 28/28; complaint workflow
+  88/88; search 5/5; worker 19/19; notifications 45/45; reports 32/32 — Passed.
+- Web: shell 213/213; API client 86/86; localization 13/13 — Passed.
+- `corepack pnpm test:visual` — 110 route previews Passed, including explicit
+  assignment user/department signals.
+- `corepack pnpm test:e2e -- accessibility` — 26 route previews Passed.
+- `corepack pnpm web:visual-review` — Passed and wrote 110 review artifacts.
+  Manually inspected EN/AR deal handoff and EN complaint workflow PNGs: RTL/LTR,
+  assignment labels/department ownership, focus, spacing, and overflow are sound.
+
+### Migration handoff
+
+Apply before application deployment:
+`corepack pnpm --dir packages/database exec prisma migrate deploy --schema prisma/schema.prisma`.
+No manual data rewrite is required; the migration backfills existing records.
+Keep legacy compatibility fields and dual writes until a separately reviewed
+cleanup migration proves all consumers have moved to the generic model.

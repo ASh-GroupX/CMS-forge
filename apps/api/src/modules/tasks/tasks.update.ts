@@ -4,6 +4,7 @@ import type { Prisma } from '@prisma/client';
 import type { AuditRecordInput, AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import type { AdminUsersService } from '../admin/admin-users.service.js';
+import type { AssignmentsService } from '../assignments/assignments.service.js';
 import type { TaskResponseDto } from './dto/task-response.dto.js';
 import { assertCanAct } from './tasks.access.js';
 import type { TasksBoardRepository } from './tasks.board.repository.js';
@@ -27,6 +28,7 @@ export async function updateTaskForActor(
   input: UpdateTaskInput,
   actor: TaskActor,
   audit: TaskAuditContext,
+  assignmentsService?: AssignmentsService,
 ): Promise<TaskResponseDto> {
   if (input.assignedDepartmentId) await assertAssignedDepartment(boardRepository, input.assignedDepartmentId);
   return repository.transaction(async (client) => {
@@ -34,11 +36,14 @@ export async function updateTaskForActor(
     if (!current) throw new AppException('TASK_NOT_FOUND', 'Task was not found', HttpStatus.NOT_FOUND);
     assertCanAct(current, actor);
     if (input.assigneeId) await usersService?.assertAssignable(actor, input.assigneeId);
+    const assignedUserId = input.assigneeId === undefined ? current.assigneeId : input.assigneeId;
+    const assignedDepartmentId = input.assignedDepartmentId === undefined ? current.assignedDepartmentId : input.assignedDepartmentId;
+    if (!assignedUserId && !assignedDepartmentId) throw assignmentRequired();
 
     const status = input.status ?? current.status;
     const nextAction =
       status === TaskStatus.DONE ? null : normalizeNextAction(input.nextAction === undefined ? currentNextAction(current) : input.nextAction);
-    assertNextAction(status, nextAction);
+    assertNextAction(status, nextAction, Boolean(assignedDepartmentId));
     const statusNote = requiredStatusNote(current.status, status, input.statusNote);
     if (nextAction) await usersService?.assertAssignable(actor, nextAction.whoId);
     assertPromiseLink(input.isCustomerPromise ?? current.isCustomerPromise, current.links);
@@ -47,7 +52,7 @@ export async function updateTaskForActor(
       {
         id: current.id,
         status,
-        ...(input.assigneeId !== undefined ? { assigneeId: requiredText(input.assigneeId, 'assigneeId') } : {}),
+        ...(input.assigneeId !== undefined ? { assigneeId: input.assigneeId } : {}),
         ...(input.dueAt !== undefined ? { dueAt: validDate(input.dueAt, 'dueAt') } : {}),
         nextActionWhat: nextAction?.what ?? null,
         nextActionWhoId: nextAction?.whoId ?? null,
@@ -76,8 +81,20 @@ export async function updateTaskForActor(
       }),
       client,
     );
+    if (assignmentsService && (input.assigneeId !== undefined || input.assignedDepartmentId !== undefined)) {
+      await assignmentsService.setInTransaction({
+        entityType: 'TASK', entityId: task.id, assignedUserId, assignedDepartmentId,
+        scopeBranchId: task.owner?.branchId ?? actor.branchId, reason: input.statusNote ?? null,
+      }, actor, audit, client);
+    }
     return taskToResponse(task);
   });
+}
+
+function assignmentRequired(): AppException {
+  return new AppException('VALIDATION_FAILED', 'Invalid task request', HttpStatus.BAD_REQUEST, [
+    { field: 'assignment', code: 'REQUIRED', message: 'A task requires an assigned user or department.' },
+  ]);
 }
 
 // Department assignment must reference an active department; anything else is a

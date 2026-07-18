@@ -15,7 +15,7 @@ export type ComplaintStatusRecord = { id: string; branchId: string; customerId: 
 export type ComplaintTransitionSubject = { id: string; vehicleRelated: boolean; vehicleId: string | null; vehicleDataUnavailableReason: string | null };
 export type ComplaintRecord = { id: string; branchId: string; customerId: string; status: ComplaintStatus; referenceNumber: string; subject: string; severity: ComplaintSeverity; categoryId: string; departmentId: string | null; ownerId: string | null };
 
-export type ComplaintQueueRecord = ComplaintRecord & { ownerId: string | null; owner: { nameEn: string; email: string } | null; branch: { code: string; nameEn: string; nameAr: string; timezone: string }; createdAt: Date; updatedAt: Date };
+export type ComplaintQueueRecord = ComplaintRecord & { ownerId: string | null; owner: { nameEn: string; email: string } | null; department?: { nameEn: string; nameAr: string } | null; branch: { code: string; nameEn: string; nameAr: string; timezone: string }; createdAt: Date; updatedAt: Date };
 export type ComplaintDetailRecord = ComplaintQueueRecord & { category: { id: string; nameEn: string; nameAr: string }; descriptionEn: string; incidentAt: Date | null; customer: { id: string; nameEn: string; phone: string; dmsCode: string | null; dataSource: DataSource }; vehicle: { id: string; vin: string; plate: string; makeEn: string; modelEn: string; year: number; dataSource: DataSource } | null; customerDataSource: DataSource; manualCustomerFlag: boolean; vehicleRelated: boolean; vehicleDataSource: DataSource | null; manualVehicleFlag: boolean; vehicleDataUnavailableReason: string | null; statusHistory: Array<{ id: string; fromStatus: ComplaintStatus | null; toStatus: ComplaintStatus; action: ComplaintTransitionAction | null; actorId: string | null; actorRole: RoleCode | null; requestSource: ComplaintTransitionRequestSource | null; reason: string | null; correlationId: string | null; createdAt: Date }> };
 export type CreateComplaintData = { referenceNumber: string; status: ComplaintStatus; subject: string; severity: ComplaintSeverity; branchId: string; categoryId: string; customerName: string; customerPhone?: string | null; customerNumber?: string | null; customerDataSource: DataSource; manualCustomerFlag: boolean; vehicleId?: string | null; vehicleVin?: string | null; vehiclePlate?: string | null; vehicleBrand?: string | null; vehicleModel?: string | null; vehicleModelYear?: number | null; vehicleDataSource?: DataSource | null; manualVehicleFlag: boolean; vehicleRelated: boolean; vehicleDataUnavailableReason?: string | null; departmentId?: string | null; createdById?: string | null; descriptionEn: string; incidentAt: Date };
 
@@ -104,7 +104,7 @@ export class ComplaintsRepository {
     return client.complaint.findMany({
       where: filter.branchId ? { branchId: filter.branchId } : {},
       orderBy: [{ createdAt: 'desc' }, { referenceNumber: 'asc' }],
-      select: { ...complaintSelect, ownerId: true, owner: { select: { nameEn: true, email: true } }, branch: { select: { code: true, nameEn: true, nameAr: true, timezone: true } }, createdAt: true, updatedAt: true },
+      select: { ...complaintSelect, ownerId: true, owner: { select: { nameEn: true, email: true } }, department: { select: { nameEn: true, nameAr: true } }, branch: { select: { code: true, nameEn: true, nameAr: true, timezone: true } }, createdAt: true, updatedAt: true },
     });
   }
 
@@ -116,7 +116,7 @@ export class ComplaintsRepository {
       ...(filter.limit === null || filter.limit === undefined ? {} : { take: filter.limit }),
       select: {
         ...complaintSelect,
-        ownerId: true, owner: { select: { nameEn: true, email: true } }, branch: { select: { code: true, nameEn: true, nameAr: true, timezone: true } },
+        ownerId: true, owner: { select: { nameEn: true, email: true } }, department: { select: { nameEn: true, nameAr: true } }, branch: { select: { code: true, nameEn: true, nameAr: true, timezone: true } },
         categoryId: true,
         createdAt: true,
         updatedAt: true,
@@ -139,7 +139,7 @@ export class ComplaintsRepository {
       where: { id, ...(filter.branchId ? { branchId: filter.branchId } : {}) },
       select: {
         ...complaintSelect,
-        ownerId: true, owner: { select: { nameEn: true, email: true } }, branch: { select: { code: true, nameEn: true, nameAr: true, timezone: true } },
+        ownerId: true, owner: { select: { nameEn: true, email: true } }, department: { select: { nameEn: true, nameAr: true } }, branch: { select: { code: true, nameEn: true, nameAr: true, timezone: true } },
         descriptionEn: true, incidentAt: true,
         category: { select: { id: true, nameEn: true, nameAr: true } },
         customer: { select: { id: true, nameEn: true, phone: true, dmsCode: true, dataSource: true } },
@@ -221,8 +221,8 @@ export class ComplaintsRepository {
       status: data.toStatus,
       ...(referenceNumber ? { referenceNumber } : {}),
       ...(data.targetBranchId ? { branchId: data.targetBranchId } : {}),
-      ...(data.targetDepartmentId ? { departmentId: data.targetDepartmentId } : {}),
-      ...(data.ownerId ? { ownerId: data.ownerId } : {}),
+      ...(data.targetDepartmentId !== undefined ? { departmentId: data.targetDepartmentId } : {}),
+      ...(data.ownerId !== undefined ? { ownerId: data.ownerId } : {}),
       ...(data.resolvedAt ? { resolvedAt: data.resolvedAt } : {}),
       ...(data.closedAt ? { closedAt: data.closedAt } : {}),
       ...(data.vehicleDataUnavailableReason ? { vehicleDataUnavailableReason: data.vehicleDataUnavailableReason } : {}),

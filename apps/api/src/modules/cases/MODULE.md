@@ -30,6 +30,7 @@ module's boundary so you can work in a fresh context without scanning the tree.
 - `core/*` (prisma, errors, audit, rbac, correlation).
 - `AuthService` through `AuthModule` for session validation guard wiring.
 - `AdminUsersService` through `AdminModule` for assignable staff validation.
+- `AssignmentsService` through `AssignmentsModule` for generic assignment history and notifications.
 - Other modules' public services only. Never import another module repository,
   `dto/`, or Prisma model type.
 

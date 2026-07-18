@@ -28,6 +28,7 @@ const caseSelect = {
   confidentialityLevel: true,
   branchId: true,
   ownerId: true,
+  assignedDepartmentId: true,
   subject: true,
   descriptionEn: true,
   descriptionAr: true,
@@ -35,6 +36,7 @@ const caseSelect = {
   updatedAt: true,
   branch: { select: { nameEn: true, nameAr: true } },
   owner: { select: { nameEn: true } },
+  assignedDepartment: { select: { nameEn: true, nameAr: true } },
   links: { select: { entityType: true, entityId: true, createdAt: true } },
   participants: { select: { userId: true, role: true } },
   restrictedNotes: { select: { id: true, authorId: true, body: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
@@ -61,6 +63,7 @@ export type CreateCaseData = {
   confidentialityLevel: CaseConfidentialityLevel;
   branchId: string;
   ownerId?: string | null;
+  assignedDepartmentId?: string | null;
   subject: string;
   descriptionEn: string;
   descriptionAr?: string | null;
@@ -110,6 +113,7 @@ export class CasesRepository {
       links: { create: data.links },
     };
     if (data.ownerId) createData.owner = { connect: { id: data.ownerId } };
+    if (data.assignedDepartmentId) createData.assignedDepartment = { connect: { id: data.assignedDepartmentId } };
     if (data.participants.length) createData.participants = { create: data.participants };
 
     return client.case.create({
@@ -162,6 +166,17 @@ export class CasesRepository {
       },
     });
     return updated;
+  }
+
+  updateAssignment(id: string, assignedUserId: string | null, assignedDepartmentId: string | null, client: CaseClient): Promise<CaseRecord> {
+    return client.case.update({
+      where: { id },
+      data: {
+        owner: assignedUserId ? { connect: { id: assignedUserId } } : { disconnect: true },
+        assignedDepartment: assignedDepartmentId ? { connect: { id: assignedDepartmentId } } : { disconnect: true },
+      },
+      select: caseSelect,
+    });
   }
 
   async createCapaAction(data: CreateCapaActionData, client: CapaClient = this.prisma): Promise<CapaActionRecord> {

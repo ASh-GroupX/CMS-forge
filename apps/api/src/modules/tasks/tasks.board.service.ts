@@ -65,7 +65,7 @@ export class TasksBoardService {
 
       const status = stage.mappedTaskStatus ?? current.status;
       const nextAction = status === TaskStatus.DONE ? null : normalizeNextAction(input.nextAction === undefined ? currentNextAction(current) : input.nextAction);
-      assertNextAction(status, nextAction);
+      assertNextAction(status, nextAction, Boolean(current.assignedDepartmentId));
       // Same guard as PATCH /tasks/:id: the actor may only route a next action to a
       // staff member inside their branch scope (admins excepted). Prevents a move
       // from leaking a task into another branch's queue via nextActionWhoId.

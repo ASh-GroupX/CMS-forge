@@ -16,6 +16,7 @@ import { portalSurveyText } from '../apps/web/src/i18n/portal-survey.ts';
 import { portalTrackingText } from '../apps/web/src/i18n/portal-tracking.ts';
 import { reportsDashboardText } from '../apps/web/src/i18n/staff-reports-dashboard.ts';
 import { staffShellText } from '../apps/web/src/i18n/staff-shell.ts';
+import { staffAssignmentText } from '../apps/web/src/i18n/staff-assignment.ts';
 import { taskBoardText } from '../apps/web/src/i18n/staff-task-board.ts';
 import { taskConversationText } from '../apps/web/src/i18n/staff-task-conversation.ts';
 
@@ -46,7 +47,7 @@ function buildVisualCases(locale) {
     visualCase('manager task detail', locale, 'staff-manager-detail', { ...base }, ['TASK-MANAGER-PROOF', managerControlRoomText[locale].fields.nextAction, managerControlRoomText[locale].back], ['sm:grid-cols-2', 'min-h-11']),
     visualCase('dashboard', locale, 'staff-dashboard', { ...base }, [modernUiText[locale].dashboard.attention, modernUiText[locale].dashboard.mainIndicators, modernUiText[locale].dashboard.recentUpdates], ['xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,1fr)]', 'sm:grid-cols-2']),
     visualCase('work queue', locale, 'staff-complaints', { ...base }, [t.workQueue.title, t.workQueue.filterHelp, 'CMP-PROOF-001', t.workQueue.pagination.page], ['md:grid-cols-6', 'overflow-x-auto']),
-    visualCase('deal handoff', locale, 'staff-deal-handoff', { ...base }, [dealHandoffText[locale].title, dealHandoffText[locale].sections.stuck[0], dealHandoffText[locale].actions.updateDetails, 'DEAL-PROOF-001'], ['<details', 'bg-surface-raised']),
+    visualCase('deal handoff', locale, 'staff-deal-handoff', { ...base }, [dealHandoffText[locale].title, dealHandoffText[locale].sections.stuck[0], dealHandoffText[locale].actions.updateDetails, staffAssignmentText[locale].user, staffAssignmentText[locale].department, 'DEAL-PROOF-001'], ['<details', 'bg-surface-raised']),
     visualCase('complaint create', locale, 'staff-complaint-new', { ...base, create: 'validation', lookup: 'match' }, [t.createForm.title, t.lookup.states.match, t.lookup.actions.useMatch, t.createForm.validation.vinRequired], ['md:grid-cols-2', 'md:col-span-2']),
     visualCase('complaint detail', locale, 'staff-complaint-detail', { ...base, attachment: 'clean', lookup: 'multiple', tab: 'details' }, [detail.title, tabs.details, detail.sections.customer, detail.sections.attachments, tabs.dms, t.lookup.states.multiple, relations.title], ['2xl:grid-cols-2', 'grid-cols-3']),
     visualCase('complaint collaboration', locale, 'staff-complaint-detail', { ...base, tab: 'communication' }, [detail.title, tabs.communication, collaboration.additions], ['xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]', 'border-line-subtle']),

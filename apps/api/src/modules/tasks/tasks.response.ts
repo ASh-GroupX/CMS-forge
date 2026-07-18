@@ -4,8 +4,9 @@ import type { TaskRecord } from './tasks.repository.js';
 export function taskCounts(tasks: TaskRecord[]): ManagerRollupCountDto[] {
   const grouped = new Map<string, { assigneeId: string; assigneeName: string | null; count: number }>();
   for (const task of tasks) {
-    const current = grouped.get(task.assigneeId);
-    grouped.set(task.assigneeId, { assigneeId: task.assigneeId, assigneeName: task.assignee?.nameEn ?? null, count: (current?.count ?? 0) + 1 });
+    const assigneeId = task.assigneeId ?? task.assignedDepartmentId ?? 'UNASSIGNED';
+    const current = grouped.get(assigneeId);
+    grouped.set(assigneeId, { assigneeId, assigneeName: task.assignee?.nameEn ?? task.assignedDepartment?.nameEn ?? null, count: (current?.count ?? 0) + 1 });
   }
   return [...grouped.values()];
 }
@@ -24,6 +25,8 @@ export function taskToResponse(task: TaskRecord): TaskResponseDto {
     dueAt: task.dueAt.toISOString(),
     status: task.status,
     assignedDepartmentId: task.assignedDepartmentId,
+    assignedDepartmentName: task.assignedDepartment?.nameEn ?? null,
+    assignedDepartmentNameAr: task.assignedDepartment?.nameAr ?? null,
     nextAction: currentNextAction(task)?.toDto ?? null,
     isCustomerPromise: task.isCustomerPromise,
     visibility: task.visibility,
@@ -46,6 +49,8 @@ export function managerTaskDetailResponse(task: TaskRecord, now: Date, canOpenIn
       ownerName: response.ownerName ?? null,
       assigneeId: response.assigneeId,
       assigneeName: response.assigneeName ?? null,
+      assignedDepartmentId: response.assignedDepartmentId ?? null,
+      assignedDepartmentName: response.assignedDepartmentName ?? null,
       branchId: response.branchId ?? null,
       branchName: response.branchName ?? null,
       displayTimeZone: response.displayTimeZone,

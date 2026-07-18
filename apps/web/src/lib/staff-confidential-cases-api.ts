@@ -1,3 +1,5 @@
+import { CSRF_COOKIE, hasStaffSessionCookie, incomingCookieHeader, readCookie } from './staff-request-auth';
+
 export type StaffConfidentialCaseTimeline = {
   case: {
     id: string;
@@ -9,6 +11,9 @@ export type StaffConfidentialCaseTimeline = {
     branchName: string;
     ownerId: string | null;
     ownerName: string | null;
+    assignedDepartmentId: string | null;
+    assignedDepartmentName: string | null;
+    assignedDepartmentNameAr: string | null;
     createdAt: string;
     updatedAt: string;
   };
@@ -17,8 +22,6 @@ export type StaffConfidentialCaseTimeline = {
 };
 
 type TimelineResponse = Partial<StaffConfidentialCaseTimeline>;
-
-const STAFF_SESSION_COOKIE = 'cms_staff_session';
 
 export async function getStaffConfidentialCaseTimeline({
   apiUrl = process.env.API_URL ?? 'http://localhost:3000',
@@ -76,12 +79,33 @@ function timelineFrom(body: TimelineResponse): StaffConfidentialCaseTimeline | n
       branchName: caseItem.branchName,
       ownerId: typeof caseItem.ownerId === 'string' ? caseItem.ownerId : null,
       ownerName: typeof caseItem.ownerName === 'string' ? caseItem.ownerName : null,
+      assignedDepartmentId: typeof caseItem.assignedDepartmentId === 'string' ? caseItem.assignedDepartmentId : null,
+      assignedDepartmentName: typeof caseItem.assignedDepartmentName === 'string' ? caseItem.assignedDepartmentName : null,
+      assignedDepartmentNameAr: typeof caseItem.assignedDepartmentNameAr === 'string' ? caseItem.assignedDepartmentNameAr : null,
       createdAt: caseItem.createdAt,
       updatedAt: caseItem.updatedAt,
     },
     restrictedNotes,
     events,
   };
+}
+
+export async function assignConfidentialCase(caseId: string, input: { assignedUserId: string | null; assignedDepartmentId: string | null; reason?: string | null }): Promise<'success' | 'denied' | 'error'> {
+  const cookies = await incomingCookieHeader();
+  if (!hasStaffSessionCookie(cookies)) return 'denied';
+  const csrf = readCookie(cookies, CSRF_COOKIE);
+  try {
+    const response = await fetch(new URL(`/cases/${encodeURIComponent(caseId)}/assignment`, process.env.API_URL ?? 'http://localhost:3000'), {
+      body: JSON.stringify(input),
+      cache: 'no-store',
+      headers: { Accept: 'application/json', 'content-type': 'application/json', cookie: cookies, ...(csrf ? { 'x-csrf-token': csrf } : {}) },
+      method: 'PATCH',
+    });
+    if (response.status === 401 || response.status === 403) return 'denied';
+    return response.ok ? 'success' : 'error';
+  } catch {
+    return 'error';
+  }
 }
 
 function isNote(note: unknown): note is StaffConfidentialCaseTimeline['restrictedNotes'][number] {
@@ -97,17 +121,4 @@ function isEvent(event: unknown): event is StaffConfidentialCaseTimeline['events
   return Boolean(event && typeof event === 'object'
     && typeof (event as { type?: unknown }).type === 'string'
     && typeof (event as { occurredAt?: unknown }).occurredAt === 'string');
-}
-
-function hasStaffSessionCookie(cookieHeader: string): boolean {
-  return cookieHeader.split(';').some((cookie) => cookie.trim().startsWith(`${STAFF_SESSION_COOKIE}=`));
-}
-
-async function incomingCookieHeader(): Promise<string> {
-  try {
-    const { cookies } = await import('next/headers');
-    return (await cookies()).toString();
-  } catch {
-    return '';
-  }
 }

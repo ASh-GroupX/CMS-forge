@@ -186,7 +186,7 @@ test('admin screens render Arabic RTL and English LTR', async () => {
 });
 
 test('remaining staff Arabic text uses real Arabic codepoints', () => {
-  const files = ['staff-audit-viewer', 'staff-collaboration', 'staff-communication-groups', 'staff-complaint-tabs', 'staff-employee-today', 'staff-deal-handoff', 'staff-notification-center', 'staff-reports-dashboard', 'staff-sent-tasks', 'staff-task-conversation'];
+  const files = ['staff-assignment', 'staff-audit-viewer', 'staff-collaboration', 'staff-communication-groups', 'staff-complaint-tabs', 'staff-employee-today', 'staff-deal-handoff', 'staff-notification-center', 'staff-reports-dashboard', 'staff-sent-tasks', 'staff-task-conversation'];
   const bundles = [auditViewerText, collaborationText, communicationGroupsText, complaintTabsText, employeeTodayText, dealHandoffText, notificationCenterText, reportsDashboardText, reportCatalogText, sentTasksText, taskConversationText];
 
   for (const file of files) {

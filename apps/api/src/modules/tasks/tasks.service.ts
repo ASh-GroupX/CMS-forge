@@ -5,6 +5,7 @@ import { AppException } from '../../core/http-kernel.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { CommunicationGroupsService } from '../communication-groups/communication-groups.service.js';
 import type { AdminUsersService, StaffLookupActor } from '../admin/admin-users.service.js';
+import type { AssignmentsService } from '../assignments/assignments.service.js';
 import type { EmployeeTodayResponseDto, ManagerControlRoomResponseDto, ManagerTaskDetailResponseDto, PromiseTrackerResponseDto, SentTasksResponseDto, TaskCommentsResponseDto, TaskResponseDto } from './dto/task-response.dto.js';
 import type { CreateTaskCommentInput, TaskNudgeInput } from './dto/task-collaboration.dto.js';
 import type { RelatedRecordLookupQueryDto, RelatedRecordLookupResponseDto } from './dto/related-record-lookup.dto.js';
@@ -28,16 +29,16 @@ export type { NormalizedNextAction } from './tasks.validation.js';
 export type TaskAuditContext = { actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 
 export type TaskNextActionInput = { what: string; whoId: string; when: Date | string };
-export type CreateTaskInput = { title: string; ownerId: string; assigneeId: string; dueAt: Date | string; status?: TaskStatus; nextAction?: TaskNextActionInput | null; isCustomerPromise?: boolean; visibility?: TaskVisibility; confidentialityLevel?: TaskConfidentialityLevel; links?: { entityType: TaskLinkEntityType; entityId: string }[]; participantUserIds?: string[]; assignedDepartmentId?: string | null };
+export type CreateTaskInput = { title: string; ownerId: string; assigneeId?: string | null; dueAt: Date | string; status?: TaskStatus; nextAction?: TaskNextActionInput | null; isCustomerPromise?: boolean; visibility?: TaskVisibility; confidentialityLevel?: TaskConfidentialityLevel; links?: { entityType: TaskLinkEntityType; entityId: string }[]; participantUserIds?: string[]; assignedDepartmentId?: string | null };
 export type UpdateTaskStatusInput = { taskId: string; status: TaskStatus; nextAction?: TaskNextActionInput | null; statusNote?: string };
-export type UpdateTaskInput = { taskId: string; status?: TaskStatus; assigneeId?: string; dueAt?: Date | string; nextAction?: TaskNextActionInput | null; isCustomerPromise?: boolean; statusNote?: string; assignedDepartmentId?: string | null };
+export type UpdateTaskInput = { taskId: string; status?: TaskStatus; assigneeId?: string | null; dueAt?: Date | string; nextAction?: TaskNextActionInput | null; isCustomerPromise?: boolean; statusNote?: string; assignedDepartmentId?: string | null };
 export type TaskActor = { userId: string; roleCode: string; branchId: string | null; departmentId?: string | null; permissions?: string[] };
 
 type ManagerRollupScope = { roleCode: string; branchId: string | null };
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly tasksRepository: TasksRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly usersService?: Pick<AdminUsersService, 'assertAssignable'>, private readonly relatedRecordsService?: TasksRelatedRecordsService, private readonly groupsService?: CommunicationGroupsService, private readonly boardRepository?: TasksBoardRepository) {}
+  constructor(private readonly tasksRepository: TasksRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly usersService?: Pick<AdminUsersService, 'assertAssignable'>, private readonly relatedRecordsService?: TasksRelatedRecordsService, private readonly groupsService?: CommunicationGroupsService, private readonly boardRepository?: TasksBoardRepository, private readonly assignmentsService?: AssignmentsService) {}
 
   async create(input: CreateTaskInput, audit: TaskAuditContext = {}): Promise<TaskResponseDto> {
     return this.tasksRepository.transaction((client) => this.createInTransaction(input, audit, client));
@@ -47,23 +48,26 @@ export class TasksService {
     await this.assertAssignable(input, actor);
     await this.assertRelatedRecords(input, actor);
     if (input.assignedDepartmentId) await assertAssignedDepartment(this.boardRepository, input.assignedDepartmentId);
-    return this.create(input, audit);
+    const task = await this.tasksRepository.transaction((client) => this.createInTransaction(input, audit, client, actor));
+    await this.assignmentsService?.notifyAfterCommit?.('TASK', task.id, { href: `/tasks/${task.id}`, title: task.title });
+    return task;
   }
 
   async relatedRecords(query: RelatedRecordLookupQueryDto, actor: TaskActor): Promise<RelatedRecordLookupResponseDto> {
     return { records: await this.relatedRecordsService!.list(query.type, actor, query.q) };
   }
 
-  async createInTransaction(input: CreateTaskInput, audit: TaskAuditContext, client: Prisma.TransactionClient): Promise<TaskResponseDto> {
+  async createInTransaction(input: CreateTaskInput, audit: TaskAuditContext, client: Prisma.TransactionClient, actor?: TaskActor): Promise<TaskResponseDto> {
     const status = input.status ?? TaskStatus.OPEN;
     const nextAction = status === TaskStatus.DONE ? null : normalizeNextAction(input.nextAction);
-    assertNextAction(status, nextAction);
+    assertNextAction(status, nextAction, Boolean(input.assignedDepartmentId));
     const taskLinks = links(input.links ?? []);
     assertPromiseLink(input.isCustomerPromise ?? false, taskLinks);
+    assertAssignment(input.assigneeId, input.assignedDepartmentId);
     const data = {
       title: requiredText(input.title, 'title'),
       ownerId: requiredText(input.ownerId, 'ownerId'),
-      assigneeId: requiredText(input.assigneeId, 'assigneeId'),
+      assigneeId: optionalId(input.assigneeId),
       dueAt: validDate(input.dueAt, 'dueAt'),
       status,
       nextActionWhat: nextAction?.what ?? null,
@@ -80,6 +84,13 @@ export class TasksService {
     const task = await this.tasksRepository.create(data, client);
     await this.tasksRepository.createStatusHistory(historyInput(task.id, null, task.status, audit), client);
     await this.auditService.record(taskAudit('task_created', task, audit, { status: task.status }), client);
+    if (this.assignmentsService && actor) {
+      await this.assignmentsService.setInTransaction({
+        entityType: 'TASK', entityId: task.id, assignedUserId: task.assigneeId,
+        assignedDepartmentId: task.assignedDepartmentId,
+        scopeBranchId: task.owner?.branchId ?? actor.branchId,
+      }, actor, audit, client);
+    }
     return taskToResponse(task);
   }
 
@@ -90,7 +101,7 @@ export class TasksService {
 
       const nextAction =
         input.status === TaskStatus.DONE ? null : normalizeNextAction(input.nextAction === undefined ? currentNextAction(current) : input.nextAction);
-      assertNextAction(input.status, nextAction);
+      assertNextAction(input.status, nextAction, Boolean(current.assignedDepartmentId));
       const statusNote = requiredStatusNote(current.status, input.status, input.statusNote);
       const task = await this.tasksRepository.updateStatus(
         {
@@ -112,7 +123,11 @@ export class TasksService {
   }
 
   async updateForActor(input: UpdateTaskInput, actor: TaskActor, audit: TaskAuditContext = {}): Promise<TaskResponseDto> {
-    return updateTaskForActor(this.tasksRepository, this.auditService, this.usersService, this.boardRepository, input, actor, audit);
+    const task = await updateTaskForActor(this.tasksRepository, this.auditService, this.usersService, this.boardRepository, input, actor, audit, this.assignmentsService);
+    if (input.assigneeId !== undefined || input.assignedDepartmentId !== undefined) {
+      await this.assignmentsService?.notifyAfterCommit?.('TASK', task.id, { href: `/tasks/${task.id}`, title: task.title });
+    }
+    return task;
   }
 
   async getForParticipant(taskId: string, actorId: string): Promise<TaskResponseDto> {
@@ -214,7 +229,7 @@ export class TasksService {
   }
 
   private async assertAssignable(input: CreateTaskInput, actor: StaffLookupActor): Promise<void> {
-    await this.usersService?.assertAssignable(actor, input.assigneeId);
+    if (input.assigneeId) await this.usersService?.assertAssignable(actor, input.assigneeId);
     const nextWho = input.nextAction?.whoId;
     if (nextWho && nextWho !== input.assigneeId) await this.usersService?.assertAssignable(actor, nextWho);
   }
@@ -232,13 +247,26 @@ export class TasksService {
 function participants(input: CreateTaskInput, nextAction: NormalizedNextAction | null) {
   const rows = new Map<string, TaskParticipantRole>();
   rows.set(requiredText(input.ownerId, 'ownerId'), TaskParticipantRole.OWNER);
-  if (!rows.has(requiredText(input.assigneeId, 'assigneeId'))) rows.set(input.assigneeId.trim(), TaskParticipantRole.ASSIGNEE);
+  const assigneeId = optionalId(input.assigneeId);
+  if (assigneeId && !rows.has(assigneeId)) rows.set(assigneeId, TaskParticipantRole.ASSIGNEE);
   if (nextAction && !rows.has(nextAction.whoId)) rows.set(nextAction.whoId, TaskParticipantRole.PARTICIPANT);
   for (const userId of input.participantUserIds ?? []) {
     const clean = requiredText(userId, 'participantUserIds');
     if (!rows.has(clean)) rows.set(clean, TaskParticipantRole.PARTICIPANT);
   }
   return [...rows].map(([userId, role]) => ({ userId, role }));
+}
+
+function assertAssignment(userId: string | null | undefined, departmentId: string | null | undefined): void {
+  if (optionalId(userId) || optionalId(departmentId)) return;
+  throw new AppException('VALIDATION_FAILED', 'Invalid task request', HttpStatus.BAD_REQUEST, [
+    { field: 'assignment', code: 'REQUIRED', message: 'A task requires an assigned user or department.' },
+  ]);
+}
+
+function optionalId(value: string | null | undefined): string | null {
+  const text = value?.trim() ?? '';
+  return text || null;
 }
 
 function links(input: { entityType: TaskLinkEntityType; entityId: string }[]) {

@@ -19,6 +19,7 @@ test('case draft accepts customer link without requiring a vehicle', async () =>
   const result = await service.createDraft({
     branchId: 'branch_1',
     ownerId: 'owner_1',
+    assignedDepartmentId: null,
     subject: 'Late delivery',
     descriptionEn: 'Customer delivery promise missed',
     links: [{ entityType: CaseLinkEntityType.CUSTOMER, entityId: 'customer_1' }],
@@ -208,6 +209,51 @@ test('case CAPA write denies readonly actors before create', async () => {
   );
 });
 
+test('case assignment dual-writes legacy and generic records in one transaction', async () => {
+  const tx = { case: {}, assignment: {}, assignmentHistory: {}, auditLog: {} };
+  const calls: unknown[] = [];
+  const service = new CasesService({
+    transaction: async <T>(work: (client: never) => Promise<T>) => work(tx as never),
+    findByIdInTransaction: async (_id: string, client: unknown) => {
+      calls.push({ find: client });
+      return caseRecord({ ownerId: null, assignedDepartmentId: null });
+    },
+    updateAssignment: async (_id: string, userId: string | null, departmentId: string | null, client: unknown) => {
+      calls.push({ legacy: { userId, departmentId }, client });
+      return caseRecord({ ownerId: userId, assignedDepartmentId: departmentId });
+    },
+  } as unknown as CasesRepository, undefined, undefined, {
+    setInTransaction: async (input: unknown, actor: unknown, audit: unknown, client: unknown) => {
+      calls.push({ generic: input, actor, audit, client });
+      return {} as never;
+    },
+    notifyAfterCommit: async (entityType: string, entityId: string) => { calls.push({ notify: { entityType, entityId } }); },
+  } as never);
+
+  const result = await service.assignForActor('case_1', {
+    assignedUserId: null,
+    assignedDepartmentId: 'dept_service',
+    reason: 'Service review',
+  }, { userId: 'manager_1', role: RoleCode.CR_MANAGER, branchId: 'branch_1', departmentId: 'dept_management' }, { correlationId: 'req_assign' });
+
+  assert.equal(result.assignedDepartmentId, 'dept_service');
+  assert.deepEqual(calls[1], { legacy: { userId: null, departmentId: 'dept_service' }, client: tx });
+  assert.deepEqual(calls[2], {
+    generic: { entityType: 'CASE', entityId: 'case_1', assignedUserId: null, assignedDepartmentId: 'dept_service', scopeBranchId: 'branch_1', reason: 'Service review' },
+    actor: { userId: 'manager_1', roleCode: RoleCode.CR_MANAGER, branchId: 'branch_1', departmentId: 'dept_management' },
+    audit: { correlationId: 'req_assign' }, client: tx,
+  });
+  assert.deepEqual(calls[3], { notify: { entityType: 'CASE', entityId: 'case_1' } });
+});
+
+test('case assignment denies readonly actors before starting a transaction', async () => {
+  const service = new CasesService({ transaction: async () => assert.fail('transaction should not start') } as unknown as CasesRepository);
+  await assert.rejects(
+    service.assignForActor('case_1', { assignedUserId: 'owner_2', assignedDepartmentId: null }, { userId: 'readonly', role: RoleCode.MGMT_READONLY, branchId: 'branch_1' }),
+    (error) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
+});
+
 test('case CAPA write denies different branch before create and audits', async () => {
   const auditRecords: AuditRecordInput[] = [];
   const service = new CasesService({
@@ -382,6 +428,7 @@ function caseRecord(overrides: Partial<CaseRecord> & { links?: CaseRecord['links
     confidentialityLevel: CaseConfidentialityLevel.NORMAL,
     branchId: 'branch_1',
     ownerId: 'owner_1',
+    assignedDepartmentId: null,
     subject: 'Late delivery',
     descriptionEn: 'Customer delivery promise missed',
     descriptionAr: null,
@@ -389,6 +436,7 @@ function caseRecord(overrides: Partial<CaseRecord> & { links?: CaseRecord['links
     updatedAt: now,
     branch: { nameEn: 'Main Branch', nameAr: 'Main Branch' },
     owner: { nameEn: 'Owner User' },
+    assignedDepartment: null,
     links: [{ entityType: CaseLinkEntityType.CUSTOMER, entityId: 'customer_1', createdAt: now }],
     participants: [],
     restrictedNotes: [],

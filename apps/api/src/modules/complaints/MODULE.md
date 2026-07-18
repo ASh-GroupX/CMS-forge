@@ -57,6 +57,8 @@ in the `board-stages` module).
   detail.
 - CommunicationGroupsService through CommunicationGroupsModule for
   server-scoped mention and watcher resolution.
+- AssignmentsService through AssignmentsModule for generic assignment history
+  and department recipient notifications.
 - Other modules' public services only. Never import another module repository,
   DTO folder, or Prisma model type.
 

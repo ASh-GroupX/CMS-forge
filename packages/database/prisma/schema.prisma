@@ -305,6 +305,7 @@ model Branch {
   auditLogs   AuditLog[]
   deals       Deal[]
   cases       Case[]
+  assignments Assignment[] @relation("AssignmentScopeBranch")
 
   @@map("branches")
 }
@@ -324,6 +325,10 @@ model Department {
   slaPolicies SlaPolicy[]
   capaActions CapaAction[]
   tasks       Task[]
+  assignments Assignment[] @relation("AssignmentDepartment")
+  assignmentHistory AssignmentHistory[] @relation("AssignmentHistoryDepartment")
+  deals       Deal[]
+  cases       Case[]
 
   @@index([branchId])
   @@map("departments")
@@ -419,6 +424,10 @@ model User {
   ownedCapaActions     CapaAction[]              @relation("CapaActionOwner")
   caseParticipants     CaseParticipant[]
   caseRestrictedNotes  CaseRestrictedNote[]      @relation("CaseRestrictedNoteAuthor")
+  assignmentsReceived  Assignment[]              @relation("AssignmentAssignedUser")
+  assignmentsMade      Assignment[]              @relation("AssignmentActor")
+  assignmentHistoryReceived AssignmentHistory[]  @relation("AssignmentHistoryAssignedUser")
+  assignmentHistoryMade AssignmentHistory[]      @relation("AssignmentHistoryActor")
 
   @@index([roleId])
   @@index([branchId])
@@ -937,11 +946,58 @@ model BoardStage {
   @@map("board_stages")
 }
 
+model Assignment {
+  id                   String              @id @default(cuid())
+  entityType           String              @map("entity_type") @db.VarChar(80)
+  entityId             String              @map("entity_id")
+  assignedUserId       String?             @map("assigned_user_id")
+  assignedDepartmentId String?             @map("assigned_department_id")
+  scopeBranchId        String?             @map("scope_branch_id")
+  assignedById         String?             @map("assigned_by_id")
+  version              Int                 @default(1)
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+  assignedUser         User?               @relation("AssignmentAssignedUser", fields: [assignedUserId], references: [id], onDelete: Restrict)
+  assignedDepartment   Department?         @relation("AssignmentDepartment", fields: [assignedDepartmentId], references: [id], onDelete: Restrict)
+  scopeBranch          Branch?             @relation("AssignmentScopeBranch", fields: [scopeBranchId], references: [id], onDelete: Restrict)
+  assignedBy           User?               @relation("AssignmentActor", fields: [assignedById], references: [id], onDelete: SetNull)
+  history              AssignmentHistory[]
+
+  @@unique([entityType, entityId])
+  @@index([assignedUserId, entityType])
+  @@index([assignedDepartmentId, entityType])
+  @@index([scopeBranchId, entityType])
+  @@map("assignments")
+}
+
+model AssignmentHistory {
+  id                   String      @id @default(cuid())
+  assignmentId         String      @map("assignment_id")
+  entityType           String      @map("entity_type") @db.VarChar(80)
+  entityId             String      @map("entity_id")
+  action               String      @db.VarChar(40)
+  assignedUserId       String?     @map("assigned_user_id")
+  assignedDepartmentId String?     @map("assigned_department_id")
+  assignedById         String?     @map("assigned_by_id")
+  reason               String?
+  correlationId        String?     @map("correlation_id")
+  createdAt            DateTime    @default(now()) @map("created_at")
+  assignment           Assignment  @relation(fields: [assignmentId], references: [id], onDelete: Restrict)
+  assignedUser         User?       @relation("AssignmentHistoryAssignedUser", fields: [assignedUserId], references: [id], onDelete: Restrict)
+  assignedDepartment   Department? @relation("AssignmentHistoryDepartment", fields: [assignedDepartmentId], references: [id], onDelete: Restrict)
+  assignedBy           User?       @relation("AssignmentHistoryActor", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([assignedUserId, createdAt])
+  @@index([assignedDepartmentId, createdAt])
+  @@map("assignment_history")
+}
+
 model Task {
   id                   String                   @id @default(cuid())
   title                String
   ownerId              String                   @map("owner_id")
-  assigneeId           String                   @map("assignee_id")
+  assigneeId           String?                  @map("assignee_id")
   dueAt                DateTime                 @map("due_at")
   status               TaskStatus               @default(OPEN)
   stageId              String?                  @map("stage_id")
@@ -956,7 +1012,7 @@ model Task {
   createdAt            DateTime                 @default(now()) @map("created_at")
   updatedAt            DateTime                 @updatedAt @map("updated_at")
   owner                User                     @relation("TaskOwner", fields: [ownerId], references: [id])
-  assignee             User                     @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  assignee             User?                    @relation("TaskAssignee", fields: [assigneeId], references: [id])
   nextActionWho        User?                    @relation("TaskNextActionWho", fields: [nextActionWhoId], references: [id])
   stage                BoardStage?              @relation(fields: [stageId], references: [id])
   assignedDepartment   Department?              @relation(fields: [assignedDepartmentId], references: [id])
@@ -1082,7 +1138,8 @@ model Deal {
   title           String
   branchId        String    @map("branch_id")
   ownerId         String    @map("owner_id")
-  currentHolderId String    @map("current_holder_id")
+  currentHolderId String?   @map("current_holder_id")
+  assignedDepartmentId String? @map("assigned_department_id")
   stage           DealStage @default(LEAD)
   stageDueAt      DateTime  @map("stage_due_at")
   blocker         String?
@@ -1090,11 +1147,13 @@ model Deal {
   updatedAt       DateTime  @updatedAt @map("updated_at")
   branch          Branch    @relation(fields: [branchId], references: [id])
   owner           User      @relation("DealOwner", fields: [ownerId], references: [id])
-  currentHolder   User      @relation("DealCurrentHolder", fields: [currentHolderId], references: [id])
+  currentHolder   User?     @relation("DealCurrentHolder", fields: [currentHolderId], references: [id])
+  assignedDepartment Department? @relation(fields: [assignedDepartmentId], references: [id])
 
   @@index([branchId, stage])
   @@index([ownerId])
   @@index([currentHolderId])
+  @@index([assignedDepartmentId])
   @@index([stageDueAt])
   @@map("deals")
 }
@@ -1107,6 +1166,7 @@ model Case {
   confidentialityLevel CaseConfidentialityLevel @default(NORMAL) @map("confidentiality_level")
   branchId             String                   @map("branch_id")
   ownerId              String?                  @map("owner_id")
+  assignedDepartmentId String?                  @map("assigned_department_id")
   subject              String
   descriptionEn        String                   @map("description_en")
   descriptionAr        String?                  @map("description_ar")
@@ -1114,6 +1174,7 @@ model Case {
   updatedAt            DateTime                 @updatedAt @map("updated_at")
   branch               Branch                   @relation(fields: [branchId], references: [id])
   owner                User?                    @relation("CaseOwner", fields: [ownerId], references: [id])
+  assignedDepartment   Department?              @relation(fields: [assignedDepartmentId], references: [id])
   links                CaseLink[]
   participants         CaseParticipant[]
   restrictedNotes      CaseRestrictedNote[]
@@ -1124,6 +1185,7 @@ model Case {
   @@index([confidentialityLevel])
   @@index([branchId, status])
   @@index([ownerId])
+  @@index([assignedDepartmentId])
   @@index([createdAt])
   @@map("cases")
 }

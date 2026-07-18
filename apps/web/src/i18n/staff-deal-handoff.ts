@@ -22,6 +22,7 @@ export const dealHandoffText = {
       branch: 'Branch',
       count: 'Count',
       delay: 'How late',
+      department: 'Assigned department',
       due: 'Stage due',
       holder: 'Current owner',
       history: 'History',
@@ -43,6 +44,7 @@ export const dealHandoffText = {
       noHistory: 'No audited actions yet.',
       unknownBranch: 'Branch not available',
       unknownStaff: 'Staff member not available',
+      unassigned: 'Not assigned',
     },
     staffPicker: {
       placeholder: 'Search staff by name, role, or branch',
@@ -77,6 +79,7 @@ export const dealHandoffText = {
       branch: 'الفرع',
       count: 'العدد',
       delay: 'مدة التأخير',
+      department: 'القسم المسند إليه',
       due: 'موعد المرحلة',
       holder: 'المسؤول الحالي',
       history: 'السجل',
@@ -98,6 +101,7 @@ export const dealHandoffText = {
       noHistory: 'لا توجد إجراءات مسجلة بعد.',
       unknownBranch: 'الفرع غير متاح',
       unknownStaff: 'الموظف غير متاح',
+      unassigned: 'غير مسند',
     },
     staffPicker: {
       placeholder: 'ابحث بالاسم أو الدور أو الفرع',

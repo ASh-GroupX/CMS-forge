@@ -6,11 +6,12 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Field, StateBlock } from '../shared/ui-primitives';
-import { StaffPicker } from '../shared/staff-picker';
+import { AssignmentPicker } from '../shared/assignment-picker';
 import { complaintDetailText } from '../../i18n/staff-complaint-detail';
 import { confirmationText } from '../../i18n/staff-confirmations';
 import type { Locale } from '../../i18n/staff-shell';
 import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
+import type { StaffAssignmentOptions } from '../../lib/staff-assignment-options-api';
 import type { ComplaintFormOption, ComplaintFormOptions } from '../../lib/staff-complaint-form-options-api';
 import {
   submitStaffComplaintWorkflowAction,
@@ -29,12 +30,14 @@ export type TransitionField = Exclude<keyof StaffComplaintTransitionRequest, 'st
 const previewActions: ComplaintTransitionAction[] = ['ACCEPT_INTAKE', 'APPROVE_AND_ROUTE', 'SEND_BACK', 'ASSIGN_INVESTIGATION', 'ADD_INVESTIGATION_UPDATE', 'RESOLVE', 'CLOSE', 'REJECT_AS_INVALID', 'REOPEN'];
 const transitionFields: TransitionField[] = ['reason', 'targetBranchId', 'targetDepartmentId', 'ownerId', 'resolutionType', 'resolutionSummary', 'customerCommunicationStatus', 'vehicleDataUnavailableReason'];
 const reasonRequired = new Set<ComplaintTransitionAction>(['APPROVE_AND_ROUTE', 'SEND_BACK', 'ASSIGN_INVESTIGATION', 'CLOSE', 'REOPEN', 'ROUTE_AGAIN', 'REJECT_AS_INVALID', 'REJECT_AFTER_REVIEW', 'REJECT_AFTER_INVESTIGATION', 'REJECT_RESOLUTION']);
-const ownerRequired = new Set<ComplaintTransitionAction>(['APPROVE_AND_ROUTE', 'ASSIGN_INVESTIGATION']);
+const assignmentActions = new Set<ComplaintTransitionAction>(['APPROVE_AND_ROUTE', 'ASSIGN_INVESTIGATION']);
+export function requiresAssignment(action: ComplaintTransitionAction): boolean { return assignmentActions.has(action); }
 const resolutionRequired = new Set<ComplaintTransitionAction>(['RESOLVE', 'RESOLVE_DIRECTLY']);
 export const destructiveActions = new Set<ComplaintTransitionAction>(['CLOSE', 'REJECT_AS_INVALID', 'REJECT_AFTER_REVIEW', 'REJECT_AFTER_INVESTIGATION', 'REJECT_RESOLUTION']);
 
 export function ComplaintWorkflowModal({
   allowedActions,
+  assignmentOptions,
   complaintId,
   locale,
   options,
@@ -44,6 +47,7 @@ export function ComplaintWorkflowModal({
   workflowState,
 }: {
   allowedActions?: ComplaintTransitionAction[] | undefined;
+  assignmentOptions?: StaffAssignmentOptions | null | undefined;
   complaintId?: string | undefined;
   locale: Locale;
   options?: ComplaintFormOptions | null | undefined;
@@ -69,7 +73,8 @@ export function ComplaintWorkflowModal({
       return;
     }
     const form = new FormData(event.currentTarget);
-    if (requiredFields(action, vehicleNeedsUnavailableReason).some((field) => !fieldText(form, field))) {
+    if (requiredFields(action, vehicleNeedsUnavailableReason).some((field) => !fieldText(form, field))
+      || (assignmentActions.has(action) && !fieldText(form, 'ownerId') && !fieldText(form, 'targetDepartmentId'))) {
       setSubmitState('validation');
       return;
     }
@@ -117,7 +122,7 @@ export function ComplaintWorkflowModal({
             ))}
           </div>
           <form className="mt-3 grid gap-3" onSubmit={(event) => { void submit(event); }}>
-            <WorkflowFields action={action} locale={locale} options={options} staff={staff} text={t.workflow} vehicleNeedsUnavailableReason={vehicleNeedsUnavailableReason} />
+            <WorkflowFields action={action} assignmentOptions={assignmentOptions} locale={locale} options={options} text={t.workflow} vehicleNeedsUnavailableReason={vehicleNeedsUnavailableReason} />
             {destructiveActions.has(action) ? (
               <label className="grid gap-2 rounded-sm border border-status-warning-border bg-status-warning-bg px-3 py-2 text-sm text-content-strong">
                 <span className="font-semibold">{confirm.title}</span>
@@ -139,15 +144,14 @@ export function ComplaintWorkflowModal({
   );
 }
 
-export function WorkflowFields({ action, locale, options, staff, text, vehicleNeedsUnavailableReason }: { action: ComplaintTransitionAction; locale: Locale; options?: ComplaintFormOptions | null | undefined; staff?: AssignableStaff[] | null | undefined; text: typeof complaintDetailText.en.workflow; vehicleNeedsUnavailableReason: boolean }) {
+export function WorkflowFields({ action, assignmentOptions, locale, options, text, vehicleNeedsUnavailableReason }: { action: ComplaintTransitionAction; assignmentOptions?: StaffAssignmentOptions | null | undefined; locale: Locale; options?: ComplaintFormOptions | null | undefined; text: typeof complaintDetailText.en.workflow; vehicleNeedsUnavailableReason: boolean }) {
   const fields = requiredFields(action, vehicleNeedsUnavailableReason);
   if (fields.length === 0) return <StateBlock message={text.noExtraFields} />;
   return (
     <div className="grid gap-3 md:grid-cols-2">
-      {fields.map((field) => {
+      {assignmentActions.has(action) ? <div className="md:col-span-2"><AssignmentPicker departmentName="targetDepartmentId" locale={locale} options={assignmentOptions} userName="ownerId" /></div> : null}
+      {fields.filter((field) => field !== 'targetDepartmentId' && field !== 'ownerId').map((field) => {
         if (field === 'targetBranchId') return <OptionField key={field} emptyHint={text.noOptions} label={text.fields.targetBranchId} name={field} options={options?.branches ?? []} locale={locale} />;
-        if (field === 'targetDepartmentId') return <OptionField key={field} emptyHint={text.noOptions} label={text.fields.targetDepartmentId} name={field} options={options?.departments ?? []} locale={locale} />;
-        if (field === 'ownerId') return <StaffPicker key={field} label={text.fields.ownerId} locale={locale} name={field} staff={staff} t={text.ownerPicker} />;
         if (field === 'reason' || field === 'resolutionSummary' || field === 'vehicleDataUnavailableReason') return <TextField area key={field} label={text.fields[field]} name={field} />;
         return <TextField key={field} label={text.fields[field]} name={field} />;
       })}
@@ -159,7 +163,6 @@ export function requiredFields(action: ComplaintTransitionAction, vehicleNeedsUn
   return [
     ...(reasonRequired.has(action) ? ['reason' as const] : []),
     ...(action === 'APPROVE_AND_ROUTE' ? ['targetBranchId' as const, 'targetDepartmentId' as const] : []),
-    ...(ownerRequired.has(action) ? ['ownerId' as const] : []),
     ...(resolutionRequired.has(action) ? ['resolutionType' as const, 'resolutionSummary' as const] : []),
     ...(action === 'CLOSE' ? ['customerCommunicationStatus' as const] : []),
     ...(action === 'CLOSE' && vehicleNeedsUnavailableReason ? ['vehicleDataUnavailableReason' as const] : []),

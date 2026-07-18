@@ -19,6 +19,9 @@ export function queueItem(complaint: ComplaintQueueRecord, slaService?: SlaServi
     displayTimeZone: complaint.branch.timezone,
     ownerId: complaint.ownerId,
     ownerName: complaint.owner?.nameEn ?? null,
+    assignedDepartmentId: complaint.departmentId ?? null,
+    assignedDepartmentName: complaint.department?.nameEn ?? null,
+    assignedDepartmentNameAr: complaint.department?.nameAr ?? null,
     ...sla,
     nextAction: nextComplaintAction(complaint),
     createdAt: complaint.createdAt.toISOString(),
@@ -27,7 +30,7 @@ export function queueItem(complaint: ComplaintQueueRecord, slaService?: SlaServi
 }
 
 export function reportItem(complaint: ComplaintReportRecord): ComplaintReportRow {
-  return { id: complaint.id, referenceNumber: complaint.referenceNumber, branchId: complaint.branchId, categoryId: complaint.categoryId, status: complaint.status, severity: complaint.severity, subject: complaint.subject, ownerId: complaint.ownerId, displayTimeZone: complaint.branch.timezone, createdAt: complaint.createdAt.toISOString(), updatedAt: complaint.updatedAt.toISOString() };
+  return { id: complaint.id, referenceNumber: complaint.referenceNumber, branchId: complaint.branchId, categoryId: complaint.categoryId, status: complaint.status, severity: complaint.severity, subject: complaint.subject, ownerId: complaint.ownerId, assignedDepartmentId: complaint.departmentId, displayTimeZone: complaint.branch.timezone, createdAt: complaint.createdAt.toISOString(), updatedAt: complaint.updatedAt.toISOString() };
 }
 
 export function searchItem(complaint: ComplaintSearchRecord, masked = false, slaService?: SlaService): ComplaintSearchRow {
@@ -56,8 +59,9 @@ function slaSnapshot(complaint: Pick<ComplaintQueueRecord, 'branch' | 'createdAt
   return { slaState: nowMs >= dueMs ? 'BREACHED' : nowMs >= warningMs ? 'WARNING' : 'ON_TRACK', slaDueAt: deadline.dueAt, slaStage: deadline.stage, slaPercentElapsed: percent };
 }
 
-function nextComplaintAction(complaint: Pick<ComplaintQueueRecord, 'owner' | 'status'>): string | null {
+function nextComplaintAction(complaint: Pick<ComplaintQueueRecord, 'owner' | 'department' | 'status'>): string | null {
   if (complaint.status === ComplaintStatus.CLOSED || complaint.status === ComplaintStatus.REJECTED) return null;
   if (complaint.owner?.nameEn) return `Next response from ${complaint.owner.nameEn}`;
+  if (complaint.department?.nameEn) return `Next response from ${complaint.department.nameEn}`;
   return ({ DRAFT: 'Submit complaint', SUBMITTED: 'Manager intake review', MANAGER_REVIEW: 'Manager routing decision', BRANCH_REVIEW: 'Branch assignment or resolution', IN_PROGRESS: 'Investigation update', RESOLVED: 'Customer close decision', REOPENED: 'Route reopened complaint' } as Partial<Record<ComplaintStatus, string>>)[complaint.status] ?? null;
 }

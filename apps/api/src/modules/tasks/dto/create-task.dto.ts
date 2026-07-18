@@ -15,7 +15,8 @@ export type QuickAddTaskRequestDto = {
   participantUserIds?: string[];
   visibility?: TaskVisibility;
   confidentialityLevel?: TaskConfidentialityLevel;
-  assignedDepartmentId?: string;
+  assignedDepartmentId?: string | null;
+  assignedUserId?: string | null;
 };
 
 export type QuickAddTaskResponseDto = {
@@ -37,8 +38,10 @@ export function parseQuickAddTaskBody(body: unknown): QuickAddTaskRequestDto {
   const participantUserIds = optionalStringArray(input.participantUserIds, 'participantUserIds');
   const visibility = optionalEnum(input.visibility, TaskVisibility, 'visibility');
   const confidentialityLevel = optionalEnum(input.confidentialityLevel, TaskConfidentialityLevel, 'confidentialityLevel');
-  const assignedDepartmentId = optionalText(input.assignedDepartmentId, 'assignedDepartmentId');
+  const assignedDepartmentId = optionalNullableText(input.assignedDepartmentId, 'assignedDepartmentId');
+  const assignedUserId = optionalNullableText(input.assignedUserId, 'assignedUserId');
   if (assignedDepartmentId !== undefined) result.assignedDepartmentId = assignedDepartmentId;
+  if (assignedUserId !== undefined) result.assignedUserId = assignedUserId;
   if (dueAt !== undefined) result.dueAt = dueAt;
   if (isCustomerPromise !== undefined) result.isCustomerPromise = isCustomerPromise;
   if (links !== undefined) result.links = links;
@@ -52,7 +55,7 @@ export function toQuickAddTaskInput(body: QuickAddTaskRequestDto, ownerId: strin
   const input: CreateTaskInput = {
     title: body.title,
     ownerId,
-    assigneeId: body.whoId,
+    assigneeId: body.assignedUserId === undefined ? body.whoId : body.assignedUserId,
     dueAt: body.dueAt ?? body.when,
     nextAction: { what: body.what, whoId: body.whoId, when: body.when },
   };
@@ -85,6 +88,11 @@ function requiredText(value: unknown, field: string): string {
 
 function optionalText(value: unknown, field: string): string | undefined {
   return value === undefined ? undefined : requiredText(value, field);
+}
+
+function optionalNullableText(value: unknown, field: string): string | null | undefined {
+  if (value === undefined || value === null) return value;
+  return requiredText(value, field);
 }
 
 function optionalStringArray(value: unknown, field: string): string[] | undefined {

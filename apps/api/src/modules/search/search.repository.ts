@@ -23,8 +23,8 @@ export class SearchRepository {
   }
 
   private async tasks(q: string, limit: number, actor: SearchActor): Promise<SearchResult[]> {
-    const rows = await this.prisma.task.findMany({ where: { title: { contains: q, mode: 'insensitive' }, ...taskAccess(actor) }, orderBy: { updatedAt: 'desc' }, take: limit, select: { id: true, title: true, dueAt: true, assignee: { select: { nameEn: true, nameAr: true } } } });
-    return rows.map((row) => ({ type: 'TASK', id: row.id, label: row.title, labelAr: row.title, context: row.assignee.nameEn, contextAr: row.assignee.nameAr, href: `/tasks/${row.id}` }));
+    const rows = await this.prisma.task.findMany({ where: { title: { contains: q, mode: 'insensitive' }, ...taskAccess(actor) }, orderBy: { updatedAt: 'desc' }, take: limit, select: { id: true, title: true, dueAt: true, assignee: { select: { nameEn: true, nameAr: true } }, assignedDepartment: { select: { nameEn: true, nameAr: true } } } });
+    return rows.map((row) => ({ type: 'TASK', id: row.id, label: row.title, labelAr: row.title, context: row.assignee?.nameEn ?? row.assignedDepartment?.nameEn ?? '', contextAr: row.assignee?.nameAr ?? row.assignedDepartment?.nameAr ?? '', href: `/tasks/${row.id}` }));
   }
 
   private async cases(q: string, limit: number, actor: SearchActor): Promise<SearchResult[]> {
@@ -34,7 +34,7 @@ export class SearchRepository {
 
   private async deals(q: string, limit: number, actor: SearchActor): Promise<SearchResult[]> {
     const rows = await this.prisma.deal.findMany({ where: { ...branchScope(actor), OR: [{ title: { contains: q, mode: 'insensitive' } }, { currentHolder: { nameEn: { contains: q, mode: 'insensitive' } } }, { currentHolder: { nameAr: { contains: q, mode: 'insensitive' } } }] }, orderBy: { updatedAt: 'desc' }, take: limit, select: { id: true, title: true, branch: { select: { nameEn: true, nameAr: true } }, currentHolder: { select: { nameEn: true, nameAr: true } } } });
-    return rows.map((row) => ({ type: 'DEAL', id: row.id, label: row.title, labelAr: row.title, context: `${row.currentHolder.nameEn} · ${row.branch.nameEn}`, contextAr: `${row.currentHolder.nameAr} · ${row.branch.nameAr}`, href: '/deals/handoff' }));
+    return rows.map((row) => ({ type: 'DEAL', id: row.id, label: row.title, labelAr: row.title, context: `${row.currentHolder?.nameEn ?? ''} · ${row.branch.nameEn}`, contextAr: `${row.currentHolder?.nameAr ?? ''} · ${row.branch.nameAr}`, href: '/deals/handoff' }));
   }
 
   private async customers(q: string, limit: number, actor: SearchActor): Promise<SearchResult[]> {

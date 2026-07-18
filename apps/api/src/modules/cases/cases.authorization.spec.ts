@@ -11,16 +11,18 @@ import { AppException } from '../../core/http-kernel.js';
 import { CasesController } from './cases.controller.js';
 import { CasesModule } from './cases.module.js';
 
-test('case routes require permissions and CSRF for CAPA writes', async () => {
+test('case routes require permissions and CSRF for CAPA and assignment writes', async () => {
   assert.deepEqual(guardNames('timeline'), ['SessionAuthGuard', 'PermissionGuard']);
   assert.deepEqual(guardNames('confidentialTimeline'), ['SessionAuthGuard', 'PermissionGuard']);
   assert.deepEqual(guardNames('capa'), ['SessionAuthGuard', 'PermissionGuard']);
   assert.deepEqual(guardNames('createCapa'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('assign'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
 
   const auditRecords: AuditRecordInput[] = [];
   const guard = new PermissionGuard(new Reflector(), { record: async (input: AuditRecordInput) => auditRecords.push(input) } as unknown as AuditService);
   assert.equal(await guard.canActivate(context(request(['COMPLAINT_VIEW_BRANCH']), 'timeline')), true);
   assert.equal(await guard.canActivate(context(request(['COMPLAINT_COMMENT_INTERNAL']), 'createCapa')), true);
+  assert.equal(await guard.canActivate(context(request(['COMPLAINT_COMMENT_INTERNAL']), 'assign')), true);
 
   await assert.rejects(
     guard.canActivate(context(request([]), 'createCapa')),

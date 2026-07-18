@@ -5,6 +5,17 @@ export async function proofFetch(input) {
   if (path === '/auth/me') return json({ user: proofPrincipal() });
   if (path === '/notifications') return json({ items: proofNotifications() });
   if (path === '/staff/assignable') return json({ staff: proofStaff() });
+  if (path === '/assignments/options') return json({
+    users: proofStaff().map((staff) => ({
+      id: staff.userId,
+      nameEn: staff.displayName,
+      nameAr: staff.displayNameAr,
+      branchId: 'branch_proof',
+      departmentId: 'dept_proof',
+      roleCode: 'CR_MANAGER',
+    })),
+    departments: [{ id: 'dept_proof', nameEn: 'Proof department', nameAr: 'قسم تجريبي', branchId: 'branch_proof' }],
+  });
   if (path === '/tasks/today') return json({
     completed: [],
     dueToday: [],

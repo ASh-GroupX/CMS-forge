@@ -7,9 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { StaffPicker } from '../shared/staff-picker';
+import { AssignmentPicker } from '../shared/assignment-picker';
 import { employeeTodayText } from '../../i18n/staff-employee-today';
 import type { Locale } from '../../i18n/staff-shell';
 import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
+import type { StaffAssignmentOptions } from '../../lib/staff-assignment-options-api';
 import type { RelatedRecordType, StaffRelatedRecord, StaffRelatedRecordOptions } from '../../lib/staff-related-records-api';
 import type { StaffTask, StaffTaskStatus } from '../../lib/staff-tasks-api';
 import { formatZonedDateTimeLocal } from '../../lib/locale-format';
@@ -20,7 +22,7 @@ type RelatedRecordsAction = () => Promise<StaffRelatedRecordOptions | null>;
 
 const RELATED_RECORD_TYPES: RelatedRecordType[] = ['CUSTOMER', 'COMPLAINT', 'CASE', 'DEAL'];
 
-export function QuickAddForm({ action, loadRelatedRecordsAction, locale, relatedRecords, staff, t, timeZone }: { action: TaskAction; loadRelatedRecordsAction?: RelatedRecordsAction | undefined; locale: Locale; relatedRecords?: StaffRelatedRecordOptions | null | undefined; staff?: AssignableStaff[] | null | undefined; t: EmployeeTodayText; timeZone: string }) {
+export function QuickAddForm({ action, assignmentOptions, loadRelatedRecordsAction, locale, relatedRecords, staff, t, timeZone }: { action: TaskAction; assignmentOptions?: StaffAssignmentOptions | null | undefined; loadRelatedRecordsAction?: RelatedRecordsAction | undefined; locale: Locale; relatedRecords?: StaffRelatedRecordOptions | null | undefined; staff?: AssignableStaff[] | null | undefined; t: EmployeeTodayText; timeZone: string }) {
   const [loadedRecords, setLoadedRecords] = React.useState<StaffRelatedRecordOptions | null | undefined>(relatedRecords);
   const [loadingRecords, setLoadingRecords] = React.useState(false);
 
@@ -44,7 +46,8 @@ export function QuickAddForm({ action, loadRelatedRecordsAction, locale, related
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <LabeledInput label={t.fields.title} name="title" required />
-          <StaffPicker label={t.fields.assignee} labelName="assigneeLabel" locale={locale} name="whoId" staff={staff} t={t.staffPicker} />
+          <div className="md:col-span-2"><AssignmentPicker locale={locale} options={assignmentOptions} /></div>
+          <StaffPicker label={t.fields.nextOwner} labelName="assigneeLabel" locale={locale} name="whoId" staff={staff} t={t.staffPicker} />
           <LabeledInput label={`${t.fields.when} (${timeZone})`} name="when" required type="datetime-local" />
           <LabeledInput label={`${t.fields.due} (${timeZone})`} name="dueAt" type="datetime-local" />
           <RelatedRecordPicker locale={locale} relatedRecords={loadingRecords ? undefined : loadedRecords} t={t} />
@@ -143,9 +146,9 @@ function relatedRecordLabel(record: StaffRelatedRecord, locale: Locale): string 
   return [label, context].filter(Boolean).join(' - ');
 }
 
-export function TaskActions({ action, locale, staff, task, t }: { action: TaskAction; locale: Locale; staff?: AssignableStaff[] | null | undefined; task: StaffTask; t: EmployeeTodayText }) {
+export function TaskActions({ action, assignmentOptions, locale, staff, task, t }: { action: TaskAction; assignmentOptions?: StaffAssignmentOptions | null | undefined; locale: Locale; staff?: AssignableStaff[] | null | undefined; task: StaffTask; t: EmployeeTodayText }) {
   const nextWhat = task.nextAction?.what ?? task.title;
-  const nextWho = task.nextAction?.whoId ?? task.assigneeId;
+  const nextWho = task.nextAction?.whoId ?? task.assigneeId ?? '';
   const nextWhen = formatZonedDateTimeLocal(task.nextAction?.when ?? task.dueAt, task.displayTimeZone);
 
   return (
@@ -158,7 +161,7 @@ export function TaskActions({ action, locale, staff, task, t }: { action: TaskAc
         <summary className="cursor-pointer text-sm font-semibold text-content-strong">{t.actions.updateDetails}</summary>
         <form action={action} className="mt-3 grid gap-2 md:grid-cols-[1fr_1fr_1fr_auto]">
           <HiddenTaskFields locale={locale} taskId={task.id} />
-          <StaffPicker initialUserId={task.assigneeId} label={t.fields.assignee} labelName="assigneeLabel" locale={locale} name="assigneeId" staff={staff} t={t.staffPicker} />
+          <div className="md:col-span-2"><AssignmentPicker departmentName="assignedDepartmentId" initialDepartmentId={task.assignedDepartmentId ?? ''} initialUserId={task.assigneeId ?? ''} locale={locale} options={assignmentOptions} userName="assigneeId" /></div>
           <LabeledInput defaultValue={nextWhat} label={t.fields.nextAction} name="nextActionWhat" required />
           <StaffPicker initialUserId={nextWho} label={t.fields.nextOwner} labelName="nextActionWhoLabel" locale={locale} name="nextActionWhoId" staff={staff} t={t.staffPicker} />
           <div className="grid gap-2">

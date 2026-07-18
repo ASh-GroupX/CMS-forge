@@ -8,7 +8,7 @@ export function parseUpdateTaskBody(taskId: string, body: unknown): UpdateTaskIn
   const result: UpdateTaskInput = { taskId: requiredText(taskId, 'taskId') };
 
   if (input.status !== undefined) result.status = enumValue(input.status, TaskStatus, 'status');
-  if (input.assigneeId !== undefined) result.assigneeId = requiredText(input.assigneeId, 'assigneeId');
+  if (input.assigneeId !== undefined) result.assigneeId = input.assigneeId === null ? null : requiredText(input.assigneeId, 'assigneeId');
   if (input.dueAt !== undefined) result.dueAt = requiredText(input.dueAt, 'dueAt');
   if (input.isCustomerPromise !== undefined) result.isCustomerPromise = booleanValue(input.isCustomerPromise, 'isCustomerPromise');
   if (input.nextAction !== undefined) result.nextAction = nextActionValue(input.nextAction);

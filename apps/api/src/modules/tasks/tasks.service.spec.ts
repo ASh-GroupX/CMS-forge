@@ -610,6 +610,7 @@ function taskRecord(overrides: Partial<TaskRecord> = {}): TaskRecord {
     updatedAt: now,
     owner: { nameEn: 'Owner User', branchId: 'branch_1', branch: { nameEn: 'Main Branch', timezone: 'Asia/Riyadh' } },
     assignee: { nameEn: 'Assignee User', branchId: 'branch_1', branch: { nameEn: 'Main Branch', timezone: 'Asia/Riyadh' } },
+    assignedDepartment: null,
     nextActionWho: { nameEn: 'Assignee User', branchId: 'branch_1' },
     links: [{ entityType: TaskLinkEntityType.CUSTOMER, entityId: 'customer_1' }],
     participants: [],

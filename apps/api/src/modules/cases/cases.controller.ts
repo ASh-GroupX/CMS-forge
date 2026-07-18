@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { RoleCode } from '@prisma/client';
 import { PermissionGuard, Permissions, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
@@ -6,6 +6,7 @@ import { CsrfGuard } from '../../core/csrf.guard.js';
 import { CasesService } from './cases.service.js';
 import type { CapaActionDto, CaseTimelineResponseDto } from './dto/case-response.dto.js';
 import { parseCreateCapaBody, toCreateCapaInput } from './dto/case-capa.dto.js';
+import { parseCaseAssignmentBody } from './dto/update-case.dto.js';
 
 @Controller('cases')
 export class CasesController {
@@ -38,6 +39,13 @@ export class CasesController {
   async createCapa(@Param('caseId') caseId: string, @Body() body: unknown, @Req() request: AuthenticatedRequest): Promise<{ capa: CapaActionDto }> {
     return { capa: await this.casesService.createCapaAction(toCreateCapaInput(caseId, parseCreateCapaBody(body)), actor(request), auditContext(request)) };
   }
+
+  @Patch(':caseId/assignment')
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
+  async assign(@Param('caseId') caseId: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    return { case: await this.casesService.assignForActor(caseId, parseCaseAssignmentBody(body), assignmentActor(request), auditContext(request)) };
+  }
 }
 
 function actor(request: AuthenticatedRequest) {
@@ -45,6 +53,13 @@ function actor(request: AuthenticatedRequest) {
     userId: request.principal?.userId ?? '',
     role: request.principal?.roleCode as RoleCode,
     branchId: request.principal?.branchId ?? null,
+  };
+}
+
+function assignmentActor(request: AuthenticatedRequest) {
+  return {
+    ...actor(request),
+    departmentId: request.principal?.departmentId ?? null,
   };
 }
 

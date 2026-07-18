@@ -1,20 +1,21 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RoleCode, TaskLinkEntityType } from '@prisma/client';
 import { AuditService } from '../../core/audit.service.js';
-import type { AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
-import type { DealActionHistoryDto, DealBoardItemDto, DealHandoffBoardResponseDto } from './dto/deal-response.dto.js';
+import type { DealHandoffBoardResponseDto } from './dto/deal-response.dto.js';
 import { DealsRepository } from './deals.repository.js';
-import type { DealAuditRow, DealRow } from './deals.repository.js';
+import type { DealRow } from './deals.repository.js';
+import { boardItem, dealAudit, groupHistory, holderCounts } from './deals.read-models.js';
 import { TasksService } from '../tasks/tasks.service.js';
+import type { AssignmentsService } from '../assignments/assignments.service.js';
 
 export const dealStages = ['LEAD', 'BOOKING', 'PAYMENT', 'FINANCE', 'INSURANCE', 'REGISTRATION', 'PDI', 'DELIVERY', 'POST_DELIVERY'] as const;
 export type DealStageCode = (typeof dealStages)[number];
 
-export type DealRecord = { id: string; title: string; branchId: string; branchName: string | null; ownerId: string; ownerName: string | null; currentHolderId: string; currentHolderName: string | null; stage: DealStageCode; stageDueAt: string; blocker: string | null; createdAt: string; updatedAt: string };
+export type DealRecord = { id: string; title: string; branchId: string; branchName: string | null; ownerId: string; ownerName: string | null; currentHolderId: string | null; currentHolderName: string | null; assignedDepartmentId: string | null; assignedDepartmentName: string | null; assignedDepartmentNameAr: string | null; stage: DealStageCode; stageDueAt: string; blocker: string | null; createdAt: string; updatedAt: string };
 
-export type CreateDealInput = { title: string; branchId: string; ownerId: string; currentHolderId: string; stageDueAt: Date | string; stage?: DealStageCode; blocker?: string | null };
-export type AdvanceDealStageInput = { deal: DealRecord; toStage: DealStageCode; currentHolderId: string; stageDueAt: Date | string; blocker?: string | null; updateNote?: string | null };
+export type CreateDealInput = { title: string; branchId: string; ownerId: string; currentHolderId?: string | null; assignedDepartmentId?: string | null; stageDueAt: Date | string; stage?: DealStageCode; blocker?: string | null };
+export type AdvanceDealStageInput = { deal: DealRecord; toStage: DealStageCode; currentHolderId?: string | null; assignedDepartmentId?: string | null; stageDueAt: Date | string; blocker?: string | null; updateNote?: string | null };
 
 type DealAuditContext = { actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 type DealBoardScope = { roleCode: string; branchId: string | null };
@@ -26,9 +27,13 @@ export class DealsService {
     private readonly dealsRepository: DealsRepository,
     private readonly tasksService?: TasksService,
     private readonly auditService?: AuditService,
+    private readonly assignmentsService?: AssignmentsService,
   ) {}
 
   create(input: CreateDealInput, now: Date = new Date()): DealRecord {
+    const currentHolderId = assignmentUser(input.currentHolderId);
+    const assignedDepartmentId = assignmentDepartment(input.assignedDepartmentId);
+    requireAssignment(currentHolderId, assignedDepartmentId);
     return {
       id: `deal_${now.getTime()}`,
       title: requiredText(input.title, 'title'),
@@ -36,8 +41,11 @@ export class DealsService {
       branchName: null,
       ownerId: requiredText(input.ownerId, 'ownerId'),
       ownerName: null,
-      currentHolderId: requiredText(input.currentHolderId, 'currentHolderId'),
+      currentHolderId,
       currentHolderName: null,
+      assignedDepartmentId,
+      assignedDepartmentName: null,
+      assignedDepartmentNameAr: null,
       stage: validStage(input.stage ?? 'LEAD'),
       stageDueAt: validDate(input.stageDueAt, 'stageDueAt').toISOString(),
       blocker: optionalText(input.blocker),
@@ -55,10 +63,16 @@ export class DealsService {
     if (input.deal.blocker) {
       throw new AppException('DEAL_BLOCKED', 'Deal blocker must be cleared before advancing', HttpStatus.CONFLICT);
     }
+    const currentHolderId = assignmentUser(input.currentHolderId);
+    const assignedDepartmentId = input.assignedDepartmentId === undefined
+      ? input.deal.assignedDepartmentId
+      : assignmentDepartment(input.assignedDepartmentId);
+    requireAssignment(currentHolderId, assignedDepartmentId);
     return {
       ...input.deal,
       stage: toStage,
-      currentHolderId: requiredText(input.currentHolderId, 'currentHolderId'),
+      currentHolderId,
+      assignedDepartmentId,
       stageDueAt: validDate(input.stageDueAt, 'stageDueAt').toISOString(),
       blocker: optionalText(input.blocker),
       updatedAt: now.toISOString(),
@@ -67,21 +81,27 @@ export class DealsService {
 
   async createForActor(input: Omit<CreateDealInput, 'branchId' | 'ownerId'> & { branchId?: string }, actor: DealWriteActor, audit: DealAuditContext = {}): Promise<DealRecord> {
     const branchId = actor.roleCode === RoleCode.ADMIN ? requiredText(input.branchId ?? '', 'branchId') : scopedBranchId(actor);
-    return this.createPersisted({ ...input, branchId, ownerId: actor.userId }, audit);
+    const deal = await this.createPersisted({ ...input, branchId, ownerId: actor.userId }, audit, actor);
+    await this.assignmentsService?.notifyAfterCommit?.('DEAL', deal.id, { href: `/deals/${deal.id}`, title: deal.title });
+    return deal;
   }
 
-  async advanceForActor(id: string, input: { currentHolderId: string; stageDueAt: Date | string; updateNote: string }, actor: DealWriteActor, audit: DealAuditContext = {}): Promise<{ deal: DealRecord; taskId: string }> {
+  async advanceForActor(id: string, input: { currentHolderId: string | null; assignedDepartmentId?: string | null; stageDueAt: Date | string; updateNote: string }, actor: DealWriteActor, audit: DealAuditContext = {}): Promise<{ deal: DealRecord; taskId: string }> {
     const deal = await this.dealsRepository.findById(requiredText(id, 'id'));
     if (!deal) throw new AppException('DEAL_NOT_FOUND', 'Deal was not found', HttpStatus.NOT_FOUND);
     const current = toResponse(deal);
     assertDealWriteAllowed(current, actor);
-    return this.advanceStagePersisted({
+    const result = await this.advanceStagePersisted({
       deal: current,
       toStage: nextStage(current.stage),
       currentHolderId: input.currentHolderId,
+      ...(input.assignedDepartmentId !== undefined ? { assignedDepartmentId: input.assignedDepartmentId } : {}),
       stageDueAt: input.stageDueAt,
       updateNote: input.updateNote,
-    }, audit);
+    }, audit, actor);
+    await this.assignmentsService?.notifyAfterCommit?.('DEAL', result.deal.id, { href: `/deals/${result.deal.id}`, title: result.deal.title });
+    await this.assignmentsService?.notifyAfterCommit?.('TASK', result.taskId, { href: `/tasks/${result.taskId}`, title: `Complete deal ${result.deal.stage}` });
+    return result;
   }
 
   async updateBlockerForActor(id: string, input: { blocker: string | null; updateNote: string }, actor: DealWriteActor, audit: DealAuditContext = {}): Promise<DealRecord> {
@@ -97,33 +117,43 @@ export class DealsService {
     });
   }
 
-  async updateDetailsForActor(id: string, input: { currentHolderId: string; stageDueAt: Date | string; updateNote: string }, actor: DealWriteActor, audit: DealAuditContext = {}): Promise<DealRecord> {
+  async updateDetailsForActor(id: string, input: { currentHolderId: string | null; assignedDepartmentId?: string | null; stageDueAt: Date | string; updateNote: string }, actor: DealWriteActor, audit: DealAuditContext = {}): Promise<DealRecord> {
     const updateNote = requiredText(input.updateNote, 'updateNote');
-    return this.dealsRepository.transaction(async (client) => {
+    const deal = await this.dealsRepository.transaction(async (client) => {
       const current = await this.dealsRepository.findById(requiredText(id, 'id'), client);
       if (!current) throw new AppException('DEAL_NOT_FOUND', 'Deal was not found', HttpStatus.NOT_FOUND);
       const existing = toResponse(current);
       assertDealWriteAllowed(existing, actor);
+      const currentHolderId = assignmentUser(input.currentHolderId);
+      const assignedDepartmentId = input.assignedDepartmentId === undefined
+        ? existing.assignedDepartmentId
+        : assignmentDepartment(input.assignedDepartmentId);
+      requireAssignment(currentHolderId, assignedDepartmentId);
       const deal = toResponse(await this.dealsRepository.updateDetails({
         id: existing.id,
-        currentHolderId: requiredText(input.currentHolderId, 'currentHolderId'),
+        currentHolderId,
+        assignedDepartmentId,
         stageDueAt: validDate(input.stageDueAt, 'stageDueAt'),
       }, client));
       await this.auditService?.record(dealAudit('deal_details_updated', deal, audit, { stage: deal.stage, updateNote }), client);
+      await this.assignmentsService?.setInTransaction({ entityType: 'DEAL', entityId: deal.id, assignedUserId: deal.currentHolderId, assignedDepartmentId: deal.assignedDepartmentId, scopeBranchId: deal.branchId, reason: updateNote }, actor, audit, client);
       return deal;
     });
+    await this.assignmentsService?.notifyAfterCommit?.('DEAL', deal.id, { href: `/deals/${deal.id}`, title: deal.title });
+    return deal;
   }
 
-  async createPersisted(input: CreateDealInput, audit: DealAuditContext = {}): Promise<DealRecord> {
+  async createPersisted(input: CreateDealInput, audit: DealAuditContext = {}, actor?: DealWriteActor): Promise<DealRecord> {
     const data = normalizedCreate(input);
     return this.dealsRepository.transaction(async (client) => {
       const deal = await this.dealsRepository.create(data, client);
       await this.auditService?.record(dealAudit('deal_created', toResponse(deal), audit, { stage: deal.stage }), client);
+      if (actor) await this.assignmentsService?.setInTransaction({ entityType: 'DEAL', entityId: deal.id, assignedUserId: deal.currentHolderId, assignedDepartmentId: deal.assignedDepartmentId, scopeBranchId: deal.branchId }, actor, audit, client);
       return toResponse(deal);
     });
   }
 
-  async advanceStagePersisted(input: AdvanceDealStageInput, audit: DealAuditContext = {}): Promise<{ deal: DealRecord; taskId: string }> {
+  async advanceStagePersisted(input: AdvanceDealStageInput, audit: DealAuditContext = {}, actor?: DealWriteActor): Promise<{ deal: DealRecord; taskId: string }> {
     const tasksService = this.tasksService;
     if (!tasksService) throw new AppException('VALIDATION_FAILED', 'Tasks service is required', HttpStatus.BAD_REQUEST);
     const updateNote = requiredText(input.updateNote ?? '', 'updateNote');
@@ -133,18 +163,21 @@ export class DealsService {
         id: next.id,
         stage: next.stage,
         currentHolderId: next.currentHolderId,
+        assignedDepartmentId: next.assignedDepartmentId,
         stageDueAt: new Date(next.stageDueAt),
         blocker: next.blocker,
       }, client));
       await this.auditService?.record(dealAudit('deal_stage_advanced', deal, audit, { fromStage: input.deal.stage, toStage: deal.stage, updateNote }), client);
+      if (actor) await this.assignmentsService?.setInTransaction({ entityType: 'DEAL', entityId: deal.id, assignedUserId: deal.currentHolderId, assignedDepartmentId: deal.assignedDepartmentId, scopeBranchId: deal.branchId, reason: updateNote }, actor, audit, client);
       const task = await tasksService.createInTransaction({
         title: `Complete deal ${deal.stage}`,
         ownerId: deal.ownerId,
         assigneeId: deal.currentHolderId,
+        assignedDepartmentId: deal.assignedDepartmentId,
         dueAt: deal.stageDueAt,
-        nextAction: { what: `Complete ${deal.stage} stage`, whoId: deal.currentHolderId, when: deal.stageDueAt },
+        nextAction: deal.currentHolderId ? { what: `Complete ${deal.stage} stage`, whoId: deal.currentHolderId, when: deal.stageDueAt } : null,
         links: [{ entityType: TaskLinkEntityType.DEAL, entityId: deal.id }],
-      }, audit, client);
+      }, audit, client, actor);
       return { deal, taskId: task.id };
     });
   }
@@ -152,7 +185,7 @@ export class DealsService {
   async handoffBoard(scope: DealBoardScope, now: Date = new Date()): Promise<DealHandoffBoardResponseDto> {
     const rows = await this.dealsRepository.listHandoffBoard(managerBranchId(scope));
     const history = groupHistory(await this.dealsRepository.listHandoffHistory(rows.map((deal) => deal.id)));
-    const deals = rows.map((deal) => boardItem(deal, now, history.get(deal.id) ?? []));
+    const deals = rows.map((deal) => boardItem(deal, now, history.get(deal.id) ?? [], toResponse));
     return {
       byStage: dealStages.map((stage) => {
         const stageDeals = deals.filter((deal) => deal.stage === stage);
@@ -192,39 +225,17 @@ function nextStage(stage: DealStageCode): DealStageCode {
   return next;
 }
 
-function boardItem(deal: DealRow, now: Date, historyRows: DealAuditRow[]): DealBoardItemDto {
-  const response = toResponse(deal);
-  const history = historyRows.slice(0, 5).map(historyItem);
-  return { ...response, delayAgeMinutes: Math.max(0, Math.floor((now.getTime() - deal.stageDueAt.getTime()) / 60_000)), lastAction: history[0] ?? null, history };
-}
-
-function groupHistory(rows: DealAuditRow[]): Map<string, DealAuditRow[]> {
-  const grouped = new Map<string, DealAuditRow[]>();
-  for (const row of rows) if (row.targetId) grouped.set(row.targetId, [...(grouped.get(row.targetId) ?? []), row]);
-  return grouped;
-}
-
-function historyItem(row: DealAuditRow): DealActionHistoryDto {
-  const metadata = row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata) ? row.metadata as Record<string, unknown> : {};
-  return { id: row.id, action: row.action, actor: { id: row.actorId, name: row.actor?.nameEn ?? null }, createdAt: row.createdAt.toISOString(), updateNote: typeof metadata.updateNote === 'string' ? metadata.updateNote : null };
-}
-
-function holderCounts(deals: DealBoardItemDto[]) {
-  const grouped = new Map<string, { currentHolderId: string; currentHolderName: string | null; count: number }>();
-  for (const deal of deals) {
-    const row = grouped.get(deal.currentHolderId) ?? { currentHolderId: deal.currentHolderId, currentHolderName: deal.currentHolderName, count: 0 };
-    row.count += 1;
-    grouped.set(deal.currentHolderId, row);
-  }
-  return [...grouped.values()];
-}
 
 function normalizedCreate(input: CreateDealInput) {
+  const currentHolderId = assignmentUser(input.currentHolderId);
+  const assignedDepartmentId = assignmentDepartment(input.assignedDepartmentId);
+  requireAssignment(currentHolderId, assignedDepartmentId);
   return {
     title: requiredText(input.title, 'title'),
     branchId: requiredText(input.branchId, 'branchId'),
     ownerId: requiredText(input.ownerId, 'ownerId'),
-    currentHolderId: requiredText(input.currentHolderId, 'currentHolderId'),
+    currentHolderId,
+    assignedDepartmentId,
     stage: validStage(input.stage ?? 'LEAD'),
     stageDueAt: validDate(input.stageDueAt, 'stageDueAt'),
     blocker: optionalText(input.blocker),
@@ -241,6 +252,9 @@ function toResponse(deal: DealRow): DealRecord {
     ownerName: deal.owner?.nameEn ?? null,
     currentHolderId: deal.currentHolderId,
     currentHolderName: deal.currentHolder?.nameEn ?? null,
+    assignedDepartmentId: deal.assignedDepartmentId,
+    assignedDepartmentName: deal.assignedDepartment?.nameEn ?? null,
+    assignedDepartmentNameAr: deal.assignedDepartment?.nameAr ?? null,
     stage: validStage(deal.stage),
     stageDueAt: deal.stageDueAt.toISOString(),
     blocker: deal.blocker,
@@ -249,19 +263,11 @@ function toResponse(deal: DealRow): DealRecord {
   };
 }
 
-function dealAudit(action: string, deal: DealRecord, context: DealAuditContext, metadata: Record<string, string>): AuditRecordInput {
-  return {
-    eventType: 'WORKFLOW',
-    action,
-    actorId: context.actorId ?? null,
-    branchId: deal.branchId,
-    targetType: 'deal',
-    targetId: deal.id,
-    correlationId: context.correlationId ?? null,
-    ipAddress: context.ipAddress ?? null,
-    userAgent: context.userAgent ?? null,
-    metadata,
-  };
+function assignmentUser(value: string | null | undefined): string | null { return optionalText(value); }
+function assignmentDepartment(value: string | null | undefined): string | null { return optionalText(value); }
+function requireAssignment(userId: string | null, departmentId: string | null): void {
+  if (userId || departmentId) return;
+  throw invalid('assignment');
 }
 
 function validStage(value: string): DealStageCode {

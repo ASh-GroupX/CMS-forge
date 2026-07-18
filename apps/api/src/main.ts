@@ -8,6 +8,7 @@ import {
 import { AdminModule } from './modules/admin/admin.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { AttachmentsModule } from './modules/attachments/attachments.module.js';
+import { AssignmentsModule } from './modules/assignments/assignments.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { BoardStagesModule } from './modules/board-stages/board-stages.module.js';
 import { BranchesModule } from './modules/branches/branches.module.js';
@@ -44,6 +45,7 @@ class HealthController {
     AuthModule,
     AdminModule,
     AuditModule,
+    AssignmentsModule,
     BoardStagesModule,
     BranchesModule,
     CasesModule,

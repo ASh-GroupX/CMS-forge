@@ -40,6 +40,8 @@ module's boundary so you can work in a fresh context without scanning the tree.
 - `NotificationsService` public surface for task nudge/comment in-app rows.
 - `CommunicationGroupsService` public surface for server-scoped collaboration
   targets and recipient resolution.
+- `AssignmentsService` through `AssignmentsModule` for generic user and
+  department assignment history and notifications.
 - Other modules' public services only. Never import another module repository,
   `dto/`, or Prisma model type.
 

@@ -22,6 +22,7 @@ const taskSelect = {
   updatedAt: true,
   owner: { select: { nameEn: true, branchId: true, branch: { select: { nameEn: true, timezone: true } } } },
   assignee: { select: { nameEn: true, branchId: true, branch: { select: { nameEn: true, timezone: true } } } },
+  assignedDepartment: { select: { nameEn: true, nameAr: true, branchId: true } },
   nextActionWho: { select: { nameEn: true, branchId: true } },
   links: { select: { entityType: true, entityId: true } },
   participants: { select: { userId: true, role: true, user: { select: { email: true, nameEn: true, nameAr: true } } } },
@@ -65,7 +66,7 @@ type TaskClient = Pick<Prisma.TransactionClient, 'task' | 'taskComment' | 'taskC
 export type CreateTaskData = {
   title: string;
   ownerId: string;
-  assigneeId: string;
+  assigneeId: string | null;
   dueAt: Date;
   status: TaskStatus;
   nextActionWhat?: string | null;
@@ -82,7 +83,7 @@ export type CreateTaskData = {
 export type UpdateTaskStatusData = {
   id: string;
   status?: TaskStatus;
-  assigneeId?: string;
+  assigneeId?: string | null;
   dueAt?: Date;
   nextActionWhat?: string | null;
   nextActionWhoId?: string | null;
@@ -124,8 +125,8 @@ export class TasksRepository {
       visibility: data.visibility,
       confidentialityLevel: data.confidentialityLevel,
       owner: { connect: { id: data.ownerId } },
-      assignee: { connect: { id: data.assigneeId } },
     };
+    if (data.assigneeId) createData.assignee = { connect: { id: data.assigneeId } };
     if (data.nextActionWhoId) createData.nextActionWho = { connect: { id: data.nextActionWhoId } };
     if (data.assignedDepartmentId) createData.assignedDepartment = { connect: { id: data.assignedDepartmentId } };
     if (data.links.length) createData.links = { create: data.links };
@@ -231,7 +232,9 @@ export class TasksRepository {
       where: { id: data.id },
       data: {
         ...(data.status !== undefined ? { status: data.status } : {}),
-        ...(data.assigneeId !== undefined ? { assignee: { connect: { id: data.assigneeId } } } : {}),
+        ...(data.assigneeId !== undefined
+          ? { assignee: data.assigneeId ? { connect: { id: data.assigneeId } } : { disconnect: true } }
+          : {}),
         ...(data.dueAt !== undefined ? { dueAt: data.dueAt } : {}),
         ...(data.nextActionWhat !== undefined ? { nextActionWhat: data.nextActionWhat } : {}),
         ...(data.nextActionWhoId !== undefined ? { nextActionWho: data.nextActionWhoId ? { connect: { id: data.nextActionWhoId } } : { disconnect: true } } : {}),
