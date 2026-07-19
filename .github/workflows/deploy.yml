@@ -105,6 +105,19 @@ jobs:
             corepack pnpm prod:config:check -- --env-file .env.production
             docker compose --env-file .env.production -f docker-compose.prod.yml config
 
+            # Create and verify a pre-migration database backup. Fail closed so
+            # the migrate service cannot run unless the current database is safe.
+            BACKUP_DIR=/root/cms-auto-backups/postgres
+            BACKUP_FILE="$BACKUP_DIR/cms-auto-$(date -u +%Y%m%dT%H%M%SZ).dump"
+            mkdir -p "$BACKUP_DIR"
+            chmod 700 "$BACKUP_DIR"
+            docker compose --env-file .env.production -f docker-compose.prod.yml up -d postgres
+            docker compose --env-file .env.production -f docker-compose.prod.yml exec -T postgres \
+              sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$BACKUP_FILE"
+            test -s "$BACKUP_FILE"
+            chmod 600 "$BACKUP_FILE"
+            echo "Pre-migration database backup created and verified"
+
             # Build and deploy production containers
             docker compose --env-file .env.production -f docker-compose.prod.yml build
             docker compose --env-file .env.production -f docker-compose.prod.yml up -d
