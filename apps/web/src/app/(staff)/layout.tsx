@@ -8,13 +8,13 @@ import { getStaffSessionPrincipal } from '../../lib/staff-session-api';
 import { AppShell, type StaffNavKey } from '../app-shell';
 
 const ROLE_NAV: Record<string, readonly StaffNavKey[]> = {
-  ADMIN: ['today', 'sent', 'promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'create', 'admin', 'audit', 'notifications', 'groups'],
-  CR_MANAGER: ['today', 'sent', 'promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'audit', 'notifications', 'groups'],
-  BRANCH_MANAGER: ['today', 'sent', 'promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'audit', 'notifications', 'groups'],
-  MGMT_READONLY: ['promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'audit', 'notifications', 'groups'],
+  ADMIN: ['today', 'board', 'sent', 'promises', 'handoff', 'queue', 'ticketBoard', 'reports', 'manager', 'dashboard', 'create', 'admin', 'audit', 'notifications', 'groups'],
+  CR_MANAGER: ['today', 'board', 'sent', 'promises', 'handoff', 'queue', 'ticketBoard', 'reports', 'manager', 'dashboard', 'audit', 'notifications', 'groups'],
+  BRANCH_MANAGER: ['today', 'board', 'sent', 'promises', 'handoff', 'queue', 'ticketBoard', 'reports', 'manager', 'dashboard', 'audit', 'notifications', 'groups'],
+  MGMT_READONLY: ['board', 'promises', 'handoff', 'queue', 'ticketBoard', 'reports', 'manager', 'dashboard', 'audit', 'notifications', 'groups'],
 };
 
-const STAFF_NAV: readonly StaffNavKey[] = ['today', 'sent', 'promises', 'handoff', 'queue', 'reports', 'dashboard', 'create', 'notifications', 'groups'];
+const STAFF_NAV: readonly StaffNavKey[] = ['today', 'board', 'sent', 'promises', 'handoff', 'queue', 'ticketBoard', 'reports', 'dashboard', 'create', 'notifications', 'groups'];
 
 export default async function StaffLayout({ children }: { children: ReactNode }) {
   const requestHeaders = await headers();

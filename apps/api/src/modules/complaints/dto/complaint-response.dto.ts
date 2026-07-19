@@ -13,6 +13,9 @@ export type ComplaintQueueItemDto = {
   displayTimeZone: string;
   ownerId: string | null;
   ownerName: string | null;
+  assignedDepartmentId: string | null;
+  assignedDepartmentName: string | null;
+  assignedDepartmentNameAr: string | null;
   slaState: 'ON_TRACK' | 'WARNING' | 'BREACHED' | 'CLOSED';
   slaDueAt: string | null;
   slaStage: string | null;

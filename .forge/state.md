@@ -1,9 +1,10 @@
 # Current State
 
-Status: CMSS Kanban revamp Phase A started; A1 (schema + seed) complete
-Phase: CMSS Trello-style board revamp — Phase A (task board drag & drop)
-Next Task: A2 — GET /tasks/board session-scoped endpoint + tests
-Model Tier: Opus 4.8 Max or GPT-5.5 Extra High
+Status: Universal assignment/forwarding implementation complete on isolated
+branch `nour` (not merged into a protected branch).
+Phase: A–E complete.
+Next Task: Human review, then optional commit/push/PR.
+Model Tier: GPT-5.5 Extra High or equivalent.
 
 ## How to use this file
 
@@ -12,26 +13,40 @@ Prior state history is in .forge/archive/state-archive.md.
 
 ## Snapshot
 
-- SSOT: `docs/CMSS_REVAMP_PLAN.md` (checklist, locked decisions). T0 + A1 done.
-- A1 shipped: `BoardStage` model + `BoardScope` enum + `Task.stageId?` +
-  `Task.boardPosition` in `packages/database/prisma/schema.prisma`;
-  idempotent default TASKS stages seed in
-  `packages/database/prisma/board-stages-seed.ts` (wired into `seed.ts`).
-- A1 proofs: prisma validate + generate Passed; repo lint + typecheck Passed;
-  `db:push`/`db:seed` Not Run (no local DATABASE_URL in this environment).
-- Uncommitted working-tree changes: schema, seed files, docs/CMSS_REVAMP_PLAN.md,
-  .forge chain files (plus pre-existing unrelated modifications:
-  packages/contracts/openapi.json, tools/lint.mjs, tools/web-proof.test.mjs).
+- `nour` was created from clean commit `e7435c0` after `git fetch`; source branch
+  `feat/cmss-task-board` matched its remote at the branch point (0 ahead/behind).
+- Added generic current assignment + append-only forwarding history, additive
+  compatibility columns, and idempotent backfill migration.
+- Generated and registered the reusable assignments module with scoped options,
+  target validation, transactional history/audit, and after-commit delivery.
+- Tasks/Promises, Complaints, Deals/Leads, and Cases/Requests dual-write their
+  legacy fields and the generic assignment in the owning domain transaction.
+- Reusable EN/AR assignment picker is integrated into task, complaint, deal,
+  and confidential case forms; user, department, and combined targets work.
+- Read models, search/report filters, dashboard ownership, notifications, and
+  nullable department-only compatibility were updated without removing legacy
+  APIs or fields.
+- OpenAPI and generated contract are current. Visual and accessibility proofs
+  passed and EN/AR screenshots were inspected.
+- Full proof matrix is recorded in `.forge/evidence.md`.
 
-## Current Stop
+## Security focus
 
-Handover requested by user mid-Phase A. A2 design is settled (see
-docs/CMSS_REVAMP_PLAN.md + next.md): new `tasks.board.repository.ts` +
-`tasks.board.service.ts` + `dto/board.dto.ts` because `tasks.service.ts`
-(300 lines) and `tasks.repository.ts` (281 lines) are at/near the 300-line
-budget — do NOT extend them.
+- Actor role/branch/department scope comes only from the server session.
+- Domain modules retain record/workflow authorization.
+- Generic assignment validates active targets and branch compatibility.
+- Assignment/history/audit writes commit atomically; notifications enqueue
+  after commit.
+- Portal APIs never expose assignment history or staff directory details.
 
-## Open Carry-Forward / Known Debt
+## Deployment handoff
 
-- A2–A8 of Phase A, then Phases B/C per SSOT.
-- Deploy secrets + `production` branch + production smoke (human gates).
+1. Back up the target database.
+2. Run `corepack pnpm --dir packages/database exec prisma migrate deploy --schema prisma/schema.prisma`.
+3. Regenerate/deploy the application packages normally.
+4. Verify assignment options and one user-, department-, and combined-target
+   assignment per adopted domain.
+
+Rollback should roll application code forward to a repair build while retaining
+the additive tables. Do not drop generic tables if department-only rows exist;
+legacy columns remain available because no destructive removal was performed.

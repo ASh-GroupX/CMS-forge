@@ -7,7 +7,9 @@ import { AppException } from '../../core/http-kernel.js';
 import { ComplaintFormOptionsService } from './complaint-form-options.service.js';
 import { auditContext, commentPermission, optionalSeverity, optionalSlaState, optionalStatus, optionalText, pageNumber, queueBranchId, requestRole, requiredQuery, searchBranchId, targetComplaintId, transitionPermission } from './complaints.controller-helpers.js';
 import { ComplaintRelationsService } from './complaint-relations.service.js';
+import { ComplaintsBoardService } from './complaints.board.service.js';
 import { ComplaintsService } from './complaints.service.js';
+import type { ComplaintBoardResponseDto } from './dto/complaint-board.dto.js';
 import type { ComplaintCommentResponseDto, ComplaintCommentsResponseDto, ComplaintPublicCommentsResponseDto } from './dto/complaint-comment.dto.js';
 import { parseComplaintCommentBody, toCommentInput } from './dto/complaint-comment.dto.js';
 import type { ComplaintCorrectionResponseDto } from './dto/complaint-correction.dto.js';
@@ -24,6 +26,7 @@ export class ComplaintsController {
     @Inject(ComplaintsService) private readonly complaintsService: ComplaintsService,
     @Inject(ComplaintFormOptionsService) private readonly formOptions: ComplaintFormOptionsService,
     @Inject(ComplaintRelationsService) private readonly relationsService: ComplaintRelationsService,
+    @Inject(ComplaintsBoardService) private readonly boardService: ComplaintsBoardService,
   ) {}
 
   @Get()
@@ -68,6 +71,16 @@ export class ComplaintsController {
   @Permissions('COMPLAINT_CREATE')
   async formOptionsForCreate(@Req() request: AuthenticatedRequest) {
     return this.formOptions.list(request.principal!);
+  }
+
+  @Get('board')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('COMPLAINT_VIEW_BRANCH')
+  @BranchScoped()
+  async board(@Req() request: AuthenticatedRequest): Promise<ComplaintBoardResponseDto> {
+    const principal = request.principal!;
+    // Session-only scoping: branch from the principal (admins unrestricted), role for allowed transitions.
+    return this.boardService.board({ userId: principal.userId, roleCode: principal.roleCode as RoleCode, branchId: queueBranchId(undefined, request) });
   }
 
   @Get(':id')

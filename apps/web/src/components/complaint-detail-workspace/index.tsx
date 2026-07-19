@@ -6,6 +6,7 @@ import { caseLifecycleStatusLabel, caseTypeLabel, complaintStatusLabel, severity
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import { formatDisplayDate, formatDisplayNumber, missingDisplay } from '../../lib/locale-format';
 import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
+import type { StaffAssignmentOptions } from '../../lib/staff-assignment-options-api';
 import type { ComplaintFormOptions } from '../../lib/staff-complaint-form-options-api';
 import type { StaffComplaintRelationsView } from '../../lib/staff-complaint-relations-api';
 import type { StaffComplaintComment } from '../../lib/staff-complaint-comments-api';
@@ -28,6 +29,7 @@ export type { ComplaintCommentsFixtureState };
 export type { ComplaintWorkflowFixtureState };
 
 export function ComplaintDetailWorkspace({
+  assignmentOptions,
   attachmentState,
   comments,
   commentsState,
@@ -43,6 +45,7 @@ export function ComplaintDetailWorkspace({
   surveys,
   workflowState,
 }: {
+  assignmentOptions?: StaffAssignmentOptions | null | undefined;
   attachmentState?: ComplaintAttachmentFixtureState | undefined;
   comments?: StaffComplaintComment[] | null | undefined;
   commentsState?: ComplaintCommentsFixtureState | undefined;
@@ -77,7 +80,7 @@ export function ComplaintDetailWorkspace({
           <Tabs defaultValue={initialTab} dir={shell.dir}>
             <TabsList className="grid h-auto w-full grid-cols-3"><TabsTrigger value="work">{tabs.work}</TabsTrigger><TabsTrigger value="communication">{tabs.communication}</TabsTrigger><TabsTrigger value="details">{tabs.details}</TabsTrigger></TabsList>
             <TabsContent className="grid gap-3 2xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.55fr)]" value="work">
-              <ComplaintWorkflowModal allowedActions={detail?.allowedActions} complaintId={detail?.id} locale={locale} options={options} staff={staff} status={detail?.status} vehicleNeedsUnavailableReason={Boolean(detail?.vehicleRelated && !detail.vehicle && !detail.vehicleDataUnavailableReason)} workflowState={workflowState} />
+              <ComplaintWorkflowModal allowedActions={detail?.allowedActions} assignmentOptions={assignmentOptions} complaintId={detail?.id} locale={locale} options={options} staff={staff} status={detail?.status} vehicleNeedsUnavailableReason={Boolean(detail?.vehicleRelated && !detail.vehicle && !detail.vehicleDataUnavailableReason)} workflowState={workflowState} />
               <DetailPanel title={t.sections.ownership} rows={[[t.labels.owner, values.owner], [tabs.deadlineState, values.sla], [t.labels.nextAction, detail?.nextAction ? actionDisplay(detail.nextAction, t, locale) : t.workflow.states.empty]]} />
             </TabsContent>
             <TabsContent className="grid gap-3 2xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" value="communication">

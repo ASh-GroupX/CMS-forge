@@ -12,3 +12,6 @@ pnpm-debug.log*
 .codex-run/
 .playwright-cli/
 output/
+
+# JetBrains IDE
+.idea/

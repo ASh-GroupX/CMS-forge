@@ -8,12 +8,18 @@ import { parseQuickAddTaskBody, toQuickAddTaskInput } from './dto/create-task.dt
 import { parseRelatedRecordLookupQuery, type RelatedRecordLookupResponseDto } from './dto/related-record-lookup.dto.js';
 import { parseTaskCommentBody, parseTaskNudgeBody } from './dto/task-collaboration.dto.js';
 import type { EmployeeTodayResponseDto, ManagerControlRoomResponseDto, ManagerTaskDetailResponseDto, PromiseTrackerResponseDto } from './dto/task-response.dto.js';
+import type { MoveTaskResponseDto, TaskBoardResponseDto } from './dto/board.dto.js';
+import { parseMoveTaskBody } from './dto/move-task.dto.js';
+import { TasksBoardService } from './tasks.board.service.js';
 import { TasksService } from './tasks.service.js';
 import { parseUpdateTaskBody } from './dto/update-task.dto.js';
 
 @Controller('tasks')
 export class TasksController {
-  constructor(@Inject(TasksService) private readonly tasksService: TasksService) {}
+  constructor(
+    @Inject(TasksService) private readonly tasksService: TasksService,
+    @Inject(TasksBoardService) private readonly boardService?: TasksBoardService,
+  ) {}
 
   @Post('quick-add')
   @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
@@ -23,7 +29,7 @@ export class TasksController {
     return {
       task: await this.tasksService.createForActor(
         toQuickAddTaskInput(parseQuickAddTaskBody(body), principal.userId),
-        { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId },
+        taskActor(principal),
         auditContext(request),
       ),
     };
@@ -40,8 +46,7 @@ export class TasksController {
   @UseGuards(SessionAuthGuard, PermissionGuard)
   @Permissions('COMPLAINT_COMMENT_INTERNAL')
   async sentByMe(@Req() request: AuthenticatedRequest) {
-    const principal = requirePrincipal(request);
-    return this.tasksService.sentByMe({ userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId });
+    return this.tasksService.sentByMe(taskActor(requirePrincipal(request)));
   }
 
   @Get('manager-rollup')
@@ -67,8 +72,7 @@ export class TasksController {
   @Permissions('COMPLAINT_COMMENT_INTERNAL')
   @BranchScoped()
   relatedRecords(@Query() query: Record<string, unknown>, @Req() request: AuthenticatedRequest): Promise<RelatedRecordLookupResponseDto> {
-    const principal = requirePrincipal(request);
-    return this.tasksService.relatedRecords(parseRelatedRecordLookupQuery(query), { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId });
+    return this.tasksService.relatedRecords(parseRelatedRecordLookupQuery(query), taskActor(requirePrincipal(request)));
   }
 
   @Get(':id/manager-detail')
@@ -79,20 +83,25 @@ export class TasksController {
     return this.tasksService.managerTaskDetail(id, taskActor(requirePrincipal(request)));
   }
 
+  @Get('board')
+  @UseGuards(SessionAuthGuard, PermissionGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
+  async board(@Req() request: AuthenticatedRequest): Promise<TaskBoardResponseDto> {
+    return this.boardService!.board(taskActor(requirePrincipal(request)));
+  }
+
   @Get(':id')
   @UseGuards(SessionAuthGuard, PermissionGuard)
   @Permissions('COMPLAINT_COMMENT_INTERNAL')
   async get(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
-    const principal = requirePrincipal(request);
-    return { task: await this.tasksService.getForActor(id, { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId }) };
+    return { task: await this.tasksService.getForActor(id, taskActor(requirePrincipal(request))) };
   }
 
   @Get(':id/comments')
   @UseGuards(SessionAuthGuard, PermissionGuard)
   @Permissions('COMPLAINT_COMMENT_INTERNAL')
   async comments(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
-    const principal = requirePrincipal(request);
-    return this.tasksService.listCommentsForActor(id, { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId }, auditContext(request));
+    return this.tasksService.listCommentsForActor(id, taskActor(requirePrincipal(request)), auditContext(request));
   }
 
   @Post(':id/comments')
@@ -138,20 +147,25 @@ export class TasksController {
   @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
   @Permissions('COMPLAINT_COMMENT_INTERNAL')
   async nudge(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
-    const principal = requirePrincipal(request);
-    await this.tasksService.nudgeForActor(id, parseTaskNudgeBody(body), { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId }, auditContext(request));
+    await this.tasksService.nudgeForActor(id, parseTaskNudgeBody(body), taskActor(requirePrincipal(request)), auditContext(request));
     return { ok: true };
+  }
+
+  @Post(':id/move')
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
+  async move(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest): Promise<MoveTaskResponseDto> {
+    return this.boardService!.move(parseMoveTaskBody(id, body), taskActor(requirePrincipal(request)), auditContext(request));
   }
 
   @Patch(':id')
   @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
   @Permissions('COMPLAINT_COMMENT_INTERNAL')
   async update(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
-    const principal = requirePrincipal(request);
     return {
       task: await this.tasksService.updateForActor(
         parseUpdateTaskBody(id, body),
-        { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId },
+        taskActor(requirePrincipal(request)),
         auditContext(request),
       ),
     };
@@ -169,7 +183,7 @@ function requirePrincipal(request: AuthenticatedRequest): StaffPrincipal {
 }
 
 function taskActor(principal: StaffPrincipal) {
-  return { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId, permissions: principal.permissions ?? [] };
+  return { userId: principal.userId, roleCode: principal.roleCode, branchId: principal.branchId, departmentId: principal.departmentId ?? null, permissions: principal.permissions ?? [] };
 }
 
 function watcherUserId(body: unknown): string {

@@ -1,19 +1,21 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { CapaActionStatus, CaseConfidentialityLevel, CaseLifecycleStatus, CaseLinkEntityType, CaseParticipantRole, CaseType, ComplaintStatus, RoleCode, TaskLinkEntityType } from '@prisma/client';
-import type { Prisma } from '@prisma/client';
+import { CapaActionStatus, CaseConfidentialityLevel, CaseLifecycleStatus, CaseLinkEntityType, CaseParticipantRole, CaseType, ComplaintStatus, TaskLinkEntityType, type Prisma } from '@prisma/client';
 import { AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import type { AdminUsersService } from '../admin/admin-users.service.js';
+import type { AssignmentsService } from '../assignments/assignments.service.js';
 import type { CapaActionDto, CaseRepeatIssueDto, CaseResponseDto, CaseTimelineResponseDto, TaskCaseLinkDto } from './dto/case-response.dto.js';
 import { assertCanReadCase, assertLifecycle, caseAudit } from './cases.policy.js';
 import type { CaseReadActor, CaseReadAudit } from './cases.policy.js';
 import { CasesRepository } from './cases.repository.js';
 import type { CapaActionRecord, CaseRecord } from './cases.repository.js';
 import { toCapaResponse, toCaseResponse, toRestrictedNoteResponse } from './cases.response.js';
+import { assignCaseForActor, assertCanWriteCase } from './cases.assignment.js';
 
 export type CreateCaseDraftInput = {
   branchId: string;
   ownerId?: string | null;
+  assignedDepartmentId?: string | null;
   subject: string;
   descriptionEn: string;
   descriptionAr?: string | null;
@@ -51,11 +53,7 @@ export type UpdateEmployeeGrievanceLifecycleInput = { caseId: string; toStatus: 
 
 @Injectable()
 export class CasesService {
-  constructor(
-    private readonly casesRepository: CasesRepository,
-    private readonly auditService?: AuditService,
-    private readonly usersService?: Pick<AdminUsersService, 'assertAssignable'>,
-  ) {}
+  constructor(private readonly casesRepository: CasesRepository, private readonly auditService?: AuditService, private readonly usersService?: Pick<AdminUsersService, 'assertAssignable'>, private readonly assignmentsService?: AssignmentsService) {}
 
   async createDraft(input: CreateCaseDraftInput): Promise<CaseResponseDto> {
     const links = normalizeLinks(input.links);
@@ -66,6 +64,7 @@ export class CasesService {
       confidentialityLevel: input.confidentialityLevel ?? CaseConfidentialityLevel.NORMAL,
       branchId: requiredText(input.branchId, 'branchId'),
       ownerId: input.ownerId ? requiredText(input.ownerId, 'ownerId') : null,
+      assignedDepartmentId: input.assignedDepartmentId ? requiredText(input.assignedDepartmentId, 'assignedDepartmentId') : null,
       subject: requiredText(input.subject, 'subject'),
       descriptionEn: requiredText(input.descriptionEn, 'descriptionEn'),
       descriptionAr: input.descriptionAr?.trim() || null,
@@ -86,6 +85,7 @@ export class CasesService {
       confidentialityLevel: CaseConfidentialityLevel.CONFIDENTIAL,
       branchId: requiredText(input.branchId, 'branchId'),
       ownerId: input.ownerId ? requiredText(input.ownerId, 'ownerId') : null,
+      assignedDepartmentId: input.assignedDepartmentId ? requiredText(input.assignedDepartmentId, 'assignedDepartmentId') : null,
       subject: requiredText(input.subject, 'subject'),
       descriptionEn: requiredText(input.descriptionEn, 'descriptionEn'),
       descriptionAr: input.descriptionAr?.trim() || null,
@@ -161,12 +161,22 @@ export class CasesService {
     });
   }
 
+  async assignForActor(
+    caseId: string,
+    input: { assignedUserId: string | null; assignedDepartmentId: string | null; reason?: string | null },
+    actor: CaseReadActor,
+    audit: CaseReadAudit = {},
+  ): Promise<CaseResponseDto> {
+    assertCanWriteCase(actor);
+    return assignCaseForActor(this.casesRepository, this.auditService, this.assignmentsService, requiredText(caseId, 'caseId'), input, actor, audit);
+  }
+
   taskLinkForCase(caseId: string): TaskCaseLinkDto {
     return { entityType: TaskLinkEntityType.CASE, entityId: requiredText(caseId, 'caseId') };
   }
 
   async createCapaAction(input: CreateCapaActionInput, actor: CaseReadActor, audit: CaseReadAudit = {}): Promise<CapaActionResponse> {
-    assertCanWriteCapa(actor);
+    assertCanWriteCase(actor);
     if (input.ownerId) await this.usersService?.assertAssignable({ userId: actor.userId, roleCode: actor.role, branchId: actor.branchId ?? null }, input.ownerId);
     return this.casesRepository.transaction(async (client) => {
       const record = await this.casesRepository.findByIdInTransaction(requiredText(input.caseId, 'caseId'), client);
@@ -282,14 +292,6 @@ function validEnum<T extends Record<string, string>>(value: string, options: T, 
   if (!Object.values(options).includes(value)) throw invalid(field);
   return value as T[keyof T];
 }
-
-function assertCanWriteCapa(actor: CaseReadActor): void {
-  if (!capaWriteRoles.has(actor.role)) {
-    throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
-  }
-}
-
-const capaWriteRoles = new Set<RoleCode>([RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.BRANCH_MANAGER, RoleCode.ADMIN]);
 
 function invalid(field: string): AppException {
   return new AppException('VALIDATION_FAILED', 'Invalid case request', HttpStatus.BAD_REQUEST, [

@@ -318,11 +318,11 @@ test('workflow close allows documented unavailable vehicle data reason and persi
 test('workflow route and assignment required data returns field errors before transaction', async () => {
   await assertValidationFieldsNoTransaction(
     transitionInput(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.APPROVE_AND_ROUTE, RoleCode.ADMIN),
-    ['reason', 'targetBranchId', 'targetDepartmentId', 'ownerId'],
+    ['reason', 'targetBranchId', 'targetDepartmentId'],
   );
   await assertValidationFieldsNoTransaction(
     transitionInput(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.ASSIGN_INVESTIGATION, RoleCode.ADMIN),
-    ['reason', 'ownerId'],
+    ['reason', 'assignment'],
   );
   await assertValidationFieldsNoTransaction(
     transitionInput(ComplaintStatus.REOPENED, ComplaintTransitionAction.ROUTE_AGAIN, RoleCode.ADMIN),
@@ -357,6 +357,32 @@ test('workflow approve and route persists route fields with history and audit', 
   assert.deepEqual(calls[0], { status: { complaintId: 'cmp_1', fromStatus: ComplaintStatus.MANAGER_REVIEW, toStatus: ComplaintStatus.BRANCH_REVIEW, targetBranchId: 'branch_service', targetDepartmentId: 'dept_service', ownerId: 'usr_owner' } });
   assert.deepEqual(calls[1], { history: { complaintId: 'cmp_1', fromStatus: ComplaintStatus.MANAGER_REVIEW, toStatus: ComplaintStatus.BRANCH_REVIEW, action: ComplaintTransitionAction.APPROVE_AND_ROUTE, actorId: 'usr_1', actorRole: RoleCode.ADMIN, requestSource: ComplaintTransitionRequestSource.STAFF_API, reason: 'route to service', correlationId: null } });
   assert.equal(audits[0]?.branchId, 'branch_service');
+});
+
+test('a failing post-commit side effect never fails the committed transition', async () => {
+  const calls: string[] = [];
+  const throwingSla = {
+    recordDeadlineEvent: async () => { calls.push('sla-attempt'); throw new Error('SLA policy not found'); },
+    recordLifecycleEvent: async () => { calls.push('slaLifecycle'); return {}; },
+  } as never;
+  const service = complaintService(
+    {
+      transaction: async <T>(work: (client: never) => Promise<T>) => { const result = await work({} as never); calls.push('commit'); return result; },
+      updateStatus: async (data) => { calls.push('status'); return { ...complaintStatus({ status: ComplaintStatus.MANAGER_REVIEW }), status: data.toStatus }; },
+      createStatusHistory: async () => { calls.push('history'); },
+    } as unknown as ComplaintsRepository,
+    { record: async () => { calls.push('audit'); } } as unknown as AuditService,
+    notificationSink(calls, []),
+    undefined,
+    throwingSla,
+  );
+
+  // ACCEPT_INTAKE maps to an SLA deadline stage; the SLA write throws AFTER commit.
+  const result = await service.applyTransition(transitionInput(ComplaintStatus.SUBMITTED, ComplaintTransitionAction.ACCEPT_INTAKE, RoleCode.ADMIN));
+
+  assert.equal(result.toStatus, ComplaintStatus.MANAGER_REVIEW); // transition still succeeds
+  assert.ok(calls.includes('commit'), 'transaction committed');
+  assert.ok(calls.includes('sla-attempt'), 'the failing side effect was attempted');
 });
 
 test('workflow approve and route queues notification and SLA only after commit', async () => {
@@ -424,6 +450,60 @@ test('workflow assign investigation persists owner with history and audit', asyn
 
   assert.deepEqual(updates, [{ complaintId: 'cmp_1', fromStatus: ComplaintStatus.BRANCH_REVIEW, toStatus: ComplaintStatus.IN_PROGRESS, ownerId: 'usr_investigator' }]);
   assert.deepEqual(calls, ['status', 'history', 'audit', 'commit', 'queue']);
+});
+
+test('workflow assignment accepts a department without a user and dual-writes the generic assignment in the complaint transaction', async () => {
+  const calls: string[] = [];
+  const assignmentWrites: unknown[] = [];
+  const txClient = {};
+  const Service = ComplaintsService as unknown as new (...args: unknown[]) => ComplaintsService;
+  const service = new Service({
+    transaction: async <T>(work: (client: never) => Promise<T>) => {
+      const result = await work(txClient as never);
+      calls.push('commit');
+      return result;
+    },
+    updateStatus: async (data: Record<string, unknown>) => {
+      calls.push('status');
+      return complaintStatus({
+        status: ComplaintStatus.IN_PROGRESS,
+        ownerId: null,
+        departmentId: data.targetDepartmentId as string,
+      });
+    },
+    createStatusHistory: async () => { calls.push('history'); },
+  } as unknown as ComplaintsRepository, {
+    record: async () => { calls.push('workflow-audit'); },
+  } as unknown as AuditService, undefined, undefined, undefined, undefined, undefined, undefined, {
+    setInTransaction: async (input: unknown, actor: unknown, audit: unknown, client: unknown) => {
+      assert.equal(client, txClient);
+      calls.push('assignment');
+      assignmentWrites.push({ input, actor, audit });
+      return {};
+    },
+  });
+
+  await service.applyTransition(transitionInput(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.ASSIGN_INVESTIGATION, RoleCode.ADMIN, {
+    reason: 'route to service team',
+    ownerId: null,
+    targetDepartmentId: 'dept_service',
+  }));
+
+  assert.deepEqual(calls, ['status', 'history', 'workflow-audit', 'assignment', 'commit']);
+  assert.deepEqual(assignmentWrites[0], {
+    input: {
+      entityType: 'COMPLAINT',
+      entityId: 'cmp_1',
+      assignedUserId: null,
+      assignedDepartmentId: 'dept_service',
+      scopeBranchId: 'branch_main',
+      reason: 'route to service team',
+    },
+    actor: { userId: 'usr_1', roleCode: RoleCode.ADMIN, branchId: 'branch_main' },
+    audit: transitionInput(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.ASSIGN_INVESTIGATION, RoleCode.ADMIN, {
+      reason: 'route to service team', ownerId: null, targetDepartmentId: 'dept_service',
+    }),
+  });
 });
 
 test('workflow assign investigation queues investigator notification and SLA only after commit', async () => {

@@ -159,7 +159,7 @@ function TaskCard({ locale, task, t }: { locale: Locale; task: StaffTask | Manag
         </div>
       </div>
       <dl className="mt-3 grid gap-2 text-sm md:grid-cols-2">
-        <Field label={t.fields.assignee} title={task.assigneeId} value={task.assigneeName ?? shortId(task.assigneeId)} />
+        <Field label={t.fields.assignee} title={task.assigneeId ?? undefined} value={task.assigneeName ?? (task.assigneeId ? shortId(task.assigneeId) : '-')} />
         <Field label={t.fields.due} value={formatDate(task.dueAt, locale, task.displayTimeZone)} />
         <Field label={t.fields.owner} title={task.ownerId} value={task.ownerName ?? shortId(task.ownerId)} />
         <Field label={t.fields.branch} title={task.branchId ?? undefined} value={task.branchName ?? (task.branchId ? shortId(task.branchId) : '-')} />

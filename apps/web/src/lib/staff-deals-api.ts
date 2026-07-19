@@ -7,8 +7,11 @@ export type DealBoardItem = {
   branchName: string | null;
   ownerId: string;
   ownerName: string | null;
-  currentHolderId: string;
+  currentHolderId: string | null;
   currentHolderName: string | null;
+  assignedDepartmentId: string | null;
+  assignedDepartmentName: string | null;
+  assignedDepartmentNameAr: string | null;
   stage: DealStage;
   stageDueAt: string;
   blocker: string | null;
@@ -75,11 +78,11 @@ export async function getDealHandoffBoardLoadResult({
   }
 }
 
-export async function createDeal(input: { title: string; branchId?: string; currentHolderId: string; stageDueAt: string; blocker?: string | null }): Promise<DealWriteResult> {
+export async function createDeal(input: { title: string; branchId?: string; currentHolderId: string | null; assignedDepartmentId: string | null; stageDueAt: string; blocker?: string | null }): Promise<DealWriteResult> {
   return dealWrite('/deals', 'POST', input);
 }
 
-export async function advanceDeal(id: string, input: { currentHolderId: string; stageDueAt: string; updateNote: string }): Promise<DealWriteResult> {
+export async function advanceDeal(id: string, input: { currentHolderId: string | null; assignedDepartmentId: string | null; stageDueAt: string; updateNote: string }): Promise<DealWriteResult> {
   return dealWrite(`/deals/${encodeURIComponent(id)}/advance`, 'POST', input);
 }
 
@@ -87,7 +90,7 @@ export async function updateDealBlocker(id: string, input: { blocker: string | n
   return dealWrite(`/deals/${encodeURIComponent(id)}/blocker`, 'PATCH', input);
 }
 
-export async function updateDealDetails(id: string, input: { currentHolderId: string; stageDueAt: string; updateNote: string }): Promise<DealWriteResult> {
+export async function updateDealDetails(id: string, input: { currentHolderId: string | null; assignedDepartmentId: string | null; stageDueAt: string; updateNote: string }): Promise<DealWriteResult> {
   return dealWrite(`/deals/${encodeURIComponent(id)}/details`, 'PATCH', input);
 }
 
@@ -116,8 +119,11 @@ function dealFrom(deal: Partial<DealBoardItem>): DealBoardItem | null {
     (deal.branchName !== null && typeof deal.branchName !== 'string') ||
     typeof deal.ownerId !== 'string' ||
     (deal.ownerName !== null && typeof deal.ownerName !== 'string') ||
-    typeof deal.currentHolderId !== 'string' ||
+    (deal.currentHolderId !== null && typeof deal.currentHolderId !== 'string') ||
     (deal.currentHolderName !== null && typeof deal.currentHolderName !== 'string') ||
+    (deal.assignedDepartmentId !== undefined && deal.assignedDepartmentId !== null && typeof deal.assignedDepartmentId !== 'string') ||
+    (deal.assignedDepartmentName !== undefined && deal.assignedDepartmentName !== null && typeof deal.assignedDepartmentName !== 'string') ||
+    (deal.assignedDepartmentNameAr !== undefined && deal.assignedDepartmentNameAr !== null && typeof deal.assignedDepartmentNameAr !== 'string') ||
     !stage ||
     typeof deal.stageDueAt !== 'string' ||
     (deal.blocker !== null && typeof deal.blocker !== 'string') ||
@@ -126,7 +132,7 @@ function dealFrom(deal: Partial<DealBoardItem>): DealBoardItem | null {
     typeof deal.updatedAt !== 'string'
   ) return null;
   const history = Array.isArray(deal.history) ? deal.history.map(actionFrom).filter((item): item is DealActionHistory => item !== null) : [];
-  return { id: deal.id, title: deal.title, branchId: deal.branchId, branchName: deal.branchName ?? null, ownerId: deal.ownerId, ownerName: deal.ownerName ?? null, currentHolderId: deal.currentHolderId, currentHolderName: deal.currentHolderName ?? null, stage, stageDueAt: deal.stageDueAt, blocker: deal.blocker, delayAgeMinutes: deal.delayAgeMinutes, lastAction: actionFrom(deal.lastAction) ?? history[0] ?? null, history, createdAt: deal.createdAt, updatedAt: deal.updatedAt };
+  return { id: deal.id, title: deal.title, branchId: deal.branchId, branchName: deal.branchName ?? null, ownerId: deal.ownerId, ownerName: deal.ownerName ?? null, currentHolderId: deal.currentHolderId ?? null, currentHolderName: deal.currentHolderName ?? null, assignedDepartmentId: deal.assignedDepartmentId ?? null, assignedDepartmentName: deal.assignedDepartmentName ?? null, assignedDepartmentNameAr: deal.assignedDepartmentNameAr ?? null, stage, stageDueAt: deal.stageDueAt, blocker: deal.blocker, delayAgeMinutes: deal.delayAgeMinutes, lastAction: actionFrom(deal.lastAction) ?? history[0] ?? null, history, createdAt: deal.createdAt, updatedAt: deal.updatedAt };
 }
 
 function actionFrom(value: unknown): DealActionHistory | null {

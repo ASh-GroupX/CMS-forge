@@ -2,8 +2,8 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { ComplaintSeverity, ComplaintStatus, ComplaintTransitionAction, ComplaintTransitionRequestSource, RoleCode } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { AuditService } from '../../core/audit.service.js';
-import type { AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
+import { AssignmentsService } from '../assignments/assignments.service.js';
 import { CasesService } from '../cases/cases.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { SlaService } from '../sla/sla.service.js';
@@ -21,8 +21,9 @@ import { detailItem, queueItem, reportItem, searchItem, shouldMask } from './com
 import { timelineItems } from './complaint-timeline.js';
 import { queueComplaintCreationSideEffects, queueWorkflowSideEffects } from './complaint-workflow-side-effects.js';
 import { ComplaintsRepository } from './complaints.repository.js';
-import type { ComplaintReportFilter, ComplaintStatusRecord, ComplaintTransitionSubject, DataSource, PortalVerificationTargetRecord } from './complaints.repository.js';
+import type { ComplaintReportFilter, ComplaintStatusRecord, DataSource, PortalVerificationTargetRecord } from './complaints.repository.js';
 import type { ComplaintCaseSummaryDto, ComplaintDetailDto, ComplaintQueueItemDto, ComplaintTimelineItemDto } from './dto/complaint-response.dto.js';
+import { actorCanSeeAction, assertActorCanApplyTransition, assertVehicleClosureAllowed, ASSIGNMENT_ACTIONS, invalidTransitionError, recordWorkflowRoleForbidden, roleForbiddenError, statusUpdateData, validateRequiredTransitionData, workflowAuditInput } from './complaint-transition.rules.js';
 export type ValidateComplaintTransitionInput = { fromStatus: ComplaintStatus; action: ComplaintTransitionAction; actorRole: RoleCode };
 export type ComplaintTransitionDecision = ValidateComplaintTransitionInput & { toStatus: ComplaintStatus };
 export type ApplyComplaintTransitionInput = ValidateComplaintTransitionInput & {
@@ -48,7 +49,7 @@ export type CreateInternalComplaintInput = {
 export type ComplaintCreationResult = { id: string; referenceNumber: string; status: ComplaintStatus };
 
 export type ComplaintQueueFilter = { branchId?: string | null; role?: RoleCode | null };
-export type ComplaintReportRow = { id: string; referenceNumber: string; branchId: string; categoryId: string; status: ComplaintStatus; severity: ComplaintSeverity; subject: string; ownerId: string | null; displayTimeZone: string; createdAt: string; updatedAt: string };
+export type ComplaintReportRow = { id: string; referenceNumber: string; branchId: string; categoryId: string; status: ComplaintStatus; severity: ComplaintSeverity; subject: string; ownerId: string | null; assignedDepartmentId: string | null; displayTimeZone: string; createdAt: string; updatedAt: string };
 export type ComplaintSearchInput = ComplaintReportFilter & { sla?: ComplaintQueueItemDto['slaState'] | null };
 export type ComplaintSearchRow = ComplaintQueueItemDto & { categoryId: string; customerName: string; customerPhone: string; customerIdentifier: string | null };
 
@@ -82,7 +83,7 @@ function transition(fromStatus: ComplaintStatus, action: ComplaintTransitionActi
 
 @Injectable()
 export class ComplaintsService {
-  constructor(private readonly complaintsRepository: ComplaintsRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly casesService?: CasesService, private readonly slaService?: SlaService, private readonly surveysService?: SurveysService, private readonly tasksService?: TasksService, private readonly groupsService?: CommunicationGroupsService) {}
+  constructor(private readonly complaintsRepository: ComplaintsRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly casesService?: CasesService, private readonly slaService?: SlaService, private readonly surveysService?: SurveysService, private readonly tasksService?: TasksService, private readonly groupsService?: CommunicationGroupsService, private readonly assignmentsService?: AssignmentsService) {}
 
   async createInternal(input: CreateInternalComplaintInput): Promise<ComplaintCreationResult> {
     const data = createComplaintData(input);
@@ -218,6 +219,20 @@ export class ComplaintsService {
           correlationId: input.correlationId ?? null,
         }, client);
         await this.auditService.record(workflowAuditInput(input, decision.toStatus, complaint.branchId), client);
+        if (this.assignmentsService && ASSIGNMENT_ACTIONS.has(input.action)) {
+          await this.assignmentsService.setInTransaction({
+            entityType: 'COMPLAINT',
+            entityId: complaint.id,
+            assignedUserId: complaint.ownerId,
+            assignedDepartmentId: complaint.departmentId,
+            scopeBranchId: complaint.branchId,
+            reason: input.reason ?? null,
+          }, {
+            userId: input.actorId ?? '',
+            roleCode: input.actorRole,
+            branchId: complaint.branchId,
+          }, input, client);
+        }
 
         return { result: { complaintId: complaint.id, ...decision }, complaint };
       });
@@ -229,6 +244,14 @@ export class ComplaintsService {
       throw error;
     }
     await queueWorkflowSideEffects({ notificationsService: this.notificationsService, slaService: this.slaService, surveysService: this.surveysService, input, toStatus: committed.result.toStatus, complaint: committed.complaint, enteredAt: new Date() });
+    if (ASSIGNMENT_ACTIONS.has(input.action)) {
+      await this.assignmentsService?.notifyAfterCommit?.('COMPLAINT', committed.complaint.id, {
+        href: `/complaints/${committed.complaint.id}`,
+        title: committed.complaint.id,
+        complaintId: committed.complaint.id,
+        excludeUserIds: committed.complaint.ownerId ? [committed.complaint.ownerId] : [],
+      });
+    }
     return committed.result;
   }
 
@@ -239,61 +262,4 @@ export class ComplaintsService {
 
 }
 
-function requiredTextError(value: unknown, field: string) { return typeof value === 'string' && value.trim() ? [] : [{ field, code: 'REQUIRED', message: `${field} is required.` }]; }
-
-function invalidTransitionError(): AppException { return new AppException('COMPLAINT_INVALID_TRANSITION', 'The requested action is not allowed for the current complaint state.', HttpStatus.CONFLICT); }
-function roleForbiddenError(): AppException { return new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN); }
-
-const REASON_REQUIRED = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintTransitionAction.SEND_BACK, ComplaintTransitionAction.ASSIGN_INVESTIGATION, ComplaintTransitionAction.CLOSE, ComplaintTransitionAction.REOPEN, ComplaintTransitionAction.ROUTE_AGAIN, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintTransitionAction.REJECT_AFTER_REVIEW, ComplaintTransitionAction.REJECT_AFTER_INVESTIGATION, ComplaintTransitionAction.REJECT_RESOLUTION]);
-const RESOLUTION_REQUIRED = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.RESOLVE, ComplaintTransitionAction.RESOLVE_DIRECTLY]), OWNER_ALLOWED_ACTIONS = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE, ComplaintTransitionAction.RESOLVE]), OWNER_REQUIRED = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintTransitionAction.ASSIGN_INVESTIGATION]);
-
-function assertActorCanApplyTransition(input: ApplyComplaintTransitionInput, complaint: ComplaintStatusRecord): void {
-  if (!OWNER_ALLOWED_ACTIONS.has(input.action) || (BRANCH_MANAGER_ROLES as readonly RoleCode[]).includes(input.actorRole)) return;
-  if (input.actorId && complaint.ownerId === input.actorId) return;
-  throw roleForbiddenError();
-}
-
-function actorCanSeeAction(action: ComplaintTransitionAction, actor: { roleCode: RoleCode; userId: string | null }, complaint: Pick<ComplaintDetailDto, 'ownerId'>): boolean { return !OWNER_ALLOWED_ACTIONS.has(action) || (BRANCH_MANAGER_ROLES as readonly RoleCode[]).includes(actor.roleCode) || Boolean(actor.userId && complaint.ownerId === actor.userId); }
-
-async function recordWorkflowRoleForbidden(auditService: AuditService, input: ApplyComplaintTransitionInput): Promise<void> {
-  await auditService.record({ eventType: 'SECURITY', action: 'workflow_role_forbidden', actorId: input.actorId ?? null, branchId: null, targetType: 'complaint', targetId: input.complaintId, correlationId: input.correlationId ?? null, ipAddress: input.ipAddress ?? null, userAgent: input.userAgent ?? null, metadata: { fromStatus: input.fromStatus, action: input.action, actorRole: input.actorRole, requestSource: input.requestSource } });
-}
-
-function validateRequiredTransitionData(input: ApplyComplaintTransitionInput): void {
-  const errors = [
-    ...(REASON_REQUIRED.has(input.action) ? requiredTextError(input.reason, 'reason') : []),
-    ...(input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE ? requiredTextError(input.targetBranchId, 'targetBranchId') : []),
-    ...(input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE ? requiredTextError(input.targetDepartmentId, 'targetDepartmentId') : []),
-    ...(OWNER_REQUIRED.has(input.action) ? requiredTextError(input.ownerId, 'ownerId') : []),
-    ...(RESOLUTION_REQUIRED.has(input.action) ? requiredTextError(input.resolutionType, 'resolutionType') : []),
-    ...(RESOLUTION_REQUIRED.has(input.action) ? requiredTextError(input.resolutionSummary, 'resolutionSummary') : []),
-    ...(RESOLUTION_REQUIRED.has(input.action) && !input.actorId ? [{ field: 'actorId', code: 'REQUIRED', message: 'actorId is required.' }] : []),
-    ...(input.action === ComplaintTransitionAction.CLOSE ? requiredTextError(input.customerCommunicationStatus, 'customerCommunicationStatus') : []),
-  ];
-  if (errors.length) throw new AppException('VALIDATION_FAILED', 'Invalid complaint transition request', HttpStatus.BAD_REQUEST, errors);
-}
-
-function assertVehicleClosureAllowed(input: ApplyComplaintTransitionInput, complaint: ComplaintTransitionSubject | null): void {
-  if (!complaint) throw invalidTransitionError();
-  if (!complaint.vehicleRelated || complaint.vehicleId || nonEmptyText(input.vehicleDataUnavailableReason) || nonEmptyText(complaint.vehicleDataUnavailableReason)) return;
-  throw new AppException('VALIDATION_FAILED', 'Invalid complaint transition request', HttpStatus.BAD_REQUEST, [{ field: 'vehicleDataUnavailableReason', code: 'REQUIRED', message: 'vehicleDataUnavailableReason is required.' }]);
-}
-
-function statusUpdateData(input: ApplyComplaintTransitionInput, toStatus: ComplaintStatus) {
-  const now = new Date();
-  return { complaintId: input.complaintId, fromStatus: input.fromStatus, toStatus, ...(input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE ? { targetBranchId: input.targetBranchId, targetDepartmentId: input.targetDepartmentId, ownerId: input.ownerId } : {}), ...(input.action === ComplaintTransitionAction.ASSIGN_INVESTIGATION ? { ownerId: input.ownerId } : {}), ...(RESOLUTION_REQUIRED.has(input.action) ? { resolvedAt: now } : {}), ...(input.action === ComplaintTransitionAction.CLOSE ? { closedAt: now } : {}), ...(input.action === ComplaintTransitionAction.CLOSE && nonEmptyText(input.vehicleDataUnavailableReason) ? { vehicleDataUnavailableReason: input.vehicleDataUnavailableReason } : {}) };
-}
-
-function workflowAuditInput(input: ApplyComplaintTransitionInput, toStatus: ComplaintStatus, branchId: string): AuditRecordInput {
-  return {
-    eventType: 'WORKFLOW', action: `transition_${input.action.toLowerCase()}`, actorId: input.actorId ?? null,
-    branchId, targetType: 'complaint', targetId: input.complaintId,
-    correlationId: input.correlationId ?? null,
-    ipAddress: input.ipAddress ?? null,
-    userAgent: input.userAgent ?? null,
-    metadata: { fromStatus: input.fromStatus, toStatus, action: input.action, actorRole: input.actorRole, requestSource: input.requestSource, resolutionType: input.resolutionType ?? null, customerCommunicationStatus: input.customerCommunicationStatus ?? null },
-  };
-}
-
-function nonEmptyText(value: string | null | undefined): string | null { return typeof value === 'string' && value.trim() ? value.trim() : null; }
 function withoutSlaPage(input: ComplaintSearchInput): ComplaintReportFilter { const filter = { ...input }; delete filter.sla; delete filter.limit; delete filter.offset; return filter; }

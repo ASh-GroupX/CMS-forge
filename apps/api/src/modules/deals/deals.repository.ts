@@ -9,6 +9,7 @@ const dealSelect = {
   branchId: true,
   ownerId: true,
   currentHolderId: true,
+  assignedDepartmentId: true,
   stage: true,
   stageDueAt: true,
   blocker: true,
@@ -17,6 +18,7 @@ const dealSelect = {
   branch: { select: { nameEn: true } },
   owner: { select: { nameEn: true } },
   currentHolder: { select: { nameEn: true } },
+  assignedDepartment: { select: { nameEn: true, nameAr: true } },
 } satisfies Prisma.DealSelect;
 
 const dealAuditSelect = { id: true, action: true, actorId: true, targetId: true, metadata: true, createdAt: true, actor: { select: { nameEn: true } } } satisfies Prisma.AuditLogSelect;
@@ -29,7 +31,8 @@ export type CreateDealData = {
   title: string;
   branchId: string;
   ownerId: string;
-  currentHolderId: string;
+  currentHolderId: string | null;
+  assignedDepartmentId?: string | null;
   stage: DealStageCode;
   stageDueAt: Date;
   blocker?: string | null;
@@ -38,14 +41,16 @@ export type CreateDealData = {
 export type UpdateDealStageData = {
   id: string;
   stage: DealStageCode;
-  currentHolderId: string;
+  currentHolderId: string | null;
+  assignedDepartmentId?: string | null;
   stageDueAt: Date;
   blocker?: string | null;
 };
 
 export type UpdateDealDetailsData = {
   id: string;
-  currentHolderId: string;
+  currentHolderId: string | null;
+  assignedDepartmentId?: string | null;
   stageDueAt: Date;
 };
 
@@ -58,7 +63,11 @@ export class DealsRepository {
   }
 
   async create(data: CreateDealData, client: DealClient = this.prisma): Promise<DealRow> {
-    return client.deal.create({ data, select: dealSelect });
+    return client.deal.create({ data: {
+      title: data.title, branchId: data.branchId, ownerId: data.ownerId,
+      currentHolderId: data.currentHolderId, assignedDepartmentId: data.assignedDepartmentId ?? null,
+      stage: data.stage, stageDueAt: data.stageDueAt, blocker: data.blocker ?? null,
+    }, select: dealSelect });
   }
 
   async findById(id: string, client: DealClient = this.prisma): Promise<DealRow | null> {
@@ -71,6 +80,7 @@ export class DealsRepository {
       data: {
         stage: data.stage,
         currentHolderId: data.currentHolderId,
+        assignedDepartmentId: data.assignedDepartmentId ?? null,
         stageDueAt: data.stageDueAt,
         blocker: data.blocker ?? null,
       },
@@ -91,6 +101,7 @@ export class DealsRepository {
       where: { id: data.id },
       data: {
         currentHolderId: data.currentHolderId,
+        assignedDepartmentId: data.assignedDepartmentId ?? null,
         stageDueAt: data.stageDueAt,
       },
       select: dealSelect,

@@ -12,13 +12,17 @@ import { NotificationsModule } from '../notifications/notifications.module.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { CommunicationGroupsModule } from '../communication-groups/communication-groups.module.js';
 import { CommunicationGroupsService } from '../communication-groups/communication-groups.service.js';
+import { AssignmentsModule } from '../assignments/assignments.module.js';
+import { AssignmentsService } from '../assignments/assignments.service.js';
+import { TasksBoardRepository } from './tasks.board.repository.js';
+import { TasksBoardService } from './tasks.board.service.js';
 import { TasksController } from './tasks.controller.js';
 import { TasksRelatedRecordsService } from './tasks.related-records.service.js';
 import { TasksRepository } from './tasks.repository.js';
 import { TasksService } from './tasks.service.js';
 
 @Module({
-  imports: [AuthModule, AdminModule, NotificationsModule, CommunicationGroupsModule],
+  imports: [AuthModule, AdminModule, NotificationsModule, CommunicationGroupsModule, AssignmentsModule],
   controllers: [TasksController],
   providers: [
     PrismaService,
@@ -38,9 +42,19 @@ import { TasksService } from './tasks.service.js';
       useFactory: (prisma: PrismaService) => new TasksRelatedRecordsService(prisma),
     },
     {
+      provide: TasksBoardRepository,
+      inject: [PrismaService],
+      useFactory: (prisma: PrismaService) => new TasksBoardRepository(prisma),
+    },
+    {
       provide: TasksService,
-      inject: [TasksRepository, AuditService, NotificationsService, AdminUsersService, TasksRelatedRecordsService, CommunicationGroupsService],
-      useFactory: (repository: TasksRepository, audit: AuditService, notifications: NotificationsService, users: AdminUsersService, relatedRecords: TasksRelatedRecordsService, groups: CommunicationGroupsService) => new TasksService(repository, audit, notifications, users, relatedRecords, groups),
+      inject: [TasksRepository, AuditService, NotificationsService, AdminUsersService, TasksRelatedRecordsService, CommunicationGroupsService, TasksBoardRepository, AssignmentsService],
+      useFactory: (repository: TasksRepository, audit: AuditService, notifications: NotificationsService, users: AdminUsersService, relatedRecords: TasksRelatedRecordsService, groups: CommunicationGroupsService, boardRepository: TasksBoardRepository, assignments: AssignmentsService) => new TasksService(repository, audit, notifications, users, relatedRecords, groups, boardRepository, assignments),
+    },
+    {
+      provide: TasksBoardService,
+      inject: [TasksBoardRepository, TasksRepository, AuditService, AdminUsersService],
+      useFactory: (boardRepository: TasksBoardRepository, tasksRepository: TasksRepository, audit: AuditService, users: AdminUsersService) => new TasksBoardService(boardRepository, tasksRepository, audit, users),
     },
     {
       provide: SESSION_AUTH_SERVICE,
@@ -56,6 +70,6 @@ import { TasksService } from './tasks.service.js';
     },
     CsrfGuard,
   ],
-  exports: [TasksService],
+  exports: [TasksService, TasksBoardService],
 })
 export class TasksModule {}

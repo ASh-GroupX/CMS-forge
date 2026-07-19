@@ -5,6 +5,363 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/board-stages": {
+      "get": {
+        "tags": [
+          "BoardStages"
+        ],
+        "operationId": "boardStagesList",
+        "summary": "List active board stages (staff read; optional scope filter)",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "TASKS",
+                "TICKETS"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Active board stages in position order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardStageAdminListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "BoardStages"
+        ],
+        "operationId": "boardStageCreate",
+        "summary": "Create a board stage (admin master data)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBoardStageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created stage appended at the end of its scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardStageAdminResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/board-stages/{id}": {
+      "patch": {
+        "tags": [
+          "BoardStages"
+        ],
+        "operationId": "boardStageUpdate",
+        "summary": "Rename or recolor a board stage (admin master data)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBoardStageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated stage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardStageAdminResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Stage not found or archived",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/board-stages/reorder": {
+      "post": {
+        "tags": [
+          "BoardStages"
+        ],
+        "operationId": "boardStagesReorder",
+        "summary": "Reorder all active stages of a scope (admin master data; all-or-nothing)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderBoardStagesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stages in the new position order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardStageAdminListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "orderedIds does not match the active stage set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/board-stages/{id}/archive": {
+      "post": {
+        "tags": [
+          "BoardStages"
+        ],
+        "operationId": "boardStageArchive",
+        "summary": "Archive a stage, moving its cards to a destination stage (admin master data)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArchiveBoardStageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Archived stage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardStageAdminResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Stage or destination not found or archived",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "tags": [
@@ -1523,6 +1880,47 @@
           },
           "409": {
             "description": "Complaint correction conflict (COMPLAINT_INVALID_TRANSITION)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/complaints/board": {
+      "get": {
+        "tags": [
+          "Complaints"
+        ],
+        "operationId": "complaintBoardGet",
+        "summary": "Session-scoped ticket Kanban board (stages plus permitted complaints)",
+        "responses": {
+          "200": {
+            "description": "Ticket board columns and cards the session principal may see",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintBoardResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
             "content": {
               "application/json": {
                 "schema": {
@@ -3892,6 +4290,47 @@
         }
       }
     },
+    "/tasks/board": {
+      "get": {
+        "tags": [
+          "Tasks"
+        ],
+        "operationId": "taskBoardGet",
+        "summary": "Session-scoped task Kanban board (stages plus permitted cards)",
+        "responses": {
+          "200": {
+            "description": "Task board columns and cards the session principal may see",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskBoardResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/tasks/today": {
       "get": {
         "tags": [
@@ -5148,6 +5587,87 @@
         }
       }
     },
+    "/tasks/{id}/move": {
+      "post": {
+        "tags": [
+          "Tasks"
+        ],
+        "operationId": "taskBoardMove",
+        "summary": "Move a task to a board stage (derives status, writes history+audit)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskMoveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Moved task board card",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoveTaskResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body, missing outcome note, or missing next action",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Task access denied or invalid CSRF token (CSRF_INVALID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task or target board stage not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/tasks/{id}/nudge": {
       "post": {
         "tags": [
@@ -5540,10 +6060,335 @@
     },
     "/tasks/{id}/watchers/{userId}": {
       "delete": { "tags": ["Tasks"], "operationId": "taskWatcherRemove", "summary": "Remove a task CC watcher", "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }, { "name": "userId", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "Watcher removed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OkResponse" } } } }, "403": { "description": "Task manage access denied" } } }
+    },
+    "/assignments/options": {
+      "get": {
+        "tags": ["Assignments"],
+        "operationId": "assignmentOptionsList",
+        "summary": "List active user and department assignment targets in the server-session scope",
+        "responses": {
+          "200": { "description": "Assignment targets", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssignmentOptionsResponse" } } } },
+          "401": { "description": "Missing or invalid staff session", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/cases/{caseId}/assignment": {
+      "patch": {
+        "tags": ["Cases", "Assignments"],
+        "operationId": "caseAssignmentUpdate",
+        "summary": "Assign or forward a case to a user, department, or both",
+        "parameters": [{ "name": "caseId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CaseAssignmentRequest" } } } },
+        "responses": {
+          "200": { "description": "Case assignment updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CaseAssignmentResponse" } } } },
+          "400": { "description": "A user or department is required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Case assignment denied or invalid CSRF token", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "Case not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AssignmentOption": {
+        "type": "object",
+        "required": ["id", "nameEn", "nameAr", "branchId"],
+        "properties": {
+          "id": { "type": "string" },
+          "nameEn": { "type": "string" },
+          "nameAr": { "type": "string" },
+          "branchId": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      },
+      "AssignmentUserOption": {
+        "allOf": [
+          { "$ref": "#/components/schemas/AssignmentOption" },
+          { "type": "object", "required": ["departmentId", "roleCode"], "properties": { "departmentId": { "type": ["string", "null"] }, "roleCode": { "type": "string" } } }
+        ]
+      },
+      "AssignmentOptionsResponse": {
+        "type": "object",
+        "required": ["users", "departments"],
+        "properties": {
+          "users": { "type": "array", "items": { "$ref": "#/components/schemas/AssignmentUserOption" } },
+          "departments": { "type": "array", "items": { "$ref": "#/components/schemas/AssignmentOption" } }
+        },
+        "additionalProperties": false
+      },
+      "CaseAssignmentRequest": {
+        "type": "object",
+        "required": ["assignedUserId", "assignedDepartmentId"],
+        "properties": {
+          "assignedUserId": { "type": ["string", "null"] },
+          "assignedDepartmentId": { "type": ["string", "null"] },
+          "reason": { "type": ["string", "null"] }
+        },
+        "anyOf": [
+          { "properties": { "assignedUserId": { "type": "string", "minLength": 1 } } },
+          { "properties": { "assignedDepartmentId": { "type": "string", "minLength": 1 } } }
+        ],
+        "additionalProperties": false
+      },
+      "CaseAssignmentResponse": {
+        "type": "object",
+        "required": ["case"],
+        "properties": { "case": { "$ref": "#/components/schemas/CaseResponse" } },
+        "additionalProperties": false
+      },
+      "BoardStageAdmin": {
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "scope",
+          "nameEn",
+          "nameAr",
+          "color",
+          "position",
+          "isDefault",
+          "mappedTaskStatus",
+          "mappedComplaintStatus",
+          "archivedAt",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "TASKS",
+              "TICKETS"
+            ]
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string",
+            "enum": [
+              "slate",
+              "blue",
+              "amber",
+              "green",
+              "red",
+              "violet"
+            ]
+          },
+          "position": {
+            "type": "integer"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "mappedTaskStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "OPEN",
+              "IN_PROGRESS",
+              "WAITING",
+              "DONE",
+              null
+            ]
+          },
+          "mappedComplaintStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "MANAGER_REVIEW",
+              "BRANCH_REVIEW",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED",
+              "REOPENED",
+              "REJECTED",
+              null
+            ]
+          },
+          "archivedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BoardStageAdminListResponse": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardStageAdmin"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "BoardStageAdminResponse": {
+        "type": "object",
+        "required": [
+          "stage"
+        ],
+        "properties": {
+          "stage": {
+            "$ref": "#/components/schemas/BoardStageAdmin"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateBoardStageRequest": {
+        "type": "object",
+        "required": [
+          "code",
+          "scope",
+          "nameEn",
+          "nameAr",
+          "color"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "TASKS",
+              "TICKETS"
+            ]
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string",
+            "enum": [
+              "slate",
+              "blue",
+              "amber",
+              "green",
+              "red",
+              "violet"
+            ]
+          },
+          "mappedTaskStatus": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "IN_PROGRESS",
+              "WAITING",
+              "DONE"
+            ]
+          },
+          "mappedComplaintStatus": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "MANAGER_REVIEW",
+              "BRANCH_REVIEW",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED",
+              "REOPENED",
+              "REJECTED"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateBoardStageRequest": {
+        "type": "object",
+        "minProperties": 1,
+        "properties": {
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string",
+            "enum": [
+              "slate",
+              "blue",
+              "amber",
+              "green",
+              "red",
+              "violet"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReorderBoardStagesRequest": {
+        "type": "object",
+        "required": [
+          "scope",
+          "orderedIds"
+        ],
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "TASKS",
+              "TICKETS"
+            ]
+          },
+          "orderedIds": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ArchiveBoardStageRequest": {
+        "type": "object",
+        "required": [
+          "destinationStageId"
+        ],
+        "properties": {
+          "destinationStageId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "HealthResponse": {
         "type": "object",
         "required": [
@@ -7082,6 +7927,15 @@
               "null"
             ]
           },
+          "assignedDepartmentId": {
+            "type": ["string", "null"]
+          },
+          "assignedDepartmentName": {
+            "type": ["string", "null"]
+          },
+          "assignedDepartmentNameAr": {
+            "type": ["string", "null"]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -7103,6 +7957,273 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ComplaintQueueItem"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintBoardStage": {
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "nameEn",
+          "nameAr",
+          "color",
+          "position",
+          "mappedComplaintStatus"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "position": {
+            "type": "integer"
+          },
+          "mappedComplaintStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "MANAGER_REVIEW",
+              "BRANCH_REVIEW",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED",
+              "REOPENED",
+              "REJECTED",
+              null
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintBoardTransition": {
+        "type": "object",
+        "required": [
+          "action",
+          "toStatus"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "SUBMIT",
+              "ACCEPT_INTAKE",
+              "REJECT_AS_INVALID",
+              "APPROVE_AND_ROUTE",
+              "SEND_BACK",
+              "ASSIGN_INVESTIGATION",
+              "RESOLVE_DIRECTLY",
+              "REJECT_AFTER_REVIEW",
+              "ADD_INVESTIGATION_UPDATE",
+              "RESOLVE",
+              "REJECT_AFTER_INVESTIGATION",
+              "CLOSE",
+              "REJECT_RESOLUTION",
+              "REOPEN",
+              "ROUTE_AGAIN"
+            ]
+          },
+          "toStatus": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "MANAGER_REVIEW",
+              "BRANCH_REVIEW",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED",
+              "REOPENED",
+              "REJECTED"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintBoardCard": {
+        "type": "object",
+        "required": [
+          "id",
+          "referenceNumber",
+          "status",
+          "severity",
+          "subject",
+          "branchId",
+          "branchName",
+          "displayTimeZone",
+          "ownerId",
+          "ownerName",
+          "slaState",
+          "slaDueAt",
+          "slaStage",
+          "slaPercentElapsed",
+          "nextAction",
+          "createdAt",
+          "updatedAt",
+          "stageId",
+          "allowedTransitions"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "referenceNumber": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "MANAGER_REVIEW",
+              "BRANCH_REVIEW",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED",
+              "REOPENED",
+              "REJECTED"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "CRITICAL",
+              "HIGH",
+              "MEDIUM",
+              "LOW"
+            ]
+          },
+          "subject": {
+            "type": "string"
+          },
+          "branchId": {
+            "type": "string"
+          },
+          "branchName": {
+            "type": "string"
+          },
+          "displayTimeZone": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ownerName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "slaState": {
+            "type": "string",
+            "enum": [
+              "ON_TRACK",
+              "WARNING",
+              "BREACHED",
+              "CLOSED"
+            ]
+          },
+          "slaDueAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "slaStage": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "slaPercentElapsed": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "nextAction": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stageId": {
+            "type": "string"
+          },
+          "allowedTransitions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplaintBoardTransition"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintBoardColumn": {
+        "type": "object",
+        "required": [
+          "stageId",
+          "cards"
+        ],
+        "properties": {
+          "stageId": {
+            "type": "string"
+          },
+          "cards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplaintBoardCard"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ComplaintBoardResponse": {
+        "type": "object",
+        "required": [
+          "stages",
+          "columns"
+        ],
+        "properties": {
+          "stages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplaintBoardStage"
+            }
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplaintBoardColumn"
             }
           }
         },
@@ -8266,7 +9387,10 @@
             "type": "string"
           },
           "assigneeId": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "dueAt": {
             "type": "string",
@@ -8354,6 +9478,18 @@
               "null"
             ]
           },
+          "assignedDepartmentId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assignedDepartmentName": {
+            "type": ["string", "null"]
+          },
+          "assignedDepartmentNameAr": {
+            "type": ["string", "null"]
+          },
           "displayTimeZone": {
             "type": "string"
           }
@@ -8420,6 +9556,12 @@
           },
           "isCustomerPromise": {
             "type": "boolean"
+          },
+          "assignedDepartmentId": {
+            "type": ["string", "null"]
+          },
+          "assignedUserId": {
+            "type": ["string", "null"]
           }
         },
         "additionalProperties": false
@@ -8432,6 +9574,342 @@
         "properties": {
           "task": {
             "$ref": "#/components/schemas/Task"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TaskMoveRequest": {
+        "type": "object",
+        "required": [
+          "stageId",
+          "boardPosition"
+        ],
+        "properties": {
+          "stageId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "boardPosition": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "statusNote": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nextAction": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "what",
+                  "whoId",
+                  "when"
+                ],
+                "properties": {
+                  "what": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "whoId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "when": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "MoveTaskResponse": {
+        "type": "object",
+        "required": [
+          "card"
+        ],
+        "properties": {
+          "card": {
+            "$ref": "#/components/schemas/BoardCard"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BoardStage": {
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "nameEn",
+          "nameAr",
+          "color",
+          "position",
+          "mappedTaskStatus"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "position": {
+            "type": "integer"
+          },
+          "mappedTaskStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "OPEN",
+              "IN_PROGRESS",
+              "WAITING",
+              "DONE",
+              null
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "BoardCard": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "ownerId",
+          "ownerName",
+          "ownerNameAr",
+          "assigneeId",
+          "assigneeName",
+          "assigneeNameAr",
+          "assignedDepartmentId",
+          "departmentName",
+          "departmentNameAr",
+          "branchId",
+          "dueAt",
+          "status",
+          "stageId",
+          "boardPosition",
+          "isCustomerPromise",
+          "visibility",
+          "confidentialityLevel",
+          "daysActive",
+          "dueState",
+          "commentCount",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": "string"
+          },
+          "ownerName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ownerNameAr": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assigneeId": {
+            "type": "string"
+          },
+          "assigneeName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assigneeNameAr": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assignedDepartmentId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "departmentName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "departmentNameAr": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "branchId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "IN_PROGRESS",
+              "WAITING",
+              "DONE"
+            ]
+          },
+          "stageId": {
+            "type": "string"
+          },
+          "boardPosition": {
+            "type": "integer"
+          },
+          "isCustomerPromise": {
+            "type": "boolean"
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "PARTICIPANTS",
+              "BRANCH",
+              "MANAGEMENT"
+            ]
+          },
+          "confidentialityLevel": {
+            "type": "string",
+            "enum": [
+              "NORMAL",
+              "CONFIDENTIAL",
+              "RESTRICTED"
+            ]
+          },
+          "daysActive": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "dueState": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "OVERDUE",
+              "DUE_TODAY",
+              "UPCOMING",
+              null
+            ]
+          },
+          "commentCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BoardColumn": {
+        "type": "object",
+        "required": [
+          "stageId",
+          "cards"
+        ],
+        "properties": {
+          "stageId": {
+            "type": "string"
+          },
+          "cards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardCard"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "TaskBoardResponse": {
+        "type": "object",
+        "required": [
+          "stages",
+          "columns",
+          "departments"
+        ],
+        "properties": {
+          "stages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardStage"
+            }
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardColumn"
+            }
+          },
+          "departments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoardDepartment"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "BoardDepartment": {
+        "type": "object",
+        "required": [
+          "id",
+          "nameEn",
+          "nameAr"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
           }
         },
         "additionalProperties": false
@@ -8487,8 +9965,7 @@
         ],
         "properties": {
           "assigneeId": {
-            "type": "string",
-            "minLength": 1
+            "type": ["string", "null"]
           },
           "count": {
             "type": "integer",
@@ -8712,7 +10189,7 @@
             ]
           },
           "currentHolderId": {
-            "type": "string"
+            "type": ["string", "null"]
           },
           "currentHolderName": {
             "type": [
@@ -8720,6 +10197,9 @@
               "null"
             ]
           },
+          "assignedDepartmentId": { "type": ["string", "null"] },
+          "assignedDepartmentName": { "type": ["string", "null"] },
+          "assignedDepartmentNameAr": { "type": ["string", "null"] },
           "stage": {
             "type": "string",
             "enum": [
@@ -8999,6 +10479,9 @@
               "null"
             ]
           },
+          "assignedDepartmentId": {
+            "type": ["string", "null"]
+          },
           "subject": {
             "type": "string"
           },
@@ -9033,6 +10516,12 @@
               "string",
               "null"
             ]
+          },
+          "assignedDepartmentName": {
+            "type": ["string", "null"]
+          },
+          "assignedDepartmentNameAr": {
+            "type": ["string", "null"]
           }
         }
       },
@@ -9490,6 +10979,13 @@
           },
           "isCustomerPromise": {
             "type": "boolean"
+          },
+          "assignedDepartmentId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
           }
         },
         "additionalProperties": false
@@ -9572,7 +11068,7 @@
             ]
           },
           "currentHolderId": {
-            "type": "string"
+            "type": ["string", "null"]
           },
           "currentHolderName": {
             "type": [
@@ -9580,6 +11076,9 @@
               "null"
             ]
           },
+          "assignedDepartmentId": { "type": ["string", "null"] },
+          "assignedDepartmentName": { "type": ["string", "null"] },
+          "assignedDepartmentNameAr": { "type": ["string", "null"] },
           "stage": {
             "type": "string",
             "enum": [
@@ -9632,8 +11131,10 @@
             "minLength": 1
           },
           "currentHolderId": {
-            "type": "string",
-            "minLength": 1
+            "type": ["string", "null"]
+          },
+          "assignedDepartmentId": {
+            "type": ["string", "null"]
           },
           "stageDueAt": {
             "type": "string",
@@ -9657,8 +11158,10 @@
         ],
         "properties": {
           "currentHolderId": {
-            "type": "string",
-            "minLength": 1
+            "type": ["string", "null"]
+          },
+          "assignedDepartmentId": {
+            "type": ["string", "null"]
           },
           "stageDueAt": {
             "type": "string",
@@ -9680,8 +11183,10 @@
         ],
         "properties": {
           "currentHolderId": {
-            "type": "string",
-            "minLength": 1
+            "type": ["string", "null"]
+          },
+          "assignedDepartmentId": {
+            "type": ["string", "null"]
           },
           "stageDueAt": {
             "type": "string",

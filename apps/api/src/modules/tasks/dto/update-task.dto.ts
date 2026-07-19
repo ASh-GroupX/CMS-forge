@@ -8,11 +8,15 @@ export function parseUpdateTaskBody(taskId: string, body: unknown): UpdateTaskIn
   const result: UpdateTaskInput = { taskId: requiredText(taskId, 'taskId') };
 
   if (input.status !== undefined) result.status = enumValue(input.status, TaskStatus, 'status');
-  if (input.assigneeId !== undefined) result.assigneeId = requiredText(input.assigneeId, 'assigneeId');
+  if (input.assigneeId !== undefined) result.assigneeId = input.assigneeId === null ? null : requiredText(input.assigneeId, 'assigneeId');
   if (input.dueAt !== undefined) result.dueAt = requiredText(input.dueAt, 'dueAt');
   if (input.isCustomerPromise !== undefined) result.isCustomerPromise = booleanValue(input.isCustomerPromise, 'isCustomerPromise');
   if (input.nextAction !== undefined) result.nextAction = nextActionValue(input.nextAction);
   if (input.statusNote !== undefined) result.statusNote = requiredText(input.statusNote, 'statusNote');
+  // null clears the department assignment; a string re-assigns (validated server-side).
+  if (input.assignedDepartmentId !== undefined) {
+    result.assignedDepartmentId = input.assignedDepartmentId === null ? null : requiredText(input.assignedDepartmentId, 'assignedDepartmentId');
+  }
 
   if (Object.keys(result).length === 1) throw invalid('body', 'At least one task field is required.');
   if ((result.status === TaskStatus.DONE || result.status === TaskStatus.WAITING) && !result.statusNote) {

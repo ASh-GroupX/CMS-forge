@@ -16,8 +16,19 @@ import { SlaService } from './sla.service.js';
   controllers: [SlaController],
   providers: [
     PrismaService,
-    AuditService,
-    SlaRepository,
+    // Explicit factory injection (matching every other module) so constructor
+    // dependencies resolve without relying on emitted `design:paramtypes`
+    // metadata — bare type-injection breaks under esbuild/tsx dev runtimes.
+    {
+      provide: AuditService,
+      inject: [PrismaService],
+      useFactory: (prisma: PrismaService) => new AuditService(prisma),
+    },
+    {
+      provide: SlaRepository,
+      inject: [PrismaService],
+      useFactory: (prisma: PrismaService) => new SlaRepository(prisma),
+    },
     {
       provide: SlaService,
       inject: [SlaRepository, NotificationsService, AuditService],

@@ -15,6 +15,9 @@ export class CaseResponseDto {
   branchName!: string;
   ownerId!: string | null;
   ownerName!: string | null;
+  assignedDepartmentId!: string | null;
+  assignedDepartmentName!: string | null;
+  assignedDepartmentNameAr!: string | null;
   subject!: string;
   descriptionEn!: string;
   descriptionAr!: string | null;

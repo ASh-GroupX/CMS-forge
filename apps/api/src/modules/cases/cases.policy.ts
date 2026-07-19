@@ -5,7 +5,7 @@ import { AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import type { CaseRecord } from './cases.repository.js';
 
-export type CaseReadActor = { userId: string; role: RoleCode; branchId?: string | null };
+export type CaseReadActor = { userId: string; role: RoleCode; branchId?: string | null; departmentId?: string | null };
 export type CaseReadAudit = { correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 
 export async function assertCanReadCase(

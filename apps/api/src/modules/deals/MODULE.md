@@ -27,6 +27,7 @@ Reads `audit_logs` for deal handoff history.
 - `AuthModule` / `AuthService` for staff session guard wiring on deal routes.
 - `TasksModule` / `TasksService` for generating next-holder tasks from deal
   transitions.
+- `AssignmentsModule` / `AssignmentsService` for user and department handoffs.
 - Other modules' public services only. Never import another module repository,
   `dto/`, or Prisma model type.
 

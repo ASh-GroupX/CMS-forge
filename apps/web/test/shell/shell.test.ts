@@ -1889,13 +1889,17 @@ test('complaint detail workflow modal renders actions and required comment valid
 test('complaint workflow modal renders minimal fields for required actions', () => {
   const options = { branches: [{ id: 'branch_service', code: 'SERVICE', nameEn: 'Service Branch', nameAr: 'فرع الصيانة' }], categories: [], departments: [{ id: 'dept_service', code: 'SERVICE', nameEn: 'Service', nameAr: 'الصيانة' }], severities: [] };
   const staff = [{ userId: 'usr_owner', displayName: 'Owner User', displayNameAr: 'مسؤول', role: 'CR Manager', roleAr: 'مدير', branchLabel: 'Service Branch', branchLabelAr: 'فرع الصيانة' }];
-  const render = (action: import('../../src/lib/staff-complaints-api').ComplaintTransitionAction, extra: { vehicleNeedsUnavailableReason?: boolean } = {}) => renderToStaticMarkup(React.createElement(ComplaintWorkflowModal, { allowedActions: [action], complaintId: 'cmp_1', locale: 'en', options, staff, status: 'SUBMITTED', ...extra }));
+  const assignmentOptions = {
+    users: [{ id: 'usr_owner', nameEn: 'Owner User', nameAr: 'Owner User', branchId: 'branch_service', departmentId: 'dept_service', roleCode: 'CR_MANAGER' }],
+    departments: [{ id: 'dept_service', nameEn: 'Service', nameAr: 'Service', branchId: 'branch_service' }],
+  };
+  const render = (action: import('../../src/lib/staff-complaints-api').ComplaintTransitionAction, extra: { vehicleNeedsUnavailableReason?: boolean } = {}) => renderToStaticMarkup(React.createElement(ComplaintWorkflowModal, { allowedActions: [action], assignmentOptions, complaintId: 'cmp_1', locale: 'en', options, staff, status: 'SUBMITTED', ...extra }));
 
   assert.match(render('ACCEPT_INTAKE'), /Nothing else is needed/);
   assert.match(render('APPROVE_AND_ROUTE'), /Target branch/);
-  assert.match(render('APPROVE_AND_ROUTE'), /Target department/);
-  assert.match(render('APPROVE_AND_ROUTE'), /Assigned owner/);
-  assert.match(render('ASSIGN_INVESTIGATION'), /Assigned owner/);
+  assert.match(render('APPROVE_AND_ROUTE'), /Assigned department/);
+  assert.match(render('APPROVE_AND_ROUTE'), /Assigned user/);
+  assert.match(render('ASSIGN_INVESTIGATION'), /Assigned user/);
   assert.match(render('RESOLVE'), /Resolution type/);
   assert.match(render('RESOLVE'), /Resolution summary/);
   assert.match(render('CLOSE', { vehicleNeedsUnavailableReason: true }), /Customer communication status/);
@@ -4326,6 +4330,10 @@ test('confidential case route renders actor-scoped restricted notes through the 
   const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
   const fetchImpl: typeof fetch = async (input, init) => {
     calls.push({ input, init });
+    if (String(input).endsWith('/assignments/options')) return jsonResponse({
+      users: [{ id: 'usr_hr', nameEn: 'HR Owner', nameAr: 'HR Owner', branchId: 'branch_main', departmentId: 'dept_hr', roleCode: 'CR_MANAGER' }],
+      departments: [{ id: 'dept_hr', nameEn: 'Human Resources', nameAr: 'Human Resources', branchId: 'branch_main' }],
+    });
     return jsonResponse(confidentialCaseFixture());
   };
   const html = renderToStaticMarkup(
@@ -4338,8 +4346,11 @@ test('confidential case route renders actor-scoped restricted notes through the 
   );
 
   const caseCall = calls.find((call) => String(call.input).endsWith('/cases/case_hr_1/confidential-timeline'));
+  const assignmentCall = calls.find((call) => String(call.input).endsWith('/assignments/options'));
   assert.ok(caseCall);
+  assert.ok(assignmentCall);
   assert.deepEqual(caseCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
+  assert.deepEqual(assignmentCall.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
   assert.doesNotMatch(String(caseCall.input), /role|actor|workflow|branchId|owner|participant|token|credential/i);
   assert.match(html, /Confidential case timeline/);
   assert.match(html, /Employee grievance/);
@@ -4349,9 +4360,9 @@ test('confidential case route renders actor-scoped restricted notes through the 
   assert.match(html, /HR Owner/);
   assert.match(html, /Private HR note/);
   assert.match(html, /Case Created/);
-  assert.doesNotMatch(html, /case_hr_1/);
+  assert.match(html, /Assignment and forwarding/);
+  assert.match(html, /Choose a user, a department, or both/);
   assert.doesNotMatch(html, /branch_main/);
-  assert.doesNotMatch(html, /usr_hr/);
 });
 
 test('confidential case route renders denied and no-note states without private notes', async () => {

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { NotificationsService } from '../../src/modules/notifications/notifications.service.ts';
 import {
+  collaborationDigestJobName,
   notificationEmailJobName,
   notificationSmsJobName,
   notificationWhatsAppJobName,
@@ -58,6 +59,7 @@ test('worker schedules notification dispatch jobs on an interval', async () => {
     { id: notificationEmailJobName, repeat: { every: 5_000 }, template: { name: notificationEmailJobName, data: {} } },
     { id: notificationSmsJobName, repeat: { every: 5_000 }, template: { name: notificationSmsJobName, data: {} } },
     { id: notificationWhatsAppJobName, repeat: { every: 5_000 }, template: { name: notificationWhatsAppJobName, data: {} } },
+    { id: collaborationDigestJobName, repeat: { every: 5_000 }, template: { name: collaborationDigestJobName, data: {} } },
     { id: taskEscalationJobName, repeat: { every: 5_000 }, template: { name: taskEscalationJobName, data: {} } },
     { id: taskNotificationBatchJobName, repeat: { every: 5_000 }, template: { name: taskNotificationBatchJobName, data: {} } },
   ]);

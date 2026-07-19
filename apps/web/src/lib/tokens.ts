@@ -63,6 +63,21 @@ export const designTokens = {
         border: 'hsl(var(--state-conflict-border))',
       },
     },
+    board: {
+      column: 'hsl(var(--board-column-bg))',
+      columnBorder: 'hsl(var(--board-column-border))',
+      card: 'hsl(var(--board-card-bg))',
+      drop: 'hsl(var(--board-drop-bg))',
+      dropRing: 'hsl(var(--board-drop-ring))',
+    },
+    stage: {
+      slate: { DEFAULT: 'hsl(var(--stage-slate))', bg: 'hsl(var(--stage-slate-bg))' },
+      blue: { DEFAULT: 'hsl(var(--stage-blue))', bg: 'hsl(var(--stage-blue-bg))' },
+      amber: { DEFAULT: 'hsl(var(--stage-amber))', bg: 'hsl(var(--stage-amber-bg))' },
+      green: { DEFAULT: 'hsl(var(--stage-green))', bg: 'hsl(var(--stage-green-bg))' },
+      red: { DEFAULT: 'hsl(var(--stage-red))', bg: 'hsl(var(--stage-red-bg))' },
+      violet: { DEFAULT: 'hsl(var(--stage-violet))', bg: 'hsl(var(--stage-violet-bg))' },
+    },
   },
   typography: {
     fontFamily: 'var(--font-sans)',
@@ -89,6 +104,7 @@ export const designTokens = {
     sm: 'var(--shadow-sm)',
     md: 'var(--shadow-md)',
     lg: 'var(--shadow-lg)',
+    drag: 'var(--board-drag-shadow)',
   },
   focusRing: 'var(--focus-ring)',
 } as const;

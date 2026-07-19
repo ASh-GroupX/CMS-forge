@@ -107,8 +107,8 @@ export class TasksRelatedRecordsService {
       recordId: row.id,
       label: row.title,
       labelAr: row.title,
-      context: [row.stage, row.currentHolder.nameEn, row.branch.nameEn].filter(Boolean).join(' - '),
-      contextAr: [row.stage, row.currentHolder.nameAr, row.branch.nameAr].filter(Boolean).join(' - '),
+      context: [row.stage, row.currentHolder?.nameEn, row.branch.nameEn].filter(Boolean).join(' - '),
+      contextAr: [row.stage, row.currentHolder?.nameAr, row.branch.nameAr].filter(Boolean).join(' - '),
     }));
   }
 }

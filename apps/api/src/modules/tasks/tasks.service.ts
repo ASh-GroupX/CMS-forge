@@ -5,35 +5,40 @@ import { AppException } from '../../core/http-kernel.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { CommunicationGroupsService } from '../communication-groups/communication-groups.service.js';
 import type { AdminUsersService, StaffLookupActor } from '../admin/admin-users.service.js';
+import type { AssignmentsService } from '../assignments/assignments.service.js';
 import type { EmployeeTodayResponseDto, ManagerControlRoomResponseDto, ManagerTaskDetailResponseDto, PromiseTrackerResponseDto, SentTasksResponseDto, TaskCommentsResponseDto, TaskResponseDto } from './dto/task-response.dto.js';
 import type { CreateTaskCommentInput, TaskNudgeInput } from './dto/task-collaboration.dto.js';
 import type { RelatedRecordLookupQueryDto, RelatedRecordLookupResponseDto } from './dto/related-record-lookup.dto.js';
 import { createCommentForActor, listCommentsForActor, nudgeForActor, sentByMe } from './tasks.collaboration.js';
-import { assertCanAct, assertCanView, managerBranchId } from './tasks.access.js';
+import { assertCanView, managerBranchId } from './tasks.access.js';
 import { addTaskWatcher, removeTaskWatcher, taskCapabilities, taskCommunicationTargets } from './tasks.collaboration-service.js';
 import { selectTaskEscalations } from './tasks.escalation.js';
 import { assertPromiseLink } from './tasks.promise.js';
 import { buildPromiseTracker, promiseTrackerQuery } from './tasks.promise-tracker.js';
 import { TasksRelatedRecordsService } from './tasks.related-records.service.js';
+import type { TasksBoardRepository } from './tasks.board.repository.js';
 import { TasksRepository } from './tasks.repository.js';
 import type { TaskRecord, TaskTimelineRecord } from './tasks.repository.js';
 import { currentNextAction, managerTaskDetailResponse, taskCounts, taskToResponse } from './tasks.response.js';
 import { requiredStatusNote, statusComment } from './tasks.status-note.js';
-import { requiredText, utcDay, validDate, validEnum } from './tasks.validation.js';
+import { assertAssignedDepartment, updateTaskForActor } from './tasks.update.js';
+import { assertNextAction, normalizeNextAction, requiredText, utcDay, validDate, validEnum } from './tasks.validation.js';
+import type { NormalizedNextAction } from './tasks.validation.js';
+export { assertNextAction, normalizeNextAction } from './tasks.validation.js';
+export type { NormalizedNextAction } from './tasks.validation.js';
 export type TaskAuditContext = { actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 
 export type TaskNextActionInput = { what: string; whoId: string; when: Date | string };
-export type CreateTaskInput = { title: string; ownerId: string; assigneeId: string; dueAt: Date | string; status?: TaskStatus; nextAction?: TaskNextActionInput | null; isCustomerPromise?: boolean; visibility?: TaskVisibility; confidentialityLevel?: TaskConfidentialityLevel; links?: { entityType: TaskLinkEntityType; entityId: string }[]; participantUserIds?: string[] };
+export type CreateTaskInput = { title: string; ownerId: string; assigneeId?: string | null; dueAt: Date | string; status?: TaskStatus; nextAction?: TaskNextActionInput | null; isCustomerPromise?: boolean; visibility?: TaskVisibility; confidentialityLevel?: TaskConfidentialityLevel; links?: { entityType: TaskLinkEntityType; entityId: string }[]; participantUserIds?: string[]; assignedDepartmentId?: string | null };
 export type UpdateTaskStatusInput = { taskId: string; status: TaskStatus; nextAction?: TaskNextActionInput | null; statusNote?: string };
-export type UpdateTaskInput = { taskId: string; status?: TaskStatus; assigneeId?: string; dueAt?: Date | string; nextAction?: TaskNextActionInput | null; isCustomerPromise?: boolean; statusNote?: string };
-export type TaskActor = { userId: string; roleCode: string; branchId: string | null; permissions?: string[] };
+export type UpdateTaskInput = { taskId: string; status?: TaskStatus; assigneeId?: string | null; dueAt?: Date | string; nextAction?: TaskNextActionInput | null; isCustomerPromise?: boolean; statusNote?: string; assignedDepartmentId?: string | null };
+export type TaskActor = { userId: string; roleCode: string; branchId: string | null; departmentId?: string | null; permissions?: string[] };
 
-type NormalizedNextAction = { what: string; whoId: string; when: Date };
 type ManagerRollupScope = { roleCode: string; branchId: string | null };
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly tasksRepository: TasksRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly usersService?: Pick<AdminUsersService, 'assertAssignable'>, private readonly relatedRecordsService?: TasksRelatedRecordsService, private readonly groupsService?: CommunicationGroupsService) {}
+  constructor(private readonly tasksRepository: TasksRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly usersService?: Pick<AdminUsersService, 'assertAssignable'>, private readonly relatedRecordsService?: TasksRelatedRecordsService, private readonly groupsService?: CommunicationGroupsService, private readonly boardRepository?: TasksBoardRepository, private readonly assignmentsService?: AssignmentsService) {}
 
   async create(input: CreateTaskInput, audit: TaskAuditContext = {}): Promise<TaskResponseDto> {
     return this.tasksRepository.transaction((client) => this.createInTransaction(input, audit, client));
@@ -42,23 +47,27 @@ export class TasksService {
   async createForActor(input: CreateTaskInput, actor: StaffLookupActor, audit: TaskAuditContext = {}): Promise<TaskResponseDto> {
     await this.assertAssignable(input, actor);
     await this.assertRelatedRecords(input, actor);
-    return this.create(input, audit);
+    if (input.assignedDepartmentId) await assertAssignedDepartment(this.boardRepository, input.assignedDepartmentId);
+    const task = await this.tasksRepository.transaction((client) => this.createInTransaction(input, audit, client, actor));
+    await this.assignmentsService?.notifyAfterCommit?.('TASK', task.id, { href: `/tasks/${task.id}`, title: task.title });
+    return task;
   }
 
   async relatedRecords(query: RelatedRecordLookupQueryDto, actor: TaskActor): Promise<RelatedRecordLookupResponseDto> {
     return { records: await this.relatedRecordsService!.list(query.type, actor, query.q) };
   }
 
-  async createInTransaction(input: CreateTaskInput, audit: TaskAuditContext, client: Prisma.TransactionClient): Promise<TaskResponseDto> {
+  async createInTransaction(input: CreateTaskInput, audit: TaskAuditContext, client: Prisma.TransactionClient, actor?: TaskActor): Promise<TaskResponseDto> {
     const status = input.status ?? TaskStatus.OPEN;
     const nextAction = status === TaskStatus.DONE ? null : normalizeNextAction(input.nextAction);
-    assertNextAction(status, nextAction);
+    assertNextAction(status, nextAction, Boolean(input.assignedDepartmentId));
     const taskLinks = links(input.links ?? []);
     assertPromiseLink(input.isCustomerPromise ?? false, taskLinks);
+    assertAssignment(input.assigneeId, input.assignedDepartmentId);
     const data = {
       title: requiredText(input.title, 'title'),
       ownerId: requiredText(input.ownerId, 'ownerId'),
-      assigneeId: requiredText(input.assigneeId, 'assigneeId'),
+      assigneeId: optionalId(input.assigneeId),
       dueAt: validDate(input.dueAt, 'dueAt'),
       status,
       nextActionWhat: nextAction?.what ?? null,
@@ -69,11 +78,19 @@ export class TasksService {
       confidentialityLevel: input.confidentialityLevel ?? TaskConfidentialityLevel.NORMAL,
       links: taskLinks,
       participants: participants(input, nextAction),
+      assignedDepartmentId: input.assignedDepartmentId ?? null,
     };
 
     const task = await this.tasksRepository.create(data, client);
     await this.tasksRepository.createStatusHistory(historyInput(task.id, null, task.status, audit), client);
     await this.auditService.record(taskAudit('task_created', task, audit, { status: task.status }), client);
+    if (this.assignmentsService && actor) {
+      await this.assignmentsService.setInTransaction({
+        entityType: 'TASK', entityId: task.id, assignedUserId: task.assigneeId,
+        assignedDepartmentId: task.assignedDepartmentId,
+        scopeBranchId: task.owner?.branchId ?? actor.branchId,
+      }, actor, audit, client);
+    }
     return taskToResponse(task);
   }
 
@@ -84,7 +101,7 @@ export class TasksService {
 
       const nextAction =
         input.status === TaskStatus.DONE ? null : normalizeNextAction(input.nextAction === undefined ? currentNextAction(current) : input.nextAction);
-      assertNextAction(input.status, nextAction);
+      assertNextAction(input.status, nextAction, Boolean(current.assignedDepartmentId));
       const statusNote = requiredStatusNote(current.status, input.status, input.statusNote);
       const task = await this.tasksRepository.updateStatus(
         {
@@ -106,42 +123,11 @@ export class TasksService {
   }
 
   async updateForActor(input: UpdateTaskInput, actor: TaskActor, audit: TaskAuditContext = {}): Promise<TaskResponseDto> {
-    return this.tasksRepository.transaction(async (client) => {
-      const current = await this.tasksRepository.findById(requiredText(input.taskId, 'taskId'), client);
-      if (!current) throw new AppException('TASK_NOT_FOUND', 'Task was not found', HttpStatus.NOT_FOUND);
-      assertCanAct(current, actor);
-      if (input.assigneeId) await this.usersService?.assertAssignable(actor, input.assigneeId);
-
-      const status = input.status ?? current.status;
-      const nextAction =
-        status === TaskStatus.DONE ? null : normalizeNextAction(input.nextAction === undefined ? currentNextAction(current) : input.nextAction);
-      assertNextAction(status, nextAction);
-      const statusNote = requiredStatusNote(current.status, status, input.statusNote);
-      if (nextAction) await this.usersService?.assertAssignable(actor, nextAction.whoId);
-      assertPromiseLink(input.isCustomerPromise ?? current.isCustomerPromise, current.links);
-
-      const task = await this.tasksRepository.updateStatus(
-        {
-          id: current.id,
-          status,
-          ...(input.assigneeId !== undefined ? { assigneeId: requiredText(input.assigneeId, 'assigneeId') } : {}),
-          ...(input.dueAt !== undefined ? { dueAt: validDate(input.dueAt, 'dueAt') } : {}),
-          nextActionWhat: nextAction?.what ?? null,
-          nextActionWhoId: nextAction?.whoId ?? null,
-          nextActionWhen: nextAction?.when ?? null,
-          ...(input.isCustomerPromise !== undefined ? { isCustomerPromise: input.isCustomerPromise } : {}),
-        },
-        client,
-      );
-      if (current.status !== task.status) {
-        await this.tasksRepository.createStatusHistory(historyInput(task.id, current.status, task.status, audit), client);
-        if (statusNote) {
-          await this.tasksRepository.createComment({ taskId: task.id, authorId: actor.userId, body: statusComment(current.status, task.status, statusNote) }, client);
-        }
-      }
-      await this.auditService.record(taskAudit('task_updated', task, audit, { fromStatus: current.status, toStatus: task.status }), client);
-      return taskToResponse(task);
-    });
+    const task = await updateTaskForActor(this.tasksRepository, this.auditService, this.usersService, this.boardRepository, input, actor, audit, this.assignmentsService);
+    if (input.assigneeId !== undefined || input.assignedDepartmentId !== undefined) {
+      await this.assignmentsService?.notifyAfterCommit?.('TASK', task.id, { href: `/tasks/${task.id}`, title: task.title });
+    }
+    return task;
   }
 
   async getForParticipant(taskId: string, actorId: string): Promise<TaskResponseDto> {
@@ -243,7 +229,7 @@ export class TasksService {
   }
 
   private async assertAssignable(input: CreateTaskInput, actor: StaffLookupActor): Promise<void> {
-    await this.usersService?.assertAssignable(actor, input.assigneeId);
+    if (input.assigneeId) await this.usersService?.assertAssignable(actor, input.assigneeId);
     const nextWho = input.nextAction?.whoId;
     if (nextWho && nextWho !== input.assigneeId) await this.usersService?.assertAssignable(actor, nextWho);
   }
@@ -258,33 +244,29 @@ export class TasksService {
   }
 }
 
-function assertNextAction(status: TaskStatus, nextAction: NormalizedNextAction | null): void {
-  if (status !== TaskStatus.DONE && !nextAction) {
-    throw new AppException('TASK_NEXT_ACTION_REQUIRED', 'Open tasks require a next action', HttpStatus.CONFLICT, [
-      { field: 'nextAction', code: 'REQUIRED', message: 'nextAction is required for open tasks.' },
-    ]);
-  }
-}
-
-function normalizeNextAction(input: TaskNextActionInput | null | undefined): NormalizedNextAction | null {
-  if (!input) return null;
-  return {
-    what: requiredText(input.what, 'nextAction.what'),
-    whoId: requiredText(input.whoId, 'nextAction.whoId'),
-    when: validDate(input.when, 'nextAction.when'),
-  };
-}
-
 function participants(input: CreateTaskInput, nextAction: NormalizedNextAction | null) {
   const rows = new Map<string, TaskParticipantRole>();
   rows.set(requiredText(input.ownerId, 'ownerId'), TaskParticipantRole.OWNER);
-  if (!rows.has(requiredText(input.assigneeId, 'assigneeId'))) rows.set(input.assigneeId.trim(), TaskParticipantRole.ASSIGNEE);
+  const assigneeId = optionalId(input.assigneeId);
+  if (assigneeId && !rows.has(assigneeId)) rows.set(assigneeId, TaskParticipantRole.ASSIGNEE);
   if (nextAction && !rows.has(nextAction.whoId)) rows.set(nextAction.whoId, TaskParticipantRole.PARTICIPANT);
   for (const userId of input.participantUserIds ?? []) {
     const clean = requiredText(userId, 'participantUserIds');
     if (!rows.has(clean)) rows.set(clean, TaskParticipantRole.PARTICIPANT);
   }
   return [...rows].map(([userId, role]) => ({ userId, role }));
+}
+
+function assertAssignment(userId: string | null | undefined, departmentId: string | null | undefined): void {
+  if (optionalId(userId) || optionalId(departmentId)) return;
+  throw new AppException('VALIDATION_FAILED', 'Invalid task request', HttpStatus.BAD_REQUEST, [
+    { field: 'assignment', code: 'REQUIRED', message: 'A task requires an assigned user or department.' },
+  ]);
+}
+
+function optionalId(value: string | null | undefined): string | null {
+  const text = value?.trim() ?? '';
+  return text || null;
 }
 
 function links(input: { entityType: TaskLinkEntityType; entityId: string }[]) {

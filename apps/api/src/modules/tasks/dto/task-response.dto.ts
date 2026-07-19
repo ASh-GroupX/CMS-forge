@@ -20,13 +20,16 @@ export class TaskResponseDto {
   title!: string;
   ownerId!: string;
   ownerName?: string | null;
-  assigneeId!: string;
+  assigneeId!: string | null;
   assigneeName?: string | null;
   branchId?: string | null;
   branchName?: string | null;
   displayTimeZone!: string;
   dueAt!: string;
   status!: TaskStatus;
+  assignedDepartmentId?: string | null;
+  assignedDepartmentName?: string | null;
+  assignedDepartmentNameAr?: string | null;
   nextAction!: TaskNextActionDto | null;
   isCustomerPromise!: boolean;
   visibility!: TaskVisibility;
@@ -70,6 +73,7 @@ export type TaskCommentsResponseDto = {
 export type ManagerRollupCountDto = {
   assigneeId: string;
   assigneeName?: string | null;
+  assignmentType?: 'USER' | 'DEPARTMENT';
   count: number;
 };
 
@@ -95,8 +99,10 @@ export type ManagerTaskDetailDto = {
   title: string;
   ownerId: string;
   ownerName: string | null;
-  assigneeId: string;
+  assigneeId: string | null;
   assigneeName: string | null;
+  assignedDepartmentId: string | null;
+  assignedDepartmentName: string | null;
   branchId: string | null;
   branchName: string | null;
   displayTimeZone: string;

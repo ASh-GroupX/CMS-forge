@@ -104,6 +104,36 @@ test('case CAPA routes use session actor and parse minimal create body', async (
   assert.deepEqual((calls[1] as { actor: unknown }).actor, { userId: 'session_user', role: RoleCode.CR_MANAGER, branchId: 'branch_1' });
 });
 
+test('case assignment route uses only session authority and accepts department-only assignment', async () => {
+  const calls: unknown[] = [];
+  const controller = new CasesController({
+    assignForActor: async (caseId: string, input: unknown, actor: unknown, audit: unknown) => {
+      calls.push({ caseId, input, actor, audit });
+      return { id: caseId };
+    },
+  } as unknown as CasesService);
+  const req = request({ roleCode: RoleCode.CR_MANAGER, correlationId: 'req_assign', url: '/cases/case_1/assignment?role=ADMIN' });
+  if (req.principal) req.principal.departmentId = 'dept_actor';
+
+  const result = await controller.assign('case_1', {
+    assignedUserId: null,
+    assignedDepartmentId: 'dept_service',
+    reason: 'Route to service',
+    actorId: 'spoofed',
+    branchId: 'other',
+  }, req);
+
+  assert.equal(result.case.id, 'case_1');
+  assert.deepEqual((calls[0] as { input: unknown }).input, {
+    assignedUserId: null,
+    assignedDepartmentId: 'dept_service',
+    reason: 'Route to service',
+  });
+  assert.deepEqual((calls[0] as { actor: unknown }).actor, {
+    userId: 'session_user', role: RoleCode.CR_MANAGER, branchId: 'branch_1', departmentId: 'dept_actor',
+  });
+});
+
 test('confidential timeline route preserves accused denial and audit before restricted notes escape', async () => {
   const auditRecords: AuditRecordInput[] = [];
   const controller = new CasesController(new CasesService({
@@ -161,6 +191,7 @@ function caseRecord(overrides: Partial<CaseRecord> = {}): CaseRecord {
     confidentialityLevel: CaseConfidentialityLevel.CONFIDENTIAL,
     branchId: 'branch_1',
     ownerId: 'hr_owner',
+    assignedDepartmentId: null,
     subject: 'Workplace grievance',
     descriptionEn: 'Confidential HR review',
     descriptionAr: null,
@@ -168,6 +199,7 @@ function caseRecord(overrides: Partial<CaseRecord> = {}): CaseRecord {
     updatedAt: now,
     branch: { nameEn: 'Main Branch', nameAr: 'Main Branch' },
     owner: { nameEn: 'Owner User' },
+    assignedDepartment: null,
     links: [{ entityType: CaseLinkEntityType.EMPLOYEE, entityId: 'session_user', createdAt: now }],
     participants: [],
     restrictedNotes: [],

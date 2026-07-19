@@ -1,4 +1,6 @@
 import { ComplaintStatus, PrismaClient, RoleCode } from '@prisma/client';
+import { seedBoardStages } from './board-stages-seed.js';
+import { seedSlaPolicies } from './sla-policies-seed.js';
 import { seedPhase10DealershipDemo } from './phase10-seed.js';
 import { defaultRolePermissions, permissionDefinitions } from './role-permissions.js';
 
@@ -25,6 +27,25 @@ async function main(): Promise<void> {
       create: { code: 'NORTH', nameEn: 'North Branch', nameAr: 'فرع الشمال' },
     }),
   ]);
+
+  // ── Departments ──────────────────────────────────────────────────────────
+  // Global (branchId null) so every branch/role can route to them — the ticket
+  // board's APPROVE_AND_ROUTE and the task board's department picker read these.
+  const departmentDefs: { code: string; nameEn: string; nameAr: string }[] = [
+    { code: 'SALES',         nameEn: 'Sales',         nameAr: 'المبيعات' },
+    { code: 'SERVICE',       nameEn: 'Service',       nameAr: 'الصيانة' },
+    { code: 'PARTS',         nameEn: 'Parts',         nameAr: 'قطع الغيار' },
+    { code: 'BODY_PAINT',    nameEn: 'Body & Paint',  nameAr: 'السمكرة والدهان' },
+    { code: 'FINANCE',       nameEn: 'Finance',       nameAr: 'المالية' },
+    { code: 'CUSTOMER_CARE', nameEn: 'Customer Care', nameAr: 'خدمة العملاء' },
+  ];
+  for (const def of departmentDefs) {
+    await prisma.department.upsert({
+      where: { code: def.code },
+      update: {},
+      create: { ...def, isActive: true },
+    });
+  }
 
   // ── Roles ─────────────────────────────────────────────────────────────────
   const roleDefs: { code: RoleCode; nameEn: string; nameAr: string }[] = [
@@ -239,7 +260,10 @@ async function main(): Promise<void> {
     complaint1,
   });
 
-  console.log('Seed complete: 2 branches, 6 roles, 4 users, 5 categories, 2 customers, 2 vehicles, 3 complaints, 2 deals, 2 tasks, 1 confidential case.');
+  await seedBoardStages(prisma);
+  const slaPolicies = await seedSlaPolicies(prisma);
+
+  console.log(`Seed complete: 2 branches, 6 roles, 4 users, 5 categories, 2 customers, 2 vehicles, 3 complaints, 2 deals, 2 tasks, 1 confidential case, 13 board stages (4 tasks + 9 tickets), ${slaPolicies} SLA policies.`);
 }
 
 main()

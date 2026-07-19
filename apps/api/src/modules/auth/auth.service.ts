@@ -43,6 +43,7 @@ export type StaffAuthClaims = {
   roleCode: StaffAuthRecord['role']['code'];
   permissions: string[];
   branchId: string | null;
+  departmentId: string | null;
   branchName: string | null; branchNameAr: string | null; branchTimezone: string | null;
 };
 
@@ -80,16 +81,7 @@ export class AuthService {
         throw authDenied('AUTH_INVALID_CREDENTIALS');
       }
 
-      return {
-        userId: user.id,
-        email: user.email,
-        nameEn: user.nameEn,
-        nameAr: user.nameAr,
-        roleCode: user.role.code,
-        permissions: permissionCodes(user),
-        branchId: user.branchId,
-        branchName: user.branch?.nameEn ?? null, branchNameAr: user.branch?.nameAr ?? null, branchTimezone: user.branch?.timezone ?? null,
-      };
+      return staffClaims(user);
     } catch (error) {
       await this.recordAuthAudit({
         action: 'login_failure',
@@ -151,17 +143,7 @@ export class AuthService {
       throw authDenied('AUTH_LOCKED_OR_INACTIVE');
     }
 
-    return {
-      sessionId: session.id,
-      userId: session.user.id,
-      email: session.user.email,
-      nameEn: session.user.nameEn,
-      nameAr: session.user.nameAr,
-      roleCode: session.user.role.code,
-      permissions: permissionCodes(session.user),
-      branchId: session.user.branchId,
-      branchName: session.user.branch?.nameEn ?? null, branchNameAr: session.user.branch?.nameAr ?? null, branchTimezone: session.user.branch?.timezone ?? null,
-    };
+    return { sessionId: session.id, ...staffClaims(session.user) };
   }
 
   async logoutStaffSession(token: string, secureCookie = false, now = new Date()): Promise<string> {
@@ -283,6 +265,21 @@ export class AuthService {
 
 function authDenied(code: 'AUTH_INVALID_CREDENTIALS' | 'AUTH_LOCKED_OR_INACTIVE'): AppException {
   return new AppException(code, 'Invalid credentials', HttpStatus.UNAUTHORIZED);
+}
+
+// Single source for the safe server-derived claims shape (login + session).
+function staffClaims(user: Omit<StaffAuthRecord, 'passwordHash'>): StaffAuthClaims {
+  return {
+    userId: user.id,
+    email: user.email,
+    nameEn: user.nameEn,
+    nameAr: user.nameAr,
+    roleCode: user.role.code,
+    permissions: permissionCodes(user),
+    branchId: user.branchId,
+    departmentId: user.departmentId ?? null,
+    branchName: user.branch?.nameEn ?? null, branchNameAr: user.branch?.nameAr ?? null, branchTimezone: user.branch?.timezone ?? null,
+  };
 }
 
 function permissionCodes(user: Pick<StaffAuthRecord, 'role'>): string[] {

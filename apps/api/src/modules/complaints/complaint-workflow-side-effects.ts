@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { ComplaintStatus, ComplaintTransitionAction, ComplaintTransitionRequestSource, RoleCode, SlaEventType, SlaStage } from '@prisma/client';
 import type { NotificationsService } from '../notifications/notifications.service.js';
 import type { SlaService } from '../sla/sla.service.js';
@@ -62,6 +63,21 @@ const PAUSE_ACTIONS = new Set<ComplaintTransitionAction>([
   ComplaintTransitionAction.REJECT_AFTER_INVESTIGATION,
 ]);
 
+const sideEffectLogger = new Logger('ComplaintWorkflowSideEffects');
+
+// Post-commit side effects are best-effort: the transition (or creation) has
+// already committed, so a notification/SLA/survey failure must never fail the
+// request (docs/ARCHITECTURE.md — side effects enqueue AFTER commit). Each effect
+// is isolated so one failing does not skip the rest, and its failure is logged,
+// never propagated. No payloads are logged (may carry PII) — only action + id.
+async function safely(action: string, complaintId: string, run: () => Promise<unknown>): Promise<void> {
+  try {
+    await run();
+  } catch (error) {
+    sideEffectLogger.error(`post-commit side effect "${action}" failed for complaint ${complaintId}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 export async function queueWorkflowSideEffects({
   notificationsService,
   slaService,
@@ -72,22 +88,22 @@ export async function queueWorkflowSideEffects({
   enteredAt,
 }: WorkflowSideEffectInput): Promise<void> {
   if (input.action === ComplaintTransitionAction.CLOSE && surveysService) {
-    await surveysService.scheduleClosureSurvey({ complaintId: complaint.id, customerId: complaint.customerId });
+    await safely('closure-survey', complaint.id, () => surveysService.scheduleClosureSurvey({ complaintId: complaint.id, customerId: complaint.customerId }));
   }
 
   const templateCode = notificationTemplate(input.action);
   if (templateCode && notificationsService) {
-    await notificationsService.queueInternal({
+    await safely('notification', complaint.id, () => notificationsService.queueInternal({
       complaintId: input.complaintId,
       ...recipient(input, complaint),
       templateCode,
       payload: notificationPayload(input, toStatus, complaint),
-    });
+    }));
   }
 
   const stage = SLA_STAGE_BY_ACTION[input.action];
   if (stage && slaService) {
-    await slaService.recordDeadlineEvent({
+    await safely('sla-deadline', complaint.id, () => slaService.recordDeadlineEvent({
       complaintId: complaint.id,
       severity: complaint.severity,
       stage,
@@ -95,12 +111,12 @@ export async function queueWorkflowSideEffects({
       departmentId: complaint.departmentId,
       categoryId: complaint.categoryId,
       enteredAt,
-    });
+    }));
   }
 
   const lifecycle = lifecycleEvent(input);
   if (lifecycle && slaService) {
-    await slaService.recordLifecycleEvent({ complaintId: complaint.id, ...lifecycle, occurredAt: enteredAt });
+    await safely('sla-lifecycle', complaint.id, () => slaService.recordLifecycleEvent({ complaintId: complaint.id, ...lifecycle, occurredAt: enteredAt }));
   }
 }
 

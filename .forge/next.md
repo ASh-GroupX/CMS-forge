@@ -1,42 +1,34 @@
-# CMSS Trello-Style Board Revamp — Phase A
+# Universal Assignments — Complete on `nour`
 
-Status: Plan approved; SSOT created at `docs/CMSS_REVAMP_PLAN.md`
-Required model tier: Opus 4.8 Max or GPT-5.5 Extra High
-Phase: CMSS Kanban revamp — Phase A (task board with drag & drop)
-Risk: High (RBAC scoping, workflow-adjacent state changes, schema migration)
-SRS IDs: `REQ-RBAC-001`, `UI-SCREEN-001`, `UI-DESIGN-001`,
-`REQ-LOCALIZATION-001`, `METHOD-TEST-001`
+Status: Complete on isolated branch `nour` (not merged)
+Required model tier: GPT-5.5 Extra High or equivalent
+Branch: `nour`
+Risk: High (RBAC, scope, audit, workflow, migration)
+SSOT: `docs/UNIVERSAL_ASSIGNMENTS_PLAN.md`
+SRS IDs: `REQ-RBAC-001`, `REQ-COLLAB-001`, `REQ-WORKFLOW-002`,
+`REQ-AUDIT-001`, `REQ-SEARCH-001`, `REQ-REPORT-001`,
+`REQ-LOCALIZATION-001`, `METHOD-MODULAR-001`, `METHOD-AUDIT-001`,
+`METHOD-API-001`, `METHOD-TEST-001`
 
 ## Task
 
-Execute Phase A of `docs/CMSS_REVAMP_PLAN.md` (the SSOT — read it first),
-task by task, starting at A1:
+Universal assignment and forwarding is implemented for Tasks/Promises,
+Complaints, Deals/Leads, and Cases/Requests. It supports a user, a department,
+or both, with a reusable module/control and an extensible entity-type boundary.
 
-- A1: Prisma migration — `BoardStage` model, `Task.stageId?`, `Task.position`,
-  seed default TASKS stages mapped to `TaskStatus`.
-- A2: `GET /tasks/board` session-scoped read endpoint + scoping tests.
-- A3: `POST /tasks/:id/move` (history + audit same-tx) + OpenAPI entries.
-- A4–A8: dnd-kit + shadcn primitives, typed client, `/tasks/board` Kanban
-  page (Trello UX, RTL, all states), mobile pass, visual/a11y/e2e proofs.
+## Constraints
 
-Constraints (locked decisions):
-- Ticket stages (Phase B) are mapped columns over the existing complaint
-  state machine — never bypass `POST /complaints/:id/transitions`.
-- Boards ship alongside existing screens; old screens stay.
-- Board reads are scoped from the server session only.
-- Each task ≈ 1–5 files + tests; mark `[x]` in the SSOT after each task.
+- Do not merge or push until human review.
+- Apply `20260718120000_universal_assignments` before deploying application code.
+- Keep legacy fields and dual-write compatibility in place.
+- Future modules adopt `AssignmentsService`; owning modules retain authorization.
 
-## Verification
+## Proof
 
-Per task: `corepack pnpm lint`, `typecheck`, `test`, `test:api -- <suite>`,
-`openapi:generate` + `openapi:check` on route changes; UI tasks additionally
-`test:visual`, `test:e2e -- accessibility`, `web:visual-review` (en + ar).
-High-risk tasks record the security self-check in `.forge/evidence.md`.
+All required proof passed. Exact commands and counts are recorded in
+`.forge/evidence.md` under “Universal assignment and forwarding”.
 
-## Carry-Forward (from prior next.md — release automation)
+## Next human gate
 
-- Needs Human Review: add repository deploy secrets (`DEPLOY_HOST`,
-  `DEPLOY_USER`, `DEPLOY_KEY`, `DEPLOY_PATH`) in GitHub settings.
-- Needs Human Review: create the `production` branch to trigger the
-  auto-deploy pipeline (`.github/workflows/deploy.yml`), then run
-  authenticated production smoke.
+Review the published `nour` branch, then decide whether to open a pull request.
+No protected branch has been modified.

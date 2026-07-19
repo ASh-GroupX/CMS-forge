@@ -6,6 +6,8 @@ import { employeeTodayText } from '../../i18n/staff-employee-today';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import { formatDisplayDate } from '../../lib/locale-format';
 import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
+import type { StaffAssignmentOptions } from '../../lib/staff-assignment-options-api';
+import { staffAssignmentText } from '../../i18n/staff-assignment';
 import type { StaffRelatedRecordOptions } from '../../lib/staff-related-records-api';
 import type { EmployeeTodayTasks, StaffTask, StaffTaskStatus } from '../../lib/staff-tasks-api';
 import { QuickAddForm, TaskActions, type TaskAction } from './task-action-forms';
@@ -23,6 +25,7 @@ const STATUS_CLASS: Record<StaffTaskStatus, string> = {
 };
 
 export function EmployeeToday({
+  assignmentOptions,
   data,
   locale,
   quickAddAction,
@@ -34,6 +37,7 @@ export function EmployeeToday({
   timeZone = 'UTC',
   updateAction,
 }: {
+  assignmentOptions?: StaffAssignmentOptions | null | undefined;
   data: EmployeeTodayTasks | null;
   locale: Locale;
   loadRelatedRecordsAction?: (() => Promise<StaffRelatedRecordOptions | null>) | undefined;
@@ -72,7 +76,7 @@ export function EmployeeToday({
             {result === 'success' ? t.states.saved : result === 'denied' ? t.states.denied : result === 'link-required' ? t.states.linkRequired : t.states.saveFailed}
           </p>
         ) : null}
-        {quickAddAction ? <QuickAddForm action={quickAddAction} loadRelatedRecordsAction={loadRelatedRecordsAction} locale={locale} relatedRecords={relatedRecords} staff={staff} t={t} timeZone={timeZone} /> : null}
+        {quickAddAction ? <QuickAddForm action={quickAddAction} assignmentOptions={assignmentOptions} loadRelatedRecordsAction={loadRelatedRecordsAction} locale={locale} relatedRecords={relatedRecords} staff={staff} t={t} timeZone={timeZone} /> : null}
         {data === null ? (
           <p className="rounded-sm border border-status-error bg-status-error/10 px-3 py-2 text-sm text-status-error" role="alert">
             {state === 'denied' ? t.states.denied : t.states.error}
@@ -84,7 +88,7 @@ export function EmployeeToday({
         ) : (
           <div className="grid items-start gap-3 xl:grid-cols-2">
             {activeSections.map((key) => (
-              <TaskSection key={key} locale={locale} sectionKey={key} staff={staff} tasks={data[key]} t={t} updateAction={updateAction} />
+              <TaskSection assignmentOptions={assignmentOptions} key={key} locale={locale} sectionKey={key} staff={staff} tasks={data[key]} t={t} updateAction={updateAction} />
             ))}
             {emptySections.length ? <EmptySections locale={locale} sectionKeys={emptySections} t={t} /> : null}
           </div>
@@ -134,6 +138,7 @@ function EmptySections({ locale, sectionKeys, t }: { locale: Locale; sectionKeys
 }
 
 function TaskSection({
+  assignmentOptions,
   locale,
   sectionKey,
   staff,
@@ -141,6 +146,7 @@ function TaskSection({
   t,
   updateAction,
 }: {
+  assignmentOptions?: StaffAssignmentOptions | null | undefined;
   locale: Locale;
   sectionKey: SectionKey;
   staff?: AssignableStaff[] | null | undefined;
@@ -163,14 +169,14 @@ function TaskSection({
         <p className="mt-3 rounded-sm bg-muted px-3 py-2 text-sm text-muted-foreground">{t.states.sectionEmpty}</p>
       ) : (
         <div className="mt-3 grid gap-2">
-          {tasks.map((task) => <TaskCard key={`${sectionKey}-${task.id}`} locale={locale} staff={staff} task={task} t={t} updateAction={updateAction} />)}
+          {tasks.map((task) => <TaskCard assignmentOptions={assignmentOptions} key={`${sectionKey}-${task.id}`} locale={locale} staff={staff} task={task} t={t} updateAction={updateAction} />)}
         </div>
       )}
     </section>
   );
 }
 
-function TaskCard({ locale, staff, task, t, updateAction }: { locale: Locale; staff?: AssignableStaff[] | null | undefined; task: StaffTask; t: EmployeeTodayText; updateAction?: TaskAction | undefined }) {
+function TaskCard({ assignmentOptions, locale, staff, task, t, updateAction }: { assignmentOptions?: StaffAssignmentOptions | null | undefined; locale: Locale; staff?: AssignableStaff[] | null | undefined; task: StaffTask; t: EmployeeTodayText; updateAction?: TaskAction | undefined }) {
   return (
     <article className="rounded-sm border border-line-subtle bg-surface p-3 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -184,6 +190,7 @@ function TaskCard({ locale, staff, task, t, updateAction }: { locale: Locale; st
       </div>
       <dl className="mt-3 grid gap-2 rounded-sm bg-surface-raised p-3 text-sm md:grid-cols-2">
         <Field label={t.fields.assignee} value={task.assigneeName ?? '-'} />
+        <Field label={staffAssignmentText[locale].department} value={locale === 'ar' ? task.assignedDepartmentNameAr ?? task.assignedDepartmentName ?? '-' : task.assignedDepartmentName ?? task.assignedDepartmentNameAr ?? '-'} />
         <Field label={t.fields.due} value={formatDate(task.dueAt, locale, task.displayTimeZone)} />
       </dl>
       <details className="mt-2 text-sm">
@@ -203,7 +210,7 @@ function TaskCard({ locale, staff, task, t, updateAction }: { locale: Locale; st
           </p>
         </div>
       ) : null}
-      {updateAction ? <TaskActions action={updateAction} locale={locale} staff={staff} task={task} t={t} /> : null}
+      {updateAction ? <TaskActions action={updateAction} assignmentOptions={assignmentOptions} locale={locale} staff={staff} task={task} t={t} /> : null}
       {task.links.length ? (
         <div className="mt-3 flex flex-wrap gap-1" aria-label={t.fields.links}>
           {task.links.map((link) => (

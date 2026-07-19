@@ -62,6 +62,7 @@ test('valid staff session returns safe server-derived claims', async () => {
     roleCode: 'ADMIN',
     permissions: ['ROLES_MANAGE'],
     branchId: 'branch_main',
+    departmentId: null,
     branchName: 'Main Branch',
     branchNameAr: 'الفرع الرئيسي',
     branchTimezone: 'Asia/Riyadh',

@@ -24,18 +24,29 @@ export type ComplaintTimelineItem = {
   metadata?: Record<string, string | number | boolean | null>;
 };
 
-export async function fetchComplaintTimeline({ apiUrl, complaintId, cookies, fetchImpl }: { apiUrl: string; complaintId: string; cookies: string; fetchImpl: typeof fetch }): Promise<ComplaintTimelineItem[]> {
+type TimelineArgs = { apiUrl: string; complaintId: string; cookies: string; fetchImpl: typeof fetch };
+
+// Distinguishes a transport/parse failure ({ ok: false }) from a valid-but-empty
+// timeline ({ ok: true, items: [] }). The board's quick-look drawer needs that
+// distinction to surface a real error state (mirroring the task drawer); the full
+// detail page keeps swallowing failures via fetchComplaintTimeline below.
+export async function fetchComplaintTimelineResult({ apiUrl, complaintId, cookies, fetchImpl }: TimelineArgs): Promise<{ ok: true; items: ComplaintTimelineItem[] } | { ok: false }> {
   try {
     const response = await fetchImpl(new URL(`/complaints/${encodeURIComponent(complaintId)}/timeline`, apiUrl), {
       cache: 'no-store',
       headers: { Accept: 'application/json', cookie: cookies },
     });
-    if (!response.ok) return [];
+    if (!response.ok) return { ok: false };
     const body = await response.json() as { items?: unknown[] };
-    return Array.isArray(body.items) ? body.items.filter(communicationTimelineItem) : [];
+    return { ok: true, items: Array.isArray(body.items) ? body.items.filter(communicationTimelineItem) : [] };
   } catch {
-    return [];
+    return { ok: false };
   }
+}
+
+export async function fetchComplaintTimeline(args: TimelineArgs): Promise<ComplaintTimelineItem[]> {
+  const result = await fetchComplaintTimelineResult(args);
+  return result.ok ? result.items : [];
 }
 
 function communicationTimelineItem(item: unknown): item is ComplaintTimelineItem {

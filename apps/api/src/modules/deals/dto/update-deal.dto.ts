@@ -2,7 +2,8 @@ import { HttpStatus } from '@nestjs/common';
 import { AppException } from '../../../core/http-kernel.js';
 
 export type AdvanceDealRequestDto = {
-  currentHolderId: string;
+  currentHolderId: string | null;
+  assignedDepartmentId?: string | null;
   stageDueAt: string;
   updateNote: string;
 };
@@ -13,7 +14,8 @@ export type DealBlockerRequestDto = {
 };
 
 export type DealDetailsRequestDto = {
-  currentHolderId: string;
+  currentHolderId: string | null;
+  assignedDepartmentId?: string | null;
   stageDueAt: string;
   updateNote: string;
 };
@@ -21,7 +23,8 @@ export type DealDetailsRequestDto = {
 export function parseAdvanceDealBody(body: unknown): AdvanceDealRequestDto {
   const input = objectBody(body);
   return {
-    currentHolderId: text(input.currentHolderId),
+    currentHolderId: text(input.currentHolderId) || null,
+    ...(input.assignedDepartmentId !== undefined ? { assignedDepartmentId: text(input.assignedDepartmentId) || null } : {}),
     stageDueAt: text(input.stageDueAt),
     updateNote: requiredText(input.updateNote, 'updateNote'),
   };
@@ -35,7 +38,8 @@ export function parseDealBlockerBody(body: unknown): DealBlockerRequestDto {
 export function parseDealDetailsBody(body: unknown): DealDetailsRequestDto {
   const input = objectBody(body);
   return {
-    currentHolderId: requiredText(input.currentHolderId, 'currentHolderId'),
+    currentHolderId: text(input.currentHolderId) || null,
+    ...(input.assignedDepartmentId !== undefined ? { assignedDepartmentId: text(input.assignedDepartmentId) || null } : {}),
     stageDueAt: requiredText(input.stageDueAt, 'stageDueAt'),
     updateNote: requiredText(input.updateNote, 'updateNote'),
   };

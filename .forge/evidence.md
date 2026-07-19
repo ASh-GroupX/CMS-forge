@@ -13534,3 +13534,919 @@ SRS IDs: `ARCH-UI-001`, `UI-SCREEN-001`, `UI-DESIGN-001`, `QA-UI-001`, `REQ-LOCA
 - Notes:
   - Deployment execution requires setting up repository secrets (`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_KEY`, `DEPLOY_PATH`) in your GitHub repository settings.
 
+
+---
+
+## A2 - GET /tasks/board session-scoped Kanban read
+
+- Date: 2026-07-13
+- Risk: High (RBAC scoping of a new read surface; privacy of task board payload)
+- Status: Passed
+- Requirement IDs: REQ-RBAC-001, UI-SCREEN-001, METHOD-TEST-001
+- Evidence:
+  - New files (kept out of the at-budget `tasks.service.ts`/`tasks.repository.ts`):
+    `apps/api/src/modules/tasks/dto/board.dto.ts`,
+    `apps/api/src/modules/tasks/tasks.board.repository.ts`,
+    `apps/api/src/modules/tasks/tasks.board.service.ts`,
+    `apps/api/test/tasks/board.test.ts`.
+  - `TasksBoardRepository.listStages(TASKS)` returns active (non-archived) stages
+    ordered by position; `listBoardTasks(scope, completedSince)` scopes rows in the
+    Prisma WHERE exactly like `listPromiseTracker` (participants always, managers on
+    NORMAL tasks within their branch, admins everywhere) and includes DONE tasks only
+    when `updatedAt` is within the 14-day completed window.
+  - `TasksBoardService.board` reuses `promiseTrackerQuery(actor)` for scope-flag
+    mapping and computes `completedSince` from the server clock. Pure `buildTaskBoard`
+    projects one column per active stage (empty columns preserved), buckets each card
+    by explicit stage → default stage for its status (isDefault preferred) → first
+    stage, sorts by `boardPosition` then `dueAt`, and derives `daysActive` +
+    `dueState` (OVERDUE/DUE_TODAY/UPCOMING, null when DONE).
+  - Controller `@Get('board')` is registered BEFORE `@Get(':id')` with
+    `SessionAuthGuard + PermissionGuard + @Permissions('COMPLAINT_COMMENT_INTERNAL')`
+    (no CSRF/RbacGuard — read, scoped from session). `TasksBoardService` is an
+    optional `@Inject`-ed constructor arg so existing single-arg controller test
+    construction still compiles; providers wired in `tasks.module.ts`.
+  - `MODULE.md` updated: `board_stages` declared under Owns tables (read-only here;
+    write ownership moves to the Phase B `board-stages` module) and `TasksBoardService`
+    noted as an internal, non-exported board read surface.
+- Verification:
+  - Passed: `corepack pnpm test:api -- tasks` (24/24; 9 new board tests).
+  - Passed: `corepack pnpm typecheck` (all six tsconfig projects).
+  - Passed: `corepack pnpm lint` (boundary, module-manifest truth, wiring, size).
+  - Passed: `corepack pnpm openapi:generate` + `openapi:check`. `GET /tasks/board`
+    is now documented in `tools/openapi-canonical.json` with `TaskBoardResponse` /
+    `BoardStage` / `BoardCard` / `BoardColumn` schemas (pulled forward into A2 to
+    honor the CLAUDE.md "every public route in OpenAPI" non-negotiable rather than
+    deferring to A3; `POST /tasks/:id/move` will be added in A3).
+  - Not Run: live DB scoping (`db:push`/`db:seed`) — no local `DATABASE_URL`.
+- Security Self-Check:
+  - Session-only scoping: cards are filtered in the Prisma WHERE from the session
+    principal's role/branch/participation; the actor→query flag mapping is asserted
+    by the allowed (`manager`/`admin` reach) and denied (`employee` participant-only,
+    no manager/admin reach) unit tests. DB-level SQL enforcement is Assumed here (no
+    local DB); the query-shape assertions are the actual proof.
+  - Same-tx history+audit: N/A — this is a read; no mutation, no audit write.
+  - No secrets logged; the board select omits participant emails/PII (asserted by a
+    test that the serialized board contains no `@`), and carries bilingual
+    (`nameEn`/`nameAr`) owner/assignee names for the RTL board.
+
+---
+
+## A3 - POST /tasks/:id/move (board drag → status transition, same-tx)
+
+- Date: 2026-07-13
+- Risk: High (workflow-adjacent state change; RBAC record-level authorization;
+  same-transaction history + audit)
+- Status: Passed
+- Requirement IDs: REQ-RBAC-001, UI-SCREEN-001, METHOD-TEST-001, METHOD-AUDIT-001
+- Evidence:
+  - Move logic lives in the SAME new board files (no growth of the at-budget
+    `tasks.service.ts` (300) / `tasks.repository.ts`):
+    `tasks.board.repository.ts` gains `findStage` (active TASKS stage only, else
+    null → 404) + `moveTask` (sets stageId/boardPosition/status + next-action
+    fields on the tx client); `tasks.board.service.ts` gains `TasksBoardService.move`;
+    new `dto/move-task.dto.ts` parser; `dto/board.dto.ts` gains `MoveTaskResponseDto`.
+  - `move` runs in one `tasksRepository.transaction`: `findById` (full `TaskRecord`
+    for `assertCanAct`) → `assertCanAct(current, actor)` → status :=
+    `stage.mappedTaskStatus ?? current.status` → the SAME `assertNextAction` /
+    `normalizeNextAction` (exported from `tasks.service.ts`, no line growth) and
+    `requiredStatusNote` invariants as `PATCH /tasks/:id` → `moveTask` →
+    `createStatusHistory` + `statusComment` comment (only when status changed) →
+    `auditService.record('task_moved', metadata {fromStage,toStage,fromStatus,toStatus})`
+    — all on the same tx client. Returns the moved `BoardCardDto`.
+  - Reused canonical helpers rather than reimplementing: `assertCanAct`
+    (`tasks.access.ts`), `requiredStatusNote`/`statusComment` (`tasks.status-note.ts`),
+    `currentNextAction` (`tasks.response.ts`) — so the board move and the existing
+    PATCH cannot diverge on the next-action / outcome-note rules.
+  - Branch-scope guard on the next-action target (parity with `updateForActor`):
+    `TasksBoardService` injects `AdminUsersService` and calls
+    `assertAssignable(actor, nextAction.whoId)` whenever a move sets a next action, so
+    a reopen cannot route the task into another branch's queue via `nextActionWhoId`.
+  - Conflict handling (SSOT A3 "conflict handling"): the rollback surface is
+    `TASK_NEXT_ACTION_REQUIRED` (409) / `TASK_STATUS_NOTE_REQUIRED` (400) /
+    `BRANCH_SCOPE_FORBIDDEN` (403) — the frontend rolls back the optimistic move on
+    these. `Task` has no optimistic `version` column (only `Complaint` does), so there
+    is no stale-move lock to build here; consciously out of scope.
+  - Controller `@Post(':id/move')` guarded by `SessionAuthGuard + PermissionGuard +
+    CsrfGuard` and `@Permissions('COMPLAINT_COMMENT_INTERNAL')`; `TasksBoardService`
+    provider now injects `TasksRepository` + `AuditService`.
+  - `taskSelect` in `tasks.repository.ts` gained the `stageId` scalar (1 line, file
+    at 281) so the audit `fromStage` reads from the authorized record; `TaskRecord`
+    fixtures in `tasks.service.spec.ts` + `manager-rollup.test.ts` updated.
+  - `POST /tasks/{id}/move` (with `TaskMoveRequest` / `MoveTaskResponse` schemas)
+    added to `tools/openapi-canonical.json`; committed contract regenerated.
+- Verification:
+  - Passed: `corepack pnpm test:api -- tasks` (35/35; 11 new move tests covering
+    guards, allowed owner + denied non-participant, BOARD_STAGE_NOT_FOUND,
+    TASK_NOT_FOUND, done-without-note, reopen-without-next-action, in-scope vs
+    out-of-scope next-action assignee, same-tx client identity across
+    move+history+comment+audit, and audit metadata).
+  - Passed: `corepack pnpm typecheck`, `lint`, `openapi:generate` + `openapi:check`.
+  - Not Run: live DB (`db:push`/`db:seed`) — no local `DATABASE_URL`; the tx/audit
+    behavior is proven via stubbed-repo call-order + shared-client assertions.
+  - Pre-existing/unrelated: `corepack pnpm test` (tools suite) reports 58/59 with
+    one failure in the web visual-proof harness (`web-proof.test.mjs`, a Playwright
+    child-process `DEP0190` env issue) that references no api/openapi code and is
+    modified in the working tree independently of this task.
+- Security Self-Check:
+  - Session-only authority: the move is authorized by `assertCanAct` on the
+    server-loaded record (participants / branch-scoped managers on NORMAL tasks /
+    admin); a non-participant, non-manager actor is denied (RBAC_FORBIDDEN) with no
+    writes — asserted by test. The next-action target is additionally branch-scoped
+    via `assertAssignable`, so a move cannot leak the task into another branch's
+    queue (out-of-scope assignee → BRANCH_SCOPE_FORBIDDEN, no writes — asserted).
+  - Same-tx history + audit: `moveTask`, `createStatusHistory`, `createComment`,
+    and `auditService.record` all execute on the one transaction client — asserted
+    by a shared-client-identity test. Audit is append-only; no secrets in metadata.
+  - State machine preserved: status is derived from the stage mapping and gated by
+    the existing note/next-action invariants; the board never sets an arbitrary
+    TaskStatus. (Ticket board over the complaint state machine is Phase B.)
+
+## A4 — Board frontend groundwork: dnd-kit, shadcn primitives, board tokens (2026-07-14)
+
+- SRS: UI-DESIGN-001 (token system, no ad-hoc colors), UI-SCREEN-001 (primitives
+  via shadcn CLI, never hand-rolled).
+- Scope (deps + generated primitives + tokens, no board page yet):
+  - `apps/web/package.json`: `@dnd-kit/core@^6.3.1`, `@dnd-kit/sortable@^10.0.0`,
+    `@dnd-kit/utilities@^3.2.2` (+ Radix deps pulled by the shadcn CLI:
+    avatar, tooltip, scroll-area, popover).
+  - shadcn CLI (`npx shadcn@latest add avatar tooltip sheet scroll-area popover`)
+    generated `apps/web/src/components/ui/{avatar,tooltip,sheet,scroll-area,popover}.tsx`.
+  - Board tokens: `--board-column-bg`, `--board-column-border`, `--board-card-bg`,
+    `--board-drop-bg`, `--board-drop-ring`, `--board-drag-shadow`, and stage accents
+    `--stage-{slate,blue,amber,green,red,violet}[-bg]` with `.dark` overrides in
+    `apps/web/src/globals.css`; exposed as `board.*` / `stage.*` colors and
+    `shadow-drag` in `tailwind.config.ts`; mirrored in `lib/tokens.ts`.
+    Stage color names match `BoardStage.color` seed values (slate/blue/amber/green)
+    plus red/violet headroom for Phase B admin-defined stages.
+- Verification:
+  - Passed: `corepack pnpm lint`; full `typecheck` (all 6 projects);
+    `test:api -- tasks` 35/35 (re-verified after install); `openapi:check`.
+  - Not Run: visual proofs — no screen consumes the tokens yet (A6/A8).
+- Environment notes: shadcn CLI requires `pnpm` on PATH; created corepack shims via
+  `corepack enable --install-directory <scratchpad>/corepack-shims`. Fresh Windows
+  checkouts (`core.autocrlf=true`) break byte-exact `openapi:check` until
+  `openapi:generate` rewrites LF endings (content-identical).
+
+## A5 — Typed board client + move server action + client-shape tests (2026-07-14)
+
+- SRS: REQ-RBAC-001 (session-cookie-only authority, no client-side privacy
+  filtering), METHOD-TEST-001 (client-shape tests incl. denied boundary).
+- Files:
+  - `apps/web/src/lib/staff-board-api.ts` (220 lines): `getTaskBoardLoadResult`
+    (GET /tasks/board → `{status:'ready',data}|{status:'denied'|'error'}`) and
+    `moveTaskCard` (POST /tasks/:id/move with `x-csrf-token` from the cookie →
+    `success{card}` / `invalid{fields}` (400 VALIDATION_FAILED detail fields,
+    consumed by the A6 status-note dialog) / `denied` / `not_found` / `error`).
+    Shapes mirror `apps/api/src/modules/tasks/dto/board.dto.ts`; every payload
+    is runtime-validated before use (malformed → error, never partial data).
+  - `apps/web/src/app/(staff)/tasks/board/actions.ts`: `moveTaskCardAction`
+    ('use server') — calls `moveTaskCard`, `revalidatePath('/tasks/board')` on
+    success, returns the serializable result union for optimistic rollback.
+  - `apps/web/test/api-client/staff-board-api.test.ts`: 4 tests — scoped GET
+    with session cookie; denied (no session + 403) / error (500) / malformed
+    payload; POST body + CSRF header assertion; outcome mapping incl. 404 and
+    field-level 400.
+- Verification:
+  - Passed: `corepack pnpm test:web` 213/213; `lint`; web `tsc --noEmit`.
+  - Not Run: live API round-trip (no local DATABASE_URL/API) — covered by
+    fetch-stub shape tests, same as every other `*-api.ts` client.
+- Security self-check: requests authorized only by the forwarded session
+  cookie; no session/CSRF values logged or persisted; denied paths return
+  before any fetch; the client renders nothing the server did not scope.
+
+## A6 — /tasks/board Kanban page (Trello UX, en+ar, nav) (2026-07-14)
+
+- SRS: UI-SCREEN-001 (states, a11y), UI-DESIGN-001 (tokens only),
+  REQ-LOCALIZATION-001 (en LTR + ar RTL), REQ-RBAC-001 (server-scoped read;
+  nav entry visible to all staff roles, data still session-scoped).
+- Files:
+  - `apps/web/src/components/task-board/index.tsx` (216): 'use client' dnd-kit
+    island — DndContext (pointer/touch/keyboard sensors, closestCorners),
+    cross-column onDragOver preview, onDragEnd optimistic commit with
+    snapshot rollback, DragOverlay tilt (`rotate-3 shadow-drag`), status-note
+    dialog on `invalid:statusNote` (retries the move with the note),
+    nextAction-required and denied/not_found/error toasts (sonner), SR
+    announcements + keyboard instructions, empty/error/denied states.
+  - `apps/web/src/components/task-board/board-card.tsx` (82): card visual —
+    due-state/promise badges, days-active, comment count, assignee avatar
+    initials (ar name preferred in ar locale); sortable wrapper.
+  - `apps/web/src/components/task-board/board-column.tsx` (61): droppable
+    column — stage color dot + tinted header (stage-* tokens), drop highlight
+    (board-drop tokens + ring), dashed empty drop target.
+  - `apps/web/src/components/task-board/board-loading.tsx` + route
+    `loading.tsx`: skeleton board.
+  - `apps/web/src/app/(staff)/tasks/board/page.tsx`: RSC loader (locale +
+    getTaskBoardLoadResult), passes moveTaskCardAction.
+  - `apps/web/src/i18n/staff-task-board.ts`: full en+ar copy incl. a11y.
+  - Nav: `app-shell.tsx` 'board' item (KanbanSquare, work section),
+    `staff-shell.ts` nav.board en+ar, `(staff)/layout.tsx` all role lists.
+  - Proof harness registration: `/tasks/board` fixture (4 stages, cards
+    covering overdue/due-today/promise/done/empty column) in
+    `web-proof-fixtures.mjs`; `staff-board` route in `web-proof.mjs`; en+ar
+    visual cases in `web-proof-cases.mjs`.
+- Verification:
+  - Passed: `test:visual` (102 previews incl. 2 board cases); screenshots
+    rendered via Playwright and self-reviewed for en LTR + ar RTL (columns
+    flow RTL, Arabic badges/counts, drop target, active nav) — sent to user;
+    `lint` (all files within 300-line budget); web `tsc --noEmit`;
+    `test:web` 213/213; `i18n-lint`.
+  - Not Run: live drag against a running API (no local DATABASE_URL); the
+    optimistic flow is exercised through the server-action result contract.
+    Playwright e2e drag test is A8.
+- Security self-check: page renders only the server-scoped board payload; the
+  move action goes through the session+CSRF client; failures roll the UI back
+  and reveal nothing beyond the localized error copy.
+
+## A7 — Mobile board pass (2026-07-14)
+
+- SRS: UI-SCREEN-001 (mobile states + touch targets), REQ-LOCALIZATION-001.
+- Changes: Board/List view toggle in `components/task-board/index.tsx`
+  (mobile-only `lg:hidden`, `min-h-11` ≥44px targets, `aria-pressed`,
+  focus ring); `layout` prop in `board-column.tsx` — list mode stacks
+  full-width columns (`w-full lg:w-72`); `view.{label,board,list}` copy en+ar
+  in `i18n/staff-task-board.ts`. Horizontal snap-scroll (`snap-x
+  snap-mandatory overflow-x-auto`) and the dnd-kit TouchSensor (150ms delay)
+  shipped in A6. Visual cases: en `task board 390px` + ar `task board
+  {390,430,768,1024,1440}px` in `web-proof-cases.mjs`.
+- Verification:
+  - Passed: `test:visual` 108 previews; 390px screenshots self-reviewed en+ar
+    (switcher, single swipeable column, bottom nav, RTL) — sent to user;
+    `lint`; web `tsc --noEmit`.
+  - Not Run: real-device touch drag (no device); TouchSensor is dnd-kit's
+    supported path and the e2e drag test lands in A8.
+
+## A8 — Visual/a11y proofs + drag e2e for the task board (2026-07-14)
+
+- SRS: METHOD-TEST-001, UI-SCREEN-001 (a11y), UI-DESIGN-001.
+- Visual: `staff-board` fixture + en/ar cases (A6) + responsive cases (A7) —
+  `test:visual` 108 previews Passed; screenshots self-reviewed en+ar,
+  desktop + 390px, delivered to the user.
+- Accessibility: en+ar `task board` cases in `web-proof-cases.mjs`;
+  `test:e2e -- accessibility` 24 previews with axe Passed after fixing the
+  two serious violations it caught: (1) dnd-kit's `role="button"` landed on
+  the `<li>` (axe `list` + `aria-allowed-role`) — sortable attributes moved
+  to an inner div; (2) contrast — avatar initials now `bg-brand
+  text-brand-foreground`, DUE_TODAY badge text `text-content-strong` on the
+  warning tint, empty-column hint `text-content-muted`.
+- Drag e2e: `tools/task-board-dnd-proof.mjs` (95 lines), runner mode
+  `test:e2e -- task-board-dnd`. esbuild-bundles the real `TaskBoardScreen`
+  with the proof board and a recording move action, hydrates in headless
+  Chromium with compiled Tailwind, executes a real pointer drag
+  (activation-constraint clearing + 20-step glide) of BOARD-PROOF-002 from
+  Open into In Progress, then asserts: exactly one committed move for
+  `task_board_2` with `stageId=stage_in_progress` and integer
+  `boardPosition >= 0`; the card's article renders inside the target column;
+  the localized success toast appears. Passed.
+- Full sweep after A8: lint, web tsc, test:web 213/213, test:visual 108,
+  accessibility 24, task-board-dnd — all Passed.
+- Not Run: drag against a live API/DB (no local DATABASE_URL) — the
+  server-side move contract is covered by the 35 tasks API tests (A2/A3).
+
+## B1 — board-stages CRUD module + TICKETS seed (2026-07-14)
+
+- SRS: REQ-ADMIN-001, REQ-RBAC-001, METHOD-MODULAR-001, METHOD-AUDIT-001,
+  METHOD-API-001, METHOD-TEST-001.
+- Module (copied from the golden `branches` structure):
+  `apps/api/src/modules/board-stages/` — repository (owned table
+  `board_stages`), service, controller, module, MODULE.md,
+  `dto/board-stage-response.dto.ts` + `dto/board-stage-write.dto.ts`.
+  Registered in `main.ts`.
+- Routes: `GET /board-stages[?scope=]` staff read
+  (COMPLAINT_COMMENT_INTERNAL); `POST /board-stages`, `PATCH
+  /board-stages/:id`, `POST /board-stages/reorder`, `POST
+  /board-stages/:id/archive` under MASTER_DATA_MANAGE + CsrfGuard.
+- Rules: create validates color against the frontend stage tokens and
+  scope-specific mappings (TICKETS requires mappedComplaintStatus; TASKS may
+  map a TaskStatus; cross-scope mappings rejected) and appends at the end of
+  the scope. Reorder is all-or-nothing: orderedIds must equal the active
+  stage set exactly (else 409 BOARD_STAGE_ORDER_MISMATCH) so a stale admin
+  screen cannot drop columns. Archive always names a destination: same scope,
+  active, different id; TASKS cards are reassigned through the public
+  `TasksBoardService.reassignStage` on the archive transaction's client
+  (never direct task-table writes from this module); a TICKETS destination
+  must carry a mappedComplaintStatus. Every mutation writes its CONFIG audit
+  entry on the same transaction (asserted via shared-client identity).
+- Tasks module additions: `TasksBoardRepository.reassignStage` (updateMany on
+  the caller's tx client), `TasksBoardService.reassignStage` passthrough,
+  `TasksBoardService` added to TasksModule exports.
+- Seed: 9 TICKETS stages (one per ComplaintStatus in workflow order, en+ar
+  names, token colors) added to `board-stages-seed.ts`, idempotent upserts.
+- OpenAPI: 5 operations + 7 schemas spliced additively into
+  `tools/openapi-canonical.json` (610-line additive diff, no reformat);
+  regenerated committed document.
+- Verification:
+  - Passed: `test:api -- board-stages` 8/8 (guard wiring incl. CSRF on all
+    mutations; staff-read allowed / non-admin write denied + SECURITY audit;
+    same-tx create/reorder/archive assertions incl. reassignment client
+    identity; scope/mapping/color/duplicate validation; 409 reorder mismatch;
+    response shape). `test:api -- tasks` 35/35. `lint`, full `typecheck`,
+    `openapi:generate`+`openapi:check`.
+  - Not Run: live DB seed (no local DATABASE_URL); upserts mirror the proven
+    A1 pattern.
+- Security self-check: manage routes are permission-gated + CSRF; reads
+  expose only stage configuration (no cards, no customer data); audit
+  metadata carries configuration values only — no secrets, no PII.
+
+## B2 — Admin stage management UI (2026-07-14)
+
+- SRS: REQ-ADMIN-001, REQ-RBAC-001, UI-SCREEN-001, UI-DESIGN-001,
+  REQ-LOCALIZATION-001, METHOD-TEST-001.
+- Files: `apps/web/src/lib/staff-board-stages-api.ts` (149 lines — typed
+  client for /board-stages list/create/update/reorder/archive; CSRF header;
+  outcomes success/invalid{fields}/denied/conflict/not_found/error);
+  4 stage server actions added to `(staff)/tasks/board/actions.ts`
+  (revalidatePath on success); `components/task-board/stage-manager.tsx`
+  (217 lines — shadcn Sheet, per-stage rename en+ar + token-color radio
+  picker + up/down reorder sending the full ordered set + archive with
+  destination select, add-stage form with optional TaskStatus mapping,
+  sonner toasts incl. 409 conflict copy); island accepts a `stageManager`
+  slot; `page.tsx` renders it only when the SERVER session principal has
+  MASTER_DATA_MANAGE (client never decides); `manage.*` copy en+ar.
+- Verification:
+  - Passed: web api-client tests 67/67 (3 new stage-client tests: endpoint/
+    CSRF/payload mapping, outcome mapping incl. 409, denied-before-fetch);
+    `test:visual` 108 previews (manage trigger signal, admin proof
+    principal); hydrated open-sheet screenshots en LTR + ar RTL (start-side
+    sheet) self-reviewed and sent to user; `lint`; web `tsc`; `i18n-lint`.
+  - Not Run: writes against a live API (no local DATABASE_URL) — covered by
+    the B1 API suite + client-shape stubs. Board a11y axe cases from A8
+    cover the trigger; the open sheet is client-portal-only and is not in
+    the static axe pass (buttons carry aria labels + focus rings).
+- Security self-check: manage affordance gated by the server-loaded
+  principal's permissions; every write goes through the CSRF client and the
+  B1 admin-guarded routes; no secrets in toasts or logs.
+
+## B3 — Task department assignment (2026-07-15)
+
+- SRS: REQ-RBAC-001, UI-SCREEN-001, UI-DESIGN-001, REQ-LOCALIZATION-001,
+  METHOD-AUDIT-001, METHOD-TEST-001.
+- Schema: `Task.assignedDepartmentId?` (+ `assignedDepartment` relation,
+  `@@index`, `Department.tasks` back-relation) in
+  `packages/database/prisma/schema.prisma`. `prisma validate` + `generate`
+  Passed with placeholder DATABASE_URL; `db:push`/`db:seed` Not Run (no
+  local DB).
+- Session authority: `departmentId` now flows server-side only —
+  `auth.repository.ts` selects it for credential + session lookups,
+  `auth.service.ts` returns it in claims via a new `staffClaims` helper
+  (dedupes the login/session claim shape; file back under the 300 budget),
+  `StaffPrincipal` + `TaskActor` extended, and `tasks.controller.ts` builds
+  every actor through `taskActor(principal)` (inline literals removed).
+- Access rule: `tasks.access.ts` `isDepartmentMember` — members of the
+  assigned department may view/act on the task, but ONLY at NORMAL
+  confidentiality (mirrors the manager-rollup precedent; confidential tasks
+  stay with named participants/admins). The board read mirrors the same
+  predicate in the Prisma OR-clause (`tasks.board.repository.ts`), so the
+  frontend never filters for privacy.
+- Update path: `updateForActor` extracted to new `tasks.update.ts`
+  (tasks.service.ts was AT the 300-line budget) and extended:
+  `assignedDepartmentId` accepted on PATCH (null clears), validated against
+  active departments (`findActiveDepartment`) as a 400 field error, written
+  with from/to department metadata on the `task_updated` audit entry in the
+  SAME transaction as the update/history/comment. Quick-add create accepts
+  the field too (validated in `createForActor`).
+- Board read: cards carry `assignedDepartmentId`/`departmentName(Ar)`;
+  `GET /tasks/board` returns the active `departments` reference list
+  (id + bilingual names only — no PII) for the assignment control.
+- OpenAPI: additive text splices — Task, TaskQuickAddRequest,
+  TaskUpdateRequest, BoardCard, TaskBoardResponse, new BoardDepartment.
+  `openapi:generate` + `openapi:check` Passed.
+- Frontend: `assignTaskDepartment` in `lib/staff-board-api.ts` (PATCH with
+  CSRF; success/invalid/denied/not_found/error union),
+  `assignTaskDepartmentAction` server action (revalidates /tasks/board);
+  `components/task-board/board-card-department.tsx` — department chip on the
+  card opens a popover picker (active departments + "No department",
+  selected state, help text); optimistic badge update with snapshot rollback
+  and en+ar toasts. A11y: dnd-kit `attributes` moved off the card wrapper
+  onto a dedicated grip-handle button (axe `nested-interactive` fix) while
+  pointer/touch drags still start anywhere on the card.
+- Verification:
+  - Passed: `test:api -- tasks` 42/42 (7 new: dept member allowed view/act,
+    other-department denied, confidential/unassigned denied, same-tx assign
+    + audit metadata, unknown department 400 with no writes, null clear,
+    session-scoped board query); `test:api -- auth` 38/38; `test:api --
+    board-stages` 8/8; web api-client 69/69 (2 new PATCH/outcome tests);
+    `test:web` 213/213; `test:visual` 108; `test:e2e -- accessibility` 24;
+    `test:e2e -- task-board-dnd`; `lint`; full `typecheck`;
+    `openapi:check`; `i18n-lint`. Hydrated popover screenshots
+    self-reviewed en LTR + ar RTL.
+  - Not Run: live-DB migration/seed (no local DATABASE_URL).
+- Security self-check: departmentId derives from the staff session row only
+  (never client input); one allowed + one denied boundary test per new rule;
+  the department grant is confidentiality-gated so it never widens access to
+  CONFIDENTIAL/RESTRICTED tasks; audit metadata carries ids only — no
+  secrets, no PII; the departments list exposes reference names only.
+
+
+## B4 — GET /complaints/board (ticket Kanban read) (2026-07-15)
+
+- SRS: REQ-RBAC-001, REQ-COMPLAINT-001, ARCH-WORKFLOW-001,
+  WORKFLOW-MATRIX-001, METHOD-MODULAR-001, METHOD-API-001, METHOD-TEST-001.
+- New files (small, complaints module — complaints.service.ts is large and was
+  NOT grown): `dto/complaint-board.dto.ts` (ComplaintBoardStage /
+  ComplaintBoardTransition{action,toStatus} / ComplaintBoardCard =
+  ComplaintQueueItem + stageId + allowedTransitions / Column / Response);
+  `complaints.board.repository.ts` (`listStages` → active TICKETS `board_stages`,
+  read-only shared reference data, same pattern tasks.board.repository uses);
+  `complaints.board.service.ts` (`ComplaintsBoardService.board` + pure
+  `buildComplaintBoard`).
+- Scoping (server session only): `board()` calls the existing
+  `ComplaintsService.listQueue({ branchId, role })` — identical branch/role
+  scoping as `GET /complaints`; the controller derives branch via
+  `queueBranchId` (ADMIN unrestricted, else the principal branch), role via the
+  principal, and userId from the session. React never filters for privacy.
+- Columns: one per active TICKETS stage from `board_stages`; each complaint is
+  bucketed by the stage mapping its status (preferring `isDefault`, else lowest
+  `position`, else the first stage as fallback so no card is dropped). Column
+  placement is cosmetic — `allowedTransitions` derive from the card's real
+  status, so the backend state machine stays authoritative.
+- Per-card transitions: `allowedActionsFor(card, actor)` (role + owner rules
+  enforced in ComplaintsService) mapped to `{ action, toStatus }` via a
+  module-level `WORKFLOW_TRANSITIONS` index — so B5's board can grey illegal
+  columns and map a drop to the right action without reconstructing the state
+  machine (React never decides complaint state; a drop drives the existing
+  `POST /complaints/:id/transitions`).
+- Terminal columns (CLOSED/REJECTED) are windowed to the last 14 days by
+  `updatedAt` in the board projection so they never grow unbounded; the
+  complaint queue itself is unchanged and keeps every complaint.
+- Route: `@Get('board')` declared BEFORE `@Get(':id')` (route-order shadowing),
+  guards `SessionAuthGuard, PermissionGuard, RbacGuard` +
+  `@Permissions('COMPLAINT_VIEW_BRANCH')` + `@BranchScoped()` (no CSRF on a
+  GET) — the same guard set as the queue `list`. Module wires
+  ComplaintsBoardRepository + ComplaintsBoardService; MODULE.md records the
+  board service and read-only `board_stages`.
+- OpenAPI: additive text splices (never a full rewrite of the hand-formatted
+  canonical) — `/complaints/board` operation + ComplaintBoardStage,
+  ComplaintBoardTransition, ComplaintBoardCard, ComplaintBoardColumn,
+  ComplaintBoardResponse schemas. `openapi:generate` + `openapi:check` Passed.
+- Verification:
+  - Passed: `test:api -- complaints` 86/86 (9 new in
+    `test/workflow/complaint-board.test.ts`: guard metadata; session
+    branch-scope vs admin-unrestricted; queue-filter pass-through;
+    status→stage grouping with default / lowest-position / first-stage
+    fallback and preserved empty columns; manager-allowed vs officer-denied
+    allowedTransitions carrying target statuses; terminal 14-day window;
+    no-`@`/no-PII projection); full `typecheck`; `lint`; `openapi:check`.
+    Fixed the pre-existing `complaints.controller.spec.ts` constructor (4th
+    board-service arg).
+  - Not Run: live server / DB drive (no local DATABASE_URL) — the projection,
+    scoping, transition derivation, and window are covered by unit tests.
+- Security self-check: branch/role/userId derive from the staff session only
+  (never client input); one allowed (branch manager) + one denied (CR officer)
+  transition boundary test; the board reuses the audited queue scoping so it
+  cannot widen reach beyond `GET /complaints`; cards carry no customer PII and
+  only owner `nameEn` (no emails — asserted); reads only, no state change, no
+  secrets logged.
+
+
+## B5 — /complaints/board transition-aware ticket page (2026-07-15)
+
+- SRS: REQ-RBAC-001, UI-SCREEN-001, UI-DESIGN-001, REQ-LOCALIZATION-001,
+  ARCH-WORKFLOW-001, WORKFLOW-MATRIX-001, METHOD-TEST-001.
+- Typed client `apps/web/src/lib/staff-complaint-board-api.ts`:
+  `getComplaintBoardLoadResult` (GET /complaints/board, ready/denied/error union,
+  full runtime validation incl. rejecting an unknown transition `toStatus`) and a
+  server-side `transitionComplaint` (direct API call with the forwarded session +
+  CSRF, so a server action can revalidate) mapping 409→`conflict`,
+  400→`invalid{fields}`, 401/403→`denied`, 404→`not_found`.
+- Board components `apps/web/src/components/complaint-board/*`: dnd-kit
+  drop-to-column only (`useDraggable` + `useDroppable`, no sortable/`arrayMove` —
+  complaints carry no in-column order). NO optimistic move: a drop opens the
+  transition dialog; on success the server action revalidates `/complaints/board`
+  and the RSC re-places the card with its new status and `allowedTransitions`
+  (an optimistic move would strand the card with stale transitions, since
+  `allowedTransitions` are a function of status). On drop the target column's
+  `mappedComplaintStatus` is matched to the card's `allowedTransitions.toStatus`
+  → that action fires through the EXISTING `POST /complaints/:id/transitions`
+  (backend state machine never bypassed). Illegal columns grey out and stop
+  accepting the drop; same-column drop is a no-op (ADD_INVESTIGATION_UPDATE,
+  IN_PROGRESS→IN_PROGRESS, is left to the B6 card action, not a board drag).
+- Dialog reuse: `WorkflowFields`, `requiredFields`, `transitionRequest`,
+  `destructiveActions` are exported ADDITIVELY from the committed
+  `complaint-workflow-modal` and reused by the board's transition dialog, so the
+  reason/resolution/routing/owner field matrix and its i18n never drift a second
+  copy. 409 renders the board's conflict state; destructive actions keep the
+  confirmation checkbox. Card keyboard/SR drag lives on a dedicated grip-handle
+  button (no interactive control nested in role="button").
+- Page `apps/web/src/app/(staff)/complaints/board/{page,actions,loading}.tsx`:
+  RSC loader fetches the board + reuses the complaint-detail form-options and
+  assignable-staff catalogs for routing fields; `transitionComplaintAction`
+  ('use server') revalidates on success or conflict. `ticketBoard` nav entry
+  (Columns icon, after Cases) in app-shell groups + layout ROLE_NAV/STAFF_NAV;
+  `isActiveNav` queue branch excludes `/complaints/board`. i18n en+ar in
+  `staff-complaint-board.ts` (RTL-ready; field/action labels reuse
+  staff-complaint-detail's workflow copy).
+- Proof harness: `/complaints/board` fixture in new
+  `tools/web-proof-board-fixtures.mjs` (imported by web-proof-fixtures.mjs to keep
+  it within the 300-line budget), `staff-complaint-board` route in web-proof.mjs
+  and web-visual-review.mjs, en/ar visual + accessibility cases in
+  web-proof-cases.mjs.
+- Verification:
+  - Passed: `test:web` shell 213/213, api-client 73/73 (4 new: scoped GET,
+    denied/error/malformed, transition CSRF+payload, conflict/denied/not-found/
+    validation outcomes), localization 13/13; `test:visual` 110 previews (en+ar
+    ticket board); `test:e2e -- accessibility` 26 previews with axe (en+ar
+    ticket board); `lint`; full `typecheck`.
+  - Screenshots reviewed en LTR + ar RTL are STATIC renders
+    (`renderToStaticMarkup`, no hydration): they verify layout, RTL mirroring,
+    colored stage columns, severity/SLA badges, owner + next-action, grip
+    handles, and horizontal snap-scroll. Keyboard drag uses the default
+    `KeyboardSensor` getter (not the sortable one — this board has no
+    SortableContext).
+  - LIVE browser verification (2026-07-16, local full stack: isolated Docker
+    Postgres+Redis, real API+web, seeded DB, admin login, Chrome automation):
+    the hydrated board rendered real complaints; a real pointer drag
+    Submitted→Manager review resolved to ACCEPT_INTAKE ("Approve" dialog,
+    "Nothing else is needed"); a drag Manager review→Draft resolved to SEND_BACK
+    ("Send back" dialog with the required Reason field) → Confirm → HTTP 201 →
+    success toast "moved to Draft" and the card RE-PLACED in Draft by the RSC
+    revalidate (proving the no-optimism loop end-to-end, the key B5 design).
+    Illegal columns are disabled droppables (a DRAFT card dragged toward Branch
+    review snapped to Submitted, the only legal target). The 409 CONFLICT-state
+    render and the automated transition e2e remain C2 (409 was reproduced over
+    curl but the conflict UI has not been rendered).
+  - BACKEND BUG surfaced by live testing (NOT B5, reproduced via curl with zero
+    B5 involvement): forward SLA-stage transitions (SUBMIT/ACCEPT_INTAKE/…) return
+    HTTP 500 because a post-commit side-effect (`slaService.recordDeadlineEvent`)
+    throws — yet the transition COMMITS first, so the board shows "could not be
+    moved" while the DB state changed (and, since the board only revalidates on
+    success/conflict, the stale card stays). SEND_BACK (skips SLA) returns 201.
+    Contributing: (a) the seed creates no SLA policies → `resolvePolicy` throws;
+    (b) even after inserting matching active policies SUBMIT still 500s (deeper
+    SLA resolve/calculate issue — not chased) and `GET /sla/policies` also 500s;
+    (c) architectural: `await queueWorkflowSideEffects` runs after commit and its
+    errors propagate to the caller, so a post-commit side-effect failure 500s the
+    request despite the committed state — this violates the "side effects enqueue
+    after commit" intent and is the real defect the test exposed, in the EXISTING
+    complaints.service flow. Flagged as separate follow-up tasks (out of B5 scope).
+  - Minor: dnd-kit emits a React hydration mismatch on the drag handle's
+    `aria-describedby` (`DndDescribedBy-0` vs `-1`) under SSR — shared with the
+    committed task board, functionally harmless, fixable via a stable
+    `DndContext id`.
+  - Needs Human Review (pre-existing, not B5): `web:visual-review` flags a
+    horizontal-overflow on the unrelated `task board 390px` fallback case —
+    reproduced with the B5 nav changes stashed; the real task board 390px passes
+    in `test:visual`.
+- Security self-check: the board read and every transition are authorized by the
+  server session (branch/role scoping inherited from B4's `GET /complaints/board`
+  and the existing `POST /complaints/:id/transitions` RBAC); the client never
+  decides state — a drop only proposes an action the backend already listed as
+  allowed, and the backend re-validates role + workflow on apply; CSRF token sent
+  on the transition; no secrets or customer PII on the board cards (owner name
+  only). No new state machine, no client-side privacy filtering.
+
+
+## B5 follow-up — transition resilience + SLA fixes (2026-07-16, from live testing)
+
+Live browser testing of B5 surfaced backend/seed defects (all reproduced via
+curl with no B5 involvement); fixed in order, each verified live end-to-end:
+
+1. Post-commit side effects made NON-FATAL (`complaint-workflow-side-effects.ts`):
+   each notification/SLA/survey effect is isolated behind `safely()` and logged
+   (no payloads — PII), never propagated. A transition that has already committed
+   can no longer 5xx on a post-commit side-effect failure (docs/ARCHITECTURE.md —
+   "side effects enqueue AFTER commit"). Test:
+   `test/workflow/transition-matrix.test.ts` "a failing post-commit side effect
+   never fails the committed transition". complaints 87/87.
+2. SLA module DI fixed (`sla.module.ts`, `sla.controller.ts`): it was the lone
+   module using bare type-based constructor injection (`SlaController.slaService`,
+   `SlaRepository.prisma`), which resolves to `undefined` under esbuild/tsx dev
+   runtimes (no `design:paramtypes` emitted) — the cause of the `GET /sla/policies`
+   500 and the transition side-effect 500. Converted to the codebase's explicit
+   `useFactory`/`inject` + `@Inject` convention (8 other modules already do this).
+   Production (tsc build, emitDecoratorMetadata: true) was unaffected; dev now
+   works. Verified live: `GET /sla/policies` 200 (24 items); `SUBMIT`/
+   `ACCEPT_INTAKE` 201 with a real `DEADLINE_SET`/`INTAKE` sla_event recorded
+   (policy resolved + deadline persisted). sla 37/37.
+3. Default SLA policies seeded (`sla-policies-seed.ts`, wired into `seed.ts`): one
+   global unscoped policy per severity x stage (idempotent), so forward
+   transitions resolve a deadline out of the box; scoped policies override by
+   specificity. Seed now reports "24 SLA policies".
+4. Board self-heals (`(staff)/complaints/board/actions.ts`): `transitionComplaint
+   Action` now also revalidates on `error` (not just success/conflict), so if the
+   backend ever commits-then-5xx the board refetches server truth instead of
+   showing a stale card. web api-client 73/73.
+5. Diagnosability (`core/http-kernel.ts`): `AppExceptionFilter` now logs the stack
+   + correlation id for unexpected (non-domain) errors that were previously
+   swallowed into an opaque 500 — no request data logged. This is what made the
+   above root causes findable.
+
+Live end-to-end proof: the exact `img.png` failure (drag a SUBMITTED ticket to
+Manager review → ACCEPT_INTAKE) now shows the success toast "moved to Manager
+review" and the card re-places via revalidate. Proofs re-run: full typecheck,
+lint, complaints 87/87, sla 37/37, rbac 2/2, web api-client 73/73 — all Passed.
+
+## B6 — Card detail quick-look drawer, both boards (2026-07-16)
+
+SRS: UI-SCREEN-001, UI-DESIGN-001, REQ-LOCALIZATION-001, REQ-RBAC-001, METHOD-TEST-001
+
+Prerequisite (B6.0, its own commit): `tools/web-proof.mjs` sat at the 300-line
+agentic budget, so the B6 route/import would overflow it. Extracted the shared
+route→React-element map + fixture helpers into `tools/web-proof-routes.mjs`
+(exports `routePage`), imported by both `web-proof.mjs` (300→169) and
+`web-visual-review.mjs` (227→78). This de-duplicated a routePage that had already
+drifted — visual-review had lost the task-board branch. `test:visual` 110 Passed;
+`lint` Passed.
+
+Feature: a read-only quick-look drawer on both Kanban boards — the plain reading
+of the SSOT's "link to detail page" (a quick-look, not a second detail page).
+- Shared presentational shell `components/board-detail/card-detail-sheet.tsx`
+  (shadcn Radix `Sheet`): reference + title + status badge, a 2-column meta grid,
+  a read-only "updates" section (children), and a footer link to the full detail
+  page. Owns no fetching and makes no state decisions (UI-DESIGN-001 — no business
+  logic in components).
+- Two per-board adapters own fetch-on-open + meta:
+  `components/complaint-board/detail-drawer.tsx` (status/severity/SLA/owner/branch/
+  days-active + the unified timeline) and `components/task-board/detail-drawer.tsx`
+  (status/assignee/owner/department/days-active/due + task comments).
+- Fetch-on-open via read-only server actions `complaintCardDetailAction` /
+  `taskCardDetailAction`, backed by thin wrappers
+  `lib/staff-complaint-board-detail-api.ts` (reuses the tested
+  `fetchComplaintTimeline`) and `lib/staff-task-board-detail-api.ts` (reuses
+  `getStaffTaskComments`). Both require the staff session and go through the
+  already-authorized, branch/visibility-scoped endpoints — no new read path
+  bypasses scope (REQ-RBAC-001). Neither action revalidates (pure read).
+- Trigger: the card TITLE became a keyboard-accessible `<button>` quick-look
+  trigger, kept distinct from the grip/drag surface. The dnd-kit PointerSensor
+  uses `activationConstraint.distance: 6`, so a click (no move) opens the drawer
+  while a real drag (move > 6px) suppresses the click — click-opens vs
+  drag-doesn't-open. The drop workflow (ticket) and the B3 department control
+  (task) stay on the board; heavy actions live on the linked detail page.
+- days-active: display arithmetic over the card's `createdAt` (ticket) / the
+  server-computed `card.daysActive` (task). i18n `detail.*` en + ar added to both
+  board i18n files (REQ-LOCALIZATION-001). Links: ticket → `/complaints/:id`,
+  task → `/tasks/:id` (general route, not the manager-only one).
+
+Tests (METHOD-TEST-001): new detail-client unit tests
+`apps/web/test/api-client/staff-complaint-board-detail-api.test.ts` and
+`…/staff-task-board-detail-api.test.ts` — scoped-endpoint + session-cookie
+forwarding, an allowed (ready) case, a denied (no-session, API never called)
+case, and a failed-read (error) / malformed (filtered-empty) case each.
+
+Proofs run: web typecheck, `test:web -- api-client` 79/79 (+6 new), `test:visual`
+110, accessibility 26 (axe), `lint` — all Passed.
+
+Live drive (2026-07-17, real full stack — Postgres:5433 + Redis:6380 + API tsx:3000
++ web next:4000, seeded + bootstrapped admin.local): the open-drawer behaviour was
+driven live in a real browser on BOTH boards and passed:
+- Ticket board `/complaints/board`: clicking CMP-SEED-001's title (not the grip)
+  opened the drawer; fetch-on-open resolved (loading→ready) showing the meta grid
+  (status/severity/SLA/owner/branch/days-active/last-updated) + the timeline
+  empty-state ("No updates recorded yet." — this seed has no timeline events) + the
+  "Open full ticket" link. API mapped `/complaints/:id/timeline`.
+- Task board `/tasks/board`: after reassigning one seed task to admin + inserting a
+  real task comment, clicking the card title opened the drawer; fetch-on-open
+  rendered the actual threaded update (comment body + author + timestamp) alongside
+  the meta grid (status/assignee/owner/department/days-active + due date shown in
+  red for the overdue task) + "Open full task" link.
+- Click-vs-drag: a 342px drag gesture on a card was treated as a drag (past the 6px
+  sensor threshold) and did NOT open the drawer — confirming click-opens /
+  drag-does-not-open.
+
+Still owned by Phase C (unchanged): the STATIC visual + a11y *registration* of the
+open drawer — `renderToStaticMarkup` cannot mount the Radix portal, so C1 must
+capture it via live/Playwright screenshots, and C2 formalises the interaction in
+the e2e suite. The static proofs already exercise the closed board + trigger button.
+
+---
+
+## Phase C — Proof & polish (2026-07-17)
+SRS: REQ-RBAC-001, UI-SCREEN-001, UI-DESIGN-001, REQ-LOCALIZATION-001, METHOD-TEST-001
+
+### Cosmetic fixes (flagged in the Phase C handover)
+- **Task drawer header:** was passing the localized status into the shared sheet's
+  mono *reference* slot (tasks have no reference number), duplicating the meta-grid
+  status. Made `reference` optional in `components/board-detail/card-detail-sheet.tsx`
+  (the `<p>` renders only when present) and gave the task drawer a status **Badge**
+  (`components/task-board/detail-drawer.tsx`) — visual parity with the ticket drawer.
+  Verified in the ar RTL screenshot: badge "مفتوحة", no orphan mono slot.
+- **Ticket drawer error state was dead code:** `fetchComplaintTimeline` swallowed
+  transport failures → `[]` → `getComplaintCardDetail` always returned `ready`.
+  Added `fetchComplaintTimelineResult` ({ ok:true; items } | { ok:false }) in
+  `lib/staff-complaint-timeline-api.ts`; `fetchComplaintTimeline` now wraps it
+  (existing callers, incl. the full detail page `lib/staff-detail-api.ts`, unchanged).
+  `getComplaintCardDetail` uses the result variant → transport/parse failure now
+  surfaces the drawer's `error` state, mirroring the task drawer's null→error path.
+  Unit test split (`test/api-client/staff-complaint-board-detail-api.test.ts`):
+  transport failure/throw → `error`; valid-but-empty (200, filtered-out rows) → `ready`.
+
+### C1 — visual + a11y registration of the OPEN drawer (both boards, en + ar)
+`tools/board-drawer-proof.mjs` (`test:e2e -- board-drawer`). The B6 drawer is a Radix
+Sheet portal that `renderToStaticMarkup` cannot mount; a hermetic Playwright run
+hydrates the REAL island so the portal mounts for real. For task + complaint × en LTR
++ ar RTL it clicks the card title, asserts the fetch-on-open payload renders, screenshots
+the open drawer (`coverage/board-drawer/<board>-<locale>.png`), and runs live axe
+(no serious/critical). All four screenshots were reviewed: RTL mirrored (drawer on the
+left, meta grid mirrored), status badge correct, overdue due-date red, timeline/comment
+rendered. Passed: task-en, task-ar, complaint-en, complaint-ar.
+
+### C2 — Playwright e2e (hermetic island harness)
+Shared `tools/board-island-harness.mjs` (esbuild-bundles a real island + fixture +
+recording stub actions; shims `process` so `next/link`/client-api imports don't throw;
+compiles the proof Tailwind; hydrates in Chromium). Cases:
+- **Task drag** — `tools/task-board-dnd-proof.mjs` (`test:e2e -- task-board-dnd`):
+  real pointer drag moves the card and commits `stage_in_progress` + a non-negative
+  position. (Migrated onto the shared harness; it was silently broken since B6 added
+  `next/link` to the bundle graph without the `process` shim — now fixed + passing.)
+- **Denied-scope** — `tools/complaint-board-proof.mjs` (`test:e2e -- complaint-board`):
+  a SUBMITTED ticket may only go to MANAGER_REVIEW/REJECTED. During a real drag the
+  IN_PROGRESS column is `aria-disabled` and never shows the drop highlight (inert,
+  driven by the card's server-computed `allowedTransitions`, not an ad-hoc flag),
+  while the one legal column stays enabled; invariant asserted that the scoped ticket
+  only ever commits its allowed transition. NOTE (honest scope): this proves the client
+  HONOURS server-scoped permissions; that the server COMPUTES/withholds transitions by
+  role/branch is proven in the API suite (`apps/api .../workflow/complaint-board.test.ts`
+  — manager-allowed vs officer-denied allowedTransitions; board session scoping).
+- **Ticket transition-with-reason** — same file: dragging a BRANCH_REVIEW ticket to
+  IN_PROGRESS opens the ASSIGN_INVESTIGATION dialog; filling the reason textarea +
+  picking an owner commits `{ action: ASSIGN_INVESTIGATION, reason, ownerId }` through
+  the existing `POST /complaints/:id/transitions` server-action path (client never
+  decides state). Paired legal ACCEPT_INTAKE drop on the SAME board opens + commits.
+- **Drawer interaction** — `tools/board-drawer-proof.mjs`: click-a-card-title OPENS the
+  drawer and renders fetch-on-open; a completed DRAG (past the 6px sensor threshold)
+  does NOT open the drawer (asserted via absence of the drawer's fetch-on-open payload,
+  since a complaint drag legitimately opens the transition dialog — the precise
+  discriminator for "the trigger click was suppressed").
+
+### C3 — gates (run 2026-07-17, labelled honestly)
+- `typecheck` — Passed. `lint` (boundary + budget; new tool files 70/109/103 lines) — Passed.
+- `openapi:check` — Passed (no route changes in Phase C).
+- `test` (tools coverage) — 59/59 Passed; overall 93.11% lines / 83.77% functions /
+  91.83% branches (thresholds 80/75/65). e2e proof scripts aren't loaded by the unit
+  runner so they don't enter the coverage denominator.
+- `test:web` — 213/213 Passed (includes the localization suite). `test:visual` — 110 Passed.
+  `test:e2e -- accessibility` (static axe) — 26 Passed.
+- e2e: `task-board-dnd`, `complaint-board`, `board-drawer` — all Passed.
+- i18n-lint: no separate script exists; no user-facing strings were added or changed
+  (fixes reuse existing `t.manage.statuses` / `t.detail.*` keys). Localization coverage
+  via `test:web`. Labelled: Not Run (no such script) / covered by `test:web`.
+
+---
+
+## Bugfix + live DB verification — board "move failed" on WAITING/DONE (2026-07-17)
+SRS: REQ-RBAC-001, UI-SCREEN-001, METHOD-TEST-001
+
+### Root cause + fix
+Dragging a task IN_PROGRESS→WAITING showed a generic "move failed" toast instead of the
+status-note dialog. Root cause: three board clients parsed a non-existent top-level
+`body.details`, but the API error envelope is `{ error: { fieldErrors:[{field}] } }`
+(`apps/api/src/core/http-kernel.ts:87-96`). So a `400 TASK_STATUS_NOTE_REQUIRED`
+(`tasks.status-note.ts`, WAITING/DONE require an outcome note) yielded `fields:[]`, the
+island's `fields.includes('statusNote')` was false, and it fell through to the error toast.
+Shipped because the hermetic e2e stubs the move action and the unit tests used a fabricated
+`{ details: [...] }` fixture the API never emits.
+Fix: new shared `apps/web/src/lib/staff-error-envelope.ts` `fieldErrorsFrom` reads
+`error.fieldErrors` (the pattern already used by `staff-complaints-api.ts`/`portal-submission-api.ts`);
+adopted by `staff-board-api.ts`, `staff-complaint-board-api.ts`, `staff-board-stages-api.ts`
+(all three had the bug). Real-envelope regression tests added (`staff-error-envelope.test.ts`,
+4) and the three client-test fixtures corrected to the real shape. No backend change — the
+note requirement is SRS-intended; the frontend just surfaces it.
+Gates: typecheck, lint Passed; `test:web -- api-client` 84/84 (was 80).
+
+### Live end-to-end verification (real stack, DB user cms_auto @ pg:5433)
+Task board (card `seed_task_overdue_promise`, driven via keyboard dnd in-browser):
+- IN_PROGRESS→WAITING: note dialog now appears ("Moving this task to Waiting needs a short
+  note"); entered a note + committed. DB (all atomic @13:14:55): `tasks` status=WAITING +
+  Waiting stage + updated_at; `task_status_history` IN_PROGRESS→WAITING (+actor+correlationId);
+  `task_comments` "Status update IN_PROGRESS -> WAITING: VERIFY-MOVE-2026…"; `audit_logs`
+  task_moved (3→4) with from/to stage+status metadata.
+- WAITING→DONE: note dialog appears; committed. DB @13:17:13: status=DONE + Done stage;
+  next_action_what / next_action_who_id CLEARED (DONE nulls the next action); history
+  WAITING→DONE; DONE note comment; audit task_moved (4→5). Overdue badge disappears (DONE
+  has no dueState).
+- Same-column reorder not exercised (single card on the board).
+Analytics/downstream after the move (read-time):
+- `/tasks/today`: task now in `completed`; gone from `overdue` + `overduePromises`.
+- `/tasks/manager-rollup`: `promiseKpi` → {openPromiseCount:0, overduePromiseCount:0} (the
+  overdue customer-promise closed); a different employee's overdue task still counted.
+- `/tasks/board`: task now in TASKS_DONE, dueState=null.
+
+Ticket board (CMP-SEED-001 SUBMITTED, before: 0 history / 0 audit / 0 sla_events / 0 notif):
+- ACCEPT_INTAKE SUBMITTED→MANAGER_REVIEW via drop→dialog→confirm. Illegal Draft column was
+  dimmed during drag; Manager review highlighted. DB: complaints.status=MANAGER_REVIEW;
+  `complaint_status_history` SUBMITTED→MANAGER_REVIEW (+actor+correlationId) @13:21:15;
+  `audit_logs` transition_accept_intake @13:21:15 (same tx); `sla_events` DEADLINE_SET
+  @13:21:16 (after-commit side effect, one second later); `notifications` none — correct,
+  ACCEPT_INTAKE is an internal step with no owner assignment / customer-facing change.
+Result: the state machine is never bypassed; status history + audit are written in the same
+transaction and SLA/side-effects enqueue after commit, exactly as designed.
+
+### Second bug (from img_1.png): dnd-kit SSR hydration mismatch on both boards
+The dev overlay flagged a React hydration error on /complaints/board (and /tasks/board):
+"some attributes of the server rendered HTML didn't match" — the only differing attribute
+was dnd-kit's `aria-describedby` (`DndDescribedBy-3` server vs `DndDescribedBy-0` client).
+Root cause: `<DndContext>` was rendered with no `id`, so dnd-kit's `useUniqueId('DndDescribedBy', id)`
+fell back to a module-global counter (`@dnd-kit/utilities` `useUniqueId`), which differs between
+the SSR pass and client hydration. Confirmed in the installed source (@dnd-kit/core@6.3.1 line
+~2900 + utilities useUniqueId returns the passed value verbatim, else `prefix-<counter>`).
+Fix: pass a stable `id={useId()}` (React 19 useId is SSR-stable) to `<DndContext>` in both
+`components/task-board/index.tsx` and `components/complaint-board/index.tsx`. The hermetic e2e
+never caught this because it renders client-only (createRoot, no SSR/hydration).
+Verified live: reloaded both boards (fresh SSR+hydration) — the dev overlay "1 Issue" badge is
+gone and no hydration error appears in the console. Gates after fix: typecheck, lint, test:visual
+110, accessibility 26, e2e (task-board-dnd, board-drawer, complaint-board [passes in isolation;
+flakes only under back-to-back Chromium contention]) — all Passed.
+
+### Third + fourth bugs (img_2, img_3): reopen-from-Done + empty target department
+- **img_2 (Done→Waiting → generic "could not be moved"):** `assertNextAction` (tasks.validation.ts)
+  requires a next action for any non-DONE status and throws **409 TASK_NEXT_ACTION_REQUIRED**;
+  completing a task to DONE clears its next action, so reopening 409s. The board move client
+  maps only 400→invalid, so 409 fell through to the generic error toast, and the board never
+  collected a next action. Decision (user): **block dragging out of Done** — reopen only from
+  the task detail page. Fix: `SortableBoardCard` takes `dragDisabled`; `task-board/index.tsx`
+  passes `dragDisabled={stage.mappedTaskStatus === 'DONE'}`; Done cards render with no grip
+  handle and no drag listeners (useSortable disabled), while the title quick-look + department
+  controls still work. Verified in the authenticated SSR HTML: the Done card has zero
+  "Drag task" buttons and keeps its "Open task … details" button; `task-board-dnd` still passes
+  (non-Done cards remain draggable + hydration OK).
+- **img_3 (Target department dropdown empty in APPROVE_AND_ROUTE):** the `departments` table was
+  empty (0 rows) — the seed never created any — so `/complaints/form-options` returned
+  `departments: []` and the required dropdown was unfillable. Decision (user): **seed standard
+  departments + graceful empty-state.** Fix: seed 6 global departments (Sales, Service, Parts,
+  Body & Paint, Finance, Customer Care; bilingual, branchId null) in
+  `packages/database/prisma/seed.ts`; `OptionField` (complaint-workflow-modal) now shows a
+  bilingual "None configured yet…" hint (`workflow.noOptions`, en+ar) instead of an empty
+  required select when a list is empty. Verified: DB now has 6 departments and
+  `/complaints/form-options` returns all 6, so the dropdown is populated.
+NOTE: heavy local machine load during this session intermittently froze the browser renderer
+(CDP Page.captureScreenshot) and flaked the interaction-heavy complaint-board e2e; both recover
+when load settles (the proof passes in isolation). Not a code regression.
+
+---
+
+## Universal assignment and forwarding — complete on `nour` (2026-07-18)
+
+SRS: REQ-RBAC-001, REQ-COLLAB-001, REQ-WORKFLOW-002,
+REQ-SEARCH-001, REQ-REPORT-001, REQ-AUDIT-001,
+REQ-LOCALIZATION-001, RBAC-MATRIX-001, METHOD-MODULAR-001,
+METHOD-AUDIT-001, METHOD-API-001, METHOD-TEST-001, UI-DESIGN-001
+
+### Delivered
+
+- Created isolated branch `nour` from clean `feat/cmss-task-board` commit
+  `e7435c0` after `git fetch --prune origin`; source was 0 ahead/behind its
+  remote at branch creation. No merge, push, or protected-branch write occurred.
+- Added generic `assignments` current state and append-only
+  `assignment_history`, with a database check requiring a user, department, or
+  both. Migration `20260718120000_universal_assignments` is additive and
+  idempotently backfills Tasks/Promises, Complaints, Deals/Leads, and
+  Cases/Requests while retaining legacy columns.
+- Generated a canonical assignments module. Owning domain modules authorize
+  records; the generic service validates active, branch-compatible targets and
+  writes current state, forwarding history, and audit in the owning transaction.
+- Domain services dual-write generic and legacy assignment state. Complaint
+  workflow status authority remains in the complaint state machine. Assignment
+  notifications resolve explicit users plus active department members and queue
+  only after commit.
+- Added `GET /assignments/options` and case assignment API, expanded task,
+  complaint, deal, and case contracts, and regenerated OpenAPI.
+- Added one reusable shadcn-based assignment picker to Task/Promise,
+  Complaint, Deal/Lead, and Case/Request forms. EN LTR and Arabic RTL support
+  user-only, department-only, and combined assignments.
+- Updated nullable/department ownership projections used by queues, search,
+  reports, task/deal dashboards, and notification batches. Legacy payloads with
+  missing department fields normalize safely.
+
+### Security self-check
+
+- Passed: actor role, branch, and department are taken only from the server
+  session; client role/branch spoof fields are ignored.
+- Passed: owning modules keep workflow and confidential-record authorization;
+  assignment target scope is validated by the shared backend service.
+- Passed: legacy record changes, current assignment, history, and audit use one
+  Prisma transaction; notification work happens after commit.
+- Passed: audit metadata contains IDs/version only, never credentials, tokens,
+  OTPs, message bodies, or assignment free text.
+- Passed: customer portal routes were not expanded and never expose internal
+  assignment options/history or staff PII.
+- Passed: one allowed and one denied case-assignment path are covered, plus
+  shared branch-scope denial and complaint workflow authorization tests.
+
+### Verification (ran; Passed)
+
+- `corepack pnpm lint` — Passed.
+- `corepack pnpm typecheck` — Passed across API, web, database, Prisma,
+  contracts, and config.
+- `corepack pnpm openapi:check` — Passed; canonical/generated contracts match.
+- `corepack pnpm test` — 62/62 Passed; 93.21% lines, 83.95% branches,
+  91.95% functions.
+- `corepack pnpm db:migrate:test` — Passed Prisma validation and migration SQL
+  sanity; a clean disposable database replay also applied all 29 migrations.
+- Assignment migration focus — 3/3 Passed (schema, compatibility constraint,
+  idempotent aggregate backfill).
+- API: assignments 6/6; tasks 42/42; deals 9/9; cases 28/28; complaint workflow
+  88/88; search 5/5; worker 19/19; notifications 45/45; reports 32/32 — Passed.
+- Web: shell 213/213; API client 86/86; localization 13/13 — Passed.
+- `corepack pnpm test:visual` — 110 route previews Passed, including explicit
+  assignment user/department signals.
+- `corepack pnpm test:e2e -- accessibility` — 26 route previews Passed.
+- `corepack pnpm web:visual-review` — Passed and wrote 110 review artifacts.
+  Manually inspected EN/AR deal handoff and EN complaint workflow PNGs: RTL/LTR,
+  assignment labels/department ownership, focus, spacing, and overflow are sound.
+
+### Migration handoff
+
+Apply before application deployment:
+`corepack pnpm --dir packages/database exec prisma migrate deploy --schema prisma/schema.prisma`.
+No manual data rewrite is required; the migration backfills existing records.
+Keep legacy compatibility fields and dual writes until a separately reviewed
+cleanup migration proves all consumers have moved to the generic model.

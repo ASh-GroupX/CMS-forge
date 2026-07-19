@@ -6,13 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { StaffPicker } from '../../../../components/shared/staff-picker';
+import { AssignmentPicker } from '../../../../components/shared/assignment-picker';
 import { StateBlock } from '../../../../components/shared/ui-primitives';
 import { dealStageLabel } from '../../../../i18n/domain-labels';
 import { dealHandoffText } from '../../../../i18n/staff-deal-handoff';
 import { resolveLocale, staffShellText, type Locale } from '../../../../i18n/staff-shell';
 import { formatDisplayDate, formatDurationMinutes } from '../../../../lib/locale-format';
 import { getAssignableStaff, type AssignableStaff } from '../../../../lib/staff-assignable-staff-api';
+import { getStaffAssignmentOptions, type StaffAssignmentOptions } from '../../../../lib/staff-assignment-options-api';
 import { getComplaintFormOptions, type ComplaintFormOptions } from '../../../../lib/staff-complaint-form-options-api';
 import { getDealHandoffBoardLoadResult, type DealBoardItem, type DealHandoffBoard, type DealHolderBucket, type DealStageBucket } from '../../../../lib/staff-deals-api';
 import { advanceDealAction, clearDealBlockerAction, createDealAction, setDealBlockerAction, updateDealDetailsAction } from './actions';
@@ -21,7 +22,6 @@ import { DealActionHistoryList, DealActionSummary } from './deal-action-history'
 type SearchParams = { deal?: string | string[]; locale?: string | string[] };
 type Copy = (typeof dealHandoffText)[Locale];
 type DealFeedback = 'denied' | 'error' | 'success';
-
 export default async function DealHandoffPage({ cookieHeader, fetchImpl, searchParams }: { cookieHeader?: string; fetchImpl?: typeof fetch; searchParams?: Promise<SearchParams> }) {
   const params = await searchParams;
   const locale = resolveLocale(readParam(params?.locale));
@@ -29,11 +29,11 @@ export default async function DealHandoffPage({ cookieHeader, fetchImpl, searchP
     ...(cookieHeader !== undefined ? { cookieHeader } : {}),
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
   };
-  const [data, staff, options] = await Promise.all([getDealHandoffBoardLoadResult(apiInput), getAssignableStaff(apiInput), getComplaintFormOptions(apiInput)]);
-  return <DealHandoffBoardView data={data.status === 'ready' ? data.data : null} feedback={resolveFeedback(readParam(params?.deal))} loadState={data.status === 'ready' ? undefined : data.status} locale={locale} options={options} staff={staff} />;
+  const [data, staff, options, assignmentOptions] = await Promise.all([getDealHandoffBoardLoadResult(apiInput), getAssignableStaff(apiInput), getComplaintFormOptions(apiInput), getStaffAssignmentOptions(apiInput)]);
+  return <DealHandoffBoardView assignmentOptions={assignmentOptions} data={data.status === 'ready' ? data.data : null} feedback={resolveFeedback(readParam(params?.deal))} loadState={data.status === 'ready' ? undefined : data.status} locale={locale} options={options} staff={staff} />;
 }
 
-export function DealHandoffBoardView({ data, feedback, loadState, locale, options, staff }: { data: DealHandoffBoard | null; feedback?: DealFeedback | undefined; loadState?: 'denied' | 'error' | undefined; locale: Locale; options?: ComplaintFormOptions | null | undefined; staff?: AssignableStaff[] | null | undefined }) {
+export function DealHandoffBoardView({ assignmentOptions, data, feedback, loadState, locale, options, staff }: { assignmentOptions?: StaffAssignmentOptions | null | undefined; data: DealHandoffBoard | null; feedback?: DealFeedback | undefined; loadState?: 'denied' | 'error' | undefined; locale: Locale; options?: ComplaintFormOptions | null | undefined; staff?: AssignableStaff[] | null | undefined }) {
   const shell = staffShellText[locale];
   const t = dealHandoffText[locale];
   const total = data ? data.byStage.reduce((sum, bucket) => sum + bucket.count, 0) : 0;
@@ -56,13 +56,13 @@ export function DealHandoffBoardView({ data, feedback, loadState, locale, option
           <p className="rounded-sm border border-status-error bg-status-error/10 px-3 py-2 text-sm text-status-error" role="alert">{loadState === 'denied' ? t.states.denied : t.states.error}</p>
         ) : (
           <div className="grid gap-3 xl:grid-cols-2">
-            <CreateDealForm branches={branches} locale={locale} staff={staff} t={t} />
+            <CreateDealForm assignmentOptions={assignmentOptions} branches={branches} locale={locale} t={t} />
             {total === 0 && data.stuck.length === 0 && data.currentHolder.length === 0 ? (
               <p className="rounded-sm border border-border bg-muted px-3 py-2 text-sm text-muted-foreground xl:col-span-2" role="status">{t.states.empty}</p>
             ) : null}
-            <StageSection buckets={data.byStage} locale={locale} staff={staff} t={t} />
+            <StageSection assignmentOptions={assignmentOptions} buckets={data.byStage} locale={locale} staff={staff} t={t} />
             <HolderSection holders={data.currentHolder} locale={locale} t={t} />
-            <DealSection deals={data.stuck} locale={locale} staff={staff} t={t} />
+            <DealSection assignmentOptions={assignmentOptions} deals={data.stuck} locale={locale} staff={staff} t={t} />
           </div>
         )}
       </CardContent>
@@ -86,7 +86,7 @@ export function DealHandoffLoading({ locale }: { locale: Locale }) {
   );
 }
 
-function StageSection({ buckets, locale, staff, t }: { buckets: DealStageBucket[]; locale: Locale; staff?: AssignableStaff[] | null | undefined; t: Copy }) {
+function StageSection({ assignmentOptions, buckets, locale, staff, t }: { assignmentOptions?: StaffAssignmentOptions | null | undefined; buckets: DealStageBucket[]; locale: Locale; staff?: AssignableStaff[] | null | undefined; t: Copy }) {
   const [title, description] = t.sections.byStage;
   const activeBuckets = buckets.filter((bucket) => bucket.deals.length > 0);
   const emptyBuckets = buckets.filter((bucket) => bucket.deals.length === 0);
@@ -94,7 +94,7 @@ function StageSection({ buckets, locale, staff, t }: { buckets: DealStageBucket[
     <section className="rounded-md border border-border bg-background p-3" aria-label={title}>
       <SectionHeader count={buckets.reduce((sum, bucket) => sum + bucket.count, 0)} description={description} locale={locale} title={title} />
       <div className="mt-3 grid gap-2">
-        {activeBuckets.map((bucket) => <StageBucket bucket={bucket} key={bucket.stage} locale={locale} staff={staff} t={t} />)}
+        {activeBuckets.map((bucket) => <StageBucket assignmentOptions={assignmentOptions} bucket={bucket} key={bucket.stage} locale={locale} staff={staff} t={t} />)}
         {emptyBuckets.length ? <EmptyStageBuckets buckets={emptyBuckets} locale={locale} t={t} /> : null}
       </div>
     </section>
@@ -112,11 +112,11 @@ function EmptyStageBuckets({ buckets, locale, t }: { buckets: DealStageBucket[];
   );
 }
 
-function StageBucket({ bucket, locale, staff, t }: { bucket: DealStageBucket; locale: Locale; staff?: AssignableStaff[] | null | undefined; t: Copy }) {
+function StageBucket({ assignmentOptions, bucket, locale, staff, t }: { assignmentOptions?: StaffAssignmentOptions | null | undefined; bucket: DealStageBucket; locale: Locale; staff?: AssignableStaff[] | null | undefined; t: Copy }) {
   return (
     <div className="rounded-sm border border-border bg-muted p-2">
       <div className="flex items-center justify-between gap-2"><span className="text-sm font-semibold" title={bucket.stage}>{dealStageLabel(locale, bucket.stage)}</span><Badge variant="outline">{formatNumber(locale, bucket.count)}</Badge></div>
-      {bucket.deals.length === 0 ? <EmptyLine t={t} /> : <div className="mt-2 grid gap-2">{bucket.deals.map((deal) => <DealCard deal={deal} key={deal.id} locale={locale} staff={staff} t={t} />)}</div>}
+      {bucket.deals.length === 0 ? <EmptyLine t={t} /> : <div className="mt-2 grid gap-2">{bucket.deals.map((deal) => <DealCard assignmentOptions={assignmentOptions} deal={deal} key={deal.id} locale={locale} staff={staff} t={t} />)}</div>}
     </div>
   );
 }
@@ -136,17 +136,17 @@ function HolderSection({ holders, locale, t }: { holders: DealHolderBucket[]; lo
   );
 }
 
-function DealSection({ deals, locale, staff, t }: { deals: DealBoardItem[]; locale: Locale; staff?: AssignableStaff[] | null | undefined; t: Copy }) {
+function DealSection({ assignmentOptions, deals, locale, staff, t }: { assignmentOptions?: StaffAssignmentOptions | null | undefined; deals: DealBoardItem[]; locale: Locale; staff?: AssignableStaff[] | null | undefined; t: Copy }) {
   const [title, description] = t.sections.stuck;
   return (
     <section className="rounded-md border border-border bg-background p-3 xl:col-span-2" aria-label={title}>
       <SectionHeader count={deals.length} description={description} locale={locale} title={title} />
-      {deals.length === 0 ? <EmptyLine t={t} /> : <div className="mt-3 grid gap-2 md:grid-cols-2">{deals.map((deal) => <DealCard deal={deal} key={deal.id} locale={locale} staff={staff} t={t} />)}</div>}
+      {deals.length === 0 ? <EmptyLine t={t} /> : <div className="mt-3 grid gap-2 md:grid-cols-2">{deals.map((deal) => <DealCard assignmentOptions={assignmentOptions} deal={deal} key={deal.id} locale={locale} staff={staff} t={t} />)}</div>}
     </section>
   );
 }
 
-function CreateDealForm({ branches, locale, staff, t }: { branches: { id: string; name: string }[]; locale: Locale; staff?: AssignableStaff[] | null | undefined; t: Copy }) {
+function CreateDealForm({ assignmentOptions, branches, locale, t }: { assignmentOptions?: StaffAssignmentOptions | null | undefined; branches: { id: string; name: string }[]; locale: Locale; t: Copy }) {
   return (
     <details className="rounded-sm border border-line-subtle bg-surface-raised xl:col-span-2">
       <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-content-strong">{t.actions.create}</summary>
@@ -155,7 +155,7 @@ function CreateDealForm({ branches, locale, staff, t }: { branches: { id: string
         <div className="grid gap-3 md:grid-cols-4">
           <FieldInput label={t.fields.title} name="title" required />
           <SelectInput label={t.fields.branch} name="branchId" options={branches.map((branch) => [branch.id, branch.name])} />
-          <StaffPicker label={t.fields.holder} labelName="currentHolderLabel" locale={locale} name="currentHolderId" staff={staff} t={t.staffPicker} />
+          <div className="md:col-span-2"><AssignmentPicker departmentName="assignedDepartmentId" locale={locale} options={assignmentOptions} userName="currentHolderId" /></div>
           <FieldInput label={t.fields.due} name="stageDueAt" required type="datetime-local" />
         </div>
         <Button className="w-fit" size="sm" type="submit">{t.actions.create}</Button>
@@ -164,7 +164,7 @@ function CreateDealForm({ branches, locale, staff, t }: { branches: { id: string
   );
 }
 
-function DealCard({ deal, locale, staff, t }: { deal: DealBoardItem; locale: Locale; staff?: AssignableStaff[] | null | undefined; t: Copy }) {
+function DealCard({ assignmentOptions, deal, locale, staff, t }: { assignmentOptions?: StaffAssignmentOptions | null | undefined; deal: DealBoardItem; locale: Locale; staff?: AssignableStaff[] | null | undefined; t: Copy }) {
   const canAdvance = deal.stage !== 'POST_DELIVERY' && !deal.blocker;
   return (
     <article className="rounded-sm border border-line-subtle bg-surface p-3 shadow-sm">
@@ -174,6 +174,7 @@ function DealCard({ deal, locale, staff, t }: { deal: DealBoardItem; locale: Loc
       </div>
       <dl className="mt-3 grid gap-2 rounded-sm bg-surface-raised p-3 text-sm md:grid-cols-2">
         <Field label={t.fields.holder} value={staffDisplay(deal.currentHolderId, deal.currentHolderName, staff, locale, t)} />
+        <Field label={t.fields.department} value={locale === 'ar' ? deal.assignedDepartmentNameAr ?? deal.assignedDepartmentName ?? t.states.unassigned : deal.assignedDepartmentName ?? deal.assignedDepartmentNameAr ?? t.states.unassigned} />
         <Field label={t.fields.delay} value={formatMinutes(locale, deal.delayAgeMinutes)} />
         <Field label={t.fields.due} value={formatDate(deal.stageDueAt, locale)} />
         <Field label={t.fields.updated} value={formatDate(deal.updatedAt, locale)} />
@@ -186,7 +187,8 @@ function DealCard({ deal, locale, staff, t }: { deal: DealBoardItem; locale: Loc
         <form action={advanceDealAction}>
           <input name="dealId" type="hidden" value={deal.id} />
           <input name="locale" type="hidden" value={locale} />
-          <input name="currentHolderId" type="hidden" value={deal.currentHolderId} />
+          <input name="currentHolderId" type="hidden" value={deal.currentHolderId ?? ''} />
+          <input name="assignedDepartmentId" type="hidden" value={deal.assignedDepartmentId ?? ''} />
           <input name="stageDueAt" type="hidden" value={toDateTimeLocal(deal.stageDueAt)} />
           <NoteField id={`advance-note-${deal.id}`} label={t.fields.updateNote} />
           <Button className="mt-2" disabled={!canAdvance} size="sm" type="submit">{t.actions.advance}</Button>
@@ -196,7 +198,7 @@ function DealCard({ deal, locale, staff, t }: { deal: DealBoardItem; locale: Loc
           <form action={updateDealDetailsAction} className="mt-3 grid gap-2 md:grid-cols-[1fr_1fr_auto]">
             <input name="dealId" type="hidden" value={deal.id} />
             <input name="locale" type="hidden" value={locale} />
-            <StaffPicker initialUserId={deal.currentHolderId} label={t.fields.holder} labelName="currentHolderLabel" locale={locale} name="currentHolderId" staff={staff} t={t.staffPicker} />
+            <div className="md:col-span-2"><AssignmentPicker departmentName="assignedDepartmentId" initialDepartmentId={deal.assignedDepartmentId ?? ''} initialUserId={deal.currentHolderId ?? ''} locale={locale} options={assignmentOptions} userName="currentHolderId" /></div>
             <FieldInput defaultValue={toDateTimeLocal(deal.stageDueAt)} label={t.fields.due} name="stageDueAt" required type="datetime-local" />
             <NoteField className="md:col-span-2" id={`details-note-${deal.id}`} label={t.fields.updateNote} />
             <Button className="self-end" size="sm" type="submit">{t.actions.saveDetails}</Button>
@@ -272,7 +274,8 @@ function branchOptions(options: ComplaintFormOptions | null | undefined, locale:
   return (options?.branches ?? []).map((branch) => ({ id: branch.id, name: locale === 'ar' ? branch.nameAr : branch.nameEn }));
 }
 
-function staffDisplay(id: string, fallback: string | null, staff: AssignableStaff[] | null | undefined, locale: Locale, t: Copy): string {
+function staffDisplay(id: string | null, fallback: string | null, staff: AssignableStaff[] | null | undefined, locale: Locale, t: Copy): string {
+  if (!id) return fallback ?? t.states.unassigned;
   const person = staff?.find((item) => item.userId === id);
   if (!person) return fallback ?? t.states.unknownStaff;
   const name = locale === 'ar' ? person.displayNameAr : person.displayName;

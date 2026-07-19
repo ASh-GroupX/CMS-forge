@@ -7,12 +7,14 @@ import { AuthModule } from '../auth/auth.module.js';
 import { AuthService } from '../auth/auth.service.js';
 import { AdminModule } from '../admin/admin.module.js';
 import { AdminUsersService } from '../admin/admin-users.service.js';
+import { AssignmentsModule } from '../assignments/assignments.module.js';
+import { AssignmentsService } from '../assignments/assignments.service.js';
 import { CasesController } from './cases.controller.js';
 import { CasesRepository } from './cases.repository.js';
 import { CasesService } from './cases.service.js';
 
 @Module({
-  imports: [AuthModule, AdminModule],
+  imports: [AuthModule, AdminModule, AssignmentsModule],
   controllers: [CasesController],
   providers: [
     PrismaService,
@@ -28,8 +30,8 @@ import { CasesService } from './cases.service.js';
     },
     {
       provide: CasesService,
-      inject: [CasesRepository, AuditService, AdminUsersService],
-      useFactory: (repository: CasesRepository, audit: AuditService, users: AdminUsersService) => new CasesService(repository, audit, users),
+      inject: [CasesRepository, AuditService, AdminUsersService, AssignmentsService],
+      useFactory: (repository: CasesRepository, audit: AuditService, users: AdminUsersService, assignments: AssignmentsService) => new CasesService(repository, audit, users, assignments),
     },
     {
       provide: SESSION_AUTH_SERVICE,

@@ -4,6 +4,7 @@ import {
 } from '../../../../components/complaint-detail-workspace';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { getAssignableStaff } from '../../../../lib/staff-assignable-staff-api';
+import { getStaffAssignmentOptions } from '../../../../lib/staff-assignment-options-api';
 import { getComplaintFormOptions } from '../../../../lib/staff-complaint-form-options-api';
 import { getStaffComplaintComments } from '../../../../lib/staff-complaint-comments-api';
 import { getStaffComplaintRelationsView } from '../../../../lib/staff-complaint-relations-api';
@@ -36,18 +37,20 @@ export default async function ComplaintDetailPage({
   };
   const detailResult = await getStaffComplaintDetailLoadResult(apiInput);
   const detail = detailResult.status === 'ready' ? detailResult.data : null;
-  const [comments, relations, surveys, staff, options] = detail ? await Promise.all([
+  const [comments, relations, surveys, staff, options, assignmentOptions] = detail ? await Promise.all([
     getStaffComplaintComments(apiInput),
     getStaffComplaintRelationsView(apiInput),
     getStaffComplaintSurveys(apiInput),
     getAssignableStaff({ ...(cookieHeader !== undefined ? { cookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
     getComplaintFormOptions({ ...(cookieHeader !== undefined ? { cookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
-  ]) : [null, null, null, null, null] as const;
+    getStaffAssignmentOptions({ ...(cookieHeader !== undefined ? { cookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
+  ]) : [null, null, null, null, null, null] as const;
   const detailState = detailResult.status === 'ready' ? undefined : detailResult.status;
   const commentsState = detail && comments === null ? 'error' : undefined;
 
   return (
     <ComplaintDetailWorkspace
+      assignmentOptions={assignmentOptions}
       comments={comments}
       commentsState={commentsState}
       detail={detail ?? undefined}

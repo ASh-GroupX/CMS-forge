@@ -71,7 +71,7 @@ function employeeDigestRecipients(rollup: ManagerControlRoomResponseDto): string
 
 function addTaskUsers(users: Set<string>, task: TaskResponseDto): void {
   users.add(task.ownerId);
-  users.add(task.assigneeId);
+  if (task.assigneeId) users.add(task.assigneeId);
   if (task.nextAction) users.add(task.nextAction.whoId);
   for (const userId of task.participantUserIds) users.add(userId);
 }

@@ -5,6 +5,7 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  Logger,
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
@@ -73,6 +74,8 @@ export function correlationMiddleware(
 
 @Catch()
 export class AppExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger('AppExceptionFilter');
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const context = host.switchToHttp();
     const response = context.getResponse<JsonResponse>();
@@ -80,11 +83,12 @@ export class AppExceptionFilter implements ExceptionFilter {
     const isHttp = exception instanceof HttpException;
     const status = isHttp ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
     const appError = exception instanceof AppException ? exception : undefined;
+    const correlationId = request.correlationId ?? `req_${randomUUID()}`;
     const body: ErrorBody = {
       error: {
         code: appError?.code ?? 'INTERNAL_ERROR',
         message: appError?.safeMessage ?? 'Request failed',
-        correlationId: request.correlationId ?? `req_${randomUUID()}`,
+        correlationId,
       },
     };
 
@@ -93,6 +97,14 @@ export class AppExceptionFilter implements ExceptionFilter {
     }
     if (appError?.actualRecipientCount !== undefined) {
       body.error.actualRecipientCount = appError.actualRecipientCount;
+    }
+
+    // Unexpected (non-domain, non-HTTP) failures carry no safe code and were
+    // previously swallowed into an opaque 500. Log the stack with the correlation
+    // id so they are diagnosable; the client response is unchanged and no request
+    // data (which may hold PII) is logged.
+    if (!isHttp && !appError) {
+      this.logger.error(`Unhandled error [${correlationId}] ${request.method ?? ''} ${request.url ?? ''}`, exception instanceof Error ? exception.stack : String(exception));
     }
 
     response.status(status).json(body);

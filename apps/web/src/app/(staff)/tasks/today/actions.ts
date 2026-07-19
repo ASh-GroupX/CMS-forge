@@ -20,6 +20,8 @@ export async function quickAddTaskAction(formData: FormData): Promise<void> {
     title: text(formData, 'title'),
     what: text(formData, 'what'),
     whoId: await staffIdFrom(formData, 'whoId', 'assigneeLabel'),
+    assignedUserId: optionalText(formData, 'assignedUserId'),
+    assignedDepartmentId: optionalText(formData, 'assignedDepartmentId'),
     when: zonedDateTimeToIso(text(formData, 'when'), timeZone),
     isCustomerPromise: formData.get('isCustomerPromise') === 'on',
     ...(optionalText(formData, 'dueAt') ? { dueAt: zonedDateTimeToIso(text(formData, 'dueAt'), timeZone) } : {}),
@@ -42,13 +44,15 @@ export async function updateTaskAction(formData: FormData): Promise<void> {
   const taskId = text(formData, 'taskId');
   const status = optionalStatus(formData.get('status'));
   const nextActionWhat = optionalText(formData, 'nextActionWhat');
-  const assigneeId = await staffIdFrom(formData, 'assigneeId', 'assigneeLabel');
+  const assigneeId = optionalText(formData, 'assigneeId');
+  const assignedDepartmentId = optionalText(formData, 'assignedDepartmentId');
   const nextActionWhoId = await staffIdFrom(formData, 'nextActionWhoId', 'nextActionWhoLabel');
   const nextActionWhen = optionalText(formData, 'nextActionWhen');
   const result = await updateTask(taskId, {
     ...(status ? { status } : {}),
     ...(optionalText(formData, 'statusNote') ? { statusNote: text(formData, 'statusNote') } : {}),
-    ...(assigneeId ? { assigneeId } : {}),
+    ...(formData.has('assigneeId') ? { assigneeId } : {}),
+    ...(formData.has('assignedDepartmentId') ? { assignedDepartmentId } : {}),
     ...(optionalText(formData, 'dueAt') ? { dueAt: zonedDateTimeToIso(text(formData, 'dueAt'), timeZone) } : {}),
     ...(nextActionWhat && nextActionWhoId && nextActionWhen
       ? { nextAction: { what: nextActionWhat, whoId: nextActionWhoId, when: zonedDateTimeToIso(nextActionWhen, timeZone) } }
