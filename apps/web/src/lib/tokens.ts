@@ -32,6 +32,13 @@ export const designTokens = {
       subtle: 'hsl(var(--line-subtle))',
       strong: 'hsl(var(--line-strong))',
     },
+    nav: {
+      DEFAULT: 'hsl(var(--nav-surface))',
+      raised: 'hsl(var(--nav-surface-raised))',
+      border: 'hsl(var(--nav-border))',
+      foreground: 'hsl(var(--nav-text))',
+      muted: 'hsl(var(--nav-muted))',
+    },
     status: {
       success: {
         DEFAULT: 'hsl(var(--color-success))',

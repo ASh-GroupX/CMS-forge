@@ -28,11 +28,11 @@ export function PageHeader({
   title: string;
 }) {
   return (
-    <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line-subtle pb-4">
+    <header className="flex flex-wrap items-start justify-between gap-4 border-b border-line-subtle pb-5">
       <div className="min-w-0">
-        {eyebrow ? <p className="text-xs font-semibold text-content-muted">{eyebrow}</p> : null}
-        <h1 className="text-xl font-semibold tracking-normal text-content-strong">{title}</h1>
-        {description ? <p className="mt-1 max-w-3xl text-sm text-content-muted">{description}</p> : null}
+        {eyebrow ? <p className="mb-1 text-xs font-medium text-brand">{eyebrow}</p> : null}
+        <h1 className="text-xl font-semibold tracking-[-0.03em] text-content-strong md:text-2xl">{title}</h1>
+        {description ? <p className="mt-1 max-w-[65ch] text-sm leading-6 text-content-muted [text-wrap:pretty]">{description}</p> : null}
       </div>
       {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
     </header>
@@ -60,7 +60,7 @@ export function StateBlock({
         ? 'border-status-error-border bg-status-error-bg text-status-error'
         : 'border-line-subtle bg-surface-raised text-content-muted';
   return (
-    <section className={cn('rounded-sm border px-3 py-2 text-sm leading-6', colors, className)} role={alert ? 'alert' : 'status'}>
+    <section className={cn('rounded-md border px-4 py-3 text-sm leading-6 shadow-sm', colors, className)} role={alert ? 'alert' : 'status'}>
       {title ? <p className="font-semibold">{title}</p> : null}
       <p className={title ? 'mt-1' : undefined}>{message}</p>
     </section>
@@ -107,7 +107,7 @@ export function FilterBar({
   method?: 'get' | 'post';
 }) {
   return (
-    <form action={action} className={cn('grid gap-2 border-b border-line-subtle bg-surface px-3 py-2 md:grid-cols-6', className)} method={method}>
+    <form action={action} className={cn('grid gap-3 border-b border-line-subtle bg-surface-raised/65 px-4 py-3 md:grid-cols-6', className)} method={method}>
       {children}
     </form>
   );
@@ -125,7 +125,7 @@ export function DataTable({
   minWidth?: string;
 }) {
   return (
-    <div className="hidden w-full min-w-0 max-w-full overflow-x-auto border-t border-line-subtle md:block">
+    <div className="hidden w-full min-w-0 max-w-full overflow-x-auto rounded-md border border-line-subtle bg-surface md:block">
       <Table style={{ minWidth }}>
         <TableHeader className="bg-surface-raised text-xs font-semibold tracking-normal text-content-muted">
           <TableRow>
@@ -163,24 +163,31 @@ export function MetricStrip({
   return (
     <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-5">
       {items.map((item) => (
-        <div className="rounded-md border border-line-subtle bg-surface p-4 shadow-sm" key={item.label}>
-          <p className="text-sm font-medium text-content-muted">{item.label}</p>
-          <p className={cn('mt-2 text-3xl font-semibold tracking-normal text-content-strong', item.tone === 'brand' && 'text-brand', item.tone === 'danger' && 'text-status-error', item.tone === 'warning' && 'text-status-warning')}>
-            {item.value}
-          </p>
-          <p className="mt-1 text-xs text-content-muted">{item.description}</p>
-        </div>
+        <Metric {...item} key={item.label} />
       ))}
     </div>
+  );
+}
+
+export function Metric({ description, label, tone, value }: { description: string; label: string; tone?: PrimitiveTone | undefined; value: string }) {
+  return (
+        <div className="relative overflow-hidden rounded-lg border border-line-subtle bg-surface p-4 shadow-md">
+          <span aria-hidden="true" className={cn('absolute inset-y-0 start-0 w-1', toneClass[tone ?? 'neutral'])} />
+          <p className="text-sm font-medium text-content-muted">{label}</p>
+          <p className={cn('mt-2 text-3xl font-semibold tracking-[-0.045em] text-content-strong', tone === 'brand' && 'text-brand', tone === 'danger' && 'text-status-error', tone === 'warning' && 'text-status-warning')}>
+            {value}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-content-muted">{description}</p>
+        </div>
   );
 }
 
 export function Timeline({ emptyText, items }: { emptyText: string; items: readonly { meta: string; text: string }[] }) {
   if (!items.length) return <StateBlock message={emptyText} />;
   return (
-    <ol className="grid gap-2">
+    <ol className="relative ms-2 grid gap-3 border-s border-brand/25 ps-5">
       {items.map((item) => (
-        <li className="rounded-sm border border-line-subtle bg-surface px-3 py-2 text-sm" key={`${item.meta}-${item.text}`}>
+        <li className="relative rounded-md border border-line-subtle bg-surface px-3 py-2 text-sm shadow-sm before:absolute before:-start-[1.52rem] before:top-4 before:size-2 before:rounded-full before:bg-brand before:ring-4 before:ring-surface" key={`${item.meta}-${item.text}`}>
           <p className="font-medium text-content-strong">{item.text}</p>
           {item.meta ? <p className="mt-1 text-xs text-content-muted">{item.meta}</p> : null}
         </li>
@@ -188,6 +195,11 @@ export function Timeline({ emptyText, items }: { emptyText: string; items: reado
     </ol>
   );
 }
+
+export function EmptyState({ message, title }: { message: string; title?: string }) { return <StateBlock message={message} {...(title ? { title } : {})} />; }
+export function FormSection({ children, title }: { children: React.ReactNode; title: string }) { return <section className="grid gap-4 border-t border-line-subtle pt-4"><h2 className="text-base font-semibold tracking-[-0.02em]">{title}</h2>{children}</section>; }
+export const DataTableShell = DataTable;
+export const TimelineLane = Timeline;
 
 export function AttachmentDropzone({
   id,

@@ -1,5 +1,6 @@
-import { Bell, Building2, CheckSquare2, ClipboardList, Columns3, FilePlus2, FolderCog, Gauge, GitBranch, Handshake, History, Inbox, KanbanSquare, Menu, Search, Send, ShieldCheck, UsersRound } from 'lucide-react';
+import { Bell, Building2, CheckSquare2, ClipboardList, Columns3, FilePlus2, FolderCog, Gauge, GitBranch, Handshake, History, Inbox, KanbanSquare, Menu, Search, Send, UsersRound } from 'lucide-react';
 import React, { type ReactNode } from 'react';
+import { BrandMark } from '../components/brand-mark';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { modernUiText } from '../i18n/staff-modern-ui';
 import { staffShellText, type Locale } from '../i18n/staff-shell';
@@ -56,25 +57,24 @@ export function AppShell({ activePath = '', activeSearch = '', children, locale,
   return (
     <main lang={t.lang} dir={t.dir} className="min-h-screen bg-surface-canvas text-content-strong">
       <a className="sr-only focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:ring-2 focus:ring-brand" href="#staff-main">{t.skipToMain}</a>
-      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[18rem_minmax(0,1fr)]">
-        <aside className="hidden border-e border-line-subtle bg-surface px-4 py-5 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:overflow-y-auto">
-          <div className="flex items-center gap-3 px-2 pb-5">
-            <span className="grid size-11 place-items-center rounded-xl bg-brand text-brand-foreground shadow-sm"><ShieldCheck aria-hidden="true" className="size-7" /></span>
-            <div className="min-w-0"><h1 className="truncate text-lg font-bold tracking-tight">{t.title}</h1><p className="truncate text-xs text-content-muted">{t.subtitle}</p></div>
+      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[17rem_minmax(0,1fr)]">
+        <aside className="hidden border-e border-nav-border bg-nav px-4 py-5 text-nav-foreground lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:overflow-y-auto">
+          <div className="px-2 pb-5">
+            <BrandMark label={t.title} tagline={t.subtitle} />
           </div>
-          {identity ? <section className="mb-5 rounded-xl border border-line-subtle bg-surface-raised p-3 shadow-sm" aria-label={identity.name}>
-            <div className="flex items-center gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-full bg-brand/5 text-sm font-bold text-brand">{identity.initials}</span><div className="min-w-0"><p className="truncate text-sm font-bold">{identity.name}</p><p className="truncate text-xs text-content-muted">{identity.role}</p></div></div>
-            <p className="mt-3 flex items-center gap-2 border-t border-line-subtle pt-3 text-xs text-content-muted"><Building2 aria-hidden="true" className="size-4" /><span className="truncate">{identity.branch}</span></p>
+          {identity ? <section className="mb-5 rounded-xl border border-nav-border bg-nav-raised p-3 shadow-lg shadow-black/10" aria-label={identity.name}>
+            <div className="flex items-center gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand/15 text-sm font-semibold text-white">{identity.initials}</span><div className="min-w-0"><p className="truncate text-sm font-semibold text-nav-foreground">{identity.name}</p><p className="truncate text-xs text-nav-muted">{identity.role}</p></div></div>
+            <p className="mt-3 flex items-center gap-2 border-t border-nav-border pt-3 text-xs text-nav-muted"><Building2 aria-hidden="true" className="size-4" /><span className="truncate">{identity.branch}</span></p>
           </section> : null}
           <nav className="grid gap-3" aria-label={t.title}>{desktopSections.map((section) => {
             const items = visibleItems.filter((item) => (section.items as readonly string[]).includes(item.key));
             return items.length ? <section className="grid gap-1 border-t border-line-subtle pt-3 first:border-0 first:pt-0" key={section.key}><h2 className="sr-only">{t.navSections[section.key]}</h2>{items.map((item) => <DesktopNavLink activePath={activePath} item={item} key={item.key} locale={locale} t={t} />)}</section> : null;
           })}</nav>
-          <div className="mt-auto border-t border-line-subtle pt-4">{sidebarAfter}{sidebarBefore}</div>
+          <div className="mt-auto border-t border-nav-border pt-4 [&_button]:border-nav-border [&_button]:bg-nav-raised [&_button]:text-nav-foreground [&_button:hover]:bg-brand">{sidebarAfter}{sidebarBefore}</div>
         </aside>
         <div className="min-w-0">
           <StaffTopBar account={identity ? { initials: identity.initials, name: identity.name } : null} heading={heading} isRtl={locale === 'ar'} languageHref={languageHref(activePath, activeSearch, locale === 'ar' ? 'en' : 'ar')} locale={locale} notificationsHref={`/notifications?locale=${locale}`} search={modern.search} subheading={subheading} switchLabel={t.switchLabel} switchTarget={t.switchTarget} themeDark={t.theme.dark} themeLabel={t.theme.label} themeLight={t.theme.light} />
-          <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-line-subtle bg-surface/95 px-1 pb-[max(.25rem,env(safe-area-inset-bottom))] pt-1 shadow-lg backdrop-blur lg:hidden" aria-label={t.title}>
+          <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-nav-border bg-nav/95 px-1 pb-[max(.25rem,env(safe-area-inset-bottom))] pt-1 text-nav-foreground shadow-lg backdrop-blur lg:hidden" aria-label={t.title}>
             {mobileKeys.flatMap((key) => { const item = visibleItems.find((candidate) => candidate.key === key); return item ? [<MobileNavLink activePath={activePath} item={item} key={item.key} label={mobileLabel(t, key)} locale={locale} />] : []; })}
             <Dialog><DialogTrigger asChild><button className="grid min-h-11 min-w-0 place-items-center gap-1 rounded-md px-1 py-2 text-xs font-semibold text-content-muted focus:outline-none focus:ring-2 focus:ring-brand" type="button"><Menu aria-hidden="true" className="size-5" /><span className="truncate">{t.mobileNav.more}</span></button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>{t.mobileNav.title}</DialogTitle></DialogHeader><nav className="grid gap-1" aria-label={t.mobileNav.title}>{visibleItems.filter((item) => !(mobileKeys as readonly StaffNavKey[]).includes(item.key)).map((item) => <DesktopNavLink activePath={activePath} item={item} key={item.key} locale={locale} t={t} />)}</nav></DialogContent></Dialog>
           </nav>
@@ -87,8 +87,8 @@ export function AppShell({ activePath = '', activeSearch = '', children, locale,
 
 type NavItem = (typeof staffNavItems)[number];
 type ShellCopy = (typeof staffShellText)[Locale];
-function DesktopNavLink({ activePath, item: { key, Icon, href }, locale, t }: { activePath: string; item: NavItem; locale: Locale; t: ShellCopy }) { const [label, description] = t.nav[key]; const active = isActiveNav(key, href, activePath); return <a aria-current={active ? 'page' : undefined} aria-label={`${label}: ${description}`} className={`grid min-h-12 grid-cols-[1.5rem_1fr] items-center gap-3 rounded-lg px-3 py-2 text-start text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-brand ${active ? 'bg-brand text-brand-foreground shadow-sm' : 'text-content-muted hover:bg-surface-raised hover:text-content-strong'}`} href={`${href}?locale=${locale}`} title={description}><Icon aria-hidden="true" className="size-5" /><span className="truncate">{label}</span></a>; }
-function MobileNavLink({ activePath, item: { key, Icon, href }, label, locale }: { activePath: string; item: NavItem; label: string; locale: Locale }) { const active = isActiveNav(key, href, activePath); return <a aria-current={active ? 'page' : undefined} className={`grid min-h-11 min-w-0 place-items-center gap-1 rounded-md px-1 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand ${active ? 'text-brand' : 'text-content-muted'}`} href={`${href}?locale=${locale}`}><Icon aria-hidden="true" className="size-5" /><span className="w-full truncate text-center">{label}</span></a>; }
+function DesktopNavLink({ activePath, item: { key, Icon, href }, locale, t }: { activePath: string; item: NavItem; locale: Locale; t: ShellCopy }) { const [label, description] = t.nav[key]; const active = isActiveNav(key, href, activePath); return <a aria-current={active ? 'page' : undefined} aria-label={`${label}: ${description}`} className={`group grid min-h-11 grid-cols-[1.5rem_1fr] items-center gap-3 rounded-lg px-3 py-2 text-start text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand ${active ? 'bg-brand text-white shadow-md shadow-brand/20' : 'text-nav-muted hover:bg-nav-raised hover:text-nav-foreground'}`} href={`${href}?locale=${locale}`} title={description}><Icon aria-hidden="true" className={`size-[1.125rem] ${active ? 'text-white' : 'text-nav-muted group-hover:text-brand'}`} /><span className="truncate">{label}</span></a>; }
+function MobileNavLink({ activePath, item: { key, Icon, href }, label, locale }: { activePath: string; item: NavItem; label: string; locale: Locale }) { const active = isActiveNav(key, href, activePath); return <a aria-current={active ? 'page' : undefined} className={`grid min-h-11 min-w-0 place-items-center gap-1 rounded-md px-1 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand ${active ? 'text-white' : 'text-nav-muted'}`} href={`${href}?locale=${locale}`}><Icon aria-hidden="true" className={`size-5 ${active ? 'text-brand' : ''}`} /><span className="w-full truncate text-center">{label}</span></a>; }
 function mobileLabel(t: ShellCopy, key: (typeof mobileKeys)[number]): string { if (key === 'queue') return t.mobileNav.cases; if (key === 'dashboard') return t.nav.dashboard[0]; return t.mobileNav[key]; }
 
 const ROLE_LABELS: Record<Locale, Record<string, string>> = {

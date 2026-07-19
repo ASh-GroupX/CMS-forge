@@ -59,15 +59,15 @@ export function StaffTopBar({ account = null, heading, isRtl, languageHref, loca
   const resolvedSubheading = subheading ?? signedIn ?? subtitle ?? '';
 
   return <>
-    <header className="sticky top-0 z-30 border-b border-line-subtle bg-surface/95 px-3 backdrop-blur md:px-5">
-      <div className="flex min-h-[5.75rem] items-center justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-3"><div className="min-w-0"><h1 className="truncate text-xl font-bold tracking-tight md:text-2xl">{resolvedHeading}</h1><p className="mt-1 truncate text-sm text-content-muted">{resolvedSubheading}</p></div><Button aria-label={themeLabel} aria-pressed={theme === 'dark'} className="hidden size-11 shrink-0 md:inline-flex" onClick={toggleTheme} size="icon" type="button" variant="ghost">{theme === 'dark' ? <Sun aria-hidden="true" className="size-5 text-status-warning" /> : <Sun aria-hidden="true" className="size-5 text-status-warning" />}<span className="sr-only">{theme === 'dark' ? themeLight : themeDark}</span></Button></div>
+    <header className="sticky top-0 z-30 border-b border-line-subtle bg-surface-canvas/90 px-3 backdrop-blur-xl md:px-5">
+      <div className="flex min-h-16 items-center justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3"><div className="min-w-0"><h1 className="truncate text-lg font-semibold tracking-[-0.025em] md:text-xl">{resolvedHeading}</h1><p className="truncate text-xs text-content-muted md:text-sm">{resolvedSubheading}</p></div><Button aria-label={themeLabel} aria-pressed={theme === 'dark'} className="hidden size-10 shrink-0 md:inline-flex" onClick={toggleTheme} size="icon" type="button" variant="ghost">{theme === 'dark' ? <Sun aria-hidden="true" className="size-5 text-status-warning" /> : <Moon aria-hidden="true" className="size-5" />}<span className="sr-only">{theme === 'dark' ? themeLight : themeDark}</span></Button></div>
         <div className="flex shrink-0 items-center gap-2">
           {showSearch ? <><Button className="hidden h-11 w-[19rem] justify-start rounded-lg text-content-muted xl:flex" onClick={() => setSearchOpen(true)} type="button" variant="outline"><Search aria-hidden="true" className="me-2 size-5" /><span className="truncate">{search.placeholder}</span></Button><Button aria-label={search.label} className="xl:hidden" onClick={() => setSearchOpen(true)} size="icon" type="button" variant="outline"><Search aria-hidden="true" className="size-5" /></Button></> : null}
           <Button asChild aria-label={search.label} size="icon" variant="ghost"><a href={notificationsHref}><Bell aria-hidden="true" className="size-5" /></a></Button>
           <Button asChild className="hidden sm:inline-flex" variant="ghost"><a aria-label={switchLabel} href={languageHref}>{switchTarget}</a></Button>
           <Button aria-label={themeLabel} aria-pressed={theme === 'dark'} className="md:hidden" onClick={toggleTheme} size="icon" type="button" variant="ghost">{theme === 'dark' ? <Sun aria-hidden="true" className="size-5" /> : <Moon aria-hidden="true" className="size-5" />}</Button>
-          {account ? <div className="hidden items-center gap-2 border-s border-line-subtle ps-3 sm:flex"><span className="grid size-9 place-items-center rounded-full bg-brand/5 text-xs font-bold text-brand">{account.initials}</span><span className="max-w-28 truncate text-sm font-semibold">{account.name}</span></div> : null}
+          {account ? <div className="hidden items-center gap-2 border-s border-line-subtle ps-3 sm:flex"><span className="grid size-9 place-items-center rounded-lg bg-brand/10 text-xs font-semibold text-content-strong">{account.initials}</span><span className="max-w-28 truncate text-sm font-medium">{account.name}</span></div> : null}
         </div>
       </div>
     </header>

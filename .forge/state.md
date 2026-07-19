@@ -1,52 +1,73 @@
 # Current State
 
-Status: Universal assignment/forwarding implementation complete on isolated
-branch `nour` (not merged into a protected branch).
-Phase: A–E complete.
-Next Task: Human review, then optional commit/push/PR.
+Status: Redesigned UI production build is live locally on port 4000.
+Phase: Live visual review; authentication recovery remains an operator action.
+Next Task: Hard-refresh and review the live UI, then bootstrap the local admin credential.
 Model Tier: GPT-5.5 Extra High or equivalent.
 
 ## How to use this file
 
 SNAPSHOT only. REPLACE each run, never append. Per-task detail -> evidence.md.
-Prior state history is in .forge/archive/state-archive.md.
+Prior state history is in `.forge/archive/state-archive.md`.
 
 ## Snapshot
 
-- `nour` was created from clean commit `e7435c0` after `git fetch`; source branch
-  `feat/cmss-task-board` matched its remote at the branch point (0 ahead/behind).
-- Added generic current assignment + append-only forwarding history, additive
-  compatibility columns, and idempotent backfill migration.
-- Generated and registered the reusable assignments module with scoped options,
-  target validation, transactional history/audit, and after-commit delivery.
-- Tasks/Promises, Complaints, Deals/Leads, and Cases/Requests dual-write their
-  legacy fields and the generic assignment in the owning domain transaction.
-- Reusable EN/AR assignment picker is integrated into task, complaint, deal,
-  and confidential case forms; user, department, and combined targets work.
-- Read models, search/report filters, dashboard ownership, notifications, and
-  nullable department-only compatibility were updated without removing legacy
-  APIs or fields.
-- OpenAPI and generated contract are current. Visual and accessibility proofs
-  passed and EN/AR screenshots were inspected.
-- Full proof matrix is recorded in `.forge/evidence.md`.
+- Work is isolated on `codex/cms-auto-visual-redesign`.
+- The pulled origin already contained the P12B permission guards and the later
+  universal-assignment implementation; no backend redesign was required.
+- Installed `.agents/skills/redesign-existing-projects` and used its audit
+  sequence to converge typography, palette, interaction, layout, components,
+  and state treatment without changing the application stack.
+- Added IBM Plex Sans Variable and IBM Plex Sans Arabic, semantic carbon/cobalt
+  light and dark tokens, a CMS-Auto handoff-lane mark, a 272px navigation rail,
+  64px command bar, redesigned auth and portal shells, and presentation-only
+  shared wrappers.
+- Existing shadcn primitives were adapted rather than replaced by handwritten
+  controls. All touched source files remain under the 300-line limit.
+- EN/AR and light/dark screenshots were generated and inspected. The persisted
+  `cms-theme` behavior, RTL direction, reduced motion, responsive tables, and
+  mobile portal layouts remain intact.
+- No endpoint, OpenAPI source, workflow rule, RBAC decision, persistence model,
+  or server-owned authority changed.
+- The unrelated dirty change in `docs/operations/runbook.md` remains preserved.
 
-## Security focus
+## Proof state
 
-- Actor role/branch/department scope comes only from the server session.
-- Domain modules retain record/workflow authorization.
-- Generic assignment validates active targets and branch compatibility.
-- Assignment/history/audit writes commit atomically; notifications enqueue
-  after commit.
-- Portal APIs never expose assignment history or staff directory details.
+- Passed: shell 213/213, localization 13/13, UI smoke, accessibility 26 route
+  previews, visual 116 route previews, visual review, performance 5 previews,
+  typecheck, lint, production compilation/static generation, and diff check.
+- Unsupported: `test:e2e -- localization`; this runner has no such mode. The
+  dedicated `test:web -- localization` suite passed 13/13.
+- Blocked: `openapi:check` reports that origin's document is not canonical.
+- Environment note: the aggregate pnpm build command is intercepted by the
+  Codex supply-chain approval gate. Every underlying build stage passed when
+  invoked directly with the installed repository toolchain.
 
-## Deployment handoff
+## Authentication diagnosis
 
-1. Back up the target database.
-2. Run `corepack pnpm --dir packages/database exec prisma migrate deploy --schema prisma/schema.prisma`.
-3. Regenerate/deploy the application packages normally.
-4. Verify assignment options and one user-, department-, and combined-target
-   assignment per adopted domain.
+- API health returned 200 with database and Redis configured.
+- The local admin exists, is active, is unlocked, and uses the current seed hash.
+- The documented bootstrap credential does not verify against that seed hash.
+- Recent login audit events safely report `AUTH_INVALID_CREDENTIALS` without
+  containing submitted passwords or hashes.
+- No authentication code or database credential was changed without the
+  operator selecting the replacement password.
 
-Rollback should roll application code forward to a repair build while retaining
-the additive tables. Do not drop generic tables if department-only rows exist;
-legacy columns remain available because no destructive removal was performed.
+## Live runtime
+
+- The old three-week-old Docker web image was replaced.
+- The rebuilt `cms-forge-web` container is serving port 4000.
+- Live endpoint verification returned HTTP 200 and contained the new staff
+  identity, handoff motif, navigation tokens, and cockpit entrance styling.
+- The initial Docker rebuild stalled in BuildKit; its validated orphaned helper
+  processes were stopped. A focused cached web-image build then passed, and the
+  container was recreated successfully. API, PostgreSQL, Redis, MinIO, and
+  worker containers remain running.
+- Applied all seven pending checked-in migrations after creating a pre-migration
+  dump inside the PostgreSQL container. Prisma now reports all 29 migrations
+  applied and the database schema current.
+- Removed only the two obsolete three-week-old API/worker containers that were
+  duplicating service aliases and emitting stale P1001 errors. No images,
+  volumes, or database data were removed.
+- Current API and web endpoints both return HTTP 200 with no new P1001 or
+  missing-column messages from the active services.

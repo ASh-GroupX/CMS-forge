@@ -14450,3 +14450,115 @@ Apply before application deployment:
 No manual data rewrite is required; the migration backfills existing records.
 Keep legacy compatibility fields and dual writes until a separately reviewed
 cleanup migration proves all consumers have moved to the generic model.
+
+---
+
+## CMS-Auto full visual redesign (2026-07-19)
+
+SRS: UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+### Delivered
+
+- Confirmed after the user's origin pull that the P12B permission-guard work and
+  later RBAC/assignment foundations already exist; no backend behavior changed.
+- Installed `redesign-existing-projects` from `Leonxlnx/taste-skill` and applied
+  its existing-project audit to typography, palette, interaction, layout,
+  components, and UI states.
+- Replaced the web font packages with IBM Plex Sans Variable and IBM Plex Sans
+  Arabic. Added semantic carbon/cobalt light and dark tokens, logical RTL-safe
+  styling, tabular data, 120-180ms interaction motion, and reduced-motion support.
+- Added the CMS-Auto handoff-lane brand mark and favicon; redesigned staff auth,
+  the 64px command bar, 272px desktop navigation rail, responsive staff shell,
+  and mobile-first portal shell.
+- Standardized the existing shadcn button, input, badge, card, table, and dialog
+  primitives. Added presentation-only PageHeader, Metric, DataTableShell,
+  FormSection, EmptyState, StatusBadge, and TimelineLane interfaces.
+- Expanded visual-review fixtures with representative dark-mode EN/AR staff,
+  complaint, reports, and portal cases. The complete harness covers 390, 430,
+  768, 1024, and 1440px responsive views.
+- Preserved real API wiring, RBAC visibility, workflow authority, localization,
+  `cms-theme` persistence, and the unrelated runbook working-tree change.
+
+### Verification
+
+- Passed: shell web tests 213/213.
+- Passed: localization web tests 13/13.
+- Passed: UI smoke proof, 2 route previews.
+- Passed: accessibility proof, 26 route previews.
+- Passed: visual proof, 116 route previews.
+- Passed: visual review; artifacts written to `coverage/web-visual-review` and
+  EN/AR auth, dashboard, complaint, report, and portal captures inspected.
+- Passed: performance proof, 5 route previews.
+- Passed: typecheck and lint.
+- Passed: direct production build stages, including Next.js compilation, type
+  analysis, and static generation for 33 pages.
+- Passed: `git diff --check` (line-ending warnings only).
+- Unsupported: `test:e2e -- localization`; no localization mode exists in the
+  e2e runner. The dedicated localization suite passed.
+- Failed (inherited, outside UI scope): `openapi:check` reports the document is
+  non-canonical immediately after the origin pull. No API/contract source was
+  changed in this redesign; regeneration is recorded as the next repair task.
+- Environment-blocked wrapper only: `corepack pnpm build` invokes the Codex pnpm
+  supply-chain approval prompt. The underlying application build passed.
+
+---
+
+## Local staff sign-in diagnosis (2026-07-19)
+
+SRS: ARCH-AUTH-001, REQ-AUTH-001, REQ-AUDIT-001
+
+- Passed: `GET /health` returned 200; API, database configuration, and Redis
+  configuration are available.
+- Passed: safe database inspection confirmed the local admin account exists,
+  is active, and is not locked.
+- Passed: safe audit inspection found recent `AUTH_INVALID_CREDENTIALS` login
+  failures; no submitted password, password hash, session cookie, or token was
+  printed or recorded.
+- Root cause: the active account uses the current repository seed hash, which
+  does not verify against the bootstrap credential documented for local setup.
+- Not changed: credential state. Recovery requires an operator-selected password
+  supplied to the existing `staff:bootstrap` command.
+- Operational note: five failed attempts in 60 seconds trigger the existing
+  account/IP login rate limiter; wait for the window before verifying recovery.
+
+---
+
+## Live redesign runtime handoff (2026-07-19)
+
+SRS: UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+- Root cause of "no UI changed": `localhost:4000` was still served by a Docker
+  web image created three weeks earlier, before the redesign branch.
+- Stopped only the stale web container; API, database, Redis, object storage,
+  and worker services remain running.
+- Started the already-verified current Next.js production build on port 4000.
+- Passed: live `GET http://localhost:4000` returned HTTP 200 and the response
+  contains the new staff identity, handoff motif, navigation token classes, and
+  compiled cockpit entrance styling.
+- The full Docker image rebuild stalled in local BuildKit. Stopped the validated
+  orphaned Docker build client/helper processes without deleting images, data,
+  containers, or volumes.
+- Browser plugin setup was unavailable due to a local kernel-assets error. Live
+  endpoint inspection was completed directly; the previously generated EN/AR,
+  light/dark screenshot matrix remains available under visual-review coverage.
+- Port-conflict recovery: terminated only the verified temporary Next server
+  process holding TCP 4000, confirmed the port was free, rebuilt
+  `cms-forge-web:latest`, and recreated the web container.
+- Passed: the recreated container is healthy on TCP 4000; live HTTP returned
+  200 and the response contains the redesigned handoff and navigation signals.
+
+### Database/runtime recovery
+
+- Diagnosed the reported P1001 as output from an obsolete API container with no
+  Compose network. The current API container resolved `postgres` and returned
+  HTTP 200 from `/health`.
+- Found seven pending repository migrations and missing runtime columns/tables.
+- Created `/tmp/cms_auto_pre_20260719_migrations.dump` inside the PostgreSQL
+  container before changing schema state.
+- Passed: `prisma migrate deploy` applied all seven pending migrations; follow-up
+  `prisma migrate status` reports all 29 migrations current.
+- Restarted active API and worker services, then removed only the validated
+  obsolete three-week-old API/worker containers. Persistent volumes and data
+  were retained.
+- Passed: API HTTP 200, web HTTP 200, and active service logs contain no new
+  P1001 or missing-schema errors after recovery.

@@ -32,7 +32,7 @@ function reviewHtml(testCase, renderedHtml) {
   const signals = (testCase.signals ?? []).map((signal) => `<li>${escapeHtml(signal)}</li>`).join('');
   const frameStyle = testCase.viewport?.width ? ` style="max-width:${testCase.viewport.width}px"` : '';
   return `<!doctype html>
-<html lang="${testCase.locale}">
+<html class="${testCase.theme === 'dark' ? 'dark' : ''}" dir="${testCase.locale === 'ar' ? 'rtl' : 'ltr'}" lang="${testCase.locale}">
 <head>
   <meta charset="utf-8" />
   <title>${escapeHtml(testCase.name)}</title>

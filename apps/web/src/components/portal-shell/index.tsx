@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ReactNode } from 'react';
+import { BrandMark } from '../brand-mark';
 import { portalShellText, type PortalShellLocale, type PortalShellPage } from '../../i18n/portal-shell';
 
 const portalRoutes: Record<PortalShellPage, string> = {
@@ -36,11 +37,14 @@ export function PortalShell({
       <a className="sr-only focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-50 focus:rounded-sm focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:ring-2 focus:ring-brand" href="#portal-main">
         {t.skipToMain}
       </a>
-      <header className="border-b border-line-subtle bg-surface px-4 py-4 shadow-sm md:px-6">
+      <header className="border-b border-line-subtle bg-surface/90 px-4 py-4 shadow-md backdrop-blur-xl md:px-6">
+        <div className="mx-auto mb-4 max-w-5xl border-b border-line-subtle pb-4">
+          <BrandMark />
+        </div>
         <div className="mx-auto grid max-w-5xl gap-4 md:grid-cols-[1fr_auto] md:items-start">
           <div className="min-w-0">
             <p className="text-xs font-semibold text-content-muted">{t.navLabel}</p>
-            <h1 className="text-2xl font-semibold tracking-normal text-content-strong">{title}</h1>
+            <h1 className="text-2xl font-semibold tracking-[-0.03em] text-content-strong md:text-3xl">{title}</h1>
             <p className="mt-1 max-w-2xl text-sm text-content-muted">{subtitle}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -68,7 +72,7 @@ export function PortalShell({
           </div>
         </div>
       </header>
-      <main className="mx-auto grid max-w-5xl gap-4 p-4 md:p-6" id="portal-main">
+      <main className="mx-auto grid w-full max-w-5xl gap-4 p-4 md:p-6" id="portal-main">
         {children}
       </main>
       <footer className="border-t border-line-subtle bg-surface px-4 py-4 md:px-6">

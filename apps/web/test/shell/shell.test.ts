@@ -1309,7 +1309,7 @@ test('staff shell keeps responsive layout classes for dashboard and queue', asyn
     await StaffShellPage({ searchParams: Promise.resolve({ locale: 'en', role: 'admin', session: 'signed-in' }) }),
   );
 
-  assert.match(html, /lg:grid-cols-\[18rem_minmax\(0,1fr\)\]/);
+  assert.match(html, /lg:grid-cols-\[17rem_minmax\(0,1fr\)\]/);
   assert.match(html, /lg:h-screen/);
   assert.match(html, /md:grid-cols-3/);
   assert.match(html, /xl:grid-cols-\[minmax\(0,1\.45fr\)_minmax\(20rem,1fr\)\]/);

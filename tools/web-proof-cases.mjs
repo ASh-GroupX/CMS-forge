@@ -25,7 +25,7 @@ export const smokeCases = [
   { name: 'Arabic management shell', locale: 'ar', params: { locale: 'ar', role: 'management', session: 'signed-in', comments: 'error', queue: 'empty', reports: 'denied' } },
 ];
 
-export const visualCases = [...['en', 'ar'].flatMap((locale) => [...buildVisualCases(locale), ...buildPortalVisualCases(locale)]), ...buildEnglishResponsiveCases(), ...buildArabicResponsiveCases()];
+export const visualCases = [...['en', 'ar'].flatMap((locale) => [...buildVisualCases(locale), ...buildPortalVisualCases(locale)]), ...buildEnglishResponsiveCases(), ...buildArabicResponsiveCases(), ...buildDarkVisualCases()];
 export const accessibilityCases = buildAccessibilityCases();
 export const performanceCases = buildPerformanceCases();
 
@@ -38,8 +38,8 @@ function buildVisualCases(locale) {
   const t = staffShellText[locale], collaboration = collaborationText[locale], detail = complaintDetailText[locale], comment = complaintCommentText[locale], groups = communicationGroupsText[locale], relations = complaintRelationsText[locale], tabs = complaintTabsText[locale], task = taskConversationText[locale];
   const base = { locale, role: 'admin', session: 'signed-in' };
   return [
-    visualCase('auth landing', locale, 'staff-auth', { locale }, [t.title, t.auth.loginTitle, t.nav.queue[0]], ['lg:grid-cols-[minmax(0,1fr)_minmax(24rem,32rem)]', 'bg-surface-raised']),
-    visualCase('staff shell', locale, 'staff', { ...base }, [t.title, t.nav.today[0], t.workQueue.title], ['lg:grid-cols-[18rem_minmax(0,1fr)]', 'bg-surface-raised']),
+    visualCase('auth landing', locale, 'staff-auth', { locale }, [t.title, t.auth.loginTitle, t.nav.queue[0]], ['lg:grid-cols-[minmax(0,1.25fr)_minmax(24rem,32rem)]', 'bg-nav']),
+    visualCase('staff shell', locale, 'staff', { ...base }, [t.title, t.nav.today[0], t.workQueue.title], ['lg:grid-cols-[17rem_minmax(0,1fr)]', 'bg-surface-raised']),
     visualCase('today tasks', locale, 'staff-today', { ...base }, [employeeTodayText[locale].title, employeeTodayText[locale].sections.overdue[0], employeeTodayText[locale].help.waiting, employeeTodayText[locale].actions.updateDetails, 'TASK-PROOF-001'], ['<details', 'bg-surface-raised']),
     visualCase('task board', locale, 'staff-board', { ...base }, [taskBoardText[locale].title, taskBoardText[locale].subtitle, taskBoardText[locale].columnEmpty, taskBoardText[locale].card.promise, taskBoardText[locale].card.dueStates.OVERDUE, taskBoardText[locale].manage.open, 'BOARD-PROOF-001', 'BOARD-PROOF-004'], ['bg-board-column', 'bg-board-card', 'overflow-x-auto', 'snap-x']),
     visualCase('ticket board', locale, 'staff-complaint-board', { ...base }, [complaintBoardText[locale].title, complaintBoardText[locale].subtitle, complaintBoardText[locale].columnEmpty, complaintBoardText[locale].card.severity.CRITICAL, complaintBoardText[locale].card.sla.BREACHED, 'CMP-BOARD-001', 'CMP-BOARD-004'], ['bg-board-column', 'bg-board-card', 'overflow-x-auto', 'snap-x']),
@@ -70,6 +70,19 @@ function buildEnglishResponsiveCases() {
     { ...visualCase('manager control room 390px', locale, 'staff-manager', base, [managerControlRoomText.en.title, 'TASK-MANAGER-PROOF'], []), viewport },
     { ...visualCase('task board 390px', locale, 'staff-board', base, [taskBoardText.en.title, taskBoardText.en.view.list, 'BOARD-PROOF-001'], ['snap-x', 'min-h-11']), viewport },
     { ...visualCase('manager task detail 390px', locale, 'staff-manager-detail', base, ['TASK-MANAGER-PROOF', managerControlRoomText.en.back], []), viewport },
+  ];
+}
+
+function buildDarkVisualCases() {
+  const en = { locale: 'en', role: 'admin', session: 'signed-in' };
+  const ar = { locale: 'ar', role: 'admin', session: 'signed-in' };
+  return [
+    { ...visualCase('dashboard dark', 'en', 'staff-dashboard', en, [modernUiText.en.dashboard.attention, modernUiText.en.dashboard.recentUpdates], []), theme: 'dark' },
+    { ...visualCase('today tasks dark', 'ar', 'staff-today', ar, [employeeTodayText.ar.title, employeeTodayText.ar.sections.overdue[0]], []), theme: 'dark' },
+    { ...visualCase('complaint detail dark', 'en', 'staff-complaint-detail', { ...en, tab: 'work' }, [complaintDetailText.en.title, complaintTabsText.en.work], []), theme: 'dark' },
+    { ...visualCase('reports dark', 'ar', 'staff-reports', ar, [reportsDashboardText.ar.title, reportsDashboardText.ar.export.title], []), theme: 'dark' },
+    { ...portalVisualCase('portal submission dark', 'en', 'portal-submission', { state: 'validation' }, [portalSubmissionText.en.title, portalSubmissionText.en.states.validation], []), theme: 'dark' },
+    { ...portalVisualCase('portal tracking dark', 'ar', 'portal-tracking-preview', { state: 'attachment' }, [portalTrackingText.ar.title, portalTrackingText.ar.states.attachment], []), theme: 'dark' },
   ];
 }
 

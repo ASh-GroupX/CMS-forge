@@ -1,34 +1,24 @@
-# Universal Assignments — Complete on `nour`
+# CMS-Auto redesigned UI — live local review
 
-Status: Complete on isolated branch `nour` (not merged)
+Status: Redesigned production build live at `http://localhost:4000`
 Required model tier: GPT-5.5 Extra High or equivalent
-Branch: `nour`
-Risk: High (RBAC, scope, audit, workflow, migration)
-SSOT: `docs/UNIVERSAL_ASSIGNMENTS_PLAN.md`
-SRS IDs: `REQ-RBAC-001`, `REQ-COLLAB-001`, `REQ-WORKFLOW-002`,
-`REQ-AUDIT-001`, `REQ-SEARCH-001`, `REQ-REPORT-001`,
-`REQ-LOCALIZATION-001`, `METHOD-MODULAR-001`, `METHOD-AUDIT-001`,
-`METHOD-API-001`, `METHOD-TEST-001`
+Risk: Medium (local runtime handoff; presentation system)
+SRS IDs: `UI-DESIGN-001`, `UI-SCREEN-001`, `REQ-LOCALIZATION-001`
 
-## Task
+## Current review task
 
-Universal assignment and forwarding is implemented for Tasks/Promises,
-Complaints, Deals/Leads, and Cases/Requests. It supports a user, a department,
-or both, with a reusable module/control and an extensible entity-type boundary.
+Hard-refresh `http://localhost:4000` and review the live taste-skill redesign:
+IBM Plex bilingual typography, carbon/cobalt operational cockpit, handoff-lane
+identity, redesigned auth split, 64px command bar, 272px staff rail, semantic
+components, responsive portal shell, and persisted light/dark themes.
 
-## Constraints
+The three-week-old Docker web image was the reason the previous UI remained
+visible. It has been replaced; the rebuilt `cms-forge-web` container from
+`codex/cms-auto-visual-redesign` now owns port 4000.
 
-- Do not merge or push until human review.
-- Apply `20260718120000_universal_assignments` before deploying application code.
-- Keep legacy fields and dual-write compatibility in place.
-- Future modules adopt `AssignmentsService`; owning modules retain authorization.
+## Remaining operational follow-ups
 
-## Proof
+1. Bootstrap the local admin with an operator-selected credential before login.
+2. Repair the inherited canonical OpenAPI drift in a separate contract slice.
 
-All required proof passed. Exact commands and counts are recorded in
-`.forge/evidence.md` under “Universal assignment and forwarding”.
-
-## Next human gate
-
-Review the published `nour` branch, then decide whether to open a pull request.
-No protected branch has been modified.
+Do not overwrite the unrelated local change in `docs/operations/runbook.md`.

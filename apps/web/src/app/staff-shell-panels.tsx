@@ -63,20 +63,20 @@ export function AuthPanel({
   }
 
   return (
-    <section className="rounded-sm border border-line-subtle bg-surface p-3 shadow-sm" aria-label={t.auth.loginTitle}>
-      <h2 className="text-base font-semibold">{t.auth.loginTitle}</h2>
+    <section className="rounded-xl border border-line-subtle bg-surface p-5 shadow-lg" aria-label={t.auth.loginTitle}>
+      <h2 className="text-lg font-semibold tracking-[-0.025em]">{t.auth.loginTitle}</h2>
       {authError ? <p className="mt-2 rounded-sm border border-status-error-border bg-status-error-bg px-2 py-1 text-sm text-status-error" role="alert">{t.auth.genericError}</p> : null}
-      <form action={loginStaffAction} className="mt-3 grid gap-2">
+      <form action={loginStaffAction} className="mt-5 grid gap-3">
         <input name="locale" type="hidden" value={locale} />
         <label className="grid gap-1 text-sm font-medium text-content-strong">
           {t.auth.identifier}
-          <input className="h-density-field rounded-sm border border-line-subtle bg-surface px-3 py-2 text-content-strong focus:outline-none focus:ring-2 focus:ring-brand" name="identifier" autoComplete="username" />
+          <input className="h-10 rounded-md border border-line-subtle bg-surface px-3 py-2 text-content-strong shadow-sm hover:border-line-strong focus:outline-none focus:ring-2 focus:ring-brand" name="identifier" autoComplete="username" />
         </label>
         <label className="grid gap-1 text-sm font-medium text-content-strong">
           {t.auth.password}
           <PasswordInput hideLabel={t.auth.hidePassword} id="staff-password" name="password" showLabel={t.auth.showPassword} />
         </label>
-        <button className="h-density-field rounded-sm bg-brand px-3 py-2 text-sm font-semibold text-brand-foreground focus:outline-none focus:ring-2 focus:ring-brand" type="submit">{t.auth.submit}</button>
+        <button className="h-10 rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-foreground shadow-md shadow-brand/20 hover:-translate-y-px hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-brand" type="submit">{t.auth.submit}</button>
       </form>
       <PasswordResetPanel locale={locale} state={resetState} />
     </section>

@@ -3,14 +3,17 @@ import { headers } from 'next/headers';
 import Script from 'next/script';
 import React from 'react';
 import type { ReactNode } from 'react';
-import '@fontsource-variable/noto-sans/wght.css';
-import '@fontsource-variable/noto-sans-arabic/wght.css';
+import '@fontsource-variable/ibm-plex-sans/wght.css';
+import '@fontsource/ibm-plex-sans-arabic/400.css';
+import '@fontsource/ibm-plex-sans-arabic/500.css';
+import '@fontsource/ibm-plex-sans-arabic/600.css';
+import '@fontsource/ibm-plex-sans-arabic/700.css';
 import { resolveLocale, staffShellText, type Locale } from '../i18n/staff-shell';
 import '../globals.css';
 
 export const metadata: Metadata = {
-  title: 'CMS-Auto Staff',
-  description: 'Staff complaint management shell',
+  title: { default: 'CMS-Auto', template: '%s · CMS-Auto' },
+  description: 'Dealership accountability, complaint, task, and handoff operations.',
   icons: { icon: '/favicon.svg' },
 };
 
