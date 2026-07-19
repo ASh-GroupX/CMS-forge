@@ -155,6 +155,7 @@ test('auth and staff navigation follow theme tokens without horizontal rail over
   assert.match(globals, /\.dark[\s\S]*--nav-surface: 210 24% 8%/);
   assert.match(shell, /lg:overflow-x-hidden lg:overflow-y-auto/);
   assert.match(shell, /grid-cols-\[1\.5rem_minmax\(0,1fr\)\]/);
+  assert.match(shell, /bg-brand\/15 text-sm font-semibold text-nav-foreground/);
 });
 
 test('form dropdowns use the themed Radix viewport, Lucide chevron, and semantic scrollbars', () => {

@@ -1,8 +1,8 @@
 # Current State
 
-Status: Radix dropdown and scrollbar convergence is complete and live on port 4000.
-Phase: Shared interaction-surface correction verified; authentication recovery remains an operator action.
-Next Task: Hard-refresh and review menus, then bootstrap the local admin credential.
+Status: Production dashboard contrast CI repair is complete and verified.
+Phase: Accessibility regression repair; authentication recovery remains an operator action.
+Next Task: Observe production CI, then bootstrap the local admin credential.
 Model Tier: GPT-5.5 Extra High or equivalent.
 
 ## How to use this file
@@ -33,6 +33,13 @@ Prior state history is in `.forge/archive/state-archive.md`.
 
 ## Proof state
 
+- Production CI failure reproduced locally: the light staff identity badge had
+  1.24:1 white-on-cobalt-tint contrast.
+- Fixed with semantic `text-nav-foreground`; Axe now passes all 26 accessibility
+  previews in light/dark and English/Arabic coverage.
+- Passed: root `pnpm test` 62/62, typecheck, lint, diff check, and visual review
+  118 previews. EN dashboard light/dark screenshots were inspected.
+- Axe failures now report selectors and detailed failure summaries.
 - Passed: shell 213/213, localization 13/13, UI smoke, accessibility 26 route
   previews, visual 116 route previews, visual review, performance 5 previews,
   typecheck, lint, production compilation/static generation, and diff check.

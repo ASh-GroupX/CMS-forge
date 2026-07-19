@@ -14626,3 +14626,22 @@ SRS: UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
 - Passed: Docker production build (33 routes), container recreation, and live
   HTTP 200 on port 4000.
 - Preserved: unrelated local `docs/operations/runbook.md` modification.
+
+---
+
+## Production dashboard contrast CI repair (2026-07-19)
+
+SRS: UI-DESIGN-001, NFR-A11Y-001
+
+- Pulled `production` at `25155a6` and reproduced the attached Linux CI failure
+  locally with `node --import tsx tools/web-proof.mjs accessibility`.
+- Axe identified `.bg-brand\/15` at 1.24:1: white identity initials on the light
+  navigation badge tint. Replaced raw `text-white` with semantic
+  `text-nav-foreground`, which remains legible in light and dark themes.
+- Added a shell regression assertion and enhanced Axe diagnostics with the
+  failing selector and failure summary; no acceptance threshold was weakened.
+- Passed: accessibility proof, 26/26 route previews.
+- Passed: root `pnpm test`, 62/62 tests and all configured coverage gates.
+- Passed: typecheck, lint, `git diff --check`, and visual review 118 previews.
+- Manually inspected EN dashboard light/dark screenshots; identity badges are
+  visually balanced and legible without layout change.

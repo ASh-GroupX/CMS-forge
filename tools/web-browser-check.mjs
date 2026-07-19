@@ -95,6 +95,11 @@ async function assertNoSeriousAxeViolations(AxeBuilder, page, name) {
   const results = await new AxeBuilder({ page }).analyze();
   const violations = results.violations.filter((violation) => ['critical', 'serious'].includes(violation.impact));
   if (violations.length) {
-    throw new Error(`${name} has axe violations: ${violations.map((violation) => `${violation.id} (${violation.impact})`).join(', ')}`);
+    const details = violations.flatMap((violation) => violation.nodes.map((node) => {
+      const target = node.target.join(' ');
+      const summary = node.failureSummary?.replaceAll('\n', ' ') ?? node.html;
+      return `${violation.id} (${violation.impact}) at ${target}: ${summary}`;
+    }));
+    throw new Error(`${name} has axe violations: ${details.join(' | ')}`);
   }
 }

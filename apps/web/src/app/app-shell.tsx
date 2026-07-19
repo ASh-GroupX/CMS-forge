@@ -63,7 +63,7 @@ export function AppShell({ activePath = '', activeSearch = '', children, locale,
             <BrandMark label={t.title} tagline={t.subtitle} />
           </div>
           {identity ? <section className="mb-5 rounded-xl border border-nav-border bg-nav-raised p-3 shadow-lg shadow-black/10" aria-label={identity.name}>
-            <div className="flex items-center gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand/15 text-sm font-semibold text-white">{identity.initials}</span><div className="min-w-0"><p className="truncate text-sm font-semibold text-nav-foreground">{identity.name}</p><p className="truncate text-xs text-nav-muted">{identity.role}</p></div></div>
+            <div className="flex items-center gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand/15 text-sm font-semibold text-nav-foreground">{identity.initials}</span><div className="min-w-0"><p className="truncate text-sm font-semibold text-nav-foreground">{identity.name}</p><p className="truncate text-xs text-nav-muted">{identity.role}</p></div></div>
             <p className="mt-3 flex items-center gap-2 border-t border-nav-border pt-3 text-xs text-nav-muted"><Building2 aria-hidden="true" className="size-4" /><span className="truncate">{identity.branch}</span></p>
           </section> : null}
           <nav className="grid min-w-0 gap-3 overflow-x-hidden" aria-label={t.title}>{desktopSections.map((section) => {
