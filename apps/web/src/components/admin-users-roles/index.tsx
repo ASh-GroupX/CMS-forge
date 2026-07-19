@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { FormSelect } from '../ui/form-select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { adminUsersText } from '../../i18n/staff-admin-users';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
@@ -79,16 +80,11 @@ function CreateUserForm({ action, data, locale }: { action: AdminAction; data: A
         <Field label={t.fields.nameAr} name="nameAr" />
         <label className="grid gap-1 text-sm font-medium">
           {t.fields.role}
-          <select className="rounded-md border border-input bg-background px-3 py-2" name="roleCode" required>
-            {data.roles.map((role) => <option key={role.id} value={role.code}>{localizedName(role, locale)}</option>)}
-          </select>
+          <FormSelect name="roleCode" options={data.roles.map((role) => ({ label: localizedName(role, locale), value: role.code }))} required />
         </label>
         <label className="grid gap-1 text-sm font-medium">
           {t.fields.branch}
-          <select className="rounded-md border border-input bg-background px-3 py-2" name="branchId">
-            <option value="">{t.allBranches}</option>
-            {data.branches.map((branch) => <option key={branch.id} value={branch.id}>{localizedName(branch, locale)}</option>)}
-          </select>
+          <FormSelect name="branchId" options={data.branches.map((branch) => ({ label: localizedName(branch, locale), value: branch.id }))} placeholder={t.allBranches} />
         </label>
         <Field label={t.fields.initialPassword} minLength={12} name="initialPassword" type="password" />
         <Button className="md:col-span-3" type="submit">{t.actions.create}</Button>

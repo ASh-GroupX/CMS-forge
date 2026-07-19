@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Label } from '../ui/label';
+import { FormSelect } from '../ui/form-select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { StaffPicker } from '../shared/staff-picker';
 import { StateBlock, StatusBadge } from '../shared/ui-primitives';
@@ -192,18 +193,12 @@ function DateField({ label, name, value }: { label: string; name: string; value:
 
 function SelectField({ choose, disabledLabel, label, name, optionLabel = (option: string) => option, options, value }: { choose: string; disabledLabel: string; label: string; name: string; optionLabel?: (option: string) => string; options: string[]; value: string }) {
   const id = `reports-${name}`;
-  return <div className="grid gap-2"><Label htmlFor={id}>{label}</Label><select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" defaultValue={options.includes(value) ? value : ''} disabled={options.length === 0} id={id} name={name}>
-    <option value="">{options.length === 0 ? disabledLabel : choose}</option>
-    {options.map((option) => <option key={option} value={option}>{optionLabel(option)}</option>)}
-  </select></div>;
+  return <div className="grid gap-2"><Label htmlFor={id}>{label}</Label><FormSelect defaultValue={options.includes(value) ? value : ''} disabled={options.length === 0} id={id} name={name} options={options.map((option) => ({ label: optionLabel(option), value: option }))} placeholder={options.length === 0 ? disabledLabel : choose} /></div>;
 }
 
 function OptionField({ choose, disabledLabel, label, locale, name, options, value }: { choose: string; disabledLabel: string; label: string; locale: Locale; name: string; options: ComplaintFormOption[]; value: string }) {
   const id = `reports-${name}`;
-  return <div className="grid gap-2"><Label htmlFor={id}>{label}</Label><select className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" defaultValue={options.length === 0 ? '' : value} disabled={options.length === 0} id={id} name={name}>
-    <option value="">{options.length === 0 ? disabledLabel : choose}</option>
-    {options.map((option) => <option key={option.id} value={option.id}>{optionLabelText(option, locale)}</option>)}
-  </select></div>;
+  return <div className="grid gap-2"><Label htmlFor={id}>{label}</Label><FormSelect defaultValue={options.length === 0 ? '' : value} disabled={options.length === 0} id={id} name={name} options={options.map((option) => ({ label: optionLabelText(option, locale), value: option.id }))} placeholder={options.length === 0 ? disabledLabel : choose} /></div>;
 }
 
 function ReportBadge({ children }: { children: React.ReactNode }) { return <StatusBadge>{children}</StatusBadge>; }

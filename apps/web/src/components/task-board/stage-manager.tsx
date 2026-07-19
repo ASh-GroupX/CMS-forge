@@ -4,6 +4,7 @@ import { ArchiveIcon, ChevronDown, ChevronUp, Plus, Settings2 } from 'lucide-rea
 import React, { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { FormSelect } from '@/components/ui/form-select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -137,9 +138,7 @@ function StageRow({ archiving, disabled, index, last, locale, onArchive, onArchi
       {archiving ? (
         <div className="grid gap-2 rounded-md border border-status-warning-border bg-status-warning-bg p-2">
           <Label className="text-xs font-semibold" htmlFor={`destination-${stage.id}`}>{t.destination}</Label>
-          <select className="min-h-10 rounded-md border border-line-subtle bg-surface px-2 text-sm" id={`destination-${stage.id}`} onChange={(event) => setDestination(event.target.value)} value={destination}>
-            {others.map((candidate) => <option key={candidate.id} value={candidate.id}>{locale === 'ar' ? candidate.nameAr : candidate.nameEn}</option>)}
-          </select>
+          <FormSelect className="min-h-10" id={`destination-${stage.id}`} onValueChange={setDestination} options={others.map((candidate) => ({ label: locale === 'ar' ? candidate.nameAr : candidate.nameEn, value: candidate.id }))} value={destination} />
           <div className="flex justify-end gap-2">
             <Button className="min-h-10" onClick={() => onArchiveToggle(false)} type="button" variant="outline">{t.cancelArchive}</Button>
             <Button className="min-h-10" disabled={disabled || !destination} onClick={() => onArchive(destination)} type="button" variant="destructive">{t.confirmArchive}</Button>
@@ -183,10 +182,7 @@ function AddStageForm({ disabled, locale, onAdd }: { disabled: boolean; locale: 
       </div>
       <ColorPicker color={color} label={t.color} labels={t.colors} onChange={setColor} />
       <label className="grid gap-1 text-xs font-semibold text-content-muted">{t.mapping}
-        <select className="min-h-10 rounded-md border border-line-subtle bg-surface px-2 text-sm" onChange={(event) => setMapping(event.target.value)} value={mapping}>
-          <option value="">{t.mappingNone}</option>
-          {STATUSES.map((status) => <option key={status} value={status}>{t.statuses[status]}</option>)}
-        </select>
+        <FormSelect className="min-h-10" onValueChange={setMapping} options={STATUSES.map((status) => ({ label: t.statuses[status], value: status }))} placeholder={t.mappingNone} value={mapping} />
       </label>
       <Button className="min-h-11 justify-self-end" disabled={disabled || !nameEn.trim() || !nameAr.trim()} onClick={submit} type="button">{t.add}</Button>
     </section>

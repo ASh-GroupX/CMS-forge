@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { FormSelect } from '@/components/ui/form-select';
 import { Textarea } from '@/components/ui/textarea';
 import { Field, StateBlock } from '../shared/ui-primitives';
 import { LocalizedFileInput } from '../shared/localized-file-input';
@@ -109,10 +110,7 @@ export function ComplaintCreateForm({
           <SelectField choose={t.choose} error={fieldError(fieldErrors, 'categoryId')} label={t.fields.category} locale={locale} name="categoryId" options={categoryOptions} />
           <SelectField choose={t.choose} error={fieldError(fieldErrors, 'subcategoryId')} label={extra.fields.subcategory} locale={locale} name="subcategoryId" options={subcategories.length ? subcategories : categories} />
           <Field error={fieldError(fieldErrors, 'severity')} id="severity" label={t.fields.severity}>
-            <select className="rounded-sm border border-line-subtle bg-surface px-2 py-2" id="severity" name="severity" defaultValue="">
-              <option value="">{t.choose}</option>
-              {severityOptions.map((severity) => <option key={severity} value={severity}>{extra.severityLabels[severity]}</option>)}
-            </select>
+            <FormSelect id="severity" name="severity" options={severityOptions.map((severity) => ({ label: extra.severityLabels[severity], value: severity }))} placeholder={t.choose} />
           </Field>
           <SelectField choose={t.choose} error={fieldError(fieldErrors, 'branchId')} label={t.fields.branch} locale={locale} name="branchId" options={branches} />
           <Field error={fieldError(fieldErrors, 'incidentAt')} id="incidentAt" label={t.fields.incidentDate}>
@@ -193,10 +191,7 @@ function TextField({ error, label, name, type = 'text', value, wide = false }: {
 function SelectField({ choose, error, label, locale, name, options }: { choose: string; error: string | undefined; label: string; locale: Locale; name: string; options: ComplaintFormOption[] }) {
   return (
     <Field error={error} id={name} label={label}>
-      <select className="rounded-sm border border-line-subtle bg-surface px-2 py-2" id={name} name={name} defaultValue="">
-        <option value="">{choose}</option>
-        {options.map((option) => <option key={option.id} value={option.id}>{locale === 'ar' ? option.nameAr : option.nameEn}</option>)}
-      </select>
+      <FormSelect id={name} name={name} options={options.map((option) => ({ label: locale === 'ar' ? option.nameAr : option.nameEn, value: option.id }))} placeholder={choose} />
     </Field>
   );
 }

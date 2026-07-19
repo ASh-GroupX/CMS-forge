@@ -1,4 +1,4 @@
-@tailwind base;
+@import "./styles/scrollbars.css"; @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -64,11 +64,8 @@
     --status-info-bg: 211 76% 95%;
     --status-info-border: 211 52% 79%;
 
-    --nav-surface: 210 24% 8%;
-    --nav-surface-raised: 209 25% 12%;
-    --nav-border: 208 22% 18%;
-    --nav-text: 207 37% 93%;
-    --nav-muted: 207 15% 67%;
+    --nav-surface: 204 26% 96%; --nav-surface-raised: 0 0% 100%;
+    --nav-border: 207 20% 86%; --nav-text: 210 24% 8%; --nav-muted: 208 18% 28%;
 
     --color-loading: var(--surface-raised);
     --color-empty: var(--surface-raised);
@@ -158,6 +155,9 @@
     --ring: 218 100% 65%;
     --color-loading: var(--surface-raised);
     --color-empty: var(--surface-raised);
+
+    --nav-surface: 210 24% 8%; --nav-surface-raised: 209 25% 12%;
+    --nav-border: 208 22% 18%; --nav-text: 207 37% 93%; --nav-muted: 207 15% 67%;
 
     --board-drag-shadow: 0 16px 36px -14px rgb(0 0 0 / 0.6);
 

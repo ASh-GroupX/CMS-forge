@@ -6,6 +6,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { FormSelect } from '../ui/form-select';
 import { adminRolesText } from '../../i18n/staff-admin-roles';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import type { AdminRolesData } from '../../lib/staff-admin-roles-api';
@@ -83,7 +84,7 @@ function PermissionChecklist({ copyEnabled, data, initialCodes, locale, onSelect
     if (source) setSelected(source.permissions.map(({ code }) => code));
   };
   return <div className="grid gap-3 rounded-md border border-input bg-background p-3">
-    {copyEnabled ? <label className="grid gap-1 text-sm font-medium">{t.copyPermissions}<select className="rounded-md border border-input bg-background px-3 py-2" defaultValue="" onChange={(event) => copyFrom(event.target.value)}><option value="">{t.selectRole}</option>{data.roles.filter(({ id, code }) => id !== role?.id && code !== 'CUSTOMER_PORTAL').map((source) => <option key={source.id} value={source.id}>{localizedName(source, locale)}</option>)}</select></label> : null}
+    {copyEnabled ? <label className="grid gap-1 text-sm font-medium">{t.copyPermissions}<FormSelect onValueChange={copyFrom} options={data.roles.filter(({ id, code }) => id !== role?.id && code !== 'CUSTOMER_PORTAL').map((source) => ({ label: localizedName(source, locale), value: source.id }))} placeholder={t.selectRole} /></label> : null}
     {Object.entries(permissionGroups(t)).map(([group, codes]) => {
       const groupPermissions = permissions.filter(({ code }) => codes(code));
       return groupPermissions.length ? <fieldset className="grid gap-2" key={group}><legend className="text-sm font-semibold">{group}</legend><div className="grid gap-2 sm:grid-cols-2">

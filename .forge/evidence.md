@@ -14562,3 +14562,67 @@ SRS: UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
   were retained.
 - Passed: API HTTP 200, web HTTP 200, and active service logs contain no new
   P1001 or missing-schema errors after recovery.
+
+---
+
+## Theme-aware auth and navigation correction (2026-07-19)
+
+SRS: UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+- Root cause: navigation tokens were defined as graphite in `:root` and not
+  overridden by `.dark`, so auth and rail surfaces stayed dark in both themes.
+- Root cause: vertical `auto` overflow on the desktop rail allowed the browser
+  to synthesize horizontal scrolling when a descendant exceeded its grid track.
+- Added separate light steel and dark graphite semantic nav token sets.
+- Added horizontal containment to the rail, navigation groups, and links while
+  preserving vertical scroll and truncated bilingual labels.
+- Passed: shell tests 214/214, including the new theme/overflow regression.
+- Passed: web typecheck, lint, and `git diff --check`.
+- Passed: visual review with 118 route previews. Manually inspected light/dark
+  English auth and staff-shell PNGs; theme contrast and rail containment are sound.
+- Passed: Docker web production build and recreation; live HTTP 200. Compiled
+  CSS contains both nav token sets and `overflow-x:hidden`.
+- Preserved: unrelated local `docs/operations/runbook.md` modification.
+
+## Native dropdown visual convergence (2026-07-19)
+
+SRS: UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+- Audited 12 feature files using native `<select>` alongside the existing
+  shadcn/Radix select primitive.
+- Added a shared semantic native-select stylesheet with consistent light/dark
+  surface, border, shadow, chevron, spacing, typography, hover, focus, active,
+  disabled, invalid, checked-option, RTL, and reduced-motion rules.
+- Preserved form submission contracts and server-owned behavior; no name, value,
+  API, workflow, validation, or RBAC logic changed.
+- Passed: shell tests 215/215, web typecheck, lint, and visual review 118 previews.
+- Manually inspected EN complaint intake, EN reports, and AR dark reports; native
+  and Radix dropdowns now read as one coherent component system.
+- Passed: Docker production build and container recreation; live HTTP 200 and
+  compiled CSS contains both native-select and RTL selectors.
+- Preserved: unrelated local `docs/operations/runbook.md` modification.
+
+---
+
+## Radix dropdown and scrollbar convergence (2026-07-19)
+
+SRS: UI-DESIGN-001, UI-SCREEN-001, REQ-LOCALIZATION-001
+
+- Superseded the native-select styling pass by migrating all 18 remaining
+  feature-level native controls in 12 files to one form-compatible Radix/shadcn
+  wrapper. No source-level native `<select>` remains outside Radix internals.
+- Preserved form names, submitted values, default/controlled selection,
+  optional clearing, required and disabled state, validation descriptions,
+  localized option labels, and SSR route proof metadata.
+- Retained the requested `p-1 h-[var(--radix-select-trigger-height)] w-full
+  min-w-[var(--radix-select-trigger-width)]` viewport and Lucide
+  `ChevronDown` with `h-4 w-4 opacity-50`.
+- Added semantic scrollbar track, thumb, hover, active, horizontal, corner, and
+  reduced-motion treatment. All colors resolve through light/dark theme tokens.
+- Passed: shell tests 215/215, web TypeScript, lint, `git diff --check`, and
+  full visual review with 118 English/Arabic, light/dark, and responsive previews.
+- Manually inspected EN light complaint intake and AR dark reports; closed
+  controls, chevron direction, density, contrast, and page overflow are sound.
+- Passed: Docker production build (33 routes), container recreation, and live
+  HTTP 200 on port 4000.
+- Preserved: unrelated local `docs/operations/runbook.md` modification.

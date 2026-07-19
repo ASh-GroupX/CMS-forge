@@ -3,6 +3,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { FormSelect } from '@/components/ui/form-select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -66,7 +67,6 @@ export function QuickAddForm({ action, assignmentOptions, loadRelatedRecordsActi
 
 function RelatedRecordPicker({ locale, relatedRecords, t }: { locale: Locale; relatedRecords?: StaffRelatedRecordOptions | null | undefined; t: EmployeeTodayText }) {
   const listId = React.useId();
-  const selectRef = React.useRef<HTMLSelectElement>(null);
   const [type, setType] = React.useState<RelatedRecordType>('CUSTOMER');
   const [selectedValue, setSelectedValue] = React.useState('');
   const options = (relatedRecords?.[type] ?? []).map((record, index) => ({ record, value: String(index) }));
@@ -78,15 +78,13 @@ function RelatedRecordPicker({ locale, relatedRecords, t }: { locale: Locale; re
       <div className="grid gap-2 md:grid-cols-2">
         <div className="grid gap-2">
           <Label htmlFor={`${listId}-type`}>{t.fields.relatedTo}</Label>
-          <select
-            className="flex h-9 w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
+          <FormSelect
             id={`${listId}-type`}
             name="relatedRecordType"
-            onChange={(event) => { setType(event.currentTarget.value as RelatedRecordType); setSelectedValue(''); }}
+            onValueChange={(nextType) => { setType(nextType as RelatedRecordType); setSelectedValue(''); }}
+            options={RELATED_RECORD_TYPES.map((recordType) => ({ label: t.recordTypes[recordType], value: recordType }))}
             value={type}
-          >
-            {RELATED_RECORD_TYPES.map((recordType) => <option key={recordType} value={recordType}>{t.recordTypes[recordType]}</option>)}
-          </select>
+          />
         </div>
         {relatedRecords === undefined ? (
           <PickerState label={t.fields.relatedRecord} message={t.recordPicker.loading} />
@@ -98,21 +96,15 @@ function RelatedRecordPicker({ locale, relatedRecords, t }: { locale: Locale; re
           <div className="grid gap-2">
             <Label htmlFor={`${listId}-record`}>{t.fields.relatedRecord}</Label>
             <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-              <select
+              <FormSelect
                 aria-describedby={`${listId}-selected`}
-                className="flex h-9 min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm"
                 id={`${listId}-record`}
-                onChange={(event) => setSelectedValue(event.currentTarget.value)}
-                ref={selectRef}
+                onValueChange={setSelectedValue}
+                options={options.map((option) => ({ label: relatedRecordLabel(option.record, locale), value: option.value }))}
+                placeholder={t.recordPicker.placeholder}
                 value={selectedValue}
-              >
-                <option value="">{t.recordPicker.placeholder}</option>
-                {options.map((option) => {
-                  const label = relatedRecordLabel(option.record, locale);
-                  return <option key={option.record.recordId} value={option.value}>{label}</option>;
-                })}
-              </select>
-              <Button aria-label={t.recordPicker.clear} onClick={() => { setSelectedValue(''); if (selectRef.current) selectRef.current.value = ''; }} type="button" variant="outline">
+              />
+              <Button aria-label={t.recordPicker.clear} onClick={() => setSelectedValue('')} type="button" variant="outline">
                 <X className="size-4" aria-hidden="true" />
               </Button>
             </div>

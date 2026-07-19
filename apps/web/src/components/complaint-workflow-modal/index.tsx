@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { FormSelect } from '../ui/form-select';
 import { Textarea } from '../ui/textarea';
 import { Field, StateBlock } from '../shared/ui-primitives';
 import { AssignmentPicker } from '../shared/assignment-picker';
@@ -203,10 +204,13 @@ function OptionField({ emptyHint, label, locale, name, options }: { emptyHint: s
   return (
     <Label className="grid min-w-0 gap-1" htmlFor={id}>
       {label}
-      <select className="flex h-9 min-w-0 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" id={id} name={name} required>
-        <option value="" />
-        {options.map((option) => <option key={option.id} value={option.id}>{locale === 'ar' ? option.nameAr : option.nameEn}</option>)}
-      </select>
+      <FormSelect
+        id={id}
+        name={name}
+        options={options.map((option) => ({ label: locale === 'ar' ? option.nameAr : option.nameEn, value: option.id }))}
+        placeholder={label}
+        required
+      />
     </Label>
   );
 }

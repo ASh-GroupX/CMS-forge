@@ -8,9 +8,39 @@ names and operational responsibilities only; it contains no secret values.
 1. Install Node.js 20+, Corepack, Docker, and the package manager version pinned
    in `package.json`.
 2. Start local dependencies with `docker compose up -d postgres redis`.
-3. Set `DATABASE_URL`, `REDIS_URL`, `API_URL`, and port variables in the local
-   shell or environment manager.
+3. Create a local `.env` file in the repo root. This file is intentionally
+   ignored by Git and must be created for every clone. Example values:
+
+   ```env
+   DATABASE_URL=postgres://cms_auto:cms_auto_dev@localhost:5432/cms_auto
+   REDIS_URL=redis://localhost:6379
+   API_URL=http://localhost:3000
+   PORT=3000
+   CMS_BOOTSTRAP_EMAIL=admin@example.com
+   CMS_BOOTSTRAP_PASSWORD=ChangeMe12345!
+   CMS_BOOTSTRAP_ROLE=ADMIN
+   ```
+
 4. Run `corepack pnpm db:seed` only against local or staging test databases.
+5. Create the first staff user with the bootstrap command after `.env` is loaded:
+
+   - On Windows CMD:
+     ```cmd
+     set CMS_BOOTSTRAP_EMAIL=admin@example.com
+     set CMS_BOOTSTRAP_PASSWORD=ChangeMe12345!
+     set CMS_BOOTSTRAP_ROLE=ADMIN
+     corepack pnpm --dir apps/api staff:bootstrap
+     ```
+
+   - On PowerShell:
+     ```powershell
+     $env:CMS_BOOTSTRAP_EMAIL='admin@example.com'
+     $env:CMS_BOOTSTRAP_PASSWORD='ChangeMe12345!'
+     $env:CMS_BOOTSTRAP_ROLE='ADMIN'
+     corepack pnpm --dir apps/api staff:bootstrap
+     ```
+
+6. Start the app only after the database is running and bootstrap has completed.
 
 ## Deployment
 

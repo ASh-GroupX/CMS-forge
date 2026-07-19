@@ -11,6 +11,6 @@ export const modernUiText: Record<Locale, typeof en> = {
   ar: {
     search: { label: 'بحث', placeholder: 'ابحث في التحديثات، المهام، أو الشكاوى…', hint: 'أدخل حرفين على الأقل', loading: 'جاري البحث…', empty: 'لم يتم العثور على سجلات مصرح بها', error: 'البحث غير متاح. حاول مرة أخرى.', types: { COMPLAINT: 'شكوى', TASK: 'مهمة', CASE: 'حالة', DEAL: 'صفقة', CUSTOMER: 'عميل' } },
     dashboard: { greetings: { morning: 'صباح الخير، {name}', afternoon: 'مساء الخير، {name}', evening: 'مساء الخير، {name}', hello: 'مرحباً، {name}' }, attention: 'ما يحتاج انتباهك', mainIndicators: 'مؤشرات الأداء الرئيسية', recentUpdates: 'التحديثات والرسائل', teamWorkload: 'الفريق', viewAll: 'عرض الكل', tasks: 'مهام', complaints: 'شكاوى', promises: 'وعود للعملاء', waitingOnMe: 'بانتظارك', overdueDetail: 'تجاوز موعد الإنجاز المتوقع', dueTodayDetail: 'موعد الاستحقاق اليوم', dueSoonDetail: 'تقترب من هدف الخدمة', waitingDetail: 'تحتاج إلى ردك', updatesShown: 'التحديثات المعروضة', openTasks: 'مفتوحة', unread: 'غير مقروء', openMyWork: 'فتح مهامي', createComplaint: 'إنشاء شكوى', noUpdates: 'لا توجد تحديثات حديثة ضمن نطاقك.', noTeamData: 'عبء الفريق غير متاح لدورك.', recordUpdate: 'تحديث على سجل' },
-    queue: { title: 'مرشحات سريعة', mine: 'شكاواي', unassigned: 'غير مسندة', overdue: 'متأخرة', clear: 'مسح الكل', active: 'المرشحات النشطة', results: 'نتائج في هذه الصفحة' },
+    queue: { title: 'مرشحات سريعة', mine: 'شكاوي', unassigned: 'غير مسندة', overdue: 'متأخرة', clear: 'مسح الكل', active: 'المرشحات النشطة', results: 'نتائج في هذه الصفحة' },
   },
 };

@@ -3,6 +3,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { FormSelect } from '../ui/form-select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { adminUsersText } from '../../i18n/staff-admin-users';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
@@ -137,10 +138,12 @@ function ParentSelect({ currentId, locale, rows, value }: { currentId?: string |
   return (
     <label className="grid gap-1 text-sm font-medium">
       {t.headers[3]}
-      <select className="rounded-md border border-input bg-background px-3 py-2" defaultValue={value} name="parentId">
-        <option value="">{t.root}</option>
-        {rows.filter((row) => !row.parentId && row.id !== currentId).map((row) => <option key={row.id} value={row.id}>{localizedName(row, locale)}</option>)}
-      </select>
+      <FormSelect
+        defaultValue={value}
+        name="parentId"
+        options={rows.filter((row) => !row.parentId && row.id !== currentId).map((row) => ({ label: localizedName(row, locale), value: row.id }))}
+        placeholder={t.root}
+      />
     </label>
   );
 }

@@ -58,17 +58,17 @@ export function AppShell({ activePath = '', activeSearch = '', children, locale,
     <main lang={t.lang} dir={t.dir} className="min-h-screen bg-surface-canvas text-content-strong">
       <a className="sr-only focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:ring-2 focus:ring-brand" href="#staff-main">{t.skipToMain}</a>
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[17rem_minmax(0,1fr)]">
-        <aside className="hidden border-e border-nav-border bg-nav px-4 py-5 text-nav-foreground lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:overflow-y-auto">
-          <div className="px-2 pb-5">
+        <aside className="hidden min-w-0 max-w-full overflow-x-hidden border-e border-nav-border bg-nav px-4 py-5 text-nav-foreground lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:overflow-x-hidden lg:overflow-y-auto">
+          <div className="min-w-0 px-2 pb-5">
             <BrandMark label={t.title} tagline={t.subtitle} />
           </div>
           {identity ? <section className="mb-5 rounded-xl border border-nav-border bg-nav-raised p-3 shadow-lg shadow-black/10" aria-label={identity.name}>
             <div className="flex items-center gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand/15 text-sm font-semibold text-white">{identity.initials}</span><div className="min-w-0"><p className="truncate text-sm font-semibold text-nav-foreground">{identity.name}</p><p className="truncate text-xs text-nav-muted">{identity.role}</p></div></div>
             <p className="mt-3 flex items-center gap-2 border-t border-nav-border pt-3 text-xs text-nav-muted"><Building2 aria-hidden="true" className="size-4" /><span className="truncate">{identity.branch}</span></p>
           </section> : null}
-          <nav className="grid gap-3" aria-label={t.title}>{desktopSections.map((section) => {
+          <nav className="grid min-w-0 gap-3 overflow-x-hidden" aria-label={t.title}>{desktopSections.map((section) => {
             const items = visibleItems.filter((item) => (section.items as readonly string[]).includes(item.key));
-            return items.length ? <section className="grid gap-1 border-t border-line-subtle pt-3 first:border-0 first:pt-0" key={section.key}><h2 className="sr-only">{t.navSections[section.key]}</h2>{items.map((item) => <DesktopNavLink activePath={activePath} item={item} key={item.key} locale={locale} t={t} />)}</section> : null;
+            return items.length ? <section className="grid min-w-0 gap-1 border-t border-nav-border pt-3 first:border-0 first:pt-0" key={section.key}><h2 className="sr-only">{t.navSections[section.key]}</h2>{items.map((item) => <DesktopNavLink activePath={activePath} item={item} key={item.key} locale={locale} t={t} />)}</section> : null;
           })}</nav>
           <div className="mt-auto border-t border-nav-border pt-4 [&_button]:border-nav-border [&_button]:bg-nav-raised [&_button]:text-nav-foreground [&_button:hover]:bg-brand">{sidebarAfter}{sidebarBefore}</div>
         </aside>
@@ -87,7 +87,7 @@ export function AppShell({ activePath = '', activeSearch = '', children, locale,
 
 type NavItem = (typeof staffNavItems)[number];
 type ShellCopy = (typeof staffShellText)[Locale];
-function DesktopNavLink({ activePath, item: { key, Icon, href }, locale, t }: { activePath: string; item: NavItem; locale: Locale; t: ShellCopy }) { const [label, description] = t.nav[key]; const active = isActiveNav(key, href, activePath); return <a aria-current={active ? 'page' : undefined} aria-label={`${label}: ${description}`} className={`group grid min-h-11 grid-cols-[1.5rem_1fr] items-center gap-3 rounded-lg px-3 py-2 text-start text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand ${active ? 'bg-brand text-white shadow-md shadow-brand/20' : 'text-nav-muted hover:bg-nav-raised hover:text-nav-foreground'}`} href={`${href}?locale=${locale}`} title={description}><Icon aria-hidden="true" className={`size-[1.125rem] ${active ? 'text-white' : 'text-nav-muted group-hover:text-brand'}`} /><span className="truncate">{label}</span></a>; }
+function DesktopNavLink({ activePath, item: { key, Icon, href }, locale, t }: { activePath: string; item: NavItem; locale: Locale; t: ShellCopy }) { const [label, description] = t.nav[key]; const active = isActiveNav(key, href, activePath); return <a aria-current={active ? 'page' : undefined} aria-label={`${label}: ${description}`} className={`group grid min-h-11 min-w-0 max-w-full grid-cols-[1.5rem_minmax(0,1fr)] items-center gap-3 overflow-hidden rounded-lg px-3 py-2 text-start text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand ${active ? 'bg-brand text-white shadow-md shadow-brand/20' : 'text-nav-muted hover:bg-nav-raised hover:text-nav-foreground'}`} href={`${href}?locale=${locale}`} title={description}><Icon aria-hidden="true" className={`size-[1.125rem] ${active ? 'text-white' : 'text-nav-muted group-hover:text-brand'}`} /><span className="min-w-0 truncate">{label}</span></a>; }
 function MobileNavLink({ activePath, item: { key, Icon, href }, label, locale }: { activePath: string; item: NavItem; label: string; locale: Locale }) { const active = isActiveNav(key, href, activePath); return <a aria-current={active ? 'page' : undefined} className={`grid min-h-11 min-w-0 place-items-center gap-1 rounded-md px-1 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand ${active ? 'text-white' : 'text-nav-muted'}`} href={`${href}?locale=${locale}`}><Icon aria-hidden="true" className={`size-5 ${active ? 'text-brand' : ''}`} /><span className="w-full truncate text-center">{label}</span></a>; }
 function mobileLabel(t: ShellCopy, key: (typeof mobileKeys)[number]): string { if (key === 'queue') return t.mobileNav.cases; if (key === 'dashboard') return t.nav.dashboard[0]; return t.mobileNav[key]; }
 

@@ -147,6 +147,32 @@ test('root and textarea avoid hydration-prone client mutations', () => {
   assert.match(textareaSource, /spellCheck=\{false\}/);
 });
 
+test('auth and staff navigation follow theme tokens without horizontal rail overflow', () => {
+  const globals = readFileSync('apps/web/src/globals.css', 'utf8');
+  const shell = readFileSync('apps/web/src/app/app-shell.tsx', 'utf8');
+
+  assert.match(globals, /:root[\s\S]*--nav-surface: 204 26% 96%/);
+  assert.match(globals, /\.dark[\s\S]*--nav-surface: 210 24% 8%/);
+  assert.match(shell, /lg:overflow-x-hidden lg:overflow-y-auto/);
+  assert.match(shell, /grid-cols-\[1\.5rem_minmax\(0,1fr\)\]/);
+});
+
+test('form dropdowns use the themed Radix viewport, Lucide chevron, and semantic scrollbars', () => {
+  const globals = readFileSync('apps/web/src/globals.css', 'utf8');
+  const select = readFileSync('apps/web/src/components/ui/select.tsx', 'utf8');
+  const formSelect = readFileSync('apps/web/src/components/ui/form-select.tsx', 'utf8');
+  const scrollbars = readFileSync('apps/web/src/styles/scrollbars.css', 'utf8');
+
+  assert.match(globals, /@import "\.\/styles\/scrollbars\.css"/);
+  assert.match(formSelect, /<SelectContent>/);
+  assert.match(select, /h-\[var\(--radix-select-trigger-height\)\] w-full min-w-\[var\(--radix-select-trigger-width\)\]/);
+  assert.match(select, /<ChevronDown className="h-4 w-4 opacity-50"/);
+  assert.match(select, /data-slot="select-viewport"/);
+  assert.match(scrollbars, /scrollbar-color:/);
+  assert.match(scrollbars, /::-webkit-scrollbar-thumb:hover/);
+  assert.match(scrollbars, /var\(--color-brand\)/);
+});
+
 test('staff routes require a session except password reset', () => {
   assert.equal(shouldRedirectStaffRoute(false, '/dashboard'), true);
   assert.equal(shouldRedirectStaffRoute(false, '/complaints/new'), true);

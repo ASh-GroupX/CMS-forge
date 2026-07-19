@@ -1,8 +1,8 @@
 # Current State
 
-Status: Redesigned UI production build is live locally on port 4000.
-Phase: Live visual review; authentication recovery remains an operator action.
-Next Task: Hard-refresh and review the live UI, then bootstrap the local admin credential.
+Status: Radix dropdown and scrollbar convergence is complete and live on port 4000.
+Phase: Shared interaction-surface correction verified; authentication recovery remains an operator action.
+Next Task: Hard-refresh and review menus, then bootstrap the local admin credential.
 Model Tier: GPT-5.5 Extra High or equivalent.
 
 ## How to use this file
@@ -71,3 +71,16 @@ Prior state history is in `.forge/archive/state-archive.md`.
   volumes, or database data were removed.
 - Current API and web endpoints both return HTTP 200 with no new P1001 or
   missing-column messages from the active services.
+- Light mode now renders light auth/navigation surfaces; dark mode explicitly
+  restores graphite nav tokens. The desktop rail cannot scroll horizontally and
+  retains vertical scrolling for long navigation.
+- Added dedicated light/dark auth and shell captures, inspected all four, and
+  rebuilt the live web container with the corrected compiled CSS.
+- Every feature dropdown now uses the shared Radix/shadcn form select; no legacy
+  source-level native `<select>` remains outside the Radix implementation.
+- Select popups retain the requested trigger-sized viewport classes and Lucide
+  chevron, with semantic light/dark surfaces and logical RTL item alignment.
+- Page and menu scrollbars now use semantic track/thumb colors, compact geometry,
+  brand active feedback, horizontal treatment, and reduced-motion-safe smooth scrolling.
+- Inspected complaint intake in EN light and reports in AR dark, passed all 118
+  visual previews, rebuilt the live web image, and confirmed port 4000 returns 200.

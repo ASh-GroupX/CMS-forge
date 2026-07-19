@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FormSelect } from '@/components/ui/form-select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { AssignmentPicker } from '../../../../components/shared/assignment-picker';
@@ -235,9 +236,8 @@ function NoteField({ className = '', id, label }: { className?: string; id: stri
 }
 
 function SelectInput({ defaultValue, label, name, options, required }: { defaultValue?: string; label: string; name: string; options: [string, string][]; required?: boolean }) {
-  return <div className="grid gap-1"><Label className="text-xs font-semibold text-muted-foreground" htmlFor={name}>{label}</Label><select className="h-9 rounded-md border border-input bg-background px-3 text-sm" defaultValue={defaultValue} id={name} name={name} required={required}>{!required ? <option value="" /> : null}{options.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select></div>;
+  return <div className="grid gap-1"><Label className="text-xs font-semibold text-muted-foreground" htmlFor={name}>{label}</Label><FormSelect defaultValue={defaultValue} id={name} name={name} options={options.map(([value, text]) => ({ label: text, value }))} placeholder={required ? undefined : label} required={required} /></div>;
 }
-
 function SectionHeader({ count, description, locale, title }: { count: number; description: string; locale: Locale; title: string }) {
   return <div className="flex flex-wrap items-start justify-between gap-2"><div><h2 className="text-base font-semibold tracking-normal">{title}</h2><p className="text-xs text-muted-foreground">{description}</p></div><Badge variant="outline">{formatNumber(locale, count)}</Badge></div>;
 }

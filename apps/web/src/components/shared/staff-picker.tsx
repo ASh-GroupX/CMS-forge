@@ -3,6 +3,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { FormSelect } from '@/components/ui/form-select';
 import { Label } from '@/components/ui/label';
 import type { Locale } from '../../i18n/staff-shell';
 import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
@@ -38,7 +39,6 @@ export function StaffPicker({
 }) {
   const listId = React.useId();
   const options = staff?.map((person, index) => ({ id: person.userId, label: staffLabel(person, locale), value: String(index) })) ?? [];
-  const selectRef = React.useRef<HTMLSelectElement>(null);
   const [selectedValue, setSelectedValue] = React.useState(options.find((option) => option.id === initialUserId)?.value ?? '');
   const selected = options.find((option) => option.value === selectedValue);
 
@@ -50,19 +50,16 @@ export function StaffPicker({
     <div className="grid gap-2">
       <Label htmlFor={`${listId}-input`}>{label}</Label>
       <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-        <select
+        <FormSelect
           aria-describedby={`${listId}-selected`}
-          className="flex h-9 min-w-0 w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
           id={`${listId}-input`}
-          onChange={(event) => setSelectedValue(event.currentTarget.value)}
-          ref={selectRef}
+          onValueChange={setSelectedValue}
+          options={options.map((option) => ({ label: option.label, value: option.value }))}
+          placeholder={t.placeholder}
           required={required}
           value={selectedValue}
-        >
-          <option value="" disabled={required}>{t.placeholder}</option>
-          {options.map((option) => <option key={option.id} value={option.value}>{option.label}</option>)}
-        </select>
-        <Button aria-label={t.clear} onClick={() => { setSelectedValue(''); if (selectRef.current) selectRef.current.value = ''; }} type="button" variant="outline">
+        />
+        <Button aria-label={t.clear} onClick={() => setSelectedValue('')} type="button" variant="outline">
           <X className="size-4" aria-hidden="true" />
         </Button>
       </div>

@@ -3,6 +3,7 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { FormSelect } from '../ui/form-select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Field, StateBlock, StatusBadge } from '../shared/ui-primitives';
 import { severityLabel } from '../../i18n/domain-labels';
@@ -110,10 +111,12 @@ function CategoryForm({ action, compact = false, item, locale, rows }: { action:
       <TextField label={t.fields.nameAr} name="nameAr" value={item?.nameAr} />
       <label className="grid gap-1 text-sm font-medium">
         {t.fields.parent}
-        <select className="rounded-md border border-input bg-background px-3 py-2" defaultValue={item?.parentId ?? ''} name="parentId">
-          <option value="">{t.root}</option>
-          {rows.filter((row) => row.parentId === null && row.id !== item?.id).map((row) => <option key={row.id} value={row.id}>{localizedName(row, locale)}</option>)}
-        </select>
+        <FormSelect
+          defaultValue={item?.parentId ?? ''}
+          name="parentId"
+          options={rows.filter((row) => row.parentId === null && row.id !== item?.id).map((row) => ({ label: localizedName(row, locale), value: row.id }))}
+          placeholder={t.root}
+        />
       </label>
       <Button className="self-end" size={compact ? 'sm' : 'default'} type="submit" variant={item ? 'outline' : 'default'}>{item ? t.actions.edit : t.actions.create}</Button>
     </form>
@@ -184,10 +187,14 @@ function SlaForm({ action, locale, policy }: { action: AdminAction; locale: Loca
       <TextField label={t.fields.timezone} name="branchTimezone" value={policy.branchTimezone} />
       <label className="grid gap-1 text-sm font-medium">
         {t.fields.calendar}
-        <select className="rounded-md border border-input bg-background px-3 py-2" defaultValue={policy.workingCalendarMode} name="workingCalendarMode">
-          <option value="ALWAYS_ON">{t.modes.ALWAYS_ON}</option>
-          <option value="CALENDAR_HOURS">{t.modes.CALENDAR_HOURS}</option>
-        </select>
+        <FormSelect
+          defaultValue={policy.workingCalendarMode}
+          name="workingCalendarMode"
+          options={[
+            { label: t.modes.ALWAYS_ON, value: 'ALWAYS_ON' },
+            { label: t.modes.CALENDAR_HOURS, value: 'CALENDAR_HOURS' },
+          ]}
+        />
       </label>
       <TextField label={t.fields.escalationLevel1} name="escalationLevel1" value={policy.escalationLevel1} />
       <TextField label={t.fields.escalationLevel2} name="escalationLevel2" value={policy.escalationLevel2 ?? ''} />

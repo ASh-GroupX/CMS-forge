@@ -77,6 +77,8 @@ function buildDarkVisualCases() {
   const en = { locale: 'en', role: 'admin', session: 'signed-in' };
   const ar = { locale: 'ar', role: 'admin', session: 'signed-in' };
   return [
+    { ...visualCase('auth landing dark', 'en', 'staff-auth', { locale: 'en' }, [staffShellText.en.title, staffShellText.en.auth.loginTitle], ['bg-nav']), theme: 'dark' },
+    { ...visualCase('staff shell dark', 'en', 'staff', en, [staffShellText.en.title, staffShellText.en.nav.today[0]], ['lg:overflow-x-hidden']), theme: 'dark' },
     { ...visualCase('dashboard dark', 'en', 'staff-dashboard', en, [modernUiText.en.dashboard.attention, modernUiText.en.dashboard.recentUpdates], []), theme: 'dark' },
     { ...visualCase('today tasks dark', 'ar', 'staff-today', ar, [employeeTodayText.ar.title, employeeTodayText.ar.sections.overdue[0]], []), theme: 'dark' },
     { ...visualCase('complaint detail dark', 'en', 'staff-complaint-detail', { ...en, tab: 'work' }, [complaintDetailText.en.title, complaintTabsText.en.work], []), theme: 'dark' },

@@ -1,24 +1,27 @@
-# CMS-Auto redesigned UI — live local review
+# Radix dropdown and scrollbar convergence — complete
 
-Status: Redesigned production build live at `http://localhost:4000`
+Status: Complete and live locally at `http://localhost:4000`
 Required model tier: GPT-5.5 Extra High or equivalent
-Risk: Medium (local runtime handoff; presentation system)
+Risk: Medium (shared form-control behavior and presentation)
 SRS IDs: `UI-DESIGN-001`, `UI-SCREEN-001`, `REQ-LOCALIZATION-001`
 
-## Current review task
+## Delivered
 
-Hard-refresh `http://localhost:4000` and review the live taste-skill redesign:
-IBM Plex bilingual typography, carbon/cobalt operational cockpit, handoff-lane
-identity, redesigned auth split, 64px command bar, 272px staff rail, semantic
-components, responsive portal shell, and persisted light/dark themes.
-
-The three-week-old Docker web image was the reason the previous UI remained
-visible. It has been replaced; the rebuilt `cms-forge-web` container from
-`codex/cms-auto-visual-redesign` now owns port 4000.
+- Replaced every remaining feature-level native `<select>` with the shared
+  Radix/shadcn form select while preserving names, submitted values, required
+  state, controlled values, defaults, disabled state, validation links, and
+  localized labels.
+- Standardized all menus on the requested Radix viewport geometry and Lucide
+  `ChevronDown` treatment.
+- Added semantic page and menu scrollbars with light/dark track, thumb, hover,
+  active, horizontal, corner, and reduced-motion behavior.
+- Improved select trigger, popup surface, checked item, focus, disabled, hover,
+  logical RTL padding, and logical item-indicator placement.
+- Preserved backend APIs, RBAC, workflow authority, and data contracts.
 
 ## Remaining operational follow-ups
 
 1. Bootstrap the local admin with an operator-selected credential before login.
-2. Repair the inherited canonical OpenAPI drift in a separate contract slice.
+2. Repair inherited canonical OpenAPI drift in a separate contract slice.
 
 Do not overwrite the unrelated local change in `docs/operations/runbook.md`.

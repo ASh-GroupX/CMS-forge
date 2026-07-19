@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { FormSelect } from '../ui/form-select';
 import { Textarea } from '../ui/textarea';
 import { StateBlock } from '../shared/ui-primitives';
 import { LocalizedFileInput } from '../shared/localized-file-input';
@@ -240,10 +241,7 @@ function SelectField({ choose, disabled = false, error, label, name, onChange, o
   return (
     <Label className="grid gap-1 text-sm font-medium" htmlFor={name}>
       {label}
-      <select aria-describedby={error ? `${name}-error` : undefined} aria-invalid={Boolean(error)} className="min-h-11 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring" defaultValue="" disabled={disabled} id={name} name={name} onChange={(event) => onChange?.(event.currentTarget.value)}>
-        <option value="">{choose}</option>
-        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-      </select>
+      <FormSelect aria-describedby={error ? `${name}-error` : undefined} aria-invalid={Boolean(error)} className="min-h-11" disabled={disabled} id={name} name={name} onValueChange={onChange} options={options} placeholder={choose} />
       <FieldError id={`${name}-error`} message={error} />
     </Label>
   );
