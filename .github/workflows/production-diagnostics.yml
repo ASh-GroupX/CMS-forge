@@ -102,6 +102,9 @@ jobs:
 
             try {
               const users = await prisma.user.findMany({ where: { isActive: true }, select: { id: true } });
+              const activeSessions = await prisma.staffSession.count({
+                where: { expiresAt: { gt: new Date() }, revokedAt: null },
+              });
               let visibleTaskRows = 0;
               for (const user of users) {
                 const rows = await prisma.task.findMany({
@@ -123,7 +126,7 @@ jobs:
                 }
                 visibleTaskRows += rows.length;
               }
-              console.log(`task-query-ok activeStaff=${users.length} visibleTaskRows=${visibleTaskRows}`);
+              console.log(`task-query-ok activeStaff=${users.length} activeSessions=${activeSessions} visibleTaskRows=${visibleTaskRows}`);
             } catch (error) {
               const meta = error && typeof error === 'object' && error.meta && typeof error.meta === 'object'
                 ? error.meta
