@@ -1,8 +1,8 @@
 # Current State
 
-Status: Deployment guard complete; production data cutover pending
+Status: GitHub-managed production deployment active and externally verified
 Phase: Production deployment hardening
-Next Task: Migrate authoritative data, correct the VPS hostname, then switch Nginx
+Next Task: Rotate exposed credentials and complete authenticated multi-role smoke
 Model Tier: GPT-5.5 Extra High or equivalent
 
 ## How to use this file
@@ -12,30 +12,22 @@ Prior state history is in `.forge/archive/state-archive.md`.
 
 ## Snapshot
 
-- GitHub Actions deploys `production` to `/root/cms-auto` as the
-  `cms-auto-prod` Compose project.
-- The VPS environment names `cms-auto.laith-alobaidi-crm.com`, which has no DNS
-  record and differs from the user-facing `cms.laith-alobaidi-crm.com` host.
-- The GitHub-managed gateway and API are healthy when addressed with their
-  configured Host header, but the public domain is still served by host Nginx
-  from the manual `/opt/cms-auto` stack on ports 4100 and 3100.
-- Actions created a separate `cms-auto-prod_postgres-data` volume on 2026-07-13;
-  the deploy workflow runs migrations but never seeds or imports the manual
-  production database.
-- The deployment guard now enforces the canonical hostname, binds port 8080 to
-  loopback, suppresses resolved Compose output, removes global image pruning,
-  checks every long-running CMS service, and fails unless the public domain
-  returns the exact Git commit SHA from the managed Caddy gateway.
-- Remote production validation now runs directly with Node and no longer
-  installs the workspace or downloads a package manager during deployment.
+- Host Nginx routes `cms.laith-alobaidi-crm.com` to the GitHub-managed Caddy
+  gateway on `127.0.0.1:8080`.
+- The authoritative manual database was backed up and restored into
+  `cms-auto-prod_postgres-data`; selected row counts matched exactly before and
+  after restore, and migration 29 applied successfully.
+- Production commit `45865725` deployed through Actions run `29728937945`,
+  attempt 2. Public HTTPS returns that exact SHA in `X-CMS-Deployment` and API
+  health is `ok`.
+- API, web, worker, Caddy, PostgreSQL, and Redis passed the workflow health gate.
+- Port 8080 is loopback-only and is not reachable externally.
+- The first deployment attempt hit a transient 15-second SSH reachability
+  timeout; the workflow now allows a bounded 60-second retry window.
+- Manual API and web containers remain stopped. Their PostgreSQL and Redis
+  containers and the cutover backup remain available for rollback.
 
 ## Current Stop
 
-Do not switch Nginx yet. Verify and migrate the authoritative manual database
-into the managed production database first, with tested backups and rollback.
-
-## Security Carry-Forward
-
-Rotate database, Redis, SMTP, and object-storage credentials that appeared in
-the historical Actions log. Do not include replacement values in GitHub logs or
-Forge evidence.
+Functional deployment cutover is complete. Security closeout still requires
+credential rotation, authenticated multi-role smoke, and off-VPS backup proof.

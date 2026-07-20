@@ -67,7 +67,7 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
         run: |
-          timeout 15 bash -c "until nc -zvw5 \"$VPS_HOST\" \"$VPS_PORT\"; do sleep 1; done"
+          timeout 60 bash -c "until nc -zvw5 \"$VPS_HOST\" \"$VPS_PORT\"; do sleep 5; done"
 
       - name: Create release tarball
         run: |

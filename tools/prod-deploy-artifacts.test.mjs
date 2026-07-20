@@ -48,6 +48,7 @@ test('production deploy artifacts avoid dev trust and committed secrets', () => 
 
 test('production deployment verifies that the public domain reaches its stack', () => {
   assert.match(workflow, /PRODUCTION_SITE_DOMAIN: cms\.laith-alobaidi-crm\.com/);
+  assert.match(workflow, /timeout 60 bash -c/);
   assert.match(workflow, /test "\$SITE_DOMAIN" = '\$\{\{ env\.PRODUCTION_SITE_DOMAIN \}\}'/);
   assert.match(workflow, /DEPLOYMENT_SHA='\$\{\{ github\.sha \}\}'/);
   assert.match(compose, /com\.cms-auto\.revision: \$\{DEPLOYMENT_SHA:-manual\}/);
