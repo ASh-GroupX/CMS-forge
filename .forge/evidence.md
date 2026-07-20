@@ -14645,3 +14645,80 @@ SRS: UI-DESIGN-001, NFR-A11Y-001
 - Passed: typecheck, lint, `git diff --check`, and visual review 118 previews.
 - Manually inspected EN dashboard light/dark screenshots; identity badges are
   visually balanced and legible without layout change.
+
+---
+
+## Production Deployment Route Verification (2026-07-20)
+
+SRS: NFR-SEC-002, NFR-AVAIL-001, OPS-RUNBOOK-001
+
+- Computer-use inspection confirmed Actions run 18 built and started healthy
+  `cms-auto-prod-*` containers under `/root/cms-auto` on the VPS.
+- The public site can still be served by the separate `/opt/cms-auto` stack,
+  because the workflow checked only internal container health and not the public
+  route.
+- Actions printed resolved Compose environment values into its logs and ran a
+  VPS-global image prune despite the host containing unrelated projects.
+- Added a Caddy response marker and public-domain verification, made Compose
+  validation quiet, and removed global image pruning.
+
+### Verification
+
+- Passed: `node --test tools/prod-deploy-artifacts.test.mjs` (4/4),
+  `corepack pnpm lint`, and `git diff --check`.
+- Needs Human Review: Nginx upstream alignment to `127.0.0.1:8080`, credential
+  rotation, production merge, and the resulting Actions run.
+
+### Security Self-Check
+
+- The change removes secret-bearing resolved config from CI output and does not
+  alter authentication, RBAC, branch scope, workflow authority, audit writes, or
+  portal response data.
+
+---
+
+## Production Stack Identity And Host Guard (2026-07-20)
+
+SRS: NFR-SEC-002, NFR-AVAIL-001, NFR-DATA-001, OPS-RUNBOOK-001
+
+- Repository and Actions-script inspection confirmed that the public and
+  automated deployment paths are different Compose projects, directories,
+  ports, and PostgreSQL volumes.
+- Actions run `29687352035` deployed commit `750460a7` to the healthy
+  `cms-auto-prod-*` containers, but its resolved configuration used
+  `cms-auto.laith-alobaidi-crm.com`. That hostname has no DNS record and differs
+  from the public `cms.laith-alobaidi-crm.com` domain.
+- Read-only probes returned the Next.js app and API health through port 8080
+  only when the configured Actions Host header was used. The public Host header
+  reached no matching Caddy site, while the public HTTPS domain continued to be
+  served by host Nginx.
+- Historical Actions run `29283344403` created the separate
+  `cms-auto-prod_postgres-data` volume. The workflow deploys migrations but has
+  no seed or import step, so public routing must not switch until the
+  authoritative manual database is backed up, compared, and migrated.
+- The Compose gateway now binds `127.0.0.1:8080:80`, and the workflow rejects a
+  VPS `SITE_DOMAIN` that is not the canonical public hostname.
+- API, web, worker, and Caddy containers carry the Git commit SHA as a revision
+  label. Caddy returns that SHA in `X-CMS-Deployment`, and the workflow compares
+  the public header with the exact triggering commit before reporting success.
+- Deployment health now covers API, web, worker, Caddy, PostgreSQL, and Redis.
+  Production config validation runs directly with Node without installing the
+  workspace or downloading a package manager on the VPS.
+
+### Verification
+
+- Passed: `node --test tools/prod-deploy-artifacts.test.mjs` (4/4).
+- Passed: `corepack pnpm lint` and `git diff --check`.
+- Passed: `docker compose --env-file .env.production.example -f
+  docker-compose.prod.yml config --quiet`.
+- Passed: GitHub Actions metadata and filtered deployment-log inspection.
+- Passed: read-only public and managed-gateway HTTP probes.
+- Needs Human Review: database comparison, backups, migration, Nginx cutover,
+  multi-role smoke, and credential rotation.
+
+### Security Self-Check
+
+- Port 8080 is no longer intentionally exposed on every VPS interface.
+- No production credentials or customer records were read or recorded by this
+  change. Authentication, RBAC, branch scope, audit, and portal data behavior
+  are unchanged.

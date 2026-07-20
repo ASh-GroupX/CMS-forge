@@ -9,6 +9,9 @@ concurrency:
   group: production-deploy
   cancel-in-progress: false
 
+env:
+  PRODUCTION_SITE_DOMAIN: cms.laith-alobaidi-crm.com
+
 jobs:
   validate:
     name: Validate and Test
@@ -94,16 +97,19 @@ jobs:
             # Ensure target directory exists
             mkdir -p /root/cms-auto
             cd /root/cms-auto
+            DEPLOYMENT_SHA='${{ github.sha }}'
+            export DEPLOYMENT_SHA
 
             # Extract release package and clean up tarball
             tar -xzf release.tar.gz
             rm -f release.tar.gz
 
-            # Set up pnpm and run local validation checks
-            corepack enable
-            corepack pnpm install --frozen-lockfile
-            corepack pnpm prod:config:check -- --env-file .env.production
-            docker compose --env-file .env.production -f docker-compose.prod.yml config
+            # Validate production inputs without a runtime package download.
+            node tools/prod-config-check.mjs --env-file .env.production
+            docker compose --env-file .env.production -f docker-compose.prod.yml config --quiet
+            SITE_DOMAIN="$(grep '^SITE_DOMAIN=' .env.production | cut -d= -f2-)"
+            test -n "$SITE_DOMAIN"
+            test "$SITE_DOMAIN" = '${{ env.PRODUCTION_SITE_DOMAIN }}'
 
             # Create and verify a pre-migration database backup. Fail closed so
             # the migrate service cannot run unless the current database is safe.
@@ -122,33 +128,40 @@ jobs:
             docker compose --env-file .env.production -f docker-compose.prod.yml build
             docker compose --env-file .env.production -f docker-compose.prod.yml up -d
 
-            # Clean up old unused images
-            docker image prune -f
-
-            # Health Check Verification (checks Docker container health status)
+            # Health Check Verification (checks every long-running CMS service)
             echo "Waiting for services to become healthy..."
-            API_HEALTHY=0
-            WEB_HEALTHY=0
-            for i in $(seq 1 30); do
-              if [ "$API_HEALTHY" -eq 0 ] && docker inspect --format='{{.State.Health.Status}}' cms-auto-prod-api-1 2>/dev/null | grep -q "healthy"; then
-                echo "API is healthy!"
-                API_HEALTHY=1
-              fi
-              if [ "$WEB_HEALTHY" -eq 0 ] && docker inspect --format='{{.State.Health.Status}}' cms-auto-prod-web-1 2>/dev/null | grep -q "healthy"; then
-                echo "Web UI is healthy!"
-                WEB_HEALTHY=1
-              fi
-              if [ "$API_HEALTHY" -eq 1 ] && [ "$WEB_HEALTHY" -eq 1 ]; then
+            UNHEALTHY="api web worker caddy postgres redis"
+            for i in $(seq 1 45); do
+              UNHEALTHY=""
+              for SERVICE in api web worker caddy postgres redis; do
+                CONTAINER="cms-auto-prod-$SERVICE-1"
+                STATUS="$(docker inspect --format='{{.State.Health.Status}}' "$CONTAINER" 2>/dev/null || true)"
+                if [ "$STATUS" != "healthy" ]; then
+                  UNHEALTHY="$UNHEALTHY $SERVICE"
+                fi
+              done
+              if [ -z "$UNHEALTHY" ]; then
                 break
               fi
               sleep 2
             done
 
-            if [ "$API_HEALTHY" -ne 1 ] || [ "$WEB_HEALTHY" -ne 1 ]; then
-              echo "Deployment failed: API or Web did not become healthy in time."
-              docker compose --env-file .env.production -f docker-compose.prod.yml logs api || true
-              docker compose --env-file .env.production -f docker-compose.prod.yml logs web || true
+            if [ -n "$UNHEALTHY" ]; then
+              echo "Deployment failed: unhealthy services:$UNHEALTHY"
+              docker compose --env-file .env.production -f docker-compose.prod.yml logs \
+                api web worker caddy postgres redis || true
               exit 1
             fi
+
+            for SERVICE in api web worker caddy; do
+              CONTAINER="cms-auto-prod-$SERVICE-1"
+              test "$(docker inspect --format='{{ index .Config.Labels "com.cms-auto.revision" }}' "$CONTAINER")" = "$DEPLOYMENT_SHA"
+            done
+
+            # Fail unless host Nginx serves this exact release publicly.
+            curl -fsS -H "Host: $SITE_DOMAIN" http://127.0.0.1:8080/ >/dev/null
+            PUBLIC_SHA="$(curl -fsSI "https://$SITE_DOMAIN/" | tr -d '\r' | awk -F': ' 'tolower($1) == "x-cms-deployment" { print $2 }')"
+            test "$PUBLIC_SHA" = "$DEPLOYMENT_SHA"
+            curl -fsS "https://$SITE_DOMAIN/api/health" >/dev/null
 
             echo "Production deployed and verified"

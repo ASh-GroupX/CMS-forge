@@ -1,27 +1,35 @@
-# Production dashboard contrast repair — complete
+# Production Data And Route Cutover
 
-Status: Complete on `production`
+Status: Deployment guards ready; production cutover blocked on data verification
 Required model tier: GPT-5.5 Extra High or equivalent
-Risk: Low (semantic foreground correction and proof diagnostics)
-SRS IDs: `UI-DESIGN-001`, `NFR-A11Y-001`
+Risk: Critical (production data, credentials, and public routing)
+SRS IDs: `NFR-SEC-002`, `NFR-AVAIL-001`, `NFR-DATA-001`,
+`OPS-RUNBOOK-001`
 
-## Delivered
+## Task
 
-- Reproduced the Linux CI Axe failure for the English dashboard status preview.
-- Corrected the staff identity badge from white-on-cobalt-tint to the semantic
-  navigation foreground, preserving contrast in light and dark themes.
-- Added a shell regression assertion for the semantic foreground class.
-- Improved Axe failure output to include the failing selector and summary so
-  future contrast regressions identify the exact element and measured ratio.
+Confirm the authoritative `/opt/cms-auto` database, back it up, and migrate it
+into the GitHub-managed `cms-auto-prod` database before changing public traffic.
+Set the VPS `SITE_DOMAIN` to `cms.laith-alobaidi-crm.com`, update host Nginx to
+route that domain to loopback port 8080, and retain the manual stack as the
+tested rollback target until authenticated production smoke passes.
+
+## Required Gates
+
+- Needs Human Review: compare non-secret row counts and latest complaint dates
+  in `cms-auto-postgres-1` and `cms-auto-prod-postgres-1`.
+- Needs Human Review: create and verify backups of both databases before restore
+  or routing changes.
+- Needs Human Review: migrate the authoritative data, run Prisma migrations,
+  and smoke employee, manager, and administrator access in English and Arabic.
+- Needs Human Review: rotate every credential present in the historical
+  resolved-Compose Actions log.
 
 ## Proof
 
-- Passed: accessibility proof, 26 route previews.
-- Passed: root `pnpm test`, 62/62 tests with coverage gates.
-- Passed: typecheck, lint, `git diff --check`.
-- Passed: visual review, 118 previews; EN dashboard light/dark inspected.
-
-## Remaining operational follow-ups
-
-1. Bootstrap the local admin with an operator-selected credential before login.
-2. Repair inherited canonical OpenAPI drift in a separate contract slice.
+- Passed: `node --test tools/prod-deploy-artifacts.test.mjs` (4/4).
+- Passed: `corepack pnpm lint` and `git diff --check`.
+- Passed: `docker compose --env-file .env.production.example -f
+  docker-compose.prod.yml config --quiet`.
+- Passed: read-only live probes distinguish the public Nginx route from the
+  GitHub-managed Caddy route and verify the latter's API health.
