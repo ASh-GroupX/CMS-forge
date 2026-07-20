@@ -14800,3 +14800,20 @@ SRS: `NFR-SEC-002`, `NFR-AVAIL-001`, `OPS-RUNBOOK-001`,
   audit behavior, or portal data exposure.
 - No credentials, customer row contents, or sessions were read during
   implementation.
+
+### Production Incident Results
+
+- Passed: production deployment run `29735104767` deployed commit `a0f80255`
+  and passed validation, build, migration, six-service health, and public exact
+  revision verification.
+- Passed: diagnostics runs `29735402373`, `29735605114`, `29735676508`,
+  `29735737663`, and `29735790516` completed successfully.
+- Passed: web-to-API and public API health both returned `ok`.
+- Passed: the production task relation query executed for all 8 active staff
+  users and 38 visible task rows without a Prisma, migration, relation, date,
+  or serialization failure.
+- Passed: 3 unexpired sessions resolved to 3 active/unlocked users, and all 3
+  carried `COMPLAINT_COMMENT_INTERNAL`.
+- Not Run: authenticated browser smoke. No production smoke credential is
+  configured in GitHub, and diagnostics did not bypass authentication or mint
+  an impersonation session.
