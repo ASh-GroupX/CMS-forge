@@ -41,9 +41,12 @@ test('production deploy artifacts avoid dev trust and committed secrets', () => 
 
   assert.match(workflow, /config --quiet/);
   assert.doesNotMatch(workflow, /docker image prune/);
+  assert.match(compose, /127\.0\.0\.1:8080:80/);
 });
 
 test('production deployment verifies that the public domain reaches its stack', () => {
+  assert.match(workflow, /PRODUCTION_SITE_DOMAIN: cms\.laith-alobaidi-crm\.com/);
+  assert.match(workflow, /test "\$SITE_DOMAIN" = '\$\{\{ env\.PRODUCTION_SITE_DOMAIN \}\}'/);
   assert.match(caddy, /X-CMS-Deployment "github-actions"/);
   assert.match(workflow, /127\.0\.0\.1:8080/);
   assert.match(workflow, /x-cms-deployment: github-actions/);

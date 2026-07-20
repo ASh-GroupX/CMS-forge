@@ -1,8 +1,8 @@
 # Current State
 
-Status: Production deployment verification fix passed local proof
+Status: Deployment guard complete; production data cutover pending
 Phase: Production deployment hardening
-Next Task: Verify, commit, merge to production, and align host Nginx to port 8080
+Next Task: Migrate authoritative data, correct the VPS hostname, then switch Nginx
 Model Tier: GPT-5.5 Extra High or equivalent
 
 ## How to use this file
@@ -12,17 +12,27 @@ Prior state history is in `.forge/archive/state-archive.md`.
 
 ## Snapshot
 
-- GitHub Actions deploys `production` to `/root/cms-auto` with
-  `docker-compose.prod.yml`; that stack is internally healthy on host port 8080.
-- The public site may still route to the manually managed `/opt/cms-auto` stack
-  on port 4100, allowing false-positive Actions runs.
-- Resolved Compose configuration was printed into Actions logs and global image
-  pruning could affect unrelated projects on the shared VPS.
-- The fix makes config validation quiet, removes global pruning, marks responses
-  from the GitHub-managed Caddy gateway, and verifies that marker publicly.
-- No API, workflow authority, database schema, or frontend behavior changed.
+- GitHub Actions deploys `production` to `/root/cms-auto` as the
+  `cms-auto-prod` Compose project.
+- The VPS environment names `cms-auto.laith-alobaidi-crm.com`, which has no DNS
+  record and differs from the user-facing `cms.laith-alobaidi-crm.com` host.
+- The GitHub-managed gateway and API are healthy when addressed with their
+  configured Host header, but the public domain is still served by host Nginx
+  from the manual `/opt/cms-auto` stack on ports 4100 and 3100.
+- Actions created a separate `cms-auto-prod_postgres-data` volume on 2026-07-13;
+  the deploy workflow runs migrations but never seeds or imports the manual
+  production database.
+- The deployment guard now enforces the canonical hostname, binds port 8080 to
+  loopback, suppresses resolved Compose output, removes global image pruning,
+  and fails unless the public domain returns the managed Caddy marker.
 
 ## Current Stop
 
-Commit and push the fix branch, then align host Nginx and merge to `production`.
-Historical credentials visible in Actions logs require operator rotation.
+Do not switch Nginx yet. Verify and migrate the authoritative manual database
+into the managed production database first, with tested backups and rollback.
+
+## Security Carry-Forward
+
+Rotate database, Redis, SMTP, and object-storage credentials that appeared in
+the historical Actions log. Do not include replacement values in GitHub logs or
+Forge evidence.
