@@ -103,7 +103,9 @@ jobs:
             corepack enable
             corepack pnpm install --frozen-lockfile
             corepack pnpm prod:config:check -- --env-file .env.production
-            docker compose --env-file .env.production -f docker-compose.prod.yml config
+            docker compose --env-file .env.production -f docker-compose.prod.yml config --quiet
+            SITE_DOMAIN="$(grep '^SITE_DOMAIN=' .env.production | cut -d= -f2-)"
+            test -n "$SITE_DOMAIN"
 
             # Create and verify a pre-migration database backup. Fail closed so
             # the migrate service cannot run unless the current database is safe.
@@ -121,9 +123,6 @@ jobs:
             # Build and deploy production containers
             docker compose --env-file .env.production -f docker-compose.prod.yml build
             docker compose --env-file .env.production -f docker-compose.prod.yml up -d
-
-            # Clean up old unused images
-            docker image prune -f
 
             # Health Check Verification (checks Docker container health status)
             echo "Waiting for services to become healthy..."
@@ -150,5 +149,10 @@ jobs:
               docker compose --env-file .env.production -f docker-compose.prod.yml logs web || true
               exit 1
             fi
+
+            # Fail if host Nginx still routes the public domain to another stack.
+            curl -fsS -H "Host: $SITE_DOMAIN" http://127.0.0.1:8080/ >/dev/null
+            curl -fsSI "https://$SITE_DOMAIN/" | tr -d '\r' | grep -Fqi 'x-cms-deployment: github-actions'
+            curl -fsS "https://$SITE_DOMAIN/api/health" >/dev/null
 
             echo "Production deployed and verified"

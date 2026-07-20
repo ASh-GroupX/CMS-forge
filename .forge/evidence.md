@@ -14645,3 +14645,32 @@ SRS: UI-DESIGN-001, NFR-A11Y-001
 - Passed: typecheck, lint, `git diff --check`, and visual review 118 previews.
 - Manually inspected EN dashboard light/dark screenshots; identity badges are
   visually balanced and legible without layout change.
+
+---
+
+## Production Deployment Route Verification (2026-07-20)
+
+SRS: NFR-SEC-002, NFR-AVAIL-001, OPS-RUNBOOK-001
+
+- Computer-use inspection confirmed Actions run 18 built and started healthy
+  `cms-auto-prod-*` containers under `/root/cms-auto` on the VPS.
+- The public site can still be served by the separate `/opt/cms-auto` stack,
+  because the workflow checked only internal container health and not the public
+  route.
+- Actions printed resolved Compose environment values into its logs and ran a
+  VPS-global image prune despite the host containing unrelated projects.
+- Added a Caddy response marker and public-domain verification, made Compose
+  validation quiet, and removed global image pruning.
+
+### Verification
+
+- Passed: `node --test tools/prod-deploy-artifacts.test.mjs` (4/4),
+  `corepack pnpm lint`, and `git diff --check`.
+- Needs Human Review: Nginx upstream alignment to `127.0.0.1:8080`, credential
+  rotation, production merge, and the resulting Actions run.
+
+### Security Self-Check
+
+- The change removes secret-bearing resolved config from CI output and does not
+  alter authentication, RBAC, branch scope, workflow authority, audit writes, or
+  portal response data.

@@ -5,6 +5,7 @@ import test from 'node:test';
 const compose = readFileSync('docker-compose.prod.yml', 'utf8').replace(/\r\n/g, '\n');
 const caddy = readFileSync('Caddyfile', 'utf8').replace(/\r\n/g, '\n');
 const envExample = readFileSync('.env.production.example', 'utf8').replace(/\r\n/g, '\n');
+const workflow = readFileSync('.github/workflows/deploy.yml', 'utf8').replace(/\r\n/g, '\n');
 
 test('production deploy artifacts define the required pilot stack', () => {
   for (const service of ['caddy', 'web', 'api', 'migrate', 'worker', 'postgres', 'redis']) {
@@ -37,4 +38,14 @@ test('production deploy artifacts avoid dev trust and committed secrets', () => 
   for (const name of ['POSTGRES_PASSWORD', 'REDIS_PASSWORD', 'SMTP_PASSWORD', 'ATTACHMENT_S3_SECRET_ACCESS_KEY']) {
     assert.match(envExample, new RegExp(`${name}=replace-with-`));
   }
+
+  assert.match(workflow, /config --quiet/);
+  assert.doesNotMatch(workflow, /docker image prune/);
+});
+
+test('production deployment verifies that the public domain reaches its stack', () => {
+  assert.match(caddy, /X-CMS-Deployment "github-actions"/);
+  assert.match(workflow, /127\.0\.0\.1:8080/);
+  assert.match(workflow, /x-cms-deployment: github-actions/);
+  assert.match(workflow, /https:\/\/\$SITE_DOMAIN\/api\/health/);
 });
