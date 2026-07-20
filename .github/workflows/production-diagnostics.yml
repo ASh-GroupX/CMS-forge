@@ -102,9 +102,29 @@ jobs:
 
             try {
               const users = await prisma.user.findMany({ where: { isActive: true }, select: { id: true } });
-              const activeSessions = await prisma.staffSession.count({
+              const sessions = await prisma.staffSession.findMany({
                 where: { expiresAt: { gt: new Date() }, revokedAt: null },
+                select: {
+                  user: {
+                    select: {
+                      isActive: true,
+                      lockedAt: true,
+                      role: {
+                        select: {
+                          permissions: {
+                            where: { permission: { isActive: true } },
+                            select: { permission: { select: { code: true } } },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
               });
+              const validSessions = sessions.filter((session) => session.user.isActive && !session.user.lockedAt);
+              const taskAuthorizedSessions = validSessions.filter((session) =>
+                session.user.role.permissions.some(({ permission }) => permission.code === 'COMPLAINT_COMMENT_INTERNAL'),
+              );
               let visibleTaskRows = 0;
               for (const user of users) {
                 const rows = await prisma.task.findMany({
@@ -126,7 +146,7 @@ jobs:
                 }
                 visibleTaskRows += rows.length;
               }
-              console.log(`task-query-ok activeStaff=${users.length} activeSessions=${activeSessions} visibleTaskRows=${visibleTaskRows}`);
+              console.log(`task-query-ok activeStaff=${users.length} activeSessions=${sessions.length} validSessions=${validSessions.length} taskAuthorizedSessions=${taskAuthorizedSessions.length} visibleTaskRows=${visibleTaskRows}`);
             } catch (error) {
               const meta = error && typeof error === 'object' && error.meta && typeof error.meta === 'object'
                 ? error.meta
