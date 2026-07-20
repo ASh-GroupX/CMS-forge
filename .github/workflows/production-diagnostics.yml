@@ -70,6 +70,78 @@ jobs:
             curl -fsS https://cms.laith-alobaidi-crm.com/api/health || echo "public API health check failed"
             printf '\n'
 
+            echo "=== Read-only production task query probe ==="
+            docker compose --env-file .env.production -f docker-compose.prod.yml exec -T api \
+              node --input-type=module - <<'NODE'
+            import { PrismaClient } from '@prisma/client';
+
+            const prisma = new PrismaClient();
+            const taskSelect = {
+              id: true,
+              title: true,
+              ownerId: true,
+              assigneeId: true,
+              dueAt: true,
+              status: true,
+              assignedDepartmentId: true,
+              nextActionWhat: true,
+              nextActionWhoId: true,
+              nextActionWhen: true,
+              isCustomerPromise: true,
+              visibility: true,
+              confidentialityLevel: true,
+              createdAt: true,
+              updatedAt: true,
+              owner: { select: { nameEn: true, branchId: true, branch: { select: { nameEn: true, timezone: true } } } },
+              assignee: { select: { nameEn: true, branchId: true, branch: { select: { nameEn: true, timezone: true } } } },
+              assignedDepartment: { select: { nameEn: true, nameAr: true, branchId: true } },
+              nextActionWho: { select: { nameEn: true, branchId: true } },
+              links: { select: { entityType: true, entityId: true } },
+              participants: { select: { userId: true, role: true, user: { select: { nameEn: true, nameAr: true } } } },
+            };
+
+            try {
+              const users = await prisma.user.findMany({ where: { isActive: true }, select: { id: true } });
+              let visibleTaskRows = 0;
+              for (const user of users) {
+                const rows = await prisma.task.findMany({
+                  where: {
+                    OR: [
+                      { ownerId: user.id },
+                      { assigneeId: user.id },
+                      { nextActionWhoId: user.id },
+                      { participants: { some: { userId: user.id } } },
+                    ],
+                  },
+                  select: taskSelect,
+                });
+                for (const task of rows) {
+                  task.dueAt.toISOString();
+                  task.createdAt.toISOString();
+                  task.updatedAt.toISOString();
+                  if (task.nextActionWhen) task.nextActionWhen.toISOString();
+                }
+                visibleTaskRows += rows.length;
+              }
+              console.log(`task-query-ok activeStaff=${users.length} visibleTaskRows=${visibleTaskRows}`);
+            } catch (error) {
+              const meta = error && typeof error === 'object' && error.meta && typeof error.meta === 'object'
+                ? error.meta
+                : {};
+              console.log(JSON.stringify({
+                taskQueryError: true,
+                name: error?.name ?? 'UnknownError',
+                code: error?.code ?? null,
+                modelName: meta.modelName ?? null,
+                column: meta.column ?? null,
+                target: Array.isArray(meta.target) ? meta.target.filter((value) => typeof value === 'string') : null,
+              }));
+              process.exitCode = 1;
+            } finally {
+              await prisma.$disconnect();
+            }
+            NODE
+
             docker compose --env-file .env.production -f docker-compose.prod.yml logs \
               --no-color --since "$LOOKBACK" --tail 500 api web >"$LOG_FILE" 2>&1 || true
 

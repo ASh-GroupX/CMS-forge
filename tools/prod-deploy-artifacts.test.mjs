@@ -65,6 +65,10 @@ test('production diagnostics are manual, read-only, bounded, and sanitized', () 
   assert.match(diagnostics, /5m\|10m\|30m\|60m/);
   assert.match(diagnostics, /--tail 500 api web/);
   assert.match(diagnostics, /tail -n 250/);
+  assert.match(diagnostics, /Read-only production task query probe/);
+  assert.match(diagnostics, /prisma\.task\.findMany/);
+  assert.match(diagnostics, /task-query-ok activeStaff=/);
+  assert.doesNotMatch(diagnostics, /prisma\.[a-zA-Z]+\.(create|update|upsert|delete|executeRaw)/);
   assert.match(diagnostics, /\[REDACTED\]/);
   assert.match(diagnostics, /\[REDACTED_EMAIL\]/);
   assert.match(diagnostics, /\[REDACTED_IP\]/);

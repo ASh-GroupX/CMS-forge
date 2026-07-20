@@ -14776,10 +14776,11 @@ SRS: `NFR-SEC-002`, `NFR-AVAIL-001`, `OPS-RUNBOOK-001`,
 - Added a manual GitHub Actions workflow that uses the existing VPS SSH secrets
   to inspect bounded recent API/web error signals without requiring direct VPS
   access.
-- The workflow reads no environment values, database rows, session cookies, or
+- The workflow reads no environment values, row contents, session cookies, or
   credentials. It validates a fixed lookback choice, caps source and displayed
-  log lines, and redacts connection credentials, secret-like fields, email
-  addresses, and IP addresses before output.
+  log lines, redacts connection credentials, secret-like fields, email
+  addresses, and IP addresses before output, and exposes only aggregate counts
+  from its read-only task-query probe.
 - Diagnostics are read-only: container state, revision labels, internal/public
   health, and sanitized API/web error signals only.
 
@@ -14797,5 +14798,5 @@ SRS: `NFR-SEC-002`, `NFR-AVAIL-001`, `OPS-RUNBOOK-001`,
   state changes.
 - It does not alter authentication, RBAC, branch scope, workflow transactions,
   audit behavior, or portal data exposure.
-- No credentials, customer data, sessions, or production log output were read
-  during implementation.
+- No credentials, customer row contents, or sessions were read during
+  implementation.
