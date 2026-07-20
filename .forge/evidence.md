@@ -14765,3 +14765,37 @@ METHOD-TEST-001
   audit, workflow authority, and portal privacy behavior.
 - Credentials exposed by the historical non-quiet Compose log remain scheduled
   for rotation and are not considered closed security evidence.
+
+---
+
+## Read-Only Production Diagnostics Workflow (2026-07-20)
+
+SRS: `NFR-SEC-002`, `NFR-AVAIL-001`, `OPS-RUNBOOK-001`,
+`METHOD-TEST-001`
+
+- Added a manual GitHub Actions workflow that uses the existing VPS SSH secrets
+  to inspect bounded recent API/web error signals without requiring direct VPS
+  access.
+- The workflow reads no environment values, database rows, session cookies, or
+  credentials. It validates a fixed lookback choice, caps source and displayed
+  log lines, and redacts connection credentials, secret-like fields, email
+  addresses, and IP addresses before output.
+- Diagnostics are read-only: container state, revision labels, internal/public
+  health, and sanitized API/web error signals only.
+
+### Verification
+
+- Passed: `node --test tools/prod-deploy-artifacts.test.mjs` (5/5).
+- Passed: `corepack pnpm lint`.
+- Passed: `git diff --check`.
+- Needs Human Review: merge the workflow, reproduce the task failure, run
+  `Production Diagnostics`, and inspect the sanitized error signal.
+
+### Security Self-Check
+
+- The workflow has read-only repository permission and makes no production
+  state changes.
+- It does not alter authentication, RBAC, branch scope, workflow transactions,
+  audit behavior, or portal data exposure.
+- No credentials, customer data, sessions, or production log output were read
+  during implementation.

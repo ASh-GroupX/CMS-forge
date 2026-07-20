@@ -22,6 +22,9 @@ Prior state history is in `.forge/archive/state-archive.md`.
   health is `ok`.
 - API, web, worker, Caddy, PostgreSQL, and Redis passed the workflow health gate.
 - Port 8080 is loopback-only and is not reachable externally.
+- GitHub now has a manual, read-only production diagnostics workflow for
+  bounded API/web error signals with credential and PII redaction. It must be
+  merged before it can be dispatched against the reported task failure.
 - The first deployment attempt hit a transient 15-second SSH reachability
   timeout; the workflow now allows a bounded 60-second retry window.
 - Manual API and web containers remain stopped. Their PostgreSQL and Redis

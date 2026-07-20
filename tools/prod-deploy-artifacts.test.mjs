@@ -6,6 +6,7 @@ const compose = readFileSync('docker-compose.prod.yml', 'utf8').replace(/\r\n/g,
 const caddy = readFileSync('Caddyfile', 'utf8').replace(/\r\n/g, '\n');
 const envExample = readFileSync('.env.production.example', 'utf8').replace(/\r\n/g, '\n');
 const workflow = readFileSync('.github/workflows/deploy.yml', 'utf8').replace(/\r\n/g, '\n');
+const diagnostics = readFileSync('.github/workflows/production-diagnostics.yml', 'utf8').replace(/\r\n/g, '\n');
 
 test('production deploy artifacts define the required pilot stack', () => {
   for (const service of ['caddy', 'web', 'api', 'migrate', 'worker', 'postgres', 'redis']) {
@@ -56,4 +57,17 @@ test('production deployment verifies that the public domain reaches its stack', 
   assert.match(workflow, /127\.0\.0\.1:8080/);
   assert.match(workflow, /test "\$PUBLIC_SHA" = "\$DEPLOYMENT_SHA"/);
   assert.match(workflow, /https:\/\/\$SITE_DOMAIN\/api\/health/);
+});
+
+test('production diagnostics are manual, read-only, bounded, and sanitized', () => {
+  assert.match(diagnostics, /workflow_dispatch:/);
+  assert.match(diagnostics, /permissions:\n  contents: read/);
+  assert.match(diagnostics, /5m\|10m\|30m\|60m/);
+  assert.match(diagnostics, /--tail 500 api web/);
+  assert.match(diagnostics, /tail -n 250/);
+  assert.match(diagnostics, /\[REDACTED\]/);
+  assert.match(diagnostics, /\[REDACTED_EMAIL\]/);
+  assert.match(diagnostics, /\[REDACTED_IP\]/);
+  assert.doesNotMatch(diagnostics, /set -x|cat \.env|printenv|docker compose[^\n]* config/);
+  assert.doesNotMatch(diagnostics, /postgres[^\n]*exec[^\n]*(psql|pg_dump)|redis-cli/);
 });

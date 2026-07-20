@@ -1,0 +1,86 @@
+name: Production Diagnostics
+
+on:
+  workflow_dispatch:
+    inputs:
+      lookback:
+        description: Recent log window to inspect
+        required: true
+        default: 10m
+        type: choice
+        options:
+          - 5m
+          - 10m
+          - 30m
+          - 60m
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-diagnostics
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    name: Read-only API and web diagnostics
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check VPS SSH reachability
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+        run: timeout 60 bash -c "until nc -zvw5 \"$VPS_HOST\" \"$VPS_PORT\"; do sleep 5; done"
+
+      - name: Inspect recent production failures
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 5m
+          request_pty: false
+          script: |
+            set -eu
+            cd /root/cms-auto
+            LOOKBACK='${{ inputs.lookback }}'
+
+            case "$LOOKBACK" in
+              5m|10m|30m|60m) ;;
+              *) echo "Invalid diagnostic lookback"; exit 2 ;;
+            esac
+
+            LOG_FILE="$(mktemp)"
+            trap 'rm -f "$LOG_FILE"' EXIT
+
+            echo "=== Production service state ==="
+            for SERVICE in api web worker caddy postgres redis; do
+              CONTAINER="cms-auto-prod-$SERVICE-1"
+              STATUS="$(docker inspect --format='{{.State.Status}}/{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' "$CONTAINER" 2>/dev/null || true)"
+              REVISION="$(docker inspect --format='{{ index .Config.Labels "com.cms-auto.revision" }}' "$CONTAINER" 2>/dev/null || true)"
+              printf '%s status=%s revision=%s\n' "$SERVICE" "${STATUS:-missing}" "${REVISION:-unknown}"
+            done
+
+            echo "=== Internal and public health ==="
+            docker compose --env-file .env.production -f docker-compose.prod.yml exec -T web \
+              wget -qO- http://api:3000/health || echo "web-to-api health check failed"
+            printf '\n'
+            curl -fsS https://cms.laith-alobaidi-crm.com/api/health || echo "public API health check failed"
+            printf '\n'
+
+            docker compose --env-file .env.production -f docker-compose.prod.yml logs \
+              --no-color --since "$LOOKBACK" --tail 500 api web >"$LOG_FILE" 2>&1 || true
+
+            echo "=== Sanitized recent error signals ==="
+            sed -E \
+              -e 's#(postgres(ql)?|redis)://[^[:space:]@]+@#\1://[REDACTED]@#Ig' \
+              -e 's#(authorization|cookie|set-cookie|password|passwd|secret|token|api[-_]?key)([=:][[:space:]]*)[^[:space:],;]+#\1\2[REDACTED]#Ig' \
+              -e 's#[[:alnum:]._%+-]+@[[:alnum:].-]+\.[[:alpha:]]{2,}#[REDACTED_EMAIL]#g' \
+              -e 's#([0-9]{1,3}\.){3}[0-9]{1,3}#[REDACTED_IP]#g' \
+              "$LOG_FILE" \
+              | grep -Ei 'Unhandled error|INTERNAL_ERROR|Prisma|ECONN|CSRF_INVALID|AUTH_INVALID|/tasks/|error|exception|failed' \
+              | tail -n 250 || echo "No matching error signals in the selected window. Reproduce the issue, then run this workflow again."
+
+            echo "Diagnostics completed without reading environment values, database rows, or session data."

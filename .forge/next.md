@@ -30,3 +30,5 @@ cutover backup until rollback retention is approved.
   `45865725` successfully.
 - Passed: public HTTP 200, API health `ok`, exact commit response header, and
   external port 8080 rejection.
+- Passed: a bounded, sanitized, read-only `Production Diagnostics` workflow is
+  ready for manual dispatch after the production task failure is reproduced.
