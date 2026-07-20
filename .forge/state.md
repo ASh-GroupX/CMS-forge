@@ -24,7 +24,10 @@ Prior state history is in `.forge/archive/state-archive.md`.
   production database.
 - The deployment guard now enforces the canonical hostname, binds port 8080 to
   loopback, suppresses resolved Compose output, removes global image pruning,
-  and fails unless the public domain returns the managed Caddy marker.
+  checks every long-running CMS service, and fails unless the public domain
+  returns the exact Git commit SHA from the managed Caddy gateway.
+- Remote production validation now runs directly with Node and no longer
+  installs the workspace or downloads a package manager during deployment.
 
 ## Current Stop
 

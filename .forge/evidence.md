@@ -14698,11 +14698,19 @@ SRS: NFR-SEC-002, NFR-AVAIL-001, NFR-DATA-001, OPS-RUNBOOK-001
   authoritative manual database is backed up, compared, and migrated.
 - The Compose gateway now binds `127.0.0.1:8080:80`, and the workflow rejects a
   VPS `SITE_DOMAIN` that is not the canonical public hostname.
+- API, web, worker, and Caddy containers carry the Git commit SHA as a revision
+  label. Caddy returns that SHA in `X-CMS-Deployment`, and the workflow compares
+  the public header with the exact triggering commit before reporting success.
+- Deployment health now covers API, web, worker, Caddy, PostgreSQL, and Redis.
+  Production config validation runs directly with Node without installing the
+  workspace or downloading a package manager on the VPS.
 
 ### Verification
 
 - Passed: `node --test tools/prod-deploy-artifacts.test.mjs` (4/4).
 - Passed: `corepack pnpm lint` and `git diff --check`.
+- Passed: `docker compose --env-file .env.production.example -f
+  docker-compose.prod.yml config --quiet`.
 - Passed: GitHub Actions metadata and filtered deployment-log inspection.
 - Passed: read-only public and managed-gateway HTTP probes.
 - Needs Human Review: database comparison, backups, migration, Nginx cutover,

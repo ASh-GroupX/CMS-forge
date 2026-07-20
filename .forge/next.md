@@ -29,5 +29,7 @@ tested rollback target until authenticated production smoke passes.
 
 - Passed: `node --test tools/prod-deploy-artifacts.test.mjs` (4/4).
 - Passed: `corepack pnpm lint` and `git diff --check`.
+- Passed: `docker compose --env-file .env.production.example -f
+  docker-compose.prod.yml config --quiet`.
 - Passed: read-only live probes distinguish the public Nginx route from the
   GitHub-managed Caddy route and verify the latter's API health.

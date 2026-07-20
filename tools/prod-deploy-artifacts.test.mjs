@@ -40,6 +40,8 @@ test('production deploy artifacts avoid dev trust and committed secrets', () => 
   }
 
   assert.match(workflow, /config --quiet/);
+  assert.match(workflow, /node tools\/prod-config-check\.mjs --env-file/);
+  assert.doesNotMatch(workflow, /corepack enable/);
   assert.doesNotMatch(workflow, /docker image prune/);
   assert.match(compose, /127\.0\.0\.1:8080:80/);
 });
@@ -47,8 +49,10 @@ test('production deploy artifacts avoid dev trust and committed secrets', () => 
 test('production deployment verifies that the public domain reaches its stack', () => {
   assert.match(workflow, /PRODUCTION_SITE_DOMAIN: cms\.laith-alobaidi-crm\.com/);
   assert.match(workflow, /test "\$SITE_DOMAIN" = '\$\{\{ env\.PRODUCTION_SITE_DOMAIN \}\}'/);
-  assert.match(caddy, /X-CMS-Deployment "github-actions"/);
+  assert.match(workflow, /DEPLOYMENT_SHA='\$\{\{ github\.sha \}\}'/);
+  assert.match(compose, /com\.cms-auto\.revision: \$\{DEPLOYMENT_SHA:-manual\}/);
+  assert.match(caddy, /X-CMS-Deployment "\{\$DEPLOYMENT_SHA\}"/);
   assert.match(workflow, /127\.0\.0\.1:8080/);
-  assert.match(workflow, /x-cms-deployment: github-actions/);
+  assert.match(workflow, /test "\$PUBLIC_SHA" = "\$DEPLOYMENT_SHA"/);
   assert.match(workflow, /https:\/\/\$SITE_DOMAIN\/api\/health/);
 });

@@ -10,7 +10,7 @@ http://{$SITE_DOMAIN} {
 	encode zstd gzip
 
 	header {
-		X-CMS-Deployment "github-actions"
+		X-CMS-Deployment "{$DEPLOYMENT_SHA}"
 		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
