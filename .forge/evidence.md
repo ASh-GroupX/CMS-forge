@@ -14722,3 +14722,46 @@ SRS: NFR-SEC-002, NFR-AVAIL-001, NFR-DATA-001, OPS-RUNBOOK-001
 - No production credentials or customer records were read or recorded by this
   change. Authentication, RBAC, branch scope, audit, and portal data behavior
   are unchanged.
+
+---
+
+## GitHub-Managed Production Cutover (2026-07-20)
+
+SRS: NFR-SEC-002, NFR-AVAIL-001, NFR-DATA-001, OPS-RUNBOOK-001,
+METHOD-TEST-001
+
+- Stopped both application paths before the final source dump. The manual
+  database and previously empty managed database were written to separate
+  verified custom-format backups.
+- Restored the authoritative manual database into
+  `cms-auto-prod_postgres-data`. Source and target counts matched: 8 users, 2
+  branches, 4 complaints, 0 attachments, 19 tasks, and 363 audit entries.
+- Applied migration `20260718120000_universal_assignments`; all 29 migrations
+  are current.
+- Corrected `SITE_DOMAIN` to `cms.laith-alobaidi-crm.com`, started the managed
+  stack, switched host Nginx from ports 3100/4100 to the loopback Caddy gateway,
+  and retained the stopped manual application plus database for rollback.
+- Merged PR 5 as production commit `45865725`. Actions run `29728937945`
+  attempt 2 completed successfully after a transient SSH timeout on attempt 1.
+- Extended the SSH reachability window from 15 to 60 seconds to tolerate brief
+  GitHub-to-VPS routing delays while remaining bounded.
+
+### Verification
+
+- Passed: managed API and public API health returned `status: ok`.
+- Passed: public homepage returned HTTP 200.
+- Passed: `X-CMS-Deployment` exactly matched
+  `45865725abca66f5d56691c738cf9e8ff19fda53`.
+- Passed: external access to port 8080 timed out after the loopback-only bind.
+- Passed: Actions validation, build, backup, migration, six-service health,
+  container revision labels, and public exact-revision verification.
+- Needs Human Review: authenticated multi-role/localization smoke, credential
+  rotation, and off-VPS backup confirmation.
+
+### Security Self-Check
+
+- No credential values or customer records were written to this evidence.
+- The managed deployment preserves backend authentication, RBAC, branch scope,
+  audit, workflow authority, and portal privacy behavior.
+- Credentials exposed by the historical non-quiet Compose log remain scheduled
+  for rotation and are not considered closed security evidence.
