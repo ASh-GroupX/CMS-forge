@@ -14765,3 +14765,49 @@ METHOD-TEST-001
   audit, workflow authority, and portal privacy behavior.
 - Credentials exposed by the historical non-quiet Compose log remain scheduled
   for rotation and are not considered closed security evidence.
+
+---
+
+## Production task-read schema hotfix (2026-07-22)
+
+SRS: NFR-SEC-002, NFR-AVAIL-001, NFR-DATA-001, OPS-RUNBOOK-001,
+METHOD-TEST-001
+
+- Reproduced the authenticated production failure with the existing staff
+  session: `GET /api/tasks/today` returned HTTP 500 with correlation ID
+  `req_e395885c-fb8d-4242-a2ba-0a077855a78b` while `/api/health` remained healthy.
+- Traced the production-only failure to Prisma migration drift. The generated
+  client selected `tasks.stage_id`, but no committed migration created
+  `BoardScope`, `board_stages`, `tasks.stage_id`, or `tasks.board_position`.
+- Added migration `20260722120000_board_stages` with the missing schema, foreign
+  key, indexes, and 13 idempotent task/ticket board defaults. No existing rows
+  are deleted or rewritten.
+- Added a regression test requiring every board-stage Prisma field and default
+  stage to have deployable migration SQL.
+
+### Verification
+
+- Passed: all 30 migrations applied from scratch in an isolated PostgreSQL
+  schema; probes returned 13 default stages and both task columns. The isolated
+  schema was removed after the proof.
+- Passed: `corepack pnpm lint`, `corepack pnpm typecheck`,
+  `corepack pnpm db:migrate:test`, and `git diff --check`.
+- Passed: `corepack pnpm test` with all configured coverage gates and
+  `corepack pnpm test:api -- tasks` (42/42).
+- Passed: `corepack pnpm security:check`.
+- Passed: the production build stages with pnpm 9.15.4, including the Next.js
+  optimized build and API/database/contracts/config TypeScript builds.
+- Passed: OpenAPI canonical content is unchanged; its check passed after local
+  line-ending normalization and no OpenAPI file remains modified.
+- Needs Human Review: production workflow deployment and authenticated live
+  task/board verification after migration 30 is applied.
+
+### Security Self-Check
+
+- Roles, branch scope, and department scope remain derived from the server
+  session; the task API allowed/denied tests passed.
+- The migration adds read-model storage only. It does not change workflow state,
+  transaction/audit behavior, side-effect timing, or append-only audit data.
+- No password, token, session cookie, provider credential, or customer record is
+  logged or returned by this change.
+- Portal response paths and privacy filters are unchanged.
