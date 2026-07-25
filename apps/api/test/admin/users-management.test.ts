@@ -38,6 +38,7 @@ const userRecord: AdminUserRecord = {
   updatedAt: new Date('2026-06-20T11:00:00.000Z'),
   role: { id: 'role_cr', code: RoleCode.CR_OFFICER, nameEn: 'CR Officer', nameAr: 'CR Officer' },
   branch: { id: 'branch_main', code: 'MAIN', nameEn: 'Main branch', nameAr: 'Main branch' },
+  department: { id: 'dept_service', code: 'SERVICE', nameEn: 'Service', nameAr: 'Service', branchId: null },
 };
 
 const admin: StaffPrincipal = {
@@ -79,6 +80,7 @@ test('admin user service lists users and option data without credential material
     options: async () => ({
       roles: [userRecord.role],
       branches: [userRecord.branch!],
+      departments: [userRecord.department!],
     }),
   } as AdminUsersRepository, noopAudit());
 
@@ -133,6 +135,7 @@ test('admin user service creates an account with hashed password and CONFIG audi
   const service = new AdminUsersService({
     roleId: async (code) => code === RoleCode.CR_OFFICER ? 'role_cr' : null,
     branchExists: async (id) => id === 'branch_main',
+    activeDepartment: async (id) => id === 'dept_service' ? userRecord.department : null,
     transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
     create: async (data, client) => {
       assert.equal(client, txClient);
@@ -150,6 +153,7 @@ test('admin user service creates an account with hashed password and CONFIG audi
       nameAr: ' Service Advisor ',
       roleCode: RoleCode.CR_OFFICER,
       branchId: 'branch_main',
+      departmentId: 'dept_service',
       initialPassword: 'ChangeMe12345!',
     },
     auditContext(),
@@ -164,6 +168,32 @@ test('admin user service creates an account with hashed password and CONFIG audi
   assert.equal(auditRecords[0]?.input.actorId, 'usr_admin');
   assert.equal(JSON.stringify(auditRecords).includes('ChangeMe12345!'), false);
   assert.equal(JSON.stringify(auditRecords).includes(passwordHash), false);
+});
+
+test('admin user service changes a user department and audits the database write', async () => {
+  const txClient = {};
+  const auditRecords: Array<{ input: AuditRecordInput; client: unknown }> = [];
+  const service = new AdminUsersService({
+    activeDepartment: async (id) => id === 'dept_sales'
+      ? { id, code: 'SALES', nameEn: 'Sales', nameAr: 'Sales', branchId: null }
+      : null,
+    transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
+    updateDepartment: async (id, departmentId, client) => {
+      assert.equal(id, 'usr_1');
+      assert.equal(departmentId, 'dept_sales');
+      assert.equal(client, txClient);
+      return { ...userRecord, department: { id: departmentId, code: 'SALES', nameEn: 'Sales', nameAr: 'Sales', branchId: null } };
+    },
+  } as AdminUsersRepository, {
+    record: async (input: AuditRecordInput, client?: unknown) => auditRecords.push({ input, client }),
+  } as AuditService);
+
+  const updated = await service.updateDepartment('usr_1', 'dept_sales', auditContext());
+
+  assert.equal(updated.departmentId, 'dept_sales');
+  assert.equal(updated.departmentName, 'Sales');
+  assert.equal(auditRecords[0]?.input.action, 'admin_user_department_updated');
+  assert.equal(auditRecords[0]?.client, txClient);
 });
 
 test('admin user service deactivates and reactivates with audit entries', async () => {
@@ -189,9 +219,10 @@ test('admin user service deactivates and reactivates with audit entries', async 
 test('admin users controller routes require USERS_MANAGE permission and CSRF for writes', async () => {
   assert.deepEqual(guardNames('list'), ['SessionAuthGuard', 'PermissionGuard']);
   assert.deepEqual(guardNames('create'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('updateDepartment'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
   assert.deepEqual(guardNames('deactivate'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
   assert.deepEqual(guardNames('reactivate'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
-  for (const handler of ['list', 'create', 'deactivate', 'reactivate'] as Array<keyof AdminUsersController>) {
+  for (const handler of ['list', 'create', 'updateDepartment', 'deactivate', 'reactivate'] as Array<keyof AdminUsersController>) {
     assert.equal(guardNames(handler).includes('RbacGuard'), false);
   }
 

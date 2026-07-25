@@ -19,6 +19,7 @@ import { TasksRelatedRecordsService } from './tasks.related-records.service.js';
 import type { TasksBoardRepository } from './tasks.board.repository.js';
 import { TasksRepository } from './tasks.repository.js';
 import type { TaskRecord, TaskTimelineRecord } from './tasks.repository.js';
+import { notifyTaskRecipients, type TaskRecipientsRepository } from './tasks.recipients.js';
 import { currentNextAction, managerTaskDetailResponse, taskCounts, taskToResponse } from './tasks.response.js';
 import { requiredStatusNote, statusComment } from './tasks.status-note.js';
 import { assertAssignedDepartment, updateTaskForActor } from './tasks.update.js';
@@ -29,7 +30,7 @@ export type { NormalizedNextAction } from './tasks.validation.js';
 export type TaskAuditContext = { actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 
 export type TaskNextActionInput = { what: string; whoId: string; when: Date | string };
-export type CreateTaskInput = { title: string; ownerId: string; assigneeId?: string | null; dueAt: Date | string; status?: TaskStatus; nextAction?: TaskNextActionInput | null; isCustomerPromise?: boolean; visibility?: TaskVisibility; confidentialityLevel?: TaskConfidentialityLevel; links?: { entityType: TaskLinkEntityType; entityId: string }[]; participantUserIds?: string[]; assignedDepartmentId?: string | null };
+export type CreateTaskInput = { title: string; ownerId: string; assigneeId?: string | null; dueAt: Date | string; status?: TaskStatus; nextAction?: TaskNextActionInput | null; isCustomerPromise?: boolean; visibility?: TaskVisibility; confidentialityLevel?: TaskConfidentialityLevel; links?: { entityType: TaskLinkEntityType; entityId: string }[]; participantUserIds?: string[]; assignedDepartmentId?: string | null; assignedDepartmentIds?: string[] };
 export type UpdateTaskStatusInput = { taskId: string; status: TaskStatus; nextAction?: TaskNextActionInput | null; statusNote?: string };
 export type UpdateTaskInput = { taskId: string; status?: TaskStatus; assigneeId?: string | null; dueAt?: Date | string; nextAction?: TaskNextActionInput | null; isCustomerPromise?: boolean; statusNote?: string; assignedDepartmentId?: string | null };
 export type TaskActor = { userId: string; roleCode: string; branchId: string | null; departmentId?: string | null; permissions?: string[] };
@@ -38,7 +39,7 @@ type ManagerRollupScope = { roleCode: string; branchId: string | null };
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly tasksRepository: TasksRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly usersService?: Pick<AdminUsersService, 'assertAssignable'>, private readonly relatedRecordsService?: TasksRelatedRecordsService, private readonly groupsService?: CommunicationGroupsService, private readonly boardRepository?: TasksBoardRepository, private readonly assignmentsService?: AssignmentsService) {}
+  constructor(private readonly tasksRepository: TasksRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly usersService?: Pick<AdminUsersService, 'assertAssignable'>, private readonly relatedRecordsService?: TasksRelatedRecordsService, private readonly groupsService?: CommunicationGroupsService, private readonly boardRepository?: TasksBoardRepository, private readonly assignmentsService?: AssignmentsService, private readonly taskRecipientsRepository?: TaskRecipientsRepository) {}
 
   async create(input: CreateTaskInput, audit: TaskAuditContext = {}): Promise<TaskResponseDto> {
     return this.tasksRepository.transaction((client) => this.createInTransaction(input, audit, client));
@@ -47,9 +48,9 @@ export class TasksService {
   async createForActor(input: CreateTaskInput, actor: StaffLookupActor, audit: TaskAuditContext = {}): Promise<TaskResponseDto> {
     await this.assertAssignable(input, actor);
     await this.assertRelatedRecords(input, actor);
-    if (input.assignedDepartmentId) await assertAssignedDepartment(this.boardRepository, input.assignedDepartmentId);
+    for (const departmentId of departmentIds(input)) await assertAssignedDepartment(this.boardRepository, departmentId);
     const task = await this.tasksRepository.transaction((client) => this.createInTransaction(input, audit, client, actor));
-    await this.assignmentsService?.notifyAfterCommit?.('TASK', task.id, { href: `/tasks/${task.id}`, title: task.title });
+    await notifyTaskRecipients(this.taskRecipientsRepository, this.notificationsService, task.id, task.title);
     return task;
   }
 
@@ -60,10 +61,11 @@ export class TasksService {
   async createInTransaction(input: CreateTaskInput, audit: TaskAuditContext, client: Prisma.TransactionClient, actor?: TaskActor): Promise<TaskResponseDto> {
     const status = input.status ?? TaskStatus.OPEN;
     const nextAction = status === TaskStatus.DONE ? null : normalizeNextAction(input.nextAction);
-    assertNextAction(status, nextAction, Boolean(input.assignedDepartmentId));
+    const selectedDepartmentIds = departmentIds(input);
+    assertNextAction(status, nextAction, selectedDepartmentIds.length > 0);
     const taskLinks = links(input.links ?? []);
     assertPromiseLink(input.isCustomerPromise ?? false, taskLinks);
-    assertAssignment(input.assigneeId, input.assignedDepartmentId);
+    assertAssignment(input.assigneeId, input.participantUserIds, selectedDepartmentIds);
     const data = {
       title: requiredText(input.title, 'title'),
       ownerId: requiredText(input.ownerId, 'ownerId'),
@@ -78,12 +80,17 @@ export class TasksService {
       confidentialityLevel: input.confidentialityLevel ?? TaskConfidentialityLevel.NORMAL,
       links: taskLinks,
       participants: participants(input, nextAction),
-      assignedDepartmentId: input.assignedDepartmentId ?? null,
+      assignedDepartmentId: selectedDepartmentIds[0] ?? null,
+      assignedDepartmentIds: selectedDepartmentIds,
     };
 
     const task = await this.tasksRepository.create(data, client);
     await this.tasksRepository.createStatusHistory(historyInput(task.id, null, task.status, audit), client);
-    await this.auditService.record(taskAudit('task_created', task, audit, { status: task.status }), client);
+    await this.auditService.record(taskAudit('task_created', task, audit, {
+      status: task.status,
+      recipientUserIds: explicitUserIds(input),
+      recipientDepartmentIds: selectedDepartmentIds,
+    }), client);
     if (this.assignmentsService && actor) {
       await this.assignmentsService.setInTransaction({
         entityType: 'TASK', entityId: task.id, assignedUserId: task.assigneeId,
@@ -229,7 +236,7 @@ export class TasksService {
   }
 
   private async assertAssignable(input: CreateTaskInput, actor: StaffLookupActor): Promise<void> {
-    if (input.assigneeId) await this.usersService?.assertAssignable(actor, input.assigneeId);
+    for (const userId of explicitUserIds(input)) await this.usersService?.assertAssignable(actor, userId);
     const nextWho = input.nextAction?.whoId;
     if (nextWho && nextWho !== input.assigneeId) await this.usersService?.assertAssignable(actor, nextWho);
   }
@@ -257,11 +264,19 @@ function participants(input: CreateTaskInput, nextAction: NormalizedNextAction |
   return [...rows].map(([userId, role]) => ({ userId, role }));
 }
 
-function assertAssignment(userId: string | null | undefined, departmentId: string | null | undefined): void {
-  if (optionalId(userId) || optionalId(departmentId)) return;
+function assertAssignment(userId: string | null | undefined, participantUserIds: string[] | undefined, assignedDepartmentIds: string[]): void {
+  if (optionalId(userId) || (participantUserIds?.length ?? 0) > 0 || assignedDepartmentIds.length > 0) return;
   throw new AppException('VALIDATION_FAILED', 'Invalid task request', HttpStatus.BAD_REQUEST, [
     { field: 'assignment', code: 'REQUIRED', message: 'A task requires an assigned user or department.' },
   ]);
+}
+
+function explicitUserIds(input: Pick<CreateTaskInput, 'assigneeId' | 'participantUserIds'>): string[] {
+  return [...new Set([input.assigneeId, ...(input.participantUserIds ?? [])].map(optionalId).filter((id): id is string => Boolean(id)))];
+}
+
+function departmentIds(input: Pick<CreateTaskInput, 'assignedDepartmentId' | 'assignedDepartmentIds'>): string[] {
+  return [...new Set([input.assignedDepartmentId, ...(input.assignedDepartmentIds ?? [])].map(optionalId).filter((id): id is string => Boolean(id)))];
 }
 
 function optionalId(value: string | null | undefined): string | null {

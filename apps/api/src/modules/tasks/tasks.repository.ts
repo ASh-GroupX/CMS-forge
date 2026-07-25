@@ -23,6 +23,7 @@ const taskSelect = {
   owner: { select: { nameEn: true, branchId: true, branch: { select: { nameEn: true, timezone: true } } } },
   assignee: { select: { nameEn: true, branchId: true, branch: { select: { nameEn: true, timezone: true } } } },
   assignedDepartment: { select: { nameEn: true, nameAr: true, branchId: true } },
+  departmentRecipients: { select: { departmentId: true, department: { select: { nameEn: true, nameAr: true, branchId: true } } } },
   nextActionWho: { select: { nameEn: true, branchId: true } },
   links: { select: { entityType: true, entityId: true } },
   participants: { select: { userId: true, role: true, user: { select: { email: true, nameEn: true, nameAr: true } } } },
@@ -78,6 +79,7 @@ export type CreateTaskData = {
   links: { entityType: TaskLinkEntityType; entityId: string }[];
   participants: { userId: string; role: TaskParticipantRole }[];
   assignedDepartmentId?: string | null;
+  assignedDepartmentIds: string[];
 };
 
 export type UpdateTaskStatusData = {
@@ -110,9 +112,7 @@ export type CreateTaskCommentData = {
 export class TasksRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async transaction<T>(work: (client: Prisma.TransactionClient) => Promise<T>): Promise<T> {
-    return this.prisma.$transaction(work);
-  }
+  async transaction<T>(work: (client: Prisma.TransactionClient) => Promise<T>): Promise<T> { return this.prisma.$transaction(work); }
 
   async create(data: CreateTaskData, client: TaskClient = this.prisma): Promise<TaskRecord> {
     const createData: Prisma.TaskCreateInput = {
@@ -129,6 +129,9 @@ export class TasksRepository {
     if (data.assigneeId) createData.assignee = { connect: { id: data.assigneeId } };
     if (data.nextActionWhoId) createData.nextActionWho = { connect: { id: data.nextActionWhoId } };
     if (data.assignedDepartmentId) createData.assignedDepartment = { connect: { id: data.assignedDepartmentId } };
+    if (data.assignedDepartmentIds.length) {
+      createData.departmentRecipients = { create: data.assignedDepartmentIds.map((departmentId) => ({ departmentId })) };
+    }
     if (data.links.length) createData.links = { create: data.links };
     if (data.participants.length) createData.participants = { create: data.participants };
     return client.task.create({ data: createData, select: taskSelect });
@@ -142,7 +145,10 @@ export class TasksRepository {
     return this.prisma.task.findFirst({
       where: {
         id,
-        OR: [{ ownerId: userId }, { assigneeId: userId }, { nextActionWhoId: userId }, { participants: { some: { userId } } }],
+        OR: [
+          { ownerId: userId }, { assigneeId: userId }, { nextActionWhoId: userId }, { participants: { some: { userId } } },
+          { confidentialityLevel: 'NORMAL', departmentRecipients: { some: { department: { users: { some: { id: userId, isActive: true, lockedAt: null } } } } } },
+        ],
       },
       select: taskSelect,
     });
@@ -164,7 +170,10 @@ export class TasksRepository {
     return this.prisma.task.findMany({
       where: {
         AND: [{ OR: [{ status: { not: 'DONE' } }, { status: 'DONE', updatedAt: { gte: completedSince } }] }],
-        OR: [{ ownerId: userId }, { assigneeId: userId }, { nextActionWhoId: userId }, { participants: { some: { userId } } }],
+        OR: [
+          { ownerId: userId }, { assigneeId: userId }, { nextActionWhoId: userId }, { participants: { some: { userId } } },
+          { confidentialityLevel: 'NORMAL', departmentRecipients: { some: { department: { users: { some: { id: userId, isActive: true, lockedAt: null } } } } } },
+        ],
       },
       orderBy: [{ dueAt: 'asc' }, { createdAt: 'asc' }],
       select: taskSelect,

@@ -131,7 +131,7 @@ export class TasksBoardRepository {
           { participants: { some: { userId: scope.userId } } },
           // B3: department members see NORMAL tasks assigned to their department
           // (mirrors tasks.access.ts isDepartmentMember — keep the two in sync).
-          ...(scope.departmentId ? [{ confidentialityLevel: 'NORMAL' as const, assignedDepartmentId: scope.departmentId }] : []),
+          ...(scope.departmentId ? [{ confidentialityLevel: 'NORMAL' as const, departmentRecipients: { some: { departmentId: scope.departmentId } } }] : []),
           ...(scope.isManager && scope.branchId
             ? [{ confidentialityLevel: 'NORMAL' as const, OR: [{ owner: { branchId: scope.branchId } }, { assignee: { branchId: scope.branchId } }, { nextActionWho: { branchId: scope.branchId } }] }]
             : []),

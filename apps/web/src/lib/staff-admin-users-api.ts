@@ -7,10 +7,12 @@ export type AdminUser = {
   roleName: string;
   branchId: string | null;
   branchName: string | null;
+  departmentId: string | null;
+  departmentName: string | null;
   isActive: boolean;
 };
-export type AdminOption = { id: string; code: string; nameEn: string; nameAr: string };
-export type AdminUsersData = { users: AdminUser[]; roles: AdminOption[]; branches: AdminOption[] };
+export type AdminOption = { id: string; code: string; nameEn: string; nameAr: string; branchId?: string | null };
+export type AdminUsersData = { users: AdminUser[]; roles: AdminOption[]; branches: AdminOption[]; departments: AdminOption[] };
 
 const STAFF_SESSION_COOKIE = 'cms_staff_session';
 

@@ -19,6 +19,7 @@ import { TasksBoardService } from './tasks.board.service.js';
 import { TasksController } from './tasks.controller.js';
 import { TasksRelatedRecordsService } from './tasks.related-records.service.js';
 import { TasksRepository } from './tasks.repository.js';
+import { TaskRecipientsRepository } from './tasks.recipients.js';
 import { TasksService } from './tasks.service.js';
 
 @Module({
@@ -37,6 +38,11 @@ import { TasksService } from './tasks.service.js';
       useFactory: (prisma: PrismaService) => new TasksRepository(prisma),
     },
     {
+      provide: TaskRecipientsRepository,
+      inject: [PrismaService],
+      useFactory: (prisma: PrismaService) => new TaskRecipientsRepository(prisma),
+    },
+    {
       provide: TasksRelatedRecordsService,
       inject: [PrismaService],
       useFactory: (prisma: PrismaService) => new TasksRelatedRecordsService(prisma),
@@ -48,8 +54,8 @@ import { TasksService } from './tasks.service.js';
     },
     {
       provide: TasksService,
-      inject: [TasksRepository, AuditService, NotificationsService, AdminUsersService, TasksRelatedRecordsService, CommunicationGroupsService, TasksBoardRepository, AssignmentsService],
-      useFactory: (repository: TasksRepository, audit: AuditService, notifications: NotificationsService, users: AdminUsersService, relatedRecords: TasksRelatedRecordsService, groups: CommunicationGroupsService, boardRepository: TasksBoardRepository, assignments: AssignmentsService) => new TasksService(repository, audit, notifications, users, relatedRecords, groups, boardRepository, assignments),
+      inject: [TasksRepository, AuditService, NotificationsService, AdminUsersService, TasksRelatedRecordsService, CommunicationGroupsService, TasksBoardRepository, AssignmentsService, TaskRecipientsRepository],
+      useFactory: (repository: TasksRepository, audit: AuditService, notifications: NotificationsService, users: AdminUsersService, relatedRecords: TasksRelatedRecordsService, groups: CommunicationGroupsService, boardRepository: TasksBoardRepository, assignments: AssignmentsService, recipients: TaskRecipientsRepository) => new TasksService(repository, audit, notifications, users, relatedRecords, groups, boardRepository, assignments, recipients),
     },
     {
       provide: TasksBoardService,

@@ -142,6 +142,8 @@ export type QuickAddTaskPayload = {
   links?: { entityType: string; entityId: string }[];
   assignedUserId?: string | null;
   assignedDepartmentId?: string | null;
+  assignedUserIds?: string[];
+  assignedDepartmentIds?: string[];
 };
 
 export type UpdateTaskPayload = {

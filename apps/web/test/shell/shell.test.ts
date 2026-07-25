@@ -67,6 +67,7 @@ import { applyDmsMatchToCorrectionFields, type CorrectionFields } from '../../sr
 import { isActiveNav } from '../../src/app/app-shell';
 import { AttachmentDropzone, DataTable, Field, FilterBar, MetricStrip, PageHeader, StateBlock, StatusBadge, Timeline } from '../../src/components/shared/ui-primitives';
 import { TableCell, TableRow } from '../../src/components/ui/table';
+import { AssignmentPicker } from '../../src/components/shared/assignment-picker';
 
 test('shared UI primitives render accessible operational markup', () => {
   const html = renderToStaticMarkup(
@@ -2240,11 +2241,14 @@ test('admin users roles renders real account actions when backend data is presen
             roleName: 'CR Officer',
             branchId: 'branch_main',
             branchName: 'Main branch',
+            departmentId: 'dept_service',
+            departmentName: 'Service',
             isActive: true,
           },
         ],
         roles: [{ id: 'role_1', code: 'CR_OFFICER', nameEn: 'CR Officer', nameAr: 'CR Officer' }],
         branches: [{ id: 'branch_main', code: 'MAIN', nameEn: 'Main branch', nameAr: 'Main branch' }],
+        departments: [{ id: 'dept_service', code: 'SERVICE', nameEn: 'Service', nameAr: 'الخدمة', branchId: null }],
       },
       locale: 'en',
       toggleAction: async () => undefined,
@@ -2256,6 +2260,22 @@ test('admin users roles renders real account actions when backend data is presen
   assert.match(html, /advisor@cms-auto\.test/);
   assert.match(html, /Deactivate/);
   assert.doesNotMatch(html, /disabled=""/);
+});
+
+test('multi-recipient task assignment renders live users and departments in English and Arabic', () => {
+  const options = {
+    users: [{ id: 'user_sales', nameEn: 'Sales User', nameAr: 'موظف المبيعات', branchId: null, departmentId: 'dept_sales', roleCode: 'CR_OFFICER' }],
+    departments: [{ id: 'dept_sales', nameEn: 'Sales', nameAr: 'المبيعات', branchId: null }],
+  };
+  const english = renderToStaticMarkup(React.createElement(AssignmentPicker, { departmentName: 'assignedDepartmentIds', locale: 'en', multiple: true, options, userName: 'assignedUserIds' }));
+  const arabic = renderToStaticMarkup(React.createElement(AssignmentPicker, { departmentName: 'assignedDepartmentIds', locale: 'ar', multiple: true, options, userName: 'assignedUserIds' }));
+
+  assert.match(english, /Sales User/);
+  assert.match(english, /Sales/);
+  assert.match(english, /name="assignedUserIds"/);
+  assert.match(english, /name="assignedDepartmentIds"/);
+  assert.match(arabic, /موظف المبيعات/);
+  assert.match(arabic, /المبيعات/);
 });
 
 test('admin users roles source is render-only and reset-safe', () => {
