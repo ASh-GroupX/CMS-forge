@@ -48,7 +48,7 @@ jobs:
         run: pnpm openapi:check
 
       - name: Install Playwright Browsers
-        run: npx playwright install chromium
+        run: pnpm exec playwright-core install chromium
 
       - name: Run unit and sanity tests
         run: pnpm test

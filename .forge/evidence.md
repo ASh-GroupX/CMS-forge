@@ -14844,6 +14844,13 @@ SRS: REQ-ADMIN-001, NFR-DATA-001, OPS-RUNBOOK-001, METHOD-TEST-001
   request, response, or schema contract.
 - Needs Human Review: production deployment backup/migration and authenticated
   live department-option smoke.
+- Failed: production run `30158177286` attempt 1 ended with GitHub
+  `startup_failure` before any job started.
+- Failed: attempt 2 validation installed floating `playwright@1.62.0` through
+  `npx`, while repository tests used `playwright-core@1.61.0`; browser revision
+  `1234` was installed but revision `1228` was required. Deployment was skipped.
+- Fixed locally: `playwright-core@1.61.0` is now an explicit dependency and CI
+  installs its browser through `pnpm exec playwright-core install chromium`.
 
 ### Security Self-Check
 

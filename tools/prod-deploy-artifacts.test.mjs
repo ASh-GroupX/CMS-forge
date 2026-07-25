@@ -67,3 +67,8 @@ test('production deployment verifies every active global department default', ()
   assert.match(workflow, /test "\$DEFAULT_DEPARTMENT_COUNT" = "6"/);
   assert.match(workflow, /Default departments verified/);
 });
+
+test('production validation installs the workspace-pinned Playwright browser', () => {
+  assert.match(workflow, /pnpm exec playwright-core install chromium/);
+  assert.doesNotMatch(workflow, /npx playwright install/);
+});
