@@ -19,6 +19,8 @@ rotation and multi-role English/Arabic smoke.
 - Passed: the migration inserts all six defaults and is idempotent by code.
 - Passed: existing department rows, names, branch ownership, and activation
   choices are preserved on conflict.
+- Passed: the deployment fails closed unless all six active global department
+  codes are queryable after migrations.
 - Passed: lint, typecheck, root tests, coverage, and migration sanity.
 - Needs Human Review: deploy through the production workflow and confirm the
   pre-migration backup succeeds.
@@ -34,6 +36,7 @@ rotation and multi-role English/Arabic smoke.
 - Passed: `corepack pnpm typecheck`.
 - Passed: `corepack pnpm test` (67/67 and configured coverage thresholds).
 - Passed: `corepack pnpm db:migrate:test`.
+- Passed: focused migration and deployment-artifact tests (7/7).
 - Failed (pre-existing, unchanged): `corepack pnpm openapi:check` because the
   committed OpenAPI document differs from its canonical scaffold. This
   migration adds no API route or schema.

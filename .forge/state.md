@@ -18,6 +18,8 @@ Prior state history is in `.forge/archive/state-archive.md`.
   Parts, Body & Paint, Finance, and Customer Care as active global departments.
 - The migration uses `ON CONFLICT ("code") DO NOTHING`, so repeated deploys are
   safe and existing administrator-managed rows are not overwritten.
+- The production workflow now queries PostgreSQL after migration and fails
+  unless all six active global department defaults are present.
 - The focused migration test, lint, typecheck, root tests with coverage, and
   migration sanity check pass.
 - The repository's committed OpenAPI document remains non-canonical. This is

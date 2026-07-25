@@ -14826,6 +14826,8 @@ SRS: REQ-ADMIN-001, NFR-DATA-001, OPS-RUNBOOK-001, METHOD-TEST-001
   names, branch ownership, or activation choices and does not delete data.
 - Added a focused regression test requiring all six codes, global scope,
   idempotency, and the absence of writes to demo-data tables.
+- Added a fail-closed production workflow assertion that queries PostgreSQL
+  after migration and requires all six active global department codes.
 
 ### Verification
 
@@ -14835,6 +14837,7 @@ SRS: REQ-ADMIN-001, NFR-DATA-001, OPS-RUNBOOK-001, METHOD-TEST-001
 - Passed: `corepack pnpm test` (67/67; line 92.67%, branch 83.94%, function
   91.76%).
 - Passed: `corepack pnpm db:migrate:test`.
+- Passed: focused migration and deployment-artifact tests (7/7).
 - Passed: `git diff --check`.
 - Failed (pre-existing, unchanged): `corepack pnpm openapi:check` reports the
   committed OpenAPI JSON is not canonical. This migration changes no route,

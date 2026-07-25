@@ -57,3 +57,13 @@ test('production deployment verifies that the public domain reaches its stack', 
   assert.match(workflow, /test "\$PUBLIC_SHA" = "\$DEPLOYMENT_SHA"/);
   assert.match(workflow, /https:\/\/\$SITE_DOMAIN\/api\/health/);
 });
+
+test('production deployment verifies every active global department default', () => {
+  for (const code of ['SALES', 'SERVICE', 'PARTS', 'BODY_PAINT', 'FINANCE', 'CUSTOMER_CARE']) {
+    assert.match(workflow, new RegExp(`'${code}'`));
+  }
+  assert.match(workflow, /DEFAULT_DEPARTMENT_COUNT/);
+  assert.match(workflow, /branch_id IS NULL AND is_active = true/);
+  assert.match(workflow, /test "\$DEFAULT_DEPARTMENT_COUNT" = "6"/);
+  assert.match(workflow, /Default departments verified/);
+});
