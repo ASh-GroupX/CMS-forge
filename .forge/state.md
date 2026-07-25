@@ -1,8 +1,8 @@
 # Current State
 
-Status: Production schema hotfix prepared and fully verified locally
+Status: Default department production migration implemented and locally verified
 Phase: Production deployment hardening
-Next Task: Rotate exposed credentials and complete authenticated multi-role smoke
+Next Task: Deploy and authenticate department-option smoke, then resume security closeout
 Model Tier: GPT-5.5 Extra High or equivalent
 
 ## How to use this file
@@ -12,27 +12,21 @@ Prior state history is in `.forge/archive/state-archive.md`.
 
 ## Snapshot
 
-- Host Nginx routes `cms.laith-alobaidi-crm.com` to the GitHub-managed Caddy
-  gateway on `127.0.0.1:8080`.
-- The authoritative manual database was backed up and restored into
-  `cms-auto-prod_postgres-data`; selected row counts matched exactly before and
-  after restore, and migration 29 applied successfully.
-- Public HTTPS currently serves production revision `97412ba0`; API health is
-  `ok`, but authenticated task reads return `INTERNAL_ERROR` because the
-  board-stage schema change had no deployable migration.
-- Migration `20260722120000_board_stages` adds the missing `board_stages` table,
-  `tasks.stage_id`, and `tasks.board_position`, including 13 production defaults.
-- All 30 migrations applied successfully in an isolated PostgreSQL schema. The
-  production workflow will create its required pre-migration backup before
-  applying migration 30.
-- API, web, worker, Caddy, PostgreSQL, and Redis passed the workflow health gate.
-- Port 8080 is loopback-only and is not reachable externally.
-- The first deployment attempt hit a transient 15-second SSH reachability
-  timeout; the workflow now allows a bounded 60-second retry window.
-- Manual API and web containers remain stopped. Their PostgreSQL and Redis
-  containers and the cutover backup remain available for rollback.
+- Production deploys Prisma migrations but intentionally does not run the
+  development seed, which was the only place creating department rows.
+- Migration `20260725120000_default_departments` now inserts Sales, Service,
+  Parts, Body & Paint, Finance, and Customer Care as active global departments.
+- The migration uses `ON CONFLICT ("code") DO NOTHING`, so repeated deploys are
+  safe and existing administrator-managed rows are not overwritten.
+- The focused migration test, lint, typecheck, root tests with coverage, and
+  migration sanity check pass.
+- The repository's committed OpenAPI document remains non-canonical. This is
+  pre-existing and unrelated because the hotfix changes no API surface.
+- Production credential rotation, authenticated multi-role smoke, off-VPS
+  backup proof, and rollback-retention decisions remain pending.
 
 ## Current Stop
 
-Deploy and verify the schema hotfix, then continue security closeout: credential
-rotation, authenticated multi-role smoke, and off-VPS backup proof.
+Publish and deploy the isolated department migration through the production
+workflow, verify authenticated department options, then resume the existing
+production security closeout.

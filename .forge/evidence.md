@@ -14811,3 +14811,43 @@ METHOD-TEST-001
 - No password, token, session cookie, provider credential, or customer record is
   logged or returned by this change.
 - Portal response paths and privacy filters are unchanged.
+
+---
+
+## Production default-departments hotfix (2026-07-25)
+
+SRS: REQ-ADMIN-001, NFR-DATA-001, OPS-RUNBOOK-001, METHOD-TEST-001
+
+- Confirmed the local/deployment mismatch: local databases run the development
+  seed, while production runs only `prisma migrate deploy`.
+- Added migration `20260725120000_default_departments` to install the six shared
+  routing departments without running demo-data seed code.
+- Existing rows win on unique-code conflicts. The migration does not overwrite
+  names, branch ownership, or activation choices and does not delete data.
+- Added a focused regression test requiring all six codes, global scope,
+  idempotency, and the absence of writes to demo-data tables.
+
+### Verification
+
+- Passed: `node --test tools/departments-migration.test.mjs` (2/2).
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test` (67/67; line 92.67%, branch 83.94%, function
+  91.76%).
+- Passed: `corepack pnpm db:migrate:test`.
+- Passed: `git diff --check`.
+- Failed (pre-existing, unchanged): `corepack pnpm openapi:check` reports the
+  committed OpenAPI JSON is not canonical. This migration changes no route,
+  request, response, or schema contract.
+- Needs Human Review: production deployment backup/migration and authenticated
+  live department-option smoke.
+
+### Security Self-Check
+
+- Authentication, RBAC, server-session branch scope, and department filtering
+  code are unchanged.
+- This reference-data migration changes no complaint or task state, audit
+  transaction, assignment authority, or post-commit side effect.
+- No password, hash, token, session, provider credential, or customer data is
+  read, written, logged, or returned.
+- Customer portal routes and privacy projections are unchanged.
