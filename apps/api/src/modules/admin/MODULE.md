@@ -9,6 +9,8 @@ tags: [backend, module, agent-context]
 
 - `AdminUsersService` is the public staff-user management service.
 - `AdminCategoriesService` is the public complaint category management service.
+- `AdminDepartmentsService` creates audited active top-level departments for
+  database-backed assignment and routing selectors.
 - `AdminRolesService` is the public role catalog and permission-selection service.
 
 ## Owns tables
@@ -19,6 +21,7 @@ tags: [backend, module, agent-context]
 - `role_permissions`
 - `branches`
 - `categories`
+- `departments`
 
 ## May depend on
 

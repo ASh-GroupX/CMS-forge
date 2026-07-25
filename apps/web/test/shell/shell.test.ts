@@ -2129,7 +2129,7 @@ test('admin branches route renders real master data labels', async () => {
   const fetchImpl: typeof fetch = async () => jsonResponse({
     branches: [{ id: 'branch_main', code: 'MAIN', nameEn: 'Main Branch', nameAr: 'Ø§Ù„ÙØ±Ø¹ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ' }],
     categories: [{ id: 'cat_vehicle', code: 'VEHICLE', nameEn: 'Vehicle issue', nameAr: 'Ù…Ø´ÙƒÙ„Ø© Ù…Ø±ÙƒØ¨Ø©', parentId: null }],
-    departments: [],
+    departments: [{ id: 'dept_new', code: 'NEW_TEAM', nameEn: 'New Team', nameAr: 'الفريق الجديد' }],
     severities: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
   });
   const english = renderToStaticMarkup(await AdminBranchesPage({ cookieHeader: 'cms_staff_session=raw-session', fetchImpl, searchParams: Promise.resolve({ locale: 'en' }) }));
@@ -2138,10 +2138,14 @@ test('admin branches route renders real master data labels', async () => {
   assert.match(english, /dir="ltr"/);
   assert.match(english, /Complaint intake dropdowns/);
   assert.match(english, /Main Branch/);
+  assert.match(english, /New Team/);
+  assert.match(english, /Departments/);
   assert.match(english, /Vehicle issue/);
   assert.doesNotMatch(english, /Branches and departments/);
   assert.match(arabic, /dir="rtl"/);
   assert.ok(arabic.includes(adminUsersText.ar.masterData.title));
+  assert.match(arabic, /الفريق الجديد/);
+  assert.match(arabic, /الأقسام/);
 });
 
 test('admin branches route fails closed when master data is unavailable', async () => {

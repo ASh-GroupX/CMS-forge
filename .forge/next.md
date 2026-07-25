@@ -1,42 +1,26 @@
-# Deploy Default Departments Hotfix
+# Deploy Dynamic Department Assignment Fix
 
-Status: Production-safe migration implemented and verified locally
+Status: Implemented and verified locally
 Required model tier: GPT-5.5 Extra High or equivalent
-Risk: High (production reference data and routing availability)
-SRS IDs: `REQ-ADMIN-001`, `NFR-DATA-001`, `OPS-RUNBOOK-001`,
-`METHOD-TEST-001`
+Risk: High (admin master data, RBAC, branch scope, production deployment)
+SRS IDs: `REQ-ADMIN-001`, `REQ-RBAC-001`, `METHOD-AUDIT-001`,
+`METHOD-API-001`, `METHOD-TEST-001`
 
 ## Task
 
-Deploy migration `20260725120000_default_departments`, then verify an
-authenticated administrator and branch-scoped staff member receive the six
-active shared departments in task, complaint-routing, and assignment options.
-After this hotfix is verified, resume the pending production credential
-rotation and multi-role English/Arabic smoke.
+Publish the audited top-level department creation path and the database-backed,
+scope-eligible assignment selectors. Deploy to production, create a uniquely
+named active top-level department through the admin workflow, and verify it is
+immediately available in the English and Arabic task assignment interfaces.
 
 ## Required Gates
 
-- Passed: the migration inserts all six defaults and is idempotent by code.
-- Passed: existing department rows, names, branch ownership, and activation
-  choices are preserved on conflict.
-- Passed: the deployment fails closed unless all six active global department
-  codes are queryable after migrations.
-- Passed: lint, typecheck, root tests, coverage, and migration sanity.
-- Needs Human Review: deploy through the production workflow and confirm the
-  pre-migration backup succeeds.
-- Needs Human Review: authenticated live department-option checks for admin and
-  branch-scoped staff.
-- Needs Human Review: rotate PostgreSQL, Redis, SMTP, and object-storage
-  credentials and complete the previously scheduled production smoke.
-
-## Proof
-
-- Passed: `node --test tools/departments-migration.test.mjs` (2/2).
-- Passed: `corepack pnpm lint`.
-- Passed: `corepack pnpm typecheck`.
-- Passed: `corepack pnpm test` (67/67 and configured coverage thresholds).
-- Passed: `corepack pnpm db:migrate:test`.
-- Passed: focused migration and deployment-artifact tests (7/7).
-- Failed (pre-existing, unchanged): `corepack pnpm openapi:check` because the
-  committed OpenAPI document differs from its canonical scaffold. This
-  migration adds no API route or schema.
+- Passed: admin department creation is permission-gated, CSRF-protected, active,
+  global, and audited in the create transaction.
+- Passed: assignment and task-board selectors query active database rows and
+  include global departments while excluding other-branch rows for scoped staff.
+- Passed: English and Arabic names are preserved and rendered from API data.
+- Passed: lint, typecheck, root tests, focused API/web tests, visual proof, and
+  canonical OpenAPI.
+- Pending: publish, merge to `production`, and monitor deployment.
+- Pending: authenticated production create-and-select verification.

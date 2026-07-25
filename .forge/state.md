@@ -1,8 +1,8 @@
 # Current State
 
-Status: Default department production migration implemented and locally verified
-Phase: Production deployment hardening
-Next Task: Deploy and authenticate department-option smoke, then resume security closeout
+Status: Dynamic department assignment fix verified locally
+Phase: Production deployment
+Next Task: Publish, merge, deploy, and run authenticated production verification
 Model Tier: GPT-5.5 Extra High or equivalent
 
 ## How to use this file
@@ -12,23 +12,19 @@ Prior state history is in `.forge/archive/state-archive.md`.
 
 ## Snapshot
 
-- Production deploys Prisma migrations but intentionally does not run the
-  development seed, which was the only place creating department rows.
-- Migration `20260725120000_default_departments` now inserts Sales, Service,
-  Parts, Body & Paint, Finance, and Customer Care as active global departments.
-- The migration uses `ON CONFLICT ("code") DO NOTHING`, so repeated deploys are
-  safe and existing administrator-managed rows are not overwritten.
-- The production workflow now queries PostgreSQL after migration and fails
-  unless all six active global department defaults are present.
-- The focused migration test, lint, typecheck, root tests with coverage, and
-  migration sanity check pass.
-- The repository's committed OpenAPI document remains non-canonical. This is
-  pre-existing and unrelated because the hotfix changes no API surface.
-- Production credential rotation, authenticated multi-role smoke, off-VPS
-  backup proof, and rollback-retention decisions remain pending.
+- The prior admin branches page displayed department-like preview data but had
+  no real department creation endpoint or action.
+- Admins can now create active top-level departments through an audited,
+  CSRF-protected `MASTER_DATA_MANAGE` endpoint.
+- The admin page lists departments from PostgreSQL-backed form options and
+  reloads them without cache after creation.
+- Generic task assignment and task-board selectors load database rows, include
+  active global departments, and filter branch-specific rows by server session.
+- Arabic and English names remain data-driven; no department name is hardcoded.
+- Local lint, typecheck, root/focused tests, visual proof, and OpenAPI pass.
 
 ## Current Stop
 
-Publish and deploy the isolated department migration through the production
-workflow, verify authenticated department options, then resume the existing
-production security closeout.
+Publish and merge the fix into `production`, monitor the production workflow,
+then create and verify a uniquely named top-level department in both task
+assignment interfaces.

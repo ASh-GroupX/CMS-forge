@@ -14,11 +14,13 @@ type AdminAction = (formData: FormData) => void | Promise<void>;
 export function AdminMasterDataOverview({
   branchAction,
   categoryAction,
+  departmentAction,
   locale,
   options,
 }: {
   branchAction?: AdminAction;
   categoryAction?: AdminAction;
+  departmentAction?: AdminAction;
   locale: Locale;
   options?: ComplaintFormOptions | null;
 }) {
@@ -34,8 +36,9 @@ export function AdminMasterDataOverview({
       </CardHeader>
       <CardContent className="grid gap-4 p-4">
         {options ? (
-          <div className="grid gap-4 xl:grid-cols-3">
+          <div className="grid gap-4 xl:grid-cols-2">
             <EditableOptionsTable action={branchAction} itemType="branch" locale={locale} rows={options.branches} title={t.sections.branches} />
+            <EditableOptionsTable action={departmentAction} itemType="department" locale={locale} rows={options.departments} title={t.sections.departments} />
             <EditableOptionsTable action={categoryAction} itemType="category" locale={locale} parentName={parentName} rows={options.categories} title={t.sections.categories} />
             <SeverityTable locale={locale} values={options.severities} />
           </div>
@@ -56,7 +59,7 @@ function EditableOptionsTable({
   title,
 }: {
   action?: AdminAction | undefined;
-  itemType: 'branch' | 'category';
+  itemType: 'branch' | 'category' | 'department';
   locale: Locale;
   parentName?: Map<string, string>;
   rows: ComplaintFormOption[];
@@ -84,8 +87,8 @@ function EditableOptionsTable({
               <TableCell className="font-semibold">{row.code}</TableCell>
               <TableCell>{localizedName(row, locale)}</TableCell>
               <TableCell>{row.nameAr}</TableCell>
-              <TableCell>{row.parentId ? parentName.get(row.parentId) ?? t.root : t.root}</TableCell>
-              <TableCell>{action ? (
+              <TableCell>{itemType === 'category' ? (row.parentId ? parentName.get(row.parentId) ?? t.root : t.root) : '—'}</TableCell>
+              <TableCell>{action && itemType !== 'department' ? (
                 <details className="rounded-sm border border-line-subtle bg-surface-raised px-2 py-1">
                   <summary className="cursor-pointer text-sm font-semibold text-content-strong">{t.editValue}</summary>
                   <OptionForm action={action} compact item={row} itemType={itemType} locale={locale} rows={rows} />
@@ -112,7 +115,7 @@ function OptionForm({
   action: AdminAction;
   compact?: boolean;
   item?: ComplaintFormOption;
-  itemType: 'branch' | 'category';
+  itemType: 'branch' | 'category' | 'department';
   locale: Locale;
   rows: ComplaintFormOption[];
 }) {

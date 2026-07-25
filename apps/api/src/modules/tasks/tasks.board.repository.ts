@@ -99,9 +99,14 @@ export class TasksBoardRepository {
     return this.prisma.department.findFirst({ where: { id, isActive: true }, select: { id: true } });
   }
 
-  async listActiveDepartments(): Promise<BoardDepartmentRecord[]> {
+  async listEligibleDepartments(scope: Pick<BoardScopeQuery, 'branchId' | 'isAdmin'>): Promise<BoardDepartmentRecord[]> {
     return this.prisma.department.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        ...(!scope.isAdmin
+          ? { OR: [...(scope.branchId ? [{ branchId: scope.branchId }] : []), { branchId: null }] }
+          : {}),
+      },
       orderBy: { nameEn: 'asc' },
       select: { id: true, nameEn: true, nameAr: true },
     });
