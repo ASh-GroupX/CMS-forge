@@ -16,6 +16,10 @@ import { AdminCategoriesController } from '../../src/modules/admin/admin-categor
 import { AdminCategoriesRepository } from '../../src/modules/admin/admin-categories.repository.ts';
 import type { AdminCategoryRecord } from '../../src/modules/admin/admin-categories.repository.ts';
 import { AdminCategoriesService } from '../../src/modules/admin/admin-categories.service.ts';
+import { AdminDepartmentsController } from '../../src/modules/admin/admin-departments.controller.ts';
+import { AdminDepartmentsRepository } from '../../src/modules/admin/admin-departments.repository.ts';
+import type { AdminDepartmentRecord } from '../../src/modules/admin/admin-departments.repository.ts';
+import { AdminDepartmentsService } from '../../src/modules/admin/admin-departments.service.ts';
 import { AdminUsersController, StaffLookupController } from '../../src/modules/admin/admin-users.controller.ts';
 import { AdminUsersRepository } from '../../src/modules/admin/admin-users.repository.ts';
 import type { AdminUserRecord } from '../../src/modules/admin/admin-users.repository.ts';
@@ -56,6 +60,17 @@ const categoryRecord: AdminCategoryRecord = {
   isActive: true,
   createdAt: new Date('2026-06-20T10:00:00.000Z'),
   updatedAt: new Date('2026-06-20T11:00:00.000Z'),
+};
+
+const departmentRecord: AdminDepartmentRecord = {
+  id: 'dept_new',
+  code: 'NEW_TEAM',
+  nameEn: 'New Team',
+  nameAr: 'الفريق الجديد',
+  branchId: null,
+  isActive: true,
+  createdAt: new Date('2026-07-25T10:00:00.000Z'),
+  updatedAt: new Date('2026-07-25T10:00:00.000Z'),
 };
 
 test('admin user service lists users and option data without credential material', async () => {
@@ -295,6 +310,42 @@ test('admin category controller write routes require MASTER_DATA_MANAGE permissi
   }
 });
 
+test('admin creates an active top-level department and audits it in the same transaction', async () => {
+  const txClient = {};
+  const auditRecords: Array<{ input: AuditRecordInput; client: unknown }> = [];
+  const service = new AdminDepartmentsService({
+    transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
+    create: async (data, client) => {
+      assert.equal(client, txClient);
+      assert.deepEqual(data, {
+        code: 'NEW_TEAM',
+        nameEn: 'New Team',
+        nameAr: 'الفريق الجديد',
+        branchId: null,
+      });
+      return departmentRecord;
+    },
+  } as AdminDepartmentsRepository, {
+    record: async (input: AuditRecordInput, client?: unknown) => auditRecords.push({ input, client }),
+  } as AuditService);
+
+  const result = await service.createTopLevel({
+    code: ' NEW_TEAM ',
+    nameEn: ' New Team ',
+    nameAr: ' الفريق الجديد ',
+  }, auditContext());
+
+  assert.equal(result.isActive, true);
+  assert.equal(result.branchId, null);
+  assert.equal(auditRecords[0]?.client, txClient);
+  assert.equal(auditRecords[0]?.input.action, 'admin_department_created');
+  assert.equal(auditRecords[0]?.input.targetType, 'department');
+});
+
+test('admin department creation requires master-data permission and CSRF', () => {
+  assert.deepEqual(departmentGuardNames('create'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+});
+
 function noopAudit(): AuditService {
   return { record: async () => undefined } as unknown as AuditService;
 }
@@ -339,6 +390,11 @@ function staffGuardNames(handler: keyof StaffLookupController): string[] {
 
 function categoryGuardNames(handler: keyof AdminCategoriesController): string[] {
   const guards = Reflect.getMetadata(GUARDS_METADATA, AdminCategoriesController.prototype[handler]) as Array<{ name: string }>;
+  return guards.map((guard) => guard.name);
+}
+
+function departmentGuardNames(handler: keyof AdminDepartmentsController): string[] {
+  const guards = Reflect.getMetadata(GUARDS_METADATA, AdminDepartmentsController.prototype[handler]) as Array<{ name: string }>;
   return guards.map((guard) => guard.name);
 }
 

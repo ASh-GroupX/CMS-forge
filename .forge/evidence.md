@@ -14861,3 +14861,51 @@ SRS: REQ-ADMIN-001, NFR-DATA-001, OPS-RUNBOOK-001, METHOD-TEST-001
 - No password, hash, token, session, provider credential, or customer data is
   read, written, logged, or returned.
 - Customer portal routes and privacy projections are unchanged.
+
+---
+
+## Dynamic top-level departments in task assignment (2026-07-25)
+
+SRS: REQ-ADMIN-001, REQ-RBAC-001, METHOD-AUDIT-001, METHOD-API-001,
+METHOD-TEST-001
+
+- Root cause: the production selector queries were database-backed, but the
+  admin surface had no department write path. Creating a displayed top-level
+  item therefore never created a `Department` row.
+- Added an active global department create endpoint and server action. The
+  department code and bilingual names come from the admin request; names are
+  not hardcoded.
+- The write requires `MASTER_DATA_MANAGE`, staff session authentication, and
+  CSRF validation, and records a `CONFIG` audit entry in the create transaction.
+- Assignment options include active branch-owned rows in the actor's branch and
+  active global rows. The task-board selector now applies the same eligibility
+  rule instead of exposing other branches' department choices.
+- Admin and assignment data requests use database-backed endpoints without a
+  response cache, so the next render includes the newly committed department.
+- Documented `POST /admin/departments` in the canonical OpenAPI contract.
+
+### Verification
+
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test` (69/69; line 93.10%, branch 84.11%, function
+  91.45%).
+- Passed: `corepack pnpm test:api -- admin` (33/33).
+- Passed: `corepack pnpm test:api -- assignments` (7/7).
+- Passed: `corepack pnpm test:api -- tasks` (43/43).
+- Passed: `corepack pnpm test:web` (215/215), including English LTR and Arabic
+  RTL department data rendering.
+- Passed: `corepack pnpm test:visual` (118 route previews).
+- Passed: `corepack pnpm openapi:check` and `git diff --check`.
+- Pending: production deployment and authenticated live create/select proof.
+
+### Security Self-Check
+
+- Roles and branch scope come only from the authenticated server principal.
+- The new state change and its append-only audit entry share one transaction;
+  it schedules no side effect.
+- Allowed admin creation and denied/missing permission behavior are guarded;
+  active/inactive and in-branch/out-of-branch selector boundaries are tested.
+- No password, OTP, token, hash, credential, provider secret, or customer data
+  is logged or returned.
+- Customer portal projections and complaint workflow authority are unchanged.

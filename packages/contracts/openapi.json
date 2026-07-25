@@ -911,6 +911,67 @@
         }
       }
     },
+    "/admin/departments": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "operationId": "adminDepartmentCreate",
+        "summary": "Create an active top-level department",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminDepartmentWriteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Top-level department created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminDepartment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role denied or invalid CSRF token (CSRF_INVALID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/users/{id}/deactivate": {
       "post": {
         "tags": [
@@ -10943,6 +11004,61 @@
               "string",
               "null"
             ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "AdminDepartment": {
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "nameEn",
+          "nameAr",
+          "branchId",
+          "isActive"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "branchId": {
+            "type": "null"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AdminDepartmentWriteRequest": {
+        "type": "object",
+        "required": [
+          "code",
+          "nameEn",
+          "nameAr"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nameEn": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nameAr": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "additionalProperties": false

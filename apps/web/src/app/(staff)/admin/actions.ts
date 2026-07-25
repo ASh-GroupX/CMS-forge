@@ -35,6 +35,19 @@ export async function saveCategoryAction(formData: FormData): Promise<void> {
   redirect(`${returnTo(formData, '/admin')}?locale=${locale}&admin=${state(response)}`);
 }
 
+export async function saveDepartmentAction(formData: FormData): Promise<void> {
+  const locale = safeLocale(formData.get('locale'));
+  const response = await adminFetch('/admin/departments', {
+    body: JSON.stringify({
+      code: text(formData, 'code'),
+      nameEn: text(formData, 'nameEn'),
+      nameAr: text(formData, 'nameAr'),
+    }),
+    method: 'POST',
+  });
+  redirect(`/admin/branches?locale=${locale}&admin=${state(response)}`);
+}
+
 export async function deactivateCategoryAction(formData: FormData): Promise<void> {
   const locale = safeLocale(formData.get('locale'));
   const id = text(formData, 'id');

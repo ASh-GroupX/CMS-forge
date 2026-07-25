@@ -11,14 +11,20 @@ test('assignment options use the session-scoped endpoint and preserve user and d
       calls.push({ input, init });
       return jsonResponse({
         users: [{ id: 'usr_1', nameEn: 'Owner User', nameAr: 'Owner User', branchId: 'branch_1', departmentId: 'dept_1', roleCode: 'CR_MANAGER' }],
-        departments: [{ id: 'dept_1', nameEn: 'Service', nameAr: 'Service', branchId: 'branch_1' }],
+        departments: [
+          { id: 'dept_1', nameEn: 'Service', nameAr: 'الصيانة', branchId: 'branch_1' },
+          { id: 'dept_new', nameEn: 'New Team', nameAr: 'الفريق الجديد', branchId: null },
+        ],
       });
     },
   });
 
   assert.deepEqual(result, {
     users: [{ id: 'usr_1', nameEn: 'Owner User', nameAr: 'Owner User', branchId: 'branch_1', departmentId: 'dept_1', roleCode: 'CR_MANAGER' }],
-    departments: [{ id: 'dept_1', nameEn: 'Service', nameAr: 'Service', branchId: 'branch_1' }],
+    departments: [
+      { id: 'dept_1', nameEn: 'Service', nameAr: 'الصيانة', branchId: 'branch_1' },
+      { id: 'dept_new', nameEn: 'New Team', nameAr: 'الفريق الجديد', branchId: null },
+    ],
   });
   assert.equal(String(calls[0]?.input), 'http://api.test/assignments/options');
   assert.deepEqual(calls[0]?.init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });

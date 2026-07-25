@@ -37,10 +37,11 @@ export class TasksBoardService {
   ) {}
 
   async board(actor: TaskActor, now: Date = new Date()): Promise<TaskBoardResponseDto> {
+    const scope = promiseTrackerQuery(actor);
     const [stages, tasks, departments] = await Promise.all([
       this.boardRepository.listStages(BoardScope.TASKS),
-      this.boardRepository.listBoardTasks(promiseTrackerQuery(actor), new Date(now.getTime() - COMPLETED_WINDOW_MS)),
-      this.boardRepository.listActiveDepartments(),
+      this.boardRepository.listBoardTasks(scope, new Date(now.getTime() - COMPLETED_WINDOW_MS)),
+      this.boardRepository.listEligibleDepartments(scope),
     ]);
     return { ...buildTaskBoard(stages, tasks, now), departments };
   }
