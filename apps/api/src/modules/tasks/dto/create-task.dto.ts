@@ -17,6 +17,8 @@ export type QuickAddTaskRequestDto = {
   confidentialityLevel?: TaskConfidentialityLevel;
   assignedDepartmentId?: string | null;
   assignedUserId?: string | null;
+  assignedDepartmentIds?: string[];
+  assignedUserIds?: string[];
 };
 
 export type QuickAddTaskResponseDto = {
@@ -40,8 +42,12 @@ export function parseQuickAddTaskBody(body: unknown): QuickAddTaskRequestDto {
   const confidentialityLevel = optionalEnum(input.confidentialityLevel, TaskConfidentialityLevel, 'confidentialityLevel');
   const assignedDepartmentId = optionalNullableText(input.assignedDepartmentId, 'assignedDepartmentId');
   const assignedUserId = optionalNullableText(input.assignedUserId, 'assignedUserId');
+  const assignedDepartmentIds = optionalStringArray(input.assignedDepartmentIds, 'assignedDepartmentIds');
+  const assignedUserIds = optionalStringArray(input.assignedUserIds, 'assignedUserIds');
   if (assignedDepartmentId !== undefined) result.assignedDepartmentId = assignedDepartmentId;
   if (assignedUserId !== undefined) result.assignedUserId = assignedUserId;
+  if (assignedDepartmentIds !== undefined) result.assignedDepartmentIds = assignedDepartmentIds;
+  if (assignedUserIds !== undefined) result.assignedUserIds = assignedUserIds;
   if (dueAt !== undefined) result.dueAt = dueAt;
   if (isCustomerPromise !== undefined) result.isCustomerPromise = isCustomerPromise;
   if (links !== undefined) result.links = links;
@@ -55,7 +61,9 @@ export function toQuickAddTaskInput(body: QuickAddTaskRequestDto, ownerId: strin
   const input: CreateTaskInput = {
     title: body.title,
     ownerId,
-    assigneeId: body.assignedUserId === undefined ? body.whoId : body.assignedUserId,
+    assigneeId: body.assignedUserIds !== undefined
+      ? body.assignedUserIds[0] ?? null
+      : body.assignedUserId === undefined ? body.whoId : body.assignedUserId,
     dueAt: body.dueAt ?? body.when,
     nextAction: { what: body.what, whoId: body.whoId, when: body.when },
   };
@@ -65,6 +73,8 @@ export function toQuickAddTaskInput(body: QuickAddTaskRequestDto, ownerId: strin
   if (body.visibility !== undefined) input.visibility = body.visibility;
   if (body.confidentialityLevel !== undefined) input.confidentialityLevel = body.confidentialityLevel;
   if (body.assignedDepartmentId !== undefined) input.assignedDepartmentId = body.assignedDepartmentId;
+  if (body.assignedDepartmentIds !== undefined) input.assignedDepartmentIds = body.assignedDepartmentIds;
+  if (body.assignedUserIds !== undefined) input.participantUserIds = body.assignedUserIds;
   return input;
 }
 

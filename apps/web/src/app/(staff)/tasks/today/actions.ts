@@ -20,8 +20,8 @@ export async function quickAddTaskAction(formData: FormData): Promise<void> {
     title: text(formData, 'title'),
     what: text(formData, 'what'),
     whoId: await staffIdFrom(formData, 'whoId', 'assigneeLabel'),
-    assignedUserId: optionalText(formData, 'assignedUserId'),
-    assignedDepartmentId: optionalText(formData, 'assignedDepartmentId'),
+    assignedUserIds: values(formData, 'assignedUserIds'),
+    assignedDepartmentIds: values(formData, 'assignedDepartmentIds'),
     when: zonedDateTimeToIso(text(formData, 'when'), timeZone),
     isCustomerPromise: formData.get('isCustomerPromise') === 'on',
     ...(optionalText(formData, 'dueAt') ? { dueAt: zonedDateTimeToIso(text(formData, 'dueAt'), timeZone) } : {}),
@@ -115,4 +115,8 @@ function optionalText(formData: FormData, name: string): string | null {
 
 function text(formData: FormData, name: string): string {
   return String(formData.get(name) ?? '').trim();
+}
+
+function values(formData: FormData, name: string): string[] {
+  return formData.getAll(name).map(String).map((value) => value.trim()).filter(Boolean);
 }

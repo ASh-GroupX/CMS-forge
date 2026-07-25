@@ -47,7 +47,7 @@ export function QuickAddForm({ action, assignmentOptions, loadRelatedRecordsActi
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <LabeledInput label={t.fields.title} name="title" required />
-          <div className="md:col-span-2"><AssignmentPicker locale={locale} options={assignmentOptions} /></div>
+          <div className="md:col-span-2"><AssignmentPicker departmentName="assignedDepartmentIds" locale={locale} multiple options={assignmentOptions} userName="assignedUserIds" /></div>
           <StaffPicker label={t.fields.nextOwner} labelName="assigneeLabel" locale={locale} name="whoId" staff={staff} t={t.staffPicker} />
           <LabeledInput label={`${t.fields.when} (${timeZone})`} name="when" required type="datetime-local" />
           <LabeledInput label={`${t.fields.due} (${timeZone})`} name="dueAt" type="datetime-local" />

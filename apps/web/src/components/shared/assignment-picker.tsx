@@ -16,6 +16,7 @@ export function AssignmentPicker({
   options,
   departmentName = 'assignedDepartmentId',
   userName = 'assignedUserId',
+  multiple = false,
 }: {
   initialDepartmentId?: string;
   initialUserId?: string;
@@ -23,6 +24,7 @@ export function AssignmentPicker({
   options?: StaffAssignmentOptions | null | undefined;
   departmentName?: string;
   userName?: string;
+  multiple?: boolean;
 }) {
   const t = staffAssignmentText[locale];
   const [userId, setUserId] = React.useState(initialUserId);
@@ -30,6 +32,7 @@ export function AssignmentPicker({
   if (options === undefined) return <PickerState message={t.loading} />;
   if (options === null) return <PickerState alert message={t.error} />;
   if (options.users.length === 0 && options.departments.length === 0) return <PickerState message={t.empty} />;
+  if (multiple) return <MultipleAssignmentPicker departmentName={departmentName} locale={locale} options={options} userName={userName} />;
 
   return (
     <fieldset className="grid min-w-0 gap-3 rounded-md border border-border p-3 md:grid-cols-2">
@@ -43,6 +46,38 @@ export function AssignmentPicker({
       <input name={userName} type="hidden" value={userId} />
       <input name={departmentName} type="hidden" value={departmentId} />
     </fieldset>
+  );
+}
+
+function MultipleAssignmentPicker({ departmentName, locale, options, userName }: {
+  departmentName: string;
+  locale: Locale;
+  options: StaffAssignmentOptions;
+  userName: string;
+}) {
+  const t = staffAssignmentText[locale];
+  return (
+    <fieldset className="grid min-w-0 gap-3 rounded-md border border-border p-3 md:grid-cols-2">
+      <legend className="px-1 text-xs font-semibold text-muted-foreground">{t.help}</legend>
+      <ChoiceList label={t.user} name={userName} options={options.users.map((user) => ({ id: user.id, label: locale === 'ar' ? user.nameAr : user.nameEn }))} />
+      <ChoiceList label={t.department} name={departmentName} options={options.departments.map((department) => ({ id: department.id, label: locale === 'ar' ? department.nameAr : department.nameEn }))} />
+    </fieldset>
+  );
+}
+
+function ChoiceList({ label, name, options }: { label: string; name: string; options: { id: string; label: string }[] }) {
+  return (
+    <div className="grid content-start gap-2">
+      <span className="text-sm font-medium">{label}</span>
+      <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-border p-2">
+        {options.map((option) => (
+          <Label className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 hover:bg-muted" key={option.id}>
+            <input className="size-4 rounded border-border accent-primary" name={name} type="checkbox" value={option.id} />
+            <span>{option.label}</span>
+          </Label>
+        ))}
+      </div>
+    </div>
   );
 }
 

@@ -1,26 +1,26 @@
-# Deploy Dynamic Department Assignment Fix
+# User Department Membership and Task Distribution
 
-Status: Implemented and verified locally
+Status: Locally verified; production release in progress
 Required model tier: GPT-5.5 Extra High or equivalent
-Risk: High (admin master data, RBAC, branch scope, production deployment)
+Risk: High (user administration, task authorization, notifications, production migration)
 SRS IDs: `REQ-ADMIN-001`, `REQ-RBAC-001`, `METHOD-AUDIT-001`,
-`METHOD-API-001`, `METHOD-TEST-001`
+`METHOD-API-001`, `METHOD-TEST-001`, `ARCH-UI-001`, `UI-DESIGN-001`
 
 ## Task
 
-Publish the audited top-level department creation path and the database-backed,
-scope-eligible assignment selectors. Deploy to production, create a uniquely
-named active top-level department through the admin workflow, and verify it is
-immediately available in the English and Arabic task assignment interfaces.
+Require an active eligible department when administrators create or edit staff
+users. Allow task creation to target multiple specific users and departments,
+while preserving the SRS invariant that one selected user is the accountable
+assignee. Resolve task visibility and notifications from the deduplicated union
+of explicit participants and active members of selected departments.
 
 ## Required Gates
 
-- Passed: admin department creation is permission-gated, CSRF-protected, active,
-  global, and audited in the create transaction.
-- Passed: assignment and task-board selectors query active database rows and
-  include global departments while excluding other-branch rows for scoped staff.
-- Passed: English and Arabic names are preserved and rendered from API data.
-- Passed: lint, typecheck, root tests, focused API/web tests, visual proof, and
-  canonical OpenAPI.
-- Pending: publish, merge to `production`, and monitor deployment.
-- Pending: authenticated production create-and-select verification.
+- Creating and changing a user's department is validated, persisted, and audited.
+- Task department targets are relational database records and existing single
+  department assignments are migrated without data loss.
+- Active department members can see assigned tasks; inactive members cannot.
+- Explicit users and department-derived users receive at most one notification.
+- English LTR and Arabic RTL task assignment controls use live database options.
+- Focused tests, migration checks, lint, typecheck, OpenAPI, and production
+  deployment verification pass.

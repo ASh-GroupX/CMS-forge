@@ -14909,3 +14909,62 @@ METHOD-TEST-001
 - No password, OTP, token, hash, credential, provider secret, or customer data
   is logged or returned.
 - Customer portal projections and complaint workflow authority are unchanged.
+
+---
+
+## User department membership and multi-recipient task delivery (2026-07-25)
+
+SRS: REQ-ADMIN-001, REQ-RBAC-001, METHOD-AUDIT-001, METHOD-API-001,
+METHOD-TEST-001, ARCH-UI-001, UI-DESIGN-001
+
+- Admin user creation now requires an active, branch-eligible department; the
+  selected department is stored on the user row. A guarded edit route changes
+  it later and records a CONFIG audit entry in the same transaction.
+- Task creation accepts multiple explicit users and multiple departments. The
+  first explicit user remains the accountable assignee, while all explicit
+  users are persisted as participants and all departments are persisted in the
+  relational `task_department_recipients` table.
+- Existing `tasks.assigned_department_id` values are additively backfilled into
+  the recipient table. The migration does not update or delete existing tasks,
+  departments, users, or assignment values.
+- Task visibility and post-commit notifications resolve the database union of
+  explicit recipients and current active department members. One `User`
+  query and idempotency keys prevent overlapping user/department recipients
+  from receiving duplicate assignment notifications.
+- English LTR and Arabic RTL quick-add interfaces render multi-select user and
+  department options returned by the live assignment-options API.
+
+### Verification
+
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm test` (69/69; line 92.46%, branch 84.11%, function
+  91.45%).
+- Passed: `corepack pnpm test:api -- admin` (34/34).
+- Passed: `corepack pnpm test:api -- tasks` (43/43).
+- Passed: `corepack pnpm test:web -- shell` (216/216), including English LTR
+  and Arabic RTL multi-recipient controls.
+- Passed: focused task service (27/27) and controller (14/14) tests.
+- Passed: `node --test tools/task-department-recipients-migration.test.mjs`
+  (1/1) and `corepack pnpm db:migrate:test`.
+- Passed: visual inspection of the generated English and Arabic assignment
+  controls.
+- Passed: `git diff --check`.
+- Verified: `.github/workflows/deploy.yml` creates and validates a database
+  backup before deployment; `docker-compose.prod.yml` requires `prisma migrate
+  deploy` to complete successfully before API startup.
+- Pending: GitHub merge, production deployment, and authenticated live proof.
+
+### Security Self-Check
+
+- Department eligibility and branch compatibility are enforced by backend
+  services using the authenticated server actor; the client supplies no role
+  or branch authority.
+- Department task visibility is limited to active current members and NORMAL
+  confidentiality tasks. Explicit participant access remains unchanged.
+- User department writes and task creation retain transactional audit/history
+  guarantees. Notification delivery runs only after commit.
+- Recipient queries exclude inactive, locked, and customer-portal users.
+- No password, OTP, token, hash, session, provider credential, or customer data
+  is logged or exposed.

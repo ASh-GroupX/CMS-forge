@@ -24,6 +24,13 @@ export class AdminUsersController {
     return this.users.create(parseCreateUser(body), auditContext(request));
   }
 
+  @Post(':id/department')
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('USERS_MANAGE')
+  updateDepartment(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    return this.users.updateDepartment(id, departmentId(body), auditContext(request));
+  }
+
   @Post(':id/deactivate')
   @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
   @Permissions('USERS_MANAGE')
@@ -57,8 +64,13 @@ function parseCreateUser(body: unknown): CreateAdminUserInput {
   const input = body as Record<string, unknown>;
   return {
     email: text(input.email, 'email'), nameEn: text(input.nameEn, 'nameEn'), nameAr: text(input.nameAr, 'nameAr'),
-    roleCode: role(input.roleCode), branchId: optionalText(input.branchId), initialPassword: text(input.initialPassword, 'initialPassword'),
+    roleCode: role(input.roleCode), branchId: optionalText(input.branchId), departmentId: text(input.departmentId, 'departmentId'), initialPassword: text(input.initialPassword, 'initialPassword'),
   };
+}
+
+function departmentId(body: unknown): string {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) throw badBody('departmentId');
+  return text((body as Record<string, unknown>).departmentId, 'departmentId');
 }
 
 function text(value: unknown, field: string): string {

@@ -4,13 +4,14 @@ export const adminUsersText: Record<Locale, typeof enAdminUsersText> = {
   en: {
     title: 'Users, roles, and branch scope',
     subtitle: 'Create accounts and control staff access.',
-    headers: ['User', 'Role', 'Branch scope', 'Status', 'Action'],
+    headers: ['User', 'Role', 'Branch scope', 'Department', 'Status', 'Action'],
     badges: { active: 'Active', inactive: 'Inactive' },
     actions: {
       create: 'Create user',
       manageRoles: 'Manage roles',
       deactivate: 'Deactivate',
       reactivate: 'Reactivate',
+      saveDepartment: 'Save',
     },
     fields: {
       email: 'Email',
@@ -18,6 +19,7 @@ export const adminUsersText: Record<Locale, typeof enAdminUsersText> = {
       nameAr: 'Arabic name',
       role: 'Role',
       branch: 'Branch scope',
+      department: 'Department',
       initialPassword: 'Initial password',
     },
     masterData: {
@@ -50,13 +52,14 @@ export const adminUsersText: Record<Locale, typeof enAdminUsersText> = {
   ar: {
     title: 'المستخدمون والأدوار ونطاق الفروع',
     subtitle: 'أنشئ حسابات الموظفين وتحكم في صلاحياتهم.',
-    headers: ['المستخدم', 'الدور', 'نطاق الفرع', 'الحالة', 'الإجراء'],
+    headers: ['المستخدم', 'الدور', 'نطاق الفرع', 'القسم', 'الحالة', 'الإجراء'],
     badges: { active: 'نشط', inactive: 'غير نشط' },
     actions: {
       create: 'إنشاء مستخدم',
       manageRoles: 'إدارة الأدوار',
       deactivate: 'إيقاف',
       reactivate: 'تفعيل',
+      saveDepartment: 'حفظ',
     },
     fields: {
       email: 'البريد الإلكتروني',
@@ -64,6 +67,7 @@ export const adminUsersText: Record<Locale, typeof enAdminUsersText> = {
       nameAr: 'الاسم بالعربية',
       role: 'الدور',
       branch: 'نطاق الفرع',
+      department: 'القسم',
       initialPassword: 'كلمة المرور الأولية',
     },
     masterData: {
@@ -100,8 +104,8 @@ const enAdminUsersText = {
   subtitle: '',
   headers: [''],
   badges: { active: '', inactive: '' },
-  actions: { create: '', manageRoles: '', deactivate: '', reactivate: '' },
-  fields: { email: '', nameEn: '', nameAr: '', role: '', branch: '', initialPassword: '' },
+  actions: { create: '', manageRoles: '', deactivate: '', reactivate: '', saveDepartment: '' },
+  fields: { email: '', nameEn: '', nameAr: '', role: '', branch: '', department: '', initialPassword: '' },
   masterData: {
     title: '',
     subtitle: '',

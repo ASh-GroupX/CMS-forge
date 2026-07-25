@@ -5,14 +5,14 @@ import { AuditService } from '../../core/audit.service.js';
 import type { AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import { AdminUsersRepository } from './admin-users.repository.js';
-import type { AdminBranchOption, AdminRoleOption, AdminUserRecord, AssignableStaffRecord } from './admin-users.repository.js';
+import type { AdminBranchOption, AdminDepartmentOption, AdminRoleOption, AdminUserRecord, AssignableStaffRecord } from './admin-users.repository.js';
 
 export type AdminUserDto = {
   id: string; email: string; username: string | null; nameEn: string; nameAr: string; roleCode: string; roleName: string;
-  branchId: string | null; branchName: string | null; isActive: boolean; lockedAt: string | null; lastLoginAt: string | null;
+  branchId: string | null; branchName: string | null; departmentId: string | null; departmentName: string | null; isActive: boolean; lockedAt: string | null; lastLoginAt: string | null;
 };
-export type AdminUsersResponse = { users: AdminUserDto[]; roles: AdminRoleOption[]; branches: AdminBranchOption[] };
-export type CreateAdminUserInput = { email: string; nameEn: string; nameAr: string; roleCode: string; branchId?: string | null; initialPassword: string };
+export type AdminUsersResponse = { users: AdminUserDto[]; roles: AdminRoleOption[]; branches: AdminBranchOption[]; departments: AdminDepartmentOption[] };
+export type CreateAdminUserInput = { email: string; nameEn: string; nameAr: string; roleCode: string; branchId?: string | null; departmentId: string; initialPassword: string };
 export type StaffLookupActor = { userId: string; roleCode: string; branchId: string | null };
 export type AssignableStaffDto = { userId: string; displayName: string; displayNameAr: string; role: string; roleAr: string; branchLabel: string | null; branchLabelAr: string | null };
 export type AssignableStaffResponse = { staff: AssignableStaffDto[] };
@@ -56,6 +56,17 @@ export class AdminUsersService {
     });
   }
 
+  async updateDepartment(id: string, departmentId: string, audit: AdminAudit = {}): Promise<AdminUserDto> {
+    const userId = nonEmpty(id, 'id');
+    const department = await this.validDepartment(departmentId);
+    return this.repository.transaction(async (client) => {
+      const current = await this.repository.updateDepartment(userId, department.id, client);
+      if (department.branchId && current.branch?.id !== department.branchId) throw validation('departmentId', 'departmentId is outside the user branch.');
+      await this.audit.record(auditInput('admin_user_department_updated', current, audit, { departmentId: department.id }), client);
+      return userDto(current);
+    });
+  }
+
   private async createData(input: CreateAdminUserInput) {
     const email = nonEmpty(input.email, 'email').toLowerCase();
     if (!email.includes('@')) throw validation('email', 'email is invalid.');
@@ -63,12 +74,20 @@ export class AdminUsersService {
     if (!roleId || input.roleCode === RoleCode.CUSTOMER_PORTAL) throw validation('roleCode', 'roleCode is invalid.');
     const branchId = optionalText(input.branchId, 'branchId');
     if (branchId && !(await this.repository.branchExists(branchId))) throw validation('branchId', 'branchId is invalid.');
+    const department = await this.validDepartment(input.departmentId);
+    if (department.branchId && department.branchId !== branchId) throw validation('departmentId', 'departmentId is outside the user branch.');
     const password = nonEmpty(input.initialPassword, 'initialPassword');
     if (password.length < 12) throw validation('initialPassword', 'initialPassword must be at least 12 characters.');
     return {
       email, nameEn: nonEmpty(input.nameEn, 'nameEn'), nameAr: nonEmpty(input.nameAr, 'nameAr'),
-      passwordHash: await argon2.hash(password, { type: argon2.argon2id }), roleId, branchId,
+      passwordHash: await argon2.hash(password, { type: argon2.argon2id }), roleId, branchId, departmentId: department.id,
     };
+  }
+
+  private async validDepartment(departmentId: string): Promise<AdminDepartmentOption> {
+    const department = await this.repository.activeDepartment(nonEmpty(departmentId, 'departmentId'));
+    if (!department) throw validation('departmentId', 'departmentId is invalid.');
+    return department;
   }
 }
 
@@ -76,6 +95,7 @@ function userDto(user: AdminUserRecord): AdminUserDto {
   return {
     id: user.id, email: user.email, username: user.username, nameEn: user.nameEn, nameAr: user.nameAr, roleCode: user.role.code, roleName: user.role.nameEn,
     branchId: user.branch?.id ?? null, branchName: user.branch?.nameEn ?? null, isActive: user.isActive,
+    departmentId: user.department?.id ?? null, departmentName: user.department?.nameEn ?? null,
     lockedAt: user.lockedAt?.toISOString() ?? null, lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
   };
 }
