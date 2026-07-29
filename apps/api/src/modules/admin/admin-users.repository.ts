@@ -78,7 +78,7 @@ export class AdminUsersRepository {
   }
 
   async setActive(id: string, active: boolean, client: AdminUserClient = this.prisma): Promise<AdminUserRecord> {
-    return client.user.update({ where: { id }, data: { isActive: active, lockedAt: active ? null : new Date() }, select: userSelect });
+    return client.user.update({ where: { id }, data: { isActive: active }, select: userSelect });
   }
 
   async updateDepartment(id: string, departmentId: string, client: AdminUserClient = this.prisma): Promise<AdminUserRecord> {
