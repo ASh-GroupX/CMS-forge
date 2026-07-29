@@ -68,6 +68,28 @@ import { isActiveNav } from '../../src/app/app-shell';
 import { AttachmentDropzone, DataTable, Field, FilterBar, MetricStrip, PageHeader, StateBlock, StatusBadge, Timeline } from '../../src/components/shared/ui-primitives';
 import { TableCell, TableRow } from '../../src/components/ui/table';
 import { AssignmentPicker } from '../../src/components/shared/assignment-picker';
+import { deferMouseSelectToClick } from '../../src/components/ui/select';
+
+test('shared select defers mouse selection until click without changing touch behavior', () => {
+  let mousePrevented = false;
+  let touchPrevented = false;
+  let mouseFocused = false;
+
+  deferMouseSelectToClick({
+    currentTarget: { focus: (options?: FocusOptions) => { mouseFocused = options?.preventScroll === true; } },
+    pointerType: 'mouse',
+    preventDefault: () => { mousePrevented = true; },
+  } as React.PointerEvent);
+  deferMouseSelectToClick({
+    currentTarget: { focus: () => { throw new Error('touch item must not be focused by the mouse deferral'); } },
+    pointerType: 'touch',
+    preventDefault: () => { touchPrevented = true; },
+  } as React.PointerEvent);
+
+  assert.equal(mousePrevented, true);
+  assert.equal(mouseFocused, true);
+  assert.equal(touchPrevented, false);
+});
 
 test('shared UI primitives render accessible operational markup', () => {
   const html = renderToStaticMarkup(

@@ -115,7 +115,7 @@ SelectLabel.displayName = SelectPrimitive.Label.displayName
 const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, onPointerDown, onPointerMove, ...props }, ref) => (
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
@@ -123,6 +123,14 @@ const SelectItem = React.forwardRef<
       className
     )}
     {...props}
+    onPointerDown={(event) => {
+      onPointerDown?.(event)
+      if (!event.defaultPrevented) deferMouseSelectToClick(event)
+    }}
+    onPointerMove={(event) => {
+      onPointerMove?.(event)
+      if (!event.defaultPrevented) deferMouseSelectToClick(event)
+    }}
   >
     <span className="absolute end-2 flex h-3.5 w-3.5 items-center justify-center">
       <SelectPrimitive.ItemIndicator>
@@ -133,6 +141,18 @@ const SelectItem = React.forwardRef<
   </SelectPrimitive.Item>
 ))
 SelectItem.displayName = SelectPrimitive.Item.displayName
+
+export function deferMouseSelectToClick(
+  event: Pick<React.PointerEvent<HTMLElement>, "currentTarget" | "pointerType" | "preventDefault">
+) {
+  // Radix normally selects mouse items on pointerup, which unmounts the portal
+  // before the following click. Defer to click so it cannot land on navigation
+  // underneath the closed menu.
+  if (event.pointerType === "mouse") {
+    event.currentTarget.focus({ preventScroll: true })
+    event.preventDefault()
+  }
+}
 
 const SelectSeparator = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Separator>,

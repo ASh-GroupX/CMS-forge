@@ -204,7 +204,7 @@ test('admin user service deactivates and reactivates with audit entries', async 
     setActive: async (id, active, client) => {
       assert.equal(id, 'usr_1');
       assert.equal(client, txClient);
-      return { ...userRecord, isActive: active, lockedAt: active ? null : new Date('2026-06-20T12:00:00.000Z') };
+      return { ...userRecord, isActive: active };
     },
   } as AdminUsersRepository, {
     record: async (input: AuditRecordInput, client?: unknown) => auditRecords.push({ input, client }),
@@ -214,6 +214,42 @@ test('admin user service deactivates and reactivates with audit entries', async 
   assert.equal((await service.setActive('usr_1', true, auditContext())).isActive, true);
   assert.deepEqual(auditRecords.map((record) => record.input.action), ['admin_user_deactivated', 'admin_user_reactivated']);
   assert.equal(auditRecords.every((record) => record.client === txClient), true);
+});
+
+test('admin user repository changes only active state and active selectors exclude deactivated users', async () => {
+  const updates: unknown[] = [];
+  const queries: unknown[] = [];
+  const repository = new AdminUsersRepository({
+    user: {
+      update: async (args: unknown) => {
+        updates.push(args);
+        const active = (args as { data: { isActive: boolean } }).data.isActive;
+        return { ...userRecord, isActive: active };
+      },
+      findMany: async (args: unknown) => {
+        queries.push(args);
+        return [];
+      },
+    },
+  } as never);
+
+  assert.equal((await repository.setActive('usr_1', false)).isActive, false);
+  assert.equal((await repository.setActive('usr_1', true)).isActive, true);
+  await repository.listAssignableStaff('branch_main');
+
+  assert.deepEqual(
+    updates.map((update) => (update as { data: unknown }).data),
+    [{ isActive: false }, { isActive: true }],
+  );
+  assert.deepEqual(
+    (queries[0] as { where: unknown }).where,
+    {
+      isActive: true,
+      lockedAt: null,
+      role: { code: { not: 'CUSTOMER_PORTAL' } },
+      branchId: 'branch_main',
+    },
+  );
 });
 
 test('admin users controller routes require USERS_MANAGE permission and CSRF for writes', async () => {
