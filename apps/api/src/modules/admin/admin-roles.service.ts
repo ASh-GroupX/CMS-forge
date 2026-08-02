@@ -48,7 +48,8 @@ export class AdminRolesService {
       this.assertVersion(current, input.expectedUpdatedAt);
       const impact = await this.permissionImpact(current, input.permissionCodes, audit.actorId ?? null, client);
       if (!impact.allowed) throw conflict(impact.denialReason!);
-      const updated = await this.repository.replacePermissions(current.id, permissionIds, client);
+      const updated = await this.repository.replacePermissionsIfVersion(current.id, current.updatedAt, permissionIds, client);
+      if (!updated) throw conflict('ROLE_VERSION_CONFLICT');
       await this.audit.record(permissionAuditInput(current, updated, audit), client);
       return roleDto(updated, impact.affectedActiveUserCount);
     });

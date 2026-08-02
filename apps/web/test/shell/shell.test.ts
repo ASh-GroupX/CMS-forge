@@ -12,7 +12,7 @@ import PromisesPage from '../../src/app/(staff)/tasks/promises/page';
 import ManagerControlRoomPage from '../../src/app/(staff)/tasks/manager/page';
 import DealHandoffPage from '../../src/app/(staff)/deals/handoff/page';
 import ConfidentialCasePage from '../../src/app/(staff)/cases/confidential/[caseId]/page';
-import { shouldRedirectStaffRoute } from '../../src/app/(staff)/layout';
+import { navForPrincipal, shouldRedirectStaffRoute } from '../../src/app/(staff)/layout';
 import ComplaintsPage from '../../src/app/(staff)/complaints/page';
 import NewComplaintPage from '../../src/app/(staff)/complaints/new/page';
 import ComplaintDetailPage from '../../src/app/(staff)/complaints/[id]/page';
@@ -69,6 +69,26 @@ import { AttachmentDropzone, DataTable, Field, FilterBar, MetricStrip, PageHeade
 import { TableCell, TableRow } from '../../src/components/ui/table';
 import { AssignmentPicker } from '../../src/components/shared/assignment-picker';
 import { deferMouseSelectToClick } from '../../src/components/ui/select';
+import { assigneeLabel } from '../../src/components/task-board/board-card';
+import { departmentLabel } from '../../src/components/task-board/board-card-department';
+
+test('administration navigation follows effective permissions for built-in and custom roles', () => {
+  const adminPermissions = ['STAFF_LOGIN', 'USERS_MANAGE'];
+  assert.equal(navForPrincipal('ADMIN', adminPermissions).includes('admin'), true);
+  assert.equal(navForPrincipal('QA_CUSTOM', adminPermissions).includes('admin'), true);
+  assert.equal(navForPrincipal('QA_CUSTOM', ['STAFF_LOGIN']).includes('admin'), false);
+  assert.equal(staffShellText.en.nav.admin.length > 0, true);
+  assert.equal(staffShellText.ar.nav.admin.length > 0, true);
+});
+
+test('department-only board labels remain readable in English and Arabic without an assignee', () => {
+  const department = { departmentName: 'Service', departmentNameAr: 'الصيانة' };
+  const noAssignee = { assigneeName: null, assigneeNameAr: null };
+  assert.equal(departmentLabel(department, 'en'), 'Service');
+  assert.equal(departmentLabel(department, 'ar'), 'الصيانة');
+  assert.equal(assigneeLabel(noAssignee, 'en', 'Unassigned'), 'Unassigned');
+  assert.equal(assigneeLabel(noAssignee, 'ar', 'غير معين'), 'غير معين');
+});
 
 test('shared select defers mouse selection until click without changing touch behavior', () => {
   let mousePrevented = false;

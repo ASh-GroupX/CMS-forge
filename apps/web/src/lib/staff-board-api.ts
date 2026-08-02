@@ -24,7 +24,7 @@ export type BoardCard = {
   ownerId: string;
   ownerName: string | null;
   ownerNameAr: string | null;
-  assigneeId: string;
+  assigneeId: string | null;
   assigneeName: string | null;
   assigneeNameAr: string | null;
   assignedDepartmentId: string | null;
@@ -210,7 +210,7 @@ export function boardCardFrom(card: Partial<BoardCard>): BoardCard | null {
     typeof card.id !== 'string' ||
     typeof card.title !== 'string' ||
     typeof card.ownerId !== 'string' ||
-    typeof card.assigneeId !== 'string' ||
+    (card.assigneeId !== null && typeof card.assigneeId !== 'string') ||
     typeof card.dueAt !== 'string' ||
     !isTaskStatus(card.status) ||
     typeof card.stageId !== 'string' ||
@@ -233,7 +233,7 @@ export function boardCardFrom(card: Partial<BoardCard>): BoardCard | null {
     ownerId: card.ownerId,
     ownerName: typeof card.ownerName === 'string' ? card.ownerName : null,
     ownerNameAr: typeof card.ownerNameAr === 'string' ? card.ownerNameAr : null,
-    assigneeId: card.assigneeId,
+    assigneeId: typeof card.assigneeId === 'string' ? card.assigneeId : null,
     assigneeName: typeof card.assigneeName === 'string' ? card.assigneeName : null,
     assigneeNameAr: typeof card.assigneeNameAr === 'string' ? card.assigneeNameAr : null,
     assignedDepartmentId: typeof card.assignedDepartmentId === 'string' ? card.assignedDepartmentId : null,
