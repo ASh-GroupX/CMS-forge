@@ -17,7 +17,7 @@ const DUE_BADGE_CLASS: Record<NonNullable<BoardCard['dueState']>, string> = {
   UPCOMING: 'border-line-subtle bg-surface-raised text-content-muted',
 };
 
-export function assigneeLabel(card: BoardCard, locale: Locale, fallback: string): string {
+export function assigneeLabel(card: Pick<BoardCard, 'assigneeName' | 'assigneeNameAr'>, locale: Locale, fallback: string): string {
   const name = locale === 'ar' ? card.assigneeNameAr ?? card.assigneeName : card.assigneeName ?? card.assigneeNameAr;
   return name?.trim() || fallback;
 }

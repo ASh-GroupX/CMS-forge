@@ -26,7 +26,7 @@ export default async function StaffLayout({ children }: { children: ReactNode })
   if (shouldRedirectStaffRoute(Boolean(principal), activePath)) {
     redirect(`/?locale=${locale}`);
   }
-  const allowedNav = principal ? navForPrincipal(ROLE_NAV[principal.roleCode] ?? STAFF_NAV, principal.permissions) : STAFF_NAV;
+  const allowedNav = principal ? navForPrincipal(principal.roleCode, principal.permissions) : STAFF_NAV;
 
   return (
     <AppShell
@@ -53,10 +53,13 @@ export function shouldRedirectStaffRoute(hasPrincipal: boolean, pathname: string
   return !hasPrincipal && !pathname.startsWith('/auth/reset');
 }
 
-function navForPrincipal(nav: readonly StaffNavKey[], permissions: readonly string[]): readonly StaffNavKey[] {
+export function navForPrincipal(roleCode: string, permissions: readonly string[]): readonly StaffNavKey[] {
   const has = (permission: string) => permissions.includes(permission);
+  const base = ROLE_NAV[roleCode] ?? STAFF_NAV;
+  const canAdmin = has('USERS_MANAGE') || has('ROLES_MANAGE') || has('MASTER_DATA_MANAGE') || has('NOTIFICATIONS_MANAGE');
+  const nav = canAdmin && !base.includes('admin') ? [...base, 'admin' as const] : base;
   return nav.filter((key) => {
-    if (key === 'admin') return has('USERS_MANAGE') || has('ROLES_MANAGE') || has('MASTER_DATA_MANAGE') || has('NOTIFICATIONS_MANAGE');
+    if (key === 'admin') return canAdmin;
     if (key === 'audit') return has('AUDIT_VIEW');
     if (key === 'handoff') return has('COMPLAINT_ASSIGN');
     if (key === 'reports' || key === 'dashboard' || key === 'manager' || key === 'promises') return has('REPORT_VIEW');
