@@ -64,8 +64,7 @@ ADD COLUMN     "is_external" BOOLEAN NOT NULL DEFAULT true,
 ADD COLUMN     "is_internal" BOOLEAN NOT NULL DEFAULT false;
 
 -- AlterTable
-ALTER TABLE "complaint_status_history" DROP COLUMN "actor_role",
-ADD COLUMN     "actor_role" TEXT;
+ALTER TABLE "complaint_status_history" ALTER COLUMN "actor_role" TYPE TEXT USING "actor_role"::TEXT;
 
 -- AlterTable
 ALTER TABLE "complaints" ADD COLUMN     "channel" TEXT,
