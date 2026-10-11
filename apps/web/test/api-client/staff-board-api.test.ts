@@ -56,6 +56,45 @@ test('task board load calls the scoped endpoint with the session cookie only', a
   assert.deepEqual(result, { status: 'ready', data: { stages: [stage], columns: [{ stageId: 'stage_open', cards: [card] }], departments: [department] } });
 });
 
+test('task board accepts direct, department-only, and mixed cards without duplicates', async () => {
+  const departmentOnly = {
+    ...card,
+    id: 'task_department',
+    assigneeId: null,
+    assigneeName: null,
+    assigneeNameAr: null,
+    assignedDepartmentId: department.id,
+    departmentName: department.nameEn,
+    departmentNameAr: department.nameAr,
+  };
+  const mixed = {
+    ...card,
+    id: 'task_mixed',
+    assignedDepartmentId: department.id,
+    departmentName: department.nameEn,
+    departmentNameAr: department.nameAr,
+  };
+  const secondDepartment = { id: 'dept_parts', nameEn: 'Parts', nameAr: 'القطع' };
+  const result = await getTaskBoardLoadResult({
+    apiUrl: 'http://api.test',
+    cookieHeader: 'cms_staff_session=session',
+    fetchImpl: async () => jsonResponse({
+      stages: [stage],
+      columns: [{ stageId: stage.id, cards: [card, departmentOnly, mixed] }],
+      departments: [department, secondDepartment],
+    }),
+  });
+
+  assert.equal(result.status, 'ready');
+  if (result.status !== 'ready') return;
+  const cards = result.data.columns[0]!.cards;
+  assert.deepEqual(cards.map(({ id }) => id), ['task_1', 'task_department', 'task_mixed']);
+  assert.equal(new Set(cards.map(({ id }) => id)).size, cards.length);
+  assert.equal(cards[1]?.assigneeId, null);
+  assert.equal(cards[1]?.departmentName, 'Service');
+  assert.deepEqual(result.data.departments.map(({ id }) => id), ['dept_service', 'dept_parts']);
+});
+
 test('task board load distinguishes denied, error, and malformed payloads', async () => {
   assert.deepEqual(await getTaskBoardLoadResult({ cookieHeader: '' }), { status: 'denied' });
   assert.deepEqual(await getTaskBoardLoadResult({

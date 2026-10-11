@@ -23,6 +23,7 @@ module's boundary so you can work in a fresh context without scanning the tree.
 - `tasks`
 - `task_links`
 - `task_participants`
+- `task_department_recipients`
 - `task_comments`
 - `task_status_history`
 - `task_comment_mentions`
@@ -30,6 +31,7 @@ module's boundary so you can work in a fresh context without scanning the tree.
   the `board-stages` module in Phase B)
 - `departments` (read-only shared reference data: B3 department-assignment
   validation and the board's assignment options — never written here)
+- `users` (read-only active recipient resolution; never written here)
 
 ## May depend on
 

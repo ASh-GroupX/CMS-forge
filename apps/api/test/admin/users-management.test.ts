@@ -16,6 +16,10 @@ import { AdminCategoriesController } from '../../src/modules/admin/admin-categor
 import { AdminCategoriesRepository } from '../../src/modules/admin/admin-categories.repository.ts';
 import type { AdminCategoryRecord } from '../../src/modules/admin/admin-categories.repository.ts';
 import { AdminCategoriesService } from '../../src/modules/admin/admin-categories.service.ts';
+import { AdminDepartmentsController } from '../../src/modules/admin/admin-departments.controller.ts';
+import { AdminDepartmentsRepository } from '../../src/modules/admin/admin-departments.repository.ts';
+import type { AdminDepartmentRecord } from '../../src/modules/admin/admin-departments.repository.ts';
+import { AdminDepartmentsService } from '../../src/modules/admin/admin-departments.service.ts';
 import { AdminUsersController, StaffLookupController } from '../../src/modules/admin/admin-users.controller.ts';
 import { AdminUsersRepository } from '../../src/modules/admin/admin-users.repository.ts';
 import type { AdminUserRecord } from '../../src/modules/admin/admin-users.repository.ts';
@@ -34,6 +38,7 @@ const userRecord: AdminUserRecord = {
   updatedAt: new Date('2026-06-20T11:00:00.000Z'),
   role: { id: 'role_cr', code: RoleCode.CR_OFFICER, nameEn: 'CR Officer', nameAr: 'CR Officer' },
   branch: { id: 'branch_main', code: 'MAIN', nameEn: 'Main branch', nameAr: 'Main branch' },
+  department: { id: 'dept_service', code: 'SERVICE', nameEn: 'Service', nameAr: 'Service', branchId: null },
 };
 
 const admin: StaffPrincipal = {
@@ -59,12 +64,24 @@ const categoryRecord: AdminCategoryRecord = {
   updatedAt: new Date('2026-06-20T11:00:00.000Z'),
 };
 
+const departmentRecord: AdminDepartmentRecord = {
+  id: 'dept_new',
+  code: 'NEW_TEAM',
+  nameEn: 'New Team',
+  nameAr: 'الفريق الجديد',
+  branchId: null,
+  isActive: true,
+  createdAt: new Date('2026-07-25T10:00:00.000Z'),
+  updatedAt: new Date('2026-07-25T10:00:00.000Z'),
+};
+
 test('admin user service lists users and option data without credential material', async () => {
   const service = new AdminUsersService({
     listUsers: async () => [userRecord],
     options: async () => ({
       roles: [userRecord.role],
       branches: [userRecord.branch!],
+      departments: [userRecord.department!],
     }),
   } as AdminUsersRepository, noopAudit());
 
@@ -119,6 +136,7 @@ test('admin user service creates an account with hashed password and CONFIG audi
   const service = new AdminUsersService({
     roleId: async (code) => code === RoleCode.CR_OFFICER ? 'role_cr' : null,
     branchExists: async (id) => id === 'branch_main',
+    activeDepartment: async (id) => id === 'dept_service' ? userRecord.department : null,
     transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
     create: async (data, client) => {
       assert.equal(client, txClient);
@@ -136,6 +154,7 @@ test('admin user service creates an account with hashed password and CONFIG audi
       nameAr: ' Service Advisor ',
       roleCode: RoleCode.CR_OFFICER,
       branchId: 'branch_main',
+      departmentId: 'dept_service',
       initialPassword: 'ChangeMe12345!',
     },
     auditContext(),
@@ -152,6 +171,32 @@ test('admin user service creates an account with hashed password and CONFIG audi
   assert.equal(JSON.stringify(auditRecords).includes(passwordHash), false);
 });
 
+test('admin user service changes a user department and audits the database write', async () => {
+  const txClient = {};
+  const auditRecords: Array<{ input: AuditRecordInput; client: unknown }> = [];
+  const service = new AdminUsersService({
+    activeDepartment: async (id) => id === 'dept_sales'
+      ? { id, code: 'SALES', nameEn: 'Sales', nameAr: 'Sales', branchId: null }
+      : null,
+    transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
+    updateDepartment: async (id, departmentId, client) => {
+      assert.equal(id, 'usr_1');
+      assert.equal(departmentId, 'dept_sales');
+      assert.equal(client, txClient);
+      return { ...userRecord, department: { id: departmentId, code: 'SALES', nameEn: 'Sales', nameAr: 'Sales', branchId: null } };
+    },
+  } as AdminUsersRepository, {
+    record: async (input: AuditRecordInput, client?: unknown) => auditRecords.push({ input, client }),
+  } as AuditService);
+
+  const updated = await service.updateDepartment('usr_1', 'dept_sales', auditContext());
+
+  assert.equal(updated.departmentId, 'dept_sales');
+  assert.equal(updated.departmentName, 'Sales');
+  assert.equal(auditRecords[0]?.input.action, 'admin_user_department_updated');
+  assert.equal(auditRecords[0]?.client, txClient);
+});
+
 test('admin user service deactivates and reactivates with audit entries', async () => {
   const txClient = {};
   const auditRecords: Array<{ input: AuditRecordInput; client: unknown }> = [];
@@ -160,7 +205,7 @@ test('admin user service deactivates and reactivates with audit entries', async 
     setActive: async (id, active, client) => {
       assert.equal(id, 'usr_1');
       assert.equal(client, txClient);
-      return { ...userRecord, isActive: active, lockedAt: active ? null : new Date('2026-06-20T12:00:00.000Z') };
+      return { ...userRecord, isActive: active };
     },
   } as AdminUsersRepository, {
     record: async (input: AuditRecordInput, client?: unknown) => auditRecords.push({ input, client }),
@@ -172,12 +217,49 @@ test('admin user service deactivates and reactivates with audit entries', async 
   assert.equal(auditRecords.every((record) => record.client === txClient), true);
 });
 
+test('admin user repository changes only active state and active selectors exclude deactivated users', async () => {
+  const updates: unknown[] = [];
+  const queries: unknown[] = [];
+  const repository = new AdminUsersRepository({
+    user: {
+      update: async (args: unknown) => {
+        updates.push(args);
+        const active = (args as { data: { isActive: boolean } }).data.isActive;
+        return { ...userRecord, isActive: active };
+      },
+      findMany: async (args: unknown) => {
+        queries.push(args);
+        return [];
+      },
+    },
+  } as never);
+
+  assert.equal((await repository.setActive('usr_1', false)).isActive, false);
+  assert.equal((await repository.setActive('usr_1', true)).isActive, true);
+  await repository.listAssignableStaff('branch_main');
+
+  assert.deepEqual(
+    updates.map((update) => (update as { data: unknown }).data),
+    [{ isActive: false }, { isActive: true }],
+  );
+  assert.deepEqual(
+    (queries[0] as { where: unknown }).where,
+    {
+      isActive: true,
+      lockedAt: null,
+      role: { code: { not: 'CUSTOMER_PORTAL' } },
+      branchId: 'branch_main',
+    },
+  );
+});
+
 test('admin users controller routes require USERS_MANAGE permission and CSRF for writes', async () => {
   assert.deepEqual(guardNames('list'), ['SessionAuthGuard', 'PermissionGuard']);
   assert.deepEqual(guardNames('create'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('updateDepartment'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
   assert.deepEqual(guardNames('deactivate'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
   assert.deepEqual(guardNames('reactivate'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
-  for (const handler of ['list', 'create', 'deactivate', 'reactivate'] as Array<keyof AdminUsersController>) {
+  for (const handler of ['list', 'create', 'updateDepartment', 'deactivate', 'reactivate'] as Array<keyof AdminUsersController>) {
     assert.equal(guardNames(handler).includes('RbacGuard'), false);
   }
 
@@ -298,6 +380,42 @@ test('admin category controller write routes require MASTER_DATA_MANAGE permissi
   }
 });
 
+test('admin creates an active top-level department and audits it in the same transaction', async () => {
+  const txClient = {};
+  const auditRecords: Array<{ input: AuditRecordInput; client: unknown }> = [];
+  const service = new AdminDepartmentsService({
+    transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
+    create: async (data, client) => {
+      assert.equal(client, txClient);
+      assert.deepEqual(data, {
+        code: 'NEW_TEAM',
+        nameEn: 'New Team',
+        nameAr: 'الفريق الجديد',
+        branchId: null,
+      });
+      return departmentRecord;
+    },
+  } as AdminDepartmentsRepository, {
+    record: async (input: AuditRecordInput, client?: unknown) => auditRecords.push({ input, client }),
+  } as AuditService);
+
+  const result = await service.createTopLevel({
+    code: ' NEW_TEAM ',
+    nameEn: ' New Team ',
+    nameAr: ' الفريق الجديد ',
+  }, auditContext());
+
+  assert.equal(result.isActive, true);
+  assert.equal(result.branchId, null);
+  assert.equal(auditRecords[0]?.client, txClient);
+  assert.equal(auditRecords[0]?.input.action, 'admin_department_created');
+  assert.equal(auditRecords[0]?.input.targetType, 'department');
+});
+
+test('admin department creation requires master-data permission and CSRF', () => {
+  assert.deepEqual(departmentGuardNames('create'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+});
+
 function noopAudit(): AuditService {
   return { record: async () => undefined } as unknown as AuditService;
 }
@@ -342,6 +460,11 @@ function staffGuardNames(handler: keyof StaffLookupController): string[] {
 
 function categoryGuardNames(handler: keyof AdminCategoriesController): string[] {
   const guards = Reflect.getMetadata(GUARDS_METADATA, AdminCategoriesController.prototype[handler]) as Array<{ name: string }>;
+  return guards.map((guard) => guard.name);
+}
+
+function departmentGuardNames(handler: keyof AdminDepartmentsController): string[] {
+  const guards = Reflect.getMetadata(GUARDS_METADATA, AdminDepartmentsController.prototype[handler]) as Array<{ name: string }>;
   return guards.map((guard) => guard.name);
 }
 

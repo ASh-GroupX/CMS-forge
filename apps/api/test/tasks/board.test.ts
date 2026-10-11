@@ -11,7 +11,8 @@ import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.g
 import { AppException } from '../../src/core/http-kernel.ts';
 import { TasksController } from '../../src/modules/tasks/tasks.controller.ts';
 import { TasksBoardService, buildTaskBoard } from '../../src/modules/tasks/tasks.board.service.ts';
-import type { BoardScopeQuery, BoardStageRecord, BoardTaskRecord, TasksBoardRepository } from '../../src/modules/tasks/tasks.board.repository.ts';
+import { TasksBoardRepository } from '../../src/modules/tasks/tasks.board.repository.ts';
+import type { BoardScopeQuery, BoardStageRecord, BoardTaskRecord } from '../../src/modules/tasks/tasks.board.repository.ts';
 
 const NOW = new Date('2026-06-20T12:00:00.000Z');
 
@@ -66,6 +67,27 @@ test('manager board query carries branch scope; admin board query is unrestricte
 test('department members are scoped to their own department only, from the session', async () => {
   const member = await captureBoardQuery({ userId: 'user_member', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_a', departmentId: 'dept_service' });
   assert.deepEqual(member.scope, { userId: 'user_member', branchId: 'branch_a', departmentId: 'dept_service', isAdmin: false, isManager: false });
+});
+
+test('task-board selector loads active global and in-branch departments from the database', async () => {
+  let query: unknown;
+  const repository = new TasksBoardRepository({
+    department: {
+      findMany: async (input: unknown) => {
+        query = input;
+        return [{ id: 'dept_new', nameEn: 'New Team', nameAr: 'الفريق الجديد' }];
+      },
+    },
+  } as never);
+
+  assert.deepEqual(await repository.listEligibleDepartments({ branchId: 'branch_a', isAdmin: false }), [
+    { id: 'dept_new', nameEn: 'New Team', nameAr: 'الفريق الجديد' },
+  ]);
+  assert.deepEqual(query, {
+    where: { isActive: true, OR: [{ branchId: 'branch_a' }, { branchId: null }] },
+    orderBy: { nameEn: 'asc' },
+    select: { id: true, nameEn: true, nameAr: true },
+  });
 });
 
 test('board groups cards into every active stage, keeping empty columns and sorting by position', () => {
@@ -141,7 +163,7 @@ async function captureBoardQuery(actor: { userId: string; roleCode: string; bran
       captured.completedSince = completedSince;
       return [];
     },
-    listActiveDepartments: async () => [],
+    listEligibleDepartments: async () => [],
   } as unknown as TasksBoardRepository);
 
   await service.board(actor, NOW);

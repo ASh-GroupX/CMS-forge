@@ -27,6 +27,12 @@ export function taskToResponse(task: TaskRecord): TaskResponseDto {
     assignedDepartmentId: task.assignedDepartmentId,
     assignedDepartmentName: task.assignedDepartment?.nameEn ?? null,
     assignedDepartmentNameAr: task.assignedDepartment?.nameAr ?? null,
+    assignedDepartmentIds: (task.departmentRecipients ?? []).map((recipient) => recipient.departmentId),
+    assignedDepartments: (task.departmentRecipients ?? []).map((recipient) => ({
+      id: recipient.departmentId,
+      name: recipient.department.nameEn,
+      nameAr: recipient.department.nameAr,
+    })),
     nextAction: currentNextAction(task)?.toDto ?? null,
     isCustomerPromise: task.isCustomerPromise,
     visibility: task.visibility,

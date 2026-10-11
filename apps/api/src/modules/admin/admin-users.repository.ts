@@ -7,12 +7,12 @@ const userSelect = {
   lastLoginAt: true, createdAt: true, updatedAt: true,
   role: { select: { id: true, code: true, nameEn: true, nameAr: true } },
   branch: { select: { id: true, code: true, nameEn: true, nameAr: true } },
-  department: { select: { id: true, code: true, nameEn: true, nameAr: true } },
+  department: { select: { id: true, code: true, nameEn: true, nameAr: true, branchId: true } },
 } satisfies Prisma.UserSelect;
 
 const roleSelect = { id: true, code: true, nameEn: true, nameAr: true } satisfies Prisma.RoleSelect;
 const branchSelect = { id: true, code: true, nameEn: true, nameAr: true } satisfies Prisma.BranchSelect;
-const departmentSelect = { id: true, code: true, nameEn: true, nameAr: true } satisfies Prisma.DepartmentSelect;
+const departmentSelect = { id: true, code: true, nameEn: true, nameAr: true, branchId: true } satisfies Prisma.DepartmentSelect;
 
 export type AdminUserRecord = Prisma.UserGetPayload<{ select: typeof userSelect }>;
 export type AdminRoleOption = Prisma.RoleGetPayload<{ select: typeof roleSelect }>;
@@ -22,7 +22,7 @@ export type AssignableStaffRecord = Prisma.UserGetPayload<{ select: typeof userS
 type AdminUserClient = Pick<Prisma.TransactionClient, 'user'>;
 
 export type CreateAdminUserData = {
-  email: string; nameEn: string; nameAr: string; passwordHash: string; roleId: string; branchId: string | null; departmentId: string | null;
+  email: string; nameEn: string; nameAr: string; passwordHash: string; roleId: string; branchId: string | null; departmentId: string;
 };
 
 @Injectable()
@@ -73,12 +73,20 @@ export class AdminUsersRepository {
     return Boolean(await this.prisma.department.findUnique({ where: { id }, select: { id: true } }));
   }
 
+  async activeDepartment(id: string): Promise<AdminDepartmentOption | null> {
+    return this.prisma.department.findFirst({ where: { id, isActive: true }, select: departmentSelect });
+  }
+
   async create(data: CreateAdminUserData, client: AdminUserClient = this.prisma): Promise<AdminUserRecord> {
     return client.user.create({ data, select: userSelect });
   }
 
   async setActive(id: string, active: boolean, client: AdminUserClient = this.prisma): Promise<AdminUserRecord> {
-    return client.user.update({ where: { id }, data: { isActive: active, lockedAt: active ? null : new Date() }, select: userSelect });
+    return client.user.update({ where: { id }, data: { isActive: active }, select: userSelect });
+  }
+
+  async updateDepartment(id: string, departmentId: string, client: AdminUserClient = this.prisma): Promise<AdminUserRecord> {
+    return client.user.update({ where: { id }, data: { departmentId }, select: userSelect });
   }
 
   async update(id: string, data: { branchId: string | null; departmentId: string | null; roleId?: string }, client: AdminUserClient = this.prisma): Promise<AdminUserRecord> {

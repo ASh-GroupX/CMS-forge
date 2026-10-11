@@ -8,6 +8,9 @@ import { AuthService } from '../auth/auth.service.js';
 import { AdminCategoriesController } from './admin-categories.controller.js';
 import { AdminCategoriesRepository } from './admin-categories.repository.js';
 import { AdminCategoriesService } from './admin-categories.service.js';
+import { AdminDepartmentsController } from './admin-departments.controller.js';
+import { AdminDepartmentsRepository } from './admin-departments.repository.js';
+import { AdminDepartmentsService } from './admin-departments.service.js';
 import { AdminUsersController, StaffLookupController } from './admin-users.controller.js';
 import { AdminUsersRepository } from './admin-users.repository.js';
 import { AdminUsersService } from './admin-users.service.js';
@@ -17,7 +20,7 @@ import { AdminRolesService } from './admin-roles.service.js';
 
 @Module({
   imports: [AuthModule],
-  controllers: [AdminUsersController, StaffLookupController, AdminCategoriesController, AdminRolesController],
+  controllers: [AdminUsersController, StaffLookupController, AdminCategoriesController, AdminDepartmentsController, AdminRolesController],
   providers: [
     PrismaService,
     { provide: AuditService, inject: [PrismaService], useFactory: (prisma: PrismaService) => new AuditService(prisma) },
@@ -31,11 +34,13 @@ import { AdminRolesService } from './admin-roles.service.js';
     CsrfGuard,
     AdminCategoriesRepository,
     AdminCategoriesService,
+    AdminDepartmentsRepository,
+    AdminDepartmentsService,
     AdminUsersRepository,
     AdminUsersService,
     AdminRolesRepository,
     AdminRolesService,
   ],
-  exports: [AdminUsersService, AdminCategoriesService, AdminRolesService],
+  exports: [AdminUsersService, AdminCategoriesService, AdminDepartmentsService, AdminRolesService],
 })
 export class AdminModule {}

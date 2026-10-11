@@ -343,6 +343,7 @@ model Department {
   slaPolicies       SlaPolicy[]
   capaActions       CapaAction[]
   tasks             Task[]
+  taskRecipients    TaskDepartmentRecipient[]
   assignments       Assignment[]        @relation("AssignmentDepartment")
   assignmentHistory AssignmentHistory[] @relation("AssignmentHistoryDepartment")
   deals             Deal[]
@@ -1045,30 +1046,31 @@ model AssignmentHistory {
 }
 
 model Task {
-  id                   String                   @id @default(cuid())
+  id                   String                    @id @default(cuid())
   title                String
-  ownerId              String                   @map("owner_id")
-  assigneeId           String?                  @map("assignee_id")
-  dueAt                DateTime                 @map("due_at")
-  status               TaskStatus               @default(OPEN)
-  stageId              String?                  @map("stage_id")
-  boardPosition        Int                      @default(0) @map("board_position")
-  assignedDepartmentId String?                  @map("assigned_department_id")
-  nextActionWhat       String?                  @map("next_action_what")
-  nextActionWhoId      String?                  @map("next_action_who_id")
-  nextActionWhen       DateTime?                @map("next_action_when")
-  isCustomerPromise    Boolean                  @default(false) @map("is_customer_promise")
-  visibility           TaskVisibility           @default(PARTICIPANTS)
-  confidentialityLevel TaskConfidentialityLevel @default(NORMAL) @map("confidentiality_level")
-  createdAt            DateTime                 @default(now()) @map("created_at")
-  updatedAt            DateTime                 @updatedAt @map("updated_at")
-  owner                User                     @relation("TaskOwner", fields: [ownerId], references: [id])
-  assignee             User?                    @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  nextActionWho        User?                    @relation("TaskNextActionWho", fields: [nextActionWhoId], references: [id])
-  stage                BoardStage?              @relation(fields: [stageId], references: [id])
-  assignedDepartment   Department?              @relation(fields: [assignedDepartmentId], references: [id])
+  ownerId              String                    @map("owner_id")
+  assigneeId           String?                   @map("assignee_id")
+  dueAt                DateTime                  @map("due_at")
+  status               TaskStatus                @default(OPEN)
+  stageId              String?                   @map("stage_id")
+  boardPosition        Int                       @default(0) @map("board_position")
+  assignedDepartmentId String?                   @map("assigned_department_id")
+  nextActionWhat       String?                   @map("next_action_what")
+  nextActionWhoId      String?                   @map("next_action_who_id")
+  nextActionWhen       DateTime?                 @map("next_action_when")
+  isCustomerPromise    Boolean                   @default(false) @map("is_customer_promise")
+  visibility           TaskVisibility            @default(PARTICIPANTS)
+  confidentialityLevel TaskConfidentialityLevel  @default(NORMAL) @map("confidentiality_level")
+  createdAt            DateTime                  @default(now()) @map("created_at")
+  updatedAt            DateTime                  @updatedAt @map("updated_at")
+  owner                User                      @relation("TaskOwner", fields: [ownerId], references: [id])
+  assignee             User?                     @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  nextActionWho        User?                     @relation("TaskNextActionWho", fields: [nextActionWhoId], references: [id])
+  stage                BoardStage?               @relation(fields: [stageId], references: [id])
+  assignedDepartment   Department?               @relation(fields: [assignedDepartmentId], references: [id])
   links                TaskLink[]
   participants         TaskParticipant[]
+  departmentRecipients TaskDepartmentRecipient[]
   comments             TaskComment[]
   statusHistory        TaskStatusHistory[]
 
@@ -1106,6 +1108,19 @@ model TaskParticipant {
   @@unique([taskId, userId])
   @@index([userId])
   @@map("task_participants")
+}
+
+model TaskDepartmentRecipient {
+  id           String     @id @default(cuid())
+  taskId       String     @map("task_id")
+  departmentId String     @map("department_id")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  task         Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+
+  @@unique([taskId, departmentId])
+  @@index([departmentId])
+  @@map("task_department_recipients")
 }
 
 model TaskStatusHistory {

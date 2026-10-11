@@ -48,7 +48,7 @@ jobs:
         run: pnpm openapi:check
 
       - name: Install Playwright Browsers
-        run: npx playwright install chromium
+        run: pnpm exec playwright-core install chromium
 
       - name: Run unit and sanity tests
         run: pnpm test
@@ -152,6 +152,16 @@ jobs:
                 api web worker caddy postgres redis || true
               exit 1
             fi
+
+            # Fail closed unless all production routing defaults are queryable.
+            DEFAULT_DEPARTMENT_COUNT="$(
+              printf '%s\n' \
+                "SELECT COUNT(*) FROM departments WHERE branch_id IS NULL AND is_active = true AND code IN ('SALES','SERVICE','PARTS','BODY_PAINT','FINANCE','CUSTOMER_CARE');" |
+                docker compose --env-file .env.production -f docker-compose.prod.yml exec -T postgres \
+                  sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tA'
+            )"
+            test "$DEFAULT_DEPARTMENT_COUNT" = "6"
+            echo "Default departments verified"
 
             for SERVICE in api web worker caddy; do
               CONTAINER="cms-auto-prod-$SERVICE-1"

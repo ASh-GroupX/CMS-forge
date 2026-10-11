@@ -99,7 +99,7 @@ function EditableOptionsTable({
               <TableCell className="font-semibold">{row.code}</TableCell>
               <TableCell>{localizedName(row, locale)}</TableCell>
               <TableCell>{row.nameAr}</TableCell>
-              <TableCell>{itemType === 'category' && row.departmentId ? departmentName.get(row.departmentId) ?? t.root : (itemType === 'category' ? t.root : null)}</TableCell>
+              <TableCell>{itemType === 'category' && row.departmentId ? departmentName?.get(row.departmentId) ?? t.root : (itemType === 'category' ? t.root : '—')}</TableCell>
               <TableCell>{action ? (
                 <details className="rounded-sm border border-line-subtle bg-surface-raised px-2 py-1">
                   <summary className="cursor-pointer text-sm font-semibold text-content-strong">{t.editValue}</summary>

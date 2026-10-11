@@ -12,7 +12,88 @@ import { AppException } from '../../core/http-kernel.js';
 import { promiseKeptOnTime } from './tasks.promise.js';
 import { TasksRelatedRecordsService } from './tasks.related-records.service.js';
 import { TasksService } from './tasks.service.js';
-import { TasksRepository, type CreateTaskCommentData, type CreateTaskStatusHistoryData, type PromiseTaskRecord, type TaskCommentRecord, type TaskRecord, type UpdateTaskStatusData } from './tasks.repository.js';
+import { TasksRepository, type CreateTaskCommentData, type CreateTaskData, type CreateTaskStatusHistoryData, type PromiseTaskRecord, type TaskCommentRecord, type TaskRecord, type UpdateTaskStatusData } from './tasks.repository.js';
+import { TaskRecipientsRepository } from './tasks.recipients.js';
+
+test('task creation stores multiple user and department recipients and queues each resolved user once', async () => {
+  let createData: CreateTaskData | undefined;
+  const validatedUsers: string[] = [];
+  const validatedDepartments: string[] = [];
+  const notifications: { recipientUserId?: string | null; channel?: string }[] = [];
+  const repository = {
+    transaction: async <T>(work: (client: never) => Promise<T>) => work({} as never),
+    create: async (data: CreateTaskData) => {
+      createData = data;
+      return taskRecord({
+        assigneeId: data.assigneeId,
+        participants: data.participants.map((participant) => ({
+          ...participant,
+          user: { email: `${participant.userId}@example.test`, nameEn: participant.userId, nameAr: participant.userId },
+        })),
+        assignedDepartmentId: data.assignedDepartmentId ?? null,
+        assignedDepartment: data.assignedDepartmentId ? { nameEn: 'Sales', nameAr: 'Sales', branchId: null } : null,
+        departmentRecipients: data.assignedDepartmentIds.map((departmentId) => ({
+          departmentId,
+          department: { nameEn: departmentId, nameAr: departmentId, branchId: null },
+        })),
+      });
+    },
+    createStatusHistory: async () => undefined,
+  } as unknown as TasksRepository;
+  const service = new TasksService(
+    repository,
+    { record: async () => undefined } as never,
+    { queueInternal: async (input: { recipientUserId?: string | null; channel?: string }) => { notifications.push(input); return {} as never; } } as never,
+    { assertAssignable: async (_actor, userId) => { validatedUsers.push(userId); } },
+    undefined,
+    undefined,
+    { findActiveDepartment: async (id: string) => { validatedDepartments.push(id); return { id }; } } as never,
+    undefined,
+    { recipientUsers: async () => [
+      { id: 'user_sales', email: 'sales@example.test', nameEn: 'Sales user', nameAr: 'Sales user' },
+      { id: 'user_hr', email: 'hr@example.test', nameEn: 'HR user', nameAr: 'HR user' },
+    ] } as unknown as TaskRecipientsRepository,
+  );
+
+  await service.createForActor({
+    title: 'Sales follow-up',
+    ownerId: 'user_owner',
+    assigneeId: 'user_hr',
+    participantUserIds: ['user_hr', 'user_sales'],
+    assignedDepartmentIds: ['dept_sales', 'dept_service'],
+    dueAt: '2026-06-21T09:00:00.000Z',
+    nextAction: { what: 'Call customer', whoId: 'user_hr', when: '2026-06-21T09:00:00.000Z' },
+  }, { userId: 'user_owner', roleCode: RoleCode.ADMIN, branchId: null });
+
+  assert.deepEqual(createData?.assignedDepartmentIds, ['dept_sales', 'dept_service']);
+  assert.equal(createData?.assignedDepartmentId, 'dept_sales');
+  assert.deepEqual(validatedDepartments, ['dept_sales', 'dept_service']);
+  assert.deepEqual(validatedUsers, ['user_hr', 'user_sales']);
+  assert.equal(createData?.participants.filter((row) => row.userId === 'user_hr').length, 1);
+  assert.deepEqual(notifications.map((row) => row.recipientUserId), ['user_sales', 'user_sales', 'user_hr', 'user_hr']);
+});
+
+test('task recipient query excludes inactive users and resolves explicit and department targets in one database query', async () => {
+  let where: unknown;
+  const repository = new TaskRecipientsRepository({
+    user: {
+      findMany: async (query: { where: unknown }) => {
+        where = query.where;
+        return [{ id: 'user_1', email: 'user@example.test', nameEn: 'User', nameAr: 'User' }];
+      },
+    },
+  } as never);
+
+  const recipients = await repository.recipientUsers('task_1');
+  const serialized = JSON.stringify(where);
+
+  assert.equal(recipients.length, 1);
+  assert.match(serialized, /"isActive":true/);
+  assert.match(serialized, /"lockedAt":null/);
+  assert.match(serialized, /"assignedTasks"/);
+  assert.match(serialized, /"taskParticipants"/);
+  assert.match(serialized, /"taskRecipients"/);
+});
 
 test('open task without next action is rejected', async () => {
   const service = new TasksService(txOnlyRepository(), {} as never);
@@ -501,7 +582,7 @@ test('promise tracker returns server-scoped promises with labels and kept KPI', 
 
   const result = await service.promiseTracker({ userId: 'user_owner', roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_1' }, new Date('2026-06-20T12:00:00.000Z'));
 
-  assert.deepEqual(query, { userId: 'user_owner', branchId: 'branch_1', isAdmin: false, isManager: true });
+  assert.deepEqual(query, { userId: 'user_owner', branchId: 'branch_1', departmentId: null, isAdmin: false, isManager: true });
   assert.equal(result.openPromiseCount, 2);
   assert.equal(result.overduePromiseCount, 1);
   assert.equal(result.keptOnTimePercent, 100);
@@ -611,6 +692,7 @@ function taskRecord(overrides: Partial<TaskRecord> = {}): TaskRecord {
     owner: { nameEn: 'Owner User', branchId: 'branch_1', branch: { nameEn: 'Main Branch', timezone: 'Asia/Riyadh' } },
     assignee: { nameEn: 'Assignee User', branchId: 'branch_1', branch: { nameEn: 'Main Branch', timezone: 'Asia/Riyadh' } },
     assignedDepartment: null,
+    departmentRecipients: [],
     nextActionWho: { nameEn: 'Assignee User', branchId: 'branch_1' },
     links: [{ entityType: TaskLinkEntityType.CUSTOMER, entityId: 'customer_1' }],
     participants: [],

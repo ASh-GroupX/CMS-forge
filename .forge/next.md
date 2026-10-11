@@ -1,32 +1,26 @@
-# Production Security Rotation And Smoke
+# User Department Membership and Task Distribution
 
-Status: Automated production deployment operational; security closeout pending
+Status: Locally verified; production release in progress
 Required model tier: GPT-5.5 Extra High or equivalent
-Risk: Critical (production credentials and authenticated workflows)
-SRS IDs: `NFR-SEC-002`, `NFR-AVAIL-001`, `NFR-DATA-001`,
-`OPS-RUNBOOK-001`, `METHOD-TEST-001`
+Risk: High (user administration, task authorization, notifications, production migration)
+SRS IDs: `REQ-ADMIN-001`, `REQ-RBAC-001`, `METHOD-AUDIT-001`,
+`METHOD-API-001`, `METHOD-TEST-001`, `ARCH-UI-001`, `UI-DESIGN-001`
 
 ## Task
 
-Rotate credentials exposed by the historical resolved-Compose Actions log,
-then run authenticated English and Arabic production smoke for employee,
-manager, and administrator roles. Retain the manual database and verified
-cutover backup until rollback retention is approved.
+Require an active eligible department when administrators create or edit staff
+users. Allow task creation to target multiple specific users and departments,
+while preserving the SRS invariant that one selected user is the accountable
+assignee. Resolve task visibility and notifications from the deduplicated union
+of explicit participants and active members of selected departments.
 
 ## Required Gates
 
-- Needs Human Review: rotate PostgreSQL, Redis, SMTP, and object-storage
-  credentials without printing values in Actions or operator evidence.
-- Needs Human Review: smoke login, dashboard, complaints, tasks, reports, and
-  attachments for representative production roles and both locales.
-- Needs Human Review: confirm an off-VPS encrypted database backup and decide
-  when to retire the stopped manual stack.
-
-## Proof
-
-- Passed: authoritative row counts matched before and after database restore.
-- Passed: all 29 Prisma migrations are applied to the managed database.
-- Passed: Actions run `29728937945`, attempt 2, deployed production commit
-  `45865725` successfully.
-- Passed: public HTTP 200, API health `ok`, exact commit response header, and
-  external port 8080 rejection.
+- Creating and changing a user's department is validated, persisted, and audited.
+- Task department targets are relational database records and existing single
+  department assignments are migrated without data loss.
+- Active department members can see assigned tasks; inactive members cannot.
+- Explicit users and department-derived users receive at most one notification.
+- English LTR and Arabic RTL task assignment controls use live database options.
+- Focused tests, migration checks, lint, typecheck, OpenAPI, and production
+  deployment verification pass.

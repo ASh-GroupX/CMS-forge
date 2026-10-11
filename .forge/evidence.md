@@ -14765,3 +14765,206 @@ METHOD-TEST-001
   audit, workflow authority, and portal privacy behavior.
 - Credentials exposed by the historical non-quiet Compose log remain scheduled
   for rotation and are not considered closed security evidence.
+
+---
+
+## Production task-read schema hotfix (2026-07-22)
+
+SRS: NFR-SEC-002, NFR-AVAIL-001, NFR-DATA-001, OPS-RUNBOOK-001,
+METHOD-TEST-001
+
+- Reproduced the authenticated production failure with the existing staff
+  session: `GET /api/tasks/today` returned HTTP 500 with correlation ID
+  `req_e395885c-fb8d-4242-a2ba-0a077855a78b` while `/api/health` remained healthy.
+- Traced the production-only failure to Prisma migration drift. The generated
+  client selected `tasks.stage_id`, but no committed migration created
+  `BoardScope`, `board_stages`, `tasks.stage_id`, or `tasks.board_position`.
+- Added migration `20260722120000_board_stages` with the missing schema, foreign
+  key, indexes, and 13 idempotent task/ticket board defaults. No existing rows
+  are deleted or rewritten.
+- Added a regression test requiring every board-stage Prisma field and default
+  stage to have deployable migration SQL.
+
+### Verification
+
+- Passed: all 30 migrations applied from scratch in an isolated PostgreSQL
+  schema; probes returned 13 default stages and both task columns. The isolated
+  schema was removed after the proof.
+- Passed: `corepack pnpm lint`, `corepack pnpm typecheck`,
+  `corepack pnpm db:migrate:test`, and `git diff --check`.
+- Passed: `corepack pnpm test` with all configured coverage gates and
+  `corepack pnpm test:api -- tasks` (42/42).
+- Passed: `corepack pnpm security:check`.
+- Passed: the production build stages with pnpm 9.15.4, including the Next.js
+  optimized build and API/database/contracts/config TypeScript builds.
+- Passed: OpenAPI canonical content is unchanged; its check passed after local
+  line-ending normalization and no OpenAPI file remains modified.
+- Needs Human Review: production workflow deployment and authenticated live
+  task/board verification after migration 30 is applied.
+
+### Security Self-Check
+
+- Roles, branch scope, and department scope remain derived from the server
+  session; the task API allowed/denied tests passed.
+- The migration adds read-model storage only. It does not change workflow state,
+  transaction/audit behavior, side-effect timing, or append-only audit data.
+- No password, token, session cookie, provider credential, or customer record is
+  logged or returned by this change.
+- Portal response paths and privacy filters are unchanged.
+
+---
+
+## Production default-departments hotfix (2026-07-25)
+
+SRS: REQ-ADMIN-001, NFR-DATA-001, OPS-RUNBOOK-001, METHOD-TEST-001
+
+- Confirmed the local/deployment mismatch: local databases run the development
+  seed, while production runs only `prisma migrate deploy`.
+- Added migration `20260725120000_default_departments` to install the six shared
+  routing departments without running demo-data seed code.
+- Existing rows win on unique-code conflicts. The migration does not overwrite
+  names, branch ownership, or activation choices and does not delete data.
+- Added a focused regression test requiring all six codes, global scope,
+  idempotency, and the absence of writes to demo-data tables.
+- Added a fail-closed production workflow assertion that queries PostgreSQL
+  after migration and requires all six active global department codes.
+
+### Verification
+
+- Passed: `node --test tools/departments-migration.test.mjs` (2/2).
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test` (67/67; line 92.67%, branch 83.94%, function
+  91.76%).
+- Passed: `corepack pnpm db:migrate:test`.
+- Passed: focused migration and deployment-artifact tests (7/7).
+- Passed: `git diff --check`.
+- Failed (pre-existing, unchanged): `corepack pnpm openapi:check` reports the
+  committed OpenAPI JSON is not canonical. This migration changes no route,
+  request, response, or schema contract.
+- Needs Human Review: production deployment backup/migration and authenticated
+  live department-option smoke.
+- Failed: production run `30158177286` attempt 1 ended with GitHub
+  `startup_failure` before any job started.
+- Failed: attempt 2 validation installed floating `playwright@1.62.0` through
+  `npx`, while repository tests used `playwright-core@1.61.0`; browser revision
+  `1234` was installed but revision `1228` was required. Deployment was skipped.
+- Fixed locally: `playwright-core@1.61.0` is now an explicit dependency and CI
+  installs its browser through `pnpm exec playwright-core install chromium`.
+
+### Security Self-Check
+
+- Authentication, RBAC, server-session branch scope, and department filtering
+  code are unchanged.
+- This reference-data migration changes no complaint or task state, audit
+  transaction, assignment authority, or post-commit side effect.
+- No password, hash, token, session, provider credential, or customer data is
+  read, written, logged, or returned.
+- Customer portal routes and privacy projections are unchanged.
+
+---
+
+## Dynamic top-level departments in task assignment (2026-07-25)
+
+SRS: REQ-ADMIN-001, REQ-RBAC-001, METHOD-AUDIT-001, METHOD-API-001,
+METHOD-TEST-001
+
+- Root cause: the production selector queries were database-backed, but the
+  admin surface had no department write path. Creating a displayed top-level
+  item therefore never created a `Department` row.
+- Added an active global department create endpoint and server action. The
+  department code and bilingual names come from the admin request; names are
+  not hardcoded.
+- The write requires `MASTER_DATA_MANAGE`, staff session authentication, and
+  CSRF validation, and records a `CONFIG` audit entry in the create transaction.
+- Assignment options include active branch-owned rows in the actor's branch and
+  active global rows. The task-board selector now applies the same eligibility
+  rule instead of exposing other branches' department choices.
+- Admin and assignment data requests use database-backed endpoints without a
+  response cache, so the next render includes the newly committed department.
+- Documented `POST /admin/departments` in the canonical OpenAPI contract.
+
+### Verification
+
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm test` (69/69; line 93.10%, branch 84.11%, function
+  91.45%).
+- Passed: `corepack pnpm test:api -- admin` (33/33).
+- Passed: `corepack pnpm test:api -- assignments` (7/7).
+- Passed: `corepack pnpm test:api -- tasks` (43/43).
+- Passed: `corepack pnpm test:web` (215/215), including English LTR and Arabic
+  RTL department data rendering.
+- Passed: `corepack pnpm test:visual` (118 route previews).
+- Passed: `corepack pnpm openapi:check` and `git diff --check`.
+- Pending: production deployment and authenticated live create/select proof.
+
+### Security Self-Check
+
+- Roles and branch scope come only from the authenticated server principal.
+- The new state change and its append-only audit entry share one transaction;
+  it schedules no side effect.
+- Allowed admin creation and denied/missing permission behavior are guarded;
+  active/inactive and in-branch/out-of-branch selector boundaries are tested.
+- No password, OTP, token, hash, credential, provider secret, or customer data
+  is logged or returned.
+- Customer portal projections and complaint workflow authority are unchanged.
+
+---
+
+## User department membership and multi-recipient task delivery (2026-07-25)
+
+SRS: REQ-ADMIN-001, REQ-RBAC-001, METHOD-AUDIT-001, METHOD-API-001,
+METHOD-TEST-001, ARCH-UI-001, UI-DESIGN-001
+
+- Admin user creation now requires an active, branch-eligible department; the
+  selected department is stored on the user row. A guarded edit route changes
+  it later and records a CONFIG audit entry in the same transaction.
+- Task creation accepts multiple explicit users and multiple departments. The
+  first explicit user remains the accountable assignee, while all explicit
+  users are persisted as participants and all departments are persisted in the
+  relational `task_department_recipients` table.
+- Existing `tasks.assigned_department_id` values are additively backfilled into
+  the recipient table. The migration does not update or delete existing tasks,
+  departments, users, or assignment values.
+- Task visibility and post-commit notifications resolve the database union of
+  explicit recipients and current active department members. One `User`
+  query and idempotency keys prevent overlapping user/department recipients
+  from receiving duplicate assignment notifications.
+- English LTR and Arabic RTL quick-add interfaces render multi-select user and
+  department options returned by the live assignment-options API.
+
+### Verification
+
+- Passed: `corepack pnpm lint`.
+- Passed: `corepack pnpm typecheck`.
+- Passed: `corepack pnpm openapi:check`.
+- Passed: `corepack pnpm test` (69/69; line 92.46%, branch 84.11%, function
+  91.45%).
+- Passed: `corepack pnpm test:api -- admin` (34/34).
+- Passed: `corepack pnpm test:api -- tasks` (43/43).
+- Passed: `corepack pnpm test:web -- shell` (216/216), including English LTR
+  and Arabic RTL multi-recipient controls.
+- Passed: focused task service (27/27) and controller (14/14) tests.
+- Passed: `node --test tools/task-department-recipients-migration.test.mjs`
+  (1/1) and `corepack pnpm db:migrate:test`.
+- Passed: visual inspection of the generated English and Arabic assignment
+  controls.
+- Passed: `git diff --check`.
+- Verified: `.github/workflows/deploy.yml` creates and validates a database
+  backup before deployment; `docker-compose.prod.yml` requires `prisma migrate
+  deploy` to complete successfully before API startup.
+- Pending: GitHub merge, production deployment, and authenticated live proof.
+
+### Security Self-Check
+
+- Department eligibility and branch compatibility are enforced by backend
+  services using the authenticated server actor; the client supplies no role
+  or branch authority.
+- Department task visibility is limited to active current members and NORMAL
+  confidentiality tasks. Explicit participant access remains unchanged.
+- User department writes and task creation retain transactional audit/history
+  guarantees. Notification delivery runs only after commit.
+- Recipient queries exclude inactive, locked, and customer-portal users.
+- No password, OTP, token, hash, session, provider credential, or customer data
+  is logged or exposed.

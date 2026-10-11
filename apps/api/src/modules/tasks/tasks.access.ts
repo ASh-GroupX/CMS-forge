@@ -54,5 +54,5 @@ function isParticipant(task: TaskRecord, userId: string): boolean {
 // The actor departmentId comes from the server session, never client input.
 function isDepartmentMember(task: TaskRecord, actor: TaskActor): boolean {
   if (task.confidentialityLevel !== TaskConfidentialityLevel.NORMAL) return false;
-  return Boolean(task.assignedDepartmentId && actor.departmentId && task.assignedDepartmentId === actor.departmentId);
+  return Boolean(actor.departmentId && task.departmentRecipients.some((recipient) => recipient.departmentId === actor.departmentId));
 }

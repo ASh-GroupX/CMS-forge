@@ -99,9 +99,14 @@ export class TasksBoardRepository {
     return this.prisma.department.findFirst({ where: { id, isActive: true }, select: { id: true } });
   }
 
-  async listActiveDepartments(): Promise<BoardDepartmentRecord[]> {
+  async listEligibleDepartments(scope: Pick<BoardScopeQuery, 'branchId' | 'isAdmin'>): Promise<BoardDepartmentRecord[]> {
     return this.prisma.department.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        ...(!scope.isAdmin
+          ? { OR: [...(scope.branchId ? [{ branchId: scope.branchId }] : []), { branchId: null }] }
+          : {}),
+      },
       orderBy: { nameEn: 'asc' },
       select: { id: true, nameEn: true, nameAr: true },
     });
@@ -125,7 +130,10 @@ export class TasksBoardRepository {
           { participants: { some: { userId: scope.userId } } },
           // B3: department members see NORMAL tasks assigned to their department
           // (mirrors tasks.access.ts isDepartmentMember — keep the two in sync).
-          ...(scope.departmentId ? [{ confidentialityLevel: 'NORMAL' as const, assignedDepartmentId: scope.departmentId }] : []),
+          ...(scope.departmentId ? [{ confidentialityLevel: 'NORMAL' as const, departmentRecipients: { some: { departmentId: scope.departmentId } } }] : []),
+          ...(scope.isManager && scope.branchId
+            ? [{ confidentialityLevel: 'NORMAL' as const, OR: [{ owner: { branchId: scope.branchId } }, { assignee: { branchId: scope.branchId } }, { nextActionWho: { branchId: scope.branchId } }] }]
+            : []),
         ],
       },
       orderBy: [{ boardPosition: 'asc' }, { dueAt: 'asc' }, { createdAt: 'asc' }],

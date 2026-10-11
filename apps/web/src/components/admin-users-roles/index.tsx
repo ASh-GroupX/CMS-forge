@@ -23,6 +23,7 @@ export function AdminUsersRoles({
   state,
   toggleAction,
   updateAssignmentsAction,
+  updateDepartmentAction,
 }: {
   createAction?: AdminAction;
   data?: AdminUsersData | null;
@@ -30,6 +31,7 @@ export function AdminUsersRoles({
   state?: AdminUsersFixtureState | undefined;
   toggleAction?: AdminAction;
   updateAssignmentsAction?: AdminAction;
+  updateDepartmentAction?: AdminAction;
 }) {
   const shell = staffShellText[locale];
   const t = adminUsersText[locale];
@@ -60,7 +62,7 @@ export function AdminUsersRoles({
                   <TableCell className="font-semibold">{user.nameEn}<span className="block text-xs text-muted-foreground">{user.email}</span></TableCell>
                   <TableCell>{roleNames.get(user.roleCode) ?? user.roleName}</TableCell>
                   <TableCell>{user.branchId ? branchNames.get(user.branchId) ?? user.branchName ?? t.allBranches : t.allBranches}</TableCell>
-                  <TableCell>{user.departmentId ? departmentNames.get(user.departmentId) ?? user.departmentName ?? t.allDepartments : t.allDepartments}</TableCell>
+                  <TableCell>{updateDepartmentAction && data ? <DepartmentForm action={updateDepartmentAction} data={data} locale={locale} user={user} /> : (user.departmentId ? departmentNames.get(user.departmentId) ?? user.departmentName ?? t.allDepartments : t.allDepartments)}</TableCell>
                   <TableCell><Badge className="shadow-none" variant={user.isActive ? 'secondary' : 'outline'}>{user.isActive ? t.badges.active : t.badges.inactive}</Badge></TableCell>
                   <TableCell>
                     <div className="flex gap-2">
@@ -100,12 +102,25 @@ function CreateUserForm({ action, data, locale }: { action: AdminAction; data: A
         </label>
         <label className="grid gap-1 text-sm font-medium">
           {t.fields.department}
-          <FormSelect name="departmentId" options={(data.departments ?? []).map((department) => ({ label: localizedName(department, locale), value: department.id }))} placeholder={t.allDepartments} />
+          <FormSelect name="departmentId" options={(data.departments ?? []).map((department) => ({ label: localizedName(department, locale), value: department.id }))} required />
         </label>
         <Field label={t.fields.initialPassword} minLength={12} name="initialPassword" type="password" />
         <Button className="md:col-span-3" type="submit">{t.actions.create}</Button>
       </form>
     </details>
+  );
+}
+
+function DepartmentForm({ action, data, locale, user }: { action: AdminAction; data: AdminUsersData; locale: Locale; user: AdminUsersData['users'][number] }) {
+  const t = adminUsersText[locale];
+  const eligible = data.departments.filter((department) => !department.branchId || department.branchId === user.branchId);
+  return (
+    <form action={action} className="flex min-w-56 items-center gap-2">
+      <input name="id" type="hidden" value={user.id} />
+      <input name="locale" type="hidden" value={locale} />
+      <FormSelect defaultValue={user.departmentId ?? undefined} name="departmentId" options={eligible.map((department) => ({ label: localizedName(department, locale), value: department.id }))} required />
+      <Button size="sm" type="submit" variant="outline">{t.actions.saveDepartment}</Button>
+    </form>
   );
 }
 

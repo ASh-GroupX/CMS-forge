@@ -63,8 +63,9 @@ test('admin role service replaces selected permissions and audits the change in 
     activeUserRoleId: async () => 'role_admin',
     activePermissionIds: async (codes) => codes.map((code) => `per_${code}`),
     transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
-    replacePermissions: async (id, ids, client) => {
+    replacePermissionsIfVersion: async (id, expectedVersion, ids, client) => {
       assert.equal(id, role.id);
+      assert.equal(expectedVersion.toISOString(), updatedAt.toISOString());
       assert.deepEqual(ids, ['per_STAFF_LOGIN', 'per_REPORT_VIEW']);
       assert.equal(client, txClient);
       return { ...role, permissions: [{ permission: login }, { permission: { ...login, id: 'per_report', code: 'REPORT_VIEW', nameEn: 'View reports' } }] };
@@ -77,6 +78,57 @@ test('admin role service replaces selected permissions and audits the change in 
   assert.equal(audits[0]?.client, txClient);
   assert.equal(audits[0]?.input.action, 'admin_role_permissions_updated');
   assert.deepEqual(audits[0]?.input.metadata?.previousPermissionCodes, ['STAFF_LOGIN']);
+});
+
+test('admin role service rejects an atomic stale-write claim without changing permissions or writing audit', async () => {
+  const audits: AuditRecordInput[] = [];
+  const newer = { ...role, updatedAt: new Date('2026-07-13T12:01:00.000Z'), permissions: [{ permission: login }, { permission: { ...login, id: 'per_report', code: 'REPORT_VIEW' } }] };
+  const service = new AdminRolesService({
+    findById: async () => role,
+    activePermissionIds: async (codes) => codes.map((code) => `per_${code}`),
+    countActiveUsersForRole: async () => 1,
+    activeUserRoleId: async () => 'role_admin',
+    transaction: async <T>(work: (client: never) => Promise<T>) => work({} as never),
+    replacePermissionsIfVersion: async () => null,
+  } as unknown as AdminRolesRepository, { record: async (input) => audits.push(input) } as AuditService);
+
+  await assert.rejects(
+    service.updatePermissions(role.id, { permissionCodes: ['STAFF_LOGIN', 'REPORT_EXPORT'], expectedUpdatedAt: updatedAt.toISOString() }, auditContext()),
+    (error: unknown) => error instanceof AppException && error.code === 'ROLE_VERSION_CONFLICT' && error.getStatus() === 409,
+  );
+  assert.deepEqual(newer.permissions.map(({ permission }) => permission.code), ['STAFF_LOGIN', 'REPORT_VIEW']);
+  assert.equal(audits.length, 0);
+});
+
+test('role repository claims the expected timestamp before replacing permission relations', async () => {
+  const calls: unknown[] = [];
+  const repository = new AdminRolesRepository({
+    role: {
+      updateMany: async (input: unknown) => { calls.push(input); return { count: 1 }; },
+      update: async (input: unknown) => { calls.push(input); return role; },
+    },
+  } as never);
+
+  const result = await repository.replacePermissionsIfVersion(role.id, updatedAt, ['per_STAFF_LOGIN']);
+
+  assert.equal(result?.id, role.id);
+  assert.deepEqual((calls[0] as { where: unknown }).where, { id: role.id, updatedAt });
+  assert.deepEqual((calls[1] as { data: unknown }).data, { permissions: { deleteMany: {}, create: [{ permissionId: 'per_STAFF_LOGIN' }] } });
+});
+
+test('role repository leaves permissions untouched when the expected timestamp is stale', async () => {
+  let relationReplacementCalled = false;
+  const repository = new AdminRolesRepository({
+    role: {
+      updateMany: async () => ({ count: 0 }),
+      update: async () => { relationReplacementCalled = true; return role; },
+    },
+  } as never);
+
+  const result = await repository.replacePermissionsIfVersion(role.id, updatedAt, ['per_REPORT_EXPORT']);
+
+  assert.equal(result, null);
+  assert.equal(relationReplacementCalled, false);
 });
 
 test('admin role service blocks stale edits, self lockout, and removal of the last role manager', async () => {

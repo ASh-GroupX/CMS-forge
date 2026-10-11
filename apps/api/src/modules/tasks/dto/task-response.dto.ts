@@ -30,6 +30,8 @@ export class TaskResponseDto {
   assignedDepartmentId?: string | null;
   assignedDepartmentName?: string | null;
   assignedDepartmentNameAr?: string | null;
+  assignedDepartmentIds!: string[];
+  assignedDepartments!: { id: string; name: string; nameAr: string }[];
   nextAction!: TaskNextActionDto | null;
   isCustomerPromise!: boolean;
   visibility!: TaskVisibility;

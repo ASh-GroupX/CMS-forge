@@ -12,7 +12,7 @@ import PromisesPage from '../../src/app/(staff)/tasks/promises/page';
 import ManagerControlRoomPage from '../../src/app/(staff)/tasks/manager/page';
 import DealHandoffPage from '../../src/app/(staff)/deals/handoff/page';
 import ConfidentialCasePage from '../../src/app/(staff)/cases/confidential/[caseId]/page';
-import { shouldRedirectStaffRoute } from '../../src/app/(staff)/layout';
+import { navForPrincipal, shouldRedirectStaffRoute } from '../../src/app/(staff)/layout';
 import ComplaintsPage from '../../src/app/(staff)/complaints/page';
 import NewComplaintPage from '../../src/app/(staff)/complaints/new/page';
 import ComplaintDetailPage from '../../src/app/(staff)/complaints/[id]/page';
@@ -67,6 +67,49 @@ import { applyDmsMatchToCorrectionFields, type CorrectionFields } from '../../sr
 import { isActiveNav } from '../../src/app/app-shell';
 import { AttachmentDropzone, DataTable, Field, FilterBar, MetricStrip, PageHeader, StateBlock, StatusBadge, Timeline } from '../../src/components/shared/ui-primitives';
 import { TableCell, TableRow } from '../../src/components/ui/table';
+import { AssignmentPicker } from '../../src/components/shared/assignment-picker';
+import { deferMouseSelectToClick } from '../../src/components/ui/select';
+import { assigneeLabel } from '../../src/components/task-board/board-card';
+import { departmentLabel } from '../../src/components/task-board/board-card-department';
+
+test('administration navigation follows effective permissions for built-in and custom roles', () => {
+  const adminPermissions = ['STAFF_LOGIN', 'USERS_MANAGE'];
+  assert.equal(navForPrincipal('ADMIN', adminPermissions).includes('admin'), true);
+  assert.equal(navForPrincipal('QA_CUSTOM', adminPermissions).includes('admin'), true);
+  assert.equal(navForPrincipal('QA_CUSTOM', ['STAFF_LOGIN']).includes('admin'), false);
+  assert.equal(staffShellText.en.nav.admin.length > 0, true);
+  assert.equal(staffShellText.ar.nav.admin.length > 0, true);
+});
+
+test('department-only board labels remain readable in English and Arabic without an assignee', () => {
+  const department = { departmentName: 'Service', departmentNameAr: 'الصيانة' };
+  const noAssignee = { assigneeName: null, assigneeNameAr: null };
+  assert.equal(departmentLabel(department, 'en'), 'Service');
+  assert.equal(departmentLabel(department, 'ar'), 'الصيانة');
+  assert.equal(assigneeLabel(noAssignee, 'en', 'Unassigned'), 'Unassigned');
+  assert.equal(assigneeLabel(noAssignee, 'ar', 'غير معين'), 'غير معين');
+});
+
+test('shared select defers mouse selection until click without changing touch behavior', () => {
+  let mousePrevented = false;
+  let touchPrevented = false;
+  let mouseFocused = false;
+
+  deferMouseSelectToClick({
+    currentTarget: { focus: (options?: FocusOptions) => { mouseFocused = options?.preventScroll === true; } },
+    pointerType: 'mouse',
+    preventDefault: () => { mousePrevented = true; },
+  } as React.PointerEvent);
+  deferMouseSelectToClick({
+    currentTarget: { focus: () => { throw new Error('touch item must not be focused by the mouse deferral'); } },
+    pointerType: 'touch',
+    preventDefault: () => { touchPrevented = true; },
+  } as React.PointerEvent);
+
+  assert.equal(mousePrevented, true);
+  assert.equal(mouseFocused, true);
+  assert.equal(touchPrevented, false);
+});
 
 test('shared UI primitives render accessible operational markup', () => {
   const html = renderToStaticMarkup(
@@ -2128,8 +2171,8 @@ test('admin overview route does not render disabled preview action buttons', asy
 test('admin branches route renders real master data labels', async () => {
   const fetchImpl: typeof fetch = async () => jsonResponse({
     branches: [{ id: 'branch_main', code: 'MAIN', nameEn: 'Main Branch', nameAr: 'Ø§Ù„ÙØ±Ø¹ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ' }],
-    categories: [{ id: 'cat_vehicle', code: 'VEHICLE', nameEn: 'Vehicle issue', nameAr: 'Ù…Ø´ÙƒÙ„Ø© Ù…Ø±ÙƒØ¨Ø©', departmentId: null, branchId: null }],
-    departments: [],
+    categories: [{ id: 'cat_vehicle', code: 'VEHICLE', nameEn: 'Vehicle issue', nameAr: 'مشكلة مركبة', departmentId: null, branchId: null }],
+    departments: [{ id: 'dept_new', code: 'NEW_TEAM', nameEn: 'New Team', nameAr: 'الفريق الجديد', branchId: null }],
     severities: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
   });
   const english = renderToStaticMarkup(await AdminBranchesPage({ cookieHeader: 'cms_staff_session=raw-session', fetchImpl, searchParams: Promise.resolve({ locale: 'en' }) }));
@@ -2138,10 +2181,14 @@ test('admin branches route renders real master data labels', async () => {
   assert.match(english, /dir="ltr"/);
   assert.match(english, /Complaint intake dropdowns/);
   assert.match(english, /Main Branch/);
+  assert.match(english, /New Team/);
+  assert.match(english, /Departments/);
   assert.match(english, /Vehicle issue/);
   assert.doesNotMatch(english, /Branches and departments/);
   assert.match(arabic, /dir="rtl"/);
   assert.ok(arabic.includes(adminUsersText.ar.masterData.title));
+  assert.match(arabic, /الفريق الجديد/);
+  assert.match(arabic, /الأقسام/);
 });
 
 test('admin branches route fails closed when master data is unavailable', async () => {
@@ -2236,11 +2283,14 @@ test('admin users roles renders real account actions when backend data is presen
             roleName: 'CR Officer',
             branchId: 'branch_main',
             branchName: 'Main branch',
+            departmentId: 'dept_service',
+            departmentName: 'Service',
             isActive: true,
           },
         ],
         roles: [{ id: 'role_1', code: 'CR_OFFICER', nameEn: 'CR Officer', nameAr: 'CR Officer' }],
         branches: [{ id: 'branch_main', code: 'MAIN', nameEn: 'Main branch', nameAr: 'Main branch' }],
+        departments: [{ id: 'dept_service', code: 'SERVICE', nameEn: 'Service', nameAr: 'الخدمة', branchId: null }],
       },
       locale: 'en',
       toggleAction: async () => undefined,
@@ -2252,6 +2302,22 @@ test('admin users roles renders real account actions when backend data is presen
   assert.match(html, /advisor@cms-auto\.test/);
   assert.match(html, /Deactivate/);
   assert.doesNotMatch(html, /disabled=""/);
+});
+
+test('multi-recipient task assignment renders live users and departments in English and Arabic', () => {
+  const options = {
+    users: [{ id: 'user_sales', nameEn: 'Sales User', nameAr: 'موظف المبيعات', branchId: null, departmentId: 'dept_sales', roleCode: 'CR_OFFICER' }],
+    departments: [{ id: 'dept_sales', nameEn: 'Sales', nameAr: 'المبيعات', branchId: null }],
+  };
+  const english = renderToStaticMarkup(React.createElement(AssignmentPicker, { departmentName: 'assignedDepartmentIds', locale: 'en', multiple: true, options, userName: 'assignedUserIds' }));
+  const arabic = renderToStaticMarkup(React.createElement(AssignmentPicker, { departmentName: 'assignedDepartmentIds', locale: 'ar', multiple: true, options, userName: 'assignedUserIds' }));
+
+  assert.match(english, /Sales User/);
+  assert.match(english, /Sales/);
+  assert.match(english, /name="assignedUserIds"/);
+  assert.match(english, /name="assignedDepartmentIds"/);
+  assert.match(arabic, /موظف المبيعات/);
+  assert.match(arabic, /المبيعات/);
 });
 
 test('admin users roles source is render-only and reset-safe', () => {

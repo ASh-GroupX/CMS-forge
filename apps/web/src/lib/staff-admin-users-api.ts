@@ -12,7 +12,7 @@ export type AdminUser = {
   departmentName: string | null;
   isActive: boolean;
 };
-export type AdminOption = { id: string; code: string; nameEn: string; nameAr: string };
+export type AdminOption = { id: string; code: string; nameEn: string; nameAr: string; branchId?: string | null };
 export type AdminUsersData = { users: AdminUser[]; roles: AdminOption[]; branches: AdminOption[]; departments: AdminOption[] };
 
 const STAFF_SESSION_COOKIE = 'cms_staff_session';

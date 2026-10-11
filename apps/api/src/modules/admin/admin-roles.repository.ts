@@ -69,7 +69,12 @@ export class AdminRolesRepository {
     });
   }
 
-  async replacePermissions(id: string, permissionIds: string[], client: RoleClient = this.prisma): Promise<AdminRoleRecord> {
+  async replacePermissionsIfVersion(id: string, expectedUpdatedAt: Date, permissionIds: string[], client: RoleClient = this.prisma): Promise<AdminRoleRecord | null> {
+    const claimed = await client.role.updateMany({
+      data: { updatedAt: new Date(Math.max(Date.now(), expectedUpdatedAt.getTime() + 1)) },
+      where: { id, updatedAt: expectedUpdatedAt },
+    });
+    if (claimed.count !== 1) return null;
     return client.role.update({ data: { permissions: { deleteMany: {}, create: permissionIds.map((permissionId) => ({ permissionId })) } }, where: { id }, select: roleSelect });
   }
 }

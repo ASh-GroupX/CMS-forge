@@ -5,7 +5,7 @@ import type { AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import type { NotificationsService } from '../notifications/notifications.service.js';
 import { AssignmentsService } from './assignments.service.js';
-import type { AssignmentRecord, AssignmentsRepository } from './assignments.repository.js';
+import { AssignmentsRepository, type AssignmentRecord } from './assignments.repository.js';
 
 const transactionClient = {} as Prisma.TransactionClient;
 
@@ -53,6 +53,43 @@ test('accepts department-only assignment', async () => {
   );
   assert.equal(result.assignedUserId, null);
   assert.equal(result.assignedDepartmentId, 'dept_1');
+});
+
+test('department options query active database rows and include global departments for branch staff', async () => {
+  let departmentQuery: unknown;
+  const repository = new AssignmentsRepository({
+    user: { findMany: async () => [] },
+    department: {
+      findMany: async (query: unknown) => {
+        departmentQuery = query;
+        return [{
+          id: 'dept_new',
+          nameEn: 'New Team',
+          nameAr: 'الفريق الجديد',
+          branchId: null,
+        }];
+      },
+    },
+  } as never);
+  const service = new AssignmentsService(repository, auditStub());
+
+  const result = await service.options({
+    userId: 'user_1',
+    roleCode: RoleCode.CR_MANAGER,
+    branchId: 'branch_1',
+  });
+
+  assert.deepEqual(result.departments, [{
+    id: 'dept_new',
+    nameEn: 'New Team',
+    nameAr: 'الفريق الجديد',
+    branchId: null,
+  }]);
+  assert.deepEqual(departmentQuery, {
+    where: { isActive: true, OR: [{ branchId: 'branch_1' }, { branchId: null }] },
+    orderBy: [{ nameEn: 'asc' }, { code: 'asc' }],
+    select: { id: true, nameEn: true, nameAr: true, branchId: true },
+  });
 });
 
 test('rejects an out-of-branch target from the server-session scope', async () => {

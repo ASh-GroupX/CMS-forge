@@ -4,7 +4,7 @@ export const adminUsersText: Record<Locale, typeof enAdminUsersText> = {
   en: {
     title: 'Users, roles, and branch scope',
     subtitle: 'Create accounts and control staff access.',
-    headers: ['User', 'Role', 'Branch scope', 'Department scope', 'Status', 'Action'],
+    headers: ['User', 'Role', 'Branch scope', 'Department', 'Status', 'Action'],
     badges: { active: 'Active', inactive: 'Inactive' },
     actions: {
       create: 'Create user',
@@ -12,6 +12,7 @@ export const adminUsersText: Record<Locale, typeof enAdminUsersText> = {
       deactivate: 'Deactivate',
       reactivate: 'Reactivate',
       saveAssignments: 'Save assignments',
+      saveDepartment: 'Save',
     },
     fields: {
       email: 'Email',
@@ -19,12 +20,12 @@ export const adminUsersText: Record<Locale, typeof enAdminUsersText> = {
       nameAr: 'Arabic name',
       role: 'Role',
       branch: 'Branch scope',
-      department: 'Department scope',
+      department: 'Department',
       initialPassword: 'Initial password',
     },
     masterData: {
       title: 'Complaint intake dropdowns',
-      subtitle: 'Live branch, category, and severity values used by complaint creation.',
+      subtitle: 'Live branch, department, category, and severity values used by complaint creation and task assignment.',
       unavailable: 'Intake dropdown values could not be loaded.',
       sections: { branches: 'Branches', departments: 'Departments', categories: 'Categories and subcategories', severities: 'Severity values' },
       headers: ['Code', 'English value', 'Arabic value', 'Parent'],
@@ -54,7 +55,7 @@ export const adminUsersText: Record<Locale, typeof enAdminUsersText> = {
   ar: {
     title: 'المستخدمون والأدوار ونطاق الفروع',
     subtitle: 'أنشئ حسابات الموظفين وتحكم في صلاحياتهم.',
-    headers: ['المستخدم', 'الدور', 'نطاق الفرع', 'نطاق القسم', 'الحالة', 'الإجراء'],
+    headers: ['المستخدم', 'الدور', 'نطاق الفرع', 'القسم', 'الحالة', 'الإجراء'],
     badges: { active: 'نشط', inactive: 'غير نشط' },
     actions: {
       create: 'إنشاء مستخدم',
@@ -62,6 +63,7 @@ export const adminUsersText: Record<Locale, typeof enAdminUsersText> = {
       deactivate: 'إيقاف',
       reactivate: 'تفعيل',
       saveAssignments: 'حفظ التعيينات',
+      saveDepartment: 'حفظ',
     },
     fields: {
       email: 'البريد الإلكتروني',
@@ -69,12 +71,12 @@ export const adminUsersText: Record<Locale, typeof enAdminUsersText> = {
       nameAr: 'الاسم بالعربية',
       role: 'الدور',
       branch: 'نطاق الفرع',
-      department: 'نطاق القسم',
+      department: 'القسم',
       initialPassword: 'كلمة المرور الأولية',
     },
     masterData: {
       title: 'قوائم إدخال الشكاوى',
-      subtitle: 'القيم الفعلية للفروع والفئات والشدة المستخدمة عند إنشاء الشكوى.',
+      subtitle: 'القيم الفعلية للفروع والأقسام والفئات والشدة المستخدمة عند إنشاء الشكوى وإسناد المهام.',
       unavailable: 'تعذر تحميل قيم قوائم الإدخال.',
       sections: { branches: 'الفروع', departments: 'الأقسام', categories: 'الفئات والفئات الفرعية', severities: 'قيم الشدة' },
       headers: ['الرمز', 'القيمة بالإنجليزية', 'القيمة بالعربية', 'الأصل'],
@@ -108,7 +110,7 @@ const enAdminUsersText = {
   subtitle: '',
   headers: [''],
   badges: { active: '', inactive: '' },
-  actions: { create: '', manageRoles: '', deactivate: '', reactivate: '', saveAssignments: '' },
+  actions: { create: '', manageRoles: '', deactivate: '', reactivate: '', saveAssignments: '', saveDepartment: '' },
   fields: { email: '', nameEn: '', nameAr: '', role: '', branch: '', department: '', initialPassword: '' },
   masterData: {
     title: '',

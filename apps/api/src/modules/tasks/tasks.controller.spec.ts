@@ -35,7 +35,7 @@ test('quick-add derives owner and audit actor from the staff session', async () 
   assert.equal(result.task.id, 'task_1');
   assert.equal(capturedInput?.ownerId, 'user_owner');
   assert.equal(capturedInput?.assigneeId, 'user_assignee');
-  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'CR_OFFICER', branchId: 'branch_1' });
+  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'CR_OFFICER', branchId: 'branch_1', departmentId: null, permissions: [] });
   assert.deepEqual(capturedInput?.nextAction, {
     what: 'Confirm delivery time',
     whoId: 'user_assignee',
@@ -69,6 +69,29 @@ test('quick-add accepts customer promise flag from the staff form', async () => 
 
   assert.equal(capturedInput?.isCustomerPromise, true);
   assert.deepEqual(capturedInput?.links, [{ entityType: 'CUSTOMER', entityId: 'customer_1' }]);
+});
+
+test('quick-add accepts multiple user and department assignment targets', async () => {
+  let capturedInput: CreateTaskInput | undefined;
+  const controller = new TasksController({
+    createForActor: async (input: CreateTaskInput) => {
+      capturedInput = input;
+      return taskResponse();
+    },
+  } as unknown as TasksService);
+
+  await controller.quickAdd({
+    title: 'Distribute task',
+    what: 'Coordinate follow-up',
+    whoId: 'user_hr',
+    when: '2026-06-21T09:00:00.000Z',
+    assignedUserIds: ['user_hr', 'user_sales'],
+    assignedDepartmentIds: ['dept_sales', 'dept_service'],
+  }, request());
+
+  assert.equal(capturedInput?.assigneeId, 'user_hr');
+  assert.deepEqual(capturedInput?.participantUserIds, ['user_hr', 'user_sales']);
+  assert.deepEqual(capturedInput?.assignedDepartmentIds, ['dept_sales', 'dept_service']);
 });
 
 test('quick-add rejects client-owned task authority fields', async () => {
@@ -125,7 +148,7 @@ test('sent by me derives actor from the staff session', async () => {
   const result = await controller.sentByMe(request('CR_MANAGER'));
 
   assert.equal(result.tasks[0]?.id, 'task_1');
-  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'CR_MANAGER', branchId: 'branch_1' });
+  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'CR_MANAGER', branchId: 'branch_1', departmentId: null, permissions: [] });
 });
 
 test('manager rollup derives role and branch from the staff session', async () => {
@@ -176,7 +199,7 @@ test('related-record lookup derives actor from the staff session and ignores cli
 
   assert.equal(result.records[0]?.recordId, 'customer_1');
   assert.deepEqual(capturedQuery, { type: 'CUSTOMER', q: 'Noor' });
-  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'CR_MANAGER', branchId: 'branch_1' });
+  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'CR_MANAGER', branchId: 'branch_1', departmentId: null, permissions: [] });
 });
 
 test('get task derives actor from the staff session', async () => {
@@ -191,7 +214,7 @@ test('get task derives actor from the staff session', async () => {
   const result = await controller.get('task_1', request('BRANCH_MANAGER'));
 
   assert.equal(result.task.id, 'task_1');
-  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'BRANCH_MANAGER', branchId: 'branch_1' });
+  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'BRANCH_MANAGER', branchId: 'branch_1', departmentId: null, permissions: [] });
 });
 
 test('task comments derive actor and audit from the staff session', async () => {
@@ -214,7 +237,7 @@ test('task comments derive actor and audit from the staff session', async () => 
 
   assert.equal(list.comments[0]?.id, 'comment_1');
   assert.equal(created.comment.id, 'comment_2');
-  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'BRANCH_MANAGER', branchId: 'branch_1', permissions: [] });
+  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'BRANCH_MANAGER', branchId: 'branch_1', departmentId: null, permissions: [] });
   assert.equal(capturedAudit?.actorId, 'user_owner');
   assert.equal(capturedAudit?.correlationId, 'req_test');
 });
@@ -233,7 +256,7 @@ test('task nudge derives actor from the staff session and accepts only body fiel
 
   assert.deepEqual(result, { ok: true });
   assert.deepEqual(capturedInput, { message: 'Please follow up.' });
-  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'CR_MANAGER', branchId: 'branch_1' });
+  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'CR_MANAGER', branchId: 'branch_1', departmentId: null, permissions: [] });
 });
 
 test('update task derives actor and audit from the staff session', async () => {
@@ -266,7 +289,7 @@ test('update task derives actor and audit from the staff session', async () => {
     statusNote: 'Waiting for customer payment.',
     nextAction: { what: 'Wait for payment', whoId: 'user_assignee', when: '2026-06-22T09:00:00.000Z' },
   });
-  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'BRANCH_MANAGER', branchId: 'branch_1' });
+  assert.deepEqual(capturedActor, { userId: 'user_owner', roleCode: 'BRANCH_MANAGER', branchId: 'branch_1', departmentId: null, permissions: [] });
   assert.equal(capturedAudit?.actorId, 'user_owner');
   assert.equal(capturedAudit?.correlationId, 'req_test');
 });
@@ -313,6 +336,8 @@ function taskResponseBase(): TaskResponseDto {
     isCustomerPromise: false,
     visibility: TaskVisibility.PARTICIPANTS,
     confidentialityLevel: TaskConfidentialityLevel.NORMAL,
+    assignedDepartmentIds: [],
+    assignedDepartments: [],
     links: [],
     participantUserIds: ['user_owner', 'user_assignee'],
     participants: [],
