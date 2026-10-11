@@ -55,6 +55,8 @@ export type ComplaintDetail = ComplaintQueueItem & {
   categoryId: string;
   categoryName: string;
   categoryNameAr: string;
+  assignedDepartmentName?: string | null;
+  assignedDepartmentNameAr?: string | null;
   description: string;
   incidentAt: string | null;
   customer: ComplaintCustomerDetail;

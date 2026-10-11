@@ -128,8 +128,8 @@ function viewFromDetail(detail: ComplaintDetail, caseTimeline: DetailTimelineIte
     categoryId: detail.categoryId,
     categoryName: detail.categoryName,
     categoryNameAr: detail.categoryNameAr,
-    assignedDepartmentName: detail.assignedDepartmentName,
-    assignedDepartmentNameAr: detail.assignedDepartmentNameAr,
+    assignedDepartmentName: detail.assignedDepartmentName ?? null,
+    assignedDepartmentNameAr: detail.assignedDepartmentNameAr ?? null,
     case: detail.caseSummary ? {
       id: detail.caseSummary.id,
       type: detail.caseSummary.type,

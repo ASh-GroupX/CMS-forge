@@ -71,7 +71,13 @@ function parseCreateUser(body: unknown): CreateAdminUserInput {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw badBody('body');
   const input = body as Record<string, unknown>;
   return {
-    roleCode: role(input.roleCode), branchId: optionalText(input.branchId), departmentId: text(input.departmentId, 'departmentId'), initialPassword: text(input.initialPassword, 'initialPassword'),
+    email: text(input.email, 'email'),
+    nameEn: text(input.nameEn, 'nameEn'),
+    nameAr: text(input.nameAr, 'nameAr'),
+    roleCode: role(input.roleCode),
+    branchId: optionalText(input.branchId),
+    departmentId: text(input.departmentId, 'departmentId'),
+    initialPassword: text(input.initialPassword, 'initialPassword'),
   };
 }
 
