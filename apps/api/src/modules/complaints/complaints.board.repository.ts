@@ -32,4 +32,28 @@ export class ComplaintsBoardRepository {
       select: boardStageSelect,
     });
   }
+
+  async listActiveDepartments() {
+    return this.prisma.department.findMany({
+      where: { isActive: true },
+      orderBy: { code: 'asc' },
+      select: { id: true, code: true, nameEn: true, nameAr: true },
+    });
+  }
+
+  async listActiveBranches() {
+    return this.prisma.branch.findMany({
+      where: { isActive: true },
+      orderBy: { code: 'asc' },
+      select: { id: true, code: true, nameEn: true, nameAr: true },
+    });
+  }
+
+  async listActiveCategories() {
+    return this.prisma.category.findMany({
+      where: { isActive: true },
+      orderBy: { code: 'asc' },
+      select: { id: true, code: true, nameEn: true, nameAr: true },
+    });
+  }
 }

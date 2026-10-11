@@ -11,6 +11,9 @@ const en = {
     branches: ['Branches and departments', 'Maintain branch and department structure for routing and scope.'],
     categories: ['Categories and SLA', 'Maintain complaint categories, severity values, and SLA policies.'],
     templates: ['Notification templates', 'Review operational notification templates and delivery copy.'],
+    standardProblems: ['Standard Problems', 'Manage common problem templates for each department.'],
+    complaintTemplates: ['Complaint Templates', 'Manage custom form fields for specific departments.'],
+    ticketSettings: ['Internal Ticket Settings', 'Manage lists for resolution subjects, waiting reasons, and reject reasons.'],
   },
 };
 
@@ -27,6 +30,9 @@ export const adminHubText: Record<Locale, typeof en> = {
       branches: ['الفروع والأقسام', 'إدارة هيكل الفروع والأقسام للتوجيه والنطاق.'],
       categories: ['التصنيفات واتفاقية الخدمة', 'إدارة تصنيفات الشكاوى ودرجات الخطورة وسياسات SLA.'],
       templates: ['قوالب الإشعارات', 'مراجعة قوالب الإشعارات التشغيلية ونصوص التسليم.'],
+      standardProblems: ['المشاكل الشائعة', 'إدارة قوالب المشاكل الشائعة لكل قسم.'],
+      complaintTemplates: ['قوالب الشكاوى', 'إدارة الحقول الإضافية للشكاوى حسب القسم.'],
+      ticketSettings: ['إعدادات التذاكر الداخلية', 'إدارة قوائم مواضيع الحل، أسباب الانتظار، وأسباب الرفض.'],
     },
   },
 };

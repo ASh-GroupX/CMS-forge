@@ -19,6 +19,8 @@ export type ComplaintQueueItemDto = {
   slaState: 'ON_TRACK' | 'WARNING' | 'BREACHED' | 'CLOSED';
   slaDueAt: string | null;
   slaStage: string | null;
+  categoryId: string | null;
+  categoryName: string | null;
   slaPercentElapsed: number | null;
   nextAction: string | null;
   createdAt: string;
@@ -99,9 +101,21 @@ export type ComplaintDetailDto = ComplaintQueueItemDto & {
   vehicleSource: DataSourceDto | null;
   manualVehicle: boolean;
   vehicleDataUnavailableReason: string | null;
+  channel: string | null;
+  customerType: string | null;
+  lastServiceDate: string | null;
+  odometer: number | null;
+  warrantyActive: boolean | null;
+  salesAdvisorName: string | null;
+  rootCauseCategory: string | null;
+  repeatCustomer: boolean | null;
   statusHistory: ComplaintStatusTimelineItemDto[];
   caseSummary: ComplaintCaseSummaryDto | null;
   allowedActions: ComplaintTransitionAction[];
+  canDelete?: boolean;
+  createdBy: { name: string; nameAr: string } | null;
+  approvedBy: { name: string; nameAr: string } | null;
+  assignedBy: { name: string; nameAr: string; departmentName?: string; departmentNameAr?: string } | null;
 };
 
 export type ComplaintDetailResponseDto = {

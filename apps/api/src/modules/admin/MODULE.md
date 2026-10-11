@@ -19,6 +19,7 @@ tags: [backend, module, agent-context]
 - `role_permissions`
 - `branches`
 - `categories`
+- `departments`
 
 ## May depend on
 

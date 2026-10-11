@@ -1,9 +1,10 @@
-export type ComplaintFormOption = { id: string; code: string; nameEn: string; nameAr: string; parentId?: string | null };
+export type ComplaintFormOption = { id: string; code: string; nameEn: string; nameAr: string; departmentId?: string | null; branchId?: string | null };
 export type ComplaintFormOptions = {
   branches: ComplaintFormOption[];
   categories: ComplaintFormOption[];
-  departments: ComplaintFormOption[];
+  departments: Array<ComplaintFormOption & { branchId: string | null }>;
   severities: Array<'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>;
+  types: string[];
 };
 
 const STAFF_SESSION_COOKIE = 'cms_staff_session';

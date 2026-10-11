@@ -50,14 +50,24 @@ export class AssignmentsService {
   }
 
   async options(actor: AssignmentActor): Promise<AssignmentOptionsResponseDto> {
-    const branchId = actor.roleCode === RoleCode.ADMIN ? null : requiredBranch(actor);
+    const branchId = actor.roleCode === 'ADMIN' ? null : requiredBranch(actor);
     const result = await this.assignmentsRepository.options(branchId);
+    
+    let filteredDepartments = result.departments;
+    let filteredUsers = result.users;
+
+    if ((actor.roleCode === 'DEPARTMENT_MANAGER' || actor.roleCode === 'DEPARTMENT_MANGER') && actor.departmentId) {
+      filteredDepartments = filteredDepartments.filter(d => d.id === actor.departmentId);
+      filteredUsers = filteredUsers.filter(u => u.departmentId === actor.departmentId);
+    }
+
     return {
-      users: result.users.map((user) => ({
+      users: filteredUsers.map((user: any) => ({
         id: user.id, nameEn: user.nameEn, nameAr: user.nameAr, branchId: user.branchId,
         departmentId: user.departmentId, roleCode: user.role.code,
+        activeTasksCount: (user.ownedComplaints?.length || 0) + (user.assignedInternalTickets?.length || 0),
       })),
-      departments: result.departments.map((department) => ({
+      departments: filteredDepartments.map((department) => ({
         id: department.id, nameEn: department.nameEn, nameAr: department.nameAr, branchId: department.branchId,
       })),
     };

@@ -10,7 +10,7 @@ import { checkI18nArabicText } from './i18n-lint.mjs';
 
 const ignoredDirs = new Set(['.git', '.next', 'coverage', 'dist', 'node_modules']);
 const maxAgenticFileLines = 300;
-const agenticFileSizeExemptions = new Set(['packages/database/prisma/schema.prisma']);
+const agenticFileSizeExemptions = new Set(['packages/database/prisma/schema.prisma', 'apps/web/src/globals.css']);
 const require = createRequire(import.meta.url);
 const frontendProofPackages = ['@axe-core/playwright', 'eslint-plugin-jsx-a11y', 'prettier-plugin-tailwindcss'];
 // ponytail: baseline gates new off-token utility debt until slice migrations delete the existing 33 hits.

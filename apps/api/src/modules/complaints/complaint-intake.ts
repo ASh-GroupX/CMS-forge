@@ -12,7 +12,6 @@ export function createComplaintData(input: CreateInternalComplaintInput): Omit<C
     ...requiredTextError(input.customerName, 'customerName'),
     ...contactErrors(input),
     ...requiredTextError(input.categoryId, 'categoryId'),
-    ...requiredTextError(input.subcategoryId, 'subcategoryId'),
     ...requiredTextError(input.description, 'description'),
     ...requiredTextError(input.branchId, 'branchId'),
     ...requiredTextError(input.subject, 'subject'),
@@ -28,10 +27,11 @@ export function createComplaintData(input: CreateInternalComplaintInput): Omit<C
     : null;
   return {
     status: input.saveAsDraft === true ? ComplaintStatus.DRAFT : ComplaintStatus.SUBMITTED,
+    type: (input.type as any) ?? 'COMPLAINT',
     subject: input.subject.trim(),
     severity: input.severity,
     branchId: input.branchId.trim(),
-    categoryId: input.subcategoryId.trim(),
+    categoryId: input.categoryId.trim(),
     customerName: input.customerName.trim(),
     customerPhone: optionalText(input.customerPhone),
     customerNumber: optionalText(input.customerNumber),
@@ -47,10 +47,20 @@ export function createComplaintData(input: CreateInternalComplaintInput): Omit<C
     manualVehicleFlag: vehicleDataSource === 'MANUAL',
     vehicleRelated: input.vehicleRelated === true,
     vehicleDataUnavailableReason: vehicleReason,
+    channel: optionalText(input.channel),
+    customerType: optionalText(input.customerType),
+    lastServiceDate: input.lastServiceDate ?? null,
+    odometer: input.odometer ?? null,
+    warrantyActive: input.warrantyActive ?? null,
+    salesAdvisorName: optionalText(input.salesAdvisorName),
+    rootCauseCategory: optionalText(input.rootCauseCategory),
+    repeatCustomer: input.repeatCustomer ?? null,
     departmentId: optionalText(input.departmentId),
     createdById: input.actorId ?? null,
     descriptionEn: input.description.trim(),
     incidentAt: new Date(input.incidentAt),
+    templateId: optionalText(input.templateId),
+    templateData: input.templateData !== undefined ? input.templateData : undefined,
   };
 }
 

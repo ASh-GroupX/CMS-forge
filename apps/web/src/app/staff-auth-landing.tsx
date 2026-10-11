@@ -19,6 +19,7 @@ export function StaffAuthLanding({
   return (
     <main lang={t.lang} dir={t.dir} className="min-h-screen bg-surface-canvas text-content-strong">
       <StaffTopBar
+        createLabel={t.nav.create[0]}
         isRtl={locale === 'ar'}
         languageHref={`?locale=${locale === 'ar' ? 'en' : 'ar'}`}
         locale={locale}

@@ -6,7 +6,7 @@ import type { ApplyComplaintTransitionInput } from './complaints.service.js';
 import type { ComplaintStatusRecord, ComplaintTransitionSubject } from './complaints.repository.js';
 import type { ComplaintDetailDto } from './dto/complaint-response.dto.js';
 
-const branchManagerRoles = new Set<RoleCode>([RoleCode.BRANCH_MANAGER, RoleCode.CR_MANAGER, RoleCode.ADMIN]);
+const branchManagerRoles = new Set<string>([RoleCode.BRANCH_MANAGER, RoleCode.CR_MANAGER, RoleCode.ADMIN, 'DEPARTMENT_MANAGER', 'DEPARTMENT_MANGER']);
 const reasonRequired = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintTransitionAction.SEND_BACK, ComplaintTransitionAction.ASSIGN_INVESTIGATION, ComplaintTransitionAction.CLOSE, ComplaintTransitionAction.REOPEN, ComplaintTransitionAction.ROUTE_AGAIN, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintTransitionAction.REJECT_AFTER_REVIEW, ComplaintTransitionAction.REJECT_AFTER_INVESTIGATION, ComplaintTransitionAction.REJECT_RESOLUTION]);
 const resolutionRequired = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.RESOLVE, ComplaintTransitionAction.RESOLVE_DIRECTLY]);
 const ownerAllowedActions = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE, ComplaintTransitionAction.RESOLVE]);
@@ -16,13 +16,15 @@ export function invalidTransitionError(): AppException { return new AppException
 export function roleForbiddenError(): AppException { return new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN); }
 
 export function assertActorCanApplyTransition(input: ApplyComplaintTransitionInput, complaint: ComplaintStatusRecord): void {
-  if (!ownerAllowedActions.has(input.action) || branchManagerRoles.has(input.actorRole)) return;
+  const isManager = branchManagerRoles.has(input.actorRole) || Boolean(input.actorPermissions?.includes('COMPLAINT_MANAGE')) || Boolean(input.actorPermissions?.includes('COMPLAINT_RESOLVE')) || Boolean(input.actorPermissions?.includes('COMPLAINT_ASSIGN'));
+  if (!ownerAllowedActions.has(input.action) || isManager) return;
   if (input.actorId && complaint.ownerId === input.actorId) return;
   throw roleForbiddenError();
 }
 
-export function actorCanSeeAction(action: ComplaintTransitionAction, actor: { roleCode: RoleCode; userId: string | null }, complaint: Pick<ComplaintDetailDto, 'ownerId'>): boolean {
-  return !ownerAllowedActions.has(action) || branchManagerRoles.has(actor.roleCode) || Boolean(actor.userId && complaint.ownerId === actor.userId);
+export function actorCanSeeAction(action: ComplaintTransitionAction, actor: { roleCode: string; userId: string | null; permissions?: string[] }, complaint: Pick<ComplaintDetailDto, 'ownerId'>): boolean {
+  const isManager = branchManagerRoles.has(actor.roleCode) || Boolean(actor.permissions?.includes('COMPLAINT_MANAGE')) || Boolean(actor.permissions?.includes('COMPLAINT_RESOLVE')) || Boolean(actor.permissions?.includes('COMPLAINT_ASSIGN'));
+  return !ownerAllowedActions.has(action) || isManager || Boolean(actor.userId && complaint.ownerId === actor.userId);
 }
 
 export async function recordWorkflowRoleForbidden(auditService: AuditService, input: ApplyComplaintTransitionInput): Promise<void> {

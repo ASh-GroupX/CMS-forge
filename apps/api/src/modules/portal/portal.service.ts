@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { CommentVisibility, ComplaintSeverity, ComplaintStatus, ComplaintTransitionRequestSource, NotificationChannel } from '@prisma/client';
+import { CommentVisibility, ComplaintSeverity, ComplaintStatus, ComplaintTransitionRequestSource, ComplaintTransitionAction, NotificationChannel, RoleCode } from '@prisma/client';
 import { AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import { AttachmentsService } from '../attachments/attachments.service.js';
@@ -14,11 +14,11 @@ import { createSessionToken, generateOtp, hashOtp, hashSessionToken, verifyOtpHa
 
 export type PortalComplaintAttachmentInput = { fileName: string; contentType: string; sizeBytes: number; contentBase64: string };
 export type PortalAttachmentDto = { id: string; complaintId: string; fileName: string; contentType: string; sizeBytes: number; scanStatus: string; customerVisible: boolean };
-type SubmitPortalComplaintBase = Omit<CreateInternalComplaintInput, 'actorId' | 'branchId' | 'categoryId' | 'customerNumber' | 'requestSource' | 'severity' | 'subcategoryId'>;
+type SubmitPortalComplaintBase = Omit<CreateInternalComplaintInput, 'actorId' | 'branchId' | 'categoryId' | 'customerNumber' | 'requestSource' | 'severity'>;
 export type SubmitPortalComplaintInput = SubmitPortalComplaintBase & {
   branchId?: string | null;
   categoryId?: string | null;
-  subcategoryId?: string | null;
+
   severity?: ComplaintSeverity | null;
   manualTriage?: boolean;
   attachments?: PortalComplaintAttachmentInput[];
@@ -84,7 +84,7 @@ export class PortalService {
       ...input,
       branchId: optionalText(input.branchId) ?? defaults.branchId,
       categoryId: optionalText(input.categoryId) ?? defaults.categoryId,
-      subcategoryId: optionalText(input.subcategoryId) ?? defaults.subcategoryId,
+
       severity: input.severity ?? ComplaintSeverity.MEDIUM,
       manualTriage: true,
     };
@@ -179,7 +179,35 @@ export class PortalService {
       if (error instanceof AppException && error.code === 'COMPLAINT_NOT_FOUND') throw verificationFailed();
       throw error;
     });
-    if (complaint.status === ComplaintStatus.CLOSED || complaint.status === ComplaintStatus.REJECTED) throw verificationFailed();
+
+    if (complaint.status === ComplaintStatus.RESOLVED) {
+      await this.complaintsService.applyTransition({
+        complaintId: session.complaintId,
+        fromStatus: ComplaintStatus.RESOLVED,
+        action: ComplaintTransitionAction.CUSTOMER_REJECT_RESOLUTION,
+        requestSource: ComplaintTransitionRequestSource.CUSTOMER_PORTAL,
+        actorId: null,
+        actorRole: RoleCode.CUSTOMER_PORTAL,
+        reason: 'Customer rejected resolution via follow-up',
+        correlationId: input.correlationId ?? null,
+        ipAddress: input.ipAddress ?? null,
+        userAgent: input.userAgent ?? null,
+      });
+    } else if (complaint.status === ComplaintStatus.CLOSED || complaint.status === ComplaintStatus.REJECTED) {
+      await this.complaintsService.applyTransition({
+        complaintId: session.complaintId,
+        fromStatus: complaint.status,
+        action: ComplaintTransitionAction.CUSTOMER_RESUBMIT,
+        requestSource: ComplaintTransitionRequestSource.CUSTOMER_PORTAL,
+        actorId: null,
+        actorRole: RoleCode.CUSTOMER_PORTAL,
+        reason: 'Customer resubmitted via follow-up',
+        correlationId: input.correlationId ?? null,
+        ipAddress: input.ipAddress ?? null,
+        userAgent: input.userAgent ?? null,
+      });
+    }
+
     await this.complaintsService.createComment({
       complaintId: session.complaintId,
       body: requiredText(input.body),
@@ -198,7 +226,6 @@ export class PortalService {
       if (error instanceof AppException && error.code === 'COMPLAINT_NOT_FOUND') throw verificationFailed();
       throw error;
     });
-    if (complaint.status === ComplaintStatus.CLOSED || complaint.status === ComplaintStatus.REJECTED) throw verificationFailed();
     return { complaintId: session.complaintId, customerId: session.customerId, branchId: complaint.branchId, status: complaint.status };
   }
 

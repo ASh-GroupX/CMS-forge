@@ -11,7 +11,7 @@ import { defaultRolePermissions, permissionDefinitions } from './role-permission
 
 const prisma = new PrismaClient();
 const DEV_STAFF_PASSWORD_HASH =
-  '$argon2id$v=19$m=65536,t=3,p=4$c2VlZC1hdXRoLWRldi1zYWx0$Ee8H+eXW8u5+8ZBASu1hC3K0c1GkCvh9V7D2Y5zWn1Y';
+  '$argon2id$v=19$m=65536,t=3,p=4$c2VlZC1hdXRoLWRldi1zYWx0$YenN4Ee1nQSAEaw+znCzaQVtZ1ewT7558rIpnAuXKpM';
 
 async function main(): Promise<void> {
   // ── Branches ─────────────────────────────────────────────────────────────

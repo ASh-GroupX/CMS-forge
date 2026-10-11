@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, Inject, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpStatus, Inject, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { RoleCode } from '@prisma/client';
-import { BranchScoped, DynamicPermissionGuard, DynamicPermissions, PermissionGuard, Permissions, RbacGuard, SessionAuthGuard } from '../../core/auth.guard.js';
+import { BranchScoped, DynamicPermissionGuard, DynamicPermissions, PermissionGuard, Permissions, RbacGuard, SessionAuthGuard, Roles } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { AppException } from '../../core/http-kernel.js';
@@ -37,7 +37,7 @@ export class ComplaintsController {
     @Query('branchId') branchId: string | undefined,
     @Req() request: AuthenticatedRequest,
   ): Promise<ComplaintQueueResponseDto> {
-    return { items: await this.complaintsService.listQueue({ branchId: queueBranchId(branchId, request), role: requestRole(request) }) };
+    return { items: await this.complaintsService.listQueue({ branchId: queueBranchId(branchId, request), role: requestRole(request), userId: request.principal!.userId, userDepartmentId: request.principal!.departmentId ?? null, permissions: request.principal!.permissions ?? [] }) };
   }
 
   @Get('search')
@@ -62,6 +62,9 @@ export class ComplaintsController {
       limit,
       offset,
       role: requestRole(request),
+      userId: request.principal!.userId,
+      userDepartmentId: request.principal!.departmentId ?? null,
+      permissions: request.principal!.permissions ?? []
     });
     return { items, limit, offset };
   }
@@ -79,8 +82,39 @@ export class ComplaintsController {
   @BranchScoped()
   async board(@Req() request: AuthenticatedRequest): Promise<ComplaintBoardResponseDto> {
     const principal = request.principal!;
-    // Session-only scoping: branch from the principal (admins unrestricted), role for allowed transitions.
-    return this.boardService.board({ userId: principal.userId, roleCode: principal.roleCode as RoleCode, branchId: queueBranchId(undefined, request) });
+    return this.boardService.board({ userId: principal.userId, roleCode: principal.roleCode as RoleCode, branchId: queueBranchId(undefined, request), permissions: principal.permissions ?? [] });
+  }
+
+  @Get('board/department')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('COMPLAINT_VIEW_BRANCH')
+  @BranchScoped()
+  async boardByDepartment(@Req() request: AuthenticatedRequest): Promise<ComplaintBoardResponseDto> {
+    try {
+      const principal = request.principal!;
+      return await this.boardService.boardByDepartment({ userId: principal.userId, roleCode: principal.roleCode as RoleCode, branchId: queueBranchId(undefined, request), permissions: principal.permissions ?? [] });
+    } catch (err) {
+      console.error("boardByDepartment ERROR:", err);
+      throw err;
+    }
+  }
+
+  @Get('board/branch')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('COMPLAINT_VIEW_BRANCH')
+  @BranchScoped()
+  async boardByBranch(@Req() request: AuthenticatedRequest): Promise<ComplaintBoardResponseDto> {
+    const principal = request.principal!;
+    return this.boardService.boardByBranch({ userId: principal.userId, roleCode: principal.roleCode as RoleCode, branchId: queueBranchId(undefined, request), permissions: principal.permissions ?? [] });
+  }
+
+  @Get('board/category')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('COMPLAINT_VIEW_BRANCH')
+  @BranchScoped()
+  async boardByCategory(@Req() request: AuthenticatedRequest): Promise<ComplaintBoardResponseDto> {
+    const principal = request.principal!;
+    return this.boardService.boardByCategory({ userId: principal.userId, roleCode: principal.roleCode as RoleCode, branchId: queueBranchId(undefined, request), permissions: principal.permissions ?? [] });
   }
 
   @Get(':id')
@@ -92,9 +126,30 @@ export class ComplaintsController {
     @Query('branchId') branchId: string | undefined,
     @Req() request: AuthenticatedRequest,
   ): Promise<ComplaintDetailResponseDto> {
-    const complaint = await this.complaintsService.getDetail(id, { branchId: queueBranchId(branchId, request), role: requestRole(request) });
+    const complaint = await this.complaintsService.getDetail(id, { 
+      branchId: queueBranchId(branchId, request),
+      role: requestRole(request),
+      userId: request.principal!.userId,
+      userDepartmentId: request.principal!.departmentId ?? null,
+      permissions: request.principal!.permissions ?? []
+    });
     const principal = request.principal!;
-    return { complaint: { ...complaint, allowedActions: this.complaintsService.allowedActionsFor(complaint, { roleCode: principal.roleCode as RoleCode, userId: principal.userId }) } };
+    return { complaint: { ...complaint, allowedActions: this.complaintsService.allowedActionsFor(complaint, { roleCode: principal.roleCode as RoleCode, userId: principal.userId, permissions: principal.permissions ?? [] }), canDelete: principal.permissions?.includes('COMPLAINT_MANAGE') || principal.roleCode === 'ADMIN' } };
+  }
+
+  @Delete(':id')
+  @UseGuards(SessionAuthGuard, CsrfGuard)
+  async remove(
+    @Param('id') id: string,
+    @Query('branchId') branchId: string | undefined,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<{ ok: boolean }> {
+    const principal = request.principal!;
+    if (principal.roleCode !== 'ADMIN') {
+      throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
+    }
+    await this.complaintsService.deleteDetail(id, { branchId: queueBranchId(branchId, request), role: requestRole(request), userId: principal.userId, permissions: principal.permissions ?? [] });
+    return { ok: true };
   }
 
   @Get(':id/timeline')
@@ -106,7 +161,7 @@ export class ComplaintsController {
     @Query('branchId') branchId: string | undefined,
     @Req() request: AuthenticatedRequest,
   ): Promise<ComplaintTimelineResponseDto> {
-    return { items: await this.complaintsService.timeline(id, { branchId: queueBranchId(branchId, request), role: requestRole(request) }) };
+    return { items: await this.complaintsService.timeline(id, { branchId: queueBranchId(branchId, request), role: requestRole(request), userId: request.principal!.userId, permissions: request.principal!.permissions ?? [] }) };
   }
 
   @Get(':id/related')
@@ -253,7 +308,13 @@ export class ComplaintsController {
     @Req() request: AuthenticatedRequest,
   ): Promise<ComplaintTransitionResponseDto> {
     const transitionBody = parseComplaintTransitionBody(body);
-    await this.complaintsService.getDetail(id, { branchId: queueBranchId(branchId, request) });
+    await this.complaintsService.getDetail(id, { 
+      branchId: queueBranchId(branchId, request),
+      role: requestRole(request),
+      userId: request.principal!.userId,
+      userDepartmentId: request.principal!.departmentId ?? null,
+      permissions: request.principal!.permissions ?? []
+    });
     return {
       transition: await this.complaintsService.applyTransition(
         toTransitionInput(id, transitionBody, auditContext(request)),

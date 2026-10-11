@@ -9,10 +9,10 @@ import type { AdminBranchOption, AdminRoleOption, AdminUserRecord, AssignableSta
 
 export type AdminUserDto = {
   id: string; email: string; username: string | null; nameEn: string; nameAr: string; roleCode: string; roleName: string;
-  branchId: string | null; branchName: string | null; isActive: boolean; lockedAt: string | null; lastLoginAt: string | null;
+  branchId: string | null; branchName: string | null; departmentId: string | null; departmentName: string | null; isActive: boolean; lockedAt: string | null; lastLoginAt: string | null;
 };
-export type AdminUsersResponse = { users: AdminUserDto[]; roles: AdminRoleOption[]; branches: AdminBranchOption[] };
-export type CreateAdminUserInput = { email: string; nameEn: string; nameAr: string; roleCode: string; branchId?: string | null; initialPassword: string };
+export type AdminUsersResponse = { users: AdminUserDto[]; roles: AdminRoleOption[]; branches: AdminBranchOption[]; departments: AdminBranchOption[] };
+export type CreateAdminUserInput = { email: string; nameEn: string; nameAr: string; roleCode: string; branchId?: string | null; departmentId?: string | null; initialPassword: string };
 export type StaffLookupActor = { userId: string; roleCode: string; branchId: string | null };
 export type AssignableStaffDto = { userId: string; displayName: string; displayNameAr: string; role: string; roleAr: string; branchLabel: string | null; branchLabelAr: string | null };
 export type AssignableStaffResponse = { staff: AssignableStaffDto[] };
@@ -56,6 +56,28 @@ export class AdminUsersService {
     });
   }
 
+  async updateAssignments(id: string, branchId: string | null, departmentId: string | null, roleCode: string | null, audit: AdminAudit = {}): Promise<AdminUserDto> {
+    const validatedBranch = optionalText(branchId, 'branchId');
+    const validatedDepartment = optionalText(departmentId, 'departmentId');
+    const validatedRole = optionalText(roleCode, 'roleCode');
+    if (validatedBranch && !(await this.repository.branchExists(validatedBranch))) throw validation('branchId', 'branchId is invalid.');
+    if (validatedDepartment && !(await this.repository.departmentExists(validatedDepartment))) throw validation('departmentId', 'departmentId is invalid.');
+    let roleId: string | undefined = undefined;
+    if (validatedRole) {
+      const found = await this.repository.roleId(validatedRole);
+      if (!found || validatedRole === 'CUSTOMER_PORTAL') throw validation('roleCode', 'roleCode is invalid.');
+      roleId = found;
+    }
+
+    return this.repository.transaction(async (client) => {
+      const updateData: { branchId: string | null; departmentId: string | null; roleId?: string } = { branchId: validatedBranch, departmentId: validatedDepartment };
+      if (roleId) updateData.roleId = roleId;
+      const user = await this.repository.update(nonEmpty(id, 'id'), updateData, client);
+      await this.audit.record(auditInput('admin_user_updated', user, audit, { branchId: validatedBranch, departmentId: validatedDepartment, ...(validatedRole ? { roleCode: validatedRole } : {}) }), client);
+      return userDto(user);
+    });
+  }
+
   private async createData(input: CreateAdminUserInput) {
     const email = nonEmpty(input.email, 'email').toLowerCase();
     if (!email.includes('@')) throw validation('email', 'email is invalid.');
@@ -63,11 +85,13 @@ export class AdminUsersService {
     if (!roleId || input.roleCode === RoleCode.CUSTOMER_PORTAL) throw validation('roleCode', 'roleCode is invalid.');
     const branchId = optionalText(input.branchId, 'branchId');
     if (branchId && !(await this.repository.branchExists(branchId))) throw validation('branchId', 'branchId is invalid.');
+    const departmentId = optionalText(input.departmentId, 'departmentId');
+    if (departmentId && !(await this.repository.departmentExists(departmentId))) throw validation('departmentId', 'departmentId is invalid.');
     const password = nonEmpty(input.initialPassword, 'initialPassword');
     if (password.length < 12) throw validation('initialPassword', 'initialPassword must be at least 12 characters.');
     return {
       email, nameEn: nonEmpty(input.nameEn, 'nameEn'), nameAr: nonEmpty(input.nameAr, 'nameAr'),
-      passwordHash: await argon2.hash(password, { type: argon2.argon2id }), roleId, branchId,
+      passwordHash: await argon2.hash(password, { type: argon2.argon2id }), roleId, branchId, departmentId,
     };
   }
 }
@@ -75,7 +99,9 @@ export class AdminUsersService {
 function userDto(user: AdminUserRecord): AdminUserDto {
   return {
     id: user.id, email: user.email, username: user.username, nameEn: user.nameEn, nameAr: user.nameAr, roleCode: user.role.code, roleName: user.role.nameEn,
-    branchId: user.branch?.id ?? null, branchName: user.branch?.nameEn ?? null, isActive: user.isActive,
+    branchId: user.branch?.id ?? null, branchName: user.branch?.nameEn ?? null,
+    departmentId: user.department?.id ?? null, departmentName: user.department?.nameEn ?? null,
+    isActive: user.isActive,
     lockedAt: user.lockedAt?.toISOString() ?? null, lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
   };
 }

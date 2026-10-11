@@ -15,7 +15,7 @@ export type PortalComplaintRequestDto = {
   customerName: string;
   customerPhone: string;
   categoryId?: string | null;
-  subcategoryId?: string | null;
+  departmentId?: string | null;
   description: string;
   incidentAt: string;
   branchId?: string | null;
@@ -29,7 +29,7 @@ export type PortalComplaintRequestDto = {
   vehicleBrand?: string | null;
   vehicleModel?: string | null;
   vehicleModelYear?: number | null;
-  departmentId?: string | null;
+
   attachments?: PortalAttachmentRequestDto[];
 };
 
@@ -41,7 +41,7 @@ export function parsePortalComplaintBody(body: unknown): PortalComplaintRequestD
     customerName: requiredText(input.customerName, 'customerName'),
     customerPhone: requiredText(input.customerPhone, 'customerPhone'),
     categoryId: manualTriage ? optionalText(input.categoryId, 'categoryId') : requiredText(input.categoryId, 'categoryId'),
-    subcategoryId: manualTriage ? optionalText(input.subcategoryId, 'subcategoryId') : requiredText(input.subcategoryId, 'subcategoryId'),
+    departmentId: manualTriage ? optionalText(input.departmentId, 'departmentId') : requiredText(input.departmentId, 'departmentId'),
     description: requiredText(input.description, 'description'),
     incidentAt: requiredText(input.incidentAt, 'incidentAt'),
     branchId: manualTriage ? optionalText(input.branchId, 'branchId') : requiredText(input.branchId, 'branchId'),
@@ -55,7 +55,7 @@ export function parsePortalComplaintBody(body: unknown): PortalComplaintRequestD
     vehicleBrand: optionalText(input.vehicleBrand, 'vehicleBrand'),
     vehicleModel: optionalText(input.vehicleModel, 'vehicleModel'),
     vehicleModelYear: optionalNumber(input.vehicleModelYear, 'vehicleModelYear'),
-    departmentId: optionalText(input.departmentId, 'departmentId'),
+
     ...(attachments.length ? { attachments } : {}),
   };
 }

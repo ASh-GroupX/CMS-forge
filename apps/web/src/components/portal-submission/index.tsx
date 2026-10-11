@@ -38,12 +38,14 @@ export function PortalSubmissionScreen({
 }) {
   const t = portalSubmissionText[locale];
   const resolvedOptions = options ?? emptyOptions;
-  const categories = resolvedOptions.categories.filter((option) => !option.parentId);
+
   const optionsUnavailable = !hasRequiredOptions(resolvedOptions);
   const [submitState, setSubmitState] = useState<SubmitState>({ kind: 'idle' });
-  const [categoryId, setCategoryId] = useState('');
+  const [branchId, setBranchId] = useState('');
+  const [departmentId, setDepartmentId] = useState('');
   const [vehicleRelated, setVehicleRelated] = useState(false);
-  const subcategories = resolvedOptions.categories.filter((option) => option.parentId && (!categoryId || option.parentId === categoryId));
+  const departments = resolvedOptions.departments.filter((option) => !branchId || option.branchId === branchId);
+  const categories = resolvedOptions.categories.filter((option) => !departmentId || option.departmentId === departmentId);
   const visibleState = submitState.kind === 'idle' ? previewState(state, reference, locale, attachmentWarning) : submitState;
   const messageState = visibleState;
   const fieldErrors = visibleState.kind === 'validation' ? visibleState.fieldErrors : [];
@@ -89,7 +91,7 @@ export function PortalSubmissionScreen({
       <PortalSubmissionMessage locale={locale} state={messageState} />
 
       {submitted ? null : (
-      <form className="grid gap-4 rounded-md border border-line-subtle bg-surface p-portal-card shadow-sm md:grid-cols-2" onSubmit={onSubmit} ref={formRef}>
+      <form className="relative grid gap-6 rounded-2xl border border-line-subtle bg-surface p-6 md:p-8 shadow-xl md:grid-cols-2" onSubmit={onSubmit} ref={formRef}>
           <StateBlock className="md:col-span-2" message={t.privacy} />
           {fieldErrors.length ? <section className="rounded-sm border border-status-error-border bg-status-error-bg p-3 text-sm text-status-error md:col-span-2" role="alert"><p className="font-semibold">{t.states.validation}</p><ul className="mt-2 grid gap-1">{fieldErrors.map((error) => <li key={`${error.field}-${error.code}`}><a className="underline" href={`#${error.field}`}>{fieldError(fieldErrors, error.field, locale)}</a></li>)}</ul></section> : null}
           <FieldGroup title={t.sections.contact}>
@@ -105,9 +107,9 @@ export function PortalSubmissionScreen({
               </div>
             ) : (
               <>
-                <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'branchId', locale)} label={t.fields.branch} name="branchId" options={selectOptions(resolvedOptions.branches, locale)} />
-                <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'categoryId', locale)} label={t.fields.category} name="categoryId" onChange={setCategoryId} options={selectOptions(categories, locale)} />
-                <SelectField choose={t.choices.choose} disabled={!categoryId} error={fieldError(fieldErrors, 'subcategoryId', locale)} key={categoryId} label={t.fields.subcategory} name="subcategoryId" options={selectOptions(subcategories, locale)} />
+                <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'branchId', locale)} label={t.fields.branch} name="branchId" onChange={setBranchId} options={selectOptions(resolvedOptions.branches, locale)} />
+                <SelectField choose={t.choices.choose} disabled={!branchId} error={fieldError(fieldErrors, 'departmentId', locale)} key={branchId} label={t.fields.department} name="departmentId" onChange={setDepartmentId} options={selectOptions(departments, locale)} />
+                <SelectField choose={t.choices.choose} disabled={!departmentId} error={fieldError(fieldErrors, 'categoryId', locale)} key={`${branchId}-${departmentId}`} label={t.fields.category} name="categoryId" options={selectOptions(categories, locale)} />
                 <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'severity', locale)} label={t.fields.severity} name="severity" options={resolvedOptions.severities.map((value) => ({ label: t.severityLabels[value], value }))} />
               </>
             )}
@@ -145,7 +147,7 @@ export function PortalSubmissionScreen({
             </details>
           </FieldGroup>
 
-          <Button className="min-h-11 focus:ring-2 focus:ring-ring md:col-span-2" disabled={visibleState.kind === 'loading'} type="submit">
+          <Button className="min-h-12 w-full text-base font-medium transition-transform active:scale-95 shadow-md md:col-span-2" disabled={visibleState.kind === 'loading'} type="submit">
             {visibleState.kind === 'loading' ? t.actions.submitting : optionsUnavailable ? t.actions.submitManualReview : t.actions.submit}
           </Button>
       </form>
@@ -165,13 +167,13 @@ export function buildPortalComplaintSubmission(formData: FormData): PortalCompla
     vehicleRelated: formData.get('vehicleRelated') === 'on',
     vehicleVin: optionalTextValue(formData, 'vehicleVin'),
   };
-  const categoryId = optionalTextValue(formData, 'categoryId');
-  const subcategoryId = optionalTextValue(formData, 'subcategoryId');
   const branchId = optionalTextValue(formData, 'branchId');
+  const departmentId = optionalTextValue(formData, 'departmentId');
+  const categoryId = optionalTextValue(formData, 'categoryId');
   const severity = optionalTextValue(formData, 'severity') as PortalComplaintCreateRequest['severity'] | undefined;
-  if (categoryId) request.categoryId = categoryId;
-  if (subcategoryId) request.subcategoryId = subcategoryId;
   if (branchId) request.branchId = branchId;
+  if (departmentId) request.departmentId = departmentId;
+  if (categoryId) request.categoryId = categoryId;
   if (severity) request.severity = severity;
   return request;
 }
@@ -230,7 +232,9 @@ function actionText(t: (typeof portalSubmissionText)[PortalLocale], key: 'copied
 }
 
 function FieldGroup({ children, title }: { children: React.ReactNode; title: string }) {
-  return <section className="grid content-start gap-3 rounded-md bg-surface-raised p-3 md:col-span-2 md:grid-cols-2" aria-label={title}><h2 className="text-sm font-semibold md:col-span-2">{title}</h2>{children}</section>;
+  return (
+    <section className="grid content-start gap-5 rounded-xl bg-surface-raised p-5 md:col-span-2 md:grid-cols-2 border border-line shadow-sm transition-shadow hover:shadow-md" aria-label={title}><h2 className="text-base font-semibold tracking-tight md:col-span-2">{title}</h2>{children}</section>
+  );
 }
 
 function TextField({ error, label, name, type = 'text' }: { error?: string | undefined; label: string; name: string; type?: string }) {
@@ -250,7 +254,7 @@ function SelectField({ choose, disabled = false, error, label, name, onChange, o
 function FieldError({ id, message }: { id?: string; message?: string | undefined }) { return message ? <span className="text-xs font-semibold text-status-error" id={id} role="alert">{message}</span> : null; }
 
 function validateSubmission(input: PortalComplaintCreateRequest): PortalFieldError[] {
-  const required = input.manualTriage ? ['customerName', 'customerPhone', 'description', 'incidentAt', 'subject'] : ['customerName', 'customerPhone', 'categoryId', 'subcategoryId', 'description', 'incidentAt', 'branchId', 'subject', 'severity'];
+  const required = input.manualTriage ? ['customerName', 'customerPhone', 'description', 'incidentAt', 'subject'] : ['customerName', 'customerPhone', 'branchId', 'departmentId', 'categoryId', 'description', 'incidentAt', 'subject', 'severity'];
   return required
     .filter((field) => !String(input[field as keyof PortalComplaintCreateRequest] ?? '').trim())
     .map((field) => ({ field, code: 'REQUIRED', message: `${field} is required.` }));
@@ -290,7 +294,7 @@ function selectOptions(options: PortalSubmissionOption[], locale: PortalLocale):
 }
 
 function hasRequiredOptions(options: PortalSubmissionOptions): boolean {
-  return Boolean(options.branches.length && options.categories.some((option) => !option.parentId) && options.categories.some((option) => option.parentId) && options.severities.length);
+  return Boolean(options.branches.length && options.departments.length && options.categories.length && options.severities.length);
 }
 
-const emptyOptions: PortalSubmissionOptions = { branches: [], categories: [], severities: [] };
+const emptyOptions: PortalSubmissionOptions = { branches: [], departments: [], categories: [], severities: [] };

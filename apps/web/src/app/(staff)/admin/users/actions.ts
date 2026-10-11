@@ -15,6 +15,7 @@ export async function createAdminUserAction(formData: FormData): Promise<void> {
       nameAr: String(formData.get('nameAr') ?? ''),
       roleCode: String(formData.get('roleCode') ?? ''),
       branchId: String(formData.get('branchId') ?? '') || null,
+      departmentId: String(formData.get('departmentId') ?? '') || null,
       initialPassword: String(formData.get('initialPassword') ?? ''),
     }),
     method: 'POST',
@@ -27,6 +28,20 @@ export async function toggleAdminUserAction(formData: FormData): Promise<void> {
   const id = encodeURIComponent(String(formData.get('id') ?? ''));
   const action = formData.get('action') === 'reactivate' ? 'reactivate' : 'deactivate';
   const response = await adminFetch(`/admin/users/${id}/${action}`, { method: 'POST' });
+  redirect(`/admin/users?locale=${locale}&admin=${response.ok ? 'success' : 'error'}`);
+}
+
+export async function updateAdminUserAssignmentsAction(formData: FormData): Promise<void> {
+  const locale = safeLocale(formData.get('locale'));
+  const id = encodeURIComponent(String(formData.get('id') ?? ''));
+  const response = await adminFetch(`/admin/users/${id}/assignments`, {
+    body: JSON.stringify({
+      branchId: String(formData.get('branchId') ?? '') || null,
+      departmentId: String(formData.get('departmentId') ?? '') || null,
+      roleCode: String(formData.get('roleCode') ?? '') || null,
+    }),
+    method: 'POST',
+  });
   redirect(`/admin/users?locale=${locale}&admin=${response.ok ? 'success' : 'error'}`);
 }
 

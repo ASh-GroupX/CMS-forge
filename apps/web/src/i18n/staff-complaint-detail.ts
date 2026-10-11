@@ -18,8 +18,8 @@ export const complaintDetailText: Record<Locale, typeof enComplaintDetailText> =
       attachments: 'Attachments',
       workflow: 'Workflow action',
     },
-    labels: { reference: 'Reference', status: 'Status', severity: 'Severity', category: 'Category', owner: 'Current responsible staff', sla: 'Due status', nextAction: 'Next action', lastUpdated: 'Last updated', customer: 'Customer', contact: 'Contact', customerNumber: 'Customer number', customerSource: 'Customer source', manualCustomer: 'Manual customer', vehicle: 'Vehicle', vin: 'VIN', plate: 'Plate', vehicleRelated: 'Vehicle related', vehicleSource: 'Vehicle source', manualVehicle: 'Manual vehicle', vehicleDataUnavailableReason: 'Unavailable reason', rating: 'Rating', submitted: 'Submitted', author: 'Author', time: 'Time', visibility: 'Visibility', file: 'File', scan: 'Scan status', caseId: 'Case number', caseType: 'Case type', caseLifecycle: 'Case status', caseBranch: 'Case branch', caseOwner: 'Case owner' },
-    values: { reference: 'CMP-2026-001', status: 'Submitted', severity: 'High', category: 'Service concern', owner: 'CR team queue', sla: 'Backend scoped', customer: 'Customer data unavailable', contact: 'Contact unavailable in this scope', vehicle: 'Vehicle data unavailable', vin: 'VIN unavailable', customerSource: 'Local record', manualCustomer: 'No', vehicleRelated: 'No', vehicleSource: 'No vehicle source', manualVehicle: 'No', vehicleDataUnavailableReason: 'Not documented', yes: 'Yes', no: 'No', none: 'None', rating: '4 / 5', submitted: 'Survey submitted placeholder', author: 'Authorized staff', time: '2026-06-19 10:00', internalBody: 'Staff-only note placeholder', publicBody: 'Customer-visible update placeholder', file: 'supporting-document.pdf' },
+    labels: { reference: 'Reference', status: 'Status', severity: 'Severity', category: 'Category', owner: 'Current responsible staff', sla: 'Due status', nextAction: 'Next action', lastUpdated: 'Last updated', customer: 'Customer', contact: 'Contact', customerNumber: 'Customer number', customerSource: 'Customer source', manualCustomer: 'Manual customer', vehicle: 'Vehicle', vin: 'VIN', plate: 'Plate', vehicleRelated: 'Vehicle related', vehicleSource: 'Vehicle source', manualVehicle: 'Manual vehicle', vehicleDataUnavailableReason: 'Unavailable reason', rating: 'Rating', submitted: 'Submitted', author: 'Author', time: 'Time', visibility: 'Visibility', file: 'File', scan: 'Scan status', caseId: 'Case number', caseType: 'Case type', caseLifecycle: 'Case status', caseBranch: 'Case branch', caseOwner: 'Case owner', createdBy: 'Created by', approvedBy: 'Approved by', assignedBy: 'Assigned by' },
+    values: { reference: 'CMP-2026-001', status: 'Submitted', severity: 'High', category: 'Service concern', owner: 'CR team queue', sla: 'Backend scoped', customer: 'Customer data unavailable', contact: 'Contact unavailable in this scope', vehicle: 'Vehicle data unavailable', vin: 'VIN unavailable', customerSource: 'Local record', manualCustomer: 'No', vehicleRelated: 'No', vehicleSource: 'No vehicle source', manualVehicle: 'No', vehicleDataUnavailableReason: 'Not documented', yes: 'Yes', no: 'No', none: 'None', rating: '4 / 5', submitted: 'Survey submitted placeholder', author: 'Authorized staff', time: '2026-06-19 10:00', internalBody: 'Staff-only note placeholder', publicBody: 'Customer-visible update placeholder', file: 'supporting-document.pdf', backToBoard: 'Back to Board' },
     badges: {
       internal: 'Internal only',
       public: 'Customer visible',
@@ -61,7 +61,7 @@ export const complaintDetailText: Record<Locale, typeof enComplaintDetailText> =
       noOptions: 'None configured yet. Ask an admin to add one before routing here.',
       submit: 'Save action',
       actions: ['Approve', 'Send back', 'Assign', 'Investigate', 'Resolve', 'Close', 'Reject', 'Reopen'],
-      actionLabels: { SUBMIT: 'Submit', ACCEPT_INTAKE: 'Approve', APPROVE_AND_ROUTE: 'Approve and route', SEND_BACK: 'Send back', ASSIGN_INVESTIGATION: 'Assign investigation', ADD_INVESTIGATION_UPDATE: 'Investigate', RESOLVE: 'Resolve', RESOLVE_DIRECTLY: 'Resolve directly', CLOSE: 'Close', REJECT_AS_INVALID: 'Reject', REJECT_AFTER_REVIEW: 'Reject', REJECT_AFTER_INVESTIGATION: 'Reject', REJECT_RESOLUTION: 'Reject resolution', REOPEN: 'Reopen', ROUTE_AGAIN: 'Route again' },
+      actionLabels: { SUBMIT: 'Submit', ACCEPT_INTAKE: 'Approve', APPROVE_AND_ROUTE: 'Approve and route', SEND_BACK: 'Send back', ASSIGN_INVESTIGATION: 'Assign investigation', ADD_INVESTIGATION_UPDATE: 'Investigate', RESOLVE: 'Resolve', RESOLVE_DIRECTLY: 'Resolve directly', COMPLETE: 'Customer Contact', CLOSE: 'Close', REJECT_AS_INVALID: 'Reject', REJECT_AFTER_REVIEW: 'Reject', REJECT_AFTER_INVESTIGATION: 'Reject', REJECT_RESOLUTION: 'Reject resolution', REOPEN: 'Reopen', ROUTE_AGAIN: 'Route again' },
       fields: { reason: 'Reason', targetBranchId: 'Target branch', targetDepartmentId: 'Target department', ownerId: 'Assigned owner', resolutionType: 'Resolution type', resolutionSummary: 'Resolution summary', customerCommunicationStatus: 'Customer communication status', vehicleDataUnavailableReason: 'Vehicle data unavailable reason' },
       ownerPicker: { placeholder: 'Search staff by name, role, or branch', prompt: 'Choose who owns the next step.', selected: 'Selected: {name}', clear: 'Clear selected staff', loading: 'Loading staff list.', empty: 'No assignable staff found in your scope.', error: 'Staff list could not be loaded. Refresh and try again.' },
       states: {
@@ -149,6 +149,9 @@ export const complaintDetailText: Record<Locale, typeof enComplaintDetailText> =
       caseLifecycle: 'حالة الحالة',
       caseBranch: 'فرع الحالة',
       caseOwner: 'مسؤول الحالة',
+      createdBy: 'تم الإنشاء بواسطة',
+      approvedBy: 'تم الاعتماد بواسطة',
+      assignedBy: 'تم التعيين بواسطة',
     },
     values: {
       reference: 'CMP-2026-001',
@@ -177,6 +180,7 @@ export const complaintDetailText: Record<Locale, typeof enComplaintDetailText> =
       internalBody: 'عنصر ملاحظة للموظفين فقط',
       publicBody: 'عنصر تحديث مرئي للعميل',
       file: 'supporting-document.pdf',
+      backToBoard: 'العودة للوحة',
     },
     badges: {
       internal: 'داخلي فقط',
@@ -219,7 +223,7 @@ export const complaintDetailText: Record<Locale, typeof enComplaintDetailText> =
       noOptions: 'لا توجد خيارات مُهيأة بعد. اطلب من المسؤول إضافتها قبل التوجيه هنا.',
       submit: 'حفظ التحديث',
       actions: ['قبول الشكوى', 'إرجاع', 'إسناد', 'تحقيق', 'حل', 'إغلاق', 'رفض', 'إعادة فتح'],
-      actionLabels: { SUBMIT: 'حفظ التحديث', ACCEPT_INTAKE: 'قبول الشكوى', APPROVE_AND_ROUTE: 'قبول الشكوى وتوجيهها', SEND_BACK: 'إرجاع', ASSIGN_INVESTIGATION: 'إسناد التحقيق', ADD_INVESTIGATION_UPDATE: 'تحقيق', RESOLVE: 'حل', RESOLVE_DIRECTLY: 'حل مباشر', CLOSE: 'إغلاق', REJECT_AS_INVALID: 'رفض', REJECT_AFTER_REVIEW: 'رفض', REJECT_AFTER_INVESTIGATION: 'رفض', REJECT_RESOLUTION: 'رفض الحل', REOPEN: 'إعادة فتح', ROUTE_AGAIN: 'توجيه مرة أخرى' },
+      actionLabels: { SUBMIT: 'حفظ التحديث', ACCEPT_INTAKE: 'قبول الشكوى', APPROVE_AND_ROUTE: 'قبول الشكوى وتوجيهها', SEND_BACK: 'إرجاع', ASSIGN_INVESTIGATION: 'إسناد التحقيق', ADD_INVESTIGATION_UPDATE: 'تحقيق', RESOLVE: 'حل', RESOLVE_DIRECTLY: 'حل مباشر', COMPLETE: 'تواصل مع العميل', CLOSE: 'إغلاق', REJECT_AS_INVALID: 'رفض', REJECT_AFTER_REVIEW: 'رفض', REJECT_AFTER_INVESTIGATION: 'رفض', REJECT_RESOLUTION: 'رفض الحل', REOPEN: 'إعادة فتح', ROUTE_AGAIN: 'توجيه مرة أخرى' },
       fields: { reason: 'السبب', targetBranchId: 'الفرع المستهدف', targetDepartmentId: 'القسم المستهدف', ownerId: 'المسؤول المسند', resolutionType: 'نوع الحل', resolutionSummary: 'ملخص الحل', customerCommunicationStatus: 'حالة التواصل مع العميل', vehicleDataUnavailableReason: 'سبب عدم توفر بيانات المركبة' },
       ownerPicker: { placeholder: 'ابحث بالاسم أو الدور أو الفرع', prompt: 'اختر المسؤول.', selected: 'تم الاختيار: {name}', clear: 'مسح الموظف المختار', loading: 'جاري تحميل قائمة الموظفين.', empty: 'لا يوجد موظفون متاحون ضمن صلاحيتك.', error: 'تعذر تحميل قائمة الموظفين. حاول مرة أخرى.' },
       states: {
@@ -263,8 +267,8 @@ const enComplaintDetailText = {
   title: '',
   subtitle: '',
   sections: { facts: '', customer: '', vehicle: '', ownership: '', timeline: '', communicationTimeline: '', caseTimeline: '', survey: '', internalComments: '', publicUpdates: '', attachments: '', workflow: '' },
-  labels: { reference: '', status: '', severity: '', category: '', owner: '', sla: '', nextAction: '', lastUpdated: '', customer: '', contact: '', customerNumber: '', customerSource: '', manualCustomer: '', vehicle: '', vin: '', plate: '', vehicleRelated: '', vehicleSource: '', manualVehicle: '', vehicleDataUnavailableReason: '', rating: '', submitted: '', author: '', time: '', visibility: '', file: '', scan: '', caseId: '', caseType: '', caseLifecycle: '', caseBranch: '', caseOwner: '' },
-  values: { reference: '', status: '', severity: '', category: '', owner: '', sla: '', customer: '', contact: '', vehicle: '', vin: '', customerSource: '', manualCustomer: '', vehicleRelated: '', vehicleSource: '', manualVehicle: '', vehicleDataUnavailableReason: '', yes: '', no: '', none: '', rating: '', submitted: '', author: '', time: '', internalBody: '', publicBody: '', file: '' },
+  labels: { reference: '', status: '', severity: '', category: '', owner: '', sla: '', nextAction: '', lastUpdated: '', customer: '', contact: '', customerNumber: '', customerSource: '', manualCustomer: '', vehicle: '', vin: '', plate: '', vehicleRelated: '', vehicleSource: '', manualVehicle: '', vehicleDataUnavailableReason: '', rating: '', submitted: '', author: '', time: '', visibility: '', file: '', scan: '', caseId: '', caseType: '', caseLifecycle: '', caseBranch: '', caseOwner: '', createdBy: '', approvedBy: '', assignedBy: '' },
+  values: { reference: '', status: '', severity: '', category: '', owner: '', sla: '', customer: '', contact: '', vehicle: '', vin: '', customerSource: '', manualCustomer: '', vehicleRelated: '', vehicleSource: '', manualVehicle: '', vehicleDataUnavailableReason: '', yes: '', no: '', none: '', rating: '', submitted: '', author: '', time: '', internalBody: '', publicBody: '', file: '', backToBoard: '' },
   badges: { internal: '', public: '', pending: '', clean: '', rejected: '' },
   timelineLegend: { latest: '', public: '', internal: '' },
   timelineFilters: { all: '', internal: '', public: '', tasks: '', system: '' },

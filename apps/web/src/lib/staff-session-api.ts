@@ -10,6 +10,8 @@ export type StaffSessionPrincipal = {
   branchName: string | null;
   branchNameAr: string | null;
   branchTimezone: string | null;
+  departmentId?: string | null;
+  departmentName?: string | null;
 };
 
 type AuthMeResponse = { user?: Partial<StaffSessionPrincipal> };
@@ -69,6 +71,8 @@ function principalFrom(body: AuthMeResponse): StaffSessionPrincipal | null {
     branchName: typeof user.branchName === 'string' ? user.branchName : null,
     branchNameAr: typeof user.branchNameAr === 'string' ? user.branchNameAr : null,
     branchTimezone: typeof user.branchTimezone === 'string' ? user.branchTimezone : null,
+    departmentId: typeof user.departmentId === 'string' ? user.departmentId : null,
+    departmentName: typeof user.departmentName === 'string' ? user.departmentName : null,
   };
 }
 

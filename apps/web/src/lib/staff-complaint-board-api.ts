@@ -33,6 +33,12 @@ export type ComplaintBoardCard = {
   slaState: 'ON_TRACK' | 'WARNING' | 'BREACHED' | 'CLOSED';
   slaDueAt: string | null;
   slaStage: string | null;
+  categoryId: string | null;
+  categoryName: string | null;
+  subcategoryId: string | null;
+  subcategoryName: string | null;
+  assignedDepartmentId: string | null;
+  assignedDepartmentName: string | null;
   slaPercentElapsed: number | null;
   nextAction: string | null;
   createdAt: string;
@@ -79,6 +85,72 @@ export async function getComplaintBoardLoadResult({
 
   try {
     const response = await fetchImpl(new URL('/complaints/board', apiUrl), {
+      cache: 'no-store',
+      headers: { Accept: 'application/json', cookie: cookies },
+    });
+    if (response.status === 401 || response.status === 403) return { status: 'denied' };
+    if (!response.ok) return { status: 'error' };
+    const data = complaintBoardFrom(await response.json());
+    return data ? { status: 'ready', data } : { status: 'error' };
+  } catch {
+    return { status: 'error' };
+  }
+}
+
+export async function getComplaintBoardByDepartmentLoadResult({
+  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  cookieHeader,
+  fetchImpl = fetch,
+}: RequestOptions = {}): Promise<ComplaintBoardLoadResult> {
+  const cookies = cookieHeader ?? await incomingCookieHeader();
+  if (!hasStaffSessionCookie(cookies)) return { status: 'denied' };
+
+  try {
+    const response = await fetchImpl(new URL('/complaints/board/department', apiUrl), {
+      cache: 'no-store',
+      headers: { Accept: 'application/json', cookie: cookies },
+    });
+    if (response.status === 401 || response.status === 403) return { status: 'denied' };
+    if (!response.ok) return { status: 'error' };
+    const data = complaintBoardFrom(await response.json());
+    return data ? { status: 'ready', data } : { status: 'error' };
+  } catch {
+    return { status: 'error' };
+  }
+}
+
+export async function getComplaintBoardByBranchLoadResult({
+  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  cookieHeader,
+  fetchImpl = fetch,
+}: RequestOptions = {}): Promise<ComplaintBoardLoadResult> {
+  const cookies = cookieHeader ?? await incomingCookieHeader();
+  if (!hasStaffSessionCookie(cookies)) return { status: 'denied' };
+
+  try {
+    const response = await fetchImpl(new URL('/complaints/board/branch', apiUrl), {
+      cache: 'no-store',
+      headers: { Accept: 'application/json', cookie: cookies },
+    });
+    if (response.status === 401 || response.status === 403) return { status: 'denied' };
+    if (!response.ok) return { status: 'error' };
+    const data = complaintBoardFrom(await response.json());
+    return data ? { status: 'ready', data } : { status: 'error' };
+  } catch {
+    return { status: 'error' };
+  }
+}
+
+export async function getComplaintBoardByCategoryLoadResult({
+  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  cookieHeader,
+  fetchImpl = fetch,
+}: RequestOptions = {}): Promise<ComplaintBoardLoadResult> {
+  const cookies = cookieHeader ?? await incomingCookieHeader();
+  if (!hasStaffSessionCookie(cookies)) return { status: 'denied' };
+
+  try {
+    const response = await fetchImpl(new URL('/complaints/board/category', apiUrl), {
       cache: 'no-store',
       headers: { Accept: 'application/json', cookie: cookies },
     });
@@ -202,6 +274,12 @@ export function boardCardFrom(card: Partial<ComplaintBoardCard>): ComplaintBoard
     slaState: card.slaState,
     slaDueAt: typeof card.slaDueAt === 'string' ? card.slaDueAt : null,
     slaStage: typeof card.slaStage === 'string' ? card.slaStage : null,
+    categoryId: typeof card.categoryId === 'string' ? card.categoryId : null,
+    categoryName: typeof card.categoryName === 'string' ? card.categoryName : null,
+    subcategoryId: typeof card.subcategoryId === 'string' ? card.subcategoryId : null,
+    subcategoryName: typeof card.subcategoryName === 'string' ? card.subcategoryName : null,
+    assignedDepartmentId: typeof card.assignedDepartmentId === 'string' ? card.assignedDepartmentId : null,
+    assignedDepartmentName: typeof card.assignedDepartmentName === 'string' ? card.assignedDepartmentName : null,
     slaPercentElapsed: typeof card.slaPercentElapsed === 'number' ? card.slaPercentElapsed : null,
     nextAction: typeof card.nextAction === 'string' ? card.nextAction : null,
     createdAt: card.createdAt,
@@ -217,7 +295,7 @@ function boardTransitionFrom(item: Partial<ComplaintBoardTransition>): Complaint
 }
 
 function isComplaintStatus(value: unknown): value is ComplaintStatus {
-  return value === 'DRAFT' || value === 'SUBMITTED' || value === 'MANAGER_REVIEW' || value === 'BRANCH_REVIEW' || value === 'IN_PROGRESS' || value === 'RESOLVED' || value === 'CLOSED' || value === 'REOPENED' || value === 'REJECTED';
+  return value === 'DRAFT' || value === 'SUBMITTED' || value === 'MANAGER_REVIEW' || value === 'BRANCH_REVIEW' || value === 'IN_PROGRESS' || value === 'RESOLVED' || value === 'COMPLETED' || value === 'CLOSED' || value === 'REOPENED' || value === 'REJECTED';
 }
 
 function isSeverity(value: unknown): value is ComplaintSeverity {

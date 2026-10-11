@@ -57,14 +57,15 @@ const DEFAULT_TICKET_STAGES: {
   mappedComplaintStatus: ComplaintStatus;
 }[] = [
   { code: 'TICKETS_DRAFT', nameEn: 'Draft', nameAr: 'مسودة', color: 'slate', position: 0, mappedComplaintStatus: ComplaintStatus.DRAFT },
-  { code: 'TICKETS_SUBMITTED', nameEn: 'Submitted', nameAr: 'مقدمة', color: 'blue', position: 1, mappedComplaintStatus: ComplaintStatus.SUBMITTED },
-  { code: 'TICKETS_MANAGER_REVIEW', nameEn: 'Manager review', nameAr: 'مراجعة المدير', color: 'violet', position: 2, mappedComplaintStatus: ComplaintStatus.MANAGER_REVIEW },
-  { code: 'TICKETS_BRANCH_REVIEW', nameEn: 'Branch review', nameAr: 'مراجعة الفرع', color: 'violet', position: 3, mappedComplaintStatus: ComplaintStatus.BRANCH_REVIEW },
-  { code: 'TICKETS_IN_PROGRESS', nameEn: 'In progress', nameAr: 'قيد المعالجة', color: 'amber', position: 4, mappedComplaintStatus: ComplaintStatus.IN_PROGRESS },
-  { code: 'TICKETS_RESOLVED', nameEn: 'Resolved', nameAr: 'تم الحل', color: 'green', position: 5, mappedComplaintStatus: ComplaintStatus.RESOLVED },
-  { code: 'TICKETS_CLOSED', nameEn: 'Closed', nameAr: 'مغلقة', color: 'slate', position: 6, mappedComplaintStatus: ComplaintStatus.CLOSED },
-  { code: 'TICKETS_REOPENED', nameEn: 'Reopened', nameAr: 'أعيد فتحها', color: 'red', position: 7, mappedComplaintStatus: ComplaintStatus.REOPENED },
-  { code: 'TICKETS_REJECTED', nameEn: 'Rejected', nameAr: 'مرفوضة', color: 'red', position: 8, mappedComplaintStatus: ComplaintStatus.REJECTED },
+  { code: 'TICKETS_SUBMITTED', nameEn: 'Open', nameAr: 'مفتوحة', color: 'blue', position: 1, mappedComplaintStatus: ComplaintStatus.SUBMITTED },
+  { code: 'TICKETS_MANAGER_REVIEW', nameEn: 'Under Review', nameAr: 'قيد المراجعة', color: 'violet', position: 2, mappedComplaintStatus: ComplaintStatus.MANAGER_REVIEW },
+  { code: 'TICKETS_BRANCH_REVIEW', nameEn: 'Assigned', nameAr: 'معينة', color: 'violet', position: 3, mappedComplaintStatus: ComplaintStatus.BRANCH_REVIEW },
+  { code: 'TICKETS_IN_PROGRESS', nameEn: 'In Progress', nameAr: 'قيد التنفيذ', color: 'amber', position: 4, mappedComplaintStatus: ComplaintStatus.IN_PROGRESS },
+  { code: 'TICKETS_RESOLVED', nameEn: 'Resolution Pending', nameAr: 'بانتظار الحل', color: 'green', position: 5, mappedComplaintStatus: ComplaintStatus.RESOLVED },
+  { code: 'TICKETS_COMPLETED', nameEn: 'Customer Contacted', nameAr: 'تم التواصل مع العميل', color: 'slate', position: 6, mappedComplaintStatus: ComplaintStatus.COMPLETED },
+  { code: 'TICKETS_CLOSED', nameEn: 'Closed', nameAr: 'مغلقة', color: 'slate', position: 7, mappedComplaintStatus: ComplaintStatus.CLOSED },
+  { code: 'TICKETS_REOPENED', nameEn: 'Reopened', nameAr: 'أعيد فتحها', color: 'red', position: 8, mappedComplaintStatus: ComplaintStatus.REOPENED },
+  { code: 'TICKETS_REJECTED', nameEn: 'Rejected', nameAr: 'مرفوضة', color: 'red', position: 9, mappedComplaintStatus: ComplaintStatus.REJECTED },
 ];
 
 export async function seedBoardStages(prisma: PrismaClient): Promise<void> {
@@ -93,6 +94,8 @@ export async function seedBoardStages(prisma: PrismaClient): Promise<void> {
       update: {
         mappedComplaintStatus: stage.mappedComplaintStatus,
         isDefault: true,
+        nameEn: stage.nameEn,
+        nameAr: stage.nameAr,
       },
       create: {
         code: stage.code,

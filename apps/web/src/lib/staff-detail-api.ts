@@ -13,6 +13,8 @@ export type StaffComplaintDetailView = {
   categoryId: string;
   categoryName: string;
   categoryNameAr: string;
+  assignedDepartmentName: string | null;
+  assignedDepartmentNameAr: string | null;
   case: {
     id: string;
     type: string;
@@ -45,6 +47,21 @@ export type StaffComplaintDetailView = {
   vehicleDataUnavailableReason: string | null;
   allowedActions: ComplaintDetail['allowedActions'];
   timeline: DetailTimelineItem[];
+  canDelete: boolean;
+  createdBy: ComplaintDetail['createdBy'];
+  approvedBy: ComplaintDetail['approvedBy'];
+  assignedBy: ComplaintDetail['assignedBy'];
+  type?: string | undefined;
+  templateId?: string | null | undefined;
+  templateData?: any | undefined;
+  channel?: string | null;
+  customerType?: string | null;
+  lastServiceDate?: string | null;
+  odometer?: number | null;
+  warrantyActive?: boolean | null;
+  salesAdvisorName?: string | null;
+  rootCauseCategory?: string | null;
+  repeatCustomer?: boolean | null;
 };
 
 export type StaffComplaintDetailLoadResult =
@@ -111,6 +128,8 @@ function viewFromDetail(detail: ComplaintDetail, caseTimeline: DetailTimelineIte
     categoryId: detail.categoryId,
     categoryName: detail.categoryName,
     categoryNameAr: detail.categoryNameAr,
+    assignedDepartmentName: detail.assignedDepartmentName,
+    assignedDepartmentNameAr: detail.assignedDepartmentNameAr,
     case: detail.caseSummary ? {
       id: detail.caseSummary.id,
       type: detail.caseSummary.type,
@@ -143,6 +162,21 @@ function viewFromDetail(detail: ComplaintDetail, caseTimeline: DetailTimelineIte
     vehicleDataUnavailableReason: detail.vehicleDataUnavailableReason,
     allowedActions: detail.allowedActions,
     timeline: detail.statusHistory.map((item) => ({ at: item.createdAt, label: item.toStatus })),
+    canDelete: detail.canDelete ?? false,
+    createdBy: detail.createdBy,
+    approvedBy: detail.approvedBy,
+    assignedBy: detail.assignedBy,
+    type: detail.type,
+    templateId: detail.templateId,
+    templateData: detail.templateData,
+    channel: detail.channel,
+    customerType: detail.customerType,
+    lastServiceDate: detail.lastServiceDate,
+    odometer: detail.odometer,
+    warrantyActive: detail.warrantyActive,
+    salesAdvisorName: detail.salesAdvisorName,
+    rootCauseCategory: detail.rootCauseCategory,
+    repeatCustomer: detail.repeatCustomer,
   };
 }
 
@@ -178,6 +212,7 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
     severity: complaint.severity,
     subject: complaint.subject,
     branchId: complaint.branchId,
+    branchName: typeof complaint.branchName === 'string' ? complaint.branchName : '',
     displayTimeZone: complaint.displayTimeZone,
     ownerId: typeof complaint.ownerId === 'string' ? complaint.ownerId : null,
     ownerName: typeof complaint.ownerName === 'string' ? complaint.ownerName : null,
@@ -204,6 +239,21 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
     statusHistory: complaint.statusHistory.filter(statusHistoryItem),
     caseSummary: caseSummary(complaint.caseSummary),
     allowedActions: Array.isArray(complaint.allowedActions) ? complaint.allowedActions.filter(transitionAction) : [],
+    canDelete: complaint.canDelete === true,
+    createdBy: complaint.createdBy || null,
+    approvedBy: complaint.approvedBy || null,
+    assignedBy: complaint.assignedBy || null,
+    type: typeof complaint.type === 'string' ? complaint.type : undefined,
+    templateId: typeof complaint.templateId === 'string' ? complaint.templateId : null,
+    templateData: complaint.templateData,
+    channel: typeof complaint.channel === 'string' ? complaint.channel : null,
+    customerType: typeof complaint.customerType === 'string' ? complaint.customerType : null,
+    lastServiceDate: typeof complaint.lastServiceDate === 'string' ? complaint.lastServiceDate : null,
+    odometer: typeof complaint.odometer === 'number' ? complaint.odometer : null,
+    warrantyActive: typeof complaint.warrantyActive === 'boolean' ? complaint.warrantyActive : null,
+    salesAdvisorName: typeof complaint.salesAdvisorName === 'string' ? complaint.salesAdvisorName : null,
+    rootCauseCategory: typeof complaint.rootCauseCategory === 'string' ? complaint.rootCauseCategory : null,
+    repeatCustomer: typeof complaint.repeatCustomer === 'boolean' ? complaint.repeatCustomer : null,
   };
 }
 

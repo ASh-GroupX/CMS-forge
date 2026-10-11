@@ -6,9 +6,9 @@ import { AdminCategoriesRepository } from './admin-categories.repository.js';
 import type { AdminCategoryData, AdminCategoryRecord } from './admin-categories.repository.js';
 
 export type AdminCategoryDto = {
-  id: string; code: string; nameEn: string; nameAr: string; parentId: string | null; isActive: boolean;
+  id: string; code: string; nameEn: string; nameAr: string; departmentId: string | null; branchId: string | null; isActive: boolean; isExternal: boolean; isInternal: boolean;
 };
-export type AdminCategoryInput = { code: string; nameEn: string; nameAr: string; parentId?: string | null };
+export type AdminCategoryInput = { code: string; nameEn: string; nameAr: string; departmentId?: string | null; branchId?: string | null; isExternal?: boolean; isInternal?: boolean };
 type AdminAudit = { actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 
 @Injectable()
@@ -46,10 +46,11 @@ export class AdminCategoriesService {
   }
 
   private async data(input: AdminCategoryInput, id?: string): Promise<AdminCategoryData> {
-    const parentId = optionalText(input.parentId, 'parentId');
-    if (parentId && parentId === id) throw validation('parentId', 'parentId cannot be the same category.');
-    if (parentId && !(await this.repository.parentExists(parentId))) throw validation('parentId', 'parentId is invalid.');
-    return { code: nonEmpty(input.code, 'code'), nameEn: nonEmpty(input.nameEn, 'nameEn'), nameAr: nonEmpty(input.nameAr, 'nameAr'), parentId };
+    const departmentId = optionalText(input.departmentId, 'departmentId');
+    const branchId = optionalText(input.branchId, 'branchId');
+    if (departmentId && !(await this.repository.departmentExists(departmentId))) throw validation('departmentId', 'departmentId is invalid.');
+    if (branchId && !(await this.repository.branchExists(branchId))) throw validation('branchId', 'branchId is invalid.');
+    return { code: nonEmpty(input.code, 'code'), nameEn: nonEmpty(input.nameEn, 'nameEn'), nameAr: nonEmpty(input.nameAr, 'nameAr'), departmentId, branchId, ...(input.isExternal !== undefined && { isExternal: input.isExternal }), ...(input.isInternal !== undefined && { isInternal: input.isInternal }) };
   }
 }
 
@@ -59,8 +60,11 @@ function dto(category: AdminCategoryRecord): AdminCategoryDto {
     code: category.code,
     nameEn: category.nameEn,
     nameAr: category.nameAr,
-    parentId: category.parentId,
+    departmentId: category.departmentId,
+    branchId: category.branchId,
     isActive: category.isActive,
+    isExternal: category.isExternal,
+    isInternal: category.isInternal,
   };
 }
 

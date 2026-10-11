@@ -39,7 +39,7 @@ test('board service passes the actor branch and role straight to the scoped queu
   );
 
   await service.board({ userId: 'user_officer', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_a' }, NOW);
-  assert.deepEqual(captured, { branchId: 'branch_a', role: RoleCode.CR_OFFICER });
+  assert.deepEqual(captured, { branchId: 'branch_a', role: RoleCode.CR_OFFICER, userId: 'user_officer' });
 });
 
 test('board groups complaints into the stage that maps their status, keeping empty columns', () => {

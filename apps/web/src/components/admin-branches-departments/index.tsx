@@ -62,7 +62,7 @@ function AdminTable({
     <section className="rounded-md border border-line-subtle bg-surface-raised" aria-label={title}>
       <h3 className="border-b border-line-subtle px-3 py-2 text-sm font-semibold">{title}</h3>
       <Table className="min-w-[34rem]">
-        <TableHeader className="bg-surface text-xs font-semibold uppercase tracking-normal text-content-muted">
+        <TableHeader className="bg-surface-subtle text-xs font-semibold uppercase tracking-normal text-content-muted">
           <TableRow>
             {t.headers.map((header) => (
               <TableHead className="text-start" key={header}>{header}</TableHead>

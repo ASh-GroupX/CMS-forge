@@ -43,7 +43,7 @@ export function ReportsDashboard({
   const t = reportsDashboardText[locale];
   const reports = reportCatalogText[locale];
   const branches = options?.branches ?? [];
-  const categories = options?.categories?.filter((item) => !item.parentId) ?? [];
+  const categories = options?.categories ?? [];
   const severities = options?.severities ?? [];
   const exportQuery = reportQuery(filters);
   const operationalRows = rows?.slice(0, 17);

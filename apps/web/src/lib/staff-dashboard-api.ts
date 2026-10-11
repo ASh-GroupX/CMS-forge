@@ -34,6 +34,34 @@ export async function getStaffDashboardSummary({
   }
 }
 
+export async function getPremiumDashboardSummary({
+  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  cookieHeader,
+  fetchImpl = fetch,
+}: {
+  apiUrl?: string;
+  cookieHeader?: string;
+  fetchImpl?: typeof fetch;
+} = {}): Promise<any | null> {
+  const cookies = cookieHeader ?? await incomingCookieHeader();
+  if (!hasStaffSessionCookie(cookies)) return null;
+
+  try {
+    const response = await fetchImpl(new URL('/reports/premium-dashboard', apiUrl), {
+      cache: 'no-store',
+      headers: { Accept: 'application/json', cookie: cookies },
+    });
+    if (!response.ok) {
+      console.error('Premium Dashboard API Error:', response.status, await response.text().catch(() => 'no text'));
+      return null;
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Premium Dashboard API Exception:', error);
+    return null;
+  }
+}
+
 function summaryFrom(body: DashboardResponse): StaffDashboardSummary | null {
   const summary = body.summary;
   if (

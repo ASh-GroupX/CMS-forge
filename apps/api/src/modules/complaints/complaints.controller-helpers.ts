@@ -3,6 +3,14 @@ import { ComplaintSeverity, ComplaintStatus, ComplaintTransitionAction, RoleCode
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { AppException } from '../../core/http-kernel.js';
 
+/** Returns true when the principal should see complaints across all branches (not scoped to their own branch). */
+function hasGlobalComplaintView(request: AuthenticatedRequest): boolean {
+  const p = request.principal;
+  if (!p) return false;
+  if (p.roleCode === RoleCode.ADMIN || p.roleCode === RoleCode.CR_MANAGER) return true;
+  return p.permissions?.includes('COMPLAINT_VIEW_ALL') ?? false;
+}
+
 export function commentPermission(request: AuthenticatedRequest): string[] {
   const visibility = bodyField(request.body, 'visibility');
   if (visibility === 'INTERNAL') return ['COMPLAINT_COMMENT_INTERNAL'];
@@ -28,6 +36,8 @@ export function transitionPermission(request: AuthenticatedRequest): string[] {
     case ComplaintTransitionAction.REJECT_AFTER_REVIEW:
     case ComplaintTransitionAction.REJECT_AFTER_INVESTIGATION:
     case ComplaintTransitionAction.REJECT_RESOLUTION: return ['COMPLAINT_REJECT'];
+    case ComplaintTransitionAction.CUSTOMER_REJECT_RESOLUTION:
+    case ComplaintTransitionAction.CUSTOMER_RESUBMIT: return [];
     default: return [];
   }
 }
@@ -35,7 +45,8 @@ export function transitionPermission(request: AuthenticatedRequest): string[] {
 export function auditContext(request: AuthenticatedRequest) {
   return {
     actorId: request.principal?.userId ?? null,
-    actorRole: request.principal?.roleCode as RoleCode,
+    actorRole: request.principal?.roleCode as string,
+    actorPermissions: request.principal?.permissions ?? [],
     sessionId: request.principal?.sessionId ?? null,
     correlationId: request.correlationId ?? headerValue(request.headers['x-correlation-id']),
     ipAddress: headerValue(request.headers['x-forwarded-for'])?.split(',')[0]?.trim() ?? request.socket?.remoteAddress ?? null,
@@ -57,15 +68,15 @@ export function requiredQuery(value: string | undefined, field: string): string 
 
 export function queueBranchId(value: string | undefined, request: AuthenticatedRequest): string | null {
   if (value?.trim()) return value.trim();
-  return request.principal?.roleCode === RoleCode.ADMIN ? null : request.principal?.branchId ?? null;
+  return hasGlobalComplaintView(request) ? null : request.principal?.branchId ?? null;
 }
 
 export function searchBranchId(value: string | undefined, request: AuthenticatedRequest): string | null {
-  return request.principal?.roleCode === RoleCode.ADMIN ? optionalText(value) : request.principal?.branchId ?? null;
+  return hasGlobalComplaintView(request) ? optionalText(value) : request.principal?.branchId ?? null;
 }
 
 export function optionalText(value: string | undefined): string | null { return value?.trim() || null; }
-export function requestRole(request: AuthenticatedRequest): RoleCode { return request.principal?.roleCode as RoleCode; }
+export function requestRole(request: AuthenticatedRequest): string { return request.principal?.roleCode ?? 'UNKNOWN'; }
 export function optionalStatus(value: string | undefined): ComplaintStatus | null { return optionalEnum(value, ComplaintStatus, 'status') as ComplaintStatus | null; }
 export function optionalSeverity(value: string | undefined): ComplaintSeverity | null { return optionalEnum(value, ComplaintSeverity, 'severity') as ComplaintSeverity | null; }
 export function optionalSlaState(value: string | undefined): 'ON_TRACK' | 'WARNING' | 'BREACHED' | 'CLOSED' | null {

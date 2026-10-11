@@ -8,7 +8,7 @@ test('complaint form options come from DB and branch scope comes from the server
   const departmentQueries: unknown[] = [];
   const service = new ComplaintFormOptionsService({
     branch: { findMany: async (query: unknown) => { branchQueries.push(query); return [{ id: 'branch_main', code: 'MAIN', nameEn: 'Main Branch', nameAr: 'الفرع الرئيسي' }]; } },
-    category: { findMany: async () => [{ id: 'cat_engine', code: 'ENGINE', nameEn: 'Engine', nameAr: 'المحرك', parentId: null }] },
+    category: { findMany: async () => [{ id: 'cat_engine', code: 'ENGINE', nameEn: 'Engine', nameAr: 'المحرك', departmentId: null, branchId: null }] },
     department: { findMany: async (query: unknown) => { departmentQueries.push(query); return [{ id: 'dept_service', code: 'SERVICE', nameEn: 'Service', nameAr: 'الصيانة' }]; } },
   } as never);
 

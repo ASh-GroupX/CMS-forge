@@ -2,7 +2,7 @@ import React from 'react';
 import { complaintDetailText } from '../../i18n/staff-complaint-detail';
 import { complaintTabsText } from '../../i18n/staff-complaint-tabs';
 import { complaintRelationsText } from '../../i18n/staff-complaint-relations';
-import { caseLifecycleStatusLabel, caseTypeLabel, complaintStatusLabel, severityLabel, slaStateLabel } from '../../i18n/domain-labels';
+import { caseLifecycleStatusLabel, caseTypeLabel, complaintStatusLabel, severityLabel, slaStateLabel, complaintTypeLabel } from '../../i18n/domain-labels';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import { formatDisplayDate, formatDisplayNumber, missingDisplay } from '../../lib/locale-format';
 import type { AssignableStaff } from '../../lib/staff-assignable-staff-api';
@@ -70,39 +70,83 @@ export function ComplaintDetailWorkspace({
   const effectiveState = state ?? (!detail && !commentsState && !attachmentState && !workflowState ? 'empty' : undefined);
 
   return (
-    <section aria-label={t.title} className="grid gap-4" dir={shell.dir}>
-      <PageHeader description={t.subtitle} eyebrow={detail ? values.reference : undefined} title={detail?.subject ?? t.title} />
+    <section aria-label={t.title} className="flex h-full flex-col overflow-hidden" dir={shell.dir}>
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-line-subtle bg-surface px-4">
+        <div className="flex items-center gap-4">
+          <a href={`/complaints?locale=${locale}`} className="text-sm font-medium text-brand hover:underline">
+            &larr; {t.values.backToBoard || 'Back to Board'}
+          </a>
+          <div className="h-4 w-px bg-line-subtle" />
+          <h1 className="text-base font-bold text-content-strong">
+            {detail?.subject ?? t.title}
+          </h1>
+          {detail && (
+            <span className="rounded-md bg-surface-raised px-2 py-0.5 text-xs font-medium text-content-muted">
+              {values.reference}
+            </span>
+          )}
+        </div>
+      </header>
+
       {effectiveState ? (
-        <StateBlock message={t.states[effectiveState]} tone={effectiveState === 'empty' || effectiveState === 'loading' ? 'neutral' : 'error'} />
+        <div className="p-4">
+          <StateBlock message={t.states[effectiveState]} tone={effectiveState === 'empty' || effectiveState === 'loading' ? 'neutral' : 'error'} />
+        </div>
       ) : (
-        <div className="grid gap-4">
-          {detail ? <DetailSummary deadlineLabel={tabs.deadlineState} detail={detail} locale={locale} text={t} values={values} /> : null}
-          <Tabs defaultValue={initialTab} dir={shell.dir}>
-            <TabsList className="grid h-auto w-full grid-cols-3"><TabsTrigger value="work">{tabs.work}</TabsTrigger><TabsTrigger value="communication">{tabs.communication}</TabsTrigger><TabsTrigger value="details">{tabs.details}</TabsTrigger></TabsList>
-            <TabsContent className="grid gap-3 2xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.55fr)]" value="work">
+        <div className="flex flex-1 overflow-hidden">
+          <aside className="hidden w-80 shrink-0 flex-col gap-4 overflow-y-auto border-e border-line-subtle bg-surface-raised p-4 xl:flex">
+            {detail && <DetailSidebar deadlineLabel={tabs.deadlineState} detail={detail} locale={locale} text={t} values={values} />}
+            <div className="mt-2">
               <ComplaintWorkflowModal allowedActions={detail?.allowedActions} assignmentOptions={assignmentOptions} complaintId={detail?.id} locale={locale} options={options} staff={staff} status={detail?.status} vehicleNeedsUnavailableReason={Boolean(detail?.vehicleRelated && !detail.vehicle && !detail.vehicleDataUnavailableReason)} workflowState={workflowState} />
-              <DetailPanel title={t.sections.ownership} rows={[[t.labels.owner, values.owner], [tabs.deadlineState, values.sla], [t.labels.nextAction, detail?.nextAction ? actionDisplay(detail.nextAction, t, locale) : t.workflow.states.empty]]} />
-            </TabsContent>
-            <TabsContent className="grid gap-3 2xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" value="communication">
-              {detail ? <CommunicationTimelinePanel detail={detail} locale={locale} text={t} /> : <DetailPanel title={t.sections.communicationTimeline}><StateBlock message={t.commentStates.empty} /></DetailPanel>}
-              <ComplaintCommentsPanel comments={comments} commentsState={commentsState} complaintId={detail?.id} initialVisibility={commentVisibility} locale={locale} timeZone={detail?.displayTimeZone ?? 'UTC'} />
-            </TabsContent>
-            <TabsContent className="grid gap-3 2xl:grid-cols-2" value="details">
-              <div className="grid min-w-0 content-start gap-3">
-                <DetailPanel title={t.sections.facts} rows={[[t.labels.reference, values.reference], [t.labels.status, values.status], [t.labels.severity, values.severity]]} />
-                <DetailPanel title={t.sections.customer} rows={[[t.labels.customer, detail?.customer.name ?? t.values.customer], [t.labels.contact, detail?.customer.phone ?? t.values.contact], [t.labels.customerNumber, detail?.customer.identifier ?? t.values.none], [t.labels.customerSource, provenance?.customerSource ?? t.values.customerSource], [t.labels.manualCustomer, provenance?.manualCustomer ?? t.values.manualCustomer]]} />
-                <DetailPanel title={t.sections.vehicle} rows={vehicleRows(detail, t, provenance)} />
-                {detail ? <ProvenanceCorrectionPanel detail={detail} locale={locale} lookupState={lookupState} text={{ ...t.correction, title: tabs.dms }} /> : null}
-                <ComplaintAttachmentControls attachmentState={attachmentState} complaintId={detail?.id} locale={locale} />
-              </div>
-              <aside className="grid min-w-0 content-start gap-3">
-                <DetailPanel title={t.sections.caseTimeline} rows={detail?.case ? [[t.labels.caseType, caseTypeLabel(locale, detail.case.type)], [t.labels.status, complaintStatusLabel(locale, detail.case.status)], [t.labels.caseLifecycle, caseLifecycleStatusLabel(locale, detail.case.lifecycleStatus)], [t.labels.caseBranch, detail.case.branchName], [t.labels.caseOwner, detail.case.ownerName ?? t.values.owner]] : [[t.labels.caseLifecycle, t.states.empty]]}>{caseTimeline.length ? <Timeline emptyText={t.states.empty} items={caseTimeline.map((item) => ({ meta: '', text: `${item.label} - ${formatDate(item.at, locale)}` }))} /> : null}</DetailPanel>
-                <CaseCapaPanel caseId={detail?.case?.id} caseOwnerId={detail?.case?.ownerId ?? undefined} items={detail?.capaActions ?? []} locale={locale} staff={staff} text={{ ...t.capa, title: tabs.capa }} />
-                <DetailPanel title={t.sections.survey} rows={surveyRows(surveys, t, locale)} />
-                <ComplaintRelationsPanel complaintId={detail?.id} locale={locale} relations={relations} text={complaintRelationsText[locale]} />
-              </aside>
-            </TabsContent>
-          </Tabs>
+            </div>
+            {detail && (
+              <DetailPanel title={t.sections.ownership} rows={[[t.labels.owner, values.owner], [t.labels.nextAction, detail.nextAction ? actionDisplay(detail.nextAction, t, locale) : t.workflow.states.empty]]} />
+            )}
+          </aside>
+
+          <main className="flex-1 min-w-0 overflow-y-auto bg-surface p-4">
+            <Tabs defaultValue={initialTab} dir={shell.dir}>
+              <TabsList className="mb-4 grid h-auto w-full max-w-md grid-cols-3">
+                <TabsTrigger value="work">{tabs.work}</TabsTrigger>
+                <TabsTrigger value="communication">{tabs.communication}</TabsTrigger>
+                <TabsTrigger value="details">{tabs.details}</TabsTrigger>
+              </TabsList>
+              <TabsContent className="grid gap-3" value="work">
+                {/* Work specific summary for mobile or extra workspace */}
+                <div className="xl:hidden mb-4">
+                  <ComplaintWorkflowModal allowedActions={detail?.allowedActions} assignmentOptions={assignmentOptions} complaintId={detail?.id} locale={locale} options={options} staff={staff} status={detail?.status} vehicleNeedsUnavailableReason={Boolean(detail?.vehicleRelated && !detail.vehicle && !detail.vehicleDataUnavailableReason)} workflowState={workflowState} />
+                </div>
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <DetailPanel title={t.sections.ownership} rows={[[t.labels.owner, values.owner], [tabs.deadlineState, values.sla]]} />
+                </div>
+              </TabsContent>
+              <TabsContent className="grid gap-3 2xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" value="communication">
+                {detail ? <CommunicationTimelinePanel detail={detail} locale={locale} text={t} /> : <DetailPanel title={t.sections.communicationTimeline}><StateBlock message={t.commentStates.empty} /></DetailPanel>}
+                <ComplaintCommentsPanel comments={comments} commentsState={commentsState} complaintId={detail?.id} initialVisibility={commentVisibility} locale={locale} timeZone={detail?.displayTimeZone ?? 'UTC'} />
+              </TabsContent>
+              <TabsContent className="grid gap-3 2xl:grid-cols-2" value="details">
+                <div className="grid min-w-0 content-start gap-3">
+                  <DetailPanel title={t.sections.customer} rows={[[t.labels.customer, detail?.customer.name ?? t.values.customer], [t.labels.contact, detail?.customer.phone ?? t.values.contact], [t.labels.customerNumber, detail?.customer.identifier ?? t.values.none], [t.labels.customerSource, provenance?.customerSource ?? t.values.customerSource], [t.labels.manualCustomer, provenance?.manualCustomer ?? t.values.manualCustomer]]} />
+                  <DetailPanel title={t.sections.vehicle} rows={vehicleRows(detail, t, provenance)} />
+                  <DetailPanel title={locale === 'ar' ? 'بيانات CRM' : 'CRM Data'} rows={crmRows(detail, locale, t)} />
+                  {detail && detail.templateData && Object.keys(detail.templateData).length > 0 && (
+                    <DetailPanel 
+                      title={locale === 'ar' ? 'بيانات إضافية' : 'Additional Information'} 
+                      rows={Object.entries(detail.templateData).map(([k, v]) => [k, Array.isArray(v) ? v.join(', ') : String(v)])} 
+                    />
+                  )}
+                  {detail ? <ProvenanceCorrectionPanel detail={detail} locale={locale} lookupState={lookupState} text={{ ...t.correction, title: tabs.dms }} /> : null}
+                  <ComplaintAttachmentControls attachmentState={attachmentState} complaintId={detail?.id} locale={locale} />
+                </div>
+                <aside className="grid min-w-0 content-start gap-3">
+                  <DetailPanel title={t.sections.caseTimeline} rows={detail?.case ? [[t.labels.caseType, caseTypeLabel(locale, detail.case.type)], [t.labels.status, complaintStatusLabel(locale, detail.case.status)], [t.labels.caseLifecycle, caseLifecycleStatusLabel(locale, detail.case.lifecycleStatus)], [t.labels.caseBranch, detail.case.branchName], [t.labels.caseOwner, detail.case.ownerName ?? t.values.owner]] : [[t.labels.caseLifecycle, t.states.empty]]}>{caseTimeline.length ? <Timeline emptyText={t.states.empty} items={caseTimeline.map((item) => ({ meta: '', text: `${item.label} - ${formatDate(item.at, locale)}` }))} /> : null}</DetailPanel>
+                  <CaseCapaPanel caseId={detail?.case?.id} caseOwnerId={detail?.case?.ownerId ?? undefined} items={detail?.capaActions ?? []} locale={locale} staff={staff} text={{ ...t.capa, title: tabs.capa }} />
+                  <DetailPanel title={t.sections.survey} rows={surveyRows(surveys, t, locale)} />
+                  <ComplaintRelationsPanel complaintId={detail?.id} locale={locale} relations={relations} text={complaintRelationsText[locale]} />
+                </aside>
+              </TabsContent>
+            </Tabs>
+          </main>
         </div>
       )}
     </section>
@@ -117,26 +161,48 @@ function surveyRows(surveys: StaffComplaintSurvey[] | null | undefined, t: typeo
   ];
 }
 
-function DetailSummary({ deadlineLabel, detail, locale, text, values }: { deadlineLabel: string; detail: StaffComplaintDetailView; locale: Locale; text: typeof complaintDetailText.en; values: typeof complaintDetailText.en.values }) {
+function DetailSidebar({ deadlineLabel, detail, locale, text, values }: { deadlineLabel: string; detail: StaffComplaintDetailView; locale: Locale; text: typeof complaintDetailText.en; values: typeof complaintDetailText.en.values }) {
   return (
-    <section className="grid gap-2 rounded-md border border-line-subtle bg-surface p-3 md:grid-cols-3 2xl:grid-cols-7" aria-label={text.sections.facts}>
+    <div className="grid gap-3" aria-label={text.sections.facts}>
       <SummaryItem label={text.labels.status} value={<StatusBadge tone="brand">{values.status}</StatusBadge>} />
       <SummaryItem label={text.labels.severity} value={<StatusBadge tone="danger">{values.severity}</StatusBadge>} />
-      <SummaryItem label={text.labels.category} value={<bdi>{values.category}</bdi>} />
-      <SummaryItem label={text.labels.owner} value={values.owner} />
       <SummaryItem label={deadlineLabel} value={values.sla} />
-      <SummaryItem label={text.labels.nextAction} value={detail.nextAction ? actionDisplay(detail.nextAction, text, locale) : text.workflow.states.empty} />
-      <SummaryItem label={text.labels.lastUpdated} value={formatDate(detail.updatedAt, locale, detail.displayTimeZone)} />
-    </section>
+      <SummaryItem label={text.labels.category} value={<bdi>{values.category}</bdi>} />
+      <SummaryItem label={text.labels.customer} value={detail.customer.name} />
+      <SummaryItem label={text.labels.vehicle} value={detail.vehicle ? `${detail.vehicle.make} ${detail.vehicle.model}` : text.values.none} />
+      
+      {/* Tracking Info */}
+      {detail.createdBy && (
+        <SummaryItem label={text.labels.createdBy || 'Created by'} value={locale === 'ar' ? detail.createdBy.nameAr : detail.createdBy.name} />
+      )}
+      {detail.approvedBy && (
+        <SummaryItem label={text.labels.approvedBy || 'Approved by'} value={locale === 'ar' ? detail.approvedBy.nameAr : detail.approvedBy.name} />
+      )}
+      {detail.assignedBy && (
+        <SummaryItem 
+          label={text.labels.assignedBy || 'Assigned by'} 
+          value={
+            <div className="flex flex-col">
+              <span>{locale === 'ar' ? detail.assignedBy.nameAr : detail.assignedBy.name}</span>
+              {(detail.assignedBy.departmentName || detail.assignedBy.departmentNameAr) && (
+                <span className="text-xs text-content-muted">
+                  {locale === 'ar' ? detail.assignedBy.departmentNameAr || detail.assignedBy.departmentName : detail.assignedBy.departmentName}
+                </span>
+              )}
+            </div>
+          } 
+        />
+      )}
+    </div>
   );
 }
 
 function SummaryItem({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <dl className="rounded-sm bg-surface-raised px-3 py-2 text-sm">
-      <dt className="text-content-muted">{label}</dt>
-      <dd className="mt-1 font-medium text-content-strong">{value}</dd>
-    </dl>
+    <div className="flex flex-col gap-1 rounded-md border border-line-subtle bg-surface px-3 py-2 text-sm shadow-sm">
+      <span className="text-xs text-content-muted">{label}</span>
+      <span className="font-medium text-content-strong">{value}</span>
+    </div>
   );
 }
 
@@ -169,6 +235,23 @@ function vehicleRows(detail: StaffComplaintDetailView | undefined, t: typeof com
     [t.labels.vehicleSource, provenance?.vehicleSource ?? t.values.vehicleSource],
     [t.labels.manualVehicle, provenance?.manualVehicle ?? t.values.manualVehicle],
     [t.labels.vehicleDataUnavailableReason, provenance?.vehicleDataUnavailableReason ?? t.values.vehicleDataUnavailableReason],
+  ];
+}
+
+function crmRows(detail: StaffComplaintDetailView | undefined, locale: Locale, t: typeof complaintDetailText.en): readonly (readonly [string, string])[] {
+  if (!detail) return [];
+  const yes = locale === 'ar' ? 'نعم' : 'Yes';
+  const no = locale === 'ar' ? 'لا' : 'No';
+  return [
+    [locale === 'ar' ? 'نوع الطلب' : 'Request Type', detail.type ? complaintTypeLabel(locale, detail.type) : t.values.none],
+    [locale === 'ar' ? 'القناة' : 'Channel', detail.channel || t.values.none],
+    [locale === 'ar' ? 'نوع العميل' : 'Customer Type', detail.customerType || t.values.none],
+    [locale === 'ar' ? 'اسم مستشار المبيعات' : 'Sales Advisor Name', detail.salesAdvisorName || t.values.none],
+    [locale === 'ar' ? 'فئة السبب الجذري' : 'Root Cause Category', detail.rootCauseCategory || t.values.none],
+    [locale === 'ar' ? 'تاريخ آخر خدمة' : 'Last Service Date', detail.lastServiceDate ? formatDate(detail.lastServiceDate, locale) : t.values.none],
+    [locale === 'ar' ? 'قراءة العداد' : 'Odometer', detail.odometer !== null && detail.odometer !== undefined ? detail.odometer.toString() : t.values.none],
+    [locale === 'ar' ? 'الضمان ساري' : 'Warranty Active', detail.warrantyActive ? yes : no],
+    [locale === 'ar' ? 'عميل متكرر' : 'Repeat Customer', detail.repeatCustomer ? yes : no],
   ];
 }
 

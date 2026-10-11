@@ -26,6 +26,7 @@ enum ComplaintStatus {
   CLOSED
   REOPENED
   REJECTED
+  COMPLETED
 }
 
 enum ComplaintTransitionAction {
@@ -44,6 +45,9 @@ enum ComplaintTransitionAction {
   REJECT_RESOLUTION
   REOPEN
   ROUTE_AGAIN
+  COMPLETE
+  CUSTOMER_REJECT_RESOLUTION
+  CUSTOMER_RESUBMIT
 }
 
 enum ComplaintTransitionRequestSource {
@@ -76,6 +80,11 @@ enum DataSource {
 
 enum ComplaintType {
   COMPLAINT
+  ACTION_REQUEST
+  CALL_BACK_REQUEST
+  SERVICE_VISIT_REQUEST
+  FOLLOW_UP_REQUEST
+  INFORMATION_REQUEST
   INQUIRY
   SUGGESTION
   FEEDBACK
@@ -289,46 +298,56 @@ enum AuditEventType {
 }
 
 model Branch {
-  id          String       @id @default(cuid())
-  code        String       @unique
-  nameEn      String       @map("name_en")
-  nameAr      String       @map("name_ar")
-  timezone    String       @default("Asia/Riyadh")
-  isActive    Boolean      @default(true) @map("is_active")
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
-  users       User[]
-  departments Department[]
-  complaints  Complaint[]
+  id                          String                       @id @default(cuid())
+  code                        String                       @unique
+  nameEn                      String                       @map("name_en")
+  nameAr                      String                       @map("name_ar")
+  timezone                    String                       @default("Asia/Riyadh")
+  isActive                    Boolean                      @default(true) @map("is_active")
+  createdAt                   DateTime                     @default(now()) @map("created_at")
+  updatedAt                   DateTime                     @updatedAt @map("updated_at")
+  users                       User[]
+  departments                 Department[]
+  complaints                  Complaint[]
   complaintReferenceSequences ComplaintReferenceSequence[]
-  slaPolicies SlaPolicy[]
-  auditLogs   AuditLog[]
-  deals       Deal[]
-  cases       Case[]
-  assignments Assignment[] @relation("AssignmentScopeBranch")
+  slaPolicies                 SlaPolicy[]
+  auditLogs                   AuditLog[]
+  deals                       Deal[]
+  cases                       Case[]
+  assignments                 Assignment[]                 @relation("AssignmentScopeBranch")
+  Category                    Category[]
 
   @@map("branches")
 }
 
 model Department {
-  id          String       @id @default(cuid())
-  code        String       @unique
-  nameEn      String       @map("name_en")
-  nameAr      String       @map("name_ar")
-  branchId    String?      @map("branch_id")
-  isActive    Boolean      @default(true) @map("is_active")
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
-  branch      Branch?      @relation(fields: [branchId], references: [id])
-  users       User[]
-  complaints  Complaint[]
-  slaPolicies SlaPolicy[]
-  capaActions CapaAction[]
-  tasks       Task[]
-  assignments Assignment[] @relation("AssignmentDepartment")
+  complaintTemplates DepartmentComplaintTemplate[]
+
+  internalTickets         InternalTicket[]         @relation("InternalTicketTargetDepartment")
+  ticketWaitingReasons    TicketWaitingReason[]
+  ticketResolutionReasons TicketResolutionReason[]
+  ticketRejectReasons     TicketRejectReason[]
+  standardProblems        StandardProblem[]
+
+  id                String              @id @default(cuid())
+  code              String              @unique
+  nameEn            String              @map("name_en")
+  nameAr            String              @map("name_ar")
+  branchId          String?             @map("branch_id")
+  isActive          Boolean             @default(true) @map("is_active")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  branch            Branch?             @relation(fields: [branchId], references: [id])
+  users             User[]
+  complaints        Complaint[]
+  slaPolicies       SlaPolicy[]
+  capaActions       CapaAction[]
+  tasks             Task[]
+  assignments       Assignment[]        @relation("AssignmentDepartment")
   assignmentHistory AssignmentHistory[] @relation("AssignmentHistoryDepartment")
-  deals       Deal[]
-  cases       Case[]
+  deals             Deal[]
+  cases             Case[]
+  Category          Category[]
 
   @@index([branchId])
   @@map("departments")
@@ -374,60 +393,70 @@ model RolePermission {
 }
 
 model User {
-  id                   String                    @id @default(cuid())
-  email                String                    @unique
-  username             String?                   @unique
-  nameEn               String                    @map("name_en")
-  nameAr               String                    @map("name_ar")
-  passwordHash         String?                   @map("password_hash")
-  roleId               String                    @map("role_id")
-  branchId             String?                   @map("branch_id")
-  departmentId         String?                   @map("department_id")
-  isActive             Boolean                   @default(true) @map("is_active")
-  lockedAt             DateTime?                 @map("locked_at")
-  lastLoginAt          DateTime?                 @map("last_login_at")
-  createdAt            DateTime                  @default(now()) @map("created_at")
-  updatedAt            DateTime                  @updatedAt @map("updated_at")
-  role                 Role                      @relation(fields: [roleId], references: [id])
-  branch               Branch?                   @relation(fields: [branchId], references: [id])
-  department           Department?               @relation(fields: [departmentId], references: [id])
-  createdComplaints    Complaint[]               @relation("ComplaintCreatedBy")
-  ownedComplaints      Complaint[]               @relation("ComplaintOwner")
-  statusHistory        ComplaintStatusHistory[]
-  comments             Comment[]
-  attachments          Attachment[]
-  approvalsRequested   Approval[]                @relation("ApprovalRequestedBy")
-  approvalsDecided     Approval[]                @relation("ApprovalDecidedBy")
-  notifications        Notification[]            @relation("NotificationRecipient")
-  surveys              Survey[]
-  compensationProposed Compensation[]            @relation("CompensationProposedBy")
-  compensationApproved Compensation[]            @relation("CompensationApprovedBy")
-  staffSessions        StaffSession[]
-  passwordResetTokens  StaffPasswordResetToken[]
-  auditLogs            AuditLog[]                @relation("AuditActor")
-  ownedTasks           Task[]                    @relation("TaskOwner")
-  assignedTasks        Task[]                    @relation("TaskAssignee")
-  taskNextActions      Task[]                    @relation("TaskNextActionWho")
-  taskParticipants     TaskParticipant[]
-  taskComments         TaskComment[]             @relation("TaskCommentAuthor")
-  taskStatusHistory    TaskStatusHistory[]
-  communicationGroups  CommunicationGroup[]      @relation("CommunicationGroupOwner")
+  requestedTickets          InternalTicket[]       @relation("TicketRequestedBy")
+  assignedInternalTickets   InternalTicket[]       @relation("TicketAssignedEmployee")
+  requestedEmployeeTickets  InternalTicket[]       @relation("TicketRequestedEmployee")
+  ticketNotes               TicketNote[]           @relation("TicketNoteAuthor")
+  ticketActivities          TicketActivity[]       @relation("TicketActivityActor")
+  managerTicketRatings      TicketRating[]         @relation("TicketRatingManager")
+  employeeTicketRatings     TicketRating[]         @relation("TicketRatingEmployee")
+  uploadedTicketAttachments TicketAttachment[]     @relation("TicketAttachmentUploadedBy")
+  uploadedNoteAttachments   TicketNoteAttachment[] @relation("TicketNoteAttachmentUploadedBy")
+
+  id                        String                     @id @default(cuid())
+  email                     String                     @unique
+  username                  String?                    @unique
+  nameEn                    String                     @map("name_en")
+  nameAr                    String                     @map("name_ar")
+  passwordHash              String?                    @map("password_hash")
+  roleId                    String                     @map("role_id")
+  branchId                  String?                    @map("branch_id")
+  departmentId              String?                    @map("department_id")
+  isActive                  Boolean                    @default(true) @map("is_active")
+  lockedAt                  DateTime?                  @map("locked_at")
+  lastLoginAt               DateTime?                  @map("last_login_at")
+  createdAt                 DateTime                   @default(now()) @map("created_at")
+  updatedAt                 DateTime                   @updatedAt @map("updated_at")
+  role                      Role                       @relation(fields: [roleId], references: [id])
+  branch                    Branch?                    @relation(fields: [branchId], references: [id])
+  department                Department?                @relation(fields: [departmentId], references: [id])
+  createdComplaints         Complaint[]                @relation("ComplaintCreatedBy")
+  ownedComplaints           Complaint[]                @relation("ComplaintOwner")
+  statusHistory             ComplaintStatusHistory[]
+  comments                  Comment[]
+  attachments               Attachment[]
+  approvalsRequested        Approval[]                 @relation("ApprovalRequestedBy")
+  approvalsDecided          Approval[]                 @relation("ApprovalDecidedBy")
+  notifications             Notification[]             @relation("NotificationRecipient")
+  surveys                   Survey[]
+  compensationProposed      Compensation[]             @relation("CompensationProposedBy")
+  compensationApproved      Compensation[]             @relation("CompensationApprovedBy")
+  staffSessions             StaffSession[]
+  passwordResetTokens       StaffPasswordResetToken[]
+  auditLogs                 AuditLog[]                 @relation("AuditActor")
+  ownedTasks                Task[]                     @relation("TaskOwner")
+  assignedTasks             Task[]                     @relation("TaskAssignee")
+  taskNextActions           Task[]                     @relation("TaskNextActionWho")
+  taskParticipants          TaskParticipant[]
+  taskComments              TaskComment[]              @relation("TaskCommentAuthor")
+  taskStatusHistory         TaskStatusHistory[]
+  communicationGroups       CommunicationGroup[]       @relation("CommunicationGroupOwner")
   communicationGroupMembers CommunicationGroupMember[]
-  complaintWatchers    ComplaintWatcher[]        @relation("ComplaintWatcherUser")
-  complaintWatcherAdds ComplaintWatcher[]        @relation("ComplaintWatcherAddedBy")
-  complaintCommentMentions ComplaintCommentMention[]
-  taskCommentMentions  TaskCommentMention[]
-  notificationDigestItems NotificationDigestItem[]
-  ownedDeals           Deal[]                    @relation("DealOwner")
-  currentDealHandoffs  Deal[]                    @relation("DealCurrentHolder")
-  ownedCases           Case[]                    @relation("CaseOwner")
-  ownedCapaActions     CapaAction[]              @relation("CapaActionOwner")
-  caseParticipants     CaseParticipant[]
-  caseRestrictedNotes  CaseRestrictedNote[]      @relation("CaseRestrictedNoteAuthor")
-  assignmentsReceived  Assignment[]              @relation("AssignmentAssignedUser")
-  assignmentsMade      Assignment[]              @relation("AssignmentActor")
-  assignmentHistoryReceived AssignmentHistory[]  @relation("AssignmentHistoryAssignedUser")
-  assignmentHistoryMade AssignmentHistory[]      @relation("AssignmentHistoryActor")
+  complaintWatchers         ComplaintWatcher[]         @relation("ComplaintWatcherUser")
+  complaintWatcherAdds      ComplaintWatcher[]         @relation("ComplaintWatcherAddedBy")
+  complaintCommentMentions  ComplaintCommentMention[]
+  taskCommentMentions       TaskCommentMention[]
+  notificationDigestItems   NotificationDigestItem[]
+  ownedDeals                Deal[]                     @relation("DealOwner")
+  currentDealHandoffs       Deal[]                     @relation("DealCurrentHolder")
+  ownedCases                Case[]                     @relation("CaseOwner")
+  ownedCapaActions          CapaAction[]               @relation("CapaActionOwner")
+  caseParticipants          CaseParticipant[]
+  caseRestrictedNotes       CaseRestrictedNote[]       @relation("CaseRestrictedNoteAuthor")
+  assignmentsReceived       Assignment[]               @relation("AssignmentAssignedUser")
+  assignmentsMade           Assignment[]               @relation("AssignmentActor")
+  assignmentHistoryReceived AssignmentHistory[]        @relation("AssignmentHistoryAssignedUser")
+  assignmentHistoryMade     AssignmentHistory[]        @relation("AssignmentHistoryActor")
 
   @@index([roleId])
   @@index([branchId])
@@ -465,6 +494,15 @@ model StaffPasswordResetToken {
 }
 
 model Category {
+  branchId         String?           @map("branch_id")
+  departmentId     String?           @map("department_id")
+  isExternal       Boolean           @default(true) @map("is_external")
+  isInternal       Boolean           @default(false) @map("is_internal")
+  branch           Branch?           @relation(fields: [branchId], references: [id])
+  department       Department?       @relation(fields: [departmentId], references: [id])
+  standardProblems StandardProblem[]
+  internalTickets  InternalTicket[]
+
   id          String      @id @default(cuid())
   code        String      @unique
   nameEn      String      @map("name_en")
@@ -521,55 +559,68 @@ model Vehicle {
 }
 
 model Complaint {
-  id                  String                   @id @default(cuid())
-  referenceNumber     String                   @unique @map("reference_number")
-  status              ComplaintStatus          @default(DRAFT)
-  type                ComplaintType            @default(COMPLAINT)
-  severity            ComplaintSeverity        @default(MEDIUM)
-  source              ComplaintSource          @default(STAFF)
-  customerDataSource  DataSource               @default(LOCAL) @map("customer_data_source")
-  vehicleDataSource   DataSource?              @map("vehicle_data_source")
-  manualCustomerFlag  Boolean                  @default(false) @map("manual_customer_flag")
-  manualVehicleFlag   Boolean                  @default(false) @map("manual_vehicle_flag")
-  vehicleRelated      Boolean                  @default(false) @map("vehicle_related")
-  vehicleDataUnavailableReason String?         @map("vehicle_data_unavailable_reason")
-  subject             String                   @default("General complaint")
-  branchId            String                   @map("branch_id")
-  categoryId          String                   @map("category_id")
-  customerId          String                   @map("customer_id")
-  vehicleId           String?                  @map("vehicle_id")
-  createdById         String?                  @map("created_by_id")
-  ownerId             String?                  @map("owner_id")
-  departmentId        String?                  @map("department_id")
-  descriptionEn       String                   @map("description_en")
-  descriptionAr       String?                  @map("description_ar")
-  incidentAt          DateTime?                @map("incident_at")
-  firstResponseAt     DateTime?                @map("first_response_at")
-  resolvedAt          DateTime?                @map("resolved_at")
-  closedAt            DateTime?                @map("closed_at")
-  version             Int                      @default(1)
-  createdAt           DateTime                 @default(now()) @map("created_at")
-  updatedAt           DateTime                 @updatedAt @map("updated_at")
-  branch              Branch                   @relation(fields: [branchId], references: [id])
-  category            Category                 @relation(fields: [categoryId], references: [id])
-  customer            Customer                 @relation(fields: [customerId], references: [id])
-  vehicle             Vehicle?                 @relation(fields: [vehicleId], references: [id])
-  createdBy           User?                    @relation("ComplaintCreatedBy", fields: [createdById], references: [id])
-  owner               User?                    @relation("ComplaintOwner", fields: [ownerId], references: [id])
-  department          Department?              @relation(fields: [departmentId], references: [id])
-  statusHistory       ComplaintStatusHistory[]
-  approvals           Approval[]
-  attachments         Attachment[]
-  comments            Comment[]
-  slaEvents           SlaEvent[]
-  notifications       Notification[]
-  surveys             Survey[]
-  compensation        Compensation[]
-  portalVerifications PortalVerification[]
-  portalSessions      PortalSession[]
-  relatedSources      ComplaintRelation[]      @relation("ComplaintRelationSource")
-  relatedTargets      ComplaintRelation[]      @relation("ComplaintRelationTarget")
-  watchers            ComplaintWatcher[]
+  rootCauseCategory String?                    @map("root_cause_category")
+  salesAdvisorName String?                     @map("sales_advisor_name")
+  odometer        Int?                         @map("odometer")
+  lastServiceDate DateTime?                    @map("last_service_date")
+  templateData    Json?                        @map("template_data")
+  template        DepartmentComplaintTemplate? @relation(fields: [templateId], references: [id])
+
+  templateId     String?  @map("template_id")
+  channel        String? // Recovered missing fields
+  customerType   String?  @map("customer_type")
+  repeatCustomer Boolean? @map("repeat_customer")
+  warrantyActive Boolean? @map("warranty_active")
+
+  id                           String                   @id @default(cuid())
+  referenceNumber              String                   @unique @map("reference_number")
+  status                       ComplaintStatus          @default(DRAFT)
+  type                         ComplaintType            @default(COMPLAINT)
+  severity                     ComplaintSeverity        @default(MEDIUM)
+  source                       ComplaintSource          @default(STAFF)
+  customerDataSource           DataSource               @default(LOCAL) @map("customer_data_source")
+  vehicleDataSource            DataSource?              @map("vehicle_data_source")
+  manualCustomerFlag           Boolean                  @default(false) @map("manual_customer_flag")
+  manualVehicleFlag            Boolean                  @default(false) @map("manual_vehicle_flag")
+  vehicleRelated               Boolean                  @default(false) @map("vehicle_related")
+  vehicleDataUnavailableReason String?                  @map("vehicle_data_unavailable_reason")
+  subject                      String                   @default("General complaint")
+  branchId                     String                   @map("branch_id")
+  categoryId                   String                   @map("category_id")
+  customerId                   String                   @map("customer_id")
+  vehicleId                    String?                  @map("vehicle_id")
+  createdById                  String?                  @map("created_by_id")
+  ownerId                      String?                  @map("owner_id")
+  departmentId                 String?                  @map("department_id")
+  descriptionEn                String                   @map("description_en")
+  descriptionAr                String?                  @map("description_ar")
+  incidentAt                   DateTime?                @map("incident_at")
+  firstResponseAt              DateTime?                @map("first_response_at")
+  resolvedAt                   DateTime?                @map("resolved_at")
+  closedAt                     DateTime?                @map("closed_at")
+  version                      Int                      @default(1)
+  createdAt                    DateTime                 @default(now()) @map("created_at")
+  updatedAt                    DateTime                 @updatedAt @map("updated_at")
+  branch                       Branch                   @relation(fields: [branchId], references: [id])
+  category                     Category                 @relation(fields: [categoryId], references: [id])
+  customer                     Customer                 @relation(fields: [customerId], references: [id])
+  vehicle                      Vehicle?                 @relation(fields: [vehicleId], references: [id])
+  createdBy                    User?                    @relation("ComplaintCreatedBy", fields: [createdById], references: [id])
+  owner                        User?                    @relation("ComplaintOwner", fields: [ownerId], references: [id])
+  department                   Department?              @relation(fields: [departmentId], references: [id])
+  statusHistory                ComplaintStatusHistory[]
+  approvals                    Approval[]
+  attachments                  Attachment[]
+  comments                     Comment[]
+  slaEvents                    SlaEvent[]
+  notifications                Notification[]
+  surveys                      Survey[]
+  compensation                 Compensation[]
+  portalVerifications          PortalVerification[]
+  portalSessions               PortalSession[]
+  relatedSources               ComplaintRelation[]      @relation("ComplaintRelationSource")
+  relatedTargets               ComplaintRelation[]      @relation("ComplaintRelationTarget")
+  watchers                     ComplaintWatcher[]
 
   @@index([status])
   @@index([branchId, status])
@@ -587,7 +638,7 @@ model ComplaintStatusHistory {
   toStatus      ComplaintStatus                   @map("to_status")
   action        ComplaintTransitionAction?
   actorId       String?                           @map("actor_id")
-  actorRole     RoleCode?                         @map("actor_role")
+  actorRole     String?                           @map("actor_role")
   requestSource ComplaintTransitionRequestSource? @map("request_source")
   reason        String?
   correlationId String?                           @map("correlation_id")
@@ -662,15 +713,15 @@ model Attachment {
 }
 
 model Comment {
-  id          String            @id @default(cuid())
-  complaintId String            @map("complaint_id")
-  authorId    String?           @map("author_id")
+  id          String                    @id @default(cuid())
+  complaintId String                    @map("complaint_id")
+  authorId    String?                   @map("author_id")
   body        String
-  visibility  CommentVisibility @default(INTERNAL)
-  editedAt    DateTime?         @map("edited_at")
-  createdAt   DateTime          @default(now()) @map("created_at")
-  complaint   Complaint         @relation(fields: [complaintId], references: [id])
-  author      User?             @relation(fields: [authorId], references: [id])
+  visibility  CommentVisibility         @default(INTERNAL)
+  editedAt    DateTime?                 @map("edited_at")
+  createdAt   DateTime                  @default(now()) @map("created_at")
+  complaint   Complaint                 @relation(fields: [complaintId], references: [id])
+  author      User?                     @relation(fields: [authorId], references: [id])
   mentions    ComplaintCommentMention[]
 
   @@index([complaintId, createdAt])
@@ -679,14 +730,14 @@ model Comment {
 }
 
 model ComplaintWatcher {
-  id        String    @id @default(cuid())
-  complaintId String  @map("complaint_id")
-  userId    String    @map("user_id")
-  addedById String    @map("added_by_id")
-  createdAt DateTime  @default(now()) @map("created_at")
-  complaint Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
-  user      User      @relation("ComplaintWatcherUser", fields: [userId], references: [id])
-  addedBy   User      @relation("ComplaintWatcherAddedBy", fields: [addedById], references: [id])
+  id          String    @id @default(cuid())
+  complaintId String    @map("complaint_id")
+  userId      String    @map("user_id")
+  addedById   String    @map("added_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  user        User      @relation("ComplaintWatcherUser", fields: [userId], references: [id])
+  addedBy     User      @relation("ComplaintWatcherAddedBy", fields: [addedById], references: [id])
 
   @@unique([complaintId, userId])
   @@index([userId])
@@ -694,15 +745,15 @@ model ComplaintWatcher {
 }
 
 model ComplaintCommentMention {
-  id              String                    @id @default(cuid())
-  commentId       String                    @map("comment_id")
-  recipientUserId String                    @map("recipient_user_id")
+  id              String                     @id @default(cuid())
+  commentId       String                     @map("comment_id")
+  recipientUserId String                     @map("recipient_user_id")
   source          CollaborationMentionSource
-  sourceId        String?                   @map("source_id")
-  sourceLabel     String                    @map("source_label")
-  createdAt       DateTime                  @default(now()) @map("created_at")
-  comment         Comment                   @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  recipientUser   User                      @relation(fields: [recipientUserId], references: [id])
+  sourceId        String?                    @map("source_id")
+  sourceLabel     String                     @map("source_label")
+  createdAt       DateTime                   @default(now()) @map("created_at")
+  comment         Comment                    @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  recipientUser   User                       @relation(fields: [recipientUserId], references: [id])
 
   @@unique([commentId, recipientUserId])
   @@index([recipientUserId])
@@ -710,30 +761,30 @@ model ComplaintCommentMention {
 }
 
 model SlaPolicy {
-  id                  String              @id @default(cuid())
-  severity            ComplaintSeverity
-  stage               SlaStage
-  branchId            String?             @map("branch_id")
-  departmentId        String?             @map("department_id")
-  categoryId          String?             @map("category_id")
-  durationMinutes     Int                 @map("duration_minutes")
-  warningPercent      Int                 @default(80) @map("warning_percent")
-  branchTimezone      String              @default("Asia/Riyadh") @map("branch_timezone")
-  workingCalendarMode WorkingCalendarMode @default(ALWAYS_ON) @map("working_calendar_mode")
-  pausePolicy         String              @default("NONE") @map("pause_policy")
-  escalationLevel1    String              @map("escalation_level_1")
-  escalationLevel2    String?             @map("escalation_level_2")
-  escalationLevel3    String?             @map("escalation_level_3")
-  escalationLevel2AfterBreachMinutes Int? @map("escalation_level_2_after_breach_minutes")
-  escalationLevel3AfterBreachMinutes Int? @map("escalation_level_3_after_breach_minutes")
-  totalTargetMinutes  Int?                @map("total_target_minutes")
-  isActive            Boolean             @default(true) @map("is_active")
-  createdAt           DateTime            @default(now()) @map("created_at")
-  updatedAt           DateTime            @updatedAt @map("updated_at")
-  branch              Branch?             @relation(fields: [branchId], references: [id])
-  department          Department?         @relation(fields: [departmentId], references: [id])
-  category            Category?           @relation(fields: [categoryId], references: [id])
-  events              SlaEvent[]
+  id                                 String              @id @default(cuid())
+  severity                           ComplaintSeverity
+  stage                              SlaStage
+  branchId                           String?             @map("branch_id")
+  departmentId                       String?             @map("department_id")
+  categoryId                         String?             @map("category_id")
+  durationMinutes                    Int                 @map("duration_minutes")
+  warningPercent                     Int                 @default(80) @map("warning_percent")
+  branchTimezone                     String              @default("Asia/Riyadh") @map("branch_timezone")
+  workingCalendarMode                WorkingCalendarMode @default(ALWAYS_ON) @map("working_calendar_mode")
+  pausePolicy                        String              @default("NONE") @map("pause_policy")
+  escalationLevel1                   String              @map("escalation_level_1")
+  escalationLevel2                   String?             @map("escalation_level_2")
+  escalationLevel3                   String?             @map("escalation_level_3")
+  escalationLevel2AfterBreachMinutes Int?                @map("escalation_level_2_after_breach_minutes")
+  escalationLevel3AfterBreachMinutes Int?                @map("escalation_level_3_after_breach_minutes")
+  totalTargetMinutes                 Int?                @map("total_target_minutes")
+  isActive                           Boolean             @default(true) @map("is_active")
+  createdAt                          DateTime            @default(now()) @map("created_at")
+  updatedAt                          DateTime            @updatedAt @map("updated_at")
+  branch                             Branch?             @relation(fields: [branchId], references: [id])
+  department                         Department?         @relation(fields: [departmentId], references: [id])
+  category                           Category?           @relation(fields: [categoryId], references: [id])
+  events                             SlaEvent[]
 
   @@index([severity, stage])
   @@index([branchId])
@@ -1074,13 +1125,13 @@ model TaskStatusHistory {
 }
 
 model TaskComment {
-  id        String   @id @default(cuid())
-  taskId    String   @map("task_id")
-  authorId  String   @map("author_id")
+  id        String               @id @default(cuid())
+  taskId    String               @map("task_id")
+  authorId  String               @map("author_id")
   body      String
-  createdAt DateTime @default(now()) @map("created_at")
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  author    User     @relation("TaskCommentAuthor", fields: [authorId], references: [id])
+  createdAt DateTime             @default(now()) @map("created_at")
+  task      Task                 @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author    User                 @relation("TaskCommentAuthor", fields: [authorId], references: [id])
   mentions  TaskCommentMention[]
 
   @@index([taskId, createdAt])
@@ -1089,15 +1140,15 @@ model TaskComment {
 }
 
 model TaskCommentMention {
-  id              String                    @id @default(cuid())
-  taskCommentId   String                    @map("task_comment_id")
-  recipientUserId String                    @map("recipient_user_id")
+  id              String                     @id @default(cuid())
+  taskCommentId   String                     @map("task_comment_id")
+  recipientUserId String                     @map("recipient_user_id")
   source          CollaborationMentionSource
-  sourceId        String?                   @map("source_id")
-  sourceLabel     String                    @map("source_label")
-  createdAt       DateTime                  @default(now()) @map("created_at")
-  taskComment     TaskComment               @relation(fields: [taskCommentId], references: [id], onDelete: Cascade)
-  recipientUser   User                      @relation(fields: [recipientUserId], references: [id])
+  sourceId        String?                    @map("source_id")
+  sourceLabel     String                     @map("source_label")
+  createdAt       DateTime                   @default(now()) @map("created_at")
+  taskComment     TaskComment                @relation(fields: [taskCommentId], references: [id], onDelete: Cascade)
+  recipientUser   User                       @relation(fields: [recipientUserId], references: [id])
 
   @@unique([taskCommentId, recipientUserId])
   @@index([recipientUserId])
@@ -1105,15 +1156,15 @@ model TaskCommentMention {
 }
 
 model CommunicationGroup {
-  id        String                       @id @default(cuid())
-  name      String
+  id         String                       @id @default(cuid())
+  name       String
   visibility CommunicationGroupVisibility @default(PERSONAL)
-  ownerId   String                       @map("owner_id")
-  isActive  Boolean                      @default(true) @map("is_active")
-  createdAt DateTime                     @default(now()) @map("created_at")
-  updatedAt DateTime                     @updatedAt @map("updated_at")
-  owner     User                         @relation("CommunicationGroupOwner", fields: [ownerId], references: [id])
-  members   CommunicationGroupMember[]
+  ownerId    String                       @map("owner_id")
+  isActive   Boolean                      @default(true) @map("is_active")
+  createdAt  DateTime                     @default(now()) @map("created_at")
+  updatedAt  DateTime                     @updatedAt @map("updated_at")
+  owner      User                         @relation("CommunicationGroupOwner", fields: [ownerId], references: [id])
+  members    CommunicationGroupMember[]
 
   @@unique([ownerId, name])
   @@index([visibility, isActive])
@@ -1134,21 +1185,21 @@ model CommunicationGroupMember {
 }
 
 model Deal {
-  id              String    @id @default(cuid())
-  title           String
-  branchId        String    @map("branch_id")
-  ownerId         String    @map("owner_id")
-  currentHolderId String?   @map("current_holder_id")
-  assignedDepartmentId String? @map("assigned_department_id")
-  stage           DealStage @default(LEAD)
-  stageDueAt      DateTime  @map("stage_due_at")
-  blocker         String?
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  branch          Branch    @relation(fields: [branchId], references: [id])
-  owner           User      @relation("DealOwner", fields: [ownerId], references: [id])
-  currentHolder   User?     @relation("DealCurrentHolder", fields: [currentHolderId], references: [id])
-  assignedDepartment Department? @relation(fields: [assignedDepartmentId], references: [id])
+  id                   String      @id @default(cuid())
+  title                String
+  branchId             String      @map("branch_id")
+  ownerId              String      @map("owner_id")
+  currentHolderId      String?     @map("current_holder_id")
+  assignedDepartmentId String?     @map("assigned_department_id")
+  stage                DealStage   @default(LEAD)
+  stageDueAt           DateTime    @map("stage_due_at")
+  blocker              String?
+  createdAt            DateTime    @default(now()) @map("created_at")
+  updatedAt            DateTime    @updatedAt @map("updated_at")
+  branch               Branch      @relation(fields: [branchId], references: [id])
+  owner                User        @relation("DealOwner", fields: [ownerId], references: [id])
+  currentHolder        User?       @relation("DealCurrentHolder", fields: [currentHolderId], references: [id])
+  assignedDepartment   Department? @relation(fields: [assignedDepartmentId], references: [id])
 
   @@index([branchId, stage])
   @@index([ownerId])
@@ -1292,4 +1343,267 @@ model AuditLog {
   @@index([targetType, targetId])
   @@index([correlationId])
   @@map("audit_logs")
+}
+
+model RoleCodeExport {
+  id   String   @id
+  code RoleCode
+}
+
+// Enums
+enum InternalTicketStatus {
+  PENDING_APPROVAL
+  NEW
+  ASSIGNED
+  IN_PROGRESS
+  WAITING
+  RESOLVED
+  CLOSED
+  REJECTED
+}
+
+enum InternalTicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+// Models
+model TicketCategory {
+  id       String           @id @default(cuid())
+  nameEn   String           @map("name_en")
+  nameAr   String           @map("name_ar")
+  isActive Boolean          @default(true) @map("is_active")
+
+  @@map("ticket_categories")
+}
+
+model TicketWaitingReason {
+  id           String           @id @default(cuid())
+  departmentId String           @map("department_id")
+  reasonEn     String           @map("reason_en")
+  reasonAr     String           @map("reason_ar")
+  order        Int              @default(0)
+  isActive     Boolean          @default(true) @map("is_active")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  department   Department       @relation(fields: [departmentId], references: [id])
+  tickets      InternalTicket[]
+
+  @@index([departmentId])
+  @@map("ticket_waiting_reasons")
+}
+
+model TicketResolutionReason {
+  id           String           @id @default(cuid())
+  departmentId String           @map("department_id")
+  reasonEn     String           @map("reason_en")
+  reasonAr     String           @map("reason_ar")
+  order        Int              @default(0)
+  isActive     Boolean          @default(true) @map("is_active")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  department   Department       @relation(fields: [departmentId], references: [id])
+  tickets      InternalTicket[]
+
+  @@index([departmentId])
+  @@map("ticket_resolution_reasons")
+}
+
+model TicketRejectReason {
+  id           String           @id @default(cuid())
+  departmentId String           @map("department_id")
+  reasonEn     String           @map("reason_en")
+  reasonAr     String           @map("reason_ar")
+  order        Int              @default(0)
+  isActive     Boolean          @default(true) @map("is_active")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  department   Department       @relation(fields: [departmentId], references: [id])
+  tickets      InternalTicket[]
+
+  @@index([departmentId])
+  @@map("ticket_reject_reasons")
+}
+
+model TicketSlaOption {
+  id              String  @id @default(cuid())
+  nameEn          String  @map("name_en")
+  nameAr          String  @map("name_ar")
+  durationMinutes Int
+  order           Int     @default(0)
+  isActive        Boolean @default(true) @map("is_active")
+
+  @@map("ticket_sla_options")
+}
+
+model InternalTicket {
+  id              String @id @default(cuid())
+  referenceNumber String @unique @map("reference_number")
+  title           String
+  description     String
+
+  status   InternalTicketStatus   @default(NEW)
+  priority InternalTicketPriority @default(NORMAL)
+
+  requestedById       String  @map("requested_by_id")
+  targetDepartmentId  String  @map("target_department_id")
+  assignedEmployeeId  String? @map("assigned_employee_id")
+  requestedEmployeeId String? @map("requested_employee_id")
+
+  categoryId          String  @map("category_id")
+  waitingReasonId     String? @map("waiting_reason_id")
+  customWaitingReason String? @map("custom_waiting_reason")
+  resolutionReasonId  String? @map("resolution_reason_id")
+  resolutionDetails   String? @map("resolution_details")
+  rejectReasonId      String? @map("reject_reason_id")
+  rejectDetails       String? @map("reject_details")
+
+  slaOptionId String?   @map("sla_option_id")
+  dueAt       DateTime? @map("due_at")
+
+  resolvedAt DateTime? @map("resolved_at")
+  closedAt   DateTime? @map("closed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  requestedBy       User                    @relation("TicketRequestedBy", fields: [requestedById], references: [id])
+  assignedEmployee  User?                   @relation("TicketAssignedEmployee", fields: [assignedEmployeeId], references: [id])
+  requestedEmployee User?                   @relation("TicketRequestedEmployee", fields: [requestedEmployeeId], references: [id])
+  category          Category          @relation(fields: [categoryId], references: [id])
+  targetDepartment  Department              @relation("InternalTicketTargetDepartment", fields: [targetDepartmentId], references: [id])
+  waitingReason     TicketWaitingReason?    @relation(fields: [waitingReasonId], references: [id])
+  resolutionReason  TicketResolutionReason? @relation(fields: [resolutionReasonId], references: [id])
+  rejectReason      TicketRejectReason?     @relation(fields: [rejectReasonId], references: [id])
+
+  activities  TicketActivity[]
+  notes       TicketNote[]
+  rating      TicketRating?
+  attachments TicketAttachment[]
+
+  @@index([targetDepartmentId, status])
+  @@index([assignedEmployeeId])
+  @@index([requestedById])
+  @@map("internal_tickets")
+}
+
+model TicketNote {
+  id          String                 @id @default(cuid())
+  ticketId    String                 @map("ticket_id")
+  authorId    String                 @map("author_id")
+  content     String
+  createdAt   DateTime               @default(now()) @map("created_at")
+  updatedAt   DateTime               @updatedAt @map("updated_at")
+  author      User                   @relation("TicketNoteAuthor", fields: [authorId], references: [id])
+  ticket      InternalTicket         @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  attachments TicketNoteAttachment[]
+
+  @@index([ticketId])
+  @@index([authorId])
+  @@map("ticket_notes")
+}
+
+model TicketActivity {
+  id        String         @id @default(cuid())
+  ticketId  String         @map("ticket_id")
+  actorId   String         @map("actor_id")
+  action    String
+  details   Json?
+  createdAt DateTime       @default(now()) @map("created_at")
+  actor     User           @relation("TicketActivityActor", fields: [actorId], references: [id])
+  ticket    InternalTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+  @@index([actorId])
+  @@map("ticket_activities")
+}
+
+model TicketAttachment {
+  id           String               @id @default(cuid())
+  ticketId     String               @map("ticket_id")
+  uploadedById String?              @map("uploaded_by_id")
+  storageKey   String               @unique @map("storage_key")
+  fileName     String               @map("file_name")
+  contentType  String               @map("content_type")
+  sizeBytes    Int                  @map("size_bytes")
+  scanStatus   AttachmentScanStatus @default(PENDING) @map("scan_status")
+  createdAt    DateTime             @default(now()) @map("created_at")
+
+  ticket     InternalTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  uploadedBy User?          @relation("TicketAttachmentUploadedBy", fields: [uploadedById], references: [id])
+
+  @@index([ticketId])
+  @@index([scanStatus])
+  @@map("ticket_attachments")
+}
+
+model TicketNoteAttachment {
+  id           String               @id @default(cuid())
+  noteId       String               @map("note_id")
+  uploadedById String?              @map("uploaded_by_id")
+  storageKey   String               @unique @map("storage_key")
+  fileName     String               @map("file_name")
+  contentType  String               @map("content_type")
+  sizeBytes    Int                  @map("size_bytes")
+  scanStatus   AttachmentScanStatus @default(PENDING) @map("scan_status")
+  createdAt    DateTime             @default(now()) @map("created_at")
+
+  note       TicketNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  uploadedBy User?      @relation("TicketNoteAttachmentUploadedBy", fields: [uploadedById], references: [id])
+
+  @@index([noteId])
+  @@index([scanStatus])
+  @@map("ticket_note_attachments")
+}
+
+model TicketRating {
+  id         String         @id @default(cuid())
+  ticketId   String         @unique @map("ticket_id")
+  managerId  String         @map("manager_id")
+  employeeId String         @map("employee_id")
+  score      Int
+  comment    String?
+  createdAt  DateTime       @default(now()) @map("created_at")
+  employee   User           @relation("TicketRatingEmployee", fields: [employeeId], references: [id])
+  manager    User           @relation("TicketRatingManager", fields: [managerId], references: [id])
+  ticket     InternalTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@map("ticket_ratings")
+}
+
+model StandardProblem {
+  id           String   @id @default(cuid())
+  departmentId String   @map("department_id")
+  categoryId   String   @map("category_id")
+  titleEn      String   @map("title_en")
+  titleAr      String   @map("title_ar")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  department Department @relation(fields: [departmentId], references: [id])
+  category   Category   @relation(fields: [categoryId], references: [id])
+
+  @@index([departmentId])
+  @@index([categoryId])
+  @@map("standard_problems")
+}
+
+model DepartmentComplaintTemplate {
+  id           String   @id @default(cuid())
+  departmentId String   @map("department_id")
+  name         String
+  description  String?
+  schema       Json
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  department Department  @relation(fields: [departmentId], references: [id])
+  complaints Complaint[]
+
+  @@index([departmentId])
+  @@map("department_complaint_templates")
 }

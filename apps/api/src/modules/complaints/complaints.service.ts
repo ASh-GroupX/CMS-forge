@@ -24,7 +24,7 @@ import { ComplaintsRepository } from './complaints.repository.js';
 import type { ComplaintReportFilter, ComplaintStatusRecord, DataSource, PortalVerificationTargetRecord } from './complaints.repository.js';
 import type { ComplaintCaseSummaryDto, ComplaintDetailDto, ComplaintQueueItemDto, ComplaintTimelineItemDto } from './dto/complaint-response.dto.js';
 import { actorCanSeeAction, assertActorCanApplyTransition, assertVehicleClosureAllowed, ASSIGNMENT_ACTIONS, invalidTransitionError, recordWorkflowRoleForbidden, roleForbiddenError, statusUpdateData, validateRequiredTransitionData, workflowAuditInput } from './complaint-transition.rules.js';
-export type ValidateComplaintTransitionInput = { fromStatus: ComplaintStatus; action: ComplaintTransitionAction; actorRole: RoleCode };
+export type ValidateComplaintTransitionInput = { fromStatus: ComplaintStatus; action: ComplaintTransitionAction; actorRole: string; actorPermissions?: string[] };
 export type ComplaintTransitionDecision = ValidateComplaintTransitionInput & { toStatus: ComplaintStatus };
 export type ApplyComplaintTransitionInput = ValidateComplaintTransitionInput & {
   complaintId: string; actorId?: string | null; requestSource: ComplaintTransitionRequestSource;
@@ -37,49 +37,57 @@ export type ApplyComplaintTransitionResult = ComplaintTransitionDecision & { com
 
 export type CreateInternalComplaintInput = {
   customerName: string; customerPhone?: string | null; customerNumber?: string | null; customerSource?: DataSource | null; categoryId: string;
-  subcategoryId: string; description: string; incidentAt: Date | string; branchId: string; subject: string;
-  severity: ComplaintSeverity; vehicleRelated?: boolean; vehicleVin?: string | null; vehicleId?: string | null;
+  description: string; incidentAt: Date | string; branchId: string; subject: string;
+  severity: ComplaintSeverity; type?: string; vehicleRelated?: boolean; vehicleVin?: string | null; vehicleId?: string | null;
   vehiclePlate?: string | null; vehicleBrand?: string | null; vehicleModel?: string | null; vehicleModelYear?: number | null;
+  channel?: string | null; customerType?: string | null; lastServiceDate?: Date | null; odometer?: number | null;
+  warrantyActive?: boolean | null; salesAdvisorName?: string | null; rootCauseCategory?: string | null; repeatCustomer?: boolean | null;
   vehicleSource?: DataSource | null; vehicleDataUnavailableReason?: string | null;
   departmentId?: string | null; saveAsDraft?: boolean;
   actorId?: string | null; requestSource?: ComplaintTransitionRequestSource; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null;
-  manualTriage?: boolean;
+  manualTriage?: boolean; templateId?: string | null; templateData?: any;
 };
 
 export type ComplaintCreationResult = { id: string; referenceNumber: string; status: ComplaintStatus };
 
-export type ComplaintQueueFilter = { branchId?: string | null; role?: RoleCode | null };
+export type ComplaintQueueFilter = { branchId?: string | null; role?: string | null; userId?: string | null; userDepartmentId?: string | null; permissions?: string[] };
 export type ComplaintReportRow = { id: string; referenceNumber: string; branchId: string; categoryId: string; status: ComplaintStatus; severity: ComplaintSeverity; subject: string; ownerId: string | null; assignedDepartmentId: string | null; displayTimeZone: string; createdAt: string; updatedAt: string };
 export type ComplaintSearchInput = ComplaintReportFilter & { sla?: ComplaintQueueItemDto['slaState'] | null };
 export type ComplaintSearchRow = ComplaintQueueItemDto & { categoryId: string; customerName: string; customerPhone: string; customerIdentifier: string | null };
 
-type WorkflowTransition = { fromStatus: ComplaintStatus; action: ComplaintTransitionAction; toStatus: ComplaintStatus; allowedRoles: readonly RoleCode[] };
+type WorkflowTransition = { fromStatus: ComplaintStatus; action: ComplaintTransitionAction; toStatus: ComplaintStatus; allowedRoles: readonly string[]; requiredPermission?: string };
 
-const MANAGER_ROLES = [RoleCode.CR_MANAGER, RoleCode.ADMIN] as const;
-const BRANCH_MANAGER_ROLES = [RoleCode.BRANCH_MANAGER, RoleCode.CR_MANAGER, RoleCode.ADMIN] as const;
+const MANAGER_ROLES = [RoleCode.CR_MANAGER, RoleCode.ADMIN, 'DEPARTMENT_MANAGER', 'DEPARTMENT_MANGER'] as const;
+const BRANCH_MANAGER_ROLES = [RoleCode.BRANCH_MANAGER, RoleCode.CR_MANAGER, RoleCode.ADMIN, 'DEPARTMENT_MANAGER', 'DEPARTMENT_MANGER'] as const;
 const OWNER_OR_BRANCH_MANAGER_ROLES = [RoleCode.CR_OFFICER, ...BRANCH_MANAGER_ROLES] as const;
 
 export const WORKFLOW_TRANSITIONS: readonly WorkflowTransition[] = [
-  transition(ComplaintStatus.DRAFT, ComplaintTransitionAction.SUBMIT, ComplaintStatus.SUBMITTED, [RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.ADMIN, RoleCode.CUSTOMER_PORTAL]),
-  transition(ComplaintStatus.SUBMITTED, ComplaintTransitionAction.ACCEPT_INTAKE, ComplaintStatus.MANAGER_REVIEW, MANAGER_ROLES),
-  transition(ComplaintStatus.SUBMITTED, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintStatus.REJECTED, MANAGER_ROLES),
-  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintStatus.BRANCH_REVIEW, MANAGER_ROLES),
-  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.SEND_BACK, ComplaintStatus.DRAFT, MANAGER_ROLES),
-  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintStatus.REJECTED, MANAGER_ROLES),
-  transition(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.ASSIGN_INVESTIGATION, ComplaintStatus.IN_PROGRESS, BRANCH_MANAGER_ROLES),
-  transition(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.RESOLVE_DIRECTLY, ComplaintStatus.RESOLVED, BRANCH_MANAGER_ROLES),
-  transition(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.REJECT_AFTER_REVIEW, ComplaintStatus.REJECTED, BRANCH_MANAGER_ROLES),
-  transition(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE, ComplaintStatus.IN_PROGRESS, OWNER_OR_BRANCH_MANAGER_ROLES),
-  transition(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.RESOLVE, ComplaintStatus.RESOLVED, OWNER_OR_BRANCH_MANAGER_ROLES),
-  transition(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.REJECT_AFTER_INVESTIGATION, ComplaintStatus.REJECTED, BRANCH_MANAGER_ROLES),
-  transition(ComplaintStatus.RESOLVED, ComplaintTransitionAction.CLOSE, ComplaintStatus.CLOSED, BRANCH_MANAGER_ROLES),
-  transition(ComplaintStatus.RESOLVED, ComplaintTransitionAction.REJECT_RESOLUTION, ComplaintStatus.IN_PROGRESS, BRANCH_MANAGER_ROLES),
-  transition(ComplaintStatus.CLOSED, ComplaintTransitionAction.REOPEN, ComplaintStatus.REOPENED, MANAGER_ROLES),
-  transition(ComplaintStatus.REJECTED, ComplaintTransitionAction.REOPEN, ComplaintStatus.REOPENED, MANAGER_ROLES),
-  transition(ComplaintStatus.REOPENED, ComplaintTransitionAction.ROUTE_AGAIN, ComplaintStatus.MANAGER_REVIEW, MANAGER_ROLES),
+  transition(ComplaintStatus.DRAFT, ComplaintTransitionAction.SUBMIT, ComplaintStatus.SUBMITTED, [RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.ADMIN, RoleCode.CUSTOMER_PORTAL], 'COMPLAINT_SUBMIT'),
+  transition(ComplaintStatus.SUBMITTED, ComplaintTransitionAction.ACCEPT_INTAKE, ComplaintStatus.MANAGER_REVIEW, MANAGER_ROLES, 'COMPLAINT_APPROVE'),
+  transition(ComplaintStatus.SUBMITTED, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintStatus.REJECTED, MANAGER_ROLES, 'COMPLAINT_REJECT'),
+  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintStatus.BRANCH_REVIEW, MANAGER_ROLES, 'COMPLAINT_APPROVE'),
+  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.SEND_BACK, ComplaintStatus.DRAFT, MANAGER_ROLES, 'COMPLAINT_APPROVE'),
+  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintStatus.REJECTED, MANAGER_ROLES, 'COMPLAINT_REJECT'),
+  transition(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.ASSIGN_INVESTIGATION, ComplaintStatus.IN_PROGRESS, BRANCH_MANAGER_ROLES, 'COMPLAINT_ASSIGN'),
+  transition(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.RESOLVE_DIRECTLY, ComplaintStatus.RESOLVED, BRANCH_MANAGER_ROLES, 'COMPLAINT_RESOLVE'),
+  transition(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.REJECT_AFTER_REVIEW, ComplaintStatus.REJECTED, BRANCH_MANAGER_ROLES, 'COMPLAINT_REJECT'),
+  transition(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE, ComplaintStatus.IN_PROGRESS, OWNER_OR_BRANCH_MANAGER_ROLES, 'COMPLAINT_COMMENT_INTERNAL'),
+  transition(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.RESOLVE, ComplaintStatus.RESOLVED, OWNER_OR_BRANCH_MANAGER_ROLES, 'COMPLAINT_RESOLVE'),
+  transition(ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.REJECT_AFTER_INVESTIGATION, ComplaintStatus.REJECTED, BRANCH_MANAGER_ROLES, 'COMPLAINT_REJECT'),
+  transition(ComplaintStatus.RESOLVED, ComplaintTransitionAction.COMPLETE, ComplaintStatus.COMPLETED, BRANCH_MANAGER_ROLES, 'COMPLAINT_CLOSE'),
+  transition(ComplaintStatus.RESOLVED, ComplaintTransitionAction.CLOSE, ComplaintStatus.CLOSED, BRANCH_MANAGER_ROLES, 'COMPLAINT_CLOSE'),
+  transition(ComplaintStatus.RESOLVED, ComplaintTransitionAction.REJECT_RESOLUTION, ComplaintStatus.IN_PROGRESS, BRANCH_MANAGER_ROLES, 'COMPLAINT_REJECT'),
+
+  transition(ComplaintStatus.COMPLETED, ComplaintTransitionAction.REOPEN, ComplaintStatus.REOPENED, MANAGER_ROLES, 'COMPLAINT_REOPEN'),
+  transition(ComplaintStatus.CLOSED, ComplaintTransitionAction.REOPEN, ComplaintStatus.REOPENED, MANAGER_ROLES, 'COMPLAINT_REOPEN'),
+  transition(ComplaintStatus.REJECTED, ComplaintTransitionAction.REOPEN, ComplaintStatus.REOPENED, MANAGER_ROLES, 'COMPLAINT_REOPEN'),
+  transition(ComplaintStatus.REOPENED, ComplaintTransitionAction.ROUTE_AGAIN, ComplaintStatus.MANAGER_REVIEW, MANAGER_ROLES, 'COMPLAINT_REOPEN'),
+  transition(ComplaintStatus.RESOLVED, ComplaintTransitionAction.CUSTOMER_REJECT_RESOLUTION, ComplaintStatus.IN_PROGRESS, [RoleCode.CUSTOMER_PORTAL]),
+  transition(ComplaintStatus.REJECTED, ComplaintTransitionAction.CUSTOMER_RESUBMIT, ComplaintStatus.MANAGER_REVIEW, [RoleCode.CUSTOMER_PORTAL]),
+  transition(ComplaintStatus.CLOSED, ComplaintTransitionAction.CUSTOMER_RESUBMIT, ComplaintStatus.MANAGER_REVIEW, [RoleCode.CUSTOMER_PORTAL]),
 ];
 
-function transition(fromStatus: ComplaintStatus, action: ComplaintTransitionAction, toStatus: ComplaintStatus, allowedRoles: readonly RoleCode[]): WorkflowTransition { return { fromStatus, action, toStatus, allowedRoles }; }
+function transition(fromStatus: ComplaintStatus, action: ComplaintTransitionAction, toStatus: ComplaintStatus, allowedRoles: readonly string[], requiredPermission?: string): WorkflowTransition { return { fromStatus, action, toStatus, allowedRoles, ...(requiredPermission ? { requiredPermission } : {}) }; }
 
 @Injectable()
 export class ComplaintsService {
@@ -136,6 +144,12 @@ export class ComplaintsService {
 
   async getDetail(id: string, filter: ComplaintQueueFilter = {}): Promise<ComplaintDetailDto> { const complaint = await this.complaintsRepository.findDetail(id, filter); if (!complaint) throw new AppException('COMPLAINT_NOT_FOUND', 'Complaint not found', HttpStatus.NOT_FOUND); return { ...detailItem(complaint, shouldMask(filter), this.slaService), caseSummary: await this.complaintCaseSummary(complaint.id) }; }
 
+  async deleteDetail(id: string, filter: ComplaintQueueFilter = {}): Promise<void> {
+    const complaint = await this.complaintsRepository.findDetail(id, filter);
+    if (!complaint) throw new AppException('COMPLAINT_NOT_FOUND', 'Complaint not found', HttpStatus.NOT_FOUND);
+    await this.complaintsRepository.delete(id);
+  }
+
   async timeline(id: string, filter: ComplaintQueueFilter = {}): Promise<ComplaintTimelineItemDto[]> {
     const complaint = await this.getDetail(id, filter);
     const [facts, tasks] = await Promise.all([
@@ -145,7 +159,15 @@ export class ComplaintsService {
     return timelineItems(complaint, facts, tasks);
   }
 
-  allowedActionsFor(complaint: Pick<ComplaintDetailDto, 'ownerId' | 'status'>, actor: { roleCode: RoleCode; userId: string | null }): ComplaintTransitionAction[] { return WORKFLOW_TRANSITIONS.filter((item) => item.fromStatus === complaint.status && item.allowedRoles.includes(actor.roleCode) && actorCanSeeAction(item.action, actor, complaint)).map((item) => item.action); }
+  allowedActionsFor(complaint: Pick<ComplaintDetailDto, 'ownerId' | 'status'>, actor: { roleCode: RoleCode; userId: string | null; permissions?: string[] }): ComplaintTransitionAction[] { 
+    const actions = WORKFLOW_TRANSITIONS.filter((item) => {
+      const roleMatch = item.allowedRoles.includes(actor.roleCode);
+      const permMatch = Boolean(item.requiredPermission && actor.permissions?.includes(item.requiredPermission));
+      const canSee = actorCanSeeAction(item.action, actor, complaint);
+      return item.fromStatus === complaint.status && (roleMatch || permMatch) && canSee;
+    }).map((item) => item.action);
+    return actions;
+  }
 
   async correctProvenance(input: ApplyComplaintCorrectionInput): Promise<ApplyComplaintCorrectionResult> { const data = complaintCorrectionData(input); return this.complaintsRepository.transaction(async (client) => { const complaint = await this.complaintsRepository.updateCorrection(data, client); if (!complaint) throw correctionConflictError(); await this.auditService.record(complaintCorrectionAudit(input, complaint.branchId, data.changedFields), client); return { complaintId: complaint.id, changedFields: data.changedFields }; }); }
 
@@ -175,7 +197,12 @@ export class ComplaintsService {
     );
 
     if (!transition) throw invalidTransitionError();
-    if (!transition.allowedRoles.includes(input.actorRole)) throw roleForbiddenError();
+    
+    if (!transition.allowedRoles.includes(input.actorRole)) {
+      if (!input.actorPermissions || !transition.requiredPermission || !input.actorPermissions.includes(transition.requiredPermission)) {
+        throw roleForbiddenError();
+      }
+    }
 
     return { fromStatus: input.fromStatus, action: input.action, actorRole: input.actorRole, toStatus: transition.toStatus };
   }
@@ -184,6 +211,9 @@ export class ComplaintsService {
     let decision: ComplaintTransitionDecision;
     try {
       decision = this.validateTransition(input);
+      if (input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE && input.ownerId) {
+        decision.toStatus = ComplaintStatus.IN_PROGRESS;
+      }
     } catch (error) {
       if (error instanceof AppException && error.code === 'RBAC_FORBIDDEN') {
         await recordWorkflowRoleForbidden(this.auditService, input);

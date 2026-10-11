@@ -7,15 +7,18 @@ const categorySelect = {
   code: true,
   nameEn: true,
   nameAr: true,
-  parentId: true,
+  departmentId: true,
+  branchId: true,
   isActive: true,
+  isExternal: true,
+  isInternal: true,
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.CategorySelect;
 
 export type AdminCategoryRecord = Prisma.CategoryGetPayload<{ select: typeof categorySelect }>;
 type CategoryClient = Pick<Prisma.TransactionClient, 'category'>;
-export type AdminCategoryData = { code: string; nameEn: string; nameAr: string; parentId?: string | null };
+export type AdminCategoryData = { code: string; nameEn: string; nameAr: string; departmentId?: string | null; branchId?: string | null; isExternal?: boolean; isInternal?: boolean };
 
 @Injectable()
 export class AdminCategoriesRepository {
@@ -25,8 +28,12 @@ export class AdminCategoriesRepository {
     return this.prisma.$transaction(work);
   }
 
-  async parentExists(id: string): Promise<boolean> {
-    return Boolean(await this.prisma.category.findUnique({ where: { id }, select: { id: true } }));
+  async departmentExists(id: string): Promise<boolean> {
+    return Boolean(await this.prisma.department.findUnique({ where: { id }, select: { id: true } }));
+  }
+
+  async branchExists(id: string): Promise<boolean> {
+    return Boolean(await this.prisma.branch.findUnique({ where: { id }, select: { id: true } }));
   }
 
   async list(): Promise<AdminCategoryRecord[]> {

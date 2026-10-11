@@ -157,7 +157,7 @@ export function TaskBoardScreen({ assignDepartmentAction, board, detailAction, l
   };
 
   return (
-    <section aria-label={t.title} className="grid content-start gap-4" dir={shell.dir}>
+    <section aria-label={t.title} className="flex h-full flex-col gap-4 overflow-hidden" dir={shell.dir}>
       <Toaster dir={shell.dir === 'rtl' ? 'rtl' : 'ltr'} position="bottom-center" richColors />
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -176,8 +176,9 @@ export function TaskBoardScreen({ assignDepartmentAction, board, detailAction, l
         </div>
       </header>
       <DndContext accessibility={{ announcements, screenReaderInstructions: { draggable: t.a11y.instructions } }} collisionDetection={closestCorners} id={dndContextId} onDragCancel={() => { if (dragSnapshot.current) setColumns(dragSnapshot.current); dragSnapshot.current = null; setActiveCard(null); }} onDragEnd={onDragEnd} onDragOver={onDragOver} onDragStart={onDragStart} sensors={sensors}>
-        <ol aria-label={t.boardLabel} className={view === 'list' ? 'grid gap-4 lg:flex lg:snap-x lg:snap-mandatory lg:gap-4 lg:overflow-x-auto lg:pb-3' : 'flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3'}>
-          {stages.map((stage) => {
+        <div className="flex-1 overflow-x-auto pb-4">
+          <ol aria-label={t.boardLabel} className="flex h-full items-start gap-4">
+            {stages.map((stage) => {
             const cards = columns[stage.id] ?? [];
             return (
               <BoardColumnShell cards={cards} key={stage.id} label={formatBoardText(t.columnLabel, { name: stageName(stage), count: cards.length })} layout={view} stage={stage} count={formatBoardCount(cards.length, t.cardCount)} emptyText={t.columnEmpty} title={stageName(stage)}>
@@ -187,7 +188,8 @@ export function TaskBoardScreen({ assignDepartmentAction, board, detailAction, l
               </BoardColumnShell>
             );
           })}
-        </ol>
+          </ol>
+        </div>
         <DragOverlay>{activeCard ? <BoardCardView card={activeCard} dragging locale={locale} t={t} /> : null}</DragOverlay>
       </DndContext>
       <MoveNoteDialog locale={locale} pending={pendingNote} onCancel={() => { if (pendingNote) setColumns(pendingNote.snapshot); setPendingNote(null); }} onConfirm={(note) => { if (!pendingNote) return; const { taskId, stageId, boardPosition, snapshot } = pendingNote; setPendingNote(null); commitMove(taskId, stageId, boardPosition, snapshot, note); }} />

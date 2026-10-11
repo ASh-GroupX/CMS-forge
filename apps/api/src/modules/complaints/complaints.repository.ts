@@ -13,17 +13,17 @@ export type DataSource = 'LOCAL' | 'MANUAL' | 'DMS';
 
 export type ComplaintStatusRecord = { id: string; branchId: string; customerId: string; status: ComplaintStatus; ownerId: string | null; severity: ComplaintSeverity; categoryId: string; departmentId: string | null };
 export type ComplaintTransitionSubject = { id: string; vehicleRelated: boolean; vehicleId: string | null; vehicleDataUnavailableReason: string | null };
-export type ComplaintRecord = { id: string; branchId: string; customerId: string; status: ComplaintStatus; referenceNumber: string; subject: string; severity: ComplaintSeverity; categoryId: string; departmentId: string | null; ownerId: string | null };
+export type ComplaintRecord = { id: string; branchId: string; customerId: string; status: ComplaintStatus; type: any; referenceNumber: string; subject: string; severity: ComplaintSeverity; categoryId: string; departmentId: string | null; ownerId: string | null; resolvedAt: Date | null; closedAt: Date | null; templateId?: string | null; templateData?: any; };
 
-export type ComplaintQueueRecord = ComplaintRecord & { ownerId: string | null; owner: { nameEn: string; email: string } | null; department?: { nameEn: string; nameAr: string } | null; branch: { code: string; nameEn: string; nameAr: string; timezone: string }; createdAt: Date; updatedAt: Date };
-export type ComplaintDetailRecord = ComplaintQueueRecord & { category: { id: string; nameEn: string; nameAr: string }; descriptionEn: string; incidentAt: Date | null; customer: { id: string; nameEn: string; phone: string; dmsCode: string | null; dataSource: DataSource }; vehicle: { id: string; vin: string; plate: string; makeEn: string; modelEn: string; year: number; dataSource: DataSource } | null; customerDataSource: DataSource; manualCustomerFlag: boolean; vehicleRelated: boolean; vehicleDataSource: DataSource | null; manualVehicleFlag: boolean; vehicleDataUnavailableReason: string | null; statusHistory: Array<{ id: string; fromStatus: ComplaintStatus | null; toStatus: ComplaintStatus; action: ComplaintTransitionAction | null; actorId: string | null; actorRole: RoleCode | null; requestSource: ComplaintTransitionRequestSource | null; reason: string | null; correlationId: string | null; createdAt: Date }> };
-export type CreateComplaintData = { referenceNumber: string; status: ComplaintStatus; subject: string; severity: ComplaintSeverity; branchId: string; categoryId: string; customerName: string; customerPhone?: string | null; customerNumber?: string | null; customerDataSource: DataSource; manualCustomerFlag: boolean; vehicleId?: string | null; vehicleVin?: string | null; vehiclePlate?: string | null; vehicleBrand?: string | null; vehicleModel?: string | null; vehicleModelYear?: number | null; vehicleDataSource?: DataSource | null; manualVehicleFlag: boolean; vehicleRelated: boolean; vehicleDataUnavailableReason?: string | null; departmentId?: string | null; createdById?: string | null; descriptionEn: string; incidentAt: Date };
+export type ComplaintQueueRecord = ComplaintRecord & { ownerId: string | null; owner: { nameEn: string; email: string } | null; department?: { nameEn: string; nameAr: string } | null; category?: { id: string; nameEn: string; nameAr: string } | null; branch: { code: string; nameEn: string; nameAr: string; timezone: string }; createdAt: Date; updatedAt: Date };
+export type ComplaintDetailRecord = Omit<ComplaintQueueRecord, 'category'> & { category: { id: string; nameEn: string; nameAr: string }; descriptionEn: string; incidentAt: Date | null; customer: { id: string; nameEn: string; phone: string; dmsCode: string | null; dataSource: DataSource }; vehicle: { id: string; vin: string; plate: string; makeEn: string; modelEn: string; year: number; dataSource: DataSource } | null; customerDataSource: DataSource; manualCustomerFlag: boolean; vehicleRelated: boolean; vehicleDataSource: DataSource | null; manualVehicleFlag: boolean; vehicleDataUnavailableReason: string | null; templateId?: string | null; templateData?: any; statusHistory: Array<{ id: string; fromStatus: ComplaintStatus | null; toStatus: ComplaintStatus; action: ComplaintTransitionAction | null; actorId: string | null; actorRole: string | null; requestSource: ComplaintTransitionRequestSource | null; reason: string | null; correlationId: string | null; createdAt: Date; actor: { nameEn: string; nameAr: string; department: { nameEn: string; nameAr: string } | null } | null }> };
+export type CreateComplaintData = { referenceNumber: string; status: ComplaintStatus; type: any; subject: string; severity: ComplaintSeverity; branchId: string; categoryId: string; customerName: string; customerPhone?: string | null; customerNumber?: string | null; customerDataSource: DataSource; manualCustomerFlag: boolean; vehicleId?: string | null; vehicleVin?: string | null; vehiclePlate?: string | null; vehicleBrand?: string | null; vehicleModel?: string | null; vehicleModelYear?: number | null; vehicleDataSource?: DataSource | null; manualVehicleFlag: boolean; vehicleRelated: boolean; vehicleDataUnavailableReason?: string | null; channel?: string | null; customerType?: string | null; lastServiceDate?: Date | null; odometer?: number | null; warrantyActive?: boolean | null; salesAdvisorName?: string | null; rootCauseCategory?: string | null; repeatCustomer?: boolean | null; departmentId?: string | null; createdById?: string | null; descriptionEn: string; incidentAt: Date; templateId?: string | null; templateData?: any; };
 
 export type UpdateComplaintStatusData = { complaintId: string; fromStatus: ComplaintStatus; toStatus: ComplaintStatus; targetBranchId?: string | null; targetDepartmentId?: string | null; ownerId?: string | null; resolvedAt?: Date | null; closedAt?: Date | null; vehicleDataUnavailableReason?: string | null };
 
-export type CreateComplaintStatusHistoryData = { complaintId: string; fromStatus: ComplaintStatus | null; toStatus: ComplaintStatus; action: ComplaintTransitionAction | null; actorId?: string | null; actorRole: RoleCode | null; requestSource: ComplaintTransitionRequestSource; reason?: string | null; correlationId?: string | null };
+export type CreateComplaintStatusHistoryData = { complaintId: string; fromStatus: ComplaintStatus | null; toStatus: ComplaintStatus; action: ComplaintTransitionAction | null; actorId?: string | null; actorRole: string | null; requestSource: ComplaintTransitionRequestSource; reason?: string | null; correlationId?: string | null };
 
-export type ListComplaintQueueFilter = { branchId?: string | null; role?: RoleCode | null };
+export type ListComplaintQueueFilter = { branchId?: string | null; role?: string | null; userId?: string | null; userDepartmentId?: string | null; permissions?: string[] };
 
 export type ComplaintReportFilter = ListComplaintQueueFilter & { dateFrom?: Date | string | null; dateTo?: Date | string | null; limit?: number | null; offset?: number | null; referenceNumber?: string | null; customer?: string | null; status?: ComplaintStatus | null; categoryId?: string | null; departmentId?: string | null; severity?: ComplaintSeverity | null; ownerId?: string | null; ownerUnassigned?: boolean };
 
@@ -79,6 +79,7 @@ export class ComplaintsRepository {
       data: {
         referenceNumber: data.referenceNumber,
         status: data.status,
+        type: data.type,
         subject: data.subject,
         severity: data.severity,
         branchId: data.branchId,
@@ -91,20 +92,54 @@ export class ComplaintsRepository {
         manualVehicleFlag: data.manualVehicleFlag,
         vehicleRelated: data.vehicleRelated,
         vehicleDataUnavailableReason: data.vehicleDataUnavailableReason ?? null,
+        channel: data.channel ?? null,
+        customerType: data.customerType ?? null,
+        lastServiceDate: data.lastServiceDate ?? null,
+        odometer: data.odometer ?? null,
+        warrantyActive: data.warrantyActive ?? null,
+        salesAdvisorName: data.salesAdvisorName ?? null,
+        rootCauseCategory: data.rootCauseCategory ?? null,
+        repeatCustomer: data.repeatCustomer ?? null,
         departmentId: data.departmentId ?? null,
         createdById: data.createdById ?? null,
         descriptionEn: data.descriptionEn,
         incidentAt: data.incidentAt,
+        templateId: data.templateId ?? null,
+        templateData: data.templateData !== undefined ? data.templateData : undefined,
       },
       select: complaintSelect,
     });
   }
 
   async listQueue(filter: ListComplaintQueueFilter = {}, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintQueueRecord[]> {
+    const where: Prisma.ComplaintWhereInput = { AND: [] };
+    
+    if (filter.permissions?.includes('COMPLAINT_VIEW_ALL')) {
+      if (filter.branchId) (where.AND as any[]).push({ branchId: filter.branchId });
+      if (filter.role !== 'CR_MANAGER' && filter.role !== 'ADMIN' && filter.userId) {
+        (where.AND as any[]).push({ OR: [{ departmentId: null }, { department: { code: { not: 'IT' } } }, { ownerId: filter.userId }, { createdById: filter.userId }] });
+      }
+    } else if (filter.permissions?.includes('COMPLAINT_VIEW_BRANCH')) {
+      if (filter.branchId) (where.AND as any[]).push({ branchId: filter.branchId });
+      if (filter.role !== 'CR_MANAGER' && filter.role !== 'ADMIN' && filter.userId) {
+        (where.AND as any[]).push({ OR: [{ departmentId: null }, { department: { code: { not: 'IT' } } }, { ownerId: filter.userId }, { createdById: filter.userId }] });
+      }
+    } else if (filter.userId) {
+      const isManager = filter.permissions?.includes('COMPLAINT_MANAGE') || filter.permissions?.includes('COMPLAINT_ASSIGN') || filter.permissions?.includes('COMPLAINT_RESOLVE');
+      const orConditions: Prisma.ComplaintWhereInput[] = [
+        { ownerId: filter.userId },
+        { createdById: filter.userId }
+      ];
+      if (isManager && filter.userDepartmentId) {
+        orConditions.push({ departmentId: filter.userDepartmentId });
+      }
+      (where.AND as any[]).push({ OR: orConditions });
+    }
+
     return client.complaint.findMany({
-      where: filter.branchId ? { branchId: filter.branchId } : {},
+      where,
       orderBy: [{ createdAt: 'desc' }, { referenceNumber: 'asc' }],
-      select: { ...complaintSelect, ownerId: true, owner: { select: { nameEn: true, email: true } }, department: { select: { nameEn: true, nameAr: true } }, branch: { select: { code: true, nameEn: true, nameAr: true, timezone: true } }, createdAt: true, updatedAt: true },
+      select: { ...complaintSelect, ownerId: true, owner: { select: { nameEn: true, email: true } }, department: { select: { nameEn: true, nameAr: true } }, category: { select: { id: true, nameEn: true, nameAr: true } }, branch: { select: { code: true, nameEn: true, nameAr: true, timezone: true } }, createdAt: true, updatedAt: true },
     });
   }
 
@@ -135,8 +170,32 @@ export class ComplaintsRepository {
   }
 
   async findDetail(id: string, filter: ListComplaintQueueFilter = {}, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintDetailRecord | null> {
+    const where: Prisma.ComplaintWhereInput = { id, AND: [] };
+    
+    if (filter.permissions?.includes('COMPLAINT_VIEW_ALL')) {
+      if (filter.branchId) (where.AND as any[]).push({ branchId: filter.branchId });
+      if (filter.role !== 'CR_MANAGER' && filter.role !== 'ADMIN' && filter.userId) {
+        (where.AND as any[]).push({ OR: [{ departmentId: null }, { department: { code: { not: 'IT' } } }, { ownerId: filter.userId }, { createdById: filter.userId }] });
+      }
+    } else if (filter.permissions?.includes('COMPLAINT_VIEW_BRANCH')) {
+      if (filter.branchId) (where.AND as any[]).push({ branchId: filter.branchId });
+      if (filter.role !== 'CR_MANAGER' && filter.role !== 'ADMIN' && filter.userId) {
+        (where.AND as any[]).push({ OR: [{ departmentId: null }, { department: { code: { not: 'IT' } } }, { ownerId: filter.userId }, { createdById: filter.userId }] });
+      }
+    } else if (filter.userId) {
+      const isManager = filter.permissions?.includes('COMPLAINT_MANAGE') || filter.permissions?.includes('COMPLAINT_ASSIGN') || filter.permissions?.includes('COMPLAINT_RESOLVE');
+      const orConditions: Prisma.ComplaintWhereInput[] = [
+        { ownerId: filter.userId },
+        { createdById: filter.userId }
+      ];
+      if (isManager && filter.userDepartmentId) {
+        orConditions.push({ departmentId: filter.userDepartmentId });
+      }
+      (where.AND as any[]).push({ OR: orConditions });
+    }
+
     return client.complaint.findFirst({
-      where: { id, ...(filter.branchId ? { branchId: filter.branchId } : {}) },
+      where,
       select: {
         ...complaintSelect,
         ownerId: true, owner: { select: { nameEn: true, email: true } }, department: { select: { nameEn: true, nameAr: true } }, branch: { select: { code: true, nameEn: true, nameAr: true, timezone: true } },
@@ -152,6 +211,7 @@ export class ComplaintsRepository {
           select: {
             id: true, fromStatus: true, toStatus: true, action: true, actorId: true,
             actorRole: true, requestSource: true, reason: true, correlationId: true, createdAt: true,
+            actor: { select: { nameEn: true, nameAr: true, department: { select: { nameEn: true, nameAr: true } } } },
           },
         },
       },
@@ -180,6 +240,30 @@ export class ComplaintsRepository {
   async removeWatcher(complaintId: string, userId: string, client: ComplaintTransitionClient): Promise<boolean> {
     const result = await client.complaintWatcher.deleteMany({ where: { complaintId, userId } });
     return result.count === 1;
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      // Delete dependent records first to avoid foreign key constraints
+      await tx.complaintWatcher.deleteMany({ where: { complaintId: id } });
+      await tx.complaintCommentMention.deleteMany({ where: { comment: { complaintId: id } } });
+      await tx.comment.deleteMany({ where: { complaintId: id } });
+      await tx.approval.deleteMany({ where: { complaintId: id } });
+      await tx.complaintStatusHistory.deleteMany({ where: { complaintId: id } });
+      await tx.complaintRelation.deleteMany({ where: { sourceComplaintId: id } });
+      await tx.complaintRelation.deleteMany({ where: { targetComplaintId: id } });
+      await tx.slaEvent.deleteMany({ where: { complaintId: id } });
+      await tx.notification.deleteMany({ where: { complaintId: id } });
+      await tx.survey.deleteMany({ where: { complaintId: id } });
+      await tx.compensation.deleteMany({ where: { complaintId: id } });
+      await tx.portalVerification.deleteMany({ where: { complaintId: id } });
+      await tx.portalSession.deleteMany({ where: { complaintId: id } });
+      await tx.attachment.deleteMany({ where: { complaintId: id } });
+      // Remove link from Tasks
+      await tx.taskLink.deleteMany({ where: { entityId: id } });
+      // Finally delete the complaint
+      await tx.complaint.delete({ where: { id } });
+    });
   }
 
   async listWatchers(complaintId: string) {
@@ -245,7 +329,7 @@ export class ComplaintsRepository {
   async createStatusHistory(data: CreateComplaintStatusHistoryData, client: ComplaintTransitionClient = this.prisma): Promise<void> { await client.complaintStatusHistory.create({ data }); }
 }
 
-const complaintSelect = { id: true, referenceNumber: true, branchId: true, customerId: true, status: true, subject: true, severity: true, categoryId: true, departmentId: true, ownerId: true } satisfies Prisma.ComplaintSelect;
+const complaintSelect = { id: true, referenceNumber: true, branchId: true, customerId: true, status: true, type: true, subject: true, severity: true, categoryId: true, departmentId: true, ownerId: true, resolvedAt: true, closedAt: true, templateId: true, templateData: true } satisfies Prisma.ComplaintSelect;
 
 function customerPhone(data: CreateComplaintData): string {
   return data.customerPhone ?? `DMS-${data.customerNumber}`;

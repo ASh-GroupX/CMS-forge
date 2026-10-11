@@ -86,8 +86,8 @@ export class AppExceptionFilter implements ExceptionFilter {
     const correlationId = request.correlationId ?? `req_${randomUUID()}`;
     const body: ErrorBody = {
       error: {
-        code: appError?.code ?? 'INTERNAL_ERROR',
-        message: appError?.safeMessage ?? 'Request failed',
+        code: appError?.code ?? (isHttp ? 'VALIDATION_ERROR' : 'INTERNAL_ERROR'),
+        message: appError?.safeMessage ?? (isHttp ? (exception.getResponse() as any)?.message ?? exception.message : 'Request failed'),
         correlationId,
       },
     };

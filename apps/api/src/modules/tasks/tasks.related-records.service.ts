@@ -114,7 +114,7 @@ export class TasksRelatedRecordsService {
 }
 
 function scopeFrom(actor: RelatedRecordActor): Scope {
-  return { branchId: actor.branchId, isAdmin: actor.roleCode === RoleCode.ADMIN };
+  return { branchId: actor.branchId, isAdmin: actor.roleCode === RoleCode.ADMIN || actor.roleCode === RoleCode.CR_MANAGER };
 }
 
 function branchScope(scope: Scope): { branchId?: string } {

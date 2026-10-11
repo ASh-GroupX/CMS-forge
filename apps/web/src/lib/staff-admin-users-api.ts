@@ -1,3 +1,4 @@
+import { getApiBase } from './api-base';
 export type AdminUser = {
   id: string;
   email: string;
@@ -7,15 +8,17 @@ export type AdminUser = {
   roleName: string;
   branchId: string | null;
   branchName: string | null;
+  departmentId: string | null;
+  departmentName: string | null;
   isActive: boolean;
 };
 export type AdminOption = { id: string; code: string; nameEn: string; nameAr: string };
-export type AdminUsersData = { users: AdminUser[]; roles: AdminOption[]; branches: AdminOption[] };
+export type AdminUsersData = { users: AdminUser[]; roles: AdminOption[]; branches: AdminOption[]; departments: AdminOption[] };
 
 const STAFF_SESSION_COOKIE = 'cms_staff_session';
 
 export async function getAdminUsers({
-  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  apiUrl = getApiBase(),
   cookieHeader,
   fetchImpl = fetch,
 }: {

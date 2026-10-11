@@ -58,6 +58,16 @@ export class BranchesController {
   ): Promise<{ branch: BranchResponseDto }> {
     return { branch: await this.branchesService.deactivate(id, auditContext(request)) };
   }
+
+  @Post(':id/delete')
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('MASTER_DATA_MANAGE')
+  async delete(
+    @Param('id') id: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<{ branch: BranchResponseDto }> {
+    return { branch: await this.branchesService.delete(id, auditContext(request)) };
+  }
 }
 
 function auditContext(request: AuthenticatedRequest) {

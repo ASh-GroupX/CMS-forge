@@ -8,7 +8,7 @@ import type { ComplaintRelationFilter, ComplaintRelationItemRecord } from './com
 import type { ComplaintRelationItemDto } from './dto/complaint-response.dto.js';
 
 export type ComplaintRelationAuditContext = {
-  actorId?: string | null; actorRole?: RoleCode | null; sessionId?: string | null;
+  actorId?: string | null; actorRole?: string | null; sessionId?: string | null;
   correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null;
 };
 export type LinkComplaintInput = ComplaintRelationAuditContext & { sourceComplaintId: string; targetComplaintId: string; branchId?: string | null };

@@ -15,6 +15,8 @@ import type { DashboardReadRow } from './reports.repository.js';
 export type DashboardReportScope = {
   role: RoleCode;
   branchId?: string | null;
+  departmentId?: string | null;
+  userId?: string | null;
   now?: Date | string;
 };
 
@@ -146,6 +148,14 @@ export class ReportsService {
       ...deriveTaskPromiseKpis(taskRows.tasks, taskRows.events, now),
       ...deriveComplaintCaseKpis(complaintCaseRows.records, complaintCaseRows.statusEvents, complaintCaseRows.slaEvents, now),
     };
+  }
+
+  async premiumDashboardSummary(scope: DashboardReportScope) {
+    return await this.reportsRepository.getPremiumDashboardData(
+      scopedBranchId(scope), 
+      scope.departmentId ?? null,
+      scope.userId ?? null
+    );
   }
 
   async exportReport(input: FilteredReportInput & { format: ReportExportFormat; rowLimit?: number }, audit: ReportExportAudit = {}): Promise<ReportExportResult> {

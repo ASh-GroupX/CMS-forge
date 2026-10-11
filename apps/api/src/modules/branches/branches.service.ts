@@ -56,6 +56,14 @@ export class BranchesService {
       return toResponse(branch);
     });
   }
+
+  async delete(id: string, audit: BranchAuditContext = {}): Promise<BranchResponseDto> {
+    return this.branchesRepository.transaction(async (client) => {
+      const branch = await this.branchesRepository.delete(nonEmpty(id, 'id'), client);
+      await this.auditService.record(auditInput('branch_deleted', branch, audit), client);
+      return toResponse(branch);
+    });
+  }
 }
 
 function toResponse(branch: BranchRecord): BranchResponseDto {

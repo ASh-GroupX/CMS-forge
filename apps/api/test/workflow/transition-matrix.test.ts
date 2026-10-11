@@ -354,8 +354,8 @@ test('workflow approve and route persists route fields with history and audit', 
     ownerId: 'usr_owner',
   }));
 
-  assert.deepEqual(calls[0], { status: { complaintId: 'cmp_1', fromStatus: ComplaintStatus.MANAGER_REVIEW, toStatus: ComplaintStatus.BRANCH_REVIEW, targetBranchId: 'branch_service', targetDepartmentId: 'dept_service', ownerId: 'usr_owner' } });
-  assert.deepEqual(calls[1], { history: { complaintId: 'cmp_1', fromStatus: ComplaintStatus.MANAGER_REVIEW, toStatus: ComplaintStatus.BRANCH_REVIEW, action: ComplaintTransitionAction.APPROVE_AND_ROUTE, actorId: 'usr_1', actorRole: RoleCode.ADMIN, requestSource: ComplaintTransitionRequestSource.STAFF_API, reason: 'route to service', correlationId: null } });
+  assert.deepEqual(calls[0], { status: { complaintId: 'cmp_1', fromStatus: ComplaintStatus.MANAGER_REVIEW, toStatus: ComplaintStatus.IN_PROGRESS, targetBranchId: 'branch_service', targetDepartmentId: 'dept_service', ownerId: 'usr_owner' } });
+  assert.deepEqual(calls[1], { history: { complaintId: 'cmp_1', fromStatus: ComplaintStatus.MANAGER_REVIEW, toStatus: ComplaintStatus.IN_PROGRESS, action: ComplaintTransitionAction.APPROVE_AND_ROUTE, actorId: 'usr_1', actorRole: RoleCode.ADMIN, requestSource: ComplaintTransitionRequestSource.STAFF_API, reason: 'route to service', correlationId: null } });
   assert.equal(audits[0]?.branchId, 'branch_service');
 });
 
@@ -390,7 +390,7 @@ test('workflow approve and route queues notification and SLA only after commit',
   const queued: unknown[] = [];
   const deadlines: unknown[] = [];
   const serviceWithSideEffects = transitionService(calls, queued, complaintStatus({
-    status: ComplaintStatus.BRANCH_REVIEW,
+    status: ComplaintStatus.IN_PROGRESS,
     branchId: 'branch_service',
     departmentId: 'dept_service',
     ownerId: 'usr_owner',
@@ -408,7 +408,7 @@ test('workflow approve and route queues notification and SLA only after commit',
     fromStatus: ComplaintStatus.MANAGER_REVIEW,
     action: ComplaintTransitionAction.APPROVE_AND_ROUTE,
     actorRole: RoleCode.ADMIN,
-    toStatus: ComplaintStatus.BRANCH_REVIEW,
+    toStatus: ComplaintStatus.IN_PROGRESS,
   });
   assert.deepEqual(calls, ['status', 'history', 'audit', 'commit', 'queue', 'sla']);
   assert.deepEqual(queued, [{
@@ -418,7 +418,7 @@ test('workflow approve and route queues notification and SLA only after commit',
     payload: {
       complaintId: 'cmp_1',
       fromStatus: ComplaintStatus.MANAGER_REVIEW,
-      toStatus: ComplaintStatus.BRANCH_REVIEW,
+      toStatus: ComplaintStatus.IN_PROGRESS,
       action: ComplaintTransitionAction.APPROVE_AND_ROUTE,
       actorId: 'usr_1',
       targetBranchId: 'branch_service',
@@ -430,7 +430,7 @@ test('workflow approve and route queues notification and SLA only after commit',
   assert.deepEqual({ ...(deadlines[0] as Record<string, unknown>), enteredAt: 'date' }, {
     complaintId: 'cmp_1',
     severity: ComplaintSeverity.HIGH,
-    stage: SlaStage.BRANCH_REVIEW,
+    stage: SlaStage.INVESTIGATION,
     branchId: 'branch_service',
     departmentId: 'dept_service',
     categoryId: 'cat_service',
@@ -551,7 +551,8 @@ test('workflow SLA deadline stage mapping follows P14D transition map', async ()
     [ComplaintStatus.DRAFT, ComplaintTransitionAction.SUBMIT, SlaStage.INTAKE, {}],
     [ComplaintStatus.SUBMITTED, ComplaintTransitionAction.ACCEPT_INTAKE, SlaStage.MANAGER_REVIEW, {}],
     [ComplaintStatus.REOPENED, ComplaintTransitionAction.ROUTE_AGAIN, SlaStage.MANAGER_REVIEW, { reason: 'new cycle' }],
-    [ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.APPROVE_AND_ROUTE, SlaStage.BRANCH_REVIEW, { reason: 'route', targetBranchId: 'branch_service', targetDepartmentId: 'dept_service', ownerId: 'usr_owner' }],
+    [ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.APPROVE_AND_ROUTE, SlaStage.BRANCH_REVIEW, { reason: 'route', targetBranchId: 'branch_service', targetDepartmentId: 'dept_service' }],
+    [ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.APPROVE_AND_ROUTE, SlaStage.INVESTIGATION, { reason: 'route directly to officer', targetBranchId: 'branch_service', targetDepartmentId: 'dept_service', ownerId: 'usr_owner' }],
     [ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.ASSIGN_INVESTIGATION, SlaStage.INVESTIGATION, { reason: 'assign', ownerId: 'usr_investigator' }],
     [ComplaintStatus.RESOLVED, ComplaintTransitionAction.REJECT_RESOLUTION, SlaStage.INVESTIGATION, { reason: 'needs more work' }],
     [ComplaintStatus.IN_PROGRESS, ComplaintTransitionAction.RESOLVE, SlaStage.RESOLUTION, { resolutionType: 'repair', resolutionSummary: 'fixed' }],

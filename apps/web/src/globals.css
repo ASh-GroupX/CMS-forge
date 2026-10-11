@@ -21,11 +21,11 @@
 
     --color-neutral: var(--primitive-slate-100);
     --color-neutral-foreground: var(--primitive-ink-950);
-    --surface-canvas: var(--primitive-warm-50);
-    --surface: var(--primitive-white);
-    --surface-raised: 204 25% 98%;
-    --surface-sunken: 206 24% 93%;
-    --surface-overlay: var(--primitive-white);
+    --surface-canvas: 350 100% 96%; /* Light pink */
+    --surface: 48 100% 94%; /* Light yellow */
+    --surface-raised: 48 100% 90%;
+    --surface-sunken: 350 100% 92%;
+    --surface-overlay: 48 100% 94%;
     --text-strong: var(--primitive-ink-950);
     --text-muted: var(--primitive-slate-700);
     --text-subtle: var(--primitive-slate-500);
@@ -64,8 +64,8 @@
     --status-info-bg: 211 76% 95%;
     --status-info-border: 211 52% 79%;
 
-    --nav-surface: 204 26% 96%; --nav-surface-raised: 0 0% 100%;
-    --nav-border: 207 20% 86%; --nav-text: 210 24% 8%; --nav-muted: 208 18% 28%;
+    --nav-surface: 350 100% 95%; --nav-surface-raised: 48 100% 94%;
+    --nav-border: 350 60% 85%; --nav-text: 210 24% 8%; --nav-muted: 208 18% 28%;
 
     --color-loading: var(--surface-raised);
     --color-empty: var(--surface-raised);
@@ -96,6 +96,22 @@
     --board-drop-ring: var(--color-brand);
     --board-drag-shadow: 0 16px 36px -14px rgb(15 23 42 / 0.38);
 
+    /* ── Operations board ─────────────────────────────────── */
+    --ops-column-min: 17rem;
+    --ops-column-max: 22rem;
+    --ops-card-gap: 0.5rem;
+    --ops-card-py: 0.625rem;
+    --ops-card-px: 0.75rem;
+    --ops-workload-h: 0.1875rem;
+
+    /* Department color palette (6 departments) */
+    --dept-sales: 221 83% 53%;
+    --dept-service: 153 64% 32%;
+    --dept-parts: 38 92% 43%;
+    --dept-body-paint: 262 60% 47%;
+    --dept-finance: 352 72% 45%;
+    --dept-customer-care: 207 76% 38%;
+
     --stage-slate: 215 16% 47%;
     --stage-slate-bg: 216 28% 95%;
     --stage-blue: 221 83% 53%;
@@ -115,29 +131,32 @@
   .dark {
     color-scheme: dark;
 
-    --primitive-white: 210 40% 98%;
-    --primitive-ink-950: 207 37% 93%;
-    --primitive-slate-700: 215 20% 72%;
-    --primitive-slate-500: 215 16% 62%;
-    --primitive-slate-200: 207 26% 22%;
-    --primitive-slate-100: 208 36% 10%;
-    --primitive-warm-50: 210 35% 7%;
-    --primitive-blue-600: 218 100% 65%;
-    --primitive-blue-50: 218 36% 18%;
+    --primitive-white: 257 40% 98%;
+    --primitive-ink-950: 257 40% 98%;
+    --primitive-slate-700: 257 20% 72%;
+    --primitive-slate-500: 257 16% 62%;
+    --primitive-slate-200: 257 26% 25%;
+    --primitive-slate-100: 257 35% 15%;
+    --primitive-warm-50: 257 47% 7%;
+    --primitive-blue-600: 257 91% 64%;
+    --primitive-blue-50: 257 36% 18%;
 
     --color-brand: var(--primitive-blue-600);
     --color-neutral: var(--primitive-slate-100);
-    --color-neutral-foreground: 210 40% 98%;
-    --surface-canvas: var(--primitive-warm-50);
-    --surface: 208 36% 10%;
-    --surface-raised: 207 31% 13%;
-    --surface-sunken: 210 35% 6%;
-    --surface-overlay: 207 31% 13%;
+    --color-neutral-foreground: 257 40% 98%;
+    
+    --surface-canvas: 257 47% 7%;
+    --surface: 257 40% 11%;
+    --surface-raised: 257 35% 15%;
+    --surface-sunken: 257 50% 5%;
+    --surface-overlay: 257 35% 15%;
+    
     --text-strong: var(--primitive-ink-950);
     --text-muted: var(--primitive-slate-700);
     --text-subtle: var(--primitive-slate-500);
-    --line-subtle: var(--primitive-slate-200);
-    --line-strong: 207 22% 34%;
+    --line-subtle: 257 25% 20%;
+    --line-strong: 257 25% 35%;
+    
     --background: var(--surface-canvas);
     --foreground: var(--text-strong);
     --card: var(--surface);

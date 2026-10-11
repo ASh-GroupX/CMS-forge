@@ -1,6 +1,7 @@
 import { fieldErrorsFrom } from './staff-error-envelope';
 import { CSRF_COOKIE, hasStaffSessionCookie, incomingCookieHeader, readCookie } from './staff-request-auth';
 import type { StaffTaskStatus } from './staff-tasks-api';
+import { getApiBase } from './api-base';
 
 // Typed client for the task board (Kanban) contract — docs/CMSS_REVAMP_PLAN.md A5.
 // Mirrors apps/api/src/modules/tasks/dto/board.dto.ts. Reads and writes are
@@ -71,7 +72,7 @@ export type AssignTaskDepartmentResult =
 type RequestOptions = { apiUrl?: string; cookieHeader?: string; fetchImpl?: typeof fetch };
 
 export async function getTaskBoardLoadResult({
-  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  apiUrl = getApiBase(),
   cookieHeader,
   fetchImpl = fetch,
 }: RequestOptions = {}): Promise<TaskBoardLoadResult> {

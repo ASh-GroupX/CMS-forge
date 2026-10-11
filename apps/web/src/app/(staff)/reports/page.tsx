@@ -6,20 +6,28 @@ import { getComplaintFormOptions } from '../../../lib/staff-complaint-form-optio
 import { getStaffReportCatalogLoadResult, getStaffReportKpisLoadResult, getStaffReportRowsLoadResult } from '../../../lib/staff-reports-api';
 import { getStaffSessionPrincipal } from '../../../lib/staff-session-api';
 
+import { headers } from 'next/headers';
+
 type SearchParams = { locale?: string | string[]; branchId?: string | string[]; categoryId?: string | string[]; dateFrom?: string | string[]; dateTo?: string | string[]; departmentId?: string | string[]; ownerId?: string | string[]; severity?: string | string[] };
 
 export default async function ReportsPage({
-  cookieHeader,
-  fetchImpl,
   searchParams,
+  cookieHeader: propCookieHeader,
+  fetchImpl,
 }: {
+  searchParams?: Promise<SearchParams>;
   cookieHeader?: string;
   fetchImpl?: typeof fetch;
-  searchParams?: Promise<SearchParams>;
 }) {
   const params = await searchParams;
+  let cookieHeader = propCookieHeader;
+  if (!cookieHeader) {
+    const requestHeaders = await headers();
+    cookieHeader = requestHeaders.get('cookie') ?? '';
+  }
   const apiInput = {
-    ...(cookieHeader !== undefined ? { cookieHeader } : {}),
+    cookieHeader,
+    apiUrl: process.env.API_URL ?? 'http://localhost:3000',
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
   };
   const filters = {
@@ -31,6 +39,7 @@ export default async function ReportsPage({
     ownerId: readParam(params?.ownerId) ?? '',
     severity: readParam(params?.severity) ?? '',
   };
+
   const [rows, kpis, catalog, options, staff, principal] = await Promise.all([
     getStaffReportRowsLoadResult({ ...apiInput, filters }),
     getStaffReportKpisLoadResult(apiInput),
@@ -40,6 +49,7 @@ export default async function ReportsPage({
     getStaffSessionPrincipal(apiInput),
   ]);
   const loadState = [rows, kpis, catalog].some((item) => item.status === 'denied') ? 'denied' : [rows, kpis, catalog].some((item) => item.status === 'error') ? 'error' : undefined;
+  
   return (
     <ReportsDashboard
       canExport={principal?.permissions.includes('REPORT_EXPORT') ?? false}

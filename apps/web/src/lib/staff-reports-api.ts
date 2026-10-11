@@ -44,6 +44,7 @@ export type StaffReportFilters = {
   departmentId?: string;
   ownerId?: string;
   severity?: string;
+  customer?: string;
 };
 
 type ReportsResponse = { items?: Partial<StaffReportRow>[] };

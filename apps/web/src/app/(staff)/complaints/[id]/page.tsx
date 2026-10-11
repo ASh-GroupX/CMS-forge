@@ -1,7 +1,5 @@
 import React from 'react';
-import {
-  ComplaintDetailWorkspace,
-} from '../../../../components/complaint-detail-workspace';
+import { ComplaintWorkspace } from '../../../../components/complaint-workspace';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { getAssignableStaff } from '../../../../lib/staff-assignable-staff-api';
 import { getStaffAssignmentOptions } from '../../../../lib/staff-assignment-options-api';
@@ -9,6 +7,7 @@ import { getComplaintFormOptions } from '../../../../lib/staff-complaint-form-op
 import { getStaffComplaintComments } from '../../../../lib/staff-complaint-comments-api';
 import { getStaffComplaintRelationsView } from '../../../../lib/staff-complaint-relations-api';
 import { getStaffComplaintSurveys } from '../../../../lib/staff-complaint-surveys-api';
+import { fetchComplaintTimeline } from '../../../../lib/staff-complaint-timeline-api';
 import { getStaffComplaintDetailLoadResult } from '../../../../lib/staff-detail-api';
 
 type RouteParams = { id?: string | string[] };
@@ -30,37 +29,40 @@ export default async function ComplaintDetailPage({
 }) {
   const [routeParams, query] = await Promise.all([params, searchParams]);
   const id = readParam(routeParams?.id);
+  
+  let resolvedCookieHeader = cookieHeader;
+  if (resolvedCookieHeader === undefined) {
+    try {
+      const { cookies } = await import('next/headers');
+      resolvedCookieHeader = (await cookies()).toString();
+    } catch {
+      resolvedCookieHeader = '';
+    }
+  }
+
   const apiInput = {
-    ...(cookieHeader !== undefined ? { cookieHeader } : {}),
+    ...(resolvedCookieHeader !== '' ? { cookieHeader: resolvedCookieHeader } : {}),
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
     ...(id !== undefined ? { complaintId: id } : {}),
   };
   const detailResult = await getStaffComplaintDetailLoadResult(apiInput);
   const detail = detailResult.status === 'ready' ? detailResult.data : null;
-  const [comments, relations, surveys, staff, options, assignmentOptions] = detail ? await Promise.all([
-    getStaffComplaintComments(apiInput),
-    getStaffComplaintRelationsView(apiInput),
-    getStaffComplaintSurveys(apiInput),
+  const [staff, options, assignmentOptions] = detail ? await Promise.all([
     getAssignableStaff({ ...(cookieHeader !== undefined ? { cookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
     getComplaintFormOptions({ ...(cookieHeader !== undefined ? { cookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
     getStaffAssignmentOptions({ ...(cookieHeader !== undefined ? { cookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
-  ]) : [null, null, null, null, null, null] as const;
-  const detailState = detailResult.status === 'ready' ? undefined : detailResult.status;
-  const commentsState = detail && comments === null ? 'error' : undefined;
+  ]) : [null, null, null] as const;
+  const detailState = detailResult.status === 'ready' ? 'ready' : detailResult.status;
 
   return (
-    <ComplaintDetailWorkspace
+    <ComplaintWorkspace
       assignmentOptions={assignmentOptions}
-      comments={comments}
-      commentsState={commentsState}
       detail={detail ?? undefined}
-      initialTab={tabParam(readParam(query?.tab))}
       locale={resolveLocale(readParam(query?.locale))}
       options={options}
-      relations={relations ?? undefined}
       staff={staff}
       state={detailState}
-      surveys={surveys}
+      timeline={detail ? await fetchComplaintTimeline({ apiUrl: process.env.API_URL ?? 'http://localhost:3000', complaintId: detail.id, cookies: apiInput.cookieHeader ?? '', fetchImpl: apiInput.fetchImpl ?? fetch }) : undefined}
     />
   );
 }

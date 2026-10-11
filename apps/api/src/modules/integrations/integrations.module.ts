@@ -31,7 +31,27 @@ import { InMemoryWhatsAppProvider, WHATSAPP_PROVIDER } from './whatsapp-provider
     { provide: EMAIL_PROVIDER, useFactory: () => emailProviderFromEnv() },
     { provide: SMS_PROVIDER, useClass: InMemorySmsProvider },
     { provide: WHATSAPP_PROVIDER, useClass: InMemoryWhatsAppProvider },
-    { provide: DMS_PROVIDER, useFactory: () => new InMemoryDmsProvider({ status: 'DISABLED' }) },
+    { 
+      provide: DMS_PROVIDER, 
+      useFactory: () => new InMemoryDmsProvider({ 
+        status: 'MATCH', 
+        matches: [{
+          customerId: 'cust_c100',
+          customerCode: 'C100',
+          customerName: 'Nadia Saleh',
+          primaryPhone: '+201001112222',
+          vehicleId: 'veh_wba12345678900001',
+          vin: 'WBA12345678900001',
+          plateNumber: 'EG-123',
+          brand: 'Toyota',
+          model: 'Corolla',
+          modelYear: 2023,
+          warrantyStatus: 'Active',
+          serviceBranch: 'Main Branch',
+          source: 'DMS'
+        }]
+      }) 
+    },
   ],
   exports: [IntegrationsService],
 })

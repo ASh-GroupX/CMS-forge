@@ -12,13 +12,13 @@ export function managerBranchId(scope: ManagerRollupScope): string | null {
   if (!managerRoles.has(scope.roleCode)) {
     throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
   }
-  if (scope.roleCode === RoleCode.ADMIN) return null;
+  if (scope.roleCode === RoleCode.ADMIN || scope.roleCode === RoleCode.CR_MANAGER) return null;
   if (!scope.branchId) throw new AppException('BRANCH_SCOPE_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
   return scope.branchId;
 }
 
 export function assertCanView(task: TaskRecord, actor: TaskActor): void {
-  if (actor.roleCode === RoleCode.ADMIN) return;
+  if (actor.roleCode === RoleCode.ADMIN || actor.roleCode === RoleCode.CR_MANAGER) return;
   if (isParticipant(task, actor.userId)) return;
   if (isDepartmentMember(task, actor)) return;
   if (!managerRoles.has(actor.roleCode) || !actor.branchId) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
@@ -32,7 +32,7 @@ export function assertCanComment(task: TaskRecord, actor: TaskActor): void {
 }
 
 export function assertCanManage(task: TaskRecord, actor: TaskActor): void {
-  if (actor.roleCode === RoleCode.ADMIN) return;
+  if (actor.roleCode === RoleCode.ADMIN || actor.roleCode === RoleCode.CR_MANAGER) return;
   const membership = task.participants.find((participant) => participant.userId === actor.userId);
   if (task.ownerId === actor.userId || task.assigneeId === actor.userId || task.nextActionWhoId === actor.userId || membership?.role === TaskParticipantRole.PARTICIPANT) return;
   if (isDepartmentMember(task, actor)) return;

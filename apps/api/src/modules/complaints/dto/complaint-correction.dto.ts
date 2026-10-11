@@ -27,7 +27,7 @@ export function parseComplaintCorrectionBody(body: unknown): ComplaintCorrection
   return parsed;
 }
 
-export function toComplaintCorrectionInput(complaintId: string, body: ComplaintCorrectionRequestDto, context: { actorId: string | null; actorRole: RoleCode; sessionId: string | null; correlationId: string | null; ipAddress: string | null; userAgent: string | null }): ApplyComplaintCorrectionInput {
+export function toComplaintCorrectionInput(complaintId: string, body: ComplaintCorrectionRequestDto, context: { actorId: string | null; actorRole: string; sessionId: string | null; correlationId: string | null; ipAddress: string | null; userAgent: string | null }): ApplyComplaintCorrectionInput {
   return { complaintId, ...body, actorId: context.actorId, actorRole: context.actorRole, sessionId: context.sessionId, correlationId: context.correlationId, ipAddress: context.ipAddress, userAgent: context.userAgent };
 }
 

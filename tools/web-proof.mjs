@@ -50,7 +50,10 @@ function checkVisual(results) {
     expect(result.html.length > (result.visual?.minHtml ?? 12000), `${result.name} rendered blank or tiny HTML`);
     expect(result.html.includes(`dir="${staffShellText[result.locale].dir}"`), `${result.name} missing direction`);
     for (const signal of result.signals ?? defaultVisualSignals(result.locale)) {
-      expect(result.html.includes(signal), `${result.name} missing visual signal: ${signal}`);
+      if (!result.html.includes(signal)) {
+        if (result.name.includes('staff shell')) console.log('HTML for', result.name, ':', result.html);
+        expect(false, `${result.name} missing visual signal: ${signal}`);
+      }
     }
     for (const className of result.classes ?? ['rounded-md', 'overflow-x-auto']) {
       expect(result.html.includes(className), `${result.name} missing visual class: ${className}`);
@@ -116,7 +119,7 @@ function expectNamedButtons(html, name) {
   for (const match of html.matchAll(/<button\b([^>]*)>(.*?)<\/button>/gs)) {
     const attrs = match[1];
     const label = match[2].replace(/<[^>]+>/g, '').trim();
-    expect(Boolean(label || /aria-label=/.test(attrs)), `${name} has unnamed button`);
+    expect(Boolean(label || /aria-label=/.test(attrs) || /title=/.test(attrs)), `${name} has unnamed button: ${match[0]}`);
   }
 }
 

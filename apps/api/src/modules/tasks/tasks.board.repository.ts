@@ -119,7 +119,6 @@ export class TasksBoardRepository {
       where: {
         AND: [{ OR: [{ status: { not: 'DONE' } }, { status: 'DONE', updatedAt: { gte: completedSince } }] }],
         OR: [
-          ...(scope.isAdmin ? [{}] : []),
           { ownerId: scope.userId },
           { assigneeId: scope.userId },
           { nextActionWhoId: scope.userId },
@@ -127,9 +126,6 @@ export class TasksBoardRepository {
           // B3: department members see NORMAL tasks assigned to their department
           // (mirrors tasks.access.ts isDepartmentMember — keep the two in sync).
           ...(scope.departmentId ? [{ confidentialityLevel: 'NORMAL' as const, assignedDepartmentId: scope.departmentId }] : []),
-          ...(scope.isManager && scope.branchId
-            ? [{ confidentialityLevel: 'NORMAL' as const, OR: [{ owner: { branchId: scope.branchId } }, { assignee: { branchId: scope.branchId } }, { nextActionWho: { branchId: scope.branchId } }] }]
-            : []),
         ],
       },
       orderBy: [{ boardPosition: 'asc' }, { dueAt: 'asc' }, { createdAt: 'asc' }],

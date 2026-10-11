@@ -24,6 +24,7 @@ export type AssignmentOptionDto = {
 export type AssignmentUserOptionDto = AssignmentOptionDto & {
   departmentId: string | null;
   roleCode: string;
+  activeTasksCount?: number;
 };
 
 export type AssignmentOptionsResponseDto = {

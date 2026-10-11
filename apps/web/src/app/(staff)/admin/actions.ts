@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
@@ -17,28 +18,67 @@ export async function saveBranchAction(formData: FormData): Promise<void> {
     }),
     method: id ? 'PATCH' : 'POST',
   });
-  redirect(`/admin?locale=${locale}&admin=${state(response)}`);
+  revalidatePath('/admin', 'layout');
+  redirect(`/admin/branches?locale=${locale}&admin=${state(response)}`);
+}
+
+export async function saveDepartmentAction(formData: FormData): Promise<void> {
+  const locale = safeLocale(formData.get('locale'));
+  const id = String(formData.get('id') ?? '').trim();
+  const response = await adminFetch(id ? `/departments/${encodeURIComponent(id)}` : '/departments', {
+    body: JSON.stringify({
+      code: text(formData, 'code'),
+      nameEn: text(formData, 'nameEn'),
+      nameAr: text(formData, 'nameAr'),
+      branchId: text(formData, 'branchId'),
+    }),
+    method: id ? 'PATCH' : 'POST',
+  });
+  revalidatePath('/admin', 'layout');
+  redirect(`/admin/branches?locale=${locale}&admin=${state(response)}`);
 }
 
 export async function saveCategoryAction(formData: FormData): Promise<void> {
   const locale = safeLocale(formData.get('locale'));
   const id = String(formData.get('id') ?? '').trim();
+  const payload = {
+    code: text(formData, 'code'),
+    nameEn: text(formData, 'nameEn'),
+    nameAr: text(formData, 'nameAr'),
+    departmentId: String(formData.get('departmentId') ?? '').trim() || null,
+    branchId: String(formData.get('branchId') ?? '').trim() || null,
+    isExternal: formData.get('isExternal') === 'true',
+    isInternal: formData.get('isInternal') === 'true',
+  };
   const response = await adminFetch(id ? `/admin/categories/${encodeURIComponent(id)}` : '/admin/categories', {
-    body: JSON.stringify({
-      code: text(formData, 'code'),
-      nameEn: text(formData, 'nameEn'),
-      nameAr: text(formData, 'nameAr'),
-      parentId: String(formData.get('parentId') ?? '').trim() || null,
-    }),
+    body: JSON.stringify(payload),
     method: id ? 'PATCH' : 'POST',
   });
-  redirect(`${returnTo(formData, '/admin')}?locale=${locale}&admin=${state(response)}`);
+  revalidatePath('/admin', 'layout');
+  redirect(`${returnTo(formData, '/admin/categories')}?locale=${locale}&admin=${state(response)}`);
+}
+
+export async function deactivateBranchAction(formData: FormData): Promise<void> {
+  const locale = safeLocale(formData.get('locale'));
+  const id = text(formData, 'id');
+  const response = await adminFetch(`/branches/${encodeURIComponent(id)}/deactivate`, { method: 'POST' });
+  revalidatePath('/admin', 'layout');
+  redirect(`/admin/branches?locale=${locale}&admin=${state(response)}`);
+}
+
+export async function deactivateDepartmentAction(formData: FormData): Promise<void> {
+  const locale = safeLocale(formData.get('locale'));
+  const id = text(formData, 'id');
+  const response = await adminFetch(`/departments/${encodeURIComponent(id)}/deactivate`, { method: 'POST' });
+  revalidatePath('/admin', 'layout');
+  redirect(`/admin/branches?locale=${locale}&admin=${state(response)}`);
 }
 
 export async function deactivateCategoryAction(formData: FormData): Promise<void> {
   const locale = safeLocale(formData.get('locale'));
   const id = text(formData, 'id');
   const response = await adminFetch(`/admin/categories/${encodeURIComponent(id)}/deactivate`, { method: 'POST' });
+  revalidatePath('/admin', 'layout');
   redirect(`${returnTo(formData, '/admin/categories')}?locale=${locale}&admin=${state(response)}`);
 }
 
@@ -59,6 +99,7 @@ export async function saveSlaPolicyAction(formData: FormData): Promise<void> {
     }),
     method: 'PATCH',
   });
+  revalidatePath('/admin', 'layout');
   redirect(`${returnTo(formData, '/admin/categories')}?locale=${locale}&admin=${state(response)}`);
 }
 

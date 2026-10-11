@@ -94,21 +94,19 @@ function PortalTrackingView({ initialFeedback, initialFollowUp, initialPhone, in
   async function sendFollowUp(event: React.FormEvent) {
     event.preventDefault();
     if (!portalSession || !followUp.trim()) return setFeedback('validation');
-    if (tracking && isTerminal(tracking.status)) return setFeedback('closed');
     setBusy(true);
     const result = await submitPortalFollowUp(portalSession, followUp);
     setBusy(false);
-    if (!result.ok) return setFeedback(tracking && isTerminal(tracking.status) ? 'denied' : feedbackFromCode(result.error.code));
+    if (!result.ok) return setFeedback(feedbackFromCode(result.error.code));
     setFeedback('followup');
   }
 
   async function sendAttachment(file: File | null) {
     if (!portalSession || !file) return setFeedback('validation');
-    if (tracking && isTerminal(tracking.status)) return setFeedback('closed');
     setBusy(true);
     const result = await uploadPortalAttachment(portalSession, file);
     setBusy(false);
-    if (!result.ok) return setFeedback(tracking && isTerminal(tracking.status) ? 'denied' : feedbackFromCode(result.error.code));
+    if (!result.ok) return setFeedback(feedbackFromCode(result.error.code));
     setFeedback('attachment');
   }
 
@@ -147,7 +145,6 @@ function PortalTrackingView({ initialFeedback, initialFollowUp, initialPhone, in
               <PortalFollowUpPanel
                 attachmentSubmitted={feedback === 'attachment'}
                 busy={busy}
-                closed={isTerminal(tracking.status)}
                 locale={locale}
                 onAttachmentSubmit={sendAttachment}
                 onTextChange={setFollowUp}

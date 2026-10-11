@@ -8,7 +8,7 @@ test('admin category SLA client forwards staff cookie and parses backend config'
     calls.push({ input, init });
     const url = String(input);
     if (url.endsWith('/admin/categories')) {
-      return jsonResponse({ items: [{ id: 'cat_1', code: 'SERVICE', nameEn: 'Service', nameAr: 'الخدمة', parentId: null, isActive: true }] });
+      return jsonResponse({ items: [{ id: 'cat_1', code: 'SERVICE', nameEn: 'Service', nameAr: 'الخدمة', departmentId: null, branchId: null, isActive: true }] });
     }
     if (url.endsWith('/sla/policies')) {
       return jsonResponse({

@@ -11,7 +11,7 @@ export type PortalComplaintCreateRequest = {
   customerName: string;
   customerPhone: string;
   categoryId?: string;
-  subcategoryId?: string;
+  departmentId?: string;
   description: string;
   incidentAt: string;
   branchId?: string;
@@ -43,9 +43,10 @@ export type PortalComplaintCreateResponse = {
     attachmentWarning?: PortalAttachmentWarning;
   };
 };
-export type PortalSubmissionOption = { id: string; nameEn: string; nameAr: string; parentId?: string | null };
+export type PortalSubmissionOption = { id: string; nameEn: string; nameAr: string; departmentId?: string | null; branchId?: string | null };
 export type PortalSubmissionOptions = {
   branches: PortalSubmissionOption[];
+  departments: Array<{ id: string; nameEn: string; nameAr: string; branchId?: string | null }>;
   categories: PortalSubmissionOption[];
   severities: Array<'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>;
 };

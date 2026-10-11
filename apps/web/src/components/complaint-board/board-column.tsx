@@ -40,10 +40,10 @@ export function ComplaintColumnShell({ children, count, dimmed = false, disabled
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: stage.id, disabled });
   return (
-    <li aria-label={label} className="w-72 shrink-0 snap-start">
+    <li aria-label={label} className="w-full">
       <section
         aria-disabled={disabled || undefined}
-        className={`grid max-h-full content-start gap-2 rounded-xl border p-2 transition-colors ${
+        className={`grid h-full content-start gap-2 rounded-xl border p-2 transition-colors ${
           dimmed
             ? 'border-line-subtle bg-board-column opacity-45'
             : isOver

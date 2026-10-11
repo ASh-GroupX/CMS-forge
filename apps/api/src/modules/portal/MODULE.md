@@ -22,6 +22,7 @@ Agent context manifest. Read this before editing the module.
 - `portal_sessions`
 - `branches`
 - `categories`
+- `departments`
 
 ## May depend on
 

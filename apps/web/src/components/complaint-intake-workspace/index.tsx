@@ -13,11 +13,17 @@ export function ComplaintIntakeWorkspace({
   locale,
   lookupState,
   options,
+  defaultPhone,
+  relatedTo,
+  canEditIncidentDate,
 }: {
   createState?: CreateFormFixtureState | undefined;
   locale: Locale;
   lookupState?: LookupFixtureState | undefined;
   options?: ComplaintFormOptions | null | undefined;
+  defaultPhone?: string | undefined;
+  relatedTo?: string | undefined;
+  canEditIncidentDate?: boolean;
 }) {
   const [lookupSelection, setLookupSelection] = useState<LookupSelection | null>(null);
   const t = complaintCreateText[locale].intake;
@@ -25,8 +31,8 @@ export function ComplaintIntakeWorkspace({
   return (
     <section className="grid gap-4" aria-label={t.title}>
       <PageHeader description={t.description} eyebrow={t.eyebrow} title={t.title} />
-      <CustomerVehicleLookup locale={locale} onSelectionChange={setLookupSelection} state={lookupState} />
-      <ComplaintCreateForm locale={locale} lookupSelection={lookupSelection} options={options} state={createState} />
+      <CustomerVehicleLookup locale={locale} onSelectionChange={setLookupSelection} state={lookupState} defaultPhone={defaultPhone} />
+      <ComplaintCreateForm locale={locale} lookupSelection={lookupSelection} options={options} state={createState} relatedTo={relatedTo} canEditIncidentDate={canEditIncidentDate} />
     </section>
   );
 }

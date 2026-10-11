@@ -8,26 +8,36 @@ type DataSource = typeof dataSources[number];
 
 export type CreateComplaintRequestDto = {
   customerName: string;
-  customerPhone?: string | null;
-  customerNumber?: string | null;
-  customerSource?: DataSource | null;
+  customerPhone?: string | null | undefined;
+  customerNumber?: string | null | undefined;
+  customerSource?: DataSource | null | undefined;
   categoryId: string;
-  subcategoryId: string;
   description: string;
   incidentAt: string;
   subject: string;
   severity: ComplaintSeverity;
-  vehicleRelated?: boolean;
-  vehicleVin?: string | null;
-  vehicleId?: string | null;
-  vehiclePlate?: string | null;
-  vehicleBrand?: string | null;
-  vehicleModel?: string | null;
-  vehicleModelYear?: number | null;
-  vehicleSource?: DataSource | null;
-  vehicleDataUnavailableReason?: string | null;
-  departmentId?: string | null;
-  saveAsDraft?: boolean;
+  type?: string | undefined; // New: Action Request, Complaint, etc.
+  vehicleRelated?: boolean | undefined;
+  vehicleVin?: string | null | undefined;
+  vehicleId?: string | null | undefined;
+  vehiclePlate?: string | null | undefined;
+  vehicleBrand?: string | null | undefined;
+  vehicleModel?: string | null | undefined;
+  vehicleModelYear?: number | null | undefined;
+  channel?: string | undefined;
+  customerType?: string | undefined;
+  lastServiceDate?: string | null | undefined;
+  odometer?: number | null | undefined;
+  warrantyActive?: boolean | null | undefined;
+  salesAdvisorName?: string | null | undefined;
+  rootCauseCategory?: string | null | undefined;
+  repeatCustomer?: boolean | null | undefined;
+  vehicleSource?: DataSource | null | undefined;
+  vehicleDataUnavailableReason?: string | null | undefined;
+  departmentId?: string | null | undefined;
+  saveAsDraft?: boolean | undefined;
+  templateId?: string | null | undefined;
+  templateData?: any | undefined;
 };
 
 export type CreateComplaintResponseDto = {
@@ -42,11 +52,11 @@ export function parseCreateComplaintBody(body: unknown): CreateComplaintRequestD
     customerNumber: optionalText(input.customerNumber, 'customerNumber'),
     customerSource: optionalDataSource(input.customerSource, 'customerSource'),
     categoryId: requiredText(input.categoryId, 'categoryId'),
-    subcategoryId: requiredText(input.subcategoryId, 'subcategoryId'),
     description: requiredText(input.description, 'description'),
     incidentAt: requiredText(input.incidentAt, 'incidentAt'),
     subject: requiredText(input.subject, 'subject'),
-    severity: enumValue(input.severity, ComplaintSeverity, 'severity'),
+    severity: enumValue(input.severity, ComplaintSeverity as any, 'severity'),
+    type: optionalText(input.type, 'type') ?? undefined,
     vehicleRelated: input.vehicleRelated === true,
     vehicleVin: optionalText(input.vehicleVin, 'vehicleVin'),
     vehicleId: optionalText(input.vehicleId, 'vehicleId'),
@@ -54,10 +64,20 @@ export function parseCreateComplaintBody(body: unknown): CreateComplaintRequestD
     vehicleBrand: optionalText(input.vehicleBrand, 'vehicleBrand'),
     vehicleModel: optionalText(input.vehicleModel, 'vehicleModel'),
     vehicleModelYear: optionalNumber(input.vehicleModelYear, 'vehicleModelYear'),
+    channel: optionalText(input.channel, 'channel') ?? undefined,
+    customerType: optionalText(input.customerType, 'customerType') ?? undefined,
+    lastServiceDate: optionalText(input.lastServiceDate, 'lastServiceDate'),
+    odometer: optionalNumber(input.odometer, 'odometer'),
+    warrantyActive: input.warrantyActive !== undefined ? input.warrantyActive === true : undefined,
+    salesAdvisorName: optionalText(input.salesAdvisorName, 'salesAdvisorName'),
+    rootCauseCategory: optionalText(input.rootCauseCategory, 'rootCauseCategory'),
+    repeatCustomer: input.repeatCustomer !== undefined ? input.repeatCustomer === true : undefined,
     vehicleSource: optionalDataSource(input.vehicleSource, 'vehicleSource'),
     vehicleDataUnavailableReason: optionalText(input.vehicleDataUnavailableReason, 'vehicleDataUnavailableReason'),
     departmentId: optionalText(input.departmentId, 'departmentId'),
     saveAsDraft: input.saveAsDraft === true,
+    templateId: optionalText(input.templateId, 'templateId'),
+    templateData: input.templateData !== undefined ? input.templateData : undefined,
   };
 }
 
@@ -69,12 +89,36 @@ export function toCreateComplaintInput(
   const { actorId, correlationId, ipAddress, userAgent } = context;
   return {
     ...body,
+    customerPhone: body.customerPhone ?? null,
+    customerNumber: body.customerNumber ?? null,
+    customerSource: body.customerSource ?? null,
+    type: body.type,
+    vehicleRelated: body.vehicleRelated,
+    vehicleVin: body.vehicleVin ?? null,
+    vehicleId: body.vehicleId ?? null,
+    vehiclePlate: body.vehiclePlate ?? null,
+    vehicleBrand: body.vehicleBrand ?? null,
+    vehicleModel: body.vehicleModel ?? null,
+    vehicleModelYear: body.vehicleModelYear ?? null,
+    channel: body.channel ?? null,
+    customerType: body.customerType ?? null,
+    lastServiceDate: body.lastServiceDate ? new Date(body.lastServiceDate) : null,
+    odometer: body.odometer ?? null,
+    warrantyActive: body.warrantyActive ?? null,
+    salesAdvisorName: body.salesAdvisorName ?? null,
+    rootCauseCategory: body.rootCauseCategory ?? null,
+    repeatCustomer: body.repeatCustomer ?? null,
+    vehicleSource: body.vehicleSource ?? null,
+    vehicleDataUnavailableReason: body.vehicleDataUnavailableReason ?? null,
+    departmentId: body.departmentId ?? null,
+    saveAsDraft: body.saveAsDraft,
+    templateId: body.templateId ?? null,
     branchId,
     actorId: actorId ?? null,
     correlationId: correlationId ?? null,
     ipAddress: ipAddress ?? null,
     userAgent: userAgent ?? null,
-  };
+  } as CreateInternalComplaintInput;
 }
 
 function objectBody(body: unknown): Record<string, unknown> {

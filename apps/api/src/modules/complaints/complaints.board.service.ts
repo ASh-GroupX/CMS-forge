@@ -18,7 +18,7 @@ const TERMINAL_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 // column without the frontend reconstructing the state machine.
 const TRANSITION_TARGET = new Map<string, ComplaintStatus>(WORKFLOW_TRANSITIONS.map((item) => [`${item.fromStatus}:${item.action}`, item.toStatus]));
 
-export type ComplaintBoardActor = { userId: string | null; roleCode: RoleCode; branchId: string | null };
+export type ComplaintBoardActor = { userId: string | null; roleCode: RoleCode; branchId: string | null; permissions?: string[] };
 
 @Injectable()
 export class ComplaintsBoardService {
@@ -31,9 +31,33 @@ export class ComplaintsBoardService {
     const [stages, queue] = await Promise.all([
       this.boardRepository.listStages(),
       // Identical branch/role scoping as GET /complaints — from the server session only.
-      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode }),
+      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode, userId: actor.userId }),
     ]);
     return buildComplaintBoard(stages, recentQueue(queue, now), (card) => allowedTransitionsFor(this.complaintsService, card, actor));
+  }
+
+  async boardByDepartment(actor: ComplaintBoardActor, now: Date = new Date()): Promise<ComplaintBoardResponseDto> {
+    const [departments, queue] = await Promise.all([
+      this.boardRepository.listActiveDepartments(),
+      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode, userId: actor.userId }),
+    ]);
+    return buildComplaintBoardByDepartment(departments, recentQueue(queue, now), (card) => allowedTransitionsFor(this.complaintsService, card, actor));
+  }
+
+  async boardByBranch(actor: ComplaintBoardActor, now: Date = new Date()): Promise<ComplaintBoardResponseDto> {
+    const [branches, queue] = await Promise.all([
+      this.boardRepository.listActiveBranches(),
+      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode, userId: actor.userId }),
+    ]);
+    return buildComplaintBoardByBranch(branches, recentQueue(queue, now), (card) => allowedTransitionsFor(this.complaintsService, card, actor));
+  }
+
+  async boardByCategory(actor: ComplaintBoardActor, now: Date = new Date()): Promise<ComplaintBoardResponseDto> {
+    const [categories, queue] = await Promise.all([
+      this.boardRepository.listActiveCategories(),
+      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode, userId: actor.userId }),
+    ]);
+    return buildComplaintBoardByCategory(categories, recentQueue(queue, now), (card) => allowedTransitionsFor(this.complaintsService, card, actor));
   }
 }
 
@@ -41,7 +65,7 @@ export class ComplaintsBoardService {
 // enforced by ComplaintsService), each tagged with its target status.
 function allowedTransitionsFor(service: ComplaintsService, card: ComplaintQueueItemDto, actor: ComplaintBoardActor): ComplaintBoardTransitionDto[] {
   return service
-    .allowedActionsFor(card, { roleCode: actor.roleCode, userId: actor.userId })
+    .allowedActionsFor(card, { roleCode: actor.roleCode, userId: actor.userId, permissions: actor.permissions ?? [] })
     .flatMap((action) => transitionDto(card.status, action));
 }
 
@@ -88,3 +112,131 @@ export function buildComplaintBoard(
 function toStageDto(stage: ComplaintBoardStageRecord): ComplaintBoardStageDto {
   return { id: stage.id, code: stage.code, nameEn: stage.nameEn, nameAr: stage.nameAr, color: stage.color, position: stage.position, mappedComplaintStatus: stage.mappedComplaintStatus };
 }
+
+// ── Department board projection ──
+
+export function buildComplaintBoardByDepartment(
+  departments: { id: string; code: string; nameEn: string; nameAr: string }[],
+  cards: ComplaintQueueItemDto[],
+  transitionsFor: (card: ComplaintQueueItemDto) => ComplaintBoardTransitionDto[],
+): ComplaintBoardResponseDto {
+  // Map departments to the ComplaintBoardStageDto shape for the frontend
+  const stages: ComplaintBoardStageDto[] = departments.map((dept, index) => ({
+    id: dept.id,
+    code: dept.code,
+    nameEn: dept.nameEn,
+    nameAr: dept.nameAr,
+    color: getDepartmentColor(dept.code),
+    position: index,
+    mappedComplaintStatus: null,
+  }));
+
+  // Add an "Unassigned" pseudo-department column at the end
+  const unassignedId = 'UNASSIGNED_DEPT';
+  stages.push({
+    id: unassignedId,
+    code: 'UNASSIGNED',
+    nameEn: 'Unassigned',
+    nameAr: 'غير مكلف بقسم',
+    color: 'bg-surface-raised text-content-muted',
+    position: stages.length,
+    mappedComplaintStatus: null,
+  });
+
+  const grouped = new Map<string, ComplaintBoardCardDto[]>();
+  for (const stage of stages) grouped.set(stage.id, []);
+
+  for (const card of cards) {
+    const stageId = card.assignedDepartmentId && grouped.has(card.assignedDepartmentId)
+      ? card.assignedDepartmentId
+      : unassignedId;
+    grouped.get(stageId)!.push({ ...card, stageId, allowedTransitions: transitionsFor(card) });
+  }
+
+  const activeStages = stages.filter(stage => grouped.get(stage.id)!.length > 0);
+
+  return {
+    stages: activeStages,
+    columns: activeStages.map((stage) => ({ stageId: stage.id, cards: grouped.get(stage.id) ?? [] })),
+  };
+}
+
+function getDepartmentColor(code: string): string {
+  // Matches CSS variables in globals.css for department colors
+  switch (code) {
+    case 'SALES': return 'var(--dept-sales)';
+    case 'SERVICE': return 'var(--dept-service)';
+    case 'PARTS': return 'var(--dept-parts)';
+    case 'BODY_PAINT': return 'var(--dept-body-paint)';
+    case 'FINANCE': return 'var(--dept-finance)';
+    case 'CUSTOMER_CARE': return 'var(--dept-customer-care)';
+    default: return 'var(--stage-slate)';
+  }
+}
+
+export function buildComplaintBoardByBranch(
+  branches: { id: string; code: string; nameEn: string; nameAr: string }[],
+  cards: ComplaintQueueItemDto[],
+  transitionsFor: (card: ComplaintQueueItemDto) => ComplaintBoardTransitionDto[],
+): ComplaintBoardResponseDto {
+  const stages: ComplaintBoardStageDto[] = branches.map((b, index) => ({
+    id: b.id,
+    code: b.code,
+    nameEn: b.nameEn,
+    nameAr: b.nameAr,
+    color: 'var(--stage-slate)',
+    position: index,
+    mappedComplaintStatus: null,
+  }));
+
+  const grouped = new Map<string, ComplaintBoardCardDto[]>();
+  for (const stage of stages) grouped.set(stage.id, []);
+
+  for (const card of cards) {
+    const stageId = card.branchId && grouped.has(card.branchId) ? card.branchId : null;
+    if (stageId) {
+      grouped.get(stageId)!.push({ ...card, stageId, allowedTransitions: transitionsFor(card) });
+    }
+  }
+
+  const activeStages = stages.filter(stage => grouped.get(stage.id)!.length > 0);
+
+  return {
+    stages: activeStages,
+    columns: activeStages.map((stage) => ({ stageId: stage.id, cards: grouped.get(stage.id) ?? [] })),
+  };
+}
+
+export function buildComplaintBoardByCategory(
+  categories: { id: string; code: string; nameEn: string; nameAr: string }[],
+  cards: ComplaintQueueItemDto[],
+  transitionsFor: (card: ComplaintQueueItemDto) => ComplaintBoardTransitionDto[],
+): ComplaintBoardResponseDto {
+  const stages: ComplaintBoardStageDto[] = categories.map((c, index) => ({
+    id: c.id,
+    code: c.code,
+    nameEn: c.nameEn,
+    nameAr: c.nameAr,
+    color: 'var(--stage-slate)',
+    position: index,
+    mappedComplaintStatus: null,
+  }));
+
+  const grouped = new Map<string, ComplaintBoardCardDto[]>();
+  for (const stage of stages) grouped.set(stage.id, []);
+
+  for (const card of cards) {
+    const stageId = card.categoryId && grouped.has(card.categoryId) ? card.categoryId : null;
+    if (stageId) {
+      grouped.get(stageId)!.push({ ...card, stageId, allowedTransitions: transitionsFor(card) });
+    }
+  }
+
+  const activeStages = stages.filter(stage => grouped.get(stage.id)!.length > 0);
+
+  return {
+    stages: activeStages,
+    columns: activeStages.map((stage) => ({ stageId: stage.id, cards: grouped.get(stage.id) ?? [] })),
+  };
+}
+

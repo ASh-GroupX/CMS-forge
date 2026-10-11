@@ -89,6 +89,9 @@ export async function proofFetch(input) {
     currentHolder: [{ currentHolderId: 'usr_proof', currentHolderName: 'Proof Admin', count: 2 }],
   });
   if (path === '/reports/dashboard') return json({ summary: { openComplaints: 9, overdueComplaints: 2, slaWarningComplaints: 3, closedComplaints: 7, averageTatHours: 18 } });
+  if (path === '/reports/premium-dashboard') return json({ summary: { openComplaints: 9, overdueComplaints: 2, slaWarningComplaints: 3, closedComplaints: 7, averageTatHours: 18 } });
+  if (path === '/internal-tickets/options') return json({ categories: [], departments: [] });
+  if (path === '/internal-tickets/team-workload') return json({ workload: [] });
   if (path === '/reports/kpis') return json({ kpis: proofKpis() });
   if (path === '/reports/catalog') return json({ items: [
     { id: 'RPT-001', name: 'Open complaints summary', users: 'Managers', requiredFilters: ['date', 'branch'], status: 'DELIVERED', signoffRequired: false, exportable: true, unavailableReason: null },

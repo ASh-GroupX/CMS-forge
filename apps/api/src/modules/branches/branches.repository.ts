@@ -72,4 +72,11 @@ export class BranchesRepository {
       select: branchSelect,
     });
   }
+
+  async delete(id: string, client: BranchClient = this.prisma): Promise<BranchRecord> {
+    return client.branch.delete({
+      where: { id },
+      select: branchSelect,
+    });
+  }
 }

@@ -1,19 +1,27 @@
 import { Injectable } from '@nestjs/common';
-import { ComplaintSeverity, RoleCode } from '@prisma/client';
+import { ComplaintSeverity, RoleCode, ComplaintType } from '@prisma/client';
 import type { StaffPrincipal } from '../../core/auth.guard.js';
 import { PrismaService } from '../../core/http-kernel.js';
 
+function hasGlobalView(principal: StaffPrincipal): boolean {
+  if (principal.roleCode === RoleCode.ADMIN || principal.roleCode === RoleCode.CR_MANAGER) return true;
+  return principal.permissions?.includes('COMPLAINT_VIEW_ALL') ?? false;
+}
+
 export type ComplaintFormOptions = {
   branches: Array<{ id: string; code: string; nameEn: string; nameAr: string }>;
-  categories: Array<{ id: string; code: string; nameEn: string; nameAr: string; parentId: string | null }>;
-  departments: Array<{ id: string; code: string; nameEn: string; nameAr: string }>;
+  categories: Array<{ id: string; code: string; nameEn: string; nameAr: string; departmentId: string | null; branchId: string | null }>;
+  departments: Array<{ id: string; code: string; nameEn: string; nameAr: string; branchId: string | null }>;
   severities: ComplaintSeverity[];
+  types: ComplaintType[];
 };
 
 export type PublicComplaintFormOptions = {
   branches: Array<{ id: string; nameEn: string; nameAr: string }>;
-  categories: Array<{ id: string; nameEn: string; nameAr: string; parentId: string | null }>;
+  departments: Array<{ id: string; nameEn: string; nameAr: string; branchId: string | null }>;
+  categories: Array<{ id: string; nameEn: string; nameAr: string; departmentId: string | null; branchId: string | null }>;
   severities: ComplaintSeverity[];
+  types: ComplaintType[];
 };
 
 @Injectable()
@@ -21,24 +29,29 @@ export class ComplaintFormOptionsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async listPublic(): Promise<PublicComplaintFormOptions> {
-    const [branches, categories] = await Promise.all([
+    const [branches, departments, categories] = await Promise.all([
       this.prisma.branch.findMany({
         orderBy: [{ nameEn: 'asc' }, { id: 'asc' }],
         select: { id: true, nameEn: true, nameAr: true },
         where: { isActive: true },
       }),
+      this.prisma.department.findMany({
+        orderBy: [{ nameEn: 'asc' }, { id: 'asc' }],
+        select: { id: true, nameEn: true, nameAr: true, branchId: true },
+        where: { isActive: true },
+      }),
       this.prisma.category.findMany({
         orderBy: [{ nameEn: 'asc' }, { id: 'asc' }],
-        select: { id: true, nameEn: true, nameAr: true, parentId: true },
+        select: { id: true, nameEn: true, nameAr: true, departmentId: true, branchId: true },
         where: { isActive: true },
       }),
     ]);
-    return { branches, categories, severities: Object.values(ComplaintSeverity) };
+    return { branches, departments, categories, severities: Object.values(ComplaintSeverity), types: Object.values(ComplaintType) };
   }
 
   async list(principal: StaffPrincipal): Promise<ComplaintFormOptions> {
-    const branchScope = principal.roleCode === RoleCode.ADMIN ? {} : { id: principal.branchId ?? '' };
-    const departmentScope = principal.roleCode === RoleCode.ADMIN ? {} : { OR: [{ branchId: principal.branchId ?? '' }, { branchId: null }] };
+    const isGlobal = hasGlobalView(principal);
+    const branchScope = isGlobal ? {} : { id: principal.branchId ?? '' };
     const [branches, categories, departments] = await Promise.all([
       this.prisma.branch.findMany({
         orderBy: [{ nameEn: 'asc' }, { code: 'asc' }],
@@ -47,15 +60,15 @@ export class ComplaintFormOptionsService {
       }),
       this.prisma.category.findMany({
         orderBy: [{ nameEn: 'asc' }, { code: 'asc' }],
-        select: { id: true, code: true, nameEn: true, nameAr: true, parentId: true },
+        select: { id: true, code: true, nameEn: true, nameAr: true, departmentId: true, branchId: true },
         where: { isActive: true },
       }),
       this.prisma.department.findMany({
         orderBy: [{ nameEn: 'asc' }, { code: 'asc' }],
-        select: { id: true, code: true, nameEn: true, nameAr: true },
-        where: { isActive: true, ...departmentScope },
+        select: { id: true, code: true, nameEn: true, nameAr: true, branchId: true },
+        where: { isActive: true, ...(isGlobal ? {} : { OR: [{ branchId: principal.branchId ?? '' }, { branchId: null }] }) },
       }),
     ]);
-    return { branches, categories, departments, severities: Object.values(ComplaintSeverity) };
+    return { branches, categories, departments, severities: Object.values(ComplaintSeverity), types: Object.values(ComplaintType) };
   }
 }

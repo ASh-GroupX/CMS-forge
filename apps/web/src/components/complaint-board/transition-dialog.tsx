@@ -78,7 +78,7 @@ export function TransitionDialog({ locale, onClose, onSuccess, options, pending,
           <form className="grid gap-3" onSubmit={onSubmit}>
             {action ? <WorkflowFields action={action} assignmentOptions={legacyAssignmentOptions(staff, options)} locale={locale} options={options} text={wf} vehicleNeedsUnavailableReason={false} /> : null}
             {action && destructiveActions.has(action) ? (
-              <label className="grid gap-1 rounded-sm border border-status-warning-border bg-status-warning-bg px-3 py-2 text-sm text-content-strong">
+              <label className="grid gap-1 rounded-sm border border-amber-500/30 bg-amber-50 dark:bg-amber-950/80 dark:border-amber-900 px-3 py-2 text-sm text-amber-900 dark:text-amber-200">
                 <span className="font-semibold">{confirm.title}</span>
                 <span className="flex items-center gap-2">
                   <input className="size-4" name="confirmDestructive" type="checkbox" />

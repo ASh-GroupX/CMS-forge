@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
-import Script from 'next/script';
 import React from 'react';
 import type { ReactNode } from 'react';
 import '@fontsource-variable/ibm-plex-sans/wght.css';
@@ -27,19 +26,13 @@ export function rootDirection(locale: Locale) {
   return staffShellText[locale].dir;
 }
 
-const themeScript = `
-try {
-  document.documentElement.classList.toggle('dark', localStorage.getItem('cms-theme') === 'dark');
-} catch {}
-`;
-
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const locale = resolveRootLocale((await headers()).get(rootLocaleHeader));
 
   return (
     <html lang={locale} dir={rootDirection(locale)} suppressHydrationWarning>
+      <head />
       <body>
-        <Script id="cms-theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeScript }} />
         {children}
       </body>
     </html>

@@ -7,9 +7,9 @@ import { PasswordInput } from '../components/password-input';
 export type RolePreview = 'staff' | 'admin' | 'management';
 
 export const roleNav = {
-  staff: ['today', 'sent', 'promises', 'handoff', 'queue', 'reports', 'dashboard', 'create', 'notifications'],
-  admin: ['today', 'sent', 'promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'create', 'admin', 'audit', 'notifications'],
-  management: ['today', 'sent', 'promises', 'handoff', 'queue', 'reports', 'manager', 'dashboard', 'audit', 'notifications'],
+  staff: ['dashboard', 'internalTickets', 'complaints', 'customers', 'tasks', 'communication'],
+  admin: ['dashboard', 'internalTickets', 'complaints', 'customers', 'tasks', 'communication', 'reports', 'admin', 'audit'],
+  management: ['dashboard', 'internalTickets', 'complaints', 'customers', 'tasks', 'communication', 'reports', 'audit'],
 } as const;
 
 export function RolePanel({ locale, role }: { locale: Locale; role: RolePreview }) {

@@ -43,7 +43,7 @@ export class SearchRepository {
   }
 }
 
-function branchScope(actor: SearchActor): { branchId?: string } { return actor.roleCode === RoleCode.ADMIN ? {} : { branchId: actor.branchId ?? '' }; }
+function branchScope(actor: SearchActor): { branchId?: string } { return actor.roleCode === RoleCode.ADMIN || actor.roleCode === RoleCode.CR_MANAGER ? {} : { branchId: actor.branchId ?? '' }; }
 function participantAccess(actor: SearchActor): Prisma.TaskWhereInput[] { return [{ ownerId: actor.userId }, { assigneeId: actor.userId }, { nextActionWhoId: actor.userId }, { participants: { some: { userId: actor.userId } } }]; }
 function taskAccess(actor: SearchActor): Prisma.TaskWhereInput {
   if (actor.roleCode === RoleCode.ADMIN) return {};

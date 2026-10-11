@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -107,7 +109,11 @@ export function FilterBar({
   method?: 'get' | 'post';
 }) {
   return (
-    <form action={action} className={cn('grid gap-3 border-b border-line-subtle bg-surface-raised/65 px-4 py-3 md:grid-cols-6', className)} method={method}>
+    <form 
+      action={action} 
+      className={cn('grid gap-3 border-b border-line-subtle bg-surface-raised/65 px-4 py-3 md:grid-cols-6', className)} 
+      method={method}
+    >
       {children}
     </form>
   );

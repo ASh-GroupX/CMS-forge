@@ -46,7 +46,10 @@ function parseCategory(body: unknown): AdminCategoryInput {
     code: text(input.code, 'code'),
     nameEn: text(input.nameEn, 'nameEn'),
     nameAr: text(input.nameAr, 'nameAr'),
-    parentId: optionalText(input.parentId),
+    departmentId: optionalText(input.departmentId),
+    branchId: optionalText(input.branchId),
+    isExternal: input.isExternal === 'true' || input.isExternal === true,
+    isInternal: input.isInternal === 'true' || input.isInternal === true,
   };
 }
 

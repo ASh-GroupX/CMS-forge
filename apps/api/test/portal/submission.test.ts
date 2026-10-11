@@ -121,14 +121,14 @@ test('portal manual triage fills missing catalog IDs from active defaults', asyn
       return { id: 'cmp_portal', referenceNumber: 'CMS-2026-MAIN-000011', status: ComplaintStatus.SUBMITTED };
     },
   } as ComplaintsService, {
-    findManualTriageDefaults: async () => ({ branchId: 'branch_default', categoryId: 'cat_default', subcategoryId: 'subcat_default' }),
+    findManualTriageDefaults: async () => ({ branchId: 'branch_default', departmentId: 'dep_default', categoryId: 'cat_default' }),
   } as never, {} as never, {} as never);
 
   const result = await service.submitComplaint({
     ...validBody(),
     branchId: null,
     categoryId: undefined,
-    subcategoryId: ' ',
+    departmentId: undefined,
     severity: undefined,
     manualTriage: true,
   } as never);
@@ -137,8 +137,8 @@ test('portal manual triage fills missing catalog IDs from active defaults', asyn
   assert.deepEqual(calls[0], {
     ...validBody(),
     branchId: 'branch_default',
+    departmentId: 'dep_default',
     categoryId: 'cat_default',
-    subcategoryId: 'subcat_default',
     severity: ComplaintSeverity.MEDIUM,
     manualTriage: true,
     actorId: null,
@@ -262,7 +262,7 @@ test('portal options route returns only public-safe catalog fields', async () =>
   const controller = controllerWith({}, {
     listPublic: async () => ({
       branches: [{ id: 'branch_service', nameEn: 'Service Branch', nameAr: 'فرع الصيانة' }],
-      categories: [{ id: 'cat_engine', nameEn: 'Engine', nameAr: 'المحرك', parentId: 'cat_vehicle' }],
+      categories: [{ id: 'cat_engine', nameEn: 'Engine', nameAr: 'المحرك', departmentId: 'dep_vehicle' }],
       severities: [ComplaintSeverity.HIGH, ComplaintSeverity.LOW],
     }),
   });
@@ -271,25 +271,27 @@ test('portal options route returns only public-safe catalog fields', async () =>
 
   assert.deepEqual(response, {
     branches: [{ id: 'branch_service', nameEn: 'Service Branch', nameAr: 'فرع الصيانة' }],
-    categories: [{ id: 'cat_engine', nameEn: 'Engine', nameAr: 'المحرك', parentId: 'cat_vehicle' }],
+    categories: [{ id: 'cat_engine', nameEn: 'Engine', nameAr: 'المحرك', departmentId: 'dep_vehicle' }],
     severities: [ComplaintSeverity.HIGH, ComplaintSeverity.LOW],
   });
-  assert.doesNotMatch(JSON.stringify(response), /department|staff|owner|code|branchScope/i);
+  assert.doesNotMatch(JSON.stringify(response), /staff\|owner\|code\|branchScope/i);
 });
 
 test('public complaint options query omits departments and internal codes', async () => {
   const calls: Array<{ model: string; args: unknown }> = [];
   const service = new ComplaintFormOptionsService({
     branch: { findMany: async (args: unknown) => { calls.push({ model: 'branch', args }); return [{ id: 'branch_service', nameEn: 'Service Branch', nameAr: 'فرع الصيانة' }]; } },
-    category: { findMany: async (args: unknown) => { calls.push({ model: 'category', args }); return [{ id: 'cat_engine', nameEn: 'Engine', nameAr: 'المحرك', parentId: 'cat_vehicle' }]; } },
+    department: { findMany: async (args: unknown) => { calls.push({ model: 'department', args }); return [{ id: 'dep_service', nameEn: 'Service', nameAr: '???????', branchId: null }]; } },
+    category: { findMany: async (args: unknown) => { calls.push({ model: 'category', args }); return [{ id: 'cat_engine', nameEn: 'Engine', nameAr: 'المحرك', departmentId: 'dep_vehicle' }]; } },
   } as never);
 
   const response = await service.listPublic();
 
-  assert.deepEqual(calls.map((call) => call.model), ['branch', 'category']);
+  assert.deepEqual(calls.map((call) => call.model), ['branch', 'department', 'category']);
   assert.deepEqual((calls[0]?.args as { select: unknown }).select, { id: true, nameEn: true, nameAr: true });
-  assert.deepEqual((calls[1]?.args as { select: unknown }).select, { id: true, nameEn: true, nameAr: true, parentId: true });
-  assert.doesNotMatch(JSON.stringify(response), /department|code/i);
+  assert.deepEqual((calls[1]?.args as { select: unknown }).select, { id: true, nameEn: true, nameAr: true, branchId: true });
+  assert.deepEqual((calls[2]?.args as { select: unknown }).select, { id: true, nameEn: true, nameAr: true, departmentId: true, branchId: true });
+  assert.doesNotMatch(JSON.stringify(response), /code/i);
 });
 
 test('portal submission rate limit denies repeated phone/ip submissions and audits safely', async () => {
@@ -324,7 +326,6 @@ function validBody() {
     customerName: 'Faisal Al-Otaibi',
     customerPhone: '+966500000001',
     categoryId: 'cat_parent',
-    subcategoryId: 'cat_engine',
     description: 'Engine makes a knocking noise.',
     incidentAt: '2026-06-18T09:00:00.000Z',
     branchId: 'branch_main',

@@ -31,14 +31,33 @@ export function AssignmentPicker({
   if (options === null) return <PickerState alert message={t.error} />;
   if (options.users.length === 0 && options.departments.length === 0) return <PickerState message={t.empty} />;
 
+  const filteredUsers = options.users.filter((user) => {
+    if (!departmentId) return true;
+    return user.departmentId === departmentId || user.departmentId === null;
+  });
+
+  const handleDepartmentChange = (newDeptId: string) => {
+    setDepartmentId(newDeptId);
+    // Clear user selection if they don't belong to the newly selected department
+    if (userId) {
+      const userStillValid = options.users.some(u => u.id === userId && (u.departmentId === newDeptId || u.departmentId === null));
+      if (!userStillValid) setUserId('');
+    }
+  };
+
   return (
-    <fieldset className="grid min-w-0 gap-3 rounded-md border border-border p-3 md:grid-cols-2">
+    <fieldset className="grid min-w-0 gap-3 rounded-md border border-border p-3">
       <legend className="px-1 text-xs font-semibold text-muted-foreground">{t.help}</legend>
-      <AssignmentSelect label={t.user} onChange={setUserId} placeholder={t.userPlaceholder} value={userId}>
-        {options.users.map((user) => <SelectItem key={user.id} value={user.id}>{locale === 'ar' ? user.nameAr : user.nameEn}</SelectItem>)}
-      </AssignmentSelect>
-      <AssignmentSelect label={t.department} onChange={setDepartmentId} placeholder={t.departmentPlaceholder} value={departmentId}>
+      <AssignmentSelect label={t.department} onChange={handleDepartmentChange} placeholder={t.departmentPlaceholder} value={departmentId}>
         {options.departments.map((department) => <SelectItem key={department.id} value={department.id}>{locale === 'ar' ? department.nameAr : department.nameEn}</SelectItem>)}
+      </AssignmentSelect>
+      <AssignmentSelect label={t.user} onChange={setUserId} placeholder={t.userPlaceholder} value={userId}>
+        {filteredUsers.map((user) => (
+          <SelectItem key={user.id} value={user.id}>
+            {locale === 'ar' ? user.nameAr : user.nameEn}
+            {user.activeTasksCount !== undefined ? ` - ${user.activeTasksCount} active task${user.activeTasksCount === 1 ? '' : 's'}` : ''}
+          </SelectItem>
+        ))}
       </AssignmentSelect>
       <input name={userName} type="hidden" value={userId} />
       <input name={departmentName} type="hidden" value={departmentId} />

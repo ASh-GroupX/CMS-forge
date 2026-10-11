@@ -129,12 +129,20 @@ function queueRow(row: ComplaintQueueItem, t: typeof staffShellText[Locale]['wor
     subject: row.subject,
     owner: row.ownerName ?? t.unassigned,
     branch: row.branchName ?? row.branchId,
-    sla: slaUnavailable(t),
+    sla: formatSla(row),
     age: formatAge(row.updatedAt, locale),
     updated: formatDate(row.updatedAt, locale),
     action: t.actions.open,
     href: `/complaints/${encodeURIComponent(row.id)}?locale=${locale}`,
   };
+}
+
+function formatSla(row: ComplaintQueueItem): string {
+  if (row.slaState === 'ON_TRACK') return 'On time';
+  if (row.slaState === 'WARNING') return 'In progress';
+  if (row.slaState === 'BREACHED') return 'Overdue';
+  if (row.slaState === 'CLOSED') return 'Done late';
+  return row.slaState || 'Unknown';
 }
 
 function formatDate(value: string, locale: Locale): string {
@@ -165,18 +173,15 @@ function severityTone(severity: string): PrimitiveTone {
 }
 
 type FilterOption = { label: string; value: string };
-const STATUS_OPTIONS = ['DRAFT', 'SUBMITTED', 'MANAGER_REVIEW', 'BRANCH_REVIEW', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REOPENED', 'REJECTED'];
+const STATUS_OPTIONS = ['DRAFT', 'SUBMITTED', 'MANAGER_REVIEW', 'BRANCH_REVIEW', 'IN_PROGRESS', 'RESOLVED', 'COMPLETED', 'CLOSED', 'REOPENED', 'REJECTED'];
 const SEVERITY_OPTIONS = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
+const SLA_OPTIONS = ['On time', 'In progress', 'Overdue', 'Done late'];
 
 function filterOptions(rows: QueueRow[], t: typeof staffShellText[Locale]['workQueue']): Record<'status' | 'branch' | 'severity' | 'sla', FilterOption[]> {
   return {
     status: STATUS_OPTIONS.map((status) => ({ label: status, value: status })),
     branch: [...new Set(rows.map((row) => row.branch))].map((branch) => ({ label: branch, value: branch })),
     severity: SEVERITY_OPTIONS.map((severity) => ({ label: severity, value: severity })),
-    sla: [],
+    sla: SLA_OPTIONS.map((sla) => ({ label: sla, value: sla })),
   };
-}
-
-function slaUnavailable(t: typeof staffShellText[Locale]['workQueue']): string {
-  return (t.sla as typeof t.sla & { unavailable?: string }).unavailable ?? t.sla.backendScoped;
 }

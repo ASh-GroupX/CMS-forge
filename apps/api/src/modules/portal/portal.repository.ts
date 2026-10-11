@@ -4,7 +4,7 @@ import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
 
 type PortalClient = Pick<Prisma.TransactionClient, 'portalVerification' | 'portalSession'>;
-type PortalCatalogClient = Pick<Prisma.TransactionClient, 'branch' | 'category'>;
+type PortalCatalogClient = Pick<Prisma.TransactionClient, 'branch' | 'department' | 'category'>;
 
 export type CreatePortalVerificationData = {
   complaintId: string;
@@ -43,7 +43,7 @@ export type PortalSessionRecord = {
   createdAt: Date;
 };
 export type PortalSessionLookupRecord = Pick<PortalSessionRecord, 'id' | 'complaintId' | 'customerId' | 'expiresAt'>;
-export type PortalManualTriageDefaults = { branchId: string; categoryId: string; subcategoryId: string };
+export type PortalManualTriageDefaults = { branchId: string; departmentId: string; categoryId: string };
 
 @Injectable()
 export class PortalRepository {
@@ -95,15 +95,16 @@ export class PortalRepository {
   }
 
   async findManualTriageDefaults(client: PortalCatalogClient = this.prisma): Promise<PortalManualTriageDefaults | null> {
-    const [branch, subcategory] = await Promise.all([
+    const [branch, department, category] = await Promise.all([
       client.branch.findFirst({ orderBy: [{ nameEn: 'asc' }, { id: 'asc' }], select: { id: true }, where: { isActive: true } }),
+      client.department.findFirst({ orderBy: [{ nameEn: 'asc' }, { id: 'asc' }], select: { id: true }, where: { isActive: true } }),
       client.category.findFirst({
         orderBy: [{ nameEn: 'asc' }, { id: 'asc' }],
-        select: { id: true, parentId: true },
-        where: { isActive: true, parentId: { not: null } },
+        select: { id: true },
+        where: { isActive: true },
       }),
     ]);
-    return branch && subcategory?.parentId ? { branchId: branch.id, categoryId: subcategory.parentId, subcategoryId: subcategory.id } : null;
+    return branch && department && category ? { branchId: branch.id, departmentId: department.id, categoryId: category.id } : null;
   }
 }
 

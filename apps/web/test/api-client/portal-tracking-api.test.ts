@@ -112,7 +112,7 @@ test('portal submission options client loads public-safe catalogs', async () => 
     calls.push({ input, init });
     return jsonResponse({
       branches: [{ id: 'branch_service', nameEn: 'Service Branch', nameAr: 'فرع الصيانة' }],
-      categories: [{ id: 'cat_engine', nameEn: 'Engine', nameAr: 'المحرك', parentId: 'cat_vehicle' }],
+      categories: [{ id: 'cat_engine', nameEn: 'Engine', nameAr: 'المحرك', departmentId: 'dep_vehicle', branchId: null }],
       severities: ['HIGH', 'LOW'],
     });
   };

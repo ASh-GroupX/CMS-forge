@@ -52,7 +52,8 @@ const categoryRecord: AdminCategoryRecord = {
   code: 'SERVICE',
   nameEn: 'Service quality',
   nameAr: 'Service quality',
-  parentId: null,
+  departmentId: null,
+  branchId: null,
   isActive: true,
   createdAt: new Date('2026-06-20T10:00:00.000Z'),
   updatedAt: new Date('2026-06-20T11:00:00.000Z'),
@@ -227,7 +228,8 @@ test('admin category service lists creates updates and deactivates categories wi
   const txClient = {};
   const auditRecords: Array<{ input: AuditRecordInput; client: unknown }> = [];
   const service = new AdminCategoriesService({
-    parentExists: async (id) => id === 'cat_parent',
+    departmentExists: async (id) => id === 'dep_1',
+    branchExists: async (id) => id === 'branch_1',
     list: async () => [categoryRecord, { ...categoryRecord, id: 'cat_inactive', code: 'OLD', isActive: false }],
     transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
     create: async (data, client) => {
@@ -251,23 +253,24 @@ test('admin category service lists creates updates and deactivates categories wi
   const listed = await service.list();
   assert.deepEqual(listed.items.map((item) => [item.code, item.isActive]), [['SERVICE', true], ['OLD', false]]);
   assert.equal((await service.create({ code: ' SERVICE ', nameEn: ' Service ', nameAr: ' Service ' }, auditContext())).code, 'SERVICE');
-  assert.equal((await service.update('cat_1', { code: 'ENGINE', nameEn: 'Engine', nameAr: 'Engine', parentId: 'cat_parent' }, auditContext())).parentId, 'cat_parent');
+  assert.equal((await service.update('cat_1', { code: 'ENGINE', nameEn: 'Engine', nameAr: 'Engine', departmentId: 'dep_1' }, auditContext())).departmentId, 'dep_1');
   assert.equal((await service.deactivate('cat_1', auditContext())).isActive, false);
   assert.deepEqual(auditRecords.map((record) => record.input.action), ['admin_category_created', 'admin_category_updated', 'admin_category_deactivated']);
   assert.equal(auditRecords.every((record) => record.client === txClient), true);
 });
 
-test('admin category service rejects self parent and invalid parent', async () => {
+test('admin category service rejects invalid department and branch', async () => {
   const service = new AdminCategoriesService({
-    parentExists: async () => false,
+    departmentExists: async () => false,
+    branchExists: async () => false,
   } as AdminCategoriesRepository, noopAudit());
 
   await assert.rejects(
-    service.update('cat_1', { code: 'ENGINE', nameEn: 'Engine', nameAr: 'Engine', parentId: 'cat_1' }),
+    service.update('cat_1', { code: 'ENGINE', nameEn: 'Engine', nameAr: 'Engine', departmentId: 'missing' }),
     (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED',
   );
   await assert.rejects(
-    service.create({ code: 'ENGINE', nameEn: 'Engine', nameAr: 'Engine', parentId: 'missing' }),
+    service.create({ code: 'ENGINE', nameEn: 'Engine', nameAr: 'Engine', branchId: 'missing' }),
     (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED',
   );
 });

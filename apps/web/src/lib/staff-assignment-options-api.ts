@@ -5,6 +5,7 @@ export type AssignmentUserOption = {
   branchId: string | null;
   departmentId: string | null;
   roleCode: string;
+  activeTasksCount?: number;
 };
 
 export type AssignmentDepartmentOption = {
@@ -19,10 +20,12 @@ export type StaffAssignmentOptions = {
   departments: AssignmentDepartmentOption[];
 };
 
-const STAFF_SESSION_COOKIE = 'cms_staff_session';
+import { getApiBase } from './api-base';
+import { incomingCookieHeader, STAFF_SESSION_COOKIE } from './staff-request-auth';
+
 
 export async function getStaffAssignmentOptions({
-  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  apiUrl = getApiBase(),
   cookieHeader,
   fetchImpl = fetch,
 }: {
@@ -56,7 +59,8 @@ function userOption(value: unknown): value is AssignmentUserOption {
   const item = value as Partial<AssignmentUserOption>;
   return typeof item?.id === 'string' && typeof item.nameEn === 'string' && typeof item.nameAr === 'string'
     && (item.branchId === null || typeof item.branchId === 'string')
-    && (item.departmentId === null || typeof item.departmentId === 'string') && typeof item.roleCode === 'string';
+    && (item.departmentId === null || typeof item.departmentId === 'string') && typeof item.roleCode === 'string'
+    && (item.activeTasksCount === undefined || typeof item.activeTasksCount === 'number');
 }
 
 function departmentOption(value: unknown): value is AssignmentDepartmentOption {
@@ -65,11 +69,3 @@ function departmentOption(value: unknown): value is AssignmentDepartmentOption {
     && (item.branchId === null || typeof item.branchId === 'string');
 }
 
-async function incomingCookieHeader(): Promise<string> {
-  try {
-    const { cookies } = await import('next/headers');
-    return (await cookies()).toString();
-  } catch {
-    return '';
-  }
-}

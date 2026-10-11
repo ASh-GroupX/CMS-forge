@@ -1,4 +1,4 @@
-export type AdminCategory = { id: string; code: string; nameEn: string; nameAr: string; parentId: string | null; isActive: boolean };
+export type AdminCategory = { id: string; code: string; nameEn: string; nameAr: string; departmentId: string | null; branchId: string | null; isActive: boolean; isExternal?: boolean; isInternal?: boolean };
 export type AdminSlaPolicy = {
   id: string;
   severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
@@ -20,7 +20,7 @@ export type AdminSlaPolicy = {
   isActive: boolean;
 };
 
-export type AdminCategorySlaConfig = { categories: AdminCategory[]; policies: AdminSlaPolicy[] };
+export type AdminCategorySlaConfig = { categories: AdminCategory[]; policies: AdminSlaPolicy[]; departments: { id: string; nameEn: string; nameAr?: string | null }[]; branches: { id: string; nameEn: string; nameAr?: string | null }[] };
 
 const STAFF_SESSION_COOKIE = 'cms_staff_session';
 
@@ -36,15 +36,19 @@ export async function getAdminCategorySlaConfig({
   const cookies = cookieHeader ?? await incomingCookieHeader();
   if (!hasStaffSessionCookie(cookies)) return null;
   try {
-    const [categories, policies] = await Promise.all([
+    const [categories, policies, departments, branches] = await Promise.all([
       fetchImpl(new URL('/admin/categories', apiUrl), { cache: 'no-store', headers: { Accept: 'application/json', cookie: cookies } }),
       fetchImpl(new URL('/sla/policies', apiUrl), { cache: 'no-store', headers: { Accept: 'application/json', cookie: cookies } }),
+      fetchImpl(new URL('/departments', apiUrl), { cache: 'no-store', headers: { Accept: 'application/json', cookie: cookies } }),
+      fetchImpl(new URL('/branches', apiUrl), { cache: 'no-store', headers: { Accept: 'application/json', cookie: cookies } }),
     ]);
-    if (!categories.ok || !policies.ok) return null;
+    if (!categories.ok || !policies.ok || !departments.ok || !branches.ok) return null;
     const categoryBody = await categories.json() as { items?: AdminCategory[] };
     const policyBody = await policies.json() as { items?: AdminSlaPolicy[] };
-    if (!Array.isArray(categoryBody.items) || !Array.isArray(policyBody.items)) return null;
-    return { categories: categoryBody.items, policies: policyBody.items };
+    const deptBody = await departments.json() as { items?: { id: string; nameEn: string; nameAr?: string | null }[] };
+    const branchBody = await branches.json() as { items?: { id: string; nameEn: string; nameAr?: string | null }[] };
+    if (!Array.isArray(categoryBody.items) || !Array.isArray(policyBody.items) || !Array.isArray(deptBody.items) || !Array.isArray(branchBody.items)) return null;
+    return { categories: categoryBody.items, policies: policyBody.items, departments: deptBody.items, branches: branchBody.items };
   } catch {
     return null;
   }

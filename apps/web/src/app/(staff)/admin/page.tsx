@@ -23,6 +23,9 @@ export default async function AdminPage({
     ['branches', '/admin/branches'],
     ['categories', '/admin/categories'],
     ['templates', '/admin/notification-templates'],
+    ['standardProblems', '/admin/standard-problems'],
+    ['complaintTemplates', '/admin/complaint-templates'],
+    ['ticketSettings', '/admin/ticket-settings'],
   ] as const;
 
   return (

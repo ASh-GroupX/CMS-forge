@@ -14,17 +14,25 @@ type AdminAction = (formData: FormData) => void | Promise<void>;
 export function AdminMasterDataOverview({
   branchAction,
   categoryAction,
+  deactivateBranchAction,
+  deactivateCategoryAction,
+  deactivateDepartmentAction,
+  departmentAction,
   locale,
   options,
 }: {
   branchAction?: AdminAction;
   categoryAction?: AdminAction;
+  deactivateBranchAction?: AdminAction;
+  deactivateCategoryAction?: AdminAction;
+  deactivateDepartmentAction?: AdminAction;
+  departmentAction?: AdminAction;
   locale: Locale;
   options?: ComplaintFormOptions | null;
 }) {
   const shell = staffShellText[locale];
   const t = adminUsersText[locale].masterData;
-  const parentName = new Map((options?.categories ?? []).map((category) => [category.id, localizedName(category, locale)]));
+  const departmentName = new Map((options?.departments ?? []).map((department) => [department.id, localizedName(department, locale)]));
 
   return (
     <Card aria-label={t.title} className="rounded-md shadow-sm" dir={shell.dir}>
@@ -34,9 +42,10 @@ export function AdminMasterDataOverview({
       </CardHeader>
       <CardContent className="grid gap-4 p-4">
         {options ? (
-          <div className="grid gap-4 xl:grid-cols-3">
-            <EditableOptionsTable action={branchAction} itemType="branch" locale={locale} rows={options.branches} title={t.sections.branches} />
-            <EditableOptionsTable action={categoryAction} itemType="category" locale={locale} parentName={parentName} rows={options.categories} title={t.sections.categories} />
+          <div className="grid gap-4 xl:grid-cols-2">
+            <EditableOptionsTable action={branchAction} deactivateAction={deactivateBranchAction} itemType="branch" locale={locale} rows={options.branches} title={t.sections.branches} />
+            <EditableOptionsTable action={departmentAction} deactivateAction={deactivateDepartmentAction} itemType="department" locale={locale} rows={options.departments} branches={options.branches} title={t.sections.departments} />
+            <EditableOptionsTable action={categoryAction} deactivateAction={deactivateCategoryAction} itemType="category" locale={locale} departmentName={departmentName} rows={options.categories} departments={options.departments} branches={options.branches} title={t.sections.categories} />
             <SeverityTable locale={locale} values={options.severities} />
           </div>
         ) : (
@@ -49,17 +58,23 @@ export function AdminMasterDataOverview({
 
 function EditableOptionsTable({
   action,
+  deactivateAction,
   itemType,
   locale,
-  parentName = new Map(),
+  departmentName = new Map(),
   rows,
+  branches,
+  departments,
   title,
 }: {
   action?: AdminAction | undefined;
-  itemType: 'branch' | 'category';
+  deactivateAction?: AdminAction | undefined;
+  itemType: 'branch' | 'category' | 'department';
   locale: Locale;
-  parentName?: Map<string, string>;
+  departmentName?: Map<string, string>;
   rows: ComplaintFormOption[];
+  branches?: ComplaintFormOption[] | undefined;
+  departments?: ComplaintFormOption[] | undefined;
   title: string;
 }) {
   const t = adminUsersText[locale].masterData;
@@ -70,13 +85,13 @@ function EditableOptionsTable({
         {action ? (
           <details className="rounded-sm border border-line-subtle bg-surface px-2 py-1">
             <summary className="cursor-pointer text-sm font-semibold text-content-strong">{t.addValue}</summary>
-            <OptionForm action={action} itemType={itemType} locale={locale} rows={rows} />
+            <OptionForm action={action} itemType={itemType} locale={locale} rows={rows} branches={branches} departments={departments} />
           </details>
         ) : null}
       </div>
       <Table className="min-w-[34rem]">
-        <TableHeader className="bg-content-strong text-xs font-semibold text-brand-foreground">
-          <TableRow>{[...t.headers, t.actionHeader].map((header) => <TableHead className="text-start text-brand-foreground" key={header}>{header}</TableHead>)}</TableRow>
+        <TableHeader className="bg-surface-subtle text-xs font-semibold uppercase tracking-normal text-content-muted">
+          <TableRow>{[...t.headers, t.actionHeader].map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>
         </TableHeader>
         <TableBody>
           {rows.length ? rows.map((row) => (
@@ -84,11 +99,11 @@ function EditableOptionsTable({
               <TableCell className="font-semibold">{row.code}</TableCell>
               <TableCell>{localizedName(row, locale)}</TableCell>
               <TableCell>{row.nameAr}</TableCell>
-              <TableCell>{row.parentId ? parentName.get(row.parentId) ?? t.root : t.root}</TableCell>
+              <TableCell>{itemType === 'category' && row.departmentId ? departmentName.get(row.departmentId) ?? t.root : (itemType === 'category' ? t.root : null)}</TableCell>
               <TableCell>{action ? (
                 <details className="rounded-sm border border-line-subtle bg-surface-raised px-2 py-1">
                   <summary className="cursor-pointer text-sm font-semibold text-content-strong">{t.editValue}</summary>
-                  <OptionForm action={action} compact item={row} itemType={itemType} locale={locale} rows={rows} />
+                  <OptionForm action={action} compact deactivateAction={deactivateAction} item={row} itemType={itemType} locale={locale} rows={rows} branches={branches} departments={departments} />
                 </details>
               ) : null}</TableCell>
             </TableRow>
@@ -104,17 +119,23 @@ function EditableOptionsTable({
 function OptionForm({
   action,
   compact = false,
+  deactivateAction,
   item,
   itemType,
   locale,
   rows,
+  branches,
+  departments,
 }: {
   action: AdminAction;
   compact?: boolean;
+  deactivateAction?: AdminAction | undefined;
   item?: ComplaintFormOption;
-  itemType: 'branch' | 'category';
+  itemType: 'branch' | 'category' | 'department';
   locale: Locale;
   rows: ComplaintFormOption[];
+  branches?: ComplaintFormOption[] | undefined;
+  departments?: ComplaintFormOption[] | undefined;
 }) {
   const t = adminUsersText[locale].masterData;
   const button = item ? t.edit : t.add;
@@ -127,21 +148,41 @@ function OptionForm({
       <Field id={`${itemType}-${key}-code`} label={t.fields.code} name="code" value={item?.code} />
       <Field id={`${itemType}-${key}-nameEn`} label={t.fields.nameEn} name="nameEn" value={item?.nameEn} />
       <Field id={`${itemType}-${key}-nameAr`} label={t.fields.nameAr} name="nameAr" value={item?.nameAr} />
-      {itemType === 'category' ? <ParentSelect currentId={item?.id} locale={locale} rows={rows} value={item?.parentId ?? ''} /> : null}
-      <Button className={itemType === 'category' ? '' : 'md:col-start-4'} size={compact ? 'sm' : 'default'} type="submit" variant={item ? 'outline' : 'default'}>{button}</Button>
+      {itemType === 'category' ? <DepartmentSelect currentId={item?.id} locale={locale} rows={departments ?? []} value={item?.departmentId ?? ''} /> : null}
+      {itemType === 'department' ? <BranchSelect locale={locale} rows={branches ?? []} value={(item as any)?.branchId ?? ''} /> : null}
+      {itemType === 'category' ? <BranchSelect locale={locale} rows={branches ?? []} value={(item as any)?.branchId ?? ''} /> : null}
+      <div className={itemType === 'category' ? 'flex gap-2' : 'flex gap-2 md:col-start-4'}>
+        <Button size={compact ? 'sm' : 'default'} type="submit" variant={item ? 'outline' : 'default'}>{button}</Button>
+        {item && deactivateAction ? <Button formAction={deactivateAction} size={compact ? 'sm' : 'default'} type="submit" variant="destructive">{t.deactivate}</Button> : null}
+      </div>
     </form>
   );
 }
 
-function ParentSelect({ currentId, locale, rows, value }: { currentId?: string | undefined; locale: Locale; rows: ComplaintFormOption[]; value: string }) {
+function BranchSelect({ locale, rows, value }: { locale: Locale; rows: ComplaintFormOption[]; value: string }) {
+  const t = adminUsersText[locale].masterData;
+  return (
+    <label className="grid gap-1 text-sm font-medium">
+      Branch
+      <FormSelect
+        defaultValue={value}
+        name="branchId"
+        options={rows.map((row) => ({ label: localizedName(row, locale), value: row.id }))}
+        placeholder="Any branch"
+      />
+    </label>
+  );
+}
+
+function DepartmentSelect({ currentId, locale, rows, value }: { currentId?: string | undefined; locale: Locale; rows: ComplaintFormOption[]; value: string }) {
   const t = adminUsersText[locale].masterData;
   return (
     <label className="grid gap-1 text-sm font-medium">
       {t.headers[3]}
       <FormSelect
         defaultValue={value}
-        name="parentId"
-        options={rows.filter((row) => !row.parentId && row.id !== currentId).map((row) => ({ label: localizedName(row, locale), value: row.id }))}
+        name="departmentId"
+        options={rows.filter((row) => row.id !== currentId).map((row) => ({ label: localizedName(row, locale), value: row.id }))}
         placeholder={t.root}
       />
     </label>
@@ -168,8 +209,8 @@ function SeverityTable({ locale, values }: { locale: Locale; values: string[] })
       <h3 className="border-b border-line-subtle bg-surface-raised px-3 py-2 text-sm font-semibold">{t.sections.severities}</h3>
       <p className="border-b border-line-subtle px-3 py-2 text-sm text-muted-foreground">{t.severityNote}</p>
       <Table className="min-w-[24rem]">
-        <TableHeader className="bg-content-strong text-xs font-semibold text-brand-foreground">
-          <TableRow>{t.headers.slice(0, 3).map((header) => <TableHead className="text-start text-brand-foreground" key={header}>{header}</TableHead>)}</TableRow>
+        <TableHeader className="bg-surface-subtle text-xs font-semibold uppercase tracking-normal text-content-muted">
+          <TableRow>{t.headers.slice(0, 3).map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>
         </TableHeader>
         <TableBody>
           {values.map((value) => (

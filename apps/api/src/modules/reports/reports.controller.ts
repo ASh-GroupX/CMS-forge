@@ -41,6 +41,19 @@ export class ReportsController {
     return { kpis: await ReportsController.reportsService.kpiSummary({ role: requestRole(request), branchId: scopedBranchId(branchId, request) }) };
   }
 
+  @Get('premium-dashboard')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('REPORT_VIEW')
+  @BranchScoped()
+  async premiumDashboard(@Query('branchId') branchId: string | undefined, @Req() request: AuthenticatedRequest) {
+    return await ReportsController.reportsService.premiumDashboardSummary({ 
+      role: requestRole(request), 
+      branchId: scopedBranchId(branchId, request),
+      userId: request.principal?.userId ?? null,
+      departmentId: request.principal?.departmentId ?? null
+    });
+  }
+
   @Get()
   @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
   @Permissions('REPORT_VIEW')

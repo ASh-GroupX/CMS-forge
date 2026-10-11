@@ -55,7 +55,7 @@ type ManagerControlRoomBody = Partial<Record<ManagerTaskSectionKey, Partial<Staf
 const TASK_SECTIONS: readonly TaskSectionKey[] = ['completed', 'dueToday', 'overdue', 'overduePromises', 'assignedToMe', 'waitingOnMe'];
 
 export async function getEmployeeTodayTasks({
-  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  apiUrl = typeof window === 'undefined' ? (process.env.NEXT_PUBLIC_API_URL ?? process.env.API_URL ?? 'http://localhost:3000') : '',
   cookieHeader,
   fetchImpl = fetch,
 }: {
@@ -68,7 +68,7 @@ export async function getEmployeeTodayTasks({
 }
 
 export async function getEmployeeTodayTasksLoadResult({
-  apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  apiUrl = typeof window === 'undefined' ? (process.env.NEXT_PUBLIC_API_URL ?? process.env.API_URL ?? 'http://localhost:3000') : '',
   cookieHeader,
   fetchImpl = fetch,
 }: {
@@ -160,6 +160,10 @@ export async function quickAddTask(payload: QuickAddTaskPayload, fetchImpl: type
 
 export async function updateTask(taskId: string, payload: UpdateTaskPayload, fetchImpl: typeof fetch = fetch): Promise<StaffWriteResult> {
   return taskWrite(`/tasks/${encodeURIComponent(taskId)}`, payload, 'PATCH', fetchImpl);
+}
+
+export async function claimTask(taskId: string, fetchImpl: typeof fetch = fetch): Promise<StaffWriteResult> {
+  return taskWrite(`/tasks/${encodeURIComponent(taskId)}/claim`, {}, 'POST', fetchImpl);
 }
 
 function tasksFrom(body: EmployeeTodayBody): EmployeeTodayTasks | null {

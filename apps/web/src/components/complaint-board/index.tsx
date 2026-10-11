@@ -96,7 +96,7 @@ export function ComplaintBoardScreen({ board, detailAction, locale, options, sta
         <p className="mt-1 text-sm text-content-muted">{t.subtitle}</p>
       </header>
       <DndContext accessibility={{ announcements, screenReaderInstructions: { draggable: t.a11y.instructions } }} collisionDetection={closestCorners} id={dndContextId} onDragCancel={() => setActiveId(null)} onDragEnd={onDragEnd} onDragStart={onDragStart} sensors={sensors}>
-        <ol aria-label={t.boardLabel} className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3">
+        <ol aria-label={t.boardLabel} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 pb-3 items-start">
           {stages.map((stage) => {
             const cards = board.columns.find((column) => column.stageId === stage.id)?.cards ?? [];
             const { dimmed, disabled } = columnState(stage);
@@ -129,7 +129,7 @@ function BoardMessage({ columns, dir, locale, stages, text, title }: { columns?:
       <header><h2 className="text-lg font-bold tracking-tight text-content-strong">{title}</h2></header>
       <p className="rounded-lg border border-line-subtle bg-surface-raised p-4 text-sm text-content-muted" role="status">{text}</p>
       {stages && columns && locale ? (
-        <ol className="flex gap-4 overflow-x-auto pb-3">
+        <ol className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 pb-3 items-start">
           {stages.map((stage) => (
             <li className="w-72 shrink-0 rounded-xl border border-board-column-border bg-board-column p-3" key={stage.id}>
               <p className="text-sm font-bold text-content-strong">{locale === 'ar' ? stage.nameAr : stage.nameEn}</p>

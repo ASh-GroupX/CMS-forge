@@ -8,7 +8,7 @@ export type ComplaintCorrectionField = 'customerId' | 'customerSource' | 'manual
 export type ApplyComplaintCorrectionInput = {
   complaintId: string; expectedUpdatedAt: Date; reason: string; customerId?: string; customerSource?: DataSource; manualCustomer?: boolean;
   vehicleId?: string | null; vehicleSource?: DataSource | null; manualVehicle?: boolean; vehicleRelated?: boolean; vehicleDataUnavailableReason?: string | null;
-  actorId?: string | null; actorRole: RoleCode; sessionId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null;
+  actorId?: string | null; actorRole: string; sessionId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null;
 };
 export type ComplaintCorrectionData = {
   complaintId: string; expectedUpdatedAt: Date; changedFields: ComplaintCorrectionField[]; customerId?: string; customerDataSource?: DataSource; manualCustomerFlag?: boolean;

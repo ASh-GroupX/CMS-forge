@@ -6,6 +6,7 @@ type Domain =
   | 'caseLifecycleStatus'
   | 'caseType'
   | 'complaintStatus'
+  | 'complaintType'
   | 'dealStage'
   | 'reportDeliveryStatus'
   | 'severity'
@@ -35,14 +36,26 @@ const labels: Record<Locale, LabelMap> = {
     },
     complaintStatus: {
       DRAFT: 'Draft',
-      SUBMITTED: 'Submitted',
-      MANAGER_REVIEW: 'Manager review',
-      BRANCH_REVIEW: 'Branch review',
-      IN_PROGRESS: 'In progress',
-      RESOLVED: 'Resolved',
+      SUBMITTED: 'Open',
+      MANAGER_REVIEW: 'Under Review',
+      BRANCH_REVIEW: 'Assigned',
+      IN_PROGRESS: 'In Progress',
+      RESOLVED: 'Resolution Pending',
+      COMPLETED: 'Customer Contacted',
       CLOSED: 'Closed',
       REOPENED: 'Reopened',
       REJECTED: 'Rejected',
+    },
+    complaintType: {
+      COMPLAINT: 'Complaint',
+      ACTION_REQUEST: 'Action Request',
+      CALL_BACK_REQUEST: 'Call Back Request',
+      SERVICE_VISIT_REQUEST: 'Service Visit Request',
+      FOLLOW_UP_REQUEST: 'Follow-up Request',
+      INFORMATION_REQUEST: 'Information Request',
+      INQUIRY: 'Inquiry',
+      SUGGESTION: 'Suggestion',
+      FEEDBACK: 'Feedback',
     },
     caseLifecycleStatus: {
       DRAFT: 'Draft',
@@ -82,7 +95,7 @@ const labels: Record<Locale, LabelMap> = {
     slaState: {
       ON_TRACK: 'On track',
       WARNING: 'Warning',
-      BREACHED: 'Breached',
+      BREACHED: 'Escalated',
       CLOSED: 'Closed',
     },
     taskStatus: {
@@ -130,14 +143,26 @@ const labels: Record<Locale, LabelMap> = {
     },
     complaintStatus: {
       DRAFT: 'مسودة',
-      SUBMITTED: 'مقدمة',
-      MANAGER_REVIEW: 'مراجعة المدير',
-      BRANCH_REVIEW: 'مراجعة الفرع',
-      IN_PROGRESS: 'قيد المعالجة',
-      RESOLVED: 'تم الحل',
+      SUBMITTED: 'مفتوحة',
+      MANAGER_REVIEW: 'قيد المراجعة',
+      BRANCH_REVIEW: 'معينة',
+      IN_PROGRESS: 'قيد التنفيذ',
+      RESOLVED: 'بانتظار القرار',
+      COMPLETED: 'تم التواصل مع العميل',
       CLOSED: 'مغلقة',
       REOPENED: 'أعيد فتحها',
       REJECTED: 'مرفوضة',
+    },
+    complaintType: {
+      COMPLAINT: 'شكوى',
+      ACTION_REQUEST: 'طلب إجراء',
+      CALL_BACK_REQUEST: 'طلب اتصال',
+      SERVICE_VISIT_REQUEST: 'طلب زيارة صيانة',
+      FOLLOW_UP_REQUEST: 'طلب متابعة',
+      INFORMATION_REQUEST: 'طلب استعلام',
+      INQUIRY: 'استفسار',
+      SUGGESTION: 'اقتراح',
+      FEEDBACK: 'ملاحظات',
     },
     caseLifecycleStatus: {
       DRAFT: 'مسودة',
@@ -177,7 +202,7 @@ const labels: Record<Locale, LabelMap> = {
     slaState: {
       ON_TRACK: 'ضمن الوقت',
       WARNING: 'تنبيه',
-      BREACHED: 'متأخرة',
+      BREACHED: 'مصعدة',
       CLOSED: 'مغلقة',
     },
     taskStatus: {
@@ -218,6 +243,7 @@ export const blockerReasonLabel = (locale: Locale, code: string | null | undefin
 export const caseLifecycleStatusLabel = (locale: Locale, code: string | null | undefined) => domainLabel(locale, 'caseLifecycleStatus', code);
 export const caseTypeLabel = (locale: Locale, code: string | null | undefined) => domainLabel(locale, 'caseType', code);
 export const complaintStatusLabel = (locale: Locale, code: string | null | undefined) => domainLabel(locale, 'complaintStatus', code);
+export const complaintTypeLabel = (locale: Locale, code: string | null | undefined) => domainLabel(locale, 'complaintType', code);
 export const dealStageLabel = (locale: Locale, code: string | null | undefined) => domainLabel(locale, 'dealStage', code);
 export const reportDeliveryStatusLabel = (locale: Locale, code: string | null | undefined) => domainLabel(locale, 'reportDeliveryStatus', code);
 export const severityLabel = (locale: Locale, code: string | null | undefined) => domainLabel(locale, 'severity', code);

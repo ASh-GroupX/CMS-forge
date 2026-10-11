@@ -12,6 +12,7 @@ import { formatDisplayDate, formatDisplayNumber } from '../../lib/locale-format'
 import type { ComplaintFormOptions } from '../../lib/staff-complaint-form-options-api';
 import type { ComplaintQueueItem, ComplaintSeverity, ComplaintStatus } from '../../lib/staff-complaints-api';
 import type { StaffQueueQuery, StaffQueueResult } from '../../lib/staff-queue-api';
+import { AutoSubmitSelect } from '../shared/auto-submit-select';
 
 export function WorkQueue({
   locale,
@@ -57,17 +58,13 @@ export function WorkQueue({
           <input name="locale" type="hidden" value={locale} />
           {(['status', 'branch', 'severity', 'sla'] as const).map((key) => (
             <Field id={`work-queue-${key}`} key={key} label={t.filters[key]}>
-              <Select defaultValue={filterValue(key, query)} name={key === 'branch' ? 'branchId' : key}>
-                <SelectTrigger aria-label={t.filters[key]} id={`work-queue-${key}`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t.filters.all}</SelectItem>
-                  {filters[key].map((option) => (
-                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <AutoSubmitSelect 
+                defaultValue={filterValue(key, query)} 
+                name={key === 'branch' ? 'branchId' : key}
+                label={t.filters[key]}
+                options={filters[key]}
+                allLabel={t.filters.all}
+              />
             </Field>
           ))}
           <Field id="work-queue-search" label={t.filters.search}>
@@ -187,7 +184,7 @@ export function WorkQueue({
 }
 
 type FilterOption = { label: string; value: string };
-const STATUS_OPTIONS: ComplaintStatus[] = ['DRAFT', 'SUBMITTED', 'MANAGER_REVIEW', 'BRANCH_REVIEW', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REOPENED', 'REJECTED'];
+const STATUS_OPTIONS: ComplaintStatus[] = ['DRAFT', 'SUBMITTED', 'MANAGER_REVIEW', 'BRANCH_REVIEW', 'IN_PROGRESS', 'RESOLVED', 'COMPLETED', 'CLOSED', 'REOPENED', 'REJECTED'];
 const SEVERITY_OPTIONS: ComplaintSeverity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 
 function filterOptions(rows: ComplaintQueueItem[], t: typeof staffShellText[Locale]['workQueue'], query: StaffQueueQuery, options: ComplaintFormOptions | null | undefined, locale: Locale): Record<'status' | 'branch' | 'severity' | 'sla', FilterOption[]> {

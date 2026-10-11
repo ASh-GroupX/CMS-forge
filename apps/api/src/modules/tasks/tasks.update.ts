@@ -91,6 +91,49 @@ export async function updateTaskForActor(
   });
 }
 
+export async function claimTaskForActor(
+  repository: TasksRepository,
+  auditService: AuditService,
+  taskId: string,
+  actor: TaskActor,
+  audit: TaskAuditContext,
+  assignmentsService?: AssignmentsService,
+): Promise<TaskResponseDto> {
+  return repository.transaction(async (client) => {
+    const current = await repository.findById(requiredText(taskId, 'taskId'), client);
+    if (!current) throw new AppException('TASK_NOT_FOUND', 'Task was not found', HttpStatus.NOT_FOUND);
+    assertCanAct(current, actor);
+
+    // Atomic claim via updateMany
+    const success = await repository.claim(current.id, actor.userId, client);
+    if (!success) {
+      throw new AppException('CONFLICT', 'Task has already been claimed or does not exist', HttpStatus.CONFLICT);
+    }
+
+    const task = await repository.findById(current.id, client);
+    if (!task) throw new AppException('TASK_NOT_FOUND', 'Task was not found', HttpStatus.NOT_FOUND);
+
+    await auditService.record(
+      updateAudit(task.id, audit, {
+        action: 'task_claimed',
+        assignedUserId: actor.userId,
+        fromDepartmentId: current.assignedDepartmentId,
+      }),
+      client,
+    );
+
+    if (assignmentsService) {
+      await assignmentsService.setInTransaction({
+        entityType: 'TASK', entityId: task.id, assignedUserId: actor.userId,
+        assignedDepartmentId: task.assignedDepartmentId,
+        scopeBranchId: task.owner?.branchId ?? actor.branchId, reason: 'Claimed from queue',
+      }, actor, audit, client);
+    }
+
+    return taskToResponse(task);
+  });
+}
+
 function assignmentRequired(): AppException {
   return new AppException('VALIDATION_FAILED', 'Invalid task request', HttpStatus.BAD_REQUEST, [
     { field: 'assignment', code: 'REQUIRED', message: 'A task requires an assigned user or department.' },

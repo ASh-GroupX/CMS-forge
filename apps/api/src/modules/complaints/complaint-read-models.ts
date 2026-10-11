@@ -22,6 +22,8 @@ export function queueItem(complaint: ComplaintQueueRecord, slaService?: SlaServi
     assignedDepartmentId: complaint.departmentId ?? null,
     assignedDepartmentName: complaint.department?.nameEn ?? null,
     assignedDepartmentNameAr: complaint.department?.nameAr ?? null,
+    categoryId: complaint.category?.id ?? null,
+    categoryName: complaint.category?.nameEn ?? null,
     ...sla,
     nextAction: nextComplaintAction(complaint),
     createdAt: complaint.createdAt.toISOString(),
@@ -39,24 +41,35 @@ export function searchItem(complaint: ComplaintSearchRecord, masked = false, sla
 
 export function detailItem(complaint: ComplaintDetailRecord, masked = false, slaService?: SlaService): Omit<ComplaintDetailDto, 'caseSummary'> {
   const vehicle = complaint.vehicle ? { id: complaint.vehicle.id, vin: masked ? MASKED : complaint.vehicle.vin, plate: masked ? MASKED : complaint.vehicle.plate, make: complaint.vehicle.makeEn, model: complaint.vehicle.modelEn, year: complaint.vehicle.year, source: complaint.vehicle.dataSource } : null;
-  return { ...queueItem(complaint, slaService), categoryId: complaint.category.id, categoryName: complaint.category.nameEn, categoryNameAr: complaint.category.nameAr, description: complaint.descriptionEn, incidentAt: complaint.incidentAt?.toISOString() ?? null, customer: { id: complaint.customer.id, name: complaint.customer.nameEn, phone: masked ? MASKED : complaint.customer.phone, identifier: masked ? MASKED : complaint.customer.dmsCode, source: complaint.customer.dataSource }, vehicle, customerSource: complaint.customerDataSource, manualCustomer: complaint.manualCustomerFlag, vehicleRelated: complaint.vehicleRelated, vehicleSource: complaint.vehicleDataSource, manualVehicle: complaint.manualVehicleFlag, vehicleDataUnavailableReason: complaint.vehicleDataUnavailableReason, statusHistory: complaint.statusHistory.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })), allowedActions: [] };
+  // Extract tracking information from history
+  const createdByTransition = complaint.statusHistory.find((t) => t.action === 'SUBMIT');
+  const approvedByTransition = complaint.statusHistory.find((t) => t.action === 'ACCEPT_INTAKE' || t.action === 'APPROVE_AND_ROUTE');
+  const assignmentActions = ['APPROVE_AND_ROUTE', 'ASSIGN_INVESTIGATION', 'ROUTE_AGAIN'];
+  const lastAssignment = [...complaint.statusHistory].reverse().find((t) => t.action && assignmentActions.includes(t.action));
+
+  const createdBy = createdByTransition?.actor ? { name: createdByTransition.actor.nameEn, nameAr: createdByTransition.actor.nameAr } : null;
+  const approvedBy = approvedByTransition?.actor ? { name: approvedByTransition.actor.nameEn, nameAr: approvedByTransition.actor.nameAr } : null;
+  const assignedBy = lastAssignment?.actor ? { name: lastAssignment.actor.nameEn, nameAr: lastAssignment.actor.nameAr, ...(lastAssignment.actor.department?.nameEn ? { departmentName: lastAssignment.actor.department.nameEn } : {}), ...(lastAssignment.actor.department?.nameAr ? { departmentNameAr: lastAssignment.actor.department.nameAr } : {}) } : null;
+
+  return { ...queueItem(complaint, slaService), categoryId: complaint.category.id, categoryName: complaint.category.nameEn, categoryNameAr: complaint.category.nameAr, description: complaint.descriptionEn, incidentAt: complaint.incidentAt?.toISOString() ?? null, customer: { id: complaint.customer.id, name: complaint.customer.nameEn, phone: masked ? MASKED : complaint.customer.phone, identifier: masked ? MASKED : complaint.customer.dmsCode, source: complaint.customer.dataSource }, vehicle, customerSource: complaint.customerDataSource, manualCustomer: complaint.manualCustomerFlag, vehicleRelated: complaint.vehicleRelated, vehicleSource: complaint.vehicleDataSource, manualVehicle: complaint.manualVehicleFlag, vehicleDataUnavailableReason: complaint.vehicleDataUnavailableReason, channel: (complaint as any).channel ?? null, customerType: (complaint as any).customerType ?? null, lastServiceDate: (complaint as any).lastServiceDate?.toISOString() ?? null, odometer: (complaint as any).odometer ?? null, warrantyActive: (complaint as any).warrantyActive ?? null, salesAdvisorName: (complaint as any).salesAdvisorName ?? null, rootCauseCategory: (complaint as any).rootCauseCategory ?? null, repeatCustomer: (complaint as any).repeatCustomer ?? null, statusHistory: complaint.statusHistory.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })), allowedActions: [], createdBy, approvedBy, assignedBy };
 }
 
-export function shouldMask(input: { role?: RoleCode | null }): boolean {
+export function shouldMask(input: { role?: string | null }): boolean {
   return input.role === RoleCode.MGMT_READONLY;
 }
 
-function slaSnapshot(complaint: Pick<ComplaintQueueRecord, 'branch' | 'createdAt' | 'severity' | 'status'>, slaService?: SlaService): Pick<ComplaintQueueItemDto, 'slaDueAt' | 'slaPercentElapsed' | 'slaStage' | 'slaState'> {
-  if (complaint.status === ComplaintStatus.CLOSED || complaint.status === ComplaintStatus.REJECTED) return { slaState: 'CLOSED', slaDueAt: null, slaStage: null, slaPercentElapsed: null };
-  if (!slaService) return { slaState: 'ON_TRACK', slaDueAt: null, slaStage: SlaStage.RESOLUTION, slaPercentElapsed: null };
+function slaSnapshot(complaint: Pick<ComplaintQueueRecord, 'branch' | 'createdAt' | 'severity' | 'status' | 'resolvedAt' | 'closedAt'>, slaService?: SlaService): Pick<ComplaintQueueItemDto, 'slaDueAt' | 'slaPercentElapsed' | 'slaStage' | 'slaState'> {
+  const isCompleted = complaint.status === ComplaintStatus.RESOLVED || complaint.status === ComplaintStatus.CLOSED || complaint.status === ComplaintStatus.REJECTED;
+  if (!slaService) return { slaState: isCompleted ? 'CLOSED' : 'ON_TRACK', slaDueAt: null, slaStage: SlaStage.RESOLUTION, slaPercentElapsed: null };
   const durationMinutes = slaService.defaultDurationMinutes(complaint.severity);
   const deadline = slaService.calculateDeadline({ severity: complaint.severity, stage: SlaStage.RESOLUTION, durationMinutes, warningPercent: 80, branchTimezone: complaint.branch.timezone, workingCalendarMode: WorkingCalendarMode.ALWAYS_ON, enteredAt: complaint.createdAt });
-  const nowMs = Date.now();
+  
+  const nowMs = isCompleted ? (complaint.resolvedAt?.getTime() ?? complaint.closedAt?.getTime() ?? Date.now()) : Date.now();
   const enteredMs = complaint.createdAt.getTime();
   const dueMs = new Date(deadline.dueAt).getTime();
   const warningMs = new Date(deadline.warningAt).getTime();
   const percent = Math.max(0, Math.min(100, Math.round(((nowMs - enteredMs) / (durationMinutes * 60_000)) * 100)));
-  return { slaState: nowMs >= dueMs ? 'BREACHED' : nowMs >= warningMs ? 'WARNING' : 'ON_TRACK', slaDueAt: deadline.dueAt, slaStage: deadline.stage, slaPercentElapsed: percent };
+  return { slaState: isCompleted ? 'CLOSED' : (nowMs >= dueMs ? 'BREACHED' : nowMs >= warningMs ? 'WARNING' : 'ON_TRACK'), slaDueAt: deadline.dueAt, slaStage: deadline.stage, slaPercentElapsed: percent };
 }
 
 function nextComplaintAction(complaint: Pick<ComplaintQueueRecord, 'owner' | 'department' | 'status'>): string | null {

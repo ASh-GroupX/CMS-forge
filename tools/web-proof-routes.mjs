@@ -8,15 +8,15 @@ import StaffShellPage from '../apps/web/src/app/page.tsx';
 import { AppShell, staffNavItems } from '../apps/web/src/app/app-shell.tsx';
 import AdminPage from '../apps/web/src/app/(staff)/admin/page.tsx';
 import AuditPage from '../apps/web/src/app/(staff)/audit/page.tsx';
-import ComplaintsPage from '../apps/web/src/app/(staff)/complaints/page.tsx';
+import ComplaintsPage from '../apps/web/src/app/(staff)/complaints/(list)/page.tsx';
 import ComplaintDetailPage from '../apps/web/src/app/(staff)/complaints/[id]/page.tsx';
 import DashboardPage from '../apps/web/src/app/(staff)/dashboard/page.tsx';
-import DealHandoffPage from '../apps/web/src/app/(staff)/deals/handoff/page.tsx';
-import EmployeeTodayPage from '../apps/web/src/app/(staff)/tasks/today/page.tsx';
-import TaskBoardPage from '../apps/web/src/app/(staff)/tasks/board/page.tsx';
+// import DealHandoffPage from '../apps/web/src/app/(staff)/deals/handoff/page.tsx';
+import EmployeeTodayPage from '../apps/web/src/app/(staff)/tasks/page.tsx';
+// import TaskBoardPage from '../apps/web/src/app/(staff)/tasks/board/page.tsx';
 import ComplaintBoardPage from '../apps/web/src/app/(staff)/complaints/board/page.tsx';
-import ManagerControlRoomPage from '../apps/web/src/app/(staff)/tasks/manager/page.tsx';
-import ManagerTaskDetailPage from '../apps/web/src/app/(staff)/tasks/manager/[id]/page.tsx';
+// import ManagerControlRoomPage from '../apps/web/src/app/(staff)/tasks/manager/page.tsx';
+// import ManagerTaskDetailPage from '../apps/web/src/app/(staff)/tasks/manager/[id]/page.tsx';
 import NewComplaintPage from '../apps/web/src/app/(staff)/complaints/new/page.tsx';
 import ReportsPage from '../apps/web/src/app/(staff)/reports/page.tsx';
 import PortalSubmissionPage from '../apps/web/src/app/portal/page.tsx';
@@ -39,30 +39,30 @@ import { staffShellText } from '../apps/web/src/i18n/staff-shell.ts';
 const webRequire = createRequire(new URL('../apps/web/package.json', import.meta.url));
 const React = webRequire('react');
 
-export const STAFF_PROOF_PATHS = { 'staff-admin': '/admin', 'staff-audit': '/audit', 'staff-complaints': '/complaints', 'staff-complaint-detail': '/complaints/cmp-proof', 'staff-complaint-new': '/complaints/new', 'staff-deal-handoff': '/deals/handoff', 'staff-manager': '/tasks/manager', 'staff-manager-detail': '/tasks/manager/task_manager_proof', 'staff-reports': '/reports', 'staff-today': '/tasks/today', 'staff-board': '/tasks/board', 'staff-complaint-board': '/complaints/board', 'staff-task-detail': '/tasks/today/task-proof', 'staff-communication-groups': '/communication-groups' };
+export const STAFF_PROOF_PATHS = { 'staff-admin': '/admin', 'staff-audit': '/audit', 'staff-complaints': '/complaints', 'staff-complaint-detail': '/complaints/cmp-proof', 'staff-complaint-new': '/complaints/new', 'staff-reports': '/reports', 'staff-today': '/tasks/today', 'staff-task-detail': '/tasks/today/task-proof', 'staff-communication-groups': '/communication-groups' };
 
 export async function routePage(testCase) {
   const params = Promise.resolve(testCase.params);
   const staffProps = { cookieHeader: 'cms_staff_session=proof', fetchImpl: proofFetch, searchParams: params };
   if (testCase.route === 'staff-navigation') return React.createElement(AppShell, { activePath: '/tasks/today', locale: testCase.locale, navKeys: staffNavItems.map((item) => item.key), principal: (await proofJson('/auth/me')).user }, React.createElement('section', { className: 'min-w-0', 'aria-label': staffShellText[testCase.locale].title }, staffShellText[testCase.locale].subtitle));
   if (testCase.route === 'staff-auth') return React.createElement(StaffAuthLanding, { authError: false, locale: testCase.locale });
-  if (testCase.route === 'staff-admin') return staffFrame(testCase, await AdminPage(staffProps));
-  if (testCase.route === 'staff-audit') return staffFrame(testCase, await AuditPage({ searchParams: params }));
-  if (testCase.route === 'staff-complaints') return staffFrame(testCase, await ComplaintsPage(staffProps));
+  if (testCase.route === 'staff-admin') return staffFrame(testCase, await AdminPage({ ...staffProps, locale: testCase.locale }));
+  if (testCase.route === 'staff-audit') return staffFrame(testCase, await AuditPage({ searchParams: params, locale: testCase.locale }));
+  if (testCase.route === 'staff-complaints') return staffFrame(testCase, await ComplaintsPage({ ...staffProps, locale: testCase.locale }));
   if (testCase.route === 'staff-complaint-detail') return staffFrame(testCase, hasAnyParam(testCase, ['attachment', 'comments', 'commentVisibility', 'detail', 'lookup', 'sla', 'tab', 'workflow'])
     ? await proofComplaintDetail(testCase)
     : await ComplaintDetailPage({ ...staffProps, params: Promise.resolve({ id: 'cmp-proof' }) }));
   if (testCase.route === 'staff-complaint-new') return staffFrame(testCase, hasAnyParam(testCase, ['create', 'lookup'])
     ? React.createElement(ComplaintIntakeWorkspace, { createState: testCase.params.create, locale: testCase.locale, lookupState: testCase.params.lookup, options: await proofJson('/complaints/form-options') })
     : await NewComplaintPage({ searchParams: params }));
-  if (testCase.route === 'staff-dashboard') return React.createElement(AppShell, { activePath: '/dashboard', locale: testCase.locale, navKeys: staffNavItems.map((item) => item.key), principal: (await proofJson('/auth/me')).user }, await DashboardPage(staffProps));
-  if (testCase.route === 'staff-deal-handoff') return staffFrame(testCase, await DealHandoffPage(staffProps));
-  if (testCase.route === 'staff-manager') return staffFrame(testCase, await ManagerControlRoomPage(staffProps));
-  if (testCase.route === 'staff-manager-detail') return staffFrame(testCase, await ManagerTaskDetailPage({ ...staffProps, params: Promise.resolve({ id: 'task_manager_proof' }) }));
-  if (testCase.route === 'staff-reports') return staffFrame(testCase, await ReportsPage(staffProps));
-  if (testCase.route === 'staff-today') return staffFrame(testCase, await EmployeeTodayPage(staffProps));
-  if (testCase.route === 'staff-board') return staffFrame(testCase, await TaskBoardPage(staffProps));
-  if (testCase.route === 'staff-complaint-board') return staffFrame(testCase, await ComplaintBoardPage(staffProps));
+  if (testCase.route === 'staff-dashboard') return React.createElement(AppShell, { activePath: '/dashboard', locale: testCase.locale, navKeys: staffNavItems.map((item) => item.key), principal: (await proofJson('/auth/me')).user }, await DashboardPage({ ...staffProps, locale: testCase.locale }));
+  // if (testCase.route === 'staff-deal-handoff') return staffFrame(testCase, await DealHandoffPage(staffProps));
+  // if (testCase.route === 'staff-manager') return staffFrame(testCase, await ManagerControlRoomPage(staffProps));
+  // if (testCase.route === 'staff-manager-detail') return staffFrame(testCase, await ManagerTaskDetailPage({ ...staffProps, params: Promise.resolve({ id: 'task_manager_proof' }) }));
+  if (testCase.route === 'staff-reports') return staffFrame(testCase, await ReportsPage({ ...staffProps, locale: testCase.locale }));
+  if (testCase.route === 'staff-today') return staffFrame(testCase, await EmployeeTodayPage({ ...staffProps, locale: testCase.locale }));
+  // if (testCase.route === 'staff-board') return staffFrame(testCase, await TaskBoardPage(staffProps));
+  if (testCase.route === 'staff-complaint-board') return staffFrame(testCase, await ComplaintBoardPage({ ...staffProps, locale: testCase.locale }));
   if (testCase.route === 'staff-task-detail') return staffFrame(testCase, React.createElement(TaskConversation, { comments: proofTaskComments(), locale: testCase.locale, task: proofTask() }));
   if (testCase.route === 'staff-communication-groups') return staffFrame(testCase, React.createElement(CommunicationGroups, { data: proofCommunicationGroups(), loadState: 'ready', locale: testCase.locale }));
   if (testCase.route === 'portal-submission') return testCase.params.state

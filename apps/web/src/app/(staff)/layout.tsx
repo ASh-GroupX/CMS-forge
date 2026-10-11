@@ -8,13 +8,13 @@ import { getStaffSessionPrincipal } from '../../lib/staff-session-api';
 import { AppShell, type StaffNavKey } from '../app-shell';
 
 const ROLE_NAV: Record<string, readonly StaffNavKey[]> = {
-  ADMIN: ['today', 'board', 'sent', 'promises', 'handoff', 'queue', 'ticketBoard', 'reports', 'manager', 'dashboard', 'create', 'admin', 'audit', 'notifications', 'groups'],
-  CR_MANAGER: ['today', 'board', 'sent', 'promises', 'handoff', 'queue', 'ticketBoard', 'reports', 'manager', 'dashboard', 'audit', 'notifications', 'groups'],
-  BRANCH_MANAGER: ['today', 'board', 'sent', 'promises', 'handoff', 'queue', 'ticketBoard', 'reports', 'manager', 'dashboard', 'audit', 'notifications', 'groups'],
-  MGMT_READONLY: ['board', 'promises', 'handoff', 'queue', 'ticketBoard', 'reports', 'manager', 'dashboard', 'audit', 'notifications', 'groups'],
+  ADMIN: ['dashboard', 'internalTickets', 'complaints', 'customers', 'tasks', 'communication', 'reports', 'admin', 'audit'],
+  CR_MANAGER: ['dashboard', 'internalTickets', 'complaints', 'customers', 'tasks', 'communication', 'reports', 'audit'],
+  BRANCH_MANAGER: ['dashboard', 'internalTickets', 'complaints', 'customers', 'tasks', 'communication', 'reports', 'audit'],
+  MGMT_READONLY: ['dashboard', 'internalTickets', 'complaints', 'customers', 'tasks', 'reports', 'audit'],
 };
 
-const STAFF_NAV: readonly StaffNavKey[] = ['today', 'board', 'sent', 'promises', 'handoff', 'queue', 'ticketBoard', 'reports', 'dashboard', 'create', 'notifications', 'groups'];
+const STAFF_NAV: readonly StaffNavKey[] = ['dashboard', 'internalTickets', 'complaints', 'customers', 'tasks', 'communication', 'reports'];
 
 export default async function StaffLayout({ children }: { children: ReactNode }) {
   const requestHeaders = await headers();
@@ -58,9 +58,7 @@ function navForPrincipal(nav: readonly StaffNavKey[], permissions: readonly stri
   return nav.filter((key) => {
     if (key === 'admin') return has('USERS_MANAGE') || has('ROLES_MANAGE') || has('MASTER_DATA_MANAGE') || has('NOTIFICATIONS_MANAGE');
     if (key === 'audit') return has('AUDIT_VIEW');
-    if (key === 'handoff') return has('COMPLAINT_ASSIGN');
-    if (key === 'reports' || key === 'dashboard' || key === 'manager' || key === 'promises') return has('REPORT_VIEW');
-    if (key === 'create') return has('COMPLAINT_CREATE');
+    if (key === 'reports') return has('REPORT_VIEW');
     return true;
   });
 }

@@ -748,8 +748,8 @@ function publicPortalOptions() {
   return {
     branches: [{ id: 'branch_service', nameEn: 'Service Branch', nameAr: 'فرع الصيانة' }],
     categories: [
-      { id: 'cat_vehicle', nameEn: 'Vehicle service', nameAr: 'خدمة المركبة', parentId: null },
-      { id: 'cat_engine', nameEn: 'Engine noise', nameAr: 'صوت المحرك', parentId: 'cat_vehicle' },
+      { id: 'cat_vehicle', nameEn: 'Vehicle service', nameAr: 'خدمة المركبة', departmentId: null, branchId: null },
+      { id: 'cat_engine', nameEn: 'Engine noise', nameAr: 'صوت المحرك', departmentId: 'dep_vehicle', branchId: null },
     ],
     severities: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
   };
@@ -2093,8 +2093,8 @@ test('admin overview route is a hub and does not fetch workspace data', async ()
       return jsonResponse({
         branches: [{ id: 'branch_main', code: 'MAIN', nameEn: 'Main Branch', nameAr: 'الفرع الرئيسي' }],
         categories: [
-          { id: 'cat_vehicle', code: 'VEHICLE', nameEn: 'Vehicle issue', nameAr: 'مشكلة مركبة', parentId: null },
-          { id: 'cat_engine', code: 'ENGINE', nameEn: 'Engine noise', nameAr: 'صوت المحرك', parentId: 'cat_vehicle' },
+          { id: 'cat_vehicle', code: 'VEHICLE', nameEn: 'Vehicle issue', nameAr: 'مشكلة مركبة', departmentId: null, branchId: null },
+          { id: 'cat_engine', code: 'ENGINE', nameEn: 'Engine noise', nameAr: 'صوت المحرك', departmentId: 'dep_vehicle', branchId: null },
         ],
         severities: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
       });
@@ -2128,7 +2128,7 @@ test('admin overview route does not render disabled preview action buttons', asy
 test('admin branches route renders real master data labels', async () => {
   const fetchImpl: typeof fetch = async () => jsonResponse({
     branches: [{ id: 'branch_main', code: 'MAIN', nameEn: 'Main Branch', nameAr: 'Ø§Ù„ÙØ±Ø¹ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ' }],
-    categories: [{ id: 'cat_vehicle', code: 'VEHICLE', nameEn: 'Vehicle issue', nameAr: 'Ù…Ø´ÙƒÙ„Ø© Ù…Ø±ÙƒØ¨Ø©', parentId: null }],
+    categories: [{ id: 'cat_vehicle', code: 'VEHICLE', nameEn: 'Vehicle issue', nameAr: 'Ù…Ø´ÙƒÙ„Ø© Ù…Ø±ÙƒØ¨Ø©', departmentId: null, branchId: null }],
     departments: [],
     severities: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
   });
@@ -2324,8 +2324,8 @@ test('admin categories route renders real category and SLA policy rows through t
     if (url.endsWith('/admin/categories')) {
       return jsonResponse({
         items: [
-          { id: 'cat_service', code: 'SERVICE', nameEn: 'Service Quality', nameAr: 'جودة الخدمة', parentId: null, isActive: true },
-          { id: 'cat_delay', code: 'DELAY', nameEn: 'Repair Delay', nameAr: 'تأخير الإصلاح', parentId: 'cat_service', isActive: false },
+          { id: 'cat_service', code: 'SERVICE', nameEn: 'Service Quality', nameAr: 'جودة الخدمة', departmentId: null, branchId: null, isActive: true },
+          { id: 'cat_delay', code: 'DELAY', nameEn: 'Repair Delay', nameAr: 'تأخير الإصلاح', departmentId: 'dep_service', branchId: null, isActive: false },
         ],
       });
     }
@@ -2799,7 +2799,7 @@ test('reports dashboard renders real scoped rows from the backend read', async (
     if (url.endsWith('/complaints/form-options')) {
       return jsonResponse({
         branches: [{ id: 'branch_main', code: 'MAIN', nameEn: 'Main Branch', nameAr: 'الفرع الرئيسي' }],
-        categories: [{ id: 'cat_engine', code: 'ENGINE', nameEn: 'Engine', nameAr: 'المحرك', parentId: null }],
+        categories: [{ id: 'cat_engine', code: 'ENGINE', nameEn: 'Engine', nameAr: 'المحرك', departmentId: null, branchId: null }],
         severities: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
       });
     }
@@ -2995,7 +2995,7 @@ test('reports route renders real scoped rows through the session cookie', async 
     if (url.endsWith('/complaints/form-options')) {
       return jsonResponse({
         branches: [{ id: 'branch_report', code: 'REPORT', nameEn: 'Reports Branch', nameAr: 'فرع التقارير' }],
-        categories: [{ id: 'cat_report', code: 'REPORT', nameEn: 'Reports Category', nameAr: 'تصنيف التقارير', parentId: null }],
+        categories: [{ id: 'cat_report', code: 'REPORT', nameEn: 'Reports Category', nameAr: 'تصنيف التقارير', departmentId: null, branchId: null }],
         severities: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
       });
     }
@@ -3406,7 +3406,7 @@ test('complaint new route renders real branch category and severity options from
     assert.deepEqual(init?.headers, { Accept: 'application/json', cookie: 'cms_staff_session=raw-session' });
     return jsonResponse({
       branches: [{ id: 'branch_main', code: 'MAIN', nameEn: 'Main Branch', nameAr: 'الفرع الرئيسي' }],
-      categories: [{ id: 'cat_engine', code: 'ENGINE', nameEn: 'Engine & Mechanical', nameAr: 'المحرك', parentId: null }],
+      categories: [{ id: 'cat_engine', code: 'ENGINE', nameEn: 'Engine & Mechanical', nameAr: 'المحرك', departmentId: null, branchId: null }],
       severities: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
     });
   };
@@ -3448,7 +3448,7 @@ test('complaint create validation does not inject sample field values', async ()
 test('complaint new route renders Arabic option labels from backend data', async () => {
   const fetchImpl: typeof fetch = async () => jsonResponse({
     branches: [{ id: 'branch_ar', code: 'AR', nameEn: 'English Branch', nameAr: 'فرع عربي' }],
-    categories: [{ id: 'cat_ar', code: 'AR', nameEn: 'English Category', nameAr: 'تصنيف عربي', parentId: null }],
+    categories: [{ id: 'cat_ar', code: 'AR', nameEn: 'English Category', nameAr: 'تصنيف عربي', departmentId: null, branchId: null }],
     severities: ['HIGH'],
   });
   const html = renderToStaticMarkup(

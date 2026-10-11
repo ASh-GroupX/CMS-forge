@@ -34,9 +34,9 @@ export function BoardColumnShell({ cards, children, count, emptyText, label, lay
 }) {
   const { isOver, setNodeRef } = useDroppable({ id: stage.id });
   return (
-    <li aria-label={label} className={layout === 'list' ? 'w-full lg:w-72 lg:shrink-0 lg:snap-start' : 'w-72 shrink-0 snap-start'}>
+    <li aria-label={label} className={layout === 'list' ? 'flex h-full w-[var(--ops-column-min-width)] shrink-0 flex-col' : 'w-full'}>
       <section
-        className={`grid max-h-full content-start gap-2 rounded-xl border p-2 transition-colors ${
+        className={`flex h-full flex-col gap-2 rounded-xl border p-2 transition-colors ${
           isOver ? 'border-board-drop-ring bg-board-drop ring-2 ring-board-drop-ring/40' : 'border-board-column-border bg-board-column'
         }`}
         ref={setNodeRef}
@@ -48,10 +48,10 @@ export function BoardColumnShell({ cards, children, count, emptyText, label, lay
           </h3>
           <span className="shrink-0 text-xs font-semibold text-content-muted">{count}</span>
         </header>
-        <ol className="grid min-h-16 content-start gap-2">
+        <ol className="flex flex-col gap-2 overflow-y-auto overflow-x-hidden min-h-[4rem] px-1 -mx-1">
           {children}
           {cards.length === 0 ? (
-            <li aria-hidden="true" className="grid min-h-16 place-items-center rounded-lg border border-dashed border-line-strong/60 px-2 py-4 text-center text-xs text-content-muted">
+            <li aria-hidden="true" className="grid min-h-[4rem] place-items-center rounded-lg border border-dashed border-line-strong/60 px-2 py-4 text-center text-xs text-content-muted">
               {emptyText}
             </li>
           ) : null}

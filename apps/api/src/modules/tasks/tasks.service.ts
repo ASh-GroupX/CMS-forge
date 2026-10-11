@@ -21,7 +21,7 @@ import { TasksRepository } from './tasks.repository.js';
 import type { TaskRecord, TaskTimelineRecord } from './tasks.repository.js';
 import { currentNextAction, managerTaskDetailResponse, taskCounts, taskToResponse } from './tasks.response.js';
 import { requiredStatusNote, statusComment } from './tasks.status-note.js';
-import { assertAssignedDepartment, updateTaskForActor } from './tasks.update.js';
+import { assertAssignedDepartment, claimTaskForActor, updateTaskForActor } from './tasks.update.js';
 import { assertNextAction, normalizeNextAction, requiredText, utcDay, validDate, validEnum } from './tasks.validation.js';
 import type { NormalizedNextAction } from './tasks.validation.js';
 export { assertNextAction, normalizeNextAction } from './tasks.validation.js';
@@ -127,6 +127,12 @@ export class TasksService {
     if (input.assigneeId !== undefined || input.assignedDepartmentId !== undefined) {
       await this.assignmentsService?.notifyAfterCommit?.('TASK', task.id, { href: `/tasks/${task.id}`, title: task.title });
     }
+    return task;
+  }
+
+  async claimForActor(taskId: string, actor: TaskActor, audit: TaskAuditContext = {}): Promise<TaskResponseDto> {
+    const task = await claimTaskForActor(this.tasksRepository, this.auditService, taskId, actor, audit, this.assignmentsService);
+    await this.assignmentsService?.notifyAfterCommit?.('TASK', task.id, { href: `/tasks/${task.id}`, title: task.title });
     return task;
   }
 

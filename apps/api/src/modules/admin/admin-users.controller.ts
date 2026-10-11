@@ -37,6 +37,14 @@ export class AdminUsersController {
   reactivate(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
     return this.users.setActive(id, true, auditContext(request));
   }
+
+  @Post(':id/assignments')
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('USERS_MANAGE')
+  updateAssignments(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    const input = body as Record<string, unknown>;
+    return this.users.updateAssignments(id, optionalText(input.branchId), optionalText(input.departmentId), optionalText(input.roleCode), auditContext(request));
+  }
 }
 
 @Controller('staff')
@@ -57,7 +65,7 @@ function parseCreateUser(body: unknown): CreateAdminUserInput {
   const input = body as Record<string, unknown>;
   return {
     email: text(input.email, 'email'), nameEn: text(input.nameEn, 'nameEn'), nameAr: text(input.nameAr, 'nameAr'),
-    roleCode: role(input.roleCode), branchId: optionalText(input.branchId), initialPassword: text(input.initialPassword, 'initialPassword'),
+    roleCode: role(input.roleCode), branchId: optionalText(input.branchId), departmentId: optionalText(input.departmentId), initialPassword: text(input.initialPassword, 'initialPassword'),
   };
 }
 

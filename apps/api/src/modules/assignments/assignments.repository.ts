@@ -24,6 +24,14 @@ const userOptionSelect = {
   branchId: true,
   departmentId: true,
   role: { select: { code: true } },
+  ownedComplaints: {
+    where: { status: { notIn: ['CLOSED', 'RESOLVED', 'REJECTED'] } },
+    select: { id: true }
+  },
+  assignedInternalTickets: {
+    where: { status: { notIn: ['CLOSED', 'RESOLVED', 'REJECTED'] } },
+    select: { id: true }
+  }
 } satisfies Prisma.UserSelect;
 
 const departmentOptionSelect = {

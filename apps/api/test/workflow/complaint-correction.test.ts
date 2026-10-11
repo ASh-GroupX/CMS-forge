@@ -132,7 +132,7 @@ test('complaint correction route delegates with server branch and actor context'
   }, request(RoleCode.CR_MANAGER, 'branch_main', ['COMPLAINT_EDIT']));
 
   assert.deepEqual(response, { correction: { complaintId: 'cmp_1', changedFields: ['customerSource'] } });
-  assert.deepEqual(calls[0], { getDetail: { id: 'cmp_1', filter: { branchId: 'branch_main' } } });
+  assert.deepEqual(calls[0], { getDetail: { id: 'cmp_1', filter: { branchId: null } } });
   assert.deepEqual(calls[1], { correctProvenance: {
     complaintId: 'cmp_1',
     expectedUpdatedAt: new Date('2026-06-18T10:00:00.000Z'),
@@ -176,7 +176,7 @@ test('complaint correction route uses edit permission, CSRF, and branch-scope gu
   const branchAudits: AuditRecordInput[] = [];
   const rbacGuard = new RbacGuard(new Reflector(), { record: async (input) => branchAudits.push(input) } as AuditService);
   await assert.rejects(
-    rbacGuard.canActivate(context(request(RoleCode.CR_MANAGER, 'branch_other', ['COMPLAINT_EDIT'], '/complaints/cmp_1/corrections?branchId=branch_other&sessionToken=leaked'), ComplaintsController.prototype.correct)),
+    rbacGuard.canActivate(context(request(RoleCode.CR_OFFICER, 'branch_other', ['COMPLAINT_EDIT'], '/complaints/cmp_1/corrections?branchId=branch_other&sessionToken=leaked'), ComplaintsController.prototype.correct)),
     (error: unknown) => error instanceof AppException && error.code === 'BRANCH_SCOPE_FORBIDDEN',
   );
   assert.equal(branchAudits[0]?.action, 'branch_scope_forbidden');

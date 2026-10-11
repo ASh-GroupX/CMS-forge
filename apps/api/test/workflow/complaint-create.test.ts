@@ -33,8 +33,7 @@ test('complaint creation validates required fields before transaction', async ()
   await assert.rejects(
     service.createInternal({
       customerName: ' ',
-      categoryId: 'cat_parent',
-      subcategoryId: 'cat_engine',
+      categoryId: 'cat_engine',
       description: 'Noise at cold start',
       incidentAt: '2026-06-18T09:00:00.000Z',
       branchId: 'branch_main',
@@ -90,8 +89,7 @@ test('complaint creation persists complaint, initial history, and audit in one t
   const result = await service.createInternal({
     customerName: ' Faisal Al-Otaibi ',
     customerPhone: '+966500000001',
-    categoryId: 'cat_parent',
-    subcategoryId: 'cat_engine',
+    categoryId: 'cat_engine',
     description: ' Engine makes a knocking noise. ',
     incidentAt: '2026-06-18T09:00:00.000Z',
     branchId: 'branch_main',
@@ -126,6 +124,14 @@ test('complaint creation persists complaint, initial history, and audit in one t
         customerPhone: '+966500000001',
         customerNumber: null,
         customerDataSource: 'MANUAL',
+        channel: null,
+        customerType: null,
+        lastServiceDate: null,
+        odometer: null,
+        warrantyActive: null,
+        salesAdvisorName: null,
+        rootCauseCategory: null,
+        repeatCustomer: null,
         manualCustomerFlag: true,
         vehicleId: 'veh_1',
         vehicleVin: 'SEEDDEMO00001',
@@ -139,6 +145,9 @@ test('complaint creation persists complaint, initial history, and audit in one t
         vehicleDataUnavailableReason: null,
         departmentId: null,
         createdById: 'usr_1',
+        type: 'COMPLAINT',
+        templateId: null,
+        templateData: undefined,
         descriptionEn: 'Engine makes a knocking noise.',
         incidentAt: new Date('2026-06-18T09:00:00.000Z'),
       },
@@ -285,8 +294,7 @@ test('complaint creation links a customer complaint case in the same transaction
   await service.createInternal({
     customerName: 'Faisal Al-Otaibi',
     customerPhone: '+966500000001',
-    categoryId: 'cat_parent',
-    subcategoryId: 'cat_engine',
+    categoryId: 'cat_engine',
     description: 'Engine noise',
     incidentAt: '2026-06-18T09:00:00.000Z',
     branchId: 'branch_main',
@@ -477,6 +485,17 @@ test('complaint creation route delegates with guarded branch and server actor co
     branchId: 'branch_main',
     actorId: 'usr_officer',
     saveAsDraft: false,
+    channel: null,
+    customerType: null,
+    lastServiceDate: null,
+    odometer: null,
+    warrantyActive: null,
+    salesAdvisorName: null,
+    rootCauseCategory: null,
+    repeatCustomer: null,
+    type: undefined,
+    templateId: null,
+    templateData: undefined,
     customerSource: null,
     vehicleSource: null,
     vehicleDataUnavailableReason: null,
@@ -622,6 +641,8 @@ test('complaint queue service returns explicit branch-scoped response objects', 
     assignedDepartmentId: null,
     assignedDepartmentName: null,
     assignedDepartmentNameAr: null,
+    categoryId: null,
+    categoryName: null,
     slaState: 'ON_TRACK',
     slaDueAt: null,
     slaStage: 'RESOLUTION',
@@ -731,7 +752,7 @@ test('complaint queue route derives branch scope from query or server principal'
 
   assert.deepEqual(await controller.list(undefined, request(RoleCode.CR_OFFICER)), { items: [] });
   assert.deepEqual(await controller.list('branch_any', request(RoleCode.ADMIN)), { items: [] });
-  assert.deepEqual(calls, [{ branchId: 'branch_main', role: RoleCode.CR_OFFICER }, { branchId: 'branch_any', role: RoleCode.ADMIN }]);
+  assert.deepEqual(calls, [{ branchId: 'branch_main', role: RoleCode.CR_OFFICER, userId: 'usr_officer' }, { branchId: 'branch_any', role: RoleCode.ADMIN, userId: 'usr_officer' }]);
 });
 
 test('complaint detail service returns explicit timeline and hides missing scoped complaints', async () => {
@@ -812,7 +833,7 @@ test('complaint detail route delegates with server-derived branch scope', async 
   const response = await controller.get('cmp_1', undefined, request(RoleCode.CR_OFFICER));
   assert.equal(response.complaint.id, 'cmp_1');
   assert.deepEqual(response.complaint.allowedActions, [ComplaintTransitionAction.ACCEPT_INTAKE]);
-  assert.deepEqual(calls[0], { id: 'cmp_1', filter: { branchId: 'branch_main', role: RoleCode.CR_OFFICER } });
+  assert.deepEqual(calls[0], { id: 'cmp_1', filter: { branchId: 'branch_main', role: RoleCode.CR_OFFICER, userId: 'usr_officer' } });
   assert.deepEqual(calls[1], { allowedActionsFor: { status: ComplaintStatus.SUBMITTED, actor: { roleCode: RoleCode.CR_OFFICER, userId: 'usr_officer' } } });
 });
 
@@ -1051,8 +1072,7 @@ function validBody() {
     customerName: 'Faisal Al-Otaibi',
     customerPhone: '+966500000001',
     customerNumber: null,
-    categoryId: 'cat_parent',
-    subcategoryId: 'cat_engine',
+    categoryId: 'cat_engine',
     description: 'Engine makes a knocking noise.',
     incidentAt: '2026-06-18T09:00:00.000Z',
     subject: 'Engine noise',
@@ -1121,6 +1141,7 @@ function searchRecord(id: string, branchId: string): ComplaintSearchRecord {
     ownerId: 'usr_owner',
     owner: { nameEn: 'Owner User', email: 'owner@cms-auto.test' },
     categoryId: 'cat_engine',
+    category: { id: 'cat_engine', nameEn: 'Engine', nameAr: 'المحرك' },
     customerName: 'Faisal Al-Otaibi',
     customerPhone: '+966500000001',
     customerIdentifier: 'CUST-001',
@@ -1144,6 +1165,8 @@ function validQueueItem() {
     assignedDepartmentId: null,
     assignedDepartmentName: null,
     assignedDepartmentNameAr: null,
+    categoryId: 'cat_engine',
+    categoryName: 'Engine',
     slaState: 'ON_TRACK',
     slaDueAt: null,
     slaStage: 'RESOLUTION',

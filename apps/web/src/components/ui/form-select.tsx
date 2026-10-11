@@ -63,7 +63,6 @@ export function FormSelect({
     <>
       <Select
       {...(disabled === undefined ? {} : { disabled })}
-      {...(name === undefined ? {} : { name })}
       onValueChange={changeValue}
       {...(required === undefined ? {} : { required })}
       value={selectedValue}
@@ -73,6 +72,7 @@ export function FormSelect({
         {...(ariaProps["aria-invalid"] === undefined ? {} : { "aria-invalid": ariaProps["aria-invalid"] })}
         className={cn("min-w-0", className)}
         {...(id === undefined ? {} : { id })}
+        aria-label={selectedLabel || placeholder}
         >
           <SelectValue placeholder={placeholder}>{selectedLabel}</SelectValue>
         </SelectTrigger>
@@ -88,6 +88,7 @@ export function FormSelect({
       <span aria-hidden="true" className="hidden" data-slot="select-options">
         {options.map((option) => <span data-value={option.value} key={option.value}>{option.label} </span>)}
       </span>
+      {name !== undefined && <input readOnly type="hidden" name={name} value={selectedValue === EMPTY_VALUE ? "" : selectedValue} />}
     </>
   )
 }

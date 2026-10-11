@@ -53,10 +53,11 @@ export function toTransitionInput(
   body: ComplaintTransitionRequestDto,
   context: {
     actorId: string | null;
-    actorRole: RoleCode;
+    actorRole: string;
     correlationId: string | null;
     ipAddress: string | null;
     userAgent: string | null;
+    actorPermissions?: string[];
   },
 ): ApplyComplaintTransitionInput {
   return {
@@ -64,6 +65,7 @@ export function toTransitionInput(
     fromStatus: body.fromStatus,
     action: body.action,
     actorRole: context.actorRole,
+    ...(context.actorPermissions ? { actorPermissions: context.actorPermissions } : {}),
     actorId: context.actorId,
     requestSource: 'STAFF_API',
     reason: body.reason ?? null,

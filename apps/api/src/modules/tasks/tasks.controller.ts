@@ -158,6 +158,15 @@ export class TasksController {
     return this.boardService!.move(parseMoveTaskBody(id, body), taskActor(requirePrincipal(request)), auditContext(request));
   }
 
+  @Post(':id/claim')
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('COMPLAINT_COMMENT_INTERNAL')
+  async claim(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    return {
+      task: await this.tasksService.claimForActor(id, taskActor(requirePrincipal(request)), auditContext(request)),
+    };
+  }
+
   @Patch(':id')
   @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
   @Permissions('COMPLAINT_COMMENT_INTERNAL')

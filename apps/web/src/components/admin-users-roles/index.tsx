@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -9,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { adminUsersText } from '../../i18n/staff-admin-users';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import type { AdminUsersData } from '../../lib/staff-admin-users-api';
+import { ActionDialog } from '../shared/action-dialog';
 
 export type AdminUsersFixtureState = 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'conflict';
 type AdminAction = (formData: FormData) => void | Promise<void>;
@@ -19,18 +22,21 @@ export function AdminUsersRoles({
   locale,
   state,
   toggleAction,
+  updateAssignmentsAction,
 }: {
   createAction?: AdminAction;
   data?: AdminUsersData | null;
   locale: Locale;
   state?: AdminUsersFixtureState | undefined;
   toggleAction?: AdminAction;
+  updateAssignmentsAction?: AdminAction;
 }) {
   const shell = staffShellText[locale];
   const t = adminUsersText[locale];
   const users = data?.users ?? [];
   const roleNames = new Map((data?.roles ?? []).map((role) => [role.code, localizedName(role, locale)]));
   const branchNames = new Map((data?.branches ?? []).map((branch) => [branch.id, localizedName(branch, locale)]));
+  const departmentNames = new Map((data?.departments ?? []).map((department) => [department.id, localizedName(department, locale)]));
 
   return (
     <Card aria-label={t.title} className="min-w-0 rounded-md shadow-sm" dir={shell.dir}>
@@ -54,8 +60,14 @@ export function AdminUsersRoles({
                   <TableCell className="font-semibold">{user.nameEn}<span className="block text-xs text-muted-foreground">{user.email}</span></TableCell>
                   <TableCell>{roleNames.get(user.roleCode) ?? user.roleName}</TableCell>
                   <TableCell>{user.branchId ? branchNames.get(user.branchId) ?? user.branchName ?? t.allBranches : t.allBranches}</TableCell>
+                  <TableCell>{user.departmentId ? departmentNames.get(user.departmentId) ?? user.departmentName ?? t.allDepartments : t.allDepartments}</TableCell>
                   <TableCell><Badge className="shadow-none" variant={user.isActive ? 'secondary' : 'outline'}>{user.isActive ? t.badges.active : t.badges.inactive}</Badge></TableCell>
-                  <TableCell>{toggleAction ? <ToggleForm action={toggleAction} active={user.isActive} id={user.id} locale={locale} /> : null}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      {toggleAction ? <ToggleForm action={toggleAction} active={user.isActive} id={user.id} locale={locale} /> : null}
+                      {updateAssignmentsAction && data ? <UpdateAssignmentsForm action={updateAssignmentsAction} data={data} locale={locale} user={user} /> : null}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -80,11 +92,15 @@ function CreateUserForm({ action, data, locale }: { action: AdminAction; data: A
         <Field label={t.fields.nameAr} name="nameAr" />
         <label className="grid gap-1 text-sm font-medium">
           {t.fields.role}
-          <FormSelect name="roleCode" options={data.roles.map((role) => ({ label: localizedName(role, locale), value: role.code }))} required />
+          <FormSelect name="roleCode" options={(data.roles ?? []).map((role) => ({ label: localizedName(role, locale), value: role.code }))} required />
         </label>
         <label className="grid gap-1 text-sm font-medium">
           {t.fields.branch}
-          <FormSelect name="branchId" options={data.branches.map((branch) => ({ label: localizedName(branch, locale), value: branch.id }))} placeholder={t.allBranches} />
+          <FormSelect name="branchId" options={(data.branches ?? []).map((branch) => ({ label: localizedName(branch, locale), value: branch.id }))} placeholder={t.allBranches} />
+        </label>
+        <label className="grid gap-1 text-sm font-medium">
+          {t.fields.department}
+          <FormSelect name="departmentId" options={(data.departments ?? []).map((department) => ({ label: localizedName(department, locale), value: department.id }))} placeholder={t.allDepartments} />
         </label>
         <Field label={t.fields.initialPassword} minLength={12} name="initialPassword" type="password" />
         <Button className="md:col-span-3" type="submit">{t.actions.create}</Button>
@@ -106,6 +122,45 @@ function ToggleForm({ action, active, id, locale }: { action: AdminAction; activ
       <input name="action" type="hidden" value={active ? 'deactivate' : 'reactivate'} />
       <Button size="sm" type="submit" variant="outline">{active ? t.actions.deactivate : t.actions.reactivate}</Button>
     </form>
+  );
+}
+
+function UpdateAssignmentsForm({ action, data, locale, user }: { action: AdminAction; data: AdminUsersData; locale: Locale; user: AdminUsersData['users'][0] }) {
+  const t = adminUsersText[locale];
+  const [open, setOpen] = React.useState(false);
+  const formRef = React.useRef<HTMLFormElement>(null);
+  
+  return (
+    <ActionDialog
+      title={locale === 'ar' ? `تعديل دور ${user.nameAr || user.nameEn}` : `Edit Role for ${user.nameEn}`}
+      open={open}
+      onOpenChange={setOpen}
+      trigger={<Button size="sm" variant="outline">Edit</Button>}
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button type="button" onClick={() => { setOpen(false); formRef.current?.requestSubmit(); }}>{t.actions.saveAssignments}</Button>
+        </>
+      }
+    >
+      <form action={action} className="grid gap-3 py-4" ref={formRef}>
+        <input name="id" type="hidden" value={user.id} />
+        <input name="locale" type="hidden" value={locale} />
+        <label className="grid gap-1 text-sm font-medium">
+          {t.fields.role}
+          <FormSelect defaultValue={user.roleCode ?? ''} name="roleCode" options={(data.roles ?? []).map((role) => ({ label: localizedName(role, locale), value: role.code }))} required />
+        </label>
+        <p className="text-xs text-muted-foreground mb-2">Need a custom role? Go to <a href={`/admin/roles?locale=${locale}`} className="underline text-primary">Manage roles</a> to create one.</p>
+        <label className="grid gap-1 text-sm font-medium">
+          {t.fields.branch}
+          <FormSelect defaultValue={user.branchId ?? ''} name="branchId" options={(data.branches ?? []).map((branch) => ({ label: localizedName(branch, locale), value: branch.id }))} placeholder={t.allBranches} />
+        </label>
+        <label className="grid gap-1 text-sm font-medium">
+          {t.fields.department}
+          <FormSelect defaultValue={user.departmentId ?? ''} name="departmentId" options={(data.departments ?? []).map((department) => ({ label: localizedName(department, locale), value: department.id }))} placeholder={t.allDepartments} />
+        </label>
+      </form>
+    </ActionDialog>
   );
 }
 

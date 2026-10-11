@@ -1,7 +1,7 @@
-export type ComplaintStatus = 'DRAFT' | 'SUBMITTED' | 'MANAGER_REVIEW' | 'BRANCH_REVIEW' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED' | 'REOPENED' | 'REJECTED';
+export type ComplaintStatus = 'DRAFT' | 'SUBMITTED' | 'MANAGER_REVIEW' | 'BRANCH_REVIEW' | 'IN_PROGRESS' | 'RESOLVED' | 'COMPLETED' | 'CLOSED' | 'REOPENED' | 'REJECTED';
 
 export type ComplaintSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
-export type ComplaintTransitionAction = 'SUBMIT' | 'ACCEPT_INTAKE' | 'REJECT_AS_INVALID' | 'APPROVE_AND_ROUTE' | 'SEND_BACK' | 'ASSIGN_INVESTIGATION' | 'RESOLVE_DIRECTLY' | 'REJECT_AFTER_REVIEW' | 'ADD_INVESTIGATION_UPDATE' | 'RESOLVE' | 'REJECT_AFTER_INVESTIGATION' | 'CLOSE' | 'REJECT_RESOLUTION' | 'REOPEN' | 'ROUTE_AGAIN';
+export type ComplaintTransitionAction = 'SUBMIT' | 'ACCEPT_INTAKE' | 'REJECT_AS_INVALID' | 'APPROVE_AND_ROUTE' | 'SEND_BACK' | 'ASSIGN_INVESTIGATION' | 'RESOLVE_DIRECTLY' | 'REJECT_AFTER_REVIEW' | 'ADD_INVESTIGATION_UPDATE' | 'RESOLVE' | 'COMPLETE' | 'REJECT_AFTER_INVESTIGATION' | 'CLOSE' | 'REJECT_RESOLUTION' | 'REOPEN' | 'ROUTE_AGAIN';
 
 export type ComplaintQueueItem = {
   id: string;
@@ -65,9 +65,24 @@ export type ComplaintDetail = ComplaintQueueItem & {
   vehicleSource: 'LOCAL' | 'MANUAL' | 'DMS' | null;
   manualVehicle: boolean;
   vehicleDataUnavailableReason: string | null;
+  channel: string | null;
+  customerType: string | null;
+  lastServiceDate: string | null;
+  odometer: number | null;
+  warrantyActive: boolean | null;
+  salesAdvisorName: string | null;
+  rootCauseCategory: string | null;
+  repeatCustomer: boolean | null;
   statusHistory: ComplaintStatusTimelineItem[];
   caseSummary: ComplaintCaseSummary | null;
   allowedActions: ComplaintTransitionAction[];
+  canDelete?: boolean;
+  createdBy?: { name: string; nameAr: string } | null;
+  approvedBy?: { name: string; nameAr: string } | null;
+  assignedBy?: { name: string; nameAr: string; departmentName?: string; departmentNameAr?: string } | null;
+  type?: string | undefined;
+  templateId?: string | null | undefined;
+  templateData?: any | undefined;
 };
 
 export type StaffApiError = {
@@ -93,7 +108,7 @@ export type StaffComplaintCreateRequest = {
   customerNumber?: string | null;
   customerSource?: ComplaintDetail['customerSource'];
   categoryId: string;
-  subcategoryId: string;
+
   description: string;
   incidentAt: string;
   subject: string;
@@ -107,6 +122,18 @@ export type StaffComplaintCreateRequest = {
   vehicleModelYear?: number | null;
   vehicleSource?: ComplaintDetail['vehicleSource'];
   vehicleDataUnavailableReason?: string | null;
+  channel?: string | null;
+  customerType?: string | null;
+  lastServiceDate?: string | null;
+  odometer?: number | null;
+  warrantyActive?: boolean | null;
+  salesAdvisorName?: string | null;
+  rootCauseCategory?: string | null;
+  repeatCustomer?: boolean | null;
+  departmentId?: string | null;
+  type?: string;
+  templateId?: string | null;
+  templateData?: any;
 };
 
 export type StaffComplaintCreateResponse = {
@@ -124,6 +151,7 @@ export type StaffComplaintCorrectionRequest = {
   manualVehicle?: boolean;
   vehicleRelated?: boolean;
   vehicleDataUnavailableReason?: string | null;
+  departmentId?: string | null;
 };
 
 export type StaffComplaintCorrectionResponse = {

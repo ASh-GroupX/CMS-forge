@@ -248,6 +248,14 @@ export class TasksRepository {
     });
   }
 
+  async claim(taskId: string, userId: string, client: TaskClient = this.prisma): Promise<boolean> {
+    const result = await client.task.updateMany({
+      where: { id: taskId, assigneeId: null },
+      data: { assigneeId: userId },
+    });
+    return result.count === 1;
+  }
+
   async createStatusHistory(data: CreateTaskStatusHistoryData, client: TaskClient = this.prisma): Promise<void> {
     await client.taskStatusHistory.create({
       data: {

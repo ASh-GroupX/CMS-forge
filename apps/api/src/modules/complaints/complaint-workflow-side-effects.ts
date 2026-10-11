@@ -29,6 +29,8 @@ const SLA_STAGE_BY_ACTION: Partial<Record<ComplaintTransitionAction, SlaStage>> 
   [ComplaintTransitionAction.REJECT_RESOLUTION]: SlaStage.INVESTIGATION,
   [ComplaintTransitionAction.RESOLVE]: SlaStage.RESOLUTION,
   [ComplaintTransitionAction.RESOLVE_DIRECTLY]: SlaStage.RESOLUTION,
+  [ComplaintTransitionAction.CUSTOMER_REJECT_RESOLUTION]: SlaStage.INVESTIGATION,
+  [ComplaintTransitionAction.CUSTOMER_RESUBMIT]: SlaStage.MANAGER_REVIEW,
 };
 
 const SLA_STAGE_BY_STATUS: Partial<Record<ComplaintStatus, SlaStage>> = {
@@ -46,8 +48,10 @@ const NOTIFICATION_BY_ACTION: Partial<Record<ComplaintTransitionAction, string>>
   [ComplaintTransitionAction.RESOLVE]: 'workflow.resolved.internal',
   [ComplaintTransitionAction.RESOLVE_DIRECTLY]: 'workflow.resolved.internal',
   [ComplaintTransitionAction.REJECT_RESOLUTION]: 'workflow.resolution-rejected.internal',
+  [ComplaintTransitionAction.CUSTOMER_REJECT_RESOLUTION]: 'workflow.resolution-rejected.internal',
   [ComplaintTransitionAction.SEND_BACK]: 'workflow.sent-back.internal',
   [ComplaintTransitionAction.REOPEN]: 'workflow.reopened.internal',
+  [ComplaintTransitionAction.CUSTOMER_RESUBMIT]: 'workflow.reopened.internal',
 };
 
 const REJECT_ACTIONS = new Set<ComplaintTransitionAction>([
@@ -101,7 +105,9 @@ export async function queueWorkflowSideEffects({
     }));
   }
 
-  const stage = SLA_STAGE_BY_ACTION[input.action];
+  const stage = (input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE && toStatus === ComplaintStatus.IN_PROGRESS) 
+    ? SlaStage.INVESTIGATION 
+    : SLA_STAGE_BY_ACTION[input.action];
   if (stage && slaService) {
     await safely('sla-deadline', complaint.id, () => slaService.recordDeadlineEvent({
       complaintId: complaint.id,
@@ -143,7 +149,8 @@ function notificationTemplate(action: ComplaintTransitionAction): string | null 
 }
 
 function lifecycleEvent(input: ApplyComplaintTransitionInput): { type: typeof SlaEventType.PAUSED | typeof SlaEventType.RESUMED; stage: SlaStage } | null {
-  if (input.action === ComplaintTransitionAction.REOPEN) return { type: SlaEventType.RESUMED, stage: SlaStage.MANAGER_REVIEW };
+  if (input.action === ComplaintTransitionAction.REOPEN || input.action === ComplaintTransitionAction.CUSTOMER_RESUBMIT) return { type: SlaEventType.RESUMED, stage: SlaStage.MANAGER_REVIEW };
+  if (input.action === ComplaintTransitionAction.CUSTOMER_REJECT_RESOLUTION) return { type: SlaEventType.RESUMED, stage: SlaStage.INVESTIGATION };
   if (!PAUSE_ACTIONS.has(input.action)) return null;
   const stage = SLA_STAGE_BY_STATUS[input.fromStatus];
   return stage ? { type: SlaEventType.PAUSED, stage } : null;
@@ -155,7 +162,7 @@ function recipient(input: ApplyComplaintTransitionInput, complaint: ComplaintSta
 }
 
 function notificationPayload(input: ApplyComplaintTransitionInput, toStatus: ComplaintStatus, complaint: ComplaintStatusRecord) {
-  if (input.action === ComplaintTransitionAction.CLOSE || input.action === ComplaintTransitionAction.REOPEN) {
+  if (input.action === ComplaintTransitionAction.CLOSE || input.action === ComplaintTransitionAction.REOPEN || input.action === ComplaintTransitionAction.CUSTOMER_RESUBMIT) {
     return {
       complaintId: input.complaintId,
       fromStatus: input.fromStatus,
@@ -185,7 +192,8 @@ function targetOwnerId(input: ApplyComplaintTransitionInput, complaint: Complain
   if (
     input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE ||
     input.action === ComplaintTransitionAction.ASSIGN_INVESTIGATION ||
-    input.action === ComplaintTransitionAction.REJECT_RESOLUTION
+    input.action === ComplaintTransitionAction.REJECT_RESOLUTION ||
+    input.action === ComplaintTransitionAction.CUSTOMER_REJECT_RESOLUTION
   ) {
     return input.ownerId ?? complaint.ownerId;
   }

@@ -29,11 +29,13 @@ export function CustomerVehicleLookup({
   onSelectionChange,
   state,
   surface = 'card',
+  defaultPhone,
 }: {
   locale: Locale;
   onSelectionChange?: ((selection: LookupSelection) => void) | undefined;
   state?: LookupFixtureState | undefined;
   surface?: 'card' | 'section';
+  defaultPhone?: string | undefined;
 }) {
   const shell = staffShellText[locale];
   const t = shell.lookup;
@@ -77,15 +79,21 @@ export function CustomerVehicleLookup({
 
   const body = (
     <>
-      <div className="border-b border-line-subtle p-4">
-        <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
-        <p className="text-sm text-content-muted">{t.subtitle}</p>
-      </div>
-      <CardContent className="grid gap-4 p-4">
-        <form className="grid gap-3 md:grid-cols-[repeat(4,minmax(0,1fr))_auto]" onSubmit={submit}>
+      <details className="group" open={false}>
+        <summary className="cursor-pointer border-b border-line-subtle p-4 list-none [&::-webkit-details-marker]:hidden flex items-center justify-between">
+          <div>
+            <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
+            <p className="text-sm text-content-muted">{t.subtitle}</p>
+          </div>
+          <div className="text-content-muted transition-transform duration-200 group-open:-rotate-180">
+            <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </div>
+        </summary>
+        <CardContent className="grid gap-4 p-4">
+          <form className="grid gap-3 md:grid-cols-[repeat(4,minmax(0,1fr))_auto]" onSubmit={submit}>
           {fields.map((field) => (
             <Field id={`lookup-${field}`} key={field} label={t.fields[field]}>
-              <Input disabled={lookupDisabled} id={`lookup-${field}`} name={field} />
+              <Input disabled={lookupDisabled} id={`lookup-${field}`} name={field} defaultValue={field === 'phone' ? defaultPhone : undefined} />
             </Field>
           ))}
           <div className="flex items-end">
@@ -142,6 +150,7 @@ export function CustomerVehicleLookup({
           </section>
         </div>
       </CardContent>
+      </details>
     </>
   );
 
@@ -204,7 +213,7 @@ function previewView(state: LookupFixtureState | undefined): ViewState {
   if (state === 'validation') return { kind: 'validation', matches: [] };
   if (state === 'manual') return { kind: 'manual', matches: [] };
   if (state === 'error') return { kind: 'error', matches: [] };
-  return { kind: 'disabled', matches: [] };
+  return { kind: 'idle', matches: [] };
 }
 
 function sampleMatch(customerCode: string, customerName: string, vin: string): DmsCustomerVehicleMatch {
