@@ -9,6 +9,7 @@ import {
   checkForbiddenImports,
   checkForbiddenMarkers,
   checkModuleManifests,
+  frontendDesignHardcodeBaseline,
 } from './lint.mjs';
 import { checkManifestTruth } from './manifest-truth-check.mjs';
 import { checkModuleWiring } from './wiring-check.mjs';
@@ -100,13 +101,14 @@ test('lint exempts test and dto files from the size budget', () => {
 test('lint rejects frontend design hardcode debt growth', () => {
   const root = mkdtempSync(join(tmpdir(), 'cms-auto-lint-'));
   mkdirSync(join(root, 'apps/web/src/components/work-queue'), { recursive: true });
+  const debtCount = frontendDesignHardcodeBaseline + 1;
   writeFileSync(
     join(root, 'apps/web/src/components/work-queue/index.tsx'),
-    `${Array.from({ length: 34 }, () => '<div className="bg-white" />').join('\n')}\n`,
+    `${Array.from({ length: debtCount }, () => '<div className="bg-white" />').join('\n')}\n`,
   );
 
   assert.deepEqual(checkFrontendDesignHardcodes(root), [
-    'apps/web/src: off-token color utility debt increased (34/33); use semantic tokens or reduce the baseline',
+    `apps/web/src: off-token color utility debt increased (${debtCount}/${frontendDesignHardcodeBaseline}); use semantic tokens or reduce the baseline`,
   ]);
 });
 

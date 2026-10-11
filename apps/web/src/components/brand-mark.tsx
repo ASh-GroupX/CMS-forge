@@ -13,7 +13,7 @@ export function BrandMark({ className, compact = false, label = 'CMS-Auto', tagl
       {compact ? null : (
         <span className="min-w-0">
           <span className="block truncate text-lg font-bold tracking-tight bg-gradient-to-br from-content-strong to-content-muted bg-clip-text text-transparent">{label}</span>
-          {tagline ? <span className="block truncate text-[0.65rem] font-semibold tracking-widest text-brand/80 uppercase">{tagline}</span> : null}
+          {tagline ? <span className="block truncate text-[0.65rem] font-semibold tracking-widest text-content-muted uppercase">{tagline}</span> : null}
         </span>
       )}
     </span>

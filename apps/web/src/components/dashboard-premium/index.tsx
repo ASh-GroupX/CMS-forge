@@ -461,18 +461,18 @@ function OfficerView({ isRtl, data }: { isRtl: boolean, data?: any }) {
             <CardContent className="p-6 grid grid-cols-3 gap-4">
               <Link href="/internal-tickets/my-work?status=on-time" className="flex flex-col items-center justify-center p-6 bg-status-success/10 rounded-2xl border border-status-success/20 hover:bg-status-success/20 transition-colors">
                 <CheckCircle2 className="size-8 text-status-success mb-3" />
-                <p className="text-3xl font-black text-status-success">{officerData.onTime}</p>
-                <p className="text-sm font-semibold text-status-success/80 mt-1">{isRtl ? 'في الوقت' : 'On-Time'}</p>
+                <p className="text-3xl font-black text-content-strong">{officerData.onTime}</p>
+                <p className="text-sm font-semibold text-content-muted mt-1">{isRtl ? 'في الوقت' : 'On-Time'}</p>
               </Link>
               <Link href="/internal-tickets/my-work?status=overdue" className="flex flex-col items-center justify-center p-6 bg-status-error/10 rounded-2xl border border-status-error/20 hover:bg-status-error/20 transition-colors">
                 <Clock className="size-8 text-status-error mb-3" />
-                <p className="text-3xl font-black text-status-error">{officerData.overdue}</p>
-                <p className="text-sm font-semibold text-status-error/80 mt-1">{isRtl ? 'متأخر' : 'Overdue'}</p>
+                <p className="text-3xl font-black text-content-strong">{officerData.overdue}</p>
+                <p className="text-sm font-semibold text-content-muted mt-1">{isRtl ? 'متأخر' : 'Overdue'}</p>
               </Link>
               <Link href="/internal-tickets/my-work?status=pending" className="flex flex-col items-center justify-center p-6 bg-status-warning/10 rounded-2xl border border-status-warning/20 hover:bg-status-warning/20 transition-colors">
                 <Inbox className="size-8 text-status-warning mb-3" />
-                <p className="text-3xl font-black text-status-warning">{officerData.pending}</p>
-                <p className="text-sm font-semibold text-status-warning/80 mt-1">{isRtl ? 'معلق' : 'Pending'}</p>
+                <p className="text-3xl font-black text-content-strong">{officerData.pending}</p>
+                <p className="text-sm font-semibold text-content-muted mt-1">{isRtl ? 'معلق' : 'Pending'}</p>
               </Link>
             </CardContent>
           </Card>
@@ -510,7 +510,7 @@ function StatCard({ title, value, icon, trend, isPositive }: { title: string; va
         <div className="flex items-end justify-between">
           <p className="text-3xl font-black tabular-nums tracking-tighter text-content-strong">{value}</p>
           {trend && (
-            <span className={`text-xs font-bold px-2 py-1 rounded-full ${isPositive ? 'bg-status-success/10 text-status-success' : 'bg-status-error/10 text-status-error'}`}>
+            <span className={`text-xs font-bold px-2 py-1 rounded-full border ${isPositive ? 'border-status-success-border bg-status-success-bg text-content-strong' : 'border-status-error-border bg-status-error-bg text-content-strong'}`}>
               {trend}
             </span>
           )}
