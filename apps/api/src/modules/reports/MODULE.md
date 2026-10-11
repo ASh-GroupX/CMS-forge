@@ -25,6 +25,8 @@ Agent context manifest. Read this before editing the module.
 - Read-only reporting boundary: `complaints`, `complaint_status_history`,
   `sla_events`, and `cases` may be read to derive complaint/case KPI aggregates.
   Reports must not write these tables.
+- Read-only reporting boundary: `users`, `internal_tickets`, and `ticket_ratings`
+  may be read to derive user and ticket reporting aggregates. Reports must not write these tables.
 
 ## May depend on
 
