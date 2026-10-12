@@ -11,15 +11,53 @@ import { reportWhere } from './complaints.report-query.js';
 type ComplaintTransitionClient = Pick<Prisma.TransactionClient, 'comment' | 'complaint' | 'complaintStatusHistory' | 'customer' | 'complaintWatcher'> & ComplaintReferenceClient;
 export type DataSource = 'LOCAL' | 'MANUAL' | 'DMS';
 
-export type ComplaintStatusRecord = { id: string; branchId: string; customerId: string; status: ComplaintStatus; ownerId: string | null; severity: ComplaintSeverity; categoryId: string; departmentId: string | null };
+export type ComplaintStatusRecord = { id: string; branchId: string; customerId: string; status: ComplaintStatus; ownerId: string | null; severity: ComplaintSeverity; categoryId: string; departmentId: string | null; createdById: string | null; referenceNumber: string };
 export type ComplaintTransitionSubject = { id: string; vehicleRelated: boolean; vehicleId: string | null; vehicleDataUnavailableReason: string | null };
-export type ComplaintRecord = { id: string; branchId: string; customerId: string; status: ComplaintStatus; type: any; referenceNumber: string; subject: string; severity: ComplaintSeverity; categoryId: string; departmentId: string | null; ownerId: string | null; resolvedAt: Date | null; closedAt: Date | null; templateId?: string | null; templateData?: any; };
+export type ComplaintRecord = { id: string; branchId: string; customerId: string; status: ComplaintStatus; type: any; referenceNumber: string; subject: string; severity: ComplaintSeverity; categoryId: string; departmentId: string | null; ownerId: string | null; createdById: string | null; resolvedAt: Date | null; closedAt: Date | null; templateId?: string | null; templateData?: any; };
 
 export type ComplaintQueueRecord = ComplaintRecord & { ownerId: string | null; owner: { nameEn: string; email: string } | null; department?: { nameEn: string; nameAr: string } | null; category?: { id: string; nameEn: string; nameAr: string } | null; branch: { code: string; nameEn: string; nameAr: string; timezone: string }; createdAt: Date; updatedAt: Date };
-export type ComplaintDetailRecord = Omit<ComplaintQueueRecord, 'category'> & { category: { id: string; nameEn: string; nameAr: string }; descriptionEn: string; incidentAt: Date | null; customer: { id: string; nameEn: string; phone: string; dmsCode: string | null; dataSource: DataSource }; vehicle: { id: string; vin: string; plate: string; makeEn: string; modelEn: string; year: number; dataSource: DataSource } | null; customerDataSource: DataSource; manualCustomerFlag: boolean; vehicleRelated: boolean; vehicleDataSource: DataSource | null; manualVehicleFlag: boolean; vehicleDataUnavailableReason: string | null; templateId?: string | null; templateData?: any; statusHistory: Array<{ id: string; fromStatus: ComplaintStatus | null; toStatus: ComplaintStatus; action: ComplaintTransitionAction | null; actorId: string | null; actorRole: string | null; requestSource: ComplaintTransitionRequestSource | null; reason: string | null; correlationId: string | null; createdAt: Date; actor: { nameEn: string; nameAr: string; department: { nameEn: string; nameAr: string } | null } | null }> };
-export type CreateComplaintData = { referenceNumber: string; status: ComplaintStatus; type: any; subject: string; severity: ComplaintSeverity; branchId: string; categoryId: string; customerName: string; customerPhone?: string | null; customerNumber?: string | null; customerDataSource: DataSource; manualCustomerFlag: boolean; vehicleId?: string | null; vehicleVin?: string | null; vehiclePlate?: string | null; vehicleBrand?: string | null; vehicleModel?: string | null; vehicleModelYear?: number | null; vehicleDataSource?: DataSource | null; manualVehicleFlag: boolean; vehicleRelated: boolean; vehicleDataUnavailableReason?: string | null; channel?: string | null; customerType?: string | null; lastServiceDate?: Date | null; odometer?: number | null; warrantyActive?: boolean | null; salesAdvisorName?: string | null; rootCauseCategory?: string | null; repeatCustomer?: boolean | null; departmentId?: string | null; createdById?: string | null; descriptionEn: string; incidentAt: Date; templateId?: string | null; templateData?: any; };
+export type ComplaintDetailRecord = Omit<ComplaintQueueRecord, 'category'> & {
+  category: { id: string; nameEn: string; nameAr: string };
+  descriptionEn: string;
+  incidentAt: Date | null;
+  customer: { id: string; nameEn: string; phone: string; dmsCode: string | null; dataSource: DataSource };
+  vehicle: { id: string; vin: string; plate: string; makeEn: string; modelEn: string; year: number; dataSource: DataSource } | null;
+  customerDataSource: DataSource;
+  manualCustomerFlag: boolean;
+  vehicleRelated: boolean;
+  vehicleDataSource: DataSource | null;
+  manualVehicleFlag: boolean;
+  vehicleDataUnavailableReason: string | null;
+  templateId?: string | null;
+  templateData?: any;
+  alternativeCarProvided?: boolean;
+  backupOfficerId?: string | null;
+  backupOfficer?: { nameEn: string; email: string } | null;
+  collaboratorId?: string | null;
+  collaborator?: { nameEn: string; email: string } | null;
+  isJustified?: boolean | null;
+  satisfactionStatus?: string | null;
+  investigationNotes?: string | null;
+  investigatedAt?: Date | null;
+  salesAdvisorName?: string | null;
+  rootCauseCategory?: string | null;
+  channel?: string | null;
+  customerType?: string | null;
+  lastServiceDate?: Date | null;
+  odometer?: number | null;
+  warrantyActive?: boolean | null;
+  repeatCustomer?: boolean | null;
+  createdById?: string | null;
+  createdBy?: { nameEn: string; nameAr: string } | null;
+  statusHistory: Array<{ id: string; fromStatus: ComplaintStatus | null; toStatus: ComplaintStatus; action: ComplaintTransitionAction | null; actorId: string | null; actorRole: string | null; requestSource: ComplaintTransitionRequestSource | null; reason: string | null; correlationId: string | null; createdAt: Date; actor: { nameEn: string; nameAr: string; department: { nameEn: string; nameAr: string } | null } | null }>;
+};
+export type CreateComplaintData = {
+  referenceNumber: string; status: ComplaintStatus; type: any; subject: string; severity: ComplaintSeverity; branchId: string; categoryId: string; customerName: string; customerPhone?: string | null; customerNumber?: string | null; customerDataSource: DataSource; manualCustomerFlag: boolean; vehicleId?: string | null; vehicleVin?: string | null; vehiclePlate?: string | null; vehicleBrand?: string | null; vehicleModel?: string | null; vehicleModelYear?: number | null; vehicleDataSource?: DataSource | null; manualVehicleFlag: boolean; vehicleRelated: boolean; vehicleDataUnavailableReason?: string | null; channel?: string | null; customerType?: string | null; lastServiceDate?: Date | null; odometer?: number | null; warrantyActive?: boolean | null; salesAdvisorName?: string | null; rootCauseCategory?: string | null; repeatCustomer?: boolean | null; departmentId?: string | null; ownerId?: string | null; backupOfficerId?: string | null; collaboratorId?: string | null; alternativeCarProvided?: boolean; createdById?: string | null; descriptionEn: string; incidentAt: Date; templateId?: string | null; templateData?: any;
+};
 
-export type UpdateComplaintStatusData = { complaintId: string; fromStatus: ComplaintStatus; toStatus: ComplaintStatus; targetBranchId?: string | null; targetDepartmentId?: string | null; ownerId?: string | null; resolvedAt?: Date | null; closedAt?: Date | null; vehicleDataUnavailableReason?: string | null };
+export type UpdateComplaintStatusData = {
+  complaintId: string; fromStatus: ComplaintStatus; toStatus: ComplaintStatus; targetBranchId?: string | null; targetDepartmentId?: string | null; ownerId?: string | null; resolvedAt?: Date | null; closedAt?: Date | null; vehicleDataUnavailableReason?: string | null; isJustified?: boolean | null; satisfactionStatus?: string | null; investigationNotes?: string | null; investigatedAt?: Date | null;
+};
 
 export type CreateComplaintStatusHistoryData = { complaintId: string; fromStatus: ComplaintStatus | null; toStatus: ComplaintStatus; action: ComplaintTransitionAction | null; actorId?: string | null; actorRole: string | null; requestSource: ComplaintTransitionRequestSource; reason?: string | null; correlationId?: string | null };
 
@@ -101,6 +139,10 @@ export class ComplaintsRepository {
         rootCauseCategory: data.rootCauseCategory ?? null,
         repeatCustomer: data.repeatCustomer ?? null,
         departmentId: data.departmentId ?? null,
+        ownerId: data.ownerId ?? null,
+        backupOfficerId: data.backupOfficerId ?? null,
+        collaboratorId: data.collaboratorId ?? null,
+        alternativeCarProvided: data.alternativeCarProvided ?? false,
         createdById: data.createdById ?? null,
         descriptionEn: data.descriptionEn,
         incidentAt: data.incidentAt,
@@ -205,6 +247,25 @@ export class ComplaintsRepository {
         vehicle: { select: { id: true, vin: true, plate: true, makeEn: true, modelEn: true, year: true, dataSource: true } },
         customerDataSource: true, manualCustomerFlag: true,
         vehicleRelated: true, vehicleDataSource: true, manualVehicleFlag: true, vehicleDataUnavailableReason: true,
+        alternativeCarProvided: true,
+        backupOfficerId: true,
+        backupOfficer: { select: { nameEn: true, email: true } },
+        collaboratorId: true,
+        collaborator: { select: { nameEn: true, email: true } },
+        isJustified: true,
+        satisfactionStatus: true,
+        investigationNotes: true,
+        investigatedAt: true,
+        salesAdvisorName: true,
+        rootCauseCategory: true,
+        channel: true,
+        customerType: true,
+        lastServiceDate: true,
+        odometer: true,
+        warrantyActive: true,
+        repeatCustomer: true,
+        createdById: true,
+        createdBy: { select: { nameEn: true, nameAr: true } },
         createdAt: true, updatedAt: true,
         statusHistory: {
           orderBy: { createdAt: 'asc' },
@@ -310,6 +371,10 @@ export class ComplaintsRepository {
       ...(data.resolvedAt ? { resolvedAt: data.resolvedAt } : {}),
       ...(data.closedAt ? { closedAt: data.closedAt } : {}),
       ...(data.vehicleDataUnavailableReason ? { vehicleDataUnavailableReason: data.vehicleDataUnavailableReason } : {}),
+      ...(data.isJustified !== undefined ? { isJustified: data.isJustified } : {}),
+      ...(data.satisfactionStatus !== undefined ? { satisfactionStatus: data.satisfactionStatus } : {}),
+      ...(data.investigationNotes !== undefined ? { investigationNotes: data.investigationNotes } : {}),
+      ...(data.investigatedAt ? { investigatedAt: data.investigatedAt } : {}),
     };
     const update = await client.complaint.updateMany({
       where: { id: data.complaintId, status: data.fromStatus },
@@ -322,14 +387,14 @@ export class ComplaintsRepository {
 
     return client.complaint.findUniqueOrThrow({
       where: { id: data.complaintId },
-      select: { id: true, branchId: true, customerId: true, status: true, ownerId: true, severity: true, categoryId: true, departmentId: true },
+      select: { id: true, branchId: true, customerId: true, status: true, ownerId: true, severity: true, categoryId: true, departmentId: true, createdById: true, referenceNumber: true },
     });
   }
 
   async createStatusHistory(data: CreateComplaintStatusHistoryData, client: ComplaintTransitionClient = this.prisma): Promise<void> { await client.complaintStatusHistory.create({ data }); }
 }
 
-const complaintSelect = { id: true, referenceNumber: true, branchId: true, customerId: true, status: true, type: true, subject: true, severity: true, categoryId: true, departmentId: true, ownerId: true, resolvedAt: true, closedAt: true, templateId: true, templateData: true } satisfies Prisma.ComplaintSelect;
+const complaintSelect = { id: true, referenceNumber: true, branchId: true, customerId: true, status: true, type: true, subject: true, severity: true, categoryId: true, departmentId: true, ownerId: true, createdById: true, resolvedAt: true, closedAt: true, templateId: true, templateData: true } satisfies Prisma.ComplaintSelect;
 
 function customerPhone(data: CreateComplaintData): string {
   return data.customerPhone ?? `DMS-${data.customerNumber}`;

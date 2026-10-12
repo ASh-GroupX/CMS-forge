@@ -51,7 +51,44 @@ export function detailItem(complaint: ComplaintDetailRecord, masked = false, sla
   const approvedBy = approvedByTransition?.actor ? { name: approvedByTransition.actor.nameEn, nameAr: approvedByTransition.actor.nameAr } : null;
   const assignedBy = lastAssignment?.actor ? { name: lastAssignment.actor.nameEn, nameAr: lastAssignment.actor.nameAr, ...(lastAssignment.actor.department?.nameEn ? { departmentName: lastAssignment.actor.department.nameEn } : {}), ...(lastAssignment.actor.department?.nameAr ? { departmentNameAr: lastAssignment.actor.department.nameAr } : {}) } : null;
 
-  return { ...queueItem(complaint, slaService), categoryId: complaint.category.id, categoryName: complaint.category.nameEn, categoryNameAr: complaint.category.nameAr, description: complaint.descriptionEn, incidentAt: complaint.incidentAt?.toISOString() ?? null, customer: { id: complaint.customer.id, name: complaint.customer.nameEn, phone: masked ? MASKED : complaint.customer.phone, identifier: masked ? MASKED : complaint.customer.dmsCode, source: complaint.customer.dataSource }, vehicle, customerSource: complaint.customerDataSource, manualCustomer: complaint.manualCustomerFlag, vehicleRelated: complaint.vehicleRelated, vehicleSource: complaint.vehicleDataSource, manualVehicle: complaint.manualVehicleFlag, vehicleDataUnavailableReason: complaint.vehicleDataUnavailableReason, channel: (complaint as any).channel ?? null, customerType: (complaint as any).customerType ?? null, lastServiceDate: (complaint as any).lastServiceDate?.toISOString() ?? null, odometer: (complaint as any).odometer ?? null, warrantyActive: (complaint as any).warrantyActive ?? null, salesAdvisorName: (complaint as any).salesAdvisorName ?? null, rootCauseCategory: (complaint as any).rootCauseCategory ?? null, repeatCustomer: (complaint as any).repeatCustomer ?? null, statusHistory: complaint.statusHistory.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })), allowedActions: [], createdBy, approvedBy, assignedBy };
+  return {
+    ...queueItem(complaint, slaService),
+    categoryId: complaint.category.id,
+    categoryName: complaint.category.nameEn,
+    categoryNameAr: complaint.category.nameAr,
+    description: complaint.descriptionEn,
+    incidentAt: complaint.incidentAt?.toISOString() ?? null,
+    customer: { id: complaint.customer.id, name: complaint.customer.nameEn, phone: masked ? MASKED : complaint.customer.phone, identifier: masked ? MASKED : complaint.customer.dmsCode, source: complaint.customer.dataSource },
+    vehicle,
+    customerSource: complaint.customerDataSource,
+    manualCustomer: complaint.manualCustomerFlag,
+    vehicleRelated: complaint.vehicleRelated,
+    vehicleSource: complaint.vehicleDataSource,
+    manualVehicle: complaint.manualVehicleFlag,
+    vehicleDataUnavailableReason: complaint.vehicleDataUnavailableReason,
+    channel: (complaint as any).channel ?? null,
+    customerType: (complaint as any).customerType ?? null,
+    lastServiceDate: (complaint as any).lastServiceDate?.toISOString() ?? null,
+    odometer: (complaint as any).odometer ?? null,
+    warrantyActive: (complaint as any).warrantyActive ?? null,
+    salesAdvisorName: (complaint as any).salesAdvisorName ?? null,
+    rootCauseCategory: (complaint as any).rootCauseCategory ?? null,
+    repeatCustomer: (complaint as any).repeatCustomer ?? null,
+    alternativeCarProvided: (complaint as any).alternativeCarProvided ?? false,
+    backupOfficerId: (complaint as any).backupOfficerId ?? null,
+    backupOfficerName: (complaint as any).backupOfficer?.nameEn ?? null,
+    collaboratorId: (complaint as any).collaboratorId ?? null,
+    collaboratorName: (complaint as any).collaborator?.nameEn ?? null,
+    isJustified: (complaint as any).isJustified ?? null,
+    satisfactionStatus: (complaint as any).satisfactionStatus ?? null,
+    investigationNotes: (complaint as any).investigationNotes ?? null,
+    investigatedAt: (complaint as any).investigatedAt?.toISOString() ?? null,
+    statusHistory: complaint.statusHistory.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })),
+    allowedActions: [],
+    createdBy,
+    approvedBy,
+    assignedBy,
+  };
 }
 
 export function shouldMask(input: { role?: string | null }): boolean {

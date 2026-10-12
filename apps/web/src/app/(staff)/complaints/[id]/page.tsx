@@ -33,8 +33,8 @@ export default async function ComplaintDetailPage({
   let resolvedCookieHeader = cookieHeader;
   if (resolvedCookieHeader === undefined) {
     try {
-      const { cookies } = await import('next/headers');
-      resolvedCookieHeader = (await cookies()).toString();
+      const { headers } = await import('next/headers');
+      resolvedCookieHeader = (await headers()).get('cookie') ?? '';
     } catch {
       resolvedCookieHeader = '';
     }
@@ -48,9 +48,9 @@ export default async function ComplaintDetailPage({
   const detailResult = await getStaffComplaintDetailLoadResult(apiInput);
   const detail = detailResult.status === 'ready' ? detailResult.data : null;
   const [staff, options, assignmentOptions] = detail ? await Promise.all([
-    getAssignableStaff({ ...(cookieHeader !== undefined ? { cookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
-    getComplaintFormOptions({ ...(cookieHeader !== undefined ? { cookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
-    getStaffAssignmentOptions({ ...(cookieHeader !== undefined ? { cookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
+    getAssignableStaff({ ...(resolvedCookieHeader !== '' ? { cookieHeader: resolvedCookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
+    getComplaintFormOptions({ ...(resolvedCookieHeader !== '' ? { cookieHeader: resolvedCookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
+    getStaffAssignmentOptions({ ...(resolvedCookieHeader !== '' ? { cookieHeader: resolvedCookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
   ]) : [null, null, null] as const;
   const detailState = detailResult.status === 'ready' ? 'ready' : detailResult.status;
 

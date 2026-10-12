@@ -7,34 +7,34 @@ import type { CreateInternalComplaintInput } from './complaints.service.js';
 
 export function createComplaintData(input: CreateInternalComplaintInput): Omit<CreateComplaintData, 'referenceNumber'> {
   const vehicleReason = optionalText(input.vehicleDataUnavailableReason);
-  const missingVehicleData = input.vehicleRelated && !optionalText(input.vehicleId) && !optionalText(input.vehicleVin) && !vehicleReason;
+  const customerName = (input.customerName ?? '').trim();
+  const subject = (input.subject && input.subject.trim()) ? input.subject.trim() : customerName;
   const errors = [
-    ...requiredTextError(input.customerName, 'customerName'),
+    ...requiredTextError(customerName, 'customerName'),
     ...contactErrors(input),
     ...requiredTextError(input.categoryId, 'categoryId'),
     ...requiredTextError(input.description, 'description'),
     ...requiredTextError(input.branchId, 'branchId'),
-    ...requiredTextError(input.subject, 'subject'),
+    ...vinErrors(input.vehicleVin),
     ...requiredEnumError(input.severity, ComplaintSeverity, 'severity'),
     ...incidentAtErrors(input.incidentAt),
-    ...(missingVehicleData ? requiredTextError(input.vehicleVin, 'vehicleVin') : []),
-    ...(missingVehicleData ? requiredTextError(input.vehicleDataUnavailableReason, 'vehicleDataUnavailableReason') : []),
   ];
   if (errors.length) throw new AppException('VALIDATION_FAILED', 'Invalid complaint request', HttpStatus.BAD_REQUEST, errors);
-  const customerDataSource = sourceOrDefault(input.customerSource, input.customerNumber ? 'DMS' : 'MANUAL');
-  const vehicleDataSource = input.vehicleRelated
+  const customerNumber = optionalText(input.customerNumber) ?? generateDefaultCustomerNumber();
+  const customerDataSource = sourceOrDefault(input.customerSource, input.customerNumber && !input.customerNumber.startsWith('CUST-') ? 'DMS' : 'MANUAL');
+  const vehicleDataSource = input.vehicleRelated !== false
     ? sourceOrDefault(input.vehicleSource, input.vehicleId ? 'LOCAL' : 'MANUAL')
     : null;
   return {
     status: input.saveAsDraft === true ? ComplaintStatus.DRAFT : ComplaintStatus.SUBMITTED,
     type: (input.type as any) ?? 'COMPLAINT',
-    subject: input.subject.trim(),
+    subject,
     severity: input.severity,
     branchId: input.branchId.trim(),
     categoryId: input.categoryId.trim(),
-    customerName: input.customerName.trim(),
+    customerName,
     customerPhone: optionalText(input.customerPhone),
-    customerNumber: optionalText(input.customerNumber),
+    customerNumber,
     customerDataSource,
     manualCustomerFlag: customerDataSource === 'MANUAL',
     vehicleId: optionalText(input.vehicleId),
@@ -45,7 +45,7 @@ export function createComplaintData(input: CreateInternalComplaintInput): Omit<C
     vehicleModelYear: input.vehicleModelYear ?? null,
     vehicleDataSource,
     manualVehicleFlag: vehicleDataSource === 'MANUAL',
-    vehicleRelated: input.vehicleRelated === true,
+    vehicleRelated: input.vehicleRelated !== false,
     vehicleDataUnavailableReason: vehicleReason,
     channel: optionalText(input.channel),
     customerType: optionalText(input.customerType),
@@ -56,6 +56,10 @@ export function createComplaintData(input: CreateInternalComplaintInput): Omit<C
     rootCauseCategory: optionalText(input.rootCauseCategory),
     repeatCustomer: input.repeatCustomer ?? null,
     departmentId: optionalText(input.departmentId),
+    ownerId: optionalText(input.ownerId),
+    backupOfficerId: optionalText(input.backupOfficerId),
+    collaboratorId: optionalText(input.collaboratorId),
+    alternativeCarProvided: input.alternativeCarProvided === true,
     createdById: input.actorId ?? null,
     descriptionEn: input.description.trim(),
     incidentAt: new Date(input.incidentAt),
@@ -65,7 +69,7 @@ export function createComplaintData(input: CreateInternalComplaintInput): Omit<C
 }
 
 export function complaintCreatedAudit(input: CreateInternalComplaintInput, complaint: ComplaintRecord): AuditRecordInput {
-  const customerSource = sourceOrDefault(input.customerSource, input.customerNumber ? 'DMS' : 'MANUAL');
+  const customerSource = sourceOrDefault(input.customerSource, input.customerNumber && !input.customerNumber.startsWith('CUST-') ? 'DMS' : 'MANUAL');
   const vehicleSource = input.vehicleRelated ? sourceOrDefault(input.vehicleSource, input.vehicleId ? 'LOCAL' : 'MANUAL') : null;
   return {
     eventType: 'COMPLAINT', action: 'complaint_created', actorId: input.actorId ?? null,
@@ -100,7 +104,25 @@ function customerReference(referenceNumber: string): string | null { return refe
 function optionalText(value: string | null | undefined): string | null { return typeof value === 'string' && value.trim() ? value.trim() : null; }
 function sourceOrDefault(value: DataSource | null | undefined, fallback: DataSource): DataSource { return value ?? fallback; }
 function requiredTextError(value: unknown, field: string) { return typeof value === 'string' && value.trim() ? [] : [{ field, code: 'REQUIRED', message: `${field} is required.` }]; }
-function contactErrors(input: CreateInternalComplaintInput) { return optionalText(input.customerPhone) || optionalText(input.customerNumber) ? [] : [{ field: 'customerPhone', code: 'REQUIRED', message: 'customerPhone or customerNumber is required.' }]; }
+function contactErrors(input: CreateInternalComplaintInput) {
+  return optionalText(input.customerPhone)
+    ? []
+    : [{ field: 'customerPhone', code: 'REQUIRED', message: 'customerPhone is required.' }];
+}
+function vinErrors(value: unknown) {
+  if (typeof value !== 'string' || !value.trim()) {
+    return [{ field: 'vehicleVin', code: 'REQUIRED', message: 'vehicleVin is required.' }];
+  }
+  const trimmed = value.trim();
+  if (/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(trimmed)) {
+    return [{ field: 'vehicleVin', code: 'INVALID_VIN', message: 'vehicleVin cannot contain Arabic characters.' }];
+  }
+  return [];
+}
+function generateDefaultCustomerNumber(): string {
+  const randomDigits = Math.floor(100000 + Math.random() * 900000);
+  return `CUST-${randomDigits}`;
+}
 function requiredEnumError<T extends Record<string, string>>(value: unknown, options: T, field: string) { return typeof value === 'string' && Object.values(options).includes(value) ? [] : [{ field, code: 'REQUIRED', message: `${field} is required.` }]; }
 function incidentAtErrors(value: unknown) {
   const date = value instanceof Date || typeof value === 'string' ? new Date(value) : null;

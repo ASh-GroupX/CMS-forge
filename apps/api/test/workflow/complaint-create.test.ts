@@ -50,6 +50,29 @@ test('complaint creation validates required fields before transaction', async ()
   );
 });
 
+test('complaint creation rejects Arabic characters in vehicleVin', async () => {
+  const service = new ComplaintsService({} as ComplaintsRepository, { record: async () => undefined } as unknown as AuditService);
+
+  await assert.rejects(
+    service.createInternal({
+      customerName: 'Faisal Al-Otaibi',
+      customerPhone: '+966500000001',
+      categoryId: 'cat_engine',
+      description: 'Noise at cold start',
+      incidentAt: '2026-06-18T09:00:00.000Z',
+      branchId: 'branch_main',
+      subject: 'Engine noise',
+      severity: ComplaintSeverity.HIGH,
+      vehicleRelated: true,
+      vehicleVin: 'هيكل12345678',
+    }),
+    (error: unknown) =>
+      error instanceof AppException &&
+      error.code === 'VALIDATION_FAILED' &&
+      error.fieldErrors.some((field) => field.field === 'vehicleVin' && field.code === 'INVALID_VIN'),
+  );
+});
+
 test('complaint creation persists complaint, initial history, and audit in one transaction', async () => {
   const txClient = {};
   const calls: unknown[] = [];

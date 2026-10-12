@@ -29,9 +29,9 @@ type SubmitState = ComplaintWorkflowFixtureState | undefined;
 export type TransitionField = Exclude<keyof StaffComplaintTransitionRequest, 'status' | 'action'>;
 
 const previewActions: ComplaintTransitionAction[] = ['ACCEPT_INTAKE', 'APPROVE_AND_ROUTE', 'SEND_BACK', 'ASSIGN_INVESTIGATION', 'ADD_INVESTIGATION_UPDATE', 'RESOLVE', 'COMPLETE', 'CLOSE', 'REJECT_AS_INVALID', 'REOPEN'];
-const transitionFields: TransitionField[] = ['reason', 'targetBranchId', 'targetDepartmentId', 'ownerId', 'resolutionType', 'resolutionSummary', 'customerCommunicationStatus', 'vehicleDataUnavailableReason'];
+const transitionFields: TransitionField[] = ['reason', 'targetBranchId', 'targetDepartmentId', 'ownerId', 'resolutionType', 'resolutionSummary', 'customerCommunicationStatus', 'vehicleDataUnavailableReason', 'isJustified', 'satisfactionStatus', 'investigationNotes'];
 const reasonRequired = new Set<ComplaintTransitionAction>(['APPROVE_AND_ROUTE', 'SEND_BACK', 'ASSIGN_INVESTIGATION', 'CLOSE', 'REOPEN', 'ROUTE_AGAIN', 'REJECT_AS_INVALID', 'REJECT_AFTER_REVIEW', 'REJECT_AFTER_INVESTIGATION', 'REJECT_RESOLUTION']);
-const assignmentActions = new Set<ComplaintTransitionAction>(['APPROVE_AND_ROUTE', 'ASSIGN_INVESTIGATION']);
+const assignmentActions = new Set<ComplaintTransitionAction>(['ASSIGN_INVESTIGATION']);
 export function requiresAssignment(action: ComplaintTransitionAction): boolean { return assignmentActions.has(action); }
 const resolutionRequired = new Set<ComplaintTransitionAction>(['RESOLVE', 'RESOLVE_DIRECTLY']);
 export const destructiveActions = new Set<ComplaintTransitionAction>(['CLOSE', 'REJECT_AS_INVALID', 'REJECT_AFTER_REVIEW', 'REJECT_AFTER_INVESTIGATION', 'REJECT_RESOLUTION']);
@@ -42,6 +42,25 @@ const resolutionTypeOptions: ComplaintFormOption[] = [
   { id: 'COMPENSATED', code: 'COMPENSATED', nameEn: 'Compensated', nameAr: 'تم التعويض' },
   { id: 'OUT_OF_POLICY', code: 'OUT_OF_POLICY', nameEn: 'Out of policy', nameAr: 'خارج السياسة' },
   { id: 'DUPLICATE', code: 'DUPLICATE', nameEn: 'Duplicate', nameAr: 'مكرر' },
+];
+
+const customerCommunicationStatusOptions: ComplaintFormOption[] = [
+  { id: 'CONTACTED_SATISFIED', code: 'CONTACTED_SATISFIED', nameEn: 'Contacted - Customer Satisfied', nameAr: 'تم التواصل - العميل راضٍ' },
+  { id: 'CONTACTED_UNSATISFIED', code: 'CONTACTED_UNSATISFIED', nameEn: 'Contacted - Customer Unsatisfied', nameAr: 'تم التواصل - العميل غير راضٍ' },
+  { id: 'CONTACTED_EXPLAINED', code: 'CONTACTED_EXPLAINED', nameEn: 'Contacted - Explained Situation', nameAr: 'تم التواصل - تم توضيح الموقف' },
+  { id: 'UNREACHABLE', code: 'UNREACHABLE', nameEn: 'Customer Unreachable', nameAr: 'تعذر الوصول إلى العميل' },
+  { id: 'REJECTED_BY_CUSTOMER', code: 'REJECTED_BY_CUSTOMER', nameEn: 'Rejected by Customer', nameAr: 'مرفوض من قِبل العميل' },
+];
+
+const isJustifiedOptions: ComplaintFormOption[] = [
+  { id: 'true', code: 'true', nameEn: 'Yes - Justified Complaint', nameAr: 'نعم - شكوى مبررة' },
+  { id: 'false', code: 'false', nameEn: 'No - Unjustified Complaint', nameAr: 'لا - شكوى غير مبررة' },
+];
+
+const satisfactionStatusOptions: ComplaintFormOption[] = [
+  { id: 'SATISFIED', code: 'SATISFIED', nameEn: 'Satisfied 😊', nameAr: 'راضٍ 😊' },
+  { id: 'NEUTRAL', code: 'NEUTRAL', nameEn: 'Neutral 😐', nameAr: 'محايد 😐' },
+  { id: 'UNSATISFIED', code: 'UNSATISFIED', nameEn: 'Unsatisfied 😞', nameAr: 'غير راضٍ 😞' },
 ];
 
 export function ComplaintWorkflowModal({
@@ -162,6 +181,19 @@ export function WorkflowFields({ action, assignmentOptions, locale, options, tex
       {fields.filter((field) => field !== 'targetDepartmentId' && field !== 'ownerId').map((field) => {
         if (field === 'targetBranchId') return <OptionField key={field} emptyHint={text.noOptions} label={text.fields.targetBranchId} name={field} options={options?.branches ?? []} locale={locale} />;
         if (field === 'resolutionType') return <OptionField key={field} emptyHint={text.noOptions} label={text.fields.resolutionType} name={field} options={resolutionTypeOptions} locale={locale} />;
+        if (field === 'customerCommunicationStatus') return <OptionField key={field} emptyHint={text.noOptions} label={text.fields.customerCommunicationStatus} name={field} options={customerCommunicationStatusOptions} locale={locale} />;
+        if (field === 'isJustified') return <OptionField key={field} emptyHint="" label={text.fields.isJustified} name={field} options={isJustifiedOptions} locale={locale} />;
+        if (field === 'satisfactionStatus') return <OptionField key={field} emptyHint="" label={text.fields.satisfactionStatus} name={field} options={satisfactionStatusOptions} locale={locale} />;
+        if (field === 'investigationNotes') {
+          return (
+            <div key={field} className="grid gap-1">
+              <TextField area label={text.fields.investigationNotes} name={field} />
+              <p className="text-xs text-brand font-medium">
+                {locale === 'ar' ? 'ℹ️ سيتم إرسال إشعار لمنشئ الشكوى فور حفظ نتائج التحقيق.' : 'ℹ️ The complaint creator will be automatically notified upon submission.'}
+              </p>
+            </div>
+          );
+        }
         if (field === 'reason' || field === 'resolutionSummary' || field === 'vehicleDataUnavailableReason') return <TextField area key={field} label={text.fields[field]} name={field} />;
         return <TextField key={field} label={text.fields[field]} name={field} />;
       })}
@@ -172,18 +204,25 @@ export function WorkflowFields({ action, assignmentOptions, locale, options, tex
 export function requiredFields(action: ComplaintTransitionAction, vehicleNeedsUnavailableReason: boolean): TransitionField[] {
   return [
     ...(reasonRequired.has(action) ? ['reason' as const] : []),
-    ...(action === 'APPROVE_AND_ROUTE' ? ['targetBranchId' as const, 'targetDepartmentId' as const] : []),
-    ...(resolutionRequired.has(action) ? ['resolutionType' as const, 'resolutionSummary' as const] : []),
+    ...(action === 'ADD_INVESTIGATION_UPDATE' ? ['investigationNotes' as const] : []),
+    ...(resolutionRequired.has(action) ? ['resolutionType' as const, 'resolutionSummary' as const, 'isJustified' as const] : []),
+    ...(action === 'COMPLETE' || action === 'CLOSE' ? ['isJustified' as const, 'satisfactionStatus' as const] : []),
     ...(action === 'CLOSE' ? ['customerCommunicationStatus' as const] : []),
     ...(action === 'CLOSE' && vehicleNeedsUnavailableReason ? ['vehicleDataUnavailableReason' as const] : []),
   ];
 }
 
 export function transitionRequest(action: ComplaintTransitionAction, status: ComplaintStatus, form: FormData): StaffComplaintTransitionRequest {
-  const fields: Partial<Record<TransitionField, string>> = {};
+  const fields: Partial<Record<TransitionField, any>> = {};
   for (const field of transitionFields) {
     const value = fieldText(form, field);
-    if (value) fields[field] = value;
+    if (value) {
+      if (field === 'isJustified') {
+        fields[field] = value === 'true';
+      } else {
+        fields[field] = value;
+      }
+    }
   }
   return { status, action, ...fields };
 }

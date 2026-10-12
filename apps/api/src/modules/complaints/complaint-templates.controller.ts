@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Req, UseGuards } from '@nestjs/common';
 import { ComplaintTemplatesService } from './complaint-templates.service.js';
 import { parseCreateComplaintTemplateBody, parseUpdateComplaintTemplateBody } from './dto/complaint-template.dto.js';
 import { SessionAuthGuard, type AuthenticatedRequest } from '../../core/auth.guard.js';
@@ -20,10 +20,7 @@ export class ComplaintTemplatesController {
     @Body() body: unknown
   ) {
     const input = parseCreateComplaintTemplateBody(body);
-    const actorId = req.principal?.userId ?? 'system';
-    
-    // In a real implementation we would check RBAC here:
-    // Only DEPARTMENT_MANGER of this department OR ADMIN can create.
+    const actorId = req.principal?.userId ?? null;
     return this.templatesService.create(departmentId, actorId, input);
   }
 
@@ -34,8 +31,17 @@ export class ComplaintTemplatesController {
     @Body() body: unknown
   ) {
     const input = parseUpdateComplaintTemplateBody(body);
-    const actorId = req.principal?.userId ?? 'system';
+    const actorId = req.principal?.userId ?? null;
     return this.templatesService.update(id, actorId, input);
+  }
+
+  @Delete(':id')
+  async delete(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest
+  ) {
+    const actorId = req.principal?.userId ?? null;
+    return this.templatesService.delete(id, actorId);
   }
 
   @Get(':id')

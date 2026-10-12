@@ -18,6 +18,9 @@ export type ComplaintTransitionRequestDto = {
   resolutionSummary?: string | null;
   customerCommunicationStatus?: string | null;
   vehicleDataUnavailableReason?: string | null;
+  isJustified?: boolean | null;
+  satisfactionStatus?: string | null;
+  investigationNotes?: string | null;
 };
 
 export type ComplaintTransitionResponseDto = {
@@ -34,6 +37,9 @@ export function parseComplaintTransitionBody(body: unknown): ComplaintTransition
   const resolutionSummary = optionalText(input.resolutionSummary, 'resolutionSummary');
   const customerCommunicationStatus = optionalText(input.customerCommunicationStatus, 'customerCommunicationStatus');
   const vehicleDataUnavailableReason = optionalText(input.vehicleDataUnavailableReason, 'vehicleDataUnavailableReason');
+  const investigationNotes = optionalText(input.investigationNotes, 'investigationNotes');
+  const satisfactionStatus = optionalText(input.satisfactionStatus, 'satisfactionStatus');
+  const isJustified = typeof input.isJustified === 'boolean' ? input.isJustified : input.isJustified === null ? null : undefined;
   return {
     fromStatus: enumValue(input.fromStatus, ComplaintStatus, 'fromStatus'),
     action: enumValue(input.action, ComplaintTransitionAction, 'action'),
@@ -45,6 +51,9 @@ export function parseComplaintTransitionBody(body: unknown): ComplaintTransition
     ...(resolutionSummary === undefined ? {} : { resolutionSummary }),
     ...(customerCommunicationStatus === undefined ? {} : { customerCommunicationStatus }),
     ...(vehicleDataUnavailableReason === undefined ? {} : { vehicleDataUnavailableReason }),
+    ...(investigationNotes === undefined ? {} : { investigationNotes }),
+    ...(satisfactionStatus === undefined ? {} : { satisfactionStatus }),
+    ...(isJustified === undefined ? {} : { isJustified }),
   };
 }
 
@@ -76,6 +85,9 @@ export function toTransitionInput(
     ...(body.resolutionSummary === undefined ? {} : { resolutionSummary: body.resolutionSummary }),
     ...(body.customerCommunicationStatus === undefined ? {} : { customerCommunicationStatus: body.customerCommunicationStatus }),
     ...(body.vehicleDataUnavailableReason === undefined ? {} : { vehicleDataUnavailableReason: body.vehicleDataUnavailableReason }),
+    ...(body.isJustified === undefined ? {} : { isJustified: body.isJustified }),
+    ...(body.satisfactionStatus === undefined ? {} : { satisfactionStatus: body.satisfactionStatus }),
+    ...(body.investigationNotes === undefined ? {} : { investigationNotes: body.investigationNotes }),
     correlationId: context.correlationId,
     ipAddress: context.ipAddress,
     userAgent: context.userAgent,

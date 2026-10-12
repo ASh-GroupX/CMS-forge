@@ -1,10 +1,31 @@
-export type ComplaintFormOption = { id: string; code: string; nameEn: string; nameAr: string; departmentId?: string | null; branchId?: string | null };
+export type ComplaintFormOption = {
+  id: string;
+  code: string;
+  nameEn: string;
+  nameAr: string;
+  departmentId?: string | null;
+  branchId?: string | null;
+};
+
+export type StaffUserOption = {
+  id: string;
+  nameEn: string;
+  nameAr: string;
+  email: string;
+  departmentId: string | null;
+  branchId: string | null;
+  roleCode: string;
+};
+
 export type ComplaintFormOptions = {
   branches: ComplaintFormOption[];
   categories: ComplaintFormOption[];
   departments: Array<ComplaintFormOption & { branchId: string | null }>;
   severities: Array<'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>;
   types: string[];
+  rootCauses?: Array<{ id: string; nameEn: string; nameAr: string; order: number }>;
+  salesAdvisors?: Array<{ id: string; nameEn: string; nameAr: string; order: number }>;
+  users?: StaffUserOption[];
 };
 
 const STAFF_SESSION_COOKIE = 'cms_staff_session';
@@ -37,8 +58,8 @@ function hasStaffSessionCookie(cookieHeader: string): boolean {
 
 async function incomingCookieHeader(): Promise<string> {
   try {
-    const { cookies } = await import('next/headers');
-    return (await cookies()).toString();
+    const { headers } = await import('next/headers');
+    return (await headers()).get('cookie') ?? '';
   } catch {
     return '';
   }

@@ -109,6 +109,15 @@ export type ComplaintDetailDto = ComplaintQueueItemDto & {
   salesAdvisorName: string | null;
   rootCauseCategory: string | null;
   repeatCustomer: boolean | null;
+  alternativeCarProvided?: boolean;
+  backupOfficerId?: string | null;
+  backupOfficerName?: string | null;
+  collaboratorId?: string | null;
+  collaboratorName?: string | null;
+  isJustified?: boolean | null;
+  satisfactionStatus?: string | null;
+  investigationNotes?: string | null;
+  investigatedAt?: string | null;
   statusHistory: ComplaintStatusTimelineItemDto[];
   caseSummary: ComplaintCaseSummaryDto | null;
   allowedActions: ComplaintTransitionAction[];

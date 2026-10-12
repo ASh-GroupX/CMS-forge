@@ -78,8 +78,8 @@ function principalFrom(body: AuthMeResponse): StaffSessionPrincipal | null {
 
 async function incomingCookieHeader(): Promise<string> {
   try {
-    const { cookies } = await import('next/headers');
-    return (await cookies()).toString();
+    const { headers } = await import('next/headers');
+    return (await headers()).get('cookie') ?? '';
   } catch {
     return '';
   }

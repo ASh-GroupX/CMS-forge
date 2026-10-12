@@ -14,7 +14,7 @@ type SearchType = 'COMPLAINT' | 'TASK' | 'CASE' | 'DEAL' | 'CUSTOMER';
 type SearchResult = { type: SearchType; id: string; label: string; labelAr: string; context: string; contextAr: string; href: string };
 type SearchCopy = { label: string; placeholder: string; hint: string; loading: string; empty: string; error: string; types: Record<SearchType, string> };
 
-export function StaffTopBar({ account = null, createLabel, heading, isRtl, languageHref, locale, notificationsHref = '/notifications', search, showSearch = true, signedIn, subheading, subtitle, switchLabel, switchTarget, themeDark, themeLabel, themeLight, title }: {
+export function StaffTopBar({ account = null, createLabel, heading, isRtl, languageHref, locale, notificationsHref = '/notifications', search, showSearch = true, showCreate = true, showNotifications = true, signedIn, subheading, subtitle, switchLabel, switchTarget, themeDark, themeLabel, themeLight, title }: {
   account?: { initials: string; name: string } | null;
   createLabel: string;
   heading?: string;
@@ -24,6 +24,8 @@ export function StaffTopBar({ account = null, createLabel, heading, isRtl, langu
   notificationsHref?: string;
   search: SearchCopy;
   showSearch?: boolean;
+  showCreate?: boolean;
+  showNotifications?: boolean;
   signedIn?: string;
   subheading?: string;
   subtitle?: string;
@@ -60,17 +62,24 @@ export function StaffTopBar({ account = null, createLabel, heading, isRtl, langu
   const resolvedHeading = heading ?? title ?? '';
   const resolvedSubheading = subheading ?? signedIn ?? subtitle ?? '';
 
+  const canShowCreate = showCreate && Boolean(account);
+  const canShowNotifications = showNotifications && Boolean(account);
+
   return <>
     <header className="sticky top-4 z-30 mx-4 mb-8 md:mx-6 rounded-2xl border border-line-subtle/40 bg-surface/70 px-4 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] md:px-6 transition-all duration-300">
       <div className="flex min-h-16 items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-4"><div className="min-w-0"><h1 className="truncate text-lg font-bold tracking-tight md:text-xl bg-gradient-to-br from-content-strong to-content-muted bg-clip-text text-transparent">{resolvedHeading}</h1><p className="truncate text-xs font-medium text-content-muted md:text-sm">{resolvedSubheading}</p></div><Button aria-label={themeLabel} aria-pressed={theme === 'dark'} className="hidden size-10 shrink-0 rounded-xl md:inline-flex hover:bg-black/5" onClick={toggleTheme} size="icon" type="button" variant="ghost">{theme === 'dark' ? <Sun aria-hidden="true" className="size-5 text-status-warning" /> : <Moon aria-hidden="true" className="size-5" />}<span className="sr-only">{theme === 'dark' ? themeLight : themeDark}</span></Button></div>
         <div className="flex shrink-0 items-center gap-2">
           {showSearch ? <><Button className="hidden h-11 w-[19rem] justify-start rounded-lg text-content-muted xl:flex" onClick={() => setSearchOpen(true)} type="button" variant="outline"><Search aria-hidden="true" className="me-2 size-5" /><span className="truncate">{search.placeholder}</span></Button><Button aria-label={search.label} className="xl:hidden" onClick={() => setSearchOpen(true)} size="icon" type="button" variant="outline"><Search aria-hidden="true" className="size-5" /></Button></> : null}
-          <Button type="button" className="hidden gap-1.5 md:inline-flex" size="sm" variant="default" onClick={() => setCreateOpen(true)}>
-            <Plus aria-hidden="true" className="size-4" />
-            {createLabel}
-          </Button>
-          <Button asChild size="icon" variant="ghost"><a aria-label="Notifications" href={notificationsHref}><Bell aria-hidden="true" className="size-5" /></a></Button>
+          {canShowCreate ? (
+            <Button type="button" className="hidden gap-1.5 md:inline-flex" size="sm" variant="default" onClick={() => setCreateOpen(true)}>
+              <Plus aria-hidden="true" className="size-4" />
+              {createLabel}
+            </Button>
+          ) : null}
+          {canShowNotifications ? (
+            <Button asChild size="icon" variant="ghost"><a aria-label="Notifications" href={notificationsHref}><Bell aria-hidden="true" className="size-5" /></a></Button>
+          ) : null}
           <Button asChild className="hidden sm:inline-flex" variant="ghost"><a aria-label={switchLabel} href={languageHref}>{switchTarget}</a></Button>
           <Button aria-label={themeLabel} aria-pressed={theme === 'dark'} className="md:hidden" onClick={toggleTheme} size="icon" type="button" variant="ghost">{theme === 'dark' ? <Sun aria-hidden="true" className="size-5" /> : <Moon aria-hidden="true" className="size-5" />}</Button>
           {account ? <div className="hidden items-center gap-3 border-s border-line-subtle/50 ps-4 sm:flex"><span className="grid size-10 place-items-center rounded-xl bg-gradient-to-br from-brand/20 to-brand/5 shadow-inner text-sm font-bold text-brand">{account.initials}</span><span className="max-w-28 truncate text-sm font-semibold">{account.name}</span></div> : null}

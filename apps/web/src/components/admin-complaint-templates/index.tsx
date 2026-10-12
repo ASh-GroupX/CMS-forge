@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { PageHeader, StateBlock } from '../shared/ui-primitives';
 import type { ComplaintFormOptions } from '../../lib/staff-complaint-form-options-api';
 import type { Locale } from '../../i18n/staff-shell';
-import { getDepartmentTemplates, createComplaintTemplate, updateComplaintTemplate, type ComplaintTemplate, type TemplateField } from '../../lib/api/complaint-templates';
+import { getDepartmentTemplates, createComplaintTemplate, updateComplaintTemplate, deleteComplaintTemplate, type ComplaintTemplate, type TemplateField } from '../../lib/api/complaint-templates';
 import { Settings, Plus, GripVertical, Trash2, LayoutTemplate, Layers, Check, Search, Calendar, ChevronDown, ListFilter, Play, Eye, Copy } from 'lucide-react';
 
 export function AdminComplaintTemplates({
@@ -32,7 +32,9 @@ export function AdminComplaintTemplates({
 
   const branches = options?.branches ?? [];
   const departments = options?.departments ?? [];
-  const filteredDepartments = selectedBranch ? departments.filter((d: any) => d.branchId === selectedBranch) : [];
+  const filteredDepartments = selectedBranch
+    ? departments.filter((d: any) => !d.branchId || d.branchId === selectedBranch)
+    : departments;
 
   useEffect(() => {
     if (selectedDepartment) {
@@ -51,14 +53,13 @@ export function AdminComplaintTemplates({
     } catch (err: any) {
       // If unauthorized, redirect to staff login
       if (err?.message?.includes('401') || err?.message?.includes('Invalid credentials')) {
-        // Assuming a router is available; fallback to page reload with login query
         if (typeof window !== 'undefined') {
           const loginUrl = `/?locale=${locale}&auth=required`;
           window.location.href = loginUrl;
           return;
         }
       }
-      setError(isRtl ? 'فشل تحميل القوالب' : 'Failed to load templates');
+      setError(err?.message || (isRtl ? 'فشل تحميل القوالب' : 'Failed to load templates'));
     } finally {
       setLoading(false);
     }
@@ -77,6 +78,19 @@ export function AdminComplaintTemplates({
   function handleClone(t: ComplaintTemplate) {
     setEditingTemplate(t);
     setIsCreating(true);
+  }
+
+  async function handleDelete(id: string) {
+    if (!window.confirm(isRtl ? 'هل أنت متأكد من حذف هذا القالب؟' : 'Are you sure you want to delete this template?')) return;
+    try {
+      setLoading(true);
+      await deleteComplaintTemplate(id);
+      await loadTemplates();
+    } catch (err: any) {
+      setError(err?.message || (isRtl ? 'فشل حذف القالب' : 'Failed to delete template'));
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleCancel() {
@@ -120,19 +134,17 @@ export function AdminComplaintTemplates({
                     }}
                   />
                 </div>
-                {selectedBranch && (
-                  <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
-                    <label className="text-sm font-semibold text-content-strong">{isRtl ? 'القسم' : 'Department'}</label>
-                    <FormSelect
-                      id="departmentId"
-                      name="departmentId"
-                      options={filteredDepartments.map(d => ({ label: isRtl ? d.nameAr : d.nameEn, value: d.id }))}
-                      placeholder={isRtl ? 'اختر القسم' : 'Select Department'}
-                      value={selectedDepartment}
-                      onValueChange={setSelectedDepartment}
-                    />
-                  </div>
-                )}
+                <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
+                  <label className="text-sm font-semibold text-content-strong">{isRtl ? 'القسم' : 'Department'}</label>
+                  <FormSelect
+                    id="departmentId"
+                    name="departmentId"
+                    options={filteredDepartments.map(d => ({ label: isRtl ? d.nameAr : d.nameEn, value: d.id }))}
+                    placeholder={isRtl ? 'اختر القسم' : 'Select Department'}
+                    value={selectedDepartment}
+                    onValueChange={setSelectedDepartment}
+                  />
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -198,6 +210,9 @@ export function AdminComplaintTemplates({
                           </Button>
                           <Button variant="outline" size="sm" onClick={() => handleEdit(t)} className="rounded-lg">
                             {isRtl ? 'تعديل' : 'Edit'}
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleDelete(t.id)} className="rounded-lg text-status-error hover:bg-status-error/10 hover:border-status-error/30">
+                            <Trash2 className="size-4" />
                           </Button>
                         </div>
                       </li>

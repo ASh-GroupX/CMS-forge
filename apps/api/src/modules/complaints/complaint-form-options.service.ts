@@ -14,6 +14,9 @@ export type ComplaintFormOptions = {
   departments: Array<{ id: string; code: string; nameEn: string; nameAr: string; branchId: string | null }>;
   severities: ComplaintSeverity[];
   types: ComplaintType[];
+  rootCauses: Array<{ id: string; nameEn: string; nameAr: string; order: number }>;
+  salesAdvisors: Array<{ id: string; nameEn: string; nameAr: string; order: number }>;
+  users: Array<{ id: string; nameEn: string; nameAr: string; email: string; departmentId: string | null; branchId: string | null; roleCode: RoleCode }>;
 };
 
 export type PublicComplaintFormOptions = {
@@ -52,7 +55,7 @@ export class ComplaintFormOptionsService {
   async list(principal: StaffPrincipal): Promise<ComplaintFormOptions> {
     const isGlobal = hasGlobalView(principal);
     const branchScope = isGlobal ? {} : { id: principal.branchId ?? '' };
-    const [branches, categories, departments] = await Promise.all([
+    const [branches, categories, departments, rootCauses, salesAdvisors, users] = await Promise.all([
       this.prisma.branch.findMany({
         orderBy: [{ nameEn: 'asc' }, { code: 'asc' }],
         select: { id: true, code: true, nameEn: true, nameAr: true },
@@ -68,7 +71,31 @@ export class ComplaintFormOptionsService {
         select: { id: true, code: true, nameEn: true, nameAr: true, branchId: true },
         where: { isActive: true, ...(isGlobal ? {} : { OR: [{ branchId: principal.branchId ?? '' }, { branchId: null }] }) },
       }),
+      this.prisma.complaintRootCause.findMany({
+        orderBy: [{ order: 'asc' }, { nameEn: 'asc' }],
+        select: { id: true, nameEn: true, nameAr: true, order: true },
+        where: { isActive: true },
+      }),
+      this.prisma.complaintSalesAdvisor.findMany({
+        orderBy: [{ order: 'asc' }, { nameEn: 'asc' }],
+        select: { id: true, nameEn: true, nameAr: true, order: true },
+        where: { isActive: true },
+      }),
+      this.prisma.user.findMany({
+        orderBy: [{ nameEn: 'asc' }],
+        select: { id: true, nameEn: true, nameAr: true, email: true, departmentId: true, branchId: true, role: { select: { code: true } } },
+        where: { isActive: true },
+      }),
     ]);
-    return { branches, categories, departments, severities: Object.values(ComplaintSeverity), types: Object.values(ComplaintType) };
+    const mappedUsers = users.map((u) => ({
+      id: u.id,
+      nameEn: u.nameEn,
+      nameAr: u.nameAr,
+      email: u.email,
+      departmentId: u.departmentId,
+      branchId: u.branchId,
+      roleCode: u.role.code as RoleCode,
+    }));
+    return { branches, categories, departments, severities: Object.values(ComplaintSeverity), types: Object.values(ComplaintType), rootCauses, salesAdvisors, users: mappedUsers };
   }
 }

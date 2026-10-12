@@ -62,6 +62,16 @@ export type StaffComplaintDetailView = {
   salesAdvisorName?: string | null;
   rootCauseCategory?: string | null;
   repeatCustomer?: boolean | null;
+  description: string;
+  alternativeCarProvided?: boolean;
+  backupOfficerId?: string | null;
+  backupOfficerName?: string | null;
+  collaboratorId?: string | null;
+  collaboratorName?: string | null;
+  isJustified?: boolean | null;
+  satisfactionStatus?: string | null;
+  investigationNotes?: string | null;
+  investigatedAt?: string | null;
 };
 
 export type StaffComplaintDetailLoadResult =
@@ -177,6 +187,16 @@ function viewFromDetail(detail: ComplaintDetail, caseTimeline: DetailTimelineIte
     salesAdvisorName: detail.salesAdvisorName,
     rootCauseCategory: detail.rootCauseCategory,
     repeatCustomer: detail.repeatCustomer,
+    description: detail.description,
+    alternativeCarProvided: detail.alternativeCarProvided ?? false,
+    backupOfficerId: detail.backupOfficerId ?? null,
+    backupOfficerName: detail.backupOfficerName ?? null,
+    collaboratorId: detail.collaboratorId ?? null,
+    collaboratorName: detail.collaboratorName ?? null,
+    isJustified: detail.isJustified ?? null,
+    satisfactionStatus: detail.satisfactionStatus ?? null,
+    investigationNotes: detail.investigationNotes ?? null,
+    investigatedAt: detail.investigatedAt ?? null,
   };
 }
 
@@ -254,6 +274,15 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
     salesAdvisorName: typeof complaint.salesAdvisorName === 'string' ? complaint.salesAdvisorName : null,
     rootCauseCategory: typeof complaint.rootCauseCategory === 'string' ? complaint.rootCauseCategory : null,
     repeatCustomer: typeof complaint.repeatCustomer === 'boolean' ? complaint.repeatCustomer : null,
+    alternativeCarProvided: complaint.alternativeCarProvided === true,
+    backupOfficerId: typeof complaint.backupOfficerId === 'string' ? complaint.backupOfficerId : null,
+    backupOfficerName: typeof complaint.backupOfficerName === 'string' ? complaint.backupOfficerName : null,
+    collaboratorId: typeof complaint.collaboratorId === 'string' ? complaint.collaboratorId : null,
+    collaboratorName: typeof complaint.collaboratorName === 'string' ? complaint.collaboratorName : null,
+    isJustified: typeof complaint.isJustified === 'boolean' ? complaint.isJustified : null,
+    satisfactionStatus: typeof complaint.satisfactionStatus === 'string' ? complaint.satisfactionStatus : null,
+    investigationNotes: typeof complaint.investigationNotes === 'string' ? complaint.investigationNotes : null,
+    investigatedAt: typeof complaint.investigatedAt === 'string' ? complaint.investigatedAt : null,
   };
 }
 

@@ -24,6 +24,8 @@ export function StaffAuthLanding({
         languageHref={`?locale=${locale === 'ar' ? 'en' : 'ar'}`}
         locale={locale}
         search={modernUiText[locale].search}
+        showCreate={false}
+        showNotifications={false}
         showSearch={false}
         signedIn={t.auth.signedOut}
         subtitle={t.subtitle}

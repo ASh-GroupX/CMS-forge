@@ -26,12 +26,34 @@ export function ContextRail({ detail, locale, t }: { detail: StaffComplaintDetai
           <div className="grid gap-1">
             <dt className="flex items-center gap-2 text-content-muted">
               <User className="size-3.5" />
-              {t.labels?.owner || 'Assignee'}
+              {isArabic ? 'الموظف المسؤول' : (t.labels?.owner || 'Primary Officer')}
             </dt>
             <dd className="font-semibold text-content-strong">
               {detail.assignee || (t.values?.unassigned ?? 'Unassigned')}
             </dd>
           </div>
+          {detail.backupOfficerName && (
+            <div className="grid gap-1">
+              <dt className="flex items-center gap-2 text-content-muted">
+                <User className="size-3.5" />
+                {isArabic ? 'الموظف الاحتياطي' : 'Backup Officer'}
+              </dt>
+              <dd className="font-semibold text-content-strong">
+                {detail.backupOfficerName}
+              </dd>
+            </div>
+          )}
+          {detail.collaboratorName && (
+            <div className="grid gap-1">
+              <dt className="flex items-center gap-2 text-content-muted">
+                <User className="size-3.5" />
+                {isArabic ? 'المتعاون من قسم آخر' : 'Cross-Dept Collaborator'}
+              </dt>
+              <dd className="font-semibold text-content-strong">
+                {detail.collaboratorName}
+              </dd>
+            </div>
+          )}
           <div className="grid gap-1">
             <dt className="flex items-center gap-2 text-content-muted">
               <Building2 className="size-3.5" />

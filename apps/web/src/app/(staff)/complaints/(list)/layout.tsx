@@ -8,7 +8,9 @@ export default async function ComplaintsListLayout({ children }: { children: Rea
   const locale = resolveLocale(requestHeaders.get('x-cms-locale') ?? undefined);
   const activePath = requestHeaders.get('x-cms-pathname') ?? '/complaints';
   const t = staffShellText[locale];
-  const isOperations = activePath.includes('/operations');
+  const isOperations = activePath.startsWith('/complaints/operations');
+  const isBoard = activePath.startsWith('/complaints/board');
+  const isQueue = !isOperations && !isBoard;
 
   return (
     <div className="w-full h-full flex flex-col gap-0 bg-surface-sunken min-w-0">
@@ -21,7 +23,7 @@ export default async function ComplaintsListLayout({ children }: { children: Rea
       <nav className="flex items-center gap-6 px-6 py-2 border-b border-line-subtle bg-surface">
         <a 
           href={`/complaints?locale=${locale}`} 
-          className={`text-sm font-semibold transition-colors ${!isOperations ? 'text-brand' : 'text-content-strong hover:text-brand'}`}
+          className={`text-sm font-semibold transition-colors ${isQueue ? 'text-brand' : 'text-content-strong hover:text-brand'}`}
         >
           {t.nav.queue[0]}
         </a>
@@ -30,6 +32,12 @@ export default async function ComplaintsListLayout({ children }: { children: Rea
           className={`text-sm font-semibold transition-colors ${isOperations ? 'text-brand' : 'text-content-strong hover:text-brand'}`}
         >
           {t.nav.operations[0]}
+        </a>
+        <a 
+          href={`/complaints/board?locale=${locale}`} 
+          className={`text-sm font-semibold transition-colors ${isBoard ? 'text-brand' : 'text-content-strong hover:text-brand'}`}
+        >
+          {t.nav.ticketBoard[0]}
         </a>
       </nav>
       <div className="flex-1 min-h-0 min-w-0 p-6">

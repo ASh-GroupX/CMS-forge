@@ -31,6 +31,7 @@ export type ApplyComplaintTransitionInput = ValidateComplaintTransitionInput & {
   reason?: string | null; targetBranchId?: string | null; targetDepartmentId?: string | null; ownerId?: string | null;
   resolutionType?: string | null; resolutionSummary?: string | null; customerCommunicationStatus?: string | null;
   vehicleDataUnavailableReason?: string | null;
+  isJustified?: boolean | null; satisfactionStatus?: string | null; investigationNotes?: string | null;
   correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null;
 };
 export type ApplyComplaintTransitionResult = ComplaintTransitionDecision & { complaintId: string };
@@ -43,7 +44,7 @@ export type CreateInternalComplaintInput = {
   channel?: string | null; customerType?: string | null; lastServiceDate?: Date | null; odometer?: number | null;
   warrantyActive?: boolean | null; salesAdvisorName?: string | null; rootCauseCategory?: string | null; repeatCustomer?: boolean | null;
   vehicleSource?: DataSource | null; vehicleDataUnavailableReason?: string | null;
-  departmentId?: string | null; saveAsDraft?: boolean;
+  departmentId?: string | null; ownerId?: string | null; backupOfficerId?: string | null; collaboratorId?: string | null; alternativeCarProvided?: boolean; saveAsDraft?: boolean;
   actorId?: string | null; requestSource?: ComplaintTransitionRequestSource; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null;
   manualTriage?: boolean; templateId?: string | null; templateData?: any;
 };
@@ -65,7 +66,7 @@ export const WORKFLOW_TRANSITIONS: readonly WorkflowTransition[] = [
   transition(ComplaintStatus.DRAFT, ComplaintTransitionAction.SUBMIT, ComplaintStatus.SUBMITTED, [RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.ADMIN, RoleCode.CUSTOMER_PORTAL], 'COMPLAINT_SUBMIT'),
   transition(ComplaintStatus.SUBMITTED, ComplaintTransitionAction.ACCEPT_INTAKE, ComplaintStatus.MANAGER_REVIEW, MANAGER_ROLES, 'COMPLAINT_APPROVE'),
   transition(ComplaintStatus.SUBMITTED, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintStatus.REJECTED, MANAGER_ROLES, 'COMPLAINT_REJECT'),
-  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintStatus.BRANCH_REVIEW, MANAGER_ROLES, 'COMPLAINT_APPROVE'),
+  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintStatus.IN_PROGRESS, MANAGER_ROLES, 'COMPLAINT_APPROVE'),
   transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.SEND_BACK, ComplaintStatus.DRAFT, MANAGER_ROLES, 'COMPLAINT_APPROVE'),
   transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintStatus.REJECTED, MANAGER_ROLES, 'COMPLAINT_REJECT'),
   transition(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.ASSIGN_INVESTIGATION, ComplaintStatus.IN_PROGRESS, BRANCH_MANAGER_ROLES, 'COMPLAINT_ASSIGN'),
@@ -211,7 +212,7 @@ export class ComplaintsService {
     let decision: ComplaintTransitionDecision;
     try {
       decision = this.validateTransition(input);
-      if (input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE && input.ownerId) {
+      if (input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE) {
         decision.toStatus = ComplaintStatus.IN_PROGRESS;
       }
     } catch (error) {

@@ -31,10 +31,12 @@ import { ComplaintsService } from './complaints.service.js';
 
 import { ComplaintTemplatesController } from './complaint-templates.controller.js';
 import { ComplaintTemplatesService } from './complaint-templates.service.js';
+import { ComplaintSettingsController } from './complaint-settings.controller.js';
+import { ComplaintSettingsService } from './complaint-settings.service.js';
 
 @Module({
   imports: [AuthModule, AssignmentsModule, NotificationsModule, CasesModule, SlaModule, TasksModule, CommunicationGroupsModule, forwardRef(() => SurveysModule)],
-  controllers: [ComplaintsController, ComplaintTemplatesController],
+  controllers: [ComplaintsController, ComplaintTemplatesController, ComplaintSettingsController],
   providers: [
     PrismaService,
     {
@@ -83,6 +85,11 @@ import { ComplaintTemplatesService } from './complaint-templates.service.js';
       useFactory: (repository: ComplaintsRepository, audit: AuditService) => new ComplaintTemplatesService(repository, audit),
     },
     {
+      provide: ComplaintSettingsService,
+      inject: [PrismaService],
+      useFactory: (prisma: PrismaService) => new ComplaintSettingsService(prisma),
+    },
+    {
       provide: ComplaintsBoardRepository,
       inject: [PrismaService],
       useFactory: (prisma: PrismaService) => new ComplaintsBoardRepository(prisma),
@@ -107,6 +114,6 @@ import { ComplaintTemplatesService } from './complaint-templates.service.js';
     },
     CsrfGuard,
   ],
-  exports: [ComplaintsService, ComplaintFormOptionsService, ComplaintTemplatesService],
+  exports: [ComplaintsService, ComplaintFormOptionsService, ComplaintTemplatesService, ComplaintSettingsService],
 })
 export class ComplaintsModule {}

@@ -26,6 +26,7 @@ export default async function AdminPage({
     ['standardProblems', '/admin/standard-problems'],
     ['complaintTemplates', '/admin/complaint-templates'],
     ['ticketSettings', '/admin/ticket-settings'],
+    ['complaintSettings', '/admin/complaint-settings'],
   ] as const;
 
   return (

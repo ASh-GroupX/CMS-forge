@@ -78,19 +78,170 @@ export class ReportsRepository {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
     const bFilter = branchId ? { branchId } : {};
     const deptFilter = departmentId ? { departmentId } : branchId ? { branchId } : {};
 
     // ── Admin Data ──
     const totalEmployees = await this.prisma.user.count({ where: bFilter });
-    const totalActiveTickets = await this.prisma.internalTicket.count({
-      where: { status: { notIn: ['CLOSED', 'RESOLVED'] } }
-    });
-    const totalResolvedToday = await this.prisma.internalTicket.count({
-      where: { resolvedAt: { gte: today } }
-    });
-    const avgSysRatingAgg = await this.prisma.ticketRating.aggregate({ _avg: { score: true } });
-    const avgSystemRating = Number((avgSysRatingAgg._avg.score || 5).toFixed(1));
+
+    const [
+      activeInternalTickets,
+      activeComplaints,
+      resolvedInternalToday,
+      resolvedComplaintsToday,
+      resolvedInternalYesterday,
+      resolvedComplaintsYesterday,
+      ticketRatingAgg
+    ] = await Promise.all([
+      this.prisma.internalTicket.count({
+        where: {
+          status: { notIn: ['CLOSED', 'RESOLVED', 'REJECTED'] },
+          ...(branchId ? { targetDepartment: { branchId } } : {})
+        }
+      }),
+      this.prisma.complaint.count({
+        where: {
+          status: { notIn: ['CLOSED', 'RESOLVED', 'REJECTED'] },
+          ...(branchId ? { branchId } : {})
+        }
+      }),
+      this.prisma.internalTicket.count({
+        where: {
+          resolvedAt: { gte: today },
+          ...(branchId ? { targetDepartment: { branchId } } : {})
+        }
+      }),
+      this.prisma.complaint.count({
+        where: {
+          closedAt: { gte: today },
+          ...(branchId ? { branchId } : {})
+        }
+      }),
+      this.prisma.internalTicket.count({
+        where: {
+          resolvedAt: { gte: yesterday, lt: today },
+          ...(branchId ? { targetDepartment: { branchId } } : {})
+        }
+      }),
+      this.prisma.complaint.count({
+        where: {
+          closedAt: { gte: yesterday, lt: today },
+          ...(branchId ? { branchId } : {})
+        }
+      }),
+      this.prisma.ticketRating.aggregate({ _avg: { score: true } })
+    ]);
+
+    const totalActiveTickets = activeInternalTickets + activeComplaints;
+    const totalResolvedToday = resolvedInternalToday + resolvedComplaintsToday;
+    const resolvedYesterday = resolvedInternalYesterday + resolvedComplaintsYesterday;
+
+    const avgSystemRating = Number((ticketRatingAgg._avg.score || 5).toFixed(1));
+
+    const resolvedTrendVal = resolvedYesterday === 0
+      ? (totalResolvedToday > 0 ? `+100%` : `0%`)
+      : `${Math.round(((totalResolvedToday - resolvedYesterday) / resolvedYesterday) * 100)}%`;
+    const resolvedTrendSigned = resolvedTrendVal.startsWith('-') || resolvedTrendVal.startsWith('+') ? resolvedTrendVal : `+${resolvedTrendVal}`;
+
+    const trends = {
+      employees: `${totalEmployees}`,
+      employeesPositive: true,
+      activeTickets: totalActiveTickets > 0 ? `${totalActiveTickets}` : `0`,
+      activeTicketsPositive: totalActiveTickets === 0,
+      resolvedToday: resolvedTrendSigned,
+      resolvedTodayPositive: totalResolvedToday >= resolvedYesterday,
+      rating: `${avgSystemRating}`,
+      ratingPositive: avgSystemRating >= 4.0,
+    };
+
+    // ── 7-Day System Tracking (Plot Data) ──
+    const dayNamesEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dayNamesAr = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+
+    const [recentInternalTickets, recentComplaints] = await Promise.all([
+      this.prisma.internalTicket.findMany({
+        where: {
+          createdAt: { gte: sevenDaysAgo },
+          ...(branchId ? { targetDepartment: { branchId } } : {})
+        },
+        select: { createdAt: true, resolvedAt: true, closedAt: true, status: true }
+      }),
+      this.prisma.complaint.findMany({
+        where: {
+          createdAt: { gte: sevenDaysAgo },
+          ...(branchId ? { branchId } : {})
+        },
+        select: { createdAt: true, closedAt: true, status: true }
+      })
+    ]);
+
+    const systemTracking: Array<{
+      name: string;
+      nameAr: string;
+      date: string;
+      active: number;
+      resolved: number;
+      avgTime: number;
+    }> = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dayStart = new Date(d);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(d);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const dayOfWeek = d.getDay();
+      const name = dayNamesEn[dayOfWeek] ?? 'Day';
+      const nameAr = dayNamesAr[dayOfWeek] ?? 'يوم';
+      const dateStr = d.toISOString().split('T')[0] ?? '';
+
+      const activeInternal = recentInternalTickets.filter((t) => t.createdAt >= dayStart && t.createdAt <= dayEnd).length;
+      const activeCmp = recentComplaints.filter((c) => c.createdAt >= dayStart && c.createdAt <= dayEnd).length;
+      const dayActive = activeInternal + activeCmp;
+
+      const resolvedInternal = recentInternalTickets.filter((t) => {
+        const res = t.resolvedAt || t.closedAt;
+        return res && res >= dayStart && res <= dayEnd;
+      });
+      const resolvedCmp = recentComplaints.filter((c) => c.closedAt && c.closedAt >= dayStart && c.closedAt <= dayEnd);
+      const dayResolved = resolvedInternal.length + resolvedCmp.length;
+
+      let dayTimeMs = 0;
+      let countWithTime = 0;
+      for (const t of resolvedInternal) {
+        const res = t.resolvedAt || t.closedAt;
+        if (res && t.createdAt) {
+          dayTimeMs += (res.getTime() - t.createdAt.getTime());
+          countWithTime++;
+        }
+      }
+      for (const c of resolvedCmp) {
+        if (c.closedAt && c.createdAt) {
+          dayTimeMs += (c.closedAt.getTime() - c.createdAt.getTime());
+          countWithTime++;
+        }
+      }
+      const avgTime = countWithTime > 0
+        ? Number((dayTimeMs / (countWithTime * 1000 * 60 * 60 * 24)).toFixed(1))
+        : 0;
+
+      systemTracking.push({
+        name,
+        nameAr,
+        date: dateStr,
+        active: dayActive,
+        resolved: dayResolved,
+        avgTime
+      });
+    }
 
     // ── Manager Data (Team Performance) ──
     const employees = await this.prisma.user.findMany({
@@ -98,6 +249,7 @@ export class ReportsRepository {
       select: {
         id: true,
         nameEn: true,
+        nameAr: true,
         role: { select: { nameEn: true } },
         assignedInternalTickets: { select: { status: true, dueAt: true, resolvedAt: true, createdAt: true } },
         employeeTicketRatings: { select: { score: true } },
@@ -131,6 +283,7 @@ export class ReportsRepository {
       return {
         id: emp.id,
         name: emp.nameEn,
+        nameAr: emp.nameAr,
         role: emp.role.nameEn,
         rating: Number(rating.toFixed(1)),
         active,
@@ -139,13 +292,20 @@ export class ReportsRepository {
       };
     });
 
-    const receivedTickets = await this.prisma.internalTicket.count({
-       where: { targetDepartment: { branchId } }
-    });
+    const [receivedInternal, receivedComplaints, sentInternal] = await Promise.all([
+      this.prisma.internalTicket.count({
+        where: branchId ? { targetDepartment: { branchId } } : {}
+      }),
+      this.prisma.complaint.count({
+        where: branchId ? { branchId } : {}
+      }),
+      this.prisma.internalTicket.count({
+        where: branchId ? { requestedBy: { branchId } } : {}
+      })
+    ]);
 
-    const sentTickets = await this.prisma.internalTicket.count({
-       where: { requestedBy: { branchId } }
-    });
+    const receivedTickets = receivedInternal + receivedComplaints;
+    const sentTickets = sentInternal;
 
     // ── Officer Data ──
     let activeTasks = 0;
@@ -156,10 +316,21 @@ export class ReportsRepository {
     let pendingTasks = 0;
 
     if (userId) {
-      activeTasks = await this.prisma.internalTicket.count({ where: { assignedEmployeeId: userId, status: { notIn: ['CLOSED', 'RESOLVED'] } } });
-      sentTasks = await this.prisma.internalTicket.count({ where: { requestedById: userId } });
-      receivedTasks = await this.prisma.internalTicket.count({ where: { assignedEmployeeId: userId } });
-      const tickets = await this.prisma.internalTicket.findMany({ where: { assignedEmployeeId: userId }, select: { status: true, dueAt: true, resolvedAt: true, closedAt: true } });
+      const [userActiveTickets, userSentTickets, userReceivedTickets, userComplaints] = await Promise.all([
+        this.prisma.internalTicket.count({ where: { assignedEmployeeId: userId, status: { notIn: ['CLOSED', 'RESOLVED'] } } }),
+        this.prisma.internalTicket.count({ where: { requestedById: userId } }),
+        this.prisma.internalTicket.count({ where: { assignedEmployeeId: userId } }),
+        this.prisma.complaint.count({ where: { ownerId: userId, status: { notIn: ['CLOSED', 'RESOLVED', 'REJECTED'] } } })
+      ]);
+
+      activeTasks = userActiveTickets + userComplaints;
+      sentTasks = userSentTickets;
+      receivedTasks = userReceivedTickets + userComplaints;
+
+      const tickets = await this.prisma.internalTicket.findMany({
+        where: { assignedEmployeeId: userId },
+        select: { status: true, dueAt: true, resolvedAt: true, closedAt: true }
+      });
       const now = new Date();
       tickets.forEach(t => {
         if (!['CLOSED', 'RESOLVED'].includes(t.status)) {
@@ -175,13 +346,114 @@ export class ReportsRepository {
 
     const avgCompletionMs = completedTicketsCount > 0 ? totalCompletionTimeMs / completedTicketsCount : 0;
     const avgCompletionDays = (avgCompletionMs / (1000 * 60 * 60 * 24)).toFixed(1);
-    const avgCompletion = avgCompletionDays !== "0.0" ? `${avgCompletionDays}d` : "N/A";
-    const performanceKpi = employees.length > 0 ? `${Math.round(totalOnTimeRate / employees.length)}%` : "N/A";
+    const avgCompletion = avgCompletionDays !== "0.0" ? `${avgCompletionDays}d` : "0d";
+    const performanceKpi = employees.length > 0 ? `${Math.round(totalOnTimeRate / employees.length)}%` : "100%";
+
+    // ── CRM Complaint Analytics ──
+    const complaintWhere: Prisma.ComplaintWhereInput = branchId ? { branchId } : {};
+
+    const [
+      totalCrmComplaints,
+      inProgressCrmComplaints,
+      resolvedCrmComplaints,
+      closedCrmComplaints,
+      reopenedCrmComplaints,
+      alternativeCarCount,
+      justifiedCount,
+      unjustifiedCount,
+      satisfiedCount,
+      neutralCount,
+      unsatisfiedCount,
+      crmComplaintsWithDetails,
+    ] = await Promise.all([
+      this.prisma.complaint.count({ where: complaintWhere }),
+      this.prisma.complaint.count({ where: { ...complaintWhere, status: { in: ['SUBMITTED', 'MANAGER_REVIEW', 'BRANCH_REVIEW', 'IN_PROGRESS'] } } }),
+      this.prisma.complaint.count({ where: { ...complaintWhere, status: 'RESOLVED' } }),
+      this.prisma.complaint.count({ where: { ...complaintWhere, status: 'CLOSED' } }),
+      this.prisma.complaint.count({ where: { ...complaintWhere, status: 'REOPENED' } }),
+      this.prisma.complaint.count({ where: { ...complaintWhere, alternativeCarProvided: true } }),
+      this.prisma.complaint.count({ where: { ...complaintWhere, isJustified: true } }),
+      this.prisma.complaint.count({ where: { ...complaintWhere, isJustified: false } }),
+      this.prisma.complaint.count({ where: { ...complaintWhere, satisfactionStatus: 'SATISFIED' } }),
+      this.prisma.complaint.count({ where: { ...complaintWhere, satisfactionStatus: 'NEUTRAL' } }),
+      this.prisma.complaint.count({ where: { ...complaintWhere, satisfactionStatus: 'UNSATISFIED' } }),
+      this.prisma.complaint.findMany({
+        where: complaintWhere,
+        take: 200,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          status: true,
+          rootCauseCategory: true,
+          salesAdvisorName: true,
+          department: { select: { nameEn: true, nameAr: true } },
+          owner: { select: { nameEn: true, nameAr: true } },
+        }
+      })
+    ]);
+
+    const rootCauseCounts: Record<string, number> = {};
+    const deptWorkloadMap: Record<string, { nameEn: string; nameAr: string; active: number; resolved: number }> = {};
+    const officerWorkloadMap: Record<string, { nameEn: string; nameAr: string; active: number; resolved: number }> = {};
+
+    for (const c of crmComplaintsWithDetails) {
+      if (c.rootCauseCategory) {
+        rootCauseCounts[c.rootCauseCategory] = (rootCauseCounts[c.rootCauseCategory] ?? 0) + 1;
+      }
+      const isActive = ['SUBMITTED', 'MANAGER_REVIEW', 'BRANCH_REVIEW', 'IN_PROGRESS'].includes(c.status);
+      const isResolved = ['RESOLVED', 'CLOSED'].includes(c.status);
+
+      if (c.department?.nameEn) {
+        const key = c.department.nameEn;
+        if (!deptWorkloadMap[key]) {
+          deptWorkloadMap[key] = { nameEn: c.department.nameEn, nameAr: c.department.nameAr, active: 0, resolved: 0 };
+        }
+        if (isActive) deptWorkloadMap[key].active++;
+        if (isResolved) deptWorkloadMap[key].resolved++;
+      }
+
+      if (c.owner?.nameEn) {
+        const key = c.owner.nameEn;
+        if (!officerWorkloadMap[key]) {
+          officerWorkloadMap[key] = { nameEn: c.owner.nameEn, nameAr: c.owner.nameAr, active: 0, resolved: 0 };
+        }
+        if (isActive) officerWorkloadMap[key].active++;
+        if (isResolved) officerWorkloadMap[key].resolved++;
+      }
+    }
+
+    const rootCausesBreakdown = Object.entries(rootCauseCounts)
+      .map(([category, count]) => ({ category, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+
+    const departmentWorkload = Object.values(deptWorkloadMap);
+    const officerWorkload = Object.values(officerWorkloadMap);
+
+    const crm = {
+      total: totalCrmComplaints,
+      inProgress: inProgressCrmComplaints,
+      resolved: resolvedCrmComplaints,
+      closed: closedCrmComplaints,
+      escalated: reopenedCrmComplaints,
+      alternativeCarCount,
+      justifiedCount,
+      unjustifiedCount,
+      satisfaction: {
+        satisfied: satisfiedCount,
+        neutral: neutralCount,
+        unsatisfied: unsatisfiedCount,
+      },
+      rootCausesBreakdown,
+      departmentWorkload,
+      officerWorkload,
+    };
 
     return {
-      admin: { totalEmployees, totalActiveTickets, totalResolvedToday, avgSystemRating },
+      admin: { totalEmployees, totalActiveTickets, totalResolvedToday, avgSystemRating, trends, systemTracking },
       manager: { teamPerformance, receivedTickets, sentTickets, avgCompletion, performanceKpi },
-      officer: { activeTasks, sentTasks, receivedTasks, onTime: onTimeTasks, overdue: overdueTasks, pending: pendingTasks }
+      officer: { activeTasks, sentTasks, receivedTasks, onTime: onTimeTasks, overdue: overdueTasks, pending: pendingTasks },
+      crm
     };
   }
 }

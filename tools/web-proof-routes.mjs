@@ -14,7 +14,7 @@ import DashboardPage from '../apps/web/src/app/(staff)/dashboard/page.tsx';
 // import DealHandoffPage from '../apps/web/src/app/(staff)/deals/handoff/page.tsx';
 import EmployeeTodayPage from '../apps/web/src/app/(staff)/tasks/page.tsx';
 // import TaskBoardPage from '../apps/web/src/app/(staff)/tasks/board/page.tsx';
-import ComplaintBoardPage from '../apps/web/src/app/(staff)/complaints/board/page.tsx';
+import ComplaintBoardPage from '../apps/web/src/app/(staff)/complaints/(list)/board/page.tsx';
 // import ManagerControlRoomPage from '../apps/web/src/app/(staff)/tasks/manager/page.tsx';
 // import ManagerTaskDetailPage from '../apps/web/src/app/(staff)/tasks/manager/[id]/page.tsx';
 import NewComplaintPage from '../apps/web/src/app/(staff)/complaints/new/page.tsx';

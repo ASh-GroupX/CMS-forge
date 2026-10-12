@@ -20,7 +20,7 @@ export type ComplaintTemplate = {
 };
 
 // Next.js development typically proxies API requests or hits localhost:3000
-const API_BASE = typeof window === 'undefined' ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000') : '';
+const API_BASE = typeof window === 'undefined' ? (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000') : '';
 
 async function apiFetch(path: string, init?: RequestInit): Promise<any> {
   const isServer = typeof window === 'undefined';
@@ -33,7 +33,9 @@ async function apiFetch(path: string, init?: RequestInit): Promise<any> {
     } catch {}
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const url = isServer ? `${API_BASE}${path}` : `/api${path}`;
+
+  const response = await fetch(url, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
@@ -46,7 +48,16 @@ async function apiFetch(path: string, init?: RequestInit): Promise<any> {
   });
 
   if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
+    let message = `API error: ${response.status}`;
+    try {
+      const body = await response.json();
+      if (body?.error?.message) {
+        message = body.error.message;
+      } else if (body?.message) {
+        message = Array.isArray(body.message) ? body.message.join(', ') : body.message;
+      }
+    } catch {}
+    throw new Error(message);
   }
 
   return response.json();
@@ -73,6 +84,12 @@ export async function updateComplaintTemplate(id: string, payload: { name?: stri
   return apiFetch(`/department-complaint-templates/${id}`, {
     method: 'PUT',
     body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteComplaintTemplate(id: string): Promise<{ ok: true }> {
+  return apiFetch(`/department-complaint-templates/${id}`, {
+    method: 'DELETE',
   });
 }
 

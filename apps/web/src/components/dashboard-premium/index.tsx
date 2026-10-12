@@ -5,15 +5,21 @@ import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import {
   Activity,
+  AlertTriangle,
   ArrowDownRight,
   ArrowUpRight,
   Briefcase,
+  Car,
   CheckCircle2,
   Clock,
   Filter,
   Inbox,
   LayoutDashboard,
+  PieChart,
   Search,
+  ShieldCheck,
+  Smile,
+  Sparkles,
   Star,
   Users,
   Zap,
@@ -26,41 +32,6 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ComposedChart, Area, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-// ── Mock Data ─────────────────────────────────────────────────────────────
-
-const mockTeamPerformance = [
-  { id: 1, name: 'Sara Khaled', role: 'Officer', rating: 4.8, active: 12, done: 45, onTimeRate: 98 },
-  { id: 2, name: 'Mohamed Yasser', role: 'Officer', rating: 4.5, active: 18, done: 32, onTimeRate: 92 },
-  { id: 3, name: 'Norhan Ali', role: 'Officer', rating: 4.9, active: 8, done: 51, onTimeRate: 100 },
-  { id: 4, name: 'Ahmed Reda', role: 'Officer', rating: 4.2, active: 22, done: 28, onTimeRate: 85 },
-];
-
-const mockPersonalInsights = {
-  activeTasks: 14,
-  sentTasks: 8,
-  receivedTasks: 22,
-  onTime: 18,
-  overdue: 2,
-  pending: 4,
-};
-
-const mockAdminOverview = {
-  totalEmployees: 145,
-  totalActiveTickets: 834,
-  totalResolvedToday: 128,
-  avgSystemRating: 4.6,
-};
-
-const mockSystemTracking = [
-  { name: 'Sat', active: 120, resolved: 110, avgTime: 1.5 },
-  { name: 'Sun', active: 132, resolved: 140, avgTime: 1.2 },
-  { name: 'Mon', active: 101, resolved: 150, avgTime: 1.1 },
-  { name: 'Tue', active: 142, resolved: 130, avgTime: 1.4 },
-  { name: 'Wed', active: 150, resolved: 170, avgTime: 1.0 },
-  { name: 'Thu', active: 110, resolved: 160, avgTime: 1.3 },
-  { name: 'Fri', active: 80, resolved: 90, avgTime: 1.6 },
-];
-
 // ── Premium Dashboard Component ───────────────────────────────────────────
 
 export function PremiumDashboard({ locale, principal, data, workloadData, options }: { locale: Locale; principal: StaffSessionPrincipal | null; data?: any; workloadData?: any[]; options?: any }) {
@@ -69,6 +40,7 @@ export function PremiumDashboard({ locale, principal, data, workloadData, option
   const isAdmin = role === 'ADMIN';
   const isManager = ['BRANCH_MANAGER', 'DEPARTMENT_MANGER', 'CR_MANAGER'].includes(role);
   const isOfficer = !isAdmin && !isManager;
+  const [activeTab, setActiveTab] = useState<'crm' | 'internal'>('crm');
 
   const title = isRtl ? 'لوحة القيادة الذكية' : 'Smart Dashboard';
   const subtitle = isRtl ? 'رؤى فورية ومقاييس أداء' : 'Real-time insights and performance metrics';
@@ -76,7 +48,7 @@ export function PremiumDashboard({ locale, principal, data, workloadData, option
   return (
     <div className="flex h-full flex-col overflow-y-auto" dir={isRtl ? 'rtl' : 'ltr'}>
       {/* ── Header ── */}
-      <header className="mb-8 flex items-center justify-between">
+      <header className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-content-strong flex items-center gap-3">
             <div className="p-2 bg-brand/10 text-brand rounded-xl">
@@ -100,11 +72,45 @@ export function PremiumDashboard({ locale, principal, data, workloadData, option
         </div>
       </header>
 
-      {/* ── Role Based Views ── */}
+      {/* ── Mode Switcher (CRM vs Internal) ── */}
+      <div className="mb-6 flex items-center gap-2 border-b border-line-subtle pb-4">
+        <button
+          type="button"
+          onClick={() => setActiveTab('crm')}
+          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-all ${
+            activeTab === 'crm'
+              ? 'bg-brand text-white shadow-md shadow-brand/20'
+              : 'bg-surface hover:bg-surface-raised text-content-muted border border-line-subtle'
+          }`}
+        >
+          <Sparkles className="size-4" />
+          {isRtl ? 'لوحة شكاوى وتجربة العملاء (CRM)' : 'CRM & Customer Complaints'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('internal')}
+          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-all ${
+            activeTab === 'internal'
+              ? 'bg-brand text-white shadow-md shadow-brand/20'
+              : 'bg-surface hover:bg-surface-raised text-content-muted border border-line-subtle'
+          }`}
+        >
+          <Briefcase className="size-4" />
+          {isRtl ? 'العمليات والمهام الداخلية' : 'Internal Operations'}
+        </button>
+      </div>
+
+      {/* ── Content View ── */}
       <div className="flex flex-col gap-6 pb-24">
-        {isAdmin && <AdminView isRtl={isRtl} data={data?.admin} />}
-        {isManager && <ManagerView isRtl={isRtl} data={data?.manager} workloadData={workloadData || []} options={options} principal={principal} />}
-        {isOfficer && <OfficerView isRtl={isRtl} data={data?.officer} />}
+        {activeTab === 'crm' ? (
+          <CrmDashboardView isRtl={isRtl} crmData={data?.crm} locale={locale} />
+        ) : (
+          <>
+            {isAdmin && <AdminView isRtl={isRtl} data={data?.admin} />}
+            {isManager && <ManagerView isRtl={isRtl} data={data?.manager} workloadData={workloadData || []} options={options} principal={principal} />}
+            {isOfficer && <OfficerView isRtl={isRtl} data={data?.officer} />}
+          </>
+        )}
       </div>
     </div>
   );
@@ -113,14 +119,43 @@ export function PremiumDashboard({ locale, principal, data, workloadData, option
 // ── Role Components ───────────────────────────────────────────────────────
 
 function AdminView({ isRtl, data }: { isRtl: boolean, data?: any }) {
-  const adminData = data || mockAdminOverview;
+  const adminData = data || {
+    totalEmployees: 0,
+    totalActiveTickets: 0,
+    totalResolvedToday: 0,
+    avgSystemRating: 5.0,
+    systemTracking: [],
+    trends: undefined,
+  };
+
+  const dayNamesEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayNamesAr = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  const today = new Date();
+
+  const emptyTracking = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - (6 - i));
+    const dayOfWeek = d.getDay();
+    return {
+      name: dayNamesEn[dayOfWeek],
+      nameAr: dayNamesAr[dayOfWeek],
+      active: 0,
+      resolved: 0,
+      avgTime: 0,
+    };
+  });
+
+  const trackingData = Array.isArray(adminData.systemTracking) && adminData.systemTracking.length > 0
+    ? adminData.systemTracking
+    : emptyTracking;
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title={isRtl ? 'إجمالي الموظفين' : 'Total Employees'} value={adminData.totalEmployees} icon={<Users />} trend="+12%" isPositive />
-        <StatCard title={isRtl ? 'التذاكر النشطة' : 'Active Tickets'} value={adminData.totalActiveTickets} icon={<Activity />} trend="-5%" isPositive />
-        <StatCard title={isRtl ? 'تم الحل اليوم' : 'Resolved Today'} value={adminData.totalResolvedToday} icon={<CheckCircle2 />} trend="+18%" isPositive />
-        <StatCard title={isRtl ? 'متوسط التقييم' : 'Avg Rating'} value={`${adminData.avgSystemRating}/5.0`} icon={<Star className="text-yellow-500" />} trend="+0.2" isPositive />
+        <StatCard title={isRtl ? 'إجمالي الموظفين' : 'Total Employees'} value={adminData.totalEmployees ?? 0} icon={<Users />} trend={adminData.trends?.employees ? `${adminData.totalEmployees}` : undefined} isPositive={adminData.trends?.employeesPositive ?? true} />
+        <StatCard title={isRtl ? 'التذاكر النشطة' : 'Active Tickets'} value={adminData.totalActiveTickets ?? 0} icon={<Activity />} trend={adminData.trends?.activeTickets} isPositive={adminData.trends?.activeTicketsPositive ?? true} />
+        <StatCard title={isRtl ? 'تم الحل اليوم' : 'Resolved Today'} value={adminData.totalResolvedToday ?? 0} icon={<CheckCircle2 />} trend={adminData.trends?.resolvedToday} isPositive={adminData.trends?.resolvedTodayPositive ?? true} />
+        <StatCard title={isRtl ? 'متوسط التقييم' : 'Avg Rating'} value={`${adminData.avgSystemRating ?? 5.0}/5.0`} icon={<Star className="text-yellow-500" />} trend={adminData.trends?.rating} isPositive={adminData.trends?.ratingPositive ?? true} />
       </div>
 
       <Card className="rounded-2xl border-line-subtle shadow-lg bg-surface/40 backdrop-blur-xl overflow-hidden">
@@ -130,7 +165,7 @@ function AdminView({ isRtl, data }: { isRtl: boolean, data?: any }) {
         <CardContent className="p-6">
           <div className="h-[350px] w-full pt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={mockSystemTracking} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+              <ComposedChart data={trackingData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                 <defs>
                   <linearGradient id="colorActive" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
@@ -142,7 +177,7 @@ function AdminView({ isRtl, data }: { isRtl: boolean, data?: any }) {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--line-subtle)" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--content-muted)', fontSize: 12 }} dy={10} />
+                <XAxis dataKey={isRtl ? 'nameAr' : 'name'} axisLine={false} tickLine={false} tick={{ fill: 'var(--content-muted)', fontSize: 12 }} dy={10} />
                 <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fill: 'var(--content-muted)', fontSize: 12 }} dx={-10} />
                 <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fill: 'var(--content-muted)', fontSize: 12 }} dx={10} />
                 <Tooltip
@@ -163,10 +198,10 @@ function AdminView({ isRtl, data }: { isRtl: boolean, data?: any }) {
 
 function ManagerView({ isRtl, data, workloadData, options, principal }: { isRtl: boolean, data?: any, workloadData?: any[], options?: any, principal?: any }) {
   const managerData = data || {
-    receivedTickets: 142,
-    sentTickets: 56,
-    avgCompletion: "1.2d",
-    performanceKpi: "94%"
+    receivedTickets: 0,
+    sentTickets: 0,
+    avgCompletion: "0d",
+    performanceKpi: "100%"
   };
 
   const managerDepartmentId = principal?.departmentId;
@@ -388,9 +423,15 @@ function ManagerView({ isRtl, data, workloadData, options, principal }: { isRtl:
     </div>
   );
 }
-
 function OfficerView({ isRtl, data }: { isRtl: boolean, data?: any }) {
-  const officerData = data || mockPersonalInsights;
+  const officerData = data || {
+    activeTasks: 0,
+    sentTasks: 0,
+    receivedTasks: 0,
+    onTime: 0,
+    overdue: 0,
+    pending: 0,
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -494,9 +535,336 @@ function OfficerView({ isRtl, data }: { isRtl: boolean, data?: any }) {
   );
 }
 
+// ── CRM Dashboard View ────────────────────────────────────────────────────
+
+function CrmDashboardView({ isRtl, crmData, locale }: { isRtl: boolean; crmData?: any; locale: Locale }) {
+  const crm = crmData || {
+    total: 0,
+    inProgress: 0,
+    resolved: 0,
+    closed: 0,
+    escalated: 0,
+    alternativeCarCount: 0,
+    justifiedCount: 0,
+    unjustifiedCount: 0,
+    satisfaction: { satisfied: 0, neutral: 0, unsatisfied: 0 },
+    rootCausesBreakdown: [],
+    departmentWorkload: [],
+    officerWorkload: [],
+  };
+
+  const totalResolved = (crm.resolved || 0) + (crm.closed || 0);
+  const resolutionRate = crm.total > 0 ? Math.round((totalResolved / crm.total) * 100) : 0;
+  
+  const totalDecidedJustification = (crm.justifiedCount || 0) + (crm.unjustifiedCount || 0);
+  const justifiedRate = totalDecidedJustification > 0
+    ? Math.round((crm.justifiedCount / totalDecidedJustification) * 100)
+    : 0;
+  const unjustifiedRate = totalDecidedJustification > 0
+    ? Math.round((crm.unjustifiedCount / totalDecidedJustification) * 100)
+    : 0;
+
+  const totalSatisfactionResponses =
+    (crm.satisfaction?.satisfied || 0) +
+    (crm.satisfaction?.neutral || 0) +
+    (crm.satisfaction?.unsatisfied || 0);
+
+  const satRate = totalSatisfactionResponses > 0
+    ? Math.round(((crm.satisfaction?.satisfied || 0) / totalSatisfactionResponses) * 100)
+    : 0;
+  const neuRate = totalSatisfactionResponses > 0
+    ? Math.round(((crm.satisfaction?.neutral || 0) / totalSatisfactionResponses) * 100)
+    : 0;
+  const unsatRate = totalSatisfactionResponses > 0
+    ? Math.round(((crm.satisfaction?.unsatisfied || 0) / totalSatisfactionResponses) * 100)
+    : 0;
+
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* ── Top Metric Cards ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Link href={`/complaints?locale=${locale}`} className="block transition-transform hover:scale-[1.02]">
+          <StatCard
+            title={isRtl ? 'إجمالي الشكاوى' : 'Total Complaints'}
+            value={crm.total}
+            icon={<Inbox className="size-5" />}
+            trend={isRtl ? 'سجل الحالات' : 'All Cases'}
+            isPositive={true}
+          />
+        </Link>
+        <StatCard
+          title={isRtl ? 'قيد المتابعة والتحقيق' : 'In Progress'}
+          value={crm.inProgress}
+          icon={<Clock className="size-5 text-amber-500" />}
+          trend={`${crm.total > 0 ? Math.round((crm.inProgress / crm.total) * 100) : 0}%`}
+          isPositive={false}
+        />
+        <StatCard
+          title={isRtl ? 'تم الحل والإغلاق' : 'Resolved & Closed'}
+          value={totalResolved}
+          icon={<CheckCircle2 className="size-5 text-emerald-500" />}
+          trend={`${resolutionRate}%`}
+          isPositive={resolutionRate >= 70}
+        />
+        <StatCard
+          title={isRtl ? 'شكاوى مصعدة' : 'Escalated / Reopened'}
+          value={crm.escalated}
+          icon={<AlertTriangle className="size-5 text-rose-500" />}
+          trend={crm.escalated === 0 ? '0%' : `${crm.escalated}`}
+          isPositive={crm.escalated === 0}
+        />
+        <StatCard
+          title={isRtl ? 'سيارات بديلة ممنوحة' : 'Alternative Cars'}
+          value={crm.alternativeCarCount}
+          icon={<Car className="size-5 text-blue-500" />}
+          trend="🚗 Active"
+          isPositive={true}
+        />
+      </div>
+
+      {/* ── Justification & Satisfaction Row ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        {/* Justification Card */}
+        <Card className="rounded-2xl border-line-subtle shadow-md bg-surface overflow-hidden">
+          <CardHeader className="border-b border-line-subtle bg-surface-canvas/50 pb-3">
+            <CardTitle className="text-base font-bold flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <ShieldCheck className="size-5 text-brand" />
+                {isRtl ? 'مشروعية الشكاوى (مبررة أم غير مبررة)' : 'Complaint Justification Analysis'}
+              </span>
+              <span className="text-xs font-normal text-content-muted">
+                {totalDecidedJustification} {isRtl ? 'حالة محددة' : 'Decided'}
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-5">
+            {totalDecidedJustification > 0 ? (
+              <>
+                <div className="flex h-4 w-full overflow-hidden rounded-full bg-surface-sunken">
+                  <div style={{ width: `${justifiedRate}%` }} className="bg-emerald-500 transition-all" title={`Justified: ${justifiedRate}%`} />
+                  <div style={{ width: `${unjustifiedRate}%` }} className="bg-rose-500 transition-all" title={`Unjustified: ${unjustifiedRate}%`} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 p-4">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                        {isRtl ? '✅ شكاوى مبررة' : '✅ Justified'}
+                      </span>
+                      <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                        {justifiedRate}%
+                      </span>
+                    </div>
+                    <p className="text-2xl font-black text-emerald-800 dark:text-emerald-200">
+                      {crm.justifiedCount}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-rose-500/20 bg-rose-50/50 dark:bg-rose-950/20 p-4">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold text-rose-700 dark:text-rose-300">
+                        {isRtl ? '❌ غير مبررة' : '❌ Unjustified'}
+                      </span>
+                      <span className="text-xs font-bold text-rose-700 dark:text-rose-300">
+                        {unjustifiedRate}%
+                      </span>
+                    </div>
+                    <p className="text-2xl font-black text-rose-800 dark:text-rose-200">
+                      {crm.unjustifiedCount}
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="py-8 text-center text-sm text-content-muted">
+                {isRtl ? 'لا توجد شكاوى محددة بعد بمشروعية الحل.' : 'No complaints with justification status determined yet.'}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Satisfaction Status Card */}
+        <Card className="rounded-2xl border-line-subtle shadow-md bg-surface overflow-hidden">
+          <CardHeader className="border-b border-line-subtle bg-surface-canvas/50 pb-3">
+            <CardTitle className="text-base font-bold flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Smile className="size-5 text-brand" />
+                {isRtl ? 'مؤشر رضا العملاء' : 'Customer Satisfaction Breakdown'}
+              </span>
+              <span className="text-xs font-normal text-content-muted">
+                {totalSatisfactionResponses} {isRtl ? 'تقييم مسجل' : 'Responses'}
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-5">
+            {totalSatisfactionResponses > 0 ? (
+              <>
+                <div className="flex h-4 w-full overflow-hidden rounded-full bg-surface-sunken">
+                  <div style={{ width: `${satRate}%` }} className="bg-emerald-500 transition-all" title={`Satisfied: ${satRate}%`} />
+                  <div style={{ width: `${neuRate}%` }} className="bg-blue-500 transition-all" title={`Neutral: ${neuRate}%`} />
+                  <div style={{ width: `${unsatRate}%` }} className="bg-rose-500 transition-all" title={`Unsatisfied: ${unsatRate}%`} />
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20 p-3 text-center">
+                    <p className="text-xl font-bold mb-1">😊</p>
+                    <p className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                      {isRtl ? 'راضٍ' : 'Satisfied'}
+                    </p>
+                    <p className="text-xl font-black text-emerald-800 dark:text-emerald-200 mt-1">
+                      {crm.satisfaction?.satisfied || 0}
+                    </p>
+                    <span className="text-[10px] text-content-muted">{satRate}%</span>
+                  </div>
+
+                  <div className="rounded-xl border border-blue-500/20 bg-blue-50/50 dark:bg-blue-950/20 p-3 text-center">
+                    <p className="text-xl font-bold mb-1">😐</p>
+                    <p className="text-xs font-bold text-blue-700 dark:text-blue-300">
+                      {isRtl ? 'محايد' : 'Neutral'}
+                    </p>
+                    <p className="text-xl font-black text-blue-800 dark:text-blue-200 mt-1">
+                      {crm.satisfaction?.neutral || 0}
+                    </p>
+                    <span className="text-[10px] text-content-muted">{neuRate}%</span>
+                  </div>
+
+                  <div className="rounded-xl border border-rose-500/20 bg-rose-50/50 dark:bg-rose-950/20 p-3 text-center">
+                    <p className="text-xl font-bold mb-1">😞</p>
+                    <p className="text-xs font-bold text-rose-700 dark:text-rose-300">
+                      {isRtl ? 'غير راضٍ' : 'Unsatisfied'}
+                    </p>
+                    <p className="text-xl font-black text-rose-800 dark:text-rose-200 mt-1">
+                      {crm.satisfaction?.unsatisfied || 0}
+                    </p>
+                    <span className="text-[10px] text-content-muted">{unsatRate}%</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="py-8 text-center text-sm text-content-muted">
+                {isRtl ? 'لم تسجل بعد بيانات رضا العملاء عند الإغلاق.' : 'No customer satisfaction feedback recorded upon resolution yet.'}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+      </div>
+
+      {/* ── Root Causes & Workloads Row ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        {/* Root Causes Distribution Card */}
+        <Card className="rounded-2xl border-line-subtle shadow-md bg-surface overflow-hidden">
+          <CardHeader className="border-b border-line-subtle bg-surface-canvas/50 pb-3 flex flex-row items-center justify-between">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <PieChart className="size-5 text-brand" />
+              {isRtl ? 'توزيع الأسباب الجذرية الأكثر تكراراً' : 'Top Root Cause Categories'}
+            </CardTitle>
+            <Link href={`/admin/complaint-settings?locale=${locale}`} className="text-xs font-semibold text-brand hover:underline">
+              {isRtl ? 'إدارة القائمة' : 'Manage List'}
+            </Link>
+          </CardHeader>
+          <CardContent className="p-6">
+            {crm.rootCausesBreakdown?.length > 0 ? (
+              <div className="space-y-3">
+                {crm.rootCausesBreakdown.map((item: any) => {
+                  const maxCount = crm.rootCausesBreakdown[0]?.count || 1;
+                  const percent = Math.round((item.count / maxCount) * 100);
+                  return (
+                    <div key={item.category} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs font-semibold">
+                        <span className="text-content-strong truncate max-w-[250px]">{item.category}</span>
+                        <span className="text-brand tabular-nums">{item.count} {isRtl ? 'شكوى' : 'cases'}</span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-surface-sunken overflow-hidden">
+                        <div style={{ width: `${percent}%` }} className="h-full bg-brand rounded-full transition-all" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-sm text-content-muted">
+                {isRtl ? 'لا توجد بيانات للأسباب الجذرية بعد.' : 'No root cause categories recorded yet.'}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Workload by Department & Officer */}
+        <Card className="rounded-2xl border-line-subtle shadow-md bg-surface overflow-hidden">
+          <CardHeader className="border-b border-line-subtle bg-surface-canvas/50 pb-3">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <Users className="size-5 text-brand" />
+              {isRtl ? 'توزيع الشكاوى حسب الأقسام والموظفين' : 'Complaints Workload Distribution'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-4">
+            <div>
+              <h4 className="text-xs font-bold text-content-muted uppercase tracking-wider mb-2">
+                {isRtl ? 'حسب القسم المسؤول' : 'By Department'}
+              </h4>
+              {crm.departmentWorkload?.length > 0 ? (
+                <div className="space-y-2">
+                  {crm.departmentWorkload.slice(0, 4).map((d: any) => (
+                    <div key={d.nameEn} className="flex items-center justify-between rounded-xl bg-surface-sunken p-2.5 text-xs">
+                      <span className="font-semibold text-content-strong">
+                        {isRtl ? d.nameAr || d.nameEn : d.nameEn}
+                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="rounded bg-amber-500/10 px-2 py-0.5 font-bold text-amber-600">
+                          {d.active} {isRtl ? 'نشطة' : 'active'}
+                        </span>
+                        <span className="rounded bg-emerald-500/10 px-2 py-0.5 font-bold text-emerald-600">
+                          {d.resolved} {isRtl ? 'محلولة' : 'resolved'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-content-muted py-2">{isRtl ? 'لا توجد بيانات' : 'No data'}</p>
+              )}
+            </div>
+
+            <div className="pt-2 border-t border-line-subtle">
+              <h4 className="text-xs font-bold text-content-muted uppercase tracking-wider mb-2">
+                {isRtl ? 'أبرز الموظفين المكلفين' : 'Top Assigned Officers'}
+              </h4>
+              {crm.officerWorkload?.length > 0 ? (
+                <div className="space-y-2">
+                  {crm.officerWorkload.slice(0, 4).map((o: any) => (
+                    <div key={o.nameEn} className="flex items-center justify-between rounded-xl bg-surface-sunken p-2.5 text-xs">
+                      <span className="font-semibold text-content-strong">
+                        {isRtl ? o.nameAr || o.nameEn : o.nameEn}
+                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="rounded bg-amber-500/10 px-2 py-0.5 font-bold text-amber-600">
+                          {o.active} {isRtl ? 'نشطة' : 'active'}
+                        </span>
+                        <span className="rounded bg-emerald-500/10 px-2 py-0.5 font-bold text-emerald-600">
+                          {o.resolved} {isRtl ? 'محلولة' : 'resolved'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-content-muted py-2">{isRtl ? 'لا توجد بيانات' : 'No data'}</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+      </div>
+    </div>
+  );
+}
+
 // ── Shared UI ─────────────────────────────────────────────────────────────
 
-function StatCard({ title, value, icon, trend, isPositive }: { title: string; value: string | number; icon: React.ReactNode; trend?: string; isPositive?: boolean }) {
+function StatCard({ title, value, icon, trend, isPositive }: { title: string; value: string | number; icon: React.ReactNode; trend?: string | undefined; isPositive?: boolean | undefined }) {
   return (
     <Card className="rounded-2xl border-line-subtle shadow-md bg-surface hover:shadow-lg transition-shadow duration-300 group overflow-hidden relative">
       <div className="absolute inset-0 bg-gradient-to-br from-brand/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />

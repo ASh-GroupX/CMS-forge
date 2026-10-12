@@ -89,7 +89,40 @@ export async function proofFetch(input) {
     currentHolder: [{ currentHolderId: 'usr_proof', currentHolderName: 'Proof Admin', count: 2 }],
   });
   if (path === '/reports/dashboard') return json({ summary: { openComplaints: 9, overdueComplaints: 2, slaWarningComplaints: 3, closedComplaints: 7, averageTatHours: 18 } });
-  if (path === '/reports/premium-dashboard') return json({ summary: { openComplaints: 9, overdueComplaints: 2, slaWarningComplaints: 3, closedComplaints: 7, averageTatHours: 18 } });
+  if (path === '/reports/premium-dashboard') return json({
+    summary: { openComplaints: 9, overdueComplaints: 2, slaWarningComplaints: 3, closedComplaints: 7, averageTatHours: 18 },
+    admin: {
+      totalEmployees: 4,
+      totalActiveTickets: 2,
+      totalResolvedToday: 1,
+      avgSystemRating: 4.8,
+      trends: { employees: '4', employeesPositive: true, activeTickets: '2', activeTicketsPositive: true, resolvedToday: '+100%', resolvedTodayPositive: true, rating: '4.8', ratingPositive: true },
+      systemTracking: [
+        { name: 'Sun', nameAr: 'الأحد', date: '2026-10-05', active: 3, resolved: 2, avgTime: 1.1 },
+        { name: 'Mon', nameAr: 'الاثنين', date: '2026-10-06', active: 4, resolved: 3, avgTime: 1.0 },
+        { name: 'Tue', nameAr: 'الثلاثاء', date: '2026-10-07', active: 5, resolved: 4, avgTime: 1.2 },
+        { name: 'Wed', nameAr: 'الأربعاء', date: '2026-10-08', active: 4, resolved: 5, avgTime: 0.9 },
+        { name: 'Thu', nameAr: 'الخميس', date: '2026-10-09', active: 3, resolved: 3, avgTime: 1.4 },
+        { name: 'Fri', nameAr: 'الجمعة', date: '2026-10-10', active: 2, resolved: 2, avgTime: 1.5 },
+        { name: 'Sat', nameAr: 'السبت', date: '2026-10-11', active: 2, resolved: 1, avgTime: 1.0 },
+      ]
+    },
+    manager: {
+      teamPerformance: [],
+      receivedTickets: 3,
+      sentTickets: 0,
+      avgCompletion: '1.2d',
+      performanceKpi: '95%'
+    },
+    officer: {
+      activeTasks: 2,
+      sentTasks: 0,
+      receivedTasks: 2,
+      onTime: 2,
+      overdue: 0,
+      pending: 0
+    }
+  });
   if (path === '/internal-tickets/options') return json({ categories: [], departments: [] });
   if (path === '/internal-tickets/team-workload') return json({ workload: [] });
   if (path === '/reports/kpis') return json({ kpis: proofKpis() });

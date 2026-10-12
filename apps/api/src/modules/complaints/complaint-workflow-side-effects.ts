@@ -45,6 +45,7 @@ const NOTIFICATION_BY_ACTION: Partial<Record<ComplaintTransitionAction, string>>
   [ComplaintTransitionAction.SUBMIT]: 'complaint.submitted.internal',
   [ComplaintTransitionAction.APPROVE_AND_ROUTE]: 'workflow.approved-routed.internal',
   [ComplaintTransitionAction.ASSIGN_INVESTIGATION]: 'workflow.investigation-assigned.internal',
+  [ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE]: 'workflow.investigation-update.internal',
   [ComplaintTransitionAction.RESOLVE]: 'workflow.resolved.internal',
   [ComplaintTransitionAction.RESOLVE_DIRECTLY]: 'workflow.resolved.internal',
   [ComplaintTransitionAction.REJECT_RESOLUTION]: 'workflow.resolution-rejected.internal',
@@ -157,11 +158,22 @@ function lifecycleEvent(input: ApplyComplaintTransitionInput): { type: typeof Sl
 }
 
 function recipient(input: ApplyComplaintTransitionInput, complaint: ComplaintStatusRecord): { recipientUserId?: string } {
+  if (input.action === ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE) {
+    return complaint.createdById ? { recipientUserId: complaint.createdById } : {};
+  }
   const ownerId = targetOwnerId(input, complaint);
   return ownerId ? { recipientUserId: ownerId } : {};
 }
 
 function notificationPayload(input: ApplyComplaintTransitionInput, toStatus: ComplaintStatus, complaint: ComplaintStatusRecord) {
+  if (input.action === ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE) {
+    return {
+      complaintId: input.complaintId,
+      investigationNotes: input.investigationNotes ?? '',
+      actorId: input.actorId ?? null,
+    };
+  }
+
   if (input.action === ComplaintTransitionAction.CLOSE || input.action === ComplaintTransitionAction.REOPEN || input.action === ComplaintTransitionAction.CUSTOMER_RESUBMIT) {
     return {
       complaintId: input.complaintId,

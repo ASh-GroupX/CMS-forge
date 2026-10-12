@@ -14,6 +14,7 @@ const en = {
     standardProblems: ['Standard Problems', 'Manage common problem templates for each department.'],
     complaintTemplates: ['Complaint Templates', 'Manage custom form fields for specific departments.'],
     ticketSettings: ['Internal Ticket Settings', 'Manage lists for resolution subjects, waiting reasons, and reject reasons.'],
+    complaintSettings: ['Complaint CRM Settings', 'Manage Root Cause Categories and Sales Advisors for complaints.'],
   },
 };
 
@@ -33,6 +34,7 @@ export const adminHubText: Record<Locale, typeof en> = {
       standardProblems: ['المشاكل الشائعة', 'إدارة قوالب المشاكل الشائعة لكل قسم.'],
       complaintTemplates: ['قوالب الشكاوى', 'إدارة الحقول الإضافية للشكاوى حسب القسم.'],
       ticketSettings: ['إعدادات التذاكر الداخلية', 'إدارة قوائم مواضيع الحل، أسباب الانتظار، وأسباب الرفض.'],
+      complaintSettings: ['إعدادات شكاوى CRM', 'إدارة أسباب المشاكل ومستشاري المبيعات للشكاوى.'],
     },
   },
 };

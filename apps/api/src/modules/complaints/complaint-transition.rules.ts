@@ -34,8 +34,6 @@ export async function recordWorkflowRoleForbidden(auditService: AuditService, in
 export function validateRequiredTransitionData(input: ApplyComplaintTransitionInput): void {
   const errors = [
     ...(reasonRequired.has(input.action) ? requiredTextError(input.reason, 'reason') : []),
-    ...(input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE ? requiredTextError(input.targetBranchId, 'targetBranchId') : []),
-    ...(input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE ? requiredTextError(input.targetDepartmentId, 'targetDepartmentId') : []),
     ...(input.action === ComplaintTransitionAction.ASSIGN_INVESTIGATION && !nonEmptyText(input.ownerId) && !nonEmptyText(input.targetDepartmentId) ? [{ field: 'assignment', code: 'REQUIRED', message: 'ownerId or targetDepartmentId is required.' }] : []),
     ...(resolutionRequired.has(input.action) ? requiredTextError(input.resolutionType, 'resolutionType') : []),
     ...(resolutionRequired.has(input.action) ? requiredTextError(input.resolutionSummary, 'resolutionSummary') : []),
@@ -53,7 +51,26 @@ export function assertVehicleClosureAllowed(input: ApplyComplaintTransitionInput
 
 export function statusUpdateData(input: ApplyComplaintTransitionInput, toStatus: ComplaintStatus) {
   const now = new Date();
-  return { complaintId: input.complaintId, fromStatus: input.fromStatus, toStatus, ...(input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE ? { targetBranchId: input.targetBranchId, targetDepartmentId: input.targetDepartmentId, ownerId: input.ownerId } : {}), ...(input.action === ComplaintTransitionAction.ASSIGN_INVESTIGATION ? { ...(input.ownerId !== undefined ? { ownerId: input.ownerId } : {}), ...(input.targetDepartmentId !== undefined ? { targetDepartmentId: input.targetDepartmentId } : {}) } : {}), ...(resolutionRequired.has(input.action) ? { resolvedAt: now } : {}), ...(input.action === ComplaintTransitionAction.CLOSE ? { closedAt: now } : {}), ...(input.action === ComplaintTransitionAction.CLOSE && nonEmptyText(input.vehicleDataUnavailableReason) ? { vehicleDataUnavailableReason: input.vehicleDataUnavailableReason } : {}) };
+  return {
+    complaintId: input.complaintId,
+    fromStatus: input.fromStatus,
+    toStatus,
+    ...(input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE ? {
+      ...(input.targetBranchId ? { targetBranchId: input.targetBranchId } : {}),
+      ...(input.targetDepartmentId ? { targetDepartmentId: input.targetDepartmentId } : {}),
+      ...(input.ownerId ? { ownerId: input.ownerId } : {}),
+    } : {}),
+    ...(input.action === ComplaintTransitionAction.ASSIGN_INVESTIGATION ? {
+      ...(input.ownerId !== undefined ? { ownerId: input.ownerId } : {}),
+      ...(input.targetDepartmentId !== undefined ? { targetDepartmentId: input.targetDepartmentId } : {}),
+    } : {}),
+    ...(resolutionRequired.has(input.action) ? { resolvedAt: now } : {}),
+    ...(input.action === ComplaintTransitionAction.CLOSE ? { closedAt: now } : {}),
+    ...(input.action === ComplaintTransitionAction.CLOSE && nonEmptyText(input.vehicleDataUnavailableReason) ? { vehicleDataUnavailableReason: input.vehicleDataUnavailableReason } : {}),
+    ...(input.isJustified !== undefined ? { isJustified: input.isJustified } : {}),
+    ...(input.satisfactionStatus !== undefined ? { satisfactionStatus: input.satisfactionStatus } : {}),
+    ...(input.investigationNotes !== undefined ? { investigationNotes: input.investigationNotes, investigatedAt: now } : {}),
+  };
 }
 
 export function workflowAuditInput(input: ApplyComplaintTransitionInput, toStatus: ComplaintStatus, branchId: string): AuditRecordInput {

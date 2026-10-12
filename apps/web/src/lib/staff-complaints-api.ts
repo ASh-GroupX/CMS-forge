@@ -75,6 +75,15 @@ export type ComplaintDetail = ComplaintQueueItem & {
   salesAdvisorName: string | null;
   rootCauseCategory: string | null;
   repeatCustomer: boolean | null;
+  alternativeCarProvided?: boolean;
+  backupOfficerId?: string | null;
+  backupOfficerName?: string | null;
+  collaboratorId?: string | null;
+  collaboratorName?: string | null;
+  isJustified?: boolean | null;
+  satisfactionStatus?: string | null;
+  investigationNotes?: string | null;
+  investigatedAt?: string | null;
   statusHistory: ComplaintStatusTimelineItem[];
   caseSummary: ComplaintCaseSummary | null;
   allowedActions: ComplaintTransitionAction[];
@@ -133,6 +142,10 @@ export type StaffComplaintCreateRequest = {
   rootCauseCategory?: string | null;
   repeatCustomer?: boolean | null;
   departmentId?: string | null;
+  ownerId?: string | null;
+  backupOfficerId?: string | null;
+  collaboratorId?: string | null;
+  alternativeCarProvided?: boolean;
   type?: string;
   templateId?: string | null;
   templateData?: any;
@@ -163,7 +176,21 @@ export type StaffComplaintCorrectionResponse = {
   };
 };
 
-export type StaffComplaintTransitionRequest = { status: ComplaintStatus; action: ComplaintTransitionAction; reason?: string | null; targetBranchId?: string | null; targetDepartmentId?: string | null; ownerId?: string | null; resolutionType?: string | null; resolutionSummary?: string | null; customerCommunicationStatus?: string | null; vehicleDataUnavailableReason?: string | null };
+export type StaffComplaintTransitionRequest = {
+  status: ComplaintStatus;
+  action: ComplaintTransitionAction;
+  reason?: string | null;
+  targetBranchId?: string | null;
+  targetDepartmentId?: string | null;
+  ownerId?: string | null;
+  resolutionType?: string | null;
+  resolutionSummary?: string | null;
+  customerCommunicationStatus?: string | null;
+  vehicleDataUnavailableReason?: string | null;
+  isJustified?: boolean | null;
+  satisfactionStatus?: string | null;
+  investigationNotes?: string | null;
+};
 
 export type StaffComplaintTransitionResponse = {
   transition: {

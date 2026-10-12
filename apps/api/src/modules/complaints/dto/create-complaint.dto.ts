@@ -14,11 +14,11 @@ export type CreateComplaintRequestDto = {
   categoryId: string;
   description: string;
   incidentAt: string;
-  subject: string;
+  subject?: string | undefined;
   severity: ComplaintSeverity;
-  type?: string | undefined; // New: Action Request, Complaint, etc.
+  type?: string | undefined; // Action Request, Complaint, etc.
   vehicleRelated?: boolean | undefined;
-  vehicleVin?: string | null | undefined;
+  vehicleVin: string;
   vehicleId?: string | null | undefined;
   vehiclePlate?: string | null | undefined;
   vehicleBrand?: string | null | undefined;
@@ -35,6 +35,10 @@ export type CreateComplaintRequestDto = {
   vehicleSource?: DataSource | null | undefined;
   vehicleDataUnavailableReason?: string | null | undefined;
   departmentId?: string | null | undefined;
+  ownerId?: string | null | undefined;
+  backupOfficerId?: string | null | undefined;
+  collaboratorId?: string | null | undefined;
+  alternativeCarProvided?: boolean | undefined;
   saveAsDraft?: boolean | undefined;
   templateId?: string | null | undefined;
   templateData?: any | undefined;
@@ -46,19 +50,21 @@ export type CreateComplaintResponseDto = {
 
 export function parseCreateComplaintBody(body: unknown): CreateComplaintRequestDto {
   const input = objectBody(body);
+  const customerName = requiredText(input.customerName, 'customerName');
+  const subject = optionalText(input.subject, 'subject') ?? customerName;
   return {
-    customerName: requiredText(input.customerName, 'customerName'),
+    customerName,
     customerPhone: optionalText(input.customerPhone, 'customerPhone'),
     customerNumber: optionalText(input.customerNumber, 'customerNumber'),
     customerSource: optionalDataSource(input.customerSource, 'customerSource'),
     categoryId: requiredText(input.categoryId, 'categoryId'),
     description: requiredText(input.description, 'description'),
     incidentAt: requiredText(input.incidentAt, 'incidentAt'),
-    subject: requiredText(input.subject, 'subject'),
+    subject,
     severity: enumValue(input.severity, ComplaintSeverity as any, 'severity'),
     type: optionalText(input.type, 'type') ?? undefined,
-    vehicleRelated: input.vehicleRelated === true,
-    vehicleVin: optionalText(input.vehicleVin, 'vehicleVin'),
+    vehicleRelated: input.vehicleRelated !== false,
+    vehicleVin: requiredText(input.vehicleVin, 'vehicleVin'),
     vehicleId: optionalText(input.vehicleId, 'vehicleId'),
     vehiclePlate: optionalText(input.vehiclePlate, 'vehiclePlate'),
     vehicleBrand: optionalText(input.vehicleBrand, 'vehicleBrand'),
@@ -75,6 +81,10 @@ export function parseCreateComplaintBody(body: unknown): CreateComplaintRequestD
     vehicleSource: optionalDataSource(input.vehicleSource, 'vehicleSource'),
     vehicleDataUnavailableReason: optionalText(input.vehicleDataUnavailableReason, 'vehicleDataUnavailableReason'),
     departmentId: optionalText(input.departmentId, 'departmentId'),
+    ownerId: optionalText(input.ownerId, 'ownerId'),
+    backupOfficerId: optionalText(input.backupOfficerId, 'backupOfficerId'),
+    collaboratorId: optionalText(input.collaboratorId, 'collaboratorId'),
+    alternativeCarProvided: input.alternativeCarProvided === true,
     saveAsDraft: input.saveAsDraft === true,
     templateId: optionalText(input.templateId, 'templateId'),
     templateData: input.templateData !== undefined ? input.templateData : undefined,
@@ -111,6 +121,10 @@ export function toCreateComplaintInput(
     vehicleSource: body.vehicleSource ?? null,
     vehicleDataUnavailableReason: body.vehicleDataUnavailableReason ?? null,
     departmentId: body.departmentId ?? null,
+    ownerId: body.ownerId ?? null,
+    backupOfficerId: body.backupOfficerId ?? null,
+    collaboratorId: body.collaboratorId ?? null,
+    alternativeCarProvided: body.alternativeCarProvided ?? false,
     saveAsDraft: body.saveAsDraft,
     templateId: body.templateId ?? null,
     branchId,

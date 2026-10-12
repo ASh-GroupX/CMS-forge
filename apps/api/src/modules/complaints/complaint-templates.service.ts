@@ -31,7 +31,7 @@ export class ComplaintTemplatesService {
     });
   }
 
-  async create(departmentId: string, actorId: string, input: CreateComplaintTemplateDto): Promise<ComplaintTemplateResponseDto> {
+  async create(departmentId: string, actorId: string | null, input: CreateComplaintTemplateDto): Promise<ComplaintTemplateResponseDto> {
     return this.complaintsRepository.transaction(async (client) => {
       const template = await client.departmentComplaintTemplate.create({
         data: {
@@ -60,7 +60,7 @@ export class ComplaintTemplatesService {
     });
   }
 
-  async update(id: string, actorId: string, input: UpdateComplaintTemplateDto): Promise<ComplaintTemplateResponseDto> {
+  async update(id: string, actorId: string | null, input: UpdateComplaintTemplateDto): Promise<ComplaintTemplateResponseDto> {
     return this.complaintsRepository.transaction(async (client) => {
       const existing = await client.departmentComplaintTemplate.findUnique({ where: { id } });
       if (!existing) {
@@ -91,6 +91,32 @@ export class ComplaintTemplatesService {
       }, client);
 
       return template;
+    });
+  }
+
+  async delete(id: string, actorId: string | null): Promise<{ ok: true }> {
+    return this.complaintsRepository.transaction(async (client) => {
+      const existing = await client.departmentComplaintTemplate.findUnique({ where: { id } });
+      if (!existing) {
+        throw new AppException('NOT_FOUND', 'Template not found', HttpStatus.NOT_FOUND);
+      }
+
+      await client.departmentComplaintTemplate.delete({ where: { id } });
+
+      await this.auditService.record({
+        eventType: 'CONFIG',
+        action: 'complaint_template_deleted',
+        actorId,
+        branchId: null,
+        targetType: 'department_complaint_template',
+        targetId: id,
+        correlationId: null,
+        ipAddress: null,
+        userAgent: null,
+        metadata: { departmentId: existing.departmentId, name: existing.name }
+      }, client);
+
+      return { ok: true };
     });
   }
 

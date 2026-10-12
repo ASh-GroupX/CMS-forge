@@ -260,10 +260,41 @@ async function main(): Promise<void> {
     complaint1,
   });
 
+  // ── Complaint Root Causes & Sales Advisors ──────────────────────────────
+  const defaultRootCauses = [
+    { nameEn: 'Delivery Delay', nameAr: 'تأخر في التسليم', order: 1 },
+    { nameEn: 'Repair Quality', nameAr: 'جودة الإصلاح والصيانة', order: 2 },
+    { nameEn: 'Staff Behavior', nameAr: 'سلوك وتعامل الموظفين', order: 3 },
+    { nameEn: 'Pricing & Invoicing', nameAr: 'الأسعار والفواتير', order: 4 },
+    { nameEn: 'Parts Unavailability', nameAr: 'عدم توفر قطع الغيار', order: 5 },
+    { nameEn: 'Poor Communication', nameAr: 'ضعف التواصل والمتابعة', order: 6 },
+    { nameEn: 'Diagnostic Issue', nameAr: 'خطأ في الفحص والتشخيص', order: 7 },
+  ];
+  for (const rc of defaultRootCauses) {
+    const existing = await prisma.complaintRootCause.findFirst({ where: { nameEn: rc.nameEn } });
+    if (!existing) {
+      await prisma.complaintRootCause.create({ data: rc });
+    }
+  }
+
+  const defaultSalesAdvisors = [
+    { nameEn: 'Ahmed Al-Mansoor', nameAr: 'أحمد المنصور', order: 1 },
+    { nameEn: 'Faisal Al-Harbi', nameAr: 'فيصل الحربي', order: 2 },
+    { nameEn: 'Tariq Al-Otaibi', nameAr: 'طارق العتيبي', order: 3 },
+    { nameEn: 'Mohammed Al-Zahrani', nameAr: 'محمد الزهراني', order: 4 },
+    { nameEn: 'Khalid Al-Shammari', nameAr: 'خالد الشمري', order: 5 },
+  ];
+  for (const sa of defaultSalesAdvisors) {
+    const existing = await prisma.complaintSalesAdvisor.findFirst({ where: { nameEn: sa.nameEn } });
+    if (!existing) {
+      await prisma.complaintSalesAdvisor.create({ data: sa });
+    }
+  }
+
   await seedBoardStages(prisma);
   const slaPolicies = await seedSlaPolicies(prisma);
 
-  console.log(`Seed complete: 2 branches, 6 roles, 4 users, 5 categories, 2 customers, 2 vehicles, 3 complaints, 2 deals, 2 tasks, 1 confidential case, 13 board stages (4 tasks + 9 tickets), ${slaPolicies} SLA policies.`);
+  console.log(`Seed complete: 2 branches, 6 roles, 4 users, 5 categories, 2 customers, 2 vehicles, 3 complaints, 2 deals, 2 tasks, 1 confidential case, 13 board stages (4 tasks + 9 tickets), ${slaPolicies} SLA policies, root causes & sales advisors initialized.`);
 }
 
 main()

@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import React from 'react';
 import { AdminComplaintTemplates } from '../../../../components/admin-complaint-templates';
 import { resolveLocale } from '../../../../i18n/staff-shell';
@@ -12,8 +12,8 @@ export default async function AdminComplaintTemplatesPage({
   searchParams?: Promise<SearchParams>;
 }) {
   const params = await searchParams;
+  const cookieHeader = (await headers()).get('cookie') ?? '';
   const cookieStore = await cookies();
-  const cookieHeader = cookieStore.toString();
   
   const options = await getComplaintFormOptions({ cookieHeader });
   const csrfToken = cookieStore.get('cms_csrf_token')?.value || '';
