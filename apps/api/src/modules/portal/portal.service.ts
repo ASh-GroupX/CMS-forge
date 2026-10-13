@@ -83,6 +83,7 @@ export class PortalService {
     return {
       ...input,
       branchId: optionalText(input.branchId) ?? defaults.branchId,
+      departmentId: optionalText(input.departmentId) ?? defaults.departmentId,
       categoryId: optionalText(input.categoryId) ?? defaults.categoryId,
 
       severity: input.severity ?? ComplaintSeverity.MEDIUM,
@@ -180,6 +181,10 @@ export class PortalService {
       throw error;
     });
 
+    if (complaint.status === ComplaintStatus.CLOSED || complaint.status === ComplaintStatus.REJECTED) {
+      throw verificationFailed();
+    }
+
     if (complaint.status === ComplaintStatus.RESOLVED) {
       await this.complaintsService.applyTransition({
         complaintId: session.complaintId,
@@ -189,19 +194,6 @@ export class PortalService {
         actorId: null,
         actorRole: RoleCode.CUSTOMER_PORTAL,
         reason: 'Customer rejected resolution via follow-up',
-        correlationId: input.correlationId ?? null,
-        ipAddress: input.ipAddress ?? null,
-        userAgent: input.userAgent ?? null,
-      });
-    } else if (complaint.status === ComplaintStatus.CLOSED || complaint.status === ComplaintStatus.REJECTED) {
-      await this.complaintsService.applyTransition({
-        complaintId: session.complaintId,
-        fromStatus: complaint.status,
-        action: ComplaintTransitionAction.CUSTOMER_RESUBMIT,
-        requestSource: ComplaintTransitionRequestSource.CUSTOMER_PORTAL,
-        actorId: null,
-        actorRole: RoleCode.CUSTOMER_PORTAL,
-        reason: 'Customer resubmitted via follow-up',
         correlationId: input.correlationId ?? null,
         ipAddress: input.ipAddress ?? null,
         userAgent: input.userAgent ?? null,
@@ -226,6 +218,7 @@ export class PortalService {
       if (error instanceof AppException && error.code === 'COMPLAINT_NOT_FOUND') throw verificationFailed();
       throw error;
     });
+    if (complaint.status === ComplaintStatus.CLOSED || complaint.status === ComplaintStatus.REJECTED) throw verificationFailed();
     return { complaintId: session.complaintId, customerId: session.customerId, branchId: complaint.branchId, status: complaint.status };
   }
 

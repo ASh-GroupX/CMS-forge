@@ -774,7 +774,13 @@ function CreateSubmitMessage({ locale, state }: { locale: Locale; state: SubmitS
 
 function previewState(state: CreateFormFixtureState | undefined, locale: Locale): SubmitState {
   if (state === 'success') return { kind: 'success', attachmentCount: 1, failedAttachmentCount: 0, referenceNumber: 'CMP-2026-001', status: 'SUBMITTED' };
-  if (state === 'validation') return { kind: 'validation', fieldErrors: [{ field: 'customerPhone', code: 'REQUIRED', message: staffShellText[locale].createForm.validation.required }] };
+  if (state === 'validation') return {
+    kind: 'validation',
+    fieldErrors: [
+      { field: 'customerPhone', code: 'REQUIRED', message: staffShellText[locale].createForm.validation.required },
+      { field: 'vehicleVin', code: 'REQUIRED', message: staffShellText[locale].createForm.validation.vinRequired },
+    ],
+  };
   if (state === 'loading') return { kind: 'loading' };
   if (state === 'network') return { kind: 'error', network: true };
   if (state === 'error') return { kind: 'error', network: false };
