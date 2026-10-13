@@ -120,6 +120,15 @@ jobs:
             mkdir -p "$BACKUP_DIR"
             chmod 700 "$BACKUP_DIR"
             docker compose --env-file .env.production -f docker-compose.prod.yml up -d postgres
+            echo "Waiting for postgres to accept connections..."
+            for i in $(seq 1 30); do
+              if docker compose --env-file .env.production -f docker-compose.prod.yml exec -T postgres \
+                sh -c 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"' >/dev/null 2>&1; then
+                echo "Postgres is ready for backup"
+                break
+              fi
+              sleep 1
+            done
             docker compose --env-file .env.production -f docker-compose.prod.yml exec -T postgres \
               sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$BACKUP_FILE"
             test -s "$BACKUP_FILE"
