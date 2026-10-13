@@ -217,6 +217,23 @@ jobs:
             test "$DEFAULT_DEPARTMENT_COUNT" = "6"
             echo "Default departments verified"
 
+            # Ensure at least one active branch exists
+            echo "Verifying default branches..."
+            BRANCH_COUNT="$(
+              printf '%s\n' \
+                "SELECT COUNT(*) FROM branches WHERE is_active = true;" |
+                docker compose --env-file .env.production -f docker-compose.prod.yml exec -T postgres \
+                  sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tA' | tr -d '\r'
+            )"
+            if [ "$BRANCH_COUNT" = "0" ]; then
+              echo "No active branches found, installing default branches..."
+              printf '%s\n' \
+                "INSERT INTO \"branches\" (\"id\", \"code\", \"name_en\", \"name_ar\", \"timezone\", \"is_active\", \"created_at\", \"updated_at\") VALUES ('branch_default_main', 'MAIN', 'Main Branch', 'الفرع الرئيسي', 'Asia/Riyadh', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP), ('branch_default_north', 'NORTH', 'North Branch', 'فرع الشمال', 'Asia/Riyadh', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT (\"code\") DO NOTHING;" |
+                docker compose --env-file .env.production -f docker-compose.prod.yml exec -T postgres \
+                  sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+            fi
+            echo "Default branches verified"
+
             echo "Verifying deployment revision labels..."
             for SERVICE in api web worker caddy; do
               CONTAINER="cms-auto-prod-$SERVICE-1"

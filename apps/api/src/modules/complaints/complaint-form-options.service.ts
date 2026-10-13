@@ -75,17 +75,17 @@ export class ComplaintFormOptionsService {
         orderBy: [{ order: 'asc' }, { nameEn: 'asc' }],
         select: { id: true, nameEn: true, nameAr: true, order: true },
         where: { isActive: true },
-      }),
+      }).catch(() => []),
       this.prisma.complaintSalesAdvisor.findMany({
         orderBy: [{ order: 'asc' }, { nameEn: 'asc' }],
         select: { id: true, nameEn: true, nameAr: true, order: true },
         where: { isActive: true },
-      }),
+      }).catch(() => []),
       this.prisma.user.findMany({
         orderBy: [{ nameEn: 'asc' }],
         select: { id: true, nameEn: true, nameAr: true, email: true, departmentId: true, branchId: true, role: { select: { code: true } } },
         where: { isActive: true },
-      }),
+      }).catch(() => []),
     ]);
     const mappedUsers = users.map((u) => ({
       id: u.id,
