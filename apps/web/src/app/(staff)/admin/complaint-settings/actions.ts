@@ -6,12 +6,22 @@ import { cookies } from 'next/headers';
 const API_BASE_URL = process.env.API_URL || 'http://localhost:3000';
 
 async function getAuthHeaders() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('cms_staff_session')?.value || '';
+  const cookieHeader = (await cookies()).toString();
+  const csrf = cookieHeader.split(';').map(c => c.trim()).find(c => c.startsWith('cms_csrf_token='))?.slice('cms_csrf_token='.length);
   return {
     'Content-Type': 'application/json',
-    'Cookie': `cms_staff_session=${token}`,
+    'Cookie': cookieHeader,
+    ...(csrf ? { 'x-csrf-token': csrf } : {}),
   };
+}
+
+function parseErrorMessage(raw: string, status: number): string {
+  try {
+    const json = JSON.parse(raw);
+    if (json?.error?.message) return json.error.message;
+    if (json?.message) return Array.isArray(json.message) ? json.message.join(', ') : json.message;
+  } catch {}
+  return raw || `Request failed with status ${status}`;
 }
 
 export async function getRootCauses() {
@@ -33,7 +43,7 @@ export async function createRootCause(nameEn: string, nameAr: string): Promise<{
     });
     if (!res.ok) {
       const msg = await res.text().catch(() => '');
-      return { success: false, error: msg || `Failed with status ${res.status}` };
+      return { success: false, error: parseErrorMessage(msg, res.status) };
     }
     revalidatePath('/admin/complaint-settings');
     return { success: true };
@@ -52,7 +62,7 @@ export async function updateRootCause(id: string, nameEn: string, nameAr: string
     });
     if (!res.ok) {
       const msg = await res.text().catch(() => '');
-      return { success: false, error: msg || `Failed with status ${res.status}` };
+      return { success: false, error: parseErrorMessage(msg, res.status) };
     }
     revalidatePath('/admin/complaint-settings');
     return { success: true };
@@ -70,7 +80,7 @@ export async function deleteRootCause(id: string): Promise<{ success: boolean; e
     });
     if (!res.ok) {
       const msg = await res.text().catch(() => '');
-      return { success: false, error: msg || `Failed with status ${res.status}` };
+      return { success: false, error: parseErrorMessage(msg, res.status) };
     }
     revalidatePath('/admin/complaint-settings');
     return { success: true };
@@ -98,7 +108,7 @@ export async function createSalesAdvisor(nameEn: string, nameAr: string): Promis
     });
     if (!res.ok) {
       const msg = await res.text().catch(() => '');
-      return { success: false, error: msg || `Failed with status ${res.status}` };
+      return { success: false, error: parseErrorMessage(msg, res.status) };
     }
     revalidatePath('/admin/complaint-settings');
     return { success: true };
@@ -117,7 +127,7 @@ export async function updateSalesAdvisor(id: string, nameEn: string, nameAr: str
     });
     if (!res.ok) {
       const msg = await res.text().catch(() => '');
-      return { success: false, error: msg || `Failed with status ${res.status}` };
+      return { success: false, error: parseErrorMessage(msg, res.status) };
     }
     revalidatePath('/admin/complaint-settings');
     return { success: true };
@@ -135,7 +145,7 @@ export async function deleteSalesAdvisor(id: string): Promise<{ success: boolean
     });
     if (!res.ok) {
       const msg = await res.text().catch(() => '');
-      return { success: false, error: msg || `Failed with status ${res.status}` };
+      return { success: false, error: parseErrorMessage(msg, res.status) };
     }
     revalidatePath('/admin/complaint-settings');
     return { success: true };
@@ -143,3 +153,4 @@ export async function deleteSalesAdvisor(id: string): Promise<{ success: boolean
     return { success: false, error: err?.message || 'Network error' };
   }
 }
+

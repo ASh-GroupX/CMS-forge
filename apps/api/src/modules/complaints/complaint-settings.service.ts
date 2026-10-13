@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../core/http-kernel.js';
 
 export type RootCauseInput = {
@@ -20,16 +20,25 @@ export class ComplaintSettingsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async listRootCauses() {
-    return this.prisma.complaintRootCause.findMany({
-      orderBy: [{ order: 'asc' }, { nameEn: 'asc' }],
-    });
+    try {
+      return await this.prisma.complaintRootCause.findMany({
+        orderBy: [{ order: 'asc' }, { nameEn: 'asc' }],
+      });
+    } catch {
+      return [];
+    }
   }
 
   async createRootCause(input: RootCauseInput) {
+    const nameEn = input.nameEn?.trim();
+    if (!nameEn) {
+      throw new BadRequestException('English name is required');
+    }
+    const nameAr = (input.nameAr?.trim() || nameEn);
     return this.prisma.complaintRootCause.create({
       data: {
-        nameEn: input.nameEn.trim(),
-        nameAr: (input.nameAr ?? input.nameEn).trim(),
+        nameEn,
+        nameAr,
         order: input.order ?? 0,
         isActive: input.isActive ?? true,
       },
@@ -55,16 +64,25 @@ export class ComplaintSettingsService {
   }
 
   async listSalesAdvisors() {
-    return this.prisma.complaintSalesAdvisor.findMany({
-      orderBy: [{ order: 'asc' }, { nameEn: 'asc' }],
-    });
+    try {
+      return await this.prisma.complaintSalesAdvisor.findMany({
+        orderBy: [{ order: 'asc' }, { nameEn: 'asc' }],
+      });
+    } catch {
+      return [];
+    }
   }
 
   async createSalesAdvisor(input: SalesAdvisorInput) {
+    const nameEn = input.nameEn?.trim();
+    if (!nameEn) {
+      throw new BadRequestException('English name is required');
+    }
+    const nameAr = (input.nameAr?.trim() || nameEn);
     return this.prisma.complaintSalesAdvisor.create({
       data: {
-        nameEn: input.nameEn.trim(),
-        nameAr: (input.nameAr ?? input.nameEn).trim(),
+        nameEn,
+        nameAr,
         order: input.order ?? 0,
         isActive: input.isActive ?? true,
       },
@@ -89,3 +107,4 @@ export class ComplaintSettingsService {
     });
   }
 }
+
