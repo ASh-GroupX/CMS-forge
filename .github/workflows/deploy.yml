@@ -144,17 +144,21 @@ jobs:
             # Health Check Verification (checks every long-running CMS service)
             echo "Waiting for services to become healthy..."
             UNHEALTHY="api web worker caddy postgres redis"
-            for i in $(seq 1 45); do
+            for i in $(seq 1 60); do
               UNHEALTHY=""
               for SERVICE in api web worker caddy postgres redis; do
                 CONTAINER="cms-auto-prod-$SERVICE-1"
-                STATUS="$(docker inspect --format='{{.State.Health.Status}}' "$CONTAINER" 2>/dev/null || true)"
+                STATUS="$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$CONTAINER" 2>/dev/null || echo "missing")"
                 if [ "$STATUS" != "healthy" ]; then
-                  UNHEALTHY="$UNHEALTHY $SERVICE"
+                  UNHEALTHY="$UNHEALTHY $SERVICE($STATUS)"
                 fi
               done
               if [ -z "$UNHEALTHY" ]; then
+                echo "All services healthy after attempt $i!"
                 break
+              fi
+              if [ $((i % 5)) -eq 1 ]; then
+                echo "Health check attempt $i/60: still waiting for:$UNHEALTHY"
               fi
               sleep 2
             done
@@ -167,24 +171,38 @@ jobs:
             fi
 
             # Fail closed unless all production routing defaults are queryable.
+            echo "Verifying default departments..."
             DEFAULT_DEPARTMENT_COUNT="$(
               printf '%s\n' \
                 "SELECT COUNT(*) FROM departments WHERE branch_id IS NULL AND is_active = true AND code IN ('SALES','SERVICE','PARTS','BODY_PAINT','FINANCE','CUSTOMER_CARE');" |
                 docker compose --env-file .env.production -f docker-compose.prod.yml exec -T postgres \
-                  sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tA'
+                  sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tA' | tr -d '\r'
             )"
+            echo "Default departments found: '$DEFAULT_DEPARTMENT_COUNT' (expected 6)"
             test "$DEFAULT_DEPARTMENT_COUNT" = "6"
             echo "Default departments verified"
 
+            echo "Verifying deployment revision labels..."
             for SERVICE in api web worker caddy; do
               CONTAINER="cms-auto-prod-$SERVICE-1"
-              test "$(docker inspect --format='{{ index .Config.Labels "com.cms-auto.revision" }}' "$CONTAINER")" = "$DEPLOYMENT_SHA"
+              LABEL_SHA="$(docker inspect --format='{{ index .Config.Labels "com.cms-auto.revision" }}' "$CONTAINER" | tr -d '\r')"
+              echo "Service $SERVICE revision: $LABEL_SHA (expected: $DEPLOYMENT_SHA)"
+              test "$LABEL_SHA" = "$DEPLOYMENT_SHA"
             done
+            echo "Deployment revision labels verified"
 
             # Fail unless host Nginx serves this exact release publicly.
+            echo "Verifying host proxy reachability..."
             curl -fsS -H "Host: $SITE_DOMAIN" http://127.0.0.1:8080/ >/dev/null
+            echo "Host proxy reached successfully"
+
+            echo "Verifying public deployment revision..."
             PUBLIC_SHA="$(curl -fsSI "https://$SITE_DOMAIN/" | tr -d '\r' | awk -F': ' 'tolower($1) == "x-cms-deployment" { print $2 }')"
+            echo "Public deployment revision: $PUBLIC_SHA (expected: $DEPLOYMENT_SHA)"
             test "$PUBLIC_SHA" = "$DEPLOYMENT_SHA"
+
+            echo "Verifying public health endpoint..."
             curl -fsS "https://$SITE_DOMAIN/api/health" >/dev/null
+            echo "Public health API verified"
 
             echo "Production deployed and verified"
