@@ -119,12 +119,21 @@ jobs:
             BACKUP_FILE="$BACKUP_DIR/cms-auto-$(date -u +%Y%m%dT%H%M%SZ).dump"
             mkdir -p "$BACKUP_DIR"
             chmod 700 "$BACKUP_DIR"
-            docker compose --env-file .env.production -f docker-compose.prod.yml up -d postgres
-            echo "Waiting for postgres to accept connections..."
+            docker compose --env-file .env.production -f docker-compose.prod.yml up -d postgres redis
+            echo "Waiting for postgres and redis to accept connections..."
             for i in $(seq 1 30); do
+              PG_OK=0
+              REDIS_OK=0
               if docker compose --env-file .env.production -f docker-compose.prod.yml exec -T postgres \
                 sh -c 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"' >/dev/null 2>&1; then
-                echo "Postgres is ready for backup"
+                PG_OK=1
+              fi
+              if docker compose --env-file .env.production -f docker-compose.prod.yml exec -T redis \
+                sh -c 'redis-cli ping | grep -q PONG' >/dev/null 2>&1; then
+                REDIS_OK=1
+              fi
+              if [ "$PG_OK" = "1" ] && [ "$REDIS_OK" = "1" ]; then
+                echo "Postgres and Redis are ready for operations"
                 break
               fi
               sleep 1
@@ -148,7 +157,11 @@ jobs:
               sleep 3
               docker compose --env-file .env.production -f docker-compose.prod.yml build
             fi
-            docker compose --env-file .env.production -f docker-compose.prod.yml up -d
+            if ! docker compose --env-file .env.production -f docker-compose.prod.yml up -d; then
+              echo "docker compose up -d failed, printing container logs..."
+              docker compose --env-file .env.production -f docker-compose.prod.yml logs || true
+              exit 1
+            fi
 
             # Health Check Verification (checks every long-running CMS service)
             echo "Waiting for services to become healthy..."
