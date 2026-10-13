@@ -100,6 +100,8 @@ jobs:
             DEPLOYMENT_SHA='${{ github.sha }}'
             export DEPLOYMENT_SHA
 
+            # Clean stale source trees to eliminate deleted/renamed routes while preserving .env.production
+            rm -rf apps packages tools
             # Extract release package and clean up tarball
             tar -xzf release.tar.gz
             rm -f release.tar.gz
