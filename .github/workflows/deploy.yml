@@ -125,7 +125,18 @@ jobs:
             echo "Pre-migration database backup created and verified"
 
             # Build and deploy production containers
-            docker compose --env-file .env.production -f docker-compose.prod.yml build
+            if ! ip link show docker0 >/dev/null 2>&1; then
+              echo "docker0 bridge missing on host, restarting docker daemon..."
+              systemctl restart docker || true
+              sleep 3
+            fi
+
+            if ! docker compose --env-file .env.production -f docker-compose.prod.yml build; then
+              echo "Docker build encountered network error, restarting docker daemon to heal network bridge..."
+              systemctl restart docker || true
+              sleep 3
+              docker compose --env-file .env.production -f docker-compose.prod.yml build
+            fi
             docker compose --env-file .env.production -f docker-compose.prod.yml up -d
 
             # Health Check Verification (checks every long-running CMS service)
