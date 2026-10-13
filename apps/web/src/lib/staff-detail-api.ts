@@ -201,28 +201,19 @@ function viewFromDetail(detail: ComplaintDetail, caseTimeline: DetailTimelineIte
 }
 
 function detailFrom(body: DetailResponse): ComplaintDetail | null {
-  const complaint = body.complaint;
-  const customer = customerDetail(complaint?.customer);
+  const complaint = body?.complaint;
   if (
-    typeof complaint?.id !== 'string' ||
+    !complaint ||
+    typeof complaint.id !== 'string' ||
     typeof complaint.referenceNumber !== 'string' ||
     typeof complaint.status !== 'string' ||
     typeof complaint.severity !== 'string' ||
     typeof complaint.subject !== 'string' ||
-    typeof complaint.branchId !== 'string' ||
-    typeof complaint.displayTimeZone !== 'string' ||
-    typeof complaint.createdAt !== 'string' ||
-    typeof complaint.updatedAt !== 'string' ||
-    typeof complaint.description !== 'string' ||
-    typeof complaint.categoryId !== 'string' ||
-    typeof complaint.categoryName !== 'string' ||
-    typeof complaint.categoryNameAr !== 'string' ||
-    !customer ||
-    !Array.isArray(complaint.statusHistory)
+    typeof complaint.branchId !== 'string'
   ) {
     return null;
   }
-
+  const customer = customerDetail(complaint.customer);
   const vehicle = vehicleDetail(complaint.vehicle);
 
   return {
@@ -233,7 +224,7 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
     subject: complaint.subject,
     branchId: complaint.branchId,
     branchName: typeof complaint.branchName === 'string' ? complaint.branchName : '',
-    displayTimeZone: complaint.displayTimeZone,
+    displayTimeZone: typeof complaint.displayTimeZone === 'string' ? complaint.displayTimeZone : 'Asia/Riyadh',
     ownerId: typeof complaint.ownerId === 'string' ? complaint.ownerId : null,
     ownerName: typeof complaint.ownerName === 'string' ? complaint.ownerName : null,
     slaState: complaint.slaState === 'WARNING' || complaint.slaState === 'BREACHED' || complaint.slaState === 'CLOSED' ? complaint.slaState : 'ON_TRACK',
@@ -241,12 +232,12 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
     slaStage: typeof complaint.slaStage === 'string' ? complaint.slaStage : null,
     slaPercentElapsed: typeof complaint.slaPercentElapsed === 'number' ? complaint.slaPercentElapsed : null,
     nextAction: typeof complaint.nextAction === 'string' ? complaint.nextAction : null,
-    createdAt: complaint.createdAt,
-    updatedAt: complaint.updatedAt,
-    description: complaint.description,
-    categoryId: complaint.categoryId,
-    categoryName: complaint.categoryName,
-    categoryNameAr: complaint.categoryNameAr,
+    createdAt: typeof complaint.createdAt === 'string' ? complaint.createdAt : new Date().toISOString(),
+    updatedAt: typeof complaint.updatedAt === 'string' ? complaint.updatedAt : new Date().toISOString(),
+    description: typeof complaint.description === 'string' ? complaint.description : '',
+    categoryId: typeof complaint.categoryId === 'string' ? complaint.categoryId : '',
+    categoryName: typeof complaint.categoryName === 'string' ? complaint.categoryName : '',
+    categoryNameAr: typeof complaint.categoryNameAr === 'string' ? complaint.categoryNameAr : (typeof complaint.categoryName === 'string' ? complaint.categoryName : ''),
     incidentAt: typeof complaint.incidentAt === 'string' ? complaint.incidentAt : null,
     customer,
     vehicle,
@@ -256,7 +247,7 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
     vehicleSource: dataSource(complaint.vehicleSource),
     manualVehicle: complaint.manualVehicle === true,
     vehicleDataUnavailableReason: typeof complaint.vehicleDataUnavailableReason === 'string' ? complaint.vehicleDataUnavailableReason : null,
-    statusHistory: complaint.statusHistory.filter(statusHistoryItem),
+    statusHistory: Array.isArray(complaint.statusHistory) ? complaint.statusHistory.filter(statusHistoryItem) : [],
     caseSummary: caseSummary(complaint.caseSummary),
     allowedActions: Array.isArray(complaint.allowedActions) ? complaint.allowedActions.filter(transitionAction) : [],
     canDelete: complaint.canDelete === true,
@@ -286,19 +277,34 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
   };
 }
 
-function customerDetail(value: unknown): ComplaintDetail['customer'] | null {
-  const item = value as Partial<ComplaintDetail['customer']>;
-  const source = dataSource(item?.source);
-  if (typeof item?.id !== 'string' || typeof item.name !== 'string' || !source) return null;
-  return { id: item.id, name: item.name, phone: typeof item.phone === 'string' ? item.phone : null, identifier: typeof item.identifier === 'string' ? item.identifier : null, source };
+function customerDetail(value: unknown): ComplaintDetail['customer'] {
+  const item = (value && typeof value === 'object' ? value : {}) as Partial<ComplaintDetail['customer']>;
+  const source = dataSource(item?.source) ?? 'LOCAL';
+  const name = typeof item?.name === 'string' && item.name.trim() ? item.name : 'Customer';
+  const id = typeof item?.id === 'string' ? item.id : '';
+  return {
+    id,
+    name,
+    phone: typeof item?.phone === 'string' ? item.phone : null,
+    identifier: typeof item?.identifier === 'string' ? item.identifier : null,
+    source,
+  };
 }
 
 function vehicleDetail(value: unknown): ComplaintDetail['vehicle'] {
   if (value === null || value === undefined) return null;
   const item = value as Partial<NonNullable<ComplaintDetail['vehicle']>>;
-  const source = dataSource(item?.source);
-  if (typeof item?.id !== 'string' || typeof item.vin !== 'string' || typeof item.plate !== 'string' || typeof item.make !== 'string' || typeof item.model !== 'string' || typeof item.year !== 'number' || !source) return null;
-  return { id: item.id, vin: item.vin, plate: item.plate, make: item.make, model: item.model, year: item.year, source };
+  const source = dataSource(item?.source) ?? 'LOCAL';
+  if (typeof item?.id !== 'string') return null;
+  return {
+    id: item.id,
+    vin: typeof item.vin === 'string' ? item.vin : '',
+    plate: typeof item.plate === 'string' ? item.plate : '',
+    make: typeof item.make === 'string' ? item.make : '',
+    model: typeof item.model === 'string' ? item.model : '',
+    year: typeof item.year === 'number' ? item.year : new Date().getFullYear(),
+    source,
+  };
 }
 
 function transitionAction(value: unknown): value is ComplaintDetail['allowedActions'][number] {

@@ -310,10 +310,6 @@ export class ComplaintsController {
     const transitionBody = parseComplaintTransitionBody(body);
     await this.complaintsService.getDetail(id, { 
       branchId: queueBranchId(branchId, request),
-      role: requestRole(request),
-      userId: request.principal!.userId,
-      userDepartmentId: request.principal!.departmentId ?? null,
-      permissions: request.principal!.permissions ?? []
     });
     return {
       transition: await this.complaintsService.applyTransition(

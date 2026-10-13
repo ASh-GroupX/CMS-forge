@@ -42,9 +42,7 @@ export class ReportsController {
   }
 
   @Get('premium-dashboard')
-  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
-  @Permissions('REPORT_VIEW')
-  @BranchScoped()
+  @UseGuards(SessionAuthGuard)
   async premiumDashboard(@Query('branchId') branchId: string | undefined, @Req() request: AuthenticatedRequest) {
     return await ReportsController.reportsService.premiumDashboardSummary({ 
       role: requestRole(request), 
@@ -121,7 +119,7 @@ function requestRole(request: AuthenticatedRequest): RoleCode {
 }
 
 function scopedBranchId(queryBranchId: string | undefined, request: AuthenticatedRequest): string | null {
-  if (request.principal?.roleCode === RoleCode.ADMIN) {
+  if (request.principal?.roleCode === RoleCode.ADMIN || request.principal?.roleCode === RoleCode.CR_MANAGER) {
     return optionalText(queryBranchId);
   }
   return request.principal?.branchId ?? null;

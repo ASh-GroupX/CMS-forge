@@ -5,6 +5,11 @@ const appDir = dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '50mb',
+    },
+  },
   turbopack: {
     root: resolve(appDir, '../..'),
   },

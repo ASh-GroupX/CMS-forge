@@ -6,6 +6,7 @@ import { modernUiText } from '../i18n/staff-modern-ui';
 import { staffShellText, type Locale } from '../i18n/staff-shell';
 import type { StaffSessionPrincipal } from '../lib/staff-session-api';
 import { StaffTopBar } from './staff-top-bar';
+import { Toaster } from 'sonner';
 
 export const staffNavItems = [
   // ── Work ──
@@ -51,6 +52,7 @@ export function AppShell({ activePath = '', activeSearch = '', children, locale,
 
   return (
     <main lang={t.lang} dir={t.dir} className="min-h-screen bg-surface-canvas text-content-strong">
+      <Toaster position="bottom-center" richColors />
       <a className="sr-only focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:ring-2 focus:ring-brand" href="#staff-main">{t.skipToMain}</a>
       <div className="flex min-h-screen">
         <div className="hidden lg:block lg:sticky lg:top-0 lg:h-screen p-4 pe-0 w-[18rem] shrink-0">

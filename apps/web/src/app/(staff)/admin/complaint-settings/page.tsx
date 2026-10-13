@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, X, Check, AlertCircle, Sparkles, UserCheck } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Check, AlertCircle, Sparkles, UserCheck, Loader2 } from 'lucide-react';
 import {
   getRootCauses,
   createRootCause,
@@ -12,12 +12,14 @@ import {
   updateSalesAdvisor,
   deleteSalesAdvisor,
 } from './actions';
-import { toast } from 'sonner';
+import { toast, Toaster } from 'sonner';
 
 export default function ComplaintSettingsPage() {
   const [activeTab, setActiveTab] = useState<'rootCauses' | 'salesAdvisors'>('rootCauses');
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const [nameEn, setNameEn] = useState('');
   const [nameAr, setNameAr] = useState('');
@@ -45,38 +47,55 @@ export default function ComplaintSettingsPage() {
     setNameEn('');
     setNameAr('');
     setEditingId(null);
+    setFormError('');
   }, [activeTab]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
     if (!nameEn.trim() || !nameAr.trim()) {
-      return toast.error('Both English and Arabic names are required');
+      const msg = 'Both English and Arabic names are required / الاسمان بالإنجليزية والعربية مطلوبان';
+      setFormError(msg);
+      return toast.error(msg);
     }
 
+    setSubmitting(true);
     try {
+      let res: { success: boolean; error?: string };
       if (activeTab === 'rootCauses') {
         if (editingId) {
-          await updateRootCause(editingId, nameEn, nameAr);
-          toast.success('Root cause updated successfully');
+          res = await updateRootCause(editingId, nameEn, nameAr);
+          if (res.success) toast.success('Root cause updated successfully');
         } else {
-          await createRootCause(nameEn, nameAr);
-          toast.success('Root cause created successfully');
+          res = await createRootCause(nameEn, nameAr);
+          if (res.success) toast.success('Root cause created successfully');
         }
       } else {
         if (editingId) {
-          await updateSalesAdvisor(editingId, nameEn, nameAr);
-          toast.success('Sales advisor updated successfully');
+          res = await updateSalesAdvisor(editingId, nameEn, nameAr);
+          if (res.success) toast.success('Sales advisor updated successfully');
         } else {
-          await createSalesAdvisor(nameEn, nameAr);
-          toast.success('Sales advisor created successfully');
+          res = await createSalesAdvisor(nameEn, nameAr);
+          if (res.success) toast.success('Sales advisor created successfully');
         }
       }
+
+      if (!res.success) {
+        setFormError(res.error || 'Operation failed');
+        toast.error(res.error || 'Operation failed');
+        return;
+      }
+
       setNameEn('');
       setNameAr('');
       setEditingId(null);
-      fetchItems();
-    } catch {
-      toast.error('Operation failed');
+      await fetchItems();
+    } catch (err: any) {
+      const msg = err?.message || 'Operation failed';
+      setFormError(msg);
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -109,6 +128,7 @@ export default function ComplaintSettingsPage() {
 
   return (
     <div className="mx-auto max-w-4xl p-6">
+      <Toaster position="bottom-center" richColors />
       <div className="flex items-center gap-3 mb-2">
         <span className="flex size-9 items-center justify-center rounded-lg bg-brand-primary/10 text-brand-primary">
           <Sparkles className="size-5" />
@@ -156,6 +176,14 @@ export default function ComplaintSettingsPage() {
               ? 'Add New Root Cause / إضافة فئة سبب جذري'
               : 'Add New Sales Advisor / إضافة مستشار مبيعات'}
         </h3>
+
+        {formError && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg bg-status-error/10 border border-status-error/20 p-3 text-sm text-status-error">
+            <AlertCircle className="size-4 shrink-0" />
+            <span>{formError}</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="mb-1.5 block text-xs font-medium text-content-muted">English Name *</label>
@@ -183,10 +211,17 @@ export default function ComplaintSettingsPage() {
           <div className="flex items-center gap-2 sm:col-span-2 pt-2">
             <button
               type="submit"
-              className="flex items-center gap-2 rounded-md bg-brand-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-brand-primary/90 transition-colors"
+              disabled={submitting}
+              className="flex items-center gap-2 rounded-md bg-brand-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-brand-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {editingId ? <Check className="size-4" /> : <Plus className="size-4" />}
-              {editingId ? 'Update' : 'Add'}
+              {submitting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : editingId ? (
+                <Check className="size-4" />
+              ) : (
+                <Plus className="size-4" />
+              )}
+              {submitting ? 'Saving...' : editingId ? 'Update' : 'Add'}
             </button>
             {editingId && (
               <button

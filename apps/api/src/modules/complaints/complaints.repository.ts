@@ -220,7 +220,14 @@ export class ComplaintsRepository {
         (where.AND as any[]).push({ OR: [{ departmentId: null }, { department: { code: { not: 'IT' } } }, { ownerId: filter.userId }, { createdById: filter.userId }] });
       }
     } else if (filter.permissions?.includes('COMPLAINT_VIEW_BRANCH')) {
-      if (filter.branchId) (where.AND as any[]).push({ branchId: filter.branchId });
+      if (filter.branchId) {
+        (where.AND as any[]).push({
+          OR: [
+            { branchId: filter.branchId },
+            ...(filter.userId ? [{ ownerId: filter.userId }, { createdById: filter.userId }] : [])
+          ]
+        });
+      }
       if (filter.role !== 'CR_MANAGER' && filter.role !== 'ADMIN' && filter.userId) {
         (where.AND as any[]).push({ OR: [{ departmentId: null }, { department: { code: { not: 'IT' } } }, { ownerId: filter.userId }, { createdById: filter.userId }] });
       }

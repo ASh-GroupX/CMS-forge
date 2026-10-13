@@ -152,7 +152,7 @@ export class ReportsService {
 
   async premiumDashboardSummary(scope: DashboardReportScope) {
     return await this.reportsRepository.getPremiumDashboardData(
-      scopedBranchId(scope), 
+      scope.branchId ?? null, 
       scope.departmentId ?? null,
       scope.userId ?? null
     );

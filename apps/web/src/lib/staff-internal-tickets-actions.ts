@@ -29,22 +29,36 @@ export async function createInternalTicket(data: {
   description: string;
   targetDepartmentId: string;
   categoryId: string;
+  requestedEmployeeId?: string;
+  priority?: string;
   dueAt?: string;
-}) {
-  const res = await fetch(`${API_BASE_URL}/internal-tickets`, {
-    method: 'POST',
-    headers: await getAuthHeaders(),
-    body: JSON.stringify(data),
-    cache: 'no-store',
-  });
+  attachments?: Array<{
+    fileName: string;
+    contentType: string;
+    sizeBytes: number;
+    contentBase64: string;
+  }>;
+}): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/internal-tickets`, {
+      method: 'POST',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify(data),
+      cache: 'no-store',
+    });
 
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    console.error('[createInternalTicket] API error:', res.status, body);
-    throw new Error(`Failed to create ticket: ${res.status}`);
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      console.error('[createInternalTicket] API error:', res.status, body);
+      return { success: false, error: `Failed to create ticket (${res.status}): ${body || 'Server error'}` };
+    }
+    revalidatePath('/internal-tickets', 'layout');
+    const json = await res.json();
+    return { success: true, data: json };
+  } catch (err: any) {
+    console.error('[createInternalTicket] Exception:', err);
+    return { success: false, error: err?.message || 'Network error while creating ticket' };
   }
-  revalidatePath('/internal-tickets', 'layout');
-  return res.json();
 }
 
 export async function getMyTickets() {

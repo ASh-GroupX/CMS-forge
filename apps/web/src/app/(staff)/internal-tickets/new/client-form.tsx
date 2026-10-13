@@ -63,21 +63,35 @@ export default function CreateInternalTicketForm({ options }: { options: { depar
 
       const files = staffAttachmentFiles(formData);
       if (files.length > 0) {
+        for (const file of files) {
+          if (file.size > 20 * 1024 * 1024) {
+            setError(`File ${file.name} is too large. Maximum size is 20MB.`);
+            setLoading(false);
+            return;
+          }
+        }
+
         payload.attachments = await Promise.all(
           files.map(async (f) => ({
             fileName: f.name,
-            contentType: f.type,
+            contentType: f.type || 'application/octet-stream',
             sizeBytes: f.size,
             contentBase64: await attachmentFileToBase64(f),
           }))
         );
       }
 
-      await createInternalTicket(payload);
+      const result = await createInternalTicket(payload);
+      if (result && !result.success) {
+        setError(result.error || 'Failed to create ticket');
+        setLoading(false);
+        return;
+      }
+
       router.push('/internal-tickets');
       router.refresh();
     } catch (err: any) {
-      setError(err.message || 'Failed to create ticket');
+      setError(err?.message || 'Failed to create ticket');
       setLoading(false);
     }
   }

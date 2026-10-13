@@ -15,14 +15,14 @@ export function queueItem(complaint: ComplaintQueueRecord, slaService?: SlaServi
     severity: complaint.severity,
     subject: complaint.subject,
     branchId: complaint.branchId,
-    branchName: complaint.branch.nameEn,
-    displayTimeZone: complaint.branch.timezone,
+    branchName: complaint.branch?.nameEn ?? '',
+    displayTimeZone: complaint.branch?.timezone ?? 'Asia/Riyadh',
     ownerId: complaint.ownerId,
     ownerName: complaint.owner?.nameEn ?? null,
     assignedDepartmentId: complaint.departmentId ?? null,
     assignedDepartmentName: complaint.department?.nameEn ?? null,
     assignedDepartmentNameAr: complaint.department?.nameAr ?? null,
-    categoryId: complaint.category?.id ?? null,
+    categoryId: complaint.category?.id ?? complaint.categoryId ?? null,
     categoryName: complaint.category?.nameEn ?? null,
     ...sla,
     nextAction: nextComplaintAction(complaint),
@@ -32,7 +32,7 @@ export function queueItem(complaint: ComplaintQueueRecord, slaService?: SlaServi
 }
 
 export function reportItem(complaint: ComplaintReportRecord): ComplaintReportRow {
-  return { id: complaint.id, referenceNumber: complaint.referenceNumber, branchId: complaint.branchId, categoryId: complaint.categoryId, status: complaint.status, severity: complaint.severity, subject: complaint.subject, ownerId: complaint.ownerId, assignedDepartmentId: complaint.departmentId, displayTimeZone: complaint.branch.timezone, createdAt: complaint.createdAt.toISOString(), updatedAt: complaint.updatedAt.toISOString() };
+  return { id: complaint.id, referenceNumber: complaint.referenceNumber, branchId: complaint.branchId, categoryId: complaint.categoryId, status: complaint.status, severity: complaint.severity, subject: complaint.subject, ownerId: complaint.ownerId, assignedDepartmentId: complaint.departmentId, displayTimeZone: complaint.branch?.timezone ?? 'Asia/Riyadh', createdAt: complaint.createdAt.toISOString(), updatedAt: complaint.updatedAt.toISOString() };
 }
 
 export function searchItem(complaint: ComplaintSearchRecord, masked = false, slaService?: SlaService): ComplaintSearchRow {
@@ -42,10 +42,11 @@ export function searchItem(complaint: ComplaintSearchRecord, masked = false, sla
 export function detailItem(complaint: ComplaintDetailRecord, masked = false, slaService?: SlaService): Omit<ComplaintDetailDto, 'caseSummary'> {
   const vehicle = complaint.vehicle ? { id: complaint.vehicle.id, vin: masked ? MASKED : complaint.vehicle.vin, plate: masked ? MASKED : complaint.vehicle.plate, make: complaint.vehicle.makeEn, model: complaint.vehicle.modelEn, year: complaint.vehicle.year, source: complaint.vehicle.dataSource } : null;
   // Extract tracking information from history
-  const createdByTransition = complaint.statusHistory.find((t) => t.action === 'SUBMIT');
-  const approvedByTransition = complaint.statusHistory.find((t) => t.action === 'ACCEPT_INTAKE' || t.action === 'APPROVE_AND_ROUTE');
+  const statusHistory = Array.isArray(complaint.statusHistory) ? complaint.statusHistory : [];
+  const createdByTransition = statusHistory.find((t) => t.action === 'SUBMIT');
+  const approvedByTransition = statusHistory.find((t) => t.action === 'ACCEPT_INTAKE' || t.action === 'APPROVE_AND_ROUTE');
   const assignmentActions = ['APPROVE_AND_ROUTE', 'ASSIGN_INVESTIGATION', 'ROUTE_AGAIN'];
-  const lastAssignment = [...complaint.statusHistory].reverse().find((t) => t.action && assignmentActions.includes(t.action));
+  const lastAssignment = [...statusHistory].reverse().find((t) => t.action && assignmentActions.includes(t.action));
 
   const createdBy = createdByTransition?.actor ? { name: createdByTransition.actor.nameEn, nameAr: createdByTransition.actor.nameAr } : null;
   const approvedBy = approvedByTransition?.actor ? { name: approvedByTransition.actor.nameEn, nameAr: approvedByTransition.actor.nameAr } : null;
@@ -53,22 +54,22 @@ export function detailItem(complaint: ComplaintDetailRecord, masked = false, sla
 
   return {
     ...queueItem(complaint, slaService),
-    categoryId: complaint.category.id,
-    categoryName: complaint.category.nameEn,
-    categoryNameAr: complaint.category.nameAr,
-    description: complaint.descriptionEn,
+    categoryId: complaint.category?.id ?? complaint.categoryId ?? '',
+    categoryName: complaint.category?.nameEn ?? '',
+    categoryNameAr: complaint.category?.nameAr ?? complaint.category?.nameEn ?? '',
+    description: complaint.descriptionEn ?? '',
     incidentAt: complaint.incidentAt?.toISOString() ?? null,
-    customer: { id: complaint.customer.id, name: complaint.customer.nameEn, phone: masked ? MASKED : complaint.customer.phone, identifier: masked ? MASKED : complaint.customer.dmsCode, source: complaint.customer.dataSource },
+    customer: complaint.customer ? { id: complaint.customer.id, name: complaint.customer.nameEn ?? '', phone: masked ? MASKED : complaint.customer.phone, identifier: masked ? MASKED : complaint.customer.dmsCode, source: complaint.customer.dataSource ?? 'LOCAL' } : { id: '', name: 'Unknown Customer', phone: null, identifier: null, source: 'LOCAL' },
     vehicle,
-    customerSource: complaint.customerDataSource,
-    manualCustomer: complaint.manualCustomerFlag,
-    vehicleRelated: complaint.vehicleRelated,
-    vehicleSource: complaint.vehicleDataSource,
-    manualVehicle: complaint.manualVehicleFlag,
-    vehicleDataUnavailableReason: complaint.vehicleDataUnavailableReason,
+    customerSource: complaint.customerDataSource ?? 'LOCAL',
+    manualCustomer: complaint.manualCustomerFlag ?? false,
+    vehicleRelated: complaint.vehicleRelated ?? false,
+    vehicleSource: complaint.vehicleDataSource ?? null,
+    manualVehicle: complaint.manualVehicleFlag ?? false,
+    vehicleDataUnavailableReason: complaint.vehicleDataUnavailableReason ?? null,
     channel: (complaint as any).channel ?? null,
     customerType: (complaint as any).customerType ?? null,
-    lastServiceDate: (complaint as any).lastServiceDate?.toISOString() ?? null,
+    lastServiceDate: (complaint as any).lastServiceDate?.toISOString?.() ?? null,
     odometer: (complaint as any).odometer ?? null,
     warrantyActive: (complaint as any).warrantyActive ?? null,
     salesAdvisorName: (complaint as any).salesAdvisorName ?? null,
@@ -82,8 +83,8 @@ export function detailItem(complaint: ComplaintDetailRecord, masked = false, sla
     isJustified: (complaint as any).isJustified ?? null,
     satisfactionStatus: (complaint as any).satisfactionStatus ?? null,
     investigationNotes: (complaint as any).investigationNotes ?? null,
-    investigatedAt: (complaint as any).investigatedAt?.toISOString() ?? null,
-    statusHistory: complaint.statusHistory.map((item) => ({ ...item, createdAt: item.createdAt.toISOString() })),
+    investigatedAt: (complaint as any).investigatedAt?.toISOString?.() ?? null,
+    statusHistory: statusHistory.map((item) => ({ ...item, createdAt: item.createdAt?.toISOString?.() ?? String(item.createdAt) })),
     allowedActions: [],
     createdBy,
     approvedBy,
@@ -99,7 +100,7 @@ function slaSnapshot(complaint: Pick<ComplaintQueueRecord, 'branch' | 'createdAt
   const isCompleted = complaint.status === ComplaintStatus.RESOLVED || complaint.status === ComplaintStatus.CLOSED || complaint.status === ComplaintStatus.REJECTED;
   if (!slaService) return { slaState: isCompleted ? 'CLOSED' : 'ON_TRACK', slaDueAt: null, slaStage: SlaStage.RESOLUTION, slaPercentElapsed: null };
   const durationMinutes = slaService.defaultDurationMinutes(complaint.severity);
-  const deadline = slaService.calculateDeadline({ severity: complaint.severity, stage: SlaStage.RESOLUTION, durationMinutes, warningPercent: 80, branchTimezone: complaint.branch.timezone, workingCalendarMode: WorkingCalendarMode.ALWAYS_ON, enteredAt: complaint.createdAt });
+  const deadline = slaService.calculateDeadline({ severity: complaint.severity, stage: SlaStage.RESOLUTION, durationMinutes, warningPercent: 80, branchTimezone: complaint.branch?.timezone ?? 'Asia/Riyadh', workingCalendarMode: WorkingCalendarMode.ALWAYS_ON, enteredAt: complaint.createdAt });
   
   const nowMs = isCompleted ? (complaint.resolvedAt?.getTime() ?? complaint.closedAt?.getTime() ?? Date.now()) : Date.now();
   const enteredMs = complaint.createdAt.getTime();

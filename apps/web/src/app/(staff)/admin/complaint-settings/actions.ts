@@ -23,36 +23,60 @@ export async function getRootCauses() {
   return res.json();
 }
 
-export async function createRootCause(nameEn: string, nameAr: string) {
-  const res = await fetch(`${API_BASE_URL}/complaints/settings/root-causes`, {
-    method: 'POST',
-    headers: await getAuthHeaders(),
-    body: JSON.stringify({ nameEn, nameAr }),
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error('Failed to create root cause');
-  revalidatePath('/admin/complaint-settings');
+export async function createRootCause(nameEn: string, nameAr: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/complaints/settings/root-causes`, {
+      method: 'POST',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({ nameEn, nameAr }),
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      const msg = await res.text().catch(() => '');
+      return { success: false, error: msg || `Failed with status ${res.status}` };
+    }
+    revalidatePath('/admin/complaint-settings');
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Network error' };
+  }
 }
 
-export async function updateRootCause(id: string, nameEn: string, nameAr: string) {
-  const res = await fetch(`${API_BASE_URL}/complaints/settings/root-causes/${id}`, {
-    method: 'PUT',
-    headers: await getAuthHeaders(),
-    body: JSON.stringify({ nameEn, nameAr }),
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error('Failed to update root cause');
-  revalidatePath('/admin/complaint-settings');
+export async function updateRootCause(id: string, nameEn: string, nameAr: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/complaints/settings/root-causes/${id}`, {
+      method: 'PUT',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({ nameEn, nameAr }),
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      const msg = await res.text().catch(() => '');
+      return { success: false, error: msg || `Failed with status ${res.status}` };
+    }
+    revalidatePath('/admin/complaint-settings');
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Network error' };
+  }
 }
 
-export async function deleteRootCause(id: string) {
-  const res = await fetch(`${API_BASE_URL}/complaints/settings/root-causes/${id}`, {
-    method: 'DELETE',
-    headers: await getAuthHeaders(),
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error('Failed to delete root cause');
-  revalidatePath('/admin/complaint-settings');
+export async function deleteRootCause(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/complaints/settings/root-causes/${id}`, {
+      method: 'DELETE',
+      headers: await getAuthHeaders(),
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      const msg = await res.text().catch(() => '');
+      return { success: false, error: msg || `Failed with status ${res.status}` };
+    }
+    revalidatePath('/admin/complaint-settings');
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Network error' };
+  }
 }
 
 export async function getSalesAdvisors() {
@@ -64,34 +88,58 @@ export async function getSalesAdvisors() {
   return res.json();
 }
 
-export async function createSalesAdvisor(nameEn: string, nameAr: string) {
-  const res = await fetch(`${API_BASE_URL}/complaints/settings/sales-advisors`, {
-    method: 'POST',
-    headers: await getAuthHeaders(),
-    body: JSON.stringify({ nameEn, nameAr }),
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error('Failed to create sales advisor');
-  revalidatePath('/admin/complaint-settings');
+export async function createSalesAdvisor(nameEn: string, nameAr: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/complaints/settings/sales-advisors`, {
+      method: 'POST',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({ nameEn, nameAr }),
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      const msg = await res.text().catch(() => '');
+      return { success: false, error: msg || `Failed with status ${res.status}` };
+    }
+    revalidatePath('/admin/complaint-settings');
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Network error' };
+  }
 }
 
-export async function updateSalesAdvisor(id: string, nameEn: string, nameAr: string) {
-  const res = await fetch(`${API_BASE_URL}/complaints/settings/sales-advisors/${id}`, {
-    method: 'PUT',
-    headers: await getAuthHeaders(),
-    body: JSON.stringify({ nameEn, nameAr }),
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error('Failed to update sales advisor');
-  revalidatePath('/admin/complaint-settings');
+export async function updateSalesAdvisor(id: string, nameEn: string, nameAr: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/complaints/settings/sales-advisors/${id}`, {
+      method: 'PUT',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({ nameEn, nameAr }),
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      const msg = await res.text().catch(() => '');
+      return { success: false, error: msg || `Failed with status ${res.status}` };
+    }
+    revalidatePath('/admin/complaint-settings');
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Network error' };
+  }
 }
 
-export async function deleteSalesAdvisor(id: string) {
-  const res = await fetch(`${API_BASE_URL}/complaints/settings/sales-advisors/${id}`, {
-    method: 'DELETE',
-    headers: await getAuthHeaders(),
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error('Failed to delete sales advisor');
-  revalidatePath('/admin/complaint-settings');
+export async function deleteSalesAdvisor(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/complaints/settings/sales-advisors/${id}`, {
+      method: 'DELETE',
+      headers: await getAuthHeaders(),
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      const msg = await res.text().catch(() => '');
+      return { success: false, error: msg || `Failed with status ${res.status}` };
+    }
+    revalidatePath('/admin/complaint-settings');
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Network error' };
+  }
 }

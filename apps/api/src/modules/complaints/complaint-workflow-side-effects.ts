@@ -45,7 +45,6 @@ const NOTIFICATION_BY_ACTION: Partial<Record<ComplaintTransitionAction, string>>
   [ComplaintTransitionAction.SUBMIT]: 'complaint.submitted.internal',
   [ComplaintTransitionAction.APPROVE_AND_ROUTE]: 'workflow.approved-routed.internal',
   [ComplaintTransitionAction.ASSIGN_INVESTIGATION]: 'workflow.investigation-assigned.internal',
-  [ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE]: 'workflow.investigation-update.internal',
   [ComplaintTransitionAction.RESOLVE]: 'workflow.resolved.internal',
   [ComplaintTransitionAction.RESOLVE_DIRECTLY]: 'workflow.resolved.internal',
   [ComplaintTransitionAction.REJECT_RESOLUTION]: 'workflow.resolution-rejected.internal',
