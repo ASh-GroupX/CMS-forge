@@ -148,6 +148,17 @@ function optionalNumber(formData: FormData, name: string): number | null {
   return value ? Number(value) : null;
 }
 
-function returnTo(formData: FormData, fallback: '/admin' | '/admin/categories'): string {
-  return String(formData.get('returnTo') ?? '') === '/admin/categories' ? '/admin/categories' : fallback;
+export async function seedSlaPoliciesAction(formData: FormData): Promise<void> {
+  const locale = safeLocale(formData.get('locale'));
+  const response = await adminFetch('/sla/policies/seed', { method: 'POST' });
+  revalidatePath('/admin', 'layout');
+  revalidatePath('/admin/categories');
+  revalidatePath('/admin/sla');
+  redirect(`${returnTo(formData, '/admin/sla')}?locale=${locale}&admin=${state(response)}`);
+}
+
+function returnTo(formData: FormData, fallback: string): string {
+  const val = String(formData.get('returnTo') ?? '');
+  if (val === '/admin/categories' || val === '/admin/sla') return val;
+  return fallback;
 }

@@ -220,4 +220,39 @@ export class SlaRepository {
   async updatePolicyConfig(id: string, data: UpdateSlaPolicyConfigData, client: SlaPolicyClient = this.prisma): Promise<SlaPolicyEscalationRecord> {
     return client.slaPolicy.update({ where: { id }, data, select: slaPolicyEscalationSelect });
   }
+
+  async upsertDefaultPolicy(data: {
+    id: string;
+    severity: ComplaintSeverity;
+    stage: SlaStage;
+    durationMinutes: number;
+    warningPercent: number;
+    branchTimezone: string;
+    escalationLevel1: string;
+    escalationLevel2?: string | null;
+    escalationLevel3?: string | null;
+    escalationLevel2AfterBreachMinutes?: number | null;
+    escalationLevel3AfterBreachMinutes?: number | null;
+    isActive: boolean;
+  }): Promise<SlaPolicyRecord> {
+    return this.prisma.slaPolicy.upsert({
+      where: { id: data.id },
+      update: {},
+      create: {
+        id: data.id,
+        severity: data.severity,
+        stage: data.stage,
+        durationMinutes: data.durationMinutes,
+        warningPercent: data.warningPercent,
+        branchTimezone: data.branchTimezone,
+        escalationLevel1: data.escalationLevel1,
+        escalationLevel2: data.escalationLevel2 ?? null,
+        escalationLevel3: data.escalationLevel3 ?? null,
+        escalationLevel2AfterBreachMinutes: data.escalationLevel2AfterBreachMinutes ?? null,
+        escalationLevel3AfterBreachMinutes: data.escalationLevel3AfterBreachMinutes ?? null,
+        isActive: data.isActive,
+      },
+      select: slaPolicySelect,
+    });
+  }
 }

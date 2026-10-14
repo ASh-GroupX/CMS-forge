@@ -22,6 +22,7 @@ export default async function AdminPage({
     ['roles', '/admin/roles'],
     ['branches', '/admin/branches'],
     ['categories', '/admin/categories'],
+    ['sla', '/admin/sla'],
     ['templates', '/admin/notification-templates'],
     ['standardProblems', '/admin/standard-problems'],
     ['complaintTemplates', '/admin/complaint-templates'],

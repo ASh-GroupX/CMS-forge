@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Patch, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { PermissionGuard, Permissions, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
@@ -14,6 +14,13 @@ export class SlaController {
   @Permissions('SLA_MANAGE')
   async listPolicies() {
     return this.slaService.listPolicies();
+  }
+
+  @Post('policies/seed')
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('SLA_MANAGE')
+  async seedDefaultPolicies() {
+    return { count: await this.slaService.ensureDefaultPolicies() };
   }
 
   @Patch('policies/:id')

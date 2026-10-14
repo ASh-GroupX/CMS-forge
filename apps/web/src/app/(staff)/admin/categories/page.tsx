@@ -2,7 +2,7 @@ import React from 'react';
 import { AdminCategoriesSla, type AdminConfigFixtureState } from '../../../../components/admin-categories-sla';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { getAdminCategorySlaConfig } from '../../../../lib/staff-admin-category-sla-api';
-import { deactivateCategoryAction, saveCategoryAction, saveSlaPolicyAction } from '../actions';
+import { deactivateCategoryAction, saveCategoryAction, saveSlaPolicyAction, seedSlaPoliciesAction } from '../actions';
 
 type SearchParams = { admin?: string | string[]; locale?: string | string[] };
 
@@ -26,6 +26,7 @@ export default async function AdminCategoriesPage({
       config={config}
       deactivateCategoryAction={deactivateCategoryAction}
       locale={resolveLocale(readParam(params?.locale))}
+      seedAction={seedSlaPoliciesAction}
       slaAction={saveSlaPolicyAction}
       state={resolveState(readParam(params?.admin)) ?? (config ? undefined : 'error')}
     />

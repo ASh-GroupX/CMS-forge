@@ -15,6 +15,7 @@ const en = {
     complaintTemplates: ['Complaint Templates', 'Manage custom form fields for specific departments.'],
     ticketSettings: ['Internal Ticket Settings', 'Manage lists for resolution subjects, waiting reasons, and reject reasons.'],
     complaintSettings: ['Complaint CRM Settings', 'Manage Root Cause Categories and Sales Advisors for complaints.'],
+    sla: ['SLA Policies', 'Manage complaint resolution SLA durations, warning thresholds, calendar modes, and escalation levels.'],
   },
 };
 
@@ -35,6 +36,7 @@ export const adminHubText: Record<Locale, typeof en> = {
       complaintTemplates: ['قوالب الشكاوى', 'إدارة الحقول الإضافية للشكاوى حسب القسم.'],
       ticketSettings: ['إعدادات التذاكر الداخلية', 'إدارة قوائم مواضيع الحل، أسباب الانتظار، وأسباب الرفض.'],
       complaintSettings: ['إعدادات شكاوى CRM', 'إدارة أسباب المشاكل ومستشاري المبيعات للشكاوى.'],
+      sla: ['اتفاقيات مستوى الخدمة (SLA)', 'إدارة مُدد معالجة الشكاوى ونسب التحذير وساعات العمل ومستويات التصعيد.'],
     },
   },
 };

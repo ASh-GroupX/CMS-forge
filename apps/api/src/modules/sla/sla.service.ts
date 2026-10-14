@@ -7,7 +7,24 @@ import type { SlaPolicyResponseDto } from './dto/sla-response.dto.js';
 import type { SlaPolicyConfigInput, SlaPolicyEscalationConfigInput } from './dto/update-sla.dto.js';
 import { isPausedAfterDeadline, isTerminalComplaint, isWarningDue, queueSlaBreachNotification, queueSlaWarningNotification, runSlaEscalationJob } from './sla-job-rules.js';
 import type { RunSlaEscalationJobResult } from './sla-job-rules.js';
-import { slaPolicyConfigAudit, slaPolicyResponse, type SlaPolicyConfigAuditContext } from './sla-policy-config.js';
+import {
+  breachIdempotencyKey,
+  dateValue,
+  deadlineIdempotencyKey,
+  enumValue,
+  invalidPolicy,
+  lifecycleIdempotencyKey,
+  lifecycleType,
+  percent,
+  positiveInteger,
+  scopeMatches,
+  slaPolicyConfigAudit,
+  slaPolicyResponse,
+  specificity,
+  timezone,
+  warningIdempotencyKey,
+  type SlaPolicyConfigAuditContext,
+} from './sla-policy-config.js';
 import { SlaRepository } from './sla.repository.js';
 import type { SlaLifecycleEventType, SlaPolicyRecord } from './sla.repository.js';
 
@@ -66,7 +83,45 @@ export class SlaService {
   }
 
   async listPolicies(): Promise<{ items: SlaPolicyResponseDto[] }> {
-    return { items: (await this.slaRepository.listPolicies()).map(slaPolicyResponse) };
+    let policies = await this.slaRepository.listPolicies();
+    if (policies.length === 0) {
+      await this.ensureDefaultPolicies();
+      policies = await this.slaRepository.listPolicies();
+    }
+    return { items: policies.map(slaPolicyResponse) };
+  }
+
+  async ensureDefaultPolicies(): Promise<number> {
+    const severities = [ComplaintSeverity.CRITICAL, ComplaintSeverity.HIGH, ComplaintSeverity.MEDIUM, ComplaintSeverity.LOW];
+    const stages = [SlaStage.INTAKE, SlaStage.MANAGER_REVIEW, SlaStage.BRANCH_REVIEW, SlaStage.INVESTIGATION, SlaStage.RESOLUTION, SlaStage.CLOSURE];
+    const durations: Record<ComplaintSeverity, number> = {
+      [ComplaintSeverity.CRITICAL]: 120,
+      [ComplaintSeverity.HIGH]: 480,
+      [ComplaintSeverity.MEDIUM]: 1440,
+      [ComplaintSeverity.LOW]: 4320,
+    };
+    let count = 0;
+    for (const severity of severities) {
+      for (const stage of stages) {
+        const id = `sla_default_${severity}_${stage}`.toLowerCase();
+        await this.slaRepository.upsertDefaultPolicy({
+          id,
+          severity,
+          stage,
+          durationMinutes: durations[severity],
+          warningPercent: 80,
+          branchTimezone: 'Asia/Riyadh',
+          escalationLevel1: 'BRANCH_MANAGER',
+          escalationLevel2: 'CR_MANAGER',
+          escalationLevel3: 'ADMIN',
+          escalationLevel2AfterBreachMinutes: severity === ComplaintSeverity.CRITICAL ? 30 : severity === ComplaintSeverity.HIGH ? 60 : 120,
+          escalationLevel3AfterBreachMinutes: severity === ComplaintSeverity.CRITICAL ? 60 : severity === ComplaintSeverity.HIGH ? 120 : 240,
+          isActive: true,
+        });
+        count++;
+      }
+    }
+    return count;
   }
 
   async updatePolicyEscalationConfig(id: string, input: SlaPolicyEscalationConfigInput, audit: SlaPolicyConfigAuditContext = {}): Promise<SlaPolicyResponseDto> {
@@ -233,62 +288,3 @@ export class SlaService {
     return runSlaEscalationJob(this.slaRepository, this.notificationsService, dateValue(now, 'now'));
   }
 }
-
-function enumValue<T extends Record<string, string>>(value: unknown, options: T, field: string): T[keyof T] {
-  if (typeof value === 'string' && Object.values(options).includes(value)) return value as T[keyof T];
-  throw invalidPolicy(field);
-}
-
-function lifecycleType(value: unknown): SlaLifecycleEventType { if (value === SlaEventType.PAUSED || value === SlaEventType.RESUMED) return value; throw invalidPolicy('type'); }
-
-function positiveInteger(value: unknown, field: string): number {
-  if (Number.isInteger(value) && Number(value) > 0) return Number(value);
-  throw invalidPolicy(field);
-}
-
-function percent(value: unknown): number {
-  if (Number.isInteger(value) && Number(value) > 0 && Number(value) <= 100) return Number(value);
-  throw invalidPolicy('warningPercent');
-}
-
-function timezone(value: unknown): string {
-  if (typeof value !== 'string' || !value.trim()) {
-    throw invalidPolicy('branchTimezone');
-  }
-
-  try {
-    new Intl.DateTimeFormat('en-US', { timeZone: value }).format(new Date(0));
-    return value;
-  } catch {
-    throw invalidPolicy('branchTimezone');
-  }
-}
-
-function dateValue(value: unknown, field: string): Date {
-  const date = value instanceof Date || typeof value === 'string' ? new Date(value) : null;
-  if (date && !Number.isNaN(date.valueOf())) return date;
-  throw invalidPolicy(field);
-}
-
-function invalidPolicy(field: string): AppException {
-  return new AppException('SLA_POLICY_MISSING', 'SLA policy is missing or invalid', HttpStatus.BAD_REQUEST, [
-    { field, code: 'REQUIRED', message: `${field} is required or invalid.` },
-  ]);
-}
-
-function scopeMatches(policy: SlaPolicyRecord, input: ResolveSlaPolicyInput): boolean {
-  return matches(policy.branchId, input.branchId) && matches(policy.departmentId, input.departmentId) && matches(policy.categoryId, input.categoryId);
-}
-
-function matches(policyValue: string | null, requested: string | null | undefined): boolean {
-  return policyValue === null || policyValue === requested;
-}
-
-function specificity(policy: SlaPolicyRecord): number {
-  return Number(policy.branchId !== null) + Number(policy.departmentId !== null) + Number(policy.categoryId !== null);
-}
-
-function deadlineIdempotencyKey(complaintId: string, stage: SlaStage, policyId: string, enteredAt: string): string { return `sla:deadline:${complaintId}:${stage}:${policyId}:${enteredAt}`; }
-function warningIdempotencyKey(deadlineKey: string): string { return `sla:warning:${deadlineKey}`; }
-function breachIdempotencyKey(deadlineKey: string): string { return `sla:breach:${deadlineKey}`; }
-function lifecycleIdempotencyKey(complaintId: string, stage: SlaStage, type: SlaLifecycleEventType, occurredAt: string): string { return `sla:lifecycle:${complaintId}:${stage}:${type}:${occurredAt}`; }

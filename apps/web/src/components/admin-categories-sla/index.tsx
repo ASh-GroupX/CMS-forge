@@ -1,15 +1,15 @@
 import React from 'react';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import { FormSelect } from '../ui/form-select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { Field, StateBlock, StatusBadge } from '../shared/ui-primitives';
+import { StateBlock, StatusBadge } from '../shared/ui-primitives';
 import { severityLabel } from '../../i18n/domain-labels';
 import { adminCategoriesSlaText } from '../../i18n/staff-admin-categories-sla';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
-import type { AdminCategory, AdminCategorySlaConfig, AdminSlaPolicy } from '../../lib/staff-admin-category-sla-api';
+import type { AdminCategorySlaConfig, AdminSlaPolicy } from '../../lib/staff-admin-category-sla-api';
+import { CategoryTable } from './category-table';
+import { NumberField, TextField } from './text-field';
 
 export type AdminConfigFixtureState = 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'conflict';
 type AdminAction = (formData: FormData) => void | Promise<void>;
@@ -19,15 +19,19 @@ export function AdminCategoriesSla({
   config,
   deactivateCategoryAction,
   locale,
+  seedAction,
   slaAction,
   state,
+  viewMode = 'all',
 }: {
-  categoryAction?: AdminAction;
-  config?: AdminCategorySlaConfig | null;
-  deactivateCategoryAction?: AdminAction;
+  categoryAction?: AdminAction | undefined;
+  config?: AdminCategorySlaConfig | null | undefined;
+  deactivateCategoryAction?: AdminAction | undefined;
   locale: Locale;
-  slaAction?: AdminAction;
+  seedAction?: AdminAction | undefined;
+  slaAction?: AdminAction | undefined;
   state?: AdminConfigFixtureState | undefined;
+  viewMode?: 'all' | 'sla' | 'categories' | undefined;
 }) {
   const shell = staffShellText[locale];
   const t = adminCategoriesSlaText[locale];
@@ -35,126 +39,46 @@ export function AdminCategoriesSla({
   const policies = config?.policies ?? [];
   const visibleState = state ?? (config && categories.length === 0 && policies.length === 0 ? 'empty' : undefined);
 
+  const isSlaView = viewMode === 'sla';
+  const pageTitle = isSlaView ? (locale === 'ar' ? 'سياسات اتفاقية مستوى الخدمة (SLA)' : 'SLA Policies') : t.title;
+  const pageSubtitle = isSlaView
+    ? (locale === 'ar' ? 'إدارة مُدد الاستجابة والحل لجميع مراحل الشكاوى ودرجات الخطورة ومستويات التصعيد.' : 'Configure stage resolution targets, warning thresholds, calendar modes, and escalation levels.')
+    : t.subtitle;
+  const returnTo = isSlaView ? '/admin/sla' : '/admin/categories';
+
   return (
-    <Card aria-label={t.title} className="min-w-0 rounded-md border-border-subtle bg-surface-card shadow-sm" dir={shell.dir}>
+    <Card aria-label={pageTitle} className="min-w-0 rounded-md border-border-subtle bg-surface-card shadow-sm" dir={shell.dir}>
       <CardHeader className="border-b border-border-subtle p-4">
-        <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
-        <CardDescription className="mt-1 text-sm text-content-muted">{t.subtitle}</CardDescription>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <CardTitle className="text-lg tracking-normal">{pageTitle}</CardTitle>
+            <CardDescription className="mt-1 text-sm text-content-muted">{pageSubtitle}</CardDescription>
+          </div>
+          {seedAction ? (
+            <form action={seedAction}>
+              <input name="locale" type="hidden" value={locale} />
+              <input name="returnTo" type="hidden" value={returnTo} />
+              <Button size="sm" type="submit" variant="outline">
+                {locale === 'ar' ? 'تهيئة السياسات الافتراضية' : 'Initialize Default Policies'}
+              </Button>
+            </form>
+          ) : null}
+        </div>
       </CardHeader>
       <CardContent className="grid gap-4 p-4">
         {visibleState ? <StateBlock message={t.states[visibleState]} tone={visibleState === 'success' ? 'success' : visibleState === 'error' || visibleState === 'validation' || visibleState === 'conflict' ? 'error' : 'neutral'} /> : null}
         <p className="rounded-sm border border-border-subtle bg-surface-muted px-3 py-2 text-sm text-content-muted">{t.auditNote}</p>
         <div className="grid gap-3 xl:grid-cols-2">
-          <CategoryTable action={categoryAction} deactivateAction={deactivateCategoryAction} locale={locale} rows={categories} departments={config?.departments ?? []} branches={config?.branches ?? []} />
+          {!isSlaView ? (
+            <CategoryTable action={categoryAction} deactivateAction={deactivateCategoryAction} locale={locale} rows={categories} departments={config?.departments ?? []} branches={config?.branches ?? []} />
+          ) : null}
           <SeverityTable locale={locale} policies={policies} />
-          <SlaTable action={slaAction} locale={locale} policies={policies} />
+          <SlaTable action={slaAction} locale={locale} policies={policies} returnTo={returnTo} seedAction={seedAction} />
           <p className="rounded-sm border border-border-subtle bg-surface-muted px-3 py-2 text-sm text-content-muted xl:col-span-2">{t.slaNote}</p>
         </div>
       </CardContent>
     </Card>
   );
-}
-
-function CategoryTable({ action, deactivateAction, locale, rows, departments, branches }: { action: AdminAction | undefined; deactivateAction: AdminAction | undefined; locale: Locale; rows: AdminCategory[]; departments: { id: string; nameEn: string; nameAr?: string | null }[]; branches: { id: string; nameEn: string; nameAr?: string | null }[] }) {
-  const t = adminCategoriesSlaText[locale];
-  const departmentName = new Map(departments.map((dep) => [dep.id, localizedName(dep, locale)]));
-  const branchName = new Map(branches.map((b) => [b.id, localizedName(b, locale)]));
-  return (
-    <section className="overflow-x-auto rounded-md border border-border-subtle bg-surface-muted" aria-label={t.sections.categories}>
-      <h3 className="border-b border-border-subtle px-3 py-2 text-sm font-semibold">{t.sections.categories}</h3>
-      {action ? <CategoryForm action={action} locale={locale} rows={rows} departments={departments} branches={branches} /> : null}
-      <Table className="min-w-[54rem]">
-        <TableHeader className="bg-surface-card text-xs font-semibold uppercase tracking-normal text-content-muted">
-          <TableRow>{t.categoryHeaders.map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}<TableHead className="text-start">Type</TableHead><TableHead className="text-start">Status</TableHead><TableHead className="text-start">Actions</TableHead></TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.length ? rows.map((row) => (
-            <TableRow className="border-b border-border-subtle" key={row.id}>
-              <TableCell className="font-semibold">{row.code}</TableCell>
-              <TableCell>{localizedName(row, locale)}</TableCell>
-              <TableCell>{row.nameAr}</TableCell>
-              <TableCell>{row.departmentId ? departmentName.get(row.departmentId) ?? t.root : t.root}</TableCell>
-              <TableCell>{row.branchId ? branchName.get(row.branchId) ?? t.root : t.root}</TableCell>
-              <TableCell>
-                <div className="flex flex-col gap-1 text-xs">
-                  <span className={row.isExternal ? 'text-green-600 font-medium' : 'text-content-muted'}>CRM</span>
-                  <span className={row.isInternal ? 'text-blue-600 font-medium' : 'text-content-muted'}>Internal</span>
-                </div>
-              </TableCell>
-              <TableCell><StatusBadge>{row.isActive ? t.badges.active : t.badges.inactive}</StatusBadge></TableCell>
-              <TableCell><CategoryActions action={action} deactivateAction={deactivateAction} item={row} locale={locale} rows={rows} departments={departments} branches={branches} /></TableCell>
-            </TableRow>
-          )) : <TableRow><TableCell className="text-content-muted" colSpan={7}>{t.states.empty}</TableCell></TableRow>}
-        </TableBody>
-      </Table>
-    </section>
-  );
-}
-
-function CategoryActions({ action, deactivateAction, item, locale, rows, departments, branches }: { action: AdminAction | undefined; deactivateAction: AdminAction | undefined; item: AdminCategory; locale: Locale; rows: AdminCategory[]; departments: { id: string; nameEn: string; nameAr?: string | null }[]; branches: { id: string; nameEn: string; nameAr?: string | null }[] }) {
-  const t = adminCategoriesSlaText[locale];
-  return (
-    <div className="grid min-w-[26rem] gap-2">
-      {action ? <CategoryForm action={action} compact item={item} locale={locale} rows={rows} departments={departments} branches={branches} /> : null}
-      {deactivateAction ? (
-        <form action={deactivateAction} className="flex gap-2">
-          <input name="id" type="hidden" value={item.id} />
-          <input name="locale" type="hidden" value={locale} />
-          <Button disabled={!item.isActive} size="sm" type="submit" variant="outline">{t.actions.deactivate}</Button>
-        </form>
-      ) : null}
-    </div>
-  );
-}
-
-function CategoryForm({ action, compact = false, item, locale, rows, departments, branches }: { action: AdminAction; compact?: boolean; item?: AdminCategory; locale: Locale; rows: AdminCategory[]; departments: { id: string; nameEn: string; nameAr?: string | null }[]; branches: { id: string; nameEn: string; nameAr?: string | null }[] }) {
-  const t = adminCategoriesSlaText[locale];
-  return (
-    <form action={action} className={compact ? 'flex flex-col gap-2' : 'flex flex-col gap-4 border-b border-border-subtle p-3'}>
-      <div className="grid gap-2 md:grid-cols-5">
-        <input name="id" type="hidden" value={item?.id ?? ''} />
-        <input name="locale" type="hidden" value={locale} />
-        <input name="returnTo" type="hidden" value="/admin/categories" />
-        <TextField label={t.fields.code} name="code" value={item?.code} />
-        <TextField label={t.fields.nameEn} name="nameEn" value={item?.nameEn} />
-        <TextField label={t.fields.nameAr} name="nameAr" value={item?.nameAr} />
-        <label className="grid gap-1 text-sm font-medium">
-          {t.fields.department}
-          <FormSelect
-            defaultValue={item?.departmentId ?? ''}
-            name="departmentId"
-            options={departments.map((dep) => ({ label: localizedName(dep, locale), value: dep.id }))}
-            placeholder={t.root}
-          />
-        </label>
-        <label className="grid gap-1 text-sm font-medium">
-          {t.fields.branch}
-          <FormSelect
-            defaultValue={item?.branchId ?? ''}
-            name="branchId"
-            options={branches.map((b) => ({ label: localizedName(b, locale), value: b.id }))}
-            placeholder={t.root}
-          />
-        </label>
-      </div>
-      <div className="flex items-center gap-6 text-sm">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" name="isExternal" value="true" defaultChecked={item?.isExternal ?? true} className="rounded border-gray-300 text-brand focus:ring-brand" />
-          <span className="font-medium">CRM Complaint (Customer)</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" name="isInternal" value="true" defaultChecked={item?.isInternal ?? false} className="rounded border-gray-300 text-brand focus:ring-brand" />
-          <span className="font-medium">Internal (Staff Tasks)</span>
-        </label>
-        <div className="flex-1" />
-        <Button size={compact ? 'sm' : 'default'} type="submit" variant={item ? 'outline' : 'default'}>{item ? t.actions.edit : t.actions.create}</Button>
-      </div>
-    </form>
-  );
-}
-
-function localizedName(item: { nameAr?: string | null; nameEn: string }, locale: Locale): string {
-  return locale === 'ar' && item.nameAr ? item.nameAr : item.nameEn;
 }
 
 function SeverityTable({ locale, policies }: { locale: Locale; policies: AdminSlaPolicy[] }) {
@@ -173,45 +97,89 @@ function SeverityTable({ locale, policies }: { locale: Locale; policies: AdminSl
   );
 }
 
-function SlaTable({ action, locale, policies }: { action: AdminAction | undefined; locale: Locale; policies: AdminSlaPolicy[] }) {
+const STAGE_LABELS: Record<Locale, Record<string, string>> = {
+  en: { INTAKE: 'Intake', MANAGER_REVIEW: 'Manager Review', BRANCH_REVIEW: 'Branch Review', INVESTIGATION: 'Investigation', RESOLUTION: 'Resolution', CLOSURE: 'Closure' },
+  ar: { INTAKE: 'استلام الشكوى', MANAGER_REVIEW: 'مراجعة المدير', BRANCH_REVIEW: 'مراجعة الفرع', INVESTIGATION: 'التحقيق والفحص', RESOLUTION: 'الحل والمعالجة', CLOSURE: 'الإغلاق النهائي' },
+};
+
+function formatDurationMinutes(minutes: number, locale: Locale): string {
+  if (minutes < 60) return locale === 'ar' ? `${minutes} د` : `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return locale === 'ar' ? `${minutes} د (${hours} س)` : `${minutes}m (${hours}h)`;
+  const days = Math.floor(hours / 24);
+  return locale === 'ar' ? `${minutes} د (${days} ي)` : `${minutes}m (${days}d)`;
+}
+
+function SlaTable({ action, locale, policies, returnTo = '/admin/categories', seedAction }: { action: AdminAction | undefined; locale: Locale; policies: AdminSlaPolicy[]; returnTo?: string | undefined; seedAction?: AdminAction | undefined }) {
   const t = adminCategoriesSlaText[locale];
   return (
-    <section className="overflow-x-auto rounded-md border border-border-subtle bg-surface-muted xl:col-span-2" aria-label={t.sections.sla}>
-      <h3 className="border-b border-border-subtle px-3 py-2 text-sm font-semibold">{t.sections.sla}</h3>
+    <section className="overflow-x-auto rounded-md border border-border-subtle bg-surface-muted xl:col-span-2 min-w-[54rem]" aria-label={t.sections.sla}>
+      <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2">
+        <h3 className="text-sm font-semibold">{t.sections.sla} ({policies.length})</h3>
+        {policies.length === 0 && seedAction ? (
+          <form action={seedAction}>
+            <input name="locale" type="hidden" value={locale} />
+            <input name="returnTo" type="hidden" value={returnTo} />
+            <Button size="sm" type="submit" variant="default">
+              {locale === 'ar' ? 'تهيئة سياسات SLA الافتراضية' : 'Initialize Default SLA Policies'}
+            </Button>
+          </form>
+        ) : null}
+      </div>
       <Table className="min-w-[64rem]">
         <TableHeader className="bg-surface-card text-xs font-semibold uppercase tracking-normal text-content-muted">
           <TableRow>{t.slaHeaders.map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>
         </TableHeader>
         <TableBody>
-          {policies.length ? policies.map((policy) => <SlaRow action={action} key={policy.id} locale={locale} policy={policy} />) : <TableRow><TableCell className="text-content-muted" colSpan={8}>{t.states.empty}</TableCell></TableRow>}
+          {policies.length ? policies.map((policy) => <SlaRow action={action} key={policy.id} locale={locale} policy={policy} returnTo={returnTo} />) : (
+            <TableRow>
+              <TableCell className="text-content-muted text-center py-6" colSpan={8}>
+                <div className="flex flex-col items-center gap-2">
+                  <span>{t.states.empty}</span>
+                  {seedAction ? (
+                    <form action={seedAction}>
+                      <input name="locale" type="hidden" value={locale} />
+                      <input name="returnTo" type="hidden" value={returnTo} />
+                      <Button size="sm" type="submit" variant="default">
+                        {locale === 'ar' ? 'تهيئة سياسات SLA الافتراضية (24 سياسة)' : 'Initialize Default SLA Policies (24 Policies)'}
+                      </Button>
+                    </form>
+                  ) : null}
+                </div>
+              </TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
     </section>
   );
 }
 
-function SlaRow({ action, locale, policy }: { action: AdminAction | undefined; locale: Locale; policy: AdminSlaPolicy }) {
+function SlaRow({ action, locale, policy, returnTo = '/admin/categories' }: { action: AdminAction | undefined; locale: Locale; policy: AdminSlaPolicy; returnTo?: string | undefined }) {
   const t = adminCategoriesSlaText[locale];
+  const stageDisplay = STAGE_LABELS[locale][policy.stage] ?? policy.stage;
+  const durationDisplay = formatDurationMinutes(policy.durationMinutes, locale);
   return (
     <TableRow className="border-b border-border-subtle">
-      <TableCell className="font-semibold">{policy.stage}</TableCell>
-      <TableCell title={policy.severity}>{severityLabel(locale, policy.severity)}</TableCell>
-      <TableCell>{policy.durationMinutes}</TableCell>
+      <TableCell className="font-semibold">{stageDisplay}</TableCell>
+      <TableCell title={policy.severity}><StatusBadge>{severityLabel(locale, policy.severity)}</StatusBadge></TableCell>
+      <TableCell className="whitespace-nowrap">{durationDisplay}</TableCell>
       <TableCell>{policy.warningPercent}%</TableCell>
-      <TableCell>{policy.branchTimezone} / {policy.workingCalendarMode}</TableCell>
-      <TableCell>{policy.escalationLevel1}</TableCell>
+      <TableCell className="text-xs">{policy.branchTimezone} / {policy.workingCalendarMode === 'ALWAYS_ON' ? t.modes.ALWAYS_ON : t.modes.CALENDAR_HOURS}</TableCell>
+      <TableCell className="text-xs">{policy.escalationLevel1}{policy.escalationLevel2 ? ` -> ${policy.escalationLevel2}` : ''}{policy.escalationLevel3 ? ` -> ${policy.escalationLevel3}` : ''}</TableCell>
       <TableCell><StatusBadge>{policy.isActive ? t.badges.active : t.badges.inactive}</StatusBadge></TableCell>
-      <TableCell>{action ? <SlaForm action={action} locale={locale} policy={policy} /> : null}</TableCell>
+      <TableCell>{action ? <SlaForm action={action} locale={locale} policy={policy} returnTo={returnTo} /> : null}</TableCell>
     </TableRow>
   );
 }
 
-function SlaForm({ action, locale, policy }: { action: AdminAction; locale: Locale; policy: AdminSlaPolicy }) {
+function SlaForm({ action, locale, policy, returnTo = '/admin/categories' }: { action: AdminAction; locale: Locale; policy: AdminSlaPolicy; returnTo?: string | undefined }) {
   const t = adminCategoriesSlaText[locale];
   return (
     <form action={action} className="grid min-w-[36rem] gap-2 md:grid-cols-5">
       <input name="id" type="hidden" value={policy.id} />
       <input name="locale" type="hidden" value={locale} />
+      <input name="returnTo" type="hidden" value={returnTo} />
       <NumberField label={t.fields.durationMinutes} name="durationMinutes" value={policy.durationMinutes} />
       <NumberField label={t.fields.warningPercent} name="warningPercent" value={policy.warningPercent} />
       <TextField label={t.fields.timezone} name="branchTimezone" value={policy.branchTimezone} />
@@ -234,14 +202,4 @@ function SlaForm({ action, locale, policy }: { action: AdminAction; locale: Loca
       <Button className="self-end" size="sm" type="submit" variant="outline">{t.actions.edit}</Button>
     </form>
   );
-}
-
-function TextField({ label, name, value = '' }: { label: string; name: string; value?: string | number | undefined }) {
-  const id = `${name}-${String(value || 'new').replace(/\W+/g, '-')}`;
-  return <Field id={id} label={label}><Input defaultValue={value} id={id} name={name} /></Field>;
-}
-
-function NumberField({ label, name, value }: { label: string; name: string; value: number | '' }) {
-  const id = `${name}-${String(value || 'blank')}`;
-  return <Field id={id} label={label}><Input defaultValue={value} id={id} min={1} name={name} type="number" /></Field>;
 }
