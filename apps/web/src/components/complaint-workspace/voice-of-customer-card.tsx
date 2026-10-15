@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageSquareQuote } from 'lucide-react';
+import { Calendar, MessageSquareQuote, Phone, Quote, User } from 'lucide-react';
 import type { Locale } from '../../i18n/staff-shell';
 import type { StaffComplaintDetailView } from '../../lib/staff-detail-api';
 
@@ -12,49 +12,57 @@ export function VoiceOfCustomerCard({
 }) {
   const isArabic = locale === 'ar';
   const vocDescription = (detail.description || detail.descriptionAr || '').trim();
+  const primaryNarrative = vocDescription || detail.subject || '';
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-brand/30 bg-surface p-5 shadow-sm">
-      <div className="absolute start-0 top-0 h-full w-1.5 bg-brand" />
+    <div className="relative overflow-hidden rounded-2xl border-2 border-brand/40 bg-surface p-6 shadow-md">
+      {/* Top Gradient Accent */}
+      <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-brand via-brand-strong to-brand" />
 
-      {/* Header: Title + Badges */}
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <MessageSquareQuote className="size-5 text-brand" />
-          <h2 className="text-base font-bold text-content-strong">
-            {isArabic ? 'صوت العميل (VOC)' : 'Voice of Customer (VOC)'}
-          </h2>
+      {/* Header: Title + Subtitle + Context Badges */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle/60 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand shadow-inner">
+            <MessageSquareQuote className="size-6 text-brand" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-content-strong">
+              {isArabic ? 'صوت العميل (VOC)' : 'Voice of Customer (VOC)'}
+            </h2>
+            <p className="text-xs text-content-muted">
+              {isArabic ? 'النص الأصلي وإفادة العميل وتفاصيل الاستقبال' : 'Original customer statement and intake record'}
+            </p>
+          </div>
         </div>
+
+        {/* Status & Classification Badges */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Category Pill */}
           {(detail.categoryName || detail.categoryNameAr) && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-semibold text-brand">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand border border-brand/20">
               📁 {isArabic ? (detail.categoryNameAr || detail.categoryName) : detail.categoryName}
             </span>
           )}
-          {/* Channel Pill */}
           {detail.channel && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-surface-raised px-2.5 py-0.5 text-xs font-semibold text-content-muted border border-line-subtle">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-raised px-3 py-1 text-xs font-semibold text-content-muted border border-line-subtle">
               📢 {detail.channel}
             </span>
           )}
-          {/* Customer Type */}
           {detail.customerType && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-surface-raised px-2.5 py-0.5 text-xs font-semibold text-content-muted border border-line-subtle">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-raised px-3 py-1 text-xs font-semibold text-content-muted border border-line-subtle">
               👤 {detail.customerType}
             </span>
           )}
           {detail.alternativeCarProvided && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-status-warning-bg text-status-warning border border-status-warning-border px-3 py-1 text-xs font-semibold">
               🚗 {isArabic ? 'سيارة بديلة ممنوحة' : 'Alternative Car Provided'}
             </span>
           )}
           {detail.isJustified !== null && detail.isJustified !== undefined && (
             <span
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border ${
                 detail.isJustified
-                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
-                  : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200'
+                  ? 'bg-status-success-bg text-status-success border-status-success-border'
+                  : 'bg-status-error-bg text-status-error border-status-error-border'
               }`}
             >
               {detail.isJustified
@@ -64,12 +72,12 @@ export function VoiceOfCustomerCard({
           )}
           {detail.satisfactionStatus && (
             <span
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border ${
                 detail.satisfactionStatus === 'SATISFIED'
-                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                  ? 'bg-status-success-bg text-status-success border-status-success-border'
                   : detail.satisfactionStatus === 'NEUTRAL'
-                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200'
-                  : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200'
+                  ? 'bg-status-info-bg text-status-info border-status-info-border'
+                  : 'bg-status-error-bg text-status-error border-status-error-border'
               }`}
             >
               {detail.satisfactionStatus === 'SATISFIED' && (isArabic ? '😊 راضٍ' : '😊 Satisfied')}
@@ -80,12 +88,37 @@ export function VoiceOfCustomerCard({
         </div>
       </div>
 
-      {/* Description Body */}
-      <div className="rounded-xl border border-line-subtle bg-surface-sunken p-4 text-sm font-medium leading-relaxed text-content-strong min-h-[4.5rem]">
-        {vocDescription ? (
-          <p className="whitespace-pre-wrap">{vocDescription}</p>
+      {/* Prominent Subject Headline */}
+      {detail.subject && (
+        <div className="mb-4 rounded-xl border border-brand/20 bg-brand/5 px-4 py-3">
+          <div className="text-xs font-bold uppercase tracking-wider text-brand">
+            {isArabic ? 'موضوع الشكوى' : 'Complaint Subject'}
+          </div>
+          <div className="text-base font-bold text-content-strong mt-0.5">
+            {detail.subject}
+          </div>
+        </div>
+      )}
+
+      {/* Narrative Quote Statement Body */}
+      <div className="rounded-xl border border-line-subtle bg-surface-sunken p-5 text-content-strong shadow-inner min-h-[5.5rem]">
+        <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand">
+          <Quote className="size-4" />
+          <span>{isArabic ? 'إفادة العميل / الوصف المسجل' : 'Customer Statement / Narrative'}</span>
+        </div>
+        {primaryNarrative ? (
+          <div>
+            <p className="whitespace-pre-wrap text-base font-medium leading-relaxed">
+              {primaryNarrative}
+            </p>
+            {!vocDescription && detail.subject && (
+              <p className="mt-2 text-xs italic text-content-muted">
+                {isArabic ? '(تم تسجيل الموضوع كبيان أولي لصوت العميل)' : '(Subject displayed as initial customer voice record)'}
+              </p>
+            )}
+          </div>
         ) : (
-          <p className="italic text-content-muted">
+          <p className="italic text-content-muted text-sm">
             {isArabic ? 'لا يوجد نص لوصف الشكوى مسجل.' : 'No detailed description recorded for this complaint.'}
           </p>
         )}
@@ -93,24 +126,45 @@ export function VoiceOfCustomerCard({
 
       {/* Dynamic Template Fields (if template was used) */}
       {detail.templateData && typeof detail.templateData === 'object' && Object.keys(detail.templateData).length > 0 && (
-        <div className="mt-3 rounded-xl border border-line-subtle bg-surface-raised p-3 text-xs">
-          <div className="mb-2 font-semibold text-content-muted">
+        <div className="mt-4 rounded-xl border border-line-subtle bg-surface-raised p-4 text-xs">
+          <div className="mb-2.5 font-bold uppercase tracking-wider text-content-muted">
             {isArabic ? 'حقول النموذج المخصص:' : 'Custom Template Fields:'}
           </div>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-2.5 sm:grid-cols-2">
             {Object.entries(detail.templateData).map(([key, val]) => (
-              <div key={key} className="flex flex-col">
+              <div key={key} className="rounded-lg border border-line-subtle/50 bg-surface p-2.5 flex flex-col">
                 <span className="font-semibold text-content-muted capitalize">{key.replace(/_/g, ' ')}:</span>
-                <span className="font-medium text-content-strong">{Array.isArray(val) ? val.join(', ') : String(val)}</span>
+                <span className="font-medium text-content-strong mt-0.5">{Array.isArray(val) ? val.join(', ') : String(val)}</span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Footer: Root Cause & Sales Advisor */}
-      {(detail.rootCauseCategory || detail.salesAdvisorName) && (
-        <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-line-subtle pt-3 text-xs text-content-muted">
+      {/* Footer Metadata: Incident Time, Customer, Root Cause, Sales Advisor */}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-line-subtle/60 pt-3 text-xs text-content-muted">
+        <div className="flex flex-wrap items-center gap-4">
+          {detail.customer?.name && (
+            <div className="flex items-center gap-1.5">
+              <User className="size-3.5 text-brand" />
+              <span className="font-medium text-content-strong">{detail.customer.name}</span>
+            </div>
+          )}
+          {detail.customer?.phone && (
+            <div className="flex items-center gap-1.5" dir="ltr">
+              <Phone className="size-3.5 text-brand" />
+              <span className="font-medium">{detail.customer.phone}</span>
+            </div>
+          )}
+          {detail.updatedAt && (
+            <div className="flex items-center gap-1.5">
+              <Calendar className="size-3.5 text-brand" />
+              <span>{new Date(detail.updatedAt).toLocaleDateString([], { dateStyle: 'medium' })}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
           {detail.rootCauseCategory && (
             <div className="flex items-center gap-1">
               <span className="font-semibold text-content-strong">{isArabic ? 'السبب الجذري:' : 'Root Cause:'}</span>
@@ -124,7 +178,8 @@ export function VoiceOfCustomerCard({
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
+
