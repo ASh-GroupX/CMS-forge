@@ -15,7 +15,7 @@ export function VoiceOfCustomerCard({
   const primaryNarrative = vocDescription || detail.subject || '';
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border-2 border-brand/40 bg-surface p-6 shadow-md">
+    <div className="shrink-0 relative overflow-hidden rounded-2xl border-2 border-brand/40 bg-surface p-6 shadow-md min-h-[14rem]">
       {/* Top Gradient Accent */}
       <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-brand via-brand-strong to-brand" />
 

@@ -96,7 +96,7 @@ export function ComplaintWorkspace({
 
       {/* ── Workspace ── */}
       <div className="flex-1 p-6 overflow-y-auto">
-        <div className="mx-auto grid h-[calc(100vh-14rem)] min-h-[600px] max-w-7xl grid-cols-1 gap-6 md:grid-cols-[1fr_2fr]">
+        <div className="mx-auto grid md:h-[calc(100vh-14rem)] md:min-h-[600px] max-w-7xl grid-cols-1 gap-6 md:grid-cols-[1fr_2fr]">
           
           {/* Left: Working Notes */}
           <div className="flex flex-col overflow-hidden rounded-2xl border border-line-subtle bg-surface shadow-sm">
@@ -117,8 +117,11 @@ export function ComplaintWorkspace({
           {/* Right: Details & Activity Log */}
           <div className="flex flex-col gap-6 overflow-y-auto pr-2">
             
+            {/* Prominent Voice of Customer (VOC) Card - Top Priority */}
+            <VoiceOfCustomerCard detail={detail} locale={locale} />
+
             {/* Quick Actions (Status/Workflow Modal) */}
-            <div className="rounded-2xl border border-line-subtle bg-surface p-4 shadow-sm">
+            <div className="shrink-0 rounded-2xl border border-line-subtle bg-surface p-4 shadow-sm">
               <QuickActionsRail
                 assignmentOptions={assignmentOptions}
                 detail={detail}
@@ -129,20 +132,16 @@ export function ComplaintWorkspace({
               />
             </div>
 
-            {/* Prominent VOC Card */}
-            <VoiceOfCustomerCard detail={detail} locale={locale} />
-
-
             {/* Investigation Findings (if recorded) */}
             {detail.investigationNotes && (
-              <div className="rounded-2xl border border-blue-500/30 bg-blue-50/50 dark:bg-blue-950/30 p-5 shadow-sm">
+              <div className="shrink-0 rounded-2xl border border-brand/30 bg-surface p-5 shadow-sm">
                 <div className="mb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm font-bold text-blue-700 dark:text-blue-300">
+                  <div className="flex items-center gap-2 text-sm font-bold text-brand">
                     <ClipboardCheck className="size-4" />
                     {locale === 'ar' ? 'نتائج وملاحظات التحقيق' : 'Investigation Findings & Notes'}
                   </div>
                   {detail.investigatedAt && (
-                    <span className="text-xs text-blue-600/80 dark:text-blue-400">
+                    <span className="text-xs text-content-muted">
                       {new Date(detail.investigatedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                     </span>
                   )}
@@ -154,7 +153,7 @@ export function ComplaintWorkspace({
             )}
 
             {/* Dedicated Attachments Section */}
-            <div className="rounded-2xl border border-line-subtle bg-surface p-5 shadow-sm">
+            <div className="shrink-0 rounded-2xl border border-line-subtle bg-surface p-5 shadow-sm">
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Paperclip className="size-4 text-brand" />
@@ -212,7 +211,9 @@ export function ComplaintWorkspace({
             </div>
 
             {/* Context Rail (Core Details, Ownership, Customer, Vehicle) */}
-            <ContextRail detail={detail} locale={locale} t={t} />
+            <div className="shrink-0">
+              <ContextRail detail={detail} locale={locale} t={t} />
+            </div>
             
             {/* Activity Log */}
             <div className="shrink-0 overflow-hidden rounded-2xl border border-line-subtle bg-surface shadow-sm">
