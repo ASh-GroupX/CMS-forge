@@ -63,6 +63,7 @@ export type StaffComplaintDetailView = {
   rootCauseCategory?: string | null;
   repeatCustomer?: boolean | null;
   description: string;
+  descriptionAr?: string | null;
   alternativeCarProvided?: boolean;
   backupOfficerId?: string | null;
   backupOfficerName?: string | null;
@@ -188,6 +189,7 @@ function viewFromDetail(detail: ComplaintDetail, caseTimeline: DetailTimelineIte
     rootCauseCategory: detail.rootCauseCategory,
     repeatCustomer: detail.repeatCustomer,
     description: detail.description,
+    descriptionAr: detail.descriptionAr ?? null,
     alternativeCarProvided: detail.alternativeCarProvided ?? false,
     backupOfficerId: detail.backupOfficerId ?? null,
     backupOfficerName: detail.backupOfficerName ?? null,
@@ -234,7 +236,12 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
     nextAction: typeof complaint.nextAction === 'string' ? complaint.nextAction : null,
     createdAt: typeof complaint.createdAt === 'string' ? complaint.createdAt : new Date().toISOString(),
     updatedAt: typeof complaint.updatedAt === 'string' ? complaint.updatedAt : new Date().toISOString(),
-    description: typeof complaint.description === 'string' ? complaint.description : '',
+    description: (typeof complaint.description === 'string' && complaint.description.trim())
+      ? complaint.description
+      : (typeof (complaint as any).descriptionAr === 'string' && (complaint as any).descriptionAr.trim())
+        ? (complaint as any).descriptionAr
+        : typeof complaint.description === 'string' ? complaint.description : '',
+    descriptionAr: typeof (complaint as any).descriptionAr === 'string' ? (complaint as any).descriptionAr : null,
     categoryId: typeof complaint.categoryId === 'string' ? complaint.categoryId : '',
     categoryName: typeof complaint.categoryName === 'string' ? complaint.categoryName : '',
     categoryNameAr: typeof complaint.categoryNameAr === 'string' ? complaint.categoryNameAr : (typeof complaint.categoryName === 'string' ? complaint.categoryName : ''),

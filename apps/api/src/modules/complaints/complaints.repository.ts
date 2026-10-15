@@ -19,6 +19,7 @@ export type ComplaintQueueRecord = ComplaintRecord & { ownerId: string | null; o
 export type ComplaintDetailRecord = Omit<ComplaintQueueRecord, 'category'> & {
   category: { id: string; nameEn: string; nameAr: string };
   descriptionEn: string;
+  descriptionAr?: string | null;
   incidentAt: Date | null;
   customer: { id: string; nameEn: string; phone: string; dmsCode: string | null; dataSource: DataSource };
   vehicle: { id: string; vin: string; plate: string; makeEn: string; modelEn: string; year: number; dataSource: DataSource } | null;
@@ -248,7 +249,7 @@ export class ComplaintsRepository {
       select: {
         ...complaintSelect,
         ownerId: true, owner: { select: { nameEn: true, email: true } }, department: { select: { nameEn: true, nameAr: true } }, branch: { select: { code: true, nameEn: true, nameAr: true, timezone: true } },
-        descriptionEn: true, incidentAt: true,
+        descriptionEn: true, descriptionAr: true, incidentAt: true,
         category: { select: { id: true, nameEn: true, nameAr: true } },
         customer: { select: { id: true, nameEn: true, phone: true, dmsCode: true, dataSource: true } },
         vehicle: { select: { id: true, vin: true, plate: true, makeEn: true, modelEn: true, year: true, dataSource: true } },

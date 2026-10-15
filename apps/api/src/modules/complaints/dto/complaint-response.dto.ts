@@ -92,6 +92,10 @@ export type ComplaintDetailDto = ComplaintQueueItemDto & {
   categoryName: string;
   categoryNameAr: string;
   description: string;
+  descriptionAr?: string | null;
+  type?: string;
+  templateId?: string | null;
+  templateData?: any;
   incidentAt: string | null;
   customer: ComplaintCustomerDetailDto;
   vehicle: ComplaintVehicleDetailDto | null;

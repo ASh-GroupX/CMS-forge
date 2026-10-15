@@ -248,7 +248,9 @@ jobs:
               "ALTER TABLE \"complaints\" ADD COLUMN IF NOT EXISTS \"is_justified\" BOOLEAN;" \
               "ALTER TABLE \"complaints\" ADD COLUMN IF NOT EXISTS \"satisfaction_status\" TEXT;" \
               "ALTER TABLE \"complaints\" ADD COLUMN IF NOT EXISTS \"investigation_notes\" TEXT;" \
-              "ALTER TABLE \"complaints\" ADD COLUMN IF NOT EXISTS \"investigated_at\" TIMESTAMP(3);" |
+              "ALTER TABLE \"complaints\" ADD COLUMN IF NOT EXISTS \"investigated_at\" TIMESTAMP(3);" \
+              "INSERT INTO \"permissions\" (\"id\", \"code\", \"name_en\", \"name_ar\", \"is_active\", \"created_at\", \"updated_at\") VALUES ('perm_complaint_resolve', 'COMPLAINT_RESOLVE', 'Resolve Complaint', 'حل الشكوى', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT (\"code\") DO NOTHING;" \
+              "INSERT INTO \"role_permissions\" (\"role_id\", \"permission_id\") SELECT r.\"id\", p.\"id\" FROM \"roles\" r CROSS JOIN \"permissions\" p WHERE p.\"code\" = 'COMPLAINT_RESOLVE' AND r.\"code\" IN ('ADMIN', 'CR_MANAGER', 'BRANCH_MANAGER', 'CR_OFFICER') ON CONFLICT (\"role_id\", \"permission_id\") DO NOTHING;" |
               docker compose --env-file .env.production -f docker-compose.prod.yml exec -T postgres \
                 sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
             echo "Complaint root causes and sales advisors verified"
