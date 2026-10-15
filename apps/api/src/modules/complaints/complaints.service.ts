@@ -83,6 +83,7 @@ export const WORKFLOW_TRANSITIONS: readonly WorkflowTransition[] = [
   transition(ComplaintStatus.CLOSED, ComplaintTransitionAction.REOPEN, ComplaintStatus.REOPENED, MANAGER_ROLES, 'COMPLAINT_REOPEN'),
   transition(ComplaintStatus.REJECTED, ComplaintTransitionAction.REOPEN, ComplaintStatus.REOPENED, MANAGER_ROLES, 'COMPLAINT_REOPEN'),
   transition(ComplaintStatus.REOPENED, ComplaintTransitionAction.ROUTE_AGAIN, ComplaintStatus.MANAGER_REVIEW, MANAGER_ROLES, 'COMPLAINT_REOPEN'),
+  transition(ComplaintStatus.REOPENED, ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintStatus.IN_PROGRESS, MANAGER_ROLES, 'COMPLAINT_APPROVE'),
   transition(ComplaintStatus.RESOLVED, ComplaintTransitionAction.CUSTOMER_REJECT_RESOLUTION, ComplaintStatus.IN_PROGRESS, [RoleCode.CUSTOMER_PORTAL]),
   transition(ComplaintStatus.REJECTED, ComplaintTransitionAction.CUSTOMER_RESUBMIT, ComplaintStatus.MANAGER_REVIEW, [RoleCode.CUSTOMER_PORTAL]),
   transition(ComplaintStatus.CLOSED, ComplaintTransitionAction.CUSTOMER_RESUBMIT, ComplaintStatus.MANAGER_REVIEW, [RoleCode.CUSTOMER_PORTAL]),
@@ -250,19 +251,10 @@ export class ComplaintsService {
           correlationId: input.correlationId ?? null,
         }, client);
         await this.auditService.record(workflowAuditInput(input, decision.toStatus, complaint.branchId), client);
-        if (this.assignmentsService && ASSIGNMENT_ACTIONS.has(input.action)) {
+        if (this.assignmentsService && ASSIGNMENT_ACTIONS.has(input.action) && (complaint.ownerId || complaint.departmentId)) {
           await this.assignmentsService.setInTransaction({
-            entityType: 'COMPLAINT',
-            entityId: complaint.id,
-            assignedUserId: complaint.ownerId,
-            assignedDepartmentId: complaint.departmentId,
-            scopeBranchId: complaint.branchId,
-            reason: input.reason ?? null,
-          }, {
-            userId: input.actorId ?? '',
-            roleCode: input.actorRole,
-            branchId: complaint.branchId,
-          }, input, client);
+            entityType: 'COMPLAINT', entityId: complaint.id, assignedUserId: complaint.ownerId, assignedDepartmentId: complaint.departmentId, scopeBranchId: complaint.branchId, reason: input.reason ?? null,
+          }, { userId: input.actorId ?? '', roleCode: input.actorRole, branchId: complaint.branchId }, input, client);
         }
 
         return { result: { complaintId: complaint.id, ...decision }, complaint };
@@ -275,7 +267,7 @@ export class ComplaintsService {
       throw error;
     }
     await queueWorkflowSideEffects({ notificationsService: this.notificationsService, slaService: this.slaService, surveysService: this.surveysService, input, toStatus: committed.result.toStatus, complaint: committed.complaint, enteredAt: new Date() });
-    if (ASSIGNMENT_ACTIONS.has(input.action)) {
+    if (ASSIGNMENT_ACTIONS.has(input.action) && (committed.complaint.ownerId || committed.complaint.departmentId)) {
       await this.assignmentsService?.notifyAfterCommit?.('COMPLAINT', committed.complaint.id, {
         href: `/complaints/${committed.complaint.id}`,
         title: committed.complaint.id,

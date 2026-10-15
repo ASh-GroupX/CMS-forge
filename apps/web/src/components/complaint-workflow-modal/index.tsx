@@ -88,10 +88,11 @@ export function ComplaintWorkflowModal({
   const confirm = confirmationText[locale].workflowCloseReject;
   const [selectedAction, setSelectedAction] = useState<ComplaintTransitionAction>();
   const [submitState, setSubmitState] = useState<SubmitState>();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const visibleState = submitState ?? workflowState;
   const actions = allowedActions?.length ? allowedActions : workflowState ? previewActions : [];
   const action = selectedAction && actions.includes(selectedAction) ? selectedAction : actions[0];
-  const message = visibleState && visibleState !== 'validation' ? t.workflow.states[visibleState] : visibleState === 'validation' ? t.workflow.validation : null;
+  const message = visibleState && visibleState !== 'validation' ? t.workflow.states[visibleState] : visibleState === 'validation' ? (errorMessage ?? t.workflow.validation) : null;
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -103,15 +104,18 @@ export function ComplaintWorkflowModal({
     const form = new FormData(event.currentTarget);
     if (requiredFields(action, vehicleNeedsUnavailableReason).some((field) => !fieldText(form, field))
       || (assignmentActions.has(action) && !fieldText(form, 'ownerId') && !fieldText(form, 'targetDepartmentId'))) {
+      setErrorMessage(null);
       setSubmitState('validation');
       return;
     }
     if (destructiveActions.has(action) && form.get('confirmDestructive') !== 'on') {
+      setErrorMessage(null);
       setSubmitState('validation');
       return;
     }
 
     setSubmitState('loading');
+    setErrorMessage(null);
     const result = await submitStaffComplaintWorkflowAction(complaintId, transitionRequest(action, status as ComplaintStatus, form));
     if (result.ok) {
       setSubmitState('success');
@@ -122,6 +126,8 @@ export function ComplaintWorkflowModal({
       setSubmitState('conflict');
       return;
     }
+    const serverErr = result.error.fieldErrors?.[0]?.message || result.error.message;
+    if (serverErr) setErrorMessage(serverErr);
     setSubmitState(result.error.code === 'VALIDATION_FAILED' ? 'validation' : 'error');
   }
 
@@ -137,14 +143,14 @@ export function ComplaintWorkflowModal({
       {visibleState === 'conflict' ? (
         <div className="mt-3 flex flex-wrap gap-2">
           <Button asChild type="button" variant="outline"><a href={complaintHref(complaintId, locale)}>{t.workflow.reload}</a></Button>
-          <Button type="button" variant="outline" onClick={() => setSubmitState(undefined)}>{t.workflow.retry}</Button>
+          <Button type="button" variant="outline" onClick={() => { setSubmitState(undefined); setErrorMessage(null); }}>{t.workflow.retry}</Button>
         </div>
       ) : null}
       {actions.length && action ? (
         <>
           <div className="mt-3 flex flex-wrap gap-2">
             {actions.map((item) => (
-              <Button disabled={visibleState === 'loading'} key={item} type="button" variant={item === action ? 'default' : 'outline'} onClick={() => { setSelectedAction(item); setSubmitState(undefined); }}>
+              <Button disabled={visibleState === 'loading'} key={item} type="button" variant={item === action ? 'default' : 'outline'} onClick={() => { setSelectedAction(item); setSubmitState(undefined); setErrorMessage(null); }}>
                 {actionLabel(item, t.workflow.actionLabels)}
               </Button>
             ))}
@@ -161,7 +167,7 @@ export function ComplaintWorkflowModal({
                 </span>
               </label>
             ) : null}
-            {visibleState === 'validation' ? <span className="text-xs font-semibold text-status-error">{t.workflow.validation}</span> : null}
+            {visibleState === 'validation' ? <span className="text-xs font-semibold text-status-error">{errorMessage ?? t.workflow.validation}</span> : null}
             <Button disabled={visibleState === 'loading'} type="submit">{t.workflow.submit}</Button>
           </form>
         </>
@@ -177,7 +183,7 @@ export function WorkflowFields({ action, assignmentOptions, locale, options, tex
   if (fields.length === 0) return <StateBlock message={text.noExtraFields} />;
   return (
     <div className="grid gap-3">
-      {assignmentActions.has(action) ? <div><AssignmentPicker departmentName="targetDepartmentId" locale={locale} options={assignmentOptions} userName="ownerId" /></div> : null}
+      {assignmentActions.has(action) || action === 'APPROVE_AND_ROUTE' ? <div><AssignmentPicker departmentName="targetDepartmentId" locale={locale} options={assignmentOptions} userName="ownerId" /></div> : null}
       {fields.filter((field) => field !== 'targetDepartmentId' && field !== 'ownerId').map((field) => {
         if (field === 'targetBranchId') return <OptionField key={field} emptyHint={text.noOptions} label={text.fields.targetBranchId} name={field} options={options?.branches ?? []} locale={locale} />;
         if (field === 'resolutionType') return <OptionField key={field} emptyHint={text.noOptions} label={text.fields.resolutionType} name={field} options={resolutionTypeOptions} locale={locale} />;

@@ -195,7 +195,7 @@ function requiredBranch(actor: AssignmentActor): string {
 }
 
 function assertActorScope(actor: AssignmentActor, scopeBranchId: string | null): void {
-  if (actor.roleCode === RoleCode.ADMIN) return;
+  if (actor.roleCode === RoleCode.ADMIN || actor.roleCode === RoleCode.CR_MANAGER || actor.roleCode === RoleCode.CR_OFFICER) return;
   if (!scopeBranchId || scopeBranchId !== requiredBranch(actor)) {
     throw new AppException('BRANCH_SCOPE_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
   }
