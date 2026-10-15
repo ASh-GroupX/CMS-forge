@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, Moon, Plus, Search, Sun } from 'lucide-react';
+import { Bell, Moon, Search, Sun } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -14,9 +14,9 @@ type SearchType = 'COMPLAINT' | 'TASK' | 'CASE' | 'DEAL' | 'CUSTOMER';
 type SearchResult = { type: SearchType; id: string; label: string; labelAr: string; context: string; contextAr: string; href: string };
 type SearchCopy = { label: string; placeholder: string; hint: string; loading: string; empty: string; error: string; types: Record<SearchType, string> };
 
-export function StaffTopBar({ account = null, createLabel, heading, isRtl, languageHref, locale, notificationsHref = '/notifications', search, showSearch = true, showCreate = true, showNotifications = true, signedIn, subheading, subtitle, switchLabel, switchTarget, themeDark, themeLabel, themeLight, title }: {
+export function StaffTopBar({ account = null, createLabel, heading, isRtl, languageHref, locale, notificationsHref = '/notifications', search, showSearch = true, showCreate = false, showNotifications = true, signedIn, subheading, subtitle, switchLabel, switchTarget, themeDark, themeLabel, themeLight, title }: {
   account?: { initials: string; name: string } | null;
-  createLabel: string;
+  createLabel?: string;
   heading?: string;
   isRtl: boolean;
   languageHref: string;
@@ -38,7 +38,6 @@ export function StaffTopBar({ account = null, createLabel, heading, isRtl, langu
 }) {
   const [theme, setTheme] = useState<Theme>('light');
   const [searchOpen, setSearchOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searchState, setSearchState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -62,7 +61,6 @@ export function StaffTopBar({ account = null, createLabel, heading, isRtl, langu
   const resolvedHeading = heading ?? title ?? '';
   const resolvedSubheading = subheading ?? signedIn ?? subtitle ?? '';
 
-  const canShowCreate = showCreate && Boolean(account);
   const canShowNotifications = showNotifications && Boolean(account);
 
   return <>
@@ -71,12 +69,6 @@ export function StaffTopBar({ account = null, createLabel, heading, isRtl, langu
         <div className="flex min-w-0 items-center gap-4"><div className="min-w-0"><h1 className="truncate text-lg font-bold tracking-tight md:text-xl bg-gradient-to-br from-content-strong to-content-muted bg-clip-text text-transparent">{resolvedHeading}</h1><p className="truncate text-xs font-medium text-content-muted md:text-sm">{resolvedSubheading}</p></div><Button aria-label={themeLabel} aria-pressed={theme === 'dark'} className="hidden size-10 shrink-0 rounded-xl md:inline-flex hover:bg-black/5" onClick={toggleTheme} size="icon" type="button" variant="ghost">{theme === 'dark' ? <Sun aria-hidden="true" className="size-5 text-status-warning" /> : <Moon aria-hidden="true" className="size-5" />}<span className="sr-only">{theme === 'dark' ? themeLight : themeDark}</span></Button></div>
         <div className="flex shrink-0 items-center gap-2">
           {showSearch ? <><Button className="hidden h-11 w-[19rem] justify-start rounded-lg text-content-muted xl:flex" onClick={() => setSearchOpen(true)} type="button" variant="outline"><Search aria-hidden="true" className="me-2 size-5" /><span className="truncate">{search.placeholder}</span></Button><Button aria-label={search.label} className="xl:hidden" onClick={() => setSearchOpen(true)} size="icon" type="button" variant="outline"><Search aria-hidden="true" className="size-5" /></Button></> : null}
-          {canShowCreate ? (
-            <Button type="button" className="hidden gap-1.5 md:inline-flex" size="sm" variant="default" onClick={() => setCreateOpen(true)}>
-              <Plus aria-hidden="true" className="size-4" />
-              {createLabel}
-            </Button>
-          ) : null}
           {canShowNotifications ? (
             <Button asChild size="icon" variant="ghost"><a aria-label="Notifications" href={notificationsHref}><Bell aria-hidden="true" className="size-5" /></a></Button>
           ) : null}
@@ -91,31 +83,6 @@ export function StaffTopBar({ account = null, createLabel, heading, isRtl, langu
         {searchState === 'idle' ? <p className="p-3 text-sm text-content-muted">{search.hint}</p> : null}{searchState === 'loading' ? <p className="p-3 text-sm text-content-muted">{search.loading}</p> : null}{searchState === 'error' ? <p className="p-3 text-sm text-status-error">{search.error}</p> : null}{searchState === 'ready' && !results.length ? <p className="p-3 text-sm text-content-muted">{search.empty}</p> : null}
         {results.map((result) => <a className="flex min-h-14 items-center gap-3 rounded-md px-3 py-2 hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand" href={localeHref(result.href, locale)} key={`${result.type}:${result.id}`}><Badge variant="outline">{search.types[result.type]}</Badge><span className="min-w-0"><bdi className="block truncate text-sm font-semibold">{isRtl ? result.labelAr : result.label}</bdi><bdi className="block truncate text-xs text-content-muted">{isRtl ? result.contextAr : result.context}</bdi></span></a>)}
       </div></DialogContent>
-    </Dialog>
-    <Dialog onOpenChange={setCreateOpen} open={createOpen}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{isRtl ? 'ماذا تريد أن تنشئ؟' : 'What would you like to create?'}</DialogTitle>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <Button asChild variant="outline" className="h-16 justify-start text-start px-4" onClick={() => setCreateOpen(false)}>
-            <a href={`/complaints/new?locale=${locale}`}>
-              <div className="flex flex-col">
-                <span className="font-semibold text-content-strong">{isRtl ? 'شكوى CRM' : 'CRM Complaint'}</span>
-                <span className="text-xs text-content-muted">{isRtl ? 'سجل شكوى CRM جديدة للعميل.' : 'Log a new CRM complaint.'}</span>
-              </div>
-            </a>
-          </Button>
-          <Button asChild variant="outline" className="h-16 justify-start text-start px-4" onClick={() => setCreateOpen(false)}>
-            <a href={`/internal-tickets/new?locale=${locale}`}>
-              <div className="flex flex-col">
-                <span className="font-semibold text-content-strong">{isRtl ? 'تذكرة داخلية' : 'Internal Ticket'}</span>
-                <span className="text-xs text-content-muted">{isRtl ? 'أنشئ طلبًا داخليًا لقسم آخر.' : 'Create an internal request for another department.'}</span>
-              </div>
-            </a>
-          </Button>
-        </div>
-      </DialogContent>
     </Dialog>
   </>;
 }

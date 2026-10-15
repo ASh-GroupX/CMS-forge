@@ -12,6 +12,8 @@ export type StaffQueueQuery = {
   sla?: ComplaintQueueItem['slaState'] | null;
   status?: ComplaintStatus | null;
   ownerScope?: 'ME' | 'UNASSIGNED' | null;
+  departmentId?: string | null;
+  direction?: 'RECEIVED' | 'SENT' | 'ALL' | null;
 };
 
 export type StaffQueueResult = {
@@ -83,6 +85,8 @@ export async function getStaffQueueLoadResult({
     append(url.searchParams, 'severity', query.severity);
     append(url.searchParams, 'sla', query.sla);
     append(url.searchParams, 'ownerScope', query.ownerScope);
+    append(url.searchParams, 'departmentId', query.departmentId);
+    append(url.searchParams, 'direction', query.direction);
     if (search) url.searchParams.set(isReferenceSearch(search) ? 'referenceNumber' : 'customer', search);
 
     const response = await fetchImpl(url, {

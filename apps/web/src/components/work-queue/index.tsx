@@ -4,15 +4,27 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { DataTable, Field, FilterBar, StateBlock, StatusBadge as SharedStatusBadge, type PrimitiveTone } from '../shared/ui-primitives';
-import { complaintStatusLabel, severityLabel, slaStateLabel } from '../../i18n/domain-labels';
+import { DataTable, Field, FilterBar, StateBlock } from '../shared/ui-primitives';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import { modernUiText } from '../../i18n/staff-modern-ui';
-import { formatDisplayDate, formatDisplayNumber } from '../../lib/locale-format';
+import { formatDisplayNumber } from '../../lib/locale-format';
 import type { ComplaintFormOptions } from '../../lib/staff-complaint-form-options-api';
-import type { ComplaintQueueItem, ComplaintSeverity, ComplaintStatus } from '../../lib/staff-complaints-api';
+import type { ComplaintQueueItem } from '../../lib/staff-complaints-api';
 import type { StaffQueueQuery, StaffQueueResult } from '../../lib/staff-queue-api';
 import { AutoSubmitSelect } from '../shared/auto-submit-select';
+import {
+  activeFilterLabels,
+  caseHref,
+  filterOptions,
+  filterValue,
+  formatAge,
+  formatDate,
+  pageHref,
+  quickFilterHref,
+  SeverityBadge,
+  SlaBadge,
+  StatusBadge,
+} from './work-queue.helpers';
 
 export function WorkQueue({
   locale,
@@ -38,7 +50,7 @@ export function WorkQueue({
   const isEmpty = !isError && visibleRows.length === 0;
   const page = queue?.page ?? query.page ?? 1;
   const filters = filterOptions(queueRows ?? [], t, query, options, locale);
-  const activeFilters = activeFilterLabels(query, filters, quick);
+  const activeFilters = activeFilterLabels(query, filters, quick, locale);
 
   return (
     <Card className="w-full min-w-0 max-w-full overflow-hidden rounded-sm border-line-subtle bg-surface shadow-none" aria-label={t.title}>
@@ -49,18 +61,25 @@ export function WorkQueue({
       <CardContent className="min-w-0 p-0">
         <div className="flex flex-wrap items-center gap-2 border-b border-line-subtle p-3" aria-label={quick.title}>
           <span className="me-1 text-xs font-semibold text-content-muted">{quick.title}</span>
-          <Button asChild size="sm" variant={query.ownerScope === 'ME' ? 'default' : 'outline'}><a href={quickFilterHref(locale, 'ownerScope', 'ME')}>{quick.mine}</a></Button>
-          <Button asChild size="sm" variant={query.ownerScope === 'UNASSIGNED' ? 'default' : 'outline'}><a href={quickFilterHref(locale, 'ownerScope', 'UNASSIGNED')}>{quick.unassigned}</a></Button>
-          <Button asChild size="sm" variant={query.sla === 'BREACHED' ? 'default' : 'outline'}><a href={quickFilterHref(locale, 'sla', 'BREACHED')}>{quick.overdue}</a></Button>
+          <Button asChild size="sm" variant={query.direction === 'RECEIVED' ? 'default' : 'outline'}>
+            <a href={quickFilterHref(locale, 'direction', 'RECEIVED', query)}>{locale === 'ar' ? 'الواردة' : 'Received'}</a>
+          </Button>
+          <Button asChild size="sm" variant={query.direction === 'SENT' ? 'default' : 'outline'}>
+            <a href={quickFilterHref(locale, 'direction', 'SENT', query)}>{locale === 'ar' ? 'الصادرة' : 'Sent'}</a>
+          </Button>
+          <Button asChild size="sm" variant={query.ownerScope === 'ME' ? 'default' : 'outline'}><a href={quickFilterHref(locale, 'ownerScope', 'ME', query)}>{quick.mine}</a></Button>
+          <Button asChild size="sm" variant={query.ownerScope === 'UNASSIGNED' ? 'default' : 'outline'}><a href={quickFilterHref(locale, 'ownerScope', 'UNASSIGNED', query)}>{quick.unassigned}</a></Button>
+          <Button asChild size="sm" variant={query.sla === 'BREACHED' ? 'default' : 'outline'}><a href={quickFilterHref(locale, 'sla', 'BREACHED', query)}>{quick.overdue}</a></Button>
           {activeFilters.length ? <Button asChild className="ms-auto" size="sm" variant="ghost"><a href={`/complaints?locale=${locale}`}>{quick.clear}</a></Button> : null}
         </div>
-        <FilterBar action="/complaints" className="md:grid-cols-6">
+        <FilterBar action="/complaints" className="md:grid-cols-7">
           <input name="locale" type="hidden" value={locale} />
-          {(['status', 'branch', 'severity', 'sla'] as const).map((key) => (
+          {query.direction ? <input name="direction" type="hidden" value={query.direction} /> : null}
+          {(['status', 'branch', 'department', 'severity', 'sla'] as const).map((key) => (
             <Field id={`work-queue-${key}`} key={key} label={t.filters[key]}>
               <AutoSubmitSelect 
                 defaultValue={filterValue(key, query)} 
-                name={key === 'branch' ? 'branchId' : key}
+                name={key === 'branch' ? 'branchId' : key === 'department' ? 'departmentId' : key}
                 label={t.filters[key]}
                 options={filters[key]}
                 allLabel={t.filters.all}
@@ -183,109 +202,4 @@ export function WorkQueue({
   );
 }
 
-type FilterOption = { label: string; value: string };
-const STATUS_OPTIONS: ComplaintStatus[] = ['DRAFT', 'SUBMITTED', 'MANAGER_REVIEW', 'BRANCH_REVIEW', 'IN_PROGRESS', 'RESOLVED', 'COMPLETED', 'CLOSED', 'REOPENED', 'REJECTED'];
-const SEVERITY_OPTIONS: ComplaintSeverity[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 
-function filterOptions(rows: ComplaintQueueItem[], t: typeof staffShellText[Locale]['workQueue'], query: StaffQueueQuery, options: ComplaintFormOptions | null | undefined, locale: Locale): Record<'status' | 'branch' | 'severity' | 'sla', FilterOption[]> {
-  const branches = new Map<string, string>();
-  for (const branch of options?.branches ?? []) branches.set(branch.id, locale === 'ar' ? branch.nameAr : branch.nameEn);
-  for (const row of rows) if (!branches.has(row.branchId)) branches.set(row.branchId, row.branchName ?? row.branchId);
-  if (query.branchId && !branches.has(query.branchId)) branches.set(query.branchId, query.branchId);
-  return {
-    status: STATUS_OPTIONS.map((status) => ({ label: complaintStatusLabel(locale, status), value: status })),
-    branch: [...branches].map(([value, label]) => ({ label, value })),
-    severity: SEVERITY_OPTIONS.map((severity) => ({ label: severityLabel(locale, severity), value: severity })),
-    sla: ['ON_TRACK', 'WARNING', 'BREACHED', 'CLOSED'].map((value) => ({ label: slaStateLabel(locale, value), value })),
-  };
-}
-
-function filterValue(key: 'branch' | 'severity' | 'sla' | 'status', query: StaffQueueQuery): string {
-  if (key === 'branch') return query.branchId ?? 'all';
-  if (key === 'severity') return query.severity ?? 'all';
-  if (key === 'status') return query.status ?? 'all';
-  return query.sla ?? 'all';
-}
-
-function pageHref(locale: Locale, query: StaffQueueQuery, page: number): string {
-  const params = new URLSearchParams({ locale, page: String(page) });
-  append(params, 'branchId', query.branchId);
-  append(params, 'search', query.search);
-  append(params, 'severity', query.severity);
-  append(params, 'sla', query.sla);
-  append(params, 'status', query.status);
-  append(params, 'ownerScope', query.ownerScope);
-  return `/complaints?${params.toString()}`;
-}
-
-function quickFilterHref(locale: Locale, key: 'ownerScope' | 'sla', value: string): string { return `/complaints?${new URLSearchParams({ locale, [key]: value }).toString()}`; }
-
-function activeFilterLabels(query: StaffQueueQuery, filters: Record<'status' | 'branch' | 'severity' | 'sla', FilterOption[]>, quick: typeof modernUiText[Locale]['queue']): string[] {
-  const labels = [
-    query.ownerScope === 'ME' ? quick.mine : query.ownerScope === 'UNASSIGNED' ? quick.unassigned : null,
-    query.status ? filters.status.find((item) => item.value === query.status)?.label : null,
-    query.branchId ? filters.branch.find((item) => item.value === query.branchId)?.label : null,
-    query.severity ? filters.severity.find((item) => item.value === query.severity)?.label : null,
-    query.sla ? filters.sla.find((item) => item.value === query.sla)?.label : null,
-    query.search,
-  ];
-  return labels.filter((value): value is string => Boolean(value));
-}
-
-function caseHref(locale: Locale, id: string): string {
-  const params = new URLSearchParams({ locale });
-  return `/complaints/${encodeURIComponent(id)}?${params.toString()}`;
-}
-
-function formatDate(value: string, locale: Locale): string {
-  return formatDisplayDate(value, locale);
-}
-
-function formatAge(value: string, locale: Locale): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  const days = Math.max(0, Math.floor((Date.now() - date.getTime()) / 86_400_000));
-  return new Intl.NumberFormat(locale === 'ar' ? 'ar-EG' : 'en-US').format(days) + (locale === 'ar' ? ' يوم' : 'd');
-}
-
-function append(params: URLSearchParams, key: string, value: string | null | undefined): void {
-  if (value?.trim()) params.set(key, value.trim());
-}
-
-const STATUS_TONE: Partial<Record<ComplaintStatus, PrimitiveTone>> = {
-  SUBMITTED: 'info',
-  IN_PROGRESS: 'brand',
-  MANAGER_REVIEW: 'warning',
-  BRANCH_REVIEW: 'warning',
-  REOPENED: 'info',
-  RESOLVED: 'success',
-  CLOSED: 'neutral',
-  REJECTED: 'danger',
-};
-
-const SEVERITY_TONE: Record<ComplaintSeverity, PrimitiveTone> = {
-  CRITICAL: 'danger',
-  HIGH: 'danger',
-  MEDIUM: 'warning',
-  LOW: 'neutral',
-};
-
-function StatusBadge({ locale, status }: { locale: Locale; status: ComplaintStatus }) {
-  return <SharedStatusBadge tone={STATUS_TONE[status] ?? 'neutral'}>{complaintStatusLabel(locale, status)}</SharedStatusBadge>;
-}
-
-function SeverityBadge({ locale, severity }: { locale: Locale; severity: ComplaintSeverity }) {
-  return <SharedStatusBadge tone={SEVERITY_TONE[severity]}>{severityLabel(locale, severity)}</SharedStatusBadge>;
-}
-
-function SlaBadge({ locale, row }: { locale: Locale; row: ComplaintQueueItem }) {
-  const detail = row.slaPercentElapsed === null || row.slaPercentElapsed === undefined ? '' : ` ${formatDisplayNumber(row.slaPercentElapsed, locale)}%`;
-  return <SharedStatusBadge tone={SLA_TONE[row.slaState]}>{slaStateLabel(locale, row.slaState)}{detail}</SharedStatusBadge>;
-}
-
-const SLA_TONE: Record<ComplaintQueueItem['slaState'], PrimitiveTone> = {
-  ON_TRACK: 'success',
-  WARNING: 'warning',
-  BREACHED: 'danger',
-  CLOSED: 'neutral',
-};

@@ -83,6 +83,12 @@ export function optionalSlaState(value: string | undefined): 'ON_TRACK' | 'WARNI
   return optionalEnum(value, { ON_TRACK: 'ON_TRACK', WARNING: 'WARNING', BREACHED: 'BREACHED', CLOSED: 'CLOSED' }, 'sla') as 'ON_TRACK' | 'WARNING' | 'BREACHED' | 'CLOSED' | null;
 }
 
+export function optionalDirection(value: string | undefined): 'RECEIVED' | 'SENT' | 'ALL' | null {
+  if (!value?.trim() || value === 'ALL') return null;
+  if (value === 'RECEIVED' || value === 'SENT') return value;
+  throw new AppException('VALIDATION_FAILED', 'Invalid complaint search query', HttpStatus.BAD_REQUEST, [{ field: 'direction', code: 'INVALID', message: 'direction must be RECEIVED or SENT.' }]);
+}
+
 export function pageNumber(value: string | undefined, field: 'limit' | 'offset', fallback: number, max?: number): number {
   if (!value?.trim()) return fallback;
   const parsed = Number(value);

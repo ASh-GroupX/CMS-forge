@@ -2,6 +2,9 @@ import React from 'react';
 import type { ReactNode } from 'react';
 import { resolveLocale, staffShellText } from '../../../../i18n/staff-shell';
 import { headers } from 'next/headers';
+import Link from 'next/link';
+import { Plus } from 'lucide-react';
+import { Button } from '../../../../components/ui/button';
 
 export default async function ComplaintsListLayout({ children }: { children: ReactNode }) {
   const requestHeaders = await headers();
@@ -14,11 +17,17 @@ export default async function ComplaintsListLayout({ children }: { children: Rea
 
   return (
     <div className="w-full h-full flex flex-col gap-0 bg-surface-sunken min-w-0">
-      <div className="flex items-center gap-6 px-6 pt-6 pb-2 border-b border-line-subtle bg-surface">
+      <div className="flex items-center justify-between gap-6 px-6 pt-6 pb-2 border-b border-line-subtle bg-surface">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t.nav.complaints[0]}</h1>
           <p className="text-content-muted">{t.nav.complaints[1]}</p>
         </div>
+        <Button asChild className="gap-2 shrink-0">
+          <Link href={`/complaints/new?locale=${locale}`}>
+            <Plus aria-hidden="true" className="size-4" />
+            <span>{locale === 'ar' ? 'شكوى جديدة' : 'New Complaint'}</span>
+          </Link>
+        </Button>
       </div>
       <nav className="flex items-center gap-6 px-6 py-2 border-b border-line-subtle bg-surface">
         <a 

@@ -62,7 +62,7 @@ export type UpdateComplaintStatusData = {
 
 export type CreateComplaintStatusHistoryData = { complaintId: string; fromStatus: ComplaintStatus | null; toStatus: ComplaintStatus; action: ComplaintTransitionAction | null; actorId?: string | null; actorRole: string | null; requestSource: ComplaintTransitionRequestSource; reason?: string | null; correlationId?: string | null };
 
-export type ListComplaintQueueFilter = { branchId?: string | null; role?: string | null; userId?: string | null; userDepartmentId?: string | null; permissions?: string[] };
+export type ListComplaintQueueFilter = { branchId?: string | null; role?: string | null; userId?: string | null; userDepartmentId?: string | null; permissions?: string[]; departmentId?: string | null; direction?: 'RECEIVED' | 'SENT' | 'ALL' | null };
 
 export type ComplaintReportFilter = ListComplaintQueueFilter & { dateFrom?: Date | string | null; dateTo?: Date | string | null; limit?: number | null; offset?: number | null; referenceNumber?: string | null; customer?: string | null; status?: ComplaintStatus | null; categoryId?: string | null; departmentId?: string | null; severity?: ComplaintSeverity | null; ownerId?: string | null; ownerUnassigned?: boolean };
 
@@ -156,27 +156,48 @@ export class ComplaintsRepository {
 
   async listQueue(filter: ListComplaintQueueFilter = {}, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintQueueRecord[]> {
     const where: Prisma.ComplaintWhereInput = { AND: [] };
-    
-    if (filter.permissions?.includes('COMPLAINT_VIEW_ALL')) {
+
+    if (filter.departmentId) {
+      (where.AND as any[]).push({ departmentId: filter.departmentId });
+    }
+
+    const isGlobalManager = filter.role === 'CR_MANAGER' || filter.role === 'ADMIN' || filter.permissions?.includes('COMPLAINT_VIEW_ALL');
+    const isBranchManager = filter.role === 'BRANCH_MANAGER';
+
+    if (isGlobalManager) {
       if (filter.branchId) (where.AND as any[]).push({ branchId: filter.branchId });
-      if (filter.role !== 'CR_MANAGER' && filter.role !== 'ADMIN' && filter.userId) {
-        (where.AND as any[]).push({ OR: [{ departmentId: null }, { department: { code: { not: 'IT' } } }, { ownerId: filter.userId }, { createdById: filter.userId }] });
-      }
-    } else if (filter.permissions?.includes('COMPLAINT_VIEW_BRANCH')) {
+    } else if (isBranchManager) {
       if (filter.branchId) (where.AND as any[]).push({ branchId: filter.branchId });
-      if (filter.role !== 'CR_MANAGER' && filter.role !== 'ADMIN' && filter.userId) {
-        (where.AND as any[]).push({ OR: [{ departmentId: null }, { department: { code: { not: 'IT' } } }, { ownerId: filter.userId }, { createdById: filter.userId }] });
-      }
     } else if (filter.userId) {
-      const isManager = filter.permissions?.includes('COMPLAINT_MANAGE') || filter.permissions?.includes('COMPLAINT_ASSIGN') || filter.permissions?.includes('COMPLAINT_RESOLVE');
-      const orConditions: Prisma.ComplaintWhereInput[] = [
-        { ownerId: filter.userId },
-        { createdById: filter.userId }
-      ];
-      if (isManager && filter.userDepartmentId) {
-        orConditions.push({ departmentId: filter.userDepartmentId });
+      if (filter.branchId) (where.AND as any[]).push({ branchId: filter.branchId });
+      if (!filter.direction) {
+        (where.AND as any[]).push({
+          OR: [
+            { ownerId: filter.userId },
+            { backupOfficerId: filter.userId },
+            { collaboratorId: filter.userId },
+            { createdById: filter.userId },
+          ],
+        });
       }
-      (where.AND as any[]).push({ OR: orConditions });
+    }
+
+    if (filter.direction === 'SENT' && filter.userId) {
+      (where.AND as any[]).push({ createdById: filter.userId });
+    } else if (filter.direction === 'RECEIVED' && filter.userId) {
+      const receivedOr: Prisma.ComplaintWhereInput[] = [
+        { ownerId: filter.userId },
+        { backupOfficerId: filter.userId },
+        { collaboratorId: filter.userId },
+      ];
+      if (filter.userDepartmentId) {
+        receivedOr.push({ departmentId: filter.userDepartmentId });
+      }
+      (where.AND as any[]).push({ OR: receivedOr });
+    }
+
+    if ((where.AND as any[]).length === 0) {
+      delete where.AND;
     }
 
     return client.complaint.findMany({
@@ -215,33 +236,27 @@ export class ComplaintsRepository {
   async findDetail(id: string, filter: ListComplaintQueueFilter = {}, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintDetailRecord | null> {
     const where: Prisma.ComplaintWhereInput = { id, AND: [] };
     
-    if (filter.permissions?.includes('COMPLAINT_VIEW_ALL')) {
+    const isGlobalManager = filter.role === 'CR_MANAGER' || filter.role === 'ADMIN' || filter.permissions?.includes('COMPLAINT_VIEW_ALL');
+    const isBranchManager = filter.role === 'BRANCH_MANAGER';
+
+    if (isGlobalManager) {
       if (filter.branchId) (where.AND as any[]).push({ branchId: filter.branchId });
-      if (filter.role !== 'CR_MANAGER' && filter.role !== 'ADMIN' && filter.userId) {
-        (where.AND as any[]).push({ OR: [{ departmentId: null }, { department: { code: { not: 'IT' } } }, { ownerId: filter.userId }, { createdById: filter.userId }] });
-      }
-    } else if (filter.permissions?.includes('COMPLAINT_VIEW_BRANCH')) {
-      if (filter.branchId) {
-        (where.AND as any[]).push({
-          OR: [
-            { branchId: filter.branchId },
-            ...(filter.userId ? [{ ownerId: filter.userId }, { createdById: filter.userId }] : [])
-          ]
-        });
-      }
-      if (filter.role !== 'CR_MANAGER' && filter.role !== 'ADMIN' && filter.userId) {
-        (where.AND as any[]).push({ OR: [{ departmentId: null }, { department: { code: { not: 'IT' } } }, { ownerId: filter.userId }, { createdById: filter.userId }] });
-      }
+    } else if (isBranchManager) {
+      if (filter.branchId) (where.AND as any[]).push({ branchId: filter.branchId });
     } else if (filter.userId) {
-      const isManager = filter.permissions?.includes('COMPLAINT_MANAGE') || filter.permissions?.includes('COMPLAINT_ASSIGN') || filter.permissions?.includes('COMPLAINT_RESOLVE');
-      const orConditions: Prisma.ComplaintWhereInput[] = [
-        { ownerId: filter.userId },
-        { createdById: filter.userId }
-      ];
-      if (isManager && filter.userDepartmentId) {
-        orConditions.push({ departmentId: filter.userDepartmentId });
-      }
-      (where.AND as any[]).push({ OR: orConditions });
+      if (filter.branchId) (where.AND as any[]).push({ branchId: filter.branchId });
+      (where.AND as any[]).push({
+        OR: [
+          { ownerId: filter.userId },
+          { backupOfficerId: filter.userId },
+          { collaboratorId: filter.userId },
+          { createdById: filter.userId },
+        ],
+      });
+    }
+
+    if ((where.AND as any[]).length === 0) {
+      delete where.AND;
     }
 
     return client.complaint.findFirst({

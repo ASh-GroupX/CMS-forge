@@ -5,7 +5,7 @@ import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { AppException } from '../../core/http-kernel.js';
 import { ComplaintFormOptionsService } from './complaint-form-options.service.js';
-import { auditContext, commentPermission, optionalSeverity, optionalSlaState, optionalStatus, optionalText, pageNumber, queueBranchId, requestRole, requiredQuery, searchBranchId, targetComplaintId, transitionPermission } from './complaints.controller-helpers.js';
+import { auditContext, commentPermission, optionalDirection, optionalSeverity, optionalSlaState, optionalStatus, optionalText, pageNumber, queueBranchId, requestRole, requiredQuery, searchBranchId, targetComplaintId, transitionPermission } from './complaints.controller-helpers.js';
 import { ComplaintRelationsService } from './complaint-relations.service.js';
 import { ComplaintsBoardService } from './complaints.board.service.js';
 import { ComplaintsService } from './complaints.service.js';
@@ -55,6 +55,8 @@ export class ComplaintsController {
       customer: optionalText(query.customer),
       status: optionalStatus(query.status),
       severity: optionalSeverity(query.severity),
+      ...(query.departmentId ? { departmentId: optionalText(query.departmentId) } : {}),
+      ...(query.direction ? { direction: optionalDirection(query.direction) } : {}),
       ...(sla ? { sla } : {}),
       ...owner,
       dateFrom: optionalText(query.dateFrom),

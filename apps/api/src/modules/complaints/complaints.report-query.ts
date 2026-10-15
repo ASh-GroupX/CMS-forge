@@ -14,26 +14,41 @@ export function reportWhere(filter: ComplaintReportFilter): Prisma.ComplaintWher
     ...dateRange(filter),
   };
 
-  if (filter.permissions?.includes('COMPLAINT_VIEW_ALL')) {
+  const isGlobalManager = filter.role === 'CR_MANAGER' || filter.role === 'ADMIN' || filter.permissions?.includes('COMPLAINT_VIEW_ALL');
+  const isBranchManager = filter.role === 'BRANCH_MANAGER';
+
+  if (isGlobalManager) {
     if (filter.branchId) (where.AND as any[]).push({ branchId: filter.branchId });
-    if (filter.role !== 'CR_MANAGER' && filter.role !== 'ADMIN' && filter.userId) {
-      (where.AND as any[]).push({ OR: [{ departmentId: null }, { department: { code: { not: 'IT' } } }, { ownerId: filter.userId }, { createdById: filter.userId }] });
-    }
-  } else if (filter.permissions?.includes('COMPLAINT_VIEW_BRANCH')) {
+  } else if (isBranchManager) {
     if (filter.branchId) (where.AND as any[]).push({ branchId: filter.branchId });
-    if (filter.role !== 'CR_MANAGER' && filter.role !== 'ADMIN' && filter.userId) {
-      (where.AND as any[]).push({ OR: [{ departmentId: null }, { department: { code: { not: 'IT' } } }, { ownerId: filter.userId }, { createdById: filter.userId }] });
+  } else if (filter.userId) {
+    // Non-manager officer: strictly scoped to assigned or created
+    if (filter.branchId) (where.AND as any[]).push({ branchId: filter.branchId });
+    if (!filter.direction && !filter.ownerId && !filter.ownerUnassigned) {
+      (where.AND as any[]).push({
+        OR: [
+          { ownerId: filter.userId },
+          { backupOfficerId: filter.userId },
+          { collaboratorId: filter.userId },
+          { createdById: filter.userId },
+        ],
+      });
     }
-  } else if (filter.userId && !filter.ownerId && !filter.ownerUnassigned) {
-    const isManager = filter.permissions?.includes('COMPLAINT_MANAGE') || filter.permissions?.includes('COMPLAINT_ASSIGN') || filter.permissions?.includes('COMPLAINT_RESOLVE');
-    const orConditions: Prisma.ComplaintWhereInput[] = [
+  }
+
+  // Direction filter
+  if (filter.direction === 'SENT' && filter.userId) {
+    (where.AND as any[]).push({ createdById: filter.userId });
+  } else if (filter.direction === 'RECEIVED' && filter.userId) {
+    const receivedOr: Prisma.ComplaintWhereInput[] = [
       { ownerId: filter.userId },
-      { createdById: filter.userId }
+      { backupOfficerId: filter.userId },
+      { collaboratorId: filter.userId },
     ];
-    if (isManager && filter.userDepartmentId) {
-      orConditions.push({ departmentId: filter.userDepartmentId });
+    if (filter.userDepartmentId) {
+      receivedOr.push({ departmentId: filter.userDepartmentId });
     }
-    (where.AND as any[]).push({ OR: orConditions });
+    (where.AND as any[]).push({ OR: receivedOr });
   }
 
   if ((where.AND as any[]).length === 0) {

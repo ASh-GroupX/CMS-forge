@@ -51,7 +51,7 @@ export type CreateInternalComplaintInput = {
 
 export type ComplaintCreationResult = { id: string; referenceNumber: string; status: ComplaintStatus };
 
-export type ComplaintQueueFilter = { branchId?: string | null; role?: string | null; userId?: string | null; userDepartmentId?: string | null; permissions?: string[] };
+export type ComplaintQueueFilter = { branchId?: string | null; role?: string | null; userId?: string | null; userDepartmentId?: string | null; permissions?: string[]; departmentId?: string | null; direction?: 'RECEIVED' | 'SENT' | 'ALL' | null };
 export type ComplaintReportRow = { id: string; referenceNumber: string; branchId: string; categoryId: string; status: ComplaintStatus; severity: ComplaintSeverity; subject: string; ownerId: string | null; assignedDepartmentId: string | null; displayTimeZone: string; createdAt: string; updatedAt: string };
 export type ComplaintSearchInput = ComplaintReportFilter & { sla?: ComplaintQueueItemDto['slaState'] | null };
 export type ComplaintSearchRow = ComplaintQueueItemDto & { categoryId: string; customerName: string; customerPhone: string; customerIdentifier: string | null };

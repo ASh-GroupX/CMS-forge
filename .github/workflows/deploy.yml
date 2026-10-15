@@ -250,7 +250,11 @@ jobs:
               "ALTER TABLE \"complaints\" ADD COLUMN IF NOT EXISTS \"investigation_notes\" TEXT;" \
               "ALTER TABLE \"complaints\" ADD COLUMN IF NOT EXISTS \"investigated_at\" TIMESTAMP(3);" \
               "INSERT INTO \"permissions\" (\"id\", \"code\", \"name_en\", \"name_ar\", \"is_active\", \"created_at\", \"updated_at\") VALUES ('perm_complaint_resolve', 'COMPLAINT_RESOLVE', 'Resolve Complaint', 'حل الشكوى', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT (\"code\") DO NOTHING;" \
-              "INSERT INTO \"role_permissions\" (\"role_id\", \"permission_id\") SELECT r.\"id\", p.\"id\" FROM \"roles\" r CROSS JOIN \"permissions\" p WHERE p.\"code\" = 'COMPLAINT_RESOLVE' AND r.\"code\" IN ('ADMIN', 'CR_MANAGER', 'BRANCH_MANAGER', 'CR_OFFICER') ON CONFLICT (\"role_id\", \"permission_id\") DO NOTHING;" |
+              "INSERT INTO \"role_permissions\" (\"role_id\", \"permission_id\") SELECT r.\"id\", p.\"id\" FROM \"roles\" r CROSS JOIN \"permissions\" p WHERE p.\"code\" = 'COMPLAINT_RESOLVE' AND r.\"code\" IN ('ADMIN', 'CR_MANAGER', 'BRANCH_MANAGER', 'CR_OFFICER') ON CONFLICT (\"role_id\", \"permission_id\") DO NOTHING;" \
+              "INSERT INTO \"board_stages\" (\"id\", \"code\", \"scope\", \"name_en\", \"name_ar\", \"color\", \"position\", \"is_default\", \"mapped_task_status\", \"mapped_complaint_status\", \"updated_at\") VALUES ('board_stage_tickets_completed', 'TICKETS_COMPLETED', 'TICKETS', 'Customer Contacted', 'تم التواصل مع العميل', 'teal', 6, true, NULL, 'COMPLETED', CURRENT_TIMESTAMP) ON CONFLICT (\"code\") DO UPDATE SET \"is_default\" = true, \"name_en\" = EXCLUDED.\"name_en\", \"name_ar\" = EXCLUDED.\"name_ar\", \"color\" = EXCLUDED.\"color\", \"mapped_complaint_status\" = 'COMPLETED', \"updated_at\" = CURRENT_TIMESTAMP;" \
+              "UPDATE \"board_stages\" SET \"position\" = 7 WHERE \"code\" = 'TICKETS_CLOSED';" \
+              "UPDATE \"board_stages\" SET \"position\" = 8 WHERE \"code\" = 'TICKETS_REOPENED';" \
+              "UPDATE \"board_stages\" SET \"position\" = 9 WHERE \"code\" = 'TICKETS_REJECTED';" |
               docker compose --env-file .env.production -f docker-compose.prod.yml exec -T postgres \
                 sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
             echo "Complaint root causes and sales advisors verified"

@@ -24,11 +24,11 @@ test('board route requires the session, branch-view permission, and RBAC guard, 
 
 test('board route scopes to the caller branch from the session; admins are unrestricted', async () => {
   const officer = await captureActor(principal({ userId: 'user_officer', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_a' }));
-  assert.deepEqual(officer, { userId: 'user_officer', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_a' });
+  assert.deepEqual(officer, { userId: 'user_officer', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_a', permissions: [] });
 
   const admin = await captureActor(principal({ userId: 'user_admin', roleCode: RoleCode.ADMIN, branchId: 'branch_a' }));
   // ADMIN board query drops the branch filter (all branches), matching the queue route.
-  assert.deepEqual(admin, { userId: 'user_admin', roleCode: RoleCode.ADMIN, branchId: null });
+  assert.deepEqual(admin, { userId: 'user_admin', roleCode: RoleCode.ADMIN, branchId: null, permissions: [] });
 });
 
 test('board service passes the actor branch and role straight to the scoped queue', async () => {
@@ -38,8 +38,8 @@ test('board service passes the actor branch and role straight to the scoped queu
     { listQueue: async (filter: unknown) => { captured = filter; return []; } } as unknown as ComplaintsService,
   );
 
-  await service.board({ userId: 'user_officer', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_a' }, NOW);
-  assert.deepEqual(captured, { branchId: 'branch_a', role: RoleCode.CR_OFFICER, userId: 'user_officer' });
+  await service.board({ userId: 'user_officer', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_a', permissions: ['COMPLAINT_VIEW_BRANCH'] }, NOW);
+  assert.deepEqual(captured, { branchId: 'branch_a', role: RoleCode.CR_OFFICER, userId: 'user_officer', permissions: ['COMPLAINT_VIEW_BRANCH'] });
 });
 
 test('board groups complaints into the stage that maps their status, keeping empty columns', () => {
@@ -92,6 +92,32 @@ test('a status with no active column falls back to the first stage; never throws
   assert.deepEqual(cardIds(board, 's_only'), ['c_orphan']);
 
   assert.deepEqual(buildComplaintBoard([], [card({ id: 'c_x', status: ComplaintStatus.SUBMITTED })], () => []), { stages: [], columns: [] });
+});
+
+test('completed complaints map to TICKETS_COMPLETED, and fall back to RESOLVED rather than DRAFT', () => {
+  const stages = [
+    stage({ id: 's_draft', position: 0, mappedComplaintStatus: ComplaintStatus.DRAFT }),
+    stage({ id: 's_resolved', position: 1, mappedComplaintStatus: ComplaintStatus.RESOLVED }),
+    stage({ id: 's_completed', position: 2, mappedComplaintStatus: ComplaintStatus.COMPLETED }),
+  ];
+  const boardWithCompletedStage = buildComplaintBoard(
+    stages,
+    [card({ id: 'c_done', status: ComplaintStatus.COMPLETED })],
+    () => [],
+  );
+  assert.deepEqual(cardIds(boardWithCompletedStage, 's_completed'), ['c_done']);
+
+  // If TICKETS_COMPLETED is absent, must fall back to RESOLVED, never DRAFT
+  const stagesWithoutCompleted = [
+    stage({ id: 's_draft', position: 0, mappedComplaintStatus: ComplaintStatus.DRAFT }),
+    stage({ id: 's_resolved', position: 1, mappedComplaintStatus: ComplaintStatus.RESOLVED }),
+  ];
+  const fallbackBoard = buildComplaintBoard(
+    stagesWithoutCompleted,
+    [card({ id: 'c_done', status: ComplaintStatus.COMPLETED })],
+    () => [],
+  );
+  assert.deepEqual(cardIds(fallbackBoard, 's_resolved'), ['c_done']);
 });
 
 test('per-card allowedTransitions carry the target status; managers act where officers cannot', async () => {

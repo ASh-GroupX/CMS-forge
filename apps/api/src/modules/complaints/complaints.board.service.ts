@@ -31,7 +31,7 @@ export class ComplaintsBoardService {
     const [stages, queue] = await Promise.all([
       this.boardRepository.listStages(),
       // Identical branch/role scoping as GET /complaints — from the server session only.
-      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode, userId: actor.userId }),
+      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode, userId: actor.userId, ...(actor.permissions ? { permissions: actor.permissions } : {}) }),
     ]);
     return buildComplaintBoard(stages, recentQueue(queue, now), (card) => allowedTransitionsFor(this.complaintsService, card, actor));
   }
@@ -39,7 +39,7 @@ export class ComplaintsBoardService {
   async boardByDepartment(actor: ComplaintBoardActor, now: Date = new Date()): Promise<ComplaintBoardResponseDto> {
     const [departments, queue] = await Promise.all([
       this.boardRepository.listActiveDepartments(),
-      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode, userId: actor.userId }),
+      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode, userId: actor.userId, ...(actor.permissions ? { permissions: actor.permissions } : {}) }),
     ]);
     return buildComplaintBoardByDepartment(departments, recentQueue(queue, now), (card) => allowedTransitionsFor(this.complaintsService, card, actor));
   }
@@ -47,7 +47,7 @@ export class ComplaintsBoardService {
   async boardByBranch(actor: ComplaintBoardActor, now: Date = new Date()): Promise<ComplaintBoardResponseDto> {
     const [branches, queue] = await Promise.all([
       this.boardRepository.listActiveBranches(),
-      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode, userId: actor.userId }),
+      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode, userId: actor.userId, ...(actor.permissions ? { permissions: actor.permissions } : {}) }),
     ]);
     return buildComplaintBoardByBranch(branches, recentQueue(queue, now), (card) => allowedTransitionsFor(this.complaintsService, card, actor));
   }
@@ -55,7 +55,7 @@ export class ComplaintsBoardService {
   async boardByCategory(actor: ComplaintBoardActor, now: Date = new Date()): Promise<ComplaintBoardResponseDto> {
     const [categories, queue] = await Promise.all([
       this.boardRepository.listActiveCategories(),
-      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode, userId: actor.userId }),
+      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode, userId: actor.userId, ...(actor.permissions ? { permissions: actor.permissions } : {}) }),
     ]);
     return buildComplaintBoardByCategory(categories, recentQueue(queue, now), (card) => allowedTransitionsFor(this.complaintsService, card, actor));
   }
@@ -81,9 +81,8 @@ function recentQueue(queue: ComplaintQueueItemDto[], now: Date): ComplaintQueueI
 
 // Pure board projection: one column per active TICKETS stage (empty columns kept).
 // Each complaint is bucketed by the stage that maps its status (preferring the
-// default, else the lowest position), falling back to the first stage so no card
-// is silently dropped. Column placement is cosmetic — allowedTransitions derive
-// from the card's real status, so the backend state machine stays authoritative.
+// default, else the lowest position), falling back to a non-draft stage or the
+// first stage so no card is silently dropped or wrongly marked as Draft.
 export function buildComplaintBoard(
   stages: ComplaintBoardStageRecord[],
   cards: ComplaintQueueItemDto[],
@@ -94,12 +93,22 @@ export function buildComplaintBoard(
     if (!stage.mappedComplaintStatus) continue;
     if (stage.isDefault || !stageByStatus.has(stage.mappedComplaintStatus)) stageByStatus.set(stage.mappedComplaintStatus, stage.id);
   }
-  const fallbackStageId = stages[0]?.id ?? null;
+  const fallbackStageId: string | null = stages[0]?.id ?? null;
+  const nonDraftFallbackId: string | null = stages.find((s) => s.mappedComplaintStatus && s.mappedComplaintStatus !== ComplaintStatus.DRAFT)?.id ?? fallbackStageId;
 
   const grouped = new Map<string, ComplaintBoardCardDto[]>();
   for (const stage of stages) grouped.set(stage.id, []);
   for (const card of cards) {
-    const stageId = stageByStatus.get(card.status) ?? fallbackStageId;
+    let stageId: string | null = stageByStatus.get(card.status) ?? null;
+    if (!stageId) {
+      if (card.status === ComplaintStatus.COMPLETED) {
+        stageId = stageByStatus.get(ComplaintStatus.RESOLVED) ?? stageByStatus.get(ComplaintStatus.CLOSED) ?? nonDraftFallbackId;
+      } else if (card.status !== ComplaintStatus.DRAFT) {
+        stageId = nonDraftFallbackId;
+      } else {
+        stageId = fallbackStageId;
+      }
+    }
     if (stageId) grouped.get(stageId)!.push({ ...card, stageId, allowedTransitions: transitionsFor(card) });
   }
 

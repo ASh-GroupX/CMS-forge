@@ -60,6 +60,7 @@ export const staffShellText = {
       filters: {
         status: 'Status',
         branch: 'Branch',
+        department: 'Department',
         severity: 'Severity',
         sla: 'Due status',
         search: 'Search',
@@ -211,6 +212,7 @@ export const staffShellText = {
       filters: {
         status: 'الحالة',
         branch: 'الفرع',
+        department: 'القسم',
         severity: 'الخطورة',
         sla: 'حالة الموعد',
         search: 'بحث',
