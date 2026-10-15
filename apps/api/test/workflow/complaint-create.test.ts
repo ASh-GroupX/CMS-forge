@@ -112,6 +112,7 @@ test('complaint creation persists complaint, initial history, and audit in one t
   const result = await service.createInternal({
     customerName: ' Faisal Al-Otaibi ',
     customerPhone: '+966500000001',
+    customerNumber: 'CUST-000001',
     categoryId: 'cat_engine',
     description: ' Engine makes a knocking noise. ',
     incidentAt: '2026-06-18T09:00:00.000Z',
@@ -145,7 +146,7 @@ test('complaint creation persists complaint, initial history, and audit in one t
         categoryId: 'cat_engine',
         customerName: 'Faisal Al-Otaibi',
         customerPhone: '+966500000001',
-        customerNumber: null,
+        customerNumber: 'CUST-000001',
         customerDataSource: 'MANUAL',
         channel: null,
         customerType: null,
@@ -167,6 +168,10 @@ test('complaint creation persists complaint, initial history, and audit in one t
         vehicleRelated: true,
         vehicleDataUnavailableReason: null,
         departmentId: null,
+        ownerId: null,
+        backupOfficerId: null,
+        collaboratorId: null,
+        alternativeCarProvided: false,
         createdById: 'usr_1',
         type: 'COMPLAINT',
         templateId: null,
@@ -323,6 +328,7 @@ test('complaint creation links a customer complaint case in the same transaction
     branchId: 'branch_main',
     subject: 'Engine noise',
     severity: ComplaintSeverity.HIGH,
+    vehicleRelated: false,
     actorId: 'usr_1',
     correlationId: 'req_case',
   });
@@ -507,6 +513,10 @@ test('complaint creation route delegates with guarded branch and server actor co
     ...validBody(),
     branchId: 'branch_main',
     actorId: 'usr_officer',
+    ownerId: null,
+    backupOfficerId: null,
+    collaboratorId: null,
+    alternativeCarProvided: false,
     saveAsDraft: false,
     channel: null,
     customerType: null,
@@ -567,7 +577,7 @@ test('complaint create/read routes use permission guards and keep CSRF/branch sc
   assertSafePermissionAudit(auditRecords);
 });
 
-test('complaint creation route audits branch-scope denials', async () => {
+test('complaint creation route audits branch-scope denials for branch-scoped roles and allows CR officer', async () => {
   const auditRecords: AuditRecordInput[] = [];
   const guard = new RbacGuard(
     new Reflector(),
@@ -575,8 +585,9 @@ test('complaint creation route audits branch-scope denials', async () => {
   );
 
   assert.equal(await guard.canActivate(context(request())), true);
+  assert.equal(await guard.canActivate(context(request(RoleCode.CR_OFFICER, 'branch_other'))), true);
   await assert.rejects(
-    guard.canActivate(context(request(RoleCode.CR_OFFICER, 'branch_other'))),
+    guard.canActivate(context(request(RoleCode.BRANCH_MANAGER, 'branch_other'))),
     (error: unknown) => error instanceof AppException && error.code === 'BRANCH_SCOPE_FORBIDDEN',
   );
 
@@ -632,6 +643,7 @@ test('complaint transition route uses server role instead of client-owned author
       fromStatus: ComplaintStatus.SUBMITTED,
       action: ComplaintTransitionAction.ACCEPT_INTAKE,
       actorRole: RoleCode.CR_MANAGER,
+      actorPermissions: ['COMPLAINT_CREATE', 'COMPLAINT_VIEW_BRANCH'],
       actorId: 'usr_officer',
       requestSource: ComplaintTransitionRequestSource.STAFF_API,
       reason: null,
@@ -775,7 +787,10 @@ test('complaint queue route derives branch scope from query or server principal'
 
   assert.deepEqual(await controller.list(undefined, request(RoleCode.CR_OFFICER)), { items: [] });
   assert.deepEqual(await controller.list('branch_any', request(RoleCode.ADMIN)), { items: [] });
-  assert.deepEqual(calls, [{ branchId: 'branch_main', role: RoleCode.CR_OFFICER, userId: 'usr_officer' }, { branchId: 'branch_any', role: RoleCode.ADMIN, userId: 'usr_officer' }]);
+  assert.deepEqual(calls, [
+    { branchId: 'branch_main', role: RoleCode.CR_OFFICER, userId: 'usr_officer', userDepartmentId: null, permissions: ['COMPLAINT_CREATE', 'COMPLAINT_VIEW_BRANCH'] },
+    { branchId: 'branch_any', role: RoleCode.ADMIN, userId: 'usr_officer', userDepartmentId: null, permissions: ['COMPLAINT_CREATE', 'COMPLAINT_VIEW_BRANCH'] },
+  ]);
 });
 
 test('complaint detail service returns explicit timeline and hides missing scoped complaints', async () => {
@@ -856,8 +871,8 @@ test('complaint detail route delegates with server-derived branch scope', async 
   const response = await controller.get('cmp_1', undefined, request(RoleCode.CR_OFFICER));
   assert.equal(response.complaint.id, 'cmp_1');
   assert.deepEqual(response.complaint.allowedActions, [ComplaintTransitionAction.ACCEPT_INTAKE]);
-  assert.deepEqual(calls[0], { id: 'cmp_1', filter: { branchId: 'branch_main', role: RoleCode.CR_OFFICER, userId: 'usr_officer' } });
-  assert.deepEqual(calls[1], { allowedActionsFor: { status: ComplaintStatus.SUBMITTED, actor: { roleCode: RoleCode.CR_OFFICER, userId: 'usr_officer' } } });
+  assert.deepEqual(calls[0], { id: 'cmp_1', filter: { branchId: 'branch_main', role: RoleCode.CR_OFFICER, userId: 'usr_officer', userDepartmentId: null, permissions: ['COMPLAINT_CREATE', 'COMPLAINT_VIEW_BRANCH'] } });
+  assert.deepEqual(calls[1], { allowedActionsFor: { status: ComplaintStatus.SUBMITTED, actor: { roleCode: RoleCode.CR_OFFICER, userId: 'usr_officer', permissions: ['COMPLAINT_CREATE', 'COMPLAINT_VIEW_BRANCH'] } } });
 });
 
 test('complaint comments validate body and audit creation in one transaction', async () => {

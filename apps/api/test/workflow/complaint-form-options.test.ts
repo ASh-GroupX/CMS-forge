@@ -12,7 +12,7 @@ test('complaint form options come from DB and branch scope comes from the server
     department: { findMany: async (query: unknown) => { departmentQueries.push(query); return [{ id: 'dept_service', code: 'SERVICE', nameEn: 'Service', nameAr: 'الصيانة' }]; } },
   } as never);
 
-  const options = await service.list({ sessionId: 'ses_1', userId: 'usr_1', email: 'u@test', nameEn: 'User', nameAr: 'User', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_main' });
+  const options = await service.list({ sessionId: 'ses_1', userId: 'usr_1', email: 'u@test', nameEn: 'User', nameAr: 'User', roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_main' });
 
   assert.deepEqual((branchQueries[0] as { where: unknown }).where, { isActive: true, id: 'branch_main' });
   assert.deepEqual((departmentQueries[0] as { where: unknown }).where, { isActive: true, OR: [{ branchId: 'branch_main' }, { branchId: null }] });
@@ -20,4 +20,18 @@ test('complaint form options come from DB and branch scope comes from the server
   assert.deepEqual(options.categories.map((category) => category.code), ['ENGINE']);
   assert.deepEqual(options.departments.map((department) => department.code), ['SERVICE']);
   assert.deepEqual(options.severities, Object.values(ComplaintSeverity));
+});
+
+test('complaint form options allow CR officer to see all branches for cross-branch intake', async () => {
+  const branchQueries: unknown[] = [];
+  const service = new ComplaintFormOptionsService({
+    branch: { findMany: async (query: unknown) => { branchQueries.push(query); return [{ id: 'branch_main', code: 'MAIN', nameEn: 'Main Branch', nameAr: 'الفرع الرئيسي' }, { id: 'branch_alex', code: 'ALEX', nameEn: 'Alexandria', nameAr: 'الإسكندرية' }]; } },
+    category: { findMany: async () => [] },
+    department: { findMany: async () => [] },
+  } as never);
+
+  const options = await service.list({ sessionId: 'ses_1', userId: 'usr_1', email: 'u@test', nameEn: 'User', nameAr: 'User', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_main' });
+
+  assert.deepEqual((branchQueries[0] as { where: unknown }).where, { isActive: true });
+  assert.equal(options.branches.length, 2);
 });

@@ -9,13 +9,14 @@ export function createComplaintData(input: CreateInternalComplaintInput): Omit<C
   const vehicleReason = optionalText(input.vehicleDataUnavailableReason);
   const customerName = (input.customerName ?? '').trim();
   const subject = (input.subject && input.subject.trim()) ? input.subject.trim() : customerName;
+  const isVehicleRequired = input.vehicleRelated !== false && !vehicleReason;
   const errors = [
     ...requiredTextError(customerName, 'customerName'),
     ...contactErrors(input),
     ...requiredTextError(input.categoryId, 'categoryId'),
     ...requiredTextError(input.description, 'description'),
     ...requiredTextError(input.branchId, 'branchId'),
-    ...vinErrors(input.vehicleVin),
+    ...(isVehicleRequired ? vinErrors(input.vehicleVin) : (input.vehicleVin ? vinErrors(input.vehicleVin) : [])),
     ...requiredEnumError(input.severity, ComplaintSeverity, 'severity'),
     ...incidentAtErrors(input.incidentAt),
   ];

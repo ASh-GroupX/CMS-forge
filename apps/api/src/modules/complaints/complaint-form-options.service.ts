@@ -4,7 +4,7 @@ import type { StaffPrincipal } from '../../core/auth.guard.js';
 import { PrismaService } from '../../core/http-kernel.js';
 
 function hasGlobalView(principal: StaffPrincipal): boolean {
-  if (principal.roleCode === RoleCode.ADMIN || principal.roleCode === RoleCode.CR_MANAGER) return true;
+  if (principal.roleCode === RoleCode.ADMIN || principal.roleCode === RoleCode.CR_MANAGER || principal.roleCode === RoleCode.CR_OFFICER) return true;
   return principal.permissions?.includes('COMPLAINT_VIEW_ALL') ?? false;
 }
 
@@ -71,23 +71,23 @@ export class ComplaintFormOptionsService {
         select: { id: true, code: true, nameEn: true, nameAr: true, branchId: true },
         where: { isActive: true, ...(isGlobal ? {} : { OR: [{ branchId: principal.branchId ?? '' }, { branchId: null }] }) },
       }),
-      this.prisma.complaintRootCause.findMany({
+      this.prisma.complaintRootCause?.findMany({
         orderBy: [{ order: 'asc' }, { nameEn: 'asc' }],
         select: { id: true, nameEn: true, nameAr: true, order: true },
         where: { isActive: true },
-      }).catch(() => []),
-      this.prisma.complaintSalesAdvisor.findMany({
+      })?.catch?.(() => []) ?? [],
+      this.prisma.complaintSalesAdvisor?.findMany({
         orderBy: [{ order: 'asc' }, { nameEn: 'asc' }],
         select: { id: true, nameEn: true, nameAr: true, order: true },
         where: { isActive: true },
-      }).catch(() => []),
-      this.prisma.user.findMany({
+      })?.catch?.(() => []) ?? [],
+      this.prisma.user?.findMany({
         orderBy: [{ nameEn: 'asc' }],
         select: { id: true, nameEn: true, nameAr: true, email: true, departmentId: true, branchId: true, role: { select: { code: true } } },
         where: { isActive: true },
-      }).catch(() => []),
+      })?.catch?.(() => []) ?? [],
     ]);
-    const mappedUsers = users.map((u) => ({
+    const mappedUsers = (users || []).map((u) => ({
       id: u.id,
       nameEn: u.nameEn,
       nameAr: u.nameAr,
