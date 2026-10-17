@@ -59,7 +59,6 @@ export function WorkingNotesList({ timeline, complaintId }: { timeline: Complain
                       href={`/api/complaints/${complaintId}/attachments/${note.related.id}/download?redirect=1`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      download
                       className="flex items-center gap-1.5 rounded-lg border border-line-subtle bg-surface-canvas px-2 py-1.5 hover:bg-surface-raised hover:border-brand/30 transition-colors"
                     >
                       <Paperclip className="size-3.5 text-content-muted" />

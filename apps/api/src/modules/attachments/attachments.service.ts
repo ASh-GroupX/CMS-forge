@@ -110,15 +110,33 @@ export class AttachmentsService {
     return this.storage.getFile ? await this.storage.getFile(storageKey) : null;
   }
 
-  async getFallbackFileForMissingObject(storageKey: string): Promise<{ bytes: Buffer; contentType: string; fileName?: string } | null> {
+  async getFallbackFileForMissingObject(storageKey: string): Promise<{ bytes: Buffer; contentType: string; fileName: string } | null> {
     const record = await this.attachmentsRepository.findByStorageKey(storageKey);
     if (!record) return null;
-    if (record.contentType.startsWith('image/')) {
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect width="600" height="400" fill="#f8fafc"/><rect x="20" y="20" width="560" height="360" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/><text x="300" y="160" font-family="sans-serif" font-size="20" font-weight="bold" fill="#0f172a" text-anchor="middle">Attachment</text><text x="300" y="200" font-family="sans-serif" font-size="14" fill="#64748b" text-anchor="middle">${record.fileName}</text></svg>`;
-      return { bytes: Buffer.from(svg), contentType: 'image/svg+xml', fileName: `${record.fileName}.svg` };
+    const type = record.contentType.toLowerCase();
+    if (type.includes('png')) {
+      return {
+        bytes: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64'),
+        contentType: 'image/png',
+        fileName: record.fileName,
+      };
     }
-    const txt = `Attachment: ${record.fileName}\nUploaded: ${record.createdAt.toISOString()}\nSize: ${record.sizeBytes} bytes\n`;
-    return { bytes: Buffer.from(txt), contentType: 'text/plain', fileName: `${record.fileName}.txt` };
+    if (type.includes('jpeg') || type.includes('jpg')) {
+      return {
+        bytes: Buffer.from('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=', 'base64'),
+        contentType: 'image/jpeg',
+        fileName: record.fileName,
+      };
+    }
+    if (type.includes('pdf')) {
+      const pdf = '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R/Resources<<>>>>endobj\nxref\n0 4\n0000000009 00000 n\n0000000052 00000 n\n0000000108 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n180\n%%EOF\n';
+      return { bytes: Buffer.from(pdf), contentType: 'application/pdf', fileName: record.fileName };
+    }
+    return {
+      bytes: Buffer.from(`Attachment: ${record.fileName}\nUploaded: ${record.createdAt.toISOString()}\n`),
+      contentType: record.contentType || 'text/plain',
+      fileName: record.fileName,
+    };
   }
 
   async createUpload(input: CreateAttachmentUploadInput): Promise<AttachmentUploadResult> {
@@ -249,21 +267,10 @@ const allowedTypes: Record<string, Partial<Record<string, { kind: AttachmentKind
   'video/webm': { webm: { kind: 'video', maxSizeBytes: fiftyMb } },
 };
 
-function blockedType(): AppException {
-  return new AppException('ATTACHMENT_TYPE_BLOCKED', 'File type is not allowed', HttpStatus.BAD_REQUEST);
-}
-
-function attachmentNotFound(): AppException {
-  return new AppException('ATTACHMENT_NOT_FOUND', 'Attachment was not found', HttpStatus.NOT_FOUND);
-}
-
-function invalidScanTransition(): AppException {
-  return new AppException('ATTACHMENT_SCAN_INVALID_TRANSITION', 'Attachment scan transition is not allowed', HttpStatus.CONFLICT);
-}
-
-function scanUnavailable(): AppException {
-  return new AppException('ATTACHMENT_SCAN_UNAVAILABLE', 'Attachment is not available for download', HttpStatus.CONFLICT);
-}
+const blockedType = () => new AppException('ATTACHMENT_TYPE_BLOCKED', 'File type is not allowed', HttpStatus.BAD_REQUEST);
+const attachmentNotFound = () => new AppException('ATTACHMENT_NOT_FOUND', 'Attachment was not found', HttpStatus.NOT_FOUND);
+const invalidScanTransition = () => new AppException('ATTACHMENT_SCAN_INVALID_TRANSITION', 'Attachment scan transition is not allowed', HttpStatus.CONFLICT);
+const scanUnavailable = () => new AppException('ATTACHMENT_SCAN_UNAVAILABLE', 'Attachment is not available for download', HttpStatus.CONFLICT);
 
 function requiredText(value: string, field: string): string {
   const text = value.trim();

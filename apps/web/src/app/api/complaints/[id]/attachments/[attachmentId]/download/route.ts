@@ -28,7 +28,7 @@ export async function GET(request: Request, { params }: { params: Promise<RouteP
     const token = downloadToken(body);
     if (token && (isHttpUrl(token) || token.startsWith('/'))) {
       if (isHttpUrl(token)) {
-        const res = NextResponse.redirect(token);
+        const res = NextResponse.redirect(token, 302);
         res.headers.set('cache-control', 'no-store');
         return res;
       }
@@ -68,7 +68,7 @@ function redirectDownload(body: ArrayBuffer, requestUrl: string): Response {
   const token = downloadToken(body);
   if (token && (isHttpUrl(token) || token.startsWith('/'))) {
     const target = isHttpUrl(token) ? token : new URL(token, requestUrl).toString();
-    const response = NextResponse.redirect(target);
+    const response = NextResponse.redirect(target, 302);
     response.headers.set('cache-control', 'no-store');
     return response;
   }

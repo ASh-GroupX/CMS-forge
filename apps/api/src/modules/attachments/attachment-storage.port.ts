@@ -152,12 +152,13 @@ export class S3AttachmentStorage implements AttachmentStoragePort {
   async putObject(input: AttachmentStorageObjectInput): Promise<AttachmentStoredObject> {
     const storageKey = input.storageKey?.trim() || `attachments/${randomUUID()}`;
     try {
-      await this.options.client.send(new PutObjectCommand({
+      const putRes = await withTimeout(this.options.client.send(new PutObjectCommand({
         Bucket: this.bucket,
         Key: storageKey,
         Body: Buffer.from(input.bytes),
         ContentType: input.contentType,
-      }));
+      })), 1200);
+      if (!putRes) throw new Error('S3 putObject timed out');
       return { storageKey, contentType: input.contentType, sizeBytes: input.bytes.byteLength };
     } catch (error) {
       console.warn(`[S3AttachmentStorage] PutObject fallback for ${storageKey}: ${(error as Error)?.message}`);
@@ -169,11 +170,12 @@ export class S3AttachmentStorage implements AttachmentStoragePort {
     const key = requiredText(storageKey, 'storageKey');
     try {
       await this.assertObjectExists(key);
-      const token = await this.presigner(
+      const token = await withTimeout(this.presigner(
         this.options.client as S3Client,
         new GetObjectCommand({ Bucket: this.bucket, Key: key }),
         { expiresIn: this.downloadTtlSeconds },
-      );
+      ), 1000);
+      if (!token) throw new Error('Presigner timed out');
       return { storageKey: key, token, expiresAt: new Date(Date.now() + this.downloadTtlSeconds * 1000) };
     } catch {
       return this.fallbackStorage.createDownloadToken(key);
@@ -186,32 +188,46 @@ export class S3AttachmentStorage implements AttachmentStoragePort {
 
     let key = storageKey;
     try { key = decodeURIComponent(key); } catch {}
-    const candidates = [key, storageKey, `attachments/${path.basename(key)}`, path.basename(key)];
-    for (const testKey of candidates) {
-      try {
-        const s3Res = await this.options.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: testKey }));
-        if (s3Res.Body) {
-          const stream = s3Res.Body as any;
-          const chunks: Buffer[] = [];
-          for await (const chunk of stream) chunks.push(Buffer.from(chunk));
-          const bytes = Buffer.concat(chunks);
-          const contentType = s3Res.ContentType || 'application/octet-stream';
-          void this.fallbackStorage.putObject({ bytes, contentType, storageKey: key }).catch(() => {});
-          return { bytes, contentType };
-        }
-      } catch {}
-    }
+    try {
+      const s3Res = await withTimeout(
+        this.options.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key })),
+        800,
+      );
+      if (s3Res?.Body) {
+        const stream = s3Res.Body as any;
+        const chunks: Buffer[] = [];
+        for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+        const bytes = Buffer.concat(chunks);
+        const contentType = s3Res.ContentType || 'application/octet-stream';
+        void this.fallbackStorage.putObject({ bytes, contentType, storageKey: key }).catch(() => {});
+        return { bytes, contentType };
+      }
+    } catch {}
     return null;
   }
 
   private async assertObjectExists(storageKey: string): Promise<void> {
     try {
-      await this.options.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: storageKey }));
+      const res = await withTimeout(
+        this.options.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: storageKey })),
+        800,
+      );
+      if (!res) throw attachmentObjectMissing();
     } catch (error) {
       if (isMissingObject(error)) throw attachmentObjectMissing();
       throw error;
     }
   }
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms = 800): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), ms);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
 }
 
 export function attachmentStorageFromEnv(env: AttachmentStorageEnv = process.env): AttachmentStoragePort {

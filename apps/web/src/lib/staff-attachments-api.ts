@@ -110,7 +110,6 @@ function openAttachmentDownloadTarget(target: string): void {
     anchor.href = target;
     anchor.target = '_blank';
     anchor.rel = 'noopener noreferrer';
-    anchor.download = '';
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);
