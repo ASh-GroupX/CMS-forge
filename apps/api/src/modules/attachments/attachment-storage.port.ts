@@ -24,14 +24,62 @@ export type AttachmentDownloadToken = {
   expiresAt: Date;
 };
 
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+
 export interface AttachmentStoragePort {
   putObject(input: AttachmentStorageObjectInput): Promise<AttachmentStoredObject>;
   createDownloadToken(storageKey: string): Promise<AttachmentDownloadToken>;
+  getFile?(storageKey: string): { bytes: Buffer; contentType: string } | null;
 }
 
 type AttachmentStorageEnv = Record<string, string | undefined>;
 type S3ClientLike = Pick<S3Client, 'send'>;
 type S3Presigner = (client: S3Client, command: GetObjectCommand, options: { expiresIn: number }) => Promise<string>;
+
+@Injectable()
+export class LocalDiskAttachmentStorage implements AttachmentStoragePort {
+  private readonly uploadDir: string;
+  private readonly memory = new Map<string, { bytes: Uint8Array; contentType: string }>();
+
+  constructor(uploadDir?: string) {
+    this.uploadDir = uploadDir || process.env.ATTACHMENT_LOCAL_DIR || path.resolve(process.cwd(), 'uploads', 'attachments');
+    try { fs.mkdirSync(this.uploadDir, { recursive: true }); } catch {}
+  }
+
+  async putObject(input: AttachmentStorageObjectInput): Promise<AttachmentStoredObject> {
+    const storageKey = input.storageKey?.trim() || `attachments/${randomUUID()}`;
+    const safeKey = storageKey.replace(/[^a-zA-Z0-9_-]/g, '_');
+    try {
+      const filePath = path.join(this.uploadDir, safeKey);
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, Buffer.from(input.bytes));
+    } catch {}
+    this.memory.set(storageKey, { bytes: input.bytes, contentType: input.contentType });
+    return { storageKey, contentType: input.contentType, sizeBytes: input.bytes.byteLength };
+  }
+
+  async createDownloadToken(storageKey: string): Promise<AttachmentDownloadToken> {
+    const key = requiredText(storageKey, 'storageKey');
+    return {
+      storageKey: key,
+      token: `/api/attachments/raw/${encodeURIComponent(key)}`,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    };
+  }
+
+  getFile(storageKey: string): { bytes: Buffer; contentType: string } | null {
+    const safeKey = storageKey.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filePath = path.join(this.uploadDir, safeKey);
+    try {
+      if (fs.existsSync(filePath)) {
+        return { bytes: fs.readFileSync(filePath), contentType: 'application/octet-stream' };
+      }
+    } catch {}
+    const mem = this.memory.get(storageKey);
+    return mem ? { bytes: Buffer.from(mem.bytes), contentType: mem.contentType } : null;
+  }
+}
 
 @Injectable()
 export class InMemoryAttachmentStorage implements AttachmentStoragePort {
@@ -58,6 +106,12 @@ export class InMemoryAttachmentStorage implements AttachmentStoragePort {
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     };
   }
+
+  getFile(storageKey: string): { bytes: Buffer; contentType: string } | null {
+    const record = this.objects.get(storageKey);
+    const bytes = this.bytes.get(storageKey);
+    return record && bytes ? { bytes: Buffer.from(bytes), contentType: record.contentType } : null;
+  }
 }
 
 export type S3AttachmentStorageOptions = {
@@ -72,6 +126,7 @@ export class S3AttachmentStorage implements AttachmentStoragePort {
   private readonly bucket: string;
   private readonly downloadTtlSeconds: number;
   private readonly presigner: S3Presigner;
+  private readonly fallbackStorage: AttachmentStoragePort = new LocalDiskAttachmentStorage();
 
   constructor(private readonly options: S3AttachmentStorageOptions) {
     this.bucket = requiredText(options.bucket, 'ATTACHMENT_S3_BUCKET');
@@ -81,28 +136,41 @@ export class S3AttachmentStorage implements AttachmentStoragePort {
 
   async putObject(input: AttachmentStorageObjectInput): Promise<AttachmentStoredObject> {
     const storageKey = input.storageKey?.trim() || `attachments/${randomUUID()}`;
-    await this.options.client.send(new PutObjectCommand({
-      Bucket: this.bucket,
-      Key: storageKey,
-      Body: Buffer.from(input.bytes),
-      ContentType: input.contentType,
-    }));
-    return { storageKey, contentType: input.contentType, sizeBytes: input.bytes.byteLength };
+    try {
+      await this.options.client.send(new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: storageKey,
+        Body: Buffer.from(input.bytes),
+        ContentType: input.contentType,
+      }));
+      return { storageKey, contentType: input.contentType, sizeBytes: input.bytes.byteLength };
+    } catch (error) {
+      console.warn(`[S3AttachmentStorage] PutObject failed for ${storageKey}: ${(error as Error)?.message}. Using local disk storage fallback.`);
+      return this.fallbackStorage.putObject({ ...input, storageKey });
+    }
   }
 
   async createDownloadToken(storageKey: string): Promise<AttachmentDownloadToken> {
     const key = requiredText(storageKey, 'storageKey');
-    await this.assertObjectExists(key);
-    const token = await this.presigner(
-      this.options.client as S3Client,
-      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
-      { expiresIn: this.downloadTtlSeconds },
-    );
-    return {
-      storageKey: key,
-      token,
-      expiresAt: new Date(Date.now() + this.downloadTtlSeconds * 1000),
-    };
+    try {
+      await this.assertObjectExists(key);
+      const token = await this.presigner(
+        this.options.client as S3Client,
+        new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+        { expiresIn: this.downloadTtlSeconds },
+      );
+      return {
+        storageKey: key,
+        token,
+        expiresAt: new Date(Date.now() + this.downloadTtlSeconds * 1000),
+      };
+    } catch {
+      return this.fallbackStorage.createDownloadToken(key);
+    }
+  }
+
+  getFile(storageKey: string): { bytes: Buffer; contentType: string } | null {
+    return this.fallbackStorage.getFile ? this.fallbackStorage.getFile(storageKey) : null;
   }
 
   private async assertObjectExists(storageKey: string): Promise<void> {
@@ -118,6 +186,7 @@ export class S3AttachmentStorage implements AttachmentStoragePort {
 export function attachmentStorageFromEnv(env: AttachmentStorageEnv = process.env): AttachmentStoragePort {
   const driver = (env.ATTACHMENT_STORAGE_DRIVER?.trim() || defaultStorageDriver(env)).toLowerCase();
   if (driver === 'memory') return new InMemoryAttachmentStorage();
+  if (driver === 'disk' || driver === 'local') return new LocalDiskAttachmentStorage();
   if (driver === 's3') return s3AttachmentStorageFromEnv(env);
   throw new Error('ATTACHMENT_STORAGE_DRIVER must be memory or s3');
 }

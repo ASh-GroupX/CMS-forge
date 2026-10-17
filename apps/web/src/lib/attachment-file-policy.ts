@@ -16,10 +16,35 @@ const allowed: Record<string, Record<string, number>> = {
 
 export type AttachmentFileValidation = { ok: true } | { ok: false; code: 'ATTACHMENT_REQUIRED' | 'ATTACHMENT_TYPE_BLOCKED' | 'ATTACHMENT_SIZE_EXCEEDED' };
 
+export function normalizeAttachmentMime(fileName: string, mime?: string): string {
+  const extension = fileName.split('.').pop()?.toLowerCase() ?? '';
+  const lower = (mime || '').trim().toLowerCase();
+  if (lower && lower !== 'application/octet-stream') {
+    if (lower === 'image/jpg' || lower === 'image/pjpeg') return 'image/jpeg';
+    if (lower === 'image/x-png') return 'image/png';
+    return lower;
+  }
+  switch (extension) {
+    case 'jpg':
+    case 'jpeg': return 'image/jpeg';
+    case 'png': return 'image/png';
+    case 'webp': return 'image/webp';
+    case 'pdf': return 'application/pdf';
+    case 'mp3': return 'audio/mpeg';
+    case 'wav': return 'audio/wav';
+    case 'ogg': return 'audio/ogg';
+    case 'mp4': return 'video/mp4';
+    case 'mov': return 'video/quicktime';
+    case 'webm': return 'video/webm';
+    default: return lower || 'application/octet-stream';
+  }
+}
+
 export function validateAttachmentFile(file: File | null): AttachmentFileValidation {
   if (!file) return { ok: false, code: 'ATTACHMENT_REQUIRED' };
   const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
-  const limit = allowed[file.type.toLowerCase()]?.[extension];
+  const mime = normalizeAttachmentMime(file.name, file.type);
+  const limit = allowed[mime]?.[extension];
   if (!limit) return { ok: false, code: 'ATTACHMENT_TYPE_BLOCKED' };
   return file.size > limit ? { ok: false, code: 'ATTACHMENT_SIZE_EXCEEDED' } : { ok: true };
 }

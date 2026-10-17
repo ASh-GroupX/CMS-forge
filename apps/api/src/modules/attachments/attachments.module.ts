@@ -8,13 +8,13 @@ import { AuthService } from '../auth/auth.service.js';
 import { ComplaintsModule } from '../complaints/complaints.module.js';
 import { PortalModule } from '../portal/portal.module.js';
 import { ATTACHMENT_STORAGE, attachmentStorageFromEnv } from './attachment-storage.port.js';
-import { AttachmentsController, PortalAttachmentsController } from './attachments.controller.js';
+import { AttachmentsController, PortalAttachmentsController, RawAttachmentsController } from './attachments.controller.js';
 import { AttachmentsRepository } from './attachments.repository.js';
 import { AttachmentsService } from './attachments.service.js';
 
 @Module({
   imports: [AuthModule, ComplaintsModule, forwardRef(() => PortalModule)],
-  controllers: [AttachmentsController, PortalAttachmentsController],
+  controllers: [AttachmentsController, PortalAttachmentsController, RawAttachmentsController],
   providers: [
     PrismaService,
     AuditService,

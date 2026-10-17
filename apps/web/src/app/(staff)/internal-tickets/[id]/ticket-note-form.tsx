@@ -5,7 +5,7 @@ import { Send, Paperclip } from 'lucide-react';
 import { toast } from 'sonner';
 import { addTicketNote } from '../../../../lib/staff-internal-tickets-actions';
 import { useRouter } from 'next/navigation';
-import { attachmentFileToBase64 } from '../../../../lib/attachment-file-policy';
+import { attachmentFileToBase64, normalizeAttachmentMime } from '../../../../lib/attachment-file-policy';
 
 export function TicketNoteForm({ ticketId }: { ticketId: string }) {
   const router = useRouter();
@@ -25,7 +25,7 @@ export function TicketNoteForm({ ticketId }: { ticketId: string }) {
         attachmentsPayload = await Promise.all(
           files.map(async (f) => ({
             fileName: f.name,
-            contentType: f.type,
+            contentType: normalizeAttachmentMime(f.name, f.type),
             sizeBytes: f.size,
             contentBase64: await attachmentFileToBase64(f),
           }))

@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Headers, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpStatus, Param, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { AppException } from '../../core/http-kernel.js';
 import { RoleCode } from '@prisma/client';
 import type { IncomingMessage } from 'node:http';
 import { BranchScoped, PermissionGuard, Permissions, RbacGuard, SessionAuthGuard } from '../../core/auth.guard.js';
@@ -101,6 +102,20 @@ export class PortalAttachmentsController {
   }
 }
 
+@Controller('attachments')
+export class RawAttachmentsController {
+  constructor(private readonly attachmentsService: AttachmentsService) {}
+
+  @Get('raw/:storageKey')
+  async serveRaw(@Param('storageKey') storageKey: string, @Res() res: any) {
+    const file = this.attachmentsService.getRawFile(storageKey);
+    if (!file) throw new AppException('ATTACHMENT_NOT_FOUND', 'Attachment object was not found', HttpStatus.NOT_FOUND);
+    res.setHeader('Content-Type', file.contentType || 'application/octet-stream');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.send(file.bytes);
+  }
+}
+
 function auditContext(request: AuthenticatedRequest | (IncomingMessage & { correlationId?: string })) {
   return {
     actorId: 'principal' in request ? request.principal?.userId ?? null : null,
@@ -118,5 +133,7 @@ function headerValue(value: string | string[] | undefined): string | null {
 
 function queueBranchId(value: string | undefined, request: AuthenticatedRequest): string | null {
   if (value?.trim()) return value.trim();
-  return request.principal?.roleCode === RoleCode.ADMIN ? null : request.principal?.branchId ?? null;
+  const role = request.principal?.roleCode;
+  const isGlobal = role === RoleCode.ADMIN || role === RoleCode.CR_MANAGER || role === RoleCode.CR_OFFICER || Boolean(request.principal?.permissions?.includes('COMPLAINT_VIEW_ALL'));
+  return isGlobal ? null : request.principal?.branchId ?? null;
 }

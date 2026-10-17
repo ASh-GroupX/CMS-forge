@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Put, Delete, Body, Param, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Put, Delete, Body, Param, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { AppException } from '../../core/http-kernel.js';
@@ -158,12 +158,31 @@ export class InternalTicketsController {
   }
 
   @Get(':id/attachments/:attachmentId/download')
-  async downloadAttachment(@Param('id') id: string, @Param('attachmentId') attachmentId: string) {
-    return this.service.downloadAttachment(id, attachmentId);
+  async downloadAttachment(
+    @Param('id') id: string,
+    @Param('attachmentId') attachmentId: string,
+    @Query('redirect') redirect: string | undefined,
+    @Res() res: any,
+  ) {
+    const result = await this.service.downloadAttachment(id, attachmentId);
+    if (redirect === '1' || redirect === 'true') {
+      return res.redirect(result.url);
+    }
+    return res.json(result);
   }
 
   @Get(':id/notes/:noteId/attachments/:attachmentId/download')
-  async downloadNoteAttachment(@Param('id') id: string, @Param('noteId') noteId: string, @Param('attachmentId') attachmentId: string) {
-    return this.service.downloadNoteAttachment(id, noteId, attachmentId);
+  async downloadNoteAttachment(
+    @Param('id') id: string,
+    @Param('noteId') noteId: string,
+    @Param('attachmentId') attachmentId: string,
+    @Query('redirect') redirect: string | undefined,
+    @Res() res: any,
+  ) {
+    const result = await this.service.downloadNoteAttachment(id, noteId, attachmentId);
+    if (redirect === '1' || redirect === 'true') {
+      return res.redirect(result.url);
+    }
+    return res.json(result);
   }
 }

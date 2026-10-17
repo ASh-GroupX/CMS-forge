@@ -80,7 +80,9 @@ export class AttachmentsService {
 
   validateUploadMetadata(input: AttachmentUploadMetadata): AttachmentUploadPolicy {
     const fileName = input.fileName.trim();
-    const contentType = input.contentType.trim().toLowerCase();
+    let contentType = input.contentType.trim().toLowerCase();
+    if (contentType === 'image/jpg' || contentType === 'image/pjpeg') contentType = 'image/jpeg';
+    if (contentType === 'image/x-png') contentType = 'image/png';
     const extension = fileName.split('.').pop()?.toLowerCase();
     const policy = extension ? allowedTypes[contentType]?.[extension] : undefined;
 
@@ -101,6 +103,10 @@ export class AttachmentsService {
 
   prepareDownload(storageKey: string): Promise<AttachmentDownloadToken> {
     return this.storage.createDownloadToken(storageKey);
+  }
+
+  getRawFile(storageKey: string): { bytes: Buffer; contentType: string } | null {
+    return this.storage.getFile ? this.storage.getFile(storageKey) : null;
   }
 
   async createUpload(input: CreateAttachmentUploadInput): Promise<AttachmentUploadResult> {

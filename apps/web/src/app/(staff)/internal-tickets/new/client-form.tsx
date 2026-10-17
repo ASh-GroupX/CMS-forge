@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createInternalTicket } from '../../../../lib/staff-internal-tickets-actions';
-import { attachmentFileToBase64 } from '../../../../lib/attachment-file-policy';
+import { attachmentFileToBase64, normalizeAttachmentMime } from '../../../../lib/attachment-file-policy';
 import { staffAttachmentFiles } from '../../../../lib/staff-attachments-api';
 import { Calendar, Clock, Paperclip } from 'lucide-react';
 
@@ -74,7 +74,7 @@ export default function CreateInternalTicketForm({ options }: { options: { depar
         payload.attachments = await Promise.all(
           files.map(async (f) => ({
             fileName: f.name,
-            contentType: f.type || 'application/octet-stream',
+            contentType: normalizeAttachmentMime(f.name, f.type),
             sizeBytes: f.size,
             contentBase64: await attachmentFileToBase64(f),
           }))

@@ -1,4 +1,4 @@
-import { attachmentFileToBase64, validateAttachmentFile, type AttachmentFileValidation } from './attachment-file-policy';
+import { attachmentFileToBase64, normalizeAttachmentMime, validateAttachmentFile, type AttachmentFileValidation } from './attachment-file-policy';
 
 export type StaffAttachment = {
   id: string;
@@ -30,7 +30,7 @@ export async function uploadStaffComplaintAttachment(complaintId: string, file: 
   const selectedFile = file;
   if (!selectedFile) return { ok: false, error: validationError({ ok: false, code: 'ATTACHMENT_REQUIRED' }) };
   return requestJson(`/api/complaints/${encodeURIComponent(complaintId)}/attachments`, fetchImpl, {
-    body: JSON.stringify({ fileName: selectedFile.name, contentType: selectedFile.type, sizeBytes: selectedFile.size, contentBase64: await attachmentFileToBase64(selectedFile) }),
+    body: JSON.stringify({ fileName: selectedFile.name, contentType: normalizeAttachmentMime(selectedFile.name, selectedFile.type), sizeBytes: selectedFile.size, contentBase64: await attachmentFileToBase64(selectedFile) }),
     headers: csrfHeaders(),
     method: 'POST',
   });
@@ -75,7 +75,7 @@ export async function downloadStaffAttachment(
 
 export function staffAttachmentDownloadTarget(complaintId: string, attachmentId: string, download: StaffAttachmentDownload): string | null {
   const token = download.token.trim();
-  if (isHttpUrl(token)) return token;
+  if (isHttpUrl(token) || token.startsWith('/')) return token;
   return null;
 }
 
