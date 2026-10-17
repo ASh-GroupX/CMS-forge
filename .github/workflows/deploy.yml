@@ -95,7 +95,7 @@ jobs:
             set -eu
 
             # Ensure target directory exists
-            mkdir -p /root/cms-auto
+            mkdir -p /root/cms-auto/uploads/attachments
             cd /root/cms-auto
             DEPLOYMENT_SHA='${{ github.sha }}'
             export DEPLOYMENT_SHA

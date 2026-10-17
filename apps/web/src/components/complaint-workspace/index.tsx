@@ -200,6 +200,7 @@ export function ComplaintWorkspace({
                         href={`/api/complaints/${detail.id}/attachments/${att.related?.id}/download?redirect=1`}
                         target="_blank"
                         rel="noopener noreferrer"
+                        download
                         className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-line-subtle bg-surface px-2.5 py-1 text-xs font-semibold transition-colors hover:bg-brand hover:text-white"
                         title={locale === 'ar' ? 'تحميل المرفق' : 'Download attachment'}
                       >

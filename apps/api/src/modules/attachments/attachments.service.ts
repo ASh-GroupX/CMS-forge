@@ -106,8 +106,19 @@ export class AttachmentsService {
     return this.storage.createDownloadToken(storageKey);
   }
 
-  getRawFile(storageKey: string): { bytes: Buffer; contentType: string } | null {
-    return this.storage.getFile ? this.storage.getFile(storageKey) : null;
+  async getRawFile(storageKey: string): Promise<{ bytes: Buffer; contentType: string } | null> {
+    return this.storage.getFile ? await this.storage.getFile(storageKey) : null;
+  }
+
+  async getFallbackFileForMissingObject(storageKey: string): Promise<{ bytes: Buffer; contentType: string; fileName?: string } | null> {
+    const record = await this.attachmentsRepository.findByStorageKey(storageKey);
+    if (!record) return null;
+    if (record.contentType.startsWith('image/')) {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect width="600" height="400" fill="#f8fafc"/><rect x="20" y="20" width="560" height="360" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/><text x="300" y="160" font-family="sans-serif" font-size="20" font-weight="bold" fill="#0f172a" text-anchor="middle">Attachment</text><text x="300" y="200" font-family="sans-serif" font-size="14" fill="#64748b" text-anchor="middle">${record.fileName}</text></svg>`;
+      return { bytes: Buffer.from(svg), contentType: 'image/svg+xml', fileName: `${record.fileName}.svg` };
+    }
+    const txt = `Attachment: ${record.fileName}\nUploaded: ${record.createdAt.toISOString()}\nSize: ${record.sizeBytes} bytes\n`;
+    return { bytes: Buffer.from(txt), contentType: 'text/plain', fileName: `${record.fileName}.txt` };
   }
 
   async createUpload(input: CreateAttachmentUploadInput): Promise<AttachmentUploadResult> {

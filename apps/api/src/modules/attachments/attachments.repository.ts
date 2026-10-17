@@ -61,6 +61,16 @@ export class AttachmentsRepository {
     return client.attachment.findUnique({ where: { id }, select: attachmentSelect });
   }
 
+  async findByStorageKey(storageKey: string, client: AttachmentClient = this.prisma): Promise<AttachmentRecord | null> {
+    const key = storageKey.trim();
+    const direct = await client.attachment.findUnique({ where: { storageKey: key }, select: attachmentSelect });
+    if (direct) return direct;
+    return client.attachment.findFirst({
+      where: { OR: [{ storageKey: key }, { storageKey: `attachments/${key}` }, { storageKey: key.replace(/^attachments[\/\_]/i, '') }, { id: key }] },
+      select: attachmentSelect,
+    });
+  }
+
   async listForComplaint(complaintId: string, client: AttachmentClient = this.prisma): Promise<AttachmentRecord[]> {
     return client.attachment.findMany({ orderBy: { createdAt: 'desc' }, select: attachmentSelect, where: { complaintId } });
   }

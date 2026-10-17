@@ -2,35 +2,20 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'node:crypto';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { AppException } from '../../core/http-kernel.js';
 
 export const ATTACHMENT_STORAGE = Symbol('ATTACHMENT_STORAGE');
 
-export type AttachmentStorageObjectInput = {
-  storageKey?: string;
-  bytes: Uint8Array;
-  contentType: string;
-};
-
-export type AttachmentStoredObject = {
-  storageKey: string;
-  contentType: string;
-  sizeBytes: number;
-};
-
-export type AttachmentDownloadToken = {
-  storageKey: string;
-  token: string;
-  expiresAt: Date;
-};
-
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+export type AttachmentStorageObjectInput = { storageKey?: string; bytes: Uint8Array; contentType: string };
+export type AttachmentStoredObject = { storageKey: string; contentType: string; sizeBytes: number };
+export type AttachmentDownloadToken = { storageKey: string; token: string; expiresAt: Date };
 
 export interface AttachmentStoragePort {
   putObject(input: AttachmentStorageObjectInput): Promise<AttachmentStoredObject>;
   createDownloadToken(storageKey: string): Promise<AttachmentDownloadToken>;
-  getFile?(storageKey: string): { bytes: Buffer; contentType: string } | null;
+  getFile?(storageKey: string): Promise<{ bytes: Buffer; contentType: string } | null> | { bytes: Buffer; contentType: string } | null;
 }
 
 type AttachmentStorageEnv = Record<string, string | undefined>;
@@ -72,31 +57,43 @@ export class LocalDiskAttachmentStorage implements AttachmentStoragePort {
   getFile(storageKey: string): { bytes: Buffer; contentType: string } | null {
     let key = storageKey;
     try { key = decodeURIComponent(key); } catch {}
-
     const mem = this.memory.get(key) || this.memory.get(storageKey);
     if (mem) return { bytes: Buffer.from(mem.bytes), contentType: mem.contentType };
 
     const candidates = [
       key.replace(/[^a-zA-Z0-9_-]/g, '_'),
       storageKey.replace(/[^a-zA-Z0-9_-]/g, '_'),
+      key.replace(/^attachments[\/\_]/i, '').replace(/[^a-zA-Z0-9_-]/g, '_'),
+      path.basename(key),
+      key,
     ];
 
-    for (const safeKey of candidates) {
-      const filePath = path.join(this.uploadDir, safeKey);
-      try {
-        if (fs.existsSync(filePath)) {
-          let contentType = 'application/octet-stream';
-          try {
-            if (fs.existsSync(`${filePath}.meta`)) {
-              const meta = JSON.parse(fs.readFileSync(`${filePath}.meta`, 'utf8'));
-              if (meta.contentType) contentType = meta.contentType;
-            }
-          } catch {}
-          return { bytes: fs.readFileSync(filePath), contentType };
-        }
-      } catch {}
-    }
+    const dirs = [
+      this.uploadDir,
+      path.resolve(process.cwd(), 'uploads', 'attachments'),
+      path.resolve(process.cwd(), '..', 'uploads', 'attachments'),
+      path.resolve(process.cwd(), '..', '..', 'uploads', 'attachments'),
+      '/root/cms-auto/uploads/attachments',
+      '/tmp/attachments',
+    ].filter((dir, idx, arr) => arr.indexOf(dir) === idx);
 
+    for (const dir of dirs) {
+      for (const safeKey of candidates) {
+        const filePath = path.join(dir, safeKey);
+        try {
+          if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+            let contentType = 'application/octet-stream';
+            try {
+              if (fs.existsSync(`${filePath}.meta`)) {
+                const meta = JSON.parse(fs.readFileSync(`${filePath}.meta`, 'utf8'));
+                if (meta.contentType) contentType = meta.contentType;
+              }
+            } catch {}
+            return { bytes: fs.readFileSync(filePath), contentType };
+          }
+        } catch {}
+      }
+    }
     return null;
   }
 }
@@ -108,11 +105,7 @@ export class InMemoryAttachmentStorage implements AttachmentStoragePort {
 
   async putObject(input: AttachmentStorageObjectInput): Promise<AttachmentStoredObject> {
     const storageKey = input.storageKey?.trim() || `attachments/${randomUUID()}`;
-    const record = {
-      storageKey,
-      contentType: input.contentType,
-      sizeBytes: input.bytes.byteLength,
-    };
+    const record = { storageKey, contentType: input.contentType, sizeBytes: input.bytes.byteLength };
     this.objects.set(storageKey, record);
     this.bytes.set(storageKey, input.bytes.slice());
     return record;
@@ -128,8 +121,10 @@ export class InMemoryAttachmentStorage implements AttachmentStoragePort {
   }
 
   getFile(storageKey: string): { bytes: Buffer; contentType: string } | null {
-    const record = this.objects.get(storageKey);
-    const bytes = this.bytes.get(storageKey);
+    let key = storageKey;
+    try { key = decodeURIComponent(key); } catch {}
+    const record = this.objects.get(key) || this.objects.get(storageKey);
+    const bytes = this.bytes.get(key) || this.bytes.get(storageKey);
     return record && bytes ? { bytes: Buffer.from(bytes), contentType: record.contentType } : null;
   }
 }
@@ -165,7 +160,7 @@ export class S3AttachmentStorage implements AttachmentStoragePort {
       }));
       return { storageKey, contentType: input.contentType, sizeBytes: input.bytes.byteLength };
     } catch (error) {
-      console.warn(`[S3AttachmentStorage] PutObject failed for ${storageKey}: ${(error as Error)?.message}. Using local disk storage fallback.`);
+      console.warn(`[S3AttachmentStorage] PutObject fallback for ${storageKey}: ${(error as Error)?.message}`);
       return this.fallbackStorage.putObject({ ...input, storageKey });
     }
   }
@@ -179,18 +174,34 @@ export class S3AttachmentStorage implements AttachmentStoragePort {
         new GetObjectCommand({ Bucket: this.bucket, Key: key }),
         { expiresIn: this.downloadTtlSeconds },
       );
-      return {
-        storageKey: key,
-        token,
-        expiresAt: new Date(Date.now() + this.downloadTtlSeconds * 1000),
-      };
+      return { storageKey: key, token, expiresAt: new Date(Date.now() + this.downloadTtlSeconds * 1000) };
     } catch {
       return this.fallbackStorage.createDownloadToken(key);
     }
   }
 
-  getFile(storageKey: string): { bytes: Buffer; contentType: string } | null {
-    return this.fallbackStorage.getFile ? this.fallbackStorage.getFile(storageKey) : null;
+  async getFile(storageKey: string): Promise<{ bytes: Buffer; contentType: string } | null> {
+    const disk = this.fallbackStorage.getFile ? await this.fallbackStorage.getFile(storageKey) : null;
+    if (disk) return disk;
+
+    let key = storageKey;
+    try { key = decodeURIComponent(key); } catch {}
+    const candidates = [key, storageKey, `attachments/${path.basename(key)}`, path.basename(key)];
+    for (const testKey of candidates) {
+      try {
+        const s3Res = await this.options.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: testKey }));
+        if (s3Res.Body) {
+          const stream = s3Res.Body as any;
+          const chunks: Buffer[] = [];
+          for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+          const bytes = Buffer.concat(chunks);
+          const contentType = s3Res.ContentType || 'application/octet-stream';
+          void this.fallbackStorage.putObject({ bytes, contentType, storageKey: key }).catch(() => {});
+          return { bytes, contentType };
+        }
+      } catch {}
+    }
+    return null;
   }
 
   private async assertObjectExists(storageKey: string): Promise<void> {

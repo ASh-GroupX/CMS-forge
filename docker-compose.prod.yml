@@ -100,6 +100,9 @@ services:
         condition: service_healthy
     networks:
       - internal
+    volumes:
+      - attachments-data:/app/apps/api/uploads/attachments
+      - attachments-data:/root/cms-auto/uploads/attachments
 
   migrate:
     build:
@@ -162,6 +165,9 @@ services:
       start_period: 5s
     networks:
       - internal
+    volumes:
+      - attachments-data:/app/apps/api/uploads/attachments
+      - attachments-data:/root/cms-auto/uploads/attachments
 
   postgres:
     image: postgres:16-alpine
@@ -210,3 +216,4 @@ volumes:
   caddy-config:
   postgres-data:
   redis-data:
+  attachments-data:

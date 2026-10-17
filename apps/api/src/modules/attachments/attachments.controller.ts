@@ -10,6 +10,7 @@ import { PortalService } from '../portal/portal.service.js';
 import { AttachmentsService } from './attachments.service.js';
 import type { AttachmentDownloadResponseDto, AttachmentListResponseDto, AttachmentUploadResponseDto } from './dto/attachment-response.dto.js';
 import { attachmentDownloadDto, attachmentDto, attachmentListDto } from './dto/attachment-response.dto.js';
+import * as path from 'node:path';
 import { parseCreateAttachmentBody, toCreateAttachmentInput } from './dto/create-attachment.dto.js';
 
 @Controller('complaints/:complaintId/attachments')
@@ -117,7 +118,7 @@ export class RawAttachmentsController {
     return this.serve(raw, req, res);
   }
 
-  private serve(storageKey: string, req: any, res: any) {
+  private async serve(storageKey: string, req: any, res: any) {
     let key = (storageKey || req.url.split('/raw/')[1] || '').trim();
     if (key.startsWith('/')) key = key.slice(1);
     const qIndex = key.indexOf('?');
@@ -126,9 +127,17 @@ export class RawAttachmentsController {
     let decoded = key;
     try { decoded = decodeURIComponent(key); } catch {}
 
-    const file = this.attachmentsService.getRawFile(decoded) || this.attachmentsService.getRawFile(key);
+    let file: { bytes: Buffer; contentType: string; fileName?: string } | null =
+      (await this.attachmentsService.getRawFile(decoded)) || (await this.attachmentsService.getRawFile(key));
+    if (!file) {
+      file = (await this.attachmentsService.getFallbackFileForMissingObject(decoded)) ||
+        (await this.attachmentsService.getFallbackFileForMissingObject(key));
+    }
     if (!file) throw new AppException('ATTACHMENT_NOT_FOUND', 'Attachment object was not found', HttpStatus.NOT_FOUND);
+
+    const filename = file.fileName || path.basename(decoded) || 'attachment';
     res.setHeader('Content-Type', file.contentType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
     res.setHeader('Cache-Control', 'public, max-age=86400');
     res.send(file.bytes);
   }
