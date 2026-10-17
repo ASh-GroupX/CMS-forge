@@ -54,6 +54,7 @@ export class LocalDiskAttachmentStorage implements AttachmentStoragePort {
       const filePath = path.join(this.uploadDir, safeKey);
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.writeFileSync(filePath, Buffer.from(input.bytes));
+      fs.writeFileSync(`${filePath}.meta`, JSON.stringify({ contentType: input.contentType }));
     } catch {}
     this.memory.set(storageKey, { bytes: input.bytes, contentType: input.contentType });
     return { storageKey, contentType: input.contentType, sizeBytes: input.bytes.byteLength };
@@ -69,15 +70,34 @@ export class LocalDiskAttachmentStorage implements AttachmentStoragePort {
   }
 
   getFile(storageKey: string): { bytes: Buffer; contentType: string } | null {
-    const safeKey = storageKey.replace(/[^a-zA-Z0-9_-]/g, '_');
-    const filePath = path.join(this.uploadDir, safeKey);
-    try {
-      if (fs.existsSync(filePath)) {
-        return { bytes: fs.readFileSync(filePath), contentType: 'application/octet-stream' };
-      }
-    } catch {}
-    const mem = this.memory.get(storageKey);
-    return mem ? { bytes: Buffer.from(mem.bytes), contentType: mem.contentType } : null;
+    let key = storageKey;
+    try { key = decodeURIComponent(key); } catch {}
+
+    const mem = this.memory.get(key) || this.memory.get(storageKey);
+    if (mem) return { bytes: Buffer.from(mem.bytes), contentType: mem.contentType };
+
+    const candidates = [
+      key.replace(/[^a-zA-Z0-9_-]/g, '_'),
+      storageKey.replace(/[^a-zA-Z0-9_-]/g, '_'),
+    ];
+
+    for (const safeKey of candidates) {
+      const filePath = path.join(this.uploadDir, safeKey);
+      try {
+        if (fs.existsSync(filePath)) {
+          let contentType = 'application/octet-stream';
+          try {
+            if (fs.existsSync(`${filePath}.meta`)) {
+              const meta = JSON.parse(fs.readFileSync(`${filePath}.meta`, 'utf8'));
+              if (meta.contentType) contentType = meta.contentType;
+            }
+          } catch {}
+          return { bytes: fs.readFileSync(filePath), contentType };
+        }
+      } catch {}
+    }
+
+    return null;
   }
 }
 

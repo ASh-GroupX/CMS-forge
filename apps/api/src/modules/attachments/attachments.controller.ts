@@ -102,13 +102,31 @@ export class PortalAttachmentsController {
   }
 }
 
-@Controller('attachments')
+@Controller(['attachments', 'api/attachments'])
 export class RawAttachmentsController {
   constructor(private readonly attachmentsService: AttachmentsService) {}
 
   @Get('raw/:storageKey')
-  async serveRaw(@Param('storageKey') storageKey: string, @Res() res: any) {
-    const file = this.attachmentsService.getRawFile(storageKey);
+  async serveRaw(@Param('storageKey') storageKey: string, @Req() req: any, @Res() res: any) {
+    return this.serve(storageKey, req, res);
+  }
+
+  @Get('raw/*')
+  async serveRawWildcard(@Req() req: any, @Res() res: any) {
+    const raw = req.params[0] || req.url.split('/raw/')[1] || '';
+    return this.serve(raw, req, res);
+  }
+
+  private serve(storageKey: string, req: any, res: any) {
+    let key = (storageKey || req.url.split('/raw/')[1] || '').trim();
+    if (key.startsWith('/')) key = key.slice(1);
+    const qIndex = key.indexOf('?');
+    if (qIndex !== -1) key = key.slice(0, qIndex);
+
+    let decoded = key;
+    try { decoded = decodeURIComponent(key); } catch {}
+
+    const file = this.attachmentsService.getRawFile(decoded) || this.attachmentsService.getRawFile(key);
     if (!file) throw new AppException('ATTACHMENT_NOT_FOUND', 'Attachment object was not found', HttpStatus.NOT_FOUND);
     res.setHeader('Content-Type', file.contentType || 'application/octet-stream');
     res.setHeader('Cache-Control', 'public, max-age=86400');

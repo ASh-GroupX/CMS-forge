@@ -7,7 +7,9 @@ export async function GET(request: Request, { params }: { params: Promise<RouteP
   if (!id?.trim() || !attachmentId?.trim()) return NextResponse.json({ error: { code: 'VALIDATION_FAILED', message: 'Missing attachment target.', correlationId: null } }, { status: 400 });
 
   try {
-    const shouldRedirect = new URL(request.url).searchParams.get('redirect') === '1';
+    const accept = request.headers.get('accept') ?? '';
+    const isBrowserDirect = accept.includes('text/html') || accept.includes('*/*');
+    const shouldRedirect = new URL(request.url).searchParams.get('redirect') === '1' || isBrowserDirect;
     const response = await fetch(new URL(`/complaints/${encodeURIComponent(id)}/attachments/${encodeURIComponent(attachmentId)}/download`, process.env.API_URL ?? 'http://localhost:3000'), {
       cache: 'no-store',
       headers: new Headers({ Accept: 'application/json', cookie: request.headers.get('cookie') ?? '' }),

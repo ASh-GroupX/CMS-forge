@@ -3,8 +3,19 @@ import { Paperclip } from 'lucide-react';
 import type { ComplaintTimelineItem } from '../../lib/staff-complaint-timeline-api';
 
 export function WorkingNotesList({ timeline, complaintId }: { timeline: ComplaintTimelineItem[]; complaintId: string }) {
-  // Combine comments and standalone attachments
-  const notes = timeline.filter((t) => t.type === 'COMMENT' || t.type === 'ATTACHMENT');
+  // Combine comments and unique uploaded attachments (ignoring scan/download audit noise)
+  const seenAttachmentIds = new Set<string>();
+  const notes = timeline.filter((t) => {
+    if (t.type === 'COMMENT') return true;
+    if (t.type === 'ATTACHMENT' && t.related?.id) {
+      const action = t.metadata?.action;
+      if (action && action !== 'attachment_uploaded') return false;
+      if (seenAttachmentIds.has(t.related.id)) return false;
+      seenAttachmentIds.add(t.related.id);
+      return true;
+    }
+    return false;
+  });
 
   if (notes.length === 0) {
     return <p className="text-sm text-content-muted text-center py-8">No notes yet.</p>;

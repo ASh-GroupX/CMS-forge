@@ -49,7 +49,13 @@ export function ComplaintWorkspace({
   }
 
   const activityTimeline = timeline?.filter(t => t.type !== 'COMMENT' && t.type !== 'ATTACHMENT') ?? [];
-  const attachments = timeline?.filter(t => t.type === 'ATTACHMENT' && t.related?.id) ?? [];
+  const seenAttachmentIds = new Set<string>();
+  const attachments = (timeline ?? []).filter((t) => {
+    if (t.type !== 'ATTACHMENT' || !t.related?.id) return false;
+    if (seenAttachmentIds.has(t.related.id)) return false;
+    seenAttachmentIds.add(t.related.id);
+    return true;
+  });
 
   return (
     <section aria-label={t.title} className="flex h-full flex-col overflow-hidden bg-surface-sunken" dir={shell.dir}>
