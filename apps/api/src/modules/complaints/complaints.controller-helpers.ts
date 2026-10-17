@@ -51,6 +51,7 @@ export function auditContext(request: AuthenticatedRequest) {
     actorId: request.principal?.userId ?? null,
     actorRole: request.principal?.roleCode as string,
     actorPermissions: request.principal?.permissions ?? [],
+    actorDepartmentId: request.principal?.departmentId ?? null,
     sessionId: request.principal?.sessionId ?? null,
     correlationId: request.correlationId ?? headerValue(request.headers['x-correlation-id']),
     ipAddress: headerValue(request.headers['x-forwarded-for'])?.split(',')[0]?.trim() ?? request.socket?.remoteAddress ?? null,

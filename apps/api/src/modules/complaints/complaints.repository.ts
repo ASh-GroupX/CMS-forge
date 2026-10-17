@@ -168,17 +168,30 @@ export class ComplaintsRepository {
       if (filter.branchId) (where.AND as any[]).push({ branchId: filter.branchId });
     } else if (isBranchManager) {
       if (filter.branchId) (where.AND as any[]).push({ branchId: filter.branchId });
+      if (filter.userDepartmentId) {
+        (where.AND as any[]).push({
+          OR: [
+            { departmentId: filter.userDepartmentId },
+            { ownerId: filter.userId },
+            { createdById: filter.userId },
+            { backupOfficerId: filter.userId },
+            { collaboratorId: filter.userId },
+          ],
+        });
+      }
     } else if (filter.userId) {
       if (filter.branchId) (where.AND as any[]).push({ branchId: filter.branchId });
       if (!filter.direction) {
-        (where.AND as any[]).push({
-          OR: [
-            { ownerId: filter.userId },
-            { backupOfficerId: filter.userId },
-            { collaboratorId: filter.userId },
-            { createdById: filter.userId },
-          ],
-        });
+        const staffOr: Prisma.ComplaintWhereInput[] = [
+          { ownerId: filter.userId },
+          { backupOfficerId: filter.userId },
+          { collaboratorId: filter.userId },
+          { createdById: filter.userId },
+        ];
+        if (filter.userDepartmentId) {
+          staffOr.push({ departmentId: filter.userDepartmentId });
+        }
+        (where.AND as any[]).push({ OR: staffOr });
       }
     }
 
@@ -243,16 +256,29 @@ export class ComplaintsRepository {
       if (filter.branchId) (where.AND as any[]).push({ branchId: filter.branchId });
     } else if (isBranchManager) {
       if (filter.branchId) (where.AND as any[]).push({ branchId: filter.branchId });
+      if (filter.userDepartmentId) {
+        (where.AND as any[]).push({
+          OR: [
+            { departmentId: filter.userDepartmentId },
+            { ownerId: filter.userId },
+            { createdById: filter.userId },
+            { backupOfficerId: filter.userId },
+            { collaboratorId: filter.userId },
+          ],
+        });
+      }
     } else if (filter.userId) {
       if (filter.branchId) (where.AND as any[]).push({ branchId: filter.branchId });
-      (where.AND as any[]).push({
-        OR: [
-          { ownerId: filter.userId },
-          { backupOfficerId: filter.userId },
-          { collaboratorId: filter.userId },
-          { createdById: filter.userId },
-        ],
-      });
+      const staffOr: Prisma.ComplaintWhereInput[] = [
+        { ownerId: filter.userId },
+        { backupOfficerId: filter.userId },
+        { collaboratorId: filter.userId },
+        { createdById: filter.userId },
+      ];
+      if (filter.userDepartmentId) {
+        staffOr.push({ departmentId: filter.userDepartmentId });
+      }
+      (where.AND as any[]).push({ OR: staffOr });
     }
 
     if ((where.AND as any[]).length === 0) {

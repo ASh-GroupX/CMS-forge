@@ -10,21 +10,52 @@ const branchManagerRoles = new Set<string>([RoleCode.BRANCH_MANAGER, RoleCode.CR
 const reasonRequired = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintTransitionAction.SEND_BACK, ComplaintTransitionAction.ASSIGN_INVESTIGATION, ComplaintTransitionAction.CLOSE, ComplaintTransitionAction.REOPEN, ComplaintTransitionAction.ROUTE_AGAIN, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintTransitionAction.REJECT_AFTER_REVIEW, ComplaintTransitionAction.REJECT_AFTER_INVESTIGATION, ComplaintTransitionAction.REJECT_RESOLUTION]);
 const resolutionRequired = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.RESOLVE, ComplaintTransitionAction.RESOLVE_DIRECTLY]);
 const ownerAllowedActions = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.ACCEPT_INTAKE, ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE, ComplaintTransitionAction.RESOLVE]);
+const resolutionDecisionActions = new Set<ComplaintTransitionAction>([
+  ComplaintTransitionAction.CLOSE,
+  ComplaintTransitionAction.COMPLETE,
+  ComplaintTransitionAction.REJECT_RESOLUTION,
+]);
 export const ASSIGNMENT_ACTIONS = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintTransitionAction.ASSIGN_INVESTIGATION]);
 
 export function invalidTransitionError(): AppException { return new AppException('COMPLAINT_INVALID_TRANSITION', 'The requested action is not allowed for the current complaint state.', HttpStatus.CONFLICT); }
 export function roleForbiddenError(): AppException { return new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN); }
 
 export function assertActorCanApplyTransition(input: ApplyComplaintTransitionInput, complaint: ComplaintStatusRecord): void {
-  const isManager = branchManagerRoles.has(input.actorRole) || Boolean(input.actorPermissions?.includes('COMPLAINT_MANAGE'));
-  if (!ownerAllowedActions.has(input.action) || isManager) return;
-  if (input.actorId && complaint.ownerId === input.actorId) return;
-  throw roleForbiddenError();
+  const isGlobalManager = input.actorRole === RoleCode.CR_MANAGER || input.actorRole === RoleCode.ADMIN || Boolean(input.actorPermissions?.includes('COMPLAINT_MANAGE'));
+  const isManager = branchManagerRoles.has(input.actorRole) || isGlobalManager;
+  if (ownerAllowedActions.has(input.action)) {
+    if (!isManager && (!input.actorId || complaint.ownerId !== input.actorId)) throw roleForbiddenError();
+  }
+
+  if (resolutionDecisionActions.has(input.action) && !isGlobalManager) {
+    const isCreator = Boolean(input.actorId && complaint.createdById === input.actorId);
+    const isAssignedDept = Boolean(input.actorDepartmentId && complaint.departmentId && input.actorDepartmentId === complaint.departmentId);
+    const isGeneralBranchManager = input.actorRole === RoleCode.BRANCH_MANAGER && !input.actorDepartmentId;
+    if (!isCreator && !isAssignedDept && !isGeneralBranchManager) {
+      throw roleForbiddenError();
+    }
+  }
 }
 
-export function actorCanSeeAction(action: ComplaintTransitionAction, actor: { roleCode: string; userId: string | null; permissions?: string[] }, complaint: Pick<ComplaintDetailDto, 'ownerId'>): boolean {
-  const isManager = branchManagerRoles.has(actor.roleCode) || Boolean(actor.permissions?.includes('COMPLAINT_MANAGE'));
-  return !ownerAllowedActions.has(action) || isManager || Boolean(actor.userId && complaint.ownerId === actor.userId);
+export function actorCanSeeAction(
+  action: ComplaintTransitionAction,
+  actor: { roleCode: string; userId: string | null; permissions?: string[]; departmentId?: string | null },
+  complaint: Pick<ComplaintDetailDto, 'ownerId'> & { createdById?: string | null; departmentId?: string | null },
+): boolean {
+  const isGlobalManager = actor.roleCode === RoleCode.CR_MANAGER || actor.roleCode === RoleCode.ADMIN || Boolean(actor.permissions?.includes('COMPLAINT_MANAGE'));
+  const isManager = branchManagerRoles.has(actor.roleCode) || isGlobalManager;
+  if (ownerAllowedActions.has(action)) {
+    if (!isManager && (!actor.userId || complaint.ownerId !== actor.userId)) return false;
+  }
+
+  if (resolutionDecisionActions.has(action) && !isGlobalManager) {
+    const isCreator = Boolean(actor.userId && complaint.createdById === actor.userId);
+    const isAssignedDept = Boolean(actor.departmentId && complaint.departmentId && actor.departmentId === complaint.departmentId);
+    const isGeneralBranchManager = actor.roleCode === RoleCode.BRANCH_MANAGER && !actor.departmentId;
+    if (!isCreator && !isAssignedDept && !isGeneralBranchManager) return false;
+  }
+
+  return true;
 }
 
 export async function recordWorkflowRoleForbidden(auditService: AuditService, input: ApplyComplaintTransitionInput): Promise<void> {

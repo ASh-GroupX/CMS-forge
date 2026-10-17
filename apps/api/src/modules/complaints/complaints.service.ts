@@ -27,7 +27,7 @@ import { actorCanSeeAction, assertActorCanApplyTransition, assertVehicleClosureA
 export type ValidateComplaintTransitionInput = { fromStatus: ComplaintStatus; action: ComplaintTransitionAction; actorRole: string; actorPermissions?: string[] };
 export type ComplaintTransitionDecision = ValidateComplaintTransitionInput & { toStatus: ComplaintStatus };
 export type ApplyComplaintTransitionInput = ValidateComplaintTransitionInput & {
-  complaintId: string; actorId?: string | null; requestSource: ComplaintTransitionRequestSource;
+  complaintId: string; actorId?: string | null; actorDepartmentId?: string | null; requestSource: ComplaintTransitionRequestSource;
   reason?: string | null; targetBranchId?: string | null; targetDepartmentId?: string | null; ownerId?: string | null;
   resolutionType?: string | null; resolutionSummary?: string | null; customerCommunicationStatus?: string | null;
   vehicleDataUnavailableReason?: string | null;
@@ -163,7 +163,10 @@ export class ComplaintsService {
     return timelineItems(complaint, facts, tasks);
   }
 
-  allowedActionsFor(complaint: Pick<ComplaintDetailDto, 'ownerId' | 'status'>, actor: { roleCode: RoleCode; userId: string | null; permissions?: string[] }): ComplaintTransitionAction[] { 
+  allowedActionsFor(
+    complaint: Pick<ComplaintDetailDto, 'ownerId' | 'status'> & { createdById?: string | null; departmentId?: string | null },
+    actor: { roleCode: RoleCode; userId: string | null; permissions?: string[]; departmentId?: string | null },
+  ): ComplaintTransitionAction[] { 
     const actions = WORKFLOW_TRANSITIONS.filter((item) => {
       const roleMatch = item.allowedRoles.includes(actor.roleCode);
       const permMatch = Boolean(item.requiredPermission && actor.permissions?.includes(item.requiredPermission));

@@ -74,13 +74,18 @@ export class InternalTicketsController {
   }
 
   @Get('department/:departmentId')
-  async getDepartmentTickets(@Param('departmentId') departmentId: string) {
+  async getDepartmentTickets(@Param('departmentId') departmentId: string, @Req() req: AuthenticatedRequest) {
+    if (req.principal?.roleCode !== 'ADMIN' && req.principal?.roleCode !== 'CR_MANAGER') {
+      if (departmentId !== req.principal?.departmentId) {
+        throw new AppException('RBAC_FORBIDDEN', 'Access to another department tickets is forbidden', 403);
+      }
+    }
     return this.service.getDepartmentTickets(departmentId);
   }
 
   @Get(':id')
-  async getTicket(@Param('id') id: string) {
-    return this.service.getTicket(id);
+  async getTicket(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    return this.service.getTicket(id, req.principal);
   }
 
   @Post(':id/transfer')
@@ -122,13 +127,13 @@ export class InternalTicketsController {
   @Post(':id/approve')
   async approve(@Param('id') id: string, @Req() req: AuthenticatedRequest, @Body() dto: { rating?: number, feedback?: string }) {
     const managerId = req.principal!.userId;
-    return this.service.approve(id, managerId, dto);
+    return this.service.approve(id, managerId, dto, req.principal);
   }
 
   @Post(':id/reject')
   async reject(@Param('id') id: string, @Req() req: AuthenticatedRequest, @Body() dto: RejectTicketDto) {
     const managerId = req.principal!.userId;
-    return this.service.reject(id, managerId, dto);
+    return this.service.reject(id, managerId, dto, req.principal);
   }
 
   @Post(':id/approve-request')

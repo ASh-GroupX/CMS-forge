@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
+import { AppException } from '../../core/http-kernel.js';
 import { InternalTicketsRepository } from './internal-tickets.repository.js';
 import { InternalTicketStatus, InternalTicketPriority } from '@prisma/client';
 import { CreateInternalTicketDto } from './dto/create-internal-ticket.dto.js';
@@ -221,8 +222,22 @@ export class InternalTicketsService {
     });
   }
 
-  async reject(ticketId: string, actorId: string, dto: RejectTicketDto) {
+  async reject(ticketId: string, actorId: string, dto: RejectTicketDto, principal?: any) {
     return this.repository.transaction(async (tx) => {
+      const existing = await tx.internalTicket.findUnique({
+        where: { id: ticketId },
+        include: { requestedBy: true },
+      });
+      if (!existing) throw new NotFoundException('Ticket not found');
+
+      if (principal && principal.roleCode !== 'ADMIN' && principal.roleCode !== 'CR_MANAGER') {
+        const isTargetDept = Boolean(principal.departmentId && principal.departmentId === existing.targetDepartmentId);
+        const isRequester = Boolean(principal.userId === existing.requestedById || (principal.departmentId && principal.departmentId === existing.requestedBy?.departmentId));
+        if (!isTargetDept && !isRequester) {
+          throw new AppException('RBAC_FORBIDDEN', 'Only the assigned department manager or requesting manager can reject this resolution', 403);
+        }
+      }
+
       const ticket = await tx.internalTicket.update({
         where: { id: ticketId },
         data: { 
@@ -453,7 +468,7 @@ export class InternalTicketsService {
     });
   }
 
-  async getTicket(ticketId: string) {
+  async getTicket(ticketId: string, principal?: any) {
     const ticket = await this.repository.findById(ticketId, {
       assignedEmployee: true,
       requestedBy: { include: { department: true } },
@@ -471,6 +486,17 @@ export class InternalTicketsService {
       }
     });
     if (!ticket) throw new NotFoundException('Ticket not found');
+
+    if (principal && principal.roleCode !== 'ADMIN' && principal.roleCode !== 'CR_MANAGER') {
+      const isTargetDept = Boolean(principal.departmentId && principal.departmentId === ticket.targetDepartmentId);
+      const isRequester = Boolean(principal.userId === ticket.requestedById || (principal.departmentId && principal.departmentId === (ticket as any).requestedBy?.departmentId));
+      const isAssigned = Boolean(principal.userId === ticket.assignedEmployeeId);
+
+      if (!isTargetDept && !isRequester && !isAssigned) {
+        throw new AppException('RBAC_FORBIDDEN', 'Access to ticket belonging to another department is forbidden', 403);
+      }
+    }
+
     return ticket;
   }
 
@@ -523,8 +549,22 @@ export class InternalTicketsService {
     });
   }
 
-  async approve(ticketId: string, managerId: string, dto: any) {
+  async approve(ticketId: string, managerId: string, dto: any, principal?: any) {
     return this.repository.transaction(async (tx) => {
+      const existing = await tx.internalTicket.findUnique({
+        where: { id: ticketId },
+        include: { requestedBy: true },
+      });
+      if (!existing) throw new NotFoundException('Ticket not found');
+
+      if (principal && principal.roleCode !== 'ADMIN' && principal.roleCode !== 'CR_MANAGER') {
+        const isTargetDept = Boolean(principal.departmentId && principal.departmentId === existing.targetDepartmentId);
+        const isRequester = Boolean(principal.userId === existing.requestedById || (principal.departmentId && principal.departmentId === existing.requestedBy?.departmentId));
+        if (!isTargetDept && !isRequester) {
+          throw new AppException('RBAC_FORBIDDEN', 'Only the assigned department manager or requesting manager can accept this resolution', 403);
+        }
+      }
+
       const ticket = await tx.internalTicket.update({
         where: { id: ticketId },
         data: { status: 'CLOSED' }
@@ -535,7 +575,7 @@ export class InternalTicketsService {
           data: {
             ticketId,
             managerId,
-            employeeId: ticket.assignedEmployeeId!,
+            employeeId: existing.assignedEmployeeId!,
             score: dto.rating || 0,
             comment: dto.feedback || null
           }

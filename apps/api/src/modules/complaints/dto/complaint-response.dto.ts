@@ -127,6 +127,8 @@ export type ComplaintDetailDto = ComplaintQueueItemDto & {
   allowedActions: ComplaintTransitionAction[];
   canDelete?: boolean;
   createdBy: { name: string; nameAr: string } | null;
+  createdById?: string | null;
+  departmentId?: string | null;
   approvedBy: { name: string; nameAr: string } | null;
   assignedBy: { name: string; nameAr: string; departmentName?: string; departmentNameAr?: string } | null;
 };

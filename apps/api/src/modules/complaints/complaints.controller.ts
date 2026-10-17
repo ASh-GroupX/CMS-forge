@@ -84,7 +84,7 @@ export class ComplaintsController {
   @BranchScoped()
   async board(@Req() request: AuthenticatedRequest): Promise<ComplaintBoardResponseDto> {
     const principal = request.principal!;
-    return this.boardService.board({ userId: principal.userId, roleCode: principal.roleCode as RoleCode, branchId: queueBranchId(undefined, request), permissions: principal.permissions ?? [] });
+    return this.boardService.board({ userId: principal.userId, roleCode: principal.roleCode as RoleCode, branchId: queueBranchId(undefined, request), permissions: principal.permissions ?? [], ...(principal.departmentId ? { departmentId: principal.departmentId } : {}) });
   }
 
   @Get('board/department')
@@ -94,7 +94,7 @@ export class ComplaintsController {
   async boardByDepartment(@Req() request: AuthenticatedRequest): Promise<ComplaintBoardResponseDto> {
     try {
       const principal = request.principal!;
-      return await this.boardService.boardByDepartment({ userId: principal.userId, roleCode: principal.roleCode as RoleCode, branchId: queueBranchId(undefined, request), permissions: principal.permissions ?? [] });
+      return await this.boardService.boardByDepartment({ userId: principal.userId, roleCode: principal.roleCode as RoleCode, branchId: queueBranchId(undefined, request), permissions: principal.permissions ?? [], ...(principal.departmentId ? { departmentId: principal.departmentId } : {}) });
     } catch (err) {
       console.error("boardByDepartment ERROR:", err);
       throw err;
@@ -107,7 +107,7 @@ export class ComplaintsController {
   @BranchScoped()
   async boardByBranch(@Req() request: AuthenticatedRequest): Promise<ComplaintBoardResponseDto> {
     const principal = request.principal!;
-    return this.boardService.boardByBranch({ userId: principal.userId, roleCode: principal.roleCode as RoleCode, branchId: queueBranchId(undefined, request), permissions: principal.permissions ?? [] });
+    return this.boardService.boardByBranch({ userId: principal.userId, roleCode: principal.roleCode as RoleCode, branchId: queueBranchId(undefined, request), permissions: principal.permissions ?? [], ...(principal.departmentId ? { departmentId: principal.departmentId } : {}) });
   }
 
   @Get('board/category')
@@ -116,7 +116,7 @@ export class ComplaintsController {
   @BranchScoped()
   async boardByCategory(@Req() request: AuthenticatedRequest): Promise<ComplaintBoardResponseDto> {
     const principal = request.principal!;
-    return this.boardService.boardByCategory({ userId: principal.userId, roleCode: principal.roleCode as RoleCode, branchId: queueBranchId(undefined, request), permissions: principal.permissions ?? [] });
+    return this.boardService.boardByCategory({ userId: principal.userId, roleCode: principal.roleCode as RoleCode, branchId: queueBranchId(undefined, request), permissions: principal.permissions ?? [], ...(principal.departmentId ? { departmentId: principal.departmentId } : {}) });
   }
 
   @Get(':id')
@@ -136,7 +136,7 @@ export class ComplaintsController {
       permissions: request.principal!.permissions ?? []
     });
     const principal = request.principal!;
-    return { complaint: { ...complaint, allowedActions: this.complaintsService.allowedActionsFor(complaint, { roleCode: principal.roleCode as RoleCode, userId: principal.userId, permissions: principal.permissions ?? [] }), canDelete: principal.permissions?.includes('COMPLAINT_MANAGE') || principal.roleCode === 'ADMIN' } };
+    return { complaint: { ...complaint, allowedActions: this.complaintsService.allowedActionsFor(complaint, { roleCode: principal.roleCode as RoleCode, userId: principal.userId, permissions: principal.permissions ?? [], ...(principal.departmentId ? { departmentId: principal.departmentId } : {}) }), canDelete: principal.permissions?.includes('COMPLAINT_MANAGE') || principal.roleCode === 'ADMIN' } };
   }
 
   @Delete(':id')

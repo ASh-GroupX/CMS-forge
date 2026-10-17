@@ -91,6 +91,8 @@ export function detailItem(complaint: ComplaintDetailRecord, masked = false, sla
     statusHistory: statusHistory.map((item) => ({ ...item, createdAt: item.createdAt?.toISOString?.() ?? String(item.createdAt) })),
     allowedActions: [],
     createdBy,
+    createdById: (complaint as any).createdById ?? null,
+    departmentId: complaint.departmentId ?? null,
     approvedBy,
     assignedBy,
   };

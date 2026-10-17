@@ -176,10 +176,12 @@ export function TicketActionButtons({ ticket, options, principal }: { ticket: an
   };
 
   // RBAC checks
-  const isManager = principal?.roleCode === 'BRANCH_MANAGER' || principal?.roleCode === 'DEPARTMENT_MANGER' || principal?.roleCode === 'CR_MANAGER';
+  const isManager = principal?.roleCode === 'BRANCH_MANAGER' || principal?.roleCode === 'DEPARTMENT_MANGER' || principal?.roleCode === 'DEPARTMENT_MANAGER' || principal?.roleCode === 'CR_MANAGER';
   const isAssignedOfficer = principal?.userId === ticket.assignedEmployeeId;
-  const isTargetDepartment = principal?.departmentId === ticket.targetDepartmentId;
+  const isTargetDepartment = Boolean(principal?.departmentId && principal?.departmentId === ticket.targetDepartmentId);
+  const isRequester = principal?.userId === ticket.requestedById || Boolean(principal?.departmentId && principal?.departmentId === ticket.requestedBy?.departmentId);
   const isAdmin = principal?.roleCode === 'ADMIN';
+  const isGlobalManager = principal?.roleCode === 'CR_MANAGER' || isAdmin;
 
   return (
     <>
@@ -283,8 +285,8 @@ export function TicketActionButtons({ ticket, options, principal }: { ticket: an
           </button>
         )}
 
-        {/* Manager Actions on Resolved/InProgress tickets */}
-        {isManager && isTargetDepartment && (ticket.status === 'IN_PROGRESS' || ticket.status === 'RESOLVED') && (
+        {/* Manager Actions on Resolved/InProgress tickets: only target dept manager, requesting manager, or global manager */}
+        {((isManager && (isTargetDepartment || isRequester)) || isGlobalManager) && (ticket.status === 'IN_PROGRESS' || ticket.status === 'RESOLVED') && (
           <>
             <button onClick={() => setIsRejectOpen(true)} className="flex items-center gap-1.5 rounded-lg bg-red-500 text-white px-3 py-1.5 text-sm font-bold hover:bg-red-600">
               Reject

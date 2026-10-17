@@ -18,7 +18,7 @@ const TERMINAL_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 // column without the frontend reconstructing the state machine.
 const TRANSITION_TARGET = new Map<string, ComplaintStatus>(WORKFLOW_TRANSITIONS.map((item) => [`${item.fromStatus}:${item.action}`, item.toStatus]));
 
-export type ComplaintBoardActor = { userId: string | null; roleCode: RoleCode; branchId: string | null; permissions?: string[] };
+export type ComplaintBoardActor = { userId: string | null; roleCode: RoleCode; branchId: string | null; permissions?: string[]; departmentId?: string | null };
 
 @Injectable()
 export class ComplaintsBoardService {
@@ -31,7 +31,7 @@ export class ComplaintsBoardService {
     const [stages, queue] = await Promise.all([
       this.boardRepository.listStages(),
       // Identical branch/role scoping as GET /complaints — from the server session only.
-      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode, userId: actor.userId, ...(actor.permissions ? { permissions: actor.permissions } : {}) }),
+      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode, userId: actor.userId, ...(actor.departmentId ? { userDepartmentId: actor.departmentId } : {}), ...(actor.permissions ? { permissions: actor.permissions } : {}) }),
     ]);
     return buildComplaintBoard(stages, recentQueue(queue, now), (card) => allowedTransitionsFor(this.complaintsService, card, actor));
   }
@@ -39,7 +39,7 @@ export class ComplaintsBoardService {
   async boardByDepartment(actor: ComplaintBoardActor, now: Date = new Date()): Promise<ComplaintBoardResponseDto> {
     const [departments, queue] = await Promise.all([
       this.boardRepository.listActiveDepartments(),
-      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode, userId: actor.userId, ...(actor.permissions ? { permissions: actor.permissions } : {}) }),
+      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode, userId: actor.userId, ...(actor.departmentId ? { userDepartmentId: actor.departmentId } : {}), ...(actor.permissions ? { permissions: actor.permissions } : {}) }),
     ]);
     return buildComplaintBoardByDepartment(departments, recentQueue(queue, now), (card) => allowedTransitionsFor(this.complaintsService, card, actor));
   }
@@ -47,7 +47,7 @@ export class ComplaintsBoardService {
   async boardByBranch(actor: ComplaintBoardActor, now: Date = new Date()): Promise<ComplaintBoardResponseDto> {
     const [branches, queue] = await Promise.all([
       this.boardRepository.listActiveBranches(),
-      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode, userId: actor.userId, ...(actor.permissions ? { permissions: actor.permissions } : {}) }),
+      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode, userId: actor.userId, ...(actor.departmentId ? { userDepartmentId: actor.departmentId } : {}), ...(actor.permissions ? { permissions: actor.permissions } : {}) }),
     ]);
     return buildComplaintBoardByBranch(branches, recentQueue(queue, now), (card) => allowedTransitionsFor(this.complaintsService, card, actor));
   }
@@ -55,7 +55,7 @@ export class ComplaintsBoardService {
   async boardByCategory(actor: ComplaintBoardActor, now: Date = new Date()): Promise<ComplaintBoardResponseDto> {
     const [categories, queue] = await Promise.all([
       this.boardRepository.listActiveCategories(),
-      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode, userId: actor.userId, ...(actor.permissions ? { permissions: actor.permissions } : {}) }),
+      this.complaintsService.listQueue({ branchId: actor.branchId, role: actor.roleCode, userId: actor.userId, ...(actor.departmentId ? { userDepartmentId: actor.departmentId } : {}), ...(actor.permissions ? { permissions: actor.permissions } : {}) }),
     ]);
     return buildComplaintBoardByCategory(categories, recentQueue(queue, now), (card) => allowedTransitionsFor(this.complaintsService, card, actor));
   }
@@ -65,7 +65,7 @@ export class ComplaintsBoardService {
 // enforced by ComplaintsService), each tagged with its target status.
 function allowedTransitionsFor(service: ComplaintsService, card: ComplaintQueueItemDto, actor: ComplaintBoardActor): ComplaintBoardTransitionDto[] {
   return service
-    .allowedActionsFor(card, { roleCode: actor.roleCode, userId: actor.userId, permissions: actor.permissions ?? [] })
+    .allowedActionsFor(card, { roleCode: actor.roleCode, userId: actor.userId, permissions: actor.permissions ?? [], ...(actor.departmentId ? { departmentId: actor.departmentId } : {}) })
     .flatMap((action) => transitionDto(card.status, action));
 }
 

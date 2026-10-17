@@ -67,6 +67,7 @@ export function toTransitionInput(
     ipAddress: string | null;
     userAgent: string | null;
     actorPermissions?: string[];
+    actorDepartmentId?: string | null;
   },
 ): ApplyComplaintTransitionInput {
   return {
@@ -76,6 +77,7 @@ export function toTransitionInput(
     actorRole: context.actorRole,
     ...(context.actorPermissions ? { actorPermissions: context.actorPermissions } : {}),
     actorId: context.actorId,
+    ...(context.actorDepartmentId ? { actorDepartmentId: context.actorDepartmentId } : {}),
     requestSource: 'STAFF_API',
     reason: body.reason ?? null,
     ...(body.targetBranchId === undefined ? {} : { targetBranchId: body.targetBranchId }),
