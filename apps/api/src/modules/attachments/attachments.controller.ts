@@ -61,16 +61,28 @@ export class AttachmentsController {
     @Param('attachmentId') attachmentId: string,
     @Query('branchId') branchId: string | undefined,
     @Req() request: AuthenticatedRequest,
+    @Query('redirect') redirect?: string,
+    @Query('download') download?: string,
+    @Res({ passthrough: true }) response?: any,
   ): Promise<AttachmentDownloadResponseDto> {
     const complaint = await this.complaintsService.getDetail(complaintId, { branchId: queueBranchId(branchId, request) });
-    return {
-      download: attachmentDownloadDto(await this.attachmentsService.prepareStaffDownload({
-        complaintId,
-        attachmentId,
-        ...auditContext(request),
-        branchId: complaint.branchId,
-      })),
-    };
+    const downloadDto = attachmentDownloadDto(await this.attachmentsService.prepareStaffDownload({
+      complaintId,
+      attachmentId,
+      ...auditContext(request),
+      branchId: complaint.branchId,
+    }));
+
+    const accept = (request?.headers?.['accept'] as string) ?? '';
+    const shouldRedirect = redirect === '1' || download === '1' || accept.includes('text/html');
+    if (shouldRedirect && response?.redirect) {
+      const target = downloadDto.token.startsWith('/') || downloadDto.token.startsWith('http')
+        ? downloadDto.token
+        : `/api/attachments/raw/${encodeURIComponent(downloadDto.token)}`;
+      response.redirect(302, target);
+    }
+
+    return { download: downloadDto };
   }
 }
 

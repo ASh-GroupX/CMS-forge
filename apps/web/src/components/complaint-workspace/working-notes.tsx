@@ -56,9 +56,10 @@ export function WorkingNotesList({ timeline, complaintId }: { timeline: Complain
                 <div className={!isAttachment ? "mt-2 pt-2 border-t border-line-subtle flex flex-col gap-1.5" : "flex flex-col gap-1.5"}>
                   <div className="flex flex-wrap gap-2">
                     <a 
-                      href={`/api/complaints/${complaintId}/attachments/${note.related.id}/download?redirect=1`}
+                      href={`/api/attachments/raw/${note.related.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      download
                       className="flex items-center gap-1.5 rounded-lg border border-line-subtle bg-surface-canvas px-2 py-1.5 hover:bg-surface-raised hover:border-brand/30 transition-colors"
                     >
                       <Paperclip className="size-3.5 text-content-muted" />

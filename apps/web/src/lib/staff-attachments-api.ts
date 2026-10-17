@@ -105,15 +105,7 @@ function validationError(validation: Exclude<AttachmentFileValidation, { ok: tru
 }
 
 function openAttachmentDownloadTarget(target: string): void {
-  if (typeof window !== 'undefined') {
-    const anchor = document.createElement('a');
-    anchor.href = target;
-    anchor.target = '_blank';
-    anchor.rel = 'noopener noreferrer';
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-  }
+  if (typeof window !== 'undefined') window.location.assign(target);
 }
 
 function unavailableDownloadTarget(): StaffAttachmentError {
