@@ -23,6 +23,10 @@ export function transitionPermission(request: AuthenticatedRequest): string[] {
   switch (action) {
     case ComplaintTransitionAction.SUBMIT: return ['COMPLAINT_SUBMIT'];
     case ComplaintTransitionAction.ACCEPT_INTAKE:
+      if (request.principal?.roleCode === RoleCode.CR_OFFICER && !request.principal?.permissions?.includes('COMPLAINT_APPROVE')) {
+        return ['COMPLAINT_VIEW_ASSIGNED'];
+      }
+      return ['COMPLAINT_APPROVE'];
     case ComplaintTransitionAction.APPROVE_AND_ROUTE:
     case ComplaintTransitionAction.SEND_BACK: return ['COMPLAINT_APPROVE'];
     case ComplaintTransitionAction.ASSIGN_INVESTIGATION:

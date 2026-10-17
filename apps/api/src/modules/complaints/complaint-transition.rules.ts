@@ -9,21 +9,21 @@ import type { ComplaintDetailDto } from './dto/complaint-response.dto.js';
 const branchManagerRoles = new Set<string>([RoleCode.BRANCH_MANAGER, RoleCode.CR_MANAGER, RoleCode.ADMIN, 'DEPARTMENT_MANAGER', 'DEPARTMENT_MANGER']);
 const reasonRequired = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintTransitionAction.SEND_BACK, ComplaintTransitionAction.ASSIGN_INVESTIGATION, ComplaintTransitionAction.CLOSE, ComplaintTransitionAction.REOPEN, ComplaintTransitionAction.ROUTE_AGAIN, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintTransitionAction.REJECT_AFTER_REVIEW, ComplaintTransitionAction.REJECT_AFTER_INVESTIGATION, ComplaintTransitionAction.REJECT_RESOLUTION]);
 const resolutionRequired = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.RESOLVE, ComplaintTransitionAction.RESOLVE_DIRECTLY]);
-const ownerAllowedActions = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE, ComplaintTransitionAction.RESOLVE]);
+const ownerAllowedActions = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.ACCEPT_INTAKE, ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE, ComplaintTransitionAction.RESOLVE]);
 export const ASSIGNMENT_ACTIONS = new Set<ComplaintTransitionAction>([ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintTransitionAction.ASSIGN_INVESTIGATION]);
 
 export function invalidTransitionError(): AppException { return new AppException('COMPLAINT_INVALID_TRANSITION', 'The requested action is not allowed for the current complaint state.', HttpStatus.CONFLICT); }
 export function roleForbiddenError(): AppException { return new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN); }
 
 export function assertActorCanApplyTransition(input: ApplyComplaintTransitionInput, complaint: ComplaintStatusRecord): void {
-  const isManager = branchManagerRoles.has(input.actorRole) || Boolean(input.actorPermissions?.includes('COMPLAINT_MANAGE')) || Boolean(input.actorPermissions?.includes('COMPLAINT_RESOLVE')) || Boolean(input.actorPermissions?.includes('COMPLAINT_ASSIGN'));
+  const isManager = branchManagerRoles.has(input.actorRole) || Boolean(input.actorPermissions?.includes('COMPLAINT_MANAGE'));
   if (!ownerAllowedActions.has(input.action) || isManager) return;
   if (input.actorId && complaint.ownerId === input.actorId) return;
   throw roleForbiddenError();
 }
 
 export function actorCanSeeAction(action: ComplaintTransitionAction, actor: { roleCode: string; userId: string | null; permissions?: string[] }, complaint: Pick<ComplaintDetailDto, 'ownerId'>): boolean {
-  const isManager = branchManagerRoles.has(actor.roleCode) || Boolean(actor.permissions?.includes('COMPLAINT_MANAGE')) || Boolean(actor.permissions?.includes('COMPLAINT_RESOLVE')) || Boolean(actor.permissions?.includes('COMPLAINT_ASSIGN'));
+  const isManager = branchManagerRoles.has(actor.roleCode) || Boolean(actor.permissions?.includes('COMPLAINT_MANAGE'));
   return !ownerAllowedActions.has(action) || isManager || Boolean(actor.userId && complaint.ownerId === actor.userId);
 }
 
@@ -34,6 +34,8 @@ export async function recordWorkflowRoleForbidden(auditService: AuditService, in
 export function validateRequiredTransitionData(input: ApplyComplaintTransitionInput): void {
   const errors = [
     ...(reasonRequired.has(input.action) ? requiredTextError(input.reason, 'reason') : []),
+    ...(input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE && !nonEmptyText(input.targetBranchId) ? [{ field: 'targetBranchId', code: 'REQUIRED', message: 'targetBranchId is required.' }] : []),
+    ...(input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE && !nonEmptyText(input.targetDepartmentId) ? [{ field: 'targetDepartmentId', code: 'REQUIRED', message: 'targetDepartmentId is required.' }] : []),
     ...(input.action === ComplaintTransitionAction.ASSIGN_INVESTIGATION && !nonEmptyText(input.ownerId) && !nonEmptyText(input.targetDepartmentId) ? [{ field: 'assignment', code: 'REQUIRED', message: 'ownerId or targetDepartmentId is required.' }] : []),
     ...(resolutionRequired.has(input.action) ? requiredTextError(input.resolutionType, 'resolutionType') : []),
     ...(resolutionRequired.has(input.action) ? requiredTextError(input.resolutionSummary, 'resolutionSummary') : []),

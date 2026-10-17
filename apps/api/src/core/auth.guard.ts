@@ -122,7 +122,7 @@ export class RbacGuard implements CanActivate {
     ]);
     const branchId = requestedBranchId(request);
 
-    const isComplaintCreate = request.method === 'POST' && Boolean(request.url?.match(/^\/complaints(\?|$)/));
+    const isComplaintCreate = (!request.method || request.method === 'POST') && Boolean(request.url?.match(/^\/complaints(\?|$)/));
     const isExempt = principal.roleCode === 'ADMIN' || principal.roleCode === 'CR_MANAGER' || principal.roleCode === 'DEPARTMENT_MANAGER' || principal.roleCode === 'DEPARTMENT_MANGER' || (principal.roleCode === 'CR_OFFICER' && isComplaintCreate) || Boolean(principal.permissions?.includes('COMPLAINT_VIEW_ALL'));
     if (branchScoped && branchId && !isExempt && principal.branchId !== branchId) {
       await this.recordSecurityDeny(request, 'branch_scope_forbidden', branchId);

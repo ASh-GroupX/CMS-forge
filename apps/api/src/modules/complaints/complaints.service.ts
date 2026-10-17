@@ -66,7 +66,8 @@ export const WORKFLOW_TRANSITIONS: readonly WorkflowTransition[] = [
   transition(ComplaintStatus.DRAFT, ComplaintTransitionAction.SUBMIT, ComplaintStatus.SUBMITTED, [RoleCode.CR_OFFICER, RoleCode.CR_MANAGER, RoleCode.ADMIN, RoleCode.CUSTOMER_PORTAL], 'COMPLAINT_SUBMIT'),
   transition(ComplaintStatus.SUBMITTED, ComplaintTransitionAction.ACCEPT_INTAKE, ComplaintStatus.MANAGER_REVIEW, MANAGER_ROLES, 'COMPLAINT_APPROVE'),
   transition(ComplaintStatus.SUBMITTED, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintStatus.REJECTED, MANAGER_ROLES, 'COMPLAINT_REJECT'),
-  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintStatus.IN_PROGRESS, MANAGER_ROLES, 'COMPLAINT_APPROVE'),
+  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.ACCEPT_INTAKE, ComplaintStatus.IN_PROGRESS, OWNER_OR_BRANCH_MANAGER_ROLES, 'COMPLAINT_APPROVE'),
+  transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintStatus.BRANCH_REVIEW, MANAGER_ROLES, 'COMPLAINT_APPROVE'),
   transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.SEND_BACK, ComplaintStatus.DRAFT, MANAGER_ROLES, 'COMPLAINT_APPROVE'),
   transition(ComplaintStatus.MANAGER_REVIEW, ComplaintTransitionAction.REJECT_AS_INVALID, ComplaintStatus.REJECTED, MANAGER_ROLES, 'COMPLAINT_REJECT'),
   transition(ComplaintStatus.BRANCH_REVIEW, ComplaintTransitionAction.ASSIGN_INVESTIGATION, ComplaintStatus.IN_PROGRESS, BRANCH_MANAGER_ROLES, 'COMPLAINT_ASSIGN'),
@@ -83,6 +84,7 @@ export const WORKFLOW_TRANSITIONS: readonly WorkflowTransition[] = [
   transition(ComplaintStatus.CLOSED, ComplaintTransitionAction.REOPEN, ComplaintStatus.REOPENED, MANAGER_ROLES, 'COMPLAINT_REOPEN'),
   transition(ComplaintStatus.REJECTED, ComplaintTransitionAction.REOPEN, ComplaintStatus.REOPENED, MANAGER_ROLES, 'COMPLAINT_REOPEN'),
   transition(ComplaintStatus.REOPENED, ComplaintTransitionAction.ROUTE_AGAIN, ComplaintStatus.MANAGER_REVIEW, MANAGER_ROLES, 'COMPLAINT_REOPEN'),
+  transition(ComplaintStatus.REOPENED, ComplaintTransitionAction.ACCEPT_INTAKE, ComplaintStatus.IN_PROGRESS, OWNER_OR_BRANCH_MANAGER_ROLES, 'COMPLAINT_APPROVE'),
   transition(ComplaintStatus.REOPENED, ComplaintTransitionAction.APPROVE_AND_ROUTE, ComplaintStatus.IN_PROGRESS, MANAGER_ROLES, 'COMPLAINT_APPROVE'),
   transition(ComplaintStatus.RESOLVED, ComplaintTransitionAction.CUSTOMER_REJECT_RESOLUTION, ComplaintStatus.IN_PROGRESS, [RoleCode.CUSTOMER_PORTAL]),
   transition(ComplaintStatus.REJECTED, ComplaintTransitionAction.CUSTOMER_RESUBMIT, ComplaintStatus.MANAGER_REVIEW, [RoleCode.CUSTOMER_PORTAL]),
@@ -168,6 +170,10 @@ export class ComplaintsService {
       const canSee = actorCanSeeAction(item.action, actor, complaint);
       return item.fromStatus === complaint.status && (roleMatch || permMatch) && canSee;
     }).map((item) => item.action);
+    if (complaint.ownerId) return actions.filter((action) => action !== ComplaintTransitionAction.APPROVE_AND_ROUTE);
+    if (!complaint.ownerId && (complaint.status === ComplaintStatus.MANAGER_REVIEW || complaint.status === ComplaintStatus.REOPENED)) {
+      return actions.filter((action) => action !== ComplaintTransitionAction.ACCEPT_INTAKE);
+    }
     return actions;
   }
 
@@ -213,9 +219,8 @@ export class ComplaintsService {
     let decision: ComplaintTransitionDecision;
     try {
       decision = this.validateTransition(input);
-      if (input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE) {
-        decision.toStatus = ComplaintStatus.IN_PROGRESS;
-      }
+      if (input.action === ComplaintTransitionAction.APPROVE_AND_ROUTE && input.ownerId) decision.toStatus = ComplaintStatus.IN_PROGRESS;
+      if (input.action === ComplaintTransitionAction.ACCEPT_INTAKE && (input.fromStatus === ComplaintStatus.MANAGER_REVIEW || input.fromStatus === ComplaintStatus.REOPENED)) decision.toStatus = ComplaintStatus.IN_PROGRESS;
     } catch (error) {
       if (error instanceof AppException && error.code === 'RBAC_FORBIDDEN') {
         await recordWorkflowRoleForbidden(this.auditService, input);
@@ -228,13 +233,9 @@ export class ComplaintsService {
     let committed: { result: ApplyComplaintTransitionResult; complaint: ComplaintStatusRecord };
     try {
       committed = await this.complaintsRepository.transaction(async (client) => {
-        if (input.action === ComplaintTransitionAction.CLOSE) {
-          assertVehicleClosureAllowed(input, await this.complaintsRepository.findTransitionSubject(input.complaintId, client));
-        }
-        const complaint = await this.complaintsRepository.updateStatus(
-          statusUpdateData(input, decision.toStatus),
-          client,
-        );
+        const subject = (input.action === ComplaintTransitionAction.CLOSE && this.complaintsRepository.findTransitionSubject) ? await this.complaintsRepository.findTransitionSubject(input.complaintId, client) : null;
+        if (input.action === ComplaintTransitionAction.CLOSE) assertVehicleClosureAllowed(input, subject);
+        const complaint = await this.complaintsRepository.updateStatus(statusUpdateData(input, decision.toStatus), client);
 
         if (!complaint) throw invalidTransitionError();
         assertActorCanApplyTransition(input, complaint);

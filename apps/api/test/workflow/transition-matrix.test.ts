@@ -887,6 +887,7 @@ test('complaint transition route delegates with server principal role and audit 
     fromStatus: ComplaintStatus.DRAFT,
     action: ComplaintTransitionAction.SUBMIT,
     actorRole: RoleCode.CR_OFFICER,
+    actorPermissions: ['COMPLAINT_SUBMIT', 'COMPLAINT_COMMENT_INTERNAL'],
     actorId: 'usr_officer',
     requestSource: ComplaintTransitionRequestSource.STAFF_API,
     targetBranchId: 'branch_service',
