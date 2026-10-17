@@ -75,7 +75,7 @@ export class InternalTicketsController {
 
   @Get('department/:departmentId')
   async getDepartmentTickets(@Param('departmentId') departmentId: string, @Req() req: AuthenticatedRequest) {
-    if (req.principal?.roleCode !== 'ADMIN' && req.principal?.roleCode !== 'CR_MANAGER') {
+    if (req.principal?.roleCode !== 'ADMIN') {
       if (departmentId !== req.principal?.departmentId) {
         throw new AppException('RBAC_FORBIDDEN', 'Access to another department tickets is forbidden', 403);
       }

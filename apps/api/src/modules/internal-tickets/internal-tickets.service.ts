@@ -230,7 +230,7 @@ export class InternalTicketsService {
       });
       if (!existing) throw new NotFoundException('Ticket not found');
 
-      if (principal && principal.roleCode !== 'ADMIN' && principal.roleCode !== 'CR_MANAGER') {
+      if (principal && principal.roleCode !== 'ADMIN') {
         const isTargetDept = Boolean(principal.departmentId && principal.departmentId === existing.targetDepartmentId);
         const isRequester = Boolean(principal.userId === existing.requestedById || (principal.departmentId && principal.departmentId === existing.requestedBy?.departmentId));
         if (!isTargetDept && !isRequester) {
@@ -487,7 +487,7 @@ export class InternalTicketsService {
     });
     if (!ticket) throw new NotFoundException('Ticket not found');
 
-    if (principal && principal.roleCode !== 'ADMIN' && principal.roleCode !== 'CR_MANAGER') {
+    if (principal && principal.roleCode !== 'ADMIN') {
       const isTargetDept = Boolean(principal.departmentId && principal.departmentId === ticket.targetDepartmentId);
       const isRequester = Boolean(principal.userId === ticket.requestedById || (principal.departmentId && principal.departmentId === (ticket as any).requestedBy?.departmentId));
       const isAssigned = Boolean(principal.userId === ticket.assignedEmployeeId);
@@ -557,7 +557,7 @@ export class InternalTicketsService {
       });
       if (!existing) throw new NotFoundException('Ticket not found');
 
-      if (principal && principal.roleCode !== 'ADMIN' && principal.roleCode !== 'CR_MANAGER') {
+      if (principal && principal.roleCode !== 'ADMIN') {
         const isTargetDept = Boolean(principal.departmentId && principal.departmentId === existing.targetDepartmentId);
         const isRequester = Boolean(principal.userId === existing.requestedById || (principal.departmentId && principal.departmentId === existing.requestedBy?.departmentId));
         if (!isTargetDept && !isRequester) {
