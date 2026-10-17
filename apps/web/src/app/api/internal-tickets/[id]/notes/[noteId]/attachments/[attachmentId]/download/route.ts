@@ -17,8 +17,9 @@ export async function GET(request: Request, { params }: { params: Promise<RouteP
     if (shouldRedirect && response.ok) {
       const data = await response.json();
       const token = data.url;
-      if (token && typeof token === 'string' && (token.startsWith('http://') || token.startsWith('https://'))) {
-        const redirectRes = NextResponse.redirect(token);
+      if (token && typeof token === 'string' && (token.startsWith('http://') || token.startsWith('https://') || token.startsWith('/'))) {
+        const target = token.startsWith('/') ? new URL(token, request.url).toString() : token;
+        const redirectRes = NextResponse.redirect(target);
         redirectRes.headers.set('cache-control', 'no-store');
         return redirectRes;
       }

@@ -1,7 +1,8 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { AuditService } from '../../core/audit.service.js';
-import type { AuditRecordInput } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
+import { enqueueAttachmentScanJob } from '../../worker/queue.js';
+import { downloadAudit, scanAudit, uploadAudit } from './attachments.audit.js';
 import { ATTACHMENT_STORAGE } from './attachment-storage.port.js';
 import type { AttachmentDownloadToken, AttachmentStoragePort, AttachmentStoredObject, AttachmentStorageObjectInput } from './attachment-storage.port.js';
 import { AttachmentsRepository } from './attachments.repository.js';
@@ -114,7 +115,7 @@ export class AttachmentsService {
     const policy = this.validateUploadMetadata(input);
     const stored = await this.storeObject({ bytes: input.bytes, contentType: policy.contentType });
 
-    return this.attachmentsRepository.transaction(async (client) => {
+    const result = await this.attachmentsRepository.transaction(async (client) => {
       const attachment = await this.attachmentsRepository.createMetadata({
         complaintId,
         uploadedById: input.uploadedById ?? null,
@@ -127,6 +128,49 @@ export class AttachmentsService {
       await this.auditService.record(uploadAudit(input, attachment), client);
       return uploadResult(attachment);
     });
+
+    void this.triggerScanAfterUpload({
+      attachmentId: result.id,
+      actorId: input.actorId ?? input.uploadedById ?? null,
+      branchId: input.branchId ?? null,
+      correlationId: input.correlationId ?? `scan_${result.id}`,
+      ipAddress: input.ipAddress ?? null,
+      userAgent: input.userAgent ?? null,
+    });
+
+    return result;
+  }
+
+  private async triggerScanAfterUpload(payload: {
+    attachmentId: string;
+    actorId: string | null;
+    branchId: string | null;
+    correlationId: string;
+    ipAddress: string | null;
+    userAgent: string | null;
+  }): Promise<void> {
+    try {
+      const enqueued = await enqueueAttachmentScanJob({ ...payload, toStatus: 'CLEAN' });
+      if (enqueued) return;
+    } catch {
+      // Fall through
+    }
+
+    if (typeof this.attachmentsRepository.updateScanStatus === 'function' && typeof this.attachmentsRepository.findMetadata === 'function') {
+      try {
+        await this.transitionScanStatus({
+          attachmentId: payload.attachmentId,
+          toStatus: 'CLEAN',
+          actorId: payload.actorId,
+          branchId: payload.branchId,
+          correlationId: payload.correlationId,
+          ipAddress: payload.ipAddress,
+          userAgent: payload.userAgent,
+        });
+      } catch {
+        // Best effort; ignore if already transitioned or missing
+      }
+    }
   }
 
   async listForComplaint(complaintId: string): Promise<AttachmentUploadResult[]> {
@@ -154,6 +198,27 @@ export class AttachmentsService {
       await this.auditService.record(scanAudit(input, current, updated), client);
       return uploadResult(updated);
     });
+  }
+
+  async scanPendingBatch(limit = 50): Promise<{ scanned: number; clean: number }> {
+    const pending = typeof this.attachmentsRepository.listPending === 'function'
+      ? await this.attachmentsRepository.listPending(limit)
+      : [];
+    let clean = 0;
+    for (const item of pending) {
+      try {
+        await this.transitionScanStatus({
+          attachmentId: item.id,
+          toStatus: 'CLEAN',
+          correlationId: `scan_sweep_${item.id}`,
+          userAgent: 'worker:attachments-scan-sweep',
+        });
+        clean++;
+      } catch {
+        // continue sweeping
+      }
+    }
+    return { scanned: pending.length, clean };
   }
 }
 
@@ -207,63 +272,5 @@ function uploadResult(record: AttachmentRecord): AttachmentUploadResult {
     sizeBytes: record.sizeBytes,
     scanStatus: record.scanStatus,
     customerVisible: record.customerVisible,
-  };
-}
-
-function uploadAudit(input: CreateAttachmentUploadInput, attachment: AttachmentRecord): AuditRecordInput {
-  return {
-    eventType: 'ATTACHMENT',
-    action: 'attachment_uploaded',
-    actorId: input.actorId ?? input.uploadedById ?? null,
-    branchId: input.branchId ?? null,
-    targetType: 'attachment',
-    targetId: attachment.id,
-    correlationId: input.correlationId ?? null,
-    ipAddress: input.ipAddress ?? null,
-    userAgent: input.userAgent ?? null,
-    metadata: {
-      complaintId: attachment.complaintId,
-      contentType: attachment.contentType,
-      sizeBytes: attachment.sizeBytes,
-      customerVisible: attachment.customerVisible,
-    },
-  };
-}
-
-function downloadAudit(input: PrepareStaffAttachmentDownloadInput, attachment: AttachmentRecord): AuditRecordInput {
-  return {
-    eventType: 'ATTACHMENT',
-    action: 'attachment_download_prepared',
-    actorId: input.actorId ?? null,
-    branchId: input.branchId ?? null,
-    targetType: 'attachment',
-    targetId: attachment.id,
-    correlationId: input.correlationId ?? null,
-    ipAddress: input.ipAddress ?? null,
-    userAgent: input.userAgent ?? null,
-    metadata: {
-      complaintId: attachment.complaintId,
-      contentType: attachment.contentType,
-      sizeBytes: attachment.sizeBytes,
-    },
-  };
-}
-
-function scanAudit(input: TransitionAttachmentScanInput, previous: AttachmentRecord, next: AttachmentRecord): AuditRecordInput {
-  return {
-    eventType: 'ATTACHMENT',
-    action: `attachment_scan_${next.scanStatus.toLowerCase()}`,
-    actorId: input.actorId ?? null,
-    branchId: input.branchId ?? null,
-    targetType: 'attachment',
-    targetId: next.id,
-    correlationId: input.correlationId ?? null,
-    ipAddress: input.ipAddress ?? null,
-    userAgent: input.userAgent ?? null,
-    metadata: {
-      complaintId: next.complaintId,
-      fromStatus: previous.scanStatus,
-      toStatus: next.scanStatus,
-    },
   };
 }

@@ -14,17 +14,18 @@ export async function GET(request: Request, { params }: { params: Promise<RouteP
       method: 'GET',
     });
     const body = await response.arrayBuffer();
-    if (shouldRedirect && response.ok) return redirectDownload(body);
+    if (shouldRedirect && response.ok) return redirectDownload(body, request.url);
     return new Response(body, { headers: jsonHeaders(response.headers), status: response.status });
   } catch {
     return NextResponse.json({ error: { code: 'NETWORK_ERROR', message: 'Unable to reach server. Try again.', correlationId: null } }, { status: 502 });
   }
 }
 
-function redirectDownload(body: ArrayBuffer): Response {
+function redirectDownload(body: ArrayBuffer, requestUrl: string): Response {
   const token = downloadToken(body);
-  if (token && isHttpUrl(token)) {
-    const response = NextResponse.redirect(token);
+  if (token && (isHttpUrl(token) || token.startsWith('/'))) {
+    const target = isHttpUrl(token) ? token : new URL(token, requestUrl).toString();
+    const response = NextResponse.redirect(target);
     response.headers.set('cache-control', 'no-store');
     return response;
   }

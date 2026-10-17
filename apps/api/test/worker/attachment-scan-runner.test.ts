@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { AttachmentsService } from '../../src/modules/attachments/attachments.service.ts';
-import { attachmentScanJobName, processWorkerJob } from '../../src/worker/index.ts';
+import { attachmentScanJobName, attachmentScanSweepJobName, processWorkerJob } from '../../src/worker/index.ts';
 
 test('worker transitions attachment scan jobs to CLEAN through the public service', async () => {
   const calls: unknown[] = [];
@@ -109,7 +109,26 @@ test('worker leaves unknown attachment-scan jobs as noops', async () => {
   assert.equal(serviceRead, false);
 });
 
-function fakeApp(service: Partial<Pick<AttachmentsService, 'transitionScanStatus'>>) {
+test('worker runs attachment scan sweep through scanPendingBatch', async () => {
+  let batchCalled = false;
+  const logs: string[] = [];
+  const result = await processWorkerJob('attachments-scan', {
+    id: 'job_sweep_1',
+    name: attachmentScanSweepJobName,
+    data: {},
+  }, fakeApp({
+    scanPendingBatch: async () => {
+      batchCalled = true;
+      return { scanned: 2, clean: 2 };
+    },
+  }), fakeLogger(logs));
+
+  assert.equal(batchCalled, true);
+  assert.deepEqual(result, { scanned: 2, clean: 2 });
+  assert.match(logs[0] ?? '', /attachment scan sweep job received id=job_sweep_1/);
+});
+
+function fakeApp(service: Partial<Pick<AttachmentsService, 'transitionScanStatus' | 'scanPendingBatch'>>) {
   return {
     get: (token: unknown) => {
       assert.equal(token, AttachmentsService);

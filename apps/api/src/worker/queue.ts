@@ -63,6 +63,34 @@ export async function closeQueueRegistry(registry: WorkerQueueRegistry): Promise
   await Promise.all(workerQueueNames.map((name) => registry[name].close()));
 }
 
+export const attachmentScanJobName = 'attachments.scan';
+
+let standaloneScanQueue: Queue<WorkerJobPayload> | null = null;
+
+export async function enqueueAttachmentScanJob(payload: WorkerJobPayload): Promise<boolean> {
+  if (!process.env.REDIS_URL) return false;
+  try {
+    if (!standaloneScanQueue) {
+      const connection: RedisOptions = {
+        ...redisConnectionFromUrl(),
+        enableOfflineQueue: false,
+        maxRetriesPerRequest: 1,
+        connectTimeout: 500,
+        retryStrategy: () => null,
+      };
+      standaloneScanQueue = new Queue<WorkerJobPayload>('attachments-scan', { connection });
+      standaloneScanQueue.on('error', () => {});
+    }
+    await Promise.race([
+      standaloneScanQueue.add(attachmentScanJobName, payload),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 800)),
+    ]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function redisPort(url: URL): number {
   const port = url.port ? Number(url.port) : 6379;
   if (!Number.isInteger(port) || port < 1 || port > 65535) {

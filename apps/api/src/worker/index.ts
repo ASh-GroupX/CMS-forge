@@ -30,14 +30,18 @@ export const notificationWhatsAppJobName = 'notifications.whatsapp';
 export const collaborationDigestJobName = 'notifications.collaboration-digest';
 export const taskEscalationJobName = 'tasks.escalation.scan';
 export const taskNotificationBatchJobName = 'tasks.notification.batch';
-export const attachmentScanJobName = 'attachments.scan';
+export { attachmentScanJobName } from './queue.js';
+import { attachmentScanJobName } from './queue.js';
+export const attachmentScanSweepJobName = 'attachments.scan.sweep';
 
 type WorkerJob = { id?: string | number; name: string; data?: WorkerJobPayload };
 type WorkerLogger = Pick<Logger, 'log'>;
 type WorkerContext = Pick<INestApplicationContext, 'get'>;
 type SlaRunner = Pick<SlaService, 'runWarningJob' | 'runBreachJob' | 'runEscalationJob'>;
 type NotificationsRunner = Pick<NotificationsService, 'dispatchQueuedEmail' | 'dispatchQueuedSms' | 'dispatchQueuedWhatsApp' | 'queueInternal' | 'flushCollaborationDigests'>;
-type AttachmentsRunner = Pick<AttachmentsService, 'transitionScanStatus'>;
+type AttachmentsRunner = Pick<AttachmentsService, 'transitionScanStatus'> & {
+  scanPendingBatch?(limit?: number): Promise<{ scanned: number; clean: number }>;
+};
 type TaskEscalationRunner = Pick<TasksService, 'managerControlRoom'>;
 type QueueScheduler = Pick<Queue<WorkerJobPayload>, 'upsertJobScheduler' | 'close'>;
 
@@ -47,6 +51,7 @@ async function bootstrap(): Promise<void> {
   const connection = redisConnectionFromUrl();
   const slaQueue = new Queue<WorkerJobPayload>('sla', { connection });
   const notificationsQueue = new Queue<WorkerJobPayload>('notifications', { connection });
+  const attachmentsQueue = new Queue<WorkerJobPayload>('attachments-scan', { connection });
   const workers = workerQueueNames.map(
     (queueName) =>
       new Worker<WorkerJobPayload>(
@@ -65,8 +70,9 @@ async function bootstrap(): Promise<void> {
 
   await scheduleSlaJobs(slaQueue);
   await scheduleNotificationJobs(notificationsQueue);
+  await scheduleAttachmentScanJobs(attachmentsQueue);
 
-  const shutdown = () => close(app, workers, [slaQueue, notificationsQueue], logger);
+  const shutdown = () => close(app, workers, [slaQueue, notificationsQueue, attachmentsQueue], logger);
   process.once('SIGINT', () => void shutdown());
   process.once('SIGTERM', () => void shutdown());
 
@@ -110,10 +116,18 @@ export async function processWorkerJob(
   }
 
   if (queueName === 'attachments-scan') {
-    if (job.name !== attachmentScanJobName) return logNoopJob(queueName, job, logger);
-    const result = await runAttachmentScanJob(app.get(AttachmentsService), job.data);
-    logger.log(`attachment scan job received name=${job.name} id=${job.id ?? 'unknown'} result=${JSON.stringify(result)}`);
-    return result;
+    if (job.name === attachmentScanJobName) {
+      const result = await runAttachmentScanJob(app.get(AttachmentsService), job.data);
+      logger.log(`attachment scan job received name=${job.name} id=${job.id ?? 'unknown'} result=${JSON.stringify(result)}`);
+      return result;
+    }
+    if (job.name === attachmentScanSweepJobName) {
+      const service = app.get(AttachmentsService);
+      const result = typeof service.scanPendingBatch === 'function' ? await service.scanPendingBatch(50) : { scanned: 0, clean: 0 };
+      logger.log(`attachment scan sweep job received id=${job.id ?? 'unknown'} result=${JSON.stringify(result)}`);
+      return result;
+    }
+    return logNoopJob(queueName, job, logger);
   }
 
   return logNoopJob(queueName, job, logger);
@@ -146,6 +160,17 @@ export async function scheduleNotificationJobs(
   await queue.upsertJobScheduler(collaborationDigestJobName, { every: everyMs }, { name: collaborationDigestJobName, data: {} });
   await queue.upsertJobScheduler(taskEscalationJobName, { every: everyMs }, { name: taskEscalationJobName, data: {} });
   await queue.upsertJobScheduler(taskNotificationBatchJobName, { every: everyMs }, { name: taskNotificationBatchJobName, data: {} });
+}
+
+export async function scheduleAttachmentScanJobs(
+  queue: QueueScheduler,
+  everyMs = Number(process.env.ATTACHMENT_SCAN_INTERVAL_MS ?? 30_000),
+): Promise<void> {
+  if (!Number.isInteger(everyMs) || everyMs < 1_000) {
+    throw new Error('ATTACHMENT_SCAN_INTERVAL_MS must be at least 1000');
+  }
+
+  await queue.upsertJobScheduler(attachmentScanSweepJobName, { every: everyMs }, { name: attachmentScanSweepJobName, data: {} });
 }
 
 async function runSlaJob(slaService: SlaRunner, jobName: string, now: Date): Promise<unknown> {

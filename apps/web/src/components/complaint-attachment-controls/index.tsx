@@ -49,6 +49,20 @@ export function ComplaintAttachmentControls({
     return () => { active = false; };
   }, [complaintId]);
 
+  useEffect(() => {
+    if (!complaintId) return;
+    const hasPending = items.some((item) => item.scanStatus === 'PENDING' || item.scanStatus === 'pending');
+    if (!hasPending) return;
+
+    const timer = setTimeout(() => {
+      void listStaffComplaintAttachments(complaintId).then((result) => {
+        if (result.ok) setItems(result.data.items);
+      });
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [complaintId, items]);
+
   const preview = items.length ? items : previewItems(attachmentState, t.values.file);
   const scanState = scanBadge(preview[0]?.scanStatus ?? attachmentState);
   const visibleState = state === 'uploading' ? 'loading' : state === 'uploaded' || state === 'downloaded' ? undefined : state;

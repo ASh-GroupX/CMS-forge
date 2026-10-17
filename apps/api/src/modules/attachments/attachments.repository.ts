@@ -72,4 +72,13 @@ export class AttachmentsRepository {
     });
     return updated.count === 0 ? null : this.findMetadata(data.id, client);
   }
+
+  async listPending(limit = 50, client: AttachmentClient = this.prisma): Promise<AttachmentRecord[]> {
+    return client.attachment.findMany({
+      where: { scanStatus: 'PENDING' },
+      take: limit,
+      orderBy: { createdAt: 'asc' },
+      select: attachmentSelect,
+    });
+  }
 }
