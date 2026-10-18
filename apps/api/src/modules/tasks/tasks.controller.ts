@@ -179,6 +179,12 @@ export class TasksController {
       ),
     };
   }
+
+  @Delete(':id')
+  @UseGuards(SessionAuthGuard, CsrfGuard)
+  async delete(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    return this.tasksService.deleteForActor(id, taskActor(requirePrincipal(request)), auditContext(request));
+  }
 }
 
 function principalUserId(request: AuthenticatedRequest): string {

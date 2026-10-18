@@ -86,6 +86,7 @@ export default async function TasksPage({
   }
 
   const aggregatedData = mergeWorkItems(baseTasks, allTickets, assignedComplaints);
+  const isAdmin = principal?.roleCode === 'ADMIN' || Boolean(principal?.permissions?.includes('ADMIN_SYSTEM_CONFIG'));
 
   return (
     <>
@@ -93,7 +94,7 @@ export default async function TasksPage({
         <h1 className="text-2xl font-bold tracking-tight text-content-strong">{t.title}</h1>
         <p className="text-sm text-content-muted">{t.subtitle}</p>
       </header>
-      <MyWorkDashboard data={aggregatedData} locale={locale} t={t} />
+      <MyWorkDashboard data={aggregatedData} locale={locale} t={t} isAdmin={isAdmin} />
     </>
   );
 }

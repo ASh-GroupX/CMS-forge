@@ -17,16 +17,13 @@ import { assertPromiseLink } from './tasks.promise.js';
 import { buildPromiseTracker, promiseTrackerQuery } from './tasks.promise-tracker.js';
 import { TasksRelatedRecordsService } from './tasks.related-records.service.js';
 import type { TasksBoardRepository } from './tasks.board.repository.js';
-import { TasksRepository } from './tasks.repository.js';
-import type { TaskRecord, TaskTimelineRecord } from './tasks.repository.js';
+import { TasksRepository, type TaskRecord, type TaskTimelineRecord } from './tasks.repository.js';
 import { notifyTaskRecipients, type TaskRecipientsRepository } from './tasks.recipients.js';
 import { currentNextAction, managerTaskDetailResponse, taskCounts, taskToResponse } from './tasks.response.js';
 import { requiredStatusNote, statusComment } from './tasks.status-note.js';
 import { assertAssignedDepartment, claimTaskForActor, updateTaskForActor } from './tasks.update.js';
-import { assertNextAction, normalizeNextAction, requiredText, utcDay, validDate, validEnum } from './tasks.validation.js';
-import type { NormalizedNextAction } from './tasks.validation.js';
-export { assertNextAction, normalizeNextAction } from './tasks.validation.js';
-export type { NormalizedNextAction } from './tasks.validation.js';
+import { assertNextAction, normalizeNextAction, requiredText, utcDay, validDate, validEnum, type NormalizedNextAction } from './tasks.validation.js';
+export { assertNextAction, normalizeNextAction, type NormalizedNextAction } from './tasks.validation.js';
 export type TaskAuditContext = { actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 
 export type TaskNextActionInput = { what: string; whoId: string; when: Date | string };
@@ -241,6 +238,15 @@ export class TasksService {
     return this.tasksRepository.listTimelineForComplaint(requiredText(complaintId, 'complaintId'));
   }
 
+  async deleteForActor(id: string, actor: TaskActor, audit: TaskAuditContext = {}): Promise<{ ok: boolean }> {
+    if (actor.roleCode !== RoleCode.ADMIN && !actor.permissions?.includes('ADMIN_SYSTEM_CONFIG')) throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
+    const task = await this.tasksRepository.findById(id);
+    if (!task) throw new AppException('TASK_NOT_FOUND', 'Task not found', HttpStatus.NOT_FOUND);
+    await this.tasksRepository.delete(id);
+    await this.auditService.record(taskAudit('TASK_DELETED', task, audit, { deletedTaskId: id, title: task.title }));
+    return { ok: true };
+  }
+
   private async assertAssignable(input: CreateTaskInput, actor: StaffLookupActor): Promise<void> {
     for (const userId of explicitUserIds(input)) await this.usersService?.assertAssignable(actor, userId);
     const nextWho = input.nextAction?.whoId;
@@ -258,8 +264,7 @@ export class TasksService {
 }
 
 function participants(input: CreateTaskInput, nextAction: NormalizedNextAction | null) {
-  const rows = new Map<string, TaskParticipantRole>();
-  rows.set(requiredText(input.ownerId, 'ownerId'), TaskParticipantRole.OWNER);
+  const rows = new Map<string, TaskParticipantRole>([[requiredText(input.ownerId, 'ownerId'), TaskParticipantRole.OWNER]]);
   const assigneeId = optionalId(input.assigneeId);
   if (assigneeId && !rows.has(assigneeId)) rows.set(assigneeId, TaskParticipantRole.ASSIGNEE);
   if (nextAction && !rows.has(nextAction.whoId)) rows.set(nextAction.whoId, TaskParticipantRole.PARTICIPANT);
@@ -272,32 +277,22 @@ function participants(input: CreateTaskInput, nextAction: NormalizedNextAction |
 
 function assertAssignment(userId: string | null | undefined, participantUserIds: string[] | undefined, assignedDepartmentIds: string[]): void {
   if (optionalId(userId) || (participantUserIds?.length ?? 0) > 0 || assignedDepartmentIds.length > 0) return;
-  throw new AppException('VALIDATION_FAILED', 'Invalid task request', HttpStatus.BAD_REQUEST, [
-    { field: 'assignment', code: 'REQUIRED', message: 'A task requires an assigned user or department.' },
-  ]);
+  throw new AppException('VALIDATION_FAILED', 'Invalid task request', HttpStatus.BAD_REQUEST, [{ field: 'assignment', code: 'REQUIRED', message: 'A task requires an assigned user or department.' }]);
 }
 
 function explicitUserIds(input: Pick<CreateTaskInput, 'assigneeId' | 'participantUserIds'>): string[] {
   return [...new Set([input.assigneeId, ...(input.participantUserIds ?? [])].map(optionalId).filter((id): id is string => Boolean(id)))];
 }
-
 function departmentIds(input: Pick<CreateTaskInput, 'assignedDepartmentId' | 'assignedDepartmentIds'>): string[] {
   return [...new Set([input.assignedDepartmentId, ...(input.assignedDepartmentIds ?? [])].map(optionalId).filter((id): id is string => Boolean(id)))];
 }
-
-function optionalId(value: string | null | undefined): string | null {
-  const text = value?.trim() ?? '';
-  return text || null;
-}
-
+function optionalId(value: string | null | undefined): string | null { return value?.trim() || null; }
 function links(input: { entityType: TaskLinkEntityType; entityId: string }[]) {
   return input.map((link) => ({ entityType: validEnum(link.entityType, TaskLinkEntityType, 'links.entityType'), entityId: requiredText(link.entityId, 'links.entityId') }));
 }
-
 function taskAudit(action: string, task: TaskRecord, context: TaskAuditContext, metadata: Prisma.InputJsonObject): AuditRecordInput {
   return { eventType: 'TASK', action, actorId: context.actorId ?? null, branchId: null, targetType: 'task', targetId: task.id, correlationId: context.correlationId ?? null, ipAddress: context.ipAddress ?? null, userAgent: context.userAgent ?? null, metadata };
 }
-
 function historyInput(taskId: string, fromStatus: TaskStatus | null, toStatus: TaskStatus, context: TaskAuditContext) {
   return { taskId, fromStatus, toStatus, actorId: context.actorId ?? null, correlationId: context.correlationId ?? null };
 }

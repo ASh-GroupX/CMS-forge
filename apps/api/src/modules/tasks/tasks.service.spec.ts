@@ -720,3 +720,43 @@ function taskCommentRecord(overrides: Partial<TaskCommentRecord> = {}): TaskComm
 function txOnlyRepository(): TasksRepository {
   return { transaction: async <T>(work: (client: never) => Promise<T>) => work({} as never) } as unknown as TasksRepository;
 }
+
+test('deleteForActor denies non-admin actors with RBAC_FORBIDDEN', async () => {
+  const repository = {
+    findById: async () => taskRecord(),
+  } as unknown as TasksRepository;
+  const service = new TasksService(repository, { record: async () => undefined } as never);
+
+  await assert.rejects(
+    service.deleteForActor('task_1', { userId: 'user_agent', roleCode: RoleCode.CR_OFFICER, branchId: 'branch_1' }),
+    (error) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN',
+  );
+});
+
+test('deleteForActor allows admin actor and records TASK_DELETED audit log', async () => {
+  let deletedTaskId: string | undefined;
+  let recordedAudit: { eventType?: string; action?: string; targetId?: string | null; metadata?: unknown } | undefined;
+  const repository = {
+    findById: async (id: string) => taskRecord({ id, title: 'Test Task' }),
+    delete: async (id: string) => {
+      deletedTaskId = id;
+      return true;
+    },
+  } as unknown as TasksRepository;
+  const service = new TasksService(repository, {
+    record: async (input: typeof recordedAudit) => { recordedAudit = input; },
+  } as never);
+
+  const result = await service.deleteForActor(
+    'task_delete_1',
+    { userId: 'admin_1', roleCode: RoleCode.ADMIN, branchId: null },
+    { actorId: 'admin_1' },
+  );
+
+  assert.deepEqual(result, { ok: true });
+  assert.equal(deletedTaskId, 'task_delete_1');
+  assert.equal(recordedAudit?.eventType, 'TASK');
+  assert.equal(recordedAudit?.action, 'TASK_DELETED');
+  assert.equal(recordedAudit?.targetId, 'task_delete_1');
+});
+

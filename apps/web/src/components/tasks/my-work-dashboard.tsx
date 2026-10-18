@@ -15,10 +15,16 @@ type MyWorkDashboardProps = {
   data: EmployeeTodayTasks;
   locale: Locale;
   t: MyWorkCopy;
+  isAdmin?: boolean | undefined;
 };
 
-export function MyWorkDashboard({ data, locale, t }: MyWorkDashboardProps) {
+export function MyWorkDashboard({ data, locale, t, isAdmin = false }: MyWorkDashboardProps) {
   const [filter, setFilter] = React.useState<WorkItemFilter>('all');
+  const [deletedIds, setDeletedIds] = React.useState<Set<string>>(new Set());
+
+  const handleDeleteTask = React.useCallback((taskId: string) => {
+    setDeletedIds((prev) => new Set([...prev, taskId]));
+  }, []);
 
   const counts = React.useMemo(() => {
     const seen = new Set<string>();
@@ -27,7 +33,7 @@ export function MyWorkDashboard({ data, locale, t }: MyWorkDashboardProps) {
     let task = 0;
     for (const bucket of [data.overdue, data.dueToday, data.assignedToMe, data.waitingOnMe, data.completed]) {
       for (const item of bucket) {
-        if (!seen.has(item.id)) {
+        if (!deletedIds.has(item.id) && !seen.has(item.id)) {
           seen.add(item.id);
           const type = getTaskItemType(item);
           if (type === 'ticket') ticket++;
@@ -37,11 +43,11 @@ export function MyWorkDashboard({ data, locale, t }: MyWorkDashboardProps) {
       }
     }
     return { all: seen.size, ticket, complaint, task };
-  }, [data]);
+  }, [data, deletedIds]);
 
   const activeData = React.useMemo(() => {
-    if (filter === 'all') return data;
-    const match = (item: StaffTask) => getTaskItemType(item) === filter;
+    const notDeleted = (item: StaffTask) => !deletedIds.has(item.id);
+    const match = (item: StaffTask) => notDeleted(item) && (filter === 'all' || getTaskItemType(item) === filter);
     return {
       overdue: data.overdue.filter(match),
       overduePromises: data.overduePromises.filter(match),
@@ -50,7 +56,7 @@ export function MyWorkDashboard({ data, locale, t }: MyWorkDashboardProps) {
       waitingOnMe: data.waitingOnMe.filter(match),
       completed: data.completed.filter(match),
     };
-  }, [data, filter]);
+  }, [data, filter, deletedIds]);
 
   const overdueCount = activeData.overdue.length;
   const dueTodayCount = activeData.dueToday.length;
@@ -79,26 +85,26 @@ export function MyWorkDashboard({ data, locale, t }: MyWorkDashboardProps) {
 
       {/* ── Overdue (red, highest priority) ── */}
       {overdueCount > 0 && (
-        <TaskSection borderColor="border-red-500/40" emptyText={t.empty.overdue} headerColor="text-red-600 dark:text-red-400" icon={<AlertTriangle className="size-4" />} locale={locale} t={t} tasks={activeData.overdue} title={t.tabs.overdue} urgency="overdue" />
+        <TaskSection borderColor="border-red-500/40" emptyText={t.empty.overdue} headerColor="text-red-600 dark:text-red-400" icon={<AlertTriangle className="size-4" />} isAdmin={isAdmin} locale={locale} onDelete={handleDeleteTask} t={t} tasks={activeData.overdue} title={t.tabs.overdue} urgency="overdue" />
       )}
 
       {/* ── Overdue Promises ── */}
       {activeData.overduePromises.length > 0 && (
-        <TaskSection borderColor="border-orange-500/40" emptyText={t.empty.promises} headerColor="text-orange-600 dark:text-orange-400" icon={<Star className="size-4" />} locale={locale} t={t} tasks={activeData.overduePromises} title={t.tabs.promises} urgency="overdue" />
+        <TaskSection borderColor="border-orange-500/40" emptyText={t.empty.promises} headerColor="text-orange-600 dark:text-orange-400" icon={<Star className="size-4" />} isAdmin={isAdmin} locale={locale} onDelete={handleDeleteTask} t={t} tasks={activeData.overduePromises} title={t.tabs.promises} urgency="overdue" />
       )}
 
       {/* ── Due Today (amber) ── */}
-      <TaskSection borderColor="border-amber-500/40" emptyText={t.empty.dueToday} headerColor="text-amber-700 dark:text-amber-400" icon={<Clock className="size-4" />} locale={locale} t={t} tasks={activeData.dueToday} title={t.tabs.dueToday} urgency="today" />
+      <TaskSection borderColor="border-amber-500/40" emptyText={t.empty.dueToday} headerColor="text-amber-700 dark:text-amber-400" icon={<Clock className="size-4" />} isAdmin={isAdmin} locale={locale} onDelete={handleDeleteTask} t={t} tasks={activeData.dueToday} title={t.tabs.dueToday} urgency="today" />
 
       {/* ── Assigned to Me (blue) ── */}
-      <TaskSection borderColor="border-blue-500/40" emptyText={t.empty.inProgress} headerColor="text-blue-600 dark:text-blue-400" icon={<Inbox className="size-4" />} locale={locale} t={t} tasks={activeData.assignedToMe} title={t.tabs.inProgress} urgency="normal" />
+      <TaskSection borderColor="border-blue-500/40" emptyText={t.empty.inProgress} headerColor="text-blue-600 dark:text-blue-400" icon={<Inbox className="size-4" />} isAdmin={isAdmin} locale={locale} onDelete={handleDeleteTask} t={t} tasks={activeData.assignedToMe} title={t.tabs.inProgress} urgency="normal" />
 
       {/* ── Waiting on Me (purple) ── */}
-      <TaskSection borderColor="border-purple-500/40" emptyText={t.empty.waiting} headerColor="text-purple-700 dark:text-purple-400" icon={<HandMetal className="size-4" />} locale={locale} t={t} tasks={activeData.waitingOnMe} title={t.tabs.waiting} urgency="normal" />
+      <TaskSection borderColor="border-purple-500/40" emptyText={t.empty.waiting} headerColor="text-purple-700 dark:text-purple-400" icon={<HandMetal className="size-4" />} isAdmin={isAdmin} locale={locale} onDelete={handleDeleteTask} t={t} tasks={activeData.waitingOnMe} title={t.tabs.waiting} urgency="normal" />
 
       {/* ── Completed (green, collapsed) ── */}
       {activeData.completed.length > 0 && (
-        <TaskSection borderColor="border-emerald-500/40" collapsed emptyText={t.empty.overdue} headerColor="text-emerald-700 dark:text-emerald-400" icon={<CheckCircle2 className="size-4" />} locale={locale} t={t} tasks={activeData.completed} title={`${t.tabs.sent} (${activeData.completed.length})`} urgency="done" />
+        <TaskSection borderColor="border-emerald-500/40" collapsed emptyText={t.empty.overdue} headerColor="text-emerald-700 dark:text-emerald-400" icon={<CheckCircle2 className="size-4" />} isAdmin={isAdmin} locale={locale} onDelete={handleDeleteTask} t={t} tasks={activeData.completed} title={`${t.tabs.sent} (${activeData.completed.length})`} urgency="done" />
       )}
     </div>
   );
@@ -151,9 +157,9 @@ function StatCard({ color, count, icon, label }: { color: string; count: number;
 
 // ── Task Section ──
 
-function TaskSection({ borderColor, collapsed = false, emptyText, headerColor, icon, locale, t, tasks, title, urgency }: {
+function TaskSection({ borderColor, collapsed = false, emptyText, headerColor, icon, isAdmin = false, locale, onDelete, t, tasks, title, urgency }: {
   borderColor: string; collapsed?: boolean; emptyText: string; headerColor: string; icon: React.ReactNode;
-  locale: Locale; t: MyWorkCopy; tasks: StaffTask[]; title: string; urgency: Urgency;
+  isAdmin?: boolean | undefined; locale: Locale; onDelete?: ((taskId: string) => void) | undefined; t: MyWorkCopy; tasks: StaffTask[]; title: string; urgency: Urgency;
 }) {
   const [open, setOpen] = React.useState(!collapsed);
   return (
@@ -169,7 +175,7 @@ function TaskSection({ borderColor, collapsed = false, emptyText, headerColor, i
           {tasks.length === 0 ? (
             <p className="px-2 py-4 text-center text-sm text-content-muted">{emptyText}</p>
           ) : (
-            tasks.map((task) => <TaskRow key={task.id} locale={locale} t={t} task={task} urgency={urgency} />)
+            tasks.map((task) => <TaskRow key={task.id} isAdmin={isAdmin} locale={locale} onDelete={onDelete} t={t} task={task} urgency={urgency} />)
           )}
         </div>
       )}

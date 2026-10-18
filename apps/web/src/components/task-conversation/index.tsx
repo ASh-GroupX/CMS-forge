@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import { collaborationErrorMessage, collaborationText } from '../../i18n/staff-collaboration';
 import type { Locale } from '../../i18n/staff-shell';
 import { taskConversationText } from '../../i18n/staff-task-conversation';
@@ -19,7 +20,7 @@ import { Textarea } from '../ui/textarea';
 
 type Status = 'idle' | 'loading' | 'success' | 'error' | 'validation';
 
-export function TaskConversation({ comments, locale, task }: { comments: StaffTaskComment[]; locale: Locale; task: StaffTask }) {
+export function TaskConversation({ comments, locale, task, isAdmin = false }: { comments: StaffTaskComment[]; locale: Locale; task: StaffTask; isAdmin?: boolean | undefined }) {
   const t = taskConversationText[locale];
   const collaboration = collaborationText[locale];
   const [items, setItems] = useState(comments);
@@ -32,6 +33,41 @@ export function TaskConversation({ comments, locale, task }: { comments: StaffTa
   const [audienceConfirm, setAudienceConfirm] = useState<number | null>(null);
   const [pickerVersion, setPickerVersion] = useState(0);
   const [showAdditions, setShowAdditions] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    const confirmMsg =
+      locale === 'ar'
+        ? 'هل أنت متأكد من حذف هذه المهمة؟ لا يمكن التراجع عن هذا الإجراء.'
+        : 'Are you sure you want to delete this task? This action cannot be undone.';
+    if (!window.confirm(confirmMsg)) return;
+
+    setDeleting(true);
+    try {
+      const csrf =
+        typeof document !== 'undefined'
+          ? document.cookie
+              .split(';')
+              .map((s) => s.trim())
+              .find((s) => s.startsWith('cms_csrf_token='))
+              ?.slice('cms_csrf_token='.length)
+          : null;
+      const res = await fetch(`/api/tasks/${encodeURIComponent(task.id)}`, {
+        method: 'DELETE',
+        headers: csrf ? { 'x-csrf-token': csrf } : {},
+      });
+      if (res.ok) {
+        window.location.href = `/tasks?locale=${locale}`;
+      } else {
+        alert(locale === 'ar' ? 'فشل حذف المهمة.' : 'Failed to delete task.');
+        setDeleting(false);
+      }
+    } catch {
+      alert(locale === 'ar' ? 'حدث خطأ في الاتصال بالخادم.' : 'Network error.');
+      setDeleting(false);
+    }
+  };
+
   const loadTargets = useCallback((query: string) => getTaskCommunicationTargets(task.id, query), [task.id]);
   const loaded = useCallback((data: CommunicationTargets) => setCanComment(data.capabilities.canComment), []);
   const removeWatcher = useCallback(async (userId: string) => (await removeTaskWatcher(task.id, userId)).ok, [task.id]);
@@ -59,7 +95,24 @@ export function TaskConversation({ comments, locale, task }: { comments: StaffTa
   return (
     <section className="grid gap-4" aria-label={t.title}>
       <header className="grid gap-3 rounded-md border border-line-subtle bg-surface-raised p-4">
-        <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-xs font-medium text-content-muted">{t.task}</p><h1 className="text-lg font-semibold">{task.title}</h1></div><StatusBadge>{taskStatusLabel(locale, task.status)}</StatusBadge></div>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div><p className="text-xs font-medium text-content-muted">{t.task}</p><h1 className="text-lg font-semibold">{task.title}</h1></div>
+          <div className="flex items-center gap-2">
+            <StatusBadge>{taskStatusLabel(locale, task.status)}</StatusBadge>
+            {isAdmin && (
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                disabled={deleting}
+                onClick={handleDelete}
+              >
+                <Trash2 className="size-3.5 me-1" />
+                {locale === 'ar' ? 'حذف المهمة' : 'Delete Task'}
+              </Button>
+            )}
+          </div>
+        </div>
         <dl className="grid gap-3 text-sm sm:grid-cols-3"><Fact label={t.responsible} value={task.assigneeName ?? missingDisplay(locale)} /><Fact label={t.due} value={`${formatDisplayDate(task.dueAt, locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: task.displayTimeZone })} (${task.displayTimeZone})`} /><Fact label={t.next} value={task.nextAction?.what ?? missingDisplay(locale)} /></dl>
         {complaintId ? <a className="w-fit text-sm font-medium text-brand underline-offset-4 hover:underline" href={localeHref(`/complaints/${complaintId}?tab=communication`, locale)}>{locale === 'ar' ? 'فتح الشكوى المرتبطة' : 'Open linked complaint'}</a> : null}
       </header>

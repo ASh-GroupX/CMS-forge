@@ -267,32 +267,17 @@ export class TasksRepository {
 
   async createStatusHistory(data: CreateTaskStatusHistoryData, client: TaskClient = this.prisma): Promise<void> {
     await client.taskStatusHistory.create({
-      data: {
-        taskId: data.taskId,
-        fromStatus: data.fromStatus,
-        toStatus: data.toStatus,
-        actorId: data.actorId ?? null,
-        correlationId: data.correlationId ?? null,
-      },
+      data: { taskId: data.taskId, fromStatus: data.fromStatus, toStatus: data.toStatus, actorId: data.actorId ?? null, correlationId: data.correlationId ?? null },
     });
   }
 
   async listComments(taskId: string): Promise<TaskCommentRecord[]> {
-    return this.prisma.taskComment.findMany({
-      where: { taskId },
-      orderBy: { createdAt: 'asc' },
-      select: taskCommentSelect,
-    });
+    return this.prisma.taskComment.findMany({ where: { taskId }, orderBy: { createdAt: 'asc' }, select: taskCommentSelect });
   }
 
   async createComment(data: CreateTaskCommentData, client: TaskClient = this.prisma): Promise<TaskCommentRecord> {
     return client.taskComment.create({
-      data: {
-        taskId: data.taskId,
-        authorId: data.authorId,
-        body: data.body,
-        ...(data.mentions?.length ? { mentions: { create: data.mentions } } : {}),
-      },
+      data: { taskId: data.taskId, authorId: data.authorId, body: data.body, ...(data.mentions?.length ? { mentions: { create: data.mentions } } : {}) },
       select: taskCommentSelect,
     });
   }
@@ -303,6 +288,11 @@ export class TasksRepository {
 
   async removeWatcher(taskId: string, userId: string, client: TaskClient): Promise<boolean> {
     const result = await client.taskParticipant.deleteMany({ where: { taskId, userId, role: 'WATCHER' } });
+    return result.count === 1;
+  }
+
+  async delete(taskId: string, client: TaskClient = this.prisma): Promise<boolean> {
+    const result = await client.task.deleteMany({ where: { id: taskId } });
     return result.count === 1;
   }
 }

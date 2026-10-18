@@ -3,6 +3,7 @@ import { TaskConversation } from '../../../../components/task-conversation';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { taskConversationText } from '../../../../i18n/staff-task-conversation';
 import { getStaffTaskComments, getStaffTaskDetail } from '../../../../lib/staff-task-detail-api';
+import { getStaffSessionPrincipal } from '../../../../lib/staff-session-api';
 
 type SearchParams = { locale?: string | string[] };
 
@@ -15,9 +16,10 @@ export default async function TaskDetailPage({
 }) {
   const [{ id }, values] = await Promise.all([params, searchParams]);
   const locale = resolveLocale(Array.isArray(values?.locale) ? values?.locale[0] : values?.locale);
-  const [task, comments] = await Promise.all([
+  const [task, comments, principal] = await Promise.all([
     getStaffTaskDetail({ taskId: id }),
     getStaffTaskComments({ taskId: id }),
+    getStaffSessionPrincipal().catch(() => null),
   ]);
   if (!task) {
     return (
@@ -26,5 +28,6 @@ export default async function TaskDetailPage({
       </p>
     );
   }
-  return <TaskConversation comments={comments ?? []} locale={locale} task={task} />;
+  const isAdmin = principal?.roleCode === 'ADMIN' || Boolean(principal?.permissions?.includes('ADMIN_SYSTEM_CONFIG'));
+  return <TaskConversation comments={comments ?? []} locale={locale} task={task} isAdmin={isAdmin} />;
 }

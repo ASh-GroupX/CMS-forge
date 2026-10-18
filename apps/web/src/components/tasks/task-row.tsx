@@ -1,14 +1,67 @@
 'use client';
 
 import React from 'react';
-import { Inbox, Star } from 'lucide-react';
+import { Inbox, Loader2, Star, Trash2 } from 'lucide-react';
 import type { Locale } from '../../i18n/staff-shell';
 import type { MyWorkCopy } from '../../i18n/staff-my-work';
 import type { StaffTask } from '../../lib/staff-tasks-api';
+import { getTaskItemType } from '../../lib/staff-tasks-aggregate';
 
 export type Urgency = 'overdue' | 'today' | 'normal' | 'done';
 
-export function TaskRow({ locale, t, task, urgency }: { locale: Locale; t: MyWorkCopy; task: StaffTask; urgency: Urgency }) {
+export function TaskRow({
+  locale,
+  t,
+  task,
+  urgency,
+  isAdmin = false,
+  onDelete,
+}: {
+  locale: Locale;
+  t: MyWorkCopy;
+  task: StaffTask;
+  urgency: Urgency;
+  isAdmin?: boolean | undefined;
+  onDelete?: ((taskId: string) => void) | undefined;
+}) {
+  const [deleting, setDeleting] = React.useState(false);
+  const isRealTask = getTaskItemType(task) === 'task';
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const confirmMsg =
+      locale === 'ar'
+        ? 'هل أنت متأكد من حذف هذه المهمة؟ لا يمكن التراجع عن هذا الإجراء.'
+        : 'Are you sure you want to delete this task? This action cannot be undone.';
+    if (!window.confirm(confirmMsg)) return;
+
+    setDeleting(true);
+    try {
+      const csrf =
+        typeof document !== 'undefined'
+          ? document.cookie
+              .split(';')
+              .map((s) => s.trim())
+              .find((s) => s.startsWith('cms_csrf_token='))
+              ?.slice('cms_csrf_token='.length)
+          : null;
+      const res = await fetch(`/api/tasks/${encodeURIComponent(task.id)}`, {
+        method: 'DELETE',
+        headers: csrf ? { 'x-csrf-token': csrf } : {},
+      });
+      if (res.ok) {
+        onDelete?.(task.id);
+      } else {
+        alert(locale === 'ar' ? 'فشل حذف المهمة.' : 'Failed to delete task.');
+      }
+    } catch {
+      alert(locale === 'ar' ? 'حدث خطأ في الاتصال بالخادم.' : 'Network error.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const due = new Date(task.dueAt);
   const now = new Date();
   const diffMs = due.getTime() - now.getTime();
@@ -68,6 +121,17 @@ export function TaskRow({ locale, t, task, urgency }: { locale: Locale; t: MyWor
         <span className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${statusBadge(task.status)}`}>
           {task.status.replace('_', ' ')}
         </span>
+        {isAdmin && isRealTask && (
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting}
+            title={locale === 'ar' ? 'حذف المهمة' : 'Delete Task'}
+            className="flex size-7 items-center justify-center rounded-md border border-transparent text-content-muted transition-colors hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+          >
+            {deleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+          </button>
+        )}
       </div>
     </a>
   );
