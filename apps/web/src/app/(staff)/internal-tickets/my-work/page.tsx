@@ -1,10 +1,14 @@
 import React from 'react';
+import { headers } from 'next/headers';
 import { getMyTickets, getDepartmentTickets } from '../../../../lib/staff-internal-tickets-actions';
 import { getStaffSessionPrincipal } from '../../../../lib/staff-session-api';
+import { resolveLocale } from '../../../../i18n/staff-shell';
 import { MyWorkBoard } from '../my-work-board';
 
-export default async function InternalTicketsPage({ searchParams }: { searchParams?: Promise<{ filter?: string, status?: string }> }) {
+export default async function InternalTicketsPage({ searchParams }: { searchParams?: Promise<{ filter?: string; status?: string; locale?: string }> }) {
   const params = await searchParams;
+  const requestHeaders = await headers();
+  const locale = resolveLocale(params?.locale || (requestHeaders.get('x-cms-locale') ?? undefined));
   const filter = params?.filter;
   const statusFilter = params?.status;
 
@@ -78,5 +82,5 @@ export default async function InternalTicketsPage({ searchParams }: { searchPara
     myTasks = myTasks.filter((t: any) => t.status === 'PENDING_APPROVAL');
   }
 
-  return <MyWorkBoard tickets={myTasks} />;
+  return <MyWorkBoard tickets={myTasks} propLocale={locale} />;
 }

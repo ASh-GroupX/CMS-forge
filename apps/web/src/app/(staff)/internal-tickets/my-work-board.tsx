@@ -4,25 +4,14 @@ import React, { useState } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { ChevronDown, ChevronRight, PlusCircle, LayoutDashboard, Filter } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../components/ui/tooltip';
-
-/* ── Status colour map ─────────────────────────────────────────────── */
-const STATUS_META: Record<string, { label: string; desc: string; color: string; bg: string; border: string; barColor: string; dot: string; hex: string }> = {
-  PENDING_APPROVAL: { label: 'Pending Approval', desc: 'Awaiting manager approval before being sent to the target department.',            color: 'text-amber-700',   bg: 'bg-amber-50',    border: 'border-amber-200',  barColor: 'bg-amber-500',  dot: 'bg-amber-500',  hex: '#f59e0b' },
-  NEW:              { label: 'Sent',             desc: 'Ticket has been sent to the target department and is waiting to be assigned.',     color: 'text-indigo-700',  bg: 'bg-indigo-50',   border: 'border-indigo-200', barColor: 'bg-indigo-500', dot: 'bg-indigo-500', hex: '#6366f1' },
-  ASSIGNED:         { label: 'Assigned',         desc: 'Ticket has been assigned to an employee but not yet accepted.',                    color: 'text-sky-700',     bg: 'bg-sky-50',      border: 'border-sky-200',    barColor: 'bg-sky-500',    dot: 'bg-sky-500',    hex: '#0ea5e9' },
-  IN_PROGRESS:      { label: 'In Progress',      desc: 'The assignee is actively working on this ticket.',                                 color: 'text-violet-700',  bg: 'bg-violet-50',   border: 'border-violet-200', barColor: 'bg-violet-500', dot: 'bg-violet-500', hex: '#8b5cf6' },
-  WAITING:          { label: 'Waiting',          desc: 'Work is paused — waiting for a response or additional information.',               color: 'text-fuchsia-700', bg: 'bg-fuchsia-50',  border: 'border-fuchsia-200',barColor: 'bg-fuchsia-500',dot: 'bg-fuchsia-500',hex: '#d946ef' },
-  RESOLVED:         { label: 'Completed',        desc: 'The ticket has been resolved and is awaiting manager review.',                     color: 'text-teal-700',    bg: 'bg-teal-50',     border: 'border-teal-200',   barColor: 'bg-teal-500',   dot: 'bg-teal-500',   hex: '#14b8a6' },
-  CLOSED:           { label: 'Completed',        desc: 'Ticket is complete — approved and closed by the manager.',                         color: 'text-slate-700',   bg: 'bg-slate-50',    border: 'border-slate-200',  barColor: 'bg-slate-500',  dot: 'bg-slate-500',  hex: '#64748b' },
-  REJECTED:         { label: 'Rejected',         desc: 'Ticket was rejected and sent back for rework or clarification.',                   color: 'text-rose-700',    bg: 'bg-rose-50',     border: 'border-rose-200',   barColor: 'bg-rose-500',   dot: 'bg-rose-500',   hex: '#f43f5e' },
-};
+import { internalTicketsText } from '../../../i18n/staff-internal-tickets';
+import { resolveLocale, type Locale } from '../../../i18n/staff-shell';
 
 const STATUS_ORDER = ['PENDING_APPROVAL', 'NEW', 'ASSIGNED', 'IN_PROGRESS', 'WAITING', 'RESOLVED', 'CLOSED', 'REJECTED'];
 
-function getMeta(status: string) {
-  const meta = STATUS_META[status];
-  if (meta) return meta;
-  return STATUS_META.NEW!;
+function getMeta(status: string, locale: Locale) {
+  const dict = internalTicketsText[locale]?.statuses || internalTicketsText.en.statuses;
+  return dict[status as keyof typeof dict] || dict.NEW;
 }
 
 function getDueDateColor(t: any) {
@@ -69,20 +58,20 @@ function getCardBorderClass(t: any) {
   }
 }
 
-function DueDateLegend() {
+function DueDateLegend({ t }: { t: any }) {
   return (
     <div className="flex flex-wrap items-center gap-4 text-[10px] font-semibold text-content-muted mt-2 border-t border-line-subtle/50 pt-2">
-      <span className="text-xs font-bold text-content-strong mr-1">Due Date:</span>
-      <div className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-emerald-500"></span>Completed On-Time</div>
-      <div className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-purple-500"></span>Completed Late</div>
-      <div className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-orange-500"></span>Active (On-Time)</div>
-      <div className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-red-500"></span>Active (Overdue)</div>
+      <span className="text-xs font-bold text-content-strong me-1">{t.legend.title}</span>
+      <div className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-emerald-500"></span>{t.legend.onTime}</div>
+      <div className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-purple-500"></span>{t.legend.completedLate}</div>
+      <div className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-orange-500"></span>{t.legend.activeOnTime}</div>
+      <div className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-red-500"></span>{t.legend.activeOverdue}</div>
     </div>
   );
 }
 
 /* ── Progress Bar ──────────────────────────────────────────────────── */
-function ProgressBar({ tickets }: { tickets: any[] }) {
+function ProgressBar({ tickets, locale }: { tickets: any[]; locale: Locale }) {
   const total = tickets.length;
   if (total === 0) return null;
 
@@ -98,7 +87,7 @@ function ProgressBar({ tickets }: { tickets: any[] }) {
         const count = counts[status] || 0;
         if (count === 0) return null;
         const pct = (count / total) * 100;
-        const meta = getMeta(status);
+        const meta = getMeta(status, locale);
         return (
           <Tooltip key={status}>
             <TooltipTrigger asChild>
@@ -118,7 +107,7 @@ function ProgressBar({ tickets }: { tickets: any[] }) {
 }
 
 /* ── Legend ─────────────────────────────────────────────────────────── */
-function Legend({ tickets }: { tickets: any[] }) {
+function Legend({ tickets, locale }: { tickets: any[]; locale: Locale }) {
   const counts: Record<string, number> = {};
   for (const t of tickets) {
     const s = t.status || 'NEW';
@@ -130,7 +119,7 @@ function Legend({ tickets }: { tickets: any[] }) {
       {STATUS_ORDER.map((status) => {
         const count = counts[status] || 0;
         if (count === 0) return null;
-        const meta = getMeta(status);
+        const meta = getMeta(status, locale);
         return (
           <div key={status} className="flex items-center gap-1.5">
             <span className={`size-2.5 rounded-full ${meta.dot}`} />
@@ -144,9 +133,10 @@ function Legend({ tickets }: { tickets: any[] }) {
 }
 
 /* ── Collapsible Section ───────────────────────────────────────────── */
-function StatusSection({ status, tickets }: { status: string; tickets: any[] }) {
+function StatusSection({ status, tickets, locale, t }: { status: string; tickets: any[]; locale: Locale; t: any }) {
   const [open, setOpen] = useState(status !== 'CLOSED' && status !== 'REJECTED');
-  const meta = getMeta(status);
+  const meta = getMeta(status, locale);
+  const isAr = locale === 'ar';
 
   return (
     <div className={`flex-shrink-0 w-[340px] rounded-xl border ${meta.border} overflow-hidden transition-all flex flex-col bg-surface-raised/50`}>
@@ -157,7 +147,7 @@ function StatusSection({ status, tickets }: { status: string; tickets: any[] }) 
         <div className="flex items-center gap-2.5">
           {open
             ? <ChevronDown className={`size-4 ${meta.color}`} />
-            : <ChevronRight className={`size-4 ${meta.color}`} />
+            : <ChevronRight className={`size-4 ${meta.color} ${isAr ? 'rotate-180' : ''}`} />
           }
           <span className={`size-2 rounded-full ${meta.dot}`} />
           <span className={`text-sm font-bold ${meta.color}`}>{meta.label}</span>
@@ -169,65 +159,73 @@ function StatusSection({ status, tickets }: { status: string; tickets: any[] }) 
 
       {open && (
         <div className="p-2.5 flex flex-col gap-2.5 bg-surface">
-          {tickets.map((t: any) => (
-            <Tooltip key={t.id}>
-              <TooltipTrigger asChild>
-                <a
-                  href={`/internal-tickets/${t.id}`}
-                  className={`group flex flex-col gap-1.5 rounded-lg border-l-[4px] p-3 shadow-sm hover:shadow-md transition-all border ${getCardBorderClass(t)}`}
-                  style={{ borderLeftColor: meta.hex }}
-                >
-                  {/* Top row: status pill + ref */}
-                  <div className="flex items-center justify-between gap-1.5">
-                    <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${meta.color} ${meta.bg}`}>
-                      {meta.label}
-                    </span>
-                    <span className="text-[10px] text-content-muted font-mono tracking-tight">{t.referenceNumber || t.id?.slice(0, 12)}</span>
-                  </div>
+          {tickets.map((ticketItem: any) => {
+            const requestedByName = isAr && ticketItem.requestedBy?.nameAr ? ticketItem.requestedBy.nameAr : (ticketItem.requestedBy?.nameEn || t.card.unknown);
+            const requestedByDept = isAr && ticketItem.requestedBy?.department?.nameAr ? ticketItem.requestedBy.department.nameAr : (ticketItem.requestedBy?.department?.nameEn || 'N/A');
+            const targetDeptName = isAr && ticketItem.targetDepartment?.nameAr ? ticketItem.targetDepartment.nameAr : (ticketItem.targetDepartment?.nameEn || 'N/A');
+            const assignedEmpName = isAr && ticketItem.assignedEmployee?.nameAr ? ticketItem.assignedEmployee.nameAr : ticketItem.assignedEmployee?.nameEn;
+            const assignedLabel = assignedEmpName ? t.card.assigned.replace('{name}', assignedEmpName) : t.card.unassigned;
 
-                  {/* Title */}
-                  <h4 className="font-bold text-sm text-content-strong group-hover:text-brand transition-colors line-clamp-2 mt-0.5">
-                    {t.title}
-                  </h4>
-
-                  {/* Footer */}
-                  <div className="flex flex-col gap-1.5 pt-2 mt-1 border-t border-line-subtle">
-                    <div className="flex items-start justify-between">
-                      <div className="flex flex-col min-w-0 mr-2 flex-1">
-                        <span className="text-[9px] font-semibold text-content-muted uppercase tracking-wider">From</span>
-                        <span className="text-xs font-medium text-content-strong truncate">
-                          {t.requestedBy?.nameEn || 'Unknown'}
-                        </span>
-                        <span className="text-[10px] text-content-muted truncate" title={t.requestedBy?.department?.nameEn}>
-                          {t.requestedBy?.department?.nameEn || 'N/A'}
-                        </span>
-                      </div>
-                      <div className="flex flex-col items-end min-w-0 flex-1">
-                        <span className="text-[9px] font-semibold text-content-muted uppercase tracking-wider">To</span>
-                        <span className="text-xs font-medium text-content-strong truncate text-right" title={t.targetDepartment?.nameEn}>
-                          {t.targetDepartment?.nameEn || 'N/A'}
-                        </span>
-                        <span className="text-[10px] text-content-muted truncate text-right">
-                          {t.assignedEmployee?.nameEn ? `Assigned: ${t.assignedEmployee.nameEn}` : 'Unassigned'}
-                        </span>
-                      </div>
+            return (
+              <Tooltip key={ticketItem.id}>
+                <TooltipTrigger asChild>
+                  <a
+                    href={`/internal-tickets/${ticketItem.id}?locale=${locale}`}
+                    className={`group flex flex-col gap-1.5 rounded-lg border-s-[4px] p-3 shadow-sm hover:shadow-md transition-all border ${getCardBorderClass(ticketItem)}`}
+                    style={{ borderInlineStartColor: meta.hex }}
+                  >
+                    {/* Top row: status pill + ref */}
+                    <div className="flex items-center justify-between gap-1.5">
+                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${meta.color} ${meta.bg}`}>
+                        {meta.label}
+                      </span>
+                      <span className="text-[10px] text-content-muted font-mono tracking-tight">{ticketItem.referenceNumber || ticketItem.id?.slice(0, 12)}</span>
                     </div>
-                    {t.dueAt && (
-                      <div className="flex items-center justify-between border-t border-line-subtle/50 pt-1.5">
-                        <span className="text-[9px] font-semibold text-content-muted uppercase tracking-wider">Due Date</span>
-                        <span className={`text-xs ${getDueDateColor(t)}`}>
-                          {new Date(t.dueAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                        </span>
+
+                    {/* Title */}
+                    <h4 className="font-bold text-sm text-content-strong group-hover:text-brand transition-colors line-clamp-2 mt-0.5">
+                      {ticketItem.title}
+                    </h4>
+
+                    {/* Footer */}
+                    <div className="flex flex-col gap-1.5 pt-2 mt-1 border-t border-line-subtle">
+                      <div className="flex items-start justify-between">
+                        <div className="flex flex-col min-w-0 me-2 flex-1">
+                          <span className="text-[9px] font-semibold text-content-muted uppercase tracking-wider">{t.card.from}</span>
+                          <span className="text-xs font-medium text-content-strong truncate">
+                            {requestedByName}
+                          </span>
+                          <span className="text-[10px] text-content-muted truncate" title={requestedByDept}>
+                            {requestedByDept}
+                          </span>
+                        </div>
+                        <div className="flex flex-col items-end min-w-0 flex-1">
+                          <span className="text-[9px] font-semibold text-content-muted uppercase tracking-wider">{t.card.to}</span>
+                          <span className="text-xs font-medium text-content-strong truncate text-end" title={targetDeptName}>
+                            {targetDeptName}
+                          </span>
+                          <span className="text-[10px] text-content-muted truncate text-end">
+                            {assignedLabel}
+                          </span>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </a>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="max-w-xs">
-                <p className="text-xs">{meta.desc}</p>
-              </TooltipContent>
-            </Tooltip>
-          ))}
+                      {ticketItem.dueAt && (
+                        <div className="flex items-center justify-between border-t border-line-subtle/50 pt-1.5">
+                          <span className="text-[9px] font-semibold text-content-muted uppercase tracking-wider">{t.card.dueDate}</span>
+                          <span className={`text-xs ${getDueDateColor(ticketItem)}`}>
+                            {new Date(ticketItem.dueAt).toLocaleDateString(isAr ? 'ar-IQ' : 'en-GB', { day: '2-digit', month: 'short' })}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </a>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-xs">
+                  <p className="text-xs">{meta.desc}</p>
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
         </div>
       )}
     </div>
@@ -235,10 +233,14 @@ function StatusSection({ status, tickets }: { status: string; tickets: any[] }) 
 }
 
 /* ── Main Board ────────────────────────────────────────────────────── */
-export function MyWorkBoard({ tickets }: { tickets: any[] }) {
+export function MyWorkBoard({ tickets, propLocale }: { tickets: any[]; propLocale?: Locale }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+
+  const queryLocale = searchParams.get('locale');
+  const locale = propLocale || resolveLocale(queryLocale || (typeof document !== 'undefined' ? document.documentElement.lang : undefined));
+  const t = internalTicketsText[locale] || internalTicketsText.en;
 
   const currentFilter = searchParams.get('filter') || 'all';
   const currentStatus = searchParams.get('status') || 'all';
@@ -247,15 +249,18 @@ export function MyWorkBoard({ tickets }: { tickets: any[] }) {
     const params = new URLSearchParams(searchParams.toString());
     if (value === 'all') params.delete(key);
     else params.set(key, value);
+    if (!params.has('locale') && locale) {
+      params.set('locale', locale);
+    }
     router.push(`${pathname}?${params.toString()}`);
   };
 
   // Group tickets by status
   const grouped: Record<string, any[]> = {};
-  for (const t of tickets) {
-    const s = t.status || 'NEW';
+  for (const ticketItem of tickets) {
+    const s = ticketItem.status || 'NEW';
     if (!grouped[s]) grouped[s] = [];
-    grouped[s].push(t);
+    grouped[s].push(ticketItem);
   }
 
   // Ordered sections (only those with tickets)
@@ -269,53 +274,53 @@ export function MyWorkBoard({ tickets }: { tickets: any[] }) {
         <div>
           <h2 className="text-2xl font-bold text-content-strong flex items-center gap-2">
             <LayoutDashboard className="size-6 text-brand" />
-            My Work
+            {t.board.title}
           </h2>
-          <p className="text-sm text-content-muted mt-1">Your assigned and requested tickets</p>
+          <p className="text-sm text-content-muted mt-1">{t.board.subtitle}</p>
         </div>
         <a
-          href="/internal-tickets/new"
+          href={`/internal-tickets/new?locale=${locale}`}
           className="flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-brand/20 hover:bg-brand-hover hover:-translate-y-0.5 transition-all"
         >
           <PlusCircle className="size-4" />
-          Create Request
+          {t.board.createRequest}
         </a>
       </div>
 
       {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line-subtle bg-surface p-3 shadow-sm">
-        <div className="flex items-center gap-2 mr-4 text-sm font-semibold text-content-muted">
+        <div className="flex items-center gap-2 me-4 text-sm font-semibold text-content-muted">
           <Filter className="size-4" />
-          Filters:
+          {t.filters.title}
         </div>
         
         <div className="flex items-center gap-1 bg-surface-canvas rounded-lg p-1 border border-line-subtle">
-          <button onClick={() => setParam('filter', 'all')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentFilter === 'all' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>All</button>
-          <button onClick={() => setParam('filter', 'sent')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentFilter === 'sent' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>Sent</button>
-          <button onClick={() => setParam('filter', 'received')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentFilter === 'received' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>Received</button>
+          <button onClick={() => setParam('filter', 'all')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentFilter === 'all' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>{t.filters.all}</button>
+          <button onClick={() => setParam('filter', 'sent')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentFilter === 'sent' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>{t.filters.sent}</button>
+          <button onClick={() => setParam('filter', 'received')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentFilter === 'received' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>{t.filters.received}</button>
         </div>
 
         <div className="w-px h-6 bg-line-subtle hidden sm:block" />
 
         <div className="flex flex-wrap items-center gap-1 bg-surface-canvas rounded-lg p-1 border border-line-subtle">
-          <button onClick={() => setParam('status', 'all')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentStatus === 'all' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>All Status</button>
-          <button onClick={() => setParam('status', 'active')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentStatus === 'active' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>Active</button>
-          <button onClick={() => setParam('status', 'pending')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentStatus === 'pending' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>Pending</button>
-          <button onClick={() => setParam('status', 'on-time')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentStatus === 'on-time' ? 'bg-white shadow-sm text-status-success' : 'text-content-muted hover:text-content-strong'}`}>On-Time</button>
-          <button onClick={() => setParam('status', 'overdue')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentStatus === 'overdue' ? 'bg-white shadow-sm text-status-error' : 'text-content-muted hover:text-content-strong'}`}>Overdue</button>
-          <button onClick={() => setParam('status', 'completed')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentStatus === 'completed' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>Completed</button>
+          <button onClick={() => setParam('status', 'all')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentStatus === 'all' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>{t.filters.statusAll}</button>
+          <button onClick={() => setParam('status', 'active')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentStatus === 'active' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>{t.filters.active}</button>
+          <button onClick={() => setParam('status', 'pending')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentStatus === 'pending' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>{t.filters.pending}</button>
+          <button onClick={() => setParam('status', 'on-time')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentStatus === 'on-time' ? 'bg-white shadow-sm text-status-success' : 'text-content-muted hover:text-content-strong'}`}>{t.filters.onTime}</button>
+          <button onClick={() => setParam('status', 'overdue')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentStatus === 'overdue' ? 'bg-white shadow-sm text-status-error' : 'text-content-muted hover:text-content-strong'}`}>{t.filters.overdue}</button>
+          <button onClick={() => setParam('status', 'completed')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentStatus === 'completed' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>{t.filters.completed}</button>
         </div>
       </div>
 
       {/* Progress bar */}
       <div className="rounded-2xl border border-line-subtle bg-surface-raised/30 p-5 shadow-sm flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-content-strong">Ticket Pipeline</h3>
-          <span className="text-xs font-semibold text-content-muted">{tickets.length} total</span>
+          <h3 className="text-sm font-bold text-content-strong">{t.board.pipeline}</h3>
+          <span className="text-xs font-semibold text-content-muted">{t.board.total.replace('{count}', String(tickets.length))}</span>
         </div>
-        <ProgressBar tickets={tickets} />
-        <Legend tickets={tickets} />
-        <DueDateLegend />
+        <ProgressBar tickets={tickets} locale={locale} />
+        <Legend tickets={tickets} locale={locale} />
+        <DueDateLegend t={t} />
       </div>
 
       {/* Collapsible status sections */}
@@ -326,13 +331,13 @@ export function MyWorkBoard({ tickets }: { tickets: any[] }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <p className="font-bold text-content-strong text-lg">All caught up!</p>
-          <p className="text-sm text-content-muted mt-1">You have no active tickets in your queue.</p>
+          <p className="font-bold text-content-strong text-lg">{t.board.emptyTitle}</p>
+          <p className="text-sm text-content-muted mt-1">{t.board.emptySubtitle}</p>
         </div>
       ) : (
         <div className="flex overflow-x-auto gap-4 pb-4 items-start">
           {sections.map((status) => (
-            <StatusSection key={status} status={status} tickets={grouped[status] || []} />
+            <StatusSection key={status} status={status} tickets={grouped[status] || []} locale={locale} t={t} />
           ))}
         </div>
       )}
@@ -340,3 +345,4 @@ export function MyWorkBoard({ tickets }: { tickets: any[] }) {
     </TooltipProvider>
   );
 }
+

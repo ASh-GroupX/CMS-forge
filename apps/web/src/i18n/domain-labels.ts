@@ -8,6 +8,7 @@ type Domain =
   | 'complaintStatus'
   | 'complaintType'
   | 'dealStage'
+  | 'internalTicketStatus'
   | 'reportDeliveryStatus'
   | 'severity'
   | 'slaState'
@@ -79,6 +80,17 @@ const labels: Record<Locale, LabelMap> = {
       PDI: 'PDI',
       DELIVERY: 'Delivery',
       POST_DELIVERY: 'Post-delivery',
+    },
+    internalTicketStatus: {
+      PENDING_APPROVAL: 'Pending Approval',
+      NEW: 'Sent',
+      ASSIGNED: 'Assigned',
+      IN_PROGRESS: 'In Progress',
+      WAITING: 'Waiting',
+      RESOLVED: 'Completed',
+      CLOSED: 'Closed',
+      REJECTED: 'Rejected',
+      TRANSFERRED: 'Transferred',
     },
     reportDeliveryStatus: {
       DELIVERED: 'Available now',
@@ -187,6 +199,17 @@ const labels: Record<Locale, LabelMap> = {
       DELIVERY: 'تسليم',
       POST_DELIVERY: 'ما بعد التسليم',
     },
+    internalTicketStatus: {
+      PENDING_APPROVAL: 'بانتظار الموافقة',
+      NEW: 'مرسلة',
+      ASSIGNED: 'مُسندة',
+      IN_PROGRESS: 'قيد التنفيذ',
+      WAITING: 'قيد الانتظار',
+      RESOLVED: 'تم الحل',
+      CLOSED: 'مكتملة ومغلقة',
+      REJECTED: 'مرفوضة',
+      TRANSFERRED: 'محوّلة',
+    },
     reportDeliveryStatus: {
       DELIVERED: 'متاح الآن',
       DEFERRED: 'مؤجل',
@@ -245,6 +268,7 @@ export const caseTypeLabel = (locale: Locale, code: string | null | undefined) =
 export const complaintStatusLabel = (locale: Locale, code: string | null | undefined) => domainLabel(locale, 'complaintStatus', code);
 export const complaintTypeLabel = (locale: Locale, code: string | null | undefined) => domainLabel(locale, 'complaintType', code);
 export const dealStageLabel = (locale: Locale, code: string | null | undefined) => domainLabel(locale, 'dealStage', code);
+export const internalTicketStatusLabel = (locale: Locale, code: string | null | undefined) => domainLabel(locale, 'internalTicketStatus', code);
 export const reportDeliveryStatusLabel = (locale: Locale, code: string | null | undefined) => domainLabel(locale, 'reportDeliveryStatus', code);
 export const severityLabel = (locale: Locale, code: string | null | undefined) => domainLabel(locale, 'severity', code);
 export const slaStateLabel = (locale: Locale, code: string | null | undefined) => domainLabel(locale, 'slaState', code);

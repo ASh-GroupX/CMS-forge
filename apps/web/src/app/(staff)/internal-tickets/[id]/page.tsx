@@ -1,12 +1,18 @@
 import React from 'react';
+import { headers } from 'next/headers';
 import { FileText, Send, Paperclip, MessageSquare, History, UserPlus, Clock, Star, AlertCircle, CheckCircle2, ChevronRight, User } from 'lucide-react';
 import { getTicketDetails, getTicketOptions } from '../../../../lib/staff-internal-tickets-actions';
 import { getStaffSessionPrincipal } from '../../../../lib/staff-session-api';
+import { resolveLocale } from '../../../../i18n/staff-shell';
+import { internalTicketStatusLabel } from '../../../../i18n/domain-labels';
 import { TicketActionButtons } from './ticket-action-buttons';
 import { TicketNoteForm } from './ticket-note-form';
 
 export default async function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const requestHeaders = await headers();
+  const locale = resolveLocale(requestHeaders.get('x-cms-locale') ?? undefined);
+  const isAr = locale === 'ar';
   const principal = await getStaffSessionPrincipal();
   
   const [ticket, options] = await Promise.all([
@@ -84,7 +90,9 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
             <div className="mb-4 flex items-start justify-between">
               <div>
                 <div className="mb-2 flex items-center gap-2">
-                  <span className="rounded-md bg-brand/10 px-2 py-0.5 text-xs font-bold text-brand uppercase tracking-wider">{ticket.status.replace(/_/g, ' ')}</span>
+                  <span className="rounded-md bg-brand/10 px-2.5 py-1 text-xs font-bold text-brand uppercase tracking-wider">
+                    {internalTicketStatusLabel(locale, ticket.status)}
+                  </span>
                   <span className="text-xs font-mono font-medium text-content-muted">{ticket.referenceNumber || ticket.id}</span>
                 </div>
                 <h2 className="text-2xl font-black text-content-strong">{ticket.title}</h2>
@@ -184,6 +192,13 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
               <div className="relative border-l-2 border-line-subtle ml-4 pl-6 pb-2">
                 {ticket.activities.map((activity: any, idx: number) => {
                   const isStatusChange = activity.action.startsWith('STATUS_CHANGED');
+                  let actionText = activity.action.replace(/_/g, ' ').toLowerCase();
+                  if (isStatusChange) {
+                    const statusCode = activity.action.replace(/^STATUS_CHANGED_?/, '');
+                    const localizedStatus = internalTicketStatusLabel(locale, statusCode);
+                    actionText = isAr ? `تغيير الحالة إلى: ${localizedStatus}` : `status changed to ${localizedStatus}`;
+                  }
+                  const actorName = isAr && activity.actor?.nameAr ? activity.actor.nameAr : (activity.actor?.nameEn || activity.actorId);
                   return (
                     <div key={activity.id} className="relative mb-6 last:mb-0">
                       <div className={`absolute -left-[35px] top-0 grid size-6 place-items-center rounded-full border-2 border-surface shadow-sm ${isStatusChange ? 'bg-brand text-white' : 'bg-surface-canvas text-content-muted'}`}>
@@ -191,8 +206,8 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                       </div>
                       <div>
                         <p className="text-sm text-content-strong mb-0.5">
-                          <span className="font-bold">{activity.actor?.nameEn || activity.actorId}</span> 
-                          <span className="text-content-muted ml-1">{activity.action.replace(/_/g, ' ').toLowerCase()}</span>
+                          <span className="font-bold">{actorName}</span> 
+                          <span className="text-content-muted ml-1.5">{actionText}</span>
                         </p>
                         <p className="text-[11px] font-medium text-content-muted mb-1.5">
                           {new Date(activity.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
