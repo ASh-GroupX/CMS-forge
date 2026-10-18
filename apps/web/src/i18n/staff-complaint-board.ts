@@ -67,12 +67,12 @@ export const complaintBoardText = {
   },
   ar: {
     title: 'لوحة التذاكر',
-    subtitle: 'اسحب التذكرة إلى عمود لتنفيذ خطوة سير العمل تلك. الأعمدة الرمادية غير مسموح بها من الحالة الحالية.',
+    subtitle: 'اسحب التذكرة إلى عمود لتنفيذ خطوة سير العمل المحددة. الأعمدة المظللة غير متاحة للانتقال من الحالة الحالية.',
     boardLabel: 'أعمدة لوحة التذاكر',
     columnLabel: 'عمود {name}، {count} تذكرة',
     ticketCount: { one: 'تذكرة واحدة', other: '{count} تذاكر' },
     states: {
-      loading: 'جارٍ تحميل لوحة التذاكر.',
+      loading: 'جارٍ تحميل لوحة التذاكر...',
       empty: 'لا توجد تذاكر على اللوحة بعد. تظهر الشكاوى هنا أثناء تنقلها في سير العمل.',
       error: 'تعذر تحميل لوحة التذاكر. حدّث الصفحة أو سجّل الدخول مرة أخرى.',
       denied: 'ليس لديك صلاحية لعرض لوحة التذاكر.',
@@ -85,7 +85,7 @@ export const complaintBoardText = {
       noAllowedTransitions: 'لا توجد إجراءات متاحة لدورك',
       dragHandle: 'اسحب التذكرة {reference}',
       severity: { CRITICAL: 'حرجة', HIGH: 'عالية', MEDIUM: 'متوسطة', LOW: 'منخفضة' },
-      sla: { ON_TRACK: 'ضمن المهلة', WARNING: 'تحذير المهلة', BREACHED: 'تجاوز المهلة', CLOSED: 'مغلقة' },
+      sla: { ON_TRACK: 'ضمن الوقت', WARNING: 'اقتراب الموعد', BREACHED: 'تجاوز اتفاقية الخدمة', CLOSED: 'مغلقة' },
     },
     dialog: {
       title: '{action}',
@@ -107,7 +107,7 @@ export const complaintBoardText = {
       error: 'تعذّر تحميل التحديثات. افتح التذكرة الكاملة لمراجعتها.',
       openFull: 'فتح التذكرة الكاملة',
       close: 'إغلاق التفاصيل',
-      meta: { status: 'الحالة', severity: 'الخطورة', sla: 'المهلة', owner: 'المسؤول', branch: 'الفرع', daysActive: 'أيام النشاط', updated: 'آخر تحديث' },
+      meta: { status: 'الحالة', severity: 'الخطورة', sla: 'اتفاقية الخدمة (SLA)', owner: 'المسؤول', branch: 'الفرع', daysActive: 'أيام النشاط', updated: 'آخر تحديث' },
       daysActive: { one: 'يوم واحد', other: '{count} أيام' },
     },
     toasts: {

@@ -62,8 +62,8 @@ export function PremiumDashboard({ locale, principal, data, workloadData, option
         {/* Global Filter/Search Simulation */}
         <div className="flex items-center gap-3">
           <div className="relative">
-            <Search className={`absolute ${isRtl ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 size-4 text-content-muted`} />
-            <Input className={`w-64 ${isRtl ? 'pr-9' : 'pl-9'} bg-surface/50 border-line-subtle shadow-sm rounded-xl focus-visible:ring-brand`} placeholder={isRtl ? 'بحث...' : 'Search insights...'} />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-content-muted" />
+            <Input className="w-64 ps-9 bg-surface/50 border-line-subtle shadow-sm rounded-xl focus-visible:ring-brand" placeholder={isRtl ? 'بحث...' : 'Search insights...'} />
           </div>
           <Button type="button" variant="outline" className="rounded-xl border-line-subtle shadow-sm bg-surface/50 gap-2">
             <Filter className="size-4 text-brand" />
@@ -352,7 +352,7 @@ function ManagerView({ isRtl, data, workloadData, options, principal }: { isRtl:
 
         {/* Date Preset Buttons */}
         <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-line-subtle">
-          <span className="text-xs font-semibold text-content-muted mr-2">{isRtl ? 'فلاتر سريعة:' : 'Quick Filters:'}</span>
+          <span className="text-xs font-semibold text-content-muted me-2">{isRtl ? 'فلاتر سريعة:' : 'Quick Filters:'}</span>
           <Button type="button" size="sm" variant="outline" className="h-7 text-xs rounded-full bg-surface-canvas" onClick={() => applyDatePreset('today')}>{isRtl ? 'اليوم' : 'Today'}</Button>
           <Button type="button" size="sm" variant="outline" className="h-7 text-xs rounded-full bg-surface-canvas" onClick={() => applyDatePreset('this_week')}>{isRtl ? 'هذا الأسبوع' : 'This Week'}</Button>
           <Button type="button" size="sm" variant="outline" className="h-7 text-xs rounded-full bg-surface-canvas" onClick={() => applyDatePreset('this_month')}>{isRtl ? 'هذا الشهر' : 'This Month'}</Button>
@@ -525,7 +525,7 @@ function OfficerView({ isRtl, data }: { isRtl: boolean, data?: any }) {
             </CardHeader>
             <CardContent className="p-4">
               <div className="h-40 flex items-center justify-center border-2 border-dashed border-line-subtle rounded-xl text-content-muted text-sm text-center px-4">
-                {isRtl ? '[سيتم عرض المهام ذات الأولوية العالية هنا]' : '[High priority incoming tasks will appear here]'}
+                {isRtl ? 'ستظهر هنا المهام ذات الأولوية العالية' : 'High priority incoming tasks will appear here'}
               </div>
             </CardContent>
           </Card>

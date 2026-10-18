@@ -173,7 +173,7 @@ export const taskBoardText = {
       colors: { slate: 'رمادي', blue: 'أزرق', amber: 'كهرماني', green: 'أخضر', red: 'أحمر', violet: 'بنفسجي' },
       mapping: 'تنقل المهمة إلى',
       mappingNone: 'الإبقاء على الحالة الحالية',
-      statuses: { OPEN: 'مفتوحة', IN_PROGRESS: 'قيد التنفيذ', WAITING: 'في الانتظار', DONE: 'منجزة' },
+      statuses: { OPEN: 'مفتوحة', IN_PROGRESS: 'قيد التنفيذ', WAITING: 'قيد الانتظار', DONE: 'منجزة' },
       save: 'حفظ',
       moveUp: 'نقل المرحلة لأعلى',
       moveDown: 'نقل المرحلة لأسفل',

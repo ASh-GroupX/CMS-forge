@@ -4,6 +4,7 @@ import React from 'react';
 import { Inbox, Loader2, Star, Trash2 } from 'lucide-react';
 import type { Locale } from '../../i18n/staff-shell';
 import type { MyWorkCopy } from '../../i18n/staff-my-work';
+import { taskStatusLabel } from '../../i18n/domain-labels';
 import type { StaffTask } from '../../lib/staff-tasks-api';
 import { getTaskItemType } from '../../lib/staff-tasks-aggregate';
 
@@ -105,7 +106,7 @@ export function TaskRow({
             </span>
           )}
           <span className="font-medium text-content-strong">{task.ownerName ?? task.ownerId}</span>
-          {task.assigneeName && <span>→ {task.assigneeName}</span>}
+          {task.assigneeName && <span>{locale === 'ar' ? '←' : '→'} {task.assigneeName}</span>}
           {task.assignedDepartmentName && (
             <span className="rounded bg-surface-sunken border border-line-subtle px-1.5 py-0.5 font-medium text-content-strong">
               {locale === 'ar' ? task.assignedDepartmentNameAr ?? task.assignedDepartmentName : task.assignedDepartmentName}
@@ -119,7 +120,7 @@ export function TaskRow({
           {dueText}
         </span>
         <span className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${statusBadge(task.status)}`}>
-          {task.status.replace('_', ' ')}
+          {taskStatusLabel(locale, task.status)}
         </span>
         {isAdmin && isRealTask && (
           <button

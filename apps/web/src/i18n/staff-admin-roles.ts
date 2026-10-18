@@ -10,12 +10,12 @@ const en = {
   states: { success: 'Role saved.', validation: 'Review the role details and permission selection.', conflict: 'This role changed or the update would remove required administrator access. Reload and review it.', error: 'The role could not be saved. Try again.' },
 };
 const ar: typeof en = {
-  title: 'الأدوار والصلاحيات', subtitle: 'أنشئ أدوار الموظفين القابلة للتعيين. يفرض الخادم الصلاحيات من جلسة المستخدم.',
-  create: 'إنشاء دور', code: 'رمز الدور', nameEn: 'الاسم بالإنجليزية', nameAr: 'الاسم بالعربية', permissions: 'الصلاحيات', selectHelp: 'اختر كل الصلاحيات التي يحتاجها الدور. صلاحية دخول الموظف مطلوبة.',
-  editPermissions: 'تعديل الصلاحيات', savePermissions: 'حفظ الصلاحيات', systemLocked: 'صلاحيات دور البوابة يديرها النظام.',
+  title: 'الأدوار والصلاحيات', subtitle: 'إعداد وتخصيص أدوار الموظفين ومصفوفة الصلاحيات المعتمدة في النظام.',
+  create: 'إضافة دور جديد', code: 'رمز الدور', nameEn: 'الاسم بالإنجليزية', nameAr: 'الاسم بالعربية', permissions: 'الصلاحيات', selectHelp: 'حدد جميع الصلاحيات المطلوبة لهذا الدور. يلزم توفر صلاحية تسجيل دخول الموظفين.',
+  editPermissions: 'تعديل الصلاحيات', savePermissions: 'حفظ الصلاحيات', systemLocked: 'صلاحيات أدوار بوابة العملاء محددة تلقائياً من قبل النظام.',
   copyPermissions: 'نسخ الصلاحيات من دور آخر', selectRole: 'اختر دوراً', permissionGroups: { complaints: 'الوصول إلى الشكاوى', operations: 'الإجراءات التشغيلية', administration: 'الإدارة', reporting: 'التقارير والتدقيق' },
-  roleList: 'الأدوار المهيأة', system: 'دور نظام', custom: 'دور مخصص', noRoles: 'لا توجد أدوار مهيأة.',
-  reviewTitle: 'مراجعة أثر الصلاحيات', reviewDescription: 'تأكد من تغييرات الصلاحيات الدقيقة قبل تطبيقها.', added: 'مضافة', removed: 'محذوفة', affectedUsers: 'المستخدمون النشطون المتأثرون', noChanges: 'لا توجد تغييرات في الصلاحيات.', cancel: 'إلغاء', confirm: 'تطبيق التغييرات',
-  states: { success: 'تم حفظ الدور.', validation: 'راجع تفاصيل الدور واختيار الصلاحيات.', conflict: 'تغير هذا الدور أو سيؤدي التحديث إلى إزالة وصول إداري مطلوب. أعد التحميل وراجع التغيير.', error: 'تعذر حفظ الدور. حاول مرة أخرى.' },
+  roleList: 'الأدوار المعرفة', system: 'دور نظامي (أساسي)', custom: 'دور مخصص', noRoles: 'لا توجد أدوار معرفة حالياً.',
+  reviewTitle: 'مراجعة تأثير تغيير الصلاحيات', reviewDescription: 'يُرجى التحقق من تفاصيل التعديلات على الصلاحيات قبل اعتماد تطبيقها.', added: 'مضافة', removed: 'محذوفة', affectedUsers: 'المستخدمون النشطون المتأثرون', noChanges: 'لم يتم إجراء أي تغيير في الصلاحيات.', cancel: 'إلغاء', confirm: 'تطبيق التغييرات',
+  states: { success: 'تم حفظ بيانات الدور والصلاحيات بنجاح.', validation: 'يُرجى مراجعة بيانات الدور وقائمة الصلاحيات المحددة.', conflict: 'تم تعديل هذا الدور أو أن التحديث سيؤدي إلى إزالة صلاحيات إدارية أساسية. يُرجى إعادة تحميل الصفحة والمراجعة.', error: 'تعذر حفظ الدور. يُرجى المحاولة مرة أخرى.' },
 };
 export const adminRolesText: Record<Locale, typeof en> = { en, ar };

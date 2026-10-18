@@ -12,10 +12,10 @@ const en = {
 export const complaintTabsText: Record<Locale, typeof en> = {
   en,
   ar: {
-    work: 'العمل الآن',
+    work: 'مساحة العمل',
     communication: 'التواصل',
     details: 'التفاصيل',
-    deadlineState: 'حالة الموعد (SLA)',
+    deadlineState: 'متابعة الموعد (SLA)',
     capa: 'الإجراء التصحيحي والوقائي (CAPA)',
     dms: 'بيانات الوكالة (DMS)',
   },
