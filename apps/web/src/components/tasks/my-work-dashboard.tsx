@@ -221,8 +221,11 @@ function TaskRow({ locale, t, task, urgency }: { locale: Locale; t: MyWorkCopy; 
     : 'border-s-blue-500';
 
   const complaintLink = task.links?.find((l) => l.entityType?.toLowerCase() === 'complaint');
+  const ticketLink = task.links?.find((l) => l.entityType?.toLowerCase() === 'internal_ticket');
   const href = complaintLink 
     ? `/complaints/${complaintLink.entityId}?locale=${locale}`
+    : ticketLink
+    ? `/internal-tickets/${ticketLink.entityId}?locale=${locale}`
     : `/tasks/${task.id}?locale=${locale}`;
 
   return (
@@ -237,7 +240,12 @@ function TaskRow({ locale, t, task, urgency }: { locale: Locale; t: MyWorkCopy; 
         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-content-muted">
           {task.isCustomerPromise && (
             <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-amber-400 font-medium">
-              <Star className="me-0.5 inline size-3" />{t.row.complaint}
+              <Star className="me-0.5 inline size-3" />{locale === 'ar' ? 'شكوى' : 'Complaint'}
+            </span>
+          )}
+          {ticketLink && (
+            <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-blue-400 font-medium">
+              <Inbox className="me-0.5 inline size-3" />{locale === 'ar' ? 'تذكرة داخلية' : 'Internal Ticket'}
             </span>
           )}
           <span>{task.ownerName ?? task.ownerId}</span>
