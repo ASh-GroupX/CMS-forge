@@ -14,14 +14,18 @@ type PageProps = {
 
 export default async function ComplaintsPage({ searchParams, cookieHeader: propCookieHeader, locale: propLocale, fetchImpl }: PageProps) {
   let cookieHeader = propCookieHeader;
-  let locale = propLocale;
+  let locale: 'en' | 'ar' = propLocale ?? 'en';
   
-  if (!cookieHeader) {
-    const requestHeaders = await headers();
-    locale = locale || resolveLocale(requestHeaders.get('x-cms-locale') ?? undefined);
-    cookieHeader = requestHeaders.get('cookie') ?? '';
+  if (cookieHeader === undefined) {
+    try {
+      const requestHeaders = await headers();
+      locale = propLocale ?? resolveLocale(requestHeaders.get('x-cms-locale') ?? undefined);
+      cookieHeader = requestHeaders.get('cookie') ?? '';
+    } catch {
+      cookieHeader = '';
+    }
   } else {
-    locale = locale || resolveLocale(undefined);
+    locale = propLocale ?? resolveLocale(undefined);
   }
   
   const apiUrl = process.env.API_URL ?? 'http://localhost:3000';

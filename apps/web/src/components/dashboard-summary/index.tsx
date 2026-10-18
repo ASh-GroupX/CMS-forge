@@ -35,7 +35,7 @@ export function DashboardSummary({ data, locale, manager, notifications, princip
   return <div className="grid gap-4" dir={shell.dir}>
     {empty ? <StateBlock message={shell.dashboard.states.empty} /> : null}
     <section className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,1fr)]" aria-label={t.attention}>
-      <Card className="overflow-hidden rounded-xl border-line-subtle shadow-sm"><PanelHeader href={`/tasks/today?locale=${locale}`} title={t.attention} viewAll={t.viewAll} /><CardContent className="grid p-0 sm:grid-cols-2">
+      <Card className="overflow-hidden rounded-xl border-line-subtle shadow-sm"><PanelHeader href={`/tasks?locale=${locale}`} title={t.attention} viewAll={t.viewAll} /><CardContent className="grid p-0 sm:grid-cols-2">
         <div className="divide-y divide-line-subtle border-e border-line-subtle">{attention.slice(0, 3).map((item) => <AttentionRow item={item} key={item.label} />)}</div>
         <div className="divide-y divide-line-subtle">{attention.slice(3).map((item) => <AttentionRow item={item} key={item.label} />)}</div>
       </CardContent></Card>
@@ -56,7 +56,7 @@ export function DashboardSummary({ data, locale, manager, notifications, princip
       </CardContent></Card>
     </section>
 
-    <footer className="flex flex-wrap justify-center gap-3 pt-1"><Button asChild size="lg"><a href={`/tasks/today?locale=${locale}`}><Send aria-hidden="true" className="me-2 size-5" />{t.openMyWork}</a></Button>{canCreate ? <Button asChild size="lg" variant="outline"><a href={`/complaints/new?locale=${locale}`}><Plus aria-hidden="true" className="me-2 size-5" />{t.createComplaint}</a></Button> : null}</footer>
+    <footer className="flex flex-wrap justify-center gap-3 pt-1"><Button asChild size="lg"><a href={`/tasks?locale=${locale}`}><Send aria-hidden="true" className="me-2 size-5" />{t.openMyWork}</a></Button>{canCreate ? <Button asChild size="lg" variant="outline"><a href={`/complaints/new?locale=${locale}`}><Plus aria-hidden="true" className="me-2 size-5" />{t.createComplaint}</a></Button> : null}</footer>
   </div>;
 }
 
@@ -73,11 +73,11 @@ function TeamRows({ locale, manager, unassigned, unit }: { locale: Locale; manag
 
 function attentionItems(data: StaffDashboardSummary | null, tasks: EmployeeTodayTasks | null | undefined, locale: Locale, t: typeof modernUiText[Locale]['dashboard']): Attention[] { const q = `?locale=${locale}`; return [
   { count: data?.overdueComplaints ?? 0, detail: t.overdueDetail, href: `/complaints?sla=BREACHED&locale=${locale}`, icon: <Inbox className="size-5" />, label: t.complaints, tone: 'danger' },
-  { count: tasks?.overdue.length ?? 0, detail: t.overdueDetail, href: `/tasks/today${q}#overdue`, icon: <CheckSquareIcon />, label: t.tasks, tone: 'danger' },
+  { count: tasks?.overdue.length ?? 0, detail: t.overdueDetail, href: `/tasks${q}#overdue`, icon: <CheckSquareIcon />, label: t.tasks, tone: 'danger' },
   { count: tasks?.overduePromises.length ?? 0, detail: t.overdueDetail, href: `/tasks/promises${q}`, icon: <UsersRound className="size-5" />, label: t.promises, tone: 'danger' },
-  { count: tasks?.dueToday.length ?? 0, detail: t.dueTodayDetail, href: `/tasks/today${q}#due-today`, icon: <CalendarClock className="size-5" />, label: t.tasks, tone: 'warning' },
+  { count: tasks?.dueToday.length ?? 0, detail: t.dueTodayDetail, href: `/tasks${q}#due-today`, icon: <CalendarClock className="size-5" />, label: t.tasks, tone: 'warning' },
   { count: data?.slaWarningComplaints ?? 0, detail: t.dueSoonDetail, href: `/complaints?sla=WARNING&locale=${locale}`, icon: <Inbox className="size-5" />, label: t.complaints, tone: 'warning' },
-  { count: tasks?.waitingOnMe.length ?? 0, detail: t.waitingDetail, href: `/tasks/today${q}`, icon: <UsersRound className="size-5" />, label: t.waitingOnMe, tone: 'warning' },
+  { count: tasks?.waitingOnMe.length ?? 0, detail: t.waitingDetail, href: `/tasks${q}`, icon: <UsersRound className="size-5" />, label: t.waitingOnMe, tone: 'warning' },
 ]; }
 function CheckSquareIcon() { return <CheckCircle2 className="size-5" />; }
 function notificationHref(item: StaffNotification): string | null { const explicit = item.targetHref ?? item.payload.targetHref ?? item.payload.href; if (explicit?.startsWith('/') && !explicit.startsWith('//') && !explicit.startsWith('/portal')) return explicit; const complaintId = item.payload.complaintId ?? (item.targetType === 'COMPLAINT' ? item.targetId : undefined); if (complaintId) return `/complaints/${encodeURIComponent(complaintId)}`; const taskId = item.payload.taskId ?? (item.targetType === 'TASK' ? item.targetId : undefined); return taskId ? `/tasks/${encodeURIComponent(taskId)}` : null; }

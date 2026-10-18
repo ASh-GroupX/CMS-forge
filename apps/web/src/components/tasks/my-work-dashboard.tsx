@@ -220,7 +220,7 @@ function TaskRow({ locale, t, task, urgency }: { locale: Locale; t: MyWorkCopy; 
     : urgency === 'done' ? 'border-s-emerald-500'
     : 'border-s-blue-500';
 
-  const complaintLink = task.links?.find((l) => l.entityType === 'complaint');
+  const complaintLink = task.links?.find((l) => l.entityType?.toLowerCase() === 'complaint');
   const href = complaintLink 
     ? `/complaints/${complaintLink.entityId}?locale=${locale}`
     : `/tasks/${task.id}?locale=${locale}`;

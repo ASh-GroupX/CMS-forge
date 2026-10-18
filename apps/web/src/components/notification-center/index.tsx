@@ -135,7 +135,7 @@ function notificationHref(item: StaffNotification, kind: 'sla' | 'task' | 'workf
   if (reference) return `/complaints?search=${encodeURIComponent(reference)}`;
   const taskId = item.payload.taskId ?? (targetType === 'TASK' ? targetId : undefined);
   if (taskId) return `/tasks/${encodeURIComponent(taskId)}`;
-  if (kind === 'task') return '/tasks/today';
+  if (kind === 'task') return '/tasks';
   return null;
 }
 
