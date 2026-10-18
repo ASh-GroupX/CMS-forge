@@ -130,7 +130,7 @@ export default function ComplaintSettingsPage() {
     <div className="mx-auto max-w-4xl p-6">
       <Toaster position="bottom-center" richColors />
       <div className="flex items-center gap-3 mb-2">
-        <span className="flex size-9 items-center justify-center rounded-lg bg-brand-primary/10 text-brand-primary">
+        <span className="flex size-9 items-center justify-center rounded-lg bg-brand/10 text-brand">
           <Sparkles className="size-5" />
         </span>
         <h1 className="text-2xl font-bold text-content-strong">Complaint Settings / إعدادات الشكاوى</h1>
@@ -145,7 +145,7 @@ export default function ComplaintSettingsPage() {
           onClick={() => setActiveTab('rootCauses')}
           className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === 'rootCauses'
-              ? 'bg-brand-primary text-white shadow-sm'
+              ? 'bg-brand text-brand-foreground shadow-sm font-semibold'
               : 'text-content-muted hover:bg-surface-raised hover:text-content-strong'
           }`}
         >
@@ -156,7 +156,7 @@ export default function ComplaintSettingsPage() {
           onClick={() => setActiveTab('salesAdvisors')}
           className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === 'salesAdvisors'
-              ? 'bg-brand-primary text-white shadow-sm'
+              ? 'bg-brand text-brand-foreground shadow-sm font-semibold'
               : 'text-content-muted hover:bg-surface-raised hover:text-content-strong'
           }`}
         >
@@ -192,7 +192,7 @@ export default function ComplaintSettingsPage() {
               value={nameEn}
               onChange={(e) => setNameEn(e.target.value)}
               placeholder={activeTab === 'rootCauses' ? 'e.g. Workshop Delay' : 'e.g. Ahmed Al-Mutairi'}
-              className="w-full rounded-md border border-line-subtle bg-surface px-3 py-2 text-sm focus:border-brand-primary focus:outline-none"
+              className="w-full rounded-md border border-line-subtle bg-surface px-3 py-2 text-sm focus:border-brand focus:outline-none"
               required
             />
           </div>
@@ -204,7 +204,7 @@ export default function ComplaintSettingsPage() {
               value={nameAr}
               onChange={(e) => setNameAr(e.target.value)}
               placeholder={activeTab === 'rootCauses' ? 'مثال: تأخير الورشة' : 'مثال: أحمد المطيري'}
-              className="w-full rounded-md border border-line-subtle bg-surface px-3 py-2 text-sm text-right focus:border-brand-primary focus:outline-none"
+              className="w-full rounded-md border border-line-subtle bg-surface px-3 py-2 text-sm text-right focus:border-brand focus:outline-none"
               required
             />
           </div>
@@ -212,7 +212,7 @@ export default function ComplaintSettingsPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="flex items-center gap-2 rounded-md bg-brand-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-brand-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground shadow hover:bg-brand/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -258,7 +258,7 @@ export default function ComplaintSettingsPage() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleEdit(item)}
-                    className="p-1.5 text-content-muted hover:text-brand-primary rounded hover:bg-surface-raised transition-colors"
+                    className="p-1.5 text-content-muted hover:text-brand rounded hover:bg-surface-raised transition-colors"
                     title="Edit"
                   >
                     <Edit2 className="size-4" />

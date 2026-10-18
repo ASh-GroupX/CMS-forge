@@ -33,7 +33,7 @@ export function TaskRow({ locale, t, task, urgency }: { locale: Locale; t: MyWor
 
   return (
     <a
-      className={`group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-lg border border-transparent border-s-2 ${urgencyBorder} bg-surface-raised/50 px-4 py-3 transition-all hover:border-line-subtle hover:bg-surface-raised hover:shadow-sm`}
+      className={`group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-lg border border-line-subtle/70 border-s-4 ${urgencyBorder} bg-surface/90 px-4 py-3 transition-all hover:border-line-strong hover:bg-surface-raised hover:shadow-xs`}
       href={href}
     >
       <div className="min-w-0">
@@ -42,19 +42,19 @@ export function TaskRow({ locale, t, task, urgency }: { locale: Locale; t: MyWor
         </p>
         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-content-muted">
           {task.isCustomerPromise && (
-            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-amber-400 font-medium">
+            <span className="rounded-full bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-amber-700 dark:text-amber-300 font-semibold">
               <Star className="me-0.5 inline size-3" />{locale === 'ar' ? 'شكوى' : 'Complaint'}
             </span>
           )}
           {ticketLink && (
-            <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-blue-400 font-medium">
+            <span className="rounded-full bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 text-blue-700 dark:text-blue-300 font-semibold">
               <Inbox className="me-0.5 inline size-3" />{locale === 'ar' ? 'تذكرة داخلية' : 'Internal Ticket'}
             </span>
           )}
-          <span>{task.ownerName ?? task.ownerId}</span>
+          <span className="font-medium text-content-strong">{task.ownerName ?? task.ownerId}</span>
           {task.assigneeName && <span>→ {task.assigneeName}</span>}
           {task.assignedDepartmentName && (
-            <span className="rounded bg-white/5 px-1.5 py-0.5">
+            <span className="rounded bg-surface-sunken border border-line-subtle px-1.5 py-0.5 font-medium text-content-strong">
               {locale === 'ar' ? task.assignedDepartmentNameAr ?? task.assignedDepartmentName : task.assignedDepartmentName}
             </span>
           )}
@@ -62,7 +62,7 @@ export function TaskRow({ locale, t, task, urgency }: { locale: Locale; t: MyWor
       </div>
 
       <div className="flex shrink-0 items-center gap-2 text-xs">
-        <span className={`rounded-full px-2 py-1 font-medium tabular-nums ${isOverdue ? 'bg-red-500/15 text-red-400' : 'bg-white/5 text-content-muted'}`}>
+        <span className={`rounded-full px-2.5 py-1 font-semibold tabular-nums ${isOverdue ? 'bg-red-500/15 border border-red-500/30 text-red-700 dark:text-red-300' : 'bg-surface border border-line-subtle text-content-muted'}`}>
           {dueText}
         </span>
         <span className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${statusBadge(task.status)}`}>
@@ -75,10 +75,10 @@ export function TaskRow({ locale, t, task, urgency }: { locale: Locale; t: MyWor
 
 function statusBadge(status: string): string {
   switch (status) {
-    case 'OPEN': return 'bg-blue-500/15 text-blue-400';
-    case 'IN_PROGRESS': return 'bg-cyan-500/15 text-cyan-400';
-    case 'WAITING': return 'bg-amber-500/15 text-amber-400';
-    case 'DONE': return 'bg-emerald-500/15 text-emerald-400';
-    default: return 'bg-white/5 text-content-muted';
+    case 'OPEN': return 'bg-blue-500/15 border border-blue-500/30 text-blue-700 dark:text-blue-300';
+    case 'IN_PROGRESS': return 'bg-cyan-500/15 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300';
+    case 'WAITING': return 'bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300';
+    case 'DONE': return 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300';
+    default: return 'bg-surface border border-line-subtle text-content-muted';
   }
 }
