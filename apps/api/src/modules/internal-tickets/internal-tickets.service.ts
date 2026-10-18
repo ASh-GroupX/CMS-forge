@@ -1,4 +1,6 @@
-import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, HttpStatus } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
+import * as path from 'node:path';
 import { AppException } from '../../core/http-kernel.js';
 import { InternalTicketsRepository } from './internal-tickets.repository.js';
 import { InternalTicketStatus, InternalTicketPriority } from '@prisma/client';
@@ -6,6 +8,21 @@ import { CreateInternalTicketDto } from './dto/create-internal-ticket.dto.js';
 import { TransferTicketDto, AssignTicketDto, ResolveTicketDto, WaitTicketDto, RejectTicketDto, AddNoteDto } from './dto/update-internal-ticket.dto.js';
 import { AttachmentsService } from '../attachments/attachments.service.js';
 import { UploadTicketAttachmentDto } from './dto/upload-attachment.dto.js';
+
+const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
+
+function validateJpgAttachment(attachment: UploadTicketAttachmentDto) {
+  const ext = path.extname(attachment.fileName || '').toLowerCase().replace('.', '');
+  const mime = (attachment.contentType || '').toLowerCase().trim();
+  const isJpgExt = ext === 'jpg' || ext === 'jpeg';
+  const isJpgMime = mime === 'image/jpeg' || mime === 'image/jpg' || mime === 'image/pjpeg';
+  if (!isJpgExt && !isJpgMime) {
+    throw new AppException('ATTACHMENT_TYPE_BLOCKED', 'Only JPG images are allowed', HttpStatus.BAD_REQUEST);
+  }
+  if (attachment.sizeBytes > MAX_ATTACHMENT_SIZE) {
+    throw new AppException('ATTACHMENT_SIZE_EXCEEDED', 'File exceeds 5MB limit', HttpStatus.BAD_REQUEST);
+  }
+}
 
 @Injectable()
 export class InternalTicketsService {
@@ -16,9 +33,13 @@ export class InternalTicketsService {
 
   private async storeTicketAttachments(tx: any, ticketId: string, actorId: string, attachments: UploadTicketAttachmentDto[]) {
     for (const attachment of attachments) {
+      validateJpgAttachment(attachment);
+      const ext = (path.extname(attachment.fileName || '') || '.jpg').toLowerCase();
+      const finalExt = ext === '.jpeg' ? '.jpeg' : '.jpg';
       const stored = await this.attachmentsService.storeObject({
+        storageKey: `attachments/${randomUUID()}${finalExt}`,
         bytes: Buffer.from(attachment.contentBase64, 'base64'),
-        contentType: attachment.contentType,
+        contentType: 'image/jpeg',
       });
 
       await tx.ticketAttachment.create({
@@ -27,7 +48,7 @@ export class InternalTicketsService {
           uploadedById: actorId,
           storageKey: stored.storageKey,
           fileName: attachment.fileName,
-          contentType: attachment.contentType,
+          contentType: 'image/jpeg',
           sizeBytes: attachment.sizeBytes,
         },
       });
@@ -36,9 +57,13 @@ export class InternalTicketsService {
 
   private async storeNoteAttachments(tx: any, noteId: string, actorId: string, attachments: UploadTicketAttachmentDto[]) {
     for (const attachment of attachments) {
+      validateJpgAttachment(attachment);
+      const ext = (path.extname(attachment.fileName || '') || '.jpg').toLowerCase();
+      const finalExt = ext === '.jpeg' ? '.jpeg' : '.jpg';
       const stored = await this.attachmentsService.storeObject({
+        storageKey: `attachments/${randomUUID()}${finalExt}`,
         bytes: Buffer.from(attachment.contentBase64, 'base64'),
-        contentType: attachment.contentType,
+        contentType: 'image/jpeg',
       });
 
       await tx.ticketNoteAttachment.create({
@@ -47,7 +72,7 @@ export class InternalTicketsService {
           uploadedById: actorId,
           storageKey: stored.storageKey,
           fileName: attachment.fileName,
-          contentType: attachment.contentType,
+          contentType: 'image/jpeg',
           sizeBytes: attachment.sizeBytes,
         },
       });
@@ -638,14 +663,39 @@ export class InternalTicketsService {
     return this.repository.delete(ticketId);
   }
 
+  async getAttachmentFile(ticketId: string, attachmentId: string) {
+    const attachment = await this.repository.transaction(async (tx) => {
+      return tx.ticketAttachment.findUnique({ where: { id: attachmentId, ticketId } });
+    });
+    if (!attachment) throw new NotFoundException('Attachment not found');
+    const file = await this.attachmentsService.getRawFile(attachment.storageKey);
+    return { attachment, file };
+  }
+
+  async getNoteAttachmentFile(ticketId: string, noteId: string, attachmentId: string) {
+    const attachment = await this.repository.transaction(async (tx) => {
+      return tx.ticketNoteAttachment.findUnique({ where: { id: attachmentId, noteId } });
+    });
+    if (!attachment) throw new NotFoundException('Note attachment not found');
+    const note = await this.repository.transaction(async (tx) => {
+      return tx.ticketNote.findUnique({ where: { id: noteId, ticketId } });
+    });
+    if (!note) throw new NotFoundException('Note not found for this ticket');
+    const file = await this.attachmentsService.getRawFile(attachment.storageKey);
+    return { attachment, file };
+  }
+
   async downloadAttachment(ticketId: string, attachmentId: string) {
     const attachment = await this.repository.transaction(async (tx) => {
       return tx.ticketAttachment.findUnique({ where: { id: attachmentId, ticketId } });
     });
     if (!attachment) throw new NotFoundException('Attachment not found');
     
+    let fileName = attachment.fileName || 'attachment.jpg';
+    if (!path.extname(fileName)) fileName += '.jpg';
+
     const token = await this.attachmentsService.prepareDownload(attachment.storageKey);
-    return { url: token.token, expiresAt: token.expiresAt, fileName: attachment.fileName };
+    return { url: token.token, expiresAt: token.expiresAt, fileName };
   }
 
   async downloadNoteAttachment(ticketId: string, noteId: string, attachmentId: string) {
@@ -659,7 +709,10 @@ export class InternalTicketsService {
     });
     if (!note) throw new NotFoundException('Note not found for this ticket');
     
+    let fileName = attachment.fileName || 'attachment.jpg';
+    if (!path.extname(fileName)) fileName += '.jpg';
+
     const token = await this.attachmentsService.prepareDownload(attachment.storageKey);
-    return { url: token.token, expiresAt: token.expiresAt, fileName: attachment.fileName };
+    return { url: token.token, expiresAt: token.expiresAt, fileName };
   }
 }

@@ -53,7 +53,7 @@ export function PortalFollowUpPanel({
           <div className="grid gap-1 text-sm font-medium">
             <Label htmlFor="portal-follow-up-attachment">{t.fields.attachment}</Label>
             <LocalizedFileInput
-              accept=".jpg,.jpeg,.png,.webp,.pdf,.mp3,.wav,.ogg,.mp4,.mov,.webm,image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/wav,audio/ogg,video/mp4,video/quicktime,video/webm"
+              accept=".jpg,.jpeg,image/jpeg"
               aria-describedby={helpId}
               id="portal-follow-up-attachment"
               locale={locale}

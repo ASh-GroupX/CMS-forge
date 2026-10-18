@@ -18,7 +18,8 @@ export async function GET(
       cache: 'no-store',
     });
 
-    if (!backendRes.ok) {
+    const res = backendRes.ok ? backendRes : null;
+    if (!res) {
       const directPath = key.join('/');
       const retryRes = await fetch(`${apiUrl}/attachments/raw/${directPath}`, {
         headers: { cookie: request.headers.get('cookie') ?? '' },
@@ -27,10 +28,7 @@ export async function GET(
       if (retryRes.ok) {
         return new Response(retryRes.body, {
           status: 200,
-          headers: {
-            'content-type': retryRes.headers.get('content-type') || 'application/octet-stream',
-            'cache-control': 'public, max-age=86400',
-          },
+          headers: buildHeaders(retryRes, key),
         });
       }
       return NextResponse.json({ error: { code: 'ATTACHMENT_NOT_FOUND', message: 'Attachment not found.' } }, { status: 404 });
@@ -38,12 +36,25 @@ export async function GET(
 
     return new Response(backendRes.body, {
       status: 200,
-      headers: {
-        'content-type': backendRes.headers.get('content-type') || 'application/octet-stream',
-        'cache-control': 'public, max-age=86400',
-      },
+      headers: buildHeaders(backendRes, key),
     });
   } catch {
     return NextResponse.json({ error: { code: 'NETWORK_ERROR', message: 'Unable to reach backend service.' } }, { status: 502 });
   }
+}
+
+function buildHeaders(res: Response, key: string[]): Headers {
+  const contentType = res.headers.get('content-type') || 'image/jpeg';
+  const disposition = res.headers.get('content-disposition');
+  const headers = new Headers();
+  headers.set('content-type', contentType);
+  headers.set('cache-control', 'public, max-age=86400');
+  if (disposition) {
+    headers.set('content-disposition', disposition);
+  } else {
+    let filename = key[key.length - 1] || 'attachment.jpg';
+    if (!filename.includes('.')) filename += '.jpg';
+    headers.set('content-disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+  }
+  return headers;
 }

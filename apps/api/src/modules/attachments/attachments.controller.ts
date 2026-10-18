@@ -147,8 +147,15 @@ export class RawAttachmentsController {
     }
     if (!file) throw new AppException('ATTACHMENT_NOT_FOUND', 'Attachment object was not found', HttpStatus.NOT_FOUND);
 
-    const filename = file.fileName || path.basename(decoded) || 'attachment';
-    res.setHeader('Content-Type', file.contentType || 'application/octet-stream');
+    let filename = file.fileName || path.basename(decoded) || 'attachment';
+    if (!path.extname(filename)) {
+      const ct = (file.contentType || '').toLowerCase();
+      if (ct.includes('jpeg') || ct.includes('jpg')) filename += '.jpg';
+      else if (ct.includes('png')) filename += '.png';
+      else if (ct.includes('pdf')) filename += '.pdf';
+      else filename += '.jpg';
+    }
+    res.setHeader('Content-Type', file.contentType || 'image/jpeg');
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
     res.setHeader('Cache-Control', 'public, max-age=86400');
     res.send(file.bytes);

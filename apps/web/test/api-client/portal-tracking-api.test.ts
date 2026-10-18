@@ -16,7 +16,7 @@ test('portal client runs submission OTP session tracking follow-up and attachmen
     if (String(input).endsWith('/otp')) return jsonResponse({ ok: true, verificationId: 'ver_1', expiresAt: '2026-06-29T08:05:00.000Z' }, 201);
     if (String(input).endsWith('/verify')) return jsonResponse({ session: { sessionToken: 'portal_token', expiresAt: '2026-06-29T08:30:00.000Z' } }, 201);
     if (String(input).endsWith('/follow-ups')) return jsonResponse({ ok: true }, 201);
-    if (String(input).endsWith('/attachments')) return jsonResponse({ attachment: { id: 'att_1', complaintId: 'cmp_1', fileName: 'invoice.pdf', contentType: 'application/pdf', sizeBytes: 7, scanStatus: 'PENDING', customerVisible: true } }, 201);
+    if (String(input).endsWith('/attachments')) return jsonResponse({ attachment: { id: 'att_1', complaintId: 'cmp_1', fileName: 'photo.jpg', contentType: 'image/jpeg', sizeBytes: 7, scanStatus: 'PENDING', customerVisible: true } }, 201);
     return jsonResponse({ complaint: { referenceNumber: 'CMP-1', status: 'IN_PROGRESS', createdAt: '2026-06-29T08:00:00.000Z', updatedAt: '2026-06-29T08:10:00.000Z', timeline: [] } });
   };
 
@@ -25,7 +25,7 @@ test('portal client runs submission OTP session tracking follow-up and attachmen
   assert.equal((await verifyPortalOtp({ verificationId: 'ver_1', otp: '123456' }, fetchImpl)).ok, true);
   assert.equal((await getPortalTracking('portal_token', fetchImpl)).ok, true);
   assert.equal((await submitPortalFollowUp('portal_token', 'Customer update', fetchImpl)).ok, true);
-  assert.equal((await uploadPortalAttachment('portal_token', new File(['invoice'], 'invoice.pdf', { type: 'application/pdf' }), fetchImpl)).ok, true);
+  assert.equal((await uploadPortalAttachment('portal_token', new File(['photo'], 'photo.jpg', { type: 'image/jpeg' }), fetchImpl)).ok, true);
 
   assert.deepEqual(calls.map((call) => [call.init?.method, call.input]), [
     ['POST', '/api/portal/complaints'],
@@ -41,10 +41,10 @@ test('portal client runs submission OTP session tracking follow-up and attachmen
   assert.deepEqual(calls[3]?.init?.headers, { Accept: 'application/json', 'x-portal-session': 'portal_token' });
   assert.deepEqual(JSON.parse(String(calls[4]?.init?.body)), { body: 'Customer update' });
   assert.deepEqual(JSON.parse(String(calls[5]?.init?.body)), {
-    fileName: 'invoice.pdf',
-    contentType: 'application/pdf',
-    sizeBytes: 7,
-    contentBase64: 'aW52b2ljZQ==',
+    fileName: 'photo.jpg',
+    contentType: 'image/jpeg',
+    sizeBytes: 5,
+    contentBase64: 'cGhvdG8=',
   });
 });
 
@@ -67,7 +67,7 @@ test('portal submission client posts initial attachments with the complaint only
       },
     }, 201);
   };
-  const attachmentResult = await portalSubmissionAttachments([new File(['invoice'], 'invoice.pdf', { type: 'application/pdf' })]);
+  const attachmentResult = await portalSubmissionAttachments([new File(['photo'], 'photo.jpg', { type: 'image/jpeg' })]);
   assert.equal(attachmentResult.ok, true);
 
   const result = await submitPortalComplaint({
@@ -89,10 +89,10 @@ test('portal submission client posts initial attachments with the complaint only
   assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
     ...validPortalComplaint(),
     attachments: [{
-      fileName: 'invoice.pdf',
-      contentType: 'application/pdf',
-      sizeBytes: 7,
-      contentBase64: 'aW52b2ljZQ==',
+      fileName: 'photo.jpg',
+      contentType: 'image/jpeg',
+      sizeBytes: 5,
+      contentBase64: 'cGhvdG8=',
     }],
   });
   assert.doesNotMatch(String(calls[0]?.init?.body), /x-portal-session|staff|actorId|storageKey|credential|DMS/i);
@@ -112,7 +112,7 @@ test('portal submission options client loads public-safe catalogs', async () => 
     calls.push({ input, init });
     return jsonResponse({
       branches: [{ id: 'branch_service', nameEn: 'Service Branch', nameAr: 'فرع الصيانة' }],
-      categories: [{ id: 'cat_engine', nameEn: 'Engine', nameAr: 'المحرك', departmentId: 'dep_vehicle', branchId: null }],
+      categories: [{ id: 'cat_engine', nameEn: 'Engine', nameAr: 'المحرك', branchId: null }],
       severities: ['HIGH', 'LOW'],
     });
   };
@@ -232,12 +232,12 @@ test('portal proxy allowlists verified attachment upload and drops staff headers
   const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
   globalThis.fetch = (async (input, init) => {
     calls.push({ input, init });
-    return jsonResponse({ attachment: { id: 'att_1', complaintId: 'cmp_1', fileName: 'invoice.pdf', contentType: 'application/pdf', sizeBytes: 7, scanStatus: 'PENDING', customerVisible: true } }, 201);
+    return jsonResponse({ attachment: { id: 'att_1', complaintId: 'cmp_1', fileName: 'photo.jpg', contentType: 'image/jpeg', sizeBytes: 7, scanStatus: 'PENDING', customerVisible: true } }, 201);
   }) as typeof fetch;
   process.env.API_URL = 'http://api.test';
 
   try {
-    const payload = { fileName: 'invoice.pdf', contentType: 'application/pdf', sizeBytes: 7, contentBase64: 'aW52b2ljZQ==' };
+    const payload = { fileName: 'photo.jpg', contentType: 'image/jpeg', sizeBytes: 7, contentBase64: 'aW52b2ljZQ==' };
     const response = await POST(new Request('http://web.test/api/portal/attachments', {
       body: JSON.stringify(payload),
       headers: {

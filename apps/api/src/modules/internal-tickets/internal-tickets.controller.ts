@@ -1,4 +1,5 @@
 import { Controller, Post, Get, Put, Delete, Body, Param, Query, Req, Res, UseGuards } from '@nestjs/common';
+import * as path from 'node:path';
 import { SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { AppException } from '../../core/http-kernel.js';
@@ -169,6 +170,16 @@ export class InternalTicketsController {
     @Query('redirect') redirect: string | undefined,
     @Res() res: any,
   ) {
+    const fileData = await this.service.getAttachmentFile(id, attachmentId);
+    let filename = fileData.attachment.fileName || 'attachment.jpg';
+    if (!path.extname(filename)) filename += '.jpg';
+
+    if (fileData.file) {
+      res.setHeader('Content-Type', fileData.attachment.contentType || 'image/jpeg');
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+      return res.send(fileData.file.bytes);
+    }
+
     const result = await this.service.downloadAttachment(id, attachmentId);
     if (redirect === '1' || redirect === 'true') {
       return res.redirect(result.url);
@@ -184,6 +195,16 @@ export class InternalTicketsController {
     @Query('redirect') redirect: string | undefined,
     @Res() res: any,
   ) {
+    const fileData = await this.service.getNoteAttachmentFile(id, noteId, attachmentId);
+    let filename = fileData.attachment.fileName || 'attachment.jpg';
+    if (!path.extname(filename)) filename += '.jpg';
+
+    if (fileData.file) {
+      res.setHeader('Content-Type', fileData.attachment.contentType || 'image/jpeg');
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+      return res.send(fileData.file.bytes);
+    }
+
     const result = await this.service.downloadNoteAttachment(id, noteId, attachmentId);
     if (redirect === '1' || redirect === 'true') {
       return res.redirect(result.url);

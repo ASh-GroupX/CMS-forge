@@ -18,7 +18,7 @@ export type OpenAttachmentDownloadTarget = (target: string) => void;
 
 type ErrorEnvelope = { error?: { code?: string; message?: string; correlationId?: string | null } };
 
-export const staffAttachmentAccept = '.jpg,.jpeg,.png,.webp,.pdf,.mp3,.wav,.ogg,.mp4,.mov,.webm,image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/wav,audio/ogg,video/mp4,video/quicktime,video/webm';
+export const staffAttachmentAccept = '.jpg,.jpeg,image/jpeg';
 
 export async function listStaffComplaintAttachments(complaintId: string, fetchImpl: typeof fetch = fetch): Promise<StaffAttachmentResult<{ items: StaffAttachment[] }>> {
   return requestJson(`/api/complaints/${encodeURIComponent(complaintId)}/attachments`, fetchImpl, { method: 'GET' });

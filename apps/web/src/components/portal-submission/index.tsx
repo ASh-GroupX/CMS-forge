@@ -137,7 +137,7 @@ export function PortalSubmissionScreen({
               <summary className="cursor-pointer text-sm font-semibold text-content-strong">{t.fields.attachment}</summary>
               <div className="mt-3 grid gap-1 text-sm font-medium">
                 <Label htmlFor="portal-attachments">{t.fields.attachment}</Label>
-                <LocalizedFileInput accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" id="portal-attachments" locale={locale} multiple name="attachments" />
+                <LocalizedFileInput accept=".jpg,.jpeg,image/jpeg" id="portal-attachments" locale={locale} multiple name="attachments" />
                 <FieldError message={fieldError(fieldErrors, 'attachments', locale)} />
               </div>
               <p className="mt-3 rounded-sm border border-line-subtle bg-surface px-3 py-2 text-sm text-content-muted">{t.attachmentDeferred}</p>

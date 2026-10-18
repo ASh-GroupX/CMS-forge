@@ -54,6 +54,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                             href={`/api/internal-tickets/${ticket.id}/notes/${note.id}/attachments/${att.id}/download?redirect=1`}
                             target="_blank"
                             rel="noopener noreferrer"
+                            download={att.fileName && att.fileName.includes('.') ? att.fileName : `${att.fileName || 'image'}.jpg`}
                             className="flex items-center gap-1.5 rounded-lg border border-line-subtle bg-surface-canvas px-2 py-1.5 hover:bg-surface-raised hover:border-brand/30 transition-colors"
                           >
                             <Paperclip className="size-3.5 text-content-muted" />
@@ -103,6 +104,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                       href={`/api/internal-tickets/${ticket.id}/attachments/${att.id}/download?redirect=1`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      download={att.fileName && att.fileName.includes('.') ? att.fileName : `${att.fileName || 'image'}.jpg`}
                       className="flex items-center gap-2 rounded-xl border border-line-subtle bg-surface-canvas p-2 px-3 shadow-sm hover:bg-surface-raised hover:border-brand/30 transition-colors group"
                     >
                       <div className="grid size-8 place-items-center rounded-lg bg-brand/10 text-brand group-hover:bg-brand group-hover:text-white transition-colors">

@@ -1,17 +1,7 @@
-const tenMb = 10 * 1024 * 1024;
-const fiftyMb = 50 * 1024 * 1024;
+const fiveMb = 5 * 1024 * 1024;
 
 const allowed: Record<string, Record<string, number>> = {
-  'image/jpeg': { jpeg: tenMb, jpg: tenMb },
-  'image/png': { png: tenMb },
-  'image/webp': { webp: tenMb },
-  'application/pdf': { pdf: tenMb },
-  'audio/mpeg': { mp3: fiftyMb },
-  'audio/wav': { wav: fiftyMb },
-  'audio/ogg': { ogg: fiftyMb },
-  'video/mp4': { mp4: fiftyMb },
-  'video/quicktime': { mov: fiftyMb },
-  'video/webm': { webm: fiftyMb },
+  'image/jpeg': { jpeg: fiveMb, jpg: fiveMb },
 };
 
 export type AttachmentFileValidation = { ok: true } | { ok: false; code: 'ATTACHMENT_REQUIRED' | 'ATTACHMENT_TYPE_BLOCKED' | 'ATTACHMENT_SIZE_EXCEEDED' };

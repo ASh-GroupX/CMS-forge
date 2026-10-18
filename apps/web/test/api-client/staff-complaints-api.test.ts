@@ -165,14 +165,14 @@ test('staff attachment client lists uploads and opens prepared signed download t
       return jsonResponse({ download: { attachmentId: 'att_1', token: 'https://storage.test/attachments/att_1?X-Amz-Signature=proof', expiresAt: '2026-06-19T10:05:00.000Z' } });
     }
     if (init?.method === 'POST') {
-      return jsonResponse({ attachment: { id: 'att_1', complaintId: 'cmp/1', fileName: 'photo.png', contentType: 'image/png', sizeBytes: 10, scanStatus: 'PENDING', customerVisible: false } }, 201);
+      return jsonResponse({ attachment: { id: 'att_1', complaintId: 'cmp/1', fileName: 'photo.jpg', contentType: 'image/jpeg', sizeBytes: 10, scanStatus: 'PENDING', customerVisible: false } }, 201);
     }
-    return jsonResponse({ items: [{ id: 'att_1', complaintId: 'cmp/1', fileName: 'photo.png', contentType: 'image/png', sizeBytes: 10, scanStatus: 'CLEAN', customerVisible: false }] });
+    return jsonResponse({ items: [{ id: 'att_1', complaintId: 'cmp/1', fileName: 'photo.jpg', contentType: 'image/jpeg', sizeBytes: 10, scanStatus: 'CLEAN', customerVisible: false }] });
   };
 
   await withDocumentCookie('cms_csrf_token=csrf_123', async () => {
     assert.equal((await listStaffComplaintAttachments('cmp/1', fetchImpl)).ok, true);
-    assert.equal((await uploadStaffComplaintAttachment('cmp/1', new File(['file-bytes'], 'photo.png', { type: 'image/png' }), fetchImpl)).ok, true);
+    assert.equal((await uploadStaffComplaintAttachment('cmp/1', new File(['file-bytes'], 'photo.jpg', { type: 'image/jpeg' }), fetchImpl)).ok, true);
     assert.equal((await downloadStaffAttachment('cmp/1', 'att_1', (target) => opened.push(target), fetchImpl)).ok, true);
   });
 
@@ -181,8 +181,8 @@ test('staff attachment client lists uploads and opens prepared signed download t
   assert.equal(calls[1]?.input, '/api/complaints/cmp%2F1/attachments');
   assert.deepEqual(calls[1]?.init?.headers, { Accept: 'application/json', 'content-type': 'application/json', 'x-csrf-token': 'csrf_123' });
   assert.deepEqual(JSON.parse(String(calls[1]?.init?.body)), {
-    fileName: 'photo.png',
-    contentType: 'image/png',
+    fileName: 'photo.jpg',
+    contentType: 'image/jpeg',
     sizeBytes: 10,
     contentBase64: 'ZmlsZS1ieXRlcw==',
   });
@@ -221,13 +221,13 @@ test('staff attachment client rejects blocked files before posting', async () =>
 test('staff attachment helper uploads intake files and reports partial failure', async () => {
   const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
   const formData = new FormData();
-  formData.append('attachments', new File(['invoice'], 'invoice.pdf', { type: 'application/pdf' }));
+  formData.append('attachments', new File(['photo'], 'photo.jpg', { type: 'image/jpeg' }));
   formData.append('attachments', new File(['bad'], 'malware.exe', { type: 'application/x-msdownload' }));
-  formData.append('attachments', new File([], '', { type: 'application/pdf' }));
+  formData.append('attachments', new File([], '', { type: 'image/jpeg' }));
 
   const summary = await uploadStaffComplaintAttachments('cmp_1', staffAttachmentFiles(formData), async (input, init) => {
     calls.push({ input, init });
-    return jsonResponse({ attachment: { id: 'att_1', complaintId: 'cmp_1', fileName: 'invoice.pdf', contentType: 'application/pdf', sizeBytes: 7, scanStatus: 'PENDING', customerVisible: false } }, 201);
+    return jsonResponse({ attachment: { id: 'att_1', complaintId: 'cmp_1', fileName: 'photo.jpg', contentType: 'image/jpeg', sizeBytes: 5, scanStatus: 'PENDING', customerVisible: false } }, 201);
   });
 
   assert.equal(summary.uploadedCount, 1);
@@ -728,14 +728,14 @@ test('staff attachment proxies forward only session cookie csrf and body to the 
       return jsonResponse({ download: { attachmentId: 'att_1', token: 'attdl_safe', expiresAt: '2026-06-19T10:05:00.000Z' } });
     }
     if (init?.method === 'POST') {
-      return jsonResponse({ attachment: { id: 'att_1', complaintId: 'cmp_1', fileName: 'photo.png', contentType: 'image/png', sizeBytes: 10, scanStatus: 'PENDING', customerVisible: false } }, 201);
+      return jsonResponse({ attachment: { id: 'att_1', complaintId: 'cmp_1', fileName: 'photo.jpg', contentType: 'image/jpeg', sizeBytes: 10, scanStatus: 'PENDING', customerVisible: false } }, 201);
     }
-    return jsonResponse({ items: [{ id: 'att_1', complaintId: 'cmp_1', fileName: 'photo.png', contentType: 'image/png', sizeBytes: 10, scanStatus: 'CLEAN', customerVisible: false }] });
+    return jsonResponse({ items: [{ id: 'att_1', complaintId: 'cmp_1', fileName: 'photo.jpg', contentType: 'image/jpeg', sizeBytes: 10, scanStatus: 'CLEAN', customerVisible: false }] });
   }) as typeof fetch;
   process.env.API_URL = 'http://api.test';
 
   try {
-    const payload = { fileName: 'photo.png', contentType: 'image/png', sizeBytes: 10, contentBase64: 'ZmlsZS1ieXRlcw==', actorId: 'spoofed' };
+    const payload = { fileName: 'photo.jpg', contentType: 'image/jpeg', sizeBytes: 10, contentBase64: 'ZmlsZS1ieXRlcw==', actorId: 'spoofed' };
     const list = await proxyListAttachments(new Request('http://web.test/api/complaints/cmp_1/attachments?role=admin&branchId=spoofed', {
       headers: { cookie: 'cms_staff_session=raw-session' },
       method: 'GET',
