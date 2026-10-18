@@ -40,14 +40,15 @@ export default async function TasksPage({
     fetchImpl,
   };
 
-  const [tasksResult, principal, complaintsResult, tickets] = await Promise.all([
+  const [tasksResult, principal, queueResult, meComplaintsResult, tickets] = await Promise.all([
     getEmployeeTodayTasksLoadResult(requestOptions).catch(() => ({ status: 'error' as const })),
     getStaffSessionPrincipal(requestOptions).catch(() => null),
-    getStaffQueueLoadResult({ apiUrl, cookieHeader, query: { ownerScope: 'ME' }, fetchImpl }).catch(() => null),
+    getStaffQueueLoadResult({ apiUrl, cookieHeader, query: { pageSize: 50 }, fetchImpl }).catch(() => null),
+    getStaffQueueLoadResult({ apiUrl, cookieHeader, query: { ownerScope: 'ME', pageSize: 50 }, fetchImpl }).catch(() => null),
     fetchInternalTickets(apiUrl, cookieHeader, fetchImpl),
   ]);
 
-  if (tasksResult.status !== 'ready' && !tickets.length && (!complaintsResult || complaintsResult.status !== 'ready')) {
+  if (tasksResult.status !== 'ready' && !tickets.length && (!queueResult || queueResult.status !== 'ready') && (!meComplaintsResult || meComplaintsResult.status !== 'ready')) {
     if (!principal) {
       return (
         <div className="grid min-h-[50vh] place-items-center">
@@ -66,7 +67,14 @@ export default async function TasksPage({
     waitingOnMe: [],
   };
 
-  const assignedComplaints = complaintsResult?.status === 'ready' ? complaintsResult.data.rows : [];
+  const complaintMap = new Map<string, any>();
+  if (queueResult?.status === 'ready' && Array.isArray(queueResult.data?.rows)) {
+    for (const c of queueResult.data.rows) complaintMap.set(c.id, c);
+  }
+  if (meComplaintsResult?.status === 'ready' && Array.isArray(meComplaintsResult.data?.rows)) {
+    for (const c of meComplaintsResult.data.rows) complaintMap.set(c.id, c);
+  }
+  const assignedComplaints = Array.from(complaintMap.values());
 
   let allTickets = tickets;
   if (principal?.departmentId && (principal.roleCode === 'BRANCH_MANAGER' || principal.roleCode === 'DEPARTMENT_MANGER' || principal.roleCode === 'CR_MANAGER')) {

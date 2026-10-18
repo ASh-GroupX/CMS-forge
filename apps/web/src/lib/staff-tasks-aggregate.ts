@@ -40,6 +40,18 @@ export function ticketToStaffTask(ticket: any): StaffTask {
   };
 }
 
+export type WorkItemFilter = 'all' | 'ticket' | 'complaint' | 'task';
+
+export function getTaskItemType(task: StaffTask): 'ticket' | 'complaint' | 'task' {
+  if (task.id.startsWith('ticket_') || task.links?.some((l) => l.entityType?.toLowerCase() === 'internal_ticket')) {
+    return 'ticket';
+  }
+  if (task.id.startsWith('complaint_') || task.links?.some((l) => l.entityType?.toLowerCase() === 'complaint')) {
+    return 'complaint';
+  }
+  return 'task';
+}
+
 export function complaintToStaffTask(complaint: any): StaffTask {
   const status: StaffTaskStatus =
     complaint.status === 'RESOLVED' || complaint.status === 'CLOSED'
@@ -50,29 +62,35 @@ export function complaintToStaffTask(complaint: any): StaffTask {
       ? 'OPEN'
       : 'IN_PROGRESS';
 
-  const dueAt = complaint.slaTargetAt ? new Date(complaint.slaTargetAt).toISOString() : new Date(complaint.createdAt).toISOString();
+  const dueAt = complaint.slaDueAt
+    ? new Date(complaint.slaDueAt).toISOString()
+    : complaint.slaTargetAt
+    ? new Date(complaint.slaTargetAt).toISOString()
+    : new Date(complaint.createdAt).toISOString();
 
   return {
     id: `complaint_${complaint.id}`,
     title: complaint.referenceNumber ? `[${complaint.referenceNumber}] ${complaint.subject || 'Customer Complaint'}` : complaint.subject || 'Customer Complaint',
     ownerId: complaint.ownerId || '',
     ownerName: complaint.ownerName || null,
-    assigneeId: complaint.assignedUserId || null,
-    assigneeName: complaint.assignedUserName || null,
-    assignedDepartmentId: complaint.assignedDepartmentId || null,
-    assignedDepartmentName: complaint.assignedDepartmentName || null,
-    assignedDepartmentNameAr: complaint.assignedDepartmentNameAr || null,
+    assigneeId: complaint.ownerId || complaint.assignedUserId || null,
+    assigneeName: complaint.ownerName || complaint.assignedUserName || null,
+    assignedDepartmentId: complaint.assignedDepartmentId || complaint.departmentId || null,
+    assignedDepartmentName: complaint.assignedDepartmentName || complaint.department?.nameEn || null,
+    assignedDepartmentNameAr: complaint.assignedDepartmentNameAr || complaint.department?.nameAr || null,
     branchId: complaint.branchId || null,
-    branchName: complaint.branchName || null,
-    displayTimeZone: 'UTC',
+    branchName: complaint.branchName || complaint.branch?.nameEn || null,
+    displayTimeZone: complaint.displayTimeZone || 'UTC',
     dueAt,
     status,
-    nextAction: null,
+    nextAction: complaint.nextAction
+      ? { what: complaint.nextAction, whoId: complaint.ownerId || '', whoName: complaint.ownerName || '', when: dueAt }
+      : null,
     isCustomerPromise: true,
     visibility: 'INTERNAL',
     confidentialityLevel: 'NORMAL',
     links: [{ entityType: 'COMPLAINT', entityId: complaint.id }],
-    participantUserIds: [complaint.assignedUserId, complaint.ownerId].filter(Boolean),
+    participantUserIds: [complaint.ownerId, complaint.createdById, complaint.backupOfficerId, complaint.collaboratorId].filter(Boolean),
     createdAt: new Date(complaint.createdAt).toISOString(),
     updatedAt: new Date(complaint.updatedAt || complaint.createdAt).toISOString(),
   };
