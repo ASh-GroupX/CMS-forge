@@ -50,7 +50,6 @@ export function MyWorkDashboard({ data, locale, t, isAdmin = false }: MyWorkDash
     const match = (item: StaffTask) => notDeleted(item) && (filter === 'all' || getTaskItemType(item) === filter);
     return {
       overdue: data.overdue.filter(match),
-      overduePromises: data.overduePromises.filter(match),
       dueToday: data.dueToday.filter(match),
       assignedToMe: data.assignedToMe.filter(match),
       waitingOnMe: data.waitingOnMe.filter(match),
@@ -88,11 +87,6 @@ export function MyWorkDashboard({ data, locale, t, isAdmin = false }: MyWorkDash
         <TaskSection borderColor="border-red-500/40" emptyText={t.empty.overdue} headerColor="text-red-600 dark:text-red-400" icon={<AlertTriangle className="size-4" />} isAdmin={isAdmin} locale={locale} onDelete={handleDeleteTask} t={t} tasks={activeData.overdue} title={t.tabs.overdue} urgency="overdue" />
       )}
 
-      {/* ── Overdue Promises ── */}
-      {activeData.overduePromises.length > 0 && (
-        <TaskSection borderColor="border-orange-500/40" emptyText={t.empty.promises} headerColor="text-orange-600 dark:text-orange-400" icon={<Star className="size-4" />} isAdmin={isAdmin} locale={locale} onDelete={handleDeleteTask} t={t} tasks={activeData.overduePromises} title={t.tabs.promises} urgency="overdue" />
-      )}
-
       {/* ── Due Today (amber) ── */}
       <TaskSection borderColor="border-amber-500/40" emptyText={t.empty.dueToday} headerColor="text-amber-700 dark:text-amber-400" icon={<Clock className="size-4" />} isAdmin={isAdmin} locale={locale} onDelete={handleDeleteTask} t={t} tasks={activeData.dueToday} title={t.tabs.dueToday} urgency="today" />
 
@@ -104,7 +98,7 @@ export function MyWorkDashboard({ data, locale, t, isAdmin = false }: MyWorkDash
 
       {/* ── Completed (green, collapsed) ── */}
       {activeData.completed.length > 0 && (
-        <TaskSection borderColor="border-emerald-500/40" collapsed emptyText={t.empty.overdue} headerColor="text-emerald-700 dark:text-emerald-400" icon={<CheckCircle2 className="size-4" />} isAdmin={isAdmin} locale={locale} onDelete={handleDeleteTask} t={t} tasks={activeData.completed} title={`${t.tabs.sent} (${activeData.completed.length})`} urgency="done" />
+        <TaskSection borderColor="border-emerald-500/40" collapsed emptyText={t.empty.completed} headerColor="text-emerald-700 dark:text-emerald-400" icon={<CheckCircle2 className="size-4" />} isAdmin={isAdmin} locale={locale} onDelete={handleDeleteTask} t={t} tasks={activeData.completed} title={`${t.tabs.completed} (${activeData.completed.length})`} urgency="done" />
       )}
     </div>
   );

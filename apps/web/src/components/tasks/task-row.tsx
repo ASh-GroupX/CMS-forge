@@ -95,7 +95,7 @@ export function TaskRow({
           {task.title}
         </p>
         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-content-muted">
-          {task.isCustomerPromise && (
+          {(complaintLink || task.id.startsWith('complaint_')) && (
             <span className="rounded-full bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-amber-700 dark:text-amber-300 font-semibold">
               <Star className="me-0.5 inline size-3" />{locale === 'ar' ? 'شكوى' : 'Complaint'}
             </span>

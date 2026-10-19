@@ -53,14 +53,20 @@ export function getTaskItemType(task: StaffTask): 'ticket' | 'complaint' | 'task
 }
 
 export function complaintToStaffTask(complaint: any): StaffTask {
-  const status: StaffTaskStatus =
-    complaint.status === 'RESOLVED' || complaint.status === 'CLOSED'
-      ? 'DONE'
-      : complaint.status === 'MANAGER_REVIEW' || complaint.status === 'BRANCH_REVIEW'
-      ? 'WAITING'
-      : complaint.status === 'SUBMITTED'
-      ? 'OPEN'
-      : 'IN_PROGRESS';
+  const rawStatus = String(complaint?.status || '').trim().toUpperCase();
+  const isDone =
+    rawStatus === 'COMPLETED' ||
+    rawStatus === 'RESOLVED' ||
+    rawStatus === 'CLOSED' ||
+    rawStatus === 'REJECTED';
+
+  const status: StaffTaskStatus = isDone
+    ? 'DONE'
+    : rawStatus === 'MANAGER_REVIEW' || rawStatus === 'BRANCH_REVIEW'
+    ? 'WAITING'
+    : rawStatus === 'SUBMITTED'
+    ? 'OPEN'
+    : 'IN_PROGRESS';
 
   const dueAt = complaint.slaDueAt
     ? new Date(complaint.slaDueAt).toISOString()
@@ -86,7 +92,7 @@ export function complaintToStaffTask(complaint: any): StaffTask {
     nextAction: complaint.nextAction
       ? { what: complaint.nextAction, whoId: complaint.ownerId || '', whoName: complaint.ownerName || '', when: dueAt }
       : null,
-    isCustomerPromise: true,
+    isCustomerPromise: false,
     visibility: 'INTERNAL',
     confidentialityLevel: 'NORMAL',
     links: [{ entityType: 'COMPLAINT', entityId: complaint.id }],
@@ -102,17 +108,62 @@ export function mergeWorkItems(
   complaints: any[],
   now: Date = new Date(),
 ): EmployeeTodayTasks {
+  const isDoneComplaint = (status?: string | null) => {
+    const s = String(status || '').trim().toUpperCase();
+    return s === 'COMPLETED' || s === 'RESOLVED' || s === 'CLOSED' || s === 'REJECTED';
+  };
+
+  const complaintStatusMap = new Map<string, string>();
+  for (const c of complaints) {
+    if (c?.id && c?.status) {
+      complaintStatusMap.set(String(c.id), String(c.status));
+    }
+  }
+
+  const isTaskFinished = (task: StaffTask): boolean => {
+    if (task.status === 'DONE') return true;
+    if (task.id.startsWith('complaint_')) {
+      const cId = task.id.replace('complaint_', '');
+      const st = complaintStatusMap.get(cId);
+      if (st && isDoneComplaint(st)) return true;
+    }
+    const cLink = task.links?.find((l) => l.entityType?.toLowerCase() === 'complaint');
+    if (cLink) {
+      const st = complaintStatusMap.get(String(cLink.entityId));
+      if (st && isDoneComplaint(st)) return true;
+    }
+    return false;
+  };
+
+  const initialCompleted: StaffTask[] = [...(base.completed || [])];
+  const completedIds = new Set(initialCompleted.map((t) => t.id));
+
+  const filterActive = (tasks: StaffTask[] = []): StaffTask[] => {
+    const active: StaffTask[] = [];
+    for (const t of tasks) {
+      if (isTaskFinished(t)) {
+        if (!completedIds.has(t.id)) {
+          completedIds.add(t.id);
+          initialCompleted.push({ ...t, status: 'DONE' });
+        }
+      } else {
+        active.push(t);
+      }
+    }
+    return active;
+  };
+
   const result: EmployeeTodayTasks = {
-    completed: [...(base.completed || [])],
-    dueToday: [...(base.dueToday || [])],
-    overdue: [...(base.overdue || [])],
-    overduePromises: [...(base.overduePromises || [])],
-    assignedToMe: [...(base.assignedToMe || [])],
-    waitingOnMe: [...(base.waitingOnMe || [])],
+    completed: initialCompleted,
+    dueToday: filterActive(base.dueToday),
+    overdue: filterActive(base.overdue),
+    overduePromises: [],
+    assignedToMe: filterActive(base.assignedToMe),
+    waitingOnMe: filterActive(base.waitingOnMe),
   };
 
   const seenIds = new Set<string>();
-  for (const bucket of Object.values(base)) {
+  for (const bucket of Object.values(result)) {
     for (const t of bucket) {
       seenIds.add(t.id);
       const link = t.links?.find((l) => l.entityType === 'INTERNAL_TICKET' || l.entityType === 'COMPLAINT');
@@ -144,7 +195,10 @@ export function mergeWorkItems(
     const isDueToday = !isDone && dueTime >= startOfToday.getTime() && dueTime <= endOfToday.getTime();
 
     if (isDone) {
-      result.completed.push(task);
+      if (!completedIds.has(task.id)) {
+        completedIds.add(task.id);
+        result.completed.push(task);
+      }
     } else {
       if (isOverdue) {
         result.overdue.push(task);
@@ -156,9 +210,6 @@ export function mergeWorkItems(
         result.waitingOnMe.push(task);
       } else {
         result.assignedToMe.push(task);
-      }
-      if (task.isCustomerPromise && isOverdue) {
-        result.overduePromises.push(task);
       }
     }
   }
