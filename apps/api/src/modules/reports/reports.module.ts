@@ -11,6 +11,10 @@ import { ReportsController } from './reports.controller.js';
 import { ReportsRepository } from './reports.repository.js';
 import { ReportsService } from './reports.service.js';
 
+import { ReportsComplaintsRepository } from './reports.complaints.repository.js';
+import { ReportsTicketsRepository } from './reports.tickets.repository.js';
+import { ReportsAnalyticsService } from './reports.analytics.service.js';
+
 @Module({
   imports: [AuthModule, ComplaintsModule, SlaModule, SurveysModule],
   controllers: [ReportsController],
@@ -18,12 +22,15 @@ import { ReportsService } from './reports.service.js';
     PrismaService,
     AuditService,
     ReportsRepository,
+    ReportsComplaintsRepository,
+    ReportsTicketsRepository,
+    ReportsAnalyticsService,
     ReportsService,
     { provide: SESSION_AUTH_SERVICE, inject: [AuthService], useFactory: (authService: AuthService) => authService },
     SessionAuthGuard,
     RbacGuard,
     PermissionGuard,
   ],
-  exports: [ReportsService],
+  exports: [ReportsService, ReportsAnalyticsService],
 })
 export class ReportsModule {}

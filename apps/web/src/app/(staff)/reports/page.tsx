@@ -1,5 +1,6 @@
 import React from 'react';
 import { ReportsDashboard } from '../../../components/reports-dashboard';
+import { ReportsHubNavigator } from '../../../components/reports/reports-hub-navigator';
 import { resolveLocale } from '../../../i18n/staff-shell';
 import { getAssignableStaff } from '../../../lib/staff-assignable-staff-api';
 import { getComplaintFormOptions } from '../../../lib/staff-complaint-form-options-api';
@@ -50,18 +51,23 @@ export default async function ReportsPage({
   ]);
   const loadState = [rows, kpis, catalog].some((item) => item.status === 'denied') ? 'denied' : [rows, kpis, catalog].some((item) => item.status === 'error') ? 'error' : undefined;
   
+  const activeLocale = resolveLocale(readParam(params?.locale));
+
   return (
-    <ReportsDashboard
-      canExport={principal?.permissions.includes('REPORT_EXPORT') ?? false}
-      catalog={catalog.status === 'ready' ? catalog.data : undefined}
-      filters={filters}
-      kpis={kpis.status === 'ready' ? kpis.data : undefined}
-      locale={resolveLocale(readParam(params?.locale))}
-      options={options}
-      rows={rows.status === 'ready' ? rows.data : undefined}
-      staff={staff}
-      state={loadState}
-    />
+    <div className="space-y-6">
+      <ReportsHubNavigator locale={activeLocale} />
+      <ReportsDashboard
+        canExport={principal?.permissions.includes('REPORT_EXPORT') ?? false}
+        catalog={catalog.status === 'ready' ? catalog.data : undefined}
+        filters={filters}
+        kpis={kpis.status === 'ready' ? kpis.data : undefined}
+        locale={activeLocale}
+        options={options}
+        rows={rows.status === 'ready' ? rows.data : undefined}
+        staff={staff}
+        state={loadState}
+      />
+    </div>
   );
 }
 

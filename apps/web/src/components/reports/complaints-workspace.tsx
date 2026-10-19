@@ -1,0 +1,260 @@
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { ReportHeader } from './report-header';
+import { ReportFilters, type ReportFilterOption } from './report-filters';
+import { KpiOverviewCards } from './kpi-overview-cards';
+import { VisualAnalytics } from './visual-analytics';
+import { OfficerPerformanceTable } from './officer-performance-table';
+import { DetailedRecordsTable, type RecordTableItem } from './detailed-records-table';
+import { QuickCaseDrawer } from './quick-case-drawer';
+import { SavedViewsModal } from './saved-views-modal';
+import {
+  fetchComplaintsAnalytics,
+  fetchComplaintsRecords,
+  type ComplaintsAnalyticsFilter,
+  type ComplaintsAnalyticsResponse,
+  type ComplaintRecordRow,
+} from '../../lib/staff-reports-analytics-api';
+import { reportsAnalyticsI18n } from '../../i18n/staff-reports-analytics';
+import type { Locale } from '../../i18n/staff-shell';
+import {
+  buildComplaintsKpiCards,
+  buildComplaintsOfficerRows,
+  buildComplaintsRecordItems,
+} from './complaints-workspace-helpers';
+
+interface ComplaintsWorkspaceProps {
+  locale: Locale;
+  initialDepartments?: ReportFilterOption[];
+  initialCategories?: ReportFilterOption[];
+}
+
+export function ComplaintsWorkspace({
+  locale,
+  initialDepartments = [],
+  initialCategories = [],
+}: ComplaintsWorkspaceProps) {
+  const t = reportsAnalyticsI18n[locale];
+
+  // Filters State
+  const [period, setPeriod] = useState('this_month');
+  const [dateDimension, setDateDimension] = useState<'createdAt' | 'resolvedAt' | 'closedAt'>('createdAt');
+  const [search, setSearch] = useState('');
+  const [departmentId, setDepartmentId] = useState('');
+  const [officerId, setOfficerId] = useState('');
+  const [status, setStatus] = useState('');
+  const [severity, setSeverity] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 15;
+
+  // Analytics & Records Data
+  const [analytics, setAnalytics] = useState<ComplaintsAnalyticsResponse | null>(null);
+  const [records, setRecords] = useState<{ total: number; items: ComplaintRecordRow[] }>({ total: 0, items: [] });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Modals & Drawers
+  const [isSavedViewsOpen, setIsSavedViewsOpen] = useState(false);
+  const [inspectRecord, setInspectRecord] = useState<RecordTableItem | null>(null);
+
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    const filter: ComplaintsAnalyticsFilter = {
+      departmentId: departmentId || null,
+      ownerId: officerId || null,
+      status: status || null,
+      severity: severity || null,
+      categoryId: categoryId || null,
+      dateDimension,
+      search: search || null,
+    };
+
+    const [analyticsRes, recordsRes] = await Promise.all([
+      fetchComplaintsAnalytics(filter),
+      fetchComplaintsRecords(filter, pageSize, (page - 1) * pageSize),
+    ]);
+
+    if (analyticsRes) setAnalytics(analyticsRes);
+    if (recordsRes) setRecords(recordsRes);
+    setIsLoading(false);
+    setIsRefreshing(false);
+  }, [departmentId, officerId, status, severity, categoryId, dateDimension, search, page]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    loadData();
+  };
+
+  const handleResetFilters = () => {
+    setDepartmentId('');
+    setOfficerId('');
+    setStatus('');
+    setSeverity('');
+    setCategoryId('');
+    setSearch('');
+    setPeriod('this_month');
+    setDateDimension('createdAt');
+    setPage(1);
+  };
+
+  const handleExport = (format: 'csv' | 'excel') => {
+    const params = new URLSearchParams({
+      type: 'complaints',
+      format,
+      ...(departmentId ? { departmentId } : {}),
+      ...(officerId ? { ownerId: officerId } : {}),
+      ...(status ? { status } : {}),
+      ...(severity ? { severity } : {}),
+    });
+    window.open(`/api/reports/export-advanced?${params.toString()}`, '_blank');
+  };
+
+  const officerRows = buildComplaintsOfficerRows(analytics?.officers, locale);
+  const officerOptions: ReportFilterOption[] = (analytics?.officers || []).map((o) => ({
+    id: o.officerId,
+    name: locale === 'ar' ? o.nameAr : o.nameEn,
+  }));
+  const recordItems = buildComplaintsRecordItems(records.items);
+  const kpiCards = buildComplaintsKpiCards(analytics?.kpis, t);
+
+  return (
+    <div className="space-y-6 pb-12">
+      <ReportHeader
+        locale={locale}
+        title={t.complaints.title}
+        subtitle={t.complaints.subtitle}
+        period={period}
+        onPeriodChange={setPeriod}
+        dateDimension={dateDimension}
+        onDateDimensionChange={(d) => setDateDimension(d as any)}
+        onRefresh={handleRefresh}
+        isRefreshing={isRefreshing}
+        onExport={handleExport}
+        onOpenSavedViews={() => setIsSavedViewsOpen(true)}
+        onResetFilters={handleResetFilters}
+      />
+
+      <ReportFilters
+        locale={locale}
+        search={search}
+        onSearchChange={setSearch}
+        departmentId={departmentId}
+        onDepartmentChange={(id) => {
+          setDepartmentId(id);
+          setOfficerId('');
+          setPage(1);
+        }}
+        departments={initialDepartments}
+        officerId={officerId}
+        onOfficerChange={(id) => {
+          setOfficerId(id);
+          setPage(1);
+        }}
+        officers={officerOptions}
+        status={status}
+        onStatusChange={(s) => {
+          setStatus(s);
+          setPage(1);
+        }}
+        statuses={[
+          { key: 'SUBMITTED', label: 'Submitted' },
+          { key: 'ASSIGNED', label: 'Assigned' },
+          { key: 'INVESTIGATING', label: 'Investigating' },
+          { key: 'RESOLVED', label: 'Resolved' },
+          { key: 'CLOSED', label: 'Closed' },
+        ]}
+        severityOrPriority={severity}
+        onSeverityOrPriorityChange={(sev) => {
+          setSeverity(sev);
+          setPage(1);
+        }}
+        severityOrPriorityOptions={[
+          { key: 'CRITICAL', label: 'Critical' },
+          { key: 'HIGH', label: 'High' },
+          { key: 'MEDIUM', label: 'Medium' },
+          { key: 'LOW', label: 'Low' },
+        ]}
+        categoryId={categoryId}
+        onCategoryChange={(c) => {
+          setCategoryId(c);
+          setPage(1);
+        }}
+        categories={initialCategories}
+        onClearFilters={handleResetFilters}
+      />
+
+      <KpiOverviewCards
+        locale={locale}
+        cards={kpiCards}
+        onCardClick={(id) => {
+          if (id === 'overdue') setStatus('');
+        }}
+      />
+
+      <VisualAnalytics
+        locale={locale}
+        timeline={analytics?.timeline || []}
+        statusBreakdown={analytics?.statusBreakdown || []}
+        categoryBreakdown={analytics?.categoryBreakdown || []}
+        agingBuckets={analytics?.agingBuckets || []}
+      />
+
+      <OfficerPerformanceTable
+        locale={locale}
+        officers={officerRows}
+        selectedOfficerId={officerId}
+        onSelectOfficer={(id) => {
+          setOfficerId(id);
+          setPage(1);
+        }}
+      />
+
+      <DetailedRecordsTable
+        locale={locale}
+        records={recordItems}
+        total={records.total}
+        page={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onQuickInspect={setInspectRecord}
+        isLoading={isLoading}
+      />
+
+      <QuickCaseDrawer
+        locale={locale}
+        record={inspectRecord}
+        isOpen={Boolean(inspectRecord)}
+        onClose={() => setInspectRecord(null)}
+      />
+
+      <SavedViewsModal
+        locale={locale}
+        isOpen={isSavedViewsOpen}
+        onClose={() => setIsSavedViewsOpen(false)}
+        storageKey="complaints"
+        currentConfig={{
+          filters: { departmentId, officerId, status, severity, categoryId, search },
+          period,
+          dateDimension,
+        }}
+        onApplyView={(v) => {
+          setDepartmentId(v.filters.departmentId || '');
+          setOfficerId(v.filters.officerId || '');
+          setStatus(v.filters.status || '');
+          setSeverity(v.filters.severity || '');
+          setCategoryId(v.filters.categoryId || '');
+          setSearch(v.filters.search || '');
+          setPeriod(v.period || 'this_month');
+          setDateDimension((v.dateDimension as any) || 'createdAt');
+          setPage(1);
+        }}
+      />
+    </div>
+  );
+}

@@ -1,11 +1,21 @@
-import { Controller, Get, HttpStatus, Inject, Query, Req, Res, UseGuards } from '@nestjs/common';
-import { ComplaintSeverity, RoleCode } from '@prisma/client';
+import { Controller, Get, Inject, Optional, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { BranchScoped, PermissionGuard, Permissions, RbacGuard, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
-import { AppException } from '../../core/http-kernel.js';
 import type { ReportCatalogResponse } from './report-matrix.js';
 import { ReportsService } from './reports.service.js';
-import type { DashboardSummary, FilteredReportRow, ReportExportFormat, ReportsKpiSummary } from './reports.service.js';
+import type { FilteredReportRow, ReportsKpiSummary, DashboardSummary } from './reports.service.js';
+import { ReportsAnalyticsService } from './reports.analytics.service.js';
+import {
+  auditContext,
+  dashboardScope,
+  exportFormat,
+  optionalSeverity,
+  optionalText,
+  pageNumber,
+  reportInput,
+  requestRole,
+  scopedBranchId,
+} from './reports.helpers.js';
 
 type ExportResponse = { setHeader(name: string, value: string): void };
 
@@ -13,7 +23,10 @@ type ExportResponse = { setHeader(name: string, value: string): void };
 export class ReportsController {
   private static reportsService: ReportsService;
 
-  constructor(@Inject(ReportsService) reportsService: ReportsService) {
+  constructor(
+    @Inject(ReportsService) reportsService: ReportsService,
+    @Optional() @Inject(ReportsAnalyticsService) private readonly analyticsService?: ReportsAnalyticsService,
+  ) {
     ReportsController.reportsService = reportsService;
   }
 
@@ -88,79 +101,129 @@ export class ReportsController {
     response.setHeader('x-report-row-limit', String(exportFile.rowLimit));
     return exportFile.body;
   }
-}
 
-function reportInput(query: Record<string, string | undefined>, request: AuthenticatedRequest) {
-  return {
-    role: requestRole(request),
-    branchId: scopedBranchId(undefined, request),
-    filterBranchId: optionalText(query.branchId),
-    categoryId: optionalText(query.categoryId),
-    departmentId: optionalText(query.departmentId),
-    ownerId: optionalText(query.ownerId),
-    severity: optionalSeverity(query.severity),
-    dateFrom: optionalText(query.dateFrom),
-    dateTo: optionalText(query.dateTo),
-  };
-}
-
-function auditContext(request: AuthenticatedRequest) {
-  return {
-    actorId: request.principal?.userId ?? null,
-    branchId: request.principal?.branchId ?? null,
-    correlationId: request.correlationId ?? headerValue(request.headers['x-correlation-id']),
-    ipAddress: headerValue(request.headers['x-forwarded-for'])?.split(',')[0]?.trim() ?? request.socket?.remoteAddress ?? null,
-    userAgent: headerValue(request.headers['user-agent']),
-  };
-}
-
-function requestRole(request: AuthenticatedRequest): RoleCode {
-  return request.principal?.roleCode as RoleCode;
-}
-
-function scopedBranchId(queryBranchId: string | undefined, request: AuthenticatedRequest): string | null {
-  if (request.principal?.roleCode === RoleCode.ADMIN || request.principal?.roleCode === RoleCode.CR_MANAGER) {
-    return optionalText(queryBranchId);
+  @Get('complaints-analytics')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('REPORT_VIEW')
+  @BranchScoped()
+  async complaintsAnalytics(@Query() query: Record<string, string | undefined>, @Req() request: AuthenticatedRequest) {
+    return this.analyticsService?.complaintsAnalytics(
+      {
+        branchId: optionalText(query.branchId),
+        departmentId: optionalText(query.departmentId),
+        ownerId: optionalText(query.ownerId),
+        categoryId: optionalText(query.categoryId),
+        type: optionalText(query.type),
+        severity: optionalSeverity(query.severity),
+        status: optionalText(query.status) as any,
+        dateDimension: optionalText(query.dateDimension) as any,
+        dateFrom: optionalText(query.dateFrom),
+        dateTo: optionalText(query.dateTo),
+        search: optionalText(query.search),
+      },
+      dashboardScope(request, query.branchId),
+    );
   }
-  return request.principal?.branchId ?? null;
-}
 
-function optionalText(value: string | undefined): string | null {
-  return value?.trim() || null;
-}
-
-function optionalSeverity(value: string | undefined): ComplaintSeverity | null {
-  if (!value?.trim()) {
-    return null;
+  @Get('complaints-records')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('REPORT_VIEW')
+  @BranchScoped()
+  async complaintsRecords(@Query() query: Record<string, string | undefined>, @Req() request: AuthenticatedRequest) {
+    const limit = pageNumber(query.limit, 'limit', 25, 100);
+    const offset = pageNumber(query.offset, 'offset', 0);
+    return this.analyticsService?.complaintsRecords(
+      {
+        branchId: optionalText(query.branchId),
+        departmentId: optionalText(query.departmentId),
+        ownerId: optionalText(query.ownerId),
+        categoryId: optionalText(query.categoryId),
+        type: optionalText(query.type),
+        severity: optionalSeverity(query.severity),
+        status: optionalText(query.status) as any,
+        dateDimension: optionalText(query.dateDimension) as any,
+        dateFrom: optionalText(query.dateFrom),
+        dateTo: optionalText(query.dateTo),
+        search: optionalText(query.search),
+      },
+      dashboardScope(request, query.branchId),
+      limit,
+      offset,
+    );
   }
-  if (Object.values(ComplaintSeverity).includes(value as ComplaintSeverity)) {
-    return value as ComplaintSeverity;
-  }
-  throw new AppException('VALIDATION_FAILED', 'Invalid report query', HttpStatus.BAD_REQUEST, [
-    { field: 'severity', code: 'INVALID', message: 'severity is invalid.' },
-  ]);
-}
 
-function exportFormat(value: string | undefined): ReportExportFormat {
-  if (value === 'csv' || value === 'excel') {
-    return value;
+  @Get('tickets-analytics')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('REPORT_VIEW')
+  @BranchScoped()
+  async ticketsAnalytics(@Query() query: Record<string, string | undefined>, @Req() request: AuthenticatedRequest) {
+    return this.analyticsService?.ticketsAnalytics(
+      {
+        branchId: optionalText(query.branchId),
+        targetDepartmentId: optionalText(query.targetDepartmentId),
+        creatingDepartmentId: optionalText(query.creatingDepartmentId),
+        assignedEmployeeId: optionalText(query.assignedEmployeeId),
+        categoryId: optionalText(query.categoryId),
+        priority: optionalText(query.priority) as any,
+        status: optionalText(query.status) as any,
+        dateDimension: optionalText(query.dateDimension) as any,
+        dateFrom: optionalText(query.dateFrom),
+        dateTo: optionalText(query.dateTo),
+        search: optionalText(query.search),
+      },
+      dashboardScope(request, query.branchId),
+    );
   }
-  throw new AppException('VALIDATION_FAILED', 'Invalid report query', HttpStatus.BAD_REQUEST, [
-    { field: 'format', code: 'INVALID', message: 'format must be csv or excel.' },
-  ]);
-}
 
-function pageNumber(value: string | undefined, field: 'limit' | 'offset', fallback: number, max?: number): number {
-  if (!value?.trim()) return fallback;
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < (field === 'limit' ? 1 : 0)) {
-    throw new AppException('VALIDATION_FAILED', 'Invalid report query', HttpStatus.BAD_REQUEST, [
-      { field, code: 'INVALID', message: `${field} is invalid.` },
-    ]);
+  @Get('tickets-records')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('REPORT_VIEW')
+  @BranchScoped()
+  async ticketsRecords(@Query() query: Record<string, string | undefined>, @Req() request: AuthenticatedRequest) {
+    const limit = pageNumber(query.limit, 'limit', 25, 100);
+    const offset = pageNumber(query.offset, 'offset', 0);
+    return this.analyticsService?.ticketsRecords(
+      {
+        branchId: optionalText(query.branchId),
+        targetDepartmentId: optionalText(query.targetDepartmentId),
+        creatingDepartmentId: optionalText(query.creatingDepartmentId),
+        assignedEmployeeId: optionalText(query.assignedEmployeeId),
+        categoryId: optionalText(query.categoryId),
+        priority: optionalText(query.priority) as any,
+        status: optionalText(query.status) as any,
+        dateDimension: optionalText(query.dateDimension) as any,
+        dateFrom: optionalText(query.dateFrom),
+        dateTo: optionalText(query.dateTo),
+        search: optionalText(query.search),
+      },
+      dashboardScope(request, query.branchId),
+      limit,
+      offset,
+    );
   }
-  return max ? Math.min(parsed, max) : parsed;
-}
 
-function headerValue(value: string | string[] | undefined): string | null {
-  return Array.isArray(value) ? value[0] ?? null : value ?? null;
+  @Get('export-advanced')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('REPORT_EXPORT')
+  @BranchScoped()
+  async exportAdvanced(
+    @Query() query: Record<string, string | undefined>,
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: ExportResponse,
+  ): Promise<string> {
+    const type = query.reportType === 'internal_tickets' ? 'internal_tickets' : 'complaints';
+    const format = exportFormat(query.format);
+    const exportFile = (await this.analyticsService?.exportAdvanced(
+      type,
+      query,
+      format,
+      dashboardScope(request, query.branchId),
+      auditContext(request),
+    )) ?? { fileName: 'report.csv', contentType: 'text/csv', body: '', rowCount: 0, rowLimit: 1000 };
+
+    response.setHeader('content-type', exportFile.contentType);
+    response.setHeader('content-disposition', `attachment; filename="${exportFile.fileName}"`);
+    response.setHeader('x-report-row-count', String(exportFile.rowCount));
+    return exportFile.body;
+  }
 }
