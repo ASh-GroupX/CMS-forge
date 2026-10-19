@@ -182,16 +182,26 @@ function buildQuery(filter: Record<string, any>): string {
   return params.toString();
 }
 
+function getReportsBaseUrl(apiUrl?: string): string {
+  if (typeof window !== 'undefined') {
+    return '/api/reports';
+  }
+  const base = apiUrl || process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+  return `${base}/reports`;
+}
+
 export async function fetchComplaintsAnalytics(
   filter: ComplaintsAnalyticsFilter,
   cookieHeader?: string,
+  apiUrl?: string,
 ): Promise<ComplaintsAnalyticsResponse | null> {
   const cookies = cookieHeader ?? (await incomingCookieHeader());
   if (!hasStaffSessionCookie(cookies)) return null;
 
   try {
     const query = buildQuery(filter);
-    const res = await fetch(`/api/reports/complaints-analytics?${query}`, {
+    const base = getReportsBaseUrl(apiUrl);
+    const res = await fetch(`${base}/complaints-analytics?${query}`, {
       headers: { Accept: 'application/json', cookie: cookies },
       cache: 'no-store',
     });
@@ -207,13 +217,15 @@ export async function fetchComplaintsRecords(
   limit = 25,
   offset = 0,
   cookieHeader?: string,
+  apiUrl?: string,
 ): Promise<{ total: number; items: ComplaintRecordRow[] } | null> {
   const cookies = cookieHeader ?? (await incomingCookieHeader());
   if (!hasStaffSessionCookie(cookies)) return null;
 
   try {
     const query = buildQuery({ ...filter, limit, offset });
-    const res = await fetch(`/api/reports/complaints-records?${query}`, {
+    const base = getReportsBaseUrl(apiUrl);
+    const res = await fetch(`${base}/complaints-records?${query}`, {
       headers: { Accept: 'application/json', cookie: cookies },
       cache: 'no-store',
     });
@@ -227,13 +239,15 @@ export async function fetchComplaintsRecords(
 export async function fetchTicketsAnalytics(
   filter: TicketsAnalyticsFilter,
   cookieHeader?: string,
+  apiUrl?: string,
 ): Promise<TicketsAnalyticsResponse | null> {
   const cookies = cookieHeader ?? (await incomingCookieHeader());
   if (!hasStaffSessionCookie(cookies)) return null;
 
   try {
     const query = buildQuery(filter);
-    const res = await fetch(`/api/reports/tickets-analytics?${query}`, {
+    const base = getReportsBaseUrl(apiUrl);
+    const res = await fetch(`${base}/tickets-analytics?${query}`, {
       headers: { Accept: 'application/json', cookie: cookies },
       cache: 'no-store',
     });
@@ -249,13 +263,15 @@ export async function fetchTicketsRecords(
   limit = 25,
   offset = 0,
   cookieHeader?: string,
+  apiUrl?: string,
 ): Promise<{ total: number; items: TicketRecordRow[] } | null> {
   const cookies = cookieHeader ?? (await incomingCookieHeader());
   if (!hasStaffSessionCookie(cookies)) return null;
 
   try {
     const query = buildQuery({ ...filter, limit, offset });
-    const res = await fetch(`/api/reports/tickets-records?${query}`, {
+    const base = getReportsBaseUrl(apiUrl);
+    const res = await fetch(`${base}/tickets-records?${query}`, {
       headers: { Accept: 'application/json', cookie: cookies },
       cache: 'no-store',
     });

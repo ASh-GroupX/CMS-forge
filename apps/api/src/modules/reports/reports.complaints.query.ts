@@ -41,6 +41,7 @@ export async function fetchComplaintsOfficersPerformance(
   filter: ComplaintsAnalyticsFilter,
   dateFrom: Date,
   dateTo: Date,
+  hasExplicitDate = true,
 ): Promise<OfficerComplaintPerformance[]> {
   const userWhere: Prisma.UserWhereInput = {
     isActive: true,
@@ -72,9 +73,15 @@ export async function fetchComplaintsOfficersPerformance(
   const now = new Date();
   return users.map((u) => {
     const active = u.ownedComplaints.filter((c) => !TERMINAL_COMPLAINT_STATUSES.includes(c.status as ComplaintStatus));
-    const newAssigned = u.ownedComplaints.filter((c) => c.createdAt >= dateFrom && c.createdAt <= dateTo).length;
-    const res = u.ownedComplaints.filter((c) => c.resolvedAt && c.resolvedAt >= dateFrom && c.resolvedAt <= dateTo);
-    const cls = u.ownedComplaints.filter((c) => c.closedAt && c.closedAt >= dateFrom && c.closedAt <= dateTo).length;
+    const newAssigned = hasExplicitDate
+      ? u.ownedComplaints.filter((c) => c.createdAt >= dateFrom && c.createdAt <= dateTo).length
+      : u.ownedComplaints.length;
+    const res = hasExplicitDate
+      ? u.ownedComplaints.filter((c) => c.resolvedAt && c.resolvedAt >= dateFrom && c.resolvedAt <= dateTo)
+      : u.ownedComplaints.filter((c) => c.resolvedAt != null);
+    const cls = hasExplicitDate
+      ? u.ownedComplaints.filter((c) => c.closedAt && c.closedAt >= dateFrom && c.closedAt <= dateTo).length
+      : u.ownedComplaints.filter((c) => c.closedAt != null).length;
     const ovd = active.filter((c) => c.slaEvents.some((e) => e.type === 'BREACH')).length;
 
     const compResolved = res.filter((c) => !c.slaEvents.some((e) => e.type === 'BREACH')).length;

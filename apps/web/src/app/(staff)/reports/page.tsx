@@ -43,7 +43,7 @@ export default async function ReportsPage({
 
   const [rows, kpis, catalog, options, staff, principal] = await Promise.all([
     getStaffReportRowsLoadResult({ ...apiInput, filters }),
-    getStaffReportKpisLoadResult(apiInput),
+    getStaffReportKpisLoadResult({ ...apiInput, ...(filters.branchId ? { branchId: filters.branchId } : {}) }),
     getStaffReportCatalogLoadResult(apiInput),
     getComplaintFormOptions(apiInput),
     getAssignableStaff(apiInput),

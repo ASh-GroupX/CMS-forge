@@ -25,7 +25,8 @@ export class ReportsComplaintsRepository {
     const { dateFrom, dateTo, prevDateFrom, prevDateTo } = parseDateRange(filter.dateFrom, filter.dateTo);
     const baseWhere = buildComplaintWhere(filter);
 
-    const currCreatedWhere = buildComplaintWhere(filter, { from: dateFrom, to: dateTo });
+    const hasExplicitDate = Boolean(filter.dateFrom || filter.dateTo);
+    const currCreatedWhere = hasExplicitDate ? buildComplaintWhere(filter, { from: dateFrom, to: dateTo }) : baseWhere;
     const prevCreatedWhere = buildComplaintWhere(filter, { from: prevDateFrom, to: prevDateTo });
 
     const openWhere: Prisma.ComplaintWhereInput = {
@@ -33,18 +34,16 @@ export class ReportsComplaintsRepository {
       status: { notIn: TERMINAL_COMPLAINT_STATUSES },
     };
 
-    const currResolvedWhere: Prisma.ComplaintWhereInput = {
-      ...baseWhere,
-      resolvedAt: { gte: dateFrom, lte: dateTo },
-    };
+    const currResolvedWhere: Prisma.ComplaintWhereInput = hasExplicitDate
+      ? { ...baseWhere, resolvedAt: { gte: dateFrom, lte: dateTo } }
+      : { ...baseWhere, resolvedAt: { not: null } };
     const prevResolvedWhere: Prisma.ComplaintWhereInput = {
       ...baseWhere,
       resolvedAt: { gte: prevDateFrom, lte: prevDateTo },
     };
-    const currClosedWhere: Prisma.ComplaintWhereInput = {
-      ...baseWhere,
-      closedAt: { gte: dateFrom, lte: dateTo },
-    };
+    const currClosedWhere: Prisma.ComplaintWhereInput = hasExplicitDate
+      ? { ...baseWhere, closedAt: { gte: dateFrom, lte: dateTo } }
+      : { ...baseWhere, closedAt: { not: null } };
     const prevClosedWhere: Prisma.ComplaintWhereInput = {
       ...baseWhere,
       closedAt: { gte: prevDateFrom, lte: prevDateTo },
@@ -187,7 +186,7 @@ export class ReportsComplaintsRepository {
     }));
 
     const timeline = buildComplaintTimeline(dateFrom, dateTo, resolvedRows);
-    const officers = await fetchComplaintsOfficersPerformance(this.prisma, filter, dateFrom, dateTo);
+    const officers = await fetchComplaintsOfficersPerformance(this.prisma, filter, dateFrom, dateTo, hasExplicitDate);
 
     return {
       kpis: {

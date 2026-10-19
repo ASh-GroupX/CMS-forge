@@ -23,20 +23,27 @@ import {
   buildTicketsOfficerRows,
   buildTicketsRecordItems,
 } from './tickets-workspace-helpers';
+import { periodToDateRange } from './report-date-helpers';
 
 interface TicketsWorkspaceProps {
   locale: Locale;
   initialDepartments?: ReportFilterOption[];
+  initialAnalytics?: TicketsAnalyticsResponse | null;
+  initialRecords?: { total: number; items: TicketRecordRow[] } | null;
 }
 
 export function TicketsWorkspace({
   locale,
   initialDepartments = [],
+  initialAnalytics = null,
+  initialRecords = null,
 }: TicketsWorkspaceProps) {
   const t = reportsAnalyticsI18n[locale];
 
   // Filters State
-  const [period, setPeriod] = useState('this_month');
+  const [period, setPeriod] = useState('all');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
   const [dateDimension, setDateDimension] = useState<'createdAt' | 'dueAt' | 'resolvedAt' | 'closedAt'>('createdAt');
   const [search, setSearch] = useState('');
   const [targetDepartmentId, setTargetDepartmentId] = useState('');
@@ -48,8 +55,10 @@ export function TicketsWorkspace({
   const pageSize = 15;
 
   // Analytics & Records Data
-  const [analytics, setAnalytics] = useState<TicketsAnalyticsResponse | null>(null);
-  const [records, setRecords] = useState<{ total: number; items: TicketRecordRow[] }>({ total: 0, items: [] });
+  const [analytics, setAnalytics] = useState<TicketsAnalyticsResponse | null>(initialAnalytics);
+  const [records, setRecords] = useState<{ total: number; items: TicketRecordRow[] }>(
+    initialRecords ?? { total: 0, items: [] },
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -59,6 +68,7 @@ export function TicketsWorkspace({
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
+    const { dateFrom: computedFrom, dateTo: computedTo } = periodToDateRange(period, customFrom, customTo);
     const filter: TicketsAnalyticsFilter = {
       targetDepartmentId: targetDepartmentId || null,
       creatingDepartmentId: creatingDepartmentId || null,
@@ -66,6 +76,8 @@ export function TicketsWorkspace({
       status: status || null,
       priority: priority || null,
       dateDimension,
+      dateFrom: computedFrom,
+      dateTo: computedTo,
       search: search || null,
     };
 
@@ -78,7 +90,19 @@ export function TicketsWorkspace({
     if (recordsRes) setRecords(recordsRes);
     setIsLoading(false);
     setIsRefreshing(false);
-  }, [targetDepartmentId, creatingDepartmentId, employeeId, status, priority, dateDimension, search, page]);
+  }, [
+    targetDepartmentId,
+    creatingDepartmentId,
+    employeeId,
+    status,
+    priority,
+    dateDimension,
+    period,
+    customFrom,
+    customTo,
+    search,
+    page,
+  ]);
 
   useEffect(() => {
     loadData();
@@ -96,12 +120,15 @@ export function TicketsWorkspace({
     setStatus('');
     setPriority('');
     setSearch('');
-    setPeriod('this_month');
+    setPeriod('all');
+    setCustomFrom('');
+    setCustomTo('');
     setDateDimension('createdAt');
     setPage(1);
   };
 
   const handleExport = (format: 'csv' | 'excel') => {
+    const { dateFrom: computedFrom, dateTo: computedTo } = periodToDateRange(period, customFrom, customTo);
     const params = new URLSearchParams({
       type: 'internal_tickets',
       format,
@@ -109,6 +136,8 @@ export function TicketsWorkspace({
       ...(employeeId ? { ownerId: employeeId } : {}),
       ...(status ? { status } : {}),
       ...(priority ? { severity: priority } : {}),
+      ...(computedFrom ? { dateFrom: computedFrom } : {}),
+      ...(computedTo ? { dateTo: computedTo } : {}),
     });
     window.open(`/api/reports/export-advanced?${params.toString()}`, '_blank');
   };
@@ -129,6 +158,10 @@ export function TicketsWorkspace({
         subtitle={t.tickets.subtitle}
         period={period}
         onPeriodChange={setPeriod}
+        customFrom={customFrom}
+        onCustomFromChange={setCustomFrom}
+        customTo={customTo}
+        onCustomToChange={setCustomTo}
         dateDimension={dateDimension}
         onDateDimensionChange={(d) => setDateDimension(d as any)}
         onRefresh={handleRefresh}

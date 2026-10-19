@@ -79,6 +79,7 @@ export async function fetchTicketsOfficersPerformance(
   filter: TicketsAnalyticsFilter,
   dateFrom: Date,
   dateTo: Date,
+  hasExplicitDate = true,
 ): Promise<OfficerTicketPerformance[]> {
   const deptId = filter.targetDepartmentId;
   const users = await prisma.user.findMany({
@@ -111,9 +112,15 @@ export async function fetchTicketsOfficersPerformance(
   return users.map((u) => {
     const tickets = u.assignedInternalTickets;
     const active = tickets.filter((t) => !TERMINAL_TICKET_STATUSES.includes(t.status as InternalTicketStatus));
-    const newAssigned = tickets.filter((t) => t.createdAt >= dateFrom && t.createdAt <= dateTo).length;
-    const res = tickets.filter((t) => t.resolvedAt && t.resolvedAt >= dateFrom && t.resolvedAt <= dateTo);
-    const cls = tickets.filter((t) => t.closedAt && t.closedAt >= dateFrom && t.closedAt <= dateTo).length;
+    const newAssigned = hasExplicitDate
+      ? tickets.filter((t) => t.createdAt >= dateFrom && t.createdAt <= dateTo).length
+      : tickets.length;
+    const res = hasExplicitDate
+      ? tickets.filter((t) => t.resolvedAt && t.resolvedAt >= dateFrom && t.resolvedAt <= dateTo)
+      : tickets.filter((t) => t.resolvedAt != null);
+    const cls = hasExplicitDate
+      ? tickets.filter((t) => t.closedAt && t.closedAt >= dateFrom && t.closedAt <= dateTo).length
+      : tickets.filter((t) => t.closedAt != null).length;
     const ovd = active.filter((t) => t.dueAt && t.dueAt < now).length;
 
     const onTime = res.filter((t) => t.dueAt && t.resolvedAt! <= t.dueAt).length;

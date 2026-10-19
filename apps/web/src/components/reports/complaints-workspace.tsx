@@ -23,22 +23,29 @@ import {
   buildComplaintsOfficerRows,
   buildComplaintsRecordItems,
 } from './complaints-workspace-helpers';
+import { periodToDateRange } from './report-date-helpers';
 
 interface ComplaintsWorkspaceProps {
   locale: Locale;
   initialDepartments?: ReportFilterOption[];
   initialCategories?: ReportFilterOption[];
+  initialAnalytics?: ComplaintsAnalyticsResponse | null;
+  initialRecords?: { total: number; items: ComplaintRecordRow[] } | null;
 }
 
 export function ComplaintsWorkspace({
   locale,
   initialDepartments = [],
   initialCategories = [],
+  initialAnalytics = null,
+  initialRecords = null,
 }: ComplaintsWorkspaceProps) {
   const t = reportsAnalyticsI18n[locale];
 
   // Filters State
-  const [period, setPeriod] = useState('this_month');
+  const [period, setPeriod] = useState('all');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
   const [dateDimension, setDateDimension] = useState<'createdAt' | 'resolvedAt' | 'closedAt'>('createdAt');
   const [search, setSearch] = useState('');
   const [departmentId, setDepartmentId] = useState('');
@@ -50,8 +57,10 @@ export function ComplaintsWorkspace({
   const pageSize = 15;
 
   // Analytics & Records Data
-  const [analytics, setAnalytics] = useState<ComplaintsAnalyticsResponse | null>(null);
-  const [records, setRecords] = useState<{ total: number; items: ComplaintRecordRow[] }>({ total: 0, items: [] });
+  const [analytics, setAnalytics] = useState<ComplaintsAnalyticsResponse | null>(initialAnalytics);
+  const [records, setRecords] = useState<{ total: number; items: ComplaintRecordRow[] }>(
+    initialRecords ?? { total: 0, items: [] },
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -61,6 +70,7 @@ export function ComplaintsWorkspace({
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
+    const { dateFrom: computedFrom, dateTo: computedTo } = periodToDateRange(period, customFrom, customTo);
     const filter: ComplaintsAnalyticsFilter = {
       departmentId: departmentId || null,
       ownerId: officerId || null,
@@ -68,6 +78,8 @@ export function ComplaintsWorkspace({
       severity: severity || null,
       categoryId: categoryId || null,
       dateDimension,
+      dateFrom: computedFrom,
+      dateTo: computedTo,
       search: search || null,
     };
 
@@ -80,7 +92,7 @@ export function ComplaintsWorkspace({
     if (recordsRes) setRecords(recordsRes);
     setIsLoading(false);
     setIsRefreshing(false);
-  }, [departmentId, officerId, status, severity, categoryId, dateDimension, search, page]);
+  }, [departmentId, officerId, status, severity, categoryId, dateDimension, period, customFrom, customTo, search, page]);
 
   useEffect(() => {
     loadData();
@@ -98,12 +110,15 @@ export function ComplaintsWorkspace({
     setSeverity('');
     setCategoryId('');
     setSearch('');
-    setPeriod('this_month');
+    setPeriod('all');
+    setCustomFrom('');
+    setCustomTo('');
     setDateDimension('createdAt');
     setPage(1);
   };
 
   const handleExport = (format: 'csv' | 'excel') => {
+    const { dateFrom: computedFrom, dateTo: computedTo } = periodToDateRange(period, customFrom, customTo);
     const params = new URLSearchParams({
       type: 'complaints',
       format,
@@ -131,6 +146,10 @@ export function ComplaintsWorkspace({
         subtitle={t.complaints.subtitle}
         period={period}
         onPeriodChange={setPeriod}
+        customFrom={customFrom}
+        onCustomFromChange={setCustomFrom}
+        customTo={customTo}
+        onCustomToChange={setCustomTo}
         dateDimension={dateDimension}
         onDateDimensionChange={(d) => setDateDimension(d as any)}
         onRefresh={handleRefresh}

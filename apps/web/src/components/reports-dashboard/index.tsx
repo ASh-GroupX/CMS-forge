@@ -85,6 +85,13 @@ export function ReportsDashboard({
         <form action="/reports" className="mb-3 rounded-md border border-line-subtle bg-surface-raised p-3" method="get">
           <input name="locale" type="hidden" value={locale} />
           {filters.departmentId ? <input name="departmentId" type="hidden" value={filters.departmentId} /> : null}
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-line-subtle pb-2">
+            <div>
+              <h3 className="text-sm font-semibold">{locale === 'ar' ? 'تصفية الحالات وسجلات التصدير' : 'Filter Operational Records & Export'}</h3>
+              <p className="text-xs text-content-muted">{locale === 'ar' ? 'معايير البحث تنطبق على جدول الحالات وملفات التصدير أدناه' : 'Criteria apply to the operational cases table and exports below'}</p>
+            </div>
+            {Boolean(filters.branchId || filters.categoryId || filters.dateFrom || filters.dateTo || filters.ownerId || filters.severity) ? <span className="rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand">{locale === 'ar' ? 'تصفية نشطة' : 'Active Filters'}</span> : null}
+          </div>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <DateField label={t.filters.dateFrom} name="dateFrom" value={filters.dateFrom} />
             <DateField label={t.filters.dateTo} name="dateTo" value={filters.dateTo} />
@@ -92,7 +99,7 @@ export function ReportsDashboard({
             <OptionField choose={t.filters.allCategories} disabledLabel={t.filters.unavailable} label={t.filters.category} locale={locale} name="categoryId" options={categories} value={filters.categoryId} />
             <SelectField choose={t.filters.allSeverities} disabledLabel={t.filters.unavailable} label={t.filters.severity} name="severity" optionLabel={(severity) => severityLabel(locale, severity)} options={severities} value={filters.severity} />
             <div className="xl:col-span-2">
-              <StaffPicker initialUserId={filters.ownerId} label={t.filters.owner} locale={locale} name="ownerId" required={false} staff={staff} t={t.filters.ownerPicker} />
+              <StaffPicker initialUserId={filters.ownerId} key={filters.ownerId} label={t.filters.owner} locale={locale} name="ownerId" required={false} staff={staff} t={t.filters.ownerPicker} />
             </div>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -188,17 +195,19 @@ export function ReportsDashboard({
 
 function DateField({ label, name, value }: { label: string; name: string; value: string }) {
   const id = `reports-${name}`;
-  return <div className="grid gap-2"><Label htmlFor={id}>{label}</Label><input className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" defaultValue={value} id={id} name={name} type="date" /></div>;
+  return <div className="grid gap-2"><Label htmlFor={id}>{label}</Label><input className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:text-sm" defaultValue={value} id={id} key={value} name={name} type="date" /></div>;
 }
 
 function SelectField({ choose, disabledLabel, label, name, optionLabel = (option: string) => option, options, value }: { choose: string; disabledLabel: string; label: string; name: string; optionLabel?: (option: string) => string; options: string[]; value: string }) {
   const id = `reports-${name}`;
-  return <div className="grid gap-2"><Label htmlFor={id}>{label}</Label><FormSelect defaultValue={options.includes(value) ? value : ''} disabled={options.length === 0} id={id} name={name} options={options.map((option) => ({ label: optionLabel(option), value: option }))} placeholder={options.length === 0 ? disabledLabel : choose} /></div>;
+  const selected = options.includes(value) ? value : '';
+  return <div className="grid gap-2"><Label htmlFor={id}>{label}</Label><FormSelect defaultValue={selected} disabled={options.length === 0} id={id} name={name} options={options.map((option) => ({ label: optionLabel(option), value: option }))} placeholder={options.length === 0 ? disabledLabel : choose} value={selected} /></div>;
 }
 
 function OptionField({ choose, disabledLabel, label, locale, name, options, value }: { choose: string; disabledLabel: string; label: string; locale: Locale; name: string; options: ComplaintFormOption[]; value: string }) {
   const id = `reports-${name}`;
-  return <div className="grid gap-2"><Label htmlFor={id}>{label}</Label><FormSelect defaultValue={options.length === 0 ? '' : value} disabled={options.length === 0} id={id} name={name} options={options.map((option) => ({ label: optionLabelText(option, locale), value: option.id }))} placeholder={options.length === 0 ? disabledLabel : choose} /></div>;
+  const selected = options.some((o) => o.id === value) ? value : '';
+  return <div className="grid gap-2"><Label htmlFor={id}>{label}</Label><FormSelect defaultValue={selected} disabled={options.length === 0} id={id} name={name} options={options.map((option) => ({ label: optionLabelText(option, locale), value: option.id }))} placeholder={options.length === 0 ? disabledLabel : choose} value={selected} /></div>;
 }
 
 function ReportBadge({ children }: { children: React.ReactNode }) { return <StatusBadge>{children}</StatusBadge>; }

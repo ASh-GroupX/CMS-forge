@@ -15,6 +15,10 @@ interface ReportHeaderProps {
   onPeriodChange: (period: string) => void;
   dateDimension: string;
   onDateDimensionChange: (dim: string) => void;
+  customFrom?: string;
+  onCustomFromChange?: (val: string) => void;
+  customTo?: string;
+  onCustomToChange?: (val: string) => void;
   onRefresh: () => void;
   isRefreshing?: boolean;
   onExport: (format: 'csv' | 'excel') => void;
@@ -32,6 +36,10 @@ export function ReportHeader({
   onPeriodChange,
   dateDimension,
   onDateDimensionChange,
+  customFrom,
+  onCustomFromChange,
+  customTo,
+  onCustomToChange,
   onRefresh,
   isRefreshing,
   onExport,
@@ -140,6 +148,24 @@ export function ReportHeader({
             ))}
           </select>
         </div>
+
+        {period === 'custom' && (
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={customFrom ?? ''}
+              onChange={(e) => onCustomFromChange?.(e.target.value)}
+              className="h-8 rounded-md border border-input bg-background px-2 text-xs shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
+            />
+            <span className="text-muted-foreground">-</span>
+            <input
+              type="date"
+              value={customTo ?? ''}
+              onChange={(e) => onCustomToChange?.(e.target.value)}
+              className="h-8 rounded-md border border-input bg-background px-2 text-xs shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
+            />
+          </div>
+        )}
 
         <div className="flex items-center gap-2">
           <span className="font-semibold text-muted-foreground">{t.controls.dateDimension}:</span>

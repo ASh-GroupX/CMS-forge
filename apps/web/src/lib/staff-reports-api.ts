@@ -109,31 +109,37 @@ function appendFilters(url: URL, filters: StaffReportFilters): void {
 
 export async function getStaffReportKpis({
   apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  branchId,
   cookieHeader,
   fetchImpl = fetch,
 }: {
-  apiUrl?: string;
-  cookieHeader?: string;
-  fetchImpl?: typeof fetch;
+  apiUrl?: string | undefined;
+  branchId?: string | undefined;
+  cookieHeader?: string | undefined;
+  fetchImpl?: typeof fetch | undefined;
 } = {}): Promise<StaffReportKpis | null> {
-  const result = await getStaffReportKpisLoadResult({ apiUrl, ...(cookieHeader !== undefined ? { cookieHeader } : {}), fetchImpl });
+  const result = await getStaffReportKpisLoadResult({ apiUrl, ...(branchId !== undefined ? { branchId } : {}), ...(cookieHeader !== undefined ? { cookieHeader } : {}), fetchImpl });
   return result.status === 'ready' ? result.data : null;
 }
 
 export async function getStaffReportKpisLoadResult({
   apiUrl = process.env.API_URL ?? 'http://localhost:3000',
+  branchId,
   cookieHeader,
   fetchImpl = fetch,
 }: {
-  apiUrl?: string;
-  cookieHeader?: string;
-  fetchImpl?: typeof fetch;
+  apiUrl?: string | undefined;
+  branchId?: string | undefined;
+  cookieHeader?: string | undefined;
+  fetchImpl?: typeof fetch | undefined;
 } = {}): Promise<StaffReportLoadResult<StaffReportKpis>> {
   const cookies = cookieHeader ?? await incomingCookieHeader();
   if (!hasStaffSessionCookie(cookies)) return { status: 'denied' };
 
   try {
-    const response = await fetchImpl(new URL('/reports/kpis', apiUrl), {
+    const url = new URL('/reports/kpis', apiUrl);
+    if (branchId?.trim()) url.searchParams.set('branchId', branchId.trim());
+    const response = await fetchImpl(url, {
       cache: 'no-store',
       headers: { Accept: 'application/json', cookie: cookies },
     });
@@ -277,18 +283,6 @@ function catalogFrom(body: unknown): StaffReportCatalog | null {
 function agingBucketsFrom(value: unknown): StaffReportAgingBuckets | null {
   if (!value || typeof value !== 'object') return null;
   const buckets = value as Partial<StaffReportAgingBuckets>;
-  if (
-    typeof buckets.zeroToOneDays !== 'number' ||
-    typeof buckets.twoToThreeDays !== 'number' ||
-    typeof buckets.fourToSevenDays !== 'number' ||
-    typeof buckets.overSevenDays !== 'number'
-  ) {
-    return null;
-  }
-  return {
-    zeroToOneDays: buckets.zeroToOneDays,
-    twoToThreeDays: buckets.twoToThreeDays,
-    fourToSevenDays: buckets.fourToSevenDays,
-    overSevenDays: buckets.overSevenDays,
-  };
+  if (typeof buckets.zeroToOneDays !== 'number' || typeof buckets.twoToThreeDays !== 'number' || typeof buckets.fourToSevenDays !== 'number' || typeof buckets.overSevenDays !== 'number') return null;
+  return { zeroToOneDays: buckets.zeroToOneDays, twoToThreeDays: buckets.twoToThreeDays, fourToSevenDays: buckets.fourToSevenDays, overSevenDays: buckets.overSevenDays };
 }

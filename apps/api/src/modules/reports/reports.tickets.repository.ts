@@ -23,7 +23,8 @@ export class ReportsTicketsRepository {
     const { dateFrom, dateTo, prevDateFrom, prevDateTo } = parseDateRange(filter.dateFrom, filter.dateTo);
     const baseWhere = buildTicketWhere(filter);
 
-    const currCreatedWhere = buildTicketWhere(filter, { from: dateFrom, to: dateTo });
+    const hasExplicitDate = Boolean(filter.dateFrom || filter.dateTo);
+    const currCreatedWhere = hasExplicitDate ? buildTicketWhere(filter, { from: dateFrom, to: dateTo }) : baseWhere;
     const prevCreatedWhere = buildTicketWhere(filter, { from: prevDateFrom, to: prevDateTo });
 
     const openWhere: Prisma.InternalTicketWhereInput = {
@@ -31,18 +32,16 @@ export class ReportsTicketsRepository {
       status: { notIn: TERMINAL_TICKET_STATUSES },
     };
 
-    const currResolvedWhere: Prisma.InternalTicketWhereInput = {
-      ...baseWhere,
-      resolvedAt: { gte: dateFrom, lte: dateTo },
-    };
+    const currResolvedWhere: Prisma.InternalTicketWhereInput = hasExplicitDate
+      ? { ...baseWhere, resolvedAt: { gte: dateFrom, lte: dateTo } }
+      : { ...baseWhere, resolvedAt: { not: null } };
     const prevResolvedWhere: Prisma.InternalTicketWhereInput = {
       ...baseWhere,
       resolvedAt: { gte: prevDateFrom, lte: prevDateTo },
     };
-    const currClosedWhere: Prisma.InternalTicketWhereInput = {
-      ...baseWhere,
-      closedAt: { gte: dateFrom, lte: dateTo },
-    };
+    const currClosedWhere: Prisma.InternalTicketWhereInput = hasExplicitDate
+      ? { ...baseWhere, closedAt: { gte: dateFrom, lte: dateTo } }
+      : { ...baseWhere, closedAt: { not: null } };
     const prevClosedWhere: Prisma.InternalTicketWhereInput = {
       ...baseWhere,
       closedAt: { gte: prevDateFrom, lte: prevDateTo },
@@ -203,7 +202,7 @@ export class ReportsTicketsRepository {
 
     const timeline = buildTicketTimeline(dateFrom, dateTo, resolvedRows);
     const deptToDeptFlow = await fetchTicketsDeptToDeptFlow(this.prisma, filter);
-    const officers = await fetchTicketsOfficersPerformance(this.prisma, filter, dateFrom, dateTo);
+    const officers = await fetchTicketsOfficersPerformance(this.prisma, filter, dateFrom, dateTo, hasExplicitDate);
 
     return {
       kpis: {
