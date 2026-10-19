@@ -17,7 +17,7 @@ export function ReportsHubNavigator({ locale }: ReportsHubNavigatorProps) {
   const ArrowIcon = isRtl ? ArrowLeft : ArrowRight;
 
   return (
-    <div className="mb-6 space-y-4">
+    <div className="mb-6 w-full max-w-full min-w-0 space-y-4">
       {/* Header Banner */}
       <div className="rounded-xl border bg-gradient-to-r from-card to-muted/40 p-5 shadow-xs">
         <h2 className="text-xl font-bold tracking-tight text-foreground">{t.hub.title}</h2>
@@ -27,7 +27,7 @@ export function ReportsHubNavigator({ locale }: ReportsHubNavigatorProps) {
       {/* Two Primary Analytical Workspace Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Card 1: CRM Complaints Center */}
-        <Card className="flex flex-col justify-between p-5 border-primary/20 hover:border-primary/50 transition-all hover:shadow-md bg-card">
+        <Card className="flex flex-col justify-between p-5 border-primary/20 hover:border-primary/50 transition-all hover:shadow-md bg-card min-w-0">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
@@ -59,7 +59,7 @@ export function ReportsHubNavigator({ locale }: ReportsHubNavigatorProps) {
         </Card>
 
         {/* Card 2: Internal Tickets Center */}
-        <Card className="flex flex-col justify-between p-5 border-primary/20 hover:border-primary/50 transition-all hover:shadow-md bg-card">
+        <Card className="flex flex-col justify-between p-5 border-primary/20 hover:border-primary/50 transition-all hover:shadow-md bg-card min-w-0">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">

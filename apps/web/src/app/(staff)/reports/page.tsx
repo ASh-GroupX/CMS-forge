@@ -54,7 +54,7 @@ export default async function ReportsPage({
   const activeLocale = resolveLocale(readParam(params?.locale));
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6">
       <ReportsHubNavigator locale={activeLocale} />
       <ReportsDashboard
         canExport={principal?.permissions.includes('REPORT_EXPORT') ?? false}

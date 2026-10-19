@@ -5,9 +5,10 @@ import { pathToFileURL } from 'node:url';
 
 export function compileTailwind(outDir) {
   const output = join(outDir, 'proof.css');
+  const targetOutput = process.platform === 'win32' ? `"${resolve(output)}"` : resolve(output);
   const result = spawnSync(
     'corepack',
-    ['pnpm', '--dir', 'apps/web', 'exec', 'tailwindcss', '-c', 'tailwind.config.ts', '-i', 'src/globals.css', '-o', resolve(output), '--content', './src/**/*.{ts,tsx}'],
+    ['pnpm', '--dir', 'apps/web', 'exec', 'tailwindcss', '-c', 'tailwind.config.ts', '-i', 'src/globals.css', '-o', targetOutput, '--content', './src/**/*.{ts,tsx}'],
     { encoding: 'utf8', shell: process.platform === 'win32' },
   );
   if (result.status !== 0) {
