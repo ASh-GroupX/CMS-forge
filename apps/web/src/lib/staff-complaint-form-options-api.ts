@@ -23,7 +23,7 @@ export type ComplaintFormOptions = {
   departments: Array<ComplaintFormOption & { branchId: string | null }>;
   severities: Array<'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>;
   types: string[];
-  rootCauses?: Array<{ id: string; nameEn: string; nameAr: string; order: number }>;
+  rootCauses?: Array<{ id: string; nameEn: string; nameAr: string; order: number; complaintType?: string | null }>;
   salesAdvisors?: Array<{ id: string; nameEn: string; nameAr: string; order: number }>;
   users?: StaffUserOption[];
 };

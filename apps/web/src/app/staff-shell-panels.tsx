@@ -70,7 +70,7 @@ export function AuthPanel({
         <input name="locale" type="hidden" value={locale} />
         <label className="grid gap-1 text-sm font-medium text-content-strong">
           {t.auth.identifier}
-          <input className="h-10 rounded-md border border-line-subtle bg-surface px-3 py-2 text-content-strong shadow-sm hover:border-line-strong focus:outline-none focus:ring-2 focus:ring-brand" name="identifier" autoComplete="username" />
+          <input className="h-10 rounded-md border border-line-subtle bg-surface px-3 py-2 text-content-strong shadow-sm hover:border-line-strong focus:outline-none focus:ring-2 focus:ring-brand" name="identifier" placeholder={locale === 'ar' ? 'اسم المستخدم أو البريد' : 'Username or email'} autoComplete="username" />
         </label>
         <label className="grid gap-1 text-sm font-medium text-content-strong">
           {t.auth.password}

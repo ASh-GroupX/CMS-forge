@@ -4,6 +4,7 @@ import { PrismaService } from '../../core/http-kernel.js';
 export type RootCauseInput = {
   nameEn: string;
   nameAr?: string | undefined;
+  complaintType?: string | null | undefined;
   order?: number | undefined;
   isActive?: boolean | undefined;
 };
@@ -19,9 +20,17 @@ export type SalesAdvisorInput = {
 export class ComplaintSettingsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listRootCauses() {
+  async listRootCauses(complaintType?: string | null) {
     try {
+      const where: any = {};
+      if (complaintType && complaintType !== 'ALL') {
+        where.OR = [
+          { complaintType: null },
+          { complaintType: complaintType as any },
+        ];
+      }
       return await this.prisma.complaintRootCause.findMany({
+        where,
         orderBy: [{ order: 'asc' }, { nameEn: 'asc' }],
       });
     } catch {
@@ -35,10 +44,12 @@ export class ComplaintSettingsService {
       throw new BadRequestException('English name is required');
     }
     const nameAr = (input.nameAr?.trim() || nameEn);
+    const complaintType = (input.complaintType && input.complaintType !== 'ALL') ? input.complaintType : null;
     return this.prisma.complaintRootCause.create({
       data: {
         nameEn,
         nameAr,
+        complaintType: complaintType as any,
         order: input.order ?? 0,
         isActive: input.isActive ?? true,
       },
@@ -51,6 +62,7 @@ export class ComplaintSettingsService {
       data: {
         ...(input.nameEn !== undefined ? { nameEn: input.nameEn.trim() } : {}),
         ...(input.nameAr !== undefined ? { nameAr: input.nameAr.trim() } : {}),
+        ...(input.complaintType !== undefined ? { complaintType: (input.complaintType && input.complaintType !== 'ALL') ? (input.complaintType as any) : null } : {}),
         ...(input.order !== undefined ? { order: input.order } : {}),
         ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
       },

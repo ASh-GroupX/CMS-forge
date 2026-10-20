@@ -74,6 +74,7 @@ export function ComplaintCreateForm({
   const [selectedRootCause, setSelectedRootCause] = useState<string>('');
   const [selectedSalesAdvisor, setSelectedSalesAdvisor] = useState<string>('');
   const [alternativeCar, setAlternativeCar] = useState<boolean>(false);
+  const [selectedType, setSelectedType] = useState<string>('COMPLAINT');
 
   useEffect(() => {
     if (selectedDepartment) {
@@ -155,7 +156,11 @@ export function ComplaintCreateForm({
     ? allUsers.filter((u) => u.departmentId === selectedCollabDept)
     : [];
 
-  const rootCauseOptions = (options?.rootCauses ?? []).map((r) => ({
+  const filteredRootCauses = (options?.rootCauses ?? []).filter((r) => {
+    return !r.complaintType || r.complaintType === 'ALL' || r.complaintType === selectedType;
+  });
+
+  const rootCauseOptions = filteredRootCauses.map((r) => ({
     label: locale === 'ar' ? r.nameAr : r.nameEn,
     value: locale === 'ar' ? r.nameAr : r.nameEn,
   }));
@@ -355,7 +360,17 @@ export function ComplaintCreateForm({
               <SelectField choose={t.choose} error={fieldError(fieldErrors, 'categoryId')} label={`${t.fields.category} *`} locale={locale} name="categoryId" options={categoryOptions} value={selectedCategory} onChange={setSelectedCategory} />
 
               <Field error={fieldError(fieldErrors, 'type')} id="type" label={locale === 'ar' ? 'نوع الطلب' : 'Request Type'}>
-                <FormSelect id="type" name="type" defaultValue="COMPLAINT" options={typeOptions.map((type) => ({ label: complaintTypeLabel(locale, type), value: type }))} placeholder={t.choose} />
+                <FormSelect
+                  id="type"
+                  name="type"
+                  value={selectedType}
+                  onValueChange={(val) => {
+                    setSelectedType(val);
+                    setSelectedRootCause('');
+                  }}
+                  options={typeOptions.map((type) => ({ label: complaintTypeLabel(locale, type), value: type }))}
+                  placeholder={t.choose}
+                />
               </Field>
 
               <Field error={fieldError(fieldErrors, 'baseChannel')} id="baseChannel" label={locale === 'ar' ? 'القناة' : 'Channel'}>

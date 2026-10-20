@@ -164,7 +164,7 @@ export class ComplaintsService {
   }
 
   allowedActionsFor(
-    complaint: Pick<ComplaintDetailDto, 'ownerId' | 'status'> & { createdById?: string | null; departmentId?: string | null },
+    complaint: Pick<ComplaintDetailDto, 'ownerId' | 'status'> & { backupOfficerId?: string | null; createdById?: string | null; departmentId?: string | null },
     actor: { roleCode: RoleCode; userId: string | null; permissions?: string[]; departmentId?: string | null },
   ): ComplaintTransitionAction[] { 
     const actions = WORKFLOW_TRANSITIONS.filter((item) => {
@@ -173,8 +173,9 @@ export class ComplaintsService {
       const canSee = actorCanSeeAction(item.action, actor, complaint);
       return item.fromStatus === complaint.status && (roleMatch || permMatch) && canSee;
     }).map((item) => item.action);
-    if (complaint.ownerId) return actions.filter((action) => action !== ComplaintTransitionAction.APPROVE_AND_ROUTE);
-    if (!complaint.ownerId && (complaint.status === ComplaintStatus.MANAGER_REVIEW || complaint.status === ComplaintStatus.REOPENED)) {
+    const hasAssignee = Boolean(complaint.ownerId || complaint.backupOfficerId);
+    if (hasAssignee) return actions.filter((action) => action !== ComplaintTransitionAction.APPROVE_AND_ROUTE);
+    if (!hasAssignee && (complaint.status === ComplaintStatus.MANAGER_REVIEW || complaint.status === ComplaintStatus.REOPENED)) {
       return actions.filter((action) => action !== ComplaintTransitionAction.ACCEPT_INTAKE);
     }
     return actions;

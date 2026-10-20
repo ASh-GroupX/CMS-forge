@@ -66,7 +66,7 @@ export const staffShellText = {
         search: 'Search',
         all: 'All',
       },
-      headers: ['Reference', 'Status', 'Severity', 'Owner', 'Branch', 'Due status', 'Age', 'Next action'],
+      headers: ['Reference', 'Status', 'Severity', 'Owner', 'Branch', 'Department', 'Due status', 'Age', 'Next action'],
       labels: { updated: 'Updated', age: 'Age' },
       states: {
         loading: 'Loading cases.',
@@ -218,7 +218,7 @@ export const staffShellText = {
         search: 'بحث',
         all: 'الكل',
       },
-      headers: ['المرجع', 'الحالة', 'الخطورة', 'المالك', 'الفرع', 'حالة الموعد', 'العمر', 'الإجراء التالي'],
+      headers: ['المرجع', 'الحالة', 'الخطورة', 'المالك', 'الفرع', 'القسم', 'حالة الموعد', 'العمر', 'الإجراء التالي'],
       labels: { updated: 'آخر تحديث', age: 'العمر' },
       states: {
         loading: 'جارٍ تحميل الحالات...',

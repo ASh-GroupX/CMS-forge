@@ -1635,13 +1635,14 @@ model DepartmentComplaintTemplate {
 }
 
 model ComplaintRootCause {
-  id        String   @id @default(cuid())
-  nameEn    String   @map("name_en")
-  nameAr    String   @map("name_ar")
-  order     Int      @default(0)
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id            String         @id @default(cuid())
+  nameEn        String         @map("name_en")
+  nameAr        String         @map("name_ar")
+  complaintType ComplaintType? @map("complaint_type")
+  order         Int            @default(0)
+  isActive      Boolean        @default(true) @map("is_active")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
 
   @@map("complaint_root_causes")
 }

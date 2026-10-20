@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ComplaintSettingsService } from './complaint-settings.service.js';
 import { SessionAuthGuard } from '../../core/auth.guard.js';
 
@@ -8,8 +8,8 @@ export class ComplaintSettingsController {
   constructor(private readonly settingsService: ComplaintSettingsService) {}
 
   @Get('root-causes')
-  async listRootCauses() {
-    return this.settingsService.listRootCauses();
+  async listRootCauses(@Query('complaintType') complaintType?: string) {
+    return this.settingsService.listRootCauses(complaintType);
   }
 
   @Post('root-causes')
@@ -17,6 +17,7 @@ export class ComplaintSettingsController {
     return this.settingsService.createRootCause({
       nameEn: body.nameEn,
       nameAr: body.nameAr,
+      complaintType: body.complaintType ?? null,
       order: typeof body.order === 'number' ? body.order : 0,
       isActive: body.isActive !== false,
     });
@@ -27,6 +28,7 @@ export class ComplaintSettingsController {
     return this.settingsService.updateRootCause(id, {
       nameEn: body.nameEn,
       nameAr: body.nameAr,
+      complaintType: body.complaintType !== undefined ? (body.complaintType ?? null) : undefined,
       order: typeof body.order === 'number' ? body.order : undefined,
       isActive: body.isActive !== undefined ? Boolean(body.isActive) : undefined,
     });

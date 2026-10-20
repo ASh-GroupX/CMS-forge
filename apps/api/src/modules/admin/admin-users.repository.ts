@@ -22,7 +22,7 @@ export type AssignableStaffRecord = Prisma.UserGetPayload<{ select: typeof userS
 type AdminUserClient = Pick<Prisma.TransactionClient, 'user'>;
 
 export type CreateAdminUserData = {
-  email: string; nameEn: string; nameAr: string; passwordHash: string; roleId: string; branchId: string | null; departmentId: string;
+  email: string; username?: string | null; nameEn: string; nameAr: string; passwordHash: string; roleId: string; branchId: string | null; departmentId: string;
 };
 
 @Injectable()

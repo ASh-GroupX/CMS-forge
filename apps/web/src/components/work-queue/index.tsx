@@ -123,11 +123,15 @@ export function WorkQueue({
                 <dl className="grid grid-cols-2 gap-2 text-sm text-content-muted">
                   <div>
                     <dt className="font-medium text-content-strong">{t.headers[3]}</dt>
-                    <dd>{row.ownerName ?? t.unassigned}</dd>
+                    <dd>{locale === 'ar' ? (row.ownerNameAr || row.ownerName || t.unassigned) : (row.ownerName || row.ownerNameAr || t.unassigned)}</dd>
                   </div>
                   <div>
                     <dt className="font-medium text-content-strong">{t.headers[4]}</dt>
                     <dd>{row.branchName ?? row.branchId}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium text-content-strong">{t.headers[5]}</dt>
+                    <dd>{locale === 'ar' ? (row.assignedDepartmentNameAr || row.assignedDepartmentName || '-') : (row.assignedDepartmentName || row.assignedDepartmentNameAr || '-')}</dd>
                   </div>
                   <div>
                     <dt className="font-medium text-content-strong">{t.labels.age}</dt>
@@ -138,14 +142,14 @@ export function WorkQueue({
                     <dd>{formatDate(row.updatedAt, locale)}</dd>
                   </div>
                   <div className="col-span-2">
-                    <dt className="font-medium text-content-strong">{t.headers[7]}</dt>
+                    <dt className="font-medium text-content-strong">{t.headers[8]}</dt>
                     <dd>{row.nextAction ?? t.actions.open}</dd>
                   </div>
                 </dl>
               </article>
             ))}
           </div>
-          <DataTable headers={t.headers} minWidth="58rem">
+          <DataTable headers={t.headers} minWidth="64rem">
                 {visibleRows.map((row) => (
                   <TableRow key={row.id} className="hover:bg-surface-raised">
                     <TableCell className="py-2 font-medium text-content-strong">
@@ -158,8 +162,13 @@ export function WorkQueue({
                     <TableCell className="py-2">
                       <SeverityBadge locale={locale} severity={row.severity} />
                     </TableCell>
-                    <TableCell className="py-2">{row.ownerName ?? t.unassigned}</TableCell>
+                    <TableCell className="py-2">
+                      {locale === 'ar' ? (row.ownerNameAr || row.ownerName || t.unassigned) : (row.ownerName || row.ownerNameAr || t.unassigned)}
+                    </TableCell>
                     <TableCell className="py-2">{row.branchName ?? row.branchId}</TableCell>
+                    <TableCell className="py-2">
+                      {locale === 'ar' ? (row.assignedDepartmentNameAr || row.assignedDepartmentName || '-') : (row.assignedDepartmentName || row.assignedDepartmentNameAr || '-')}
+                    </TableCell>
                     <TableCell className="py-2">
                       <SlaBadge locale={locale} row={row} />
                     </TableCell>

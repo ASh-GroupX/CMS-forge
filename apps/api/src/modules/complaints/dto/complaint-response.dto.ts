@@ -13,6 +13,10 @@ export type ComplaintQueueItemDto = {
   displayTimeZone: string;
   ownerId: string | null;
   ownerName: string | null;
+  ownerNameAr?: string | null;
+  backupOfficerId?: string | null;
+  backupOfficerName?: string | null;
+  backupOfficerNameAr?: string | null;
   assignedDepartmentId: string | null;
   assignedDepartmentName: string | null;
   assignedDepartmentNameAr: string | null;

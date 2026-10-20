@@ -10,6 +10,7 @@ export async function createAdminUserAction(formData: FormData): Promise<void> {
   const locale = safeLocale(formData.get('locale'));
   const response = await adminFetch('/admin/users', {
     body: JSON.stringify({
+      username: String(formData.get('username') ?? '') || undefined,
       email: String(formData.get('email') ?? ''),
       nameEn: String(formData.get('nameEn') ?? ''),
       nameAr: String(formData.get('nameAr') ?? ''),

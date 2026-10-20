@@ -2,6 +2,7 @@ import { getApiBase } from './api-base';
 export type AdminUser = {
   id: string;
   email: string;
+  username?: string | null;
   nameEn: string;
   nameAr: string;
   roleCode: string;

@@ -11,11 +11,11 @@ import { reportWhere } from './complaints.report-query.js';
 type ComplaintTransitionClient = Pick<Prisma.TransactionClient, 'comment' | 'complaint' | 'complaintStatusHistory' | 'customer' | 'complaintWatcher'> & ComplaintReferenceClient;
 export type DataSource = 'LOCAL' | 'MANUAL' | 'DMS';
 
-export type ComplaintStatusRecord = { id: string; branchId: string; customerId: string; status: ComplaintStatus; ownerId: string | null; severity: ComplaintSeverity; categoryId: string; departmentId: string | null; createdById: string | null; referenceNumber: string };
+export type ComplaintStatusRecord = { id: string; branchId: string; customerId: string; status: ComplaintStatus; ownerId: string | null; backupOfficerId?: string | null; severity: ComplaintSeverity; categoryId: string; departmentId: string | null; createdById: string | null; referenceNumber: string };
 export type ComplaintTransitionSubject = { id: string; vehicleRelated: boolean; vehicleId: string | null; vehicleDataUnavailableReason: string | null };
-export type ComplaintRecord = { id: string; branchId: string; customerId: string; status: ComplaintStatus; type: any; referenceNumber: string; subject: string; severity: ComplaintSeverity; categoryId: string; departmentId: string | null; ownerId: string | null; createdById: string | null; resolvedAt: Date | null; closedAt: Date | null; templateId?: string | null; templateData?: any; };
+export type ComplaintRecord = { id: string; branchId: string; customerId: string; status: ComplaintStatus; type: any; referenceNumber: string; subject: string; severity: ComplaintSeverity; categoryId: string; departmentId: string | null; ownerId: string | null; backupOfficerId?: string | null; createdById: string | null; resolvedAt: Date | null; closedAt: Date | null; templateId?: string | null; templateData?: any; };
 
-export type ComplaintQueueRecord = ComplaintRecord & { ownerId: string | null; owner: { nameEn: string; email: string } | null; department?: { nameEn: string; nameAr: string } | null; category?: { id: string; nameEn: string; nameAr: string } | null; branch: { code: string; nameEn: string; nameAr: string; timezone: string }; createdAt: Date; updatedAt: Date };
+export type ComplaintQueueRecord = ComplaintRecord & { ownerId: string | null; backupOfficerId?: string | null; owner: { nameEn: string; nameAr?: string | null; email: string } | null; backupOfficer?: { nameEn: string; nameAr?: string | null; email: string } | null; department?: { nameEn: string; nameAr: string } | null; category?: { id: string; nameEn: string; nameAr: string } | null; branch: { code: string; nameEn: string; nameAr: string; timezone: string }; createdAt: Date; updatedAt: Date };
 export type ComplaintDetailRecord = Omit<ComplaintQueueRecord, 'category'> & {
   category: { id: string; nameEn: string; nameAr: string };
   descriptionEn: string;
@@ -216,7 +216,7 @@ export class ComplaintsRepository {
     return client.complaint.findMany({
       where,
       orderBy: [{ createdAt: 'desc' }, { referenceNumber: 'asc' }],
-      select: { ...complaintSelect, ownerId: true, owner: { select: { nameEn: true, email: true } }, department: { select: { nameEn: true, nameAr: true } }, category: { select: { id: true, nameEn: true, nameAr: true } }, branch: { select: { code: true, nameEn: true, nameAr: true, timezone: true } }, createdAt: true, updatedAt: true },
+      select: { ...complaintSelect, ownerId: true, owner: { select: { nameEn: true, nameAr: true, email: true } }, backupOfficer: { select: { nameEn: true, nameAr: true, email: true } }, department: { select: { nameEn: true, nameAr: true } }, category: { select: { id: true, nameEn: true, nameAr: true } }, branch: { select: { code: true, nameEn: true, nameAr: true, timezone: true } }, createdAt: true, updatedAt: true },
     });
   }
 
@@ -228,7 +228,7 @@ export class ComplaintsRepository {
       ...(filter.limit === null || filter.limit === undefined ? {} : { take: filter.limit }),
       select: {
         ...complaintSelect,
-        ownerId: true, owner: { select: { nameEn: true, email: true } }, department: { select: { nameEn: true, nameAr: true } }, branch: { select: { code: true, nameEn: true, nameAr: true, timezone: true } },
+        ownerId: true, owner: { select: { nameEn: true, nameAr: true, email: true } }, backupOfficer: { select: { nameEn: true, nameAr: true, email: true } }, department: { select: { nameEn: true, nameAr: true } }, branch: { select: { code: true, nameEn: true, nameAr: true, timezone: true } },
         categoryId: true,
         createdAt: true,
         updatedAt: true,
@@ -436,14 +436,14 @@ export class ComplaintsRepository {
 
     return client.complaint.findUniqueOrThrow({
       where: { id: data.complaintId },
-      select: { id: true, branchId: true, customerId: true, status: true, ownerId: true, severity: true, categoryId: true, departmentId: true, createdById: true, referenceNumber: true },
+      select: { id: true, branchId: true, customerId: true, status: true, ownerId: true, backupOfficerId: true, severity: true, categoryId: true, departmentId: true, createdById: true, referenceNumber: true },
     });
   }
 
   async createStatusHistory(data: CreateComplaintStatusHistoryData, client: ComplaintTransitionClient = this.prisma): Promise<void> { await client.complaintStatusHistory.create({ data }); }
 }
 
-const complaintSelect = { id: true, referenceNumber: true, branchId: true, customerId: true, status: true, type: true, subject: true, severity: true, categoryId: true, departmentId: true, ownerId: true, createdById: true, resolvedAt: true, closedAt: true, templateId: true, templateData: true } satisfies Prisma.ComplaintSelect;
+const complaintSelect = { id: true, referenceNumber: true, branchId: true, customerId: true, status: true, type: true, subject: true, severity: true, categoryId: true, departmentId: true, ownerId: true, backupOfficerId: true, createdById: true, resolvedAt: true, closedAt: true, templateId: true, templateData: true } satisfies Prisma.ComplaintSelect;
 
 function customerPhone(data: CreateComplaintData): string {
   return data.customerPhone ?? `DMS-${data.customerNumber}`;

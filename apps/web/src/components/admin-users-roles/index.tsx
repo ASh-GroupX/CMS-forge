@@ -59,7 +59,12 @@ export function AdminUsersRoles({
             <TableBody>
               {users.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell className="font-semibold">{user.nameEn}<span className="block text-xs text-muted-foreground">{user.email}</span></TableCell>
+                  <TableCell className="font-semibold">
+                    {user.nameEn}
+                    <span className="block text-xs text-muted-foreground">
+                      {user.username ? `@${user.username} • ` : ''}{user.email}
+                    </span>
+                  </TableCell>
                   <TableCell>{roleNames.get(user.roleCode) ?? user.roleName}</TableCell>
                   <TableCell>{user.branchId ? branchNames.get(user.branchId) ?? user.branchName ?? t.allBranches : t.allBranches}</TableCell>
                   <TableCell>{updateDepartmentAction && data ? <DepartmentForm action={updateDepartmentAction} data={data} locale={locale} user={user} /> : (user.departmentId ? departmentNames.get(user.departmentId) ?? user.departmentName ?? t.allDepartments : t.allDepartments)}</TableCell>
@@ -89,6 +94,7 @@ function CreateUserForm({ action, data, locale }: { action: AdminAction; data: A
       <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-content-strong">{t.actions.create}</summary>
       <form action={action} className="grid gap-3 border-t border-line-subtle p-3 md:grid-cols-3">
         <input name="locale" type="hidden" value={locale} />
+        <Field label={t.fields.username} name="username" placeholder={locale === 'ar' ? 'اختياري (يُشتق من البريد)' : 'Optional (derived from email)'} required={false} />
         <Field label={t.fields.email} name="email" type="email" />
         <Field label={t.fields.nameEn} name="nameEn" />
         <Field label={t.fields.nameAr} name="nameAr" />
@@ -179,11 +185,11 @@ function UpdateAssignmentsForm({ action, data, locale, user }: { action: AdminAc
   );
 }
 
-function Field({ label, minLength, name, type = 'text' }: { label: string; minLength?: number; name: string; type?: string }) {
+function Field({ label, minLength, name, placeholder, required = true, type = 'text' }: { label: string; minLength?: number; name: string; placeholder?: string; required?: boolean; type?: string }) {
   return (
     <div className="grid gap-1">
       <Label htmlFor={name}>{label}</Label>
-      <Input id={name} minLength={minLength} name={name} required type={type} />
+      <Input id={name} minLength={minLength} name={name} placeholder={placeholder} required={required} type={type} />
     </div>
   );
 }

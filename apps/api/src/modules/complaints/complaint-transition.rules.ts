@@ -24,7 +24,8 @@ export function assertActorCanApplyTransition(input: ApplyComplaintTransitionInp
   const isGlobalManager = input.actorRole === RoleCode.CR_MANAGER || input.actorRole === RoleCode.ADMIN || Boolean(input.actorPermissions?.includes('COMPLAINT_MANAGE'));
   const isManager = branchManagerRoles.has(input.actorRole) || isGlobalManager;
   if (ownerAllowedActions.has(input.action)) {
-    if (!isManager && (!input.actorId || complaint.ownerId !== input.actorId)) throw roleForbiddenError();
+    const isOwnerOrBackup = Boolean(input.actorId && (complaint.ownerId === input.actorId || complaint.backupOfficerId === input.actorId));
+    if (!isManager && !isOwnerOrBackup) throw roleForbiddenError();
   }
 
   if (resolutionDecisionActions.has(input.action) && !isGlobalManager) {
@@ -40,12 +41,13 @@ export function assertActorCanApplyTransition(input: ApplyComplaintTransitionInp
 export function actorCanSeeAction(
   action: ComplaintTransitionAction,
   actor: { roleCode: string; userId: string | null; permissions?: string[]; departmentId?: string | null },
-  complaint: Pick<ComplaintDetailDto, 'ownerId'> & { createdById?: string | null; departmentId?: string | null },
+  complaint: Pick<ComplaintDetailDto, 'ownerId'> & { backupOfficerId?: string | null; createdById?: string | null; departmentId?: string | null },
 ): boolean {
   const isGlobalManager = actor.roleCode === RoleCode.CR_MANAGER || actor.roleCode === RoleCode.ADMIN || Boolean(actor.permissions?.includes('COMPLAINT_MANAGE'));
   const isManager = branchManagerRoles.has(actor.roleCode) || isGlobalManager;
   if (ownerAllowedActions.has(action)) {
-    if (!isManager && (!actor.userId || complaint.ownerId !== actor.userId)) return false;
+    const isOwnerOrBackup = Boolean(actor.userId && (complaint.ownerId === actor.userId || complaint.backupOfficerId === actor.userId));
+    if (!isManager && !isOwnerOrBackup) return false;
   }
 
   if (resolutionDecisionActions.has(action) && !isGlobalManager) {

@@ -15,6 +15,7 @@ export const adminUsersText: Record<Locale, typeof enAdminUsersText> = {
       saveDepartment: 'Save',
     },
     fields: {
+      username: 'Username',
       email: 'Email',
       nameEn: 'English name',
       nameAr: 'Arabic name',
@@ -66,6 +67,7 @@ export const adminUsersText: Record<Locale, typeof enAdminUsersText> = {
       saveDepartment: 'حفظ',
     },
     fields: {
+      username: 'اسم المستخدم',
       email: 'البريد الإلكتروني',
       nameEn: 'الاسم بالإنجليزية',
       nameAr: 'الاسم بالعربية',
@@ -111,7 +113,7 @@ const enAdminUsersText = {
   headers: [''],
   badges: { active: '', inactive: '' },
   actions: { create: '', manageRoles: '', deactivate: '', reactivate: '', saveAssignments: '', saveDepartment: '' },
-  fields: { email: '', nameEn: '', nameAr: '', role: '', branch: '', department: '', initialPassword: '' },
+  fields: { username: '', email: '', nameEn: '', nameAr: '', role: '', branch: '', department: '', initialPassword: '' },
   masterData: {
     title: '',
     subtitle: '',

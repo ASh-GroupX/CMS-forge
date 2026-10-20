@@ -72,6 +72,7 @@ function parseCreateUser(body: unknown): CreateAdminUserInput {
   const input = body as Record<string, unknown>;
   return {
     email: text(input.email, 'email'),
+    username: optionalText(input.username),
     nameEn: text(input.nameEn, 'nameEn'),
     nameAr: text(input.nameAr, 'nameAr'),
     roleCode: role(input.roleCode),

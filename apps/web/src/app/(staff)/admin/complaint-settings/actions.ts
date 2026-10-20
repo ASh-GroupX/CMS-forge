@@ -24,8 +24,12 @@ function parseErrorMessage(raw: string, status: number): string {
   return raw || `Request failed with status ${status}`;
 }
 
-export async function getRootCauses() {
-  const res = await fetch(`${API_BASE_URL}/complaints/settings/root-causes`, {
+export async function getRootCauses(complaintType?: string) {
+  const url = new URL(`${API_BASE_URL}/complaints/settings/root-causes`);
+  if (complaintType && complaintType !== 'ALL') {
+    url.searchParams.set('complaintType', complaintType);
+  }
+  const res = await fetch(url.toString(), {
     headers: await getAuthHeaders(),
     cache: 'no-store',
   });
@@ -33,12 +37,12 @@ export async function getRootCauses() {
   return res.json();
 }
 
-export async function createRootCause(nameEn: string, nameAr: string): Promise<{ success: boolean; error?: string }> {
+export async function createRootCause(nameEn: string, nameAr: string, complaintType?: string | null): Promise<{ success: boolean; error?: string }> {
   try {
     const res = await fetch(`${API_BASE_URL}/complaints/settings/root-causes`, {
       method: 'POST',
       headers: await getAuthHeaders(),
-      body: JSON.stringify({ nameEn, nameAr }),
+      body: JSON.stringify({ nameEn, nameAr, complaintType: complaintType || null }),
       cache: 'no-store',
     });
     if (!res.ok) {
@@ -52,12 +56,12 @@ export async function createRootCause(nameEn: string, nameAr: string): Promise<{
   }
 }
 
-export async function updateRootCause(id: string, nameEn: string, nameAr: string): Promise<{ success: boolean; error?: string }> {
+export async function updateRootCause(id: string, nameEn: string, nameAr: string, complaintType?: string | null): Promise<{ success: boolean; error?: string }> {
   try {
     const res = await fetch(`${API_BASE_URL}/complaints/settings/root-causes/${id}`, {
       method: 'PUT',
       headers: await getAuthHeaders(),
-      body: JSON.stringify({ nameEn, nameAr }),
+      body: JSON.stringify({ nameEn, nameAr, complaintType }),
       cache: 'no-store',
     });
     if (!res.ok) {

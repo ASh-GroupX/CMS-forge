@@ -73,7 +73,7 @@ export class ComplaintFormOptionsService {
       }),
       this.prisma.complaintRootCause?.findMany({
         orderBy: [{ order: 'asc' }, { nameEn: 'asc' }],
-        select: { id: true, nameEn: true, nameAr: true, order: true },
+        select: { id: true, nameEn: true, nameAr: true, order: true, complaintType: true },
         where: { isActive: true },
       })?.catch?.(() => []) ?? [],
       this.prisma.complaintSalesAdvisor?.findMany({
