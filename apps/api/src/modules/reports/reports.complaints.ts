@@ -85,9 +85,17 @@ export type ComplaintsAnalyticsResponse = {
 
 export function parseDateRange(dateFromStr?: string | null, dateToStr?: string | null) {
   const now = new Date();
-  const dateTo = dateToStr ? new Date(dateToStr) : new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-  const dateFrom = dateFromStr ? new Date(dateFromStr) : new Date(dateTo.getTime() - 29 * 24 * 60 * 60 * 1000);
-  dateFrom.setHours(0, 0, 0, 0);
+  const dateTo = dateToStr
+    ? dateToStr.length === 10
+      ? new Date(`${dateToStr}T23:59:59.999Z`)
+      : new Date(dateToStr)
+    : new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const dateFrom = dateFromStr
+    ? dateFromStr.length === 10
+      ? new Date(`${dateFromStr}T00:00:00.000Z`)
+      : new Date(dateFromStr)
+    : new Date(dateTo.getTime() - 29 * 24 * 60 * 60 * 1000);
+  if (!dateFromStr) dateFrom.setHours(0, 0, 0, 0);
 
   const durationMs = Math.max(24 * 60 * 60 * 1000, dateTo.getTime() - dateFrom.getTime());
   const prevDateTo = new Date(dateFrom.getTime() - 1);

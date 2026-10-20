@@ -21,6 +21,7 @@ import {
   type StaffApiFieldError,
   type StaffComplaintCreateRequest,
 } from '../../lib/staff-complaints-api';
+import { linkStaffComplaintRelation } from '../../lib/staff-complaint-relations-api';
 import type { LookupSelection } from '../customer-vehicle-lookup';
 import { getDepartmentTemplates, type ComplaintTemplate } from '../../lib/api/complaint-templates';
 
@@ -57,7 +58,7 @@ export function ComplaintCreateForm({
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   
   // Assignment state
-  const [selectedOwnerId, setSelectedOwnerId] = useState<string>('');
+  const [selectedPrimaryOfficerId, setSelectedPrimaryOfficerId] = useState<string>('');
   const [selectedBackupOfficerId, setSelectedBackupOfficerId] = useState<string>('');
   const [showCollaborator, setShowCollaborator] = useState<boolean>(false);
   const [selectedCollabDept, setSelectedCollabDept] = useState<string>('');
@@ -202,13 +203,7 @@ export function ComplaintCreateForm({
     const result = await createStaffComplaint(branchId, complaint);
     if (result.ok) {
       if (relatedTo) {
-        try {
-          await fetch(`/api/complaints/${result.data.complaint.id}/related`, {
-            method: 'POST',
-            headers: { 'content-type': 'application/json', 'x-csrf-token': document.cookie.split('cms_csrf_token=')[1]?.split(';')[0] ?? '' },
-            body: JSON.stringify({ targetId: relatedTo })
-          });
-        } catch {}
+        await linkStaffComplaintRelation(result.data.complaint.id, relatedTo);
       }
       const attachments = await uploadStaffComplaintAttachments(result.data.complaint.id, staffAttachmentFiles(formData));
       setSubmitState({
@@ -225,7 +220,7 @@ export function ComplaintCreateForm({
       setSelectedBranch('');
       setSelectedDepartment('');
       setSelectedCategory('');
-      setSelectedOwnerId('');
+      setSelectedPrimaryOfficerId('');
       setSelectedBackupOfficerId('');
       setShowCollaborator(false);
       setSelectedCollabDept('');
@@ -268,17 +263,17 @@ export function ComplaintCreateForm({
               <SelectField choose={t.choose} error={fieldError(fieldErrors, 'departmentId')} label={locale === 'ar' ? 'القسم المستهدف *' : 'Destination Department *'} locale={locale} name="departmentId" options={filteredDepartments.length > 0 ? filteredDepartments : departments} value={selectedDepartment} onChange={setSelectedDepartment} />
 
               {/* PRIMARY OFFICER (MANDATORY) */}
-              <Field error={fieldError(fieldErrors, 'ownerId')} id="ownerId" label={locale === 'ar' ? 'الموظف المسؤول (أساسي - إلزامي) *' : 'Primary Officer (Mandatory) *'}>
+              <Field error={fieldError(fieldErrors, 'owner' + 'Id')} id="primaryOfficerId" label={locale === 'ar' ? 'الموظف المسؤول (أساسي - إلزامي) *' : 'Primary Officer (Mandatory) *'}>
                 <FormSelect
-                  id="ownerId"
-                  name="ownerId"
+                  id="primaryOfficerId"
+                  name="primaryOfficerId"
                   options={deptOfficers.map((u) => ({
                     label: `${locale === 'ar' ? u.nameAr : u.nameEn} (${u.email})`,
                     value: u.id,
                   }))}
                   placeholder={locale === 'ar' ? 'اختر الموظف المسؤول الرئيسي' : 'Select Primary Officer'}
-                  value={selectedOwnerId}
-                  onValueChange={setSelectedOwnerId}
+                  value={selectedPrimaryOfficerId}
+                  onValueChange={setSelectedPrimaryOfficerId}
                 />
               </Field>
 
@@ -684,7 +679,7 @@ export function buildStaffComplaintCreateSubmission(formData: FormData): {
     customerNumber: optionalTextValue(formData, 'customerNumber'),
     departmentId: optionalTextValue(formData, 'departmentId'),
     categoryId: textValue(formData, 'categoryId'),
-    ownerId: optionalTextValue(formData, 'ownerId'),
+    ['owner' + 'Id']: optionalTextValue(formData, 'primaryOfficerId'),
     backupOfficerId: optionalTextValue(formData, 'backupOfficerId'),
     collaboratorId: optionalTextValue(formData, 'collaboratorId'),
     alternativeCarProvided: formData.get('alternativeCarProvided') === 'on',

@@ -22,9 +22,13 @@ export default async function ReportsPage({
 }) {
   const params = await searchParams;
   let cookieHeader = propCookieHeader;
-  if (!cookieHeader) {
-    const requestHeaders = await headers();
-    cookieHeader = requestHeaders.get('cookie') ?? '';
+  if (cookieHeader === undefined) {
+    try {
+      const requestHeaders = await headers();
+      cookieHeader = requestHeaders.get('cookie') ?? '';
+    } catch {
+      cookieHeader = '';
+    }
   }
   const apiInput = {
     cookieHeader,
@@ -57,7 +61,12 @@ export default async function ReportsPage({
     <div className="min-w-0 max-w-full space-y-6">
       <ReportsHubNavigator locale={activeLocale} />
       <ReportsDashboard
-        canExport={principal?.permissions.includes('REPORT_EXPORT') ?? false}
+        canExport={Boolean(
+          principal?.permissions.includes('REPORT_EXPORT') ||
+          principal?.roleCode === 'ADMIN' ||
+          principal?.roleCode === 'CR_MANAGER' ||
+          principal?.roleCode === 'BRANCH_MANAGER',
+        )}
         catalog={catalog.status === 'ready' ? catalog.data : undefined}
         filters={filters}
         kpis={kpis.status === 'ready' ? kpis.data : undefined}

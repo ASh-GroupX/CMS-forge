@@ -1,42 +1,55 @@
 import { NextResponse } from 'next/server';
 
-const formats = new Set(['csv', 'excel']);
-const filterKeys = ['branchId', 'categoryId', 'departmentId', 'ownerId', 'severity', 'dateFrom', 'dateTo'] as const;
-
 export async function GET(request: Request): Promise<Response> {
-  const source = new URL(request.url);
-  const format = source.searchParams.get('format') ?? '';
-  if (!formats.has(format)) return NextResponse.json({ error: 'Invalid report format.' }, { status: 400 });
+  const incomingUrl = new URL(request.url);
+  const format = incomingUrl.searchParams.get('format');
+  if (format !== 'csv' && format !== 'excel') {
+    return NextResponse.json(
+      { error: { code: 'INVALID_FORMAT', message: 'Supported formats are csv and excel.' } },
+      { status: 400 },
+    );
+  }
 
   const target = new URL('/reports/export', process.env.API_URL ?? 'http://localhost:3000');
-  target.searchParams.set('format', format);
-  for (const key of filterKeys) {
-    const value = source.searchParams.get(key);
-    if (value?.trim()) target.searchParams.set(key, value.trim());
-  }
+  target.search = incomingUrl.search;
 
   try {
-    const response = await fetch(target, {
-      cache: 'no-store',
+    const cookies = request.headers.get('cookie') ?? '';
+    const res = await fetch(target, {
       headers: {
-        Accept: 'text/csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json',
-        cookie: request.headers.get('cookie') ?? '',
+        cookie: cookies,
+        Accept: '*/*',
       },
+      cache: 'no-store',
     });
-    return new Response(await response.arrayBuffer(), {
-      status: response.status,
-      headers: passthroughHeaders(response.headers),
+
+    if (!res.ok) {
+      return NextResponse.json(
+        { error: { code: 'EXPORT_FAILED', message: 'Failed to generate export file.' } },
+        { status: res.status },
+      );
+    }
+
+    const contentType = res.headers.get('content-type') ?? 'text/csv; charset=utf-8';
+    const contentDisposition =
+      res.headers.get('content-disposition') ?? 'attachment; filename="operational-report.csv"';
+    const rowCount = res.headers.get('x-report-row-count');
+
+    const headers = new Headers({
+      'content-type': contentType,
+      'content-disposition': contentDisposition,
+      'cache-control': 'no-store',
+    });
+    if (rowCount) headers.set('x-report-row-count', rowCount);
+
+    return new Response(await res.arrayBuffer(), {
+      status: 200,
+      headers,
     });
   } catch {
-    return NextResponse.json({ error: 'Report export service is unavailable.' }, { status: 502 });
+    return NextResponse.json(
+      { error: { code: 'NETWORK_ERROR', message: 'Unable to reach reporting service.' } },
+      { status: 502 },
+    );
   }
-}
-
-function passthroughHeaders(headers: Headers): Headers {
-  const result = new Headers({ 'cache-control': 'no-store' });
-  for (const name of ['content-disposition', 'content-type']) {
-    const value = headers.get(name);
-    if (value) result.set(name, value);
-  }
-  return result;
 }

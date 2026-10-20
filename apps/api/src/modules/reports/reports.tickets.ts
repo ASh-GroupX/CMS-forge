@@ -105,8 +105,10 @@ export function buildTicketWhere(filter: TicketsAnalyticsFilter, dateOverride?: 
   if (dateOverride) {
     where[dimension] = { gte: dateOverride.from, lte: dateOverride.to };
   } else if (filter.dateFrom || filter.dateTo) {
-    const from = filter.dateFrom ? new Date(filter.dateFrom) : undefined;
-    const to = filter.dateTo ? new Date(filter.dateTo) : undefined;
+    const parseFrom = (val: string) => (val.length === 10 ? new Date(`${val}T00:00:00.000Z`) : new Date(val));
+    const parseTo = (val: string) => (val.length === 10 ? new Date(`${val}T23:59:59.999Z`) : new Date(val));
+    const from = filter.dateFrom ? parseFrom(filter.dateFrom) : undefined;
+    const to = filter.dateTo ? parseTo(filter.dateTo) : undefined;
     if (from || to) {
       where[dimension] = {
         ...(from ? { gte: from } : {}),

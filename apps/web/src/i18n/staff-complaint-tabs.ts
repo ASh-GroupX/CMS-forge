@@ -15,7 +15,7 @@ export const complaintTabsText: Record<Locale, typeof en> = {
     work: 'مساحة العمل',
     communication: 'التواصل',
     details: 'التفاصيل',
-    deadlineState: 'متابعة الموعد (SLA)',
+    deadlineState: 'حالة الموعد (SLA)',
     capa: 'الإجراء التصحيحي والوقائي (CAPA)',
     dms: 'بيانات الوكالة (DMS)',
   },

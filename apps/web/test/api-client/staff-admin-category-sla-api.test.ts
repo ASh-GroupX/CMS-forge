@@ -34,6 +34,12 @@ test('admin category SLA client forwards staff cookie and parses backend config'
         }],
       });
     }
+    if (url.endsWith('/departments')) {
+      return jsonResponse({ items: [{ id: 'dept_1', nameEn: 'Service Dept', nameAr: 'قسم الخدمة' }] });
+    }
+    if (url.endsWith('/branches')) {
+      return jsonResponse({ items: [{ id: 'branch_1', nameEn: 'Main Branch', nameAr: 'الفرع الرئيسي' }] });
+    }
     return jsonResponse({}, { status: 404 });
   };
 
@@ -41,7 +47,12 @@ test('admin category SLA client forwards staff cookie and parses backend config'
 
   assert.equal(result?.categories[0]?.code, 'SERVICE');
   assert.equal(result?.policies[0]?.durationMinutes, 480);
-  assert.deepEqual(calls.map((call) => String(call.input)), ['http://localhost:3000/admin/categories', 'http://localhost:3000/sla/policies']);
+  assert.deepEqual(calls.map((call) => String(call.input)), [
+    'http://localhost:3000/admin/categories',
+    'http://localhost:3000/sla/policies',
+    'http://localhost:3000/departments',
+    'http://localhost:3000/branches',
+  ]);
   assert.equal(calls.every((call) => (call.init?.headers as Record<string, string>).cookie === 'cms_staff_session=raw-session'), true);
 });
 

@@ -63,9 +63,11 @@ function customerSearch(value: string): Prisma.CustomerWhereInput[] {
 }
 
 function dateRange(filter: ComplaintReportFilter): Pick<Prisma.ComplaintWhereInput, 'createdAt'> {
+  const parseFrom = (val: string | Date) => (typeof val === 'string' && val.length === 10 ? new Date(`${val}T00:00:00.000Z`) : new Date(val));
+  const parseTo = (val: string | Date) => (typeof val === 'string' && val.length === 10 ? new Date(`${val}T23:59:59.999Z`) : new Date(val));
   const range = {
-    ...(filter.dateFrom ? { gte: new Date(filter.dateFrom) } : {}),
-    ...(filter.dateTo ? { lte: new Date(filter.dateTo) } : {}),
+    ...(filter.dateFrom ? { gte: parseFrom(filter.dateFrom) } : {}),
+    ...(filter.dateTo ? { lte: parseTo(filter.dateTo) } : {}),
   };
   return Object.keys(range).length ? { createdAt: range } : {};
 }

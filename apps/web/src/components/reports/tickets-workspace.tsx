@@ -18,6 +18,7 @@ import {
 } from '../../lib/staff-reports-analytics-api';
 import { reportsAnalyticsI18n } from '../../i18n/staff-reports-analytics';
 import type { Locale } from '../../i18n/staff-shell';
+import { internalTicketStatusLabel } from '../../i18n/domain-labels';
 import {
   buildTicketsKpiCards,
   buildTicketsOfficerRows,
@@ -28,13 +29,22 @@ import { periodToDateRange } from './report-date-helpers';
 interface TicketsWorkspaceProps {
   locale: Locale;
   initialDepartments?: ReportFilterOption[];
+  initialOfficers?: ReportFilterOption[];
   initialAnalytics?: TicketsAnalyticsResponse | null;
   initialRecords?: { total: number; items: TicketRecordRow[] } | null;
 }
 
+const TICKET_STATUS_KEYS = ['NEW', 'ASSIGNED', 'IN_PROGRESS', 'WAITING', 'RESOLVED', 'CLOSED', 'REJECTED'];
+const PRIORITY_KEYS = ['URGENT', 'HIGH', 'NORMAL', 'LOW'] as const;
+const PRIORITY_LABELS: Record<Locale, Record<string, string>> = {
+  ar: { URGENT: 'حرجة / عاجلة', HIGH: 'عالية', NORMAL: 'عادية', LOW: 'منخفضة' },
+  en: { URGENT: 'Urgent', HIGH: 'High', NORMAL: 'Normal', LOW: 'Low' },
+};
+
 export function TicketsWorkspace({
   locale,
   initialDepartments = [],
+  initialOfficers = [],
   initialAnalytics = null,
   initialRecords = null,
 }: TicketsWorkspaceProps) {
@@ -90,19 +100,7 @@ export function TicketsWorkspace({
     if (recordsRes) setRecords(recordsRes);
     setIsLoading(false);
     setIsRefreshing(false);
-  }, [
-    targetDepartmentId,
-    creatingDepartmentId,
-    employeeId,
-    status,
-    priority,
-    dateDimension,
-    period,
-    customFrom,
-    customTo,
-    search,
-    page,
-  ]);
+  }, [targetDepartmentId, creatingDepartmentId, employeeId, status, priority, dateDimension, period, customFrom, customTo, search, page]);
 
   useEffect(() => {
     loadData();
@@ -131,22 +129,33 @@ export function TicketsWorkspace({
     const { dateFrom: computedFrom, dateTo: computedTo } = periodToDateRange(period, customFrom, customTo);
     const params = new URLSearchParams({
       type: 'internal_tickets',
+      reportType: 'internal_tickets',
       format,
-      ...(targetDepartmentId ? { departmentId: targetDepartmentId } : {}),
-      ...(employeeId ? { ownerId: employeeId } : {}),
+      ...(targetDepartmentId ? { targetDepartmentId, departmentId: targetDepartmentId } : {}),
+      ...(creatingDepartmentId ? { creatingDepartmentId } : {}),
+      ...(employeeId ? { assignedEmployeeId: employeeId, ownerId: employeeId } : {}),
       ...(status ? { status } : {}),
-      ...(priority ? { severity: priority } : {}),
+      ...(priority ? { priority, severity: priority } : {}),
+      ...(search ? { search } : {}),
       ...(computedFrom ? { dateFrom: computedFrom } : {}),
       ...(computedTo ? { dateTo: computedTo } : {}),
     });
-    window.open(`/api/reports/export-advanced?${params.toString()}`, '_blank');
+    const link = document.createElement('a');
+    link.href = `/api/reports/export-advanced?${params.toString()}`;
+    link.download = `tickets-report-${new Date().toISOString().slice(0, 10)}.${format === 'csv' ? 'csv' : 'xlsx'}`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
 
   const officerRows = buildTicketsOfficerRows(analytics?.officers, locale);
-  const officerOptions: ReportFilterOption[] = (analytics?.officers || []).map((o) => ({
-    id: o.employeeId,
-    name: locale === 'ar' ? o.nameAr : o.nameEn,
-  }));
+  const officerOptions: ReportFilterOption[] =
+    analytics?.officers && analytics.officers.length > 0
+      ? analytics.officers.map((o) => ({
+          id: o.employeeId,
+          name: locale === 'ar' ? o.nameAr : o.nameEn,
+        }))
+      : initialOfficers;
   const recordItems = buildTicketsRecordItems(records.items);
   const kpiCards = buildTicketsKpiCards(analytics?.kpis, t);
 
@@ -199,25 +208,13 @@ export function TicketsWorkspace({
           setStatus(s);
           setPage(1);
         }}
-        statuses={[
-          { key: 'NEW', label: 'New' },
-          { key: 'ASSIGNED', label: 'Assigned' },
-          { key: 'IN_PROGRESS', label: 'In Progress' },
-          { key: 'WAITING', label: 'Waiting / Pending' },
-          { key: 'RESOLVED', label: 'Resolved' },
-          { key: 'CLOSED', label: 'Closed' },
-        ]}
+        statuses={TICKET_STATUS_KEYS.map((k) => ({ key: k, label: internalTicketStatusLabel(locale, k) }))}
         severityOrPriority={priority}
         onSeverityOrPriorityChange={(p) => {
           setPriority(p);
           setPage(1);
         }}
-        severityOrPriorityOptions={[
-          { key: 'URGENT', label: 'Urgent' },
-          { key: 'HIGH', label: 'High' },
-          { key: 'NORMAL', label: 'Normal' },
-          { key: 'LOW', label: 'Low' },
-        ]}
+        severityOrPriorityOptions={PRIORITY_KEYS.map((k) => ({ key: k, label: PRIORITY_LABELS[locale][k] || k }))}
         onClearFilters={handleResetFilters}
       />
 

@@ -18,6 +18,7 @@ import {
 } from '../../lib/staff-reports-analytics-api';
 import { reportsAnalyticsI18n } from '../../i18n/staff-reports-analytics';
 import type { Locale } from '../../i18n/staff-shell';
+import { complaintStatusLabel, severityLabel } from '../../i18n/domain-labels';
 import {
   buildComplaintsKpiCards,
   buildComplaintsOfficerRows,
@@ -29,14 +30,19 @@ interface ComplaintsWorkspaceProps {
   locale: Locale;
   initialDepartments?: ReportFilterOption[];
   initialCategories?: ReportFilterOption[];
+  initialOfficers?: ReportFilterOption[];
   initialAnalytics?: ComplaintsAnalyticsResponse | null;
   initialRecords?: { total: number; items: ComplaintRecordRow[] } | null;
 }
+
+const COMPLAINT_STATUS_KEYS = ['SUBMITTED', 'MANAGER_REVIEW', 'BRANCH_REVIEW', 'IN_PROGRESS', 'RESOLVED', 'COMPLETED', 'CLOSED', 'REOPENED', 'REJECTED'];
+const SEVERITY_KEYS = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 
 export function ComplaintsWorkspace({
   locale,
   initialDepartments = [],
   initialCategories = [],
+  initialOfficers = [],
   initialAnalytics = null,
   initialRecords = null,
 }: ComplaintsWorkspaceProps) {
@@ -121,20 +127,33 @@ export function ComplaintsWorkspace({
     const { dateFrom: computedFrom, dateTo: computedTo } = periodToDateRange(period, customFrom, customTo);
     const params = new URLSearchParams({
       type: 'complaints',
+      reportType: 'complaints',
       format,
       ...(departmentId ? { departmentId } : {}),
       ...(officerId ? { ownerId: officerId } : {}),
       ...(status ? { status } : {}),
       ...(severity ? { severity } : {}),
+      ...(categoryId ? { categoryId } : {}),
+      ...(search ? { search } : {}),
+      ...(computedFrom ? { dateFrom: computedFrom } : {}),
+      ...(computedTo ? { dateTo: computedTo } : {}),
     });
-    window.open(`/api/reports/export-advanced?${params.toString()}`, '_blank');
+    const link = document.createElement('a');
+    link.href = `/api/reports/export-advanced?${params.toString()}`;
+    link.download = `complaints-report-${new Date().toISOString().slice(0, 10)}.${format === 'csv' ? 'csv' : 'xlsx'}`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
 
   const officerRows = buildComplaintsOfficerRows(analytics?.officers, locale);
-  const officerOptions: ReportFilterOption[] = (analytics?.officers || []).map((o) => ({
-    id: o.officerId,
-    name: locale === 'ar' ? o.nameAr : o.nameEn,
-  }));
+  const officerOptions: ReportFilterOption[] =
+    analytics?.officers && analytics.officers.length > 0
+      ? analytics.officers.map((o) => ({
+          id: o.officerId,
+          name: locale === 'ar' ? o.nameAr : o.nameEn,
+        }))
+      : initialOfficers;
   const recordItems = buildComplaintsRecordItems(records.items);
   const kpiCards = buildComplaintsKpiCards(analytics?.kpis, t);
 
@@ -181,24 +200,13 @@ export function ComplaintsWorkspace({
           setStatus(s);
           setPage(1);
         }}
-        statuses={[
-          { key: 'SUBMITTED', label: 'Submitted' },
-          { key: 'ASSIGNED', label: 'Assigned' },
-          { key: 'INVESTIGATING', label: 'Investigating' },
-          { key: 'RESOLVED', label: 'Resolved' },
-          { key: 'CLOSED', label: 'Closed' },
-        ]}
+        statuses={COMPLAINT_STATUS_KEYS.map((k) => ({ key: k, label: complaintStatusLabel(locale, k) }))}
         severityOrPriority={severity}
         onSeverityOrPriorityChange={(sev) => {
           setSeverity(sev);
           setPage(1);
         }}
-        severityOrPriorityOptions={[
-          { key: 'CRITICAL', label: 'Critical' },
-          { key: 'HIGH', label: 'High' },
-          { key: 'MEDIUM', label: 'Medium' },
-          { key: 'LOW', label: 'Low' },
-        ]}
+        severityOrPriorityOptions={SEVERITY_KEYS.map((k) => ({ key: k, label: severityLabel(locale, k) }))}
         categoryId={categoryId}
         onCategoryChange={(c) => {
           setCategoryId(c);

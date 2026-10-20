@@ -211,15 +211,21 @@ export class ReportsController {
     @Req() request: AuthenticatedRequest,
     @Res({ passthrough: true }) response: ExportResponse,
   ): Promise<string> {
-    const type = query.reportType === 'internal_tickets' ? 'internal_tickets' : 'complaints';
+    const type = (query.reportType || query.type) === 'internal_tickets' ? 'internal_tickets' : 'complaints';
+    const normalizedQuery: Record<string, string | undefined> = {
+      ...query,
+      targetDepartmentId: query.targetDepartmentId || query.departmentId,
+      assignedEmployeeId: query.assignedEmployeeId || query.ownerId,
+      priority: query.priority || query.severity,
+    };
     const format = exportFormat(query.format);
     const exportFile = (await this.analyticsService?.exportAdvanced(
       type,
-      query,
+      normalizedQuery,
       format,
       dashboardScope(request, query.branchId),
       auditContext(request),
-    )) ?? { fileName: 'report.csv', contentType: 'text/csv', body: '', rowCount: 0, rowLimit: 1000 };
+    )) ?? { fileName: `${type}-report.${format === 'csv' ? 'csv' : 'xls'}`, contentType: format === 'csv' ? 'text/csv' : 'application/vnd.ms-excel', body: '', rowCount: 0, rowLimit: 1000 };
 
     response.setHeader('content-type', exportFile.contentType);
     response.setHeader('content-disposition', `attachment; filename="${exportFile.fileName}"`);

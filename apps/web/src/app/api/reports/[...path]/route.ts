@@ -23,7 +23,7 @@ async function proxyReports(
 
   try {
     const headers = new Headers({
-      Accept: 'application/json',
+      Accept: request.headers.get('accept') ?? '*/*',
       cookie: request.headers.get('cookie') ?? '',
     });
 

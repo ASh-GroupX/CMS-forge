@@ -234,37 +234,21 @@ function rowFrom(row: Partial<StaffReportRow>): StaffReportRow | null {
 
 function kpisFrom(body: KpiResponse): StaffReportKpis | null {
   const kpis = body.kpis;
-  const agingBuckets = agingBucketsFrom(kpis?.agingBuckets);
-  if (
-    !kpis ||
-    typeof kpis.onTimeCompletionPercent !== 'number' ||
-    typeof kpis.activeOverdueCount !== 'number' ||
-    typeof kpis.averageDelayHours !== 'number' ||
-    typeof kpis.customerPromiseKeptPercent !== 'number' ||
-    typeof kpis.reopenedCount !== 'number' ||
-    typeof kpis.reopenRate !== 'number' ||
-    typeof kpis.escalationCount !== 'number' ||
-    typeof kpis.slaBreachRate !== 'number' ||
-    typeof kpis.medianTatHours !== 'number' ||
-    !agingBuckets ||
-    typeof kpis.averageFirstResponseHours !== 'number' ||
-    typeof kpis.averageResolutionHours !== 'number'
-  ) {
-    return null;
-  }
+  if (!kpis) return null;
+  const agingBuckets = agingBucketsFrom(kpis.agingBuckets) ?? { zeroToOneDays: 0, twoToThreeDays: 0, fourToSevenDays: 0, overSevenDays: 0 };
   return {
-    onTimeCompletionPercent: kpis.onTimeCompletionPercent,
-    activeOverdueCount: kpis.activeOverdueCount,
-    averageDelayHours: kpis.averageDelayHours,
-    customerPromiseKeptPercent: kpis.customerPromiseKeptPercent,
-    reopenedCount: kpis.reopenedCount,
-    reopenRate: kpis.reopenRate,
-    escalationCount: kpis.escalationCount,
-    slaBreachRate: kpis.slaBreachRate,
-    medianTatHours: kpis.medianTatHours,
+    onTimeCompletionPercent: Number(kpis.onTimeCompletionPercent ?? 0),
+    activeOverdueCount: Number(kpis.activeOverdueCount ?? 0),
+    averageDelayHours: Number(kpis.averageDelayHours ?? 0),
+    customerPromiseKeptPercent: Number(kpis.customerPromiseKeptPercent ?? 0),
+    reopenedCount: Number(kpis.reopenedCount ?? 0),
+    reopenRate: Number(kpis.reopenRate ?? 0),
+    escalationCount: Number(kpis.escalationCount ?? 0),
+    slaBreachRate: Number(kpis.slaBreachRate ?? 0),
+    medianTatHours: Number(kpis.medianTatHours ?? 0),
     agingBuckets,
-    averageFirstResponseHours: kpis.averageFirstResponseHours,
-    averageResolutionHours: kpis.averageResolutionHours,
+    averageFirstResponseHours: Number(kpis.averageFirstResponseHours ?? 0),
+    averageResolutionHours: Number(kpis.averageResolutionHours ?? 0),
   };
 }
 
@@ -280,9 +264,15 @@ function catalogFrom(body: unknown): StaffReportCatalog | null {
   return safeItems.length ? { items: safeItems } : null;
 }
 
-function agingBucketsFrom(value: unknown): StaffReportAgingBuckets | null {
-  if (!value || typeof value !== 'object') return null;
-  const buckets = value as Partial<StaffReportAgingBuckets>;
-  if (typeof buckets.zeroToOneDays !== 'number' || typeof buckets.twoToThreeDays !== 'number' || typeof buckets.fourToSevenDays !== 'number' || typeof buckets.overSevenDays !== 'number') return null;
-  return { zeroToOneDays: buckets.zeroToOneDays, twoToThreeDays: buckets.twoToThreeDays, fourToSevenDays: buckets.fourToSevenDays, overSevenDays: buckets.overSevenDays };
+function agingBucketsFrom(value: unknown): StaffReportAgingBuckets {
+  if (!value || typeof value !== 'object') {
+    return { zeroToOneDays: 0, twoToThreeDays: 0, fourToSevenDays: 0, overSevenDays: 0 };
+  }
+  const buckets = value as Record<string, unknown>;
+  return {
+    zeroToOneDays: Number(buckets.zeroToOneDays ?? 0),
+    twoToThreeDays: Number(buckets.twoToThreeDays ?? 0),
+    fourToSevenDays: Number(buckets.fourToSevenDays ?? 0),
+    overSevenDays: Number(buckets.overSevenDays ?? 0),
+  };
 }
