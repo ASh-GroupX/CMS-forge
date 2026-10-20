@@ -23,8 +23,12 @@ export default async function NewComplaintPage({
   const params = await searchParams;
   let finalCookie = cookieHeader;
   if (!finalCookie) {
-    const requestHeaders = await headers();
-    finalCookie = requestHeaders.get('cookie') ?? '';
+    try {
+      const requestHeaders = await headers();
+      finalCookie = requestHeaders.get('cookie') ?? '';
+    } catch {
+      finalCookie = '';
+    }
   }
   const locale = resolveLocale(readParam(params?.locale));
   const options = await getComplaintFormOptions({

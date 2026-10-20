@@ -62,7 +62,7 @@ export default async function ComplaintDetailPage({
       options={options}
       staff={staff}
       state={detailState}
-      timeline={detail ? await fetchComplaintTimeline({ apiUrl: process.env.API_URL ?? 'http://localhost:3000', complaintId: detail.id, cookies: apiInput.cookieHeader ?? '', fetchImpl: apiInput.fetchImpl ?? fetch }) : undefined}
+      timeline={detail?.communicationTimeline}
     />
   );
 }

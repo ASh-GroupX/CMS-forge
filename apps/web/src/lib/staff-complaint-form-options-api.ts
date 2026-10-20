@@ -5,6 +5,7 @@ export type ComplaintFormOption = {
   nameAr: string;
   departmentId?: string | null;
   branchId?: string | null;
+  parentId?: string | null;
 };
 
 export type StaffUserOption = {

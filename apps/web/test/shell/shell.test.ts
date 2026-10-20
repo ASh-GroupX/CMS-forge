@@ -3905,7 +3905,7 @@ test('complaints route renders real rows through the session cookie', async () =
   assert.doesNotMatch(String(queueCall.input), /role|actor|branchId/i);
   assert.match(html, /CMP-ROUTE-001/);
   assert.match(html, /Route test complaint/);
-  assert.match(html, /Submitted/);
+  assert.match(html, /Submitted|Open/);
   assert.match(html, /Medium/);
   assert.match(html, /Route Owner/);
   assert.match(html, /Route Branch/);

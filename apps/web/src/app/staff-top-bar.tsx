@@ -62,6 +62,28 @@ export function StaffTopBar({ account = null, createLabel, heading, isRtl, langu
   const resolvedSubheading = subheading ?? signedIn ?? subtitle ?? '';
 
   const canShowNotifications = showNotifications && Boolean(account);
+  const [hasUnread, setHasUnread] = useState(false);
+
+  useEffect(() => {
+    if (!canShowNotifications) return;
+    let mounted = true;
+    const checkUnread = async () => {
+      try {
+        const response = await fetch('/api/notifications?view=unread&limit=1', { cache: 'no-store' });
+        if (!response.ok) return;
+        const body = await response.json() as { items?: unknown[] };
+        if (mounted && Array.isArray(body?.items) && body.items.length > 0) {
+          setHasUnread(true);
+        }
+      } catch {
+        // Best effort
+      }
+    };
+    void checkUnread();
+    return () => {
+      mounted = false;
+    };
+  }, [canShowNotifications]);
 
   return <>
     <header className="sticky top-4 z-30 mx-4 mb-8 md:mx-6 rounded-2xl border border-line-subtle/40 bg-surface/70 px-4 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] md:px-6 transition-all duration-300">
@@ -70,7 +92,17 @@ export function StaffTopBar({ account = null, createLabel, heading, isRtl, langu
         <div className="flex shrink-0 items-center gap-2">
           {showSearch ? <><Button className="hidden h-11 w-[19rem] justify-start rounded-lg text-content-muted xl:flex" onClick={() => setSearchOpen(true)} type="button" variant="outline"><Search aria-hidden="true" className="me-2 size-5" /><span className="truncate">{search.placeholder}</span></Button><Button aria-label={search.label} className="xl:hidden" onClick={() => setSearchOpen(true)} size="icon" type="button" variant="outline"><Search aria-hidden="true" className="size-5" /></Button></> : null}
           {canShowNotifications ? (
-            <Button asChild size="icon" variant="ghost"><a aria-label="Notifications" href={notificationsHref}><Bell aria-hidden="true" className="size-5" /></a></Button>
+            <Button asChild className="relative" size="icon" variant="ghost">
+              <a aria-label="Notifications" href={notificationsHref}>
+                <Bell aria-hidden="true" className="size-5" />
+                {hasUnread ? (
+                  <span
+                    aria-hidden="true"
+                    className="absolute top-2 end-2 size-2 rounded-full bg-brand ring-2 ring-surface animate-pulse"
+                  />
+                ) : null}
+              </a>
+            </Button>
           ) : null}
           <Button asChild className="hidden sm:inline-flex" variant="ghost"><a aria-label={switchLabel} href={languageHref}>{switchTarget}</a></Button>
           <Button aria-label={themeLabel} aria-pressed={theme === 'dark'} className="md:hidden" onClick={toggleTheme} size="icon" type="button" variant="ghost">{theme === 'dark' ? <Sun aria-hidden="true" className="size-5" /> : <Moon aria-hidden="true" className="size-5" />}</Button>

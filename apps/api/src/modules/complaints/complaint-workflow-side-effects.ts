@@ -45,6 +45,7 @@ const NOTIFICATION_BY_ACTION: Partial<Record<ComplaintTransitionAction, string>>
   [ComplaintTransitionAction.SUBMIT]: 'complaint.submitted.internal',
   [ComplaintTransitionAction.APPROVE_AND_ROUTE]: 'workflow.approved-routed.internal',
   [ComplaintTransitionAction.ASSIGN_INVESTIGATION]: 'workflow.investigation-assigned.internal',
+  [ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE]: 'workflow.investigation-updated.internal',
   [ComplaintTransitionAction.RESOLVE]: 'workflow.resolved.internal',
   [ComplaintTransitionAction.RESOLVE_DIRECTLY]: 'workflow.resolved.internal',
   [ComplaintTransitionAction.REJECT_RESOLUTION]: 'workflow.resolution-rejected.internal',
@@ -96,12 +97,64 @@ export async function queueWorkflowSideEffects({
   }
 
   const templateCode = notificationTemplate(input.action);
-  if (templateCode && notificationsService) {
+  const targetRecipient = recipient(input, complaint);
+  const shouldQueue = templateCode && notificationsService && (
+    input.action !== ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE ||
+    Boolean(targetRecipient.recipientUserId && targetRecipient.recipientUserId !== input.actorId)
+  );
+  if (shouldQueue) {
     await safely('notification', complaint.id, () => notificationsService.queueInternal({
       complaintId: input.complaintId,
-      ...recipient(input, complaint),
-      templateCode,
+      ...targetRecipient,
+      templateCode: templateCode!,
       payload: notificationPayload(input, toStatus, complaint),
+    }));
+  }
+
+  if (input.action === ComplaintTransitionAction.ASSIGN_INVESTIGATION && complaint.createdById && complaint.createdById !== input.actorId && complaint.createdById !== targetOwnerId(input, complaint) && notificationsService) {
+    await safely('notification-creator-assigned', complaint.id, () => notificationsService.queueInternal({
+      complaintId: input.complaintId,
+      recipientUserId: complaint.createdById!,
+      templateCode: 'workflow.investigation-assigned.creator',
+      payload: {
+        complaintId: input.complaintId,
+        fromStatus: input.fromStatus,
+        toStatus,
+        action: input.action,
+        actorId: input.actorId ?? null,
+        ownerId: targetOwnerId(input, complaint),
+        ...(complaint.referenceNumber ? {
+          complaintReference: complaint.referenceNumber,
+          referenceNumber: complaint.referenceNumber,
+          targetType: 'COMPLAINT',
+          targetId: input.complaintId,
+          targetHref: `/complaints/${input.complaintId}`,
+          href: `/complaints/${input.complaintId}`,
+          title: `بدء التحقيق في الشكوى ${complaint.referenceNumber} / Investigation started on ${complaint.referenceNumber}`,
+        } : {}),
+      },
+    }));
+  }
+
+  if (input.investigationNotes && input.action !== ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE && input.action !== ComplaintTransitionAction.ASSIGN_INVESTIGATION && complaint.createdById && complaint.createdById !== input.actorId && notificationsService) {
+    await safely('notification-creator-investigation-notes', complaint.id, () => notificationsService.queueInternal({
+      complaintId: input.complaintId,
+      recipientUserId: complaint.createdById!,
+      templateCode: 'workflow.investigation-updated.creator',
+      payload: {
+        complaintId: input.complaintId,
+        investigationNotes: input.investigationNotes,
+        actorId: input.actorId ?? null,
+        ...(complaint.referenceNumber ? {
+          complaintReference: complaint.referenceNumber,
+          referenceNumber: complaint.referenceNumber,
+          targetType: 'COMPLAINT',
+          targetId: input.complaintId,
+          targetHref: `/complaints/${input.complaintId}`,
+          href: `/complaints/${input.complaintId}`,
+          title: `تحديث التحقيق في الشكوى ${complaint.referenceNumber} / Investigation update on ${complaint.referenceNumber}`,
+        } : {}),
+      },
     }));
   }
 
@@ -165,11 +218,22 @@ function recipient(input: ApplyComplaintTransitionInput, complaint: ComplaintSta
 }
 
 function notificationPayload(input: ApplyComplaintTransitionInput, toStatus: ComplaintStatus, complaint: ComplaintStatusRecord) {
+  const commonMeta = complaint.referenceNumber ? {
+    complaintReference: complaint.referenceNumber,
+    referenceNumber: complaint.referenceNumber,
+    targetType: 'COMPLAINT',
+    targetId: input.complaintId,
+    targetHref: `/complaints/${input.complaintId}`,
+    href: `/complaints/${input.complaintId}`,
+    title: actionTitle(input.action, complaint.referenceNumber),
+  } : {};
+
   if (input.action === ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE) {
     return {
       complaintId: input.complaintId,
       investigationNotes: input.investigationNotes ?? '',
       actorId: input.actorId ?? null,
+      ...commonMeta,
     };
   }
 
@@ -182,6 +246,7 @@ function notificationPayload(input: ApplyComplaintTransitionInput, toStatus: Com
       actorId: input.actorId ?? null,
       reason: input.reason ?? null,
       customerCommunicationStatus: input.customerCommunicationStatus ?? null,
+      ...commonMeta,
     };
   }
 
@@ -196,7 +261,26 @@ function notificationPayload(input: ApplyComplaintTransitionInput, toStatus: Com
     ...(input.targetDepartmentId ? { targetDepartmentId: input.targetDepartmentId } : {}),
     ...(ownerId ? { ownerId } : {}),
     ...(input.resolutionType ? { resolutionType: input.resolutionType } : {}),
+    ...commonMeta,
   };
+}
+
+function actionTitle(action: ComplaintTransitionAction, ref: string): string {
+  switch (action) {
+    case ComplaintTransitionAction.ASSIGN_INVESTIGATION:
+      return `إسناد التحقيق في الشكوى ${ref} / Investigation assigned on ${ref}`;
+    case ComplaintTransitionAction.ADD_INVESTIGATION_UPDATE:
+      return `تحديث التحقيق في الشكوى ${ref} / Investigation update on ${ref}`;
+    case ComplaintTransitionAction.RESOLVE:
+    case ComplaintTransitionAction.RESOLVE_DIRECTLY:
+      return `تم حل الشكوى ${ref} / Complaint resolved: ${ref}`;
+    case ComplaintTransitionAction.CLOSE:
+      return `إغلاق الشكوى ${ref} / Complaint closed: ${ref}`;
+    case ComplaintTransitionAction.REOPEN:
+      return `إعادة فتح الشكوى ${ref} / Complaint reopened: ${ref}`;
+    default:
+      return `تحديث الشكوى ${ref} / Complaint update: ${ref}`;
+  }
 }
 
 function targetOwnerId(input: ApplyComplaintTransitionInput, complaint: ComplaintStatusRecord): string | null {

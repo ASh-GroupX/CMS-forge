@@ -15,7 +15,7 @@ export async function createComplaintComment(deps: Deps, input: CreateComplaintC
   const body = nonEmpty(input.body); assertPublicSafe(input);
   const internal = input.visibility === CommentVisibility.INTERNAL;
   const collaboration = Boolean(input.mentionTargets?.length || input.ccUserIds?.length || input.actionTask);
-  const complaint = internal && collaboration ? await requiredComplaint(deps.repository, input.complaintId) : null;
+  const complaint = internal ? await requiredComplaint(deps.repository, input.complaintId) : null;
   const actor = internal && collaboration ? requiredActor(input) : null;
   if (internal && collaboration && !deps.groups) throw forbidden();
   const mentions = internal && deps.groups && actor && complaint ? await deps.groups.resolveMentions(actor, complaint.branchId, input.mentionTargets ?? []) : [];
@@ -33,6 +33,30 @@ export async function createComplaintComment(deps: Deps, input: CreateComplaintC
     const watchers = (await deps.repository.listWatchers(complaint.id)).map(({ userId, user }) => ({ userId, email: user.email, nameEn: user.nameEn, nameAr: user.nameAr }));
     await deps.notifications?.queueCollaboration({ recordType: 'COMPLAINT', recordId: complaint.id, complaintId: complaint.id, href: `/complaints/${complaint.id}?tab=communication`, title: complaint.subject, excerpt: committed.comment.body, confidential: false, eventKey: `complaint-comment:${committed.comment.id}`, mentions: committed.mentions, watchers });
     if (committed.task && assignment) await deps.notifications?.queueCollaboration({ recordType: 'TASK', recordId: committed.task.id, complaintId: complaint.id, href: `/tasks/${committed.task.id}`, title: committed.task.title, excerpt: null, confidential: committed.task.confidentialityLevel !== 'NORMAL', eventKey: `task-assigned:${committed.task.id}`, assignment, mentions: [], watchers: [] });
+  }
+  if (internal && complaint?.createdById && complaint.createdById !== input.actorId && deps.notifications) {
+    try {
+      await deps.notifications.queueInternal({
+        complaintId: complaint.id,
+        recipientUserId: complaint.createdById,
+        templateCode: 'complaint.note-added.creator',
+        locale: 'ar',
+        idempotencyKey: `complaint-note:${committed.comment.id}:${complaint.createdById}`,
+        payload: {
+          complaintId: complaint.id,
+          complaintReference: complaint.referenceNumber,
+          referenceNumber: complaint.referenceNumber,
+          targetType: 'COMPLAINT',
+          targetId: complaint.id,
+          targetHref: `/complaints/${complaint.id}`,
+          href: `/complaints/${complaint.id}`,
+          title: `ملاحظة جديدة على الشكوى ${complaint.referenceNumber} / New note on ${complaint.referenceNumber}`,
+          body: committed.comment.body.slice(0, 240),
+        },
+      });
+    } catch {
+      // Best-effort post-commit side effect
+    }
   }
   return commentItem(committed.comment, committed.task?.id ?? null);
 }

@@ -144,9 +144,13 @@ export function ComplaintCreateForm({
 
   const branches = options?.branches ?? [];
   const categories = options?.categories ?? [];
+  const subcategories = categories.filter((item) => item.parentId);
+  const rootCategories = categories.filter((item) => !item.parentId);
+  const categoryList = rootCategories.length > 0 ? rootCategories : categories;
   const departments = options?.departments ?? [];
-  const filteredDepartments = selectedBranch ? departments.filter((d: any) => d.branchId === selectedBranch) : [];
-  const categoryOptions = selectedDepartment ? categories.filter((item) => item.departmentId === selectedDepartment) : [];
+  const filteredDepartments = selectedBranch ? departments.filter((d: any) => !d.branchId || d.branchId === selectedBranch) : departments;
+  const categoryOptions = selectedDepartment ? categoryList.filter((item) => !item.departmentId || item.departmentId === selectedDepartment) : categoryList;
+  const subcategoryOptions = subcategories.length > 0 ? subcategories : categoryList;
 
   const allUsers = options?.users ?? [];
   const deptOfficers = selectedDepartment
@@ -357,7 +361,8 @@ export function ComplaintCreateForm({
               <TextField error={fieldError(fieldErrors, 'customerPhone')} label={`${extra.fields.customerPhone} * (${locale === 'ar' ? 'إلزامي' : 'Mandatory'})`} name="customerPhone" type="tel" value={defaults.customerPhone} required />
               <TextField error={fieldError(fieldErrors, 'customerNumber')} label={`${extra.fields.customerNumber} (${locale === 'ar' ? 'تلقائي افتراضي' : 'Auto Default'})`} name="customerNumber" value={defaults.customerNumber} />
 
-              <SelectField choose={t.choose} error={fieldError(fieldErrors, 'categoryId')} label={`${t.fields.category} *`} locale={locale} name="categoryId" options={categoryOptions} value={selectedCategory} onChange={setSelectedCategory} />
+              <SelectField choose={t.choose} error={fieldError(fieldErrors, 'categoryId')} label={`${t.fields.category} *`} locale={locale} name="categoryId" options={categoryOptions.length > 0 ? categoryOptions : categories} value={selectedCategory} onChange={setSelectedCategory} />
+              <SelectField choose={t.choose} error={fieldError(fieldErrors, 'subcategoryId')} label={extra.fields.subcategory} locale={locale} name="subcategoryId" options={subcategoryOptions.length > 0 ? subcategoryOptions : categories} />
 
               <Field error={fieldError(fieldErrors, 'type')} id="type" label={locale === 'ar' ? 'نوع الطلب' : 'Request Type'}>
                 <FormSelect
@@ -692,31 +697,32 @@ export function buildStaffComplaintCreateSubmission(formData: FormData): {
     customerName,
     customerPhone: optionalTextValue(formData, 'customerPhone'),
     customerNumber: optionalTextValue(formData, 'customerNumber'),
-    departmentId: optionalTextValue(formData, 'departmentId'),
     categoryId: textValue(formData, 'categoryId'),
-    ['owner' + 'Id']: optionalTextValue(formData, 'primaryOfficerId'),
-    backupOfficerId: optionalTextValue(formData, 'backupOfficerId'),
-    collaboratorId: optionalTextValue(formData, 'collaboratorId'),
-    alternativeCarProvided: formData.get('alternativeCarProvided') === 'on',
+    ...(formData.has('subcategoryId') ? { subcategoryId: optionalTextValue(formData, 'subcategoryId') } : {}),
     description: textValue(formData, 'description'),
     incidentAt: incidentAtValue(textValue(formData, 'incidentAt')),
     subject,
     severity: textValue(formData, 'severity') as StaffComplaintCreateRequest['severity'],
     vehicleRelated,
-    vehicleVin: textValue(formData, 'vehicleVin'),
+    vehicleVin: optionalTextValue(formData, 'vehicleVin'),
     vehicleId: null,
-    channel: finalChannel,
-    customerType: optionalTextValue(formData, 'customerType'),
-    lastServiceDate: null,
-    odometer: optionalNumberValue(formData, 'odometer'),
-    warrantyActive: formData.get('warrantyActive') === 'on',
-    salesAdvisorName: optionalTextValue(formData, 'salesAdvisorName'),
-    rootCauseCategory: optionalTextValue(formData, 'rootCauseCategory'),
-    repeatCustomer: formData.get('repeatCustomer') === 'on',
-    templateId: optionalTextValue(formData, 'templateId'),
-    templateData: Object.keys(templateData).length > 0 ? templateData : undefined,
-    type: textValue(formData, 'type') || 'COMPLAINT',
   };
+  if (formData.has('departmentId')) complaint.departmentId = optionalTextValue(formData, 'departmentId');
+  if (formData.has('primaryOfficerId')) (complaint as Record<string, unknown>)['owner' + 'Id'] = optionalTextValue(formData, 'primaryOfficerId');
+  if (formData.has('backupOfficerId')) complaint.backupOfficerId = optionalTextValue(formData, 'backupOfficerId');
+  if (formData.has('collaboratorId')) complaint.collaboratorId = optionalTextValue(formData, 'collaboratorId');
+  if (formData.has('alternativeCarProvided')) complaint.alternativeCarProvided = formData.get('alternativeCarProvided') === 'on';
+  if (formData.has('baseChannel') || formData.has('channel')) complaint.channel = finalChannel;
+  if (formData.has('customerType')) complaint.customerType = optionalTextValue(formData, 'customerType');
+  if (formData.has('lastServiceDate')) complaint.lastServiceDate = null;
+  if (formData.has('odometer')) complaint.odometer = optionalNumberValue(formData, 'odometer');
+  if (formData.has('warrantyActive')) complaint.warrantyActive = formData.get('warrantyActive') === 'on';
+  if (formData.has('salesAdvisorName')) complaint.salesAdvisorName = optionalTextValue(formData, 'salesAdvisorName');
+  if (formData.has('rootCauseCategory')) complaint.rootCauseCategory = optionalTextValue(formData, 'rootCauseCategory');
+  if (formData.has('repeatCustomer')) complaint.repeatCustomer = formData.get('repeatCustomer') === 'on';
+  if (formData.has('templateId')) complaint.templateId = optionalTextValue(formData, 'templateId');
+  if (Object.keys(templateData).length > 0) complaint.templateData = templateData;
+  if (formData.has('type')) complaint.type = textValue(formData, 'type') || 'COMPLAINT';
   const customerSource = dataSourceValue(formData, 'customerSource');
   const vehicleSource = vehicleRelated ? dataSourceValue(formData, 'vehicleSource') : undefined;
   const vehiclePlate = optionalTextValue(formData, 'vehiclePlate');

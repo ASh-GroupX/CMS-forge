@@ -31,6 +31,9 @@ export default async function ComplaintsPage({ searchParams, cookieHeader: propC
   const apiUrl = process.env.API_URL ?? 'http://localhost:3000';
   
   const params = await searchParams;
+  if (typeof params?.locale === 'string') {
+    locale = resolveLocale(params.locale);
+  }
   
   const query: any = {};
   if (typeof params?.search === 'string') query.search = params.search;
@@ -48,7 +51,7 @@ export default async function ComplaintsPage({ searchParams, cookieHeader: propC
     getComplaintFormOptions({ apiUrl, cookieHeader, ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
   ]);
   const rows = queueResult.status === 'ready' ? queueResult.data?.rows : undefined;
-  const state = queueResult.status === 'error' ? 'error' : undefined;
+  const state = queueResult.status === 'error' || queueResult.status === 'denied' ? queueResult.status : undefined;
   const queue = queueResult.status === 'ready' ? queueResult.data : undefined;
 
   return (
