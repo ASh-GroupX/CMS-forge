@@ -117,7 +117,7 @@ function CreateUserForm({ action, data, locale }: { action: AdminAction; data: A
           {t.fields.department}
           <FormSelect name="departmentId" options={(data.departments ?? []).map((department) => ({ label: localizedName(department, locale), value: department.id }))} required />
         </label>
-        <Field label={t.fields.initialPassword} minLength={12} name="initialPassword" type="password" />
+        <Field label={t.fields.initialPassword} minLength={6} name="initialPassword" type="password" />
         <Button className="md:col-span-3" type="submit">{t.actions.create}</Button>
       </form>
     </details>

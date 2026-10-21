@@ -285,9 +285,9 @@ function permissionCodes(user: Pick<StaffAuthRecord, 'role'>): string[] {
 }
 
 function validatePasswordStrength(password: string): void {
-  if (password.length < 12) {
+  if (password.length < 6) {
     throw new AppException('VALIDATION_FAILED', 'Invalid password reset request', HttpStatus.BAD_REQUEST, [
-      { field: 'newPassword', code: 'MIN_LENGTH', message: 'Password must be at least 12 characters.' },
+      { field: 'newPassword', code: 'MIN_LENGTH', message: 'Password must be at least 6 characters.' },
     ]);
   }
 }

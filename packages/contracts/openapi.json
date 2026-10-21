@@ -6799,7 +6799,7 @@
           },
           "newPassword": {
             "type": "string",
-            "minLength": 12
+            "minLength": 6
           }
         },
         "additionalProperties": false
@@ -10940,7 +10940,7 @@
           },
           "initialPassword": {
             "type": "string",
-            "minLength": 12
+            "minLength": 6
           }
         }
       },

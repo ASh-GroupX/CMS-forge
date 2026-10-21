@@ -10,7 +10,7 @@ async function main(): Promise<void> {
   const branchCode = process.env.CMS_BOOTSTRAP_BRANCH_CODE?.trim() || null;
 
   if (!email.includes('@')) fail('CMS_BOOTSTRAP_EMAIL must be an email address.');
-  if (password.length < 12) fail('CMS_BOOTSTRAP_PASSWORD must be at least 12 characters.');
+  if (password.length < 6) fail('CMS_BOOTSTRAP_PASSWORD must be at least 6 characters.');
 
   const [role, branch] = await Promise.all([
     prisma.role.findUnique({ where: { code: roleCode } }),

@@ -76,7 +76,7 @@ export function PasswordReset({ locale, state }: { locale: Locale; state?: Reset
             </div>
             <div className="grid gap-1">
               <Label htmlFor="new-password">{t.newPassword}</Label>
-              <Input id="new-password" name="newPassword" type="password" autoComplete="new-password" minLength={12} required />
+              <Input id="new-password" name="newPassword" type="password" autoComplete="new-password" minLength={6} required />
             </div>
             <Button type="submit">{t.resetSubmit}</Button>
             <a className="text-sm font-semibold text-brand underline" href={`${queryPrefix}request`}>

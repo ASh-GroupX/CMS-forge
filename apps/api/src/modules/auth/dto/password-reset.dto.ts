@@ -31,8 +31,8 @@ export class PasswordResetConsumeDto {
     }
     if (typeof input.newPassword !== 'string') {
       fieldErrors.push({ field: 'newPassword', code: 'INVALID_TYPE', message: 'Password must be a string.' });
-    } else if (input.newPassword.length < 12) {
-      fieldErrors.push({ field: 'newPassword', code: 'MIN_LENGTH', message: 'Password must be at least 12 characters.' });
+    } else if (input.newPassword.length < 6) {
+      fieldErrors.push({ field: 'newPassword', code: 'MIN_LENGTH', message: 'Password must be at least 6 characters.' });
     }
     if (fieldErrors.length) throw invalidPasswordReset(fieldErrors);
     return new PasswordResetConsumeDto((input.token as string).trim(), input.newPassword as string);

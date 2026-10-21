@@ -113,7 +113,7 @@ export class AdminUsersService {
     const department = await this.validDepartment(input.departmentId);
     if (department.branchId && department.branchId !== branchId) throw validation('departmentId', 'departmentId is outside the user branch.');
     const password = nonEmpty(input.initialPassword, 'initialPassword');
-    if (password.length < 12) throw validation('initialPassword', 'initialPassword must be at least 12 characters.');
+    if (password.length < 6) throw validation('initialPassword', 'initialPassword must be at least 6 characters.');
     const rawUsername = typeof input.username === 'string' ? input.username.trim().toLowerCase() : '';
     const username = rawUsername || (email ? email.split('@')[0] : (phone ? phone.replace(/\D/g, '') : null)) || `user_${Date.now()}`;
     const viewMode = input.viewMode || 'BOTH';
