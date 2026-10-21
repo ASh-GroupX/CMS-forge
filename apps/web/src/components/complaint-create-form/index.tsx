@@ -277,7 +277,7 @@ export function ComplaintCreateForm({
                   id="primaryOfficerId"
                   name="primaryOfficerId"
                   options={deptOfficers.map((u) => ({
-                    label: `${locale === 'ar' ? u.nameAr : u.nameEn} (${u.email})`,
+                    label: formatOfficerLabel(u, locale),
                     value: u.id,
                   }))}
                   placeholder={locale === 'ar' ? 'اختر الموظف المسؤول الرئيسي' : 'Select Primary Officer'}
@@ -292,7 +292,7 @@ export function ComplaintCreateForm({
                   id="backupOfficerId"
                   name="backupOfficerId"
                   options={deptOfficers.map((u) => ({
-                    label: `${locale === 'ar' ? u.nameAr : u.nameEn} (${u.email})`,
+                    label: formatOfficerLabel(u, locale),
                     value: u.id,
                   }))}
                   placeholder={locale === 'ar' ? 'اختر موظف بديل (اختياري)' : 'Select Backup Officer (Optional)'}
@@ -336,7 +336,7 @@ export function ComplaintCreateForm({
                         id="collaboratorId"
                         name="collaboratorId"
                         options={collabOfficers.map((u) => ({
-                          label: `${locale === 'ar' ? u.nameAr : u.nameEn} (${u.email})`,
+                          label: formatOfficerLabel(u, locale),
                           value: u.id,
                         }))}
                         placeholder={locale === 'ar' ? 'اختر الموظف المتعاون' : 'Select Collaborator Officer'}
@@ -857,4 +857,12 @@ function formDefaults(selectedMatch: DmsCustomerVehicleMatch | null, fallbackCus
     vehicleSource: hasVehicle ? 'DMS' : '',
     vehicleVin: selectedMatch?.vin ?? '',
   };
+}
+
+function formatOfficerLabel(u: { nameAr: string; nameEn: string; email?: string | null; phone?: string | null }, locale: string): string {
+  const name = locale === 'ar' ? u.nameAr : u.nameEn;
+  const parts: string[] = [];
+  if (u.email) parts.push(u.email);
+  if (u.phone) parts.push(u.phone);
+  return parts.length > 0 ? `${name} (${parts.join(' • ')})` : name;
 }

@@ -52,6 +52,18 @@ export class AdminUsersController {
     const input = body as Record<string, unknown>;
     return this.users.updateAssignments(id, optionalText(input.branchId), optionalText(input.departmentId), optionalText(input.roleCode), auditContext(request));
   }
+
+  @Post(':id/nav-rules')
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('USERS_MANAGE')
+  updateNavRules(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    const input = (body ?? {}) as Record<string, unknown>;
+    const viewMode = optionalText(input.viewMode) ?? 'BOTH';
+    const allowedNavKeys = Array.isArray(input.allowedNavKeys)
+      ? input.allowedNavKeys.filter((k): k is string => typeof k === 'string')
+      : [];
+    return this.users.updateNavRules(id, viewMode, allowedNavKeys, auditContext(request));
+  }
 }
 
 @Controller('staff')
@@ -70,8 +82,17 @@ export class StaffLookupController {
 function parseCreateUser(body: unknown): CreateAdminUserInput {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw badBody('body');
   const input = body as Record<string, unknown>;
+  const rawEmail = optionalText(input.email);
+  const rawPhone = optionalText(input.phone);
+  const viewMode = optionalText(input.viewMode);
+  const allowedNavKeys = Array.isArray(input.allowedNavKeys)
+    ? input.allowedNavKeys.filter((k): k is string => typeof k === 'string')
+    : undefined;
   return {
-    email: text(input.email, 'email'),
+    email: rawEmail,
+    phone: rawPhone,
+    viewMode: viewMode ?? undefined,
+    allowedNavKeys,
     username: optionalText(input.username),
     nameEn: text(input.nameEn, 'nameEn'),
     nameAr: text(input.nameAr, 'nameAr'),

@@ -3,8 +3,11 @@ import { PrismaService } from '../../core/http-kernel.js';
 
 export type StaffAuthRecord = {
   id: string;
-  email: string;
+  email: string | null;
   username: string | null;
+  phone: string | null;
+  viewMode?: string | null;
+  allowedNavKeys?: string[];
   nameEn: string;
   nameAr: string;
   passwordHash: string | null;
@@ -52,12 +55,16 @@ export class AuthRepository {
 
   async findStaffByIdentifier(identifier: string): Promise<StaffAuthRecord | null> {
     const value = identifier.toLowerCase();
+    const raw = identifier.trim();
     return this.prisma.user.findFirst({
-      where: { OR: [{ email: value }, { username: value }] },
+      where: { OR: [{ email: value }, { username: value }, { phone: raw }] },
       select: {
         id: true,
         email: true,
         username: true,
+        phone: true,
+        viewMode: true,
+        allowedNavKeys: true,
         nameEn: true,
         nameAr: true,
         passwordHash: true,
@@ -135,6 +142,9 @@ export class AuthRepository {
             id: true,
             email: true,
             username: true,
+            phone: true,
+            viewMode: true,
+            allowedNavKeys: true,
             nameEn: true,
             nameAr: true,
             branchId: true,

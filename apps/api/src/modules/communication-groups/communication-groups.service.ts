@@ -8,7 +8,7 @@ import { CommunicationGroupsRepository, type CommunicationGroupRecord, type Comm
 
 export type CommunicationActor = { userId: string; roleCode: string; branchId: string | null; permissions: string[] };
 export type MentionTarget = { type: 'USER' | 'SYSTEM_ROLE' | 'SYSTEM_DEPARTMENT' | 'CUSTOM_GROUP'; id: string };
-export type ResolvedMention = { userId: string; email: string; nameEn: string; nameAr: string; source: CollaborationMentionSource; sourceId: string | null; sourceLabel: string };
+export type ResolvedMention = { userId: string; email: string | null; nameEn: string; nameAr: string; source: CollaborationMentionSource; sourceId: string | null; sourceLabel: string };
 export type CommunicationTargetDto = { id: string; type: MentionTarget['type']; label: string; labelAr: string; recipientCount: number } & Partial<ReturnType<typeof staffContext>>;
 export type CommunicationTargetsResponse = { targets: CommunicationTargetDto[]; recipientLimit: number; confirmationRequiredAbove: number };
 type AuditContext = { actorId?: string | null; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null };

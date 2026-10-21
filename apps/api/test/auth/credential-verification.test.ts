@@ -51,6 +51,9 @@ test('valid active staff credentials return safe auth claims', async () => {
   assert.deepEqual(claims, {
     userId: 'usr_test',
     email: 'admin@cms-auto.test',
+    phone: null,
+    viewMode: 'BOTH',
+    allowedNavKeys: [],
     nameEn: 'System Admin',
     nameAr: 'System Admin',
     roleCode: 'ADMIN',
@@ -111,7 +114,7 @@ test('auth repository looks up staff by username or email', async () => {
 
   await repository.findStaffByIdentifier('Admin');
 
-  assert.deepEqual(capturedWhere, { OR: [{ email: 'admin' }, { username: 'admin' }] });
+  assert.deepEqual(capturedWhere, { OR: [{ email: 'admin' }, { username: 'admin' }, { phone: 'Admin' }] });
   assert.equal(JSON.stringify(capturedSelect).includes('"isActive":true'), true);
 });
 

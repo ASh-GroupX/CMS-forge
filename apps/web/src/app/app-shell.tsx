@@ -97,7 +97,7 @@ const ROLE_LABELS: Record<Locale, Record<string, string>> = {
 };
 
 export function staffIdentity(principal: StaffSessionPrincipal, locale: Locale): StaffIdentity {
-  const name = (locale === 'ar' ? principal.nameAr : principal.nameEn).trim() || principal.email;
+  const name = (locale === 'ar' ? principal.nameAr : principal.nameEn).trim() || principal.email || principal.phone || 'User';
   const roleLabels = ROLE_LABELS[locale];
   return { name, branch: (locale === 'ar' ? principal.branchNameAr : principal.branchName) || staffShellText[locale].branch, role: roleLabels[principal.roleCode] ?? roleLabels.STAFF!, initials: name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toLocaleUpperCase(locale) };
 }

@@ -2,19 +2,19 @@ import { CollaborationRecordType, NotificationChannel, type Prisma } from '@pris
 import type { NotificationDigestRepository } from './notification-digest.repository.js';
 import type { NotificationsService } from './notifications.service.js';
 
-export type CollaborationRecipient = { userId: string; email: string; nameEn: string; nameAr: string };
+export type CollaborationRecipient = { userId: string; email?: string | null; nameEn: string; nameAr: string };
 export type CollaborationNotificationInput = { recordType: CollaborationRecordType; recordId: string; complaintId?: string | null; href: string; title: string; excerpt?: string | null; confidential: boolean; eventKey: string; assignment?: CollaborationRecipient | null; mentions: CollaborationRecipient[]; watchers: CollaborationRecipient[] };
 type QueueNotifications = Pick<NotificationsService, 'queueInternal'>;
 
 export async function queueCollaboration(notifications: QueueNotifications, digest: NotificationDigestRepository, input: CollaborationNotificationInput): Promise<void> {
   const recipients = new Map<string, { recipient: CollaborationRecipient; priority: number; reason: 'assignment' | 'mention' | 'cc' }>();
-  const add = (recipient: CollaborationRecipient | null | undefined, priority: number, reason: 'assignment' | 'mention' | 'cc') => { if (!recipient?.userId || !recipient.email) return; const current = recipients.get(recipient.userId); if (!current || priority > current.priority) recipients.set(recipient.userId, { recipient, priority, reason }); };
+  const add = (recipient: CollaborationRecipient | null | undefined, priority: number, reason: 'assignment' | 'mention' | 'cc') => { if (!recipient?.userId) return; const current = recipients.get(recipient.userId); if (!current || priority > current.priority) recipients.set(recipient.userId, { recipient, priority, reason }); };
   add(input.assignment, 3, 'assignment'); input.mentions.forEach((recipient) => add(recipient, 2, 'mention')); input.watchers.forEach((recipient) => add(recipient, 1, 'cc'));
   const excerpt = input.confidential ? null : clippedExcerpt(input.excerpt);
   await Promise.all([...recipients.values()].map(async ({ recipient, priority, reason }) => {
     const payload = collaborationPayload(input, recipient, reason, excerpt);
     await notifications.queueInternal({ complaintId: input.complaintId ?? null, recipientUserId: recipient.userId, templateCode: `collaboration.${input.recordType.toLowerCase()}.${reason}`, locale: 'ar', idempotencyKey: `${input.eventKey}:${recipient.userId}:in-app`, payload });
-    if (priority >= 2) return notifications.queueInternal({ complaintId: input.complaintId ?? null, recipientUserId: recipient.userId, channel: NotificationChannel.EMAIL, templateCode: `collaboration.${input.recordType.toLowerCase()}.${reason}`, locale: 'ar', idempotencyKey: `${input.eventKey}:${recipient.userId}:email`, payload: emailPayload(payload, recipient.email) });
+    if (priority >= 2 && recipient.email) return notifications.queueInternal({ complaintId: input.complaintId ?? null, recipientUserId: recipient.userId, channel: NotificationChannel.EMAIL, templateCode: `collaboration.${input.recordType.toLowerCase()}.${reason}`, locale: 'ar', idempotencyKey: `${input.eventKey}:${recipient.userId}:email`, payload: emailPayload(payload, recipient.email) });
     return digest.queue({ recipientUserId: recipient.userId, recordType: input.recordType, recordId: input.recordId, eventKey: `${input.eventKey}:${recipient.userId}`, payload });
   }));
 }
@@ -26,7 +26,9 @@ export async function flushCollaborationDigests(notifications: QueueNotification
   let queued = 0; let delivered = 0;
   for (const group of grouped.values()) {
     const first = group[0]!;
-    await notifications.queueInternal({ recipientUserId: first.recipientUserId, channel: NotificationChannel.EMAIL, templateCode: `collaboration.${first.recordType.toLowerCase()}.digest`, locale: 'ar', idempotencyKey: `digest:${first.recipientUserId}:${first.recordType}:${first.recordId}:${group.map((item) => item.id).join(':')}`, payload: digestPayload(first.payload, group.length, first.recipientUser.email) });
+    if (first.recipientUser.email) {
+      await notifications.queueInternal({ recipientUserId: first.recipientUserId, channel: NotificationChannel.EMAIL, templateCode: `collaboration.${first.recordType.toLowerCase()}.digest`, locale: 'ar', idempotencyKey: `digest:${first.recipientUserId}:${first.recordType}:${first.recordId}:${group.map((item) => item.id).join(':')}`, payload: digestPayload(first.payload, group.length, first.recipientUser.email) });
+    }
     queued += 1; delivered += await digest.markDelivered(group.map((item) => item.id), now);
   }
   return { queued, delivered };

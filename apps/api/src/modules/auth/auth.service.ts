@@ -37,7 +37,10 @@ export type VerifyCredentialsInput = {
 
 export type StaffAuthClaims = {
   userId: string;
-  email: string;
+  email: string | null;
+  phone?: string | null;
+  viewMode?: string | null;
+  allowedNavKeys?: string[];
   nameEn: string;
   nameAr: string;
   roleCode: StaffAuthRecord['role']['code'];
@@ -267,25 +270,18 @@ function authDenied(code: 'AUTH_INVALID_CREDENTIALS' | 'AUTH_LOCKED_OR_INACTIVE'
   return new AppException(code, 'Invalid credentials', HttpStatus.UNAUTHORIZED);
 }
 
-// Single source for the safe server-derived claims shape (login + session).
 function staffClaims(user: Omit<StaffAuthRecord, 'passwordHash'>): StaffAuthClaims {
   return {
-    userId: user.id,
-    email: user.email,
-    nameEn: user.nameEn,
-    nameAr: user.nameAr,
-    roleCode: user.role.code,
-    permissions: permissionCodes(user),
-    branchId: user.branchId,
-    departmentId: user.departmentId ?? null,
+    userId: user.id, email: user.email, phone: user.phone ?? null,
+    viewMode: user.viewMode ?? 'BOTH', allowedNavKeys: user.allowedNavKeys ?? [],
+    nameEn: user.nameEn, nameAr: user.nameAr, roleCode: user.role.code, permissions: permissionCodes(user),
+    branchId: user.branchId, departmentId: user.departmentId ?? null,
     branchName: user.branch?.nameEn ?? null, branchNameAr: user.branch?.nameAr ?? null, branchTimezone: user.branch?.timezone ?? null,
   };
 }
 
 function permissionCodes(user: Pick<StaffAuthRecord, 'role'>): string[] {
-  return user.role.permissions
-    ?.filter(({ permission }) => permission.isActive)
-    .map(({ permission }) => permission.code) ?? [];
+  return user.role.permissions?.filter(({ permission }) => permission.isActive).map(({ permission }) => permission.code) ?? [];
 }
 
 function validatePasswordStrength(password: string): void {

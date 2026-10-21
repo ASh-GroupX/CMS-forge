@@ -171,6 +171,64 @@ test('admin user service creates an account with hashed password and CONFIG audi
   assert.equal(JSON.stringify(auditRecords).includes(passwordHash), false);
 });
 
+test('admin user service creates an account with optional email and phone', async () => {
+  const txClient = {};
+  const auditRecords: Array<{ input: AuditRecordInput; client: unknown }> = [];
+  const service = new AdminUsersService({
+    roleId: async (code) => code === RoleCode.CR_OFFICER ? 'role_cr' : null,
+    branchExists: async (id) => id === 'branch_main',
+    activeDepartment: async (id) => id === 'dept_service' ? userRecord.department : null,
+    transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
+    create: async (data, client) => {
+      assert.equal(client, txClient);
+      assert.equal(data.email, null);
+      assert.equal(data.phone, '0512345678');
+      assert.equal(Boolean(data.username), true);
+      return { ...userRecord, email: data.email, phone: data.phone, username: data.username };
+    },
+  } as AdminUsersRepository, {
+    record: async (input: AuditRecordInput, client?: unknown) => auditRecords.push({ input, client }),
+  } as AuditService);
+
+  const created = await service.create(
+    {
+      phone: '0512345678',
+      nameEn: 'Phone Only User',
+      nameAr: 'مستخدم بهاتف فقط',
+      roleCode: RoleCode.CR_OFFICER,
+      branchId: 'branch_main',
+      departmentId: 'dept_service',
+      initialPassword: 'ChangeMe12345!',
+    },
+    auditContext(),
+  );
+
+  assert.equal(created.email, null);
+  assert.equal(created.phone, '0512345678');
+});
+
+test('admin user service updates user navigation rules and audits', async () => {
+  const txClient = {};
+  const auditRecords: Array<{ input: AuditRecordInput; client: unknown }> = [];
+  const service = new AdminUsersService({
+    transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
+    updateNavRules: async (id, viewMode, allowedNavKeys, client) => {
+      assert.equal(id, 'usr_1');
+      assert.equal(viewMode, 'CRM');
+      assert.deepEqual(allowedNavKeys, ['dashboard', 'complaints']);
+      assert.equal(client, txClient);
+      return { ...userRecord, viewMode, allowedNavKeys };
+    },
+  } as AdminUsersRepository, {
+    record: async (input: AuditRecordInput, client?: unknown) => auditRecords.push({ input, client }),
+  } as AuditService);
+
+  const updated = await service.updateNavRules('usr_1', 'CRM', ['dashboard', 'complaints'], auditContext());
+  assert.equal(updated.viewMode, 'CRM');
+  assert.deepEqual(updated.allowedNavKeys, ['dashboard', 'complaints']);
+  assert.equal(auditRecords[0]?.input.action, 'admin_user_nav_rules_updated');
+});
+
 test('admin user service changes a user department and audits the database write', async () => {
   const txClient = {};
   const auditRecords: Array<{ input: AuditRecordInput; client: unknown }> = [];
@@ -257,9 +315,10 @@ test('admin users controller routes require USERS_MANAGE permission and CSRF for
   assert.deepEqual(guardNames('list'), ['SessionAuthGuard', 'PermissionGuard']);
   assert.deepEqual(guardNames('create'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
   assert.deepEqual(guardNames('updateDepartment'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('updateNavRules'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
   assert.deepEqual(guardNames('deactivate'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
   assert.deepEqual(guardNames('reactivate'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
-  for (const handler of ['list', 'create', 'updateDepartment', 'deactivate', 'reactivate'] as Array<keyof AdminUsersController>) {
+  for (const handler of ['list', 'create', 'updateDepartment', 'updateNavRules', 'deactivate', 'reactivate'] as Array<keyof AdminUsersController>) {
     assert.equal(guardNames(handler).includes('RbacGuard'), false);
   }
 

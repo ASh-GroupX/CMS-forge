@@ -22,7 +22,10 @@ export const SESSION_AUTH_SERVICE = Symbol('SESSION_AUTH_SERVICE');
 export type StaffPrincipal = {
   sessionId: string;
   userId: string;
-  email: string;
+  email: string | null;
+  phone?: string | null;
+  viewMode?: string | null;
+  allowedNavKeys?: string[];
   nameEn: string;
   nameAr: string;
   roleCode: string;

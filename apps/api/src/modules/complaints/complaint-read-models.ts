@@ -20,6 +20,7 @@ export function queueItem(complaint: ComplaintQueueRecord, slaService?: SlaServi
     ownerId: complaint.ownerId,
     ownerName: complaint.owner?.nameEn || (complaint.owner as any)?.nameAr || null,
     ownerNameAr: (complaint.owner as any)?.nameAr || complaint.owner?.nameEn || null,
+    ownerPhone: (complaint.owner as any)?.phone ?? null,
     backupOfficerId: complaint.backupOfficerId ?? null,
     backupOfficerName: (complaint as any).backupOfficer?.nameEn || (complaint as any).backupOfficer?.nameAr || null,
     backupOfficerNameAr: (complaint as any).backupOfficer?.nameAr || (complaint as any).backupOfficer?.nameEn || null,
@@ -52,9 +53,9 @@ export function detailItem(complaint: ComplaintDetailRecord, masked = false, sla
   const assignmentActions = ['APPROVE_AND_ROUTE', 'ASSIGN_INVESTIGATION', 'ROUTE_AGAIN'];
   const lastAssignment = [...statusHistory].reverse().find((t) => t.action && assignmentActions.includes(t.action));
 
-  const createdBy = createdByTransition?.actor ? { name: createdByTransition.actor.nameEn, nameAr: createdByTransition.actor.nameAr } : null;
-  const approvedBy = approvedByTransition?.actor ? { name: approvedByTransition.actor.nameEn, nameAr: approvedByTransition.actor.nameAr } : null;
-  const assignedBy = lastAssignment?.actor ? { name: lastAssignment.actor.nameEn, nameAr: lastAssignment.actor.nameAr, ...(lastAssignment.actor.department?.nameEn ? { departmentName: lastAssignment.actor.department.nameEn } : {}), ...(lastAssignment.actor.department?.nameAr ? { departmentNameAr: lastAssignment.actor.department.nameAr } : {}) } : null;
+  const createdBy = createdByTransition?.actor ? { name: createdByTransition.actor.nameEn, nameAr: createdByTransition.actor.nameAr, phone: (createdByTransition.actor as any).phone ?? null } : null;
+  const approvedBy = approvedByTransition?.actor ? { name: approvedByTransition.actor.nameEn, nameAr: approvedByTransition.actor.nameAr, phone: (approvedByTransition.actor as any).phone ?? null } : null;
+  const assignedBy = lastAssignment?.actor ? { name: lastAssignment.actor.nameEn, nameAr: lastAssignment.actor.nameAr, phone: (lastAssignment.actor as any).phone ?? null, ...(lastAssignment.actor.department?.nameEn ? { departmentName: lastAssignment.actor.department.nameEn } : {}), ...(lastAssignment.actor.department?.nameAr ? { departmentNameAr: lastAssignment.actor.department.nameAr } : {}) } : null;
 
   return {
     ...queueItem(complaint, slaService),
@@ -86,8 +87,10 @@ export function detailItem(complaint: ComplaintDetailRecord, masked = false, sla
     alternativeCarProvided: (complaint as any).alternativeCarProvided ?? false,
     backupOfficerId: (complaint as any).backupOfficerId ?? null,
     backupOfficerName: (complaint as any).backupOfficer?.nameEn ?? null,
+    backupOfficerPhone: (complaint as any).backupOfficer?.phone ?? null,
     collaboratorId: (complaint as any).collaboratorId ?? null,
     collaboratorName: (complaint as any).collaborator?.nameEn ?? null,
+    collaboratorPhone: (complaint as any).collaborator?.phone ?? null,
     isJustified: (complaint as any).isJustified ?? null,
     satisfactionStatus: (complaint as any).satisfactionStatus ?? null,
     investigationNotes: (complaint as any).investigationNotes ?? null,

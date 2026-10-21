@@ -12,7 +12,8 @@ export type StaffUserOption = {
   id: string;
   nameEn: string;
   nameAr: string;
-  email: string;
+  email: string | null;
+  phone?: string | null;
   departmentId: string | null;
   branchId: string | null;
   roleCode: string;

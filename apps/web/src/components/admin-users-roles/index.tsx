@@ -12,6 +12,7 @@ import { adminUsersText } from '../../i18n/staff-admin-users';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
 import type { AdminUsersData } from '../../lib/staff-admin-users-api';
 import { ActionDialog } from '../shared/action-dialog';
+import { UserNavRulesForm } from './user-nav-rules-form';
 
 export type AdminUsersFixtureState = 'loading' | 'empty' | 'error' | 'success' | 'validation' | 'conflict';
 type AdminAction = (formData: FormData) => void | Promise<void>;
@@ -24,6 +25,7 @@ export function AdminUsersRoles({
   toggleAction,
   updateAssignmentsAction,
   updateDepartmentAction,
+  updateNavRulesAction,
 }: {
   createAction?: AdminAction;
   data?: AdminUsersData | null;
@@ -32,6 +34,7 @@ export function AdminUsersRoles({
   toggleAction?: AdminAction;
   updateAssignmentsAction?: AdminAction;
   updateDepartmentAction?: AdminAction;
+  updateNavRulesAction?: AdminAction;
 }) {
   const shell = staffShellText[locale];
   const t = adminUsersText[locale];
@@ -62,7 +65,9 @@ export function AdminUsersRoles({
                   <TableCell className="font-semibold">
                     {user.nameEn}
                     <span className="block text-xs text-muted-foreground">
-                      {user.username ? `@${user.username} • ` : ''}{user.email}
+                      {user.username ? `@${user.username}` : ''}
+                      {user.email ? `${user.username ? ' • ' : ''}${user.email}` : ''}
+                      {user.phone ? ` • ${user.phone}` : ''}
                     </span>
                   </TableCell>
                   <TableCell>{roleNames.get(user.roleCode) ?? user.roleName}</TableCell>
@@ -73,6 +78,7 @@ export function AdminUsersRoles({
                     <div className="flex gap-2">
                       {toggleAction ? <ToggleForm action={toggleAction} active={user.isActive} id={user.id} locale={locale} /> : null}
                       {updateAssignmentsAction && data ? <UpdateAssignmentsForm action={updateAssignmentsAction} data={data} locale={locale} user={user} /> : null}
+                      {updateNavRulesAction ? <UserNavRulesForm action={updateNavRulesAction} locale={locale} user={user} /> : null}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -94,8 +100,9 @@ function CreateUserForm({ action, data, locale }: { action: AdminAction; data: A
       <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-content-strong">{t.actions.create}</summary>
       <form action={action} className="grid gap-3 border-t border-line-subtle p-3 md:grid-cols-3">
         <input name="locale" type="hidden" value={locale} />
-        <Field label={t.fields.username} name="username" placeholder={locale === 'ar' ? 'اختياري (يُشتق من البريد)' : 'Optional (derived from email)'} required={false} />
-        <Field label={t.fields.email} name="email" type="email" />
+        <Field label={t.fields.username} name="username" placeholder={locale === 'ar' ? 'اختياري (يُشتق من البريد أو الهاتف)' : 'Optional (derived from email/phone)'} required={false} />
+        <Field label={t.fields.email} name="email" placeholder={locale === 'ar' ? 'اختياري' : 'Optional'} required={false} type="email" />
+        <Field label={locale === 'ar' ? 'رقم الهاتف' : 'Phone Number'} name="phone" placeholder={locale === 'ar' ? 'اختياري' : 'Optional'} required={false} />
         <Field label={t.fields.nameEn} name="nameEn" />
         <Field label={t.fields.nameAr} name="nameAr" />
         <label className="grid gap-1 text-sm font-medium">

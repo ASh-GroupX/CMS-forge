@@ -67,8 +67,11 @@ export type StaffComplaintDetailView = {
   alternativeCarProvided?: boolean;
   backupOfficerId?: string | null;
   backupOfficerName?: string | null;
+  backupOfficerPhone?: string | null;
   collaboratorId?: string | null;
   collaboratorName?: string | null;
+  collaboratorPhone?: string | null;
+  ownerPhone?: string | null;
   isJustified?: boolean | null;
   satisfactionStatus?: string | null;
   investigationNotes?: string | null;
@@ -193,8 +196,11 @@ function viewFromDetail(detail: ComplaintDetail, caseTimeline: DetailTimelineIte
     alternativeCarProvided: detail.alternativeCarProvided ?? false,
     backupOfficerId: detail.backupOfficerId ?? null,
     backupOfficerName: detail.backupOfficerName ?? null,
+    backupOfficerPhone: detail.backupOfficerPhone ?? null,
     collaboratorId: detail.collaboratorId ?? null,
     collaboratorName: detail.collaboratorName ?? null,
+    collaboratorPhone: detail.collaboratorPhone ?? null,
+    ownerPhone: detail.ownerPhone ?? null,
     isJustified: detail.isJustified ?? null,
     satisfactionStatus: detail.satisfactionStatus ?? null,
     investigationNotes: detail.investigationNotes ?? null,
@@ -275,8 +281,11 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
     alternativeCarProvided: complaint.alternativeCarProvided === true,
     backupOfficerId: typeof complaint.backupOfficerId === 'string' ? complaint.backupOfficerId : null,
     backupOfficerName: typeof complaint.backupOfficerName === 'string' ? complaint.backupOfficerName : null,
+    backupOfficerPhone: typeof complaint.backupOfficerPhone === 'string' ? complaint.backupOfficerPhone : null,
     collaboratorId: typeof complaint.collaboratorId === 'string' ? complaint.collaboratorId : null,
     collaboratorName: typeof complaint.collaboratorName === 'string' ? complaint.collaboratorName : null,
+    collaboratorPhone: typeof complaint.collaboratorPhone === 'string' ? complaint.collaboratorPhone : null,
+    ownerPhone: typeof complaint.ownerPhone === 'string' ? complaint.ownerPhone : null,
     isJustified: typeof complaint.isJustified === 'boolean' ? complaint.isJustified : null,
     satisfactionStatus: typeof complaint.satisfactionStatus === 'string' ? complaint.satisfactionStatus : null,
     investigationNotes: typeof complaint.investigationNotes === 'string' ? complaint.investigationNotes : null,

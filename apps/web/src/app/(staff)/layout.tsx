@@ -16,6 +16,18 @@ const ROLE_NAV: Record<string, readonly StaffNavKey[]> = {
 
 const STAFF_NAV: readonly StaffNavKey[] = ['dashboard', 'internalTickets', 'complaints', 'customers', 'tasks', 'communication', 'reports'];
 
+const ROUTE_NAV_MAP: Array<{ prefix: string; key: StaffNavKey; defaultPath: string }> = [
+  { prefix: '/internal-tickets', key: 'internalTickets', defaultPath: '/internal-tickets' },
+  { prefix: '/complaints', key: 'complaints', defaultPath: '/complaints' },
+  { prefix: '/customers', key: 'customers', defaultPath: '/customers' },
+  { prefix: '/communication', key: 'communication', defaultPath: '/communication' },
+  { prefix: '/reports', key: 'reports', defaultPath: '/reports' },
+  { prefix: '/admin', key: 'admin', defaultPath: '/admin' },
+  { prefix: '/audit', key: 'audit', defaultPath: '/audit' },
+  { prefix: '/tasks', key: 'tasks', defaultPath: '/tasks' },
+  { prefix: '/dashboard', key: 'dashboard', defaultPath: '/dashboard' },
+];
+
 export default async function StaffLayout({ children }: { children: ReactNode }) {
   const requestHeaders = await headers();
   const locale = resolveLocale(requestHeaders.get('x-cms-locale') ?? undefined);
@@ -26,7 +38,16 @@ export default async function StaffLayout({ children }: { children: ReactNode })
   if (shouldRedirectStaffRoute(Boolean(principal), activePath)) {
     redirect(`/?locale=${locale}`);
   }
-  const allowedNav = principal ? navForPrincipal(principal.roleCode, principal.permissions) : STAFF_NAV;
+  const allowedNav = principal
+    ? navForPrincipal(principal.roleCode, principal.permissions, {
+        viewMode: principal.viewMode,
+        allowedNavKeys: principal.allowedNavKeys,
+      })
+    : STAFF_NAV;
+
+  if (activePath && isRouteForbidden(activePath, allowedNav)) {
+    redirect(firstAllowedPath(allowedNav, locale));
+  }
 
   return (
     <AppShell
@@ -53,15 +74,48 @@ export function shouldRedirectStaffRoute(hasPrincipal: boolean, pathname: string
   return !hasPrincipal && !pathname.startsWith('/auth/reset');
 }
 
-export function navForPrincipal(roleCode: string, permissions: readonly string[]): readonly StaffNavKey[] {
+export function firstAllowedPath(allowedNav: readonly StaffNavKey[], locale: string): string {
+  for (const item of ROUTE_NAV_MAP) {
+    if (allowedNav.includes(item.key)) {
+      return `${item.defaultPath}?locale=${locale}`;
+    }
+  }
+  return `/?locale=${locale}`;
+}
+
+export function isRouteForbidden(pathname: string, allowedNav: readonly StaffNavKey[]): boolean {
+  for (const item of ROUTE_NAV_MAP) {
+    if (pathname === item.prefix || pathname.startsWith(`${item.prefix}/`)) {
+      return !allowedNav.includes(item.key);
+    }
+  }
+  return false;
+}
+
+export function navForPrincipal(
+  roleCode: string,
+  permissions: readonly string[],
+  userRules?: { viewMode?: string | null | undefined; allowedNavKeys?: readonly string[] | null | undefined },
+): readonly StaffNavKey[] {
   const has = (permission: string) => permissions.includes(permission);
   const base = ROLE_NAV[roleCode] ?? STAFF_NAV;
   const canAdmin = has('USERS_MANAGE') || has('ROLES_MANAGE') || has('MASTER_DATA_MANAGE') || has('NOTIFICATIONS_MANAGE');
-  const nav = canAdmin && !base.includes('admin') ? [...base, 'admin' as const] : base;
-  return nav.filter((key) => {
+  let nav: readonly StaffNavKey[] = canAdmin && !base.includes('admin') ? [...base, 'admin' as const] : base;
+  nav = nav.filter((key) => {
     if (key === 'admin') return canAdmin;
     if (key === 'audit') return has('AUDIT_VIEW');
     if (key === 'reports') return has('REPORT_VIEW');
     return true;
   });
+
+  if (userRules?.viewMode === 'CRM') {
+    nav = nav.filter((key) => key !== 'internalTickets');
+  } else if (userRules?.viewMode === 'INTERNAL_TICKETS') {
+    nav = nav.filter((key) => key === 'internalTickets' || key === 'dashboard' || key === 'tasks' || key === 'admin' || key === 'audit');
+  } else if (userRules?.viewMode === 'CUSTOM' || (userRules?.allowedNavKeys && userRules.allowedNavKeys.length > 0)) {
+    const customAllowed = new Set(userRules.allowedNavKeys ?? []);
+    nav = nav.filter((key) => customAllowed.has(key));
+  }
+
+  return nav;
 }

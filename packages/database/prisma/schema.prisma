@@ -405,8 +405,11 @@ model User {
   uploadedNoteAttachments   TicketNoteAttachment[] @relation("TicketNoteAttachmentUploadedBy")
 
   id                        String                     @id @default(cuid())
-  email                     String                     @unique
+  email                     String?                    @unique
   username                  String?                    @unique
+  phone                     String?                    @map("phone")
+  viewMode                  String?                    @default("BOTH") @map("view_mode")
+  allowedNavKeys            String[]                   @default([]) @map("allowed_nav_keys")
   nameEn                    String                     @map("name_en")
   nameAr                    String                     @map("name_ar")
   passwordHash              String?                    @map("password_hash")

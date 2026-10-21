@@ -2,7 +2,7 @@ import React from 'react';
 import { AdminUsersRoles, type AdminUsersFixtureState } from '../../../../components/admin-users-roles';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { getAdminUsers } from '../../../../lib/staff-admin-users-api';
-import { createAdminUserAction, toggleAdminUserAction, updateAdminUserAssignmentsAction, updateAdminUserDepartmentAction } from './actions';
+import { createAdminUserAction, toggleAdminUserAction, updateAdminUserAssignmentsAction, updateAdminUserDepartmentAction, updateAdminUserNavRulesAction } from './actions';
 
 type SearchParams = { admin?: string | string[]; locale?: string | string[] };
 
@@ -18,6 +18,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
       toggleAction={toggleAdminUserAction}
       updateAssignmentsAction={updateAdminUserAssignmentsAction}
       updateDepartmentAction={updateAdminUserDepartmentAction}
+      updateNavRulesAction={updateAdminUserNavRulesAction}
     />
   );
 }

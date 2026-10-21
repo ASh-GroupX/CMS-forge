@@ -15,6 +15,7 @@ export type ComplaintQueueItem = {
   ownerId: string | null;
   ownerName?: string | null;
   ownerNameAr?: string | null;
+  ownerPhone?: string | null;
   backupOfficerId?: string | null;
   backupOfficerName?: string | null;
   backupOfficerNameAr?: string | null;
@@ -84,10 +85,13 @@ export type ComplaintDetail = ComplaintQueueItem & {
   rootCauseCategory: string | null;
   repeatCustomer: boolean | null;
   alternativeCarProvided?: boolean;
+  ownerPhone?: string | null;
   backupOfficerId?: string | null;
   backupOfficerName?: string | null;
+  backupOfficerPhone?: string | null;
   collaboratorId?: string | null;
   collaboratorName?: string | null;
+  collaboratorPhone?: string | null;
   isJustified?: boolean | null;
   satisfactionStatus?: string | null;
   investigationNotes?: string | null;
@@ -96,9 +100,9 @@ export type ComplaintDetail = ComplaintQueueItem & {
   caseSummary: ComplaintCaseSummary | null;
   allowedActions: ComplaintTransitionAction[];
   canDelete?: boolean;
-  createdBy?: { name: string; nameAr: string } | null;
-  approvedBy?: { name: string; nameAr: string } | null;
-  assignedBy?: { name: string; nameAr: string; departmentName?: string; departmentNameAr?: string } | null;
+  createdBy?: { name: string; nameAr: string; phone?: string | null } | null;
+  approvedBy?: { name: string; nameAr: string; phone?: string | null } | null;
+  assignedBy?: { name: string; nameAr: string; departmentName?: string; departmentNameAr?: string; phone?: string | null } | null;
   type?: string | undefined;
   templateId?: string | null | undefined;
   templateData?: any | undefined;

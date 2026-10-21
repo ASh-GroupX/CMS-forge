@@ -8,11 +8,11 @@ import { AdminUsersRepository } from './admin-users.repository.js';
 import type { AdminBranchOption, AdminDepartmentOption, AdminRoleOption, AdminUserRecord, AssignableStaffRecord } from './admin-users.repository.js';
 
 export type AdminUserDto = {
-  id: string; email: string; username: string | null; nameEn: string; nameAr: string; roleCode: string; roleName: string;
+  id: string; email: string | null; username: string | null; phone: string | null; viewMode: string; allowedNavKeys: string[]; nameEn: string; nameAr: string; roleCode: string; roleName: string;
   branchId: string | null; branchName: string | null; departmentId: string | null; departmentName: string | null; isActive: boolean; lockedAt: string | null; lastLoginAt: string | null;
 };
 export type AdminUsersResponse = { users: AdminUserDto[]; roles: AdminRoleOption[]; branches: AdminBranchOption[]; departments: AdminDepartmentOption[] };
-export type CreateAdminUserInput = { email: string; username?: string | null; nameEn: string; nameAr: string; roleCode: string; branchId?: string | null; departmentId: string; initialPassword: string };
+export type CreateAdminUserInput = { email?: string | null | undefined; phone?: string | null | undefined; viewMode?: string | null | undefined; allowedNavKeys?: string[] | undefined; username?: string | null | undefined; nameEn: string; nameAr: string; roleCode: string; branchId?: string | null | undefined; departmentId: string; initialPassword: string };
 export type StaffLookupActor = { userId: string; roleCode: string; branchId: string | null };
 export type AssignableStaffDto = { userId: string; displayName: string; displayNameAr: string; role: string; roleAr: string; branchLabel: string | null; branchLabelAr: string | null };
 export type AssignableStaffResponse = { staff: AssignableStaffDto[] };
@@ -89,9 +89,23 @@ export class AdminUsersService {
     });
   }
 
+  async updateNavRules(id: string, viewMode: string, allowedNavKeys: string[], audit: AdminAudit = {}): Promise<AdminUserDto> {
+    const userId = nonEmpty(id, 'id');
+    const validModes = ['CRM', 'INTERNAL_TICKETS', 'BOTH', 'CUSTOM'];
+    const mode = validModes.includes(viewMode) ? viewMode : 'BOTH';
+    return this.repository.transaction(async (client) => {
+      const user = await this.repository.updateNavRules(userId, mode, allowedNavKeys, client);
+      await this.audit.record(auditInput('admin_user_nav_rules_updated', user, audit, { viewMode: mode, allowedNavKeys }), client);
+      return userDto(user);
+    });
+  }
+
   private async createData(input: CreateAdminUserInput) {
-    const email = nonEmpty(input.email, 'email').toLowerCase();
-    if (!email.includes('@')) throw validation('email', 'email is invalid.');
+    const rawEmail = typeof input.email === 'string' ? input.email.trim().toLowerCase() : '';
+    const email = rawEmail || null;
+    if (email && !email.includes('@')) throw validation('email', 'email is invalid.');
+    const rawPhone = typeof input.phone === 'string' ? input.phone.trim() : '';
+    const phone = rawPhone || null;
     const roleId = await this.repository.roleId(input.roleCode);
     if (!roleId || input.roleCode === RoleCode.CUSTOMER_PORTAL) throw validation('roleCode', 'roleCode is invalid.');
     const branchId = optionalText(input.branchId, 'branchId');
@@ -101,9 +115,11 @@ export class AdminUsersService {
     const password = nonEmpty(input.initialPassword, 'initialPassword');
     if (password.length < 12) throw validation('initialPassword', 'initialPassword must be at least 12 characters.');
     const rawUsername = typeof input.username === 'string' ? input.username.trim().toLowerCase() : '';
-    const username = rawUsername || email.split('@')[0] || email;
+    const username = rawUsername || (email ? email.split('@')[0] : (phone ? phone.replace(/\D/g, '') : null)) || `user_${Date.now()}`;
+    const viewMode = input.viewMode || 'BOTH';
+    const allowedNavKeys = Array.isArray(input.allowedNavKeys) ? input.allowedNavKeys : [];
     return {
-      email, username, nameEn: nonEmpty(input.nameEn, 'nameEn'), nameAr: nonEmpty(input.nameAr, 'nameAr'),
+      email, phone, viewMode, allowedNavKeys, username, nameEn: nonEmpty(input.nameEn, 'nameEn'), nameAr: nonEmpty(input.nameAr, 'nameAr'),
       passwordHash: await argon2.hash(password, { type: argon2.argon2id }), roleId, branchId, departmentId: department.id,
     };
   }
@@ -117,7 +133,8 @@ export class AdminUsersService {
 
 function userDto(user: AdminUserRecord): AdminUserDto {
   return {
-    id: user.id, email: user.email, username: user.username, nameEn: user.nameEn, nameAr: user.nameAr, roleCode: user.role.code, roleName: user.role.nameEn,
+    id: user.id, email: user.email, username: user.username, phone: user.phone, viewMode: user.viewMode ?? 'BOTH', allowedNavKeys: user.allowedNavKeys ?? [],
+    nameEn: user.nameEn, nameAr: user.nameAr, roleCode: user.role.code, roleName: user.role.nameEn,
     branchId: user.branch?.id ?? null, branchName: user.branch?.nameEn ?? null, isActive: user.isActive,
     departmentId: user.department?.id ?? null, departmentName: user.department?.nameEn ?? null,
     lockedAt: user.lockedAt?.toISOString() ?? null, lastLoginAt: user.lastLoginAt?.toISOString() ?? null,

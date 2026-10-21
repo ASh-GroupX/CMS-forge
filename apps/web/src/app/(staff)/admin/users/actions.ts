@@ -8,16 +8,39 @@ const CSRF_COOKIE = 'cms_csrf_token';
 
 export async function createAdminUserAction(formData: FormData): Promise<void> {
   const locale = safeLocale(formData.get('locale'));
+  const emailRaw = String(formData.get('email') ?? '').trim();
+  const phoneRaw = String(formData.get('phone') ?? '').trim();
+  const viewModeRaw = String(formData.get('viewMode') ?? '').trim();
+  const allowedNavKeysRaw = formData.getAll('allowedNavKeys').map(String);
+
   const response = await adminFetch('/admin/users', {
     body: JSON.stringify({
-      username: String(formData.get('username') ?? '') || undefined,
-      email: String(formData.get('email') ?? ''),
-      nameEn: String(formData.get('nameEn') ?? ''),
-      nameAr: String(formData.get('nameAr') ?? ''),
-      roleCode: String(formData.get('roleCode') ?? ''),
-      branchId: String(formData.get('branchId') ?? '') || null,
-      departmentId: String(formData.get('departmentId') ?? ''),
+      username: String(formData.get('username') ?? '').trim() || undefined,
+      email: emailRaw ? emailRaw : undefined,
+      phone: phoneRaw ? phoneRaw : undefined,
+      viewMode: viewModeRaw ? viewModeRaw : undefined,
+      allowedNavKeys: allowedNavKeysRaw.length > 0 ? allowedNavKeysRaw : undefined,
+      nameEn: String(formData.get('nameEn') ?? '').trim(),
+      nameAr: String(formData.get('nameAr') ?? '').trim(),
+      roleCode: String(formData.get('roleCode') ?? '').trim(),
+      branchId: String(formData.get('branchId') ?? '').trim() || null,
+      departmentId: String(formData.get('departmentId') ?? '').trim() || undefined,
       initialPassword: String(formData.get('initialPassword') ?? ''),
+    }),
+    method: 'POST',
+  });
+  redirect(`/admin/users?locale=${locale}&admin=${response.ok ? 'success' : response.status === 400 ? 'validation' : 'error'}`);
+}
+
+export async function updateAdminUserNavRulesAction(formData: FormData): Promise<void> {
+  const locale = safeLocale(formData.get('locale'));
+  const id = encodeURIComponent(String(formData.get('id') ?? ''));
+  const viewMode = String(formData.get('viewMode') ?? 'BOTH');
+  const allowedNavKeys = formData.getAll('allowedNavKeys').map(String);
+  const response = await adminFetch(`/admin/users/${id}/nav-rules`, {
+    body: JSON.stringify({
+      viewMode,
+      allowedNavKeys,
     }),
     method: 'POST',
   });

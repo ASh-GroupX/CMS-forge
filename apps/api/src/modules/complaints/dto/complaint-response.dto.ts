@@ -14,6 +14,7 @@ export type ComplaintQueueItemDto = {
   ownerId: string | null;
   ownerName: string | null;
   ownerNameAr?: string | null;
+  ownerPhone?: string | null;
   backupOfficerId?: string | null;
   backupOfficerName?: string | null;
   backupOfficerNameAr?: string | null;
@@ -120,8 +121,10 @@ export type ComplaintDetailDto = ComplaintQueueItemDto & {
   alternativeCarProvided?: boolean;
   backupOfficerId?: string | null;
   backupOfficerName?: string | null;
+  backupOfficerPhone?: string | null;
   collaboratorId?: string | null;
   collaboratorName?: string | null;
+  collaboratorPhone?: string | null;
   isJustified?: boolean | null;
   satisfactionStatus?: string | null;
   investigationNotes?: string | null;
@@ -130,11 +133,11 @@ export type ComplaintDetailDto = ComplaintQueueItemDto & {
   caseSummary: ComplaintCaseSummaryDto | null;
   allowedActions: ComplaintTransitionAction[];
   canDelete?: boolean;
-  createdBy: { name: string; nameAr: string } | null;
+  createdBy: { name: string; nameAr: string; phone?: string | null } | null;
   createdById?: string | null;
   departmentId?: string | null;
-  approvedBy: { name: string; nameAr: string } | null;
-  assignedBy: { name: string; nameAr: string; departmentName?: string; departmentNameAr?: string } | null;
+  approvedBy: { name: string; nameAr: string; phone?: string | null } | null;
+  assignedBy: { name: string; nameAr: string; departmentName?: string; departmentNameAr?: string; phone?: string | null } | null;
 };
 
 export type ComplaintDetailResponseDto = {

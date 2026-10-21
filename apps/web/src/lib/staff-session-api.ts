@@ -1,7 +1,10 @@
 export type StaffSessionPrincipal = {
   sessionId: string;
   userId: string;
-  email: string;
+  email: string | null;
+  phone?: string | null | undefined;
+  viewMode?: string | null | undefined;
+  allowedNavKeys?: string[] | undefined;
   nameEn: string;
   nameAr: string;
   roleCode: string;
@@ -10,8 +13,8 @@ export type StaffSessionPrincipal = {
   branchName: string | null;
   branchNameAr: string | null;
   branchTimezone: string | null;
-  departmentId?: string | null;
-  departmentName?: string | null;
+  departmentId?: string | null | undefined;
+  departmentName?: string | null | undefined;
 };
 
 type AuthMeResponse = { user?: Partial<StaffSessionPrincipal> };
@@ -51,7 +54,7 @@ function principalFrom(body: AuthMeResponse): StaffSessionPrincipal | null {
   if (
     typeof user?.sessionId !== 'string' ||
     typeof user.userId !== 'string' ||
-    typeof user.email !== 'string' ||
+    (user.email !== null && user.email !== undefined && typeof user.email !== 'string') ||
     typeof user.nameEn !== 'string' ||
     typeof user.nameAr !== 'string' ||
     typeof user.roleCode !== 'string'
@@ -62,7 +65,10 @@ function principalFrom(body: AuthMeResponse): StaffSessionPrincipal | null {
   return {
     sessionId: user.sessionId,
     userId: user.userId,
-    email: user.email,
+    email: typeof user.email === 'string' ? user.email : null,
+    phone: typeof user.phone === 'string' ? user.phone : null,
+    viewMode: typeof user.viewMode === 'string' ? user.viewMode : null,
+    allowedNavKeys: Array.isArray(user.allowedNavKeys) ? user.allowedNavKeys.filter((k): k is string => typeof k === 'string') : undefined,
     nameEn: user.nameEn,
     nameAr: user.nameAr,
     roleCode: user.roleCode,

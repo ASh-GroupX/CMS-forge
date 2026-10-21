@@ -139,7 +139,7 @@ function taskBranchId(task: TaskRecord): string {
   return branchId;
 }
 
-function recipientUsers(task: TaskRecord): { userId: string; email: string; nameEn: string; nameAr: string }[] {
+function recipientUsers(task: TaskRecord): { userId: string; email: string | null; nameEn: string; nameAr: string }[] {
   return task.participants.map((participant) => ({ userId: participant.userId, email: participant.user.email, nameEn: participant.user.nameEn, nameAr: participant.user.nameAr }));
 }
 

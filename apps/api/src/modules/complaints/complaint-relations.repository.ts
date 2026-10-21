@@ -16,7 +16,7 @@ export type ComplaintRelationItemRecord = {
   severity: ComplaintSeverity;
   subject: string;
   ownerId: string | null;
-  owner: { nameEn: string; email: string } | null;
+  owner: { nameEn: string; email: string | null } | null;
   customer: { nameEn: string };
   branch: { code: string; nameEn: string; nameAr: string };
   createdAt: Date;

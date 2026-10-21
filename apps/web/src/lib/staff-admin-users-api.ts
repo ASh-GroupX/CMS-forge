@@ -1,8 +1,11 @@
 import { getApiBase } from './api-base';
 export type AdminUser = {
   id: string;
-  email: string;
+  email: string | null;
   username?: string | null;
+  phone?: string | null;
+  viewMode?: string | null;
+  allowedNavKeys?: string[];
   nameEn: string;
   nameAr: string;
   roleCode: string;

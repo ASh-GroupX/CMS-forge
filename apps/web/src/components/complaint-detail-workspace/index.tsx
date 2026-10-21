@@ -173,10 +173,30 @@ function DetailSidebar({ deadlineLabel, detail, locale, text, values }: { deadli
       
       {/* Tracking Info */}
       {detail.createdBy && (
-        <SummaryItem label={text.labels.createdBy || 'Created by'} value={locale === 'ar' ? detail.createdBy.nameAr : detail.createdBy.name} />
+        <SummaryItem 
+          label={text.labels.createdBy || 'Created by'} 
+          value={
+            <div className="flex flex-col">
+              <span>{locale === 'ar' ? detail.createdBy.nameAr : detail.createdBy.name}</span>
+              {detail.createdBy.phone ? (
+                <span className="text-xs text-content-muted font-mono">{detail.createdBy.phone}</span>
+              ) : null}
+            </div>
+          } 
+        />
       )}
       {detail.approvedBy && (
-        <SummaryItem label={text.labels.approvedBy || 'Approved by'} value={locale === 'ar' ? detail.approvedBy.nameAr : detail.approvedBy.name} />
+        <SummaryItem 
+          label={text.labels.approvedBy || 'Approved by'} 
+          value={
+            <div className="flex flex-col">
+              <span>{locale === 'ar' ? detail.approvedBy.nameAr : detail.approvedBy.name}</span>
+              {detail.approvedBy.phone ? (
+                <span className="text-xs text-content-muted font-mono">{detail.approvedBy.phone}</span>
+              ) : null}
+            </div>
+          } 
+        />
       )}
       {detail.assignedBy && (
         <SummaryItem 
@@ -189,6 +209,9 @@ function DetailSidebar({ deadlineLabel, detail, locale, text, values }: { deadli
                   {locale === 'ar' ? detail.assignedBy.departmentNameAr || detail.assignedBy.departmentName : detail.assignedBy.departmentName}
                 </span>
               )}
+              {detail.assignedBy.phone ? (
+                <span className="text-xs text-content-muted font-mono">{detail.assignedBy.phone}</span>
+              ) : null}
             </div>
           } 
         />
@@ -242,7 +265,7 @@ function crmRows(detail: StaffComplaintDetailView | undefined, locale: Locale, t
   if (!detail) return [];
   const yes = locale === 'ar' ? 'نعم' : 'Yes';
   const no = locale === 'ar' ? 'لا' : 'No';
-  return [
+  const rows: [string, string][] = [
     [locale === 'ar' ? 'نوع الطلب' : 'Request Type', detail.type ? complaintTypeLabel(locale, detail.type) : t.values.none],
     [locale === 'ar' ? 'القناة' : 'Channel', detail.channel || t.values.none],
     [locale === 'ar' ? 'نوع العميل' : 'Customer Type', detail.customerType || t.values.none],
@@ -253,6 +276,19 @@ function crmRows(detail: StaffComplaintDetailView | undefined, locale: Locale, t
     [locale === 'ar' ? 'الضمان ساري' : 'Warranty Active', detail.warrantyActive ? yes : no],
     [locale === 'ar' ? 'عميل متكرر' : 'Repeat Customer', detail.repeatCustomer ? yes : no],
   ];
+  if (detail.backupOfficerName) {
+    rows.push([
+      locale === 'ar' ? 'الموظف البديل' : 'Backup Officer',
+      detail.backupOfficerPhone ? `${detail.backupOfficerName} (${detail.backupOfficerPhone})` : detail.backupOfficerName,
+    ]);
+  }
+  if (detail.collaboratorName) {
+    rows.push([
+      locale === 'ar' ? 'الموظف المتعاون' : 'Collaborator Officer',
+      detail.collaboratorPhone ? `${detail.collaboratorName} (${detail.collaboratorPhone})` : detail.collaboratorName,
+    ]);
+  }
+  return rows;
 }
 
 function detailValues(detail: StaffComplaintDetailView, fallback: typeof complaintDetailText.en.values, locale: Locale): typeof complaintDetailText.en.values {
@@ -262,7 +298,7 @@ function detailValues(detail: StaffComplaintDetailView, fallback: typeof complai
     status: complaintStatusLabel(locale, detail.status),
     severity: severityLabel(locale, detail.severity),
     category: locale === 'ar' ? detail.categoryNameAr || detail.categoryName : detail.categoryName || detail.categoryNameAr,
-    owner: detail.assignee ?? fallback.owner,
+    owner: detail.ownerPhone ? `${detail.assignee ?? fallback.owner} (${detail.ownerPhone})` : (detail.assignee ?? fallback.owner),
     sla: slaLabel(detail, fallback, locale),
   };
 }

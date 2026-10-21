@@ -16,7 +16,7 @@ export type ComplaintFormOptions = {
   types: ComplaintType[];
   rootCauses: Array<{ id: string; nameEn: string; nameAr: string; order: number }>;
   salesAdvisors: Array<{ id: string; nameEn: string; nameAr: string; order: number }>;
-  users: Array<{ id: string; nameEn: string; nameAr: string; email: string; departmentId: string | null; branchId: string | null; roleCode: RoleCode }>;
+  users: Array<{ id: string; nameEn: string; nameAr: string; email: string | null; phone?: string | null; departmentId: string | null; branchId: string | null; roleCode: RoleCode }>;
 };
 
 export type PublicComplaintFormOptions = {
@@ -83,15 +83,16 @@ export class ComplaintFormOptionsService {
       })?.catch?.(() => []) ?? [],
       this.prisma.user?.findMany({
         orderBy: [{ nameEn: 'asc' }],
-        select: { id: true, nameEn: true, nameAr: true, email: true, departmentId: true, branchId: true, role: { select: { code: true } } },
+        select: { id: true, nameEn: true, nameAr: true, email: true, phone: true, departmentId: true, branchId: true, role: { select: { code: true } } },
         where: { isActive: true },
       })?.catch?.(() => []) ?? [],
     ]);
-    const mappedUsers = (users || []).map((u) => ({
+    const mappedUsers = (users || []).map((u: any) => ({
       id: u.id,
       nameEn: u.nameEn,
       nameAr: u.nameAr,
       email: u.email,
+      phone: u.phone ?? null,
       departmentId: u.departmentId,
       branchId: u.branchId,
       roleCode: u.role.code as RoleCode,

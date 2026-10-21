@@ -176,7 +176,7 @@ export default function CreateInternalTicketForm({ options }: { options: { depar
                 <option value="">Choose an officer...</option>
                 {options.employees?.filter((e: any) => e.departmentId === selectedDepartmentId && e.role?.code !== 'DEPARTMENT_MANGER').map((e: any) => (
                   <option key={e.id} value={e.id}>
-                    {e.nameEn || e.nameAr || 'Unknown'} - {e.activeTicketsCount ?? 0} active task{e.activeTicketsCount === 1 ? '' : 's'}
+                    {e.nameEn || e.nameAr || 'Unknown'}{e.phone ? ` (${e.phone})` : ''} - {e.activeTicketsCount ?? 0} active task{e.activeTicketsCount === 1 ? '' : 's'}
                   </option>
                 ))}
               </select>

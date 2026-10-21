@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
 
 const userSelect = {
-  id: true, email: true, username: true, nameEn: true, nameAr: true, isActive: true, lockedAt: true,
+  id: true, email: true, username: true, phone: true, viewMode: true, allowedNavKeys: true, nameEn: true, nameAr: true, isActive: true, lockedAt: true,
   lastLoginAt: true, createdAt: true, updatedAt: true,
   role: { select: { id: true, code: true, nameEn: true, nameAr: true } },
   branch: { select: { id: true, code: true, nameEn: true, nameAr: true } },
@@ -22,7 +22,7 @@ export type AssignableStaffRecord = Prisma.UserGetPayload<{ select: typeof userS
 type AdminUserClient = Pick<Prisma.TransactionClient, 'user'>;
 
 export type CreateAdminUserData = {
-  email: string; username?: string | null; nameEn: string; nameAr: string; passwordHash: string; roleId: string; branchId: string | null; departmentId: string;
+  email?: string | null; phone?: string | null; viewMode?: string | null; allowedNavKeys?: string[]; username?: string | null; nameEn: string; nameAr: string; passwordHash: string; roleId: string; branchId: string | null; departmentId: string;
 };
 
 @Injectable()
@@ -91,5 +91,9 @@ export class AdminUsersRepository {
 
   async update(id: string, data: { branchId: string | null; departmentId: string | null; roleId?: string }, client: AdminUserClient = this.prisma): Promise<AdminUserRecord> {
     return client.user.update({ where: { id }, data, select: userSelect });
+  }
+
+  async updateNavRules(id: string, viewMode: string, allowedNavKeys: string[], client: AdminUserClient = this.prisma): Promise<AdminUserRecord> {
+    return client.user.update({ where: { id }, data: { viewMode, allowedNavKeys }, select: userSelect });
   }
 }

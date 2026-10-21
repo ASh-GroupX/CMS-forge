@@ -325,6 +325,7 @@ export class InternalTicketsService {
           nameEn: true, 
           nameAr: true, 
           email: true, 
+          phone: true, 
           departmentId: true, 
           role: { select: { code: true } },
           assignedInternalTickets: {

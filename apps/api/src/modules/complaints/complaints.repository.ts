@@ -15,7 +15,7 @@ export type ComplaintStatusRecord = { id: string; branchId: string; customerId: 
 export type ComplaintTransitionSubject = { id: string; vehicleRelated: boolean; vehicleId: string | null; vehicleDataUnavailableReason: string | null };
 export type ComplaintRecord = { id: string; branchId: string; customerId: string; status: ComplaintStatus; type: any; referenceNumber: string; subject: string; severity: ComplaintSeverity; categoryId: string; departmentId: string | null; ownerId: string | null; backupOfficerId?: string | null; createdById: string | null; resolvedAt: Date | null; closedAt: Date | null; templateId?: string | null; templateData?: any; };
 
-export type ComplaintQueueRecord = ComplaintRecord & { ownerId: string | null; backupOfficerId?: string | null; owner: { nameEn: string; nameAr?: string | null; email: string } | null; backupOfficer?: { nameEn: string; nameAr?: string | null; email: string } | null; department?: { nameEn: string; nameAr: string } | null; category?: { id: string; nameEn: string; nameAr: string } | null; branch: { code: string; nameEn: string; nameAr: string; timezone: string }; createdAt: Date; updatedAt: Date };
+export type ComplaintQueueRecord = ComplaintRecord & { ownerId: string | null; backupOfficerId?: string | null; owner: { nameEn: string; nameAr?: string | null; email?: string | null; phone?: string | null } | null; backupOfficer?: { nameEn: string; nameAr?: string | null; email?: string | null; phone?: string | null } | null; department?: { nameEn: string; nameAr: string } | null; category?: { id: string; nameEn: string; nameAr: string } | null; branch: { code: string; nameEn: string; nameAr: string; timezone: string }; createdAt: Date; updatedAt: Date };
 export type ComplaintDetailRecord = Omit<ComplaintQueueRecord, 'category'> & {
   category: { id: string; nameEn: string; nameAr: string };
   descriptionEn: string;
@@ -33,9 +33,9 @@ export type ComplaintDetailRecord = Omit<ComplaintQueueRecord, 'category'> & {
   templateData?: any;
   alternativeCarProvided?: boolean;
   backupOfficerId?: string | null;
-  backupOfficer?: { nameEn: string; email: string } | null;
+  backupOfficer?: { nameEn: string; email?: string | null; phone?: string | null } | null;
   collaboratorId?: string | null;
-  collaborator?: { nameEn: string; email: string } | null;
+  collaborator?: { nameEn: string; email?: string | null; phone?: string | null } | null;
   isJustified?: boolean | null;
   satisfactionStatus?: string | null;
   investigationNotes?: string | null;
@@ -49,8 +49,8 @@ export type ComplaintDetailRecord = Omit<ComplaintQueueRecord, 'category'> & {
   warrantyActive?: boolean | null;
   repeatCustomer?: boolean | null;
   createdById?: string | null;
-  createdBy?: { nameEn: string; nameAr: string } | null;
-  statusHistory: Array<{ id: string; fromStatus: ComplaintStatus | null; toStatus: ComplaintStatus; action: ComplaintTransitionAction | null; actorId: string | null; actorRole: string | null; requestSource: ComplaintTransitionRequestSource | null; reason: string | null; correlationId: string | null; createdAt: Date; actor: { nameEn: string; nameAr: string; department: { nameEn: string; nameAr: string } | null } | null }>;
+  createdBy?: { nameEn: string; nameAr: string; phone?: string | null } | null;
+  statusHistory: Array<{ id: string; fromStatus: ComplaintStatus | null; toStatus: ComplaintStatus; action: ComplaintTransitionAction | null; actorId: string | null; actorRole: string | null; requestSource: ComplaintTransitionRequestSource | null; reason: string | null; correlationId: string | null; createdAt: Date; actor: { nameEn: string; nameAr: string; phone?: string | null; department: { nameEn: string; nameAr: string } | null } | null }>;
 };
 export type CreateComplaintData = {
   referenceNumber: string; status: ComplaintStatus; type: any; subject: string; severity: ComplaintSeverity; branchId: string; categoryId: string; customerName: string; customerPhone?: string | null; customerNumber?: string | null; customerDataSource: DataSource; manualCustomerFlag: boolean; vehicleId?: string | null; vehicleVin?: string | null; vehiclePlate?: string | null; vehicleBrand?: string | null; vehicleModel?: string | null; vehicleModelYear?: number | null; vehicleDataSource?: DataSource | null; manualVehicleFlag: boolean; vehicleRelated: boolean; vehicleDataUnavailableReason?: string | null; channel?: string | null; customerType?: string | null; lastServiceDate?: Date | null; odometer?: number | null; warrantyActive?: boolean | null; salesAdvisorName?: string | null; rootCauseCategory?: string | null; repeatCustomer?: boolean | null; departmentId?: string | null; ownerId?: string | null; backupOfficerId?: string | null; collaboratorId?: string | null; alternativeCarProvided?: boolean; createdById?: string | null; descriptionEn: string; incidentAt: Date; templateId?: string | null; templateData?: any;
@@ -289,7 +289,7 @@ export class ComplaintsRepository {
       where,
       select: {
         ...complaintSelect,
-        ownerId: true, owner: { select: { nameEn: true, email: true } }, department: { select: { nameEn: true, nameAr: true } }, branch: { select: { code: true, nameEn: true, nameAr: true, timezone: true } },
+        ownerId: true, owner: { select: { nameEn: true, email: true, phone: true } }, department: { select: { nameEn: true, nameAr: true } }, branch: { select: { code: true, nameEn: true, nameAr: true, timezone: true } },
         descriptionEn: true, descriptionAr: true, incidentAt: true,
         category: { select: { id: true, nameEn: true, nameAr: true } },
         customer: { select: { id: true, nameEn: true, phone: true, dmsCode: true, dataSource: true } },
@@ -298,9 +298,9 @@ export class ComplaintsRepository {
         vehicleRelated: true, vehicleDataSource: true, manualVehicleFlag: true, vehicleDataUnavailableReason: true,
         alternativeCarProvided: true,
         backupOfficerId: true,
-        backupOfficer: { select: { nameEn: true, email: true } },
+        backupOfficer: { select: { nameEn: true, email: true, phone: true } },
         collaboratorId: true,
-        collaborator: { select: { nameEn: true, email: true } },
+        collaborator: { select: { nameEn: true, email: true, phone: true } },
         isJustified: true,
         satisfactionStatus: true,
         investigationNotes: true,
@@ -314,14 +314,14 @@ export class ComplaintsRepository {
         warrantyActive: true,
         repeatCustomer: true,
         createdById: true,
-        createdBy: { select: { nameEn: true, nameAr: true } },
+        createdBy: { select: { nameEn: true, nameAr: true, phone: true } },
         createdAt: true, updatedAt: true,
         statusHistory: {
           orderBy: { createdAt: 'asc' },
           select: {
             id: true, fromStatus: true, toStatus: true, action: true, actorId: true,
             actorRole: true, requestSource: true, reason: true, correlationId: true, createdAt: true,
-            actor: { select: { nameEn: true, nameAr: true, department: { select: { nameEn: true, nameAr: true } } } },
+            actor: { select: { nameEn: true, nameAr: true, phone: true, department: { select: { nameEn: true, nameAr: true } } } },
           },
         },
       },

@@ -135,6 +135,9 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
               <div className="flex flex-col">
                 <span className="text-sm font-semibold text-content-strong">{ticket.requestedBy?.nameEn || 'Unknown'}</span>
                 <span className="text-xs text-content-muted">{ticket.requestedBy?.department?.nameEn || 'N/A'}</span>
+                {ticket.requestedBy?.phone && (
+                  <span className="text-xs text-content-muted font-mono">{ticket.requestedBy.phone}</span>
+                )}
               </div>
             </div>
             <div>
@@ -142,6 +145,9 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
               <div className="flex flex-col">
                 <span className="text-sm font-semibold text-content-strong">{ticket.targetDepartment?.nameEn || 'N/A'}</span>
                 <span className="text-xs text-content-muted">{ticket.assignedEmployee?.nameEn ? `Assigned: ${ticket.assignedEmployee.nameEn}` : 'Unassigned'}</span>
+                {ticket.assignedEmployee?.phone && (
+                  <span className="text-xs text-content-muted font-mono">{ticket.assignedEmployee.phone}</span>
+                )}
               </div>
             </div>
             <div>
