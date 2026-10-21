@@ -90,3 +90,44 @@ async function incomingCookieHeader(): Promise<string> {
     return '';
   }
 }
+
+export type UserDashboardCapabilities = {
+  canSeeCrm: boolean;
+  canSeeInternal: boolean;
+  isInternalOnly: boolean;
+  isCrmOnly: boolean;
+};
+
+export function resolveUserDashboardCapabilities(principal: StaffSessionPrincipal | null): UserDashboardCapabilities {
+  const viewMode = principal?.viewMode;
+  const allowed = principal?.allowedNavKeys;
+
+  let canSeeCrm = true;
+  let canSeeInternal = true;
+
+  if (viewMode === 'INTERNAL_TICKETS') {
+    canSeeCrm = false;
+    canSeeInternal = true;
+  } else if (viewMode === 'CRM') {
+    canSeeCrm = true;
+    canSeeInternal = false;
+  } else if (viewMode === 'CUSTOM' && Array.isArray(allowed) && allowed.length > 0) {
+    const hasCrm = allowed.includes('complaints') || allowed.includes('customers');
+    const hasInternal = allowed.includes('internalTickets');
+    if (hasInternal && !hasCrm) {
+      canSeeCrm = false;
+      canSeeInternal = true;
+    } else if (hasCrm && !hasInternal) {
+      canSeeCrm = true;
+      canSeeInternal = false;
+    }
+  }
+
+  return {
+    canSeeCrm,
+    canSeeInternal,
+    isInternalOnly: canSeeInternal && !canSeeCrm,
+    isCrmOnly: canSeeCrm && !canSeeInternal,
+  };
+}
+

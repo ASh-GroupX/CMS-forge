@@ -8,7 +8,9 @@ import { taskStatusLabel } from '../../../../i18n/domain-labels';
 import { staffPromisesText } from '../../../../i18n/staff-promises';
 import { resolveLocale, staffShellText, type Locale } from '../../../../i18n/staff-shell';
 import { formatDisplayDate } from '../../../../lib/locale-format';
+import { redirect } from 'next/navigation';
 import { getStaffPromisesLoadResult, type StaffPromises, type StaffPromiseTask } from '../../../../lib/staff-promises-api';
+import { getStaffSessionPrincipal, resolveUserDashboardCapabilities } from '../../../../lib/staff-session-api';
 import { updatePromiseAction } from './actions';
 
 type SearchParams = { locale?: string | string[]; promise?: string | string[] };
@@ -32,10 +34,18 @@ export default async function PromisesPage({
 }) {
   const params = await searchParams;
   const locale = resolveLocale(readParam(params?.locale));
-  const data = await getStaffPromisesLoadResult({
+  const apiInput = {
     ...(cookieHeader !== undefined ? { cookieHeader } : {}),
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
-  });
+  };
+  const [data, principal] = await Promise.all([
+    getStaffPromisesLoadResult(apiInput),
+    getStaffSessionPrincipal(apiInput),
+  ]);
+  const { canSeeCrm } = resolveUserDashboardCapabilities(principal);
+  if (!canSeeCrm) {
+    redirect(`/tasks?locale=${locale}`);
+  }
   const result = readResult(params?.promise);
   return (
     <Promises

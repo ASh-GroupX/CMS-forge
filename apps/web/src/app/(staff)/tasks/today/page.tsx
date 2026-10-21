@@ -3,8 +3,8 @@ import { EmployeeToday } from '../../../../components/employee-today';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { getAssignableStaff } from '../../../../lib/staff-assignable-staff-api';
 import { getStaffAssignmentOptions } from '../../../../lib/staff-assignment-options-api';
-import { getEmployeeTodayTasksLoadResult } from '../../../../lib/staff-tasks-api';
-import { getStaffSessionPrincipal } from '../../../../lib/staff-session-api';
+import { getEmployeeTodayTasksLoadResult, type StaffTask } from '../../../../lib/staff-tasks-api';
+import { getStaffSessionPrincipal, resolveUserDashboardCapabilities } from '../../../../lib/staff-session-api';
 import { loadRelatedRecordsAction, quickAddTaskAction, updateTaskAction } from './actions';
 
 type SearchParams = { locale?: string | string[]; task?: string | string[] };
@@ -30,10 +30,25 @@ export default async function EmployeeTodayPage({
     getStaffSessionPrincipal(apiInput),
     getStaffAssignmentOptions(apiInput),
   ]);
+  const { isInternalOnly } = resolveUserDashboardCapabilities(principal);
+  let tasksData = data.status === 'ready' ? data.data : null;
+  if (tasksData && isInternalOnly) {
+    const isNotCrm = (t: StaffTask) =>
+      !t.isCustomerPromise &&
+      !t.links?.some((l) => ['complaint', 'customer', 'deal', 'case'].includes(l.entityType?.toLowerCase()));
+    tasksData = {
+      completed: tasksData.completed.filter(isNotCrm),
+      dueToday: tasksData.dueToday.filter(isNotCrm),
+      overdue: tasksData.overdue.filter(isNotCrm),
+      overduePromises: [],
+      assignedToMe: tasksData.assignedToMe.filter(isNotCrm),
+      waitingOnMe: tasksData.waitingOnMe.filter(isNotCrm),
+    };
+  }
   return (
     <EmployeeToday
       assignmentOptions={assignmentOptions}
-      data={data.status === 'ready' ? data.data : null}
+      data={tasksData}
       loadRelatedRecordsAction={loadRelatedRecordsAction}
       locale={locale}
       quickAddAction={quickAddTaskAction}

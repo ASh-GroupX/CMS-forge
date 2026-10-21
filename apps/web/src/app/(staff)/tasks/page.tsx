@@ -2,10 +2,10 @@ import React from 'react';
 import { headers } from 'next/headers';
 import { resolveLocale } from '../../../i18n/staff-shell';
 import { myWorkText } from '../../../i18n/staff-my-work';
-import { getEmployeeTodayTasksLoadResult, type EmployeeTodayTasks } from '../../../lib/staff-tasks-api';
-import { getStaffSessionPrincipal } from '../../../lib/staff-session-api';
+import { getEmployeeTodayTasksLoadResult, type EmployeeTodayTasks, type StaffTask } from '../../../lib/staff-tasks-api';
+import { getStaffSessionPrincipal, resolveUserDashboardCapabilities } from '../../../lib/staff-session-api';
 import { getStaffQueueLoadResult } from '../../../lib/staff-queue-api';
-import { mergeWorkItems } from '../../../lib/staff-tasks-aggregate';
+import { getTaskItemType, mergeWorkItems } from '../../../lib/staff-tasks-aggregate';
 import { MyWorkDashboard } from '../../../components/tasks/my-work-dashboard';
 
 type SearchParams = { locale?: string | string[] };
@@ -40,12 +40,20 @@ export default async function TasksPage({
     fetchImpl,
   };
 
-  const [tasksResult, principal, queueResult, meComplaintsResult, tickets] = await Promise.all([
+  const principal = await getStaffSessionPrincipal(requestOptions).catch(() => null);
+  const { canSeeCrm, canSeeInternal, isInternalOnly, isCrmOnly } = resolveUserDashboardCapabilities(principal);
+
+  const [tasksResult, queueResult, meComplaintsResult, tickets] = await Promise.all([
     getEmployeeTodayTasksLoadResult(requestOptions).catch(() => ({ status: 'error' as const })),
-    getStaffSessionPrincipal(requestOptions).catch(() => null),
-    getStaffQueueLoadResult({ apiUrl, cookieHeader, query: { pageSize: 50 }, fetchImpl }).catch(() => null),
-    getStaffQueueLoadResult({ apiUrl, cookieHeader, query: { ownerScope: 'ME', pageSize: 50 }, fetchImpl }).catch(() => null),
-    fetchInternalTickets(apiUrl, cookieHeader, fetchImpl),
+    canSeeCrm
+      ? getStaffQueueLoadResult({ apiUrl, cookieHeader, query: { pageSize: 50 }, fetchImpl }).catch(() => null)
+      : Promise.resolve(null),
+    canSeeCrm
+      ? getStaffQueueLoadResult({ apiUrl, cookieHeader, query: { ownerScope: 'ME', pageSize: 50 }, fetchImpl }).catch(() => null)
+      : Promise.resolve(null),
+    canSeeInternal
+      ? fetchInternalTickets(apiUrl, cookieHeader, fetchImpl)
+      : Promise.resolve([]),
   ]);
 
   if (tasksResult.status !== 'ready' && !tickets.length && (!queueResult || queueResult.status !== 'ready') && (!meComplaintsResult || meComplaintsResult.status !== 'ready')) {
@@ -67,17 +75,36 @@ export default async function TasksPage({
     waitingOnMe: [],
   };
 
-  const complaintMap = new Map<string, any>();
-  if (queueResult?.status === 'ready' && Array.isArray(queueResult.data?.rows)) {
-    for (const c of queueResult.data.rows) complaintMap.set(c.id, c);
+  if (isInternalOnly) {
+    const notComplaint = (item: StaffTask) => getTaskItemType(item) !== 'complaint';
+    baseTasks.completed = baseTasks.completed.filter(notComplaint);
+    baseTasks.dueToday = baseTasks.dueToday.filter(notComplaint);
+    baseTasks.overdue = baseTasks.overdue.filter(notComplaint);
+    baseTasks.assignedToMe = baseTasks.assignedToMe.filter(notComplaint);
+    baseTasks.waitingOnMe = baseTasks.waitingOnMe.filter(notComplaint);
+    baseTasks.overduePromises = [];
+  } else if (isCrmOnly) {
+    const notTicket = (item: StaffTask) => getTaskItemType(item) !== 'ticket';
+    baseTasks.completed = baseTasks.completed.filter(notTicket);
+    baseTasks.dueToday = baseTasks.dueToday.filter(notTicket);
+    baseTasks.overdue = baseTasks.overdue.filter(notTicket);
+    baseTasks.assignedToMe = baseTasks.assignedToMe.filter(notTicket);
+    baseTasks.waitingOnMe = baseTasks.waitingOnMe.filter(notTicket);
   }
-  if (meComplaintsResult?.status === 'ready' && Array.isArray(meComplaintsResult.data?.rows)) {
-    for (const c of meComplaintsResult.data.rows) complaintMap.set(c.id, c);
+
+  const complaintMap = new Map<string, any>();
+  if (canSeeCrm) {
+    if (queueResult?.status === 'ready' && Array.isArray(queueResult.data?.rows)) {
+      for (const c of queueResult.data.rows) complaintMap.set(c.id, c);
+    }
+    if (meComplaintsResult?.status === 'ready' && Array.isArray(meComplaintsResult.data?.rows)) {
+      for (const c of meComplaintsResult.data.rows) complaintMap.set(c.id, c);
+    }
   }
   const assignedComplaints = Array.from(complaintMap.values());
 
-  let allTickets = tickets;
-  if (principal?.departmentId && (principal.roleCode === 'BRANCH_MANAGER' || principal.roleCode === 'DEPARTMENT_MANGER' || principal.roleCode === 'CR_MANAGER')) {
+  let allTickets = canSeeInternal ? tickets : [];
+  if (canSeeInternal && principal?.departmentId && (principal.roleCode === 'BRANCH_MANAGER' || principal.roleCode === 'DEPARTMENT_MANGER' || principal.roleCode === 'CR_MANAGER')) {
     const deptTickets = await fetchDepartmentTickets(principal.departmentId, apiUrl, cookieHeader, fetchImpl);
     const map = new Map<string, any>();
     for (const item of allTickets) map.set(item.id, item);
@@ -91,10 +118,21 @@ export default async function TasksPage({
   return (
     <>
       <header className="grid gap-1">
-        <h1 className="text-2xl font-bold tracking-tight text-content-strong">{t.title}</h1>
-        <p className="text-sm text-content-muted">{t.subtitle}</p>
+        <h1 className="text-2xl font-bold tracking-tight text-content-strong">
+          {isInternalOnly ? (locale === 'ar' ? 'مهام وتذاكر العمليات الداخلية' : 'Internal Operations & Tasks') : t.title}
+        </h1>
+        <p className="text-sm text-content-muted">
+          {isInternalOnly ? (locale === 'ar' ? 'جميع التذاكر والمهام الداخلية المطلوبة منك، مصنفة حسب الأولوية والاستحقاق' : 'All internal tickets and tasks assigned to you, organized by priority') : t.subtitle}
+        </p>
       </header>
-      <MyWorkDashboard data={aggregatedData} locale={locale} t={t} isAdmin={isAdmin} />
+      <MyWorkDashboard
+        canSeeCrm={canSeeCrm}
+        canSeeInternal={canSeeInternal}
+        data={aggregatedData}
+        isAdmin={isAdmin}
+        locale={locale}
+        t={t}
+      />
     </>
   );
 }

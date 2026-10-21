@@ -16,11 +16,27 @@ type MyWorkDashboardProps = {
   locale: Locale;
   t: MyWorkCopy;
   isAdmin?: boolean | undefined;
+  canSeeCrm?: boolean | undefined;
+  canSeeInternal?: boolean | undefined;
 };
 
-export function MyWorkDashboard({ data, locale, t, isAdmin = false }: MyWorkDashboardProps) {
+export function MyWorkDashboard({
+  data,
+  locale,
+  t,
+  isAdmin = false,
+  canSeeCrm = true,
+  canSeeInternal = true,
+}: MyWorkDashboardProps) {
   const [filter, setFilter] = React.useState<WorkItemFilter>('all');
   const [deletedIds, setDeletedIds] = React.useState<Set<string>>(new Set());
+
+  const effectiveFilter: WorkItemFilter =
+    !canSeeCrm && filter === 'complaint'
+      ? 'all'
+      : !canSeeInternal && filter === 'ticket'
+      ? 'all'
+      : filter;
 
   const handleDeleteTask = React.useCallback((taskId: string) => {
     setDeletedIds((prev) => new Set([...prev, taskId]));
@@ -34,8 +50,10 @@ export function MyWorkDashboard({ data, locale, t, isAdmin = false }: MyWorkDash
     for (const bucket of [data.overdue, data.dueToday, data.assignedToMe, data.waitingOnMe, data.completed]) {
       for (const item of bucket) {
         if (!deletedIds.has(item.id) && !seen.has(item.id)) {
-          seen.add(item.id);
           const type = getTaskItemType(item);
+          if (!canSeeCrm && type === 'complaint') continue;
+          if (!canSeeInternal && type === 'ticket') continue;
+          seen.add(item.id);
           if (type === 'ticket') ticket++;
           else if (type === 'complaint') complaint++;
           else task++;
@@ -43,11 +61,17 @@ export function MyWorkDashboard({ data, locale, t, isAdmin = false }: MyWorkDash
       }
     }
     return { all: seen.size, ticket, complaint, task };
-  }, [data, deletedIds]);
+  }, [data, deletedIds, canSeeCrm, canSeeInternal]);
 
   const activeData = React.useMemo(() => {
     const notDeleted = (item: StaffTask) => !deletedIds.has(item.id);
-    const match = (item: StaffTask) => notDeleted(item) && (filter === 'all' || getTaskItemType(item) === filter);
+    const match = (item: StaffTask) => {
+      if (!notDeleted(item)) return false;
+      const type = getTaskItemType(item);
+      if (!canSeeCrm && type === 'complaint') return false;
+      if (!canSeeInternal && type === 'ticket') return false;
+      return effectiveFilter === 'all' || type === effectiveFilter;
+    };
     return {
       overdue: data.overdue.filter(match),
       dueToday: data.dueToday.filter(match),
@@ -55,7 +79,7 @@ export function MyWorkDashboard({ data, locale, t, isAdmin = false }: MyWorkDash
       waitingOnMe: data.waitingOnMe.filter(match),
       completed: data.completed.filter(match),
     };
-  }, [data, filter, deletedIds]);
+  }, [data, effectiveFilter, deletedIds, canSeeCrm, canSeeInternal]);
 
   const overdueCount = activeData.overdue.length;
   const dueTodayCount = activeData.dueToday.length;
@@ -66,11 +90,15 @@ export function MyWorkDashboard({ data, locale, t, isAdmin = false }: MyWorkDash
     <div className="grid gap-6">
       {/* ── Filter Tabs ── */}
       <div className="flex flex-wrap items-center gap-2 border-b border-line-subtle pb-3">
-        <FilterButton active={filter === 'all'} count={counts.all} icon={<Layers className="size-3.5" />} label={locale === 'ar' ? 'الكل' : 'All'} onClick={() => setFilter('all')} />
-        <FilterButton active={filter === 'ticket'} count={counts.ticket} icon={<Inbox className="size-3.5" />} label={locale === 'ar' ? 'التذاكر الداخلية' : 'Internal Tickets'} onClick={() => setFilter('ticket')} variant="ticket" />
-        <FilterButton active={filter === 'complaint'} count={counts.complaint} icon={<Star className="size-3.5" />} label={locale === 'ar' ? 'الشكاوى' : 'Complaints'} onClick={() => setFilter('complaint')} variant="complaint" />
+        <FilterButton active={effectiveFilter === 'all'} count={counts.all} icon={<Layers className="size-3.5" />} label={locale === 'ar' ? 'الكل' : 'All'} onClick={() => setFilter('all')} />
+        {canSeeInternal && (
+          <FilterButton active={effectiveFilter === 'ticket'} count={counts.ticket} icon={<Inbox className="size-3.5" />} label={locale === 'ar' ? 'التذاكر الداخلية' : 'Internal Tickets'} onClick={() => setFilter('ticket')} variant="ticket" />
+        )}
+        {canSeeCrm && (
+          <FilterButton active={effectiveFilter === 'complaint'} count={counts.complaint} icon={<Star className="size-3.5" />} label={locale === 'ar' ? 'الشكاوى' : 'Complaints'} onClick={() => setFilter('complaint')} variant="complaint" />
+        )}
         {counts.task > 0 && (
-          <FilterButton active={filter === 'task'} count={counts.task} icon={<CheckSquare className="size-3.5" />} label={locale === 'ar' ? 'المهام العامة' : 'Tasks'} onClick={() => setFilter('task')} variant="task" />
+          <FilterButton active={effectiveFilter === 'task'} count={counts.task} icon={<CheckSquare className="size-3.5" />} label={locale === 'ar' ? 'المهام العامة' : 'Tasks'} onClick={() => setFilter('task')} variant="task" />
         )}
       </div>
 

@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Locale } from '../../i18n/staff-shell';
-import type { StaffSessionPrincipal } from '../../lib/staff-session-api';
+import { resolveUserDashboardCapabilities, type StaffSessionPrincipal } from '../../lib/staff-session-api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -40,10 +40,22 @@ export function PremiumDashboard({ locale, principal, data, workloadData, option
   const isAdmin = role === 'ADMIN';
   const isManager = ['BRANCH_MANAGER', 'DEPARTMENT_MANGER', 'CR_MANAGER'].includes(role);
   const isOfficer = !isAdmin && !isManager;
-  const [activeTab, setActiveTab] = useState<'crm' | 'internal'>('crm');
 
-  const title = isRtl ? 'لوحة القيادة الذكية' : 'Smart Dashboard';
-  const subtitle = isRtl ? 'رؤى فورية ومقاييس أداء' : 'Real-time insights and performance metrics';
+  const { canSeeCrm, canSeeInternal, isInternalOnly, isCrmOnly } = resolveUserDashboardCapabilities(principal);
+  const [activeTab, setActiveTab] = useState<'crm' | 'internal'>(isInternalOnly ? 'internal' : 'crm');
+  const currentTab = isInternalOnly ? 'internal' : isCrmOnly ? 'crm' : activeTab;
+
+  const title = isInternalOnly
+    ? (isRtl ? 'لوحة العمليات والمهام الداخلية' : 'Internal Operations Dashboard')
+    : isCrmOnly
+    ? (isRtl ? 'لوحة شكاوى وتجربة العملاء (CRM)' : 'CRM & Customer Complaints Dashboard')
+    : (isRtl ? 'لوحة القيادة الذكية' : 'Smart Dashboard');
+
+  const subtitle = isInternalOnly
+    ? (isRtl ? 'متابعة أداء التذاكر والمهام وسير العمل الداخلي' : 'Real-time internal tickets, tasks, and operational performance metrics')
+    : isCrmOnly
+    ? (isRtl ? 'متابعة شكاوى العملاء ومؤشرات الرضا وسرعة الحل' : 'Real-time complaints, customer satisfaction, and SLA tracking')
+    : (isRtl ? 'رؤى فورية ومقاييس أداء' : 'Real-time insights and performance metrics');
 
   return (
     <div className="flex h-full flex-col overflow-y-auto" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -73,44 +85,55 @@ export function PremiumDashboard({ locale, principal, data, workloadData, option
       </header>
 
       {/* ── Mode Switcher (CRM vs Internal) ── */}
-      <div className="mb-6 flex items-center gap-2 border-b border-line-subtle pb-4">
-        <button
-          type="button"
-          onClick={() => setActiveTab('crm')}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-all ${
-            activeTab === 'crm'
-              ? 'bg-brand text-white shadow-md shadow-brand/20'
-              : 'bg-surface hover:bg-surface-raised text-content-muted border border-line-subtle'
-          }`}
-        >
-          <Sparkles className="size-4" />
-          {isRtl ? 'لوحة شكاوى وتجربة العملاء (CRM)' : 'CRM & Customer Complaints'}
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('internal')}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-all ${
-            activeTab === 'internal'
-              ? 'bg-brand text-white shadow-md shadow-brand/20'
-              : 'bg-surface hover:bg-surface-raised text-content-muted border border-line-subtle'
-          }`}
-        >
-          <Briefcase className="size-4" />
-          {isRtl ? 'العمليات والمهام الداخلية' : 'Internal Operations'}
-        </button>
-      </div>
+      {canSeeCrm && canSeeInternal ? (
+        <div className="mb-6 flex items-center gap-2 border-b border-line-subtle pb-4">
+          <button
+            type="button"
+            onClick={() => setActiveTab('crm')}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-all ${
+              currentTab === 'crm'
+                ? 'bg-brand text-white shadow-md shadow-brand/20'
+                : 'bg-surface hover:bg-surface-raised text-content-muted border border-line-subtle'
+            }`}
+          >
+            <Sparkles className="size-4" />
+            {isRtl ? 'لوحة شكاوى وتجربة العملاء (CRM)' : 'CRM & Customer Complaints'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('internal')}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-all ${
+              currentTab === 'internal'
+                ? 'bg-brand text-white shadow-md shadow-brand/20'
+                : 'bg-surface hover:bg-surface-raised text-content-muted border border-line-subtle'
+            }`}
+          >
+            <Briefcase className="size-4" />
+            {isRtl ? 'العمليات والمهام الداخلية' : 'Internal Operations'}
+          </button>
+        </div>
+      ) : (
+        <div className="mb-6 flex items-center gap-2 border-b border-line-subtle pb-4">
+          <div className="flex items-center gap-2 rounded-xl bg-brand/10 border border-brand/20 px-4 py-2 text-sm font-bold text-brand">
+            {isInternalOnly ? <Briefcase className="size-4" /> : <Sparkles className="size-4" />}
+            {isInternalOnly
+              ? (isRtl ? 'العمليات والمهام الداخلية' : 'Internal Operations')
+              : (isRtl ? 'لوحة شكاوى وتجربة العملاء (CRM)' : 'CRM & Customer Complaints')}
+          </div>
+        </div>
+      )}
 
       {/* ── Content View ── */}
       <div className="flex flex-col gap-6 pb-24">
-        {activeTab === 'crm' ? (
+        {currentTab === 'crm' && canSeeCrm ? (
           <CrmDashboardView isRtl={isRtl} crmData={data?.crm} locale={locale} />
-        ) : (
+        ) : canSeeInternal ? (
           <>
             {isAdmin && <AdminView isRtl={isRtl} data={data?.admin} />}
             {isManager && <ManagerView isRtl={isRtl} data={data?.manager} workloadData={workloadData || []} options={options} principal={principal} />}
             {isOfficer && <OfficerView isRtl={isRtl} data={data?.officer} />}
           </>
-        )}
+        ) : null}
       </div>
     </div>
   );
