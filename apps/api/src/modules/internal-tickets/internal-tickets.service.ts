@@ -95,6 +95,34 @@ export class InternalTicketsService {
     return this.repository.transaction(async (tx) => {
       const refNumber = `TKT-${Date.now()}`;
       
+      if (principal.roleCode !== 'ADMIN' && principal.departmentId) {
+        const senderDeptId = principal.departmentId;
+        const targetDeptId = dto.targetDepartmentId;
+
+        const [senderDept, targetDept] = await Promise.all([
+          tx.department.findUnique({
+            where: { id: senderDeptId },
+            select: { nameEn: true, allowedSendToDepartmentIds: true },
+          }),
+          tx.department.findUnique({
+            where: { id: targetDeptId },
+            select: { nameEn: true, allowedReceiveFromDepartmentIds: true },
+          }),
+        ]);
+
+        if (senderDept?.allowedSendToDepartmentIds && senderDept.allowedSendToDepartmentIds.length > 0) {
+          if (!senderDept.allowedSendToDepartmentIds.includes(targetDeptId)) {
+            throw new BadRequestException('Your department is not permitted to send internal tickets to the selected department.');
+          }
+        }
+
+        if (targetDept?.allowedReceiveFromDepartmentIds && targetDept.allowedReceiveFromDepartmentIds.length > 0) {
+          if (!targetDept.allowedReceiveFromDepartmentIds.includes(senderDeptId)) {
+            throw new BadRequestException('The selected department does not accept internal tickets from your department.');
+          }
+        }
+      }
+
       const needsApproval = (
         principal.departmentId !== dto.targetDepartmentId && 
         principal.roleCode !== 'DEPARTMENT_MANGER' && 
@@ -136,6 +164,34 @@ export class InternalTicketsService {
     return this.repository.transaction(async (tx) => {
       const ticket = await tx.internalTicket.findUnique({ where: { id: ticketId } });
       if (!ticket) throw new NotFoundException('Ticket not found');
+
+      if (dto.targetDepartmentId && ticket.targetDepartmentId !== dto.targetDepartmentId) {
+        const fromDeptId = ticket.targetDepartmentId;
+        const toDeptId = dto.targetDepartmentId;
+
+        const [fromDept, toDept] = await Promise.all([
+          tx.department.findUnique({
+            where: { id: fromDeptId },
+            select: { allowedSendToDepartmentIds: true },
+          }),
+          tx.department.findUnique({
+            where: { id: toDeptId },
+            select: { allowedReceiveFromDepartmentIds: true },
+          }),
+        ]);
+
+        if (fromDept?.allowedSendToDepartmentIds && fromDept.allowedSendToDepartmentIds.length > 0) {
+          if (!fromDept.allowedSendToDepartmentIds.includes(toDeptId)) {
+            throw new BadRequestException('Transfer not permitted: current department cannot send tickets to the target department.');
+          }
+        }
+
+        if (toDept?.allowedReceiveFromDepartmentIds && toDept.allowedReceiveFromDepartmentIds.length > 0) {
+          if (!toDept.allowedReceiveFromDepartmentIds.includes(fromDeptId)) {
+            throw new BadRequestException('Transfer not permitted: target department cannot receive tickets from the current department.');
+          }
+        }
+      }
 
       const updated = await tx.internalTicket.update({
         where: { id: ticketId },
@@ -315,7 +371,34 @@ export class InternalTicketsService {
 
   async getFormOptions(principal: any) {
     return this.repository.transaction(async (tx) => {
-      const departments = await tx.department.findMany({ where: { isActive: true }, select: { id: true, nameEn: true, nameAr: true } });
+      const allDepartments = await tx.department.findMany({
+        where: { isActive: true },
+        select: { id: true, nameEn: true, nameAr: true, allowedSendToDepartmentIds: true, allowedReceiveFromDepartmentIds: true },
+      });
+
+      let departments = allDepartments.map((d) => ({
+        id: d.id,
+        nameEn: d.nameEn,
+        nameAr: d.nameAr,
+        allowedSendToDepartmentIds: d.allowedSendToDepartmentIds,
+        allowedReceiveFromDepartmentIds: d.allowedReceiveFromDepartmentIds,
+      }));
+
+      if (principal?.roleCode !== 'ADMIN' && principal?.departmentId) {
+        const senderDeptId = principal.departmentId;
+        const senderDept = allDepartments.find((d) => d.id === senderDeptId);
+
+        departments = departments.filter((targetDept) => {
+          if (senderDept?.allowedSendToDepartmentIds && senderDept.allowedSendToDepartmentIds.length > 0) {
+            if (!senderDept.allowedSendToDepartmentIds.includes(targetDept.id)) return false;
+          }
+          if (targetDept.allowedReceiveFromDepartmentIds && targetDept.allowedReceiveFromDepartmentIds.length > 0) {
+            if (!targetDept.allowedReceiveFromDepartmentIds.includes(senderDeptId)) return false;
+          }
+          return true;
+        });
+      }
+
       const categories = await tx.category.findMany({ where: { isActive: true, isInternal: true }, select: { id: true, nameEn: true, nameAr: true, departmentId: true } });
       
       const rawEmployees = await tx.user.findMany({
@@ -388,6 +471,53 @@ export class InternalTicketsService {
       if (type === 'waiting') return tx.ticketWaitingReason.delete({ where: { id } });
       if (type === 'resolution') return tx.ticketResolutionReason.delete({ where: { id } });
       if (type === 'reject') return tx.ticketRejectReason.delete({ where: { id } });
+    });
+  }
+
+  async getSettingsRouting(departmentId: string, principal: any) {
+    if (principal.roleCode !== 'ADMIN' && principal.departmentId !== departmentId) {
+      throw new BadRequestException('Unauthorized');
+    }
+    return this.repository.transaction(async (tx) => {
+      const dept = await tx.department.findUnique({
+        where: { id: departmentId },
+        select: {
+          id: true,
+          nameEn: true,
+          nameAr: true,
+          allowedSendToDepartmentIds: true,
+          allowedReceiveFromDepartmentIds: true,
+        },
+      });
+      if (!dept) throw new NotFoundException('Department not found');
+      return dept;
+    });
+  }
+
+  async updateSettingsRouting(departmentId: string, dto: any, principal: any) {
+    if (principal.roleCode !== 'ADMIN') throw new BadRequestException('Unauthorized');
+    return this.repository.transaction(async (tx) => {
+      const allowedSendToDepartmentIds = Array.isArray(dto.allowedSendToDepartmentIds)
+        ? dto.allowedSendToDepartmentIds.filter((id: unknown): id is string => typeof id === 'string')
+        : [];
+      const allowedReceiveFromDepartmentIds = Array.isArray(dto.allowedReceiveFromDepartmentIds)
+        ? dto.allowedReceiveFromDepartmentIds.filter((id: unknown): id is string => typeof id === 'string')
+        : [];
+
+      return tx.department.update({
+        where: { id: departmentId },
+        data: {
+          allowedSendToDepartmentIds,
+          allowedReceiveFromDepartmentIds,
+        },
+        select: {
+          id: true,
+          nameEn: true,
+          nameAr: true,
+          allowedSendToDepartmentIds: true,
+          allowedReceiveFromDepartmentIds: true,
+        },
+      });
     });
   }
 

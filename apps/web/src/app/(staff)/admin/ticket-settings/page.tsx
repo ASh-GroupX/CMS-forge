@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit2, X, Check } from 'lucide-react';
 import { getReasons, getDepartments, createReason, updateReason, deleteReason } from './actions';
+import { DepartmentRoutingForm } from './department-routing-form';
 import { toast } from 'sonner';
 
 export default function TicketSettingsPage() {
-  const [activeTab, setActiveTab] = useState<'waiting' | 'resolution' | 'reject'>('waiting');
+  const [activeTab, setActiveTab] = useState<'waiting' | 'resolution' | 'reject' | 'routing'>('waiting');
   const [departments, setDepartments] = useState<any[]>([]);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState('');
   const [items, setItems] = useState<any[]>([]);
@@ -25,7 +26,7 @@ export default function TicketSettingsPage() {
   }, []);
 
   const fetchItems = async () => {
-    if (!selectedDepartmentId) return;
+    if (!selectedDepartmentId || activeTab === 'routing') return;
     setLoading(true);
     try {
       const data = await getReasons(activeTab, selectedDepartmentId);
@@ -38,7 +39,7 @@ export default function TicketSettingsPage() {
   };
 
   useEffect(() => {
-    if (selectedDepartmentId) {
+    if (selectedDepartmentId && activeTab !== 'routing') {
       fetchItems();
     }
     setReasonEn('');
@@ -48,6 +49,7 @@ export default function TicketSettingsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (activeTab === 'routing') return;
     if (!reasonEn || !reasonAr) return toast.error('Both English and Arabic reasons are required');
     if (!selectedDepartmentId) return toast.error('Select a department first');
     
@@ -69,6 +71,7 @@ export default function TicketSettingsPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (activeTab === 'routing') return;
     if (!confirm('Are you sure you want to delete this?')) return;
     try {
       await deleteReason(activeTab, id);
@@ -85,16 +88,19 @@ export default function TicketSettingsPage() {
     setReasonAr(item.reasonAr);
   };
 
-  const tabLabels = {
+  const selectedDept = departments.find((d: any) => d.id === selectedDepartmentId);
+
+  const tabLabels: Record<'waiting' | 'resolution' | 'reject' | 'routing', string> = {
     waiting: 'Waiting Reasons',
     resolution: 'Resolution Subjects',
     reject: 'Reject Reasons',
+    routing: 'Department Routing Rules',
   };
 
   return (
     <div className="mx-auto max-w-4xl p-6">
-      <h1 className="mb-2 text-2xl font-bold text-content-strong">Ticket Settings</h1>
-      <p className="mb-6 text-sm text-content-muted">Manage standard reasons for each department. These appear as dropdown options when staff resolve, wait, or reject tickets.</p>
+      <h1 className="mb-2 text-2xl font-bold text-content-strong">Internal Ticket Settings</h1>
+      <p className="mb-6 text-sm text-content-muted">Manage department routing rules (who can send to this department and who it can send to), plus resolution subjects, waiting reasons, and reject reasons.</p>
 
       {/* Department Selector */}
       <div className="mb-6">
@@ -130,12 +136,20 @@ export default function TicketSettingsPage() {
             ))}
           </div>
 
-          {/* Add / Edit Form */}
-          <div className="mb-6 rounded-xl bg-surface p-5 shadow-sm border border-line-subtle">
-            <h2 className="mb-3 text-base font-bold text-content-strong">
-              {editingId ? `Edit ${tabLabels[activeTab].slice(0, -1)}` : `Add New ${tabLabels[activeTab].slice(0, -1)}`}
-            </h2>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-3 md:flex-row md:items-end">
+          {activeTab === 'routing' ? (
+            <DepartmentRoutingForm
+              departmentId={selectedDepartmentId}
+              departmentName={selectedDept?.nameEn || selectedDepartmentId}
+              allDepartments={departments}
+            />
+          ) : (
+            <>
+              {/* Add / Edit Form */}
+              <div className="mb-6 rounded-xl bg-surface p-5 shadow-sm border border-line-subtle">
+                <h2 className="mb-3 text-base font-bold text-content-strong">
+                  {editingId ? `Edit ${tabLabels[activeTab].slice(0, -1)}` : `Add New ${tabLabels[activeTab].slice(0, -1)}`}
+                </h2>
+                <form onSubmit={handleSubmit} className="flex flex-col gap-3 md:flex-row md:items-end">
               <div className="flex-1">
                 <label className="mb-1 block text-xs font-semibold text-content-subtle uppercase tracking-wide">English</label>
                 <input 
@@ -215,6 +229,8 @@ export default function TicketSettingsPage() {
               </table>
             )}
           </div>
+            </>
+          )}
         </>
       )}
     </div>

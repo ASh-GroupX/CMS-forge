@@ -335,6 +335,8 @@ model Department {
   nameAr            String              @map("name_ar")
   branchId          String?             @map("branch_id")
   isActive          Boolean             @default(true) @map("is_active")
+  allowedSendToDepartmentIds      String[] @default([]) @map("allowed_send_to_department_ids")
+  allowedReceiveFromDepartmentIds String[] @default([]) @map("allowed_receive_from_department_ids")
   createdAt         DateTime            @default(now()) @map("created_at")
   updatedAt         DateTime            @updatedAt @map("updated_at")
   branch            Branch?             @relation(fields: [branchId], references: [id])

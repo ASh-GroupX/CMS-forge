@@ -142,6 +142,12 @@ export default function CreateInternalTicketForm({ options }: { options: { depar
           </button>
         </div>
 
+        {options.departments?.length === 0 && (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
+            Your department is currently not permitted to send internal tickets to any department. Contact your administrator to adjust routing rules in Admin Hub.
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-2">
           <div className="flex flex-col gap-2">
             <label htmlFor="targetDepartmentId" className="text-sm font-bold text-content-strong">Department</label>
@@ -150,9 +156,11 @@ export default function CreateInternalTicketForm({ options }: { options: { depar
               setSelectedCategoryId('');
               setSelectedRequestedEmployeeId('');
             }} className="rounded-xl border border-line-subtle bg-surface p-3.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand transition-colors">
-              <option value="">Select a department...</option>
+              <option value="">
+                {options.departments?.length ? 'Select a department...' : 'No permitted target departments'}
+              </option>
               {options.departments?.map((d) => (
-                <option key={d.id} value={d.id}>{d.nameEn}</option>
+                <option key={d.id} value={d.id}>{d.nameEn}{d.nameAr ? ` - ${d.nameAr}` : ''}</option>
               ))}
             </select>
           </div>

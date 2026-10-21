@@ -46,6 +46,16 @@ export class InternalTicketsController {
     return this.service.deleteSettingsReason(type, id, req.principal);
   }
 
+  @Get('settings/routing/:departmentId')
+  async getSettingsRouting(@Param('departmentId') departmentId: string, @Req() req: AuthenticatedRequest) {
+    return this.service.getSettingsRouting(departmentId, req.principal);
+  }
+
+  @Put('settings/routing/:departmentId')
+  async updateSettingsRouting(@Param('departmentId') departmentId: string, @Req() req: AuthenticatedRequest, @Body() dto: any) {
+    return this.service.updateSettingsRouting(departmentId, dto, req.principal);
+  }
+
   @Get('options')
   async getOptions(@Req() req: AuthenticatedRequest) {
     return this.service.getFormOptions(req.principal);

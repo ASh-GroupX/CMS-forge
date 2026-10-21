@@ -64,3 +64,32 @@ export async function deleteReason(type: 'waiting' | 'resolution' | 'reject', id
   if (!res.ok) throw new Error('Failed to delete reason');
   revalidatePath('/admin/ticket-settings');
 }
+
+export async function getDepartmentRouting(departmentId: string) {
+  const res = await fetch(`${API_BASE_URL}/internal-tickets/settings/routing/${departmentId}`, {
+    headers: await getAuthHeaders(),
+    cache: 'no-store',
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function updateDepartmentRouting(
+  departmentId: string,
+  allowedSendToDepartmentIds: string[],
+  allowedReceiveFromDepartmentIds: string[],
+) {
+  const res = await fetch(`${API_BASE_URL}/internal-tickets/settings/routing/${departmentId}`, {
+    method: 'PUT',
+    headers: await getAuthHeaders(),
+    body: JSON.stringify({ allowedSendToDepartmentIds, allowedReceiveFromDepartmentIds }),
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to update department routing rules');
+  }
+  revalidatePath('/admin/ticket-settings');
+  revalidatePath('/internal-tickets/new');
+}
+
