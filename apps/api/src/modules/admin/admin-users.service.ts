@@ -100,6 +100,18 @@ export class AdminUsersService {
     });
   }
 
+  async resetPassword(id: string, password: string, audit: AdminAudit = {}): Promise<AdminUserDto> {
+    const userId = nonEmpty(id, 'id');
+    const cleanPassword = nonEmpty(password, 'password');
+    if (cleanPassword.length < 6) throw validation('password', 'password must be at least 6 characters.');
+    const passwordHash = await argon2.hash(cleanPassword, { type: argon2.argon2id });
+    return this.repository.transaction(async (client) => {
+      const user = await this.repository.updatePassword(userId, passwordHash, client);
+      await this.audit.record(auditInput('admin_user_password_reset', user, audit), client);
+      return userDto(user);
+    });
+  }
+
   private async createData(input: CreateAdminUserInput) {
     const rawEmail = typeof input.email === 'string' ? input.email.trim().toLowerCase() : '';
     const email = rawEmail || null;

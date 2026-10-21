@@ -96,4 +96,8 @@ export class AdminUsersRepository {
   async updateNavRules(id: string, viewMode: string, allowedNavKeys: string[], client: AdminUserClient = this.prisma): Promise<AdminUserRecord> {
     return client.user.update({ where: { id }, data: { viewMode, allowedNavKeys }, select: userSelect });
   }
+
+  async updatePassword(id: string, passwordHash: string, client: AdminUserClient = this.prisma): Promise<AdminUserRecord> {
+    return client.user.update({ where: { id }, data: { passwordHash }, select: userSelect });
+  }
 }

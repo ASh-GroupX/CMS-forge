@@ -79,6 +79,17 @@ export async function updateAdminUserAssignmentsAction(formData: FormData): Prom
   redirect(`/admin/users?locale=${locale}&admin=${response.ok ? 'success' : 'error'}`);
 }
 
+export async function resetAdminUserPasswordAction(formData: FormData): Promise<void> {
+  const locale = safeLocale(formData.get('locale'));
+  const id = encodeURIComponent(String(formData.get('id') ?? ''));
+  const password = String(formData.get('password') ?? '');
+  const response = await adminFetch(`/admin/users/${id}/reset-password`, {
+    body: JSON.stringify({ password }),
+    method: 'POST',
+  });
+  redirect(`/admin/users?locale=${locale}&admin=${response.ok ? 'success' : response.status === 400 ? 'validation' : 'error'}`);
+}
+
 async function adminFetch(path: string, init: RequestInit): Promise<Response> {
   const cookieHeader = (await cookies()).toString();
   const csrf = readCookie(cookieHeader, CSRF_COOKIE);

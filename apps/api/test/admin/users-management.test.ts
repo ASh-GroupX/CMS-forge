@@ -275,6 +275,36 @@ test('admin user service deactivates and reactivates with audit entries', async 
   assert.equal(auditRecords.every((record) => record.client === txClient), true);
 });
 
+test('admin user service directly resets user password with hash and CONFIG audit', async () => {
+  const txClient = {};
+  const auditRecords: Array<{ input: AuditRecordInput; client: unknown }> = [];
+  let savedHash = '';
+  const service = new AdminUsersService({
+    transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
+    updatePassword: async (id, hash, client) => {
+      assert.equal(id, 'usr_1');
+      assert.equal(client, txClient);
+      savedHash = hash;
+      return { ...userRecord, passwordHash: hash };
+    },
+  } as AdminUsersRepository, {
+    record: async (input: AuditRecordInput, client?: unknown) => auditRecords.push({ input, client }),
+  } as AuditService);
+
+  await assert.rejects(
+    service.resetPassword('usr_1', '12345', auditContext()),
+    (err: unknown) => err instanceof AppException && err.code === 'VALIDATION_FAILED',
+  );
+
+  const result = await service.resetPassword('usr_1', 'newPass123', auditContext());
+  assert.equal(result.id, 'usr_1');
+  assert.notEqual(savedHash, 'newPass123');
+  assert.equal(await argon2.verify(savedHash, 'newPass123'), true);
+  assert.equal(auditRecords[0]?.input.action, 'admin_user_password_reset');
+  assert.equal(JSON.stringify(auditRecords).includes('newPass123'), false);
+  assert.equal(JSON.stringify(auditRecords).includes(savedHash), false);
+});
+
 test('admin user repository changes only active state and active selectors exclude deactivated users', async () => {
   const updates: unknown[] = [];
   const queries: unknown[] = [];
@@ -316,9 +346,10 @@ test('admin users controller routes require USERS_MANAGE permission and CSRF for
   assert.deepEqual(guardNames('create'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
   assert.deepEqual(guardNames('updateDepartment'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
   assert.deepEqual(guardNames('updateNavRules'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('resetPassword'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
   assert.deepEqual(guardNames('deactivate'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
   assert.deepEqual(guardNames('reactivate'), ['SessionAuthGuard', 'PermissionGuard', 'CsrfGuard']);
-  for (const handler of ['list', 'create', 'updateDepartment', 'updateNavRules', 'deactivate', 'reactivate'] as Array<keyof AdminUsersController>) {
+  for (const handler of ['list', 'create', 'updateDepartment', 'updateNavRules', 'resetPassword', 'deactivate', 'reactivate'] as Array<keyof AdminUsersController>) {
     assert.equal(guardNames(handler).includes('RbacGuard'), false);
   }
 

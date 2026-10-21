@@ -21,6 +21,7 @@ export function AdminUsersRoles({
   createAction,
   data,
   locale,
+  resetPasswordAction,
   state,
   toggleAction,
   updateAssignmentsAction,
@@ -30,6 +31,7 @@ export function AdminUsersRoles({
   createAction?: AdminAction;
   data?: AdminUsersData | null;
   locale: Locale;
+  resetPasswordAction?: AdminAction;
   state?: AdminUsersFixtureState | undefined;
   toggleAction?: AdminAction;
   updateAssignmentsAction?: AdminAction;
@@ -79,6 +81,7 @@ export function AdminUsersRoles({
                       {toggleAction ? <ToggleForm action={toggleAction} active={user.isActive} id={user.id} locale={locale} /> : null}
                       {updateAssignmentsAction && data ? <UpdateAssignmentsForm action={updateAssignmentsAction} data={data} locale={locale} user={user} /> : null}
                       {updateNavRulesAction ? <UserNavRulesForm action={updateNavRulesAction} locale={locale} user={user} /> : null}
+                      {resetPasswordAction ? <ResetPasswordForm action={resetPasswordAction} locale={locale} user={user} /> : null}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -187,6 +190,36 @@ function UpdateAssignmentsForm({ action, data, locale, user }: { action: AdminAc
           {t.fields.department}
           <FormSelect defaultValue={user.departmentId ?? ''} name="departmentId" options={(data.departments ?? []).map((department) => ({ label: localizedName(department, locale), value: department.id }))} placeholder={t.allDepartments} />
         </label>
+      </form>
+    </ActionDialog>
+  );
+}
+
+function ResetPasswordForm({ action, locale, user }: { action: AdminAction; locale: Locale; user: AdminUsersData['users'][0] }) {
+  const [open, setOpen] = React.useState(false);
+  const formRef = React.useRef<HTMLFormElement>(null);
+  const isAr = locale === 'ar';
+
+  return (
+    <ActionDialog
+      title={isAr ? `إعادة تعيين كلمة المرور: ${user.nameAr || user.nameEn}` : `Reset Password: ${user.nameEn}`}
+      open={open}
+      onOpenChange={setOpen}
+      trigger={<Button size="sm" variant="outline">{isAr ? 'كلمة المرور' : 'Password'}</Button>}
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>{isAr ? 'إلغاء' : 'Cancel'}</Button>
+          <Button type="button" onClick={() => { setOpen(false); formRef.current?.requestSubmit(); }}>{isAr ? 'حفظ كلمة المرور' : 'Save Password'}</Button>
+        </>
+      }
+    >
+      <form action={action} className="grid gap-3 py-4" ref={formRef}>
+        <input name="id" type="hidden" value={user.id} />
+        <input name="locale" type="hidden" value={locale} />
+        <div className="grid gap-1">
+          <Label htmlFor={`pwd-${user.id}`}>{isAr ? 'كلمة المرور الجديدة' : 'New Password'}</Label>
+          <Input id={`pwd-${user.id}`} minLength={6} name="password" placeholder={isAr ? '6 أحرف أو أرقام على الأقل' : 'Minimum 6 characters'} required type="password" />
+        </div>
       </form>
     </ActionDialog>
   );

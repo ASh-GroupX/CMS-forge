@@ -64,6 +64,14 @@ export class AdminUsersController {
       : [];
     return this.users.updateNavRules(id, viewMode, allowedNavKeys, auditContext(request));
   }
+
+  @Post(':id/reset-password')
+  @UseGuards(SessionAuthGuard, PermissionGuard, CsrfGuard)
+  @Permissions('USERS_MANAGE')
+  resetPassword(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    const input = (body ?? {}) as Record<string, unknown>;
+    return this.users.resetPassword(id, text(input.password, 'password'), auditContext(request));
+  }
 }
 
 @Controller('staff')
