@@ -128,6 +128,7 @@ export async function assignTicket(id: string, employeeId: string) {
   });
   if (!res.ok) throw new Error('Failed to assign ticket');
   revalidatePath(`/internal-tickets/${id}`);
+  revalidatePath('/internal-tickets', 'layout');
   return res.json();
 }
 
