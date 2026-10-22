@@ -99,7 +99,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                 </div>
                 <h2 className="text-2xl font-black text-content-strong">{ticket.title}</h2>
               </div>
-              <TicketActionButtons ticket={ticket} options={options} principal={principal} />
+              <TicketActionButtons ticket={ticket} options={options} principal={principal} locale={locale} />
             </div>
             <div className="prose prose-sm max-w-none text-content-strong leading-relaxed bg-surface-canvas/30 p-4 rounded-xl border border-line-subtle">
               <p>{ticket.description || 'No description provided.'}</p>

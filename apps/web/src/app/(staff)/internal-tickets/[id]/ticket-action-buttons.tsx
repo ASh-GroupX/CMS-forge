@@ -6,8 +6,19 @@ import { toast } from 'sonner';
 import { transferTicket, assignTicket, acceptTicket, waitTicket, approveTicket, rejectTicket, resolveTicket, approveRequestTicket, assignToTeamTicket, deleteTicketAction, resubmitTicket } from '../../../../lib/staff-internal-tickets-actions';
 import { useRouter } from 'next/navigation';
 
-export function TicketActionButtons({ ticket, options, principal }: { ticket: any, options?: any, principal?: any }) {
+export function TicketActionButtons({ 
+  ticket, 
+  options, 
+  principal, 
+  locale = 'en' 
+}: { 
+  ticket: any; 
+  options?: any; 
+  principal?: any; 
+  locale?: string; 
+}) {
   const router = useRouter();
+  const isAr = locale === 'ar';
   const ticketId = ticket.id;
   
   const [isTransferOpen, setIsTransferOpen] = useState(false);
@@ -181,6 +192,34 @@ export function TicketActionButtons({ ticket, options, principal }: { ticket: an
   const isTargetDepartment = Boolean(principal?.departmentId && principal?.departmentId === ticket.targetDepartmentId);
   const isRequester = principal?.userId === ticket.requestedById || Boolean(principal?.departmentId && principal?.departmentId === ticket.requestedBy?.departmentId);
   const isAdmin = principal?.roleCode === 'ADMIN';
+
+  // Filter reasons strictly by department
+  const isPendingApproval = ticket.status === 'PENDING_APPROVAL';
+  const targetDeptId = ticket.targetDepartmentId;
+  const requesterDeptId = ticket.requestedBy?.departmentId || principal?.departmentId;
+
+  // Waiting reasons belong to the target department handling the ticket
+  const departmentWaitingReasons = (options?.waitingReasons || []).filter(
+    (r: any) => r.departmentId === targetDeptId
+  );
+
+  // Resolution reasons belong to the target department handling the ticket
+  const departmentResolutionReasons = (options?.resolutionReasons || []).filter(
+    (r: any) => r.departmentId === targetDeptId
+  );
+
+  // Reject reasons: if rejecting a pending approval request, prioritize requester's department reasons;
+  // otherwise prioritize target department reasons
+  const preferredRejectDeptId = isPendingApproval ? requesterDeptId : targetDeptId;
+  let departmentRejectReasons = (options?.rejectReasons || []).filter(
+    (r: any) => r.departmentId === preferredRejectDeptId
+  );
+  if (departmentRejectReasons.length === 0) {
+    const fallbackRejectDeptId = isPendingApproval ? targetDeptId : requesterDeptId;
+    departmentRejectReasons = (options?.rejectReasons || []).filter(
+      (r: any) => r.departmentId === fallbackRejectDeptId
+    );
+  }
 
   return (
     <>
@@ -397,9 +436,12 @@ export function TicketActionButtons({ ticket, options, principal }: { ticket: an
                   required
                 >
                   <option value="">Select a reason...</option>
-                  {options?.waitingReasons?.map((r: any) => (
-                    <option key={r.id} value={r.id}>{r.reasonEn}</option>
+                  {departmentWaitingReasons.map((r: any) => (
+                    <option key={r.id} value={r.id}>{isAr && r.reasonAr ? r.reasonAr : r.reasonEn}</option>
                   ))}
+                  {departmentWaitingReasons.length === 0 && (
+                    <option value="" disabled>{isAr ? 'لا توجد أسباب انتظار محددة لهذا القسم' : 'No waiting reasons configured for this department'}</option>
+                  )}
                 </select>
               </div>
               <div>
@@ -443,9 +485,12 @@ export function TicketActionButtons({ ticket, options, principal }: { ticket: an
                   required
                 >
                   <option value="">Select how you resolved this...</option>
-                  {options?.resolutionReasons?.map((r: any) => (
-                    <option key={r.id} value={r.id}>{r.reasonEn}</option>
+                  {departmentResolutionReasons.map((r: any) => (
+                    <option key={r.id} value={r.id}>{isAr && r.reasonAr ? r.reasonAr : r.reasonEn}</option>
                   ))}
+                  {departmentResolutionReasons.length === 0 && (
+                    <option value="" disabled>{isAr ? 'لا توجد موضوعات حل محددة لهذا القسم' : 'No resolution subjects configured for this department'}</option>
+                  )}
                 </select>
               </div>
               <div>
@@ -490,9 +535,12 @@ export function TicketActionButtons({ ticket, options, principal }: { ticket: an
                   required
                 >
                   <option value="">Select a reason...</option>
-                  {options?.rejectReasons?.map((r: any) => (
-                    <option key={r.id} value={r.id}>{r.reasonEn}</option>
+                  {departmentRejectReasons.map((r: any) => (
+                    <option key={r.id} value={r.id}>{isAr && r.reasonAr ? r.reasonAr : r.reasonEn}</option>
                   ))}
+                  {departmentRejectReasons.length === 0 && (
+                    <option value="" disabled>{isAr ? 'لا توجد أسباب رفض محددة لهذا القسم' : 'No reject reasons configured for this department'}</option>
+                  )}
                 </select>
               </div>
               <div>
