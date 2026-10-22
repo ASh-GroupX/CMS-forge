@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { GripVertical, Clock, AlertCircle } from 'lucide-react';
 import { internalTicketStatusLabel } from '../../../i18n/domain-labels';
 import type { Locale } from '../../../i18n/staff-shell';
+import { TicketStopwatch } from './ticket-stopwatch';
 
 interface DepartmentTicketCardProps {
   ticket: any;
@@ -63,9 +64,12 @@ export function DepartmentTicketCard({
           </Link>
         </div>
 
-        <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-surface-raised text-content-muted">
-          {internalTicketStatusLabel(locale, ticket.status)}
-        </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <TicketStopwatch ticket={ticket} locale={locale} variant="compact" />
+          <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-surface-raised text-content-muted">
+            {internalTicketStatusLabel(locale, ticket.status)}
+          </span>
+        </div>
       </div>
 
       {ticket.description && (

@@ -7,6 +7,7 @@ import { resolveLocale } from '../../../../i18n/staff-shell';
 import { internalTicketStatusLabel } from '../../../../i18n/domain-labels';
 import { TicketActionButtons } from './ticket-action-buttons';
 import { TicketNoteForm } from './ticket-note-form';
+import { TicketStopwatch } from '../ticket-stopwatch';
 
 export default async function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -89,11 +90,12 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
           <div className="p-5">
             <div className="mb-4 flex items-start justify-between">
               <div>
-                <div className="mb-2 flex items-center gap-2">
+                <div className="mb-2 flex items-center gap-2 flex-wrap">
                   <span className="rounded-md bg-brand/10 px-2.5 py-1 text-xs font-bold text-brand uppercase tracking-wider">
                     {internalTicketStatusLabel(locale, ticket.status)}
                   </span>
                   <span className="text-xs font-mono font-medium text-content-muted">{ticket.referenceNumber || ticket.id}</span>
+                  <TicketStopwatch ticket={ticket} locale={locale} variant="badge" />
                 </div>
                 <h2 className="text-2xl font-black text-content-strong">{ticket.title}</h2>
               </div>
@@ -153,7 +155,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
             )}
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-6 border-t border-line-subtle bg-surface-canvas/20 p-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-x-4 gap-y-6 border-t border-line-subtle bg-surface-canvas/20 p-5">
             <div>
               <span className="text-[10px] text-content-muted font-bold uppercase tracking-wider block mb-1">From</span>
               <div className="flex flex-col">
@@ -191,6 +193,9 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                   {ticket.dueAt ? `Due: ${new Date(ticket.dueAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}` : 'No Due Date'}
                 </span>
               </div>
+            </div>
+            <div>
+              <TicketStopwatch ticket={ticket} locale={locale} variant="card" />
             </div>
           </div>
           

@@ -1558,6 +1558,7 @@ model InternalTicket {
   dueAt       DateTime? @map("due_at")
   customFields Json?    @map("custom_fields")
 
+  inProgressAt DateTime? @map("in_progress_at")
   resolvedAt DateTime? @map("resolved_at")
   closedAt   DateTime? @map("closed_at")
   createdAt  DateTime  @default(now()) @map("created_at")

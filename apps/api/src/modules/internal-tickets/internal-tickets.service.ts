@@ -286,6 +286,7 @@ export class InternalTicketsService {
       if (!ticket) throw new NotFoundException('Ticket not found');
 
       const data: any = { status };
+      if (status === 'IN_PROGRESS') data.inProgressAt = new Date();
       if (status === 'RESOLVED') data.resolvedAt = new Date();
       if (status === 'CLOSED') data.closedAt = new Date();
 
@@ -890,7 +891,8 @@ export class InternalTicketsService {
         where: { id: ticketId },
         data: { 
           status: 'IN_PROGRESS',
-          assignedEmployeeId: employeeId
+          assignedEmployeeId: employeeId,
+          inProgressAt: new Date(),
         }
       });
 
@@ -901,9 +903,14 @@ export class InternalTicketsService {
 
   async transitionStatus(ticketId: string, actorId: string, status: any, action: string, details?: any) {
     return this.repository.transaction(async (tx) => {
+      const data: any = { status };
+      if (status === 'IN_PROGRESS') data.inProgressAt = new Date();
+      if (status === 'RESOLVED') data.resolvedAt = new Date();
+      if (status === 'CLOSED') data.closedAt = new Date();
+
       const ticket = await tx.internalTicket.update({
         where: { id: ticketId },
-        data: { status }
+        data,
       });
 
       await this.logActivity(tx, ticketId, actorId, action, details);
