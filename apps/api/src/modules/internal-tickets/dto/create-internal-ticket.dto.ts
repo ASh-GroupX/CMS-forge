@@ -41,4 +41,7 @@ export class CreateInternalTicketDto {
   @Type(() => UploadTicketAttachmentDto)
   @IsOptional()
   attachments?: UploadTicketAttachmentDto[];
+
+  @IsOptional()
+  customFields?: Record<string, any>;
 }

@@ -123,12 +123,34 @@ export class InternalTicketsService {
         }
       }
 
+      const userRule = await tx.userTicketRule.findUnique({ where: { userId: actorId } });
+
+      if (dto.requestedEmployeeId && userRule && !userRule.canDirectAssignOfficer && principal.roleCode !== 'ADMIN') {
+        throw new BadRequestException('You are not permitted to directly assign tickets to specific officers.');
+      }
+
+      if (dto.targetDepartmentId) {
+        const requiredCustomFields = await tx.departmentTicketCustomField.findMany({
+          where: { departmentId: dto.targetDepartmentId, isActive: true, isRequired: true },
+        });
+        for (const field of requiredCustomFields) {
+          const val = dto.customFields?.[field.id];
+          if (val === undefined || val === null || val === '') {
+            throw new BadRequestException(`Field "${field.nameEn}" is required.`);
+          }
+        }
+      }
+
+      const canBypassApproval = (
+        userRule?.canSendWithoutManagerApproval === true ||
+        principal.roleCode === 'DEPARTMENT_MANGER' ||
+        principal.roleCode === 'BRANCH_MANAGER' ||
+        principal.roleCode === 'ADMIN' ||
+        principal.permissions?.includes('BYPASS_TICKET_APPROVAL')
+      );
+
       const needsApproval = (
-        principal.departmentId !== dto.targetDepartmentId && 
-        principal.roleCode !== 'DEPARTMENT_MANGER' && 
-        principal.roleCode !== 'BRANCH_MANAGER' && 
-        principal.roleCode !== 'ADMIN' &&
-        !principal.permissions?.includes('BYPASS_TICKET_APPROVAL')
+        principal.departmentId !== dto.targetDepartmentId && !canBypassApproval
       );
 
       const ticket = await tx.internalTicket.create({
@@ -144,6 +166,7 @@ export class InternalTicketsService {
           priority: dto.priority || 'NORMAL',
           slaOptionId: dto.slaOptionId || null,
           dueAt: dto.dueAt ? new Date(dto.dueAt) : null,
+          customFields: (dto.customFields as any) ?? undefined,
           status: needsApproval ? 'PENDING_APPROVAL' : (dto.requestedEmployeeId ? 'ASSIGNED' : 'NEW'),
         },
       });
@@ -164,6 +187,11 @@ export class InternalTicketsService {
     return this.repository.transaction(async (tx) => {
       const ticket = await tx.internalTicket.findUnique({ where: { id: ticketId } });
       if (!ticket) throw new NotFoundException('Ticket not found');
+
+      const userRule = await tx.userTicketRule.findUnique({ where: { userId: actorId } });
+      if (userRule && !userRule.canTransferDepartment) {
+        throw new BadRequestException('You are not permitted to transfer tickets to other departments.');
+      }
 
       if (dto.targetDepartmentId && ticket.targetDepartmentId !== dto.targetDepartmentId) {
         const fromDeptId = ticket.targetDepartmentId;
@@ -521,6 +549,180 @@ export class InternalTicketsService {
     });
   }
 
+  async getDepartmentFields(departmentId: string, principal: any) {
+    return this.repository.transaction(async (tx) => {
+      const [config, customFields] = await Promise.all([
+        tx.departmentTicketFormConfig.findUnique({ where: { departmentId } }),
+        tx.departmentTicketCustomField.findMany({
+          where: { departmentId, ...(principal.roleCode === 'ADMIN' ? {} : { isActive: true }) },
+          orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+        }),
+      ]);
+
+      return {
+        config: config || {
+          departmentId,
+          enablePriorityField: true,
+          enableDueDateField: true,
+          enableAttachmentsField: true,
+          enableOfficerSelection: true,
+        },
+        customFields,
+      };
+    });
+  }
+
+  async updateDepartmentFormConfig(departmentId: string, dto: any, principal: any) {
+    if (principal.roleCode !== 'ADMIN') throw new BadRequestException('Unauthorized');
+    return this.repository.transaction(async (tx) => {
+      return tx.departmentTicketFormConfig.upsert({
+        where: { departmentId },
+        create: {
+          departmentId,
+          enablePriorityField: dto.enablePriorityField ?? true,
+          enableDueDateField: dto.enableDueDateField ?? true,
+          enableAttachmentsField: dto.enableAttachmentsField ?? true,
+          enableOfficerSelection: dto.enableOfficerSelection ?? true,
+        },
+        update: {
+          enablePriorityField: dto.enablePriorityField ?? true,
+          enableDueDateField: dto.enableDueDateField ?? true,
+          enableAttachmentsField: dto.enableAttachmentsField ?? true,
+          enableOfficerSelection: dto.enableOfficerSelection ?? true,
+        },
+      });
+    });
+  }
+
+  async createDepartmentCustomField(departmentId: string, dto: any, principal: any) {
+    if (principal.roleCode !== 'ADMIN') throw new BadRequestException('Unauthorized');
+    if (!dto.nameEn?.trim() || !dto.nameAr?.trim() || !dto.fieldType) {
+      throw new BadRequestException('English name, Arabic name, and field type are required.');
+    }
+    return this.repository.transaction(async (tx) => {
+      const count = await tx.departmentTicketCustomField.count({ where: { departmentId } });
+      const options = Array.isArray(dto.options)
+        ? dto.options.filter((o: unknown): o is string => typeof o === 'string' && Boolean(o.trim()))
+        : [];
+      return tx.departmentTicketCustomField.create({
+        data: {
+          departmentId,
+          nameEn: dto.nameEn.trim(),
+          nameAr: dto.nameAr.trim(),
+          fieldType: dto.fieldType,
+          options,
+          placeholderEn: dto.placeholderEn?.trim() || null,
+          placeholderAr: dto.placeholderAr?.trim() || null,
+          isRequired: Boolean(dto.isRequired),
+          isActive: dto.isActive !== false,
+          order: typeof dto.order === 'number' ? dto.order : count,
+        },
+      });
+    });
+  }
+
+  async updateDepartmentCustomField(departmentId: string, fieldId: string, dto: any, principal: any) {
+    if (principal.roleCode !== 'ADMIN') throw new BadRequestException('Unauthorized');
+    return this.repository.transaction(async (tx) => {
+      const field = await tx.departmentTicketCustomField.findFirst({
+        where: { id: fieldId, departmentId },
+      });
+      if (!field) throw new NotFoundException('Field not found');
+
+      const data: any = {};
+      if (dto.nameEn !== undefined) data.nameEn = dto.nameEn.trim();
+      if (dto.nameAr !== undefined) data.nameAr = dto.nameAr.trim();
+      if (dto.fieldType !== undefined) data.fieldType = dto.fieldType;
+      if (dto.options !== undefined && Array.isArray(dto.options)) {
+        data.options = dto.options.filter((o: unknown): o is string => typeof o === 'string' && Boolean(o.trim()));
+      }
+      if (dto.placeholderEn !== undefined) data.placeholderEn = dto.placeholderEn?.trim() || null;
+      if (dto.placeholderAr !== undefined) data.placeholderAr = dto.placeholderAr?.trim() || null;
+      if (dto.isRequired !== undefined) data.isRequired = Boolean(dto.isRequired);
+      if (dto.isActive !== undefined) data.isActive = Boolean(dto.isActive);
+      if (dto.order !== undefined) data.order = Number(dto.order);
+
+      return tx.departmentTicketCustomField.update({
+        where: { id: fieldId },
+        data,
+      });
+    });
+  }
+
+  async deleteDepartmentCustomField(departmentId: string, fieldId: string, principal: any) {
+    if (principal.roleCode !== 'ADMIN') throw new BadRequestException('Unauthorized');
+    return this.repository.transaction(async (tx) => {
+      return tx.departmentTicketCustomField.deleteMany({
+        where: { id: fieldId, departmentId },
+      });
+    });
+  }
+
+  async getUserTicketRules(userId: string, principal: any) {
+    if (principal.roleCode !== 'ADMIN' && principal.userId !== userId) {
+      throw new BadRequestException('Unauthorized');
+    }
+    return this.repository.transaction(async (tx) => {
+      const rule = await tx.userTicketRule.findUnique({ where: { userId } });
+      if (rule) return rule;
+      return {
+        userId,
+        canSendWithoutManagerApproval: false,
+        canDirectAssignOfficer: true,
+        canSelfAssign: true,
+        canTransferDepartment: true,
+        canCloseDirectly: true,
+        canReopenTickets: true,
+      };
+    });
+  }
+
+  async updateUserTicketRules(userId: string, dto: any, principal: any) {
+    if (principal.roleCode !== 'ADMIN') throw new BadRequestException('Unauthorized');
+    return this.repository.transaction(async (tx) => {
+      return tx.userTicketRule.upsert({
+        where: { userId },
+        create: {
+          userId,
+          canSendWithoutManagerApproval: Boolean(dto.canSendWithoutManagerApproval),
+          canDirectAssignOfficer: dto.canDirectAssignOfficer ?? true,
+          canSelfAssign: dto.canSelfAssign ?? true,
+          canTransferDepartment: dto.canTransferDepartment ?? true,
+          canCloseDirectly: dto.canCloseDirectly ?? true,
+          canReopenTickets: dto.canReopenTickets ?? true,
+        },
+        update: {
+          canSendWithoutManagerApproval: Boolean(dto.canSendWithoutManagerApproval),
+          canDirectAssignOfficer: dto.canDirectAssignOfficer ?? true,
+          canSelfAssign: dto.canSelfAssign ?? true,
+          canTransferDepartment: dto.canTransferDepartment ?? true,
+          canCloseDirectly: dto.canCloseDirectly ?? true,
+          canReopenTickets: dto.canReopenTickets ?? true,
+        },
+      });
+    });
+  }
+
+  async getAllUsersRules(principal: any) {
+    if (principal.roleCode !== 'ADMIN') throw new BadRequestException('Unauthorized');
+    return this.repository.transaction(async (tx) => {
+      return tx.user.findMany({
+        where: { isActive: true },
+        select: {
+          id: true,
+          nameEn: true,
+          nameAr: true,
+          username: true,
+          email: true,
+          role: { select: { code: true, nameEn: true, nameAr: true } },
+          department: { select: { id: true, nameEn: true, nameAr: true } },
+          ticketRule: true,
+        },
+        orderBy: [{ departmentId: 'asc' }, { nameEn: 'asc' }],
+      });
+    });
+  }
+
   async getTeamWorkload(principal: any, filters?: { filterType?: string, dateFrom?: string, dateTo?: string, categoryId?: string, severity?: string }) {
     return this.repository.transaction(async (tx) => {
       let userQuery: any = { isActive: true };
@@ -628,7 +830,11 @@ export class InternalTicketsService {
     const ticket = await this.repository.findById(ticketId, {
       assignedEmployee: true,
       requestedBy: { include: { department: true } },
-      targetDepartment: true,
+      targetDepartment: {
+        include: {
+          ticketCustomFields: true,
+        },
+      },
       category: true,
       rating: true,
       activities: {

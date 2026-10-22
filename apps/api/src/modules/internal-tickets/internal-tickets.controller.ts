@@ -56,6 +56,55 @@ export class InternalTicketsController {
     return this.service.updateSettingsRouting(departmentId, dto, req.principal);
   }
 
+  @Get('settings/departments/:departmentId/fields')
+  async getDepartmentFields(@Param('departmentId') departmentId: string, @Req() req: AuthenticatedRequest) {
+    return this.service.getDepartmentFields(departmentId, req.principal);
+  }
+
+  @Put('settings/departments/:departmentId/config')
+  async updateDepartmentFormConfig(@Param('departmentId') departmentId: string, @Req() req: AuthenticatedRequest, @Body() dto: any) {
+    return this.service.updateDepartmentFormConfig(departmentId, dto, req.principal);
+  }
+
+  @Post('settings/departments/:departmentId/custom-fields')
+  async createDepartmentCustomField(@Param('departmentId') departmentId: string, @Req() req: AuthenticatedRequest, @Body() dto: any) {
+    return this.service.createDepartmentCustomField(departmentId, dto, req.principal);
+  }
+
+  @Put('settings/departments/:departmentId/custom-fields/:fieldId')
+  async updateDepartmentCustomField(
+    @Param('departmentId') departmentId: string,
+    @Param('fieldId') fieldId: string,
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: any,
+  ) {
+    return this.service.updateDepartmentCustomField(departmentId, fieldId, dto, req.principal);
+  }
+
+  @Delete('settings/departments/:departmentId/custom-fields/:fieldId')
+  async deleteDepartmentCustomField(
+    @Param('departmentId') departmentId: string,
+    @Param('fieldId') fieldId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.service.deleteDepartmentCustomField(departmentId, fieldId, req.principal);
+  }
+
+  @Get('settings/users/:userId/rules')
+  async getUserTicketRules(@Param('userId') userId: string, @Req() req: AuthenticatedRequest) {
+    return this.service.getUserTicketRules(userId, req.principal);
+  }
+
+  @Put('settings/users/:userId/rules')
+  async updateUserTicketRules(@Param('userId') userId: string, @Req() req: AuthenticatedRequest, @Body() dto: any) {
+    return this.service.updateUserTicketRules(userId, dto, req.principal);
+  }
+
+  @Get('settings/users-rules')
+  async getAllUsersRules(@Req() req: AuthenticatedRequest) {
+    return this.service.getAllUsersRules(req.principal);
+  }
+
   @Get('options')
   async getOptions(@Req() req: AuthenticatedRequest) {
     return this.service.getFormOptions(req.principal);

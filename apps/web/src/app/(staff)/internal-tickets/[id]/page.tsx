@@ -127,6 +127,30 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                 </div>
               </div>
             )}
+
+            {ticket.customFields && typeof ticket.customFields === 'object' && Object.keys(ticket.customFields).length > 0 && (
+              <div className="mt-4 flex flex-col gap-2 rounded-xl border border-line-subtle bg-surface-canvas/40 p-4">
+                <span className="text-xs font-bold text-content-muted uppercase tracking-wider">
+                  {isAr ? 'بيانات إضافية مطلوبة من القسم' : 'Department Custom Fields'}
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {Object.entries(ticket.customFields).map(([fieldId, val]) => {
+                    const def = ticket.targetDepartment?.ticketCustomFields?.find(
+                      (f: any) => f.id === fieldId || f.nameEn === fieldId
+                    );
+                    const label = isAr && def?.nameAr ? def.nameAr : (def?.nameEn || fieldId);
+                    return (
+                      <div key={fieldId} className="flex flex-col rounded-lg bg-surface p-2.5 border border-line-subtle">
+                        <span className="text-[11px] font-bold text-content-muted">{label}</span>
+                        <span className="text-sm font-semibold text-content-strong break-words">
+                          {typeof val === 'boolean' ? (val ? 'Yes' : 'No') : String(val ?? '-')}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-6 border-t border-line-subtle bg-surface-canvas/20 p-5">

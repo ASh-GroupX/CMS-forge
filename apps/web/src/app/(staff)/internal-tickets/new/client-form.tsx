@@ -1,36 +1,96 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createInternalTicket } from '../../../../lib/staff-internal-tickets-actions';
+import { createInternalTicket, getDepartmentFormFields } from '../../../../lib/staff-internal-tickets-actions';
 import { attachmentFileToBase64, normalizeAttachmentMime, validateAttachmentFile } from '../../../../lib/attachment-file-policy';
 import { staffAttachmentFiles } from '../../../../lib/staff-attachments-api';
-import { Calendar, Clock, Paperclip } from 'lucide-react';
+import { Paperclip } from 'lucide-react';
+import { DueDatePicker, TIME_OPTIONS } from './due-date-picker';
+import { CustomFieldsRenderer, CustomFieldDef } from './custom-fields-renderer';
 
-const TIME_OPTIONS = [
-  { label: '1 Hour', hours: 1 },
-  { label: '3 Hours', hours: 3 },
-  { label: '6 Hours', hours: 6 },
-  { label: '12 Hours', hours: 12 },
-  { label: '1 Day', hours: 24 },
-  { label: '3 Days', hours: 72 },
-  { label: '5 Days', hours: 120 },
-  { label: '1 Week', hours: 168 },
-] as const;
+interface DepartmentConfig {
+  enablePriorityField: boolean;
+  enableDueDateField: boolean;
+  enableAttachmentsField: boolean;
+  enableOfficerSelection: boolean;
+}
 
-export default function CreateInternalTicketForm({ options }: { options: { departments: any[], categories: any[], employees: any[] } }) {
+export default function CreateInternalTicketForm({
+  options,
+}: {
+  options: { departments: any[]; categories: any[]; employees: any[] };
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const [dateMode, setDateMode] = useState<'relative' | 'specific'>('relative');
-  const [timeIndex, setTimeIndex] = useState(4); // Default to '1 Day'
+  const [timeIndex, setTimeIndex] = useState(4);
   const [specificDate, setSpecificDate] = useState('');
   const [assignmentMode, setAssignmentMode] = useState<'department' | 'officer'>('department');
   const [selectedDepartmentId, setSelectedDepartmentId] = useState('');
   const [selectedRequestedEmployeeId, setSelectedRequestedEmployeeId] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [selectedPriority, setSelectedPriority] = useState('NORMAL');
+
+  // Department-specific dynamic fields & rules
+  const [deptConfig, setDeptConfig] = useState<DepartmentConfig>({
+    enablePriorityField: true,
+    enableDueDateField: true,
+    enableAttachmentsField: true,
+    enableOfficerSelection: true,
+  });
+  const [deptCustomFields, setDeptCustomFields] = useState<CustomFieldDef[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, any>>({});
+  const [loadingFields, setLoadingFields] = useState(false);
+
+  useEffect(() => {
+    if (!selectedDepartmentId) {
+      setDeptConfig({
+        enablePriorityField: true,
+        enableDueDateField: true,
+        enableAttachmentsField: true,
+        enableOfficerSelection: true,
+      });
+      setDeptCustomFields([]);
+      setCustomFieldValues({});
+      return;
+    }
+
+    let isMounted = true;
+    setLoadingFields(true);
+    getDepartmentFormFields(selectedDepartmentId)
+      .then((res) => {
+        if (!isMounted) return;
+        if (res.config) {
+          setDeptConfig(res.config);
+          if (!res.config.enableOfficerSelection) {
+            setAssignmentMode('department');
+            setSelectedRequestedEmployeeId('');
+          }
+        } else {
+          setDeptConfig({
+            enablePriorityField: true,
+            enableDueDateField: true,
+            enableAttachmentsField: true,
+            enableOfficerSelection: true,
+          });
+        }
+        setDeptCustomFields(res.customFields || []);
+        setCustomFieldValues({});
+      })
+      .catch((err) => {
+        console.error('Failed to load department fields:', err);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingFields(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedDepartmentId]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -42,48 +102,69 @@ export default function CreateInternalTicketForm({ options }: { options: { depar
     const description = formData.get('description') as string;
     const targetDepartmentId = formData.get('targetDepartmentId') as string;
     const categoryId = formData.get('categoryId') as string;
-    const priority = formData.get('priority') as string;
-    
-    let finalDueAt: string | undefined = undefined;
 
-    if (dateMode === 'relative') {
-      const selectedOption = TIME_OPTIONS[timeIndex] || TIME_OPTIONS[4];
-      const hours = selectedOption?.hours ?? 24;
-      const date = new Date(Date.now() + hours * 60 * 60 * 1000);
-      finalDueAt = date.toISOString();
-    } else if (specificDate) {
-      finalDueAt = new Date(specificDate).toISOString();
+    // Validate required custom fields
+    for (const f of deptCustomFields) {
+      if (f.isRequired) {
+        const val = customFieldValues[f.id];
+        if (val === undefined || val === null || val === '') {
+          setError(`Field "${f.nameEn}" is required.`);
+          setLoading(false);
+          return;
+        }
+      }
+    }
+
+    let finalDueAt: string | undefined = undefined;
+    if (deptConfig.enableDueDateField) {
+      if (dateMode === 'relative') {
+        const selectedOption = TIME_OPTIONS[timeIndex] || TIME_OPTIONS[4];
+        const hours = selectedOption?.hours ?? 24;
+        const date = new Date(Date.now() + hours * 60 * 60 * 1000);
+        finalDueAt = date.toISOString();
+      } else if (specificDate) {
+        finalDueAt = new Date(specificDate).toISOString();
+      }
     }
 
     try {
       const payload: any = { title, description, targetDepartmentId, categoryId };
-      if (selectedRequestedEmployeeId) payload.requestedEmployeeId = selectedRequestedEmployeeId;
-      if (priority) payload.priority = priority;
+      if (deptConfig.enableOfficerSelection && selectedRequestedEmployeeId) {
+        payload.requestedEmployeeId = selectedRequestedEmployeeId;
+      }
+      if (deptConfig.enablePriorityField && selectedPriority) {
+        payload.priority = selectedPriority;
+      }
       if (finalDueAt) payload.dueAt = finalDueAt;
+      if (Object.keys(customFieldValues).length > 0) {
+        payload.customFields = customFieldValues;
+      }
 
-      const files = staffAttachmentFiles(formData);
-      if (files.length > 0) {
-        for (const file of files) {
-          const val = validateAttachmentFile(file);
-          if (!val.ok) {
-            if (val.code === 'ATTACHMENT_SIZE_EXCEEDED') {
-              setError(`File "${file.name}" exceeds the 5MB size limit.`);
-            } else {
-              setError(`File "${file.name}" is not allowed. Only JPG images (.jpg, .jpeg) are allowed.`);
+      if (deptConfig.enableAttachmentsField) {
+        const files = staffAttachmentFiles(formData);
+        if (files.length > 0) {
+          for (const file of files) {
+            const val = validateAttachmentFile(file);
+            if (!val.ok) {
+              setError(
+                val.code === 'ATTACHMENT_SIZE_EXCEEDED'
+                  ? `File "${file.name}" exceeds the 5MB size limit.`
+                  : `File "${file.name}" is not allowed. Only JPG images (.jpg, .jpeg) are allowed.`
+              );
+              setLoading(false);
+              return;
             }
-            setLoading(false);
-            return;
           }
-        }
 
-        payload.attachments = await Promise.all(
-          files.map(async (f) => ({
-            fileName: f.name,
-            contentType: normalizeAttachmentMime(f.name, f.type),
-            sizeBytes: f.size,
-            contentBase64: await attachmentFileToBase64(f),
-          }))
-        );
+          payload.attachments = await Promise.all(
+            files.map(async (f) => ({
+              fileName: f.name,
+              contentType: normalizeAttachmentMime(f.name, f.type),
+              sizeBytes: f.size,
+              contentBase64: await attachmentFileToBase64(f),
+            }))
+          );
+        }
       }
 
       const result = await createInternalTicket(payload);
@@ -104,7 +185,7 @@ export default function CreateInternalTicketForm({ options }: { options: { depar
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6 rounded-3xl border border-line-subtle bg-surface p-6 sm:p-8 shadow-sm max-w-2xl">
       {error && <div className="rounded-xl bg-status-error/10 p-4 text-sm font-semibold text-status-error">{error}</div>}
-      
+
       <div className="flex flex-col gap-2">
         <label htmlFor="title" className="text-sm font-bold text-content-strong">Title</label>
         <input required id="title" name="title" className="rounded-xl border border-line-subtle bg-surface-canvas p-3.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand transition-colors" placeholder="Brief summary of request" />
@@ -120,8 +201,8 @@ export default function CreateInternalTicketForm({ options }: { options: { depar
               setSelectedRequestedEmployeeId('');
             }}
             className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
-              assignmentMode === 'department' 
-                ? 'border-brand bg-brand/5 text-brand font-bold shadow-sm' 
+              assignmentMode === 'department'
+                ? 'border-brand bg-brand/5 text-brand font-bold shadow-sm'
                 : 'border-line-subtle bg-surface hover:border-brand/30 text-content-muted'
             }`}
           >
@@ -130,20 +211,25 @@ export default function CreateInternalTicketForm({ options }: { options: { depar
           </button>
           <button
             type="button"
+            disabled={!deptConfig.enableOfficerSelection}
             onClick={() => setAssignmentMode('officer')}
             className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
-              assignmentMode === 'officer' 
-                ? 'border-brand bg-brand/5 text-brand font-bold shadow-sm' 
+              !deptConfig.enableOfficerSelection
+                ? 'opacity-40 cursor-not-allowed border-line-subtle bg-surface'
+                : assignmentMode === 'officer'
+                ? 'border-brand bg-brand/5 text-brand font-bold shadow-sm'
                 : 'border-line-subtle bg-surface hover:border-brand/30 text-content-muted'
             }`}
           >
             Specific Officer
-            <span className="text-xs font-normal text-content-subtle mt-1">Bypasses manager's inbox</span>
+            <span className="text-xs font-normal text-content-subtle mt-1">
+              {!deptConfig.enableOfficerSelection ? 'Disabled by department rule' : "Bypasses manager's inbox"}
+            </span>
           </button>
         </div>
 
         {options.departments?.length === 0 && (
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
+          <div className="rounded-xl border border-status-warning/30 bg-status-warning/10 p-3 text-xs text-status-warning">
             Your department is currently not permitted to send internal tickets to any department. Contact your administrator to adjust routing rules in Admin Hub.
           </div>
         )}
@@ -151,23 +237,37 @@ export default function CreateInternalTicketForm({ options }: { options: { depar
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-2">
           <div className="flex flex-col gap-2">
             <label htmlFor="targetDepartmentId" className="text-sm font-bold text-content-strong">Department</label>
-            <select required id="targetDepartmentId" name="targetDepartmentId" value={selectedDepartmentId} onChange={(e) => {
-              setSelectedDepartmentId(e.target.value);
-              setSelectedCategoryId('');
-              setSelectedRequestedEmployeeId('');
-            }} className="rounded-xl border border-line-subtle bg-surface p-3.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand transition-colors">
-              <option value="">
-                {options.departments?.length ? 'Select a department...' : 'No permitted target departments'}
-              </option>
+            <select
+              required
+              id="targetDepartmentId"
+              name="targetDepartmentId"
+              value={selectedDepartmentId}
+              onChange={(e) => {
+                setSelectedDepartmentId(e.target.value);
+                setSelectedCategoryId('');
+                setSelectedRequestedEmployeeId('');
+              }}
+              className="rounded-xl border border-line-subtle bg-surface p-3.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand transition-colors"
+            >
+              <option value="">{options.departments?.length ? 'Select a department...' : 'No permitted target departments'}</option>
               {options.departments?.map((d) => (
-                <option key={d.id} value={d.id}>{d.nameEn}{d.nameAr ? ` - ${d.nameAr}` : ''}</option>
+                <option key={d.id} value={d.id}>
+                  {d.nameEn}{d.nameAr ? ` - ${d.nameAr}` : ''}
+                </option>
               ))}
             </select>
           </div>
 
           <div className="flex flex-col gap-2">
             <label htmlFor="categoryId" className="text-sm font-bold text-content-strong">Category</label>
-            <select required id="categoryId" name="categoryId" value={selectedCategoryId} onChange={(e) => setSelectedCategoryId(e.target.value)} className="rounded-xl border border-line-subtle bg-surface p-3.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand transition-colors">
+            <select
+              required
+              id="categoryId"
+              name="categoryId"
+              value={selectedCategoryId}
+              onChange={(e) => setSelectedCategoryId(e.target.value)}
+              className="rounded-xl border border-line-subtle bg-surface p-3.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand transition-colors"
+            >
               <option value="">Select a category...</option>
               {options.categories?.filter((c: any) => !c.departmentId || c.departmentId === selectedDepartmentId).map((c: any) => (
                 <option key={c.id} value={c.id}>{c.nameEn}</option>
@@ -175,16 +275,22 @@ export default function CreateInternalTicketForm({ options }: { options: { depar
             </select>
           </div>
 
-          {assignmentMode === 'officer' && (
+          {assignmentMode === 'officer' && deptConfig.enableOfficerSelection && (
             <div className="flex flex-col gap-2 sm:col-span-2 mt-2 pt-4 border-t border-line-subtle border-dashed">
-              <label htmlFor="requestedEmployeeId" className="text-sm font-bold text-content-strong">
-                Select Officer
-              </label>
-              <select required id="requestedEmployeeId" name="requestedEmployeeId" value={selectedRequestedEmployeeId} onChange={(e) => setSelectedRequestedEmployeeId(e.target.value)} disabled={!selectedDepartmentId} className="rounded-xl border border-line-subtle bg-surface p-3.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand transition-colors disabled:opacity-50">
+              <label htmlFor="requestedEmployeeId" className="text-sm font-bold text-content-strong">Select Officer</label>
+              <select
+                required
+                id="requestedEmployeeId"
+                name="requestedEmployeeId"
+                value={selectedRequestedEmployeeId}
+                onChange={(e) => setSelectedRequestedEmployeeId(e.target.value)}
+                disabled={!selectedDepartmentId}
+                className="rounded-xl border border-line-subtle bg-surface p-3.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand transition-colors disabled:opacity-50"
+              >
                 <option value="">Choose an officer...</option>
                 {options.employees?.filter((e: any) => e.departmentId === selectedDepartmentId && e.role?.code !== 'DEPARTMENT_MANGER').map((e: any) => (
                   <option key={e.id} value={e.id}>
-                    {e.nameEn || e.nameAr || 'Unknown'}{e.phone ? ` (${e.phone})` : ''} - {e.activeTicketsCount ?? 0} active task{e.activeTicketsCount === 1 ? '' : 's'}
+                    {e.nameEn || e.nameAr || 'Unknown'}{e.phone ? ` (${e.phone})` : ''} - {e.activeTicketsCount ?? 0} active tasks
                   </option>
                 ))}
               </select>
@@ -193,131 +299,74 @@ export default function CreateInternalTicketForm({ options }: { options: { depar
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label className="text-sm font-bold text-content-strong">Level of Emergency (Priority)</label>
-        <input type="hidden" name="priority" value={selectedPriority} />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <button
-            type="button"
-            onClick={() => setSelectedPriority('LOW')}
-            className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
-              selectedPriority === 'LOW' 
-                ? 'border-slate-500 bg-slate-50 text-slate-700 font-bold shadow-sm' 
-                : 'border-line-subtle bg-surface hover:border-slate-300 text-content-muted'
-            }`}
-          >
-            Low
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedPriority('NORMAL')}
-            className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
-              selectedPriority === 'NORMAL' 
-                ? 'border-blue-500 bg-blue-50 text-blue-700 font-bold shadow-sm' 
-                : 'border-line-subtle bg-surface hover:border-blue-300 text-content-muted'
-            }`}
-          >
-            Normal
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedPriority('HIGH')}
-            className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
-              selectedPriority === 'HIGH' 
-                ? 'border-orange-500 bg-orange-50 text-orange-700 font-bold shadow-sm' 
-                : 'border-line-subtle bg-surface hover:border-orange-300 text-content-muted'
-            }`}
-          >
-            High
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedPriority('URGENT')}
-            className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
-              selectedPriority === 'URGENT' 
-                ? 'border-red-500 bg-red-50 text-red-700 font-bold shadow-sm' 
-                : 'border-line-subtle bg-surface hover:border-red-300 text-content-muted'
-            }`}
-          >
-            Urgent
-          </button>
+      {loadingFields && (
+        <div className="text-xs text-brand font-medium animate-pulse py-1">Loading department custom rules and fields...</div>
+      )}
+
+      {/* Target Department Custom Fields */}
+      <CustomFieldsRenderer
+        fields={deptCustomFields}
+        values={customFieldValues}
+        onChange={(fieldId, val) => setCustomFieldValues((prev) => ({ ...prev, [fieldId]: val }))}
+      />
+
+      {/* Priority Picker */}
+      {deptConfig.enablePriorityField && (
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-bold text-content-strong">Level of Emergency (Priority)</label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { id: 'LOW', label: 'Low', active: 'border-line-strong bg-surface-raised text-content-strong' },
+              { id: 'NORMAL', label: 'Normal', active: 'border-brand bg-brand/10 text-brand' },
+              { id: 'HIGH', label: 'High', active: 'border-status-warning bg-status-warning/10 text-status-warning' },
+              { id: 'URGENT', label: 'Urgent', active: 'border-status-error bg-status-error/10 text-status-error' },
+            ].map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setSelectedPriority(p.id)}
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
+                  selectedPriority === p.id ? `${p.active} font-bold shadow-sm` : 'border-line-subtle bg-surface hover:border-line-strong text-content-muted'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Flexible Due Date Picker */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-line-subtle bg-surface-canvas/50 p-5">
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-bold text-content-strong">Timeline / Due Date</label>
-          
-          <div className="flex items-center gap-1 rounded-lg bg-surface border border-line-subtle p-1">
-            <button
-              type="button"
-              onClick={() => setDateMode('relative')}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-bold transition-colors ${dateMode === 'relative' ? 'bg-brand text-white shadow-sm' : 'text-content-muted hover:text-content-strong'}`}
-            >
-              <Clock className="size-3.5" /> Relative
-            </button>
-            <button
-              type="button"
-              onClick={() => setDateMode('specific')}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-bold transition-colors ${dateMode === 'specific' ? 'bg-brand text-white shadow-sm' : 'text-content-muted hover:text-content-strong'}`}
-            >
-              <Calendar className="size-3.5" /> Specific Date
-            </button>
-          </div>
-        </div>
-
-        {dateMode === 'relative' ? (
-          <div className="flex flex-col gap-5 pt-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-content-muted">Time allowed:</span>
-              <span className="rounded-lg bg-brand/10 px-3 py-1 text-sm font-bold text-brand">{TIME_OPTIONS[timeIndex]?.label ?? '1 Day'}</span>
-            </div>
-            <div className="relative w-full px-2">
-              <input 
-                type="range" 
-                min="0" 
-                max={TIME_OPTIONS.length - 1} 
-                step="1" 
-                value={timeIndex}
-                onChange={(e) => setTimeIndex(Number(e.target.value))}
-                className="w-full h-2 bg-line-subtle rounded-lg appearance-none cursor-pointer accent-brand"
-              />
-              <div className="flex justify-between text-[10px] font-semibold text-content-subtle mt-2 px-1">
-                <span>{TIME_OPTIONS[0]?.label}</span>
-                <span>{TIME_OPTIONS[TIME_OPTIONS.length - 1]?.label}</span>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="pt-2">
-            <input 
-              type="date" 
-              value={specificDate}
-              onChange={(e) => setSpecificDate(e.target.value)}
-              className="w-full rounded-xl border border-line-subtle bg-surface-canvas p-3.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand transition-colors" 
-            />
-          </div>
-        )}
-      </div>
+      {deptConfig.enableDueDateField && (
+        <DueDatePicker
+          dateMode={dateMode}
+          setDateMode={setDateMode}
+          timeIndex={timeIndex}
+          setTimeIndex={setTimeIndex}
+          specificDate={specificDate}
+          setSpecificDate={setSpecificDate}
+        />
+      )}
 
       <div className="flex flex-col gap-2">
         <label htmlFor="description" className="text-sm font-bold text-content-strong">Description</label>
         <textarea required id="description" name="description" rows={5} className="rounded-xl border border-line-subtle bg-surface-canvas p-3.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand transition-colors" placeholder="Detailed explanation of the task or request..." />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor="attachments" className="text-sm font-bold text-content-strong flex items-center gap-1.5"><Paperclip className="size-4" /> Attachments</label>
-        <input 
-          id="attachments" 
-          name="attachments" 
-          type="file" 
-          multiple
-          accept=".jpg,.jpeg,image/jpeg"
-          className="rounded-xl border border-line-subtle bg-surface-canvas p-3.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand/10 file:text-brand hover:file:bg-brand/20" 
-        />
-        <p className="text-xs text-content-muted">Only JPG images are allowed (.jpg, .jpeg, max 5MB).</p>
-      </div>
+      {deptConfig.enableAttachmentsField && (
+        <div className="flex flex-col gap-2">
+          <label htmlFor="attachments" className="text-sm font-bold text-content-strong flex items-center gap-1.5"><Paperclip className="size-4" /> Attachments</label>
+          <input 
+            id="attachments" 
+            name="attachments" 
+            type="file" 
+            multiple
+            accept=".jpg,.jpeg,image/jpeg"
+            className="rounded-xl border border-line-subtle bg-surface-canvas p-3.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand/10 file:text-brand hover:file:bg-brand/20" 
+          />
+          <p className="text-xs text-content-muted">Only JPG images are allowed (.jpg, .jpeg, max 5MB).</p>
+        </div>
+      )}
 
       <div className="flex justify-end gap-3 pt-4 mt-2 border-t border-line-subtle">
         <button type="button" onClick={() => router.back()} className="rounded-xl px-5 py-2.5 text-sm font-bold text-content-muted hover:bg-surface-raised transition-colors">Cancel</button>

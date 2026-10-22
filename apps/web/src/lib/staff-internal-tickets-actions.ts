@@ -32,6 +32,7 @@ export async function createInternalTicket(data: {
   requestedEmployeeId?: string;
   priority?: string;
   dueAt?: string;
+  customFields?: Record<string, any>;
   attachments?: Array<{
     fileName: string;
     contentType: string;
@@ -245,5 +246,34 @@ export async function resubmitTicket(ticketId: string, reason: string) {
   if (!res.ok) throw new Error('Failed to resubmit ticket');
   revalidatePath(`/internal-tickets/${ticketId}`);
   revalidatePath('/internal-tickets', 'layout');
+  return res.json();
+}
+
+export async function getDepartmentFormFields(departmentId: string): Promise<{
+  config: {
+    enablePriorityField: boolean;
+    enableDueDateField: boolean;
+    enableAttachmentsField: boolean;
+    enableOfficerSelection: boolean;
+  } | null;
+  customFields: Array<{
+    id: string;
+    departmentId: string;
+    nameEn: string;
+    nameAr: string;
+    fieldType: 'TEXT' | 'NUMBER' | 'DROPDOWN' | 'DATE' | 'TEXTAREA';
+    options: string[];
+    placeholderEn: string | null;
+    placeholderAr: string | null;
+    isRequired: boolean;
+    isActive: boolean;
+    order: number;
+  }>;
+}> {
+  const res = await fetch(`${API_BASE_URL}/internal-tickets/settings/departments/${departmentId}/fields`, {
+    headers: await getAuthHeaders(),
+    cache: 'no-store',
+  });
+  if (!res.ok) return { config: null, customFields: [] };
   return res.json();
 }

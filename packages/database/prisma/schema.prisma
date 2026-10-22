@@ -328,6 +328,8 @@ model Department {
   ticketResolutionReasons TicketResolutionReason[]
   ticketRejectReasons     TicketRejectReason[]
   standardProblems        StandardProblem[]
+  ticketFormConfig        DepartmentTicketFormConfig?
+  ticketCustomFields      DepartmentTicketCustomField[]
 
   id                String              @id @default(cuid())
   code              String              @unique
@@ -405,6 +407,7 @@ model User {
   employeeTicketRatings     TicketRating[]         @relation("TicketRatingEmployee")
   uploadedTicketAttachments TicketAttachment[]     @relation("TicketAttachmentUploadedBy")
   uploadedNoteAttachments   TicketNoteAttachment[] @relation("TicketNoteAttachmentUploadedBy")
+  ticketRule                UserTicketRule?
 
   id                        String                     @id @default(cuid())
   email                     String?                    @unique
@@ -1400,6 +1403,66 @@ enum InternalTicketPriority {
   URGENT
 }
 
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  DROPDOWN
+  DATE
+  TEXTAREA
+}
+
+model DepartmentTicketFormConfig {
+  id                     String     @id @default(cuid())
+  departmentId           String     @unique @map("department_id")
+  enablePriorityField    Boolean    @default(true) @map("enable_priority_field")
+  enableDueDateField     Boolean    @default(true) @map("enable_due_date_field")
+  enableAttachmentsField Boolean    @default(true) @map("enable_attachments_field")
+  enableOfficerSelection Boolean    @default(true) @map("enable_officer_selection")
+  updatedAt              DateTime   @updatedAt @map("updated_at")
+
+  department             Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@map("department_ticket_form_configs")
+}
+
+model DepartmentTicketCustomField {
+  id            String          @id @default(cuid())
+  departmentId  String          @map("department_id")
+  nameEn        String          @map("name_en")
+  nameAr        String          @map("name_ar")
+  fieldType     CustomFieldType @map("field_type")
+  options       String[]        @default([])
+  placeholderEn String?         @map("placeholder_en")
+  placeholderAr String?         @map("placeholder_ar")
+  isRequired    Boolean         @default(false) @map("is_required")
+  isActive      Boolean         @default(true)  @map("is_active")
+  order         Int             @default(0)
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt      @map("updated_at")
+
+  department    Department      @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@index([departmentId, isActive, order])
+  @@map("department_ticket_custom_fields")
+}
+
+model UserTicketRule {
+  id                            String   @id @default(cuid())
+  userId                        String   @unique @map("user_id")
+  canSendWithoutManagerApproval Boolean  @default(false) @map("can_send_without_manager_approval")
+  canDirectAssignOfficer        Boolean  @default(true)  @map("can_direct_assign_officer")
+  canSelfAssign                 Boolean  @default(true)  @map("can_self_assign")
+  canTransferDepartment         Boolean  @default(true)  @map("can_transfer_department")
+  canCloseDirectly              Boolean  @default(true)  @map("can_close_directly")
+  canReopenTickets              Boolean  @default(true)  @map("can_reopen_tickets")
+  createdAt                     DateTime @default(now())  @map("created_at")
+  updatedAt                     DateTime @updatedAt      @map("updated_at")
+
+  user                          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_ticket_rules")
+}
+
 // Models
 model TicketCategory {
   id       String           @id @default(cuid())
@@ -1493,6 +1556,7 @@ model InternalTicket {
 
   slaOptionId String?   @map("sla_option_id")
   dueAt       DateTime? @map("due_at")
+  customFields Json?    @map("custom_fields")
 
   resolvedAt DateTime? @map("resolved_at")
   closedAt   DateTime? @map("closed_at")
