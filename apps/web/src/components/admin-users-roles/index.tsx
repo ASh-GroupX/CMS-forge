@@ -20,6 +20,7 @@ type AdminAction = (formData: FormData) => void | Promise<void>;
 export function AdminUsersRoles({
   createAction,
   data,
+  errorMessage,
   locale,
   resetPasswordAction,
   state,
@@ -30,6 +31,7 @@ export function AdminUsersRoles({
 }: {
   createAction?: AdminAction;
   data?: AdminUsersData | null;
+  errorMessage?: string | undefined;
   locale: Locale;
   resetPasswordAction?: AdminAction;
   state?: AdminUsersFixtureState | undefined;
@@ -54,8 +56,8 @@ export function AdminUsersRoles({
         </div>
       </CardHeader>
       <CardContent className="p-4">
-        {state ? <StateMessage locale={locale} state={state} /> : null}
-        {createAction && data ? <CreateUserForm action={createAction} data={data} locale={locale} /> : null}
+        {state ? <StateMessage errorMessage={errorMessage} locale={locale} state={state} /> : null}
+        {createAction && data ? <CreateUserForm action={createAction} data={data} defaultOpen={state === 'validation' || state === 'error' || state === 'conflict'} locale={locale} /> : null}
         <div className="overflow-x-auto">
           <Table className="min-w-[50rem]">
             <TableHeader className="bg-muted/40 text-xs font-semibold uppercase tracking-normal text-muted-foreground">
@@ -96,16 +98,23 @@ export function AdminUsersRoles({
   );
 }
 
-function CreateUserForm({ action, data, locale }: { action: AdminAction; data: AdminUsersData; locale: Locale }) {
+function CreateUserForm({ action, data, defaultOpen, locale }: { action: AdminAction; data: AdminUsersData; defaultOpen?: boolean; locale: Locale }) {
   const t = adminUsersText[locale];
+  const [selectedBranch, setSelectedBranch] = React.useState<string>('');
+  const eligibleDepartments = React.useMemo(() => {
+    return (data.departments ?? []).filter(
+      (dept) => !selectedBranch || !dept.branchId || dept.branchId === selectedBranch
+    );
+  }, [data.departments, selectedBranch]);
+
   return (
-    <details className="mb-4 rounded-sm border border-line-subtle bg-surface-raised">
+    <details className="mb-4 rounded-sm border border-line-subtle bg-surface-raised" open={defaultOpen}>
       <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-content-strong">{t.actions.create}</summary>
       <form action={action} className="grid gap-3 border-t border-line-subtle p-3 md:grid-cols-3">
         <input name="locale" type="hidden" value={locale} />
-        <Field label={t.fields.username} name="username" placeholder={locale === 'ar' ? 'اختياري (يُشتق من البريد أو الهاتف)' : 'Optional (derived from email/phone)'} required={false} />
+        <Field label={t.fields.username} name="username" placeholder={locale === 'ar' ? 'اختياري (يُشتق من الهاتف أو البريد)' : 'Optional (derived from phone/email)'} required={false} />
         <Field label={t.fields.email} name="email" placeholder={locale === 'ar' ? 'اختياري' : 'Optional'} required={false} type="email" />
-        <Field label={locale === 'ar' ? 'رقم الهاتف' : 'Phone Number'} name="phone" placeholder={locale === 'ar' ? 'اختياري' : 'Optional'} required={false} />
+        <Field label={locale === 'ar' ? 'رقم الهاتف' : 'Phone Number'} name="phone" placeholder={locale === 'ar' ? 'مثال: 05XXXXXXXX' : 'e.g. 05XXXXXXXX'} required={false} type="tel" />
         <Field label={t.fields.nameEn} name="nameEn" />
         <Field label={t.fields.nameAr} name="nameAr" />
         <label className="grid gap-1 text-sm font-medium">
@@ -114,11 +123,20 @@ function CreateUserForm({ action, data, locale }: { action: AdminAction; data: A
         </label>
         <label className="grid gap-1 text-sm font-medium">
           {t.fields.branch}
-          <FormSelect name="branchId" options={(data.branches ?? []).map((branch) => ({ label: localizedName(branch, locale), value: branch.id }))} placeholder={t.allBranches} />
+          <FormSelect
+            name="branchId"
+            onValueChange={setSelectedBranch}
+            options={(data.branches ?? []).map((branch) => ({ label: localizedName(branch, locale), value: branch.id }))}
+            placeholder={t.allBranches}
+          />
         </label>
         <label className="grid gap-1 text-sm font-medium">
           {t.fields.department}
-          <FormSelect name="departmentId" options={(data.departments ?? []).map((department) => ({ label: localizedName(department, locale), value: department.id }))} required />
+          <FormSelect
+            name="departmentId"
+            options={eligibleDepartments.map((department) => ({ label: localizedName(department, locale), value: department.id }))}
+            placeholder={t.allDepartments}
+          />
         </label>
         <Field label={t.fields.initialPassword} minLength={6} name="initialPassword" type="password" />
         <Button className="md:col-span-3" type="submit">{t.actions.create}</Button>
@@ -234,11 +252,11 @@ function Field({ label, minLength, name, placeholder, required = true, type = 't
   );
 }
 
-function StateMessage({ locale, state }: { locale: Locale; state: AdminUsersFixtureState }) {
+function StateMessage({ errorMessage, locale, state }: { errorMessage?: string | undefined; locale: Locale; state: AdminUsersFixtureState }) {
   const t = adminUsersText[locale];
   return (
     <p className="mb-4 rounded-sm border bg-muted/40 px-3 py-2 text-sm text-muted-foreground" role={state === 'success' || state === 'loading' ? 'status' : 'alert'}>
-      {t.states[state]}
+      {errorMessage ? `${t.states[state]} (${errorMessage})` : t.states[state]}
     </p>
   );
 }

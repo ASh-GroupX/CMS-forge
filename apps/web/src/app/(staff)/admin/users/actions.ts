@@ -29,7 +29,19 @@ export async function createAdminUserAction(formData: FormData): Promise<void> {
     }),
     method: 'POST',
   });
-  redirect(`/admin/users?locale=${locale}&admin=${response.ok ? 'success' : response.status === 400 ? 'validation' : 'error'}`);
+
+  if (!response.ok) {
+    let errMessage = '';
+    try {
+      const errJson = (await response.json()) as { error?: { fieldErrors?: Array<{ message: string }>; message?: string } };
+      errMessage = errJson?.error?.fieldErrors?.[0]?.message ?? errJson?.error?.message ?? '';
+    } catch {}
+    const adminState = response.status === 400 ? 'validation' : response.status === 409 ? 'conflict' : 'error';
+    const errParam = errMessage ? `&err=${encodeURIComponent(errMessage)}` : '';
+    redirect(`/admin/users?locale=${locale}&admin=${adminState}${errParam}`);
+  }
+
+  redirect(`/admin/users?locale=${locale}&admin=success`);
 }
 
 export async function updateAdminUserNavRulesAction(formData: FormData): Promise<void> {

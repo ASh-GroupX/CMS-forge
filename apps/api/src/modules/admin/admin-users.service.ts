@@ -12,7 +12,7 @@ export type AdminUserDto = {
   branchId: string | null; branchName: string | null; departmentId: string | null; departmentName: string | null; isActive: boolean; lockedAt: string | null; lastLoginAt: string | null;
 };
 export type AdminUsersResponse = { users: AdminUserDto[]; roles: AdminRoleOption[]; branches: AdminBranchOption[]; departments: AdminDepartmentOption[] };
-export type CreateAdminUserInput = { email?: string | null | undefined; phone?: string | null | undefined; viewMode?: string | null | undefined; allowedNavKeys?: string[] | undefined; username?: string | null | undefined; nameEn: string; nameAr: string; roleCode: string; branchId?: string | null | undefined; departmentId: string; initialPassword: string };
+export type CreateAdminUserInput = { email?: string | null | undefined; phone?: string | null | undefined; viewMode?: string | null | undefined; allowedNavKeys?: string[] | undefined; username?: string | null | undefined; nameEn: string; nameAr: string; roleCode: string; branchId?: string | null | undefined; departmentId?: string | null | undefined; initialPassword: string };
 export type StaffLookupActor = { userId: string; roleCode: string; branchId: string | null };
 export type AssignableStaffDto = { userId: string; displayName: string; displayNameAr: string; role: string; roleAr: string; branchLabel: string | null; branchLabelAr: string | null };
 export type AssignableStaffResponse = { staff: AssignableStaffDto[] };
@@ -43,7 +43,7 @@ export class AdminUsersService {
     const data = await this.createData(input);
     return this.repository.transaction(async (client) => {
       const user = await this.repository.create(data, client);
-      await this.audit.record(auditInput('admin_user_created', user, audit, { email: user.email, roleCode: user.role.code, branchId: user.branch?.id ?? null }), client);
+      await this.audit.record(auditInput('admin_user_created', user, audit, { email: user.email, phone: user.phone, roleCode: user.role.code, branchId: user.branch?.id ?? null }), client);
       return userDto(user);
     });
   }
@@ -116,23 +116,83 @@ export class AdminUsersService {
     const rawEmail = typeof input.email === 'string' ? input.email.trim().toLowerCase() : '';
     const email = rawEmail || null;
     if (email && !email.includes('@')) throw validation('email', 'email is invalid.');
-    const rawPhone = typeof input.phone === 'string' ? input.phone.trim() : '';
+
+    const rawPhone = typeof input.phone === 'string' ? normalizePhone(input.phone) : '';
     const phone = rawPhone || null;
+
+    const rawUsername = typeof input.username === 'string' ? input.username.trim().toLowerCase() : '';
+
+    if (!email && !phone && !rawUsername) {
+      throw validation('phone', 'At least one of username, email, or phone number must be provided.');
+    }
+
+    if (email && this.repository.findUserByEmail) {
+      const existingEmail = await this.repository.findUserByEmail(email);
+      if (existingEmail) throw validation('email', 'Email is already in use.');
+    }
+
+    if (phone && this.repository.findUserByPhone) {
+      const existingPhone = await this.repository.findUserByPhone(phone);
+      if (existingPhone) throw validation('phone', 'Phone number is already in use by another user.');
+    }
+
     const roleId = await this.repository.roleId(input.roleCode);
     if (!roleId || input.roleCode === RoleCode.CUSTOMER_PORTAL) throw validation('roleCode', 'roleCode is invalid.');
+
     const branchId = optionalText(input.branchId, 'branchId');
     if (branchId && !(await this.repository.branchExists(branchId))) throw validation('branchId', 'branchId is invalid.');
-    const department = await this.validDepartment(input.departmentId);
-    if (department.branchId && department.branchId !== branchId) throw validation('departmentId', 'departmentId is outside the user branch.');
+
+    let departmentId: string | null = null;
+    const rawDeptId = optionalText(input.departmentId, 'departmentId');
+    if (rawDeptId) {
+      const department = await this.validDepartment(rawDeptId);
+      if (branchId && department.branchId && department.branchId !== branchId) {
+        throw validation('departmentId', 'departmentId is outside the user branch.');
+      }
+      departmentId = department.id;
+    }
+
     const password = nonEmpty(input.initialPassword, 'initialPassword');
     if (password.length < 6) throw validation('initialPassword', 'initialPassword must be at least 6 characters.');
-    const rawUsername = typeof input.username === 'string' ? input.username.trim().toLowerCase() : '';
-    const username = rawUsername || (email ? email.split('@')[0] : (phone ? phone.replace(/\D/g, '') : null)) || `user_${Date.now()}`;
+
+    let username: string;
+    if (rawUsername) {
+      if (this.repository.findUserByUsername) {
+        const existing = await this.repository.findUserByUsername(rawUsername);
+        if (existing) throw validation('username', 'Username is already taken.');
+      }
+      username = rawUsername;
+    } else {
+      const digits = phone ? phone.replace(/\D/g, '') : '';
+      const base = (email ? email.split('@')[0] : (digits ? digits : null)) || 'user';
+      let candidate = base;
+      let counter = 1;
+      if (this.repository.findUserByUsername) {
+        while (await this.repository.findUserByUsername(candidate)) {
+          candidate = `${base}_${counter++}`;
+          if (counter > 20) {
+            candidate = `user_${Date.now()}`;
+            break;
+          }
+        }
+      }
+      username = candidate;
+    }
+
     const viewMode = input.viewMode || 'BOTH';
     const allowedNavKeys = Array.isArray(input.allowedNavKeys) ? input.allowedNavKeys : [];
     return {
-      email, phone, viewMode, allowedNavKeys, username, nameEn: nonEmpty(input.nameEn, 'nameEn'), nameAr: nonEmpty(input.nameAr, 'nameAr'),
-      passwordHash: await argon2.hash(password, { type: argon2.argon2id }), roleId, branchId, departmentId: department.id,
+      email,
+      phone,
+      viewMode,
+      allowedNavKeys,
+      username,
+      nameEn: nonEmpty(input.nameEn, 'nameEn'),
+      nameAr: nonEmpty(input.nameAr, 'nameAr'),
+      passwordHash: await argon2.hash(password, { type: argon2.argon2id }),
+      roleId,
+      branchId,
+      departmentId,
     };
   }
 
@@ -189,3 +249,13 @@ function optionalText(value: string | undefined | null, field: string): string |
 function validation(field: string, message: string): AppException {
   return new AppException('VALIDATION_FAILED', 'Invalid admin user request', HttpStatus.BAD_REQUEST, [{ field, code: 'REQUIRED', message }]);
 }
+
+export function normalizePhone(value: string): string {
+  const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  let normalized = value.trim();
+  arabicDigits.forEach((digit, i) => {
+    normalized = normalized.replaceAll(digit, String(i));
+  });
+  return normalized;
+}
+

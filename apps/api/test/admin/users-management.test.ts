@@ -207,6 +207,60 @@ test('admin user service creates an account with optional email and phone', asyn
   assert.equal(created.phone, '0512345678');
 });
 
+test('admin user service creates an account with phone number and no department and normalizes Arabic digits', async () => {
+  const txClient = {};
+  const auditRecords: Array<{ input: AuditRecordInput; client: unknown }> = [];
+  let capturedData: any;
+  const service = new AdminUsersService({
+    roleId: async (code) => code === RoleCode.CR_OFFICER ? 'role_cr' : null,
+    branchExists: async (id) => true,
+    findUserByPhone: async (phone) => null,
+    findUserByUsername: async (username) => null,
+    transaction: async <T>(work: (client: never) => Promise<T>) => work(txClient as never),
+    create: async (data, client) => {
+      capturedData = data;
+      return { ...userRecord, email: data.email, phone: data.phone, username: data.username, department: null };
+    },
+  } as unknown as AdminUsersRepository, {
+    record: async (input: AuditRecordInput, client?: unknown) => auditRecords.push({ input, client }),
+  } as AuditService);
+
+  const created = await service.create(
+    {
+      phone: '٠٥١٢٣٤٥٦٧٨',
+      nameEn: 'Arabic Phone User',
+      nameAr: 'مستخدم بأرقام عربية',
+      roleCode: RoleCode.CR_OFFICER,
+      initialPassword: 'ChangeMe12345!',
+    },
+    auditContext(),
+  );
+
+  assert.equal(created.phone, '0512345678');
+  assert.equal(capturedData.departmentId, null);
+  assert.equal(capturedData.branchId, null);
+  assert.equal(capturedData.username, '0512345678');
+});
+
+test('admin user service rejects duplicate phone numbers', async () => {
+  const service = new AdminUsersService({
+    roleId: async (code) => 'role_cr',
+    findUserByPhone: async (phone) => userRecord,
+    transaction: async <T>(work: (client: never) => Promise<T>) => work({} as never),
+  } as unknown as AdminUsersRepository, noopAudit());
+
+  await assert.rejects(
+    service.create({
+      phone: '0512345678',
+      nameEn: 'Duplicate Phone',
+      nameAr: 'هاتف مكرر',
+      roleCode: RoleCode.CR_OFFICER,
+      initialPassword: 'ChangeMe12345!',
+    }),
+    (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED' && error.fieldErrors[0]?.field === 'phone',
+  );
+});
+
 test('admin user service updates user navigation rules and audits', async () => {
   const txClient = {};
   const auditRecords: Array<{ input: AuditRecordInput; client: unknown }> = [];

@@ -1,6 +1,6 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import { PrismaService } from '../../core/http-kernel.js';
+import { AppException, PrismaService } from '../../core/http-kernel.js';
 
 const userSelect = {
   id: true, email: true, username: true, phone: true, viewMode: true, allowedNavKeys: true, nameEn: true, nameAr: true, isActive: true, lockedAt: true,
@@ -22,7 +22,7 @@ export type AssignableStaffRecord = Prisma.UserGetPayload<{ select: typeof userS
 type AdminUserClient = Pick<Prisma.TransactionClient, 'user'>;
 
 export type CreateAdminUserData = {
-  email?: string | null; phone?: string | null; viewMode?: string | null; allowedNavKeys?: string[]; username?: string | null; nameEn: string; nameAr: string; passwordHash: string; roleId: string; branchId: string | null; departmentId: string;
+  email?: string | null; phone?: string | null; viewMode?: string | null; allowedNavKeys?: string[]; username?: string | null; nameEn: string; nameAr: string; passwordHash: string; roleId: string; branchId: string | null; departmentId?: string | null;
 };
 
 @Injectable()
@@ -77,8 +77,30 @@ export class AdminUsersRepository {
     return this.prisma.department.findFirst({ where: { id, isActive: true }, select: departmentSelect });
   }
 
+  async findUserByEmail(email: string): Promise<AdminUserRecord | null> {
+    return this.prisma.user.findFirst({ where: { email }, select: userSelect });
+  }
+
+  async findUserByUsername(username: string): Promise<AdminUserRecord | null> {
+    return this.prisma.user.findFirst({ where: { username }, select: userSelect });
+  }
+
+  async findUserByPhone(phone: string): Promise<AdminUserRecord | null> {
+    return this.prisma.user.findFirst({ where: { phone }, select: userSelect });
+  }
+
   async create(data: CreateAdminUserData, client: AdminUserClient = this.prisma): Promise<AdminUserRecord> {
-    return client.user.create({ data, select: userSelect });
+    try {
+      return await client.user.create({ data, select: userSelect });
+    } catch (error: any) {
+      if (error?.code === 'P2002') {
+        const target = Array.isArray(error.meta?.target) ? error.meta.target.join(', ') : error.meta?.target ?? 'field';
+        throw new AppException('USER_CONFLICT', `A user with this ${target} already exists.`, HttpStatus.CONFLICT, [
+          { field: String(target), code: 'CONFLICT', message: `A user with this ${target} already exists.` },
+        ]);
+      }
+      throw error;
+    }
   }
 
   async setActive(id: string, active: boolean, client: AdminUserClient = this.prisma): Promise<AdminUserRecord> {

@@ -106,7 +106,7 @@ function parseCreateUser(body: unknown): CreateAdminUserInput {
     nameAr: text(input.nameAr, 'nameAr'),
     roleCode: role(input.roleCode),
     branchId: optionalText(input.branchId),
-    departmentId: text(input.departmentId, 'departmentId'),
+    departmentId: optionalText(input.departmentId),
     initialPassword: text(input.initialPassword, 'initialPassword'),
   };
 }
