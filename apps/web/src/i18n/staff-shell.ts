@@ -138,6 +138,7 @@ export const staffShellText = {
       admin: ['Admin', 'Set users, branches, and categories'],
       audit: ['Audit', 'Who changed what'],
       internalTickets: ['Internal Tickets', 'Department work requests'],
+      serviceBooking: ['Service Booking', 'Service center schedule and appointments'],
       // Legacy routes to keep temporarily if referenced elsewhere
       myWork: ['My Work', 'Your tasks, complaints, and deadlines'],
       today: ['Today', 'Your work for today'],
@@ -290,6 +291,7 @@ export const staffShellText = {
       admin: ['الإدارة', 'المستخدمون والفروع والتصنيفات'],
       audit: ['التدقيق', 'سجل العمليات والتدقيق الإداري'],
       internalTickets: ['التذاكر الداخلية', 'طلبات عمل الأقسام'],
+      serviceBooking: ['حجوزات الصيانة', 'جدول ومواعيد مركز الصيانة'],
       myWork: ['مهامي وأعمالي', 'متابعة مهامك وشكاواك والتزاماتك'],
       today: ['اليوم', 'المهام المستحقة والمتأخرة والعالقة'],
       board: ['اللوحة', 'اسحب المهام بين المراحل'],

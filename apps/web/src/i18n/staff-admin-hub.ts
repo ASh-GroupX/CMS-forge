@@ -17,6 +17,7 @@ const en = {
     internalTickets: ['Internal Ticket Rules & Fields', 'Configure department form fields and per-user approval & action rules.'],
     complaintSettings: ['Complaint CRM Settings', 'Manage Root Cause Categories and Sales Advisors for complaints.'],
     sla: ['SLA Policies', 'Manage complaint resolution SLA durations, warning thresholds, calendar modes, and escalation levels.'],
+    bookingSettings: ['Service Booking Settings', 'Manage branch hours, daily and hourly appointment limits, car models, and maintenance types.'],
   },
 };
 
@@ -39,6 +40,7 @@ export const adminHubText: Record<Locale, typeof en> = {
       internalTickets: ['قواعد وحقول التذاكر الداخلية', 'تخصيص حقول نماذج الأقسام وقواعد الإجراءات وموافقات المستخدمين.'],
       complaintSettings: ['إعدادات شكاوى العملاء (CRM)', 'إدارة تصنيفات الأسباب الجذرية وقائمة مستشاري المبيعات.'],
       sla: ['سياسات اتفاقية مستوى الخدمة (SLA)', 'إدارة مدد معالجة الشكاوى ونسب التحذير وساعات العمل ومستويات التصعيد.'],
+      bookingSettings: ['إعدادات حجز الصيانة', 'إدارة ساعات عمل الفروع، الحد الأقصى للمواعيد اليومية والساعية، وموديلات السيارات وأنواع الصيانة.'],
     },
   },
 };

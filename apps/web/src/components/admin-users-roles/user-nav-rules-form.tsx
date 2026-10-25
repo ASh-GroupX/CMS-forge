@@ -9,6 +9,7 @@ import type { AdminUser } from '../../lib/staff-admin-users-api';
 const ALL_NAV_KEYS = [
   { key: 'dashboard', labelEn: 'Dashboard', labelAr: 'لوحة التحكم' },
   { key: 'internalTickets', labelEn: 'Internal Tickets', labelAr: 'التذاكر الداخلية' },
+  { key: 'serviceBooking', labelEn: 'Service Booking', labelAr: 'حجوزات الصيانة' },
   { key: 'complaints', labelEn: 'Complaints', labelAr: 'الشكاوى والطلبات' },
   { key: 'customers', labelEn: 'Customers', labelAr: 'العملاء' },
   { key: 'tasks', labelEn: 'Tasks', labelAr: 'المهام' },

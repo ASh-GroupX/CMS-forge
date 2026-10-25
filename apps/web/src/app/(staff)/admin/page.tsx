@@ -29,6 +29,7 @@ export default async function AdminPage({
     ['ticketSettings', '/admin/ticket-settings'],
     ['internalTickets', '/admin/internal-tickets'],
     ['complaintSettings', '/admin/complaint-settings'],
+    ['bookingSettings', '/admin/booking-settings'],
   ] as const;
 
   return (

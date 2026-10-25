@@ -1,4 +1,4 @@
-import { Activity, Bell, Building2, CheckSquare2, ClipboardList, Columns3, FilePlus2, FolderCog, Gauge, GitBranch, Handshake, History, Inbox, KanbanSquare, LayoutDashboard, Menu, Search, Send, UsersRound } from 'lucide-react';
+import { Activity, Bell, Building2, CalendarDays, CheckSquare2, ClipboardList, Columns3, FilePlus2, FolderCog, Gauge, GitBranch, Handshake, History, Inbox, KanbanSquare, LayoutDashboard, Menu, Search, Send, UsersRound } from 'lucide-react';
 import React, { type ReactNode } from 'react';
 import { BrandMark } from '../components/brand-mark';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
@@ -12,6 +12,7 @@ export const staffNavItems = [
   // ── Work ──
   { key: 'dashboard', Icon: LayoutDashboard, href: '/dashboard' },
   { key: 'internalTickets', Icon: CheckSquare2, href: '/internal-tickets' },
+  { key: 'serviceBooking', Icon: CalendarDays, href: '/service-booking' },
   { key: 'complaints', Icon: Inbox, href: '/complaints' },
   { key: 'customers', Icon: UsersRound, href: '/customers' },
   { key: 'tasks', Icon: CheckSquare2, href: '/tasks' },
@@ -26,7 +27,7 @@ export type StaffNavKey = (typeof staffNavItems)[number]['key'];
 export type StaffIdentity = { branch: string; initials: string; name: string; role: string };
 
 const desktopSections = [
-  { key: 'work', items: ['dashboard', 'internalTickets', 'complaints', 'customers', 'tasks', 'communication'] },
+  { key: 'work', items: ['dashboard', 'internalTickets', 'serviceBooking', 'complaints', 'customers', 'tasks', 'communication'] },
   { key: 'administration', items: ['reports', 'admin', 'audit'] },
 ] as const;
 const mobileKeys = ['dashboard', 'complaints', 'internalTickets', 'tasks'] as const satisfies readonly StaffNavKey[];

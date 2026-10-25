@@ -8,16 +8,17 @@ import { getStaffSessionPrincipal } from '../../lib/staff-session-api';
 import { AppShell, type StaffNavKey } from '../app-shell';
 
 const ROLE_NAV: Record<string, readonly StaffNavKey[]> = {
-  ADMIN: ['dashboard', 'internalTickets', 'complaints', 'customers', 'tasks', 'communication', 'reports', 'admin', 'audit'],
-  CR_MANAGER: ['dashboard', 'internalTickets', 'complaints', 'customers', 'tasks', 'communication', 'reports', 'audit'],
-  BRANCH_MANAGER: ['dashboard', 'internalTickets', 'complaints', 'customers', 'tasks', 'communication', 'reports', 'audit'],
-  MGMT_READONLY: ['dashboard', 'internalTickets', 'complaints', 'customers', 'tasks', 'reports', 'audit'],
+  ADMIN: ['dashboard', 'internalTickets', 'serviceBooking', 'complaints', 'customers', 'tasks', 'communication', 'reports', 'admin', 'audit'],
+  CR_MANAGER: ['dashboard', 'internalTickets', 'serviceBooking', 'complaints', 'customers', 'tasks', 'communication', 'reports', 'audit'],
+  BRANCH_MANAGER: ['dashboard', 'internalTickets', 'serviceBooking', 'complaints', 'customers', 'tasks', 'communication', 'reports', 'audit'],
+  MGMT_READONLY: ['dashboard', 'internalTickets', 'serviceBooking', 'complaints', 'customers', 'tasks', 'reports', 'audit'],
 };
 
-const STAFF_NAV: readonly StaffNavKey[] = ['dashboard', 'internalTickets', 'complaints', 'customers', 'tasks', 'communication', 'reports'];
+const STAFF_NAV: readonly StaffNavKey[] = ['dashboard', 'internalTickets', 'serviceBooking', 'complaints', 'customers', 'tasks', 'communication', 'reports'];
 
 const ROUTE_NAV_MAP: Array<{ prefix: string; key: StaffNavKey; defaultPath: string }> = [
   { prefix: '/internal-tickets', key: 'internalTickets', defaultPath: '/internal-tickets' },
+  { prefix: '/service-booking', key: 'serviceBooking', defaultPath: '/service-booking' },
   { prefix: '/complaints', key: 'complaints', defaultPath: '/complaints' },
   { prefix: '/customers', key: 'customers', defaultPath: '/customers' },
   { prefix: '/communication', key: 'communication', defaultPath: '/communication' },

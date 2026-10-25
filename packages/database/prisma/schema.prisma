@@ -316,6 +316,8 @@ model Branch {
   cases                       Case[]
   assignments                 Assignment[]                 @relation("AssignmentScopeBranch")
   Category                    Category[]
+  serviceBookingRules         ServiceBookingRule[]
+  serviceAppointments         ServiceAppointment[]
 
   @@map("branches")
 }
@@ -468,6 +470,7 @@ model User {
   assignmentHistoryMade     AssignmentHistory[]        @relation("AssignmentHistoryActor")
   complaintsAsBackup        Complaint[]                @relation("ComplaintBackupOfficer")
   complaintsAsCollaborator  Complaint[]                @relation("ComplaintCollaborator")
+  createdServiceAppointments ServiceAppointment[]       @relation("ServiceAppointmentCreatedBy")
 
   @@index([roleId])
   @@index([branchId])
@@ -1728,3 +1731,91 @@ model ComplaintSalesAdvisor {
 
   @@map("complaint_sales_advisors")
 }
+
+enum ServiceAppointmentStatus {
+  BOOKED
+  CONFIRMED
+  IN_SERVICE
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model ServiceCarModel {
+  id           String               @id @default(cuid())
+  nameEn       String               @map("name_en")
+  nameAr       String               @map("name_ar")
+  brand        String               @default("Nissan") @map("brand")
+  isActive     Boolean              @default(true) @map("is_active")
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @updatedAt @map("updated_at")
+  appointments ServiceAppointment[]
+
+  @@map("service_car_models")
+}
+
+model ServiceMaintenanceType {
+  id                       String               @id @default(cuid())
+  nameEn                   String               @map("name_en")
+  nameAr                   String               @map("name_ar")
+  estimatedDurationMinutes Int                  @default(30) @map("estimated_duration_minutes")
+  isActive                 Boolean              @default(true) @map("is_active")
+  createdAt                DateTime             @default(now()) @map("created_at")
+  updatedAt                DateTime             @updatedAt @map("updated_at")
+  appointments             ServiceAppointment[]
+
+  @@map("service_maintenance_types")
+}
+
+model ServiceBookingRule {
+  id                   String   @id @default(cuid())
+  branchId             String   @map("branch_id")
+  dayOfWeek            Int      @map("day_of_week")
+  isOpen               Boolean  @default(true) @map("is_open")
+  startTime            String   @default("08:00") @map("start_time")
+  endTime              String   @default("18:00") @map("end_time")
+  maxDailyAppointments Int      @default(24) @map("max_daily_appointments")
+  maxPerHour           Int      @default(3) @map("max_per_hour")
+  maxPerSlot           Int      @default(1) @map("max_per_slot")
+  slotDurationMinutes  Int      @default(15) @map("slot_duration_minutes")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  branch               Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, dayOfWeek])
+  @@index([branchId])
+  @@map("service_booking_rules")
+}
+
+model ServiceAppointment {
+  id                  String                   @id @default(cuid())
+  referenceNumber     String                   @unique @map("reference_number")
+  branchId            String                   @map("branch_id")
+  customerName        String                   @map("customer_name")
+  customerPhone       String                   @map("customer_phone")
+  vin                 String?                  @map("vin")
+  carModelId          String?                  @map("car_model_id")
+  carModelName        String                   @map("car_model_name")
+  maintenanceTypeId   String?                  @map("maintenance_type_id")
+  maintenanceTypeName String                   @map("maintenance_type_name")
+  notes               String                   @map("notes")
+  date                DateTime                 @map("date")
+  startTime           String                   @map("start_time")
+  endTime             String                   @map("end_time")
+  durationMinutes     Int                      @default(30) @map("duration_minutes")
+  status              ServiceAppointmentStatus @default(BOOKED) @map("status")
+  createdById         String?                  @map("created_by_id")
+  createdAt           DateTime                 @default(now()) @map("created_at")
+  updatedAt           DateTime                 @updatedAt @map("updated_at")
+
+  branch              Branch                   @relation(fields: [branchId], references: [id])
+  carModel            ServiceCarModel?         @relation(fields: [carModelId], references: [id])
+  maintenanceType     ServiceMaintenanceType?  @relation(fields: [maintenanceTypeId], references: [id])
+  createdBy           User?                    @relation("ServiceAppointmentCreatedBy", fields: [createdById], references: [id])
+
+  @@index([branchId, date])
+  @@index([customerPhone])
+  @@map("service_appointments")
+}
+
