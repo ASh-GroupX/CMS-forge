@@ -79,7 +79,7 @@ function EditableOptionsTable({
 }) {
   const t = adminUsersText[locale].masterData;
   return (
-    <section className="overflow-x-auto rounded-sm border border-line-subtle bg-surface" aria-label={title}>
+    <section className="w-full min-w-0 max-w-full overflow-x-auto rounded-sm border border-line-subtle bg-surface" aria-label={title}>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-subtle bg-surface-raised px-3 py-2">
         <h3 className="text-sm font-semibold">{title}</h3>
         {action ? (
@@ -205,7 +205,7 @@ function Field({ id, label, name, value = '' }: { id: string; label: string; nam
 function SeverityTable({ locale, values }: { locale: Locale; values: string[] }) {
   const t = adminUsersText[locale].masterData;
   return (
-    <section className="overflow-x-auto rounded-sm border border-line-subtle bg-surface" aria-label={t.sections.severities}>
+    <section className="w-full min-w-0 max-w-full overflow-x-auto rounded-sm border border-line-subtle bg-surface" aria-label={t.sections.severities}>
       <h3 className="border-b border-line-subtle bg-surface-raised px-3 py-2 text-sm font-semibold">{t.sections.severities}</h3>
       <p className="border-b border-line-subtle px-3 py-2 text-sm text-muted-foreground">{t.severityNote}</p>
       <Table className="min-w-[24rem]">

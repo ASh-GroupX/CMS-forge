@@ -12,7 +12,7 @@ export default async function InternalTicketsLayout({ children }: { children: Re
   const isAr = locale === 'ar';
 
   return (
-    <div className="w-full flex flex-col gap-6 bg-surface rounded-3xl p-6 shadow-sm border border-line-subtle" dir={isAr ? 'rtl' : 'ltr'}>
+    <div className="w-full min-w-0 max-w-full flex flex-col gap-6 bg-surface rounded-3xl p-6 shadow-sm border border-line-subtle overflow-hidden" dir={isAr ? 'rtl' : 'ltr'}>
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{isAr ? 'التذاكر الداخلية' : 'Internal Tickets'}</h1>

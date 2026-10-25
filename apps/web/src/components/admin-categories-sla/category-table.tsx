@@ -30,7 +30,7 @@ export function CategoryTable({
   const branchName = new Map(branches.map((b) => [b.id, localizedName(b, locale)]));
 
   return (
-    <section className="overflow-x-auto rounded-md border border-border-subtle bg-surface-muted" aria-label={t.sections.categories}>
+    <section className="w-full min-w-0 max-w-full overflow-x-auto rounded-md border border-border-subtle bg-surface-muted" aria-label={t.sections.categories}>
       <h3 className="border-b border-border-subtle px-3 py-2 text-sm font-semibold">{t.sections.categories}</h3>
       {action ? <CategoryForm action={action} locale={locale} rows={rows} departments={departments} branches={branches} /> : null}
       <Table className="min-w-[54rem]">

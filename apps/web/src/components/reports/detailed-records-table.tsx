@@ -53,7 +53,7 @@ export function DetailedRecordsTable({
   const NextIcon = isRtl ? ChevronLeft : ChevronRight;
 
   return (
-    <Card className="p-4 shadow-sm">
+    <Card className="p-4 shadow-sm w-full min-w-0 max-w-full overflow-hidden">
       {/* Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b pb-3 mb-3">
         <div>

@@ -48,7 +48,7 @@ export function AdminUsersRoles({
   const departmentNames = new Map((data?.departments ?? []).map((department) => [department.id, localizedName(department, locale)]));
 
   return (
-    <Card aria-label={t.title} className="min-w-0 rounded-md shadow-sm" dir={shell.dir}>
+    <Card aria-label={t.title} className="w-full min-w-0 max-w-full overflow-hidden rounded-md shadow-sm" dir={shell.dir}>
       <CardHeader className="border-b p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div><CardTitle className="text-lg tracking-normal">{t.title}</CardTitle><CardDescription className="mt-1 text-sm">{t.subtitle}</CardDescription></div>
@@ -58,7 +58,7 @@ export function AdminUsersRoles({
       <CardContent className="p-4">
         {state ? <StateMessage errorMessage={errorMessage} locale={locale} state={state} /> : null}
         {createAction && data ? <CreateUserForm action={createAction} data={data} defaultOpen={state === 'validation' || state === 'error' || state === 'conflict'} locale={locale} /> : null}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-w-0 max-w-full">
           <Table className="min-w-[50rem]">
             <TableHeader className="bg-muted/40 text-xs font-semibold uppercase tracking-normal text-muted-foreground">
               <TableRow>{t.headers.map((header) => <TableHead className="text-start" key={header}>{header}</TableHead>)}</TableRow>

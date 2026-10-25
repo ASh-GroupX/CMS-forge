@@ -164,8 +164,9 @@ export function OperationsBoardScreen({ board, initialView = 'stage', locale, st
         sensors={sensors}
       >
         {/* Horizontal scroll container for the board columns */}
-        <div className="flex-1 overflow-x-auto pb-4">
-          <ol className="flex h-full items-start gap-4" aria-label={t.boardLabel}>
+        <div className="w-full min-w-0 max-w-full rounded-2xl border border-line-subtle bg-surface-canvas/60 p-4 shadow-sm flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-x-auto min-w-0 max-w-full pb-4">
+            <ol className="flex h-full items-start gap-4" aria-label={t.boardLabel}>
             {stages.map((stage) => {
               const columnCards = board.columns.find((c) => c.stageId === stage.id)?.cards ?? [];
               const filteredCards = filterCards(columnCards);
@@ -224,6 +225,7 @@ export function OperationsBoardScreen({ board, initialView = 'stage', locale, st
               );
             })}
           </ol>
+          </div>
         </div>
 
         <DragOverlay>

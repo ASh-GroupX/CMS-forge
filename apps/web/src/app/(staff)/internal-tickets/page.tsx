@@ -63,7 +63,7 @@ export default async function DepartmentTicketsPage({
   ).length;
 
   return (
-    <div className="flex flex-col gap-6 h-full min-h-[calc(100vh-12rem)] overflow-y-auto">
+    <div className="flex flex-col gap-6 w-full min-w-0 max-w-full">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-content-strong">

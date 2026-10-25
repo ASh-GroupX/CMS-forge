@@ -18,54 +18,41 @@ function getDueDateColor(t: any) {
   if (!t.dueAt) return 'text-content-strong font-medium';
   const dueDate = new Date(t.dueAt);
   const now = new Date();
-  const isCompleted = ['RESOLVED', 'CLOSED'].includes(t.status);
-  
-  if (isCompleted) {
-    const finishDate = t.resolvedAt ? new Date(t.resolvedAt) : (t.updatedAt ? new Date(t.updatedAt) : now);
-    if (finishDate <= dueDate) {
-      return 'text-emerald-600 font-bold'; // completed on time -> green
-    } else {
-      return 'text-purple-600 font-bold'; // completed after due time -> purple
-    }
-  } else {
-    if (now > dueDate) {
-      return 'text-red-600 font-bold'; // active but over due -> red
-    } else {
-      return 'text-orange-500 font-bold'; // active and still got time -> orange
-    }
+  const finishDate = t.resolvedAt ? new Date(t.resolvedAt) : (t.updatedAt ? new Date(t.updatedAt) : now);
+  if (['RESOLVED', 'CLOSED'].includes(t.status)) {
+    return finishDate <= dueDate ? 'text-emerald-600 font-bold' : 'text-purple-600 font-bold';
   }
+  return now > dueDate ? 'text-red-600 font-bold' : 'text-orange-500 font-bold';
 }
 
 function getCardBorderClass(t: any) {
   if (!t.dueAt) return 'border-y-line-subtle border-r-line-subtle bg-surface';
   const dueDate = new Date(t.dueAt);
   const now = new Date();
-  const isCompleted = ['RESOLVED', 'CLOSED'].includes(t.status);
-  
-  if (isCompleted) {
-    const finishDate = t.resolvedAt ? new Date(t.resolvedAt) : (t.updatedAt ? new Date(t.updatedAt) : now);
-    if (finishDate <= dueDate) {
-      return 'border-y-emerald-200 border-r-emerald-200 bg-emerald-50/70 ring-1 ring-inset ring-emerald-100/50 shadow-emerald-500/10 hover:border-y-emerald-300 hover:border-r-emerald-300 dark:bg-emerald-500/10 dark:border-y-emerald-500/30 dark:border-r-emerald-500/30 dark:ring-emerald-500/20 dark:hover:border-y-emerald-400/50 dark:hover:border-r-emerald-400/50'; 
-    } else {
-      return 'border-y-purple-200 border-r-purple-200 bg-purple-50/70 ring-1 ring-inset ring-purple-100/50 shadow-purple-500/10 hover:border-y-purple-300 hover:border-r-purple-300 dark:bg-purple-500/10 dark:border-y-purple-500/30 dark:border-r-purple-500/30 dark:ring-purple-500/20 dark:hover:border-y-purple-400/50 dark:hover:border-r-purple-400/50'; 
-    }
-  } else {
-    if (now > dueDate) {
-      return 'border-y-red-300 border-r-red-300 bg-red-50/70 ring-1 ring-inset ring-red-200/50 shadow-red-500/20 shadow-md hover:border-y-red-400 hover:border-r-red-400 dark:bg-red-500/10 dark:border-y-red-500/30 dark:border-r-red-500/30 dark:ring-red-500/20 dark:hover:border-y-red-400/50 dark:hover:border-r-red-400/50'; 
-    } else {
-      return 'border-y-orange-200 border-r-orange-200 bg-orange-50/70 ring-1 ring-inset ring-orange-100/50 shadow-orange-500/10 hover:border-y-orange-300 hover:border-r-orange-300 dark:bg-orange-500/10 dark:border-y-orange-500/30 dark:border-r-orange-500/30 dark:ring-orange-500/20 dark:hover:border-y-orange-400/50 dark:hover:border-r-orange-400/50'; 
-    }
+  const finishDate = t.resolvedAt ? new Date(t.resolvedAt) : (t.updatedAt ? new Date(t.updatedAt) : now);
+  if (['RESOLVED', 'CLOSED'].includes(t.status)) {
+    return finishDate <= dueDate
+      ? 'border-y-emerald-200 border-r-emerald-200 bg-emerald-50/70 ring-1 ring-inset ring-emerald-100/50 shadow-emerald-500/10 hover:border-y-emerald-300 hover:border-r-emerald-300 dark:bg-emerald-500/10 dark:border-y-emerald-500/30 dark:border-r-emerald-500/30 dark:ring-emerald-500/20 dark:hover:border-y-emerald-400/50 dark:hover:border-r-emerald-400/50'
+      : 'border-y-purple-200 border-r-purple-200 bg-purple-50/70 ring-1 ring-inset ring-purple-100/50 shadow-purple-500/10 hover:border-y-purple-300 hover:border-r-purple-300 dark:bg-purple-500/10 dark:border-y-purple-500/30 dark:border-r-purple-500/30 dark:ring-purple-500/20 dark:hover:border-y-purple-400/50 dark:hover:border-r-purple-400/50';
   }
+  return now > dueDate
+    ? 'border-y-red-300 border-r-red-300 bg-red-50/70 ring-1 ring-inset ring-red-200/50 shadow-red-500/20 shadow-md hover:border-y-red-400 hover:border-r-red-400 dark:bg-red-500/10 dark:border-y-red-500/30 dark:border-r-red-500/30 dark:ring-red-500/20 dark:hover:border-y-red-400/50 dark:hover:border-r-red-400/50'
+    : 'border-y-orange-200 border-r-orange-200 bg-orange-50/70 ring-1 ring-inset ring-orange-100/50 shadow-orange-500/10 hover:border-y-orange-300 hover:border-r-orange-300 dark:bg-orange-500/10 dark:border-y-orange-500/30 dark:border-r-orange-500/30 dark:ring-orange-500/20 dark:hover:border-y-orange-400/50 dark:hover:border-r-orange-400/50';
 }
 
 function DueDateLegend({ t }: { t: any }) {
+  const items = [
+    { color: 'bg-emerald-500', label: t.legend.onTime },
+    { color: 'bg-purple-500', label: t.legend.completedLate },
+    { color: 'bg-orange-500', label: t.legend.activeOnTime },
+    { color: 'bg-red-500', label: t.legend.activeOverdue },
+  ];
   return (
     <div className="flex flex-wrap items-center gap-4 text-[10px] font-semibold text-content-muted mt-2 border-t border-line-subtle/50 pt-2">
       <span className="text-xs font-bold text-content-strong me-1">{t.legend.title}</span>
-      <div className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-emerald-500"></span>{t.legend.onTime}</div>
-      <div className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-purple-500"></span>{t.legend.completedLate}</div>
-      <div className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-orange-500"></span>{t.legend.activeOnTime}</div>
-      <div className="flex items-center gap-1.5"><span className="size-2 rounded-full bg-red-500"></span>{t.legend.activeOverdue}</div>
+      {items.map((it) => (
+        <div key={it.label} className="flex items-center gap-1.5"><span className={`size-2 rounded-full ${it.color}`} />{it.label}</div>
+      ))}
     </div>
   );
 }
@@ -268,7 +255,7 @@ export function MyWorkBoard({ tickets, propLocale }: { tickets: any[]; propLocal
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-5 w-full min-w-0 max-w-full">
         {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -295,20 +282,22 @@ export function MyWorkBoard({ tickets, propLocale }: { tickets: any[]; propLocal
         </div>
         
         <div className="flex items-center gap-1 bg-surface-canvas rounded-lg p-1 border border-line-subtle">
-          <button onClick={() => setParam('filter', 'all')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentFilter === 'all' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>{t.filters.all}</button>
-          <button onClick={() => setParam('filter', 'sent')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentFilter === 'sent' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>{t.filters.sent}</button>
-          <button onClick={() => setParam('filter', 'received')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentFilter === 'received' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>{t.filters.received}</button>
+          {(['all', 'sent', 'received'] as const).map((f) => (
+            <button key={f} onClick={() => setParam('filter', f)} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentFilter === f ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>{t.filters[f]}</button>
+          ))}
         </div>
-
         <div className="w-px h-6 bg-line-subtle hidden sm:block" />
-
         <div className="flex flex-wrap items-center gap-1 bg-surface-canvas rounded-lg p-1 border border-line-subtle">
-          <button onClick={() => setParam('status', 'all')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentStatus === 'all' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>{t.filters.statusAll}</button>
-          <button onClick={() => setParam('status', 'active')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentStatus === 'active' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>{t.filters.active}</button>
-          <button onClick={() => setParam('status', 'pending')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentStatus === 'pending' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>{t.filters.pending}</button>
-          <button onClick={() => setParam('status', 'on-time')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentStatus === 'on-time' ? 'bg-white shadow-sm text-status-success' : 'text-content-muted hover:text-content-strong'}`}>{t.filters.onTime}</button>
-          <button onClick={() => setParam('status', 'overdue')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentStatus === 'overdue' ? 'bg-white shadow-sm text-status-error' : 'text-content-muted hover:text-content-strong'}`}>{t.filters.overdue}</button>
-          <button onClick={() => setParam('status', 'completed')} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentStatus === 'completed' ? 'bg-white shadow-sm text-brand' : 'text-content-muted hover:text-content-strong'}`}>{t.filters.completed}</button>
+          {([
+            { key: 'all', label: t.filters.statusAll, color: 'text-brand' },
+            { key: 'active', label: t.filters.active, color: 'text-brand' },
+            { key: 'pending', label: t.filters.pending, color: 'text-brand' },
+            { key: 'on-time', label: t.filters.onTime, color: 'text-status-success' },
+            { key: 'overdue', label: t.filters.overdue, color: 'text-status-error' },
+            { key: 'completed', label: t.filters.completed, color: 'text-brand' },
+          ] as const).map(({ key, label, color }) => (
+            <button key={key} onClick={() => setParam('status', key)} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${currentStatus === key ? `bg-white shadow-sm ${color}` : 'text-content-muted hover:text-content-strong'}`}>{label}</button>
+          ))}
         </div>
       </div>
 
@@ -335,10 +324,12 @@ export function MyWorkBoard({ tickets, propLocale }: { tickets: any[]; propLocal
           <p className="text-sm text-content-muted mt-1">{t.board.emptySubtitle}</p>
         </div>
       ) : (
-        <div className="flex overflow-x-auto gap-4 pb-4 items-start">
-          {sections.map((status) => (
-            <StatusSection key={status} status={status} tickets={grouped[status] || []} locale={locale} t={t} />
-          ))}
+        <div className="w-full min-w-0 max-w-full rounded-3xl border border-line-subtle bg-surface-canvas/60 p-4 shadow-sm flex flex-col overflow-hidden">
+          <div className="flex overflow-x-auto gap-4 pb-4 items-start min-w-0 max-w-full">
+            {sections.map((status) => (
+              <StatusSection key={status} status={status} tickets={grouped[status] || []} locale={locale} t={t} />
+            ))}
+          </div>
         </div>
       )}
       </div>

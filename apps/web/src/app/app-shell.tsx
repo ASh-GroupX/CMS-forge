@@ -51,10 +51,10 @@ export function AppShell({ activePath = '', activeSearch = '', children, locale,
   const subheading = dashboard && identity ? `${identity.role} • ${identity.branch}` : t.subtitle;
 
   return (
-    <main lang={t.lang} dir={t.dir} className="min-h-screen bg-surface-canvas text-content-strong">
+    <main lang={t.lang} dir={t.dir} className="min-h-screen w-full max-w-full overflow-x-hidden bg-surface-canvas text-content-strong">
       <Toaster position="bottom-center" richColors />
       <a className="sr-only focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:ring-2 focus:ring-brand" href="#staff-main">{t.skipToMain}</a>
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen w-full max-w-full">
         <div className="hidden lg:block lg:sticky lg:top-0 lg:h-screen p-4 pe-0 w-[18rem] shrink-0">
           <aside className="flex h-full flex-col min-w-0 max-w-full overflow-x-hidden rounded-3xl border border-line-subtle bg-nav/70 backdrop-blur-2xl px-4 py-6 text-nav-foreground shadow-2xl shadow-brand/5 overflow-y-auto relative">
             <div className="pointer-events-none absolute inset-0 rounded-3xl shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)]" />
@@ -72,13 +72,13 @@ export function AppShell({ activePath = '', activeSearch = '', children, locale,
           <div className="mt-auto pt-4 relative z-10 [&_button]:w-full [&_button]:rounded-xl [&_button]:border-line-subtle/80 [&_button]:bg-surface/50 [&_button]:backdrop-blur-md [&_button]:text-nav-foreground [&_button]:shadow-sm [&_button:hover]:bg-surface/80 [&_button:hover]:shadow [&_button]:transition-all">{sidebarAfter}{sidebarBefore}</div>
           </aside>
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 w-full max-w-full overflow-x-hidden flex flex-col">
           <StaffTopBar account={identity ? { initials: identity.initials, name: identity.name } : null} createLabel={t.nav.create[0]} heading={heading} isRtl={locale === 'ar'} languageHref={languageHref(activePath, activeSearch, locale === 'ar' ? 'en' : 'ar')} locale={locale} notificationsHref={`/notifications?locale=${locale}`} search={modern.search} subheading={subheading} switchLabel={t.switchLabel} switchTarget={t.switchTarget} themeDark={t.theme.dark} themeLabel={t.theme.label} themeLight={t.theme.light} />
           <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-nav-border bg-nav/80 px-1 pb-[max(.25rem,env(safe-area-inset-bottom))] pt-1 text-nav-foreground shadow-[0_-10px_40px_rgba(0,0,0,0.05)] backdrop-blur-xl lg:hidden" aria-label={t.title}>
             {mobileKeys.flatMap((key) => { const item = visibleItems.find((candidate) => candidate.key === key); return item ? [<MobileNavLink activePath={activePath} item={item} key={item.key} label={mobileLabel(t, key)} locale={locale} />] : []; })}
             <Dialog><DialogTrigger asChild><button className="grid min-h-11 min-w-0 place-items-center gap-1 rounded-md px-1 py-2 text-xs font-semibold text-content-muted focus:outline-none focus:ring-2 focus:ring-brand" type="button"><Menu aria-hidden="true" className="size-5" /><span className="truncate">{t.mobileNav.more}</span></button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>{t.mobileNav.title}</DialogTitle></DialogHeader><nav className="grid gap-1" aria-label={t.mobileNav.title}>{visibleItems.filter((item) => !(mobileKeys as readonly StaffNavKey[]).includes(item.key)).map((item) => <DesktopNavLink activePath={activePath} item={item} key={item.key} locale={locale} t={t} />)}</nav></DialogContent></Dialog>
           </nav>
-          <section className="staff-workspace mx-auto grid min-w-0 max-w-[96rem] content-start gap-5 p-4 pb-24 md:p-6 md:pb-24 lg:p-8 lg:pb-8" id="staff-main">{children}</section>
+          <section className="staff-workspace mx-auto grid min-w-0 w-full max-w-[96rem] content-start gap-5 p-4 pb-24 md:p-6 md:pb-24 lg:p-8 lg:pb-8 overflow-hidden" id="staff-main">{children}</section>
         </div>
       </div>
     </main>

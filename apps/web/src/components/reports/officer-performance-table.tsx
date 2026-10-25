@@ -82,7 +82,7 @@ export function OfficerPerformanceTable({
   };
 
   return (
-    <Card className="p-4 shadow-sm">
+    <Card className="p-4 shadow-sm w-full min-w-0 max-w-full overflow-hidden">
       {/* Table Header Controls */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b pb-3 mb-3">
         <div>

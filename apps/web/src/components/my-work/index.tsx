@@ -111,7 +111,7 @@ export function MyWorkScreen({ locale, payload, state }: {
   });
 
   return (
-    <section aria-label={t.title} className="grid content-start gap-5">
+    <section aria-label={t.title} className="grid content-start gap-5 w-full min-w-0 max-w-full overflow-hidden">
       <header>
         <h2 className="text-lg font-bold tracking-tight text-content-strong">{t.title}</h2>
         <p className="mt-1 text-sm text-content-muted">{t.subtitle}</p>
@@ -119,8 +119,8 @@ export function MyWorkScreen({ locale, payload, state }: {
 
       <MyWorkSummary counts={counts} t={t} />
 
-      <Tabs className="w-full" defaultValue={activeTab} dir={locale === 'ar' ? 'rtl' : 'ltr'} onValueChange={setActiveTab}>
-        <div className="overflow-x-auto pb-1">
+      <Tabs className="w-full min-w-0 max-w-full" defaultValue={activeTab} dir={locale === 'ar' ? 'rtl' : 'ltr'} onValueChange={setActiveTab}>
+        <div className="overflow-x-auto min-w-0 max-w-full pb-1">
           <TabsList className="inline-flex min-w-full justify-start rounded-none border-b border-line-subtle bg-transparent p-0">
             {Object.entries(tabs).map(([key, tab]) => (
               <TabsTrigger

@@ -176,19 +176,21 @@ export function TaskBoardScreen({ assignDepartmentAction, board, detailAction, l
         </div>
       </header>
       <DndContext accessibility={{ announcements, screenReaderInstructions: { draggable: t.a11y.instructions } }} collisionDetection={closestCorners} id={dndContextId} onDragCancel={() => { if (dragSnapshot.current) setColumns(dragSnapshot.current); dragSnapshot.current = null; setActiveCard(null); }} onDragEnd={onDragEnd} onDragOver={onDragOver} onDragStart={onDragStart} sensors={sensors}>
-        <div className="flex-1 overflow-x-auto pb-4">
-          <ol aria-label={t.boardLabel} className="flex h-full items-start gap-4">
-            {stages.map((stage) => {
-            const cards = columns[stage.id] ?? [];
-            return (
-              <BoardColumnShell cards={cards} key={stage.id} label={formatBoardText(t.columnLabel, { name: stageName(stage), count: cards.length })} layout={view} stage={stage} count={formatBoardCount(cards.length, t.cardCount)} emptyText={t.columnEmpty} title={stageName(stage)}>
-                <SortableContext items={cards.map((card) => card.id)} strategy={verticalListSortingStrategy}>
-                  {cards.map((card) => <SortableBoardCard card={card} departments={board.departments} dragDisabled={stage.mappedTaskStatus === 'DONE'} key={card.id} locale={locale} onAssignDepartment={assignDepartment} onOpen={setDetailCard} t={t} />)}
-                </SortableContext>
-              </BoardColumnShell>
-            );
-          })}
-          </ol>
+        <div className="w-full min-w-0 max-w-full rounded-2xl border border-line-subtle bg-surface-canvas/60 p-4 shadow-sm flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-x-auto min-w-0 max-w-full pb-4">
+            <ol aria-label={t.boardLabel} className="flex h-full items-start gap-4">
+              {stages.map((stage) => {
+              const cards = columns[stage.id] ?? [];
+              return (
+                <BoardColumnShell cards={cards} key={stage.id} label={formatBoardText(t.columnLabel, { name: stageName(stage), count: cards.length })} layout={view} stage={stage} count={formatBoardCount(cards.length, t.cardCount)} emptyText={t.columnEmpty} title={stageName(stage)}>
+                  <SortableContext items={cards.map((card) => card.id)} strategy={verticalListSortingStrategy}>
+                    {cards.map((card) => <SortableBoardCard card={card} departments={board.departments} dragDisabled={stage.mappedTaskStatus === 'DONE'} key={card.id} locale={locale} onAssignDepartment={assignDepartment} onOpen={setDetailCard} t={t} />)}
+                  </SortableContext>
+                </BoardColumnShell>
+              );
+            })}
+            </ol>
+          </div>
         </div>
         <DragOverlay>{activeCard ? <BoardCardView card={activeCard} dragging locale={locale} t={t} /> : null}</DragOverlay>
       </DndContext>

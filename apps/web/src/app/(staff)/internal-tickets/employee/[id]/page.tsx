@@ -75,7 +75,7 @@ export default async function EmployeeTicketsPage({ params, searchParams }: { pa
   );
 
   return (
-    <div className="flex flex-col h-full bg-surface-canvas p-6">
+    <div className="flex flex-col h-full w-full min-w-0 max-w-full bg-surface-canvas p-6 overflow-hidden">
       <div className="flex items-center gap-4 mb-8">
         <Link href={`/dashboard?locale=${locale}`} className="grid place-items-center size-10 rounded-full bg-surface hover:bg-surface-raised transition-colors text-content-muted hover:text-content-strong shadow-sm border border-line-subtle">
           <ArrowLeft className={`size-5 ${isAr ? 'rotate-180' : ''}`} />
@@ -91,12 +91,14 @@ export default async function EmployeeTicketsPage({ params, searchParams }: { pa
         </div>
       </div>
 
-      <div className="flex-1 overflow-x-auto pb-4">
-        <div className="flex gap-6 min-w-max">
-          <Column title={isAr ? 'نشطة' : 'Active'} icon={<PlayCircle className="size-5 text-blue-500" />} tickets={activeTickets} colorClass="text-blue-500 bg-blue-100" />
-          <Column title={isAr ? 'معلقة / قيد الانتظار' : 'Pending / Waiting'} icon={<Clock className="size-5 text-yellow-500" />} tickets={pendingTickets} colorClass="text-yellow-500 bg-yellow-100" />
-          <Column title={isAr ? 'مكتملة' : 'Completed'} icon={<CheckCircle2 className="size-5 text-emerald-500" />} tickets={doneTickets} colorClass="text-emerald-500 bg-emerald-100" />
-          <Column title={isAr ? 'مرفوضة' : 'Rejected'} icon={<AlertCircle className="size-5 text-red-500" />} tickets={rejectedTickets} colorClass="text-red-500 bg-red-100" />
+      <div className="w-full min-w-0 max-w-full rounded-2xl border border-line-subtle bg-surface p-4 shadow-sm overflow-hidden flex flex-col">
+        <div className="overflow-x-auto min-w-0 max-w-full pb-4">
+          <div className="flex gap-6 min-w-max">
+            <Column title={isAr ? 'نشطة' : 'Active'} icon={<PlayCircle className="size-5 text-blue-500" />} tickets={activeTickets} colorClass="text-blue-500 bg-blue-100" />
+            <Column title={isAr ? 'معلقة / قيد الانتظار' : 'Pending / Waiting'} icon={<Clock className="size-5 text-yellow-500" />} tickets={pendingTickets} colorClass="text-yellow-500 bg-yellow-100" />
+            <Column title={isAr ? 'مكتملة' : 'Completed'} icon={<CheckCircle2 className="size-5 text-emerald-500" />} tickets={doneTickets} colorClass="text-emerald-500 bg-emerald-100" />
+            <Column title={isAr ? 'مرفوضة' : 'Rejected'} icon={<AlertCircle className="size-5 text-red-500" />} tickets={rejectedTickets} colorClass="text-red-500 bg-red-100" />
+          </div>
         </div>
       </div>
     </div>

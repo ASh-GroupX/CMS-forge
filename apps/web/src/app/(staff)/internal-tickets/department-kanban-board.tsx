@@ -131,8 +131,9 @@ export function DepartmentKanbanBoard({
   };
 
   return (
-    <div className="flex gap-5 pb-6 items-start overflow-x-auto h-full w-full">
-      {/* 1. Pending Inbox Column */}
+    <div className="w-full min-w-0 max-w-full rounded-3xl border border-line-subtle bg-surface-canvas/60 p-4 shadow-sm flex flex-col overflow-hidden">
+      <div className="flex gap-5 pb-4 items-start overflow-x-auto min-w-0 max-w-full">
+        {/* 1. Pending Inbox Column */}
       {(isManager || isAdmin) && pendingInbox.length > 0 && (
         <DepartmentKanbanColumn
           id="inbox"
@@ -211,6 +212,7 @@ export function DepartmentKanbanBoard({
           />
         );
       })}
+      </div>
     </div>
   );
 }

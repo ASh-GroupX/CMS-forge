@@ -28,7 +28,7 @@ export function AuditViewer({
   const visibleState = state ?? (!result ? 'error' : rows.length === 0 ? 'empty' : undefined);
   const exportDisabled = visibleState === 'denied' || visibleState === 'error' || visibleState === 'loading' || rows.length === 0;
   return (
-    <Card aria-label={t.title} className="min-w-0 rounded-md border-line-subtle bg-surface shadow-sm" dir={shell.dir}>
+    <Card aria-label={t.title} className="w-full min-w-0 max-w-full overflow-hidden rounded-md border-line-subtle bg-surface shadow-sm" dir={shell.dir}>
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0 border-b border-line-subtle p-4">
         <div>
           <CardTitle className="text-lg tracking-normal">{t.title}</CardTitle>
