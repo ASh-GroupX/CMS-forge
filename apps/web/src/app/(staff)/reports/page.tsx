@@ -1,7 +1,13 @@
 import React from 'react';
 import { headers } from 'next/headers';
 import { resolveLocale } from '../../../i18n/staff-shell';
+import { getAssignableStaff } from '../../../lib/staff-assignable-staff-api';
 import { getComplaintFormOptions } from '../../../lib/staff-complaint-form-options-api';
+import {
+  getStaffReportCatalogLoadResult,
+  getStaffReportKpisLoadResult,
+  getStaffReportRowsLoadResult,
+} from '../../../lib/staff-reports-api';
 import { getStaffSessionPrincipal } from '../../../lib/staff-session-api';
 import {
   fetchComplaintsAnalytics,
@@ -12,21 +18,27 @@ import {
 import { fetchDepartmentPerformance } from '../../../lib/staff-reports-departments-api';
 import { EnterpriseReportsDashboard } from '../../../components/reports/enterprise-reports-dashboard';
 import { ReportsHubNavigator } from '../../../components/reports/reports-hub-navigator';
+import { ReportsDashboard } from '../../../components/reports-dashboard';
 
 type SearchParams = {
   locale?: string | string[];
   branchId?: string | string[];
-  departmentId?: string | string[];
+  categoryId?: string | string[];
   dateFrom?: string | string[];
   dateTo?: string | string[];
+  departmentId?: string | string[];
+  ownerId?: string | string[];
+  severity?: string | string[];
 };
 
 export default async function ReportsPage({
   searchParams,
   cookieHeader: propCookieHeader,
+  fetchImpl,
 }: {
   searchParams?: Promise<SearchParams>;
   cookieHeader?: string;
+  fetchImpl?: typeof fetch;
 }) {
   const params = await searchParams;
   let cookieHeader = propCookieHeader;
@@ -40,25 +52,56 @@ export default async function ReportsPage({
   }
 
   const apiUrl = process.env.API_URL ?? 'http://localhost:3000';
-  const apiInput = { cookieHeader, apiUrl };
+  const apiInput = {
+    cookieHeader,
+    apiUrl,
+    ...(fetchImpl !== undefined ? { fetchImpl } : {}),
+  };
+
+  const filters = {
+    branchId: readParam(params?.branchId) ?? '',
+    categoryId: readParam(params?.categoryId) ?? '',
+    dateFrom: readParam(params?.dateFrom) ?? '',
+    dateTo: readParam(params?.dateTo) ?? '',
+    departmentId: readParam(params?.departmentId) ?? '',
+    ownerId: readParam(params?.ownerId) ?? '',
+    severity: readParam(params?.severity) ?? '',
+  };
 
   const [
-    principal,
+    rows,
+    kpis,
+    catalog,
     options,
+    staff,
+    principal,
     departmentsPerformance,
     complaintsAnalytics,
     complaintsRecords,
     ticketsAnalytics,
     ticketsRecords,
   ] = await Promise.all([
-    getStaffSessionPrincipal(apiInput),
+    getStaffReportRowsLoadResult({ ...apiInput, filters }),
+    getStaffReportKpisLoadResult({
+      ...apiInput,
+      ...(filters.branchId ? { branchId: filters.branchId } : {}),
+    }),
+    getStaffReportCatalogLoadResult(apiInput),
     getComplaintFormOptions(apiInput),
+    getAssignableStaff(apiInput),
+    getStaffSessionPrincipal(apiInput),
     fetchDepartmentPerformance({}, cookieHeader, apiUrl),
     fetchComplaintsAnalytics({}, cookieHeader, apiUrl),
     fetchComplaintsRecords({}, 50, 0, cookieHeader, apiUrl),
     fetchTicketsAnalytics({}, cookieHeader, apiUrl),
     fetchTicketsRecords({}, 50, 0, cookieHeader, apiUrl),
   ]);
+
+  const loadState = [rows, kpis, catalog].some((item) => item.status === 'denied')
+    ? 'denied'
+    : [rows, kpis, catalog].some((item) => item.status === 'error')
+    ? 'error'
+    : undefined;
 
   const activeLocale = resolveLocale(readParam(params?.locale));
   const isRtl = activeLocale === 'ar';
@@ -75,7 +118,7 @@ export default async function ReportsPage({
   const userDepartmentName = userDept ? (isRtl ? userDept.nameAr : userDept.nameEn) : null;
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-6 px-4 py-4 sm:px-6 lg:px-8">
+    <div className="w-full max-w-7xl mx-auto space-y-8 px-4 py-4 sm:px-6 lg:px-8 min-w-0">
       {/* Quick Nav Hub */}
       <ReportsHubNavigator locale={activeLocale} />
 
@@ -92,6 +135,26 @@ export default async function ReportsPage({
         ticketsAnalytics={ticketsAnalytics}
         ticketsRecords={ticketsRecords?.items ?? []}
       />
+
+      {/* Regulatory Delivery Matrix & Compliance Audits */}
+      <div className="pt-6 border-t">
+        <ReportsDashboard
+          canExport={Boolean(
+            principal?.permissions.includes('REPORT_EXPORT') ||
+            principal?.roleCode === 'ADMIN' ||
+            principal?.roleCode === 'CR_MANAGER' ||
+            principal?.roleCode === 'BRANCH_MANAGER',
+          )}
+          catalog={catalog.status === 'ready' ? catalog.data : undefined}
+          filters={filters}
+          kpis={kpis.status === 'ready' ? kpis.data : undefined}
+          locale={activeLocale}
+          options={options}
+          rows={rows.status === 'ready' ? rows.data : undefined}
+          staff={staff}
+          state={loadState}
+        />
+      </div>
     </div>
   );
 }

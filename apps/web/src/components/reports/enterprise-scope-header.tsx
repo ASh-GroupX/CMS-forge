@@ -65,6 +65,7 @@ export function EnterpriseScopeHeader({
           <select
             value={selectedDeptId ?? ''}
             onChange={(e) => onSelectDepartment(e.target.value || null)}
+            aria-label={t.departmentsTable.allDepartments}
             className="h-9 rounded-lg border bg-background px-3 text-xs font-medium focus:outline-hidden focus:ring-2 focus:ring-primary"
           >
             <option value="">{t.departmentsTable.allDepartments}</option>
@@ -76,6 +77,7 @@ export function EnterpriseScopeHeader({
 
         <div className="relative">
           <Button
+            type="button"
             variant="outline"
             size="sm"
             onClick={() => setIsExportOpen(!isExportOpen)}

@@ -53,38 +53,20 @@ export function UnifiedRecordsTable({
     if (tab === 'all' || tab === 'complaint') {
       for (const c of complaints) {
         list.push({
-          id: c.id,
-          type: 'complaint',
-          referenceNumber: c.referenceNumber,
-          title: c.subject,
-          status: c.status,
-          priority: c.severity,
-          departmentName: c.departmentName,
-          personName: c.customerName,
-          ownerName: c.ownerName,
-          createdAt: c.createdAt,
-          targetAt: null,
-          resolvedAt: c.resolvedAt,
-          isOverdue: c.isOverdue,
+          id: c.id, type: 'complaint', referenceNumber: c.referenceNumber, title: c.subject,
+          status: c.status, priority: c.severity, departmentName: c.departmentName,
+          personName: c.customerName, ownerName: c.ownerName, createdAt: c.createdAt,
+          targetAt: null, resolvedAt: c.resolvedAt, isOverdue: c.isOverdue,
         });
       }
     }
     if (tab === 'all' || tab === 'ticket') {
       for (const tk of tickets) {
         list.push({
-          id: tk.id,
-          type: 'ticket',
-          referenceNumber: tk.referenceNumber,
-          title: tk.title,
-          status: tk.status,
-          priority: tk.priority,
-          departmentName: tk.targetDepartmentName,
-          personName: tk.requestedByName,
-          ownerName: tk.assignedEmployeeName,
-          createdAt: tk.createdAt,
-          targetAt: tk.dueAt,
-          resolvedAt: tk.resolvedAt,
-          isOverdue: tk.isOverdue,
+          id: tk.id, type: 'ticket', referenceNumber: tk.referenceNumber, title: tk.title,
+          status: tk.status, priority: tk.priority, departmentName: tk.targetDepartmentName,
+          personName: tk.requestedByName, ownerName: tk.assignedEmployeeName,
+          createdAt: tk.createdAt, targetAt: tk.dueAt, resolvedAt: tk.resolvedAt, isOverdue: tk.isOverdue,
         });
       }
     }
@@ -169,6 +151,7 @@ export function UnifiedRecordsTable({
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               placeholder={t.recordsTable.search}
+              aria-label={t.recordsTable.search}
               className="h-9 ps-8 text-xs"
             />
           </div>
@@ -249,7 +232,13 @@ export function UnifiedRecordsTable({
                     </td>
 
                     <td className="py-2.5 px-3 text-end">
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        aria-label={isRtl ? 'عرض التفاصيل' : 'View details'}
+                      >
                         <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
                     </td>
@@ -268,11 +257,13 @@ export function UnifiedRecordsTable({
         </span>
         <div className="flex items-center gap-1.5">
           <Button
+            type="button"
             variant="outline"
             size="sm"
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             className="h-8 w-8 p-0"
+            aria-label={isRtl ? 'الصفحة السابقة' : 'Previous page'}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -280,11 +271,13 @@ export function UnifiedRecordsTable({
             {page} / {totalPages}
           </span>
           <Button
+            type="button"
             variant="outline"
             size="sm"
             disabled={page >= totalPages}
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             className="h-8 w-8 p-0"
+            aria-label={isRtl ? 'الصفحة التالية' : 'Next page'}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>

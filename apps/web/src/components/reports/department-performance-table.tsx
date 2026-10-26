@@ -92,11 +92,12 @@ export function DepartmentPerformanceTable({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t.departmentsTable.search}
+              aria-label={t.departmentsTable.search}
               className="h-9 ps-8 text-xs"
             />
           </div>
           {onExportCsv && (
-            <Button variant="outline" size="sm" onClick={onExportCsv} className="h-9 text-xs gap-1.5">
+            <Button type="button" variant="outline" size="sm" onClick={onExportCsv} className="h-9 text-xs gap-1.5">
               <Download className="h-3.5 w-3.5" />
               <span>{t.controls.exportCsv}</span>
             </Button>
@@ -248,6 +249,7 @@ export function DepartmentPerformanceTable({
                     {isAdmin && onSelectDepartment && (
                       <td className="py-3 px-3 text-end">
                         <Button
+                          type="button"
                           variant={isSelected ? 'default' : 'ghost'}
                           size="sm"
                           onClick={() => onSelectDepartment(isSelected ? null : dept.departmentId)}
