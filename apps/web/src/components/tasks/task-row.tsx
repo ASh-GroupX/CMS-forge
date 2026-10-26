@@ -33,8 +33,8 @@ export function TaskRow({
     e.stopPropagation();
     const confirmMsg =
       locale === 'ar'
-        ? 'هل أنت متأكد من حذف هذه المهمة؟ لا يمكن التراجع عن هذا الإجراء.'
-        : 'Are you sure you want to delete this task? This action cannot be undone.';
+        ? 'هل أنت متأكد من حذف هذا العنصر؟ لا يمكن التراجع عن هذا الإجراء.'
+        : 'Are you sure you want to delete this item? This action cannot be undone.';
     if (!window.confirm(confirmMsg)) return;
 
     setDeleting(true);
@@ -47,14 +47,29 @@ export function TaskRow({
               .find((s) => s.startsWith('cms_csrf_token='))
               ?.slice('cms_csrf_token='.length)
           : null;
-      const res = await fetch(`/api/tasks/${encodeURIComponent(task.id)}`, {
+
+      const itemType = getTaskItemType(task);
+      let endpoint = `/api/tasks/${encodeURIComponent(task.id)}`;
+      if (itemType === 'complaint') {
+        const entityId =
+          task.links?.find((l) => l.entityType?.toLowerCase() === 'complaint')?.entityId ||
+          task.id.replace('complaint_', '');
+        endpoint = `/api/complaints/${encodeURIComponent(entityId)}`;
+      } else if (itemType === 'ticket') {
+        const entityId =
+          task.links?.find((l) => l.entityType?.toLowerCase() === 'internal_ticket')?.entityId ||
+          task.id.replace('ticket_', '');
+        endpoint = `/api/internal-tickets/${encodeURIComponent(entityId)}`;
+      }
+
+      const res = await fetch(endpoint, {
         method: 'DELETE',
         headers: csrf ? { 'x-csrf-token': csrf } : {},
       });
       if (res.ok) {
         onDelete?.(task.id);
       } else {
-        alert(locale === 'ar' ? 'فشل حذف المهمة.' : 'Failed to delete task.');
+        alert(locale === 'ar' ? 'فشل حذف العنصر.' : 'Failed to delete item.');
       }
     } catch {
       alert(locale === 'ar' ? 'حدث خطأ في الاتصال بالخادم.' : 'Network error.');
@@ -122,12 +137,12 @@ export function TaskRow({
         <span className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${statusBadge(task.status)}`}>
           {taskStatusLabel(locale, task.status)}
         </span>
-        {isAdmin && isRealTask && (
+        {isAdmin && (
           <button
             type="button"
             onClick={handleDelete}
             disabled={deleting}
-            title={locale === 'ar' ? 'حذف المهمة' : 'Delete Task'}
+            title={locale === 'ar' ? 'حذف' : 'Delete'}
             className="flex size-7 items-center justify-center rounded-md border border-transparent text-content-muted transition-colors hover:border-destructive/30 hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
           >
             {deleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}

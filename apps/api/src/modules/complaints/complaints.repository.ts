@@ -356,7 +356,11 @@ export class ComplaintsRepository {
     await this.prisma.$transaction(async (tx) => {
       // Delete dependent records first to avoid foreign key constraints
       await tx.complaintWatcher.deleteMany({ where: { complaintId: id } });
-      await tx.complaintCommentMention.deleteMany({ where: { comment: { complaintId: id } } });
+      const comments = await tx.comment.findMany({ where: { complaintId: id }, select: { id: true } });
+      const commentIds = comments.map((c) => c.id);
+      if (commentIds.length > 0) {
+        await tx.complaintCommentMention.deleteMany({ where: { commentId: { in: commentIds } } });
+      }
       await tx.comment.deleteMany({ where: { complaintId: id } });
       await tx.approval.deleteMany({ where: { complaintId: id } });
       await tx.complaintStatusHistory.deleteMany({ where: { complaintId: id } });
@@ -369,8 +373,18 @@ export class ComplaintsRepository {
       await tx.portalVerification.deleteMany({ where: { complaintId: id } });
       await tx.portalSession.deleteMany({ where: { complaintId: id } });
       await tx.attachment.deleteMany({ where: { complaintId: id } });
-      // Remove link from Tasks
+      await tx.assignmentHistory.deleteMany({ where: { entityType: 'COMPLAINT', entityId: id } });
+      await tx.assignment.deleteMany({ where: { entityType: 'COMPLAINT', entityId: id } });
+      await tx.caseLink.deleteMany({ where: { entityType: 'COMPLAINT', entityId: id } });
+
+      // Remove linked Tasks
+      const linkedTasks = await tx.taskLink.findMany({ where: { entityType: 'COMPLAINT', entityId: id }, select: { taskId: true } });
+      const linkedTaskIds = linkedTasks.map((t) => t.taskId);
       await tx.taskLink.deleteMany({ where: { entityId: id } });
+      if (linkedTaskIds.length > 0) {
+        await tx.task.deleteMany({ where: { id: { in: linkedTaskIds } } });
+      }
+
       // Finally delete the complaint
       await tx.complaint.delete({ where: { id } });
     });
