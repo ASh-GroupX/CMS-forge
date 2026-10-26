@@ -137,6 +137,7 @@ export class ReportsComplaintsRepository {
       where: currCreatedWhere,
       select: {
         id: true,
+        createdAt: true,
         status: true,
         severity: true,
         category: { select: { id: true, nameEn: true, nameAr: true } },
@@ -185,7 +186,7 @@ export class ReportsComplaintsRepository {
       percentage: Math.round((count / totalCount) * 100),
     }));
 
-    const timeline = buildComplaintTimeline(dateFrom, dateTo, resolvedRows);
+    const timeline = buildComplaintTimeline(dateFrom, dateTo, resolvedRows, allFilteredComplaints);
     const officers = await fetchComplaintsOfficersPerformance(this.prisma, filter, dateFrom, dateTo, hasExplicitDate);
 
     return {

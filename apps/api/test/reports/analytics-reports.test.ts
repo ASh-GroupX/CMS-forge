@@ -169,6 +169,42 @@ function createMockAnalyticsService() {
     }),
   };
 
+  const departmentsRepo: any = {
+    getPerformance: async (filter: any, scope: any) => [
+      {
+        departmentId: 'dept-service',
+        nameEn: 'Service Center',
+        nameAr: 'مركز الصيانة',
+        code: 'SRV',
+        branchId: 'branch-1',
+        branchNameEn: 'Main Branch',
+        branchNameAr: 'الفرع الرئيسي',
+        employeeCount: 8,
+        ticketsCreated: 12,
+        ticketsTargeted: 15,
+        ticketsOpen: 4,
+        ticketsInProgress: 3,
+        ticketsWaiting: 1,
+        ticketsUnassigned: 0,
+        ticketsResolved: 11,
+        ticketsOverdue: 0,
+        ticketsAvgTatDays: 1.2,
+        ticketsOnTimeRate: 100,
+        complaintsTotal: 5,
+        complaintsOpen: 1,
+        complaintsResolved: 4,
+        complaintsOverdue: 0,
+        complaintsAvgHours: 18.5,
+        complaintsSlaRate: 100,
+        combinedVolume: 17,
+        combinedOpen: 5,
+        combinedResolved: 15,
+        combinedOverdue: 0,
+        overallCompletionRate: 88,
+      },
+    ],
+  };
+
   const auditService: Partial<AuditService> = {
     record: async () => undefined,
   };
@@ -176,6 +212,7 @@ function createMockAnalyticsService() {
   return new ReportsAnalyticsService(
     complaintsRepo as ReportsComplaintsRepository,
     ticketsRepo as ReportsTicketsRepository,
+    departmentsRepo,
     auditService as AuditService,
   );
 }
@@ -244,4 +281,42 @@ test('exportAdvanced generates valid CSV file body and sets headers safely', asy
   assert.equal(result.fileName.endsWith('.csv'), true);
   assert.equal(result.rowCount, 1);
   assert.match(result.body, /CMP-2026-0001/);
+  // Must start with UTF-8 BOM \uFEFF for Excel Arabic support
+  assert.equal(result.body.startsWith('\uFEFF'), true);
 });
+
+test('departmentPerformance returns aggregated metrics and enforces scope', async () => {
+  const service = createMockAnalyticsService();
+  const managerScope: DashboardReportScope = {
+    role: RoleCode.CR_MANAGER,
+    branchId: 'branch-1',
+    departmentId: 'dept-service',
+    userId: 'user-manager',
+  };
+
+  const depts = await service.departmentPerformance({}, managerScope);
+  assert.equal(depts.length, 1);
+  assert.equal(depts[0]!.departmentId, 'dept-service');
+  assert.equal(depts[0]!.combinedVolume, 17);
+  assert.equal(depts[0]!.overallCompletionRate, 88);
+});
+
+test('exportAdvanced exports departments and employees with formula sanitization', async () => {
+  const service = createMockAnalyticsService();
+  const adminScope: DashboardReportScope = {
+    role: RoleCode.ADMIN,
+    branchId: null,
+    departmentId: null,
+    userId: 'admin-user',
+  };
+
+  const deptExport = await service.exportAdvanced('departments', {}, 'csv', adminScope);
+  assert.equal(deptExport.fileName, 'departments-report.csv');
+  assert.equal(deptExport.body.startsWith('\uFEFF'), true);
+  assert.match(deptExport.body, /Service Center/);
+
+  const empExport = await service.exportAdvanced('employees', {}, 'csv', adminScope);
+  assert.equal(empExport.fileName, 'employees-report.csv');
+  assert.match(empExport.body, /Sara Engineer/);
+});
+

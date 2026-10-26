@@ -27,6 +27,7 @@ Agent context manifest. Read this before editing the module.
   Reports must not write these tables.
 - Read-only reporting boundary: `users`, `internal_tickets`, and `ticket_ratings`
   may be read to derive user and ticket reporting aggregates. Reports must not write these tables.
+- Read-only reporting boundary: `departments` and `branches` may be read to derive department and branch performance reporting aggregates. Reports must not write these tables.
 
 ## May depend on
 

@@ -202,6 +202,22 @@ export class ReportsController {
     );
   }
 
+  @Get('department-performance')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('REPORT_VIEW')
+  @BranchScoped()
+  async departmentPerformance(@Query() query: Record<string, string | undefined>, @Req() request: AuthenticatedRequest) {
+    return this.analyticsService?.departmentPerformance(
+      {
+        branchId: optionalText(query.branchId),
+        departmentId: optionalText(query.departmentId),
+        dateFrom: optionalText(query.dateFrom),
+        dateTo: optionalText(query.dateTo),
+      },
+      dashboardScope(request, query.branchId),
+    );
+  }
+
   @Get('export-advanced')
   @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
   @Permissions('REPORT_EXPORT')
@@ -211,7 +227,15 @@ export class ReportsController {
     @Req() request: AuthenticatedRequest,
     @Res({ passthrough: true }) response: ExportResponse,
   ): Promise<string> {
-    const type = (query.reportType || query.type) === 'internal_tickets' ? 'internal_tickets' : 'complaints';
+    const requested = query.reportType || query.type;
+    const type: 'complaints' | 'internal_tickets' | 'departments' | 'employees' =
+      requested === 'internal_tickets'
+        ? 'internal_tickets'
+        : requested === 'departments'
+        ? 'departments'
+        : requested === 'employees'
+        ? 'employees'
+        : 'complaints';
     const normalizedQuery: Record<string, string | undefined> = {
       ...query,
       targetDepartmentId: query.targetDepartmentId || query.departmentId,

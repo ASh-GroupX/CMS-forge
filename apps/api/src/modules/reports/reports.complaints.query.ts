@@ -14,7 +14,12 @@ export const TERMINAL_COMPLAINT_STATUSES: ComplaintStatus[] = [
   ComplaintStatus.REJECTED,
 ];
 
-export function buildComplaintTimeline(dateFrom: Date, dateTo: Date, resolvedRows: { resolvedAt: Date | null }[]): ComplaintChartPoint[] {
+export function buildComplaintTimeline(
+  dateFrom: Date,
+  dateTo: Date,
+  resolvedRows: { resolvedAt: Date | null }[],
+  createdRows: { createdAt: Date }[] = [],
+): ComplaintChartPoint[] {
   const points: ComplaintChartPoint[] = [];
   const diffDays = Math.ceil((dateTo.getTime() - dateFrom.getTime()) / (1000 * 60 * 60 * 24));
   const step = diffDays > 60 ? 7 : diffDays > 14 ? 2 : 1;
@@ -24,12 +29,13 @@ export function buildComplaintTimeline(dateFrom: Date, dateTo: Date, resolvedRow
     const dayEnd = new Date(t + step * 24 * 60 * 60 * 1000 - 1);
     const dateStr = d.toISOString().split('T')[0]!;
     const countResolved = resolvedRows.filter((r) => r.resolvedAt && r.resolvedAt.getTime() >= t && r.resolvedAt.getTime() <= dayEnd.getTime()).length;
+    const countCreated = createdRows.filter((r) => r.createdAt && r.createdAt.getTime() >= t && r.createdAt.getTime() <= dayEnd.getTime()).length;
 
     points.push({
       date: dateStr,
       labelEn: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       labelAr: d.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' }),
-      created: Math.max(0, Math.floor(countResolved * 1.1)),
+      created: countCreated,
       resolved: countResolved,
     });
   }

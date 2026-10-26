@@ -129,6 +129,7 @@ export class ReportsTicketsRepository {
       where: currCreatedWhere,
       select: {
         id: true,
+        createdAt: true,
         status: true,
         priority: true,
         waitingReason: { select: { id: true, reasonEn: true, reasonAr: true } },
@@ -200,7 +201,7 @@ export class ReportsTicketsRepository {
       percentage: Math.round((val.count / (waiting || 1)) * 100),
     }));
 
-    const timeline = buildTicketTimeline(dateFrom, dateTo, resolvedRows);
+    const timeline = buildTicketTimeline(dateFrom, dateTo, resolvedRows, allFilteredTickets);
     const deptToDeptFlow = await fetchTicketsDeptToDeptFlow(this.prisma, filter);
     const officers = await fetchTicketsOfficersPerformance(this.prisma, filter, dateFrom, dateTo, hasExplicitDate);
 

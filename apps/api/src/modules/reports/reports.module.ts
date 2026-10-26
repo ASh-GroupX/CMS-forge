@@ -13,6 +13,7 @@ import { ReportsService } from './reports.service.js';
 
 import { ReportsComplaintsRepository } from './reports.complaints.repository.js';
 import { ReportsTicketsRepository } from './reports.tickets.repository.js';
+import { ReportsDepartmentsRepository } from './reports.departments.repository.js';
 import { ReportsAnalyticsService } from './reports.analytics.service.js';
 
 @Module({
@@ -24,6 +25,7 @@ import { ReportsAnalyticsService } from './reports.analytics.service.js';
     ReportsRepository,
     ReportsComplaintsRepository,
     ReportsTicketsRepository,
+    ReportsDepartmentsRepository,
     ReportsAnalyticsService,
     ReportsService,
     { provide: SESSION_AUTH_SERVICE, inject: [AuthService], useFactory: (authService: AuthService) => authService },
