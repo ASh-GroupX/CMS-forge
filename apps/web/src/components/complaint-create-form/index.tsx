@@ -144,13 +144,11 @@ export function ComplaintCreateForm({
 
   const branches = options?.branches ?? [];
   const categories = options?.categories ?? [];
-  const subcategories = categories.filter((item) => item.parentId);
   const rootCategories = categories.filter((item) => !item.parentId);
   const categoryList = rootCategories.length > 0 ? rootCategories : categories;
   const departments = options?.departments ?? [];
   const filteredDepartments = selectedBranch ? departments.filter((d: any) => !d.branchId || d.branchId === selectedBranch) : departments;
   const categoryOptions = selectedDepartment ? categoryList.filter((item) => !item.departmentId || item.departmentId === selectedDepartment) : categoryList;
-  const subcategoryOptions = subcategories.length > 0 ? subcategories : categoryList;
 
   const allUsers = options?.users ?? [];
   const deptOfficers = selectedDepartment
@@ -362,7 +360,6 @@ export function ComplaintCreateForm({
               <TextField error={fieldError(fieldErrors, 'customerNumber')} label={`${extra.fields.customerNumber} (${locale === 'ar' ? 'تلقائي افتراضي' : 'Auto Default'})`} name="customerNumber" value={defaults.customerNumber} />
 
               <SelectField choose={t.choose} error={fieldError(fieldErrors, 'categoryId')} label={`${t.fields.category} *`} locale={locale} name="categoryId" options={categoryOptions.length > 0 ? categoryOptions : categories} value={selectedCategory} onChange={setSelectedCategory} />
-              <SelectField choose={t.choose} error={fieldError(fieldErrors, 'subcategoryId')} label={extra.fields.subcategory} locale={locale} name="subcategoryId" options={subcategoryOptions.length > 0 ? subcategoryOptions : categories} />
 
               <Field error={fieldError(fieldErrors, 'type')} id="type" label={locale === 'ar' ? 'نوع الطلب' : 'Request Type'}>
                 <FormSelect

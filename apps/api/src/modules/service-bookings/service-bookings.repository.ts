@@ -1,34 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma, ServiceAppointmentStatus } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
+import {
+  appointmentSelect,
+  type AppointmentRecord,
+  type ServiceBookingClient,
+} from './service-bookings.types.js';
 
-export const appointmentSelect = {
-  id: true,
-  referenceNumber: true,
-  branchId: true,
-  customerName: true,
-  customerPhone: true,
-  vin: true,
-  carModelId: true,
-  carModelName: true,
-  maintenanceTypeId: true,
-  maintenanceTypeName: true,
-  notes: true,
-  date: true,
-  startTime: true,
-  endTime: true,
-  durationMinutes: true,
-  status: true,
-  createdById: true,
-  createdAt: true,
-  updatedAt: true,
-  branch: {
-    select: { id: true, code: true, nameEn: true, nameAr: true },
-  },
-} satisfies Prisma.ServiceAppointmentSelect;
-
-export type AppointmentRecord = Prisma.ServiceAppointmentGetPayload<{ select: typeof appointmentSelect }>;
-type ServiceBookingClient = Pick<Prisma.TransactionClient, 'serviceAppointment' | 'serviceBookingRule' | 'serviceCarModel' | 'serviceMaintenanceType'>;
+export { appointmentSelect, type AppointmentRecord, type ServiceBookingClient };
 
 @Injectable()
 export class ServiceBookingsRepository {
@@ -36,6 +15,52 @@ export class ServiceBookingsRepository {
 
   async transaction<T>(work: (client: Prisma.TransactionClient) => Promise<T>): Promise<T> {
     return this.prisma.$transaction(work);
+  }
+
+  // ── Service Centers ───────────────────────────────────────────────────────
+  async listServiceCenters(activeOnly = true) {
+    return this.prisma.serviceCenter.findMany({
+      where: activeOnly ? { isActive: true } : {},
+      orderBy: { nameEn: 'asc' },
+    });
+  }
+
+  async findServiceCenterById(id: string) {
+    return this.prisma.serviceCenter.findUnique({ where: { id } });
+  }
+
+  async upsertServiceCenter(data: { id?: string | undefined; code?: string | undefined; nameEn: string; nameAr: string; address?: string | null | undefined; phone?: string | null | undefined; isActive?: boolean | undefined }) {
+    if (data.id) {
+      return this.prisma.serviceCenter.update({
+        where: { id: data.id },
+        data: {
+          nameEn: data.nameEn,
+          nameAr: data.nameAr,
+          ...(data.code ? { code: data.code } : {}),
+          ...(data.address !== undefined ? { address: data.address } : {}),
+          ...(data.phone !== undefined ? { phone: data.phone } : {}),
+          ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
+        },
+      });
+    }
+    const code = data.code || `CENTER_${Date.now()}`;
+    return this.prisma.serviceCenter.create({
+      data: {
+        code,
+        nameEn: data.nameEn,
+        nameAr: data.nameAr,
+        address: data.address ?? null,
+        phone: data.phone ?? null,
+        isActive: data.isActive ?? true,
+      },
+    });
+  }
+
+  async deleteServiceCenter(id: string) {
+    return this.prisma.serviceCenter.update({
+      where: { id },
+      data: { isActive: false },
+    });
   }
 
   // ── Appointments ──────────────────────────────────────────────────────────
@@ -47,16 +72,14 @@ export class ServiceBookingsRepository {
   }): Promise<AppointmentRecord[]> {
     const where: Prisma.ServiceAppointmentWhereInput = {};
     if (params.branchId && params.branchId !== 'all') {
-      where.branchId = params.branchId;
+      where.OR = [{ serviceCenterId: params.branchId }, { branchId: params.branchId }];
     }
     if (params.fromDate || params.toDate) {
       where.date = {};
       if (params.fromDate) where.date.gte = params.fromDate;
       if (params.toDate) where.date.lte = params.toDate;
     }
-    if (params.status) {
-      where.status = params.status;
-    }
+    if (params.status) where.status = params.status;
 
     return this.prisma.serviceAppointment.findMany({
       where,
@@ -75,7 +98,7 @@ export class ServiceBookingsRepository {
   async findAppointmentsForDate(branchId: string, date: Date): Promise<AppointmentRecord[]> {
     return this.prisma.serviceAppointment.findMany({
       where: {
-        branchId,
+        OR: [{ serviceCenterId: branchId }, { branchId }],
         date,
         status: { notIn: ['CANCELLED', 'NO_SHOW'] },
       },
@@ -87,7 +110,7 @@ export class ServiceBookingsRepository {
   async countDailyActive(branchId: string, date: Date, excludeId?: string): Promise<number> {
     return this.prisma.serviceAppointment.count({
       where: {
-        branchId,
+        OR: [{ serviceCenterId: branchId }, { branchId }],
         date,
         status: { notIn: ['CANCELLED', 'NO_SHOW'] },
         ...(excludeId ? { id: { not: excludeId } } : {}),
@@ -98,7 +121,7 @@ export class ServiceBookingsRepository {
   async countInHourWindow(branchId: string, date: Date, hourPrefix: string, excludeId?: string): Promise<number> {
     return this.prisma.serviceAppointment.count({
       where: {
-        branchId,
+        OR: [{ serviceCenterId: branchId }, { branchId }],
         date,
         startTime: { startsWith: hourPrefix },
         status: { notIn: ['CANCELLED', 'NO_SHOW'] },
@@ -110,7 +133,7 @@ export class ServiceBookingsRepository {
   async countInSlot(branchId: string, date: Date, startTime: string, excludeId?: string): Promise<number> {
     return this.prisma.serviceAppointment.count({
       where: {
-        branchId,
+        OR: [{ serviceCenterId: branchId }, { branchId }],
         date,
         startTime,
         status: { notIn: ['CANCELLED', 'NO_SHOW'] },
@@ -146,53 +169,67 @@ export class ServiceBookingsRepository {
     const m = String(date.getMonth() + 1).padStart(2, '0');
     const d = String(date.getDate()).padStart(2, '0');
     const prefix = `APT-${y}${m}${d}-`;
-
     const count = await client.serviceAppointment.count({
       where: { referenceNumber: { startsWith: prefix } },
     });
     return `${prefix}${String(count + 1).padStart(4, '0')}`;
   }
 
-  // ── Booking Rules ─────────────────────────────────────────────────────────
-  async findRulesByBranch(branchId: string) {
+  // ── Rules ─────────────────────────────────────────────────────────────────
+  async findRulesForBranch(branchId: string) {
     return this.prisma.serviceBookingRule.findMany({
-      where: { branchId },
+      where: { OR: [{ serviceCenterId: branchId }, { branchId }] },
       orderBy: { dayOfWeek: 'asc' },
     });
   }
 
   async findRuleForDay(branchId: string, dayOfWeek: number) {
-    return this.prisma.serviceBookingRule.findUnique({
+    return this.prisma.serviceBookingRule.findFirst({
       where: {
-        branchId_dayOfWeek: { branchId, dayOfWeek },
+        OR: [{ serviceCenterId: branchId }, { branchId }],
+        dayOfWeek,
       },
     });
   }
 
-  async upsertRule(
-    data: {
-      branchId: string;
-      dayOfWeek: number;
-      isOpen: boolean;
-      startTime: string;
-      endTime: string;
-      maxDailyAppointments: number;
-      maxPerHour: number;
-      maxPerSlot: number;
-      slotDurationMinutes: number;
-    },
-    client: ServiceBookingClient = this.prisma,
-  ) {
-    return client.serviceBookingRule.upsert({
+  async upsertRule(data: { serviceCenterId?: string | undefined; branchId?: string | undefined; dayOfWeek: number; isOpen: boolean; startTime: string; endTime: string; maxDailyAppointments: number; maxPerHour: number; maxPerSlot: number; slotDurationMinutes: number }) {
+    const existing = await this.prisma.serviceBookingRule.findFirst({
       where: {
-        branchId_dayOfWeek: { branchId: data.branchId, dayOfWeek: data.dayOfWeek },
+        OR: [
+          ...(data.serviceCenterId ? [{ serviceCenterId: data.serviceCenterId }] : []),
+          ...(data.branchId ? [{ branchId: data.branchId }] : []),
+        ],
+        dayOfWeek: data.dayOfWeek,
       },
-      create: data,
-      update: data,
     });
+
+    if (existing) {
+      return this.prisma.serviceBookingRule.update({
+        where: { id: existing.id },
+        data: {
+          isOpen: data.isOpen, startTime: data.startTime, endTime: data.endTime,
+          maxDailyAppointments: data.maxDailyAppointments, maxPerHour: data.maxPerHour,
+          maxPerSlot: data.maxPerSlot, slotDurationMinutes: data.slotDurationMinutes,
+        },
+      });
+    }
+
+    const createData: Prisma.ServiceBookingRuleUncheckedCreateInput = {
+      dayOfWeek: data.dayOfWeek,
+      isOpen: data.isOpen,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      maxDailyAppointments: data.maxDailyAppointments,
+      maxPerHour: data.maxPerHour,
+      maxPerSlot: data.maxPerSlot,
+      slotDurationMinutes: data.slotDurationMinutes,
+      serviceCenterId: data.serviceCenterId || data.branchId || 'center_main',
+      branchId: data.branchId || null,
+    };
+    return this.prisma.serviceBookingRule.create({ data: createData });
   }
 
-  // ── Car Models ────────────────────────────────────────────────────────────
+  // ── Master Data ───────────────────────────────────────────────────────────
   async listCarModels(activeOnly = true) {
     return this.prisma.serviceCarModel.findMany({
       where: activeOnly ? { isActive: true } : {},
@@ -205,19 +242,27 @@ export class ServiceBookingsRepository {
   }
 
   async upsertCarModel(data: { id?: string | undefined; nameEn: string; nameAr: string; brand?: string | undefined; isActive?: boolean | undefined }) {
-    const brand = data.brand || 'Nissan';
     if (data.id) {
       return this.prisma.serviceCarModel.update({
         where: { id: data.id },
-        data: { nameEn: data.nameEn, nameAr: data.nameAr, brand, ...(data.isActive !== undefined ? { isActive: data.isActive } : {}) },
+        data: {
+          nameEn: data.nameEn,
+          nameAr: data.nameAr,
+          ...(data.brand ? { brand: data.brand } : {}),
+          ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
+        },
       });
     }
     return this.prisma.serviceCarModel.create({
-      data: { nameEn: data.nameEn, nameAr: data.nameAr, brand, isActive: data.isActive ?? true },
+      data: {
+        nameEn: data.nameEn,
+        nameAr: data.nameAr,
+        brand: data.brand || 'Nissan',
+        isActive: data.isActive ?? true,
+      },
     });
   }
 
-  // ── Maintenance Types ─────────────────────────────────────────────────────
   async listMaintenanceTypes(activeOnly = true) {
     return this.prisma.serviceMaintenanceType.findMany({
       where: activeOnly ? { isActive: true } : {},
@@ -236,7 +281,7 @@ export class ServiceBookingsRepository {
         data: {
           nameEn: data.nameEn,
           nameAr: data.nameAr,
-          ...(data.estimatedDurationMinutes ? { estimatedDurationMinutes: data.estimatedDurationMinutes } : {}),
+          ...(data.estimatedDurationMinutes !== undefined ? { estimatedDurationMinutes: data.estimatedDurationMinutes } : {}),
           ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
         },
       });
@@ -245,7 +290,7 @@ export class ServiceBookingsRepository {
       data: {
         nameEn: data.nameEn,
         nameAr: data.nameAr,
-        estimatedDurationMinutes: data.estimatedDurationMinutes ?? 30,
+        estimatedDurationMinutes: data.estimatedDurationMinutes || 60,
         isActive: data.isActive ?? true,
       },
     });

@@ -41,7 +41,7 @@ export default async function StaffLayout({ children }: { children: ReactNode })
       })
     : STAFF_NAV;
 
-  if (activePath && isRouteForbidden(activePath, allowedNav)) {
+  if (activePath && isRouteForbidden(activePath, allowedNav, principal?.allowedNavKeys)) {
     redirect(firstAllowedPath(allowedNav, locale));
   }
 

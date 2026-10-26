@@ -1767,31 +1767,50 @@ model ServiceMaintenanceType {
   @@map("service_maintenance_types")
 }
 
+model ServiceCenter {
+  id           String               @id @default(cuid())
+  code         String               @unique
+  nameEn       String               @map("name_en")
+  nameAr       String               @map("name_ar")
+  address      String?              @map("address")
+  phone        String?              @map("phone")
+  isActive     Boolean              @default(true) @map("is_active")
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @updatedAt @map("updated_at")
+  rules        ServiceBookingRule[]
+  appointments ServiceAppointment[]
+
+  @@map("service_centers")
+}
+
 model ServiceBookingRule {
-  id                   String   @id @default(cuid())
-  branchId             String   @map("branch_id")
-  dayOfWeek            Int      @map("day_of_week")
-  isOpen               Boolean  @default(true) @map("is_open")
-  startTime            String   @default("08:00") @map("start_time")
-  endTime              String   @default("18:00") @map("end_time")
-  maxDailyAppointments Int      @default(24) @map("max_daily_appointments")
-  maxPerHour           Int      @default(3) @map("max_per_hour")
-  maxPerSlot           Int      @default(1) @map("max_per_slot")
-  slotDurationMinutes  Int      @default(15) @map("slot_duration_minutes")
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
+  id                   String         @id @default(cuid())
+  branchId             String?        @map("branch_id")
+  serviceCenterId      String         @default("center_main") @map("service_center_id")
+  dayOfWeek            Int            @map("day_of_week")
+  isOpen               Boolean        @default(true) @map("is_open")
+  startTime            String         @default("08:00") @map("start_time")
+  endTime              String         @default("18:00") @map("end_time")
+  maxDailyAppointments Int            @default(24) @map("max_daily_appointments")
+  maxPerHour           Int            @default(3) @map("max_per_hour")
+  maxPerSlot           Int            @default(1) @map("max_per_slot")
+  slotDurationMinutes  Int            @default(15) @map("slot_duration_minutes")
+  createdAt            DateTime       @default(now()) @map("created_at")
+  updatedAt            DateTime       @updatedAt @map("updated_at")
 
-  branch               Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  branch               Branch?        @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  serviceCenter        ServiceCenter? @relation(fields: [serviceCenterId], references: [id], onDelete: Cascade)
 
-  @@unique([branchId, dayOfWeek])
-  @@index([branchId])
+  @@unique([serviceCenterId, dayOfWeek])
+  @@index([serviceCenterId])
   @@map("service_booking_rules")
 }
 
 model ServiceAppointment {
   id                  String                   @id @default(cuid())
   referenceNumber     String                   @unique @map("reference_number")
-  branchId            String                   @map("branch_id")
+  branchId            String?                  @map("branch_id")
+  serviceCenterId     String                   @default("center_main") @map("service_center_id")
   customerName        String                   @map("customer_name")
   customerPhone       String                   @map("customer_phone")
   vin                 String?                  @map("vin")
@@ -1809,12 +1828,13 @@ model ServiceAppointment {
   createdAt           DateTime                 @default(now()) @map("created_at")
   updatedAt           DateTime                 @updatedAt @map("updated_at")
 
-  branch              Branch                   @relation(fields: [branchId], references: [id])
+  branch              Branch?                  @relation(fields: [branchId], references: [id])
+  serviceCenter       ServiceCenter?           @relation(fields: [serviceCenterId], references: [id])
   carModel            ServiceCarModel?         @relation(fields: [carModelId], references: [id])
   maintenanceType     ServiceMaintenanceType?  @relation(fields: [maintenanceTypeId], references: [id])
   createdBy           User?                    @relation("ServiceAppointmentCreatedBy", fields: [createdById], references: [id])
 
-  @@index([branchId, date])
+  @@index([serviceCenterId, date])
   @@index([customerPhone])
   @@map("service_appointments")
 }

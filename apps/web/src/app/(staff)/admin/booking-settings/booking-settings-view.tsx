@@ -1,31 +1,31 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Building2, Calendar, Car, Clock, Wrench } from 'lucide-react';
+import { Building2, Car, Clock, Wrench } from 'lucide-react';
 import { BranchHoursTab } from './branch-hours-tab';
 import { CarModelsTab } from './car-models-tab';
 import { MaintenanceTypesTab } from './maintenance-types-tab';
-import { BranchNamesTab } from './branch-names-tab';
-import type { CarModel, DayRule, MaintenanceType } from '../../../../lib/staff-service-bookings-api';
+import { ServiceCentersTab } from './service-centers-tab';
+import type { CarModel, DayRule, MaintenanceType, ServiceCenter } from '../../../../lib/staff-service-bookings-api';
 import type { Locale } from '../../../../i18n/staff-shell';
 import type { ServiceBookingCopy } from '../../../../i18n/staff-service-booking';
 
 export function BookingSettingsView({
-  branches,
+  centers,
   carModels,
   locale,
   maintenanceTypes,
   rulesByBranch,
   t,
 }: {
-  branches: Array<{ id: string; code: string; nameEn: string; nameAr: string }>;
+  centers: ServiceCenter[];
   carModels: CarModel[];
   locale: Locale;
   maintenanceTypes: MaintenanceType[];
   rulesByBranch: Record<string, DayRule[]>;
   t: ServiceBookingCopy;
 }) {
-  const [activeTab, setActiveTab] = useState<'hours' | 'cars' | 'maintenance' | 'branches'>('hours');
+  const [activeTab, setActiveTab] = useState<'hours' | 'cars' | 'maintenance' | 'centers'>('hours');
 
   return (
     <div className="space-y-6">
@@ -81,11 +81,11 @@ export function BookingSettingsView({
 
           <button
             className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all ${
-              activeTab === 'branches'
+              activeTab === 'centers'
                 ? 'bg-brand text-primary-foreground shadow-sm'
                 : 'border border-line-subtle bg-surface text-content-muted hover:text-content-strong'
             }`}
-            onClick={() => setActiveTab('branches')}
+            onClick={() => setActiveTab('centers')}
             type="button"
           >
             <Building2 className="size-4" />
@@ -98,7 +98,7 @@ export function BookingSettingsView({
       <div>
         {activeTab === 'hours' && (
           <BranchHoursTab
-            branches={branches}
+            centers={centers}
             initialRulesByBranch={rulesByBranch}
             locale={locale}
             t={t}
@@ -118,11 +118,10 @@ export function BookingSettingsView({
             t={t}
           />
         )}
-        {activeTab === 'branches' && (
-          <BranchNamesTab
-            branches={branches}
+        {activeTab === 'centers' && (
+          <ServiceCentersTab
+            initialCenters={centers}
             locale={locale}
-            t={t}
           />
         )}
       </div>

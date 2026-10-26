@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { ServiceBookingsService } from './service-bookings.service.js';
@@ -53,7 +53,47 @@ export class ServiceBookingsController {
     return this.service.getSlotAvailability(branchId, date);
   }
 
+  // ── Service Centers ───────────────────────────────────────────────────────
+  @Get('centers')
+  async listServiceCenters(@Query('all') all?: string) {
+    return this.service.getServiceCenters(all !== 'true');
+  }
+
+  @Post('centers')
+  async upsertServiceCenter(@Body() body: any) {
+    return this.service.upsertServiceCenter({
+      id: body.id,
+      code: body.code,
+      nameEn: body.nameEn,
+      nameAr: body.nameAr,
+      address: body.address,
+      phone: body.phone,
+      isActive: body.isActive !== false,
+    });
+  }
+
+  @Delete('centers/:id')
+  async deleteServiceCenter(@Param('id') id: string) {
+    return this.service.deleteServiceCenter(id);
+  }
+
   // ── Booking Rules ─────────────────────────────────────────────────────────
+  @Get('rules/:centerId')
+  async getCenterRules(@Param('centerId') centerId: string) {
+    return this.service.getBranchRules(centerId);
+  }
+
+  @Put('rules/:centerId')
+  async updateCenterRules(@Param('centerId') centerId: string, @Body() body: any) {
+    const rules = Array.isArray(body?.rules) ? body.rules : (Array.isArray(body) ? body : []);
+    return this.service.updateBranchRules(centerId, rules);
+  }
+
+  @Post('rules/:centerId/init-week')
+  async initWeekRules(@Param('centerId') centerId: string) {
+    return this.service.initWeekRules(centerId);
+  }
+
   @Get('rules')
   async getBranchRules(@Query('branchId') branchId: string) {
     if (!branchId) return [];

@@ -2,14 +2,15 @@ import React from 'react';
 import { headers } from 'next/headers';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { serviceBookingText } from '../../../../i18n/staff-service-booking';
-import { getComplaintFormOptions } from '../../../../lib/staff-complaint-form-options-api';
 import {
   fetchBranchRules,
   fetchCarModels,
   fetchMaintenanceTypes,
+  fetchServiceCenters,
   type CarModel,
   type DayRule,
   type MaintenanceType,
+  type ServiceCenter,
 } from '../../../../lib/staff-service-bookings-api';
 import { BookingSettingsView } from './booking-settings-view';
 
@@ -25,29 +26,48 @@ export default async function BookingSettingsAdminPage({
   const locale = resolveLocale(params?.locale || requestHeaders.get('x-cms-locale') || undefined);
   const t = serviceBookingText[locale] || serviceBookingText.en;
 
-  const formOptions = await getComplaintFormOptions().catch(() => null);
-  const branches = formOptions?.branches || [
-    { id: 'branch_main', code: 'MAIN', nameEn: 'Main Branch', nameAr: 'الفرع الرئيسي' },
-    { id: 'branch_north', code: 'NORTH', nameEn: 'North Branch', nameAr: 'فرع الشمال' },
-  ];
+  const fetchedCenters = await fetchServiceCenters().catch(() => [] as ServiceCenter[]);
+  const centers: ServiceCenter[] =
+    fetchedCenters.length > 0
+      ? fetchedCenters
+      : [
+          {
+            id: 'center_main',
+            code: 'MAIN_CTR',
+            nameEn: 'Main Service Center',
+            nameAr: 'مركز خدمة الرئيسي',
+            address: null,
+            phone: null,
+            isActive: true,
+          },
+          {
+            id: 'center_north',
+            code: 'NORTH_CTR',
+            nameEn: 'North Service Center',
+            nameAr: 'مركز خدمة الشمال',
+            address: null,
+            phone: null,
+            isActive: true,
+          },
+        ];
 
   // Fetch data in parallel
   const [carModels, maintenanceTypes, ...rulesLists] = await Promise.all([
     fetchCarModels(false).catch(() => [] as CarModel[]),
     fetchMaintenanceTypes(false).catch(() => [] as MaintenanceType[]),
-    ...branches.map((b) => fetchBranchRules(b.id).catch(() => [] as DayRule[])),
+    ...centers.map((c) => fetchBranchRules(c.id).catch(() => [] as DayRule[])),
   ]);
 
   const rulesByBranch: Record<string, DayRule[]> = {};
-  branches.forEach((b, idx) => {
-    rulesByBranch[b.id] = rulesLists[idx] || [];
+  centers.forEach((c, idx) => {
+    rulesByBranch[c.id] = rulesLists[idx] || [];
   });
 
   return (
     <section aria-label={t.adminSettings.title} className="w-full">
       <BookingSettingsView
-        branches={branches}
         carModels={carModels}
+        centers={centers}
         locale={locale}
         maintenanceTypes={maintenanceTypes}
         rulesByBranch={rulesByBranch}

@@ -2,8 +2,11 @@ export interface ServiceAppointmentDto {
   id: string;
   referenceNumber: string;
   branchId: string;
-  branchNameEn?: string;
-  branchNameAr?: string;
+  branchNameEn?: string | undefined;
+  branchNameAr?: string | undefined;
+  serviceCenterId?: string | undefined;
+  serviceCenterNameEn?: string | undefined;
+  serviceCenterNameAr?: string | undefined;
   customerName: string;
   customerPhone: string;
   vin: string | null;
@@ -20,6 +23,16 @@ export interface ServiceAppointmentDto {
   createdById?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ServiceCenterDto {
+  id: string;
+  code: string;
+  nameEn: string;
+  nameAr: string;
+  address: string | null;
+  phone: string | null;
+  isActive: boolean;
 }
 
 export interface SlotAvailabilityDto {

@@ -162,10 +162,10 @@ export async function saveMaintenanceTypeAction(data: {
 
 export async function updateBranchNameAction(branchId: string, nameEn: string, nameAr: string) {
   try {
-    const res = await fetch(`${API_BASE_URL}/branches/${encodeURIComponent(branchId)}`, {
-      method: 'PATCH',
+    const res = await fetch(`${API_BASE_URL}/service-bookings/centers`, {
+      method: 'POST',
       headers: await getAuthHeaders(),
-      body: JSON.stringify({ nameEn, nameAr }),
+      body: JSON.stringify({ id: branchId, nameEn, nameAr }),
       cache: 'no-store',
     });
     if (!res.ok) {
@@ -175,6 +175,73 @@ export async function updateBranchNameAction(branchId: string, nameEn: string, n
     revalidatePath('/service-booking');
     revalidatePath('/admin/booking-settings');
     return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Network error' };
+  }
+}
+
+export async function saveServiceCenterAction(data: {
+  id?: string | undefined;
+  code?: string | undefined;
+  nameEn: string;
+  nameAr: string;
+  address?: string | null | undefined;
+  phone?: string | null | undefined;
+  isActive?: boolean | undefined;
+}) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/service-bookings/centers`, {
+      method: 'POST',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify(data),
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      const msg = await res.text().catch(() => '');
+      return { success: false, error: parseErrorMessage(msg, res.status) };
+    }
+    revalidatePath('/service-booking');
+    revalidatePath('/admin/booking-settings');
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Network error' };
+  }
+}
+
+export async function deleteServiceCenterAction(id: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/service-bookings/centers/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: await getAuthHeaders(),
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      const msg = await res.text().catch(() => '');
+      return { success: false, error: parseErrorMessage(msg, res.status) };
+    }
+    revalidatePath('/service-booking');
+    revalidatePath('/admin/booking-settings');
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Network error' };
+  }
+}
+
+export async function initWeekRulesAction(centerId: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/service-bookings/rules/${encodeURIComponent(centerId)}/init-week`, {
+      method: 'POST',
+      headers: await getAuthHeaders(),
+      cache: 'no-store',
+    });
+    if (!res.ok) {
+      const msg = await res.text().catch(() => '');
+      return { success: false, error: parseErrorMessage(msg, res.status) };
+    }
+    const json = await res.json().catch(() => null);
+    revalidatePath('/service-booking');
+    revalidatePath('/admin/booking-settings');
+    return { success: true, rules: (json?.rules ?? json ?? []) as DayRule[] };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Network error' };
   }

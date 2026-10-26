@@ -1,14 +1,15 @@
 import React from 'react';
 import { headers } from 'next/headers';
 import { resolveLocale, staffShellText } from '../../../i18n/staff-shell';
-import { getComplaintFormOptions } from '../../../lib/staff-complaint-form-options-api';
 import {
   fetchCarModels,
   fetchMaintenanceTypes,
   fetchServiceAppointments,
+  fetchServiceCenters,
   type CarModel,
   type MaintenanceType,
   type ServiceAppointment,
+  type ServiceCenter,
 } from '../../../lib/staff-service-bookings-api';
 import { ServiceBookingProvider } from './service-booking-context';
 import { ServiceBookingView } from './service-booking-view';
@@ -31,17 +32,25 @@ export default async function ServiceBookingPage({
   const todayStr = params?.date || new Date().toISOString().slice(0, 10);
 
   // Parallel data fetching
-  const [formOptions, carModels, maintenanceTypes, appointments] = await Promise.all([
-    getComplaintFormOptions().catch(() => null),
+  const [fetchedCenters, carModels, maintenanceTypes, appointments] = await Promise.all([
+    fetchServiceCenters().catch(() => [] as ServiceCenter[]),
     fetchCarModels(false).catch(() => [] as CarModel[]),
     fetchMaintenanceTypes(false).catch(() => [] as MaintenanceType[]),
     fetchServiceAppointments({}).catch(() => [] as ServiceAppointment[]),
   ]);
 
-  const branches = formOptions?.branches || [
-    { id: 'branch_main', code: 'MAIN', nameEn: 'Main Branch', nameAr: 'الفرع الرئيسي' },
-    { id: 'branch_north', code: 'NORTH', nameEn: 'North Branch', nameAr: 'فرع الشمال' },
-  ];
+  const branches =
+    fetchedCenters.length > 0
+      ? fetchedCenters.map((c) => ({
+          id: c.id,
+          code: c.code,
+          nameEn: c.nameEn,
+          nameAr: c.nameAr,
+        }))
+      : [
+          { id: 'center_main', code: 'MAIN_CTR', nameEn: 'Main Service Center', nameAr: 'مركز خدمة الرئيسي' },
+          { id: 'center_north', code: 'NORTH_CTR', nameEn: 'North Service Center', nameAr: 'مركز خدمة الشمال' },
+        ];
 
   return (
     <section aria-label="Service Center Booking" className="grid gap-4 w-full" dir={shell.dir}>

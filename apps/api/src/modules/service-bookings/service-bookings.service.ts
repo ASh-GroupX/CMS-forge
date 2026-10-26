@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import type { ServiceAppointmentStatus } from '@prisma/client';
+import type { Prisma, ServiceAppointmentStatus } from '@prisma/client';
 import { ServiceBookingsRepository } from './service-bookings.repository.js';
 import type { CreateServiceAppointmentDto } from './dto/create-service-appointment.dto.js';
 import type { UpdateServiceAppointmentDto } from './dto/update-service-appointment.dto.js';
@@ -7,10 +7,10 @@ import type { DayRuleInput } from './dto/service-booking-rules.dto.js';
 import type {
   DayAvailabilityDto,
   ServiceAppointmentDto,
-  SlotAvailabilityDto,
 } from './dto/service-booking-response.dto.js';
 import {
   DEFAULT_DAY_RULES,
+  buildDayAvailability,
   calculateEndTime,
   mapAppointment,
 } from './service-bookings.utils.js';
@@ -46,44 +46,41 @@ export class ServiceBookingsService {
   }
 
   async createAppointment(dto: CreateServiceAppointmentDto, actorId?: string | null): Promise<ServiceAppointmentDto> {
+    const centerId = dto.branchId || 'center_main';
     const dateObj = new Date(`${dto.date}T00:00:00Z`);
     const dayOfWeek = dateObj.getUTCDay();
-    const rule = await this.resolveRule(dto.branchId, dayOfWeek);
+    const rule = await this.resolveRule(centerId, dayOfWeek);
 
     if (!rule.isOpen) {
       throw new BadRequestException('The selected branch is closed on this day');
     }
 
-    // Daily limit
-    const dailyCount = await this.repository.countDailyActive(dto.branchId, dateObj);
+    const dailyCount = await this.repository.countDailyActive(centerId, dateObj);
     if (dailyCount >= rule.maxDailyAppointments) {
-      throw new BadRequestException(`Branch daily appointment limit (${rule.maxDailyAppointments}) reached`);
+      throw new BadRequestException(`Service center daily appointment limit (${rule.maxDailyAppointments}) reached`);
     }
 
-    // Slot limit
-    const slotCount = await this.repository.countInSlot(dto.branchId, dateObj, dto.startTime);
+    const slotCount = await this.repository.countInSlot(centerId, dateObj, dto.startTime);
     if (slotCount >= rule.maxPerSlot) {
       throw new BadRequestException('This 15-minute slot is already booked to capacity');
     }
 
-    // Hourly limit (e.g. at most 3 per hour)
     const hourPrefix = dto.startTime.split(':')[0] + ':';
-    const hourCount = await this.repository.countInHourWindow(dto.branchId, dateObj, hourPrefix);
+    const hourCount = await this.repository.countInHourWindow(centerId, dateObj, hourPrefix);
     if (hourCount >= rule.maxPerHour) {
       throw new BadRequestException(`Maximum appointments per hour limit (${rule.maxPerHour}) reached for this hour`);
     }
 
-    // Resolve models
     const carModel = await this.repository.findCarModelById(dto.carModelId);
     const maintenanceType = await this.repository.findMaintenanceTypeById(dto.maintenanceTypeId);
-
     const duration = dto.durationMinutes || maintenanceType?.estimatedDurationMinutes || 30;
     const endTime = calculateEndTime(dto.startTime, duration);
     const referenceNumber = await this.repository.generateReferenceNumber(dateObj);
 
     const created = await this.repository.createAppointment({
       referenceNumber,
-      branchId: dto.branchId,
+      serviceCenterId: centerId,
+      branchId: centerId,
       customerName: dto.customerName,
       customerPhone: dto.customerPhone,
       vin: dto.vin || null,
@@ -96,7 +93,8 @@ export class ServiceBookingsService {
       startTime: dto.startTime,
       endTime,
       durationMinutes: duration,
-      createdById: actorId ?? null,
+      status: 'BOOKED',
+      createdById: actorId || null,
     });
 
     return mapAppointment(created);
@@ -106,19 +104,18 @@ export class ServiceBookingsService {
     const existing = await this.repository.findAppointmentById(id);
     if (!existing) throw new NotFoundException('Appointment not found');
 
-    const updateData: any = {};
-    if (dto.status) updateData.status = dto.status;
+    const updateData: Prisma.ServiceAppointmentUncheckedUpdateInput = {};
+    if (dto.status) updateData.status = dto.status as ServiceAppointmentStatus;
     if (dto.notes !== undefined) updateData.notes = dto.notes;
     if (dto.customerName) updateData.customerName = dto.customerName;
     if (dto.customerPhone) updateData.customerPhone = dto.customerPhone;
     if (dto.vin !== undefined) updateData.vin = dto.vin;
 
-    // Time/date reschedule validation
     if ((dto.date && dto.date !== existing.date.toISOString().slice(0, 10)) || (dto.startTime && dto.startTime !== existing.startTime)) {
       const targetDateStr = dto.date || existing.date.toISOString().slice(0, 10);
       const targetDate = new Date(`${targetDateStr}T00:00:00Z`);
       const targetTime = dto.startTime || existing.startTime;
-      const targetBranch = dto.branchId || existing.branchId;
+      const targetBranch = dto.branchId || existing.serviceCenterId || existing.branchId || 'center_main';
 
       const rule = await this.resolveRule(targetBranch, targetDate.getUTCDay());
       if (!rule.isOpen) throw new BadRequestException('Branch is closed on target day');
@@ -146,88 +143,24 @@ export class ServiceBookingsService {
     const dateObj = new Date(`${dateStr}T00:00:00Z`);
     const dayOfWeek = dateObj.getUTCDay();
     const rule = await this.resolveRule(branchId, dayOfWeek);
+    const appointments = rule.isOpen
+      ? await this.repository.findAppointmentsForDate(branchId, dateObj)
+      : [];
 
-    if (!rule.isOpen) {
-      return {
-        date: dateStr,
-        dayOfWeek,
-        branchId,
-        isOpen: false,
-        startTime: rule.startTime,
-        endTime: rule.endTime,
-        maxDailyAppointments: rule.maxDailyAppointments,
-        bookedDailyCount: 0,
-        slots: [],
-      };
-    }
-
-    const appointments = await this.repository.findAppointmentsForDate(branchId, dateObj);
-    const slotCounts = new Map<string, number>();
-    const hourCounts = new Map<string, number>();
-
-    for (const app of appointments) {
-      slotCounts.set(app.startTime, (slotCounts.get(app.startTime) || 0) + 1);
-      const hr = app.startTime.split(':')[0] + ':00';
-      hourCounts.set(hr, (hourCounts.get(hr) || 0) + 1);
-    }
-
-    const slots: SlotAvailabilityDto[] = [];
-    const [startHour = 8, startMin = 0] = rule.startTime.split(':').map(Number);
-    const [endHour = 18, endMin = 0] = rule.endTime.split(':').map(Number);
-    const startMinutes = (startHour ?? 8) * 60 + (startMin ?? 0);
-    const endMinutes = (endHour ?? 18) * 60 + (endMin ?? 0);
-    const step = rule.slotDurationMinutes || 15;
-
-    for (let m = startMinutes; m < endMinutes; m += step) {
-      const h = Math.floor(m / 60);
-      const min = m % 60;
-      const slot = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-      const hourKey = `${String(h).padStart(2, '0')}:00`;
-
-      const bookedCount = slotCounts.get(slot) || 0;
-      const hourBookedCount = hourCounts.get(hourKey) || 0;
-      const remainingInHour = Math.max(0, rule.maxPerHour - hourBookedCount);
-      const remainingInSlot = Math.max(0, rule.maxPerSlot - bookedCount);
-
-      let status: 'AVAILABLE' | 'PARTIAL' | 'FULL' = 'AVAILABLE';
-      if (appointments.length >= rule.maxDailyAppointments || remainingInHour <= 0 || remainingInSlot <= 0) {
-        status = 'FULL';
-      } else if (hourBookedCount > 0 || bookedCount > 0) {
-        status = 'PARTIAL';
-      }
-
-      slots.push({
-        slot,
-        hour: hourKey,
-        bookedCount,
-        hourBookedCount,
-        maxPerSlot: rule.maxPerSlot,
-        maxPerHour: rule.maxPerHour,
-        status,
-        remainingInHour,
-        remainingInSlot,
-      });
-    }
-
-    return {
-      date: dateStr,
-      dayOfWeek,
+    return buildDayAvailability({
       branchId,
-      isOpen: true,
-      startTime: rule.startTime,
-      endTime: rule.endTime,
-      maxDailyAppointments: rule.maxDailyAppointments,
-      bookedDailyCount: appointments.length,
-      slots,
-    };
+      dateStr,
+      dayOfWeek,
+      rule,
+      appointments,
+    });
   }
 
   // ── Rules Management ──────────────────────────────────────────────────────
   async getBranchRules(branchId: string) {
-    const existing = await this.repository.findRulesByBranch(branchId);
+    const existing = await this.repository.findRulesForBranch(branchId);
     if (existing.length === 7) return existing;
 
-    // Seed defaults for missing days
     const result = [];
     for (let day = 0; day < 7; day++) {
       const found = existing.find((r) => r.dayOfWeek === day);
@@ -236,7 +169,7 @@ export class ServiceBookingsService {
       } else {
         const def = DEFAULT_DAY_RULES[day]!;
         const created = await this.repository.upsertRule({
-          branchId,
+          serviceCenterId: branchId,
           dayOfWeek: day,
           isOpen: def.isOpen,
           startTime: def.startTime,
@@ -244,7 +177,7 @@ export class ServiceBookingsService {
           maxDailyAppointments: def.maxDailyAppointments,
           maxPerHour: def.maxPerHour,
           maxPerSlot: def.maxPerSlot,
-          slotDurationMinutes: def.slotDurationMinutes ?? 15,
+          slotDurationMinutes: def.slotDurationMinutes || 15,
         });
         result.push(created);
       }
@@ -256,6 +189,7 @@ export class ServiceBookingsService {
     const updated = [];
     for (const r of rules) {
       const res = await this.repository.upsertRule({
+        serviceCenterId: branchId,
         branchId,
         dayOfWeek: r.dayOfWeek,
         isOpen: r.isOpen,
@@ -269,6 +203,57 @@ export class ServiceBookingsService {
       updated.push(res);
     }
     return updated;
+  }
+
+  async initWeekRules(centerId: string) {
+    const updated = [];
+    for (let day = 0; day < 7; day++) {
+      const def = DEFAULT_DAY_RULES[day]!;
+      const res = await this.repository.upsertRule({
+        serviceCenterId: centerId,
+        dayOfWeek: day,
+        isOpen: def.isOpen,
+        startTime: def.startTime,
+        endTime: def.endTime,
+        maxDailyAppointments: def.maxDailyAppointments,
+        maxPerHour: def.maxPerHour,
+        maxPerSlot: def.maxPerSlot,
+        slotDurationMinutes: def.slotDurationMinutes || 15,
+      });
+      updated.push(res);
+    }
+    return updated;
+  }
+
+  // ── Service Centers ───────────────────────────────────────────────────────
+  async getServiceCenters(activeOnly = true) {
+    const centers = await this.repository.listServiceCenters(activeOnly);
+    if (centers.length === 0) {
+      const defaultCenter = await this.repository.upsertServiceCenter({
+        code: 'MAIN_CENTER',
+        nameEn: 'Main Service Center',
+        nameAr: 'مركز الصيانة الرئيسي',
+        isActive: true,
+      });
+      return [defaultCenter];
+    }
+    return centers;
+  }
+
+  async upsertServiceCenter(data: {
+    id?: string | undefined;
+    code?: string | undefined;
+    nameEn: string;
+    nameAr: string;
+    address?: string | null | undefined;
+    phone?: string | null | undefined;
+    isActive?: boolean | undefined;
+  }) {
+    return this.repository.upsertServiceCenter(data);
+  }
+
+  async deleteServiceCenter(id: string) {
+    return this.repository.deleteServiceCenter(id);
   }
 
   // ── Master Data ───────────────────────────────────────────────────────────

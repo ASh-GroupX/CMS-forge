@@ -64,6 +64,16 @@ export type MaintenanceType = {
   isActive: boolean;
 };
 
+export type ServiceCenter = {
+  id: string;
+  code: string;
+  nameEn: string;
+  nameAr: string;
+  address?: string | null;
+  phone?: string | null;
+  isActive: boolean;
+};
+
 export type DayRule = {
   id?: string;
   branchId: string;
@@ -229,3 +239,60 @@ export async function updateAppointmentApi(id: string, data: UpdateAppointmentIn
   }
   return { ok: true, appointment: json };
 }
+
+export async function fetchServiceCenters(activeOnly = true): Promise<ServiceCenter[]> {
+  const url = `${API_BASE}/service-bookings/centers?all=${!activeOnly}`;
+  const res = await fetch(url, { headers: await getAuthHeaders(), cache: 'no-store' });
+  if (!res.ok) return [];
+  const json = await res.json().catch(() => []);
+  return Array.isArray(json) ? json : (json.centers ?? []);
+}
+
+export async function saveServiceCenter(data: {
+  id?: string | undefined;
+  code?: string | undefined;
+  nameEn: string;
+  nameAr: string;
+  address?: string | null | undefined;
+  phone?: string | null | undefined;
+  isActive?: boolean | undefined;
+}): Promise<{ ok: boolean; message?: string }> {
+  const url = `${API_BASE}/service-bookings/centers`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: await getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    return { ok: false, message: err.message || 'Failed to save service center' };
+  }
+  return { ok: true };
+}
+
+export async function deleteServiceCenter(id: string): Promise<{ ok: boolean; message?: string }> {
+  const url = `${API_BASE}/service-bookings/centers/${encodeURIComponent(id)}`;
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: await getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    return { ok: false, message: err.message || 'Failed to delete service center' };
+  }
+  return { ok: true };
+}
+
+export async function initWeekRulesApi(centerId: string): Promise<{ ok: boolean; message?: string }> {
+  const url = `${API_BASE}/service-bookings/rules/${encodeURIComponent(centerId)}/init-week`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: await getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    return { ok: false, message: err.message || 'Failed to initialize week rules' };
+  }
+  return { ok: true };
+}
+

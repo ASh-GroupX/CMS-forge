@@ -18,6 +18,7 @@ Agent context manifest for the service center booking module.
 - `service_appointments`
 - `service_booking_rules`
 - `service_car_models`
+- `service_centers`
 - `service_maintenance_types`
 
 ## May depend on

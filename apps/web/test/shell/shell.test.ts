@@ -3408,7 +3408,7 @@ test('complaint create form renders required complaint fields', async () => {
   assert.match(html, /Customer phone/);
   assert.match(html, /Customer number/);
   assert.match(html, /Category/);
-  assert.match(html, /Subcategory/);
+  assert.doesNotMatch(html, /Subcategory/);
   assert.match(html, /Severity/);
   assert.match(html, /Branch/);
   assert.match(html, /Incident date/);
@@ -3481,7 +3481,7 @@ test('complaint new route renders lookup and complaint create form together', as
   assert.match(html, /Customer phone/);
   assert.match(html, /Customer number/);
   assert.match(html, /Category/);
-  assert.match(html, /Subcategory/);
+  assert.doesNotMatch(html, /Subcategory/);
   assert.match(html, /Severity/);
   assert.match(html, /Branch/);
   assert.match(html, /Incident date/);

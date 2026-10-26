@@ -1,6 +1,10 @@
 import type { DayRuleInput } from './dto/service-booking-rules.dto.js';
-import type { AppointmentRecord } from './service-bookings.repository.js';
-import type { ServiceAppointmentDto } from './dto/service-booking-response.dto.js';
+import type { AppointmentRecord } from './service-bookings.types.js';
+import type {
+  DayAvailabilityDto,
+  ServiceAppointmentDto,
+  SlotAvailabilityDto,
+} from './dto/service-booking-response.dto.js';
 
 export const DEFAULT_DAY_RULES: Omit<DayRuleInput, 'dayOfWeek'>[] = [
   // 0 = Sunday
@@ -28,12 +32,18 @@ export function calculateEndTime(startTime: string, durationMinutes: number): st
 }
 
 export function mapAppointment(record: AppointmentRecord): ServiceAppointmentDto {
+  const centerNameEn = record.serviceCenter?.nameEn || record.branch?.nameEn;
+  const centerNameAr = record.serviceCenter?.nameAr || record.branch?.nameAr;
+  const effectiveId = record.serviceCenterId || record.branchId || '';
   return {
     id: record.id,
     referenceNumber: record.referenceNumber,
-    branchId: record.branchId,
-    branchNameEn: record.branch?.nameEn,
-    branchNameAr: record.branch?.nameAr,
+    branchId: effectiveId,
+    branchNameEn: centerNameEn,
+    branchNameAr: centerNameAr,
+    serviceCenterId: effectiveId,
+    serviceCenterNameEn: centerNameEn,
+    serviceCenterNameAr: centerNameAr,
     customerName: record.customerName,
     customerPhone: record.customerPhone,
     vin: record.vin,
@@ -50,5 +60,95 @@ export function mapAppointment(record: AppointmentRecord): ServiceAppointmentDto
     createdById: record.createdById,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
+  };
+}
+
+export function buildDayAvailability(params: {
+  branchId: string;
+  dateStr: string;
+  dayOfWeek: number;
+  rule: {
+    isOpen: boolean;
+    startTime: string;
+    endTime: string;
+    maxDailyAppointments: number;
+    maxPerHour: number;
+    maxPerSlot: number;
+    slotDurationMinutes?: number;
+  };
+  appointments: AppointmentRecord[];
+}): DayAvailabilityDto {
+  const { branchId, dateStr, dayOfWeek, rule, appointments } = params;
+
+  if (!rule.isOpen) {
+    return {
+      date: dateStr,
+      dayOfWeek,
+      branchId,
+      isOpen: false,
+      startTime: rule.startTime,
+      endTime: rule.endTime,
+      maxDailyAppointments: rule.maxDailyAppointments,
+      bookedDailyCount: 0,
+      slots: [],
+    };
+  }
+
+  const slotCounts = new Map<string, number>();
+  const hourCounts = new Map<string, number>();
+  for (const app of appointments) {
+    slotCounts.set(app.startTime, (slotCounts.get(app.startTime) || 0) + 1);
+    const hr = app.startTime.split(':')[0] + ':00';
+    hourCounts.set(hr, (hourCounts.get(hr) || 0) + 1);
+  }
+
+  const slots: SlotAvailabilityDto[] = [];
+  const [startHour = 8, startMin = 0] = rule.startTime.split(':').map(Number);
+  const [endHour = 18, endMin = 0] = rule.endTime.split(':').map(Number);
+  const startMinutes = (startHour ?? 8) * 60 + (startMin ?? 0);
+  const endMinutes = (endHour ?? 18) * 60 + (endMin ?? 0);
+  const step = rule.slotDurationMinutes || 15;
+
+  for (let m = startMinutes; m < endMinutes; m += step) {
+    const h = Math.floor(m / 60);
+    const min = m % 60;
+    const slot = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+    const hourKey = `${String(h).padStart(2, '0')}:00`;
+
+    const bookedCount = slotCounts.get(slot) || 0;
+    const hourBookedCount = hourCounts.get(hourKey) || 0;
+    const remainingInHour = Math.max(0, rule.maxPerHour - hourBookedCount);
+    const remainingInSlot = Math.max(0, rule.maxPerSlot - bookedCount);
+
+    let status: 'AVAILABLE' | 'PARTIAL' | 'FULL' = 'AVAILABLE';
+    if (appointments.length >= rule.maxDailyAppointments || remainingInHour <= 0 || remainingInSlot <= 0) {
+      status = 'FULL';
+    } else if (hourBookedCount > 0 || bookedCount > 0) {
+      status = 'PARTIAL';
+    }
+
+    slots.push({
+      slot,
+      hour: hourKey,
+      bookedCount,
+      hourBookedCount,
+      maxPerSlot: rule.maxPerSlot,
+      maxPerHour: rule.maxPerHour,
+      status,
+      remainingInHour,
+      remainingInSlot,
+    });
+  }
+
+  return {
+    date: dateStr,
+    dayOfWeek,
+    branchId,
+    isOpen: true,
+    startTime: rule.startTime,
+    endTime: rule.endTime,
+    maxDailyAppointments: rule.maxDailyAppointments,
+    bookedDailyCount: appointments.length,
+    slots,
   };
 }
