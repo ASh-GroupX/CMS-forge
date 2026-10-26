@@ -114,7 +114,7 @@ services:
     command:
       [
         "sh", "-c",
-        "node /app/node_modules/prisma/build/index.js migrate resolve --rolled-back 20261011075826_add_internal_tickets_and_updates --schema /app/packages/database/prisma/schema.prisma 2>/dev/null || true && node /app/node_modules/prisma/build/index.js migrate deploy --schema /app/packages/database/prisma/schema.prisma"
+        "node /app/node_modules/prisma/build/index.js migrate resolve --rolled-back 20261011075826_add_internal_tickets_and_updates --schema /app/packages/database/prisma/schema.prisma 2>/dev/null || true && node /app/node_modules/prisma/build/index.js migrate resolve --rolled-back 20261026160000_delete_requested_admin_complaints --schema /app/packages/database/prisma/schema.prisma 2>/dev/null || true && node /app/node_modules/prisma/build/index.js migrate deploy --schema /app/packages/database/prisma/schema.prisma"
       ]
     environment:
       NODE_ENV: production

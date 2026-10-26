@@ -367,12 +367,23 @@ export class ComplaintsRepository {
       await tx.complaintRelation.deleteMany({ where: { sourceComplaintId: id } });
       await tx.complaintRelation.deleteMany({ where: { targetComplaintId: id } });
       await tx.slaEvent.deleteMany({ where: { complaintId: id } });
+      const notifs = await tx.notification.findMany({ where: { complaintId: id }, select: { id: true } });
+      const notifIds = notifs.map((n) => n.id);
+      if (notifIds.length > 0) {
+        await tx.notificationDeliveryAttempt.deleteMany({ where: { notificationId: { in: notifIds } } });
+      }
+      await tx.notificationDigestItem.deleteMany({ where: { recordId: id } });
       await tx.notification.deleteMany({ where: { complaintId: id } });
       await tx.survey.deleteMany({ where: { complaintId: id } });
       await tx.compensation.deleteMany({ where: { complaintId: id } });
       await tx.portalVerification.deleteMany({ where: { complaintId: id } });
       await tx.portalSession.deleteMany({ where: { complaintId: id } });
       await tx.attachment.deleteMany({ where: { complaintId: id } });
+      const assignments = await tx.assignment.findMany({ where: { entityType: 'COMPLAINT', entityId: id }, select: { id: true } });
+      const assignmentIds = assignments.map((a) => a.id);
+      if (assignmentIds.length > 0) {
+        await tx.assignmentHistory.deleteMany({ where: { assignmentId: { in: assignmentIds } } });
+      }
       await tx.assignmentHistory.deleteMany({ where: { entityType: 'COMPLAINT', entityId: id } });
       await tx.assignment.deleteMany({ where: { entityType: 'COMPLAINT', entityId: id } });
       await tx.caseLink.deleteMany({ where: { entityType: 'COMPLAINT', entityId: id } });
@@ -380,10 +391,18 @@ export class ComplaintsRepository {
       // Remove linked Tasks
       const linkedTasks = await tx.taskLink.findMany({ where: { entityType: 'COMPLAINT', entityId: id }, select: { taskId: true } });
       const linkedTaskIds = linkedTasks.map((t) => t.taskId);
-      await tx.taskLink.deleteMany({ where: { entityId: id } });
       if (linkedTaskIds.length > 0) {
+        const taskAssignments = await tx.assignment.findMany({ where: { entityType: 'TASK', entityId: { in: linkedTaskIds } }, select: { id: true } });
+        const taskAssignmentIds = taskAssignments.map((a) => a.id);
+        if (taskAssignmentIds.length > 0) {
+          await tx.assignmentHistory.deleteMany({ where: { assignmentId: { in: taskAssignmentIds } } });
+        }
+        await tx.assignmentHistory.deleteMany({ where: { entityType: 'TASK', entityId: { in: linkedTaskIds } } });
+        await tx.assignment.deleteMany({ where: { entityType: 'TASK', entityId: { in: linkedTaskIds } } });
+        await tx.taskLink.deleteMany({ where: { taskId: { in: linkedTaskIds } } });
         await tx.task.deleteMany({ where: { id: { in: linkedTaskIds } } });
       }
+      await tx.taskLink.deleteMany({ where: { entityId: id } });
 
       // Finally delete the complaint
       await tx.complaint.delete({ where: { id } });

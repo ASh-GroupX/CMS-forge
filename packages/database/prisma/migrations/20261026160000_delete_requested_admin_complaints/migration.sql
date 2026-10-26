@@ -27,7 +27,8 @@ BEGIN
             DELETE FROM "task_department_recipients" WHERE "task_id" = ANY(linked_task_ids);
             DELETE FROM "task_participants" WHERE "task_id" = ANY(linked_task_ids);
             DELETE FROM "task_links" WHERE "task_id" = ANY(linked_task_ids);
-            DELETE FROM "assignment_history" WHERE "entity_type" = 'TASK' AND "entity_id" = ANY(linked_task_ids);
+            DELETE FROM "case_links" WHERE "entity_type" = 'TASK' AND "entity_id" = ANY(linked_task_ids);
+            DELETE FROM "assignment_history" WHERE "assignment_id" IN (SELECT "id" FROM "assignments" WHERE "entity_type" = 'TASK' AND "entity_id" = ANY(linked_task_ids)) OR ("entity_type" = 'TASK' AND "entity_id" = ANY(linked_task_ids));
             DELETE FROM "assignments" WHERE "entity_type" = 'TASK' AND "entity_id" = ANY(linked_task_ids);
             DELETE FROM "tasks" WHERE "id" = ANY(linked_task_ids);
         END IF;
@@ -48,6 +49,8 @@ BEGIN
         DELETE FROM "complaint_status_history" WHERE "complaint_id" = ANY(target_ids);
         DELETE FROM "complaint_relations" WHERE "source_complaint_id" = ANY(target_ids) OR "target_complaint_id" = ANY(target_ids);
         DELETE FROM "sla_events" WHERE "complaint_id" = ANY(target_ids);
+        DELETE FROM "notification_delivery_attempts" WHERE "notification_id" IN (SELECT "id" FROM "notifications" WHERE "complaint_id" = ANY(target_ids));
+        DELETE FROM "notification_digest_items" WHERE "record_id" = ANY(target_ids);
         DELETE FROM "notifications" WHERE "complaint_id" = ANY(target_ids);
         DELETE FROM "surveys" WHERE "complaint_id" = ANY(target_ids);
         DELETE FROM "compensation" WHERE "complaint_id" = ANY(target_ids);
@@ -56,7 +59,7 @@ BEGIN
         DELETE FROM "attachments" WHERE "complaint_id" = ANY(target_ids);
         DELETE FROM "case_links" WHERE "entity_type" = 'COMPLAINT' AND "entity_id" = ANY(target_ids);
         DELETE FROM "task_links" WHERE "entity_type" = 'COMPLAINT' AND "entity_id" = ANY(target_ids);
-        DELETE FROM "assignment_history" WHERE "entity_type" = 'COMPLAINT' AND "entity_id" = ANY(target_ids);
+        DELETE FROM "assignment_history" WHERE "assignment_id" IN (SELECT "id" FROM "assignments" WHERE "entity_type" = 'COMPLAINT' AND "entity_id" = ANY(target_ids)) OR ("entity_type" = 'COMPLAINT' AND "entity_id" = ANY(target_ids));
         DELETE FROM "assignments" WHERE "entity_type" = 'COMPLAINT' AND "entity_id" = ANY(target_ids);
 
         -- Delete the complaints themselves
