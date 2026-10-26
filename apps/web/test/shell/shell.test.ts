@@ -10,7 +10,7 @@ import EmployeeTodayPage from '../../src/app/(staff)/tasks/today/page';
 import SentTasksPage from '../../src/app/(staff)/tasks/sent/page';
 import PromisesPage from '../../src/app/(staff)/tasks/promises/page';
 import ManagerControlRoomPage from '../../src/app/(staff)/tasks/manager/page';
-import { navForPrincipal, shouldRedirectStaffRoute } from '../../src/app/(staff)/layout';
+import { navForPrincipal, shouldRedirectStaffRoute, firstAllowedPath, isRouteForbidden } from '../../src/app/(staff)/layout';
 import ComplaintsPage from '../../src/app/(staff)/complaints/(list)/page';
 import NewComplaintPage from '../../src/app/(staff)/complaints/new/page';
 import ComplaintDetailPage from '../../src/app/(staff)/complaints/[id]/page';
@@ -77,6 +77,34 @@ test('administration navigation follows effective permissions for built-in and c
   assert.equal(navForPrincipal('QA_CUSTOM', ['STAFF_LOGIN']).includes('admin'), false);
   assert.equal(staffShellText.en.nav.admin.length > 0, true);
   assert.equal(staffShellText.ar.nav.admin.length > 0, true);
+});
+
+test('navigation routing respects custom viewMode and allowedNavKeys', () => {
+  const staffPermissions = ['COMPLAINT_CREATE', 'INTERNAL_TICKET_CREATE'];
+
+  const internalNav = navForPrincipal('STAFF', staffPermissions, {
+    viewMode: 'INTERNAL_TICKETS',
+    allowedNavKeys: ['internalTickets', 'tasks'],
+  });
+  assert.equal(internalNav.includes('dashboard'), false);
+  assert.equal(internalNav.includes('internalTickets'), true);
+  assert.equal(firstAllowedPath(internalNav, 'en'), '/internal-tickets?locale=en');
+  assert.equal(isRouteForbidden('/dashboard', internalNav), true);
+  assert.equal(isRouteForbidden('/internal-tickets', internalNav), false);
+
+  const complaintsOnly = navForPrincipal('STAFF', staffPermissions, {
+    viewMode: 'CUSTOM',
+    allowedNavKeys: ['complaints'],
+  });
+  assert.equal(firstAllowedPath(complaintsOnly, 'ar'), '/complaints?locale=ar');
+  assert.equal(isRouteForbidden('/dashboard', complaintsOnly), true);
+
+  const emptyNav = navForPrincipal('STAFF', staffPermissions, {
+    viewMode: 'CUSTOM',
+    allowedNavKeys: [],
+  });
+  assert.equal(emptyNav.length > 0, true);
+  assert.equal(firstAllowedPath(emptyNav, 'en').includes('locale=en'), true);
 });
 
 test('department-only board labels remain readable in English and Arabic without an assignee', () => {

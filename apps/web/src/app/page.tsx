@@ -21,6 +21,7 @@ import { StaffAuthLanding } from './staff-auth-landing';
 import { AuthPanel, RolePanel, roleNav, type RolePreview } from './staff-shell-panels';
 import { WorkQueue, type QueueFixtureState } from './work-queue';
 import { AppShell, type StaffNavKey } from './app-shell';
+import { firstAllowedPath, navForPrincipal } from '../lib/staff-nav-rules';
 
 type SearchParams = {
   admin?: string | string[]; auth?: string | string[]; attachment?: string | string[]; comments?: string | string[]; create?: string | string[];
@@ -47,7 +48,13 @@ export default async function StaffShellPage({
   const complaintId = readParam(params?.complaintId);
   const principal = await getStaffSessionPrincipal(apiInput);
   if (await isNextRequest()) {
-    if (principal) redirect(withLocale('/dashboard', locale));
+    if (principal) {
+      const allowedNav = navForPrincipal(principal.roleCode, principal.permissions, {
+        viewMode: principal.viewMode,
+        allowedNavKeys: principal.allowedNavKeys,
+      });
+      redirect(firstAllowedPath(allowedNav, locale));
+    }
     return <StaffAuthLanding authError={readParam(params?.auth) === 'error'} locale={locale} resetState={resolveReset(readParam(params?.reset))} />;
   }
 

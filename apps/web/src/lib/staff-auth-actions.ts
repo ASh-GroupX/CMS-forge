@@ -2,6 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { firstAllowedPath, navForPrincipal, STAFF_NAV } from './staff-nav-rules';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:3000';
 const CSRF_COOKIE = 'cms_csrf_token';
@@ -25,7 +26,24 @@ export async function loginStaffAction(formData: FormData): Promise<void> {
 
   if (!response.ok) redirect(`/?locale=${locale}&auth=error`);
   await applySetCookie(response.headers);
-  redirect(`/?locale=${locale}`);
+
+  const body = (await response.json().catch(() => null)) as {
+    user?: {
+      roleCode?: string;
+      permissions?: string[];
+      viewMode?: string | null;
+      allowedNavKeys?: string[];
+    };
+  } | null;
+
+  const allowedNav = body?.user?.roleCode
+    ? navForPrincipal(body.user.roleCode, body.user.permissions ?? [], {
+        viewMode: body.user.viewMode,
+        allowedNavKeys: body.user.allowedNavKeys,
+      })
+    : STAFF_NAV;
+
+  redirect(firstAllowedPath(allowedNav, locale));
 }
 
 export async function requestPasswordResetAction(formData: FormData): Promise<void> {
