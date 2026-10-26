@@ -1,7 +1,7 @@
 export type DisplayLocale = 'en' | 'ar';
 
 const localeCodes: Record<DisplayLocale, string> = {
-  ar: 'ar-EG',
+  ar: 'ar-JO',
   en: 'en-US',
 };
 
@@ -9,7 +9,7 @@ export function missingDisplay(locale: DisplayLocale): string {
   return locale === 'ar' ? 'غير محدد' : 'Not set';
 }
 
-export function formatDisplayDate(value: string | null | undefined, locale: DisplayLocale, options: Intl.DateTimeFormatOptions = { dateStyle: 'medium', timeZone: 'UTC' }): string {
+export function formatDisplayDate(value: string | null | undefined, locale: DisplayLocale, options: Intl.DateTimeFormatOptions = { dateStyle: 'medium', timeZone: 'Asia/Amman' }): string {
   if (!value) return missingDisplay(locale);
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return locale === 'ar' ? missingDisplay(locale) : value;

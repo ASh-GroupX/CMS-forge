@@ -232,7 +232,7 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
     subject: complaint.subject,
     branchId: complaint.branchId,
     branchName: typeof complaint.branchName === 'string' ? complaint.branchName : '',
-    displayTimeZone: typeof complaint.displayTimeZone === 'string' ? complaint.displayTimeZone : 'Asia/Riyadh',
+    displayTimeZone: typeof complaint.displayTimeZone === 'string' ? complaint.displayTimeZone : 'Asia/Amman',
     ownerId: typeof complaint.ownerId === 'string' ? complaint.ownerId : null,
     ownerName: typeof complaint.ownerName === 'string' ? complaint.ownerName : null,
     slaState: complaint.slaState === 'WARNING' || complaint.slaState === 'BREACHED' || complaint.slaState === 'CLOSED' ? complaint.slaState : 'ON_TRACK',

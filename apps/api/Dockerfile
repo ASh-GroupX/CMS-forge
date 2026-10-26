@@ -21,7 +21,8 @@ RUN pnpm exec tsc -p apps/api/tsconfig.json
 FROM node:20-alpine AS runtime
 WORKDIR /app/apps/api
 ENV NODE_ENV=production
-RUN apk add --no-cache openssl
+ENV TZ=Asia/Amman
+RUN apk add --no-cache openssl tzdata
 COPY --from=build /app/node_modules /app/node_modules
 COPY --from=build /app/apps/api/node_modules ./node_modules
 COPY --from=build /app/apps/api/dist ./dist

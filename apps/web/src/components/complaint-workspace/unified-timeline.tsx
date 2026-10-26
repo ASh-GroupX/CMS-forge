@@ -49,7 +49,7 @@ export function UnifiedTimeline({
                     )}
                   </div>
                   <time className="text-content-muted" dateTime={item.createdAt}>
-                    {formatTime(item.createdAt, locale)}
+                    {formatTime(item.createdAt, locale, detail?.displayTimeZone || 'Asia/Amman')}
                   </time>
                 </div>
                 
@@ -95,12 +95,13 @@ function TimelineIcon({ type }: { type: string }) {
   }
 }
 
-function formatTime(dateString: string, locale: Locale) {
+function formatTime(dateString: string, locale: Locale, timeZone: string = 'Asia/Amman') {
   const d = new Date(dateString);
-  return new Intl.DateTimeFormat(locale, {
+  return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-JO' : 'en-US', {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    timeZone,
   }).format(d);
 }

@@ -48,7 +48,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                 <div className="flex flex-col flex-1 rounded-xl rounded-tl-sm bg-surface p-3 shadow-sm border border-line-subtle">
                   <div className="mb-1.5 flex items-center justify-between">
                     <span className="text-sm font-bold text-content-strong">{note.author?.nameEn || 'Unknown User'}</span>
-                    <span className="text-[10px] font-medium text-content-muted">{new Date(note.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                    <span className="text-[10px] font-medium text-content-muted">{new Date(note.createdAt).toLocaleString(isAr ? 'ar-JO' : 'en-US', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Amman' })}</span>
                   </div>
                   <p className="text-sm text-content-strong whitespace-pre-wrap leading-relaxed">{note.content}</p>
                   {note.attachments && note.attachments.length > 0 && (
@@ -245,7 +245,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                           <span className="text-content-muted ml-1.5">{actionText}</span>
                         </p>
                         <p className="text-[11px] font-medium text-content-muted mb-1.5">
-                          {new Date(activity.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                          {new Date(activity.createdAt).toLocaleString(isAr ? 'ar-JO' : 'en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Amman' })}
                         </p>
                         {activity.details?.reason && (
                           <div className="rounded-md bg-surface-canvas/50 border border-line-subtle p-2 text-xs text-content-strong">

@@ -148,7 +148,7 @@ export function ComplaintWorkspace({
                   </div>
                   {detail.investigatedAt && (
                     <span className="text-xs text-content-muted">
-                      {new Date(detail.investigatedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                      {new Date(detail.investigatedAt).toLocaleString(locale === 'ar' ? 'ar-JO' : 'en-US', { dateStyle: 'short', timeStyle: 'short', timeZone: detail.displayTimeZone || 'Asia/Amman' })}
                     </span>
                   )}
                 </div>

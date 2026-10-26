@@ -18,6 +18,8 @@ RUN pnpm --filter @cms-auto/web build
 FROM node:20-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
+ENV TZ=Asia/Amman
+RUN apk add --no-cache tzdata
 RUN corepack enable
 COPY --from=build /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
 COPY --from=build /app/apps/web/package.json ./apps/web/package.json

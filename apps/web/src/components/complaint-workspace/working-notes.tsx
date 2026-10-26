@@ -42,7 +42,7 @@ export function WorkingNotesList({ timeline, complaintId }: { timeline: Complain
                   )}
                 </div>
                 <span className="text-[10px] font-medium text-content-muted">
-                  {new Date(note.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                  {new Date(note.createdAt).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Amman' })}
                 </span>
               </div>
               
