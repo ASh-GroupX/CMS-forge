@@ -36,6 +36,7 @@ export type DepartmentPerformanceRow = {
   complaintsOverdue: number;
   complaintsAvgHours: number;
   complaintsSlaRate: number;
+  uniqueCustomers: number;
   combinedVolume: number;
   combinedOpen: number;
   combinedResolved: number;
@@ -95,7 +96,7 @@ export class ReportsDepartmentsRepository {
     const now = new Date();
     const deptIds = departments.map((d) => d.id);
 
-    const [tickets, complaints] = await Promise.all([
+    const [tickets, sentTickets, complaints] = await Promise.all([
       this.prisma.internalTicket.findMany({
         where: {
           targetDepartmentId: { in: deptIds },
@@ -115,6 +116,16 @@ export class ReportsDepartmentsRepository {
           resolvedAt: true,
         },
       }),
+      this.prisma.internalTicket.findMany({
+        where: {
+          requestedBy: { departmentId: { in: deptIds } },
+          createdAt: { gte: dateFrom, lte: dateTo },
+        },
+        select: {
+          id: true,
+          requestedBy: { select: { departmentId: true } },
+        },
+      }),
       this.prisma.complaint.findMany({
         where: {
           departmentId: { in: deptIds },
@@ -131,13 +142,16 @@ export class ReportsDepartmentsRepository {
           createdAt: true,
           resolvedAt: true,
           firstResponseAt: true,
+          customerId: true,
         },
       }),
     ]);
 
     return departments.map((dept) => {
       const deptTickets = tickets.filter((t) => t.targetDepartmentId === dept.id);
+      const deptSent = sentTickets.filter((t) => t.requestedBy?.departmentId === dept.id);
       const deptComplaints = complaints.filter((c) => c.departmentId === dept.id);
+      const uniqueCustomers = new Set(deptComplaints.map((c) => c.customerId || c.id)).size;
 
       const createdTickets = deptTickets.filter(
         (t) => t.createdAt >= dateFrom && t.createdAt <= dateTo,
@@ -238,8 +252,8 @@ export class ReportsDepartmentsRepository {
         branchNameEn: dept.branch?.nameEn ?? null,
         branchNameAr: dept.branch?.nameAr ?? null,
         employeeCount: dept.users.length,
-        ticketsCreated: createdTickets.length,
-        ticketsTargeted: deptTickets.length,
+        ticketsCreated: deptSent.length,
+        ticketsTargeted: createdTickets.length,
         ticketsOpen: openTickets.length,
         ticketsInProgress: inProgressTickets.length,
         ticketsWaiting: waitingTickets.length,
@@ -254,6 +268,7 @@ export class ReportsDepartmentsRepository {
         complaintsOverdue: overdueComplaints.length,
         complaintsAvgHours,
         complaintsSlaRate,
+        uniqueCustomers,
         combinedVolume,
         combinedOpen,
         combinedResolved,

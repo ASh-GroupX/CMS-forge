@@ -32,6 +32,7 @@ export type DepartmentPerformanceRow = {
   complaintsOverdue: number;
   complaintsAvgHours: number;
   complaintsSlaRate: number;
+  uniqueCustomers: number;
   combinedVolume: number;
   combinedOpen: number;
   combinedResolved: number;

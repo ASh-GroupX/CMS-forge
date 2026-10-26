@@ -112,13 +112,18 @@ export default async function ReportsPage({
     name: isRtl ? d.nameAr : d.nameEn,
   }));
 
+  const branches = (options?.branches ?? []).map((b) => ({
+    id: b.id,
+    name: isRtl ? b.nameAr : b.nameEn,
+  }));
+
   const userDept = (options?.departments ?? []).find(
     (d) => d.id === principal?.departmentId,
   );
   const userDepartmentName = userDept ? (isRtl ? userDept.nameAr : userDept.nameEn) : null;
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-8 px-4 py-4 sm:px-6 lg:px-8 min-w-0">
+    <div className="w-full max-w-7xl mx-auto space-y-8 px-4 py-4 sm:px-6 lg:px-8 min-w-0 overflow-x-hidden">
       {/* Quick Nav Hub */}
       <ReportsHubNavigator locale={activeLocale} />
 
@@ -129,6 +134,7 @@ export default async function ReportsPage({
         userDepartmentId={principal?.departmentId ?? null}
         userDepartmentName={userDepartmentName}
         departments={departments}
+        branches={branches}
         departmentsPerformance={departmentsPerformance ?? []}
         complaintsAnalytics={complaintsAnalytics}
         complaintsRecords={complaintsRecords?.items ?? []}
