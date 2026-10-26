@@ -95,7 +95,13 @@ export default async function TasksPage({
   const complaintMap = new Map<string, any>();
   if (canSeeCrm) {
     if (queueResult?.status === 'ready' && Array.isArray(queueResult.data?.rows)) {
-      for (const c of queueResult.data.rows) complaintMap.set(c.id, c);
+      for (const c of queueResult.data.rows) {
+        const isDone = ['COMPLETED', 'RESOLVED', 'CLOSED', 'REJECTED'].includes(String(c.status || '').toUpperCase());
+        if (isDone && c.ownerId !== principal?.userId && c.backupOfficerId !== principal?.userId) {
+          continue;
+        }
+        complaintMap.set(c.id, c);
+      }
     }
     if (meComplaintsResult?.status === 'ready' && Array.isArray(meComplaintsResult.data?.rows)) {
       for (const c of meComplaintsResult.data.rows) complaintMap.set(c.id, c);
@@ -112,7 +118,7 @@ export default async function TasksPage({
     allTickets = Array.from(map.values());
   }
 
-  const aggregatedData = mergeWorkItems(baseTasks, allTickets, assignedComplaints);
+  const aggregatedData = mergeWorkItems(baseTasks, allTickets, assignedComplaints, new Date(), principal?.userId);
   const isAdmin = principal?.roleCode === 'ADMIN' || Boolean(principal?.permissions?.includes('ADMIN_SYSTEM_CONFIG'));
 
   return (

@@ -107,10 +107,21 @@ export function mergeWorkItems(
   tickets: any[],
   complaints: any[],
   now: Date = new Date(),
+  currentUserId?: string,
 ): EmployeeTodayTasks {
   const isDoneComplaint = (status?: string | null) => {
     const s = String(status || '').trim().toUpperCase();
     return s === 'COMPLETED' || s === 'RESOLVED' || s === 'CLOSED' || s === 'REJECTED';
+  };
+
+  const isTaskMine = (task: StaffTask): boolean => {
+    if (!currentUserId) return true;
+    return (
+      task.assigneeId === currentUserId ||
+      task.ownerId === currentUserId ||
+      task.nextAction?.whoId === currentUserId ||
+      Boolean(task.participantUserIds?.includes(currentUserId))
+    );
   };
 
   const complaintStatusMap = new Map<string, string>();
@@ -135,14 +146,14 @@ export function mergeWorkItems(
     return false;
   };
 
-  const initialCompleted: StaffTask[] = [...(base.completed || [])];
+  const initialCompleted: StaffTask[] = (base.completed || []).filter(isTaskMine);
   const completedIds = new Set(initialCompleted.map((t) => t.id));
 
   const filterActive = (tasks: StaffTask[] = []): StaffTask[] => {
     const active: StaffTask[] = [];
     for (const t of tasks) {
       if (isTaskFinished(t)) {
-        if (!completedIds.has(t.id)) {
+        if (!completedIds.has(t.id) && isTaskMine(t)) {
           completedIds.add(t.id);
           initialCompleted.push({ ...t, status: 'DONE' });
         }
@@ -195,7 +206,7 @@ export function mergeWorkItems(
     const isDueToday = !isDone && dueTime >= startOfToday.getTime() && dueTime <= endOfToday.getTime();
 
     if (isDone) {
-      if (!completedIds.has(task.id)) {
+      if (!completedIds.has(task.id) && isTaskMine(task)) {
         completedIds.add(task.id);
         result.completed.push(task);
       }

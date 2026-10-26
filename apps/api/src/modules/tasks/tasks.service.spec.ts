@@ -378,6 +378,7 @@ test('employee today buckets only tasks visible to the actor', async () => {
         taskRecord({ id: 'promise_late', assigneeId: 'user_owner', dueAt: new Date('2026-06-20T10:00:00.000Z'), isCustomerPromise: true }),
         taskRecord({ id: 'waiting', assigneeId: 'user_other', nextActionWhoId: 'user_owner', dueAt: new Date('2026-06-20T16:00:00.000Z') }),
         taskRecord({ id: 'completed', assigneeId: 'user_owner', status: TaskStatus.DONE }),
+        taskRecord({ id: 'completed_other', assigneeId: 'user_other', status: TaskStatus.DONE }),
       ];
     },
   } as unknown as TasksRepository;

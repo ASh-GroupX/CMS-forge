@@ -181,12 +181,12 @@ export class TasksService {
     const tasks = await this.tasksRepository.listEmployeeToday(userId, completedSince);
     const [start, end] = utcDay(now);
     const openTasks = tasks.filter((task) => task.status !== TaskStatus.DONE);
-    const overduePromises = openTasks.filter((task) => task.isCustomerPromise && task.dueAt < now);
+    const isMine = (t: TaskRecord) => t.assigneeId === userId || t.ownerId === userId || t.nextActionWhoId === userId || Boolean(t.participants?.some((p) => p.userId === userId));
     return {
-      completed: tasks.filter((task) => task.status === TaskStatus.DONE).map(taskToResponse),
+      completed: tasks.filter((task) => task.status === TaskStatus.DONE && isMine(task)).map(taskToResponse),
       dueToday: openTasks.filter((task) => task.dueAt >= start && task.dueAt < end).map(taskToResponse),
       overdue: openTasks.filter((task) => task.dueAt < start).map(taskToResponse),
-      overduePromises: overduePromises.map(taskToResponse),
+      overduePromises: openTasks.filter((task) => task.isCustomerPromise && task.dueAt < now).map(taskToResponse),
       assignedToMe: openTasks.filter((task) => task.assigneeId === userId).map(taskToResponse),
       waitingOnMe: openTasks.filter((task) => task.nextActionWhoId === userId).map(taskToResponse),
     };
