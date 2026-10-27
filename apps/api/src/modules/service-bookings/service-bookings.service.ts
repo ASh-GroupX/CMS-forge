@@ -191,14 +191,14 @@ export class ServiceBookingsService {
       const res = await this.repository.upsertRule({
         serviceCenterId: branchId,
         branchId,
-        dayOfWeek: r.dayOfWeek,
-        isOpen: r.isOpen,
-        startTime: r.startTime,
-        endTime: r.endTime,
-        maxDailyAppointments: r.maxDailyAppointments,
-        maxPerHour: r.maxPerHour,
-        maxPerSlot: r.maxPerSlot,
-        slotDurationMinutes: r.slotDurationMinutes || 15,
+        dayOfWeek: Number(r.dayOfWeek),
+        isOpen: Boolean(r.isOpen),
+        startTime: String(r.startTime || '08:00').trim(),
+        endTime: String(r.endTime || '18:00').trim(),
+        maxDailyAppointments: Number(r.maxDailyAppointments) >= 0 ? Number(r.maxDailyAppointments) : 24,
+        maxPerHour: Number(r.maxPerHour) > 0 ? Number(r.maxPerHour) : 3,
+        maxPerSlot: Number(r.maxPerSlot) > 0 ? Number(r.maxPerSlot) : 1,
+        slotDurationMinutes: Number(r.slotDurationMinutes) > 0 ? Number(r.slotDurationMinutes) : 15,
       });
       updated.push(res);
     }

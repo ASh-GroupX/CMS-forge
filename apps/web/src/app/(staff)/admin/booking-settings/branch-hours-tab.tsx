@@ -33,60 +33,63 @@ export function BranchHoursTab({
   const [initing, setIniting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const currentRules = (rulesByBranch[activeBranchId] || []).sort(
+  const currentCenterId = activeBranchId || centerList[0]?.id || '';
+  const currentRules = (rulesByBranch[currentCenterId] || []).sort(
     (a, b) => a.dayOfWeek - b.dayOfWeek
   );
 
   const updateRuleField = (day: number, field: keyof DayRule, value: any) => {
+    if (!currentCenterId) return;
     setRulesByBranch((prev) => {
-      const list = prev[activeBranchId] || [];
+      const list = prev[currentCenterId] || [];
       const updated = list.map((r) => (r.dayOfWeek === day ? { ...r, [field]: value } : r));
-      return { ...prev, [activeBranchId]: updated };
+      return { ...prev, [currentCenterId]: updated };
     });
   };
 
   const handleSave = async () => {
-    if (!activeBranchId) return;
+    if (!currentCenterId) return;
     setSaving(true);
-    const res = await saveBranchRulesAction(activeBranchId, currentRules);
+    const res = await saveBranchRulesAction(currentCenterId, currentRules);
     setSaving(false);
     if (!res.success) {
       toast.error(res.error || 'Failed to save rules');
       return;
     }
     if (res.rules && Array.isArray(res.rules)) {
-      setRulesByBranch((prev) => ({ ...prev, [activeBranchId]: res.rules }));
+      setRulesByBranch((prev) => ({ ...prev, [currentCenterId]: res.rules }));
     }
     toast.success(t.modal.successUpdated);
   };
 
   const handleInitWeek = async () => {
-    if (!activeBranchId) return;
+    if (!currentCenterId) return;
     setIniting(true);
-    const res = await initWeekRulesAction(activeBranchId);
+    const res = await initWeekRulesAction(currentCenterId);
     setIniting(false);
     if (!res.success) {
       toast.error(res.error || 'Failed to initialize week');
       return;
     }
     if (res.rules && Array.isArray(res.rules)) {
-      setRulesByBranch((prev) => ({ ...prev, [activeBranchId]: res.rules }));
+      setRulesByBranch((prev) => ({ ...prev, [currentCenterId]: res.rules }));
     }
     toast.success(isAr ? 'تمت تهيئة ساعات الأسبوع الافتراضية بنجاح!' : 'Standard week initialized successfully!');
   };
 
   const handleAddSubmit = async (ruleData: Omit<DayRule, 'branchId' | 'slotDurationMinutes'>) => {
-    const newRule: DayRule = { ...ruleData, branchId: activeBranchId, slotDurationMinutes: 15 };
+    if (!currentCenterId) return;
+    const newRule: DayRule = { ...ruleData, branchId: currentCenterId, slotDurationMinutes: 15 };
     const existing = currentRules.filter((r) => r.dayOfWeek !== ruleData.dayOfWeek);
     const updated = [...existing, newRule].sort((a, b) => a.dayOfWeek - b.dayOfWeek);
-    setRulesByBranch((prev) => ({ ...prev, [activeBranchId]: updated }));
+    setRulesByBranch((prev) => ({ ...prev, [currentCenterId]: updated }));
     setIsDialogOpen(false);
     setSaving(true);
-    const res = await saveBranchRulesAction(activeBranchId, updated);
+    const res = await saveBranchRulesAction(currentCenterId, updated);
     setSaving(false);
     if (res.success) {
       if (res.rules && Array.isArray(res.rules)) {
-        setRulesByBranch((prev) => ({ ...prev, [activeBranchId]: res.rules }));
+        setRulesByBranch((prev) => ({ ...prev, [currentCenterId]: res.rules }));
       }
       toast.success(t.modal.successUpdated);
     } else {
@@ -102,7 +105,7 @@ export function BranchHoursTab({
           {centerList.map((c) => (
             <button
               className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${
-                activeBranchId === c.id
+                currentCenterId === c.id
                   ? 'bg-brand text-primary-foreground shadow-sm'
                   : 'border border-line-subtle bg-surface text-content-muted hover:text-content-strong'
               }`}
@@ -118,7 +121,7 @@ export function BranchHoursTab({
         <div className="flex items-center gap-2">
           <Button
             className="flex items-center gap-1.5 rounded-xl border border-line-subtle bg-surface text-xs font-bold text-content-strong hover:bg-surface-canvas"
-            disabled={initing || !activeBranchId}
+            disabled={initing || !currentCenterId}
             onClick={handleInitWeek}
             type="button"
           >
@@ -128,7 +131,7 @@ export function BranchHoursTab({
 
           <Button
             className="flex items-center gap-1.5 rounded-xl bg-brand text-xs font-bold text-primary-foreground shadow-sm hover:opacity-95"
-            disabled={!activeBranchId}
+            disabled={!currentCenterId}
             onClick={() => setIsDialogOpen(true)}
             type="button"
           >

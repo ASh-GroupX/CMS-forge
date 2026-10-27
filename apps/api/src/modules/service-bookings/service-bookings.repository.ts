@@ -198,20 +198,16 @@ export class ServiceBookingsRepository {
   }
 
   async upsertRule(data: { serviceCenterId?: string | undefined; branchId?: string | undefined; dayOfWeek: number; isOpen: boolean; startTime: string; endTime: string; maxDailyAppointments: number; maxPerHour: number; maxPerSlot: number; slotDurationMinutes: number }) {
+    const centerId = data.serviceCenterId || data.branchId || 'center_main';
     const existing = await this.prisma.serviceBookingRule.findFirst({
-      where: {
-        OR: [
-          ...(data.serviceCenterId ? [{ serviceCenterId: data.serviceCenterId }] : []),
-          ...(data.branchId ? [{ branchId: data.branchId }] : []),
-        ],
-        dayOfWeek: data.dayOfWeek,
-      },
+      where: { OR: [{ serviceCenterId: centerId }, { branchId: centerId }], dayOfWeek: data.dayOfWeek },
     });
 
     if (existing) {
       return this.prisma.serviceBookingRule.update({
         where: { id: existing.id },
         data: {
+          serviceCenterId: centerId,
           isOpen: data.isOpen, startTime: data.startTime, endTime: data.endTime,
           maxDailyAppointments: data.maxDailyAppointments, maxPerHour: data.maxPerHour,
           maxPerSlot: data.maxPerSlot, slotDurationMinutes: data.slotDurationMinutes,
@@ -219,27 +215,19 @@ export class ServiceBookingsRepository {
       });
     }
 
-    const createData: Prisma.ServiceBookingRuleUncheckedCreateInput = {
-      dayOfWeek: data.dayOfWeek,
-      isOpen: data.isOpen,
-      startTime: data.startTime,
-      endTime: data.endTime,
-      maxDailyAppointments: data.maxDailyAppointments,
-      maxPerHour: data.maxPerHour,
-      maxPerSlot: data.maxPerSlot,
-      slotDurationMinutes: data.slotDurationMinutes,
-      serviceCenterId: data.serviceCenterId || data.branchId || 'center_main',
-      branchId: data.branchId || null,
-    };
-    return this.prisma.serviceBookingRule.create({ data: createData });
+    return this.prisma.serviceBookingRule.create({
+      data: {
+        dayOfWeek: data.dayOfWeek, isOpen: data.isOpen, startTime: data.startTime, endTime: data.endTime,
+        maxDailyAppointments: data.maxDailyAppointments, maxPerHour: data.maxPerHour,
+        maxPerSlot: data.maxPerSlot, slotDurationMinutes: data.slotDurationMinutes,
+        serviceCenterId: centerId, branchId: null,
+      },
+    });
   }
 
   // ── Master Data ───────────────────────────────────────────────────────────
   async listCarModels(activeOnly = true) {
-    return this.prisma.serviceCarModel.findMany({
-      where: activeOnly ? { isActive: true } : {},
-      orderBy: { nameEn: 'asc' },
-    });
+    return this.prisma.serviceCarModel.findMany({ where: activeOnly ? { isActive: true } : {}, orderBy: { nameEn: 'asc' } });
   }
 
   async findCarModelById(id: string) {
@@ -250,12 +238,7 @@ export class ServiceBookingsRepository {
     if (data.id) {
       return this.prisma.serviceCarModel.update({
         where: { id: data.id },
-        data: {
-          nameEn: data.nameEn,
-          nameAr: data.nameAr,
-          ...(data.brand ? { brand: data.brand } : {}),
-          ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
-        },
+        data: { nameEn: data.nameEn, nameAr: data.nameAr, ...(data.brand ? { brand: data.brand } : {}), ...(data.isActive !== undefined ? { isActive: data.isActive } : {}) },
       });
     }
     return this.prisma.serviceCarModel.create({
@@ -264,10 +247,7 @@ export class ServiceBookingsRepository {
   }
 
   async listMaintenanceTypes(activeOnly = true) {
-    return this.prisma.serviceMaintenanceType.findMany({
-      where: activeOnly ? { isActive: true } : {},
-      orderBy: { nameEn: 'asc' },
-    });
+    return this.prisma.serviceMaintenanceType.findMany({ where: activeOnly ? { isActive: true } : {}, orderBy: { nameEn: 'asc' } });
   }
 
   async findMaintenanceTypeById(id: string) {
@@ -278,12 +258,7 @@ export class ServiceBookingsRepository {
     if (data.id) {
       return this.prisma.serviceMaintenanceType.update({
         where: { id: data.id },
-        data: {
-          nameEn: data.nameEn,
-          nameAr: data.nameAr,
-          ...(data.estimatedDurationMinutes !== undefined ? { estimatedDurationMinutes: data.estimatedDurationMinutes } : {}),
-          ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
-        },
+        data: { nameEn: data.nameEn, nameAr: data.nameAr, ...(data.estimatedDurationMinutes !== undefined ? { estimatedDurationMinutes: data.estimatedDurationMinutes } : {}), ...(data.isActive !== undefined ? { isActive: data.isActive } : {}) },
       });
     }
     return this.prisma.serviceMaintenanceType.create({
