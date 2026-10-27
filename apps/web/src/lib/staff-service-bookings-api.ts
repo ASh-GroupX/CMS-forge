@@ -104,18 +104,24 @@ export type UpdateAppointmentInput = Partial<CreateAppointmentInput> & {
   status?: ServiceAppointmentStatus;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+function getApiBaseUrl(): string {
+  if (typeof window === 'undefined') {
+    return process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+  }
+  return process.env.NEXT_PUBLIC_API_URL || '';
+}
 
 async function getAuthHeaders(): Promise<HeadersInit> {
   const headers: Record<string, string> = { Accept: 'application/json', 'Content-Type': 'application/json' };
   if (typeof window === 'undefined') {
     try {
-      const { headers: nextHeaders } = await import('next/headers');
-      const cookie = (await nextHeaders()).get('cookie');
-      if (cookie) headers.cookie = cookie;
-    } catch {
-      // client-side or static
-    }
+      const { cookies: nextCookies, headers: nextHeaders } = await import('next/headers');
+      const cookieStore = await nextCookies().catch(() => null);
+      const cookieHeader = cookieStore ? cookieStore.toString() : (await nextHeaders().catch(() => null))?.get('cookie') || '';
+      if (cookieHeader) headers.cookie = cookieHeader;
+      const csrf = cookieStore?.get('cms_csrf_token')?.value;
+      if (csrf) headers['x-csrf-token'] = csrf;
+    } catch {}
   }
   return headers;
 }
@@ -132,51 +138,47 @@ export async function fetchServiceAppointments(params: {
   if (params.toDate) query.set('toDate', params.toDate);
   if (params.status) query.set('status', params.status);
 
-  const url = `${API_BASE}/service-bookings?${query.toString()}`;
+  const url = `${getApiBaseUrl()}/service-bookings/appointments?${query.toString()}`;
   const res = await fetch(url, { headers: await getAuthHeaders(), cache: 'no-store' });
   if (!res.ok) return [];
-  const json = await res.json();
-  return json.appointments ?? [];
+  const json = await res.json().catch(() => []);
+  return Array.isArray(json) ? json : (json.appointments ?? []);
 }
 
 export async function fetchSlotAvailability(branchId: string, date: string): Promise<DayAvailability | null> {
-  const url = `${API_BASE}/service-bookings/availability?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}`;
+  const url = `${getApiBaseUrl()}/service-bookings/slots-availability?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}`;
   const res = await fetch(url, { headers: await getAuthHeaders(), cache: 'no-store' });
   if (!res.ok) return null;
-  return res.json();
+  return res.json().catch(() => null);
 }
 
 export async function fetchCarModels(activeOnly = true): Promise<CarModel[]> {
-  const url = `${API_BASE}/service-bookings/master-data/car-models?activeOnly=${activeOnly}`;
+  const url = `${getApiBaseUrl()}/service-bookings/car-models?all=${!activeOnly}`;
   const res = await fetch(url, { headers: await getAuthHeaders(), cache: 'no-store' });
   if (!res.ok) return [];
-  const json = await res.json();
-  return json.carModels ?? [];
+  const json = await res.json().catch(() => []);
+  return Array.isArray(json) ? json : (json.carModels ?? json.items ?? []);
 }
 
 export async function fetchMaintenanceTypes(activeOnly = true): Promise<MaintenanceType[]> {
-  const url = `${API_BASE}/service-bookings/master-data/maintenance-types?activeOnly=${activeOnly}`;
+  const url = `${getApiBaseUrl()}/service-bookings/maintenance-types?all=${!activeOnly}`;
   const res = await fetch(url, { headers: await getAuthHeaders(), cache: 'no-store' });
   if (!res.ok) return [];
-  const json = await res.json();
-  return json.maintenanceTypes ?? [];
+  const json = await res.json().catch(() => []);
+  return Array.isArray(json) ? json : (json.maintenanceTypes ?? json.items ?? []);
 }
 
 export async function fetchBranchRules(branchId: string): Promise<DayRule[]> {
-  const url = `${API_BASE}/service-bookings/rules/${encodeURIComponent(branchId)}`;
+  const url = `${getApiBaseUrl()}/service-bookings/rules/${encodeURIComponent(branchId)}`;
   const res = await fetch(url, { headers: await getAuthHeaders(), cache: 'no-store' });
   if (!res.ok) return [];
-  const json = await res.json();
-  return json.rules ?? [];
+  const json = await res.json().catch(() => []);
+  return Array.isArray(json) ? json : (json.rules ?? json.items ?? []);
 }
 
 export async function saveBranchRules(branchId: string, rules: DayRule[]): Promise<{ ok: boolean; message?: string }> {
-  const url = `${API_BASE}/service-bookings/rules/${encodeURIComponent(branchId)}`;
-  const res = await fetch(url, {
-    method: 'PUT',
-    headers: await getAuthHeaders(),
-    body: JSON.stringify({ rules }),
-  });
+  const url = `${getApiBaseUrl()}/service-bookings/rules/${encodeURIComponent(branchId)}`;
+  const res = await fetch(url, { method: 'PUT', headers: await getAuthHeaders(), body: JSON.stringify({ rules }) });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     return { ok: false, message: err.message || 'Failed to save rules' };
@@ -185,12 +187,8 @@ export async function saveBranchRules(branchId: string, rules: DayRule[]): Promi
 }
 
 export async function saveCarModel(data: { id?: string | undefined; nameEn: string; nameAr: string; brand?: string | undefined; isActive?: boolean | undefined }): Promise<{ ok: boolean; message?: string }> {
-  const url = `${API_BASE}/service-bookings/master-data/car-models`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: await getAuthHeaders(),
-    body: JSON.stringify(data),
-  });
+  const url = `${getApiBaseUrl()}/service-bookings/car-models`;
+  const res = await fetch(url, { method: 'POST', headers: await getAuthHeaders(), body: JSON.stringify(data) });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     return { ok: false, message: err.message || 'Failed to save car model' };
@@ -199,12 +197,8 @@ export async function saveCarModel(data: { id?: string | undefined; nameEn: stri
 }
 
 export async function saveMaintenanceType(data: { id?: string | undefined; nameEn: string; nameAr: string; estimatedDurationMinutes?: number | undefined; isActive?: boolean | undefined }): Promise<{ ok: boolean; message?: string }> {
-  const url = `${API_BASE}/service-bookings/master-data/maintenance-types`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: await getAuthHeaders(),
-    body: JSON.stringify(data),
-  });
+  const url = `${getApiBaseUrl()}/service-bookings/maintenance-types`;
+  const res = await fetch(url, { method: 'POST', headers: await getAuthHeaders(), body: JSON.stringify(data) });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     return { ok: false, message: err.message || 'Failed to save maintenance type' };
@@ -213,35 +207,23 @@ export async function saveMaintenanceType(data: { id?: string | undefined; nameE
 }
 
 export async function createAppointmentApi(data: CreateAppointmentInput): Promise<{ ok: boolean; appointment?: ServiceAppointment; message?: string }> {
-  const url = `${API_BASE}/service-bookings`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: await getAuthHeaders(),
-    body: JSON.stringify(data),
-  });
+  const url = `${getApiBaseUrl()}/service-bookings/appointments`;
+  const res = await fetch(url, { method: 'POST', headers: await getAuthHeaders(), body: JSON.stringify(data) });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    return { ok: false, message: json.message || 'Failed to create appointment' };
-  }
+  if (!res.ok) return { ok: false, message: json.message || 'Failed to create appointment' };
   return { ok: true, appointment: json };
 }
 
 export async function updateAppointmentApi(id: string, data: UpdateAppointmentInput): Promise<{ ok: boolean; appointment?: ServiceAppointment; message?: string }> {
-  const url = `${API_BASE}/service-bookings/${encodeURIComponent(id)}`;
-  const res = await fetch(url, {
-    method: 'PATCH',
-    headers: await getAuthHeaders(),
-    body: JSON.stringify(data),
-  });
+  const url = `${getApiBaseUrl()}/service-bookings/appointments/${encodeURIComponent(id)}`;
+  const res = await fetch(url, { method: 'PATCH', headers: await getAuthHeaders(), body: JSON.stringify(data) });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    return { ok: false, message: json.message || 'Failed to update appointment' };
-  }
+  if (!res.ok) return { ok: false, message: json.message || 'Failed to update appointment' };
   return { ok: true, appointment: json };
 }
 
 export async function fetchServiceCenters(activeOnly = true): Promise<ServiceCenter[]> {
-  const url = `${API_BASE}/service-bookings/centers?all=${!activeOnly}`;
+  const url = `${getApiBaseUrl()}/service-bookings/centers?all=${!activeOnly}`;
   const res = await fetch(url, { headers: await getAuthHeaders(), cache: 'no-store' });
   if (!res.ok) return [];
   const json = await res.json().catch(() => []);
@@ -257,12 +239,8 @@ export async function saveServiceCenter(data: {
   phone?: string | null | undefined;
   isActive?: boolean | undefined;
 }): Promise<{ ok: boolean; message?: string }> {
-  const url = `${API_BASE}/service-bookings/centers`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: await getAuthHeaders(),
-    body: JSON.stringify(data),
-  });
+  const url = `${getApiBaseUrl()}/service-bookings/centers`;
+  const res = await fetch(url, { method: 'POST', headers: await getAuthHeaders(), body: JSON.stringify(data) });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     return { ok: false, message: err.message || 'Failed to save service center' };
@@ -271,11 +249,8 @@ export async function saveServiceCenter(data: {
 }
 
 export async function deleteServiceCenter(id: string): Promise<{ ok: boolean; message?: string }> {
-  const url = `${API_BASE}/service-bookings/centers/${encodeURIComponent(id)}`;
-  const res = await fetch(url, {
-    method: 'DELETE',
-    headers: await getAuthHeaders(),
-  });
+  const url = `${getApiBaseUrl()}/service-bookings/centers/${encodeURIComponent(id)}`;
+  const res = await fetch(url, { method: 'DELETE', headers: await getAuthHeaders() });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     return { ok: false, message: err.message || 'Failed to delete service center' };
@@ -284,11 +259,8 @@ export async function deleteServiceCenter(id: string): Promise<{ ok: boolean; me
 }
 
 export async function initWeekRulesApi(centerId: string): Promise<{ ok: boolean; message?: string }> {
-  const url = `${API_BASE}/service-bookings/rules/${encodeURIComponent(centerId)}/init-week`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: await getAuthHeaders(),
-  });
+  const url = `${getApiBaseUrl()}/service-bookings/rules/${encodeURIComponent(centerId)}/init-week`;
+  const res = await fetch(url, { method: 'POST', headers: await getAuthHeaders() });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     return { ok: false, message: err.message || 'Failed to initialize week rules' };

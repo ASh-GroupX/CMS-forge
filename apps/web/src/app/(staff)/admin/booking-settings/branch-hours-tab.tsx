@@ -54,6 +54,9 @@ export function BranchHoursTab({
       toast.error(res.error || 'Failed to save rules');
       return;
     }
+    if (res.rules && Array.isArray(res.rules)) {
+      setRulesByBranch((prev) => ({ ...prev, [activeBranchId]: res.rules }));
+    }
     toast.success(t.modal.successUpdated);
   };
 
@@ -73,21 +76,18 @@ export function BranchHoursTab({
   };
 
   const handleAddSubmit = async (ruleData: Omit<DayRule, 'branchId' | 'slotDurationMinutes'>) => {
-    const newRule: DayRule = {
-      ...ruleData,
-      branchId: activeBranchId,
-      slotDurationMinutes: 15,
-    };
+    const newRule: DayRule = { ...ruleData, branchId: activeBranchId, slotDurationMinutes: 15 };
     const existing = currentRules.filter((r) => r.dayOfWeek !== ruleData.dayOfWeek);
     const updated = [...existing, newRule].sort((a, b) => a.dayOfWeek - b.dayOfWeek);
-
     setRulesByBranch((prev) => ({ ...prev, [activeBranchId]: updated }));
     setIsDialogOpen(false);
-
     setSaving(true);
     const res = await saveBranchRulesAction(activeBranchId, updated);
     setSaving(false);
     if (res.success) {
+      if (res.rules && Array.isArray(res.rules)) {
+        setRulesByBranch((prev) => ({ ...prev, [activeBranchId]: res.rules }));
+      }
       toast.success(t.modal.successUpdated);
     } else {
       toast.error(res.error || 'Failed to persist rule');

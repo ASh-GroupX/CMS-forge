@@ -13,7 +13,7 @@ export class ServiceBookingsController {
   constructor(private readonly service: ServiceBookingsService) {}
 
   // ── Appointments ──────────────────────────────────────────────────────────
-  @Get('appointments')
+  @Get(['appointments', ''])
   async listAppointments(
     @Query('branchId') branchId?: string,
     @Query('fromDate') fromDate?: string,
@@ -28,7 +28,7 @@ export class ServiceBookingsController {
     return this.service.getAppointment(id);
   }
 
-  @Post('appointments')
+  @Post(['appointments', ''])
   async createAppointment(@Req() req: AuthenticatedRequest, @Body() body: unknown) {
     const dto = parseCreateServiceAppointmentBody(body);
     const actorId = req.principal?.userId ?? null;
@@ -42,7 +42,7 @@ export class ServiceBookingsController {
   }
 
   // ── Slot Availability ─────────────────────────────────────────────────────
-  @Get('slots-availability')
+  @Get(['slots-availability', 'availability'])
   async getSlotAvailability(
     @Query('branchId') branchId: string,
     @Query('date') date: string,
@@ -107,24 +107,24 @@ export class ServiceBookingsController {
   }
 
   // ── Car Models Master Data ────────────────────────────────────────────────
-  @Get('car-models')
+  @Get(['car-models', 'master-data/car-models'])
   async listCarModels(@Query('all') all?: string) {
     return this.service.getCarModels(all !== 'true');
   }
 
-  @Post('car-models')
+  @Post(['car-models', 'master-data/car-models'])
   async upsertCarModel(@Body() body: unknown) {
     const dto = parseUpsertCarModelBody(body);
     return this.service.upsertCarModel(dto);
   }
 
   // ── Maintenance Types Master Data ─────────────────────────────────────────
-  @Get('maintenance-types')
+  @Get(['maintenance-types', 'master-data/maintenance-types'])
   async listMaintenanceTypes(@Query('all') all?: string) {
     return this.service.getMaintenanceTypes(all !== 'true');
   }
 
-  @Post('maintenance-types')
+  @Post(['maintenance-types', 'master-data/maintenance-types'])
   async upsertMaintenanceType(@Body() body: unknown) {
     const dto = parseUpsertMaintenanceTypeBody(body);
     return this.service.upsertMaintenanceType(dto);

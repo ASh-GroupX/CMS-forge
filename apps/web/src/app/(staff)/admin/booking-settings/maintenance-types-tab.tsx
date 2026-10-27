@@ -79,14 +79,14 @@ export function MaintenanceTypesTab({
       setTypesList((prev) =>
         prev.map((m) =>
           m.id === editingType.id
-            ? { ...m, nameEn, nameAr, estimatedDurationMinutes: duration }
+            ? { ...m, ...res.type, nameEn, nameAr, estimatedDurationMinutes: duration }
             : m,
         ),
       );
     } else {
       setTypesList((prev) => [
         ...prev,
-        {
+        res.type || {
           id: `maint_${Date.now()}`,
           nameEn,
           nameAr,

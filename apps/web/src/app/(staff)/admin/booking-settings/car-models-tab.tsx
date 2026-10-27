@@ -80,13 +80,13 @@ export function CarModelsTab({
     if (editingCar) {
       setCarList((prev) =>
         prev.map((c) =>
-          c.id === editingCar.id ? { ...c, nameEn, nameAr, brand } : c,
+          c.id === editingCar.id ? { ...c, ...res.model, nameEn, nameAr, brand } : c,
         ),
       );
     } else {
       setCarList((prev) => [
         ...prev,
-        {
+        res.model || {
           id: `car_${Date.now()}`,
           nameEn,
           nameAr,

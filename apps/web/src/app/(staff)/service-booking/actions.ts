@@ -102,9 +102,10 @@ export async function saveBranchRulesAction(branchId: string, rules: DayRule[]) 
       const msg = await res.text().catch(() => '');
       return { success: false, error: parseErrorMessage(msg, res.status) };
     }
+    const savedRules = await res.json().catch(() => null);
     revalidatePath('/service-booking');
     revalidatePath('/admin/booking-settings');
-    return { success: true };
+    return { success: true, rules: savedRules };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Network error' };
   }
@@ -118,7 +119,7 @@ export async function saveCarModelAction(data: {
   isActive?: boolean | undefined;
 }) {
   try {
-    const res = await fetch(`${API_BASE_URL}/service-bookings/master-data/car-models`, {
+    const res = await fetch(`${API_BASE_URL}/service-bookings/car-models`, {
       method: 'POST',
       headers: await getAuthHeaders(),
       body: JSON.stringify(data),
@@ -128,9 +129,10 @@ export async function saveCarModelAction(data: {
       const msg = await res.text().catch(() => '');
       return { success: false, error: parseErrorMessage(msg, res.status) };
     }
+    const model = await res.json().catch(() => null);
     revalidatePath('/service-booking');
     revalidatePath('/admin/booking-settings');
-    return { success: true };
+    return { success: true, model };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Network error' };
   }
@@ -144,7 +146,7 @@ export async function saveMaintenanceTypeAction(data: {
   isActive?: boolean | undefined;
 }) {
   try {
-    const res = await fetch(`${API_BASE_URL}/service-bookings/master-data/maintenance-types`, {
+    const res = await fetch(`${API_BASE_URL}/service-bookings/maintenance-types`, {
       method: 'POST',
       headers: await getAuthHeaders(),
       body: JSON.stringify(data),
@@ -154,9 +156,10 @@ export async function saveMaintenanceTypeAction(data: {
       const msg = await res.text().catch(() => '');
       return { success: false, error: parseErrorMessage(msg, res.status) };
     }
+    const type = await res.json().catch(() => null);
     revalidatePath('/service-booking');
     revalidatePath('/admin/booking-settings');
-    return { success: true };
+    return { success: true, type };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Network error' };
   }
@@ -223,11 +226,12 @@ export async function saveServiceCenterAction(data: {
       const msg = await res.text().catch(() => '');
       return { success: false, error: parseErrorMessage(msg, res.status) };
     }
+    const center = await res.json().catch(() => null);
     revalidatePath('/service-booking');
     revalidatePath('/admin/booking-settings');
     revalidatePath('/admin/branches');
     revalidatePath('/admin', 'layout');
-    return { success: true };
+    return { success: true, center };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Network error' };
   }

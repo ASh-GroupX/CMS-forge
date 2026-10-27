@@ -26,30 +26,7 @@ export default async function BookingSettingsAdminPage({
   const locale = resolveLocale(params?.locale || requestHeaders.get('x-cms-locale') || undefined);
   const t = serviceBookingText[locale] || serviceBookingText.en;
 
-  const fetchedCenters = await fetchServiceCenters().catch(() => [] as ServiceCenter[]);
-  const centers: ServiceCenter[] =
-    fetchedCenters.length > 0
-      ? fetchedCenters
-      : [
-          {
-            id: 'center_main',
-            code: 'MAIN_CTR',
-            nameEn: 'Main Service Center',
-            nameAr: 'مركز خدمة الرئيسي',
-            address: null,
-            phone: null,
-            isActive: true,
-          },
-          {
-            id: 'center_north',
-            code: 'NORTH_CTR',
-            nameEn: 'North Service Center',
-            nameAr: 'مركز خدمة الشمال',
-            address: null,
-            phone: null,
-            isActive: true,
-          },
-        ];
+  const centers = await fetchServiceCenters(false).catch(() => [] as ServiceCenter[]);
 
   // Fetch data in parallel
   const [carModels, maintenanceTypes, ...rulesLists] = await Promise.all([

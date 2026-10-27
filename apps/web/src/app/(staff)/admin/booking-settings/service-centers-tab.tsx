@@ -58,12 +58,12 @@ export function ServiceCentersTab({
 
     if (editingCenter) {
       setCenterList((prev) =>
-        prev.map((c) => (c.id === editingCenter.id ? { ...c, code: payload.code, nameEn: payload.nameEn, nameAr: payload.nameAr, address: payload.address || null, phone: payload.phone || null } : c))
+        prev.map((c) => (c.id === editingCenter.id ? { ...c, ...res.center, code: payload.code, nameEn: payload.nameEn, nameAr: payload.nameAr, address: payload.address || null, phone: payload.phone || null } : c))
       );
     } else {
       setCenterList((prev) => [
         ...prev,
-        { id: `center_${Date.now()}`, code: payload.code, nameEn: payload.nameEn, nameAr: payload.nameAr, address: payload.address || null, phone: payload.phone || null, isActive: true },
+        res.center || { id: `center_${Date.now()}`, code: payload.code, nameEn: payload.nameEn, nameAr: payload.nameAr, address: payload.address || null, phone: payload.phone || null, isActive: true },
       ]);
     }
   };

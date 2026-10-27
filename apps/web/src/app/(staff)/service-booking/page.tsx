@@ -34,23 +34,17 @@ export default async function ServiceBookingPage({
   // Parallel data fetching
   const [fetchedCenters, carModels, maintenanceTypes, appointments] = await Promise.all([
     fetchServiceCenters().catch(() => [] as ServiceCenter[]),
-    fetchCarModels(false).catch(() => [] as CarModel[]),
-    fetchMaintenanceTypes(false).catch(() => [] as MaintenanceType[]),
+    fetchCarModels(true).catch(() => [] as CarModel[]),
+    fetchMaintenanceTypes(true).catch(() => [] as MaintenanceType[]),
     fetchServiceAppointments({}).catch(() => [] as ServiceAppointment[]),
   ]);
 
-  const branches =
-    fetchedCenters.length > 0
-      ? fetchedCenters.map((c) => ({
-          id: c.id,
-          code: c.code,
-          nameEn: c.nameEn,
-          nameAr: c.nameAr,
-        }))
-      : [
-          { id: 'center_main', code: 'MAIN_CTR', nameEn: 'Main Service Center', nameAr: 'مركز خدمة الرئيسي' },
-          { id: 'center_north', code: 'NORTH_CTR', nameEn: 'North Service Center', nameAr: 'مركز خدمة الشمال' },
-        ];
+  const branches = fetchedCenters.map((c) => ({
+    id: c.id,
+    code: c.code,
+    nameEn: c.nameEn,
+    nameAr: c.nameAr,
+  }));
 
   return (
     <section aria-label="Service Center Booking" className="grid gap-4 w-full" dir={shell.dir}>
