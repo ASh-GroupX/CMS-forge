@@ -30,13 +30,17 @@ export class ServiceBookingsRepository {
   }
 
   async upsertServiceCenter(data: { id?: string | undefined; code?: string | undefined; nameEn: string; nameAr: string; address?: string | null | undefined; phone?: string | null | undefined; isActive?: boolean | undefined }) {
-    if (data.id) {
+    const existing = data.id
+      ? await this.prisma.serviceCenter.findFirst({ where: { OR: [{ id: data.id }, ...(data.code ? [{ code: data.code }] : [])] } })
+      : data.code ? await this.prisma.serviceCenter.findUnique({ where: { code: data.code } }) : null;
+
+    if (existing) {
       return this.prisma.serviceCenter.update({
-        where: { id: data.id },
+        where: { id: existing.id },
         data: {
           nameEn: data.nameEn,
           nameAr: data.nameAr,
-          ...(data.code ? { code: data.code } : {}),
+          ...(data.code && data.code !== existing.code ? { code: data.code } : {}),
           ...(data.address !== undefined ? { address: data.address } : {}),
           ...(data.phone !== undefined ? { phone: data.phone } : {}),
           ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
@@ -46,6 +50,7 @@ export class ServiceBookingsRepository {
     const code = data.code || `CENTER_${Date.now()}`;
     return this.prisma.serviceCenter.create({
       data: {
+        ...(data.id ? { id: data.id } : {}),
         code,
         nameEn: data.nameEn,
         nameAr: data.nameAr,
@@ -254,12 +259,7 @@ export class ServiceBookingsRepository {
       });
     }
     return this.prisma.serviceCarModel.create({
-      data: {
-        nameEn: data.nameEn,
-        nameAr: data.nameAr,
-        brand: data.brand || 'Nissan',
-        isActive: data.isActive ?? true,
-      },
+      data: { nameEn: data.nameEn, nameAr: data.nameAr, brand: data.brand || 'Nissan', isActive: data.isActive ?? true },
     });
   }
 
@@ -287,12 +287,7 @@ export class ServiceBookingsRepository {
       });
     }
     return this.prisma.serviceMaintenanceType.create({
-      data: {
-        nameEn: data.nameEn,
-        nameAr: data.nameAr,
-        estimatedDurationMinutes: data.estimatedDurationMinutes || 60,
-        isActive: data.isActive ?? true,
-      },
+      data: { nameEn: data.nameEn, nameAr: data.nameAr, estimatedDurationMinutes: data.estimatedDurationMinutes || 60, isActive: data.isActive ?? true },
     });
   }
 }

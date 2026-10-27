@@ -57,25 +57,44 @@ export class BranchesRepository {
     });
   }
 
-  async update(id: string, data: UpdateBranchData, client: BranchClient = this.prisma): Promise<BranchRecord> {
+  async update(idOrCode: string, data: UpdateBranchData, client: BranchClient = this.prisma): Promise<BranchRecord> {
+    const existing = await client.branch.findFirst({
+      where: { OR: [{ id: idOrCode }, { code: idOrCode }] },
+      select: { id: true, code: true },
+    });
+    const targetId = existing?.id ?? idOrCode;
+    const updateData: UpdateBranchData = { ...data };
+    if (existing && updateData.code === existing.code) {
+      delete updateData.code;
+    }
     return client.branch.update({
-      where: { id },
-      data,
+      where: { id: targetId },
+      data: updateData,
       select: branchSelect,
     });
   }
 
-  async deactivate(id: string, client: BranchClient = this.prisma): Promise<BranchRecord> {
+  async deactivate(idOrCode: string, client: BranchClient = this.prisma): Promise<BranchRecord> {
+    const existing = await client.branch.findFirst({
+      where: { OR: [{ id: idOrCode }, { code: idOrCode }] },
+      select: { id: true },
+    });
+    const targetId = existing?.id ?? idOrCode;
     return client.branch.update({
-      where: { id },
+      where: { id: targetId },
       data: { isActive: false },
       select: branchSelect,
     });
   }
 
-  async delete(id: string, client: BranchClient = this.prisma): Promise<BranchRecord> {
+  async delete(idOrCode: string, client: BranchClient = this.prisma): Promise<BranchRecord> {
+    const existing = await client.branch.findFirst({
+      where: { OR: [{ id: idOrCode }, { code: idOrCode }] },
+      select: { id: true },
+    });
+    const targetId = existing?.id ?? idOrCode;
     return client.branch.delete({
-      where: { id },
+      where: { id: targetId },
       select: branchSelect,
     });
   }

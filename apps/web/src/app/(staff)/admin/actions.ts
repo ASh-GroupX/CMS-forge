@@ -10,15 +10,26 @@ const CSRF_COOKIE = 'cms_csrf_token';
 export async function saveBranchAction(formData: FormData): Promise<void> {
   const locale = safeLocale(formData.get('locale'));
   const id = String(formData.get('id') ?? '').trim();
+  const code = text(formData, 'code');
+  const nameEn = text(formData, 'nameEn');
+  const nameAr = text(formData, 'nameAr');
+
   const response = await adminFetch(id ? `/branches/${encodeURIComponent(id)}` : '/branches', {
-    body: JSON.stringify({
-      code: text(formData, 'code'),
-      nameEn: text(formData, 'nameEn'),
-      nameAr: text(formData, 'nameAr'),
-    }),
+    body: JSON.stringify({ code, nameEn, nameAr }),
     method: id ? 'PATCH' : 'POST',
   });
+
+  if (response.ok) {
+    await adminFetch('/service-bookings/centers', {
+      body: JSON.stringify({ id: id || undefined, code, nameEn, nameAr }),
+      method: 'POST',
+    }).catch(() => null);
+  }
+
   revalidatePath('/admin', 'layout');
+  revalidatePath('/admin/branches');
+  revalidatePath('/admin/booking-settings');
+  revalidatePath('/service-booking');
   redirect(`/admin/branches?locale=${locale}&admin=${state(response)}`);
 }
 
@@ -105,8 +116,9 @@ export async function saveSlaPolicyAction(formData: FormData): Promise<void> {
 }
 
 async function adminFetch(path: string, init: RequestInit): Promise<Response> {
-  const cookieHeader = (await cookies()).toString();
-  const csrf = readCookie(cookieHeader, CSRF_COOKIE);
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+  const csrf = cookieStore.get(CSRF_COOKIE)?.value ?? readCookie(cookieHeader, CSRF_COOKIE);
   return fetch(new URL(path, API_URL), {
     ...init,
     cache: 'no-store',

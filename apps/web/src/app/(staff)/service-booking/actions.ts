@@ -12,12 +12,14 @@ import type {
 const API_BASE_URL = process.env.API_URL || 'http://localhost:3000';
 
 async function getAuthHeaders() {
-  const cookieHeader = (await cookies()).toString();
-  const csrf = cookieHeader
-    .split(';')
-    .map((c) => c.trim())
-    .find((c) => c.startsWith('cms_csrf_token='))
-    ?.slice('cms_csrf_token='.length);
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
+  const csrf = cookieStore.get('cms_csrf_token')?.value
+    ?? cookieHeader
+      .split(';')
+      .map((c) => c.trim())
+      .find((c) => c.startsWith('cms_csrf_token='))
+      ?.slice('cms_csrf_token='.length);
 
   return {
     'Content-Type': 'application/json',
@@ -168,12 +170,22 @@ export async function updateBranchNameAction(branchId: string, nameEn: string, n
       body: JSON.stringify({ id: branchId, nameEn, nameAr }),
       cache: 'no-store',
     });
+
+    await fetch(`${API_BASE_URL}/branches/${encodeURIComponent(branchId)}`, {
+      method: 'PATCH',
+      headers: await getAuthHeaders(),
+      body: JSON.stringify({ nameEn, nameAr }),
+      cache: 'no-store',
+    }).catch(() => null);
+
     if (!res.ok) {
       const msg = await res.text().catch(() => '');
       return { success: false, error: parseErrorMessage(msg, res.status) };
     }
     revalidatePath('/service-booking');
     revalidatePath('/admin/booking-settings');
+    revalidatePath('/admin/branches');
+    revalidatePath('/admin', 'layout');
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Network error' };
@@ -196,12 +208,25 @@ export async function saveServiceCenterAction(data: {
       body: JSON.stringify(data),
       cache: 'no-store',
     });
+
+    const targetBranch = data.id || data.code;
+    if (targetBranch) {
+      await fetch(`${API_BASE_URL}/branches/${encodeURIComponent(targetBranch)}`, {
+        method: 'PATCH',
+        headers: await getAuthHeaders(),
+        body: JSON.stringify({ nameEn: data.nameEn, nameAr: data.nameAr }),
+        cache: 'no-store',
+      }).catch(() => null);
+    }
+
     if (!res.ok) {
       const msg = await res.text().catch(() => '');
       return { success: false, error: parseErrorMessage(msg, res.status) };
     }
     revalidatePath('/service-booking');
     revalidatePath('/admin/booking-settings');
+    revalidatePath('/admin/branches');
+    revalidatePath('/admin', 'layout');
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Network error' };
