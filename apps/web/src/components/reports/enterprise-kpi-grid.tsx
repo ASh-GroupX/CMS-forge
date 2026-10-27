@@ -136,7 +136,7 @@ export function EnterpriseKpiGrid({
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
       {cards.map((c) => {
         const Icon = c.icon;
         const isActive = activeFilterKey === c.key;
@@ -144,20 +144,25 @@ export function EnterpriseKpiGrid({
           <Card
             key={c.key}
             onClick={() => onFilterClick && onFilterClick(c.key)}
-            className={`p-3.5 flex flex-col justify-between transition-all cursor-pointer select-none rounded-xl border bg-card ${
+            className={`p-3.5 flex flex-col justify-between transition-all cursor-pointer select-none rounded-xl border bg-card shadow-2xs hover:shadow-xs min-h-[96px] ${
               isActive ? c.activeBorder : c.borderColor
             } ${c.alert ? 'border-rose-300 dark:border-rose-900 bg-rose-50/40 dark:bg-rose-950/20' : ''}`}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-2xs font-semibold text-muted-foreground truncate">{c.title}</span>
-              <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${c.iconColor}`}>
-                <Icon className="h-3.5 w-3.5" />
+            <div className="flex items-start justify-between gap-2">
+              <span
+                className="text-xs font-semibold text-muted-foreground leading-snug line-clamp-2"
+                title={c.title}
+              >
+                {c.title}
+              </span>
+              <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${c.iconColor}`}>
+                <Icon className="h-4 w-4" />
               </div>
             </div>
 
             <div className="mt-2.5">
-              <div className="flex items-baseline gap-1.5">
-                <span className={`text-lg font-extrabold tracking-tight ${
+              <div className="flex items-baseline gap-2">
+                <span className={`text-xl font-extrabold tracking-tight tabular-nums ${
                   c.alert ? 'text-rose-600 dark:text-rose-400' : 'text-foreground'
                 }`}>
                   {c.value}

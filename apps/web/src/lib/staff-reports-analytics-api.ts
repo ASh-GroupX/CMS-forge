@@ -125,6 +125,9 @@ export type TicketsAnalyticsResponse = {
     employeeId: string;
     nameEn: string;
     nameAr: string;
+    departmentId?: string | null;
+    departmentNameEn?: string | null;
+    departmentNameAr?: string | null;
     role: string;
     activeWorkload: number;
     newAssignments: number;
@@ -147,6 +150,7 @@ export type ComplaintRecordRow = {
   customerName: string;
   customerPhone: string;
   ownerName: string;
+  departmentId?: string | null;
   departmentName: string;
   createdAt: string;
   firstResponseAt: string | null;
@@ -161,6 +165,8 @@ export type TicketRecordRow = {
   title: string;
   status: string;
   priority: string;
+  targetDepartmentId?: string | null;
+  creatingDepartmentId?: string | null;
   creatingDepartmentName: string;
   targetDepartmentName: string;
   requestedByName: string;

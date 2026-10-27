@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, Eye, Network, Search, ShieldCheck } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2, ChevronLeft, ChevronRight, Eye, Network, Search, ShieldCheck } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -18,6 +18,7 @@ export type UnifiedRecord = {
   status: string;
   priority: string;
   departmentName: string;
+  sourceDepartmentName?: string;
   personName: string;
   ownerName: string;
   createdAt: string;
@@ -55,8 +56,8 @@ export function UnifiedRecordsTable({
         list.push({
           id: c.id, type: 'complaint', referenceNumber: c.referenceNumber, title: c.subject,
           status: c.status, priority: c.severity, departmentName: c.departmentName,
-          personName: c.customerName, ownerName: c.ownerName, createdAt: c.createdAt,
-          targetAt: null, resolvedAt: c.resolvedAt, isOverdue: c.isOverdue,
+          sourceDepartmentName: '', personName: c.customerName, ownerName: c.ownerName,
+          createdAt: c.createdAt, targetAt: null, resolvedAt: c.resolvedAt, isOverdue: c.isOverdue,
         });
       }
     }
@@ -65,8 +66,9 @@ export function UnifiedRecordsTable({
         list.push({
           id: tk.id, type: 'ticket', referenceNumber: tk.referenceNumber, title: tk.title,
           status: tk.status, priority: tk.priority, departmentName: tk.targetDepartmentName,
-          personName: tk.requestedByName, ownerName: tk.assignedEmployeeName,
-          createdAt: tk.createdAt, targetAt: tk.dueAt, resolvedAt: tk.resolvedAt, isOverdue: tk.isOverdue,
+          sourceDepartmentName: tk.creatingDepartmentName, personName: tk.requestedByName,
+          ownerName: tk.assignedEmployeeName, createdAt: tk.createdAt, targetAt: tk.dueAt,
+          resolvedAt: tk.resolvedAt, isOverdue: tk.isOverdue,
         });
       }
     }
@@ -79,6 +81,7 @@ export function UnifiedRecordsTable({
       r.referenceNumber.toLowerCase().includes(q) ||
       r.title.toLowerCase().includes(q) ||
       r.departmentName.toLowerCase().includes(q) ||
+      (r.sourceDepartmentName && r.sourceDepartmentName.toLowerCase().includes(q)) ||
       r.ownerName.toLowerCase().includes(q) ||
       r.personName.toLowerCase().includes(q)
     );
@@ -90,13 +93,8 @@ export function UnifiedRecordsTable({
   const formatJordanDate = (dateStr: string | null) => {
     if (!dateStr) return '—';
     try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString(isRtl ? 'ar-JO' : 'en-US', {
-        timeZone: 'Asia/Amman',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
+      return new Date(dateStr).toLocaleDateString(isRtl ? 'ar-JO' : 'en-US', {
+        timeZone: 'Asia/Amman', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
       });
     } catch {
       return dateStr;
@@ -115,33 +113,22 @@ export function UnifiedRecordsTable({
         {/* Tab Selector & Search */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="inline-flex rounded-lg border bg-muted p-0.5 text-xs">
-            <button
-              type="button"
-              onClick={() => { setTab('all'); setPage(1); }}
-              className={`rounded-md px-2.5 py-1 font-semibold transition-all ${
-                tab === 'all' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground'
-              }`}
-            >
-              {isRtl ? 'الكل' : 'All'} ({complaints.length + tickets.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => { setTab('ticket'); setPage(1); }}
-              className={`rounded-md px-2.5 py-1 font-semibold transition-all ${
-                tab === 'ticket' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground'
-              }`}
-            >
-              {isRtl ? 'التذاكر الداخلية' : 'Tickets'} ({tickets.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => { setTab('complaint'); setPage(1); }}
-              className={`rounded-md px-2.5 py-1 font-semibold transition-all ${
-                tab === 'complaint' ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground'
-              }`}
-            >
-              {isRtl ? 'شكاوى CRM' : 'Complaints'} ({complaints.length})
-            </button>
+            {(['all', 'ticket', 'complaint'] as const).map((tabKey) => {
+              const count = tabKey === 'all' ? complaints.length + tickets.length : tabKey === 'ticket' ? tickets.length : complaints.length;
+              const label = tabKey === 'all' ? (isRtl ? 'الكل' : 'All') : tabKey === 'ticket' ? (isRtl ? 'التذاكر الداخلية' : 'Tickets') : (isRtl ? 'شكاوى CRM' : 'Complaints');
+              return (
+                <button
+                  key={tabKey}
+                  type="button"
+                  onClick={() => { setTab(tabKey); setPage(1); }}
+                  className={`rounded-md px-2.5 py-1 font-semibold transition-all ${
+                    tab === tabKey ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground'
+                  }`}
+                >
+                  {label} ({count})
+                </button>
+              );
+            })}
           </div>
 
           <div className="relative w-48 sm:w-60">
@@ -166,7 +153,7 @@ export function UnifiedRecordsTable({
               <th className="py-2.5 px-3 text-start">{t.recordsTable.refNumber}</th>
               <th className="py-2.5 px-3 text-start">{isRtl ? 'النوع' : 'Type'}</th>
               <th className="py-2.5 px-3 text-start">{t.recordsTable.titleCol}</th>
-              <th className="py-2.5 px-3 text-start">{t.recordsTable.department}</th>
+              <th className="py-2.5 px-3 text-start min-w-[240px]">{t.recordsTable.flowCol}</th>
               <th className="py-2.5 px-3 text-start">{t.recordsTable.owner}</th>
               <th className="py-2.5 px-3 text-center">{t.recordsTable.status}</th>
               <th className="py-2.5 px-3 text-center">{t.recordsTable.createdAt}</th>
@@ -212,8 +199,23 @@ export function UnifiedRecordsTable({
                       <p className="text-3xs text-muted-foreground truncate">{r.personName}</p>
                     </td>
 
-                    <td className="py-2.5 px-3 text-muted-foreground whitespace-nowrap">
-                      {r.departmentName}
+                    {/* Full Flow Routing column */}
+                    <td className="py-2.5 px-3">
+                      <div className="flex items-center gap-1.5 flex-wrap text-2xs">
+                        {isTicket ? (
+                          <>
+                            <span className="font-semibold text-foreground">{r.sourceDepartmentName || '—'}</span>
+                            <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0 rtl:rotate-180" />
+                            <span className="font-semibold text-foreground">{r.departmentName}</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="font-semibold text-foreground">{r.personName}</span>
+                            <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0 rtl:rotate-180" />
+                            <span className="font-semibold text-foreground">{r.departmentName}</span>
+                          </>
+                        )}
+                      </div>
                     </td>
 
                     <td className="py-2.5 px-3 text-foreground whitespace-nowrap">

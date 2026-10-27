@@ -94,7 +94,7 @@ export function DepartmentComparisonView({
             <div className="text-2xl font-extrabold tracking-tight tabular-nums mt-0.5">{totalCustomers}</div>
             <p className="text-3xs text-muted-foreground mt-0.5">{isRtl ? 'إجمالي العملاء المستفيدين من الشكاوى' : 'Unique customer contacts served'}</p>
           </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground">
             <Users className="h-5 w-5" />
           </div>
         </Card>
@@ -116,7 +116,7 @@ export function DepartmentComparisonView({
           {onExportCsv && (
             <Button type="button" variant="outline" size="sm" onClick={onExportCsv} className="h-8 text-xs gap-1.5 font-semibold">
               <Download className="h-3.5 w-3.5" />
-              <span>{dt.filterToDept}</span>
+              <span>{isRtl ? 'تصدير الأقسام' : 'Export Departments'}</span>
             </Button>
           )}
         </div>

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { reportsAnalyticsI18n } from '../../i18n/staff-reports-analytics';
 import type { Locale } from '../../i18n/staff-shell';
 import type { DepartmentPerformanceRow } from '../../lib/staff-reports-departments-api';
 import type {
@@ -14,19 +13,24 @@ import { UnifiedFilterBar, type RecordTypeFilter, type DatePresetFilter } from '
 import { DepartmentComparisonView } from './department-comparison-view';
 import { DepartmentDeepDiveView } from './department-deep-dive-view';
 import { EmployeeTasksDrawer } from './employee-tasks-drawer';
-import { EnterpriseKpiGrid, type EnterpriseKpiData } from './enterprise-kpi-grid';
+import { EnterpriseKpiGrid } from './enterprise-kpi-grid';
 import { EnterpriseAnalyticsCharts } from './enterprise-analytics-charts';
-import { UnifiedRecordsTable, type UnifiedRecord } from './unified-records-table';
+import { UnifiedRecordsTable } from './unified-records-table';
 import { QuickCaseDrawer } from './quick-case-drawer';
 import type { RecordTableItem } from './detailed-records-table';
+import {
+  filterComplaintsList,
+  filterTicketsList,
+  computeCombinedKpis,
+} from './enterprise-reports-filters';
 
 interface EnterpriseReportsDashboardProps {
   locale: Locale;
   isAdmin: boolean;
   userDepartmentId?: string | null;
   userDepartmentName?: string | null;
-  departments: { id: string; name: string }[];
-  branches?: { id: string; name: string }[];
+  departments: { id: string; name: string; nameEn?: string; nameAr?: string }[];
+  branches?: { id: string; name: string; nameEn?: string; nameAr?: string }[];
   departmentsPerformance: DepartmentPerformanceRow[];
   complaintsAnalytics: ComplaintsAnalyticsResponse | null;
   complaintsRecords: ComplaintRecordRow[];
@@ -47,9 +51,6 @@ export function EnterpriseReportsDashboard({
   ticketsAnalytics,
   ticketsRecords,
 }: EnterpriseReportsDashboardProps) {
-  const t = reportsAnalyticsI18n[locale];
-  const isRtl = locale === 'ar';
-
   // Filters State
   const [recordType, setRecordType] = useState<RecordTypeFilter>('all');
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
@@ -61,6 +62,7 @@ export function EnterpriseReportsDashboard({
   const [search, setSearch] = useState('');
 
   // Modals / Drawers State
+  const [deepDiveDeptId, setDeepDiveDeptId] = useState<string | null>(null);
   const [inspectRecord, setInspectRecord] = useState<RecordTableItem | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<{ id: string; name: string } | null>(null);
 
@@ -73,113 +75,79 @@ export function EnterpriseReportsDashboard({
     setDateFrom('');
     setDateTo('');
     setSearch('');
+    setDeepDiveDeptId(null);
   };
 
-  // Filtered Departments
+  const filterOpts = useMemo(() => ({
+    recordType, selectedDeptId, selectedStatus, datePreset, dateFrom, dateTo, search, departments,
+  }), [recordType, selectedDeptId, selectedStatus, datePreset, dateFrom, dateTo, search, departments]);
+
   const filteredDepartments = useMemo(() => {
     return departmentsPerformance.filter((d) => {
       if (selectedBranchId && d.branchId !== selectedBranchId) return false;
+      if (selectedDeptId && d.departmentId !== selectedDeptId) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
-        const matches = d.nameEn.toLowerCase().includes(q) || d.nameAr.toLowerCase().includes(q);
-        if (!matches) return false;
+        if (!d.nameEn.toLowerCase().includes(q) && !d.nameAr.toLowerCase().includes(q)) return false;
       }
       return true;
     });
-  }, [departmentsPerformance, selectedBranchId, search]);
+  }, [departmentsPerformance, selectedBranchId, selectedDeptId, search]);
 
-  const activeDepartmentRow = useMemo(() => {
-    if (!selectedDeptId) return null;
-    return departmentsPerformance.find((d) => d.departmentId === selectedDeptId) ?? null;
-  }, [departmentsPerformance, selectedDeptId]);
+  const deepDiveDept = useMemo(() => {
+    if (!deepDiveDeptId) return null;
+    return departmentsPerformance.find((d) => d.departmentId === deepDiveDeptId) ?? null;
+  }, [departmentsPerformance, deepDiveDeptId]);
 
-  // Filtered Records based on recordType, department, status, search
-  const filteredComplaints = useMemo(() => {
-    if (recordType === 'tickets') return [];
-    return complaintsRecords.filter((c) => {
-      if (selectedDeptId) {
-        const dept = departments.find((d) => d.id === selectedDeptId);
-        if (dept && c.departmentName !== dept.name) return false;
-      }
-      if (selectedStatus && c.status !== selectedStatus) return false;
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        if (!c.referenceNumber.toLowerCase().includes(q) && !c.subject.toLowerCase().includes(q)) return false;
-      }
-      return true;
-    });
-  }, [complaintsRecords, recordType, selectedDeptId, selectedStatus, search, departments]);
+  const filteredComplaints = useMemo(
+    () => filterComplaintsList(complaintsRecords, filterOpts),
+    [complaintsRecords, filterOpts],
+  );
 
-  const filteredTickets = useMemo(() => {
-    if (recordType === 'complaints') return [];
-    return ticketsRecords.filter((tk) => {
-      if (selectedDeptId) {
-        const dept = departments.find((d) => d.id === selectedDeptId);
-        if (dept && tk.targetDepartmentName !== dept.name && tk.creatingDepartmentName !== dept.name) return false;
-      }
-      if (selectedStatus && tk.status !== selectedStatus) return false;
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        if (!tk.referenceNumber.toLowerCase().includes(q) && !tk.title.toLowerCase().includes(q)) return false;
-      }
-      return true;
-    });
-  }, [ticketsRecords, recordType, selectedDeptId, selectedStatus, search, departments]);
+  const filteredTickets = useMemo(
+    () => filterTicketsList(ticketsRecords, filterOpts),
+    [ticketsRecords, filterOpts],
+  );
 
-  // Combined KPIs
-  const combinedKpis = useMemo<EnterpriseKpiData>(() => {
-    const cCount = filteredComplaints.length;
-    const tCount = filteredTickets.length;
-    const totalCreated = cCount + tCount;
-    const openWorkload =
-      filteredComplaints.filter((c) => !['RESOLVED', 'CLOSED'].includes(c.status)).length +
-      filteredTickets.filter((t) => !['RESOLVED', 'CLOSED'].includes(t.status)).length;
-    const resolved =
-      filteredComplaints.filter((c) => ['RESOLVED', 'CLOSED'].includes(c.status)).length +
-      filteredTickets.filter((t) => ['RESOLVED', 'CLOSED'].includes(t.status)).length;
-    const overdue =
-      filteredComplaints.filter((c) => c.isOverdue).length +
-      filteredTickets.filter((t) => t.isOverdue).length;
-    const waiting = filteredTickets.filter((t) => t.status === 'WAITING').length;
-    const inProgress =
-      filteredComplaints.filter((c) => c.status === 'IN_PROGRESS').length +
-      filteredTickets.filter((t) => t.status === 'IN_PROGRESS').length;
-    const unassigned = filteredTickets.filter((t) => !t.assignedEmployeeName).length;
-
-    return {
-      totalCreated,
-      openWorkload,
-      inProgress,
-      waiting,
-      resolved,
-      overdue,
-      unassigned,
-      onTimeRate: 94,
-      avgTatDays: 1.8,
-      totalCreatedDelta: 12,
-      resolvedDelta: 8,
-    };
-  }, [filteredComplaints, filteredTickets]);
+  const combinedKpis = useMemo(
+    () => computeCombinedKpis(filteredComplaints, filteredTickets, ticketsAnalytics),
+    [filteredComplaints, filteredTickets, ticketsAnalytics],
+  );
 
   const handleInspect = (task: { id: string; refNumber: string; title: string; type: 'ticket' | 'complaint' }) => {
-    setInspectRecord({
-      id: task.id,
-      referenceNumber: task.refNumber,
-      titleOrSubject: task.title,
-      status: 'OPEN',
-      departmentName: '',
-      severityOrPriority: 'NORMAL',
-      customerOrRequester: 'Requester',
-      ownerName: 'Officer',
-      createdAt: new Date().toISOString(),
-      resolvedAt: null,
-      isOverdue: false,
-      linkHref: task.type === 'ticket' ? `/tickets/${task.id}` : `/complaints/${task.id}`,
-    });
-  };
-
-  const handleInspectUnified = (rec: UnifiedRecord) => {
-    handleInspect({ id: rec.id, refNumber: rec.referenceNumber, title: rec.title, type: rec.type });
+    if (task.type === 'ticket') {
+      const tk = ticketsRecords.find((r) => r.id === task.id || r.referenceNumber === task.refNumber);
+      setInspectRecord({
+        id: task.id,
+        referenceNumber: tk?.referenceNumber || task.refNumber,
+        titleOrSubject: tk?.title || task.title,
+        status: tk?.status || 'OPEN',
+        departmentName: tk?.targetDepartmentName || '',
+        severityOrPriority: tk?.priority || 'NORMAL',
+        customerOrRequester: tk?.requestedByName || 'Requester',
+        ownerName: tk?.assignedEmployeeName || 'Unassigned',
+        createdAt: tk?.createdAt || new Date().toISOString(),
+        resolvedAt: tk?.resolvedAt || null,
+        isOverdue: Boolean(tk?.isOverdue),
+        linkHref: `/internal-tickets/${task.id}`,
+      });
+    } else {
+      const c = complaintsRecords.find((r) => r.id === task.id || r.referenceNumber === task.refNumber);
+      setInspectRecord({
+        id: task.id,
+        referenceNumber: c?.referenceNumber || task.refNumber,
+        titleOrSubject: c?.subject || task.title,
+        status: c?.status || 'NEW',
+        departmentName: c?.departmentName || '',
+        severityOrPriority: c?.severity || 'NORMAL',
+        customerOrRequester: c?.customerName || 'Customer',
+        ownerName: c?.ownerName || 'Unassigned',
+        createdAt: c?.createdAt || new Date().toISOString(),
+        resolvedAt: c?.resolvedAt || null,
+        isOverdue: Boolean(c?.isOverdue),
+        linkHref: `/complaints/${task.id}`,
+      });
+    }
   };
 
   const handleExportCsv = () => {
@@ -190,7 +158,6 @@ export function EnterpriseReportsDashboard({
 
   return (
     <div className="space-y-6 w-full min-w-0 max-w-full">
-      {/* 1. Top Prominent Unified Filter Bar */}
       <UnifiedFilterBar
         locale={locale}
         recordType={recordType}
@@ -215,30 +182,27 @@ export function EnterpriseReportsDashboard({
         onExportCsv={handleExportCsv}
       />
 
-      {/* 2. Main Content View: Department Deep-Dive OR Department Comparison */}
-      {selectedDeptId && activeDepartmentRow ? (
+      {deepDiveDept ? (
         <DepartmentDeepDiveView
           locale={locale}
-          department={activeDepartmentRow}
+          department={deepDiveDept}
           allTickets={ticketsRecords}
           allComplaints={complaintsRecords}
           officers={ticketsAnalytics?.officers ?? []}
-          onBackToComparison={() => setSelectedDeptId(null)}
+          onBackToComparison={() => setDeepDiveDeptId(null)}
           onSelectEmployee={(id, name) => setSelectedEmployee({ id, name })}
           onInspectTask={handleInspect}
         />
       ) : (
         <div className="space-y-6">
-          {/* Department Comparison View (Sent vs Received, Customers, Completion) */}
           <DepartmentComparisonView
             locale={locale}
             departments={filteredDepartments}
             selectedDeptId={selectedDeptId}
-            onSelectDepartment={setSelectedDeptId}
+            onSelectDepartment={setDeepDiveDeptId}
             onExportCsv={handleExportCsv}
           />
 
-          {/* Dynamic KPIs matching active filters */}
           <EnterpriseKpiGrid
             locale={locale}
             kpis={combinedKpis}
@@ -246,7 +210,6 @@ export function EnterpriseReportsDashboard({
             onFilterClick={(key) => setSelectedStatus(selectedStatus === key ? null : key)}
           />
 
-          {/* Velocity, Status Breakdown, Workload Charts */}
           <EnterpriseAnalyticsCharts
             locale={locale}
             timeline={ticketsAnalytics?.timeline ?? []}
@@ -256,18 +219,16 @@ export function EnterpriseReportsDashboard({
             complaintsCount={filteredComplaints.length}
           />
 
-          {/* Unified Drill-down Case Records Table */}
           <UnifiedRecordsTable
             locale={locale}
             complaints={filteredComplaints}
             tickets={filteredTickets}
             activeTypeFilter={recordType === 'complaints' ? 'complaint' : recordType === 'tickets' ? 'ticket' : 'all'}
-            onInspect={handleInspectUnified}
+            onInspect={(rec) => handleInspect({ id: rec.id, refNumber: rec.referenceNumber, title: rec.title, type: rec.type })}
           />
         </div>
       )}
 
-      {/* Slide-over Drawer: Employee Assigned Tasks */}
       <EmployeeTasksDrawer
         locale={locale}
         isOpen={Boolean(selectedEmployee)}
@@ -279,7 +240,6 @@ export function EnterpriseReportsDashboard({
         onInspectTask={handleInspect}
       />
 
-      {/* Slide-over Drawer: Quick Case Inspector */}
       {inspectRecord && (
         <QuickCaseDrawer
           locale={locale}

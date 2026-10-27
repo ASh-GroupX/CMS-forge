@@ -17,7 +17,6 @@ import {
 } from '../../../lib/staff-reports-analytics-api';
 import { fetchDepartmentPerformance } from '../../../lib/staff-reports-departments-api';
 import { EnterpriseReportsDashboard } from '../../../components/reports/enterprise-reports-dashboard';
-import { ReportsHubNavigator } from '../../../components/reports/reports-hub-navigator';
 import { ReportsDashboard } from '../../../components/reports-dashboard';
 
 type SearchParams = {
@@ -110,11 +109,15 @@ export default async function ReportsPage({
   const departments = (options?.departments ?? []).map((d) => ({
     id: d.id,
     name: isRtl ? d.nameAr : d.nameEn,
+    nameEn: d.nameEn,
+    nameAr: d.nameAr,
   }));
 
   const branches = (options?.branches ?? []).map((b) => ({
     id: b.id,
     name: isRtl ? b.nameAr : b.nameEn,
+    nameEn: b.nameEn,
+    nameAr: b.nameAr,
   }));
 
   const userDept = (options?.departments ?? []).find(
@@ -124,9 +127,6 @@ export default async function ReportsPage({
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-8 px-4 py-4 sm:px-6 lg:px-8 min-w-0 overflow-x-hidden">
-      {/* Quick Nav Hub */}
-      <ReportsHubNavigator locale={activeLocale} />
-
       {/* Enterprise Management Intelligence Dashboard */}
       <EnterpriseReportsDashboard
         locale={activeLocale}

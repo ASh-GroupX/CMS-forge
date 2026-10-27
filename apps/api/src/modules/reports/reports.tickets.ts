@@ -60,6 +60,9 @@ export type OfficerTicketPerformance = {
   employeeId: string;
   nameEn: string;
   nameAr: string;
+  departmentId: string | null;
+  departmentNameEn: string | null;
+  departmentNameAr: string | null;
   role: string;
   activeWorkload: number;
   newAssignments: number;
