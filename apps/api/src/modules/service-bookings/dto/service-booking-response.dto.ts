@@ -21,8 +21,20 @@ export interface ServiceAppointmentDto {
   durationMinutes: number;
   status: string;
   createdById?: string | null;
+  createdByName?: string | null;
+  createdByEmail?: string | null;
   createdAt: string;
   updatedAt: string;
+  history?: ServiceAppointmentHistoryDto[];
+}
+
+export interface ServiceAppointmentHistoryDto {
+  id: string;
+  action: string;
+  actorName: string | null;
+  actorEmail: string | null;
+  createdAt: string;
+  metadata?: any;
 }
 
 export interface ServiceCenterDto {

@@ -56,6 +56,7 @@ export class ComplaintsController {
       status: optionalStatus(query.status),
       severity: optionalSeverity(query.severity),
       ...(query.departmentId ? { departmentId: optionalText(query.departmentId) } : {}),
+      ...(query.rootCauseCategory ? { rootCauseCategory: optionalText(query.rootCauseCategory) } : {}),
       ...(query.direction ? { direction: optionalDirection(query.direction) } : {}),
       ...(sla ? { sla } : {}),
       ...owner,

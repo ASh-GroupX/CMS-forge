@@ -386,15 +386,15 @@ export class ReportsRepository {
           status: true,
           rootCauseCategory: true,
           salesAdvisorName: true,
-          department: { select: { nameEn: true, nameAr: true } },
-          owner: { select: { nameEn: true, nameAr: true } },
+          department: { select: { id: true, nameEn: true, nameAr: true } },
+          owner: { select: { id: true, nameEn: true, nameAr: true } },
         }
       })
     ]);
 
     const rootCauseCounts: Record<string, number> = {};
-    const deptWorkloadMap: Record<string, { nameEn: string; nameAr: string; active: number; resolved: number }> = {};
-    const officerWorkloadMap: Record<string, { nameEn: string; nameAr: string; active: number; resolved: number }> = {};
+    const deptWorkloadMap: Record<string, { id: string; nameEn: string; nameAr: string; active: number; resolved: number }> = {};
+    const officerWorkloadMap: Record<string, { id: string; nameEn: string; nameAr: string; active: number; resolved: number }> = {};
 
     for (const c of crmComplaintsWithDetails) {
       if (c.rootCauseCategory) {
@@ -406,7 +406,7 @@ export class ReportsRepository {
       if (c.department?.nameEn) {
         const key = c.department.nameEn;
         if (!deptWorkloadMap[key]) {
-          deptWorkloadMap[key] = { nameEn: c.department.nameEn, nameAr: c.department.nameAr, active: 0, resolved: 0 };
+          deptWorkloadMap[key] = { id: c.department.id, nameEn: c.department.nameEn, nameAr: c.department.nameAr, active: 0, resolved: 0 };
         }
         if (isActive) deptWorkloadMap[key].active++;
         if (isResolved) deptWorkloadMap[key].resolved++;
@@ -415,7 +415,7 @@ export class ReportsRepository {
       if (c.owner?.nameEn) {
         const key = c.owner.nameEn;
         if (!officerWorkloadMap[key]) {
-          officerWorkloadMap[key] = { nameEn: c.owner.nameEn, nameAr: c.owner.nameAr, active: 0, resolved: 0 };
+          officerWorkloadMap[key] = { id: c.owner.id, nameEn: c.owner.nameEn, nameAr: c.owner.nameAr, active: 0, resolved: 0 };
         }
         if (isActive) officerWorkloadMap[key].active++;
         if (isResolved) officerWorkloadMap[key].resolved++;

@@ -23,9 +23,14 @@ export class ServiceBookingsController {
     return this.service.listAppointments({ branchId, fromDate, toDate, status });
   }
 
-  @Get('appointments/:id')
+  @Get(['appointments/:id', ':id'])
   async getAppointment(@Param('id') id: string) {
     return this.service.getAppointment(id);
+  }
+
+  @Get(['appointments/:id/history', ':id/history'])
+  async getAppointmentHistory(@Param('id') id: string) {
+    return this.service.getAppointmentHistory(id);
   }
 
   @Post(['appointments', ''])
@@ -35,10 +40,15 @@ export class ServiceBookingsController {
     return this.service.createAppointment(dto, actorId);
   }
 
-  @Patch('appointments/:id')
-  async updateAppointment(@Param('id') id: string, @Body() body: unknown) {
+  @Patch(['appointments/:id', ':id'])
+  async updateAppointment(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
     const dto = parseUpdateServiceAppointmentBody(body);
-    return this.service.updateAppointment(id, dto);
+    const actorId = req.principal?.userId ?? null;
+    return this.service.updateAppointment(id, dto, actorId);
   }
 
   // ── Slot Availability ─────────────────────────────────────────────────────

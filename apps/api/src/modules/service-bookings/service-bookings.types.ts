@@ -21,6 +21,9 @@ export const appointmentSelect = {
   createdById: true,
   createdAt: true,
   updatedAt: true,
+  createdBy: {
+    select: { id: true, nameEn: true, nameAr: true, email: true },
+  },
   serviceCenter: {
     select: { id: true, code: true, nameEn: true, nameAr: true },
   },

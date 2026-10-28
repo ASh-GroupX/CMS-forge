@@ -31,7 +31,7 @@ export function calculateEndTime(startTime: string, durationMinutes: number): st
   return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 }
 
-export function mapAppointment(record: AppointmentRecord): ServiceAppointmentDto {
+export function mapAppointment(record: AppointmentRecord, historyRecords: any[] = []): ServiceAppointmentDto {
   const centerNameEn = record.serviceCenter?.nameEn || record.branch?.nameEn;
   const centerNameAr = record.serviceCenter?.nameAr || record.branch?.nameAr;
   const effectiveId = record.serviceCenterId || record.branchId || '';
@@ -58,8 +58,18 @@ export function mapAppointment(record: AppointmentRecord): ServiceAppointmentDto
     durationMinutes: record.durationMinutes,
     status: record.status,
     createdById: record.createdById,
+    createdByName: (record as any).createdBy ? ((record as any).createdBy.nameEn || (record as any).createdBy.nameAr) : null,
+    createdByEmail: (record as any).createdBy?.email || null,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
+    history: historyRecords.map((h) => ({
+      id: h.id,
+      action: h.action,
+      actorName: h.actor ? (h.actor.nameEn || h.actor.nameAr) : (h.actorName || null),
+      actorEmail: h.actor?.email || h.actorEmail || null,
+      createdAt: h.createdAt instanceof Date ? h.createdAt.toISOString() : String(h.createdAt),
+      metadata: h.metadata,
+    })),
   };
 }
 

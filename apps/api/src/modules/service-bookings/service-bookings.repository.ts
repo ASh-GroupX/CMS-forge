@@ -100,6 +100,20 @@ export class ServiceBookingsRepository {
     });
   }
 
+  async findAppointmentHistory(id: string) {
+    return this.prisma.auditLog.findMany({
+      where: { targetType: 'ServiceAppointment', targetId: id },
+      include: { actor: { select: { id: true, nameEn: true, nameAr: true, email: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async recordAppointmentAudit(data: { action: string; actorId?: string | null | undefined; targetId: string; metadata: Prisma.InputJsonValue }) {
+    return this.prisma.auditLog.create({
+      data: { eventType: 'WORKFLOW', action: data.action, actorId: data.actorId ?? null, targetType: 'ServiceAppointment', targetId: data.targetId, metadata: data.metadata },
+    });
+  }
+
   async findAppointmentsForDate(branchId: string, date: Date): Promise<AppointmentRecord[]> {
     return this.prisma.serviceAppointment.findMany({
       where: {

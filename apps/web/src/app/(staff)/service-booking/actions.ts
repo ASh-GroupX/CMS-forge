@@ -57,9 +57,21 @@ export async function createAppointmentAction(input: CreateAppointmentInput) {
   }
 }
 
+export async function getAppointmentAction(id: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/service-bookings/appointments/${encodeURIComponent(id)}`, {
+      headers: await getAuthHeaders(),
+      cache: 'no-store',
+    });
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function updateAppointmentAction(id: string, input: UpdateAppointmentInput) {
   try {
-    const res = await fetch(`${API_BASE_URL}/service-bookings/${encodeURIComponent(id)}`, {
+    const res = await fetch(`${API_BASE_URL}/service-bookings/appointments/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       headers: await getAuthHeaders(),
       body: JSON.stringify(input),

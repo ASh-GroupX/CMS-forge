@@ -43,6 +43,8 @@ export default async function ComplaintsPage({ searchParams, cookieHeader: propC
   if (typeof params?.ownerScope === 'string') query.ownerScope = params.ownerScope;
   if (typeof params?.departmentId === 'string') query.departmentId = params.departmentId;
   if (typeof params?.direction === 'string') query.direction = params.direction;
+  if (typeof params?.rootCauseCategory === 'string') query.rootCauseCategory = params.rootCauseCategory;
+  if (typeof params?.ownerId === 'string') query.ownerId = params.ownerId;
   if (typeof params?.page === 'string') query.page = parseInt(params.page, 10);
   if (typeof params?.branchId === 'string') query.branchId = params.branchId;
 

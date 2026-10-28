@@ -2,37 +2,19 @@
 
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import {
-  AlertCircle,
-  Car,
-  Clock,
-  Phone,
-  Wrench,
-} from 'lucide-react';
+import { AlertCircle, Car, Clock, Phone, Wrench } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '../../../components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../../components/ui/dialog';
 import { useServiceBooking } from './service-booking-context';
-import { updateAppointmentStatusAction } from './actions';
+import { getAppointmentAction, updateAppointmentStatusAction } from './actions';
 import { AppointmentRescheduleForm } from './appointment-reschedule-form';
 import type {
   ServiceAppointment,
+  ServiceAppointmentHistoryItem,
   ServiceAppointmentStatus,
 } from '../../../lib/staff-service-bookings-api';
 
-const STATUS_OPTIONS: ServiceAppointmentStatus[] = [
-  'BOOKED',
-  'CONFIRMED',
-  'IN_SERVICE',
-  'COMPLETED',
-  'CANCELLED',
-  'NO_SHOW',
-];
+const STATUS_OPTIONS: ServiceAppointmentStatus[] = ['BOOKED', 'CONFIRMED', 'IN_SERVICE', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
 
 export function AppointmentDetailModal() {
   const {
@@ -49,6 +31,7 @@ export function AppointmentDetailModal() {
   const isAr = locale === 'ar';
   const apt = selectedAppointment;
 
+  const [detailedApt, setDetailedApt] = useState<ServiceAppointment | null>(apt);
   const [activeTab, setActiveTab] = useState<'details' | 'reschedule' | 'status'>('details');
   const [targetStatus, setTargetStatus] = useState<ServiceAppointmentStatus>('CONFIRMED');
   const [loading, setLoading] = useState(false);
@@ -56,13 +39,18 @@ export function AppointmentDetailModal() {
 
   React.useEffect(() => {
     if (apt) {
+      setDetailedApt(apt);
       setTargetStatus(apt.status);
       setActiveTab('details');
       setErrorMsg(null);
+      getAppointmentAction(apt.id).then((fresh) => {
+        if (fresh) setDetailedApt(fresh);
+      });
     }
   }, [apt]);
 
   if (!apt) return null;
+  const currentApt = detailedApt || apt;
 
   const handleStatusUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,8 +64,9 @@ export function AppointmentDetailModal() {
     }
     toast.success(t.modal.successUpdated);
     const updated = res.appointment as ServiceAppointment;
-    setAppointments((prev) => prev.map((a) => (a.id === apt.id ? updated : a)));
+    setAppointments((prev: ServiceAppointment[]) => prev.map((a: ServiceAppointment) => (a.id === apt.id ? updated : a)));
     setSelectedAppointment(updated);
+    setDetailedApt(updated);
     setActiveTab('details');
   };
 
@@ -147,8 +136,8 @@ export function AppointmentDetailModal() {
 
         {/* Details Tab */}
         {activeTab === 'details' && (
-          <div className="space-y-4 text-sm">
-            <div className="grid grid-cols-2 gap-3 rounded-2xl border border-line-subtle bg-surface-canvas/30 p-4">
+          <div className="space-y-3.5 text-sm">
+            <div className="grid grid-cols-2 gap-3 rounded-2xl border border-line-subtle bg-surface-canvas/30 p-3.5">
               <div>
                 <p className="text-[11px] font-semibold text-content-muted">{t.modal.customerPhone}</p>
                 <p className="font-bold text-content-strong flex items-center gap-1.5 mt-0.5">
@@ -181,10 +170,75 @@ export function AppointmentDetailModal() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-line-subtle bg-surface-canvas/30 p-4">
-              <p className="text-[11px] font-semibold text-content-muted mb-1">{t.modal.notes}</p>
-              <p className="text-xs text-content-strong whitespace-pre-wrap">{apt.notes}</p>
+            {/* Creator Information */}
+            <div className="flex items-center justify-between rounded-xl border border-line-subtle bg-surface-canvas/40 px-3.5 py-2.5 text-xs">
+              <div>
+                <span className="text-[10px] font-semibold text-content-muted block">{isAr ? 'أنشئ الموعد بواسطة' : 'Created By'}</span>
+                <span className="font-bold text-content-strong">
+                  {currentApt.createdByName || (isAr ? 'النظام / موظف الفرع' : 'System / Staff')}
+                </span>
+                {currentApt.createdByEmail ? (
+                  <span className="ms-1.5 font-normal text-content-muted">({currentApt.createdByEmail})</span>
+                ) : null}
+              </div>
+              <span className="text-[11px] text-content-muted font-medium">
+                {new Date(currentApt.createdAt).toLocaleDateString(isAr ? 'ar-JO' : 'en-US')}
+              </span>
             </div>
+
+            {/* Reschedule & Change Status History */}
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-bold text-content-muted uppercase tracking-wider">
+                {isAr ? 'سجل الحركات وإعادة الجدولة' : 'Reschedule & Activity History'}
+              </p>
+              {currentApt.history && currentApt.history.length > 0 ? (
+                <div className="space-y-1.5 max-h-36 overflow-y-auto pe-1">
+                  {currentApt.history.map((h: ServiceAppointmentHistoryItem) => (
+                    <div className="rounded-xl border border-line-subtle bg-surface-canvas/40 p-2.5 text-xs" key={h.id}>
+                      <div className="flex items-center justify-between font-semibold">
+                        <span className="text-content-strong">
+                          {h.action === 'service_booking_reschedule'
+                            ? (isAr ? 'إعادة جدولة الموعد' : 'Appointment Rescheduled')
+                            : (isAr ? 'تغيير الحالة' : 'Status Changed')}
+                        </span>
+                        <span className="text-[10px] text-content-muted font-normal">
+                          {new Date(h.createdAt).toLocaleString(isAr ? 'ar-JO' : 'en-US')}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-content-muted mt-0.5">
+                        {isAr ? 'الموظف: ' : 'By: '}
+                        <span className="font-semibold text-content-strong">{h.actorName || (isAr ? 'موظف' : 'Staff')}</span>
+                      </p>
+                      {h.metadata?.oldDate ? (
+                        <div className="mt-1 flex items-center gap-1.5 font-mono text-[11px] text-brand">
+                          <span>{String(h.metadata.oldDate)} ({String(h.metadata.oldStartTime)})</span>
+                          <span>➔</span>
+                          <span className="font-bold">{String(h.metadata.newDate)} ({String(h.metadata.newStartTime)})</span>
+                        </div>
+                      ) : null}
+                      {h.metadata?.oldStatus ? (
+                        <div className="mt-1 flex items-center gap-1.5 text-[11px] text-brand">
+                          <span>{t.status[h.metadata.oldStatus as ServiceAppointmentStatus] || String(h.metadata.oldStatus)}</span>
+                          <span>➔</span>
+                          <span className="font-bold">{t.status[h.metadata.newStatus as ServiceAppointmentStatus] || String(h.metadata.newStatus)}</span>
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-content-muted py-1 italic">
+                  {isAr ? 'لا توجد حركات سابقة مسجلة.' : 'No reschedules or status changes recorded yet.'}
+                </p>
+              )}
+            </div>
+
+            {apt.notes ? (
+              <div className="rounded-xl border border-line-subtle bg-surface-canvas/30 p-3">
+                <p className="text-[10px] font-semibold text-content-muted mb-0.5">{t.modal.notes}</p>
+                <p className="text-xs text-content-strong whitespace-pre-wrap">{apt.notes}</p>
+              </div>
+            ) : null}
           </div>
         )}
 
@@ -195,8 +249,9 @@ export function AppointmentDetailModal() {
             branches={branches}
             isAr={isAr}
             onSuccess={(updated) => {
-              setAppointments((prev) => prev.map((a) => (a.id === apt.id ? updated : a)));
+              setAppointments((prev: ServiceAppointment[]) => prev.map((a: ServiceAppointment) => (a.id === apt.id ? updated : a)));
               setSelectedAppointment(updated);
+              setDetailedApt(updated);
               setActiveTab('details');
             }}
             t={t}

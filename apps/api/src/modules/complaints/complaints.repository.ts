@@ -64,7 +64,7 @@ export type CreateComplaintStatusHistoryData = { complaintId: string; fromStatus
 
 export type ListComplaintQueueFilter = { branchId?: string | null; role?: string | null; userId?: string | null; userDepartmentId?: string | null; permissions?: string[]; departmentId?: string | null; direction?: 'RECEIVED' | 'SENT' | 'ALL' | null };
 
-export type ComplaintReportFilter = ListComplaintQueueFilter & { dateFrom?: Date | string | null; dateTo?: Date | string | null; limit?: number | null; offset?: number | null; referenceNumber?: string | null; customer?: string | null; status?: ComplaintStatus | null; categoryId?: string | null; departmentId?: string | null; severity?: ComplaintSeverity | null; ownerId?: string | null; ownerUnassigned?: boolean };
+export type ComplaintReportFilter = ListComplaintQueueFilter & { dateFrom?: Date | string | null; dateTo?: Date | string | null; limit?: number | null; offset?: number | null; referenceNumber?: string | null; customer?: string | null; status?: ComplaintStatus | null; categoryId?: string | null; departmentId?: string | null; severity?: ComplaintSeverity | null; ownerId?: string | null; ownerUnassigned?: boolean; rootCauseCategory?: string | null };
 
 export type ComplaintReportRecord = ComplaintQueueRecord & {
   categoryId: string;

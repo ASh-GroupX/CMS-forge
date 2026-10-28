@@ -42,7 +42,20 @@ export class ServiceBookingsService {
   async getAppointment(id: string): Promise<ServiceAppointmentDto> {
     const record = await this.repository.findAppointmentById(id);
     if (!record) throw new NotFoundException('Appointment not found');
-    return mapAppointment(record);
+    const history = await this.repository.findAppointmentHistory(id);
+    return mapAppointment(record, history);
+  }
+
+  async getAppointmentHistory(id: string) {
+    const records = await this.repository.findAppointmentHistory(id);
+    return records.map((r: any) => ({
+      id: r.id,
+      action: r.action,
+      actorName: r.actor ? (r.actor.nameEn || r.actor.nameAr) : null,
+      actorEmail: r.actor?.email ?? null,
+      createdAt: r.createdAt.toISOString(),
+      metadata: r.metadata,
+    }));
   }
 
   async createAppointment(dto: CreateServiceAppointmentDto, actorId?: string | null): Promise<ServiceAppointmentDto> {
@@ -100,21 +113,31 @@ export class ServiceBookingsService {
     return mapAppointment(created);
   }
 
-  async updateAppointment(id: string, dto: UpdateServiceAppointmentDto): Promise<ServiceAppointmentDto> {
+  async updateAppointment(id: string, dto: UpdateServiceAppointmentDto, actorId?: string | null): Promise<ServiceAppointmentDto> {
     const existing = await this.repository.findAppointmentById(id);
     if (!existing) throw new NotFoundException('Appointment not found');
 
     const updateData: Prisma.ServiceAppointmentUncheckedUpdateInput = {};
+    const isStatusChanged = Boolean(dto.status && dto.status !== existing.status);
     if (dto.status) updateData.status = dto.status as ServiceAppointmentStatus;
     if (dto.notes !== undefined) updateData.notes = dto.notes;
     if (dto.customerName) updateData.customerName = dto.customerName;
     if (dto.customerPhone) updateData.customerPhone = dto.customerPhone;
     if (dto.vin !== undefined) updateData.vin = dto.vin;
 
-    if ((dto.date && dto.date !== existing.date.toISOString().slice(0, 10)) || (dto.startTime && dto.startTime !== existing.startTime)) {
-      const targetDateStr = dto.date || existing.date.toISOString().slice(0, 10);
+    let isRescheduled = false;
+    const oldDateStr = existing.date.toISOString().slice(0, 10);
+    let newDateStr = oldDateStr;
+    const oldStartTime = existing.startTime;
+    let newStartTime = oldStartTime;
+
+    if ((dto.date && dto.date !== oldDateStr) || (dto.startTime && dto.startTime !== existing.startTime)) {
+      isRescheduled = true;
+      const targetDateStr = dto.date || oldDateStr;
+      newDateStr = targetDateStr;
       const targetDate = new Date(`${targetDateStr}T00:00:00Z`);
       const targetTime = dto.startTime || existing.startTime;
+      newStartTime = targetTime;
       const targetBranch = dto.branchId || existing.serviceCenterId || existing.branchId || 'center_main';
 
       const rule = await this.resolveRule(targetBranch, targetDate.getUTCDay());
@@ -135,7 +158,27 @@ export class ServiceBookingsService {
     }
 
     const updated = await this.repository.updateAppointment(id, updateData);
-    return mapAppointment(updated);
+
+    if (isRescheduled) {
+      await this.repository.recordAppointmentAudit({
+        action: 'service_booking_reschedule',
+        actorId: actorId ?? null,
+        targetId: id,
+        metadata: { oldDate: oldDateStr, newDate: newDateStr, oldStartTime, newStartTime },
+      });
+    }
+
+    if (isStatusChanged && dto.status) {
+      await this.repository.recordAppointmentAudit({
+        action: 'service_booking_status_change',
+        actorId: actorId ?? null,
+        targetId: id,
+        metadata: { oldStatus: existing.status, newStatus: dto.status },
+      });
+    }
+
+    const history = await this.repository.findAppointmentHistory(id);
+    return mapAppointment(updated, history);
   }
 
   // ── Availability Engine ───────────────────────────────────────────────────
@@ -160,69 +203,33 @@ export class ServiceBookingsService {
   async getBranchRules(branchId: string) {
     const existing = await this.repository.findRulesForBranch(branchId);
     if (existing.length === 7) return existing;
-
-    const result = [];
-    for (let day = 0; day < 7; day++) {
+    return Promise.all(DEFAULT_DAY_RULES.map(async (def, day) => {
       const found = existing.find((r) => r.dayOfWeek === day);
-      if (found) {
-        result.push(found);
-      } else {
-        const def = DEFAULT_DAY_RULES[day]!;
-        const created = await this.repository.upsertRule({
-          serviceCenterId: branchId,
-          dayOfWeek: day,
-          isOpen: def.isOpen,
-          startTime: def.startTime,
-          endTime: def.endTime,
-          maxDailyAppointments: def.maxDailyAppointments,
-          maxPerHour: def.maxPerHour,
-          maxPerSlot: def.maxPerSlot,
-          slotDurationMinutes: def.slotDurationMinutes || 15,
-        });
-        result.push(created);
-      }
-    }
-    return result;
+      if (found) return found;
+      return this.repository.upsertRule({
+        serviceCenterId: branchId, dayOfWeek: day, isOpen: def.isOpen, startTime: def.startTime, endTime: def.endTime,
+        maxDailyAppointments: def.maxDailyAppointments, maxPerHour: def.maxPerHour, maxPerSlot: def.maxPerSlot,
+        slotDurationMinutes: def.slotDurationMinutes || 15,
+      });
+    }));
   }
 
   async updateBranchRules(branchId: string, rules: DayRuleInput[]) {
-    const updated = [];
-    for (const r of rules) {
-      const res = await this.repository.upsertRule({
-        serviceCenterId: branchId,
-        branchId,
-        dayOfWeek: Number(r.dayOfWeek),
-        isOpen: Boolean(r.isOpen),
-        startTime: String(r.startTime || '08:00').trim(),
-        endTime: String(r.endTime || '18:00').trim(),
-        maxDailyAppointments: Number(r.maxDailyAppointments) >= 0 ? Number(r.maxDailyAppointments) : 24,
-        maxPerHour: Number(r.maxPerHour) > 0 ? Number(r.maxPerHour) : 3,
-        maxPerSlot: Number(r.maxPerSlot) > 0 ? Number(r.maxPerSlot) : 1,
-        slotDurationMinutes: Number(r.slotDurationMinutes) > 0 ? Number(r.slotDurationMinutes) : 15,
-      });
-      updated.push(res);
-    }
-    return updated;
+    return Promise.all(rules.map((r) => this.repository.upsertRule({
+      serviceCenterId: branchId, branchId, dayOfWeek: Number(r.dayOfWeek), isOpen: Boolean(r.isOpen),
+      startTime: String(r.startTime || '08:00').trim(), endTime: String(r.endTime || '18:00').trim(),
+      maxDailyAppointments: Number(r.maxDailyAppointments) >= 0 ? Number(r.maxDailyAppointments) : 24,
+      maxPerHour: Number(r.maxPerHour) > 0 ? Number(r.maxPerHour) : 3, maxPerSlot: Number(r.maxPerSlot) > 0 ? Number(r.maxPerSlot) : 1,
+      slotDurationMinutes: Number(r.slotDurationMinutes) > 0 ? Number(r.slotDurationMinutes) : 15,
+    })));
   }
 
   async initWeekRules(centerId: string) {
-    const updated = [];
-    for (let day = 0; day < 7; day++) {
-      const def = DEFAULT_DAY_RULES[day]!;
-      const res = await this.repository.upsertRule({
-        serviceCenterId: centerId,
-        dayOfWeek: day,
-        isOpen: def.isOpen,
-        startTime: def.startTime,
-        endTime: def.endTime,
-        maxDailyAppointments: def.maxDailyAppointments,
-        maxPerHour: def.maxPerHour,
-        maxPerSlot: def.maxPerSlot,
-        slotDurationMinutes: def.slotDurationMinutes || 15,
-      });
-      updated.push(res);
-    }
-    return updated;
+    return Promise.all(DEFAULT_DAY_RULES.map((def, day) => this.repository.upsertRule({
+      serviceCenterId: centerId, dayOfWeek: day, isOpen: def.isOpen, startTime: def.startTime, endTime: def.endTime,
+      maxDailyAppointments: def.maxDailyAppointments, maxPerHour: def.maxPerHour, maxPerSlot: def.maxPerSlot,
+      slotDurationMinutes: def.slotDurationMinutes || 15,
+    })));
   }
 
   // ── Service Centers ───────────────────────────────────────────────────────

@@ -1,5 +1,22 @@
 export type ServiceAppointmentStatus = 'BOOKED' | 'CONFIRMED' | 'IN_SERVICE' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
 
+export type ServiceAppointmentHistoryItem = {
+  id: string;
+  action: string;
+  actorName: string | null;
+  actorEmail: string | null;
+  createdAt: string;
+  metadata?: {
+    oldDate?: string;
+    newDate?: string;
+    oldStartTime?: string;
+    newStartTime?: string;
+    oldStatus?: string;
+    newStatus?: string;
+    [key: string]: unknown;
+  };
+};
+
 export type ServiceAppointment = {
   id: string;
   referenceNumber: string;
@@ -20,8 +37,11 @@ export type ServiceAppointment = {
   durationMinutes: number;
   status: ServiceAppointmentStatus;
   createdById?: string | null;
+  createdByName?: string | null;
+  createdByEmail?: string | null;
   createdAt: string;
   updatedAt: string;
+  history?: ServiceAppointmentHistoryItem[];
 };
 
 export type SlotAvailability = {

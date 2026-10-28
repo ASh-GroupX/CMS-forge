@@ -12,6 +12,7 @@ import {
   Car,
   CheckCircle2,
   Clock,
+  ExternalLink,
   Filter,
   Inbox,
   LayoutDashboard,
@@ -795,15 +796,23 @@ function CrmDashboardView({ isRtl, crmData, locale }: { isRtl: boolean; crmData?
                   const maxCount = crm.rootCausesBreakdown[0]?.count || 1;
                   const percent = Math.round((item.count / maxCount) * 100);
                   return (
-                    <div key={item.category} className="space-y-1">
+                    <Link
+                      className="group block space-y-1 rounded-xl p-2 -mx-2 hover:bg-surface-canvas/80 transition-colors"
+                      href={`/complaints?rootCauseCategory=${encodeURIComponent(item.category)}&locale=${locale}`}
+                      key={item.category}
+                      title={isRtl ? `عرض الشكاوى التابعة لـ ${item.category}` : `View complaints with root cause: ${item.category}`}
+                    >
                       <div className="flex items-center justify-between text-xs font-semibold">
-                        <span className="text-content-strong truncate max-w-[250px]">{item.category}</span>
-                        <span className="text-brand tabular-nums">{item.count} {isRtl ? 'شكوى' : 'cases'}</span>
+                        <span className="text-content-strong truncate max-w-[250px] group-hover:text-brand transition-colors flex items-center gap-1.5">
+                          <span>{item.category}</span>
+                          <ExternalLink className="size-3 opacity-0 group-hover:opacity-100 text-brand transition-opacity" />
+                        </span>
+                        <span className="text-brand tabular-nums font-bold">{item.count} {isRtl ? 'شكوى' : 'cases'}</span>
                       </div>
                       <div className="h-2 w-full rounded-full bg-surface-sunken overflow-hidden">
-                        <div style={{ width: `${percent}%` }} className="h-full bg-brand rounded-full transition-all" />
+                        <div className="h-full bg-brand rounded-full transition-all group-hover:opacity-90" style={{ width: `${percent}%` }} />
                       </div>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>
@@ -817,11 +826,14 @@ function CrmDashboardView({ isRtl, crmData, locale }: { isRtl: boolean; crmData?
 
         {/* Workload by Department & Officer */}
         <Card className="rounded-2xl border-line-subtle shadow-md bg-surface overflow-hidden">
-          <CardHeader className="border-b border-line-subtle bg-surface-canvas/50 pb-3">
+          <CardHeader className="border-b border-line-subtle bg-surface-canvas/50 pb-3 flex flex-row items-center justify-between">
             <CardTitle className="text-base font-bold flex items-center gap-2">
               <Users className="size-5 text-brand" />
               {isRtl ? 'توزيع الشكاوى حسب الأقسام والموظفين' : 'Complaints Workload Distribution'}
             </CardTitle>
+            <Link className="text-xs font-semibold text-brand hover:underline" href={`/reports?locale=${locale}`}>
+              {isRtl ? 'عرض التقارير' : 'Full Reports'}
+            </Link>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
             <div>
@@ -831,17 +843,30 @@ function CrmDashboardView({ isRtl, crmData, locale }: { isRtl: boolean; crmData?
               {crm.departmentWorkload?.length > 0 ? (
                 <div className="space-y-2">
                   {crm.departmentWorkload.slice(0, 4).map((d: any) => (
-                    <div key={d.nameEn} className="flex items-center justify-between rounded-xl bg-surface-sunken p-2.5 text-xs">
-                      <span className="font-semibold text-content-strong">
-                        {isRtl ? d.nameAr || d.nameEn : d.nameEn}
-                      </span>
-                      <div className="flex items-center gap-3">
-                        <span className="rounded bg-amber-500/10 px-2 py-0.5 font-bold text-amber-600">
+                    <div className="flex items-center justify-between rounded-xl bg-surface-sunken p-2.5 text-xs" key={d.nameEn}>
+                      <Link
+                        className="font-semibold text-content-strong hover:text-brand transition-colors flex items-center gap-1 group"
+                        href={d.id ? `/complaints?departmentId=${encodeURIComponent(d.id)}&locale=${locale}` : `/complaints?locale=${locale}`}
+                        title={isRtl ? 'عرض شكاوى القسم' : 'View department complaints'}
+                      >
+                        <span>{isRtl ? d.nameAr || d.nameEn : d.nameEn}</span>
+                        <ExternalLink className="size-3 text-content-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          className="rounded-md bg-status-warning-bg px-2 py-0.5 font-bold text-status-warning hover:opacity-80 transition-opacity"
+                          href={d.id ? `/complaints?departmentId=${encodeURIComponent(d.id)}&status=IN_PROGRESS&locale=${locale}` : `/complaints?status=IN_PROGRESS&locale=${locale}`}
+                          title={isRtl ? 'عرض الشكاوى النشطة' : 'View active complaints'}
+                        >
                           {d.active} {isRtl ? 'نشطة' : 'active'}
-                        </span>
-                        <span className="rounded bg-emerald-500/10 px-2 py-0.5 font-bold text-emerald-600">
+                        </Link>
+                        <Link
+                          className="rounded-md bg-status-success-bg px-2 py-0.5 font-bold text-status-success hover:opacity-80 transition-opacity"
+                          href={d.id ? `/complaints?departmentId=${encodeURIComponent(d.id)}&status=RESOLVED&locale=${locale}` : `/complaints?status=RESOLVED&locale=${locale}`}
+                          title={isRtl ? 'عرض الشكاوى المحلولة' : 'View resolved complaints'}
+                        >
                           {d.resolved} {isRtl ? 'محلولة' : 'resolved'}
-                        </span>
+                        </Link>
                       </div>
                     </div>
                   ))}
@@ -858,17 +883,30 @@ function CrmDashboardView({ isRtl, crmData, locale }: { isRtl: boolean; crmData?
               {crm.officerWorkload?.length > 0 ? (
                 <div className="space-y-2">
                   {crm.officerWorkload.slice(0, 4).map((o: any) => (
-                    <div key={o.nameEn} className="flex items-center justify-between rounded-xl bg-surface-sunken p-2.5 text-xs">
-                      <span className="font-semibold text-content-strong">
-                        {isRtl ? o.nameAr || o.nameEn : o.nameEn}
-                      </span>
-                      <div className="flex items-center gap-3">
-                        <span className="rounded bg-amber-500/10 px-2 py-0.5 font-bold text-amber-600">
+                    <div className="flex items-center justify-between rounded-xl bg-surface-sunken p-2.5 text-xs" key={o.nameEn}>
+                      <Link
+                        className="font-semibold text-content-strong hover:text-brand transition-colors flex items-center gap-1 group"
+                        href={o.id ? `/complaints?ownerId=${encodeURIComponent(o.id)}&locale=${locale}` : `/complaints?locale=${locale}`}
+                        title={isRtl ? 'عرض شكاوى الموظف' : 'View officer complaints'}
+                      >
+                        <span>{isRtl ? o.nameAr || o.nameEn : o.nameEn}</span>
+                        <ExternalLink className="size-3 text-content-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          className="rounded-md bg-status-warning-bg px-2 py-0.5 font-bold text-status-warning hover:opacity-80 transition-opacity"
+                          href={o.id ? `/complaints?ownerId=${encodeURIComponent(o.id)}&status=IN_PROGRESS&locale=${locale}` : `/complaints?status=IN_PROGRESS&locale=${locale}`}
+                          title={isRtl ? 'عرض الشكاوى النشطة' : 'View active complaints'}
+                        >
                           {o.active} {isRtl ? 'نشطة' : 'active'}
-                        </span>
-                        <span className="rounded bg-emerald-500/10 px-2 py-0.5 font-bold text-emerald-600">
+                        </Link>
+                        <Link
+                          className="rounded-md bg-status-success-bg px-2 py-0.5 font-bold text-status-success hover:opacity-80 transition-opacity"
+                          href={o.id ? `/complaints?ownerId=${encodeURIComponent(o.id)}&status=RESOLVED&locale=${locale}` : `/complaints?status=RESOLVED&locale=${locale}`}
+                          title={isRtl ? 'عرض الشكاوى المحلولة' : 'View resolved complaints'}
+                        >
                           {o.resolved} {isRtl ? 'محلولة' : 'resolved'}
-                        </span>
+                        </Link>
                       </div>
                     </div>
                   ))}
