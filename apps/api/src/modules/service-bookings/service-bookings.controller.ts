@@ -11,13 +11,13 @@ import {
   parseUpsertServiceCenterBody,
 } from './dto/service-master-data.dto.js';
 
-@UseGuards(SessionAuthGuard)
 @Controller('service-bookings')
 export class ServiceBookingsController {
   constructor(private readonly service: ServiceBookingsService) {}
 
   // ── Appointments ──────────────────────────────────────────────────────────
   @Get(['appointments', ''])
+  @UseGuards(SessionAuthGuard)
   async listAppointments(
     @Query('branchId') branchId?: string,
     @Query('fromDate') fromDate?: string,
@@ -28,16 +28,19 @@ export class ServiceBookingsController {
   }
 
   @Get(['appointments/:id', ':id'])
+  @UseGuards(SessionAuthGuard)
   async getAppointment(@Param('id') id: string) {
     return this.service.getAppointment(id);
   }
 
   @Get(['appointments/:id/history', ':id/history'])
+  @UseGuards(SessionAuthGuard)
   async getAppointmentHistory(@Param('id') id: string) {
     return this.service.getAppointmentHistory(id);
   }
 
   @Post(['appointments', ''])
+  @UseGuards(SessionAuthGuard)
   async createAppointment(@Req() req: AuthenticatedRequest, @Body() body: unknown) {
     const dto = parseCreateServiceAppointmentBody(body);
     const actorId = req.principal?.userId ?? null;
@@ -45,6 +48,7 @@ export class ServiceBookingsController {
   }
 
   @Patch(['appointments/:id', ':id'])
+  @UseGuards(SessionAuthGuard)
   async updateAppointment(
     @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
@@ -74,12 +78,14 @@ export class ServiceBookingsController {
   }
 
   @Post('centers')
+  @UseGuards(SessionAuthGuard)
   async upsertServiceCenter(@Body() body: unknown) {
     const dto = parseUpsertServiceCenterBody(body);
     return this.service.upsertServiceCenter(dto);
   }
 
   @Delete('centers/:id')
+  @UseGuards(SessionAuthGuard)
   async deleteServiceCenter(@Param('id') id: string) {
     return this.service.deleteServiceCenter(id);
   }
@@ -91,12 +97,14 @@ export class ServiceBookingsController {
   }
 
   @Put('rules/:centerId')
+  @UseGuards(SessionAuthGuard)
   async updateCenterRules(@Param('centerId') centerId: string, @Body() body: any) {
     const rules = Array.isArray(body?.rules) ? body.rules : (Array.isArray(body) ? body : []);
     return this.service.updateBranchRules(centerId, rules);
   }
 
   @Post('rules/:centerId/init-week')
+  @UseGuards(SessionAuthGuard)
   async initWeekRules(@Param('centerId') centerId: string) {
     return this.service.initWeekRules(centerId);
   }
@@ -108,6 +116,7 @@ export class ServiceBookingsController {
   }
 
   @Put('rules')
+  @UseGuards(SessionAuthGuard)
   async updateBranchRules(@Body() body: unknown) {
     const dto = parseUpdateBranchBookingRulesBody(body);
     return this.service.updateBranchRules(dto.branchId, dto.rules);
@@ -120,6 +129,7 @@ export class ServiceBookingsController {
   }
 
   @Post(['car-models', 'master-data/car-models'])
+  @UseGuards(SessionAuthGuard)
   async upsertCarModel(@Body() body: unknown) {
     const dto = parseUpsertCarModelBody(body);
     return this.service.upsertCarModel(dto);
@@ -132,6 +142,7 @@ export class ServiceBookingsController {
   }
 
   @Post(['maintenance-types', 'master-data/maintenance-types'])
+  @UseGuards(SessionAuthGuard)
   async upsertMaintenanceType(@Body() body: unknown) {
     const dto = parseUpsertMaintenanceTypeBody(body);
     return this.service.upsertMaintenanceType(dto);

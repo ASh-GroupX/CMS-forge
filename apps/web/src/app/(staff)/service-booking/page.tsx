@@ -14,6 +14,8 @@ import {
 import { ServiceBookingProvider } from './service-booking-context';
 import { ServiceBookingView } from './service-booking-view';
 
+export const dynamic = 'force-dynamic';
+
 type SearchParams = {
   locale?: string | string[];
   date?: string;

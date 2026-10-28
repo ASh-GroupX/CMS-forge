@@ -115,25 +115,22 @@ function getApiBaseUrl(): string {
 async function getAuthHeaders(customCookie?: string): Promise<HeadersInit> {
   const headers: Record<string, string> = { Accept: 'application/json', 'Content-Type': 'application/json' };
   let cookieHeader = customCookie || '';
-  let csrf: string | null | undefined;
   if (!cookieHeader && typeof window === 'undefined') {
     try {
-      const { cookies: nextCookies } = await import('next/headers');
-      const cookieStore = await nextCookies().catch(() => null);
-      if (cookieStore) {
-        cookieHeader = cookieStore.toString();
-        csrf = cookieStore.get('cms_csrf_token')?.value;
+      const { headers: nextHeaders, cookies: nextCookies } = await import('next/headers');
+      const h = await nextHeaders().catch(() => null);
+      cookieHeader = h?.get('cookie') ?? '';
+      if (!cookieHeader) {
+        const c = await nextCookies().catch(() => null);
+        if (c) cookieHeader = c.toString();
       }
     } catch {}
   }
   if (cookieHeader) {
     headers.cookie = cookieHeader;
-    headers.Cookie = cookieHeader;
-    if (!csrf) {
-      csrf = cookieHeader.split(';').map((c) => c.trim()).find((c) => c.startsWith('cms_csrf_token='))?.slice('cms_csrf_token='.length);
-    }
+    const csrf = cookieHeader.split(';').map((c) => c.trim()).find((c) => c.startsWith('cms_csrf_token='))?.slice('cms_csrf_token='.length);
+    if (csrf) headers['x-csrf-token'] = csrf;
   }
-  if (csrf) headers['x-csrf-token'] = csrf;
   return headers;
 }
 
@@ -166,7 +163,10 @@ export async function fetchSlotAvailability(branchId: string, date: string, cook
 export async function fetchCarModels(activeOnly = true, cookieHeader?: string): Promise<CarModel[]> {
   const url = `${getApiBaseUrl()}/service-bookings/car-models?all=${!activeOnly}`;
   const res = await fetch(url, { headers: await getAuthHeaders(cookieHeader), cache: 'no-store' });
-  if (!res.ok) return [];
+  if (!res.ok) {
+    console.error(`[fetchCarModels] failed with status ${res.status}: ${res.statusText}`);
+    return [];
+  }
   const json = await res.json().catch(() => []);
   return Array.isArray(json) ? json : (json.carModels ?? json.items ?? []);
 }
@@ -174,7 +174,10 @@ export async function fetchCarModels(activeOnly = true, cookieHeader?: string): 
 export async function fetchMaintenanceTypes(activeOnly = true, cookieHeader?: string): Promise<MaintenanceType[]> {
   const url = `${getApiBaseUrl()}/service-bookings/maintenance-types?all=${!activeOnly}`;
   const res = await fetch(url, { headers: await getAuthHeaders(cookieHeader), cache: 'no-store' });
-  if (!res.ok) return [];
+  if (!res.ok) {
+    console.error(`[fetchMaintenanceTypes] failed with status ${res.status}: ${res.statusText}`);
+    return [];
+  }
   const json = await res.json().catch(() => []);
   return Array.isArray(json) ? json : (json.maintenanceTypes ?? json.items ?? []);
 }
@@ -236,7 +239,10 @@ export async function updateAppointmentApi(id: string, data: UpdateAppointmentIn
 export async function fetchServiceCenters(activeOnly = true, cookieHeader?: string): Promise<ServiceCenter[]> {
   const url = `${getApiBaseUrl()}/service-bookings/centers?all=${!activeOnly}`;
   const res = await fetch(url, { headers: await getAuthHeaders(cookieHeader), cache: 'no-store' });
-  if (!res.ok) return [];
+  if (!res.ok) {
+    console.error(`[fetchServiceCenters] failed with status ${res.status}: ${res.statusText}`);
+    return [];
+  }
   const json = await res.json().catch(() => []);
   return Array.isArray(json) ? json : (json.centers ?? []);
 }

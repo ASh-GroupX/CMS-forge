@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import type {
   CreateAppointmentInput,
   DayRule,
@@ -12,9 +12,10 @@ import type {
 const API_BASE_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 async function getAuthHeaders() {
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore.toString();
-  const csrf = cookieStore.get('cms_csrf_token')?.value
+  const reqHeaders = await headers().catch(() => null);
+  const cookieStore = await cookies().catch(() => null);
+  const cookieHeader = reqHeaders?.get('cookie') || cookieStore?.toString() || '';
+  const csrf = cookieStore?.get('cms_csrf_token')?.value
     ?? cookieHeader.split(';').map((c) => c.trim()).find((c) => c.startsWith('cms_csrf_token='))?.slice('cms_csrf_token='.length);
 
   return {

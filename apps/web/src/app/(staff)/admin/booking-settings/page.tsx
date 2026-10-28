@@ -14,6 +14,8 @@ import {
 } from '../../../../lib/staff-service-bookings-api';
 import { BookingSettingsView } from './booking-settings-view';
 
+export const dynamic = 'force-dynamic';
+
 type SearchParams = { locale?: string | string[] };
 
 export default async function BookingSettingsAdminPage({
@@ -22,9 +24,9 @@ export default async function BookingSettingsAdminPage({
   searchParams?: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  const cookieStore = await cookies();
-  const cookieHeader = cookieStore.toString();
   const requestHeaders = await headers();
+  const cookieStore = await cookies().catch(() => null);
+  const cookieHeader = requestHeaders.get('cookie') || cookieStore?.toString() || '';
   const locale = resolveLocale(params?.locale || requestHeaders.get('x-cms-locale') || undefined);
   const t = serviceBookingText[locale] || serviceBookingText.en;
 
