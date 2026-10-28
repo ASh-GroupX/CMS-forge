@@ -23,16 +23,17 @@ export default async function BookingSettingsAdminPage({
 }) {
   const params = await searchParams;
   const requestHeaders = await headers();
+  const cookieHeader = requestHeaders.get('cookie') ?? '';
   const locale = resolveLocale(params?.locale || requestHeaders.get('x-cms-locale') || undefined);
   const t = serviceBookingText[locale] || serviceBookingText.en;
 
-  const centers = await fetchServiceCenters(false).catch(() => [] as ServiceCenter[]);
+  const centers = await fetchServiceCenters(false, cookieHeader).catch(() => [] as ServiceCenter[]);
 
-  // Fetch data in parallel
+  // Fetch data in parallel with forwarded cookie header
   const [carModels, maintenanceTypes, ...rulesLists] = await Promise.all([
-    fetchCarModels(false).catch(() => [] as CarModel[]),
-    fetchMaintenanceTypes(false).catch(() => [] as MaintenanceType[]),
-    ...centers.map((c) => fetchBranchRules(c.id).catch(() => [] as DayRule[])),
+    fetchCarModels(false, cookieHeader).catch(() => [] as CarModel[]),
+    fetchMaintenanceTypes(false, cookieHeader).catch(() => [] as MaintenanceType[]),
+    ...centers.map((c) => fetchBranchRules(c.id, cookieHeader).catch(() => [] as DayRule[])),
   ]);
 
   const rulesByBranch: Record<string, DayRule[]> = {};

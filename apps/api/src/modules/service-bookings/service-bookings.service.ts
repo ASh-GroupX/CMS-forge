@@ -234,15 +234,11 @@ export class ServiceBookingsService {
 
   // ── Service Centers ───────────────────────────────────────────────────────
   async getServiceCenters(activeOnly = true) {
-    const centers = await this.repository.listServiceCenters(activeOnly);
+    let centers = await this.repository.listServiceCenters(activeOnly);
     if (centers.length === 0) {
-      const defaultCenter = await this.repository.upsertServiceCenter({
-        code: 'MAIN_CENTER',
-        nameEn: 'Main Service Center',
-        nameAr: 'مركز الصيانة الرئيسي',
-        isActive: true,
-      });
-      return [defaultCenter];
+      await this.repository.upsertServiceCenter({ id: 'center_main', code: 'MAIN_CENTER', nameEn: 'AMMAN Service Center', nameAr: 'مركز صيانة عمان', isActive: true });
+      await this.repository.upsertServiceCenter({ id: 'center_north', code: 'NORTH_CENTER', nameEn: 'North Service Center', nameAr: 'مركز صيانة الشمال', isActive: true });
+      centers = await this.repository.listServiceCenters(activeOnly);
     }
     return centers;
   }

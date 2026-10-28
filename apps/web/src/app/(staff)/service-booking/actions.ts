@@ -12,18 +12,19 @@ import type {
 const API_BASE_URL = process.env.API_URL || 'http://localhost:3000';
 
 async function getAuthHeaders() {
+  const { headers: getHeaders } = await import('next/headers');
+  const reqHeaders = await getHeaders().catch(() => null);
+  let cookieHeader = reqHeaders?.get('cookie') ?? '';
   const cookieStore = await cookies();
-  const cookieHeader = cookieStore.toString();
+  if (!cookieHeader && cookieStore) {
+    cookieHeader = cookieStore.getAll().map((c) => `${c.name}=${c.value}`).join('; ');
+  }
   const csrf = cookieStore.get('cms_csrf_token')?.value
-    ?? cookieHeader
-      .split(';')
-      .map((c) => c.trim())
-      .find((c) => c.startsWith('cms_csrf_token='))
-      ?.slice('cms_csrf_token='.length);
+    ?? cookieHeader.split(';').map((c) => c.trim()).find((c) => c.startsWith('cms_csrf_token='))?.slice('cms_csrf_token='.length);
 
   return {
     'Content-Type': 'application/json',
-    Cookie: cookieHeader,
+    ...(cookieHeader ? { Cookie: cookieHeader } : {}),
     ...(csrf ? { 'x-csrf-token': csrf } : {}),
   };
 }
@@ -39,7 +40,7 @@ function parseErrorMessage(raw: string, status: number): string {
 
 export async function createAppointmentAction(input: CreateAppointmentInput) {
   try {
-    const res = await fetch(`${API_BASE_URL}/service-bookings`, {
+    const res = await fetch(`${API_BASE_URL}/service-bookings/appointments`, {
       method: 'POST',
       headers: await getAuthHeaders(),
       body: JSON.stringify(input),

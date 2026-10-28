@@ -102,7 +102,10 @@ export function TimelineDayView() {
         <div className="p-3 text-center text-xs font-semibold text-content-muted">
           {t.timeline.time}
         </div>
-        <div className={`grid grid-cols-${activeBranches.length} divide-x divide-line-subtle`}>
+        <div
+          className="grid divide-x divide-line-subtle"
+          style={{ gridTemplateColumns: `repeat(${Math.max(activeBranches.length, 1)}, minmax(0, 1fr))` }}
+        >
           {activeBranches.map((b) => (
             <div className="p-3 text-center font-bold text-sm text-content-strong flex items-center justify-center gap-2" key={b.id}>
               <span>{isAr ? b.nameAr : b.nameEn}</span>
@@ -142,7 +145,10 @@ export function TimelineDayView() {
               </div>
 
               {/* Branch Columns */}
-              <div className={`grid grid-cols-${activeBranches.length} divide-x divide-line-subtle`}>
+              <div
+                className="grid divide-x divide-line-subtle"
+                style={{ gridTemplateColumns: `repeat(${Math.max(activeBranches.length, 1)}, minmax(0, 1fr))` }}
+              >
                 {activeBranches.map((branch) => {
                   const branchHourApts = dateAppointments.filter(
                     (a) =>

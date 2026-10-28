@@ -30,21 +30,29 @@ export default async function ServiceBookingPage({
   const shell = staffShellText[locale];
 
   const todayStr = params?.date || new Date().toISOString().slice(0, 10);
+  const cookieHeader = requestHeaders.get('cookie') ?? '';
 
-  // Parallel data fetching
+  // Parallel data fetching with forwarded cookie header
   const [fetchedCenters, carModels, maintenanceTypes, appointments] = await Promise.all([
-    fetchServiceCenters().catch(() => [] as ServiceCenter[]),
-    fetchCarModels(true).catch(() => [] as CarModel[]),
-    fetchMaintenanceTypes(true).catch(() => [] as MaintenanceType[]),
-    fetchServiceAppointments({}).catch(() => [] as ServiceAppointment[]),
+    fetchServiceCenters(true, cookieHeader).catch(() => [] as ServiceCenter[]),
+    fetchCarModels(true, cookieHeader).catch(() => [] as CarModel[]),
+    fetchMaintenanceTypes(true, cookieHeader).catch(() => [] as MaintenanceType[]),
+    fetchServiceAppointments({}, cookieHeader).catch(() => [] as ServiceAppointment[]),
   ]);
 
-  const branches = fetchedCenters.map((c) => ({
+  let branches = fetchedCenters.map((c) => ({
     id: c.id,
     code: c.code,
     nameEn: c.nameEn,
     nameAr: c.nameAr,
   }));
+
+  if (branches.length === 0) {
+    branches = [
+      { id: 'center_main', code: 'MAIN_CENTER', nameEn: 'AMMAN Service Center', nameAr: 'مركز صيانة عمان' },
+      { id: 'center_north', code: 'NORTH_CENTER', nameEn: 'North Service Center', nameAr: 'مركز صيانة الشمال' },
+    ];
+  }
 
   return (
     <section aria-label="Service Center Booking" className="grid gap-4 w-full" dir={shell.dir}>

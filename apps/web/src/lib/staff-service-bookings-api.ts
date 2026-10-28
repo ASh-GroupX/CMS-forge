@@ -68,31 +68,11 @@ export type DayAvailability = {
   slots: SlotAvailability[];
 };
 
-export type CarModel = {
-  id: string;
-  nameEn: string;
-  nameAr: string;
-  brand: string;
-  isActive: boolean;
-};
+export type CarModel = { id: string; nameEn: string; nameAr: string; brand: string; isActive: boolean };
 
-export type MaintenanceType = {
-  id: string;
-  nameEn: string;
-  nameAr: string;
-  estimatedDurationMinutes: number;
-  isActive: boolean;
-};
+export type MaintenanceType = { id: string; nameEn: string; nameAr: string; estimatedDurationMinutes: number; isActive: boolean };
 
-export type ServiceCenter = {
-  id: string;
-  code: string;
-  nameEn: string;
-  nameAr: string;
-  address?: string | null;
-  phone?: string | null;
-  isActive: boolean;
-};
+export type ServiceCenter = { id: string; code: string; nameEn: string; nameAr: string; address?: string | null; phone?: string | null; isActive: boolean };
 
 export type DayRule = {
   id?: string;
@@ -131,18 +111,29 @@ function getApiBaseUrl(): string {
   return process.env.NEXT_PUBLIC_API_URL || '';
 }
 
-async function getAuthHeaders(): Promise<HeadersInit> {
+async function getAuthHeaders(customCookie?: string): Promise<HeadersInit> {
   const headers: Record<string, string> = { Accept: 'application/json', 'Content-Type': 'application/json' };
-  if (typeof window === 'undefined') {
+  let cookieHeader = customCookie || '';
+  let csrf: string | null | undefined;
+  if (!cookieHeader && typeof window === 'undefined') {
     try {
       const { cookies: nextCookies, headers: nextHeaders } = await import('next/headers');
+      const reqHeaders = await nextHeaders().catch(() => null);
+      cookieHeader = reqHeaders?.get('cookie') ?? '';
       const cookieStore = await nextCookies().catch(() => null);
-      const cookieHeader = cookieStore ? cookieStore.toString() : (await nextHeaders().catch(() => null))?.get('cookie') || '';
-      if (cookieHeader) headers.cookie = cookieHeader;
-      const csrf = cookieStore?.get('cms_csrf_token')?.value;
-      if (csrf) headers['x-csrf-token'] = csrf;
+      if (!cookieHeader && cookieStore) {
+        cookieHeader = cookieStore.getAll().map((c) => `${c.name}=${c.value}`).join('; ');
+      }
+      csrf = cookieStore?.get('cms_csrf_token')?.value;
     } catch {}
   }
+  if (cookieHeader) {
+    headers.cookie = cookieHeader;
+    if (!csrf) {
+      csrf = cookieHeader.split(';').map((c) => c.trim()).find((c) => c.startsWith('cms_csrf_token='))?.slice('cms_csrf_token='.length);
+    }
+  }
+  if (csrf) headers['x-csrf-token'] = csrf;
   return headers;
 }
 
@@ -151,7 +142,7 @@ export async function fetchServiceAppointments(params: {
   fromDate?: string;
   toDate?: string;
   status?: string;
-}): Promise<ServiceAppointment[]> {
+}, cookieHeader?: string): Promise<ServiceAppointment[]> {
   const query = new URLSearchParams();
   if (params.branchId) query.set('branchId', params.branchId);
   if (params.fromDate) query.set('fromDate', params.fromDate);
@@ -159,38 +150,38 @@ export async function fetchServiceAppointments(params: {
   if (params.status) query.set('status', params.status);
 
   const url = `${getApiBaseUrl()}/service-bookings/appointments?${query.toString()}`;
-  const res = await fetch(url, { headers: await getAuthHeaders(), cache: 'no-store' });
+  const res = await fetch(url, { headers: await getAuthHeaders(cookieHeader), cache: 'no-store' });
   if (!res.ok) return [];
   const json = await res.json().catch(() => []);
   return Array.isArray(json) ? json : (json.appointments ?? []);
 }
 
-export async function fetchSlotAvailability(branchId: string, date: string): Promise<DayAvailability | null> {
+export async function fetchSlotAvailability(branchId: string, date: string, cookieHeader?: string): Promise<DayAvailability | null> {
   const url = `${getApiBaseUrl()}/service-bookings/slots-availability?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}`;
-  const res = await fetch(url, { headers: await getAuthHeaders(), cache: 'no-store' });
+  const res = await fetch(url, { headers: await getAuthHeaders(cookieHeader), cache: 'no-store' });
   if (!res.ok) return null;
   return res.json().catch(() => null);
 }
 
-export async function fetchCarModels(activeOnly = true): Promise<CarModel[]> {
+export async function fetchCarModels(activeOnly = true, cookieHeader?: string): Promise<CarModel[]> {
   const url = `${getApiBaseUrl()}/service-bookings/car-models?all=${!activeOnly}`;
-  const res = await fetch(url, { headers: await getAuthHeaders(), cache: 'no-store' });
+  const res = await fetch(url, { headers: await getAuthHeaders(cookieHeader), cache: 'no-store' });
   if (!res.ok) return [];
   const json = await res.json().catch(() => []);
   return Array.isArray(json) ? json : (json.carModels ?? json.items ?? []);
 }
 
-export async function fetchMaintenanceTypes(activeOnly = true): Promise<MaintenanceType[]> {
+export async function fetchMaintenanceTypes(activeOnly = true, cookieHeader?: string): Promise<MaintenanceType[]> {
   const url = `${getApiBaseUrl()}/service-bookings/maintenance-types?all=${!activeOnly}`;
-  const res = await fetch(url, { headers: await getAuthHeaders(), cache: 'no-store' });
+  const res = await fetch(url, { headers: await getAuthHeaders(cookieHeader), cache: 'no-store' });
   if (!res.ok) return [];
   const json = await res.json().catch(() => []);
   return Array.isArray(json) ? json : (json.maintenanceTypes ?? json.items ?? []);
 }
 
-export async function fetchBranchRules(branchId: string): Promise<DayRule[]> {
+export async function fetchBranchRules(branchId: string, cookieHeader?: string): Promise<DayRule[]> {
   const url = `${getApiBaseUrl()}/service-bookings/rules/${encodeURIComponent(branchId)}`;
-  const res = await fetch(url, { headers: await getAuthHeaders(), cache: 'no-store' });
+  const res = await fetch(url, { headers: await getAuthHeaders(cookieHeader), cache: 'no-store' });
   if (!res.ok) return [];
   const json = await res.json().catch(() => []);
   return Array.isArray(json) ? json : (json.rules ?? json.items ?? []);
@@ -242,9 +233,9 @@ export async function updateAppointmentApi(id: string, data: UpdateAppointmentIn
   return { ok: true, appointment: json };
 }
 
-export async function fetchServiceCenters(activeOnly = true): Promise<ServiceCenter[]> {
+export async function fetchServiceCenters(activeOnly = true, cookieHeader?: string): Promise<ServiceCenter[]> {
   const url = `${getApiBaseUrl()}/service-bookings/centers?all=${!activeOnly}`;
-  const res = await fetch(url, { headers: await getAuthHeaders(), cache: 'no-store' });
+  const res = await fetch(url, { headers: await getAuthHeaders(cookieHeader), cache: 'no-store' });
   if (!res.ok) return [];
   const json = await res.json().catch(() => []);
   return Array.isArray(json) ? json : (json.centers ?? []);
