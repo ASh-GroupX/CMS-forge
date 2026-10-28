@@ -94,36 +94,36 @@ export function BookingSettingsView({
         </div>
       </div>
 
-      {/* Tab Panels */}
+      {/* Tab Panels — all stay mounted so local state survives tab switches */}
       <div>
-        {activeTab === 'hours' && (
+        <div style={{ display: activeTab === 'hours' ? undefined : 'none' }}>
           <BranchHoursTab
             centers={centers}
             initialRulesByBranch={rulesByBranch}
             locale={locale}
             t={t}
           />
-        )}
-        {activeTab === 'cars' && (
+        </div>
+        <div style={{ display: activeTab === 'cars' ? undefined : 'none' }}>
           <CarModelsTab
             initialCarModels={carModels}
             locale={locale}
             t={t}
           />
-        )}
-        {activeTab === 'maintenance' && (
+        </div>
+        <div style={{ display: activeTab === 'maintenance' ? undefined : 'none' }}>
           <MaintenanceTypesTab
             initialMaintenanceTypes={maintenanceTypes}
             locale={locale}
             t={t}
           />
-        )}
-        {activeTab === 'centers' && (
+        </div>
+        <div style={{ display: activeTab === 'centers' ? undefined : 'none' }}>
           <ServiceCentersTab
             initialCenters={centers}
             locale={locale}
           />
-        )}
+        </div>
       </div>
     </div>
   );
