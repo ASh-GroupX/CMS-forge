@@ -49,3 +49,33 @@ export function parseUpsertMaintenanceTypeBody(input: unknown): UpsertMaintenanc
     isActive: body.isActive !== undefined ? Boolean(body.isActive) : true,
   };
 }
+
+export class UpsertServiceCenterDto {
+  id?: string | undefined;
+  code?: string | undefined;
+  nameEn!: string;
+  nameAr!: string;
+  address?: string | null | undefined;
+  phone?: string | null | undefined;
+  isActive?: boolean | undefined;
+}
+
+export function parseUpsertServiceCenterBody(input: unknown): UpsertServiceCenterDto {
+  if (!input || typeof input !== 'object') throw new Error('Service center payload must be an object');
+  const body = input as Record<string, unknown>;
+  let nameEn = String(body.nameEn ?? '').trim();
+  let nameAr = String(body.nameAr ?? '').trim();
+  if (!nameEn && !nameAr) throw new Error('At least one of English or Arabic service center name is required');
+  if (!nameEn) nameEn = nameAr;
+  if (!nameAr) nameAr = nameEn;
+
+  return {
+    id: body.id ? String(body.id).trim() : undefined,
+    code: body.code ? String(body.code).trim().toUpperCase() : undefined,
+    nameEn,
+    nameAr,
+    address: body.address ? String(body.address).trim() : null,
+    phone: body.phone ? String(body.phone).trim() : null,
+    isActive: body.isActive !== undefined ? Boolean(body.isActive) : true,
+  };
+}

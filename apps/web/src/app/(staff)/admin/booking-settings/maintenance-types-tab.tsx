@@ -43,17 +43,18 @@ export function MaintenanceTypesTab({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingType, setEditingType] = useState<MaintenanceType | null>(null);
 
-  // Form State
   const [nameEn, setNameEn] = useState('');
   const [nameAr, setNameAr] = useState('');
   const [duration, setDuration] = useState(30);
   const [saving, setSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const openAdd = () => {
     setEditingType(null);
     setNameEn('');
     setNameAr('');
     setDuration(30);
+    setErrorMsg(null);
     setIsDialogOpen(true);
   };
 
@@ -62,6 +63,7 @@ export function MaintenanceTypesTab({
     setNameEn(m.nameEn);
     setNameAr(m.nameAr);
     setDuration(m.estimatedDurationMinutes);
+    setErrorMsg(null);
     setIsDialogOpen(true);
   };
 
@@ -69,12 +71,21 @@ export function MaintenanceTypesTab({
     e.preventDefault();
     const effectiveNameEn = nameEn.trim() || nameAr.trim();
     const effectiveNameAr = nameAr.trim() || nameEn.trim();
-    if (!effectiveNameEn || duration <= 0) {
-      toast.error(isAr ? 'يرجى إدخال اسم نوع الصيانة' : 'Service name is required');
+    if (!effectiveNameEn) {
+      const msg = isAr ? 'يرجى إدخال اسم نوع الصيانة' : 'Service name is required';
+      setErrorMsg(msg);
+      toast.error(msg);
+      return;
+    }
+    if (duration <= 0) {
+      const msg = isAr ? 'يرجى إدخال مدة صحيحة' : 'Please enter a valid duration';
+      setErrorMsg(msg);
+      toast.error(msg);
       return;
     }
 
     setSaving(true);
+    setErrorMsg(null);
     const res = await saveMaintenanceTypeAction({
       id: editingType?.id,
       nameEn: effectiveNameEn,
@@ -85,7 +96,9 @@ export function MaintenanceTypesTab({
     setSaving(false);
 
     if (!res.success) {
-      toast.error(res.error || 'Failed to save maintenance type');
+      const msg = res.error || (isAr ? 'فشل حفظ نوع الصيانة' : 'Failed to save maintenance type');
+      setErrorMsg(msg);
+      toast.error(msg);
       return;
     }
 
@@ -206,6 +219,12 @@ export function MaintenanceTypesTab({
               {editingType ? 'Edit Maintenance Type' : t.adminSettings.addMaintenance}
             </DialogTitle>
           </DialogHeader>
+
+          {errorMsg && (
+            <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-2.5 text-xs font-semibold text-destructive">
+              {errorMsg}
+            </div>
+          )}
 
           <form className="space-y-3 mt-2" onSubmit={handleSubmit}>
             <div>

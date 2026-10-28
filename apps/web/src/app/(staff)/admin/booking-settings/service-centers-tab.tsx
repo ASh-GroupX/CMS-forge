@@ -28,6 +28,7 @@ export function ServiceCentersTab({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCenter, setEditingCenter] = useState<ServiceCenter | null>(null);
   const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   React.useEffect(() => {
     setCenterList(centers || initialCenters || []);
@@ -43,16 +44,19 @@ export function ServiceCentersTab({
 
   const openAddDialog = () => {
     setEditingCenter(null);
+    setApiError(null);
     setDialogOpen(true);
   };
 
   const openEditDialog = (center: ServiceCenter) => {
     setEditingCenter(center);
+    setApiError(null);
     setDialogOpen(true);
   };
 
   const handleSave = async (payload: { code: string; nameEn: string; nameAr: string; address?: string | undefined; phone?: string | undefined }) => {
     setLoading(true);
+    setApiError(null);
     const body = {
       ...(editingCenter ? { id: editingCenter.id } : {}),
       ...payload,
@@ -63,7 +67,9 @@ export function ServiceCentersTab({
     setLoading(false);
 
     if (!res.success) {
-      toast.error(res.error || 'Failed to save service center');
+      const msg = res.error || (isAr ? 'فشل حفظ مركز الخدمة' : 'Failed to save service center');
+      setApiError(msg);
+      toast.error(msg);
       return;
     }
 
@@ -189,6 +195,7 @@ export function ServiceCentersTab({
       </div>
 
       <ServiceCenterDialog
+        apiError={apiError}
         editingCenter={editingCenter}
         isAr={isAr}
         isOpen={dialogOpen}

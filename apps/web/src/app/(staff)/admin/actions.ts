@@ -4,15 +4,17 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-const API_URL = process.env.API_URL ?? 'http://localhost:3000';
+const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 const CSRF_COOKIE = 'cms_csrf_token';
 
 export async function saveBranchAction(formData: FormData): Promise<void> {
   const locale = safeLocale(formData.get('locale'));
   const id = String(formData.get('id') ?? '').trim();
   const code = text(formData, 'code');
-  const nameEn = text(formData, 'nameEn');
-  const nameAr = text(formData, 'nameAr');
+  const rawNameEn = text(formData, 'nameEn');
+  const rawNameAr = text(formData, 'nameAr');
+  const nameEn = rawNameEn || rawNameAr;
+  const nameAr = rawNameAr || rawNameEn;
 
   const response = await adminFetch(id ? `/branches/${encodeURIComponent(id)}` : '/branches', {
     body: JSON.stringify({ code, nameEn, nameAr }),

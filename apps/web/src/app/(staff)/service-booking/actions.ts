@@ -9,22 +9,18 @@ import type {
   UpdateAppointmentInput,
 } from '../../../lib/staff-service-bookings-api';
 
-const API_BASE_URL = process.env.API_URL || 'http://localhost:3000';
+const API_BASE_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 async function getAuthHeaders() {
-  const { headers: getHeaders } = await import('next/headers');
-  const reqHeaders = await getHeaders().catch(() => null);
-  let cookieHeader = reqHeaders?.get('cookie') ?? '';
   const cookieStore = await cookies();
-  if (!cookieHeader && cookieStore) {
-    cookieHeader = cookieStore.getAll().map((c) => `${c.name}=${c.value}`).join('; ');
-  }
+  const cookieHeader = cookieStore.toString();
   const csrf = cookieStore.get('cms_csrf_token')?.value
     ?? cookieHeader.split(';').map((c) => c.trim()).find((c) => c.startsWith('cms_csrf_token='))?.slice('cms_csrf_token='.length);
 
   return {
+    Accept: 'application/json',
     'Content-Type': 'application/json',
-    ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+    ...(cookieHeader ? { cookie: cookieHeader } : {}),
     ...(csrf ? { 'x-csrf-token': csrf } : {}),
   };
 }
@@ -94,12 +90,7 @@ export async function updateAppointmentStatusAction(id: string, status: ServiceA
   return updateAppointmentAction(id, { status });
 }
 
-export async function rescheduleAppointmentAction(
-  id: string,
-  branchId: string,
-  date: string,
-  startTime: string,
-) {
+export async function rescheduleAppointmentAction(id: string, branchId: string, date: string, startTime: string) {
   return updateAppointmentAction(id, { branchId, date, startTime });
 }
 
@@ -132,10 +123,13 @@ export async function saveCarModelAction(data: {
   isActive?: boolean | undefined;
 }) {
   try {
+    const brand = data.brand?.trim() || 'Nissan';
+    const nameEn = data.nameEn?.trim() || data.nameAr?.trim() || brand;
+    const nameAr = data.nameAr?.trim() || data.nameEn?.trim() || brand;
     const res = await fetch(`${API_BASE_URL}/service-bookings/car-models`, {
       method: 'POST',
       headers: await getAuthHeaders(),
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, brand, nameEn, nameAr }),
       cache: 'no-store',
     });
     if (!res.ok) {
@@ -159,10 +153,12 @@ export async function saveMaintenanceTypeAction(data: {
   isActive?: boolean | undefined;
 }) {
   try {
+    const nameEn = data.nameEn?.trim() || data.nameAr?.trim();
+    const nameAr = data.nameAr?.trim() || data.nameEn?.trim();
     const res = await fetch(`${API_BASE_URL}/service-bookings/maintenance-types`, {
       method: 'POST',
       headers: await getAuthHeaders(),
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, nameEn, nameAr }),
       cache: 'no-store',
     });
     if (!res.ok) {
@@ -180,17 +176,19 @@ export async function saveMaintenanceTypeAction(data: {
 
 export async function updateBranchNameAction(branchId: string, nameEn: string, nameAr: string) {
   try {
+    const effectiveEn = nameEn.trim() || nameAr.trim();
+    const effectiveAr = nameAr.trim() || nameEn.trim();
     const res = await fetch(`${API_BASE_URL}/service-bookings/centers`, {
       method: 'POST',
       headers: await getAuthHeaders(),
-      body: JSON.stringify({ id: branchId, nameEn, nameAr }),
+      body: JSON.stringify({ id: branchId, nameEn: effectiveEn, nameAr: effectiveAr }),
       cache: 'no-store',
     });
 
     await fetch(`${API_BASE_URL}/branches/${encodeURIComponent(branchId)}`, {
       method: 'PATCH',
       headers: await getAuthHeaders(),
-      body: JSON.stringify({ nameEn, nameAr }),
+      body: JSON.stringify({ nameEn: effectiveEn, nameAr: effectiveAr }),
       cache: 'no-store',
     }).catch(() => null);
 
@@ -218,10 +216,14 @@ export async function saveServiceCenterAction(data: {
   isActive?: boolean | undefined;
 }) {
   try {
+    const effectiveEn = data.nameEn.trim() || data.nameAr.trim();
+    const effectiveAr = data.nameAr.trim() || data.nameEn.trim();
+    const payload = { ...data, nameEn: effectiveEn, nameAr: effectiveAr };
+
     const res = await fetch(`${API_BASE_URL}/service-bookings/centers`, {
       method: 'POST',
       headers: await getAuthHeaders(),
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
       cache: 'no-store',
     });
 
@@ -230,7 +232,7 @@ export async function saveServiceCenterAction(data: {
       await fetch(`${API_BASE_URL}/branches/${encodeURIComponent(targetBranch)}`, {
         method: 'PATCH',
         headers: await getAuthHeaders(),
-        body: JSON.stringify({ nameEn: data.nameEn, nameAr: data.nameAr }),
+        body: JSON.stringify({ nameEn: effectiveEn, nameAr: effectiveAr }),
         cache: 'no-store',
       }).catch(() => null);
     }

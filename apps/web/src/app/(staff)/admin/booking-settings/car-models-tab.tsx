@@ -44,17 +44,18 @@ export function CarModelsTab({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCar, setEditingCar] = useState<CarModel | null>(null);
 
-  // Form State
   const [nameEn, setNameEn] = useState('');
   const [nameAr, setNameAr] = useState('');
   const [brand, setBrand] = useState('Nissan');
   const [saving, setSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const openAdd = () => {
     setEditingCar(null);
     setNameEn('');
     setNameAr('');
     setBrand('Nissan');
+    setErrorMsg(null);
     setIsDialogOpen(true);
   };
 
@@ -63,20 +64,24 @@ export function CarModelsTab({
     setNameEn(car.nameEn);
     setNameAr(car.nameAr);
     setBrand(car.brand);
+    setErrorMsg(null);
     setIsDialogOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const effectiveBrand = brand.trim() || 'Nissan';
-    const effectiveNameEn = nameEn.trim() || nameAr.trim();
-    const effectiveNameAr = nameAr.trim() || nameEn.trim();
+    const effectiveNameEn = nameEn.trim() || nameAr.trim() || brand.trim();
+    const effectiveNameAr = nameAr.trim() || nameEn.trim() || brand.trim();
     if (!effectiveNameEn) {
-      toast.error(isAr ? 'يرجى إدخال اسم الموديل' : 'Model name is required');
+      const msg = isAr ? 'يرجى إدخال اسم الموديل أو الماركة' : 'Model or brand name is required';
+      setErrorMsg(msg);
+      toast.error(msg);
       return;
     }
 
     setSaving(true);
+    setErrorMsg(null);
     const res = await saveCarModelAction({
       id: editingCar?.id,
       nameEn: effectiveNameEn,
@@ -87,7 +92,9 @@ export function CarModelsTab({
     setSaving(false);
 
     if (!res.success) {
-      toast.error(res.error || 'Failed to save car model');
+      const msg = res.error || (isAr ? 'فشل حفظ موديل السيارة' : 'Failed to save car model');
+      setErrorMsg(msg);
+      toast.error(msg);
       return;
     }
 
@@ -221,6 +228,12 @@ export function CarModelsTab({
               {editingCar ? 'Edit Car Model' : t.adminSettings.addCar}
             </DialogTitle>
           </DialogHeader>
+
+          {errorMsg && (
+            <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-2.5 text-xs font-semibold text-destructive">
+              {errorMsg}
+            </div>
+          )}
 
           <form className="space-y-3 mt-2" onSubmit={handleSubmit}>
             <div>

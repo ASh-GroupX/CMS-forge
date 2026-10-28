@@ -5,7 +5,11 @@ import { ServiceBookingsService } from './service-bookings.service.js';
 import { parseCreateServiceAppointmentBody } from './dto/create-service-appointment.dto.js';
 import { parseUpdateServiceAppointmentBody } from './dto/update-service-appointment.dto.js';
 import { parseUpdateBranchBookingRulesBody } from './dto/service-booking-rules.dto.js';
-import { parseUpsertCarModelBody, parseUpsertMaintenanceTypeBody } from './dto/service-master-data.dto.js';
+import {
+  parseUpsertCarModelBody,
+  parseUpsertMaintenanceTypeBody,
+  parseUpsertServiceCenterBody,
+} from './dto/service-master-data.dto.js';
 
 @UseGuards(SessionAuthGuard)
 @Controller('service-bookings')
@@ -70,16 +74,9 @@ export class ServiceBookingsController {
   }
 
   @Post('centers')
-  async upsertServiceCenter(@Body() body: any) {
-    return this.service.upsertServiceCenter({
-      id: body.id,
-      code: body.code,
-      nameEn: body.nameEn,
-      nameAr: body.nameAr,
-      address: body.address,
-      phone: body.phone,
-      isActive: body.isActive !== false,
-    });
+  async upsertServiceCenter(@Body() body: unknown) {
+    const dto = parseUpsertServiceCenterBody(body);
+    return this.service.upsertServiceCenter(dto);
   }
 
   @Delete('centers/:id')
