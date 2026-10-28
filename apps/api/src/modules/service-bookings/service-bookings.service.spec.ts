@@ -91,7 +91,7 @@ test('createAppointment rejects when daily limit is reached', async () => {
         carModelId: 'c1',
         maintenanceTypeId: 'm1',
         branchId: 'b_main',
-        date: '2026-10-25', // Sunday
+        date: '2026-11-01', // Sunday
         startTime: '09:00',
         notes: 'Oil change',
       });
@@ -114,7 +114,7 @@ test('createAppointment rejects when 15-minute slot limit is reached', async () 
         carModelId: 'c1',
         maintenanceTypeId: 'm1',
         branchId: 'b_main',
-        date: '2026-10-26', // Monday
+        date: '2026-11-02', // Monday
         startTime: '10:15',
         notes: 'Brake check',
       });
@@ -138,12 +138,33 @@ test('createAppointment rejects when max 3 appointments per hour limit is reache
         carModelId: 'c1',
         maintenanceTypeId: 'm1',
         branchId: 'b_main',
-        date: '2026-10-26', // Monday
+        date: '2026-11-02', // Monday
         startTime: '09:45',
         notes: 'Inspection',
       });
     },
     /Maximum appointments per hour limit \(3\) reached/i,
+  );
+});
+
+test('createAppointment rejects when time slot is in the past', async () => {
+  const repo = createMockRepository();
+  const service = new ServiceBookingsService(repo);
+
+  await assert.rejects(
+    async () => {
+      await service.createAppointment({
+        customerName: 'Test',
+        customerPhone: '0501112233',
+        carModelId: 'c1',
+        maintenanceTypeId: 'm1',
+        branchId: 'b_main',
+        date: '2020-01-01',
+        startTime: '09:00',
+        notes: 'Old date',
+      });
+    },
+    /past time slot/i,
   );
 });
 
@@ -161,7 +182,7 @@ test('createAppointment succeeds and generates reference when within limits', as
     carModelId: 'c1',
     maintenanceTypeId: 'm1',
     branchId: 'b_main',
-    date: '2026-10-26',
+    date: '2026-11-02',
     startTime: '11:15',
     notes: 'Regular checkup',
   });

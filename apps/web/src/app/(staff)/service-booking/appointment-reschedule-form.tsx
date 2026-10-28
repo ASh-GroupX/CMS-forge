@@ -28,14 +28,22 @@ export function AppointmentRescheduleForm({
   onSuccess: (updated: ServiceAppointment) => void;
   t: ServiceBookingCopy;
 }) {
-  const [branchId, setBranchId] = useState(appointment.branchId);
+  const initialCenter = appointment.serviceCenterId || appointment.branchId || branches[0]?.id || '';
+  const [branchId, setBranchId] = useState(initialCenter);
   const [date, setDate] = useState(appointment.date);
   const [time, setTime] = useState(appointment.startTime);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const nowTime = new Date().toTimeString().slice(0, 5);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (date < todayStr || (date === todayStr && time < nowTime)) {
+      setErrorMsg(t.modal.pastSlotError);
+      return;
+    }
     setLoading(true);
     setErrorMsg(null);
     const res = await rescheduleAppointmentAction(appointment.id, branchId, date, time);
@@ -80,6 +88,7 @@ export function AppointmentRescheduleForm({
           </label>
           <input
             className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm"
+            min={todayStr}
             onChange={(e) => setDate(e.target.value)}
             type="date"
             value={date}
@@ -95,9 +104,14 @@ export function AppointmentRescheduleForm({
             onChange={(e) => setTime(e.target.value)}
             value={time}
           >
-            {TIME_SLOTS.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
+            {TIME_SLOTS.map((s) => {
+              const isPast = date === todayStr && s < nowTime;
+              return (
+                <option disabled={isPast} key={s} value={s}>
+                  {s} {isPast ? `(${isAr ? 'مضى' : 'Passed'})` : ''}
+                </option>
+              );
+            })}
           </select>
         </div>
       </div>

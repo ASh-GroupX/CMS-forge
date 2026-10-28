@@ -9,9 +9,11 @@ export class UpsertCarModelDto {
 export function parseUpsertCarModelBody(input: unknown): UpsertCarModelDto {
   if (!input || typeof input !== 'object') throw new Error('Car model payload must be an object');
   const body = input as Record<string, unknown>;
-  const nameEn = String(body.nameEn ?? '').trim();
-  const nameAr = String(body.nameAr ?? '').trim();
-  if (!nameEn || !nameAr) throw new Error('Both English and Arabic car model names are required');
+  let nameEn = String(body.nameEn ?? '').trim();
+  let nameAr = String(body.nameAr ?? '').trim();
+  if (!nameEn && !nameAr) throw new Error('At least one of English or Arabic car model name is required');
+  if (!nameEn) nameEn = nameAr;
+  if (!nameAr) nameAr = nameEn;
 
   return {
     id: body.id ? String(body.id).trim() : undefined,
@@ -33,9 +35,11 @@ export class UpsertMaintenanceTypeDto {
 export function parseUpsertMaintenanceTypeBody(input: unknown): UpsertMaintenanceTypeDto {
   if (!input || typeof input !== 'object') throw new Error('Maintenance type payload must be an object');
   const body = input as Record<string, unknown>;
-  const nameEn = String(body.nameEn ?? '').trim();
-  const nameAr = String(body.nameAr ?? '').trim();
-  if (!nameEn || !nameAr) throw new Error('Both English and Arabic maintenance type names are required');
+  let nameEn = String(body.nameEn ?? '').trim();
+  let nameAr = String(body.nameAr ?? '').trim();
+  if (!nameEn && !nameAr) throw new Error('At least one of English or Arabic maintenance type name is required');
+  if (!nameEn) nameEn = nameAr;
+  if (!nameAr) nameAr = nameEn;
 
   return {
     id: body.id ? String(body.id).trim() : undefined,

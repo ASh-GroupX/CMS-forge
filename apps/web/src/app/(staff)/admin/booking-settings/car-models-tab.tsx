@@ -68,17 +68,20 @@ export function CarModelsTab({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nameEn.trim() || !nameAr.trim() || !brand.trim()) {
-      toast.error('All fields are required');
+    const effectiveBrand = brand.trim() || 'Nissan';
+    const effectiveNameEn = nameEn.trim() || nameAr.trim();
+    const effectiveNameAr = nameAr.trim() || nameEn.trim();
+    if (!effectiveNameEn) {
+      toast.error(isAr ? 'يرجى إدخال اسم الموديل' : 'Model name is required');
       return;
     }
 
     setSaving(true);
     const res = await saveCarModelAction({
       id: editingCar?.id,
-      nameEn: nameEn.trim(),
-      nameAr: nameAr.trim(),
-      brand: brand.trim(),
+      nameEn: effectiveNameEn,
+      nameAr: effectiveNameAr,
+      brand: effectiveBrand,
       isActive: editingCar ? editingCar.isActive : true,
     });
     setSaving(false);
@@ -90,11 +93,10 @@ export function CarModelsTab({
 
     toast.success(t.modal.successUpdated);
     setIsDialogOpen(false);
-    // Refresh local list
     if (editingCar) {
       updateCarList((prev) =>
         prev.map((c) =>
-          c.id === editingCar.id ? { ...c, ...res.model, nameEn, nameAr, brand } : c,
+          c.id === editingCar.id ? { ...c, ...res.model, nameEn: effectiveNameEn, nameAr: effectiveNameAr, brand: effectiveBrand } : c,
         ),
       );
     } else {
@@ -102,9 +104,9 @@ export function CarModelsTab({
         ...prev,
         res.model || {
           id: `car_${Date.now()}`,
-          nameEn,
-          nameAr,
-          brand,
+          nameEn: effectiveNameEn,
+          nameAr: effectiveNameAr,
+          brand: effectiveBrand,
           isActive: true,
         },
       ]);
@@ -243,7 +245,6 @@ export function CarModelsTab({
                 className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm"
                 onChange={(e) => setNameEn(e.target.value)}
                 placeholder="e.g. Patrol"
-                required
                 type="text"
                 value={nameEn}
               />
@@ -258,7 +259,6 @@ export function CarModelsTab({
                 dir="rtl"
                 onChange={(e) => setNameAr(e.target.value)}
                 placeholder="مثال: باترول"
-                required
                 type="text"
                 value={nameAr}
               />
@@ -269,7 +269,7 @@ export function CarModelsTab({
                 {t.modal.cancel}
               </Button>
               <Button className="bg-brand text-primary-foreground font-semibold" disabled={saving} type="submit">
-                {saving ? t.modal.saving : t.modal.save}
+                {saving ? t.modal.saving : (editingCar ? t.adminSettings.saveChanges : t.adminSettings.addCar)}
               </Button>
             </div>
           </form>

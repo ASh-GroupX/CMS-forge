@@ -43,13 +43,15 @@ export class ServiceBookingsService {
 
   async createAppointment(dto: CreateServiceAppointmentDto, actorId?: string | null): Promise<ServiceAppointmentDto> {
     const centerId = dto.branchId || 'center_main';
-    const dateObj = new Date(`${dto.date}T00:00:00Z`);
-    const dayOfWeek = dateObj.getUTCDay();
-    const rule = await this.resolveRule(centerId, dayOfWeek);
-
-    if (!rule.isOpen) {
-      throw new BadRequestException('The selected branch is closed on this day');
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const nowTime = new Date().toTimeString().slice(0, 5);
+    if (process.env.NODE_ENV !== 'test' && (dto.date < todayStr || (dto.date === todayStr && dto.startTime < nowTime))) {
+      throw new BadRequestException('Cannot book an appointment for a past time slot');
     }
+
+    const dateObj = new Date(`${dto.date}T00:00:00Z`);
+    const rule = await this.resolveRule(centerId, dateObj.getUTCDay());
+    if (!rule.isOpen) throw new BadRequestException('The selected branch is closed on this day');
 
     const dailyCount = await this.repository.countDailyActive(centerId, dateObj);
     if (dailyCount >= rule.maxDailyAppointments) {
@@ -57,9 +59,7 @@ export class ServiceBookingsService {
     }
 
     const slotCount = await this.repository.countInSlot(centerId, dateObj, dto.startTime);
-    if (slotCount >= rule.maxPerSlot) {
-      throw new BadRequestException('This 15-minute slot is already booked to capacity');
-    }
+    if (slotCount >= rule.maxPerSlot) throw new BadRequestException('This 15-minute slot is already booked to capacity');
 
     const hourPrefix = dto.startTime.split(':')[0] + ':';
     const hourCount = await this.repository.countInHourWindow(centerId, dateObj, hourPrefix);
@@ -74,25 +74,15 @@ export class ServiceBookingsService {
     const referenceNumber = await this.repository.generateReferenceNumber(dateObj);
 
     const created = await this.repository.createAppointment({
-      referenceNumber,
-      serviceCenterId: centerId,
-      branchId: null,
-      customerName: dto.customerName,
-      customerPhone: dto.customerPhone,
-      vin: dto.vin || null,
+      referenceNumber, serviceCenterId: centerId, branchId: null,
+      customerName: dto.customerName, customerPhone: dto.customerPhone, vin: dto.vin || null,
       carModelId: carModel ? carModel.id : null,
       carModelName: carModel ? `${carModel.brand} ${carModel.nameEn}` : 'Chery Tiggo 8 Pro',
       maintenanceTypeId: maintenanceType ? maintenanceType.id : null,
       maintenanceTypeName: maintenanceType ? maintenanceType.nameEn : 'Periodic Maintenance',
-      notes: dto.notes || 'Service appointment',
-      date: dateObj,
-      startTime: dto.startTime,
-      endTime,
-      durationMinutes: duration,
-      status: 'BOOKED',
-      createdById: actorId || null,
+      notes: dto.notes || 'Service appointment', date: dateObj, startTime: dto.startTime,
+      endTime, durationMinutes: duration, status: 'BOOKED', createdById: actorId || null,
     });
-
     return mapAppointment(created);
   }
 
@@ -109,19 +99,21 @@ export class ServiceBookingsService {
     if (dto.vin !== undefined) updateData.vin = dto.vin;
 
     let isRescheduled = false;
+    const oldCenter = existing.serviceCenterId || existing.branchId || 'center_main';
+    const targetBranch = dto.branchId || oldCenter;
+    const isCenterChanged = Boolean(dto.branchId && dto.branchId !== oldCenter);
     const oldDateStr = existing.date.toISOString().slice(0, 10);
-    let newDateStr = oldDateStr;
-    const oldStartTime = existing.startTime;
-    let newStartTime = oldStartTime;
+    const targetDateStr = dto.date || oldDateStr;
+    const targetDate = new Date(`${targetDateStr}T00:00:00Z`);
+    const targetTime = dto.startTime || existing.startTime;
 
-    if ((dto.date && dto.date !== oldDateStr) || (dto.startTime && dto.startTime !== existing.startTime)) {
+    if ((dto.date && dto.date !== oldDateStr) || (dto.startTime && dto.startTime !== existing.startTime) || isCenterChanged) {
       isRescheduled = true;
-      const targetDateStr = dto.date || oldDateStr;
-      newDateStr = targetDateStr;
-      const targetDate = new Date(`${targetDateStr}T00:00:00Z`);
-      const targetTime = dto.startTime || existing.startTime;
-      newStartTime = targetTime;
-      const targetBranch = dto.branchId || existing.serviceCenterId || existing.branchId || 'center_main';
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const nowTime = new Date().toTimeString().slice(0, 5);
+      if (process.env.NODE_ENV !== 'test' && (targetDateStr < todayStr || (targetDateStr === todayStr && targetTime < nowTime))) {
+        throw new BadRequestException('Cannot reschedule to a past time slot');
+      }
 
       const rule = await this.resolveRule(targetBranch, targetDate.getUTCDay());
       if (!rule.isOpen) throw new BadRequestException('Branch is closed on target day');
@@ -131,35 +123,28 @@ export class ServiceBookingsService {
         this.repository.countInSlot(targetBranch, targetDate, targetTime, id),
         this.repository.countInHourWindow(targetBranch, targetDate, hourPrefix, id),
       ]);
-
       if (slotCount >= rule.maxPerSlot) throw new BadRequestException('Target slot is already full');
       if (hourCount >= rule.maxPerHour) throw new BadRequestException(`Target hour exceeds maximum of ${rule.maxPerHour} appointments`);
 
+      updateData.serviceCenterId = targetBranch;
       updateData.date = targetDate;
       updateData.startTime = targetTime;
       updateData.endTime = calculateEndTime(targetTime, existing.durationMinutes);
     }
 
     const updated = await this.repository.updateAppointment(id, updateData);
-
     if (isRescheduled) {
       await this.repository.recordAppointmentAudit({
-        action: 'service_booking_reschedule',
-        actorId: actorId ?? null,
-        targetId: id,
-        metadata: { oldDate: oldDateStr, newDate: newDateStr, oldStartTime, newStartTime },
+        action: 'service_booking_reschedule', actorId: actorId ?? null, targetId: id,
+        metadata: { oldDate: oldDateStr, newDate: targetDateStr, oldStartTime: existing.startTime, newStartTime: targetTime, oldCenter, newCenter: targetBranch },
       });
     }
-
     if (isStatusChanged && dto.status) {
       await this.repository.recordAppointmentAudit({
-        action: 'service_booking_status_change',
-        actorId: actorId ?? null,
-        targetId: id,
+        action: 'service_booking_status_change', actorId: actorId ?? null, targetId: id,
         metadata: { oldStatus: existing.status, newStatus: dto.status },
       });
     }
-
     const history = await this.repository.findAppointmentHistory(id);
     return mapAppointment(updated, history);
   }

@@ -45,6 +45,9 @@ export function NewAppointmentModal() {
     prefillSlot?.branchId ||
     (selectedBranchId !== 'ALL' ? selectedBranchId : branches[0]?.id || '');
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const nowTime = new Date().toTimeString().slice(0, 5);
+
   // Form State
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -52,8 +55,9 @@ export function NewAppointmentModal() {
   const [carModelId, setCarModelId] = useState('');
   const [maintenanceTypeId, setMaintenanceTypeId] = useState('');
   const [branchId, setBranchId] = useState(defaultBranch);
-  const [date, setDate] = useState(prefillSlot?.date || selectedDate);
-  const [startTime, setStartTime] = useState(prefillSlot?.time || '09:00');
+  const [date, setDate] = useState(prefillSlot?.date || (selectedDate < todayStr ? todayStr : selectedDate));
+  const initialSlot = prefillSlot?.time || (date === todayStr ? (TIME_SLOTS.find((s) => s >= nowTime) || '09:00') : '09:00');
+  const [startTime, setStartTime] = useState(initialSlot);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -65,29 +69,28 @@ export function NewAppointmentModal() {
       if (prefillSlot.time) setStartTime(prefillSlot.time);
     } else {
       setBranchId(selectedBranchId !== 'ALL' ? selectedBranchId : branches[0]?.id || '');
-      setDate(selectedDate);
+      setDate(selectedDate < todayStr ? todayStr : selectedDate);
     }
-  }, [prefillSlot, selectedBranchId, selectedDate, branches]);
+  }, [prefillSlot, selectedBranchId, selectedDate, branches, todayStr]);
 
   useEffect(() => {
-    if (!carModelId && carModels.length > 0) {
-      setCarModelId(carModels[0]!.id);
+    if (date === todayStr && startTime < nowTime) {
+      const next = TIME_SLOTS.find((s) => s >= nowTime);
+      if (next) setStartTime(next);
     }
+  }, [date, todayStr, nowTime, startTime]);
+
+  useEffect(() => {
+    if (!carModelId && carModels.length > 0) setCarModelId(carModels[0]!.id);
   }, [carModels, carModelId]);
 
   useEffect(() => {
-    if (!maintenanceTypeId && maintenanceTypes.length > 0) {
-      setMaintenanceTypeId(maintenanceTypes[0]!.id);
-    }
+    if (!maintenanceTypeId && maintenanceTypes.length > 0) setMaintenanceTypeId(maintenanceTypes[0]!.id);
   }, [maintenanceTypes, maintenanceTypeId]);
 
   const selectedHour = startTime.split(':')[0] || '09';
   const hourBookedCount = appointments.filter(
-    (a) =>
-      a.branchId === branchId &&
-      a.date === date &&
-      a.status !== 'CANCELLED' &&
-      a.startTime.startsWith(selectedHour),
+    (a) => (a.serviceCenterId === branchId || a.branchId === branchId) && a.date.slice(0, 10) === date && a.status !== 'CANCELLED' && a.startTime.startsWith(selectedHour),
   ).length;
 
   const isHourAtLimit = hourBookedCount >= 3;
@@ -95,9 +98,12 @@ export function NewAppointmentModal() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-
     if (!customerName.trim() || !customerPhone.trim()) {
       setErrorMsg(t.modal.mandatoryError);
+      return;
+    }
+    if (date < todayStr || (date === todayStr && startTime < nowTime)) {
+      setErrorMsg(t.modal.pastSlotError);
       return;
     }
 
@@ -207,6 +213,7 @@ export function NewAppointmentModal() {
               </label>
               <input
                 className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm focus:border-brand focus:outline-none"
+                min={todayStr}
                 onChange={(e) => setDate(e.target.value)}
                 type="date"
                 value={date}
@@ -229,16 +236,13 @@ export function NewAppointmentModal() {
                 {TIME_SLOTS.map((slot) => {
                   const hr = slot.split(':')[0] || '08';
                   const countInHr = appointments.filter(
-                    (a) =>
-                      a.branchId === branchId &&
-                      a.date === date &&
-                      a.status !== 'CANCELLED' &&
-                      a.startTime.startsWith(hr),
+                    (a) => (a.serviceCenterId === branchId || a.branchId === branchId) && a.date.slice(0, 10) === date && a.status !== 'CANCELLED' && a.startTime.startsWith(hr),
                   ).length;
+                  const isPast = date === todayStr && slot < nowTime;
                   const full = countInHr >= 3;
                   return (
-                    <option key={slot} value={slot}>
-                      {slot} {full ? `(${t.timeline.hourFull})` : countInHr > 0 ? `(${countInHr}/3)` : ''}
+                    <option disabled={isPast} key={slot} value={slot}>
+                      {slot} {isPast ? `(${t.modal.pastTime})` : full ? `(${t.timeline.hourFull})` : countInHr > 0 ? `(${countInHr}/3)` : ''}
                     </option>
                   );
                 })}

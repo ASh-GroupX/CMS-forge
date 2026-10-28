@@ -67,16 +67,18 @@ export function MaintenanceTypesTab({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nameEn.trim() || !nameAr.trim() || duration <= 0) {
-      toast.error('All fields are required');
+    const effectiveNameEn = nameEn.trim() || nameAr.trim();
+    const effectiveNameAr = nameAr.trim() || nameEn.trim();
+    if (!effectiveNameEn || duration <= 0) {
+      toast.error(isAr ? 'يرجى إدخال اسم نوع الصيانة' : 'Service name is required');
       return;
     }
 
     setSaving(true);
     const res = await saveMaintenanceTypeAction({
       id: editingType?.id,
-      nameEn: nameEn.trim(),
-      nameAr: nameAr.trim(),
+      nameEn: effectiveNameEn,
+      nameAr: effectiveNameAr,
       estimatedDurationMinutes: duration,
       isActive: editingType ? editingType.isActive : true,
     });
@@ -93,7 +95,7 @@ export function MaintenanceTypesTab({
       updateTypesList((prev) =>
         prev.map((m) =>
           m.id === editingType.id
-            ? { ...m, ...res.type, nameEn, nameAr, estimatedDurationMinutes: duration }
+            ? { ...m, ...res.type, nameEn: effectiveNameEn, nameAr: effectiveNameAr, estimatedDurationMinutes: duration }
             : m,
         ),
       );
@@ -102,8 +104,8 @@ export function MaintenanceTypesTab({
         ...prev,
         res.type || {
           id: `maint_${Date.now()}`,
-          nameEn,
-          nameAr,
+          nameEn: effectiveNameEn,
+          nameAr: effectiveNameAr,
           estimatedDurationMinutes: duration,
           isActive: true,
         },
@@ -214,7 +216,6 @@ export function MaintenanceTypesTab({
                 className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm"
                 onChange={(e) => setNameEn(e.target.value)}
                 placeholder="e.g. Periodic Service 10k"
-                required
                 type="text"
                 value={nameEn}
               />
@@ -229,7 +230,6 @@ export function MaintenanceTypesTab({
                 dir="rtl"
                 onChange={(e) => setNameAr(e.target.value)}
                 placeholder="مثال: صيانة دورية 10,000 كم"
-                required
                 type="text"
                 value={nameAr}
               />
@@ -255,7 +255,7 @@ export function MaintenanceTypesTab({
                 {t.modal.cancel}
               </Button>
               <Button className="bg-brand text-primary-foreground font-semibold" disabled={saving} type="submit">
-                {saving ? t.modal.saving : t.modal.save}
+                {saving ? t.modal.saving : (editingType ? t.adminSettings.saveChanges : t.adminSettings.addMaintenance)}
               </Button>
             </div>
           </form>
