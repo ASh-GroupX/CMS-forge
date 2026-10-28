@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { Car, Edit2, Plus, Search, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Car, Edit2, Plus, Search, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
 import {
   Dialog,
@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../../components/ui/dialog';
-import { saveCarModelAction } from '../../service-booking/actions';
+import { saveCarModelAction, deleteCarModelAction } from '../../service-booking/actions';
 import type { CarModel } from '../../../../lib/staff-service-bookings-api';
 import type { Locale } from '../../../../i18n/staff-shell';
 import type { ServiceBookingCopy } from '../../../../i18n/staff-service-booking';
@@ -130,6 +130,17 @@ export function CarModelsTab({
     updateCarList((prev) => prev.map((c) => (c.id === car.id ? { ...c, isActive: nextState } : c)));
   };
 
+  const handleDelete = async (car: CarModel) => {
+    if (!window.confirm(isAr ? `هل أنت متأكد من حذف ${car.brand} ${car.nameAr || car.nameEn} نهائياً؟` : `Are you sure you want to permanently delete ${car.brand} ${car.nameEn}?`)) return;
+    const res = await deleteCarModelAction(car.id);
+    if (!res.success) {
+      toast.error(res.error || (isAr ? 'فشل حذف موديل السيارة' : 'Failed to delete car model'));
+      return;
+    }
+    toast.success(isAr ? 'تم حذف موديل السيارة بنجاح' : 'Car model deleted successfully');
+    updateCarList((prev) => prev.filter((c) => c.id !== car.id));
+  };
+
   const filtered = carList.filter(
     (c) =>
       c.nameEn.toLowerCase().includes(search.toLowerCase()) ||
@@ -192,6 +203,7 @@ export function CarModelsTab({
               <button
                 className="rounded-lg p-1.5 text-content-muted hover:bg-surface-canvas hover:text-content-strong"
                 onClick={() => openEdit(car)}
+                title={isAr ? 'تعديل' : 'Edit'}
                 type="button"
               >
                 <Edit2 className="size-3.5" />
@@ -199,13 +211,18 @@ export function CarModelsTab({
               <button
                 className="rounded-lg p-1.5 text-content-muted hover:bg-surface-canvas hover:text-brand"
                 onClick={() => toggleActive(car)}
+                title={car.isActive ? (isAr ? 'تعطيل' : 'Deactivate') : (isAr ? 'تفعيل' : 'Activate')}
                 type="button"
               >
-                {car.isActive ? (
-                  <ToggleRight className="size-5 text-status-success" />
-                ) : (
-                  <ToggleLeft className="size-5 text-content-muted" />
-                )}
+                {car.isActive ? <ToggleRight className="size-5 text-status-success" /> : <ToggleLeft className="size-5 text-content-muted" />}
+              </button>
+              <button
+                className="rounded-lg p-1.5 text-content-muted hover:bg-status-error-bg hover:text-status-error"
+                onClick={() => handleDelete(car)}
+                title={isAr ? 'حذف نهائي' : 'Delete permanently'}
+                type="button"
+              >
+                <Trash2 className="size-3.5" />
               </button>
             </div>
           </div>
@@ -229,44 +246,16 @@ export function CarModelsTab({
 
           <form className="space-y-3 mt-2" onSubmit={handleSubmit}>
             <div>
-              <label className="block text-xs font-bold text-content-muted mb-1">
-                {t.adminSettings.brand}
-              </label>
-              <input
-                className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm"
-                onChange={(e) => setBrand(e.target.value)}
-                placeholder="e.g. Nissan"
-                required
-                type="text"
-                value={brand}
-              />
+              <label className="block text-xs font-bold text-content-muted mb-1">{t.adminSettings.brand}</label>
+              <input className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm" onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Nissan" required type="text" value={brand} />
             </div>
-
             <div>
-              <label className="block text-xs font-bold text-content-muted mb-1">
-                {t.adminSettings.nameEn}
-              </label>
-              <input
-                className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm"
-                onChange={(e) => setNameEn(e.target.value)}
-                placeholder="e.g. Patrol"
-                type="text"
-                value={nameEn}
-              />
+              <label className="block text-xs font-bold text-content-muted mb-1">{t.adminSettings.nameEn}</label>
+              <input className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm" onChange={(e) => setNameEn(e.target.value)} placeholder="e.g. Patrol" type="text" value={nameEn} />
             </div>
-
             <div>
-              <label className="block text-xs font-bold text-content-muted mb-1">
-                {t.adminSettings.nameAr}
-              </label>
-              <input
-                className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm"
-                dir="rtl"
-                onChange={(e) => setNameAr(e.target.value)}
-                placeholder="مثال: باترول"
-                type="text"
-                value={nameAr}
-              />
+              <label className="block text-xs font-bold text-content-muted mb-1">{t.adminSettings.nameAr}</label>
+              <input className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm" dir="rtl" onChange={(e) => setNameAr(e.target.value)} placeholder="مثال: باترول" type="text" value={nameAr} />
             </div>
 
             <div className="flex justify-end gap-2 pt-3 border-t border-line-subtle">

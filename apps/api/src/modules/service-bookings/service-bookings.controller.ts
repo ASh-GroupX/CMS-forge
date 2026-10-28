@@ -47,6 +47,12 @@ export class ServiceBookingsController {
     return this.service.upsertCarModel(dto);
   }
 
+  @Delete(['car-models/:id', 'master-data/car-models/:id'])
+  @UseGuards(SessionAuthGuard)
+  async deleteCarModel(@Param('id') id: string) {
+    return this.service.deleteCarModel(id);
+  }
+
   // ── Maintenance Types Master Data ─────────────────────────────────────────
   @Get(['maintenance-types', 'master-data/maintenance-types'])
   async listMaintenanceTypes(@Query('all') all?: string) {
@@ -58,6 +64,12 @@ export class ServiceBookingsController {
   async upsertMaintenanceType(@Body() body: unknown) {
     const dto = parseUpsertMaintenanceTypeBody(body);
     return this.service.upsertMaintenanceType(dto);
+  }
+
+  @Delete(['maintenance-types/:id', 'master-data/maintenance-types/:id'])
+  @UseGuards(SessionAuthGuard)
+  async deleteMaintenanceType(@Param('id') id: string) {
+    return this.service.deleteMaintenanceType(id);
   }
 
   // ── Booking Rules ─────────────────────────────────────────────────────────

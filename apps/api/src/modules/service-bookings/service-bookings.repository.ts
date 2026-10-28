@@ -62,10 +62,9 @@ export class ServiceBookingsRepository {
   }
 
   async deleteServiceCenter(id: string) {
-    return this.prisma.serviceCenter.update({
-      where: { id },
-      data: { isActive: false },
-    });
+    await this.prisma.serviceBookingRule.deleteMany({ where: { serviceCenterId: id } });
+    await this.prisma.serviceAppointment.updateMany({ where: { serviceCenterId: id }, data: { serviceCenterId: 'center_main' } });
+    return this.prisma.serviceCenter.delete({ where: { id } });
   }
 
   // ── Appointments ──────────────────────────────────────────────────────────
@@ -280,5 +279,15 @@ export class ServiceBookingsRepository {
     return this.prisma.serviceMaintenanceType.create({
       data: { nameEn: data.nameEn, nameAr: data.nameAr, estimatedDurationMinutes: data.estimatedDurationMinutes || 60, isActive: data.isActive ?? true },
     });
+  }
+
+  async deleteCarModel(id: string) {
+    await this.prisma.serviceAppointment.updateMany({ where: { carModelId: id }, data: { carModelId: null } });
+    return this.prisma.serviceCarModel.delete({ where: { id } });
+  }
+
+  async deleteMaintenanceType(id: string) {
+    await this.prisma.serviceAppointment.updateMany({ where: { maintenanceTypeId: id }, data: { maintenanceTypeId: null } });
+    return this.prisma.serviceMaintenanceType.delete({ where: { id } });
   }
 }

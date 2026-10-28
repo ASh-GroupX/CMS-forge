@@ -2,12 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { cookies, headers } from 'next/headers';
-import type {
-  CreateAppointmentInput,
-  DayRule,
-  ServiceAppointmentStatus,
-  UpdateAppointmentInput,
-} from '../../../lib/staff-service-bookings-api';
+import type { CreateAppointmentInput, DayRule, ServiceAppointmentStatus, UpdateAppointmentInput } from '../../../lib/staff-service-bookings-api';
 
 const API_BASE_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -253,13 +248,9 @@ export async function saveServiceCenterAction(data: {
   }
 }
 
-export async function deleteServiceCenterAction(id: string) {
+async function apiDelete(path: string) {
   try {
-    const res = await fetch(`${API_BASE_URL}/service-bookings/centers/${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-      headers: await getAuthHeaders(),
-      cache: 'no-store',
-    });
+    const res = await fetch(`${API_BASE_URL}${path}`, { method: 'DELETE', headers: await getAuthHeaders(), cache: 'no-store' });
     if (!res.ok) {
       const msg = await res.text().catch(() => '');
       return { success: false, error: parseErrorMessage(msg, res.status) };
@@ -270,6 +261,18 @@ export async function deleteServiceCenterAction(id: string) {
   } catch (err: any) {
     return { success: false, error: err?.message || 'Network error' };
   }
+}
+
+export async function deleteCarModelAction(id: string) {
+  return apiDelete(`/service-bookings/car-models/${encodeURIComponent(id)}`);
+}
+
+export async function deleteMaintenanceTypeAction(id: string) {
+  return apiDelete(`/service-bookings/maintenance-types/${encodeURIComponent(id)}`);
+}
+
+export async function deleteServiceCenterAction(id: string) {
+  return apiDelete(`/service-bookings/centers/${encodeURIComponent(id)}`);
 }
 
 export async function initWeekRulesAction(centerId: string) {

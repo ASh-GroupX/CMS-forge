@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { Building2, Plus, Edit2, Trash2, CheckCircle2, Phone, MapPin } from 'lucide-react';
+import { Building2, Plus, Edit2, Trash2, CheckCircle2, AlertCircle, Phone, MapPin, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
 import { ServiceCenterDialog } from './service-center-dialog';
 import { saveServiceCenterAction, deleteServiceCenterAction } from '../../service-booking/actions';
@@ -65,9 +65,8 @@ export function ServiceCentersTab({
     setLoading(true);
     setApiError(null);
     const body = {
-      ...(editingCenter ? { id: editingCenter.id } : {}),
+      ...(editingCenter ? { id: editingCenter.id, isActive: editingCenter.isActive } : { isActive: true }),
       ...payload,
-      isActive: true,
     };
 
     const res = await saveServiceCenterAction(body);
@@ -95,18 +94,41 @@ export function ServiceCentersTab({
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm(isAr ? 'هل أنت متأكد من تعطيل هذا المركز؟' : 'Are you sure you want to deactivate this service center?')) {
+  const toggleActive = async (center: ServiceCenter) => {
+    const nextState = !center.isActive;
+    const res = await saveServiceCenterAction({
+      id: center.id,
+      code: center.code,
+      nameEn: center.nameEn,
+      nameAr: center.nameAr,
+      address: center.address ?? undefined,
+      phone: center.phone ?? undefined,
+      isActive: nextState,
+    });
+    if (!res.success) {
+      toast.error(res.error || (isAr ? 'فشل تغيير حالة مركز الخدمة' : 'Failed to update service center status'));
+      return;
+    }
+    toast.success(
+      isAr
+        ? (nextState ? 'تم تفعيل مركز الخدمة' : 'تم تعطيل مركز الخدمة')
+        : (nextState ? 'Service center activated' : 'Service center deactivated')
+    );
+    updateCenterList((prev) => prev.map((c) => (c.id === center.id ? { ...c, isActive: nextState } : c)));
+  };
+
+  const handleDelete = async (center: ServiceCenter) => {
+    if (!window.confirm(isAr ? `هل أنت متأكد من حذف مركز الخدمة "${center.nameAr || center.nameEn}" نهائياً؟` : `Are you sure you want to permanently delete service center "${center.nameEn}"?`)) {
       return;
     }
 
-    const res = await deleteServiceCenterAction(id);
+    const res = await deleteServiceCenterAction(center.id);
     if (!res.success) {
-      toast.error(res.error || 'Failed to deactivate service center');
+      toast.error(res.error || (isAr ? 'فشل حذف مركز الخدمة' : 'Failed to delete service center'));
       return;
     }
-    toast.success(isAr ? 'تم تعطيل مركز الخدمة' : 'Service center deactivated');
-    updateCenterList((prev) => prev.filter((c) => c.id !== id));
+    toast.success(isAr ? 'تم حذف مركز الخدمة نهائياً' : 'Service center deleted permanently');
+    updateCenterList((prev) => prev.filter((c) => c.id !== center.id));
   };
 
   return (
@@ -136,7 +158,9 @@ export function ServiceCentersTab({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {centerList.map((center) => (
           <div
-            className="flex flex-col justify-between rounded-2xl border border-line-subtle bg-surface p-5 shadow-xs transition-shadow hover:shadow-md"
+            className={`flex flex-col justify-between rounded-2xl border p-5 shadow-xs transition-shadow hover:shadow-md ${
+              center.isActive ? 'border-line-subtle bg-surface' : 'border-line-subtle/50 bg-surface-canvas/40 opacity-70'
+            }`}
             key={center.id}
           >
             <div className="space-y-3">
@@ -151,10 +175,17 @@ export function ServiceCentersTab({
                   </div>
                 </div>
 
-                <span className="inline-flex items-center gap-1 rounded-full bg-status-success-bg px-2 py-0.5 text-[10px] font-bold text-status-success">
-                  <CheckCircle2 className="size-3" />
-                  <span>{isAr ? 'نشط' : 'Active'}</span>
-                </span>
+                {center.isActive ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-status-success-bg px-2 py-0.5 text-[10px] font-bold text-status-success">
+                    <CheckCircle2 className="size-3" />
+                    <span>{isAr ? 'نشط' : 'Active'}</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-status-warning-bg/40 px-2 py-0.5 text-[10px] font-bold text-status-warning">
+                    <AlertCircle className="size-3" />
+                    <span>{isAr ? 'معطل' : 'Inactive'}</span>
+                  </span>
+                )}
               </div>
 
               <div className="rounded-xl bg-surface-canvas/60 p-3 text-xs space-y-1.5">
@@ -177,7 +208,7 @@ export function ServiceCentersTab({
               </div>
             </div>
 
-            <div className="mt-4 flex items-center justify-end gap-2 border-t border-line-subtle/60 pt-3">
+            <div className="mt-4 flex items-center justify-end gap-1.5 border-t border-line-subtle/60 pt-3">
               <Button
                 className="flex items-center gap-1 rounded-xl text-xs"
                 onClick={() => openEditDialog(center)}
@@ -188,13 +219,31 @@ export function ServiceCentersTab({
                 <span>{isAr ? 'تعديل' : 'Edit'}</span>
               </Button>
               <Button
+                className="flex items-center gap-1 rounded-xl text-xs"
+                onClick={() => toggleActive(center)}
+                size="sm"
+                variant="ghost"
+              >
+                {center.isActive ? (
+                  <>
+                    <ToggleRight className="size-4 text-status-success" />
+                    <span className="text-content-muted">{isAr ? 'تعطيل' : 'Deactivate'}</span>
+                  </>
+                ) : (
+                  <>
+                    <ToggleLeft className="size-4 text-content-muted" />
+                    <span className="text-brand">{isAr ? 'تفعيل' : 'Activate'}</span>
+                  </>
+                )}
+              </Button>
+              <Button
                 className="flex items-center gap-1 rounded-xl text-xs text-status-error hover:bg-status-error-bg hover:text-status-error"
-                onClick={() => handleDelete(center.id)}
+                onClick={() => handleDelete(center)}
                 size="sm"
                 variant="ghost"
               >
                 <Trash2 className="size-3" />
-                <span>{isAr ? 'حذف' : 'Deactivate'}</span>
+                <span>{isAr ? 'حذف' : 'Delete'}</span>
               </Button>
             </div>
           </div>

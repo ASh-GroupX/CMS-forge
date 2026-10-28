@@ -202,17 +202,14 @@ export class ServiceBookingsService {
 
   // ── Service Centers ───────────────────────────────────────────────────────
   async getServiceCenters(activeOnly = true) {
-    let centers = await this.repository.listServiceCenters(activeOnly);
-    const defaultCenters = [
-      { id: 'center_main', code: 'MAIN_CENTER', nameEn: 'AMMAN Service Center', nameAr: 'مركز صيانة عمان', isActive: true },
-      { id: 'center_north', code: 'NORTH_CENTER', nameEn: 'North Service Center', nameAr: 'مركز صيانة الشمال', isActive: true },
-    ];
-    const missingDefaults = defaultCenters.filter(
-      (def) => !centers.some((c) => c.id === def.id || c.code === def.code),
-    );
-    if (missingDefaults.length > 0) {
-      await Promise.all(missingDefaults.map((c) => this.repository.upsertServiceCenter(c).catch(() => null)));
-      centers = await this.repository.listServiceCenters(activeOnly);
+    const centers = await this.repository.listServiceCenters(activeOnly);
+    if (centers.length === 0 && !activeOnly) {
+      const defaultCenters = [
+        { id: 'center_main', code: 'MAIN_CENTER', nameEn: 'AMMAN Service Center', nameAr: 'مركز صيانة عمان', isActive: true },
+        { id: 'center_north', code: 'NORTH_CENTER', nameEn: 'North Service Center', nameAr: 'مركز صيانة الشمال', isActive: true },
+      ];
+      await Promise.all(defaultCenters.map((c) => this.repository.upsertServiceCenter(c).catch(() => null)));
+      return this.repository.listServiceCenters(activeOnly);
     }
     return centers;
   }
@@ -235,13 +232,10 @@ export class ServiceBookingsService {
 
   // ── Master Data ───────────────────────────────────────────────────────────
   async getCarModels(activeOnly = true) {
-    let models = await this.repository.listCarModels(activeOnly);
-    const missingDefaults = DEFAULT_CAR_MODELS.filter(
-      (def) => !models.some((m) => m.id === def.id || (m.nameEn.toLowerCase() === def.nameEn.toLowerCase() && m.brand === def.brand)),
-    );
-    if (missingDefaults.length > 0) {
-      await Promise.all(missingDefaults.map((d) => this.repository.upsertCarModel(d).catch(() => null)));
-      models = await this.repository.listCarModels(activeOnly);
+    const models = await this.repository.listCarModels(activeOnly);
+    if (models.length === 0 && !activeOnly) {
+      await Promise.all(DEFAULT_CAR_MODELS.map((d) => this.repository.upsertCarModel(d).catch(() => null)));
+      return this.repository.listCarModels(activeOnly);
     }
     return models;
   }
@@ -250,20 +244,25 @@ export class ServiceBookingsService {
     return this.repository.upsertCarModel(data);
   }
 
+  async deleteCarModel(id: string) {
+    return this.repository.deleteCarModel(id);
+  }
+
   async getMaintenanceTypes(activeOnly = true) {
-    let types = await this.repository.listMaintenanceTypes(activeOnly);
-    const missingDefaults = DEFAULT_MAINTENANCE_TYPES.filter(
-      (def) => !types.some((t) => t.id === def.id || t.nameEn.toLowerCase() === def.nameEn.toLowerCase()),
-    );
-    if (missingDefaults.length > 0) {
-      await Promise.all(missingDefaults.map((d) => this.repository.upsertMaintenanceType(d).catch(() => null)));
-      types = await this.repository.listMaintenanceTypes(activeOnly);
+    const types = await this.repository.listMaintenanceTypes(activeOnly);
+    if (types.length === 0 && !activeOnly) {
+      await Promise.all(DEFAULT_MAINTENANCE_TYPES.map((d) => this.repository.upsertMaintenanceType(d).catch(() => null)));
+      return this.repository.listMaintenanceTypes(activeOnly);
     }
     return types;
   }
 
   async upsertMaintenanceType(data: { id?: string | undefined; nameEn: string; nameAr: string; estimatedDurationMinutes?: number | undefined; isActive?: boolean | undefined }) {
     return this.repository.upsertMaintenanceType(data);
+  }
+
+  async deleteMaintenanceType(id: string) {
+    return this.repository.deleteMaintenanceType(id);
   }
 
   // ── Private Helpers ───────────────────────────────────────────────────────

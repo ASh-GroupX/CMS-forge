@@ -55,3 +55,31 @@ test('service-bookings controller delegates listServiceCenters to service withou
   assert.equal(result.length, 1);
   assert.equal(result[0]!.id, 'center_1');
 });
+
+test('service-bookings controller delegates deleteCarModel to service', async () => {
+  let deletedId: string | null = null;
+  const mockService = {
+    deleteCarModel: async (id: string) => {
+      deletedId = id;
+      return { id };
+    },
+  } as unknown as ServiceBookingsService;
+
+  const controller = new ServiceBookingsController(mockService);
+  await controller.deleteCarModel('car_test');
+  assert.equal(deletedId, 'car_test');
+});
+
+test('service-bookings controller delegates deleteMaintenanceType to service', async () => {
+  let deletedId: string | null = null;
+  const mockService = {
+    deleteMaintenanceType: async (id: string) => {
+      deletedId = id;
+      return { id };
+    },
+  } as unknown as ServiceBookingsService;
+
+  const controller = new ServiceBookingsController(mockService);
+  await controller.deleteMaintenanceType('maint_test');
+  assert.equal(deletedId, 'maint_test');
+});

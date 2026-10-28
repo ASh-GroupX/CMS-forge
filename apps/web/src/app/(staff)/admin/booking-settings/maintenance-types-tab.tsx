@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { Clock, Edit2, Plus, ToggleLeft, ToggleRight, Wrench } from 'lucide-react';
+import { Clock, Edit2, Plus, ToggleLeft, ToggleRight, Trash2, Wrench } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
 import {
   Dialog,
@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../../components/ui/dialog';
-import { saveMaintenanceTypeAction } from '../../service-booking/actions';
+import { saveMaintenanceTypeAction, deleteMaintenanceTypeAction } from '../../service-booking/actions';
 import type { MaintenanceType } from '../../../../lib/staff-service-bookings-api';
 import type { Locale } from '../../../../i18n/staff-shell';
 import type { ServiceBookingCopy } from '../../../../i18n/staff-service-booking';
@@ -138,6 +138,17 @@ export function MaintenanceTypesTab({
     updateTypesList((prev) => prev.map((item) => (item.id === m.id ? { ...item, isActive: nextState } : item)));
   };
 
+  const handleDelete = async (m: MaintenanceType) => {
+    if (!window.confirm(isAr ? `هل أنت متأكد من حذف ${m.nameAr || m.nameEn} نهائياً؟` : `Are you sure you want to permanently delete ${m.nameEn}?`)) return;
+    const res = await deleteMaintenanceTypeAction(m.id);
+    if (!res.success) {
+      toast.error(res.error || (isAr ? 'فشل حذف نوع الصيانة' : 'Failed to delete maintenance type'));
+      return;
+    }
+    toast.success(isAr ? 'تم حذف نوع الصيانة بنجاح' : 'Maintenance type deleted successfully');
+    updateTypesList((prev) => prev.filter((item) => item.id !== m.id));
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -185,6 +196,7 @@ export function MaintenanceTypesTab({
               <button
                 className="rounded-lg p-1.5 text-content-muted hover:bg-surface-canvas hover:text-content-strong"
                 onClick={() => openEdit(m)}
+                title={isAr ? 'تعديل' : 'Edit'}
                 type="button"
               >
                 <Edit2 className="size-3.5" />
@@ -192,13 +204,18 @@ export function MaintenanceTypesTab({
               <button
                 className="rounded-lg p-1.5 text-content-muted hover:bg-surface-canvas hover:text-brand"
                 onClick={() => toggleActive(m)}
+                title={m.isActive ? (isAr ? 'تعطيل' : 'Deactivate') : (isAr ? 'تفعيل' : 'Activate')}
                 type="button"
               >
-                {m.isActive ? (
-                  <ToggleRight className="size-5 text-status-success" />
-                ) : (
-                  <ToggleLeft className="size-5 text-content-muted" />
-                )}
+                {m.isActive ? <ToggleRight className="size-5 text-status-success" /> : <ToggleLeft className="size-5 text-content-muted" />}
+              </button>
+              <button
+                className="rounded-lg p-1.5 text-content-muted hover:bg-status-error-bg hover:text-status-error"
+                onClick={() => handleDelete(m)}
+                title={isAr ? 'حذف نهائي' : 'Delete permanently'}
+                type="button"
+              >
+                <Trash2 className="size-3.5" />
               </button>
             </div>
           </div>
@@ -222,45 +239,16 @@ export function MaintenanceTypesTab({
 
           <form className="space-y-3 mt-2" onSubmit={handleSubmit}>
             <div>
-              <label className="block text-xs font-bold text-content-muted mb-1">
-                {t.adminSettings.nameEn}
-              </label>
-              <input
-                className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm"
-                onChange={(e) => setNameEn(e.target.value)}
-                placeholder="e.g. Periodic Service 10k"
-                type="text"
-                value={nameEn}
-              />
+              <label className="block text-xs font-bold text-content-muted mb-1">{t.adminSettings.nameEn}</label>
+              <input className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm" onChange={(e) => setNameEn(e.target.value)} placeholder="e.g. Periodic Service 10k" type="text" value={nameEn} />
             </div>
-
             <div>
-              <label className="block text-xs font-bold text-content-muted mb-1">
-                {t.adminSettings.nameAr}
-              </label>
-              <input
-                className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm"
-                dir="rtl"
-                onChange={(e) => setNameAr(e.target.value)}
-                placeholder="مثال: صيانة دورية 10,000 كم"
-                type="text"
-                value={nameAr}
-              />
+              <label className="block text-xs font-bold text-content-muted mb-1">{t.adminSettings.nameAr}</label>
+              <input className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm" dir="rtl" onChange={(e) => setNameAr(e.target.value)} placeholder="مثال: صيانة دورية 10,000 كم" type="text" value={nameAr} />
             </div>
-
             <div>
-              <label className="block text-xs font-bold text-content-muted mb-1">
-                {t.adminSettings.durationMinutes}
-              </label>
-              <input
-                className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm"
-                min={15}
-                onChange={(e) => setDuration(Number(e.target.value))}
-                required
-                step={15}
-                type="number"
-                value={duration}
-              />
+              <label className="block text-xs font-bold text-content-muted mb-1">{t.adminSettings.durationMinutes}</label>
+              <input className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm" min={15} onChange={(e) => setDuration(Number(e.target.value))} required step={15} type="number" value={duration} />
             </div>
 
             <div className="flex justify-end gap-2 pt-3 border-t border-line-subtle">
