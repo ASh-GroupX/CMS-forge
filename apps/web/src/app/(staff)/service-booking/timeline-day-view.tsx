@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Clock, Plus, User, Wrench } from 'lucide-react';
 import { useServiceBooking } from './service-booking-context';
 import type { ServiceAppointment } from '../../../lib/staff-service-bookings-api';
@@ -22,24 +22,68 @@ export function TimelineDayView() {
   } = useServiceBooking();
 
   const isAr = locale === 'ar';
-  const isToday = selectedDate === new Date().toISOString().slice(0, 10);
-  const [currentMinutes, setCurrentMinutes] = useState<number | null>(null);
+  const todayLocal = new Date().toLocaleDateString('en-CA');
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const isToday = selectedDate === todayLocal || selectedDate === todayIso;
+
+  const timelineContainerRef = useRef<HTMLDivElement>(null);
+  const [markerTop, setMarkerTop] = useState<number | null>(null);
+  const [formattedNowTime, setFormattedNowTime] = useState<string>('');
+
+  const updateMarkerPosition = useCallback(() => {
+    const now = new Date();
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+
+    // Timeline displays hours 8 to 17 (ends at 18:00)
+    if (hour < 8 || hour > 18 || (hour === 18 && minute > 0)) {
+      setMarkerTop(null);
+      return;
+    }
+
+    const timeStr = now.toLocaleTimeString(isAr ? 'ar-JO' : 'en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+    setFormattedNowTime(timeStr);
+
+    const container = timelineContainerRef.current;
+    if (!container) return;
+
+    if (hour === 18) {
+      const lastRow = container.querySelector('[data-hour="17"]') as HTMLElement | null;
+      if (lastRow) {
+        setMarkerTop(lastRow.offsetTop + lastRow.offsetHeight);
+      }
+      return;
+    }
+
+    const rowEl = container.querySelector(`[data-hour="${hour}"]`) as HTMLElement | null;
+    if (rowEl) {
+      const top = rowEl.offsetTop + (minute / 60) * rowEl.offsetHeight;
+      setMarkerTop(Math.round(top));
+    }
+  }, [isAr]);
 
   useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      const mins = now.getHours() * 60 + now.getMinutes();
-      // Only show between 08:00 and 18:00
-      if (mins >= 8 * 60 && mins <= 18 * 60) {
-        setCurrentMinutes(mins);
-      } else {
-        setCurrentMinutes(null);
-      }
+    updateMarkerPosition();
+    const interval = setInterval(updateMarkerPosition, 30000);
+
+    const container = timelineContainerRef.current;
+    let observer: ResizeObserver | null = null;
+    if (container && typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => {
+        updateMarkerPosition();
+      });
+      observer.observe(container);
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (observer) observer.disconnect();
     };
-    updateTime();
-    const interval = setInterval(updateTime, 60000);
-    return () => clearInterval(interval);
-  }, []);
+  }, [updateMarkerPosition, appointments, selectedBranchId]);
 
   const activeBranches =
     selectedBranchId === 'ALL'
@@ -71,19 +115,19 @@ export function TimelineDayView() {
       </div>
 
       {/* Timeline Grid */}
-      <div className="relative divide-y divide-line-subtle/70 overflow-x-auto">
+      <div ref={timelineContainerRef} className="relative divide-y divide-line-subtle/70 overflow-x-auto">
         {/* Live Red Current Time Marker */}
-        {isToday && currentMinutes !== null && (
+        {isToday && markerTop !== null && (
           <div
-            className="pointer-events-none absolute inset-x-0 z-30 flex items-center"
+            className="pointer-events-none absolute inset-x-0 z-30 flex -translate-y-1/2 items-center transition-[top] duration-300 ease-out"
             style={{
-              top: `${((currentMinutes - 8 * 60) / 60) * 112 + 4}px`, // 112px per hour
+              top: `${markerTop}px`,
             }}
           >
-            <div className="size-2.5 rounded-full bg-rose-500 ring-4 ring-rose-500/25 -ms-1" />
+            <div className="size-3 rounded-full bg-rose-500 ring-4 ring-rose-500/25 -ms-1.5 shadow-sm" />
             <div className="h-0.5 flex-1 bg-rose-500 shadow-sm" />
-            <span className="rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm me-2">
-              {t.timeline.now}
+            <span className="rounded bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm me-2 whitespace-nowrap">
+              {t.timeline.now}{formattedNowTime ? ` • ${formattedNowTime}` : ''}
             </span>
           </div>
         )}
@@ -91,7 +135,7 @@ export function TimelineDayView() {
         {HOURS.map((hour) => {
           const hourKey = `${String(hour).padStart(2, '0')}:00`;
           return (
-            <div className="grid grid-cols-[4.5rem_1fr] min-h-[7rem]" key={hour}>
+            <div className="grid grid-cols-[4.5rem_1fr] min-h-[7rem]" key={hour} data-hour={hour}>
               {/* Hour Label */}
               <div className="border-e border-line-subtle/80 bg-surface-canvas/30 p-2 text-center text-xs font-semibold text-content-muted">
                 {hourKey}
