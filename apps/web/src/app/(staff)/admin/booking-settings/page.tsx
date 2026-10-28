@@ -27,21 +27,22 @@ export default async function BookingSettingsAdminPage({
   const locale = resolveLocale(params?.locale || requestHeaders.get('x-cms-locale') || undefined);
   const t = serviceBookingText[locale] || serviceBookingText.en;
 
-  const centers = await fetchServiceCenters(false, cookieHeader).catch(() => [] as ServiceCenter[]);
-
-  // Fetch data in parallel with forwarded cookie header
-  const [carModels, maintenanceTypes, ...rulesLists] = await Promise.all([
+  const [centers, carModels, maintenanceTypes] = await Promise.all([
+    fetchServiceCenters(false, cookieHeader).catch(() => [] as ServiceCenter[]),
     fetchCarModels(false, cookieHeader).catch(() => [] as CarModel[]),
     fetchMaintenanceTypes(false, cookieHeader).catch(() => [] as MaintenanceType[]),
-    ...centers.map((c) => fetchBranchRules(c.id, cookieHeader).catch(() => [] as DayRule[])),
   ]);
 
-  const effectiveCenters: ServiceCenter[] = centers.length > 0 ? centers : [
+  const defaultCenters: ServiceCenter[] = [
     { id: 'center_main', code: 'MAIN_CENTER', nameEn: 'AMMAN Service Center', nameAr: 'مركز صيانة عمان', isActive: true },
     { id: 'center_north', code: 'NORTH_CENTER', nameEn: 'North Service Center', nameAr: 'مركز صيانة الشمال', isActive: true },
   ];
+  const effectiveCenters: ServiceCenter[] = [
+    ...centers,
+    ...defaultCenters.filter((def) => !centers.some((c) => c.id === def.id || c.code === def.code)),
+  ];
 
-  const effectiveCarModels: CarModel[] = carModels.length > 0 ? carModels : [
+  const defaultCarModels: CarModel[] = [
     { id: 'car_tiggo8_pro', nameEn: 'Chery Tiggo 8 Pro', nameAr: 'شيري تيجو 8 برو', brand: 'Chery', isActive: true },
     { id: 'car_tiggo7_pro', nameEn: 'Chery Tiggo 7 Pro', nameAr: 'شيري تيجو 7 برو', brand: 'Chery', isActive: true },
     { id: 'car_tiggo4_pro', nameEn: 'Chery Tiggo 4 Pro', nameAr: 'شيري تيجو 4 برو', brand: 'Chery', isActive: true },
@@ -49,8 +50,12 @@ export default async function BookingSettingsAdminPage({
     { id: 'car_model_patrol', nameEn: 'Nissan Patrol', nameAr: 'نيسان باترول', brand: 'Nissan', isActive: true },
     { id: 'car_model_sunny', nameEn: 'Nissan Sunny', nameAr: 'نيسان صني', brand: 'Nissan', isActive: true },
   ];
+  const effectiveCarModels: CarModel[] = [
+    ...carModels,
+    ...defaultCarModels.filter((def) => !carModels.some((c) => c.id === def.id || (c.nameEn.toLowerCase() === def.nameEn.toLowerCase() && c.brand === def.brand))),
+  ];
 
-  const effectiveMaintenanceTypes: MaintenanceType[] = maintenanceTypes.length > 0 ? maintenanceTypes : [
+  const defaultMaintenanceTypes: MaintenanceType[] = [
     { id: 'maint_periodic_10k', nameEn: 'Periodic Maintenance 10,000 km', nameAr: 'صيانة دورية 10,000 كم', estimatedDurationMinutes: 30, isActive: true },
     { id: 'maint_periodic_20k', nameEn: 'Periodic Maintenance 20,000 km', nameAr: 'صيانة دورية 20,000 كم', estimatedDurationMinutes: 45, isActive: true },
     { id: 'maint_periodic_40k', nameEn: 'Periodic Maintenance 40,000 km', nameAr: 'صيانة دورية 40,000 كم', estimatedDurationMinutes: 60, isActive: true },
@@ -58,6 +63,14 @@ export default async function BookingSettingsAdminPage({
     { id: 'maint_brake_pads', nameEn: 'Brake Pads & Discs Service', nameAr: 'فحص واستبدال فحمات وفرامل', estimatedDurationMinutes: 45, isActive: true },
     { id: 'maint_general_check', nameEn: 'Comprehensive Inspection', nameAr: 'فحص شامل وفحص كمبيوتر', estimatedDurationMinutes: 60, isActive: true },
   ];
+  const effectiveMaintenanceTypes: MaintenanceType[] = [
+    ...maintenanceTypes,
+    ...defaultMaintenanceTypes.filter((def) => !maintenanceTypes.some((m) => m.id === def.id || m.nameEn.toLowerCase() === def.nameEn.toLowerCase())),
+  ];
+
+  const rulesLists = await Promise.all(
+    effectiveCenters.map((c) => fetchBranchRules(c.id, cookieHeader).catch(() => [] as DayRule[])),
+  );
 
   const rulesByBranch: Record<string, DayRule[]> = {};
   effectiveCenters.forEach((c, idx) => {

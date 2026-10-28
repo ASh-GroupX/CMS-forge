@@ -4,17 +4,10 @@ import { ServiceBookingsRepository } from './service-bookings.repository.js';
 import type { CreateServiceAppointmentDto } from './dto/create-service-appointment.dto.js';
 import type { UpdateServiceAppointmentDto } from './dto/update-service-appointment.dto.js';
 import type { DayRuleInput } from './dto/service-booking-rules.dto.js';
-import type {
-  DayAvailabilityDto,
-  ServiceAppointmentDto,
-} from './dto/service-booking-response.dto.js';
+import type { DayAvailabilityDto, ServiceAppointmentDto } from './dto/service-booking-response.dto.js';
 import {
-  DEFAULT_CAR_MODELS,
-  DEFAULT_DAY_RULES,
-  DEFAULT_MAINTENANCE_TYPES,
-  buildDayAvailability,
-  calculateEndTime,
-  mapAppointment,
+  DEFAULT_CAR_MODELS, DEFAULT_DAY_RULES, DEFAULT_MAINTENANCE_TYPES,
+  buildDayAvailability, calculateEndTime, mapAppointment,
 } from './service-bookings.utils.js';
 
 export { DEFAULT_DAY_RULES };
@@ -24,19 +17,11 @@ export class ServiceBookingsService {
   constructor(private readonly repository: ServiceBookingsRepository) {}
 
   // ── Appointments ──────────────────────────────────────────────────────────
-  async listAppointments(params: {
-    branchId?: string | undefined;
-    fromDate?: string | undefined;
-    toDate?: string | undefined;
-    status?: string | undefined;
-  }): Promise<ServiceAppointmentDto[]> {
+  async listAppointments(params: { branchId?: string | undefined; fromDate?: string | undefined; toDate?: string | undefined; status?: string | undefined }): Promise<ServiceAppointmentDto[]> {
     const fromDate = params.fromDate ? new Date(`${params.fromDate}T00:00:00Z`) : undefined;
     const toDate = params.toDate ? new Date(`${params.toDate}T23:59:59Z`) : undefined;
     const records = await this.repository.findAppointments({
-      branchId: params.branchId,
-      fromDate,
-      toDate,
-      status: params.status as ServiceAppointmentStatus | undefined,
+      branchId: params.branchId, fromDate, toDate, status: params.status as ServiceAppointmentStatus | undefined,
     });
     return records.map((r) => mapAppointment(r));
   }
@@ -51,12 +36,8 @@ export class ServiceBookingsService {
   async getAppointmentHistory(id: string) {
     const records = await this.repository.findAppointmentHistory(id);
     return records.map((r: any) => ({
-      id: r.id,
-      action: r.action,
-      actorName: r.actor ? (r.actor.nameEn || r.actor.nameAr) : null,
-      actorEmail: r.actor?.email ?? null,
-      createdAt: r.createdAt.toISOString(),
-      metadata: r.metadata,
+      id: r.id, action: r.action, actorName: r.actor ? (r.actor.nameEn || r.actor.nameAr) : null,
+      actorEmail: r.actor?.email ?? null, createdAt: r.createdAt.toISOString(), metadata: r.metadata,
     }));
   }
 
@@ -237,9 +218,15 @@ export class ServiceBookingsService {
   // ── Service Centers ───────────────────────────────────────────────────────
   async getServiceCenters(activeOnly = true) {
     let centers = await this.repository.listServiceCenters(activeOnly);
-    if (centers.length === 0) {
-      await this.repository.upsertServiceCenter({ id: 'center_main', code: 'MAIN_CENTER', nameEn: 'AMMAN Service Center', nameAr: 'مركز صيانة عمان', isActive: true });
-      await this.repository.upsertServiceCenter({ id: 'center_north', code: 'NORTH_CENTER', nameEn: 'North Service Center', nameAr: 'مركز صيانة الشمال', isActive: true });
+    const defaultCenters = [
+      { id: 'center_main', code: 'MAIN_CENTER', nameEn: 'AMMAN Service Center', nameAr: 'مركز صيانة عمان', isActive: true },
+      { id: 'center_north', code: 'NORTH_CENTER', nameEn: 'North Service Center', nameAr: 'مركز صيانة الشمال', isActive: true },
+    ];
+    const missingDefaults = defaultCenters.filter(
+      (def) => !centers.some((c) => c.id === def.id || c.code === def.code),
+    );
+    if (missingDefaults.length > 0) {
+      await Promise.all(missingDefaults.map((c) => this.repository.upsertServiceCenter(c).catch(() => null)));
       centers = await this.repository.listServiceCenters(activeOnly);
     }
     return centers;
@@ -264,8 +251,11 @@ export class ServiceBookingsService {
   // ── Master Data ───────────────────────────────────────────────────────────
   async getCarModels(activeOnly = true) {
     let models = await this.repository.listCarModels(activeOnly);
-    if (models.length === 0) {
-      await Promise.all(DEFAULT_CAR_MODELS.map((d) => this.repository.upsertCarModel(d).catch(() => null)));
+    const missingDefaults = DEFAULT_CAR_MODELS.filter(
+      (def) => !models.some((m) => m.id === def.id || (m.nameEn.toLowerCase() === def.nameEn.toLowerCase() && m.brand === def.brand)),
+    );
+    if (missingDefaults.length > 0) {
+      await Promise.all(missingDefaults.map((d) => this.repository.upsertCarModel(d).catch(() => null)));
       models = await this.repository.listCarModels(activeOnly);
     }
     return models;
@@ -277,8 +267,11 @@ export class ServiceBookingsService {
 
   async getMaintenanceTypes(activeOnly = true) {
     let types = await this.repository.listMaintenanceTypes(activeOnly);
-    if (types.length === 0) {
-      await Promise.all(DEFAULT_MAINTENANCE_TYPES.map((d) => this.repository.upsertMaintenanceType(d).catch(() => null)));
+    const missingDefaults = DEFAULT_MAINTENANCE_TYPES.filter(
+      (def) => !types.some((t) => t.id === def.id || t.nameEn.toLowerCase() === def.nameEn.toLowerCase()),
+    );
+    if (missingDefaults.length > 0) {
+      await Promise.all(missingDefaults.map((d) => this.repository.upsertMaintenanceType(d).catch(() => null)));
       types = await this.repository.listMaintenanceTypes(activeOnly);
     }
     return types;

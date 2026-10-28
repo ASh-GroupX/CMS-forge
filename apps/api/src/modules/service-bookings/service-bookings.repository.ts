@@ -250,9 +250,10 @@ export class ServiceBookingsRepository {
 
   async upsertCarModel(data: { id?: string | undefined; nameEn: string; nameAr: string; brand?: string | undefined; isActive?: boolean | undefined }) {
     if (data.id) {
-      return this.prisma.serviceCarModel.update({
+      return this.prisma.serviceCarModel.upsert({
         where: { id: data.id },
-        data: { nameEn: data.nameEn, nameAr: data.nameAr, ...(data.brand ? { brand: data.brand } : {}), ...(data.isActive !== undefined ? { isActive: data.isActive } : {}) },
+        update: { nameEn: data.nameEn, nameAr: data.nameAr, ...(data.brand ? { brand: data.brand } : {}), ...(data.isActive !== undefined ? { isActive: data.isActive } : {}) },
+        create: { id: data.id, nameEn: data.nameEn, nameAr: data.nameAr, brand: data.brand || 'Nissan', isActive: data.isActive ?? true },
       });
     }
     return this.prisma.serviceCarModel.create({
@@ -270,9 +271,10 @@ export class ServiceBookingsRepository {
 
   async upsertMaintenanceType(data: { id?: string | undefined; nameEn: string; nameAr: string; estimatedDurationMinutes?: number | undefined; isActive?: boolean | undefined }) {
     if (data.id) {
-      return this.prisma.serviceMaintenanceType.update({
+      return this.prisma.serviceMaintenanceType.upsert({
         where: { id: data.id },
-        data: { nameEn: data.nameEn, nameAr: data.nameAr, ...(data.estimatedDurationMinutes !== undefined ? { estimatedDurationMinutes: data.estimatedDurationMinutes } : {}), ...(data.isActive !== undefined ? { isActive: data.isActive } : {}) },
+        update: { nameEn: data.nameEn, nameAr: data.nameAr, ...(data.estimatedDurationMinutes !== undefined ? { estimatedDurationMinutes: data.estimatedDurationMinutes } : {}), ...(data.isActive !== undefined ? { isActive: data.isActive } : {}) },
+        create: { id: data.id, nameEn: data.nameEn, nameAr: data.nameAr, estimatedDurationMinutes: data.estimatedDurationMinutes || 60, isActive: data.isActive ?? true },
       });
     }
     return this.prisma.serviceMaintenanceType.create({

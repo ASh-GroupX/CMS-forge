@@ -39,13 +39,20 @@ export function TimelineSidebar() {
     setSelectedDate(next.toISOString().slice(0, 10));
   };
 
-  // Compute daily booked count
-  const dailyBooked = appointments.filter(
-    (a) =>
-      a.date === selectedDate &&
-      a.status !== 'CANCELLED' &&
-      (selectedBranchId === 'ALL' || a.branchId === selectedBranchId),
-  ).length;
+  // Compute daily booked count with flexible branch and date matching
+  const dailyBooked = appointments.filter((a) => {
+    if (a.status === 'CANCELLED') return false;
+    const aDate = typeof a.date === 'string' ? a.date.slice(0, 10) : new Date(a.date).toISOString().slice(0, 10);
+    if (aDate !== selectedDate) return false;
+    if (selectedBranchId === 'ALL') return true;
+    const target = a.branchId || a.serviceCenterId || '';
+    if (target === selectedBranchId) return true;
+    const selectedBranch = branches.find((b) => b.id === selectedBranchId);
+    if (selectedBranch?.code && target === selectedBranch.code) return true;
+    if ((selectedBranchId === 'center_main' || selectedBranch?.code === 'MAIN_CENTER') && (target === 'center_main' || target === 'MAIN_CENTER')) return true;
+    if ((selectedBranchId === 'center_north' || selectedBranch?.code === 'NORTH_CENTER') && (target === 'center_north' || target === 'NORTH_CENTER')) return true;
+    return false;
+  }).length;
 
   const dayOfWeek = currentObj.getUTCDay();
   const isWeekend = dayOfWeek === 5; // Friday closed

@@ -21,6 +21,7 @@ export type ServiceAppointment = {
   id: string;
   referenceNumber: string;
   branchId: string;
+  serviceCenterId?: string;
   branchNameEn?: string;
   branchNameAr?: string;
   customerName: string;
@@ -128,7 +129,6 @@ async function getAuthHeaders(customCookie?: string): Promise<HeadersInit> {
     } catch {}
   }
   if (cookieHeader) {
-    headers.cookie = cookieHeader;
     headers.Cookie = cookieHeader;
     if (!csrf) {
       csrf = cookieHeader.split(';').map((c) => c.trim()).find((c) => c.startsWith('cms_csrf_token='))?.slice('cms_csrf_token='.length);

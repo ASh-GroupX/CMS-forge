@@ -26,6 +26,26 @@ export function BookingSettingsView({
   t: ServiceBookingCopy;
 }) {
   const [activeTab, setActiveTab] = useState<'hours' | 'cars' | 'maintenance' | 'centers'>('hours');
+  const [centersList, setCentersList] = useState(centers);
+  const [carList, setCarList] = useState(carModels);
+  const [typesList, setTypesList] = useState(maintenanceTypes);
+  const [rules, setRules] = useState(rulesByBranch);
+
+  React.useEffect(() => {
+    setCentersList(centers);
+  }, [centers]);
+
+  React.useEffect(() => {
+    setCarList(carModels);
+  }, [carModels]);
+
+  React.useEffect(() => {
+    setTypesList(maintenanceTypes);
+  }, [maintenanceTypes]);
+
+  React.useEffect(() => {
+    setRules(rulesByBranch);
+  }, [rulesByBranch]);
 
   return (
     <div className="space-y-6">
@@ -98,30 +118,34 @@ export function BookingSettingsView({
       <div>
         <div style={{ display: activeTab === 'hours' ? undefined : 'none' }}>
           <BranchHoursTab
-            centers={centers}
-            initialRulesByBranch={rulesByBranch}
+            centers={centersList}
+            initialRulesByBranch={rules}
             locale={locale}
             t={t}
           />
         </div>
         <div style={{ display: activeTab === 'cars' ? undefined : 'none' }}>
           <CarModelsTab
-            initialCarModels={carModels}
+            initialCarModels={carList}
             locale={locale}
+            onCarModelsChange={setCarList}
             t={t}
           />
         </div>
         <div style={{ display: activeTab === 'maintenance' ? undefined : 'none' }}>
           <MaintenanceTypesTab
-            initialMaintenanceTypes={maintenanceTypes}
+            initialMaintenanceTypes={typesList}
             locale={locale}
+            onMaintenanceTypesChange={setTypesList}
             t={t}
           />
         </div>
         <div style={{ display: activeTab === 'centers' ? undefined : 'none' }}>
           <ServiceCentersTab
-            initialCenters={centers}
+            centers={centersList}
+            initialCenters={centersList}
             locale={locale}
+            onCentersChange={setCentersList}
           />
         </div>
       </div>

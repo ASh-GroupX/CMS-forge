@@ -69,11 +69,30 @@ export function ServiceBookingProvider({
   const [view, setView] = useState<ServiceBookingView>('day');
   const [selectedBranchId, setSelectedBranchId] = useState<string>('ALL');
   const [appointments, setAppointments] = useState<ServiceAppointment[]>(initialAppointments);
+  const [branches, setBranches] = useState<BranchOption[]>(initialBranches);
+  const [carModels, setCarModels] = useState<CarModel[]>(initialCarModels);
+  const [maintenanceTypes, setMaintenanceTypes] = useState<MaintenanceType[]>(initialMaintenanceTypes);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<ServiceAppointment | null>(null);
   const [prefillSlot, setPrefillSlot] = useState<{ branchId: string; date: string; time: string } | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  React.useEffect(() => {
+    setAppointments(initialAppointments);
+  }, [initialAppointments]);
+
+  React.useEffect(() => {
+    setBranches(initialBranches);
+  }, [initialBranches]);
+
+  React.useEffect(() => {
+    setCarModels(initialCarModels);
+  }, [initialCarModels]);
+
+  React.useEffect(() => {
+    setMaintenanceTypes(initialMaintenanceTypes);
+  }, [initialMaintenanceTypes]);
 
   const openNewModalWithSlot = (slot: { branchId: string; date: string; time: string }) => {
     setPrefillSlot(slot);
@@ -84,13 +103,13 @@ export function ServiceBookingProvider({
     <ServiceBookingContext.Provider
       value={{
         appointments,
-        branches: initialBranches,
-        carModels: initialCarModels,
+        branches,
+        carModels,
         isDetailModalOpen,
         isNewModalOpen,
         isPending,
         locale,
-        maintenanceTypes: initialMaintenanceTypes,
+        maintenanceTypes,
         openNewModalWithSlot,
         prefillSlot,
         selectedAppointment,

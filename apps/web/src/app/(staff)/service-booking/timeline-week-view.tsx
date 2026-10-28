@@ -33,10 +33,19 @@ export function TimelineWeekView() {
     return d;
   });
 
+  const matchesSelectedBranch = (a: ServiceAppointment) => {
+    if (selectedBranchId === 'ALL') return true;
+    const target = a.branchId || a.serviceCenterId || '';
+    if (target === selectedBranchId) return true;
+    const selectedBranch = branches.find((b) => b.id === selectedBranchId);
+    if (selectedBranch?.code && target === selectedBranch.code) return true;
+    if ((selectedBranchId === 'center_main' || selectedBranch?.code === 'MAIN_CENTER') && (target === 'center_main' || target === 'MAIN_CENTER')) return true;
+    if ((selectedBranchId === 'center_north' || selectedBranch?.code === 'NORTH_CENTER') && (target === 'center_north' || target === 'NORTH_CENTER')) return true;
+    return false;
+  };
+
   const weekApts = appointments.filter(
-    (a) =>
-      a.status !== 'CANCELLED' &&
-      (selectedBranchId === 'ALL' || a.branchId === selectedBranchId),
+    (a) => a.status !== 'CANCELLED' && matchesSelectedBranch(a),
   );
 
   const defaultBranchId = selectedBranchId === 'ALL' ? branches[0]?.id || '' : selectedBranchId;
@@ -48,7 +57,10 @@ export function TimelineWeekView() {
           const dateStr = dateObj.toISOString().slice(0, 10);
           const isSelected = dateStr === selectedDate;
           const isFriday = dateObj.getUTCDay() === 5;
-          const dayApts = weekApts.filter((a) => a.date === dateStr);
+          const dayApts = weekApts.filter((a) => {
+            const aDate = typeof a.date === 'string' ? a.date.slice(0, 10) : new Date(a.date).toISOString().slice(0, 10);
+            return aDate === dateStr;
+          });
 
           const dayName = dateObj.toLocaleDateString(isAr ? 'ar-EG' : 'en-US', {
             weekday: 'short',

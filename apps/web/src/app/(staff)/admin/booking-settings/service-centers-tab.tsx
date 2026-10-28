@@ -14,11 +14,13 @@ export function ServiceCentersTab({
   centers,
   initialCenters,
   locale,
+  onCentersChange,
   t,
 }: {
   centers?: ServiceCenter[];
   initialCenters?: ServiceCenter[];
   locale: Locale;
+  onCentersChange?: (centers: ServiceCenter[]) => void;
   t?: ServiceBookingCopy;
 }) {
   const isAr = locale === 'ar';
@@ -26,6 +28,18 @@ export function ServiceCentersTab({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCenter, setEditingCenter] = useState<ServiceCenter | null>(null);
   const [loading, setLoading] = useState(false);
+
+  React.useEffect(() => {
+    setCenterList(centers || initialCenters || []);
+  }, [centers, initialCenters]);
+
+  const updateCenterList = (updater: (prev: ServiceCenter[]) => ServiceCenter[]) => {
+    setCenterList((prev) => {
+      const next = updater(prev);
+      onCentersChange?.(next);
+      return next;
+    });
+  };
 
   const openAddDialog = () => {
     setEditingCenter(null);
@@ -57,11 +71,11 @@ export function ServiceCentersTab({
     setDialogOpen(false);
 
     if (editingCenter) {
-      setCenterList((prev) =>
+      updateCenterList((prev) =>
         prev.map((c) => (c.id === editingCenter.id ? { ...c, ...res.center, code: payload.code, nameEn: payload.nameEn, nameAr: payload.nameAr, address: payload.address || null, phone: payload.phone || null } : c))
       );
     } else {
-      setCenterList((prev) => [
+      updateCenterList((prev) => [
         ...prev,
         res.center || { id: `center_${Date.now()}`, code: payload.code, nameEn: payload.nameEn, nameAr: payload.nameAr, address: payload.address || null, phone: payload.phone || null, isActive: true },
       ]);
@@ -79,7 +93,7 @@ export function ServiceCentersTab({
       return;
     }
     toast.success(isAr ? 'تم تعطيل مركز الخدمة' : 'Service center deactivated');
-    setCenterList((prev) => prev.filter((c) => c.id !== id));
+    updateCenterList((prev) => prev.filter((c) => c.id !== id));
   };
 
   return (

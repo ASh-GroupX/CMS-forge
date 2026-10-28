@@ -3,10 +3,12 @@
 import React from 'react';
 import { Calendar, Wrench } from 'lucide-react';
 import { useServiceBooking } from './service-booking-context';
+import type { ServiceAppointment } from '../../../lib/staff-service-bookings-api';
 
 export function TimelineMonthView() {
   const {
     appointments,
+    branches,
     locale,
     selectedBranchId,
     selectedDate,
@@ -31,10 +33,19 @@ export function TimelineMonthView() {
     ? ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
     : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
+  const matchesSelectedBranch = (a: ServiceAppointment) => {
+    if (selectedBranchId === 'ALL') return true;
+    const target = a.branchId || a.serviceCenterId || '';
+    if (target === selectedBranchId) return true;
+    const selectedBranch = branches.find((b) => b.id === selectedBranchId);
+    if (selectedBranch?.code && target === selectedBranch.code) return true;
+    if ((selectedBranchId === 'center_main' || selectedBranch?.code === 'MAIN_CENTER') && (target === 'center_main' || target === 'MAIN_CENTER')) return true;
+    if ((selectedBranchId === 'center_north' || selectedBranch?.code === 'NORTH_CENTER') && (target === 'center_north' || target === 'NORTH_CENTER')) return true;
+    return false;
+  };
+
   const monthApts = appointments.filter(
-    (a) =>
-      a.status !== 'CANCELLED' &&
-      (selectedBranchId === 'ALL' || a.branchId === selectedBranchId),
+    (a) => a.status !== 'CANCELLED' && matchesSelectedBranch(a),
   );
 
   return (
@@ -63,7 +74,10 @@ export function TimelineMonthView() {
           const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
           const isSelected = dateStr === selectedDate;
           const isFriday = new Date(Date.UTC(year, month, dayNum)).getUTCDay() === 5;
-          const dayApts = monthApts.filter((a) => a.date === dateStr);
+          const dayApts = monthApts.filter((a) => {
+            const aDate = typeof a.date === 'string' ? a.date.slice(0, 10) : new Date(a.date).toISOString().slice(0, 10);
+            return aDate === dateStr;
+          });
 
           return (
             <div

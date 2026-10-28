@@ -12,19 +12,15 @@ import type { ServiceBookingCopy } from '../../../../i18n/staff-service-booking'
 
 type CenterItem = { id: string; code: string; nameEn: string; nameAr: string };
 
-export function BranchHoursTab({
-  branches,
-  centers,
-  initialRulesByBranch,
-  locale,
-  t,
-}: {
+interface BranchHoursTabProps {
   branches?: CenterItem[];
   centers?: CenterItem[];
   initialRulesByBranch: Record<string, DayRule[]>;
   locale: Locale;
   t: ServiceBookingCopy;
-}) {
+}
+
+export function BranchHoursTab({ branches, centers, initialRulesByBranch, locale, t }: BranchHoursTabProps) {
   const isAr = locale === 'ar';
   const centerList = centers || branches || [];
   const [activeBranchId, setActiveBranchId] = useState(centerList[0]?.id || '');
@@ -32,6 +28,16 @@ export function BranchHoursTab({
   const [saving, setSaving] = useState(false);
   const [initing, setIniting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  React.useEffect(() => {
+    setRulesByBranch(initialRulesByBranch);
+  }, [initialRulesByBranch]);
+
+  React.useEffect(() => {
+    if (!activeBranchId && centerList[0]?.id) {
+      setActiveBranchId(centerList[0].id);
+    }
+  }, [centerList, activeBranchId]);
 
   const currentCenterId = activeBranchId || centerList[0]?.id || '';
   const currentRules = (rulesByBranch[currentCenterId] || []).sort(
@@ -157,20 +163,11 @@ export function BranchHoursTab({
                 : 'No working hours set for this center yet. You can auto-generate a standard week with one click.'}
             </p>
             <div className="mt-5 flex items-center gap-3">
-              <Button
-                className="flex items-center gap-2 rounded-xl bg-brand text-xs font-bold text-primary-foreground shadow-sm"
-                disabled={initing}
-                onClick={handleInitWeek}
-                type="button"
-              >
+              <Button className="flex items-center gap-2 rounded-xl bg-brand text-xs font-bold text-primary-foreground shadow-sm" disabled={initing} onClick={handleInitWeek} type="button">
                 <Sparkles className="size-4" />
                 <span>{initing ? (isAr ? 'جاري التهيئة...' : 'Initializing...') : t.adminSettings.initWeek}</span>
               </Button>
-              <Button
-                className="rounded-xl border border-line-subtle bg-surface text-xs font-bold text-content-strong hover:bg-surface-canvas"
-                onClick={() => setIsDialogOpen(true)}
-                type="button"
-              >
+              <Button className="rounded-xl border border-line-subtle bg-surface text-xs font-bold text-content-strong hover:bg-surface-canvas" onClick={() => setIsDialogOpen(true)} type="button">
                 <Plus className="size-4" />
                 <span>{t.adminSettings.addHours}</span>
               </Button>

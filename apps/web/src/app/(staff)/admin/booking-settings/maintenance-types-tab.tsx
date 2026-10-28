@@ -18,14 +18,28 @@ import type { ServiceBookingCopy } from '../../../../i18n/staff-service-booking'
 export function MaintenanceTypesTab({
   initialMaintenanceTypes,
   locale,
+  onMaintenanceTypesChange,
   t,
 }: {
   initialMaintenanceTypes: MaintenanceType[];
   locale: Locale;
+  onMaintenanceTypesChange?: (types: MaintenanceType[]) => void;
   t: ServiceBookingCopy;
 }) {
   const isAr = locale === 'ar';
   const [typesList, setTypesList] = useState(initialMaintenanceTypes);
+
+  React.useEffect(() => {
+    setTypesList(initialMaintenanceTypes);
+  }, [initialMaintenanceTypes]);
+
+  const updateTypesList = (updater: (prev: MaintenanceType[]) => MaintenanceType[]) => {
+    setTypesList((prev) => {
+      const next = updater(prev);
+      onMaintenanceTypesChange?.(next);
+      return next;
+    });
+  };
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingType, setEditingType] = useState<MaintenanceType | null>(null);
 
@@ -76,7 +90,7 @@ export function MaintenanceTypesTab({
     toast.success(t.modal.successUpdated);
     setIsDialogOpen(false);
     if (editingType) {
-      setTypesList((prev) =>
+      updateTypesList((prev) =>
         prev.map((m) =>
           m.id === editingType.id
             ? { ...m, ...res.type, nameEn, nameAr, estimatedDurationMinutes: duration }
@@ -84,7 +98,7 @@ export function MaintenanceTypesTab({
         ),
       );
     } else {
-      setTypesList((prev) => [
+      updateTypesList((prev) => [
         ...prev,
         res.type || {
           id: `maint_${Date.now()}`,
@@ -110,7 +124,7 @@ export function MaintenanceTypesTab({
       toast.error(res.error || 'Failed to update status');
       return;
     }
-    setTypesList((prev) =>
+    updateTypesList((prev) =>
       prev.map((item) => (item.id === m.id ? { ...item, isActive: nextState } : item)),
     );
   };

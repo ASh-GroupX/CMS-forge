@@ -85,15 +85,26 @@ export function TimelineDayView() {
     };
   }, [updateMarkerPosition, appointments, selectedBranchId]);
 
+  function matchesBranch(apt: ServiceAppointment, branch: { id: string; code?: string }) {
+    if (!branch) return false;
+    const targetId = apt.branchId || apt.serviceCenterId || '';
+    if (targetId === branch.id || (branch.code && targetId === branch.code)) return true;
+    if ((branch.id === 'center_main' || branch.code === 'MAIN_CENTER') && (targetId === 'center_main' || targetId === 'MAIN_CENTER')) return true;
+    if ((branch.id === 'center_north' || branch.code === 'NORTH_CENTER') && (targetId === 'center_north' || targetId === 'NORTH_CENTER')) return true;
+    return false;
+  }
+
   const activeBranches =
     selectedBranchId === 'ALL'
       ? branches
-      : branches.filter((b) => b.id === selectedBranchId);
+      : branches.filter((b) => b.id === selectedBranchId || b.code === selectedBranchId);
 
-  // Group appointments by branch
-  const dateAppointments = appointments.filter(
-    (a) => a.date === selectedDate && a.status !== 'CANCELLED',
-  );
+  // Group appointments by branch with normalized date comparison
+  const dateAppointments = appointments.filter((a) => {
+    if (a.status === 'CANCELLED') return false;
+    const aDate = typeof a.date === 'string' ? a.date.slice(0, 10) : new Date(a.date).toISOString().slice(0, 10);
+    return aDate === selectedDate;
+  });
 
   return (
     <div className="relative flex flex-col rounded-2xl border border-line-subtle bg-surface shadow-sm overflow-hidden">
@@ -110,7 +121,7 @@ export function TimelineDayView() {
             <div className="p-3 text-center font-bold text-sm text-content-strong flex items-center justify-center gap-2" key={b.id}>
               <span>{isAr ? b.nameAr : b.nameEn}</span>
               <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-semibold text-brand">
-                {dateAppointments.filter((a) => a.branchId === b.id).length}
+                {dateAppointments.filter((a) => matchesBranch(a, b)).length}
               </span>
             </div>
           ))}
@@ -152,7 +163,7 @@ export function TimelineDayView() {
                 {activeBranches.map((branch) => {
                   const branchHourApts = dateAppointments.filter(
                     (a) =>
-                      a.branchId === branch.id &&
+                      matchesBranch(a, branch) &&
                       a.startTime.startsWith(String(hour).padStart(2, '0')),
                   );
                   const isHourFull = branchHourApts.length >= 3;
@@ -180,7 +191,7 @@ export function TimelineDayView() {
                       {SLOTS_PER_HOUR.map((slotMin) => {
                         const timeStr = `${String(hour).padStart(2, '0')}:${slotMin}`;
                         const slotApt = dateAppointments.find(
-                          (a) => a.branchId === branch.id && a.startTime === timeStr,
+                          (a) => matchesBranch(a, branch) && a.startTime === timeStr,
                         );
 
                         return (

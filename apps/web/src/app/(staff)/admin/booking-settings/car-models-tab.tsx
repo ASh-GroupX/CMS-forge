@@ -18,14 +18,28 @@ import type { ServiceBookingCopy } from '../../../../i18n/staff-service-booking'
 export function CarModelsTab({
   initialCarModels,
   locale,
+  onCarModelsChange,
   t,
 }: {
   initialCarModels: CarModel[];
   locale: Locale;
+  onCarModelsChange?: (cars: CarModel[]) => void;
   t: ServiceBookingCopy;
 }) {
   const isAr = locale === 'ar';
   const [carList, setCarList] = useState(initialCarModels);
+
+  React.useEffect(() => {
+    setCarList(initialCarModels);
+  }, [initialCarModels]);
+
+  const updateCarList = (updater: (prev: CarModel[]) => CarModel[]) => {
+    setCarList((prev) => {
+      const next = updater(prev);
+      onCarModelsChange?.(next);
+      return next;
+    });
+  };
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCar, setEditingCar] = useState<CarModel | null>(null);
@@ -78,13 +92,13 @@ export function CarModelsTab({
     setIsDialogOpen(false);
     // Refresh local list
     if (editingCar) {
-      setCarList((prev) =>
+      updateCarList((prev) =>
         prev.map((c) =>
           c.id === editingCar.id ? { ...c, ...res.model, nameEn, nameAr, brand } : c,
         ),
       );
     } else {
-      setCarList((prev) => [
+      updateCarList((prev) => [
         ...prev,
         res.model || {
           id: `car_${Date.now()}`,
@@ -110,7 +124,7 @@ export function CarModelsTab({
       toast.error(res.error || 'Failed to update status');
       return;
     }
-    setCarList((prev) =>
+    updateCarList((prev) =>
       prev.map((c) => (c.id === car.id ? { ...c, isActive: nextState } : c)),
     );
   };
