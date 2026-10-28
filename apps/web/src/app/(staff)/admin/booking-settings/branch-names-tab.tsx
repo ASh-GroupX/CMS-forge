@@ -17,6 +17,7 @@ export function BranchNamesTab({
   locale: Locale;
   t: ServiceBookingCopy;
 }) {
+  const isAr = locale === 'ar';
   const [branchList, setBranchList] = useState(branches);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
@@ -28,7 +29,7 @@ export function BranchNamesTab({
       toast.error(res.error || 'Failed to update branch name');
       return;
     }
-    toast.success(t.modal.successUpdated);
+    toast.success(isAr ? 'تم تحديث اسم المركز بنجاح' : 'Service center name updated successfully');
   };
 
   return (

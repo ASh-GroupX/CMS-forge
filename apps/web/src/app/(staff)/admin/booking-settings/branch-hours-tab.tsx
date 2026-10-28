@@ -65,7 +65,7 @@ export function BranchHoursTab({ branches, centers, initialRulesByBranch, locale
     if (res.rules && Array.isArray(res.rules)) {
       setRulesByBranch((prev) => ({ ...prev, [currentCenterId]: res.rules }));
     }
-    toast.success(t.modal.successUpdated);
+    toast.success(isAr ? 'تم حفظ أوقات العمل بنجاح' : 'Working hours saved successfully');
   };
 
   const handleInitWeek = async () => {
@@ -97,7 +97,7 @@ export function BranchHoursTab({ branches, centers, initialRulesByBranch, locale
       if (res.rules && Array.isArray(res.rules)) {
         setRulesByBranch((prev) => ({ ...prev, [currentCenterId]: res.rules }));
       }
-      toast.success(t.modal.successUpdated);
+      toast.success(isAr ? 'تم حفظ أوقات العمل بنجاح' : 'Working hours saved successfully');
     } else {
       toast.error(res.error || 'Failed to persist rule');
     }

@@ -30,7 +30,13 @@ export function MaintenanceTypesTab({
   const [typesList, setTypesList] = useState(initialMaintenanceTypes);
 
   React.useEffect(() => {
-    setTypesList(initialMaintenanceTypes);
+    setTypesList((prev) => {
+      const map = new Map(initialMaintenanceTypes.map((m) => [m.id, m]));
+      for (const item of prev) {
+        if (!map.has(item.id)) map.set(item.id, item);
+      }
+      return Array.from(map.values());
+    });
   }, [initialMaintenanceTypes]);
 
   const updateTypesList = (updater: (prev: MaintenanceType[]) => MaintenanceType[]) => {
@@ -50,21 +56,11 @@ export function MaintenanceTypesTab({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const openAdd = () => {
-    setEditingType(null);
-    setNameEn('');
-    setNameAr('');
-    setDuration(30);
-    setErrorMsg(null);
-    setIsDialogOpen(true);
+    setEditingType(null); setNameEn(''); setNameAr(''); setDuration(30); setErrorMsg(null); setIsDialogOpen(true);
   };
 
   const openEdit = (m: MaintenanceType) => {
-    setEditingType(m);
-    setNameEn(m.nameEn);
-    setNameAr(m.nameAr);
-    setDuration(m.estimatedDurationMinutes);
-    setErrorMsg(null);
-    setIsDialogOpen(true);
+    setEditingType(m); setNameEn(m.nameEn); setNameAr(m.nameAr); setDuration(m.estimatedDurationMinutes); setErrorMsg(null); setIsDialogOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -102,7 +98,11 @@ export function MaintenanceTypesTab({
       return;
     }
 
-    toast.success(t.modal.successUpdated);
+    toast.success(
+      isAr
+        ? (editingType ? 'تم تحديث نوع الصيانة بنجاح' : 'تمت إضافة نوع الصيانة بنجاح')
+        : (editingType ? 'Maintenance type updated successfully' : 'Maintenance type added successfully'),
+    );
     setIsDialogOpen(false);
     if (editingType) {
       updateTypesList((prev) =>
@@ -129,19 +129,13 @@ export function MaintenanceTypesTab({
   const toggleActive = async (m: MaintenanceType) => {
     const nextState = !m.isActive;
     const res = await saveMaintenanceTypeAction({
-      id: m.id,
-      nameEn: m.nameEn,
-      nameAr: m.nameAr,
-      estimatedDurationMinutes: m.estimatedDurationMinutes,
-      isActive: nextState,
+      id: m.id, nameEn: m.nameEn, nameAr: m.nameAr, estimatedDurationMinutes: m.estimatedDurationMinutes, isActive: nextState,
     });
     if (!res.success) {
       toast.error(res.error || 'Failed to update status');
       return;
     }
-    updateTypesList((prev) =>
-      prev.map((item) => (item.id === m.id ? { ...item, isActive: nextState } : item)),
-    );
+    updateTypesList((prev) => prev.map((item) => (item.id === m.id ? { ...item, isActive: nextState } : item)));
   };
 
   return (

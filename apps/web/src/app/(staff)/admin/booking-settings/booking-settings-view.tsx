@@ -32,15 +32,33 @@ export function BookingSettingsView({
   const [rules, setRules] = useState(rulesByBranch);
 
   React.useEffect(() => {
-    setCentersList(centers);
+    setCentersList((prev) => {
+      const map = new Map(centers.map((c) => [c.id, c]));
+      for (const item of prev) {
+        if (!map.has(item.id)) map.set(item.id, item);
+      }
+      return Array.from(map.values());
+    });
   }, [centers]);
 
   React.useEffect(() => {
-    setCarList(carModels);
+    setCarList((prev) => {
+      const map = new Map(carModels.map((c) => [c.id, c]));
+      for (const item of prev) {
+        if (!map.has(item.id)) map.set(item.id, item);
+      }
+      return Array.from(map.values());
+    });
   }, [carModels]);
 
   React.useEffect(() => {
-    setTypesList(maintenanceTypes);
+    setTypesList((prev) => {
+      const map = new Map(maintenanceTypes.map((m) => [m.id, m]));
+      for (const item of prev) {
+        if (!map.has(item.id)) map.set(item.id, item);
+      }
+      return Array.from(map.values());
+    });
   }, [maintenanceTypes]);
 
   React.useEffect(() => {

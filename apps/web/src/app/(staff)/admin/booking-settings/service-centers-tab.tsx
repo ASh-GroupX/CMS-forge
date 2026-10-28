@@ -31,7 +31,14 @@ export function ServiceCentersTab({
   const [apiError, setApiError] = useState<string | null>(null);
 
   React.useEffect(() => {
-    setCenterList(centers || initialCenters || []);
+    const list = centers || initialCenters || [];
+    setCenterList((prev) => {
+      const map = new Map(list.map((c) => [c.id, c]));
+      for (const item of prev) {
+        if (!map.has(item.id)) map.set(item.id, item);
+      }
+      return Array.from(map.values());
+    });
   }, [centers, initialCenters]);
 
   const updateCenterList = (updater: (prev: ServiceCenter[]) => ServiceCenter[]) => {

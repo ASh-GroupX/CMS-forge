@@ -118,17 +118,16 @@ async function getAuthHeaders(customCookie?: string): Promise<HeadersInit> {
   let csrf: string | null | undefined;
   if (!cookieHeader && typeof window === 'undefined') {
     try {
-      const { cookies: nextCookies, headers: nextHeaders } = await import('next/headers');
-      const reqHeaders = await nextHeaders().catch(() => null);
-      cookieHeader = reqHeaders?.get('cookie') ?? '';
+      const { cookies: nextCookies } = await import('next/headers');
       const cookieStore = await nextCookies().catch(() => null);
-      if (!cookieHeader && cookieStore) {
-        cookieHeader = cookieStore.getAll().map((c) => `${c.name}=${c.value}`).join('; ');
+      if (cookieStore) {
+        cookieHeader = cookieStore.toString();
+        csrf = cookieStore.get('cms_csrf_token')?.value;
       }
-      csrf = cookieStore?.get('cms_csrf_token')?.value;
     } catch {}
   }
   if (cookieHeader) {
+    headers.cookie = cookieHeader;
     headers.Cookie = cookieHeader;
     if (!csrf) {
       csrf = cookieHeader.split(';').map((c) => c.trim()).find((c) => c.startsWith('cms_csrf_token='))?.slice('cms_csrf_token='.length);

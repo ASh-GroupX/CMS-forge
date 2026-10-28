@@ -1,5 +1,5 @@
 import React from 'react';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { serviceBookingText } from '../../../../i18n/staff-service-booking';
 import {
@@ -22,8 +22,9 @@ export default async function BookingSettingsAdminPage({
   searchParams?: Promise<SearchParams>;
 }) {
   const params = await searchParams;
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
   const requestHeaders = await headers();
-  const cookieHeader = requestHeaders.get('cookie') ?? '';
   const locale = resolveLocale(params?.locale || requestHeaders.get('x-cms-locale') || undefined);
   const t = serviceBookingText[locale] || serviceBookingText.en;
 

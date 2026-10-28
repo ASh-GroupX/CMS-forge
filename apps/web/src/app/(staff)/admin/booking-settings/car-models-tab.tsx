@@ -30,7 +30,13 @@ export function CarModelsTab({
   const [carList, setCarList] = useState(initialCarModels);
 
   React.useEffect(() => {
-    setCarList(initialCarModels);
+    setCarList((prev) => {
+      const map = new Map(initialCarModels.map((c) => [c.id, c]));
+      for (const item of prev) {
+        if (!map.has(item.id)) map.set(item.id, item);
+      }
+      return Array.from(map.values());
+    });
   }, [initialCarModels]);
 
   const updateCarList = (updater: (prev: CarModel[]) => CarModel[]) => {
@@ -51,21 +57,11 @@ export function CarModelsTab({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const openAdd = () => {
-    setEditingCar(null);
-    setNameEn('');
-    setNameAr('');
-    setBrand('Nissan');
-    setErrorMsg(null);
-    setIsDialogOpen(true);
+    setEditingCar(null); setNameEn(''); setNameAr(''); setBrand('Nissan'); setErrorMsg(null); setIsDialogOpen(true);
   };
 
   const openEdit = (car: CarModel) => {
-    setEditingCar(car);
-    setNameEn(car.nameEn);
-    setNameAr(car.nameAr);
-    setBrand(car.brand);
-    setErrorMsg(null);
-    setIsDialogOpen(true);
+    setEditingCar(car); setNameEn(car.nameEn); setNameAr(car.nameAr); setBrand(car.brand); setErrorMsg(null); setIsDialogOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,7 +94,11 @@ export function CarModelsTab({
       return;
     }
 
-    toast.success(t.modal.successUpdated);
+    toast.success(
+      isAr
+        ? (editingCar ? 'تم تحديث موديل السيارة بنجاح' : 'تمت إضافة موديل السيارة بنجاح')
+        : (editingCar ? 'Car model updated successfully' : 'Car model added successfully'),
+    );
     setIsDialogOpen(false);
     if (editingCar) {
       updateCarList((prev) =>
@@ -122,20 +122,12 @@ export function CarModelsTab({
 
   const toggleActive = async (car: CarModel) => {
     const nextState = !car.isActive;
-    const res = await saveCarModelAction({
-      id: car.id,
-      nameEn: car.nameEn,
-      nameAr: car.nameAr,
-      brand: car.brand,
-      isActive: nextState,
-    });
+    const res = await saveCarModelAction({ id: car.id, nameEn: car.nameEn, nameAr: car.nameAr, brand: car.brand, isActive: nextState });
     if (!res.success) {
       toast.error(res.error || 'Failed to update status');
       return;
     }
-    updateCarList((prev) =>
-      prev.map((c) => (c.id === car.id ? { ...c, isActive: nextState } : c)),
-    );
+    updateCarList((prev) => prev.map((c) => (c.id === car.id ? { ...c, isActive: nextState } : c)));
   };
 
   const filtered = carList.filter(
