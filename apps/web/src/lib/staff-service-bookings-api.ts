@@ -161,23 +161,25 @@ export async function fetchSlotAvailability(branchId: string, date: string, cook
 }
 
 export async function fetchCarModels(activeOnly = true, cookieHeader?: string): Promise<CarModel[]> {
-  const url = `${getApiBaseUrl()}/service-bookings/car-models?all=${!activeOnly}`;
-  const res = await fetch(url, { headers: await getAuthHeaders(cookieHeader), cache: 'no-store' });
-  if (!res.ok) {
-    console.error(`[fetchCarModels] failed with status ${res.status}: ${res.statusText}`);
-    return [];
+  const base = `${getApiBaseUrl()}/service-bookings`;
+  const headers = await getAuthHeaders(cookieHeader);
+  let res = await fetch(`${base}/car-models?all=${!activeOnly}`, { headers, cache: 'no-store' }).catch(() => null);
+  if (!res || !res.ok) {
+    res = await fetch(`${base}/master-data/car-models?all=${!activeOnly}`, { headers, cache: 'no-store' }).catch(() => null);
   }
+  if (!res || !res.ok) return [];
   const json = await res.json().catch(() => []);
   return Array.isArray(json) ? json : (json.carModels ?? json.items ?? []);
 }
 
 export async function fetchMaintenanceTypes(activeOnly = true, cookieHeader?: string): Promise<MaintenanceType[]> {
-  const url = `${getApiBaseUrl()}/service-bookings/maintenance-types?all=${!activeOnly}`;
-  const res = await fetch(url, { headers: await getAuthHeaders(cookieHeader), cache: 'no-store' });
-  if (!res.ok) {
-    console.error(`[fetchMaintenanceTypes] failed with status ${res.status}: ${res.statusText}`);
-    return [];
+  const base = `${getApiBaseUrl()}/service-bookings`;
+  const headers = await getAuthHeaders(cookieHeader);
+  let res = await fetch(`${base}/maintenance-types?all=${!activeOnly}`, { headers, cache: 'no-store' }).catch(() => null);
+  if (!res || !res.ok) {
+    res = await fetch(`${base}/master-data/maintenance-types?all=${!activeOnly}`, { headers, cache: 'no-store' }).catch(() => null);
   }
+  if (!res || !res.ok) return [];
   const json = await res.json().catch(() => []);
   return Array.isArray(json) ? json : (json.maintenanceTypes ?? json.items ?? []);
 }

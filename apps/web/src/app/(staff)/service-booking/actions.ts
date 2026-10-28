@@ -127,12 +127,12 @@ export async function saveCarModelAction(data: {
     const brand = data.brand?.trim() || 'Nissan';
     const nameEn = data.nameEn?.trim() || data.nameAr?.trim() || brand;
     const nameAr = data.nameAr?.trim() || data.nameEn?.trim() || brand;
-    const res = await fetch(`${API_BASE_URL}/service-bookings/car-models`, {
-      method: 'POST',
-      headers: await getAuthHeaders(),
-      body: JSON.stringify({ ...data, brand, nameEn, nameAr }),
-      cache: 'no-store',
-    });
+    const headers = await getAuthHeaders();
+    const body = JSON.stringify({ ...data, brand, nameEn, nameAr });
+    let res = await fetch(`${API_BASE_URL}/service-bookings/car-models`, { method: 'POST', headers, body, cache: 'no-store' });
+    if (!res.ok) {
+      res = await fetch(`${API_BASE_URL}/service-bookings/master-data/car-models`, { method: 'POST', headers, body, cache: 'no-store' });
+    }
     if (!res.ok) {
       const msg = await res.text().catch(() => '');
       return { success: false, error: parseErrorMessage(msg, res.status) };
@@ -156,12 +156,12 @@ export async function saveMaintenanceTypeAction(data: {
   try {
     const nameEn = data.nameEn?.trim() || data.nameAr?.trim();
     const nameAr = data.nameAr?.trim() || data.nameEn?.trim();
-    const res = await fetch(`${API_BASE_URL}/service-bookings/maintenance-types`, {
-      method: 'POST',
-      headers: await getAuthHeaders(),
-      body: JSON.stringify({ ...data, nameEn, nameAr }),
-      cache: 'no-store',
-    });
+    const headers = await getAuthHeaders();
+    const body = JSON.stringify({ ...data, nameEn, nameAr });
+    let res = await fetch(`${API_BASE_URL}/service-bookings/maintenance-types`, { method: 'POST', headers, body, cache: 'no-store' });
+    if (!res.ok) {
+      res = await fetch(`${API_BASE_URL}/service-bookings/master-data/maintenance-types`, { method: 'POST', headers, body, cache: 'no-store' });
+    }
     if (!res.ok) {
       const msg = await res.text().catch(() => '');
       return { success: false, error: parseErrorMessage(msg, res.status) };
