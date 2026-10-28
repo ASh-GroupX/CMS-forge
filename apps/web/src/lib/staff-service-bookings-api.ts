@@ -108,7 +108,7 @@ function getApiBaseUrl(): string {
   if (typeof window === 'undefined') {
     return process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
   }
-  return process.env.NEXT_PUBLIC_API_URL || '';
+  return process.env.NEXT_PUBLIC_API_URL || '/api';
 }
 
 async function getAuthHeaders(customCookie?: string): Promise<HeadersInit> {
@@ -129,6 +129,7 @@ async function getAuthHeaders(customCookie?: string): Promise<HeadersInit> {
   }
   if (cookieHeader) {
     headers.cookie = cookieHeader;
+    headers.Cookie = cookieHeader;
     if (!csrf) {
       csrf = cookieHeader.split(';').map((c) => c.trim()).find((c) => c.startsWith('cms_csrf_token='))?.slice('cms_csrf_token='.length);
     }

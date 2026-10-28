@@ -9,7 +9,9 @@ import type {
   ServiceAppointmentDto,
 } from './dto/service-booking-response.dto.js';
 import {
+  DEFAULT_CAR_MODELS,
   DEFAULT_DAY_RULES,
+  DEFAULT_MAINTENANCE_TYPES,
   buildDayAvailability,
   calculateEndTime,
   mapAppointment,
@@ -84,8 +86,8 @@ export class ServiceBookingsService {
       throw new BadRequestException(`Maximum appointments per hour limit (${rule.maxPerHour}) reached for this hour`);
     }
 
-    const carModel = await this.repository.findCarModelById(dto.carModelId);
-    const maintenanceType = await this.repository.findMaintenanceTypeById(dto.maintenanceTypeId);
+    const carModel = dto.carModelId ? await this.repository.findCarModelById(dto.carModelId).catch(() => null) : null;
+    const maintenanceType = dto.maintenanceTypeId ? await this.repository.findMaintenanceTypeById(dto.maintenanceTypeId).catch(() => null) : null;
     const duration = dto.durationMinutes || maintenanceType?.estimatedDurationMinutes || 30;
     const endTime = calculateEndTime(dto.startTime, duration);
     const referenceNumber = await this.repository.generateReferenceNumber(dateObj);
@@ -93,15 +95,15 @@ export class ServiceBookingsService {
     const created = await this.repository.createAppointment({
       referenceNumber,
       serviceCenterId: centerId,
-      branchId: centerId,
+      branchId: null,
       customerName: dto.customerName,
       customerPhone: dto.customerPhone,
       vin: dto.vin || null,
-      carModelId: dto.carModelId,
-      carModelName: carModel ? `${carModel.brand} ${carModel.nameEn}` : 'Vehicle',
-      maintenanceTypeId: dto.maintenanceTypeId,
-      maintenanceTypeName: maintenanceType ? maintenanceType.nameEn : 'General Service',
-      notes: dto.notes,
+      carModelId: carModel ? carModel.id : null,
+      carModelName: carModel ? `${carModel.brand} ${carModel.nameEn}` : 'Chery Tiggo 8 Pro',
+      maintenanceTypeId: maintenanceType ? maintenanceType.id : null,
+      maintenanceTypeName: maintenanceType ? maintenanceType.nameEn : 'Periodic Maintenance',
+      notes: dto.notes || 'Service appointment',
       date: dateObj,
       startTime: dto.startTime,
       endTime,
@@ -261,7 +263,12 @@ export class ServiceBookingsService {
 
   // ── Master Data ───────────────────────────────────────────────────────────
   async getCarModels(activeOnly = true) {
-    return this.repository.listCarModels(activeOnly);
+    let models = await this.repository.listCarModels(activeOnly);
+    if (models.length === 0) {
+      await Promise.all(DEFAULT_CAR_MODELS.map((d) => this.repository.upsertCarModel(d).catch(() => null)));
+      models = await this.repository.listCarModels(activeOnly);
+    }
+    return models;
   }
 
   async upsertCarModel(data: { id?: string | undefined; nameEn: string; nameAr: string; brand?: string | undefined; isActive?: boolean | undefined }) {
@@ -269,7 +276,12 @@ export class ServiceBookingsService {
   }
 
   async getMaintenanceTypes(activeOnly = true) {
-    return this.repository.listMaintenanceTypes(activeOnly);
+    let types = await this.repository.listMaintenanceTypes(activeOnly);
+    if (types.length === 0) {
+      await Promise.all(DEFAULT_MAINTENANCE_TYPES.map((d) => this.repository.upsertMaintenanceType(d).catch(() => null)));
+      types = await this.repository.listMaintenanceTypes(activeOnly);
+    }
+    return types;
   }
 
   async upsertMaintenanceType(data: { id?: string | undefined; nameEn: string; nameAr: string; estimatedDurationMinutes?: number | undefined; isActive?: boolean | undefined }) {

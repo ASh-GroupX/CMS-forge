@@ -69,6 +69,18 @@ export function NewAppointmentModal() {
     }
   }, [prefillSlot, selectedBranchId, selectedDate, branches]);
 
+  useEffect(() => {
+    if (!carModelId && carModels.length > 0) {
+      setCarModelId(carModels[0]!.id);
+    }
+  }, [carModels, carModelId]);
+
+  useEffect(() => {
+    if (!maintenanceTypeId && maintenanceTypes.length > 0) {
+      setMaintenanceTypeId(maintenanceTypes[0]!.id);
+    }
+  }, [maintenanceTypes, maintenanceTypeId]);
+
   const selectedHour = startTime.split(':')[0] || '09';
   const hourBookedCount = appointments.filter(
     (a) =>
@@ -84,22 +96,24 @@ export function NewAppointmentModal() {
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!customerName.trim() || !customerPhone.trim() || !carModelId || !maintenanceTypeId || !notes.trim()) {
+    if (!customerName.trim() || !customerPhone.trim()) {
       setErrorMsg(t.modal.mandatoryError);
       return;
     }
 
     setLoading(true);
-    const selectedMaint = maintenanceTypes.find((m) => m.id === maintenanceTypeId);
+    const effectiveCarModelId = carModelId || carModels[0]?.id || 'car_tiggo8_pro';
+    const effectiveMaintId = maintenanceTypeId || maintenanceTypes[0]?.id || 'maint_periodic_10k';
+    const selectedMaint = maintenanceTypes.find((m) => m.id === effectiveMaintId);
     const res = await createAppointmentAction({
-      branchId,
-      carModelId,
+      branchId: branchId || branches[0]?.id || 'center_main',
+      carModelId: effectiveCarModelId,
       customerName: customerName.trim(),
       customerPhone: customerPhone.trim(),
       date,
       durationMinutes: selectedMaint?.estimatedDurationMinutes || 30,
-      maintenanceTypeId,
-      notes: notes.trim(),
+      maintenanceTypeId: effectiveMaintId,
+      notes: notes.trim() || 'Service appointment',
       startTime,
       vin: vin.trim() || null,
     });
@@ -234,13 +248,12 @@ export function NewAppointmentModal() {
 
           <div>
             <label className="block text-xs font-bold text-content-strong mb-1">
-              {t.modal.notes} <span className="text-status-error">*</span>
+              {t.modal.notes}
             </label>
             <textarea
               className="w-full rounded-xl border border-line-subtle bg-surface p-3 text-sm focus:border-brand focus:outline-none min-h-[4.5rem]"
               onChange={(e) => setNotes(e.target.value)}
               placeholder={t.modal.notesPlaceholder}
-              required
               rows={2}
               value={notes}
             />

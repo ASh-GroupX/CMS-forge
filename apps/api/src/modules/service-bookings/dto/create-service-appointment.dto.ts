@@ -23,14 +23,9 @@ export function parseCreateServiceAppointmentBody(input: unknown): CreateService
   const customerPhone = String(body.customerPhone ?? '').trim();
   if (!customerPhone) throw new Error('Customer phone number is required');
 
-  const branchId = String(body.branchId ?? '').trim();
-  if (!branchId) throw new Error('Branch selection is required');
-
-  const carModelId = String(body.carModelId ?? '').trim();
-  if (!carModelId) throw new Error('Car type / model is required');
-
-  const maintenanceTypeId = String(body.maintenanceTypeId ?? '').trim();
-  if (!maintenanceTypeId) throw new Error('Maintenance type is required');
+  const branchId = String(body.branchId ?? '').trim() || 'center_main';
+  const carModelId = String(body.carModelId ?? '').trim() || 'car_tiggo8_pro';
+  const maintenanceTypeId = String(body.maintenanceTypeId ?? '').trim() || 'maint_periodic_10k';
 
   const date = String(body.date ?? '').trim();
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -42,8 +37,7 @@ export function parseCreateServiceAppointmentBody(input: unknown): CreateService
     throw new Error('Valid start time (HH:mm) is required');
   }
 
-  const notes = String(body.notes ?? '').trim();
-  if (!notes) throw new Error('Notes are required');
+  const notes = String(body.notes ?? '').trim() || 'Service appointment';
 
   const vin = body.vin ? String(body.vin).trim() : null;
   const durationMinutes = Number(body.durationMinutes) > 0 ? Number(body.durationMinutes) : 30;

@@ -54,14 +54,32 @@ export default async function ServiceBookingPage({
     ];
   }
 
+  const effectiveCarModels: CarModel[] = carModels.length > 0 ? carModels : [
+    { id: 'car_tiggo8_pro', nameEn: 'Chery Tiggo 8 Pro', nameAr: 'شيري تيجو 8 برو', brand: 'Chery', isActive: true },
+    { id: 'car_tiggo7_pro', nameEn: 'Chery Tiggo 7 Pro', nameAr: 'شيري تيجو 7 برو', brand: 'Chery', isActive: true },
+    { id: 'car_tiggo4_pro', nameEn: 'Chery Tiggo 4 Pro', nameAr: 'شيري تيجو 4 برو', brand: 'Chery', isActive: true },
+    { id: 'car_arrizo6_pro', nameEn: 'Chery Arrizo 6 Pro', nameAr: 'شيري أريزو 6 برو', brand: 'Chery', isActive: true },
+    { id: 'car_model_patrol', nameEn: 'Nissan Patrol', nameAr: 'نيسان باترول', brand: 'Nissan', isActive: true },
+    { id: 'car_model_sunny', nameEn: 'Nissan Sunny', nameAr: 'نيسان صني', brand: 'Nissan', isActive: true },
+  ];
+
+  const effectiveMaintenanceTypes: MaintenanceType[] = maintenanceTypes.length > 0 ? maintenanceTypes : [
+    { id: 'maint_periodic_10k', nameEn: 'Periodic Maintenance 10,000 km', nameAr: 'صيانة دورية 10,000 كم', estimatedDurationMinutes: 30, isActive: true },
+    { id: 'maint_periodic_20k', nameEn: 'Periodic Maintenance 20,000 km', nameAr: 'صيانة دورية 20,000 كم', estimatedDurationMinutes: 45, isActive: true },
+    { id: 'maint_periodic_40k', nameEn: 'Periodic Maintenance 40,000 km', nameAr: 'صيانة دورية 40,000 كم', estimatedDurationMinutes: 60, isActive: true },
+    { id: 'maint_oil_filter', nameEn: 'Oil and Filter Change', nameAr: 'تغيير زيت وفلتر', estimatedDurationMinutes: 30, isActive: true },
+    { id: 'maint_brake_pads', nameEn: 'Brake Pads & Discs Service', nameAr: 'فحص واستبدال فحمات وفرامل', estimatedDurationMinutes: 45, isActive: true },
+    { id: 'maint_general_check', nameEn: 'Comprehensive Inspection', nameAr: 'فحص شامل وفحص كمبيوتر', estimatedDurationMinutes: 60, isActive: true },
+  ];
+
   return (
     <section aria-label="Service Center Booking" className="grid gap-4 w-full" dir={shell.dir}>
       <ServiceBookingProvider
         initialAppointments={appointments}
         initialBranches={branches}
-        initialCarModels={carModels}
+        initialCarModels={effectiveCarModels}
         initialDate={todayStr}
-        initialMaintenanceTypes={maintenanceTypes}
+        initialMaintenanceTypes={effectiveMaintenanceTypes}
         locale={locale}
       >
         <ServiceBookingView />

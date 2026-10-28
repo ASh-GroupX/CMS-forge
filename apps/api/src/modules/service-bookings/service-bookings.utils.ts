@@ -23,6 +23,24 @@ export const DEFAULT_DAY_RULES: Omit<DayRuleInput, 'dayOfWeek'>[] = [
   { isOpen: true, startTime: '09:00', endTime: '17:00', maxDailyAppointments: 18, maxPerHour: 3, maxPerSlot: 1, slotDurationMinutes: 15 },
 ];
 
+export const DEFAULT_CAR_MODELS = [
+  { id: 'car_tiggo8_pro', nameEn: 'Chery Tiggo 8 Pro', nameAr: 'شيري تيجو 8 برو', brand: 'Chery', isActive: true },
+  { id: 'car_tiggo7_pro', nameEn: 'Chery Tiggo 7 Pro', nameAr: 'شيري تيجو 7 برو', brand: 'Chery', isActive: true },
+  { id: 'car_tiggo4_pro', nameEn: 'Chery Tiggo 4 Pro', nameAr: 'شيري تيجو 4 برو', brand: 'Chery', isActive: true },
+  { id: 'car_arrizo6_pro', nameEn: 'Chery Arrizo 6 Pro', nameAr: 'شيري أريزو 6 برو', brand: 'Chery', isActive: true },
+  { id: 'car_model_patrol', nameEn: 'Nissan Patrol', nameAr: 'نيسان باترول', brand: 'Nissan', isActive: true },
+  { id: 'car_model_sunny', nameEn: 'Nissan Sunny', nameAr: 'نيسان صني', brand: 'Nissan', isActive: true },
+];
+
+export const DEFAULT_MAINTENANCE_TYPES = [
+  { id: 'maint_periodic_10k', nameEn: 'Periodic Maintenance 10,000 km', nameAr: 'صيانة دورية 10,000 كم', estimatedDurationMinutes: 30, isActive: true },
+  { id: 'maint_periodic_20k', nameEn: 'Periodic Maintenance 20,000 km', nameAr: 'صيانة دورية 20,000 كم', estimatedDurationMinutes: 45, isActive: true },
+  { id: 'maint_periodic_40k', nameEn: 'Periodic Maintenance 40,000 km', nameAr: 'صيانة دورية 40,000 كم', estimatedDurationMinutes: 60, isActive: true },
+  { id: 'maint_oil_filter', nameEn: 'Oil and Filter Change', nameAr: 'تغيير زيت وفلتر', estimatedDurationMinutes: 30, isActive: true },
+  { id: 'maint_brake_pads', nameEn: 'Brake Pads & Discs Service', nameAr: 'فحص واستبدال فحمات وفرامل', estimatedDurationMinutes: 45, isActive: true },
+  { id: 'maint_general_check', nameEn: 'Comprehensive Inspection', nameAr: 'فحص شامل وفحص كمبيوتر', estimatedDurationMinutes: 60, isActive: true },
+];
+
 export function calculateEndTime(startTime: string, durationMinutes: number): string {
   const [h = 0, m = 0] = startTime.split(':').map(Number);
   const totalMinutes = (h ?? 0) * 60 + (m ?? 0) + durationMinutes;
