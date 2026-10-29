@@ -26,6 +26,7 @@ export function AppointmentDetailModal() {
     setIsDetailModalOpen,
     setSelectedAppointment,
     t,
+    userRules,
   } = useServiceBooking();
 
   const isAr = locale === 'ar';
@@ -92,39 +93,19 @@ export function AppointmentDetailModal() {
 
         {/* Tab switcher */}
         <div className="flex items-center gap-1 rounded-xl border border-line-subtle bg-surface-canvas/60 p-1 mb-4 text-xs font-semibold">
-          <button
-            className={`flex-1 rounded-lg py-1.5 transition-all ${
-              activeTab === 'details'
-                ? 'bg-surface text-content-strong shadow-xs'
-                : 'text-content-muted hover:text-content-strong'
-            }`}
-            onClick={() => setActiveTab('details')}
-            type="button"
-          >
+          <button className={`flex-1 rounded-lg py-1.5 transition-all ${activeTab === 'details' ? 'bg-surface text-content-strong shadow-xs' : 'text-content-muted hover:text-content-strong'}`} onClick={() => setActiveTab('details')} type="button">
             {t.modal.detailsTab}
           </button>
-          <button
-            className={`flex-1 rounded-lg py-1.5 transition-all ${
-              activeTab === 'reschedule'
-                ? 'bg-surface text-content-strong shadow-xs'
-                : 'text-content-muted hover:text-content-strong'
-            }`}
-            onClick={() => setActiveTab('reschedule')}
-            type="button"
-          >
-            {t.modal.rescheduleTab}
-          </button>
-          <button
-            className={`flex-1 rounded-lg py-1.5 transition-all ${
-              activeTab === 'status'
-                ? 'bg-surface text-content-strong shadow-xs'
-                : 'text-content-muted hover:text-content-strong'
-            }`}
-            onClick={() => setActiveTab('status')}
-            type="button"
-          >
-            {t.modal.statusTab}
-          </button>
+          {userRules.canRescheduleBookings && (
+            <button className={`flex-1 rounded-lg py-1.5 transition-all ${activeTab === 'reschedule' ? 'bg-surface text-content-strong shadow-xs' : 'text-content-muted hover:text-content-strong'}`} onClick={() => setActiveTab('reschedule')} type="button">
+              {t.modal.rescheduleTab}
+            </button>
+          )}
+          {userRules.canChangeStatus && (
+            <button className={`flex-1 rounded-lg py-1.5 transition-all ${activeTab === 'status' ? 'bg-surface text-content-strong shadow-xs' : 'text-content-muted hover:text-content-strong'}`} onClick={() => setActiveTab('status')} type="button">
+              {t.modal.statusTab}
+            </button>
+          )}
         </div>
 
         {errorMsg && (
@@ -243,7 +224,7 @@ export function AppointmentDetailModal() {
         )}
 
         {/* Reschedule Tab */}
-        {activeTab === 'reschedule' && (
+        {activeTab === 'reschedule' && userRules.canRescheduleBookings && (
           <AppointmentRescheduleForm
             appointment={apt}
             branches={branches}
@@ -259,7 +240,7 @@ export function AppointmentDetailModal() {
         )}
 
         {/* Status Tab */}
-        {activeTab === 'status' && (
+        {activeTab === 'status' && userRules.canChangeStatus && (
           <form className="space-y-4" onSubmit={handleStatusUpdate}>
             <div className="grid grid-cols-2 gap-2">
               {STATUS_OPTIONS.map((st) => (

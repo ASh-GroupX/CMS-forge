@@ -24,6 +24,7 @@ export function TimelineTopbar() {
     setSelectedDate,
     setView,
     t,
+    userRules,
     view,
   } = useServiceBooking();
 
@@ -170,14 +171,16 @@ export function TimelineTopbar() {
         </div>
 
         {/* New Appointment Primary Button */}
-        <Button
-          className="flex items-center gap-2 rounded-xl bg-brand font-semibold text-primary-foreground shadow-lg shadow-brand/25 transition-transform active:scale-95"
-          onClick={() => setIsNewModalOpen(true)}
-          type="button"
-        >
-          <Plus className="size-4" />
-          <span>{t.newAppointment}</span>
-        </Button>
+        {userRules.canCreateBookings && (
+          <Button
+            className="flex items-center gap-2 rounded-xl bg-brand font-semibold text-primary-foreground shadow-lg shadow-brand/25 transition-transform active:scale-95"
+            onClick={() => setIsNewModalOpen(true)}
+            type="button"
+          >
+            <Plus className="size-4" />
+            <span>{t.newAppointment}</span>
+          </Button>
+        )}
       </div>
     </header>
   );

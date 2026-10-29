@@ -8,6 +8,7 @@ import type {
   DayAvailability,
   MaintenanceType,
   ServiceAppointment,
+  UserBookingRule,
 } from '../../../lib/staff-service-bookings-api';
 
 export type BranchOption = {
@@ -43,7 +44,18 @@ interface ServiceBookingContextType {
   openNewModalWithSlot: (slot: { branchId: string; date: string; time: string }) => void;
   isPending: boolean;
   startTransition: React.TransitionStartFunction;
+  userRules: UserBookingRule;
 }
+
+const defaultUserRules: UserBookingRule = {
+  userId: '',
+  canViewBookings: true,
+  canCreateBookings: true,
+  canRescheduleBookings: true,
+  canChangeStatus: true,
+  canCancelBookings: true,
+  canManageSettings: false,
+};
 
 const ServiceBookingContext = createContext<ServiceBookingContextType | null>(null);
 
@@ -54,6 +66,7 @@ export function ServiceBookingProvider({
   initialCarModels,
   initialDate,
   initialMaintenanceTypes,
+  initialUserRules,
   locale,
 }: {
   children: ReactNode;
@@ -62,9 +75,11 @@ export function ServiceBookingProvider({
   initialCarModels: CarModel[];
   initialDate: string;
   initialMaintenanceTypes: MaintenanceType[];
+  initialUserRules?: UserBookingRule;
   locale: Locale;
 }) {
   const t = serviceBookingText[locale] || serviceBookingText.en;
+  const userRules = initialUserRules || defaultUserRules;
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [view, setView] = useState<ServiceBookingView>('day');
   const [selectedBranchId, setSelectedBranchId] = useState<string>('ALL');
@@ -124,6 +139,7 @@ export function ServiceBookingProvider({
         setView,
         startTransition,
         t,
+        userRules,
         view,
       }}
     >

@@ -83,3 +83,26 @@ test('service-bookings controller delegates deleteMaintenanceType to service', a
   await controller.deleteMaintenanceType('maint_test');
   assert.equal(deletedId, 'maint_test');
 });
+
+test('service-bookings controller delegates getMyRules and updateUserRules', async () => {
+  const mockUserRulesService = {
+    getUserBookingRule: async (userId: string, roleCode?: string) => ({
+      userId,
+      canViewBookings: true,
+      canCreateBookings: false,
+      canRescheduleBookings: false,
+      canChangeStatus: false,
+      canCancelBookings: false,
+      canManageSettings: roleCode === 'ADMIN',
+    }),
+    updateUserBookingRule: async (userId: string, dto: any) => ({ userId, ...dto }),
+  } as any;
+
+  const controller = new ServiceBookingsController({} as any, mockUserRulesService);
+  const myRules = await controller.getMyRules({ principal: { userId: 'u_1', roleCode: 'CR_OFFICER' } } as any);
+  assert.equal(myRules.canCreateBookings, false);
+  assert.equal(myRules.canManageSettings, false);
+
+  const updated = (await controller.updateUserRules('u_2', { principal: { userId: 'admin', roleCode: 'ADMIN' } } as any, { canCreateBookings: true })) as any;
+  assert.equal(updated.canCreateBookings, true);
+});

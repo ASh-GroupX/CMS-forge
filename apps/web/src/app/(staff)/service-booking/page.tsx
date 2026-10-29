@@ -4,6 +4,7 @@ import { resolveLocale, staffShellText } from '../../../i18n/staff-shell';
 import {
   fetchCarModels,
   fetchMaintenanceTypes,
+  fetchMyBookingRules,
   fetchServiceAppointments,
   fetchServiceCenters,
   type CarModel,
@@ -35,11 +36,15 @@ export default async function ServiceBookingPage({
   const cookieHeader = requestHeaders.get('cookie') ?? '';
 
   // Parallel data fetching with forwarded cookie header
-  const [fetchedCenters, carModels, maintenanceTypes, appointments] = await Promise.all([
+  const [fetchedCenters, carModels, maintenanceTypes, appointments, userRules] = await Promise.all([
     fetchServiceCenters(true, cookieHeader).catch(() => [] as ServiceCenter[]),
     fetchCarModels(true, cookieHeader).catch(() => [] as CarModel[]),
     fetchMaintenanceTypes(true, cookieHeader).catch(() => [] as MaintenanceType[]),
     fetchServiceAppointments({}, cookieHeader).catch(() => [] as ServiceAppointment[]),
+    fetchMyBookingRules(cookieHeader).catch(() => ({
+      userId: '', canViewBookings: true, canCreateBookings: true, canRescheduleBookings: true,
+      canChangeStatus: true, canCancelBookings: true, canManageSettings: false,
+    })),
   ]);
 
   const defaultBranches = [
@@ -93,6 +98,7 @@ export default async function ServiceBookingPage({
         initialCarModels={effectiveCarModels}
         initialDate={todayStr}
         initialMaintenanceTypes={effectiveMaintenanceTypes}
+        initialUserRules={userRules}
         locale={locale}
       >
         <ServiceBookingView />

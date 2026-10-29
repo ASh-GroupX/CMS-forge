@@ -410,6 +410,7 @@ model User {
   uploadedTicketAttachments TicketAttachment[]     @relation("TicketAttachmentUploadedBy")
   uploadedNoteAttachments   TicketNoteAttachment[] @relation("TicketNoteAttachmentUploadedBy")
   ticketRule                UserTicketRule?
+  bookingRule               UserBookingRule?
 
   id                        String                     @id @default(cuid())
   email                     String?                    @unique
@@ -1837,5 +1838,22 @@ model ServiceAppointment {
   @@index([serviceCenterId, date])
   @@index([customerPhone])
   @@map("service_appointments")
+}
+
+model UserBookingRule {
+  id                    String   @id @default(cuid())
+  userId                String   @unique @map("user_id")
+  canViewBookings       Boolean  @default(true)  @map("can_view_bookings")
+  canCreateBookings     Boolean  @default(true)  @map("can_create_bookings")
+  canRescheduleBookings Boolean  @default(true)  @map("can_reschedule_bookings")
+  canChangeStatus       Boolean  @default(true)  @map("can_change_status")
+  canCancelBookings     Boolean  @default(true)  @map("can_cancel_bookings")
+  canManageSettings     Boolean  @default(false) @map("can_manage_settings")
+  createdAt             DateTime @default(now())  @map("created_at")
+  updatedAt             DateTime @updatedAt      @map("updated_at")
+
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_booking_rules")
 }
 

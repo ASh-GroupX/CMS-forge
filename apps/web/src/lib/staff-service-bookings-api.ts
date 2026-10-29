@@ -88,6 +88,16 @@ export type DayRule = {
   slotDurationMinutes: number;
 };
 
+export type UserBookingRule = {
+  userId: string;
+  canViewBookings: boolean;
+  canCreateBookings: boolean;
+  canRescheduleBookings: boolean;
+  canChangeStatus: boolean;
+  canCancelBookings: boolean;
+  canManageSettings: boolean;
+};
+
 export type CreateAppointmentInput = {
   branchId: string;
   customerName: string;
@@ -249,41 +259,27 @@ export async function fetchServiceCenters(activeOnly = true, cookieHeader?: stri
   return Array.isArray(json) ? json : (json.centers ?? []);
 }
 
-export async function saveServiceCenter(data: {
-  id?: string | undefined;
-  code?: string | undefined;
-  nameEn: string;
-  nameAr: string;
-  address?: string | null | undefined;
-  phone?: string | null | undefined;
-  isActive?: boolean | undefined;
-}): Promise<{ ok: boolean; message?: string }> {
-  const url = `${getApiBaseUrl()}/service-bookings/centers`;
-  const res = await fetch(url, { method: 'POST', headers: await getAuthHeaders(), body: JSON.stringify(data) });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    return { ok: false, message: err.message || 'Failed to save service center' };
-  }
+export async function saveServiceCenter(data: { id?: string; code?: string; nameEn: string; nameAr: string; address?: string | null; phone?: string | null; isActive?: boolean }): Promise<{ ok: boolean; message?: string }> {
+  const res = await fetch(`${getApiBaseUrl()}/service-bookings/centers`, { method: 'POST', headers: await getAuthHeaders(), body: JSON.stringify(data) });
+  if (!res.ok) { const err = await res.json().catch(() => ({})); return { ok: false, message: err.message || 'Failed to save service center' }; }
   return { ok: true };
 }
 
 export async function deleteServiceCenter(id: string): Promise<{ ok: boolean; message?: string }> {
-  const url = `${getApiBaseUrl()}/service-bookings/centers/${encodeURIComponent(id)}`;
-  const res = await fetch(url, { method: 'DELETE', headers: await getAuthHeaders() });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    return { ok: false, message: err.message || 'Failed to delete service center' };
-  }
+  const res = await fetch(`${getApiBaseUrl()}/service-bookings/centers/${encodeURIComponent(id)}`, { method: 'DELETE', headers: await getAuthHeaders() });
+  if (!res.ok) { const err = await res.json().catch(() => ({})); return { ok: false, message: err.message || 'Failed to delete service center' }; }
   return { ok: true };
 }
 
 export async function initWeekRulesApi(centerId: string): Promise<{ ok: boolean; message?: string }> {
-  const url = `${getApiBaseUrl()}/service-bookings/rules/${encodeURIComponent(centerId)}/init-week`;
-  const res = await fetch(url, { method: 'POST', headers: await getAuthHeaders() });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    return { ok: false, message: err.message || 'Failed to initialize week rules' };
-  }
+  const res = await fetch(`${getApiBaseUrl()}/service-bookings/rules/${encodeURIComponent(centerId)}/init-week`, { method: 'POST', headers: await getAuthHeaders() });
+  if (!res.ok) { const err = await res.json().catch(() => ({})); return { ok: false, message: err.message || 'Failed to initialize week rules' }; }
   return { ok: true };
+}
+
+export async function fetchMyBookingRules(cookieHeader?: string): Promise<UserBookingRule> {
+  const res = await fetch(`${getApiBaseUrl()}/service-bookings/my-rules`, { headers: await getAuthHeaders(cookieHeader), cache: 'no-store' });
+  if (!res.ok) return { userId: '', canViewBookings: true, canCreateBookings: true, canRescheduleBookings: true, canChangeStatus: true, canCancelBookings: true, canManageSettings: false };
+  return res.json();
 }
 

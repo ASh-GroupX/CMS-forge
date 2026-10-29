@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Building2, Car, Clock, Wrench } from 'lucide-react';
+import { Building2, Car, Clock, ShieldCheck, Wrench } from 'lucide-react';
 import { BranchHoursTab } from './branch-hours-tab';
 import { CarModelsTab } from './car-models-tab';
 import { MaintenanceTypesTab } from './maintenance-types-tab';
 import { ServiceCentersTab } from './service-centers-tab';
+import { UserRulesTab } from './user-rules-tab';
 import type { CarModel, DayRule, MaintenanceType, ServiceCenter } from '../../../../lib/staff-service-bookings-api';
 import type { Locale } from '../../../../i18n/staff-shell';
 import type { ServiceBookingCopy } from '../../../../i18n/staff-service-booking';
@@ -25,7 +26,8 @@ export function BookingSettingsView({
   rulesByBranch: Record<string, DayRule[]>;
   t: ServiceBookingCopy;
 }) {
-  const [activeTab, setActiveTab] = useState<'hours' | 'cars' | 'maintenance' | 'centers'>('hours');
+  const isAr = locale === 'ar';
+  const [activeTab, setActiveTab] = useState<'hours' | 'cars' | 'maintenance' | 'centers' | 'user-rules'>('hours');
   const [centersList, setCentersList] = useState(centers);
   const [carList, setCarList] = useState(carModels);
   const [typesList, setTypesList] = useState(maintenanceTypes);
@@ -129,10 +131,23 @@ export function BookingSettingsView({
             <Building2 className="size-4" />
             <span>{t.adminSettings.tabBranches}</span>
           </button>
+
+          <button
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all ${
+              activeTab === 'user-rules'
+                ? 'bg-brand text-primary-foreground shadow-sm'
+                : 'border border-line-subtle bg-surface text-content-muted hover:text-content-strong'
+            }`}
+            onClick={() => setActiveTab('user-rules')}
+            type="button"
+          >
+            <ShieldCheck className="size-4" />
+            <span>{isAr ? 'صلاحيات وقواعد المستخدمين' : 'User Booking Rules'}</span>
+          </button>
         </div>
       </div>
 
-      {/* Tab Panels — all stay mounted so local state survives tab switches */}
+      {/* Tab Panels */}
       <div>
         <div style={{ display: activeTab === 'hours' ? undefined : 'none' }}>
           <BranchHoursTab
@@ -165,6 +180,9 @@ export function BookingSettingsView({
             locale={locale}
             onCentersChange={setCentersList}
           />
+        </div>
+        <div style={{ display: activeTab === 'user-rules' ? undefined : 'none' }}>
+          <UserRulesTab locale={locale} />
         </div>
       </div>
     </div>

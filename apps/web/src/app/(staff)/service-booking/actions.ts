@@ -263,16 +263,18 @@ async function apiDelete(path: string) {
   }
 }
 
-export async function deleteCarModelAction(id: string) {
-  return apiDelete(`/service-bookings/car-models/${encodeURIComponent(id)}`);
-}
+export const deleteCarModelAction = (id: string) => apiDelete(`/service-bookings/car-models/${encodeURIComponent(id)}`);
+export const deleteMaintenanceTypeAction = (id: string) => apiDelete(`/service-bookings/maintenance-types/${encodeURIComponent(id)}`);
+export const deleteServiceCenterAction = (id: string) => apiDelete(`/service-bookings/centers/${encodeURIComponent(id)}`);
 
-export async function deleteMaintenanceTypeAction(id: string) {
-  return apiDelete(`/service-bookings/maintenance-types/${encodeURIComponent(id)}`);
-}
-
-export async function deleteServiceCenterAction(id: string) {
-  return apiDelete(`/service-bookings/centers/${encodeURIComponent(id)}`);
+export async function getMyBookingRulesAction() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/service-bookings/my-rules`, { headers: await getAuthHeaders(), cache: 'no-store' });
+    if (!res.ok) return { userId: '', canViewBookings: true, canCreateBookings: true, canRescheduleBookings: true, canChangeStatus: true, canCancelBookings: true, canManageSettings: false };
+    return res.json();
+  } catch {
+    return { userId: '', canViewBookings: true, canCreateBookings: true, canRescheduleBookings: true, canChangeStatus: true, canCancelBookings: true, canManageSettings: false };
+  }
 }
 
 export async function initWeekRulesAction(centerId: string) {

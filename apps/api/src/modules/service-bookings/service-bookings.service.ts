@@ -9,15 +9,22 @@ import {
   DEFAULT_CAR_MODELS, DEFAULT_DAY_RULES, DEFAULT_MAINTENANCE_TYPES,
   buildDayAvailability, calculateEndTime, mapAppointment,
 } from './service-bookings.utils.js';
+import { UserBookingRulesService } from './user-booking-rules.service.js';
 
 export { DEFAULT_DAY_RULES };
 
 @Injectable()
 export class ServiceBookingsService {
-  constructor(private readonly repository: ServiceBookingsRepository) {}
+  constructor(
+    private readonly repository: ServiceBookingsRepository,
+    private readonly userRulesService?: UserBookingRulesService,
+  ) {}
 
   // ── Appointments ──────────────────────────────────────────────────────────
-  async listAppointments(params: { branchId?: string | undefined; fromDate?: string | undefined; toDate?: string | undefined; status?: string | undefined }): Promise<ServiceAppointmentDto[]> {
+  async listAppointments(params: { branchId?: string | undefined; fromDate?: string | undefined; toDate?: string | undefined; status?: string | undefined }, actorId?: string | null, roleCode?: string): Promise<ServiceAppointmentDto[]> {
+    if (actorId && this.userRulesService) {
+      await this.userRulesService.checkPermission(actorId, roleCode, 'canViewBookings');
+    }
     const fromDate = params.fromDate ? new Date(`${params.fromDate}T00:00:00Z`) : undefined;
     const toDate = params.toDate ? new Date(`${params.toDate}T23:59:59Z`) : undefined;
     const records = await this.repository.findAppointments({
@@ -41,7 +48,10 @@ export class ServiceBookingsService {
     }));
   }
 
-  async createAppointment(dto: CreateServiceAppointmentDto, actorId?: string | null): Promise<ServiceAppointmentDto> {
+  async createAppointment(dto: CreateServiceAppointmentDto, actorId?: string | null, roleCode?: string): Promise<ServiceAppointmentDto> {
+    if (actorId && this.userRulesService) {
+      await this.userRulesService.checkPermission(actorId, roleCode, 'canCreateBookings');
+    }
     const centerId = dto.branchId || 'center_main';
     const todayStr = new Date().toISOString().slice(0, 10);
     const nowTime = new Date().toTimeString().slice(0, 5);
@@ -86,12 +96,15 @@ export class ServiceBookingsService {
     return mapAppointment(created);
   }
 
-  async updateAppointment(id: string, dto: UpdateServiceAppointmentDto, actorId?: string | null): Promise<ServiceAppointmentDto> {
+  async updateAppointment(id: string, dto: UpdateServiceAppointmentDto, actorId?: string | null, roleCode?: string): Promise<ServiceAppointmentDto> {
     const existing = await this.repository.findAppointmentById(id);
     if (!existing) throw new NotFoundException('Appointment not found');
 
     const updateData: Prisma.ServiceAppointmentUncheckedUpdateInput = {};
     const isStatusChanged = Boolean(dto.status && dto.status !== existing.status);
+    if (isStatusChanged && actorId && this.userRulesService) {
+      await this.userRulesService.checkPermission(actorId, roleCode, 'canChangeStatus');
+    }
     if (dto.status) updateData.status = dto.status as ServiceAppointmentStatus;
     if (dto.notes !== undefined) updateData.notes = dto.notes;
     if (dto.customerName) updateData.customerName = dto.customerName;
@@ -109,6 +122,9 @@ export class ServiceBookingsService {
 
     if ((dto.date && dto.date !== oldDateStr) || (dto.startTime && dto.startTime !== existing.startTime) || isCenterChanged) {
       isRescheduled = true;
+      if (actorId && this.userRulesService) {
+        await this.userRulesService.checkPermission(actorId, roleCode, 'canRescheduleBookings');
+      }
       const todayStr = new Date().toISOString().slice(0, 10);
       const nowTime = new Date().toTimeString().slice(0, 5);
       if (process.env.NODE_ENV !== 'test' && (targetDateStr < todayStr || (targetDateStr === todayStr && targetTime < nowTime))) {

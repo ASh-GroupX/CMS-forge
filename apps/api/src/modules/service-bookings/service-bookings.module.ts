@@ -8,6 +8,7 @@ import { AuthService } from '../auth/auth.service.js';
 import { ServiceBookingsController } from './service-bookings.controller.js';
 import { ServiceBookingsRepository } from './service-bookings.repository.js';
 import { ServiceBookingsService } from './service-bookings.service.js';
+import { UserBookingRulesService } from './user-booking-rules.service.js';
 
 @Module({
   imports: [AuthModule],
@@ -17,6 +18,7 @@ import { ServiceBookingsService } from './service-bookings.service.js';
     AuditService,
     ServiceBookingsRepository,
     ServiceBookingsService,
+    UserBookingRulesService,
     {
       provide: SESSION_AUTH_SERVICE,
       inject: [AuthService],
@@ -26,7 +28,7 @@ import { ServiceBookingsService } from './service-bookings.service.js';
     PermissionGuard,
     CsrfGuard,
   ],
-  exports: [ServiceBookingsService, ServiceBookingsRepository],
+  exports: [ServiceBookingsService, ServiceBookingsRepository, UserBookingRulesService],
 })
 export class ServiceBookingsModule {}
 

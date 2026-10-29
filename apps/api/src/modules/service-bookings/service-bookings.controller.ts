@@ -4,16 +4,20 @@ import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { ServiceBookingsService } from './service-bookings.service.js';
 import { parseCreateServiceAppointmentBody } from './dto/create-service-appointment.dto.js';
 import { parseUpdateServiceAppointmentBody } from './dto/update-service-appointment.dto.js';
-import { parseUpdateBranchBookingRulesBody } from './dto/service-booking-rules.dto.js';
 import {
   parseUpsertCarModelBody,
   parseUpsertMaintenanceTypeBody,
   parseUpsertServiceCenterBody,
 } from './dto/service-master-data.dto.js';
+import { parseUpdateBranchBookingRulesBody } from './dto/service-booking-rules.dto.js';
+import { UserBookingRulesService } from './user-booking-rules.service.js';
 
 @Controller('service-bookings')
 export class ServiceBookingsController {
-  constructor(private readonly service: ServiceBookingsService) {}
+  constructor(
+    private readonly service: ServiceBookingsService,
+    private readonly userRulesService?: UserBookingRulesService,
+  ) {}
 
   // ── Service Centers ───────────────────────────────────────────────────────
   @Get('centers')
@@ -117,23 +121,59 @@ export class ServiceBookingsController {
   }
 
   // ── Appointments ──────────────────────────────────────────────────────────
+  // ── User Booking Rules ────────────────────────────────────────────────────
+  @Get('my-rules')
+  @UseGuards(SessionAuthGuard)
+  async getMyRules(@Req() req: AuthenticatedRequest) {
+    const userId = req.principal?.userId ?? '';
+    const roleCode = req.principal?.roleCode;
+    return this.userRulesService?.getUserBookingRule(userId, roleCode) ?? {
+      userId, canViewBookings: true, canCreateBookings: true, canRescheduleBookings: true,
+      canChangeStatus: true, canCancelBookings: true, canManageSettings: roleCode === 'ADMIN',
+    };
+  }
+
+  @Get('settings/users-rules')
+  @UseGuards(SessionAuthGuard)
+  async getAllUsersRules(@Req() req: AuthenticatedRequest) {
+    if (!this.userRulesService) return [];
+    return this.userRulesService.getAllUsersBookingRules(req.principal);
+  }
+
+  @Get('settings/users/:userId/rules')
+  @UseGuards(SessionAuthGuard)
+  async getUserRules(@Param('userId') userId: string, @Req() req: AuthenticatedRequest) {
+    return this.userRulesService?.getUserBookingRule(userId, req.principal?.roleCode) ?? {
+      userId, canViewBookings: true, canCreateBookings: true, canRescheduleBookings: true,
+      canChangeStatus: true, canCancelBookings: true, canManageSettings: false,
+    };
+  }
+
+  @Put('settings/users/:userId/rules')
+  @UseGuards(SessionAuthGuard)
+  async updateUserRules(@Param('userId') userId: string, @Req() req: AuthenticatedRequest, @Body() body: any) {
+    if (!this.userRulesService) return { success: false };
+    return this.userRulesService.updateUserBookingRule(userId, body, req.principal);
+  }
+
+  // ── Appointments ──────────────────────────────────────────────────────────
   @Get(['appointments', ''])
   @UseGuards(SessionAuthGuard)
   async listAppointments(
+    @Req() req: AuthenticatedRequest,
     @Query('branchId') branchId?: string,
     @Query('fromDate') fromDate?: string,
     @Query('toDate') toDate?: string,
     @Query('status') status?: string,
   ) {
-    return this.service.listAppointments({ branchId, fromDate, toDate, status });
+    return this.service.listAppointments({ branchId, fromDate, toDate, status }, req.principal?.userId, req.principal?.roleCode);
   }
 
   @Post(['appointments', ''])
   @UseGuards(SessionAuthGuard)
   async createAppointment(@Req() req: AuthenticatedRequest, @Body() body: unknown) {
     const dto = parseCreateServiceAppointmentBody(body);
-    const actorId = req.principal?.userId ?? null;
-    return this.service.createAppointment(dto, actorId);
+    return this.service.createAppointment(dto, req.principal?.userId ?? null, req.principal?.roleCode);
   }
 
   @Get('appointments/:id/history')
@@ -156,8 +196,7 @@ export class ServiceBookingsController {
     @Body() body: unknown,
   ) {
     const dto = parseUpdateServiceAppointmentBody(body);
-    const actorId = req.principal?.userId ?? null;
-    return this.service.updateAppointment(id, dto, actorId);
+    return this.service.updateAppointment(id, dto, req.principal?.userId ?? null, req.principal?.roleCode);
   }
 
   // ── Fallback Parameterized Routes (must be last to prevent shadowing) ──────

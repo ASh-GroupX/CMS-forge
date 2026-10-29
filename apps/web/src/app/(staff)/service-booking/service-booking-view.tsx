@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import { ShieldAlert } from 'lucide-react';
 import { useServiceBooking } from './service-booking-context';
 import { TimelineTopbar } from './timeline-topbar';
 import { TimelineSidebar } from './timeline-sidebar';
@@ -11,7 +11,24 @@ import { NewAppointmentModal } from './new-appointment-modal';
 import { AppointmentDetailModal } from './appointment-detail-modal';
 
 export function ServiceBookingView() {
-  const { view } = useServiceBooking();
+  const { view, userRules, locale } = useServiceBooking();
+  const isAr = locale === 'ar';
+
+  if (!userRules.canViewBookings) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center rounded-3xl border border-line-subtle bg-surface shadow-xs">
+        <ShieldAlert className="size-12 text-status-warning mb-3" />
+        <h2 className="text-lg font-bold text-content-strong">
+          {isAr ? 'لا تملك صلاحية عرض حجوزات الصيانة' : 'Access Restricted'}
+        </h2>
+        <p className="text-sm text-content-muted mt-1 max-w-md">
+          {isAr
+            ? 'تم تقييد صلاحية الوصول إلى نظام حجز الصيانة لحسابك. يرجى مراجعة مسؤول النظام لمنحك الصلاحية.'
+            : 'You do not have permission to view or access service bookings. Please contact your system administrator.'}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5 w-full">
