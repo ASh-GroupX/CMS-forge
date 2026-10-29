@@ -192,9 +192,7 @@ export async function updateBranchNameAction(branchId: string, nameEn: string, n
       const msg = await res.text().catch(() => '');
       return { success: false, error: parseErrorMessage(msg, res.status) };
     }
-    revalidatePath('/service-booking');
-    revalidatePath('/admin/booking-settings');
-    revalidatePath('/admin/branches');
+    ['/service-booking', '/admin/booking-settings', '/admin/branches'].forEach((p) => revalidatePath(p));
     revalidatePath('/admin', 'layout');
     return { success: true };
   } catch (err: any) {
@@ -203,13 +201,8 @@ export async function updateBranchNameAction(branchId: string, nameEn: string, n
 }
 
 export async function saveServiceCenterAction(data: {
-  id?: string | undefined;
-  code?: string | undefined;
-  nameEn: string;
-  nameAr: string;
-  address?: string | null | undefined;
-  phone?: string | null | undefined;
-  isActive?: boolean | undefined;
+  id?: string | undefined; code?: string | undefined; nameEn: string; nameAr: string;
+  address?: string | null | undefined; phone?: string | null | undefined; isActive?: boolean | undefined;
 }) {
   try {
     const effectiveEn = data.nameEn.trim() || data.nameAr.trim();
@@ -238,9 +231,7 @@ export async function saveServiceCenterAction(data: {
       return { success: false, error: parseErrorMessage(msg, res.status) };
     }
     const center = await res.json().catch(() => null);
-    revalidatePath('/service-booking');
-    revalidatePath('/admin/booking-settings');
-    revalidatePath('/admin/branches');
+    ['/service-booking', '/admin/booking-settings', '/admin/branches'].forEach((p) => revalidatePath(p));
     revalidatePath('/admin', 'layout');
     return { success: true, center };
   } catch (err: any) {
@@ -263,9 +254,15 @@ async function apiDelete(path: string) {
   }
 }
 
-export const deleteCarModelAction = (id: string) => apiDelete(`/service-bookings/car-models/${encodeURIComponent(id)}`);
-export const deleteMaintenanceTypeAction = (id: string) => apiDelete(`/service-bookings/maintenance-types/${encodeURIComponent(id)}`);
-export const deleteServiceCenterAction = (id: string) => apiDelete(`/service-bookings/centers/${encodeURIComponent(id)}`);
+export async function deleteCarModelAction(id: string) {
+  return apiDelete(`/service-bookings/car-models/${encodeURIComponent(id)}`);
+}
+export async function deleteMaintenanceTypeAction(id: string) {
+  return apiDelete(`/service-bookings/maintenance-types/${encodeURIComponent(id)}`);
+}
+export async function deleteServiceCenterAction(id: string) {
+  return apiDelete(`/service-bookings/centers/${encodeURIComponent(id)}`);
+}
 
 export async function getMyBookingRulesAction() {
   try {
