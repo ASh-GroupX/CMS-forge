@@ -1,6 +1,6 @@
 # CRM reliability release repair
 
-Status: Final verification, then production deployment
+Status: Deployed and verified — release 1988dc8
 Required model tier: High or equivalent
 Risk: High
 SRS IDs: REQ-FILES-001, REQ-COMPLAINT-001, REQ-CUSTOMER-001,

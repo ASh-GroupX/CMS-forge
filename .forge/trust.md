@@ -1495,3 +1495,7 @@ landmarks/tabpanel labels and restored route navigation scope. Required final
 checks must finish before merge/deploy. Explicit correction: the previously
 claimed completed production-baseline reproduction was unsupported; that run
 was interrupted. Current green counts are feature-branch checks.
+
+Release 1988dc8 deployed: GitHub validation/deployment succeeded, independent
+public health and revision checks passed, staff routes require sign-in.
+No remaining release repair items; authenticated production write UAT Not Run.

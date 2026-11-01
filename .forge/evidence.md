@@ -15071,3 +15071,19 @@ Final release gates completed: root 70/70 with coverage, shell 224/224, full bac
 662/662, API-client 89/89, localization 13/13, lint/typecheck/build/security/
 OpenAPI/migration sanity passed. Independent phase review passed. Expanded
 EN/AR serious/critical Axe count is zero. No skipped tests in these suite logs.
+
+### Production deployment verification
+
+Release: 1988dc83d51c081738634f0d53c928b2a6d237e7.
+Pushed waleed and fast-forward merged/pushed production.
+GitHub run https://github.com/ASh-GroupX/CMS-forge/actions/runs/41292139346
+completed successfully: Validate and Test; Deploy to VPS. Workflow retained
+pre-migration backup, service health and exact revision verification.
+Independent public checks passed: root /portal /portal/track /auth/reset HTTP200;
+/api/health HTTP200 with status ok, databaseConfigured and redisConfigured true.
+All returned x-cms-deployment matching the release. /complaints/new and
+/internal-tickets/new returned 307 to /?locale=en without an authenticated session.
+Authenticated production write UAT: Not Run; no production test records added.
+Automated API authorization/upload policy behavior and visual/Axe proof passed.
+This followup updates evidence on waleed only; production retains the verified
+functional release revision, avoiding an unnecessary second deployment.
