@@ -15004,7 +15004,9 @@ METHOD-API-001, METHOD-TEST-001, ARCH-UI-001, UI-DESIGN-001
   navigation, portal, complaint detail/create, DMS, reports, dashboard, and
   other staff views). The failing suite must be reconciled before production
   merge; individual requested feature checks passed.
-- Not Run: push, production merge, deployment, and authenticated live proof.
+- Passed: pushed commit `b3168f7` to `origin/waleed`.
+- Blocked: production merge, deployment, and authenticated live proof remain
+  pending a green full web shell suite.
 
 ### Security Self-Check
 

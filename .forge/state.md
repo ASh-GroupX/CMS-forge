@@ -13,7 +13,8 @@ Model Tier: GPT-5.5 Extra High or equivalent
 - The complete web shell suite ran and failed 41/223 tests across multiple
   existing screens, including complaint detail/create. Production merge is held
   until these failures are understood and the required web gate passes.
-- Branch is `waleed`; no production merge has been performed.
+- Commit `b3168f7` is pushed to `origin/waleed`; no production merge has been
+  performed.
 
 ## Current Stop
 
