@@ -256,7 +256,19 @@ export function ComplaintWorkspace({
               </div>
             </details>
 
-            <details><summary>{t.sections.facts}</summary><ComplaintDetailWorkspace supplemental detail={detail} comments={comments} relations={relations} surveys={surveys} initialTab="details" locale={locale} staff={staff} options={options} assignmentOptions={assignmentOptions} /></details>
+            {/* Supplementary Details & Facts (Collapsible, closed by default) */}
+            <details className="shrink-0 overflow-hidden rounded-2xl border border-line-subtle bg-surface shadow-sm group">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 bg-surface-canvas/50 px-4 py-3 text-sm font-semibold text-content-strong outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
+                <span className="flex items-center gap-2">
+                  <FileText aria-hidden="true" className="size-4 text-brand" />
+                  {t.sections.facts}
+                </span>
+                <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-content-muted transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="border-t border-line-subtle bg-surface-sunken p-4 overflow-x-hidden min-w-0">
+                <ComplaintDetailWorkspace supplemental detail={detail} comments={comments} relations={relations} surveys={surveys} initialTab="details" locale={locale} staff={staff} options={options} assignmentOptions={assignmentOptions} />
+              </div>
+            </details>
             <ComplaintAuditLogSection audit={audit} locale={locale} />
 
           </div>

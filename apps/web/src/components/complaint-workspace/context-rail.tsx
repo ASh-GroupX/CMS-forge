@@ -1,4 +1,4 @@
-import { Building2, Car, Clock, ShieldAlert, User } from 'lucide-react';
+import { Building2, Car, CheckCircle2, Clock, ShieldAlert, Smile, User } from 'lucide-react';
 import React from 'react';
 import { complaintStatusLabel } from '../../i18n/domain-labels';
 import type { Locale } from '../../i18n/staff-shell';
@@ -73,6 +73,40 @@ export function ContextRail({ detail, locale, t }: { detail: StaffComplaintDetai
               <SlaBadge state={detail.slaState} />
             </dd>
           </div>
+          <div className="grid gap-1">
+            <dt className="flex items-center gap-2 text-content-muted">
+              <CheckCircle2 className="size-3.5" />
+              {isArabic ? 'حكم التبرير' : 'Justification Verdict'}
+            </dt>
+            <dd className="font-semibold text-content-strong">
+              {detail.isJustified !== null && detail.isJustified !== undefined ? (
+                <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-bold ${
+                  detail.isJustified ? 'bg-status-success-bg text-status-success' : 'bg-status-error-bg text-status-error'
+                }`}>
+                  {detail.isJustified ? (isArabic ? '✅ شكوى مبررة' : '✅ Justified') : (isArabic ? '❌ شكوى غير مبررة' : '❌ Unjustified')}
+                </span>
+              ) : (
+                <span className="text-xs text-content-muted">
+                  {detail.status === 'RESOLVED' || detail.status === 'CLOSED' || detail.status === 'COMPLETED'
+                    ? (isArabic ? '⚠️ غير مسجل' : '⚠️ Unrated')
+                    : (isArabic ? 'قيد المتابعة (يُحدد عند الإنهاء)' : 'In Progress (Rated upon closure)')}
+                </span>
+              )}
+            </dd>
+          </div>
+          {detail.satisfactionStatus && (
+            <div className="grid gap-1">
+              <dt className="flex items-center gap-2 text-content-muted">
+                <Smile className="size-3.5" />
+                {isArabic ? 'مستوى رضا العميل' : 'Customer Satisfaction'}
+              </dt>
+              <dd className="font-semibold text-content-strong text-xs">
+                {detail.satisfactionStatus === 'SATISFIED' && (isArabic ? '😊 راضٍ' : '😊 Satisfied')}
+                {detail.satisfactionStatus === 'NEUTRAL' && (isArabic ? '😐 محايد' : '😐 Neutral')}
+                {detail.satisfactionStatus === 'UNSATISFIED' && (isArabic ? '😞 غير راضٍ' : '😞 Unsatisfied')}
+              </dd>
+            </div>
+          )}
           
           {(detail.createdBy || detail.approvedBy || detail.assignedBy) && (
             <div className="mt-2 grid gap-3 border-t border-line-subtle pt-4">

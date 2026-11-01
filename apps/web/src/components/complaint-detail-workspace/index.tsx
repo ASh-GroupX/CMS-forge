@@ -65,7 +65,7 @@ export function ComplaintDetailWorkspace({
 }) {
   const Body = supplemental ? 'div' : 'main';
   const DetailsContent = ({ children }: { children: React.ReactNode }) => supplemental
-    ? <section className="grid gap-3 2xl:grid-cols-2" aria-label={complaintTabsText[locale].details}>{children}</section>
+    ? <section className="grid gap-3 grid-cols-1 min-w-0" aria-label={complaintTabsText[locale].details}>{children}</section>
     : <TabsContent className="grid gap-3 2xl:grid-cols-2" value="details">{children}</TabsContent>;
   const shell = staffShellText[locale];
   const t = complaintDetailText[locale];
