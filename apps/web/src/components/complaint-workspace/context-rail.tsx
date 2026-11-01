@@ -1,5 +1,6 @@
 import { Building2, Car, Clock, ShieldAlert, User } from 'lucide-react';
 import React from 'react';
+import { complaintStatusLabel } from '../../i18n/domain-labels';
 import type { Locale } from '../../i18n/staff-shell';
 import type { StaffComplaintDetailView } from '../../lib/staff-detail-api';
 
@@ -20,7 +21,7 @@ export function ContextRail({ detail, locale, t }: { detail: StaffComplaintDetai
               {t.labels?.status || 'Status'}
             </dt>
             <dd className="font-semibold text-content-strong">
-              <span className="rounded bg-brand/10 px-2 py-0.5 text-brand">{detail.status.replace('_', ' ')}</span>
+              <span className="rounded bg-brand/10 px-2 py-0.5 text-content-strong">{complaintStatusLabel(locale, detail.status)}</span>
             </dd>
           </div>
           <div className="grid gap-1">

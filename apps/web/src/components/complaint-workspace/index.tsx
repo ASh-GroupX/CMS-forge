@@ -18,11 +18,15 @@ import { WorkingNotesList } from './working-notes';
 import { VoiceOfCustomerCard } from './voice-of-customer-card';
 import { ArrowLeft, ClipboardCheck, Download, FileText, History, Paperclip } from 'lucide-react';
 
+import { ComplaintDetailWorkspace } from '../complaint-detail-workspace';
+import type { StaffComplaintComment } from '../../lib/staff-complaint-comments-api';
+import type { StaffComplaintRelationsView } from '../../lib/staff-complaint-relations-api';
+import type { StaffComplaintSurvey } from '../../lib/staff-complaint-surveys-api';
 export type ComplaintDetailState = 'loading' | 'empty' | 'error' | 'denied' | 'notFound' | 'ready';
 
 export function ComplaintWorkspace({
   assignmentOptions,
-  audit,
+  audit, comments, relations, surveys,
   detail,
   locale,
   options,
@@ -32,6 +36,9 @@ export function ComplaintWorkspace({
 }: {
   assignmentOptions?: StaffAssignmentOptions | null | undefined;
   audit?: StaffAuditLoadResult | undefined;
+  comments?: StaffComplaintComment[] | null | undefined;
+  relations?: StaffComplaintRelationsView | undefined;
+  surveys?: StaffComplaintSurvey[] | null | undefined;
   detail?: StaffComplaintDetailView | undefined;
   locale: Locale;
   options?: ComplaintFormOptions | null | undefined;
@@ -46,7 +53,7 @@ export function ComplaintWorkspace({
     return (
       <section aria-label={t.title} className="flex h-full flex-col bg-surface" dir={shell.dir}>
         <div className="p-8">
-          <StateBlock message={state === 'error' || state === 'denied' ? t.states.error : t.states.loading} tone={state === 'error' ? 'error' : 'neutral'} />
+          <StateBlock message={state === 'ready' ? t.states.error : t.states[state]} tone={state === 'error' || state === 'denied' || state === 'notFound' ? 'error' : 'neutral'} />
         </div>
       </section>
     );
@@ -117,7 +124,7 @@ export function ComplaintWorkspace({
               </h3>
             </div>
             <div className="flex-1 overflow-y-auto bg-surface/30 p-4">
-              <WorkingNotesList timeline={timeline ?? []} complaintId={detail.id} />
+              <WorkingNotesList locale={locale} timeZone={detail.displayTimeZone} comments={comments} timeline={timeline ?? []} complaintId={detail.id} />
             </div>
             <div className="border-t border-line-subtle bg-surface-canvas p-3">
               <ComplaintNoteForm complaintId={detail.id} locale={locale} />
@@ -188,7 +195,7 @@ export function ComplaintWorkspace({
                           <FileText className="size-4" />
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-xs font-bold text-content-strong" title={att.related?.label || 'File'}>
+                          <p className="truncate text-xs font-bold text-content-strong" title={att.summary}>
                             {att.related?.label || 'Attachment'}
                           </p>
                           <div className="flex items-center gap-2 text-[10px] text-content-muted">
@@ -239,6 +246,7 @@ export function ComplaintWorkspace({
               </div>
             </div>
 
+            <details><summary>{t.sections.facts}</summary><ComplaintDetailWorkspace supplemental detail={detail} comments={comments} relations={relations} surveys={surveys} initialTab="details" locale={locale} staff={staff} options={options} assignmentOptions={assignmentOptions} /></details>
             <ComplaintAuditLogSection audit={audit} locale={locale} />
 
           </div>

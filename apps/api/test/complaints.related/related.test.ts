@@ -205,7 +205,7 @@ function request(permissions: string[]): AuthenticatedRequest {
 }
 
 function principal(permissions: string[]): StaffPrincipal {
-  return { sessionId: 'ses_route', userId: 'usr_manager', email: 'manager@cms-auto.test', nameEn: 'Manager', nameAr: 'Manager', roleCode: RoleCode.CR_MANAGER, permissions, branchId: 'branch_main' };
+  return { sessionId: 'ses_route', userId: 'usr_manager', email: 'manager@cms-auto.test', nameEn: 'Manager', nameAr: 'Manager', roleCode: RoleCode.BRANCH_MANAGER, permissions, branchId: 'branch_main' };
 }
 
 function context(req: AuthenticatedRequest, handler: unknown): ExecutionContext {

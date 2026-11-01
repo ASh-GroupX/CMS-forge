@@ -22,8 +22,8 @@ export function VoiceOfCustomerCard({
       {/* Header: Title + Subtitle + Context Badges */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-line-subtle/60 pb-4">
         <div className="flex items-center gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand shadow-inner">
-            <MessageSquareQuote className="size-6 text-brand" />
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-content-strong shadow-inner">
+            <MessageSquareQuote className="size-6 text-content-strong" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-content-strong">
@@ -38,7 +38,7 @@ export function VoiceOfCustomerCard({
         {/* Status & Classification Badges */}
         <div className="flex flex-wrap items-center gap-2">
           {(detail.categoryName || detail.categoryNameAr) && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand border border-brand/20">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-content-strong border border-brand/20">
               📁 {isArabic ? (detail.categoryNameAr || detail.categoryName) : detail.categoryName}
             </span>
           )}
@@ -91,7 +91,7 @@ export function VoiceOfCustomerCard({
       {/* Prominent Subject Headline */}
       {detail.subject && (
         <div className="mb-4 rounded-xl border border-brand/20 bg-brand/5 px-4 py-3">
-          <div className="text-xs font-bold uppercase tracking-wider text-brand">
+          <div className="text-xs font-bold uppercase tracking-wider text-content-strong">
             {isArabic ? 'موضوع الشكوى' : 'Complaint Subject'}
           </div>
           <div className="text-base font-bold text-content-strong mt-0.5">
@@ -102,7 +102,7 @@ export function VoiceOfCustomerCard({
 
       {/* Narrative Quote Statement Body */}
       <div className="rounded-xl border border-line-subtle bg-surface-sunken p-5 text-content-strong shadow-inner min-h-[5.5rem]">
-        <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand">
+        <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-content-strong">
           <Quote className="size-4" />
           <span>{isArabic ? 'إفادة العميل / الوصف المسجل' : 'Customer Statement / Narrative'}</span>
         </div>
@@ -146,19 +146,19 @@ export function VoiceOfCustomerCard({
         <div className="flex flex-wrap items-center gap-4">
           {detail.customer?.name && (
             <div className="flex items-center gap-1.5">
-              <User className="size-3.5 text-brand" />
+              <User className="size-3.5 text-content-strong" />
               <span className="font-medium text-content-strong">{detail.customer.name}</span>
             </div>
           )}
           {detail.customer?.phone && (
             <div className="flex items-center gap-1.5" dir="ltr">
-              <Phone className="size-3.5 text-brand" />
+              <Phone className="size-3.5 text-content-strong" />
               <span className="font-medium">{detail.customer.phone}</span>
             </div>
           )}
           {detail.updatedAt && (
             <div className="flex items-center gap-1.5">
-              <Calendar className="size-3.5 text-brand" />
+              <Calendar className="size-3.5 text-content-strong" />
               <span>{new Date(detail.updatedAt).toLocaleDateString([], { dateStyle: 'medium' })}</span>
             </div>
           )}
@@ -168,7 +168,7 @@ export function VoiceOfCustomerCard({
           {detail.rootCauseCategory && (
             <div className="flex items-center gap-1">
               <span className="font-semibold text-content-strong">{isArabic ? 'السبب الجذري:' : 'Root Cause:'}</span>
-              <span className="rounded bg-surface-raised px-2 py-0.5 font-medium text-brand">{detail.rootCauseCategory}</span>
+              <span className="rounded bg-surface-raised px-2 py-0.5 font-medium text-content-strong">{detail.rootCauseCategory}</span>
             </div>
           )}
           {detail.salesAdvisorName && (

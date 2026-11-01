@@ -60,6 +60,7 @@ export function ManagerControlRoom({ data, locale, state }: { data: ManagerContr
           </p>
         ) : (
           <div className="grid gap-3">
+            {total === 0 ? <p role="status">{t.states.empty}</p> : null}
             <ScopeChip label={t.filters.scope} value={t.filters.scopeValue} />
             <div className="grid gap-3 lg:grid-cols-2">
               <CountSection counts={data.overdueByEmployee} locale={locale} sectionKey="overdueByEmployee" t={t} />

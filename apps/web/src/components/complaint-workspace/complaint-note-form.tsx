@@ -2,11 +2,13 @@
 
 import React, { useState } from 'react';
 import { Send, Paperclip } from 'lucide-react';
+import { complaintDetailText } from '../../i18n/staff-complaint-detail';
 import { toast } from 'sonner';
 import { addStaffComplaintComment } from '../../lib/staff-complaint-comments-api';
 import { staffAttachmentAccept, uploadStaffComplaintAttachments } from '../../lib/staff-attachments-api';
 
 export function ComplaintNoteForm({ complaintId, locale }: { complaintId: string, locale: string }) {
+  const text = complaintDetailText[locale === 'ar' ? 'ar' : 'en'];
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
@@ -67,6 +69,7 @@ export function ComplaintNoteForm({ complaintId, locale }: { complaintId: string
       >
         <button 
           type="button"
+          aria-label={text.sections.attachments}
           onClick={() => fileInputRef.current?.click()}
           className="rounded-md p-1.5 text-content-muted hover:text-content-strong disabled:opacity-50"
           disabled={loading}
@@ -82,6 +85,7 @@ export function ComplaintNoteForm({ complaintId, locale }: { complaintId: string
           onChange={(e) => setFiles(Array.from(e.target.files || []))}
         />
         <input 
+          aria-label={text.sections.internalComments}
           name="note" 
           type="text" 
           placeholder={locale === 'ar' ? 'أضف ملاحظة...' : 'Add a note...'}
@@ -91,6 +95,7 @@ export function ComplaintNoteForm({ complaintId, locale }: { complaintId: string
           disabled={loading}
         />
         <button 
+          aria-label={text.workflow.submit}
           type="submit" 
           className="rounded-md bg-brand p-1.5 text-white hover:bg-brand-hover disabled:opacity-50"
           disabled={loading || (!content.trim() && files.length === 0)}

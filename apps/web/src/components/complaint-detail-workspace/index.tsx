@@ -29,6 +29,7 @@ export type { ComplaintCommentsFixtureState };
 export type { ComplaintWorkflowFixtureState };
 
 export function ComplaintDetailWorkspace({
+  supplemental = false,
   assignmentOptions,
   attachmentState,
   comments,
@@ -45,6 +46,7 @@ export function ComplaintDetailWorkspace({
   surveys,
   workflowState,
 }: {
+  supplemental?: boolean;
   assignmentOptions?: StaffAssignmentOptions | null | undefined;
   attachmentState?: ComplaintAttachmentFixtureState | undefined;
   comments?: StaffComplaintComment[] | null | undefined;
@@ -61,6 +63,10 @@ export function ComplaintDetailWorkspace({
   surveys?: StaffComplaintSurvey[] | null | undefined;
   workflowState?: ComplaintWorkflowFixtureState | undefined;
 }) {
+  const Body = supplemental ? 'div' : 'main';
+  const DetailsContent = ({ children }: { children: React.ReactNode }) => supplemental
+    ? <section className="grid gap-3 2xl:grid-cols-2" aria-label={complaintTabsText[locale].details}>{children}</section>
+    : <TabsContent className="grid gap-3 2xl:grid-cols-2" value="details">{children}</TabsContent>;
   const shell = staffShellText[locale];
   const t = complaintDetailText[locale];
   const tabs = complaintTabsText[locale];
@@ -71,7 +77,7 @@ export function ComplaintDetailWorkspace({
 
   return (
     <section aria-label={t.title} className="flex h-full flex-col overflow-hidden" dir={shell.dir}>
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-line-subtle bg-surface px-4">
+      {!supplemental && <header className="flex h-14 shrink-0 items-center justify-between border-b border-line-subtle bg-surface px-4">
         <div className="flex items-center gap-4">
           <a href={`/complaints?locale=${locale}`} className="text-sm font-medium text-brand hover:underline">
             &larr; {t.values.backToBoard || 'Back to Board'}
@@ -86,7 +92,7 @@ export function ComplaintDetailWorkspace({
             </span>
           )}
         </div>
-      </header>
+      </header>}
 
       {effectiveState ? (
         <div className="p-4">
@@ -94,7 +100,7 @@ export function ComplaintDetailWorkspace({
         </div>
       ) : (
         <div className="flex flex-1 overflow-hidden">
-          <aside className="hidden w-80 shrink-0 flex-col gap-4 overflow-y-auto border-e border-line-subtle bg-surface-raised p-4 xl:flex">
+          {!supplemental && <aside aria-label={t.sections.facts} className="hidden w-80 shrink-0 flex-col gap-4 overflow-y-auto border-e border-line-subtle bg-surface-raised p-4 xl:flex">
             {detail && <DetailSidebar deadlineLabel={tabs.deadlineState} detail={detail} locale={locale} text={t} values={values} />}
             <div className="mt-2">
               <ComplaintWorkflowModal allowedActions={detail?.allowedActions} assignmentOptions={assignmentOptions} complaintId={detail?.id} locale={locale} options={options} staff={staff} status={detail?.status} vehicleNeedsUnavailableReason={Boolean(detail?.vehicleRelated && !detail.vehicle && !detail.vehicleDataUnavailableReason)} workflowState={workflowState} />
@@ -102,15 +108,15 @@ export function ComplaintDetailWorkspace({
             {detail && (
               <DetailPanel title={t.sections.ownership} rows={[[t.labels.owner, values.owner], [t.labels.nextAction, detail.nextAction ? actionDisplay(detail.nextAction, t, locale) : t.workflow.states.empty]]} />
             )}
-          </aside>
+          </aside>}
 
-          <main className="flex-1 min-w-0 overflow-y-auto bg-surface p-4">
+          <Body className="flex-1 min-w-0 overflow-y-auto bg-surface p-4">
             <Tabs defaultValue={initialTab} dir={shell.dir}>
-              <TabsList className="mb-4 grid h-auto w-full max-w-md grid-cols-3">
+              {!supplemental && <TabsList className="mb-4 grid h-auto w-full max-w-md grid-cols-3">
                 <TabsTrigger value="work">{tabs.work}</TabsTrigger>
                 <TabsTrigger value="communication">{tabs.communication}</TabsTrigger>
                 <TabsTrigger value="details">{tabs.details}</TabsTrigger>
-              </TabsList>
+              </TabsList>}
               <TabsContent className="grid gap-3" value="work">
                 {/* Work specific summary for mobile or extra workspace */}
                 <div className="xl:hidden mb-4">
@@ -124,7 +130,7 @@ export function ComplaintDetailWorkspace({
                 {detail ? <CommunicationTimelinePanel detail={detail} locale={locale} text={t} /> : <DetailPanel title={t.sections.communicationTimeline}><StateBlock message={t.commentStates.empty} /></DetailPanel>}
                 <ComplaintCommentsPanel comments={comments} commentsState={commentsState} complaintId={detail?.id} initialVisibility={commentVisibility} locale={locale} timeZone={detail?.displayTimeZone ?? 'UTC'} />
               </TabsContent>
-              <TabsContent className="grid gap-3 2xl:grid-cols-2" value="details">
+              <DetailsContent>
                 <div className="grid min-w-0 content-start gap-3">
                   <DetailPanel title={t.sections.customer} rows={[[t.labels.customer, detail?.customer.name ?? t.values.customer], [t.labels.contact, detail?.customer.phone ?? t.values.contact], [t.labels.customerNumber, detail?.customer.identifier ?? t.values.none], [t.labels.customerSource, provenance?.customerSource ?? t.values.customerSource], [t.labels.manualCustomer, provenance?.manualCustomer ?? t.values.manualCustomer]]} />
                   <DetailPanel title={t.sections.vehicle} rows={vehicleRows(detail, t, provenance)} />
@@ -144,9 +150,9 @@ export function ComplaintDetailWorkspace({
                   <DetailPanel title={t.sections.survey} rows={surveyRows(surveys, t, locale)} />
                   <ComplaintRelationsPanel complaintId={detail?.id} locale={locale} relations={relations} text={complaintRelationsText[locale]} />
                 </aside>
-              </TabsContent>
+              </DetailsContent>
             </Tabs>
-          </main>
+          </Body>
         </div>
       )}
     </section>

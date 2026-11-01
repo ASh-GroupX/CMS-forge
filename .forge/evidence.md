@@ -15028,3 +15028,46 @@ METHOD-API-001, METHOD-TEST-001, ARCH-UI-001, UI-DESIGN-001
 - Completion-label changes do not change workflow transitions, status history,
   or same-transaction audit behavior.
 - No credentials or provider secrets are logged or returned by these changes.
+
+## Release repair verification — 2026-11-01
+
+Requirements: REQ-FILES-001, REQ-COMPLAINT-001, REQ-CUSTOMER-001,
+DATA-AUTO-001, REQ-RBAC-001, WORKFLOW-MATRIX-001, METHOD-AUDIT-001,
+METHOD-API-001, METHOD-TEST-001, ARCH-UI-001, UI-DESIGN-001.
+
+Explicit correction: earlier claims that all 41 failures were reproduced by a
+completed production-baseline run were unsupported. That isolated audit was
+interrupted. The feature branch reproducibly failed 41 checks before repairs.
+Root checks were also previously stopped early; they have now completed 70/70
+with coverage thresholds (lines 89.12%, branches 83.12%, functions 90%).
+
+Restored missing backend-guarded deal/confidential routes; added route scope
+checks. Restored complaint comments, related records, surveys and supporting
+facts. Supplemental view excludes duplicate workflow forms and invalid tabpanel
+semantics. Approve-and-route now includes backend-required target branch.
+Dashboard retains premium data when valid and falls back to the backend summary
+with an error state when unavailable. Manager empty state restored. Staff note
+controls have accessible names; note timestamps and status labels are localized.
+
+Test fixtures updated for current navigation, public departments, translated
+labels, query filters and session context. Booking clock is frozen to prevent
+date-dependent failures. Branch-scope tests use a branch manager; completed-task
+negative fixture now has no ownership/participant relationship to the actor.
+No tests skipped. Shell 224/224; backend all test/spec files 662/662; API-client
+89/89; localization 13/13; security/OpenAPI/migration/lint/typecheck passed.
+Expanded current ComplaintDetailPage EN/AR: zero serious/critical Axe violations;
+screenshots coverage/web-visual-review/expanded-current-en.png and -ar.png
+visually inspected. Independent PHASE-REVIEWER passes code after noted fixes.
+Final build/root rerun pending before merge.
+
+Security self-check: roles/scope remain server-session-derived. Restored pages
+use existing backend guarded reads and CSRF-protected writes. Tasks navigation
+restriction covers restored routes, with allowed/denied regression assertions.
+No state machine, transaction, append-only audit or notification ordering was
+changed. Audit remains complaint-scoped and AUDIT_VIEW-protected. Portal
+private-data and authority-field denial tests remain intact. No secrets logged.
+
+Final release gates completed: root 70/70 with coverage, shell 224/224, full backend
+662/662, API-client 89/89, localization 13/13, lint/typecheck/build/security/
+OpenAPI/migration sanity passed. Independent phase review passed. Expanded
+EN/AR serious/critical Axe count is zero. No skipped tests in these suite logs.

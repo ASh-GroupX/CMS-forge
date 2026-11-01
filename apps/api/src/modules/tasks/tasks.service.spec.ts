@@ -378,7 +378,7 @@ test('employee today buckets only tasks visible to the actor', async () => {
         taskRecord({ id: 'promise_late', assigneeId: 'user_owner', dueAt: new Date('2026-06-20T10:00:00.000Z'), isCustomerPromise: true }),
         taskRecord({ id: 'waiting', assigneeId: 'user_other', nextActionWhoId: 'user_owner', dueAt: new Date('2026-06-20T16:00:00.000Z') }),
         taskRecord({ id: 'completed', assigneeId: 'user_owner', status: TaskStatus.DONE }),
-        taskRecord({ id: 'completed_other', assigneeId: 'user_other', status: TaskStatus.DONE }),
+        taskRecord({ id: 'completed_other', ownerId: 'user_other', assigneeId: 'user_other', nextActionWhoId: 'user_other', participants: [], status: TaskStatus.DONE }),
       ];
     },
   } as unknown as TasksRepository;
@@ -624,7 +624,7 @@ test('related-record customer lookup is branch-scoped and selects no private cus
     },
   } as never);
 
-  await service.list(TaskLinkEntityType.CUSTOMER, { roleCode: RoleCode.CR_MANAGER, branchId: 'branch_1' }, 'Noor');
+  await service.list(TaskLinkEntityType.CUSTOMER, { roleCode: RoleCode.BRANCH_MANAGER, branchId: 'branch_1' }, 'Noor');
 
   const query = JSON.stringify(captured);
   assert.match(query, /"branchId":"branch_1"/);

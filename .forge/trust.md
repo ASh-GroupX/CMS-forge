@@ -1487,3 +1487,11 @@ Recommendation: Hold production merge until the required web shell suite is gree
   `093033f`. The deploy workflow now seeds the requested Completed label so it
   cannot be reset during deployment. This correction remains unpushed; no
   production merge or deployment has been made.
+
+## Independent release repair review — 2026-11-01
+
+Code review passed after fixes for duplicate workflow forms, supplemental
+landmarks/tabpanel labels and restored route navigation scope. Required final
+checks must finish before merge/deploy. Explicit correction: the previously
+claimed completed production-baseline reproduction was unsupported; that run
+was interrupted. Current green counts are feature-branch checks.

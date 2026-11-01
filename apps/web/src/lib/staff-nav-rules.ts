@@ -15,6 +15,8 @@ export const ROUTE_NAV_MAP: Array<{ prefix: string; key: StaffNavKey; defaultPat
   { prefix: '/complaints', key: 'complaints', defaultPath: '/complaints' },
   { prefix: '/service-booking', key: 'serviceBooking', defaultPath: '/service-booking' },
   { prefix: '/customers', key: 'customers', defaultPath: '/customers' },
+  { prefix: '/deals/handoff', key: 'tasks', defaultPath: '/tasks' },
+  { prefix: '/cases/confidential', key: 'tasks', defaultPath: '/tasks' },
   { prefix: '/tasks', key: 'tasks', defaultPath: '/tasks' },
   { prefix: '/communication', key: 'communication', defaultPath: '/communication' },
   { prefix: '/reports', key: 'reports', defaultPath: '/reports' },

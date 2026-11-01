@@ -1,11 +1,17 @@
 import React from 'react';
+import { complaintDetailText } from '../../i18n/staff-complaint-detail';
+import type { Locale } from '../../i18n/staff-shell';
 import { Paperclip } from 'lucide-react';
+import type { StaffComplaintComment } from '../../lib/staff-complaint-comments-api';
 import type { ComplaintTimelineItem } from '../../lib/staff-complaint-timeline-api';
 
-export function WorkingNotesList({ timeline, complaintId }: { timeline: ComplaintTimelineItem[]; complaintId: string }) {
+export function WorkingNotesList({ timeline, complaintId, comments, locale = 'en', timeZone = 'UTC' }: { locale?: Locale; timeZone?: string; timeline: ComplaintTimelineItem[]; complaintId: string; comments?: StaffComplaintComment[] | null | undefined }) {
+  const text = complaintDetailText[locale];
   // Combine comments and unique uploaded attachments (ignoring scan/download audit noise)
   const seenAttachmentIds = new Set<string>();
-  const notes = timeline.filter((t) => {
+  const commentItems: ComplaintTimelineItem[] = (comments ?? []).map(comment => ({ id: comment.id, type: 'COMMENT', createdAt: comment.createdAt, actor: { id: comment.authorId, name: comment.authorName ?? null, role: null }, visibility: comment.visibility, customerVisible: comment.visibility === 'PUBLIC', summary: comment.body, body: comment.body }));
+  const items = commentItems.length ? [...timeline.filter(item => item.type !== 'COMMENT'), ...commentItems] : timeline;
+  const notes = items.filter((t) => {
     if (t.type === 'COMMENT') return true;
     if (t.type === 'ATTACHMENT' && t.related?.id) {
       const action = t.metadata?.action;
@@ -18,7 +24,7 @@ export function WorkingNotesList({ timeline, complaintId }: { timeline: Complain
   });
 
   if (notes.length === 0) {
-    return <p className="text-sm text-content-muted text-center py-8">No notes yet.</p>;
+    return <p className="text-sm text-content-muted text-center py-8">{text.commentStates.empty}</p>;
   }
 
   return (
@@ -34,7 +40,7 @@ export function WorkingNotesList({ timeline, complaintId }: { timeline: Complain
             <div className="flex flex-col flex-1 rounded-xl rounded-tl-sm bg-surface p-3 shadow-sm border border-line-subtle">
               <div className="mb-1.5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-content-strong">{note.actor?.name || 'System'}</span>
+                  <span className="text-sm font-bold text-content-strong">{note.actor?.name || text.values.author}</span>
                   {note.actor?.role && (
                     <span className="rounded bg-brand/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-brand">
                       {note.actor.role}
@@ -42,7 +48,7 @@ export function WorkingNotesList({ timeline, complaintId }: { timeline: Complain
                   )}
                 </div>
                 <span className="text-[10px] font-medium text-content-muted">
-                  {new Date(note.createdAt).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Amman' })}
+                  {new Date(note.createdAt).toLocaleString(locale === 'ar' ? 'ar-JO' : 'en-US', { dateStyle: 'short', timeStyle: 'short', timeZone })}
                 </span>
               </div>
               
@@ -63,8 +69,8 @@ export function WorkingNotesList({ timeline, complaintId }: { timeline: Complain
                       className="flex items-center gap-1.5 rounded-lg border border-line-subtle bg-surface-canvas px-2 py-1.5 hover:bg-surface-raised hover:border-brand/30 transition-colors"
                     >
                       <Paperclip className="size-3.5 text-content-muted" />
-                      <span className="text-xs font-medium text-content-strong truncate max-w-[150px]" title={note.related.label || 'Attachment'}>
-                        {note.related.label || 'Attachment'}
+                      <span className="text-xs font-medium text-content-strong truncate max-w-[150px]" title={note.related.label || text.labels.file}>
+                        {note.related.label || text.labels.file}
                       </span>
                       {note.metadata?.sizeBytes && (
                         <span className="text-[10px] text-content-muted">

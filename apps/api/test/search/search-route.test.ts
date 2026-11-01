@@ -46,6 +46,9 @@ test('complaint search route derives scoped filters and paginates safe rows', as
     limit: 1,
     offset: 1,
     role: RoleCode.BRANCH_MANAGER,
+    userId: 'usr_branch',
+    userDepartmentId: null,
+    permissions: [],
   });
   assert.deepEqual(response, { items: [row('cmp_2')], limit: 1, offset: 1 });
 });

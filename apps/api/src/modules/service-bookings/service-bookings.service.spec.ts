@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import test, { mock } from 'node:test';
 import { ServiceBookingsRepository } from './service-bookings.repository.js';
 import { ServiceBookingsService } from './service-bookings.service.js';
+
+test.beforeEach(() => { mock.timers.enable({ apis: ['Date'], now: new Date('2026-10-01T00:00:00Z') }); });
+
+test.afterEach(() => { mock.timers.reset(); });
 
 function createMockRepository(overrides: Partial<Record<keyof ServiceBookingsRepository, any>> = {}) {
   const repo = new ServiceBookingsRepository(null as any);
