@@ -5,17 +5,11 @@ import { getAssignableStaff } from '../../../../lib/staff-assignable-staff-api';
 import { getStaffAssignmentOptions } from '../../../../lib/staff-assignment-options-api';
 import { getComplaintFormOptions } from '../../../../lib/staff-complaint-form-options-api';
 import { getStaffComplaintComments } from '../../../../lib/staff-complaint-comments-api';
-import { getStaffComplaintRelationsView } from '../../../../lib/staff-complaint-relations-api';
-import { getStaffComplaintSurveys } from '../../../../lib/staff-complaint-surveys-api';
-import { fetchComplaintTimeline } from '../../../../lib/staff-complaint-timeline-api';
 import { getStaffComplaintDetailLoadResult } from '../../../../lib/staff-detail-api';
 import { getStaffAuditLogs } from '../../../../lib/staff-audit-api';
 
 type RouteParams = { id?: string | string[] };
-type SearchParams = {
-  locale?: string | string[];
-  tab?: string | string[];
-};
+type SearchParams = { locale?: string | string[] };
 
 export default async function ComplaintDetailPage({
   cookieHeader,
@@ -44,6 +38,7 @@ export default async function ComplaintDetailPage({
   const apiInput = {
     ...(resolvedCookieHeader !== '' ? { cookieHeader: resolvedCookieHeader } : {}),
     ...(fetchImpl !== undefined ? { fetchImpl } : {}),
+    apiUrl: process.env.API_URL ?? 'http://localhost:3000',
     ...(id !== undefined ? { complaintId: id } : {}),
   };
   const detailResult = await getStaffComplaintDetailLoadResult(apiInput);
@@ -72,8 +67,4 @@ export default async function ComplaintDetailPage({
 
 function readParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
-}
-
-function tabParam(value: string | undefined): 'work' | 'communication' | 'details' {
-  return value === 'communication' || value === 'details' ? value : 'work';
 }

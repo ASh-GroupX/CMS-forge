@@ -15000,13 +15000,23 @@ METHOD-API-001, METHOD-TEST-001, ARCH-UI-001, UI-DESIGN-001
   `corepack pnpm db:migrate:test`, `corepack pnpm build`,
   `corepack pnpm test:visual` (92 route previews), and `git diff --check`.
 - Passed: captured and visually inspected `coverage/web-proof-visual/audit-review.png`.
-- Failed: `corepack pnpm test:web -- shell` (182/223; 41 failures across
-  navigation, portal, complaint detail/create, DMS, reports, dashboard, and
-  other staff views). The failing suite must be reconciled before production
-  merge; individual requested feature checks passed.
-- Passed: pushed commit `b3168f7` to `origin/waleed`.
+- Failed: `corepack pnpm test:web -- shell` (182/223; 41 failures). The same
+  failure list reproduces on a clean production baseline at `093033f`; it spans
+  shell navigation, portal, complaint detail/create, DMS, reports, and staff UI.
+  Do not merge/deploy until the required gate is green.
+- Passed: latest `corepack pnpm test:api -- attachments` (35/35),
+  `corepack pnpm test:web -- api-client` (89/89),
+  `corepack pnpm test:web -- localization` (13/13), typecheck, lint,
+  OpenAPI check, and `git diff --check`.
+- Not Run to completion: latest `corepack pnpm test` stalled after 69 emitted
+  subtests and was stopped. Earlier documented root/build/visual results belong
+  to the prior verified commit and were not repeated after the deploy script fix.
+- Failed: exact production-label regression found in deployment seeding; fixed
+  `.github/workflows/deploy.yml` to seed “Completed”/“مكتملة”. The fix is local
+  and pending push.
+- Passed: pushed commits `b3168f7` and `3ba2c2f` remain on `origin/waleed`.
 - Blocked: production merge, deployment, and authenticated live proof remain
-  pending a green full web shell suite.
+  pending reconciliation of the production-baseline shell suite.
 
 ### Security Self-Check
 

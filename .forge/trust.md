@@ -1483,3 +1483,7 @@ Recommendation: Hold production merge until the required web shell suite is gree
 - Completion display labels do not grant or change a backend transition.
 - Focused checks and production build pass. The full web shell suite has 41
   failures across multiple screens; no production merge has been made.
+- Reproduced the same full shell failure list at clean production commit
+  `093033f`. The deploy workflow now seeds the requested Completed label so it
+  cannot be reset during deployment. This correction remains unpushed; no
+  production merge or deployment has been made.
