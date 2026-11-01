@@ -230,12 +230,20 @@ export class InternalTicketsController {
     @Res() res: any,
   ) {
     const fileData = await this.service.getAttachmentFile(id, attachmentId);
-    let filename = fileData.attachment.fileName || 'attachment.jpg';
-    if (!path.extname(filename)) filename += '.jpg';
+    let filename = fileData.attachment.fileName || 'attachment';
+    if (!path.extname(filename)) {
+      const ct = (fileData.attachment.contentType || '').toLowerCase();
+      if (ct.includes('jpeg') || ct.includes('jpg')) filename += '.jpg';
+      else if (ct.includes('png')) filename += '.png';
+      else if (ct.includes('webp')) filename += '.webp';
+      else if (ct.includes('pdf')) filename += '.pdf';
+      else filename += '.jpg';
+    }
 
     if (fileData.file) {
       res.setHeader('Content-Type', fileData.attachment.contentType || 'image/jpeg');
       res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+      res.setHeader('Cache-Control', 'private, no-store');
       return res.send(fileData.file.bytes);
     }
 
@@ -255,12 +263,20 @@ export class InternalTicketsController {
     @Res() res: any,
   ) {
     const fileData = await this.service.getNoteAttachmentFile(id, noteId, attachmentId);
-    let filename = fileData.attachment.fileName || 'attachment.jpg';
-    if (!path.extname(filename)) filename += '.jpg';
+    let filename = fileData.attachment.fileName || 'attachment';
+    if (!path.extname(filename)) {
+      const ct = (fileData.attachment.contentType || '').toLowerCase();
+      if (ct.includes('jpeg') || ct.includes('jpg')) filename += '.jpg';
+      else if (ct.includes('png')) filename += '.png';
+      else if (ct.includes('webp')) filename += '.webp';
+      else if (ct.includes('pdf')) filename += '.pdf';
+      else filename += '.jpg';
+    }
 
     if (fileData.file) {
       res.setHeader('Content-Type', fileData.attachment.contentType || 'image/jpeg');
       res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+      res.setHeader('Cache-Control', 'private, no-store');
       return res.send(fileData.file.bytes);
     }
 

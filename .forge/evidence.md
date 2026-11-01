@@ -15087,3 +15087,31 @@ Authenticated production write UAT: Not Run; no production test records added.
 Automated API authorization/upload policy behavior and visual/Axe proof passed.
 This followup updates evidence on waleed only; production retains the verified
 functional release revision, avoiding an unnecessary second deployment.
+
+---
+
+## F8-IMG-01 - Original Image Byte Integrity Repair
+
+- Date: 2026-11-01
+- Risk: High
+- Status: Passed
+- Requirement IDs: REQ-FILES-001, ARCH-FILES-001, METHOD-TEST-001, REQ-RBAC-001
+- Evidence:
+  - Fixed root cause of downloaded images opening black: removed `getFallbackFileForMissingObject` dummy 1x1 black image synthesizer so missing objects fail closed with HTTP 404 `ATTACHMENT_NOT_FOUND` instead of returning pseudo-successful black bytes.
+  - Removed silent `try/catch` suppression around durable disk writes in `LocalDiskAttachmentStorage.putObject` so unpersisted writes fail immediately instead of falsely reporting success.
+  - Increased S3 timeouts (30s for putObject, 10s for getObject/headObject) to prevent prematurely aborting slow object storage transfers.
+  - Set `Cache-Control: private, no-store` on raw attachment proxies and controllers to prevent caching transient failure or missing object responses.
+  - Fixed file extension determination for WebP, PNG, and JPEG files across complaints and internal tickets.
+  - Routed complaint attachment download links in `ComplaintWorkspace` and `WorkingNotesList` through the authorized scoped download route with download filename fallback.
+  - Added full byte integrity verification in `tools/image-byte-proof.mjs`, `apps/api/test/attachments/original-image-bytes.test.ts`, and `apps/web/test/api-client/image-download-bytes.test.ts` verifying byte SHA-256 equivalence across storage restarts and headless browser canvas pixel decoding (768 distinct colors, 32x24).
+- Verification:
+  - Passed: `corepack pnpm test:image-bytes` (PNG 1567B, JPEG 423B, WebP 306B match SHA-256, decode in headless Chromium with 768 distinct colors).
+  - Passed: `corepack pnpm test:api -- attachments` (43/43 tests).
+  - Passed: `corepack pnpm test:api -- tasks` (45/45 tests).
+  - Passed: `corepack pnpm test:web` (224/224 tests).
+  - Passed: `corepack pnpm test` (70/70 tool and schema tests, 89.74% lines / 83.12% branches / 90.00% functions).
+  - Passed: `corepack pnpm test:visual` (92/92 route previews rendered and verified).
+  - Passed: `corepack pnpm typecheck`.
+  - Passed: `corepack pnpm lint`.
+  - Passed: `corepack pnpm openapi:check`.
+  - Passed: `corepack pnpm run build` (full Next.js + NestJS production build).

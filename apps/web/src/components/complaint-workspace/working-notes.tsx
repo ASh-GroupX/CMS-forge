@@ -62,10 +62,10 @@ export function WorkingNotesList({ timeline, complaintId, comments, locale = 'en
                 <div className={!isAttachment ? "mt-2 pt-2 border-t border-line-subtle flex flex-col gap-1.5" : "flex flex-col gap-1.5"}>
                   <div className="flex flex-wrap gap-2">
                     <a 
-                      href={`/api/attachments/raw/${note.related.id}`}
+                      href={`/api/complaints/${encodeURIComponent(complaintId)}/attachments/${encodeURIComponent(note.related.id)}/download?download=1`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      download
+                      download={note.related.label || 'attachment'}
                       className="flex items-center gap-1.5 rounded-lg border border-line-subtle bg-surface-canvas px-2 py-1.5 hover:bg-surface-raised hover:border-brand/30 transition-colors"
                     >
                       <Paperclip className="size-3.5 text-content-muted" />

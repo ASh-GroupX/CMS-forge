@@ -141,10 +141,6 @@ export class RawAttachmentsController {
 
     let file: { bytes: Buffer; contentType: string; fileName?: string } | null =
       (await this.attachmentsService.getRawFile(decoded)) || (await this.attachmentsService.getRawFile(key));
-    if (!file) {
-      file = (await this.attachmentsService.getFallbackFileForMissingObject(decoded)) ||
-        (await this.attachmentsService.getFallbackFileForMissingObject(key));
-    }
     if (!file) throw new AppException('ATTACHMENT_NOT_FOUND', 'Attachment object was not found', HttpStatus.NOT_FOUND);
 
     let filename = file.fileName || path.basename(decoded) || 'attachment';
@@ -152,12 +148,13 @@ export class RawAttachmentsController {
       const ct = (file.contentType || '').toLowerCase();
       if (ct.includes('jpeg') || ct.includes('jpg')) filename += '.jpg';
       else if (ct.includes('png')) filename += '.png';
+      else if (ct.includes('webp')) filename += '.webp';
       else if (ct.includes('pdf')) filename += '.pdf';
       else filename += '.jpg';
     }
     res.setHeader('Content-Type', file.contentType || 'image/jpeg');
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
-    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.setHeader('Cache-Control', 'private, no-store');
     res.send(file.bytes);
   }
 }

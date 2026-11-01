@@ -48,7 +48,7 @@ function buildHeaders(res: Response, key: string[]): Headers {
   const disposition = res.headers.get('content-disposition');
   const headers = new Headers();
   headers.set('content-type', contentType);
-  headers.set('cache-control', 'public, max-age=86400');
+  headers.set('cache-control', 'private, no-store');
   if (disposition) {
     headers.set('content-disposition', disposition);
   } else {

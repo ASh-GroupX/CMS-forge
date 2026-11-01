@@ -110,35 +110,6 @@ export class AttachmentsService {
     return this.storage.getFile ? await this.storage.getFile(storageKey) : null;
   }
 
-  async getFallbackFileForMissingObject(storageKey: string): Promise<{ bytes: Buffer; contentType: string; fileName: string } | null> {
-    const record = await this.attachmentsRepository.findByStorageKey(storageKey);
-    if (!record) return null;
-    const type = record.contentType.toLowerCase();
-    if (type.includes('png')) {
-      return {
-        bytes: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64'),
-        contentType: 'image/png',
-        fileName: record.fileName,
-      };
-    }
-    if (type.includes('jpeg') || type.includes('jpg')) {
-      return {
-        bytes: Buffer.from('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=', 'base64'),
-        contentType: 'image/jpeg',
-        fileName: record.fileName,
-      };
-    }
-    if (type.includes('pdf')) {
-      const pdf = '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R/Resources<<>>>>endobj\nxref\n0 4\n0000000009 00000 n\n0000000052 00000 n\n0000000108 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n180\n%%EOF\n';
-      return { bytes: Buffer.from(pdf), contentType: 'application/pdf', fileName: record.fileName };
-    }
-    return {
-      bytes: Buffer.from(`Attachment: ${record.fileName}\nUploaded: ${record.createdAt.toISOString()}\n`),
-      contentType: record.contentType || 'text/plain',
-      fileName: record.fileName,
-    };
-  }
-
   async createUpload(input: CreateAttachmentUploadInput): Promise<AttachmentUploadResult> {
     const complaintId = requiredText(input.complaintId, 'complaintId');
     const policy = this.validateUploadMetadata(input);

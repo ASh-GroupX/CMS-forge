@@ -1040,8 +1040,15 @@ export class InternalTicketsService {
     });
     if (!attachment) throw new NotFoundException('Attachment not found');
     
-    let fileName = attachment.fileName || 'attachment.jpg';
-    if (!path.extname(fileName)) fileName += '.jpg';
+    let fileName = attachment.fileName || 'attachment';
+    if (!path.extname(fileName)) {
+      const ct = (attachment.contentType || '').toLowerCase();
+      if (ct.includes('jpeg') || ct.includes('jpg')) fileName += '.jpg';
+      else if (ct.includes('png')) fileName += '.png';
+      else if (ct.includes('webp')) fileName += '.webp';
+      else if (ct.includes('pdf')) fileName += '.pdf';
+      else fileName += '.jpg';
+    }
 
     const token = await this.attachmentsService.prepareDownload(attachment.storageKey);
     return { url: token.token, expiresAt: token.expiresAt, fileName };
@@ -1058,8 +1065,15 @@ export class InternalTicketsService {
     });
     if (!note) throw new NotFoundException('Note not found for this ticket');
     
-    let fileName = attachment.fileName || 'attachment.jpg';
-    if (!path.extname(fileName)) fileName += '.jpg';
+    let fileName = attachment.fileName || 'attachment';
+    if (!path.extname(fileName)) {
+      const ct = (attachment.contentType || '').toLowerCase();
+      if (ct.includes('jpeg') || ct.includes('jpg')) fileName += '.jpg';
+      else if (ct.includes('png')) fileName += '.png';
+      else if (ct.includes('webp')) fileName += '.webp';
+      else if (ct.includes('pdf')) fileName += '.pdf';
+      else fileName += '.jpg';
+    }
 
     const token = await this.attachmentsService.prepareDownload(attachment.storageKey);
     return { url: token.token, expiresAt: token.expiresAt, fileName };

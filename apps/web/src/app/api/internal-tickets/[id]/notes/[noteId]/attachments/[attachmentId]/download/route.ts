@@ -17,13 +17,18 @@ export async function GET(request: Request, { params }: { params: Promise<RouteP
     if (response.ok) {
       const contentType = response.headers.get('content-type') || '';
       const contentDisposition = response.headers.get('content-disposition');
+      let ext = '.jpg';
+      if (contentType.includes('png')) ext = '.png';
+      else if (contentType.includes('webp')) ext = '.webp';
+      else if (contentType.includes('pdf')) ext = '.pdf';
+
       if (contentDisposition || !contentType.includes('application/json')) {
         const body = await response.arrayBuffer();
         return new Response(body, {
           status: 200,
           headers: {
             'content-type': contentType || 'image/jpeg',
-            'content-disposition': contentDisposition || `attachment; filename="attachment-${attachmentId}.jpg"`,
+            'content-disposition': contentDisposition || `attachment; filename="attachment-${attachmentId}${ext}"`,
             'cache-control': 'no-store',
           },
         });
@@ -31,8 +36,8 @@ export async function GET(request: Request, { params }: { params: Promise<RouteP
 
       const data = await response.json();
       const token = data.url;
-      let fileName = data.fileName || `attachment-${attachmentId}.jpg`;
-      if (!fileName.includes('.')) fileName += '.jpg';
+      let fileName = data.fileName || `attachment-${attachmentId}${ext}`;
+      if (!fileName.includes('.')) fileName += ext;
 
       if (token && typeof token === 'string' && (token.startsWith('http://') || token.startsWith('https://') || token.startsWith('/'))) {
         if (token.startsWith('/')) {

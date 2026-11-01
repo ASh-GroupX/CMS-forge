@@ -35,18 +35,17 @@ export class LocalDiskAttachmentStorage implements AttachmentStoragePort {
   async putObject(input: AttachmentStorageObjectInput): Promise<AttachmentStoredObject> {
     const storageKey = input.storageKey?.trim() || `attachments/${randomUUID()}`;
     const safeKey = storageKey.replace(/[^a-zA-Z0-9_-]/g, '_');
-    try {
-      const filePath = path.join(this.uploadDir, safeKey);
-      fs.mkdirSync(path.dirname(filePath), { recursive: true });
-      fs.writeFileSync(filePath, Buffer.from(input.bytes));
-      fs.writeFileSync(`${filePath}.meta`, JSON.stringify({ contentType: input.contentType }));
-    } catch {}
-    this.memory.set(storageKey, { bytes: input.bytes, contentType: input.contentType });
+    const filePath = path.join(this.uploadDir, safeKey);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, Buffer.from(input.bytes));
+    fs.writeFileSync(`${filePath}.meta`, JSON.stringify({ contentType: input.contentType }));
+    this.memory.set(storageKey, { bytes: Uint8Array.from(input.bytes), contentType: input.contentType });
     return { storageKey, contentType: input.contentType, sizeBytes: input.bytes.byteLength };
   }
 
   async createDownloadToken(storageKey: string): Promise<AttachmentDownloadToken> {
     const key = requiredText(storageKey, 'storageKey');
+    if (!this.getFile(key)) throw attachmentObjectMissing();
     return {
       storageKey: key,
       token: `/api/attachments/raw/${encodeURIComponent(key)}`,
@@ -57,6 +56,7 @@ export class LocalDiskAttachmentStorage implements AttachmentStoragePort {
   getFile(storageKey: string): { bytes: Buffer; contentType: string } | null {
     let key = storageKey;
     try { key = decodeURIComponent(key); } catch {}
+    if (path.isAbsolute(key) || path.win32.isAbsolute(key) || key.includes('\0') || key.split(/[\\/]/).some(part => part === '..' || part === '.')) return null;
     const mem = this.memory.get(key) || this.memory.get(storageKey);
     if (mem) return { bytes: Buffer.from(mem.bytes), contentType: mem.contentType };
 
@@ -79,7 +79,9 @@ export class LocalDiskAttachmentStorage implements AttachmentStoragePort {
 
     for (const dir of dirs) {
       for (const safeKey of candidates) {
-        const filePath = path.join(dir, safeKey);
+        const root = path.resolve(dir);
+        const filePath = path.resolve(root, safeKey);
+        if (!filePath.startsWith(root + path.sep)) continue;
         try {
           if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
             let contentType = 'application/octet-stream';
@@ -107,7 +109,7 @@ export class InMemoryAttachmentStorage implements AttachmentStoragePort {
     const storageKey = input.storageKey?.trim() || `attachments/${randomUUID()}`;
     const record = { storageKey, contentType: input.contentType, sizeBytes: input.bytes.byteLength };
     this.objects.set(storageKey, record);
-    this.bytes.set(storageKey, input.bytes.slice());
+    this.bytes.set(storageKey, Uint8Array.from(input.bytes));
     return record;
   }
 
@@ -134,6 +136,7 @@ export type S3AttachmentStorageOptions = {
   client: S3ClientLike;
   downloadTtlSeconds?: number;
   presigner?: S3Presigner;
+  fallbackStorage?: AttachmentStoragePort;
 };
 
 @Injectable()
@@ -141,9 +144,10 @@ export class S3AttachmentStorage implements AttachmentStoragePort {
   private readonly bucket: string;
   private readonly downloadTtlSeconds: number;
   private readonly presigner: S3Presigner;
-  private readonly fallbackStorage: AttachmentStoragePort = new LocalDiskAttachmentStorage();
+  private readonly fallbackStorage: AttachmentStoragePort;
 
   constructor(private readonly options: S3AttachmentStorageOptions) {
+    this.fallbackStorage = options.fallbackStorage ?? new LocalDiskAttachmentStorage();
     this.bucket = requiredText(options.bucket, 'ATTACHMENT_S3_BUCKET');
     this.downloadTtlSeconds = validTtl(options.downloadTtlSeconds ?? 300);
     this.presigner = options.presigner ?? getSignedUrl;
@@ -157,7 +161,7 @@ export class S3AttachmentStorage implements AttachmentStoragePort {
         Key: storageKey,
         Body: Buffer.from(input.bytes),
         ContentType: input.contentType,
-      })), 1200);
+      })), 30000);
       if (!putRes) throw new Error('S3 putObject timed out');
       return { storageKey, contentType: input.contentType, sizeBytes: input.bytes.byteLength };
     } catch (error) {
@@ -174,7 +178,7 @@ export class S3AttachmentStorage implements AttachmentStoragePort {
         this.options.client as S3Client,
         new GetObjectCommand({ Bucket: this.bucket, Key: key }),
         { expiresIn: this.downloadTtlSeconds },
-      ), 1000);
+      ), 10000);
       if (!token) throw new Error('Presigner timed out');
       return { storageKey: key, token, expiresAt: new Date(Date.now() + this.downloadTtlSeconds * 1000) };
     } catch {
@@ -191,7 +195,7 @@ export class S3AttachmentStorage implements AttachmentStoragePort {
     try {
       const s3Res = await withTimeout(
         this.options.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key })),
-        800,
+        10000,
       );
       if (s3Res?.Body) {
         const stream = s3Res.Body as any;
@@ -210,7 +214,7 @@ export class S3AttachmentStorage implements AttachmentStoragePort {
     try {
       const res = await withTimeout(
         this.options.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: storageKey })),
-        800,
+        10000,
       );
       if (!res) throw attachmentObjectMissing();
     } catch (error) {
@@ -255,43 +259,35 @@ export function s3AttachmentStorageFromEnv(env: AttachmentStorageEnv): S3Attachm
     }),
   });
 }
-
 function attachmentObjectMissing(): AppException {
   return new AppException('ATTACHMENT_NOT_FOUND', 'Attachment object was not found', HttpStatus.NOT_FOUND);
 }
-
 function defaultStorageDriver(env: AttachmentStorageEnv): string {
   return env.NODE_ENV === 'production' ? 's3' : 'memory';
 }
-
 function requiredEnv(env: AttachmentStorageEnv, name: string): string {
   return requiredText(env[name], name);
 }
-
 function requiredText(value: string | undefined, field: string): string {
   if (typeof value === 'string' && value.trim()) return value.trim();
   throw new Error(`${field} is required`);
 }
-
 function ttlFromEnv(env: AttachmentStorageEnv): number {
   const raw = env.ATTACHMENT_DOWNLOAD_TTL_SECONDS;
   return raw === undefined || raw === '' ? 300 : validTtl(Number(raw));
 }
-
 function validTtl(value: number): number {
   if (!Number.isInteger(value) || value < 1 || value > 3600) {
     throw new Error('ATTACHMENT_DOWNLOAD_TTL_SECONDS must be between 1 and 3600');
   }
   return value;
 }
-
 function booleanEnv(value: string | undefined, fallback: boolean, name: string): boolean {
   if (value === undefined || value.trim() === '') return fallback;
   if (['true', '1'].includes(value.toLowerCase())) return true;
   if (['false', '0'].includes(value.toLowerCase())) return false;
   throw new Error(`${name} must be true or false`);
 }
-
 function isMissingObject(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const candidate = error as { name?: string; $metadata?: { httpStatusCode?: number } };
