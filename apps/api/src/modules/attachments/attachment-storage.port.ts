@@ -23,7 +23,7 @@ type S3ClientLike = Pick<S3Client, 'send'>;
 type S3Presigner = (client: S3Client, command: GetObjectCommand, options: { expiresIn: number }) => Promise<string>;
 
 export { LocalDiskAttachmentStorage, InMemoryAttachmentStorage } from './local-disk-storage.js';
-import { LocalDiskAttachmentStorage, InMemoryAttachmentStorage, attachmentObjectMissing } from './local-disk-storage.js';
+import { LocalDiskAttachmentStorage, InMemoryAttachmentStorage } from './local-disk-storage.js';
 
 export type S3AttachmentStorageOptions = {
   bucket: string;
