@@ -57,7 +57,7 @@ export function VoiceOfCustomerCard({
               🚗 {isArabic ? 'سيارة بديلة ممنوحة' : 'Alternative Car Provided'}
             </span>
           )}
-          {detail.isJustified !== null && detail.isJustified !== undefined && (
+          {detail.isJustified !== null && detail.isJustified !== undefined ? (
             <span
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border ${
                 detail.isJustified
@@ -69,7 +69,11 @@ export function VoiceOfCustomerCard({
                 ? (isArabic ? '✅ شكوى مبررة' : '✅ Justified')
                 : (isArabic ? '❌ شكوى غير مبررة' : '❌ Unjustified')}
             </span>
-          )}
+          ) : (detail.status === 'RESOLVED' || detail.status === 'CLOSED' || detail.status === 'COMPLETED') ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-status-warning-bg text-status-warning border border-status-warning-border px-3 py-1 text-xs font-semibold">
+              {isArabic ? '⚠️ التبرير: غير محدد' : '⚠️ Verdict: Unrated'}
+            </span>
+          ) : null}
           {detail.satisfactionStatus && (
             <span
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border ${

@@ -212,8 +212,8 @@ export function requiredFields(action: ComplaintTransitionAction, vehicleNeedsUn
     ...(action === 'APPROVE_AND_ROUTE' ? ['targetBranchId' as const, 'targetDepartmentId' as const] : []),
     ...(reasonRequired.has(action) ? ['reason' as const] : []),
     ...(action === 'ADD_INVESTIGATION_UPDATE' ? ['investigationNotes' as const] : []),
-    ...(resolutionRequired.has(action) ? ['resolutionType' as const, 'resolutionSummary' as const] : []),
-    ...(action === 'COMPLETE' || action === 'CLOSE' ? ['satisfactionStatus' as const] : []),
+    ...(resolutionRequired.has(action) ? ['resolutionType' as const, 'resolutionSummary' as const, 'isJustified' as const] : []),
+    ...(action === 'COMPLETE' || action === 'CLOSE' ? ['isJustified' as const, 'satisfactionStatus' as const] : []),
     ...(action === 'CLOSE' ? ['customerCommunicationStatus' as const] : []),
     ...(action === 'CLOSE' && vehicleNeedsUnavailableReason ? ['vehicleDataUnavailableReason' as const] : []),
   ];

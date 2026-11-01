@@ -143,16 +143,27 @@ export function ContextRail({ detail, locale, t }: { detail: StaffComplaintDetai
             <div>
               <dt className="text-xs text-content-muted">{t.labels?.make || 'Make & Model'}</dt>
               <dd className="font-semibold text-content-strong">
-                {detail.vehicle.year} {detail.vehicle.make} {detail.vehicle.model}
+                {(() => {
+                  const parts = [
+                    detail.vehicle.year,
+                    detail.vehicle.make && detail.vehicle.make !== 'UNKNOWN' ? detail.vehicle.make : null,
+                    detail.vehicle.model && detail.vehicle.model !== 'UNKNOWN' ? detail.vehicle.model : null,
+                  ].filter(Boolean);
+                  return parts.length > 0 ? parts.join(' ') : (isArabic ? 'مركبة غير محددة' : 'Unspecified vehicle');
+                })()}
               </dd>
             </div>
             <div>
               <dt className="text-xs text-content-muted">{t.labels?.vin || 'VIN'}</dt>
-              <dd className="font-mono text-xs font-semibold text-content-strong">{detail.vehicle.vin}</dd>
+              <dd className="font-mono text-xs font-semibold text-content-strong">
+                {detail.vehicle.vin && detail.vehicle.vin !== 'UNKNOWN' ? detail.vehicle.vin : (isArabic ? 'غير متوفر' : 'Unavailable')}
+              </dd>
             </div>
             <div>
               <dt className="text-xs text-content-muted">{t.labels?.plate || 'Plate'}</dt>
-              <dd className="font-semibold text-content-strong">{detail.vehicle.plate}</dd>
+              <dd className="font-semibold text-content-strong">
+                {detail.vehicle.plate && detail.vehicle.plate !== 'UNKNOWN' ? detail.vehicle.plate : (isArabic ? 'غير متوفر' : 'Unavailable')}
+              </dd>
             </div>
           </dl>
         ) : (

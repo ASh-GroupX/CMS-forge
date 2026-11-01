@@ -1,6 +1,6 @@
 import React from 'react';
 import { headers } from 'next/headers';
-import { FileText, Send, Paperclip, MessageSquare, History, UserPlus, Clock, Star, AlertCircle, CheckCircle2, ChevronRight, User } from 'lucide-react';
+import { FileText, Send, Paperclip, MessageSquare, History, UserPlus, Clock, Star, AlertCircle, CheckCircle2, ChevronRight, ChevronDown, User } from 'lucide-react';
 import { getTicketDetails, getTicketOptions } from '../../../../lib/staff-internal-tickets-actions';
 import { getStaffSessionPrincipal } from '../../../../lib/staff-session-api';
 import { resolveLocale } from '../../../../i18n/staff-shell';
@@ -212,15 +212,21 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
           )}
         </div>
 
-        {/* Activity Log */}
-        <div className="shrink-0 rounded-2xl border border-line-subtle bg-surface shadow-sm overflow-hidden">
-          <div className="border-b border-line-subtle bg-surface-canvas/50 px-4 py-3">
-            <h3 className="font-semibold text-content-strong flex items-center gap-2">
+        {/* Activity Log (Collapsible, closed by default) */}
+        <details className="shrink-0 rounded-2xl border border-line-subtle bg-surface shadow-sm overflow-hidden group">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 bg-surface-canvas/50 px-4 py-3 text-sm font-semibold text-content-strong outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center gap-2">
               <History className="size-4 text-brand" />
-              Activity Log
-            </h3>
-          </div>
-          <div className="p-4 flex flex-col gap-4">
+              {isAr ? 'سجل النشاط' : 'Activity Log'}
+              {ticket.activities?.length ? (
+                <span className="rounded-md bg-surface-raised px-2 py-0.5 text-xs tabular-nums text-content-muted">
+                  {ticket.activities.length}
+                </span>
+              ) : null}
+            </span>
+            <ChevronDown className="size-4 shrink-0 text-content-muted transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="border-t border-line-subtle p-4 flex flex-col gap-4">
             {!ticket.activities || ticket.activities.length === 0 ? (
               <p className="text-sm text-content-muted text-center">No activity yet.</p>
             ) : (
@@ -260,7 +266,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
               </div>
             )}
           </div>
-        </div>
+        </details>
 
       </div>
     </div>

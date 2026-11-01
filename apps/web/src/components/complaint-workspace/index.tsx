@@ -16,7 +16,8 @@ import { ComplaintAuditLogSection } from './audit-log-section';
 import type { StaffAuditLoadResult } from '../../lib/staff-audit-api';
 import { WorkingNotesList } from './working-notes';
 import { VoiceOfCustomerCard } from './voice-of-customer-card';
-import { ArrowLeft, ClipboardCheck, Download, FileText, History, Paperclip } from 'lucide-react';
+import { ResolutionVerdictBanner } from './resolution-verdict-banner';
+import { ArrowLeft, ChevronDown, ClipboardCheck, Download, FileText, History, Paperclip } from 'lucide-react';
 
 import { ComplaintDetailWorkspace } from '../complaint-detail-workspace';
 import type { StaffComplaintComment } from '../../lib/staff-complaint-comments-api';
@@ -110,6 +111,9 @@ export function ComplaintWorkspace({
           </div>
         </div>
       )}
+
+      {/* ── Finished / Resolved Complaint Resolution Banner ── */}
+      <ResolutionVerdictBanner detail={detail} locale={locale} />
 
       {/* ── Workspace ── */}
       <div className="flex-1 p-6 overflow-y-auto">
@@ -233,18 +237,24 @@ export function ComplaintWorkspace({
               <ContextRail detail={detail} locale={locale} t={t} />
             </div>
             
-            {/* Activity Log */}
-            <div className="shrink-0 overflow-hidden rounded-2xl border border-line-subtle bg-surface shadow-sm">
-              <div className="border-b border-line-subtle bg-surface-canvas/50 px-4 py-3">
-                <h3 className="flex items-center gap-2 font-semibold text-content-strong">
-                  <History className="size-4 text-brand" />
-                  {locale === 'ar' ? 'سجل النشاط' : 'Activity Log'}
-                </h3>
-              </div>
-              <div className="bg-surface-sunken p-4">
+            {/* Activity Log (Collapsible, closed by default) */}
+            <details className="shrink-0 overflow-hidden rounded-2xl border border-line-subtle bg-surface shadow-sm group">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 bg-surface-canvas/50 px-4 py-3 text-sm font-semibold text-content-strong outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
+                <span className="flex items-center gap-2">
+                  <History aria-hidden="true" className="size-4 text-brand" />
+                  {locale === 'ar' ? 'سجل النشاط والأحداث' : 'Activity Log'}
+                  {activityTimeline.length ? (
+                    <span className="rounded-md bg-surface-raised px-2 py-0.5 text-xs tabular-nums text-content-muted">
+                      {activityTimeline.length}
+                    </span>
+                  ) : null}
+                </span>
+                <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-content-muted transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="border-t border-line-subtle bg-surface-sunken p-4">
                 <UnifiedTimeline detail={detail} locale={locale} t={t} timeline={activityTimeline} />
               </div>
-            </div>
+            </details>
 
             <details><summary>{t.sections.facts}</summary><ComplaintDetailWorkspace supplemental detail={detail} comments={comments} relations={relations} surveys={surveys} initialTab="details" locale={locale} staff={staff} options={options} assignmentOptions={assignmentOptions} /></details>
             <ComplaintAuditLogSection audit={audit} locale={locale} />
