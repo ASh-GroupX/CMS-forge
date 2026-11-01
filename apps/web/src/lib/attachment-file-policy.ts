@@ -4,6 +4,12 @@ const allowed: Record<string, Record<string, number>> = {
   'image/jpeg': { jpeg: fiveMb, jpg: fiveMb },
 };
 
+const staffAllowed: Record<string, Record<string, number>> = {
+  ...allowed,
+  'image/png': { png: fiveMb },
+  'image/webp': { webp: fiveMb },
+};
+
 export type AttachmentFileValidation = { ok: true } | { ok: false; code: 'ATTACHMENT_REQUIRED' | 'ATTACHMENT_TYPE_BLOCKED' | 'ATTACHMENT_SIZE_EXCEEDED' };
 
 export function normalizeAttachmentMime(fileName: string, mime?: string): string {
@@ -31,10 +37,18 @@ export function normalizeAttachmentMime(fileName: string, mime?: string): string
 }
 
 export function validateAttachmentFile(file: File | null): AttachmentFileValidation {
+  return validateFile(file, allowed);
+}
+
+export function validateStaffAttachmentFile(file: File | null): AttachmentFileValidation {
+  return validateFile(file, staffAllowed);
+}
+
+function validateFile(file: File | null, policies: Record<string, Record<string, number>>): AttachmentFileValidation {
   if (!file) return { ok: false, code: 'ATTACHMENT_REQUIRED' };
   const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
   const mime = normalizeAttachmentMime(file.name, file.type);
-  const limit = allowed[mime]?.[extension];
+  const limit = policies[mime]?.[extension];
   if (!limit) return { ok: false, code: 'ATTACHMENT_TYPE_BLOCKED' };
   return file.size > limit ? { ok: false, code: 'ATTACHMENT_SIZE_EXCEEDED' } : { ok: true };
 }

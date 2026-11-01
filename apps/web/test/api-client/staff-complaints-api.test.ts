@@ -233,9 +233,22 @@ test('staff attachment helper uploads intake files and reports partial failure',
   assert.equal(summary.uploadedCount, 1);
   assert.equal(summary.failedCount, 1);
   assert.equal(summary.errors[0]?.code, 'ATTACHMENT_TYPE_BLOCKED');
+  assert.deepEqual(summary.failedFiles.map((file) => file.name), ['malware.exe']);
   assert.equal(calls.length, 1);
   assert.equal(calls[0]?.input, '/api/complaints/cmp_1/attachments');
   assert.doesNotMatch(String(calls[0]?.init?.body), /branch|role|actor|workflow|storage|token|credential/i);
+});
+
+test('staff complaint attachment client accepts PNG and WebP photos', async () => {
+  const uploadedTypes: string[] = [];
+  for (const [name, type] of [['photo.png', 'image/png'], ['photo.webp', 'image/webp']]) {
+    const result = await uploadStaffComplaintAttachment('cmp_1', new File(['photo'], name, { type }), async (_input, init) => {
+      uploadedTypes.push(JSON.parse(String(init?.body)).contentType);
+      return jsonResponse({ attachment: { id: name, complaintId: 'cmp_1', fileName: name, contentType: type, sizeBytes: 5, scanStatus: 'PENDING', customerVisible: false } }, 201);
+    });
+    assert.equal(result.ok, true);
+  }
+  assert.deepEqual(uploadedTypes, ['image/png', 'image/webp']);
 });
 
 test('lookupStaffDmsCustomerVehicle reads through the same-origin proxy without client authority', async () => {

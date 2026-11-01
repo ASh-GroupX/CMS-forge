@@ -9,6 +9,7 @@ import { getStaffComplaintRelationsView } from '../../../../lib/staff-complaint-
 import { getStaffComplaintSurveys } from '../../../../lib/staff-complaint-surveys-api';
 import { fetchComplaintTimeline } from '../../../../lib/staff-complaint-timeline-api';
 import { getStaffComplaintDetailLoadResult } from '../../../../lib/staff-detail-api';
+import { getStaffAuditLogs } from '../../../../lib/staff-audit-api';
 
 type RouteParams = { id?: string | string[] };
 type SearchParams = {
@@ -47,16 +48,18 @@ export default async function ComplaintDetailPage({
   };
   const detailResult = await getStaffComplaintDetailLoadResult(apiInput);
   const detail = detailResult.status === 'ready' ? detailResult.data : null;
-  const [staff, options, assignmentOptions] = detail ? await Promise.all([
+  const [staff, options, assignmentOptions, audit] = detail ? await Promise.all([
     getAssignableStaff({ ...(resolvedCookieHeader !== '' ? { cookieHeader: resolvedCookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
     getComplaintFormOptions({ ...(resolvedCookieHeader !== '' ? { cookieHeader: resolvedCookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
     getStaffAssignmentOptions({ ...(resolvedCookieHeader !== '' ? { cookieHeader: resolvedCookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}) }),
-  ]) : [null, null, null] as const;
+    getStaffAuditLogs({ ...(resolvedCookieHeader !== '' ? { cookieHeader: resolvedCookieHeader } : {}), ...(fetchImpl !== undefined ? { fetchImpl } : {}), filters: { targetType: 'complaint', targetId: detail.id, page: '1', pageSize: '25' } }),
+  ]) : [null, null, null, undefined] as const;
   const detailState = detailResult.status === 'ready' ? 'ready' : detailResult.status;
 
   return (
     <ComplaintWorkspace
       assignmentOptions={assignmentOptions}
+      audit={audit}
       detail={detail ?? undefined}
       locale={resolveLocale(readParam(query?.locale))}
       options={options}

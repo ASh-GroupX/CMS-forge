@@ -34,4 +34,9 @@ module's boundary so you can work in a fresh context without scanning the tree.
 
 ## SRS
 
-- Add the requirement IDs this module implements before building behavior.
+- REQ-FILES-001
+- METHOD-AUDIT-001
+- METHOD-API-001
+- METHOD-TEST-001
+- ARCH-UI-001
+- UI-DESIGN-001

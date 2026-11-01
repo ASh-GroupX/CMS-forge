@@ -62,6 +62,21 @@ test('staff audit client forwards filters and parses redacted rows', async () =>
   });
 });
 
+test('complaint audit query requests only the selected complaint target', async () => {
+  let requestedUrl = '';
+  const result = await getStaffAuditLogs({
+    apiUrl: 'http://api.test',
+    cookieHeader: 'cms_staff_session=session',
+    filters: { targetType: 'complaint', targetId: 'cmp_1', page: '1', pageSize: '25' },
+    fetchImpl: async (url) => {
+      requestedUrl = String(url);
+      return jsonResponse({ items: [], page: 1, pageSize: 25 });
+    },
+  });
+  assert.equal(requestedUrl, 'http://api.test/audit/logs?page=1&pageSize=25&targetId=cmp_1&targetType=complaint');
+  assert.deepEqual(result, { status: 'ready', data: { items: [], page: 1, pageSize: 25 } });
+});
+
 test('staff audit client reports denied and invalid responses safely', async () => {
   assert.deepEqual(await getStaffAuditLogs({ cookieHeader: '' }), { status: 'denied' });
   assert.deepEqual(await getStaffAuditLogs({ cookieHeader: 'cms_staff_session=x', fetchImpl: async () => jsonResponse({}, 403) }), { status: 'denied' });

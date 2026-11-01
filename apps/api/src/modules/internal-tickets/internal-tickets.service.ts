@@ -11,17 +11,22 @@ import { UploadTicketAttachmentDto } from './dto/upload-attachment.dto.js';
 
 const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
 
-function validateJpgAttachment(attachment: UploadTicketAttachmentDto) {
+export function validateTicketImageAttachment(attachment: UploadTicketAttachmentDto): 'image/jpeg' | 'image/png' | 'image/webp' {
   const ext = path.extname(attachment.fileName || '').toLowerCase().replace('.', '');
-  const mime = (attachment.contentType || '').toLowerCase().trim();
-  const isJpgExt = ext === 'jpg' || ext === 'jpeg';
-  const isJpgMime = mime === 'image/jpeg' || mime === 'image/jpg' || mime === 'image/pjpeg';
-  if (!isJpgExt && !isJpgMime) {
-    throw new AppException('ATTACHMENT_TYPE_BLOCKED', 'Only JPG images are allowed', HttpStatus.BAD_REQUEST);
+  const rawMime = (attachment.contentType || '').toLowerCase().trim();
+  const mime = ['image/jpg', 'image/pjpeg'].includes(rawMime) ? 'image/jpeg' : rawMime;
+  const extensionMime: Record<string, 'image/jpeg' | 'image/png' | 'image/webp'> = {
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp',
+  };
+  const inferredMime = extensionMime[ext];
+  const contentType = !mime || mime === 'application/octet-stream' ? inferredMime : mime;
+  if (!inferredMime || !contentType || inferredMime !== contentType) {
+    throw new AppException('ATTACHMENT_TYPE_BLOCKED', 'Only JPG, PNG, or WebP images are allowed', HttpStatus.BAD_REQUEST);
   }
   if (attachment.sizeBytes > MAX_ATTACHMENT_SIZE) {
     throw new AppException('ATTACHMENT_SIZE_EXCEEDED', 'File exceeds 5MB limit', HttpStatus.BAD_REQUEST);
   }
+  return contentType;
 }
 
 @Injectable()
@@ -33,13 +38,13 @@ export class InternalTicketsService {
 
   private async storeTicketAttachments(tx: any, ticketId: string, actorId: string, attachments: UploadTicketAttachmentDto[]) {
     for (const attachment of attachments) {
-      validateJpgAttachment(attachment);
+      const contentType = validateTicketImageAttachment(attachment);
       const ext = (path.extname(attachment.fileName || '') || '.jpg').toLowerCase();
-      const finalExt = ext === '.jpeg' ? '.jpeg' : '.jpg';
+      const finalExt = ext === '.jpeg' ? '.jpeg' : ext === '.png' ? '.png' : ext === '.webp' ? '.webp' : '.jpg';
       const stored = await this.attachmentsService.storeObject({
         storageKey: `attachments/${randomUUID()}${finalExt}`,
         bytes: Buffer.from(attachment.contentBase64, 'base64'),
-        contentType: 'image/jpeg',
+        contentType,
       });
 
       await tx.ticketAttachment.create({
@@ -48,7 +53,7 @@ export class InternalTicketsService {
           uploadedById: actorId,
           storageKey: stored.storageKey,
           fileName: attachment.fileName,
-          contentType: 'image/jpeg',
+          contentType,
           sizeBytes: attachment.sizeBytes,
         },
       });
@@ -57,13 +62,13 @@ export class InternalTicketsService {
 
   private async storeNoteAttachments(tx: any, noteId: string, actorId: string, attachments: UploadTicketAttachmentDto[]) {
     for (const attachment of attachments) {
-      validateJpgAttachment(attachment);
+      const contentType = validateTicketImageAttachment(attachment);
       const ext = (path.extname(attachment.fileName || '') || '.jpg').toLowerCase();
-      const finalExt = ext === '.jpeg' ? '.jpeg' : '.jpg';
+      const finalExt = ext === '.jpeg' ? '.jpeg' : ext === '.png' ? '.png' : ext === '.webp' ? '.webp' : '.jpg';
       const stored = await this.attachmentsService.storeObject({
         storageKey: `attachments/${randomUUID()}${finalExt}`,
         bytes: Buffer.from(attachment.contentBase64, 'base64'),
-        contentType: 'image/jpeg',
+        contentType,
       });
 
       await tx.ticketNoteAttachment.create({
@@ -72,7 +77,7 @@ export class InternalTicketsService {
           uploadedById: actorId,
           storageKey: stored.storageKey,
           fileName: attachment.fileName,
-          contentType: 'image/jpeg',
+          contentType,
           sizeBytes: attachment.sizeBytes,
         },
       });

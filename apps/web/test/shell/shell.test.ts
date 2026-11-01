@@ -35,6 +35,7 @@ import { ComplaintAttachmentControls } from '../../src/components/complaint-atta
 import { ComplaintDetailWorkspace } from '../../src/components/complaint-detail-workspace';
 import { ComplaintIntakeWorkspace } from '../../src/components/complaint-intake-workspace';
 import { ComplaintWorkflowModal } from '../../src/components/complaint-workflow-modal';
+import { ComplaintAuditLogSection } from '../../src/components/complaint-workspace/audit-log-section';
 import { AuditViewer } from '../../src/components/audit-viewer';
 import { adminBranchesText } from '../../src/i18n/staff-admin-branches';
 import { adminCategoriesSlaText } from '../../src/i18n/staff-admin-categories-sla';
@@ -43,6 +44,7 @@ import { adminUsersText } from '../../src/i18n/staff-admin-users';
 import { auditViewerText } from '../../src/i18n/staff-audit-viewer';
 import { attachmentText } from '../../src/i18n/staff-attachments';
 import { complaintDetailText } from '../../src/i18n/staff-complaint-detail';
+import { complaintStatusLabel } from '../../src/i18n/domain-labels';
 import { complaintTabsText } from '../../src/i18n/staff-complaint-tabs';
 import { collaborationText } from '../../src/i18n/staff-collaboration';
 import { complaintRelationsText } from '../../src/i18n/staff-complaint-relations';
@@ -1630,6 +1632,13 @@ test('complaint detail route renders real backend facts through the session cook
         }],
       });
     }
+    if (String(input).startsWith('http://localhost:3000/audit/logs?')) {
+      return jsonResponse({
+        items: [{ id: 'aud_cmp_1', eventType: 'COMPLAINT', action: 'complaint_created', actorId: 'usr_staff', actorName: 'Case Owner', actorNameAr: 'مسؤول الشكوى', branchId: 'branch_main', branchName: 'Main Branch', branchNameAr: 'الفرع الرئيسي', displayTimeZone: 'Asia/Riyadh', targetType: 'complaint', targetId: 'cmp/detail', correlationId: 'corr_1', metadata: {}, createdAt: '2026-06-18T00:00:00.000Z' }],
+        page: 1,
+        pageSize: 25,
+      });
+    }
     if (String(input).endsWith('/complaints/cmp%2Fdetail/comments')) {
       return jsonResponse({
         items: [
@@ -1676,6 +1685,7 @@ test('complaint detail route renders real backend facts through the session cook
   const caseCall = calls.find((call) => String(call.input).endsWith('/cases/case_cmp_1/timeline'));
   const capaCall = calls.find((call) => String(call.input).endsWith('/cases/case_cmp_1/capa'));
   const staffCall = calls.find((call) => String(call.input).endsWith('/staff/assignable'));
+  const auditCall = calls.find((call) => String(call.input).startsWith('http://localhost:3000/audit/logs?'));
   assert.ok(detailCall);
   assert.ok(commentsCall);
   assert.ok(timelineCall);
@@ -1685,6 +1695,7 @@ test('complaint detail route renders real backend facts through the session cook
   assert.ok(caseCall);
   assert.ok(capaCall);
   assert.ok(staffCall);
+  assert.ok(auditCall);
   assert.equal(String(detailCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail');
   assert.equal(String(commentsCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail/comments');
   assert.equal(String(timelineCall.input), 'http://localhost:3000/complaints/cmp%2Fdetail/timeline');
@@ -1694,6 +1705,7 @@ test('complaint detail route renders real backend facts through the session cook
   assert.equal(String(caseCall.input), 'http://localhost:3000/cases/case_cmp_1/timeline');
   assert.equal(String(capaCall.input), 'http://localhost:3000/cases/case_cmp_1/capa');
   assert.equal(String(staffCall.input), 'http://localhost:3000/staff/assignable');
+  assert.equal(String(auditCall.input), 'http://localhost:3000/audit/logs?page=1&pageSize=25&targetId=cmp%2Fdetail&targetType=complaint');
   assert.doesNotMatch(String(detailCall.input), /role|actor|workflow|branchId/i);
   assert.doesNotMatch(String(commentsCall.input), /role|actor|workflow|branchId|token|credential/i);
   assert.doesNotMatch(String(timelineCall.input), /role|actor|workflow|branchId|token|credential/i);
@@ -1733,6 +1745,9 @@ test('complaint detail route renders real backend facts through the session cook
   });
   assert.match(html, /CMP-DETAIL-001/);
   assert.match(html, /Attachment uploaded: invoice\.pdf/);
+  assert.match(html, /<details class="shrink-0 overflow-hidden rounded-2xl border border-line-subtle bg-surface shadow-sm group">/);
+  assert.match(html, /Audit log/);
+  assert.match(html, /complaint created/);
   assert.match(html, /Related complaints/);
   assert.match(html, /Likely duplicates/);
   assert.match(html, /Linked complaints/);
@@ -3682,6 +3697,60 @@ test('complaint create form uses selected DMS match as source metadata', () => {
     vehicleModelYear: 2023,
     vehicleSource: 'DMS',
   });
+});
+
+test('complaint create form exposes optional make model and year for manual vehicle data', () => {
+  const html = renderToStaticMarkup(React.createElement(ComplaintCreateForm, { locale: 'en' }));
+  assert.match(html, /Vehicle make \(optional\)/);
+  assert.match(html, /Vehicle model \/ type \(optional\)/);
+  assert.match(html, /Vehicle year \(optional\)/);
+  assert.match(html, /name="vehicleBrand"/);
+  assert.match(html, /name="vehicleModel"/);
+  assert.match(html, /name="vehicleModelYear"/);
+
+  const formData = new FormData();
+  formData.set('customerName', 'New customer');
+  formData.set('customerPhone', '+962790000001');
+  formData.set('categoryId', 'cat_service');
+  formData.set('description', 'New issue with the vehicle.');
+  formData.set('incidentAt', '2026-11-01');
+  formData.set('severity', 'MEDIUM');
+  formData.set('branchId', 'branch_main');
+  formData.set('vehicleRelated', 'on');
+  formData.set('vehicleVin', 'NEWVIN000000001');
+  formData.set('vehicleBrand', 'Toyota');
+  formData.set('vehicleModel', 'Corolla');
+  formData.set('vehicleModelYear', '2025');
+  const complaint = buildStaffComplaintCreateSubmission(formData).complaint;
+  assert.equal(complaint.vehicleBrand, 'Toyota');
+  assert.equal(complaint.vehicleModel, 'Corolla');
+  assert.equal(complaint.vehicleModelYear, 2025);
+});
+
+test('completed complaint status displays Completed in English and Arabic', () => {
+  assert.equal(complaintStatusLabel('en', 'COMPLETED'), 'Completed');
+  assert.equal(complaintStatusLabel('ar', 'COMPLETED'), 'مكتملة');
+  assert.doesNotMatch(complaintStatusLabel('en', 'COMPLETED'), /Customer Contacted/);
+});
+
+test('complaint audit log is collapsed by default and hides rows without audit permission', () => {
+  const audit = {
+    status: 'ready' as const,
+    data: {
+      items: [{ id: 'aud_1', eventType: 'COMPLAINT', action: 'complaint_created', actorId: 'usr_1', actorName: 'Case Owner', actorNameAr: 'مسؤول الشكوى', branchId: 'branch_1', branchName: 'Main Branch', branchNameAr: 'الفرع الرئيسي', displayTimeZone: 'Asia/Amman', targetType: 'complaint', targetId: 'cmp_1', correlationId: 'corr_1', metadata: {}, createdAt: '2026-11-01T08:00:00.000Z' }],
+      page: 1,
+      pageSize: 25,
+    },
+  };
+  const english = renderToStaticMarkup(React.createElement(ComplaintAuditLogSection, { audit, locale: 'en' }));
+  const arabic = renderToStaticMarkup(React.createElement(ComplaintAuditLogSection, { audit, locale: 'ar' }));
+  const denied = renderToStaticMarkup(React.createElement(ComplaintAuditLogSection, { audit: { status: 'denied' }, locale: 'en' }));
+
+  assert.match(english, /<details class="/);
+  assert.doesNotMatch(english, /<details[^>]*\sopen/);
+  assert.match(english, /Case Owner/);
+  assert.ok(arabic.includes('سجل التدقيق'));
+  assert.equal(denied, '');
 });
 
 test('complaint create form source submits only through the staff write helper', () => {

@@ -254,9 +254,6 @@ export function ComplaintCreateForm({
           <input name="customerSource" type="hidden" value={defaults.customerSource} />
           {defaults.vehicleSource ? <input name="vehicleSource" type="hidden" value={defaults.vehicleSource} /> : null}
           <input name="vehiclePlate" type="hidden" value={defaults.vehiclePlate} />
-          <input name="vehicleBrand" type="hidden" value={defaults.vehicleBrand} />
-          <input name="vehicleModel" type="hidden" value={defaults.vehicleModel} />
-          <input name="vehicleModelYear" type="hidden" value={defaults.vehicleModelYear} />
 
           {/* SECTION 1: ROUTING & MANDATORY ASSIGNMENT */}
           <div className="space-y-3 rounded-lg border border-line-subtle bg-surface-raised p-4">
@@ -567,6 +564,16 @@ export function ComplaintCreateForm({
                   placeholder={locale === 'ar' ? 'أدخل رقم الهيكل (VIN) بالإنجليزية - إلزامي' : 'Enter Chassis/VIN Number - Mandatory (English only)'}
                   required
                 />
+              </Field>
+
+              <Field id="vehicleBrand" label={extra.fields.vehicleMake}>
+                <Input id="vehicleBrand" name="vehicleBrand" defaultValue={defaults.vehicleBrand} />
+              </Field>
+              <Field id="vehicleModel" label={extra.fields.vehicleModel}>
+                <Input id="vehicleModel" name="vehicleModel" defaultValue={defaults.vehicleModel} />
+              </Field>
+              <Field id="vehicleModelYear" label={extra.fields.vehicleYear}>
+                <Input id="vehicleModelYear" max="2100" min="1900" name="vehicleModelYear" type="number" defaultValue={defaults.vehicleModelYear} />
               </Field>
 
               {/* ALTERNATIVE CAR CHECKBOX */}

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Send, Paperclip } from 'lucide-react';
 import { toast } from 'sonner';
 import { addStaffComplaintComment } from '../../lib/staff-complaint-comments-api';
-import { uploadStaffComplaintAttachments } from '../../lib/staff-attachments-api';
+import { staffAttachmentAccept, uploadStaffComplaintAttachments } from '../../lib/staff-attachments-api';
 
 export function ComplaintNoteForm({ complaintId, locale }: { complaintId: string, locale: string }) {
   const [content, setContent] = useState('');
@@ -18,11 +18,11 @@ export function ComplaintNoteForm({ complaintId, locale }: { complaintId: string
 
     setLoading(true);
     try {
+      let failedAttachmentCount = 0;
       if (files.length > 0) {
         const uploadResult = await uploadStaffComplaintAttachments(complaintId, files);
-        if (uploadResult.failedCount > 0) {
-          toast.error(locale === 'ar' ? 'فشل رفع بعض المرفقات' : 'Failed to upload some attachments');
-        }
+        setFiles(uploadResult.failedFiles);
+        failedAttachmentCount = uploadResult.failedCount;
       }
 
       if (content.trim()) {
@@ -33,6 +33,10 @@ export function ComplaintNoteForm({ complaintId, locale }: { complaintId: string
       }
       
       setContent('');
+      if (failedAttachmentCount > 0) {
+        toast.warning(locale === 'ar' ? 'تم حفظ الملاحظة، لكن تعذر رفع بعض الصور. أعد المحاولة للملفات المتبقية.' : 'Note saved, but some images did not upload. Retry the remaining files.');
+        return;
+      }
       setFiles([]);
       toast.success(locale === 'ar' ? 'تمت إضافة الملاحظة بنجاح' : 'Note added successfully');
       
@@ -72,6 +76,7 @@ export function ComplaintNoteForm({ complaintId, locale }: { complaintId: string
         <input 
           type="file"
           multiple
+          accept={staffAttachmentAccept}
           className="hidden"
           ref={fileInputRef}
           onChange={(e) => setFiles(Array.from(e.target.files || []))}

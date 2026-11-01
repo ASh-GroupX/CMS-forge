@@ -1468,3 +1468,18 @@ were deleted, artifact secret scan passed, and required reports API, web shell,
 root coverage, seed, and diff checks passed. P10-10B local proof work is
 complete. Stop AUTO PHASE before P10-OPS because it is explicitly deferred,
 human-owned production/channel work.
+
+## CRM complaint and internal ticket reliability trust note
+
+Date: 2026-11-01
+Risk: High
+Recommendation: Hold production merge until the required web shell suite is green.
+
+- Attachment API authorization and branch scope remain server-derived; staff
+  upload changes add accepted image formats but do not move storage or authority
+  into the frontend. The shared customer-portal validator remains unchanged.
+- Complaint audit rows are fetched through the audit service, filtered to the
+  current complaint, and hidden when `AUDIT_VIEW` is denied.
+- Completion display labels do not grant or change a backend transition.
+- Focused checks and production build pass. The full web shell suite has 41
+  failures across multiple screens; no production merge has been made.

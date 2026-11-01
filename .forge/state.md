@@ -1,26 +1,21 @@
 # Current State
 
-Status: User department membership and multi-recipient tasks verified locally
-Phase: Production release
-Next Task: Publish, merge, monitor deployment, and run authenticated production verification
+Status: Blocked — broad web shell suite has 41 failing tests
+Phase: CRM complaint and internal ticket reliability
+Next Task: Replan/fix shell suite failures, then push `waleed` and merge `production`
 Model Tier: GPT-5.5 Extra High or equivalent
-
-## How to use this file
-
-SNAPSHOT only. REPLACE each run, never append. Per-task detail -> evidence.md.
-Prior state history is in `.forge/archive/state-archive.md`.
 
 ## Snapshot
 
-- Admin user create/edit requires an active branch-eligible department and
-  persists the relation with transactional audit evidence.
-- Tasks accept multiple explicit users and multiple database-backed department
-  targets while retaining one accountable assignee.
-- Active current department members can view NORMAL tasks through the relational
-  recipient table; inactive, locked, and portal users are excluded.
-- Recipient notification resolution is deduplicated and idempotent.
-- Local API, web, migration, lint, typecheck, OpenAPI, root, and visual checks pass.
+- Requested CRM and ticket changes are implemented locally.
+- Focused API, web API-client, localization, visual, build, security, migration,
+  typecheck, lint, OpenAPI, and whitespace checks passed.
+- The complete web shell suite ran and failed 41/223 tests across multiple
+  existing screens, including complaint detail/create. Production merge is held
+  until these failures are understood and the required web gate passes.
+- Branch is `waleed`; no production merge has been performed.
 
 ## Current Stop
 
-Publish the verified change and complete production live proof.
+Reconcile the full web shell failure set without skipping tests or weakening
+acceptance criteria; then complete the requested push and production merge.

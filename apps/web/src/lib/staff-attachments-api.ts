@@ -1,4 +1,4 @@
-import { attachmentFileToBase64, normalizeAttachmentMime, validateAttachmentFile, type AttachmentFileValidation } from './attachment-file-policy';
+import { attachmentFileToBase64, normalizeAttachmentMime, validateStaffAttachmentFile, type AttachmentFileValidation } from './attachment-file-policy';
 
 export type StaffAttachment = {
   id: string;
@@ -13,19 +13,19 @@ export type StaffAttachment = {
 export type StaffAttachmentDownload = { attachmentId: string; token: string; expiresAt: string };
 export type StaffAttachmentError = { kind: 'api' | 'network' | 'validation'; code: string; message: string; correlationId: string | null; status?: number };
 export type StaffAttachmentResult<T> = { ok: true; data: T } | { ok: false; error: StaffAttachmentError };
-export type StaffAttachmentUploadSummary = { uploadedCount: number; failedCount: number; attachments: StaffAttachment[]; errors: StaffAttachmentError[] };
+export type StaffAttachmentUploadSummary = { uploadedCount: number; failedCount: number; attachments: StaffAttachment[]; errors: StaffAttachmentError[]; failedFiles: File[] };
 export type OpenAttachmentDownloadTarget = (target: string) => void;
 
 type ErrorEnvelope = { error?: { code?: string; message?: string; correlationId?: string | null } };
 
-export const staffAttachmentAccept = '.jpg,.jpeg,image/jpeg';
+export const staffAttachmentAccept = '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp';
 
 export async function listStaffComplaintAttachments(complaintId: string, fetchImpl: typeof fetch = fetch): Promise<StaffAttachmentResult<{ items: StaffAttachment[] }>> {
   return requestJson(`/api/complaints/${encodeURIComponent(complaintId)}/attachments`, fetchImpl, { method: 'GET' });
 }
 
 export async function uploadStaffComplaintAttachment(complaintId: string, file: File | null, fetchImpl: typeof fetch = fetch): Promise<StaffAttachmentResult<{ attachment: StaffAttachment }>> {
-  const validation = validateAttachmentFile(file);
+  const validation = validateStaffAttachmentFile(file);
   if (!validation.ok) return { ok: false, error: validationError(validation) };
   const selectedFile = file;
   if (!selectedFile) return { ok: false, error: validationError({ ok: false, code: 'ATTACHMENT_REQUIRED' }) };
@@ -37,7 +37,7 @@ export async function uploadStaffComplaintAttachment(complaintId: string, file: 
 }
 
 export async function uploadStaffComplaintAttachments(complaintId: string, files: File[], fetchImpl: typeof fetch = fetch): Promise<StaffAttachmentUploadSummary> {
-  const summary: StaffAttachmentUploadSummary = { uploadedCount: 0, failedCount: 0, attachments: [], errors: [] };
+  const summary: StaffAttachmentUploadSummary = { uploadedCount: 0, failedCount: 0, attachments: [], errors: [], failedFiles: [] };
   for (const file of files) {
     const result = await uploadStaffComplaintAttachment(complaintId, file, fetchImpl);
     if (result.ok) {
@@ -46,6 +46,7 @@ export async function uploadStaffComplaintAttachments(complaintId: string, files
     } else {
       summary.failedCount += 1;
       summary.errors.push(result.error);
+      summary.failedFiles.push(file);
     }
   }
   return summary;

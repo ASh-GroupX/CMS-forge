@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createInternalTicket, getDepartmentFormFields } from '../../../../lib/staff-internal-tickets-actions';
-import { attachmentFileToBase64, normalizeAttachmentMime, validateAttachmentFile } from '../../../../lib/attachment-file-policy';
+import { attachmentFileToBase64, normalizeAttachmentMime, validateStaffAttachmentFile } from '../../../../lib/attachment-file-policy';
 import { staffAttachmentFiles } from '../../../../lib/staff-attachments-api';
 import { Paperclip } from 'lucide-react';
 import { DueDatePicker, TIME_OPTIONS } from './due-date-picker';
@@ -144,12 +144,12 @@ export default function CreateInternalTicketForm({
         const files = staffAttachmentFiles(formData);
         if (files.length > 0) {
           for (const file of files) {
-            const val = validateAttachmentFile(file);
+            const val = validateStaffAttachmentFile(file);
             if (!val.ok) {
               setError(
                 val.code === 'ATTACHMENT_SIZE_EXCEEDED'
                   ? `File "${file.name}" exceeds the 5MB size limit.`
-                  : `File "${file.name}" is not allowed. Only JPG images (.jpg, .jpeg) are allowed.`
+                  : `File "${file.name}" is not allowed. Only JPG, PNG, or WebP images are allowed.`
               );
               setLoading(false);
               return;
@@ -361,10 +361,10 @@ export default function CreateInternalTicketForm({
             name="attachments" 
             type="file" 
             multiple
-            accept=".jpg,.jpeg,image/jpeg"
+            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
             className="rounded-xl border border-line-subtle bg-surface-canvas p-3.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand/10 file:text-brand hover:file:bg-brand/20" 
           />
-          <p className="text-xs text-content-muted">Only JPG images are allowed (.jpg, .jpeg, max 5MB).</p>
+          <p className="text-xs text-content-muted">JPG, PNG, and WebP images are allowed (max 5MB each).</p>
         </div>
       )}
 

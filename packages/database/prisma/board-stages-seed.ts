@@ -62,7 +62,7 @@ const DEFAULT_TICKET_STAGES: {
   { code: 'TICKETS_BRANCH_REVIEW', nameEn: 'Assigned', nameAr: 'معينة', color: 'violet', position: 3, mappedComplaintStatus: ComplaintStatus.BRANCH_REVIEW },
   { code: 'TICKETS_IN_PROGRESS', nameEn: 'In Progress', nameAr: 'قيد التنفيذ', color: 'amber', position: 4, mappedComplaintStatus: ComplaintStatus.IN_PROGRESS },
   { code: 'TICKETS_RESOLVED', nameEn: 'Resolution Pending', nameAr: 'بانتظار الحل', color: 'green', position: 5, mappedComplaintStatus: ComplaintStatus.RESOLVED },
-  { code: 'TICKETS_COMPLETED', nameEn: 'Customer Contacted', nameAr: 'تم التواصل مع العميل', color: 'slate', position: 6, mappedComplaintStatus: ComplaintStatus.COMPLETED },
+  { code: 'TICKETS_COMPLETED', nameEn: 'Completed', nameAr: 'مكتملة', color: 'slate', position: 6, mappedComplaintStatus: ComplaintStatus.COMPLETED },
   { code: 'TICKETS_CLOSED', nameEn: 'Closed', nameAr: 'مغلقة', color: 'slate', position: 7, mappedComplaintStatus: ComplaintStatus.CLOSED },
   { code: 'TICKETS_REOPENED', nameEn: 'Reopened', nameAr: 'أعيد فتحها', color: 'red', position: 8, mappedComplaintStatus: ComplaintStatus.REOPENED },
   { code: 'TICKETS_REJECTED', nameEn: 'Rejected', nameAr: 'مرفوضة', color: 'red', position: 9, mappedComplaintStatus: ComplaintStatus.REJECTED },

@@ -5,7 +5,7 @@ import { Send, Paperclip } from 'lucide-react';
 import { toast } from 'sonner';
 import { addTicketNote } from '../../../../lib/staff-internal-tickets-actions';
 import { useRouter } from 'next/navigation';
-import { attachmentFileToBase64, normalizeAttachmentMime, validateAttachmentFile } from '../../../../lib/attachment-file-policy';
+import { attachmentFileToBase64, normalizeAttachmentMime, validateStaffAttachmentFile } from '../../../../lib/attachment-file-policy';
 
 export function TicketNoteForm({ ticketId }: { ticketId: string }) {
   const router = useRouter();
@@ -16,12 +16,12 @@ export function TicketNoteForm({ ticketId }: { ticketId: string }) {
 
   const handleFilesChange = (selectedFiles: File[]) => {
     for (const f of selectedFiles) {
-      const val = validateAttachmentFile(f);
+      const val = validateStaffAttachmentFile(f);
       if (!val.ok) {
         if (val.code === 'ATTACHMENT_SIZE_EXCEEDED') {
           toast.error(`File "${f.name}" exceeds the 5MB size limit.`);
         } else {
-          toast.error(`File "${f.name}" is not allowed. Only JPG images (.jpg, .jpeg) are allowed.`);
+          toast.error(`File "${f.name}" is not allowed. Only JPG, PNG, or WebP images are allowed.`);
         }
         return;
       }
@@ -34,12 +34,12 @@ export function TicketNoteForm({ ticketId }: { ticketId: string }) {
     if (!content.trim() && files.length === 0) return;
 
     for (const f of files) {
-      const val = validateAttachmentFile(f);
+      const val = validateStaffAttachmentFile(f);
       if (!val.ok) {
         if (val.code === 'ATTACHMENT_SIZE_EXCEEDED') {
           toast.error(`File "${f.name}" exceeds the 5MB size limit.`);
         } else {
-          toast.error(`File "${f.name}" is not allowed. Only JPG images (.jpg, .jpeg) are allowed.`);
+          toast.error(`File "${f.name}" is not allowed. Only JPG, PNG, or WebP images are allowed.`);
         }
         return;
       }
@@ -98,7 +98,7 @@ export function TicketNoteForm({ ticketId }: { ticketId: string }) {
         <input 
           type="file"
           multiple
-          accept=".jpg,.jpeg,image/jpeg"
+          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
           className="hidden"
           ref={fileInputRef}
           onChange={(e) => handleFilesChange(Array.from(e.target.files || []))}

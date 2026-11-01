@@ -14968,3 +14968,51 @@ METHOD-TEST-001, ARCH-UI-001, UI-DESIGN-001
 - Recipient queries exclude inactive, locked, and customer-portal users.
 - No password, OTP, token, hash, session, provider credential, or customer data
   is logged or exposed.
+
+## CRM complaint and internal ticket reliability
+
+Date: 2026-11-01
+Risk: High
+Status: Blocked pending broad web shell suite repair
+Requirements: REQ-FILES-001, REQ-COMPLAINT-001, REQ-CUSTOMER-001,
+DATA-AUTO-001, REQ-RBAC-001, WORKFLOW-MATRIX-001, METHOD-AUDIT-001,
+METHOD-API-001, METHOD-TEST-001, ARCH-UI-001, UI-DESIGN-001
+
+- Added staff PNG/WebP support while retaining JPG, preserving format and MIME
+  in internal ticket creation and notes. Complaint-note partial failures retain
+  only failed files for retry and do not claim all attachments uploaded.
+- Added optional make/model/year complaint intake fields, defaulting from lookup
+  data when present and remaining editable for manual/unmatched VINs.
+- Added a default-collapsed complaint audit panel. It queries only the current
+  complaint and renders only when the authenticated API call grants `AUDIT_VIEW`.
+- Renamed `COMPLETED` in complaint labels and the TICKETS_COMPLETED stage; added
+  an additive data migration. The backend status machine was not changed.
+
+### Verification
+
+- Passed: `corepack pnpm test:api -- attachments` (35/35).
+- Passed: `corepack pnpm test:web -- api-client` (89/89).
+- Passed: focused shell tests for optional vehicle inputs, completed labels, and
+  collapsed/permission-gated audit section (3/3).
+- Passed: `corepack pnpm test:web -- localization` (13/13).
+- Passed: `corepack pnpm typecheck`, `corepack pnpm lint`,
+  `corepack pnpm security:check` (38/38), `corepack pnpm openapi:check`,
+  `corepack pnpm db:migrate:test`, `corepack pnpm build`,
+  `corepack pnpm test:visual` (92 route previews), and `git diff --check`.
+- Passed: captured and visually inspected `coverage/web-proof-visual/audit-review.png`.
+- Failed: `corepack pnpm test:web -- shell` (182/223; 41 failures across
+  navigation, portal, complaint detail/create, DMS, reports, dashboard, and
+  other staff views). The failing suite must be reconciled before production
+  merge; individual requested feature checks passed.
+- Not Run: push, production merge, deployment, and authenticated live proof.
+
+### Security Self-Check
+
+- Staff and branch authorization remains server-session/API-owned; the browser
+  sends no role or branch authority for audit reads or attachment writes.
+- Audit lookup is exact-target filtered by `targetType=complaint` and current
+  complaint ID; the endpoint enforces `AUDIT_VIEW`. Portal routes do not expose
+  audit records or internal comments.
+- Completion-label changes do not change workflow transitions, status history,
+  or same-transaction audit behavior.
+- No credentials or provider secrets are logged or returned by these changes.

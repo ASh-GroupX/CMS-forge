@@ -12,6 +12,8 @@ import { ContextRail } from './context-rail';
 import { UnifiedTimeline } from './unified-timeline';
 import { QuickActionsRail } from './quick-actions-rail';
 import { ComplaintNoteForm } from './complaint-note-form';
+import { ComplaintAuditLogSection } from './audit-log-section';
+import type { StaffAuditLoadResult } from '../../lib/staff-audit-api';
 import { WorkingNotesList } from './working-notes';
 import { VoiceOfCustomerCard } from './voice-of-customer-card';
 import { ArrowLeft, ClipboardCheck, Download, FileText, History, Paperclip } from 'lucide-react';
@@ -20,6 +22,7 @@ export type ComplaintDetailState = 'loading' | 'empty' | 'error' | 'denied' | 'n
 
 export function ComplaintWorkspace({
   assignmentOptions,
+  audit,
   detail,
   locale,
   options,
@@ -28,6 +31,7 @@ export function ComplaintWorkspace({
   timeline,
 }: {
   assignmentOptions?: StaffAssignmentOptions | null | undefined;
+  audit?: StaffAuditLoadResult | undefined;
   detail?: StaffComplaintDetailView | undefined;
   locale: Locale;
   options?: ComplaintFormOptions | null | undefined;
@@ -234,6 +238,8 @@ export function ComplaintWorkspace({
                 <UnifiedTimeline detail={detail} locale={locale} t={t} timeline={activityTimeline} />
               </div>
             </div>
+
+            <ComplaintAuditLogSection audit={audit} locale={locale} />
 
           </div>
         </div>
