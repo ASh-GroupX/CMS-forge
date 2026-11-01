@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import { SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { AppException } from '../../core/http-kernel.js';
+import { isPublicHttpUrl } from '../attachments/attachment-storage.port.js';
 import { InternalTicketsService } from './internal-tickets.service.js';
 import { CreateInternalTicketDto } from './dto/create-internal-ticket.dto.js';
 import { TransferTicketDto, AssignTicketDto, ResolveTicketDto, WaitTicketDto, RejectTicketDto, AddNoteDto } from './dto/update-internal-ticket.dto.js';
@@ -249,7 +250,8 @@ export class InternalTicketsController {
 
     const result = await this.service.downloadAttachment(id, attachmentId);
     if (redirect === '1' || redirect === 'true') {
-      return res.redirect(result.url);
+      const target = isPublicHttpUrl(result.url) ? result.url : `/api/attachments/raw/${encodeURIComponent(fileData.attachment.storageKey)}`;
+      return res.redirect(target);
     }
     return res.json(result);
   }
@@ -282,7 +284,8 @@ export class InternalTicketsController {
 
     const result = await this.service.downloadNoteAttachment(id, noteId, attachmentId);
     if (redirect === '1' || redirect === 'true') {
-      return res.redirect(result.url);
+      const target = isPublicHttpUrl(result.url) ? result.url : `/api/attachments/raw/${encodeURIComponent(fileData.attachment.storageKey)}`;
+      return res.redirect(target);
     }
     return res.json(result);
   }

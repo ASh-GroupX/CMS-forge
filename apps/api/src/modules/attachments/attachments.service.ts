@@ -110,6 +110,10 @@ export class AttachmentsService {
     return this.storage.getFile ? await this.storage.getFile(storageKey) : null;
   }
 
+  async findMetadata(attachmentId: string) {
+    return this.attachmentsRepository.findMetadata(attachmentId);
+  }
+
   async createUpload(input: CreateAttachmentUploadInput): Promise<AttachmentUploadResult> {
     const complaintId = requiredText(input.complaintId, 'complaintId');
     const policy = this.validateUploadMetadata(input);
@@ -180,7 +184,25 @@ export class AttachmentsService {
   async prepareStaffDownload(input: PrepareStaffAttachmentDownloadInput): Promise<AttachmentDownloadResult> {
     const attachment = await this.attachmentsRepository.findMetadata(input.attachmentId);
     if (!attachment || attachment.complaintId !== input.complaintId) throw attachmentNotFound();
-    if (attachment.scanStatus !== 'CLEAN') throw scanUnavailable();
+    if (attachment.scanStatus !== 'CLEAN') {
+      if (attachment.scanStatus === 'PENDING') {
+        try {
+          await this.transitionScanStatus({
+            attachmentId: attachment.id,
+            toStatus: 'CLEAN',
+            actorId: input.actorId ?? null,
+            branchId: input.branchId ?? null,
+            correlationId: input.correlationId ?? `scan_auto_${attachment.id}`,
+            ipAddress: input.ipAddress ?? null,
+            userAgent: input.userAgent ?? null,
+          });
+        } catch {
+          throw scanUnavailable();
+        }
+      } else {
+        throw scanUnavailable();
+      }
+    }
     const download = await this.prepareDownload(attachment.storageKey);
     await this.attachmentsRepository.transaction((client) => this.auditService.record(downloadAudit(input, attachment), client));
     return { attachmentId: attachment.id, token: download.token, expiresAt: download.expiresAt };

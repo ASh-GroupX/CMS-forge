@@ -14,11 +14,25 @@ export async function GET(request: Request, { params }: { params: Promise<RouteP
     const shouldRedirect = searchParams.get('redirect') === '1' || searchParams.get('download') === '1' || accept.includes('text/html');
 
     const apiUrl = process.env.API_URL ?? 'http://localhost:3000';
-    const response = await fetch(new URL(`/complaints/${encodeURIComponent(id)}/attachments/${encodeURIComponent(attachmentId)}/download`, apiUrl), {
+    const response = await fetch(new URL(`/complaints/${encodeURIComponent(id)}/attachments/${encodeURIComponent(attachmentId)}/download${shouldRedirect ? '?download=1' : ''}`, apiUrl), {
       cache: 'no-store',
-      headers: new Headers({ Accept: 'application/json', cookie: request.headers.get('cookie') ?? '' }),
+      headers: new Headers({ Accept: shouldRedirect ? '*/*' : 'application/json', cookie: request.headers.get('cookie') ?? '' }),
       method: 'GET',
     });
+
+    const contentType = response.headers.get('content-type') || '';
+    const contentDisposition = response.headers.get('content-disposition');
+    if (response.ok && (contentDisposition || !contentType.includes('application/json'))) {
+      const body = await response.arrayBuffer();
+      return new Response(body, {
+        status: 200,
+        headers: {
+          'content-type': contentType || 'application/octet-stream',
+          'content-disposition': contentDisposition || `attachment; filename="attachment-${attachmentId}"`,
+          'cache-control': 'no-store',
+        },
+      });
+    }
 
     const body = await response.arrayBuffer();
     if (!shouldRedirect || !response.ok) {
@@ -28,27 +42,38 @@ export async function GET(request: Request, { params }: { params: Promise<RouteP
     const token = downloadToken(body);
     if (token && (isHttpUrl(token) || token.startsWith('/'))) {
       if (isHttpUrl(token)) {
-        const res = NextResponse.redirect(token, 307);
-        res.headers.set('cache-control', 'no-store');
-        return res;
+        try {
+          const s3Res = await fetch(token);
+          if (s3Res.ok) {
+            const s3Buffer = await s3Res.arrayBuffer();
+            return new Response(s3Buffer, {
+              status: 200,
+              headers: {
+                'content-type': s3Res.headers.get('content-type') || 'application/octet-stream',
+                'content-disposition': s3Res.headers.get('content-disposition') || `attachment; filename="attachment-${attachmentId}"`,
+                'cache-control': 'no-store',
+              },
+            });
+          }
+        } catch {}
       }
 
       // Stream the raw file directly without exposing tokens or redirects
       try {
-        const rawPath = token.startsWith('/api/') ? token.slice(4) : token;
+        const rawPath = token.startsWith('/api/') ? token.slice(4) : (token.startsWith('/') ? token : `/attachments/raw/${encodeURIComponent(token)}`);
         const rawRes = await fetch(new URL(rawPath, apiUrl), {
           cache: 'no-store',
           headers: new Headers({ cookie: request.headers.get('cookie') ?? '' }),
         });
         if (rawRes.ok) {
           const rawBuffer = await rawRes.arrayBuffer();
-          const contentType = rawRes.headers.get('content-type') || 'application/octet-stream';
-          const disposition = rawRes.headers.get('content-disposition') || `attachment; filename="attachment-${attachmentId}"`;
+          const ct = rawRes.headers.get('content-type') || 'application/octet-stream';
+          const cd = rawRes.headers.get('content-disposition') || `attachment; filename="attachment-${attachmentId}"`;
           return new Response(rawBuffer, {
             status: 200,
             headers: {
-              'content-type': contentType,
-              'content-disposition': disposition,
+              'content-type': ct,
+              'content-disposition': cd,
               'cache-control': 'no-store',
             },
           });

@@ -40,27 +40,39 @@ export async function GET(request: Request, { params }: { params: Promise<RouteP
       if (!fileName.includes('.')) fileName += ext;
 
       if (token && typeof token === 'string' && (token.startsWith('http://') || token.startsWith('https://') || token.startsWith('/'))) {
-        if (token.startsWith('/')) {
-          const rawRes = await fetch(new URL(token, apiUrl), {
-            cache: 'no-store',
-            headers: new Headers({ cookie: request.headers.get('cookie') ?? '' }),
-          });
-          if (rawRes.ok) {
-            const rawBuffer = await rawRes.arrayBuffer();
-            return new Response(rawBuffer, {
-              status: 200,
-              headers: {
-                'content-type': rawRes.headers.get('content-type') || 'image/jpeg',
-                'content-disposition': rawRes.headers.get('content-disposition') || `attachment; filename="${encodeURIComponent(fileName)}"`,
-                'cache-control': 'no-store',
-              },
-            });
-          }
+        if (token.startsWith('http://') || token.startsWith('https://')) {
+          try {
+            const s3Res = await fetch(token);
+            if (s3Res.ok) {
+              const s3Buffer = await s3Res.arrayBuffer();
+              return new Response(s3Buffer, {
+                status: 200,
+                headers: {
+                  'content-type': s3Res.headers.get('content-type') || contentType || 'image/jpeg',
+                  'content-disposition': s3Res.headers.get('content-disposition') || `attachment; filename="${encodeURIComponent(fileName)}"`,
+                  'cache-control': 'no-store',
+                },
+              });
+            }
+          } catch {}
         }
-        const target = token.startsWith('/') ? new URL(token, request.url).toString() : token;
-        const redirectRes = NextResponse.redirect(target);
-        redirectRes.headers.set('cache-control', 'no-store');
-        return redirectRes;
+
+        const rawPath = token.startsWith('/api/') ? token.slice(4) : (token.startsWith('/') ? token : `/attachments/raw/${encodeURIComponent(token)}`);
+        const rawRes = await fetch(new URL(rawPath, apiUrl), {
+          cache: 'no-store',
+          headers: new Headers({ cookie: request.headers.get('cookie') ?? '' }),
+        });
+        if (rawRes.ok) {
+          const rawBuffer = await rawRes.arrayBuffer();
+          return new Response(rawBuffer, {
+            status: 200,
+            headers: {
+              'content-type': rawRes.headers.get('content-type') || 'image/jpeg',
+              'content-disposition': rawRes.headers.get('content-disposition') || `attachment; filename="${encodeURIComponent(fileName)}"`,
+              'cache-control': 'no-store',
+            },
+          });
+        }
       }
       return NextResponse.json({ error: { code: 'ATTACHMENT_DOWNLOAD_TARGET_UNAVAILABLE', message: 'Download target is unavailable.', correlationId: null } }, { status: 409 });
     }

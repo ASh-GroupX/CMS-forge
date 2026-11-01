@@ -11,6 +11,7 @@ import { AttachmentsService } from './attachments.service.js';
 import type { AttachmentDownloadResponseDto, AttachmentListResponseDto, AttachmentUploadResponseDto } from './dto/attachment-response.dto.js';
 import { attachmentDownloadDto, attachmentDto, attachmentListDto } from './dto/attachment-response.dto.js';
 import * as path from 'node:path';
+import { isPublicHttpUrl } from './attachment-storage.port.js';
 import { parseCreateAttachmentBody, toCreateAttachmentInput } from './dto/create-attachment.dto.js';
 
 @Controller('complaints/:complaintId/attachments')
@@ -64,7 +65,7 @@ export class AttachmentsController {
     @Query('redirect') redirect?: string,
     @Query('download') download?: string,
     @Res({ passthrough: true }) response?: any,
-  ): Promise<AttachmentDownloadResponseDto> {
+  ): Promise<AttachmentDownloadResponseDto | void> {
     const complaint = await this.complaintsService.getDetail(complaintId, { branchId: queueBranchId(branchId, request) });
     const downloadDto = attachmentDownloadDto(await this.attachmentsService.prepareStaffDownload({
       complaintId,
@@ -74,12 +75,37 @@ export class AttachmentsController {
     }));
 
     const accept = (request?.headers?.['accept'] as string) ?? '';
-    const shouldRedirect = redirect === '1' || download === '1' || accept.includes('text/html');
-    if (shouldRedirect && response?.redirect) {
-      const target = downloadDto.token.startsWith('/') || downloadDto.token.startsWith('http')
+    const shouldStream = redirect === '1' || download === '1' || accept.includes('text/html');
+
+    if (shouldStream && response) {
+      const metadata = await this.attachmentsService.findMetadata(attachmentId);
+      const storageKey = metadata?.storageKey || downloadDto.token;
+      const file = await this.attachmentsService.getRawFile(storageKey);
+      if (file) {
+        let filename = metadata?.fileName || path.basename(storageKey) || 'attachment';
+        if (!path.extname(filename)) {
+          const ct = (file.contentType || metadata?.contentType || '').toLowerCase();
+          if (ct.includes('jpeg') || ct.includes('jpg')) filename += '.jpg';
+          else if (ct.includes('png')) filename += '.png';
+          else if (ct.includes('webp')) filename += '.webp';
+          else if (ct.includes('pdf')) filename += '.pdf';
+          else filename += '.jpg';
+        }
+        response.setHeader('Content-Type', file.contentType || metadata?.contentType || 'application/octet-stream');
+        response.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+        response.setHeader('Cache-Control', 'private, no-store');
+        return response.send(file.bytes);
+      }
+
+      const target = isPublicHttpUrl(downloadDto.token)
         ? downloadDto.token
-        : `/api/attachments/raw/${encodeURIComponent(downloadDto.token)}`;
-      response.redirect(302, target);
+        : `/api/attachments/raw/${encodeURIComponent(downloadDto.token.startsWith('/') ? downloadDto.token : (metadata?.storageKey || attachmentId))}`;
+      return response.redirect(302, target);
+    }
+
+    if (downloadDto.token && isHttpUrl(downloadDto.token) && !isPublicHttpUrl(downloadDto.token)) {
+      const metadata = await this.attachmentsService.findMetadata(attachmentId);
+      downloadDto.token = `/api/attachments/raw/${encodeURIComponent(metadata?.storageKey || attachmentId)}`;
     }
 
     return { download: downloadDto };
@@ -126,24 +152,40 @@ export class RawAttachmentsController {
 
   @Get('raw/*')
   async serveRawWildcard(@Req() req: any, @Res() res: any) {
-    const raw = req.params[0] || req.url.split('/raw/')[1] || '';
-    return this.serve(raw, req, res);
+    return this.serve('', req, res);
   }
 
-  private async serve(storageKey: string, req: any, res: any) {
-    let key = (storageKey || req.url.split('/raw/')[1] || '').trim();
-    if (key.startsWith('/')) key = key.slice(1);
-    const qIndex = key.indexOf('?');
-    if (qIndex !== -1) key = key.slice(0, qIndex);
+  private async serve(storageKeyParam: string, req: any, res: any) {
+    let rawFromUrl = '';
+    const url = req.url || '';
+    const rawIdx = url.indexOf('/raw/');
+    if (rawIdx !== -1) {
+      rawFromUrl = url.slice(rawIdx + 5);
+      const qIdx = rawFromUrl.indexOf('?');
+      if (qIdx !== -1) rawFromUrl = rawFromUrl.slice(0, qIdx);
+    }
+    if (rawFromUrl.startsWith('/')) rawFromUrl = rawFromUrl.slice(1);
 
-    let decoded = key;
-    try { decoded = decodeURIComponent(key); } catch {}
+    const candidates = [
+      rawFromUrl,
+      decodeKey(rawFromUrl),
+      storageKeyParam,
+      decodeKey(storageKeyParam),
+    ].filter(Boolean);
 
-    let file: { bytes: Buffer; contentType: string; fileName?: string } | null =
-      (await this.attachmentsService.getRawFile(decoded)) || (await this.attachmentsService.getRawFile(key));
+    let file: { bytes: Buffer; contentType: string; fileName?: string } | null = null;
+    let foundKey = rawFromUrl || storageKeyParam;
+    for (const cand of candidates) {
+      file = await this.attachmentsService.getRawFile(cand);
+      if (file) {
+        foundKey = cand;
+        break;
+      }
+    }
+
     if (!file) throw new AppException('ATTACHMENT_NOT_FOUND', 'Attachment object was not found', HttpStatus.NOT_FOUND);
 
-    let filename = file.fileName || path.basename(decoded) || 'attachment';
+    let filename = file.fileName || path.basename(foundKey) || 'attachment';
     if (!path.extname(filename)) {
       const ct = (file.contentType || '').toLowerCase();
       if (ct.includes('jpeg') || ct.includes('jpg')) filename += '.jpg';
@@ -156,6 +198,19 @@ export class RawAttachmentsController {
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
     res.setHeader('Cache-Control', 'private, no-store');
     res.send(file.bytes);
+  }
+}
+
+function decodeKey(val: string): string {
+  try { return decodeURIComponent(val); } catch { return val; }
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
   }
 }
 
