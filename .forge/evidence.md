@@ -15150,6 +15150,30 @@ functional release revision, avoiding an unnecessary second deployment.
     original attachment bytes, and allowed/denied scope behavior).
   - Passed: `corepack pnpm openapi:check`.
   - Passed: `corepack pnpm test:visual` (92/92 route previews).
+
+---
+
+## F9-RPT-03 - Arabic text in complete-record ZIP PDFs
+
+- Date: 2026-11-02
+- Risk: High
+- Status: Passed on feature branch; not deployed
+- Requirement IDs: REQ-REPORT-001, REQ-FILES-001, UI-DESIGN-001,
+  METHOD-TEST-001.
+- Root cause: PDFKit was using its default Helvetica font, which does not
+  contain Arabic glyphs and does not shape or order mixed-direction text.
+- Repair: Complete-record PDFs now embed IBM Plex Sans Arabic (Arabic and Latin
+  subsets), reshape Arabic presentation forms, and apply Unicode bidi ordering
+  before rendering each line. JSON entries remain UTF-8 for machine-readable
+  fidelity.
+- Visual proof: Generated a mixed Arabic/English sample PDF, rendered it with
+  Poppler to `tmp/pdfs/arabic-report-1.png`, and visually confirmed readable
+  Arabic glyphs and English text on the same lines.
+- Verification:
+  - Passed: Arabic PDF embedding regression test.
+  - Passed: `corepack pnpm typecheck`.
+  - Passed: `corepack pnpm lint`.
+  - Passed: `git diff --check`.
   - Passed: `corepack pnpm test:e2e -- reports` (92/92 report-inclusive visual,
     responsive, RTL/LTR route previews).
   - Passed: `corepack pnpm web:visual-review`; EN desktop and AR mobile Reports

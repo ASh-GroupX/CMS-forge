@@ -1,8 +1,11 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { RoleCode } from '@prisma/client';
 import { ZipArchive } from 'archiver';
+import bidiFactory from 'bidi-js';
 import PDFDocument from 'pdfkit';
+import { createRequire } from 'node:module';
 import { PassThrough } from 'node:stream';
+import arabicReshaper from 'arabic-reshaper';
 import { AuditService } from '../../core/audit.service.js';
 import { AppException, PrismaService } from '../../core/http-kernel.js';
 import { AttachmentsService } from '../attachments/attachments.service.js';
@@ -11,6 +14,14 @@ import type { DashboardReportScope, ReportExportAudit } from './reports.service.
 type RecordType = 'complaint' | 'ticket';
 type ArchiveAttachment = { id: string; fileName: string; contentType: string; sizeBytes: number; storageKey: string };
 type ArchiveRecord = { id: string; referenceNumber: string; title: string; data: Record<string, unknown>; attachments: ArchiveAttachment[] };
+
+const require = createRequire(import.meta.url);
+const ARABIC_FONT = require.resolve('@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-400-normal.woff');
+const LATIN_FONT = require.resolve('@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-latin-400-normal.woff');
+const bidi = (bidiFactory as unknown as () => {
+  getEmbeddingLevels(value: string, direction: 'ltr' | 'rtl' | 'auto'): unknown;
+  getReorderedString(value: string, levels: unknown): string;
+})();
 
 @Injectable()
 export class ReportsRecordExportService {
@@ -148,16 +159,28 @@ async function reportPdf(record: ArchiveRecord, exportedAt: string) {
   ]);
 }
 async function sectionPdf(title: string, values: unknown[]) { return createPdf(title, values.length ? values.map((value) => JSON.stringify(value, null, 2)) : ['No recorded entries.']); }
-function createPdf(title: string, lines: string[]): Promise<Buffer> {
+export function createPdf(title: string, lines: string[]): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: 54, size: 'A4', info: { Title: title, Author: 'Laith Al Obeidi CMS' } });
     const chunks: Buffer[] = [];
     doc.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
-    doc.fontSize(18).fillColor('#16352f').text(title).moveDown(0.75);
-    doc.fontSize(9).fillColor('#26312f');
-    for (const line of lines) doc.text(line, { width: 485 }).moveDown(0.35);
+    writeBidiLine(doc, title, 18, '#16352f');
+    doc.moveDown(0.75).fontSize(9).fillColor('#26312f');
+    for (const line of lines) writeBidiLine(doc, line, 9, '#26312f');
     doc.end();
   });
+}
+
+function writeBidiLine(doc: PDFKit.PDFDocument, value: string, fontSize: number, color: string) {
+  const shaped = arabicReshaper.convertArabic(value);
+  const visual = bidi.getReorderedString(shaped, bidi.getEmbeddingLevels(shaped, 'auto'));
+  const runs = visual.match(/[\u0600-\u06ff\u0750-\u077f\ufb50-\ufdff\ufe70-\ufeff]+|[^\u0600-\u06ff\u0750-\u077f\ufb50-\ufdff\ufe70-\ufeff]+/g) ?? [visual];
+  doc.fontSize(fontSize).fillColor(color);
+  runs.forEach((run, index) => {
+    doc.font(/^[\u0600-\u06ff\u0750-\u077f\ufb50-\ufdff\ufe70-\ufeff]/.test(run) ? ARABIC_FONT : LATIN_FONT)
+      .text(run, { width: 485, continued: index < runs.length - 1 });
+  });
+  doc.text('', { continued: false }).moveDown(0.35);
 }

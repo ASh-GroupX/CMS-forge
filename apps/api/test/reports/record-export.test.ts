@@ -1,9 +1,20 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { RoleCode } from '@prisma/client';
-import { ReportsRecordExportService } from '../../src/modules/reports/reports.record-export.service.js';
+import { createPdf, ReportsRecordExportService } from '../../src/modules/reports/reports.record-export.service.js';
 
 const scope = { role: RoleCode.ADMIN, branchId: null, departmentId: null, userId: 'admin-1' };
+
+test('complete record PDFs embed Arabic glyphs for mixed-language text', async () => {
+  const pdf = await createPdf('Complete record — السجل الكامل', [
+    'Title: إصلاح الطابعة في قسم المبيعات',
+    'Notes: تم اختبار الجهاز بنجاح — Printer tested successfully',
+  ]);
+  const source = pdf.toString('latin1');
+  assert.match(source, /IBMPlexSansArabic/);
+  assert.match(source, /\/FontFile/);
+  assert.equal(source.includes('Helvetica'), false);
+});
 
 test('complete record export streams a ZIP with original attachment bytes and writes audit', async () => {
   const audits: any[] = [];
