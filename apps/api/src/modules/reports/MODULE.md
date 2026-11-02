@@ -16,6 +16,8 @@ Agent context manifest. Read this before editing the module.
   matrix for signed-scope reconciliation.
 - Dashboard reads, filtered report reads, KPI summaries, scoped exports, RBAC,
   branch scope, and export audit are implemented in this module.
+- Complete-record ZIP exports stream scoped report data, PDF summaries, JSON,
+  manifests, and original accessible attachment bytes.
 
 ## Owns tables
 
@@ -38,6 +40,8 @@ Agent context manifest. Read this before editing the module.
 - `SlaService` through `SlaModule` for SLA warning and overdue reporting reads.
 - `SurveysService` through `SurveysModule` for survey reporting reads if kept in
   pilot scope.
+- `AttachmentsService` through `AttachmentsModule` for authenticated original
+  file bytes used by complete-record exports.
 - Other modules' public services only. Never import another module repository,
   `dto/`, or Prisma model type.
 

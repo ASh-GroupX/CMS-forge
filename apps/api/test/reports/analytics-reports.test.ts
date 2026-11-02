@@ -7,6 +7,8 @@ import type { ReportsComplaintsRepository } from '../../src/modules/reports/repo
 import type { ReportsTicketsRepository } from '../../src/modules/reports/reports.tickets.repository.js';
 import type { AuditService } from '../../src/core/audit.service.js';
 import type { DashboardReportScope } from '../../src/modules/reports/reports.service.js';
+import { buildComplaintWhere } from '../../src/modules/reports/reports.complaints.js';
+import { buildTicketWhere } from '../../src/modules/reports/reports.tickets.js';
 
 function createMockAnalyticsService() {
   const complaintsRepo: Partial<ReportsComplaintsRepository> = {
@@ -318,5 +320,19 @@ test('exportAdvanced exports departments and employees with formula sanitization
   const empExport = await service.exportAdvanced('employees', {}, 'csv', adminScope);
   assert.equal(empExport.fileName, 'employees-report.csv');
   assert.match(empExport.body, /Sara Engineer/);
+});
+
+test('command-center pseudo views stay server-side and map to bounded database filters', () => {
+  assert.deepEqual(buildComplaintWhere({ view: 'overdue' }), {
+    status: { notIn: ['RESOLVED', 'COMPLETED', 'CLOSED', 'REJECTED'] },
+    slaEvents: { some: { type: 'BREACH' } },
+  });
+  assert.deepEqual(buildTicketWhere({ view: 'unassigned' }), {
+    status: { notIn: ['RESOLVED', 'CLOSED', 'REJECTED'] },
+    assignedEmployeeId: null,
+  });
+  assert.deepEqual(buildTicketWhere({ view: 'none' }), {
+    id: '__no_matching_report_record__',
+  });
 });
 

@@ -1,5 +1,6 @@
 import type {
   ComplaintRecordRow,
+  ComplaintsAnalyticsResponse,
   TicketRecordRow,
   TicketsAnalyticsResponse,
 } from '../../lib/staff-reports-analytics-api';
@@ -118,47 +119,25 @@ export function filterTicketsList(
 }
 
 export function computeCombinedKpis(
-  filteredComplaints: ComplaintRecordRow[],
-  filteredTickets: TicketRecordRow[],
+  complaintsAnalytics: ComplaintsAnalyticsResponse | null,
   ticketsAnalytics: TicketsAnalyticsResponse | null,
+  recordType: RecordTypeFilter,
 ): EnterpriseKpiData {
-  const totalCreated = filteredComplaints.length + filteredTickets.length;
-  const openWorkload =
-    filteredComplaints.filter((c) => !['RESOLVED', 'CLOSED'].includes(c.status)).length +
-    filteredTickets.filter((t) => !['RESOLVED', 'CLOSED'].includes(t.status)).length;
-  const resolved =
-    filteredComplaints.filter((c) => ['RESOLVED', 'CLOSED'].includes(c.status)).length +
-    filteredTickets.filter((t) => ['RESOLVED', 'CLOSED'].includes(t.status)).length;
-  const overdue = filteredComplaints.filter((c) => c.isOverdue).length + filteredTickets.filter((t) => t.isOverdue).length;
-  const waiting = filteredTickets.filter((t) => t.status === 'WAITING').length;
-  const inProgress =
-    filteredComplaints.filter((c) => c.status === 'IN_PROGRESS').length +
-    filteredTickets.filter((t) => t.status === 'IN_PROGRESS').length;
-  const unassigned = filteredTickets.filter(
-    (t) => !t.assignedEmployeeName || t.assignedEmployeeName === 'Unassigned' || t.assignedEmployeeName === '—',
-  ).length;
-
-  const resTickets = filteredTickets.filter((t) => t.resolvedAt);
-  const onTimeTickets = resTickets.filter((t) => t.dueAt && new Date(t.resolvedAt!) <= new Date(t.dueAt));
-  const onTimeRate = resTickets.length > 0 ? Math.round((onTimeTickets.length / resTickets.length) * 100) : (ticketsAnalytics?.kpis.onTimeSlaRate ?? 100);
-
-  let avgTatDays = ticketsAnalytics?.kpis.avgResolutionDays ?? 0;
-  if (resTickets.length > 0) {
-    const sum = resTickets.reduce((acc, t) => acc + (new Date(t.resolvedAt!).getTime() - new Date(t.createdAt).getTime()) / 86400000, 0);
-    avgTatDays = Math.round((sum / resTickets.length) * 10) / 10;
-  }
+  const complaints = recordType === 'tickets' ? null : complaintsAnalytics?.kpis;
+  const tickets = recordType === 'complaints' ? null : ticketsAnalytics?.kpis;
+  const add = (complaintValue = 0, ticketValue = 0) => complaintValue + ticketValue;
 
   return {
-    totalCreated,
-    openWorkload,
-    inProgress,
-    waiting,
-    resolved,
-    overdue,
-    unassigned,
-    onTimeRate,
-    avgTatDays,
-    totalCreatedDelta: ticketsAnalytics?.kpis.deltas.totalCreated ?? 0,
-    resolvedDelta: ticketsAnalytics?.kpis.deltas.resolved ?? 0,
+    totalCreated: add(complaints?.totalCreated, tickets?.totalCreated),
+    openWorkload: add(complaints?.openWorkload, tickets?.openWorkload),
+    inProgress: add(complaints?.inProgress, tickets?.inProgress),
+    waiting: tickets?.waiting ?? 0,
+    resolved: add(complaints?.resolved, tickets?.resolved),
+    overdue: add(complaints?.overdue, tickets?.overdue),
+    unassigned: add(complaints?.unassigned, tickets?.unassigned),
+    onTimeRate: tickets?.onTimeSlaRate ?? complaints?.slaComplianceRate ?? 100,
+    avgTatDays: tickets?.avgResolutionDays ?? Math.round(((complaints?.avgResolutionHours ?? 0) / 24) * 10) / 10,
+    totalCreatedDelta: tickets?.deltas.totalCreated ?? complaints?.deltas.totalCreated ?? 0,
+    resolvedDelta: tickets?.deltas.resolved ?? complaints?.deltas.resolved ?? 0,
   };
 }

@@ -1,10 +1,11 @@
-import { Controller, Get, Inject, Optional, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Controller, Get, Inject, Optional, Param, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { BranchScoped, PermissionGuard, Permissions, RbacGuard, SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import type { ReportCatalogResponse } from './report-matrix.js';
 import { ReportsService } from './reports.service.js';
 import type { FilteredReportRow, ReportsKpiSummary, DashboardSummary } from './reports.service.js';
 import { ReportsAnalyticsService } from './reports.analytics.service.js';
+import { ReportsRecordExportService } from './reports.record-export.service.js';
 import {
   auditContext,
   dashboardScope,
@@ -26,6 +27,7 @@ export class ReportsController {
   constructor(
     @Inject(ReportsService) reportsService: ReportsService,
     @Optional() @Inject(ReportsAnalyticsService) private readonly analyticsService?: ReportsAnalyticsService,
+    @Optional() @Inject(ReportsRecordExportService) private readonly recordExportService?: ReportsRecordExportService,
   ) {
     ReportsController.reportsService = reportsService;
   }
@@ -120,6 +122,7 @@ export class ReportsController {
         dateFrom: optionalText(query.dateFrom),
         dateTo: optionalText(query.dateTo),
         search: optionalText(query.search),
+        view: optionalText(query.view) as any,
       },
       dashboardScope(request, query.branchId),
     );
@@ -145,6 +148,7 @@ export class ReportsController {
         dateFrom: optionalText(query.dateFrom),
         dateTo: optionalText(query.dateTo),
         search: optionalText(query.search),
+        view: optionalText(query.view) as any,
       },
       dashboardScope(request, query.branchId),
       limit,
@@ -170,6 +174,7 @@ export class ReportsController {
         dateFrom: optionalText(query.dateFrom),
         dateTo: optionalText(query.dateTo),
         search: optionalText(query.search),
+        view: optionalText(query.view) as any,
       },
       dashboardScope(request, query.branchId),
     );
@@ -195,6 +200,7 @@ export class ReportsController {
         dateFrom: optionalText(query.dateFrom),
         dateTo: optionalText(query.dateTo),
         search: optionalText(query.search),
+        view: optionalText(query.view) as any,
       },
       dashboardScope(request, query.branchId),
       limit,
@@ -255,5 +261,26 @@ export class ReportsController {
     response.setHeader('content-disposition', `attachment; filename="${exportFile.fileName}"`);
     response.setHeader('x-report-row-count', String(exportFile.rowCount));
     return exportFile.body;
+  }
+
+  @Get('records/:type/:id/archive')
+  @UseGuards(SessionAuthGuard, PermissionGuard, RbacGuard)
+  @Permissions('REPORT_EXPORT')
+  @BranchScoped()
+  async completeRecordArchive(
+    @Param('type') type: string,
+    @Param('id') id: string,
+    @Req() request: AuthenticatedRequest,
+    @Res() response: any,
+  ): Promise<void> {
+    if (!this.recordExportService || (type !== 'complaint' && type !== 'ticket')) {
+      response.status(404).end();
+      return;
+    }
+    const archive = await this.recordExportService.createArchive(type, id, dashboardScope(request), auditContext(request));
+    response.setHeader('content-type', 'application/zip');
+    response.setHeader('cache-control', 'private, no-store');
+    response.setHeader('content-disposition', `attachment; filename="complete-record.zip"; filename*=UTF-8''${encodeURIComponent(archive.fileName)}`);
+    archive.stream.pipe(response);
   }
 }

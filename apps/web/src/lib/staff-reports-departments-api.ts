@@ -62,16 +62,19 @@ export async function fetchDepartmentPerformance(
   filter: DepartmentPerformanceFilter,
   cookieHeader?: string,
   apiUrl?: string,
+  options: { signal?: AbortSignal } = {},
 ): Promise<DepartmentPerformanceRow[] | null> {
-  const cookies = cookieHeader ?? (await incomingCookieHeader());
-  if (!hasStaffSessionCookie(cookies)) return null;
+  const cookies = cookieHeader ?? (typeof window === 'undefined' ? await incomingCookieHeader() : '');
+  if (typeof window === 'undefined' && !hasStaffSessionCookie(cookies)) return null;
 
   try {
     const query = buildQuery(filter);
     const base = getReportsBaseUrl(apiUrl);
     const res = await fetch(`${base}/department-performance?${query}`, {
-      headers: { Accept: 'application/json', cookie: cookies },
+      headers: cookies ? { Accept: 'application/json', cookie: cookies } : { Accept: 'application/json' },
+      credentials: 'same-origin',
       cache: 'no-store',
+      ...(options.signal ? { signal: options.signal } : {}),
     });
     if (!res.ok) return null;
     return await res.json();

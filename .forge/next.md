@@ -1,17 +1,19 @@
-# Original image byte integrity repair
-Status: Verified
+# Reports command center redesign
+Status: Verified, including attachment proxy test repair
 Risk: High
 Required model tier: High or equivalent
-SRS: REQ-FILES-001, ARCH-FILES-001, METHOD-TEST-001, REQ-RBAC-001
+SRS: REQ-REPORT-001, REQ-RBAC-001, NFR-SEC-002, NFR-PERF-001,
+ARCH-UI-001, UI-DESIGN-001, METHOD-API-001, METHOD-TEST-001
 
-User reports successful downloads that open black. Trace full bytes, not metadata.
-Batch 1: remove synthesized missing-file images, resolve metadata IDs to original
-storage keys, prevent successful non-durable writes, and increase object-read
-timeouts. Preserve existing disk naming and persistent-volume compatibility.
-Batch 2: route complaint links through authorized complaint download endpoint,
-stop caching raw files, and test JPG/PNG/WebP bytes across fresh storage instances,
-S3 retrieval, raw controller and web proxy. Decode downloaded images and verify
-size and visible colored pixels. Missing originals must return an error.
-Batch 3: all required checks passed, independent review passed, ready to push waleed
-and merge production. Existing metadata-only attachments whose originals are absent
-cannot be reconstructed from dummy bytes.
+Redesign the CMS Reports page as the primary enterprise reporting surface while
+keeping the separate CRM completely out of scope. Preserve server-session RBAC
+and department/branch scope. Replace browser-only filtering of the first page
+with backend-filtered, paginated reads and aggregate KPI queries. Add scoped,
+audited complete-record ZIP downloads containing PDF reports, JSON, a manifest,
+and original available attachments. Keep regulatory delivery material available
+as a collapsed appendix. Verify English/Arabic, desktop/mobile, OpenAPI, build,
+and allowed/denied export cases. Do not deploy this feature branch.
+
+Follow-up completed 2026-11-02: repaired attachment download proxy behavior and
+the four failing API client assertions. The full `test:web -- api-client` suite
+now passes (95/95). The feature branch remains undeployed.

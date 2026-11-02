@@ -51,7 +51,7 @@ async function proxyReports(
       responseHeaders.set('content-disposition', contentDisposition);
     }
 
-    return new Response(await response.arrayBuffer(), {
+    return new Response(response.body, {
       headers: responseHeaders,
       status: response.status,
     });

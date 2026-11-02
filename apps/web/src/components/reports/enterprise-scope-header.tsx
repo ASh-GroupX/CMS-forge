@@ -95,7 +95,7 @@ export function EnterpriseScopeHeader({
                 {isRtl ? 'تذاكر العمليات (CSV)' : 'Internal Tickets (CSV)'}
               </button>
               <button type="button" onClick={() => onTriggerExport('complaints', 'csv')} className="w-full text-start px-2 py-1.5 rounded-md hover:bg-muted font-medium">
-                {isRtl ? 'شكاوى CRM (CSV)' : 'CRM Complaints (CSV)'}
+                {isRtl ? 'شكاوى العملاء (CSV)' : 'Customer Complaints (CSV)'}
               </button>
               <div className="border-t my-1" />
               <p className="px-2 py-1 text-3xs font-bold text-muted-foreground uppercase">{isRtl ? 'تصدير التقارير الإدارية' : 'Management Reports'}</p>

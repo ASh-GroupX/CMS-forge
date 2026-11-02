@@ -71,7 +71,7 @@ export function UnifiedFilterBar({
 
   return (
     <div className="rounded-2xl border bg-card p-4 sm:p-5 shadow-xs space-y-4 w-full min-w-0 max-w-full">
-      {/* Top Row: Primary Segment Filter (All / CRM / Tickets) + Live Search + Export */}
+      {/* Top row: CMS record type, server search, and export */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 w-full min-w-0">
         {/* Record Type Segment Control */}
         <div className="inline-flex rounded-xl border bg-muted/60 p-1 text-xs font-semibold self-start sm:self-auto max-w-full overflow-x-auto">

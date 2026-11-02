@@ -2,7 +2,7 @@ export const reportsAnalyticsEn = {
   hub: {
     title: 'Reports & Analytics Center',
     subtitle: 'Executive operational workspaces for departmental performance, workload management, and compliance.',
-    complaintsCardTitle: 'CRM Complaints Operations',
+    complaintsCardTitle: 'Customer Complaint Operations',
     complaintsCardDesc: 'Analyze customer complaint volume, SLA compliance, resolution turnaround times, and officer workload.',
     complaintsCardAction: 'Open Complaints Center',
     ticketsCardTitle: 'Internal Tickets Operations',
@@ -11,7 +11,7 @@ export const reportsAnalyticsEn = {
     matrixTitle: 'Regulatory Delivery Matrix & Audits',
   },
   complaints: {
-    title: 'CRM Complaints — Performance & Operations Center',
+    title: 'Customer Complaints — Performance & Operations Center',
     subtitle: 'Complete departmental visibility into customer complaints, officer caseloads, SLA risks, and operational throughput.',
     backToHub: 'Reports Overview',
   },
@@ -146,6 +146,7 @@ export const reportsAnalyticsEn = {
     quickInspect: 'Quick Inspect',
     empty: 'No records match the active criteria.',
     showingRecords: 'Showing',
+    loading: 'Updating matching records…',
   },
   savedViewsModal: {
     title: 'Manage Custom Views',
@@ -164,6 +165,7 @@ export const reportsAnalyticsEn = {
     status: 'Current Status',
     timeline: 'Key Timestamps',
     details: 'Case Details',
+    downloadComplete: 'Download complete record (ZIP)',
   },
   departmentsTable: {
     title: 'Department Operational Performance & Comparison',
@@ -206,8 +208,8 @@ export const reportsAnalyticsEn = {
   filterBar: {
     title: 'Management Intelligence Filters',
     recordType: 'Record Type',
-    allTypes: 'All Records (CRM + Internal)',
-    crmOnly: 'CRM Complaints',
+    allTypes: 'All CMS Records',
+    crmOnly: 'Customer Complaints',
     internalOnly: 'Internal Tickets',
     department: 'Department',
     allDepartments: 'All Departments',

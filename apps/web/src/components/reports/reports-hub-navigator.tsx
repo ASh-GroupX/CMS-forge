@@ -26,7 +26,7 @@ export function ReportsHubNavigator({ locale }: ReportsHubNavigatorProps) {
 
       {/* Two Primary Analytical Workspace Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Card 1: CRM Complaints Center */}
+        {/* Card 1: CMS customer complaints center */}
         <Card className="flex flex-col justify-between p-5 border-primary/20 hover:border-primary/50 transition-all hover:shadow-md bg-card min-w-0">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -34,7 +34,7 @@ export function ReportsHubNavigator({ locale }: ReportsHubNavigatorProps) {
                 <ShieldCheck className="h-5 w-5" />
               </div>
               <Badge variant="outline" className="text-2xs font-semibold text-blue-600 border-blue-200 dark:border-blue-800">
-                CRM Analytics
+                Complaint Analytics
               </Badge>
             </div>
             <div>
