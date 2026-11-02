@@ -7,6 +7,7 @@ import { AuthService } from '../auth/auth.service.js';
 import { ComplaintsModule } from '../complaints/complaints.module.js';
 import { SlaModule } from '../sla/sla.module.js';
 import { SurveysModule } from '../surveys/surveys.module.js';
+import { AttachmentsModule } from '../attachments/attachments.module.js';
 import { ReportsController } from './reports.controller.js';
 import { ReportsRepository } from './reports.repository.js';
 import { ReportsService } from './reports.service.js';
@@ -15,9 +16,10 @@ import { ReportsComplaintsRepository } from './reports.complaints.repository.js'
 import { ReportsTicketsRepository } from './reports.tickets.repository.js';
 import { ReportsDepartmentsRepository } from './reports.departments.repository.js';
 import { ReportsAnalyticsService } from './reports.analytics.service.js';
+import { ReportsRecordExportService } from './reports.record-export.service.js';
 
 @Module({
-  imports: [AuthModule, ComplaintsModule, SlaModule, SurveysModule],
+  imports: [AuthModule, ComplaintsModule, SlaModule, SurveysModule, AttachmentsModule],
   controllers: [ReportsController],
   providers: [
     PrismaService,
@@ -27,6 +29,7 @@ import { ReportsAnalyticsService } from './reports.analytics.service.js';
     ReportsTicketsRepository,
     ReportsDepartmentsRepository,
     ReportsAnalyticsService,
+    ReportsRecordExportService,
     ReportsService,
     { provide: SESSION_AUTH_SERVICE, inject: [AuthService], useFactory: (authService: AuthService) => authService },
     SessionAuthGuard,

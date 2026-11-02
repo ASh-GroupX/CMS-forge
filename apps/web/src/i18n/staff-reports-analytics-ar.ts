@@ -2,7 +2,7 @@ export const reportsAnalyticsAr = {
   hub: {
     title: 'مركز التقارير والتحليلات التشغيلية',
     subtitle: 'مساحات عمل تنفيذية لمتابعة أداء الأقسام، توزيع أعباء العمل، والامتثال لاتفاقيات مستوى الخدمة (SLA).',
-    complaintsCardTitle: 'إدارة عمليات شكاوى العملاء (CRM)',
+    complaintsCardTitle: 'إدارة عمليات شكاوى العملاء',
     complaintsCardDesc: 'تحليل حجم شكاوى العملاء، نسبة الامتثال للـ SLA، أزمنة المعالجة والإنجاز، وأعباء عمل الموظفين.',
     complaintsCardAction: 'فتح مركز الشكاوى',
     ticketsCardTitle: 'إدارة عمليات التذاكر الداخلية',
@@ -11,7 +11,7 @@ export const reportsAnalyticsAr = {
     matrixTitle: 'مصفوفة التسليم الرقابية وسجلات التدقيق',
   },
   complaints: {
-    title: 'شكاوى العملاء (CRM) — مركز الأداء والعمليات',
+    title: 'شكاوى العملاء — مركز الأداء والعمليات',
     subtitle: 'رؤية تشغيلية شاملة لشكاوى العملاء، توزيع القضايا على الموظفين، مخاطر التأخير، ومعدلات الإنجاز.',
     backToHub: 'لوحة التقارير العامة',
   },
@@ -146,6 +146,7 @@ export const reportsAnalyticsAr = {
     quickInspect: 'معاينة سريعة',
     empty: 'لا توجد حالات تطابق المعايير النشطة.',
     showingRecords: 'عرض',
+    loading: 'جارٍ تحديث السجلات المطابقة…',
   },
   savedViewsModal: {
     title: 'إدارة العروض المخصصة',
@@ -164,6 +165,7 @@ export const reportsAnalyticsAr = {
     status: 'الحالة الحالية',
     timeline: 'التواريخ الأساسية',
     details: 'تفاصيل الحالة',
+    downloadComplete: 'تنزيل السجل الكامل (ZIP)',
   },
   departmentsTable: {
     title: 'أداء الأقسام والمقارنة التشغيلية',
@@ -207,7 +209,7 @@ export const reportsAnalyticsAr = {
     title: 'فلاتر لوحة القيادة الذكية',
     recordType: 'نوع السجل',
     allTypes: 'كافة السجلات (شكاوى + تذاكر)',
-    crmOnly: 'شكاوى العملاء (CRM)',
+    crmOnly: 'شكاوى العملاء',
     internalOnly: 'التذاكر الداخلية',
     department: 'القسم',
     allDepartments: 'كافة الأقسام',

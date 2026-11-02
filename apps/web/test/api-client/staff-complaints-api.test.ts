@@ -785,19 +785,20 @@ test('staff attachment proxies forward only session cookie csrf and body to the 
   }
 });
 
-test('staff attachment download proxy redirects signed targets and hides opaque tokens', async () => {
+test('staff attachment download proxy streams signed targets and hides opaque tokens', async () => {
   const priorFetch = globalThis.fetch;
   const priorApiUrl = process.env.API_URL;
   const calls: Array<{ input: string | URL | Request; init?: RequestInit }> = [];
   globalThis.fetch = (async (input, init) => {
     calls.push({ input, init });
+    if (calls.length === 2) return new Response(new Uint8Array([1, 2, 3]), { headers: { 'content-type': 'image/png' } });
     const token = calls.length === 1 ? 'https://storage.test/attachments/att_1?X-Amz-Signature=proof' : 'attdl_safe';
     return jsonResponse({ download: { attachmentId: 'att_1', token, expiresAt: '2026-06-19T10:05:00.000Z' } });
   }) as typeof fetch;
   process.env.API_URL = 'http://api.test';
 
   try {
-    const redirect = await proxyDownloadAttachment(new Request('http://web.test/api/complaints/cmp_1/attachments/att_1/download?redirect=1&branchId=spoofed', {
+    const download = await proxyDownloadAttachment(new Request('http://web.test/api/complaints/cmp_1/attachments/att_1/download?redirect=1&branchId=spoofed', {
       headers: { cookie: 'cms_staff_session=raw-session' },
       method: 'GET',
     }), { params: Promise.resolve({ id: 'cmp_1', attachmentId: 'att_1' }) });
@@ -807,18 +808,51 @@ test('staff attachment download proxy redirects signed targets and hides opaque 
     }), { params: Promise.resolve({ id: 'cmp_1', attachmentId: 'att_1' }) });
     const opaqueBody = await opaque.json() as { error?: { code?: string; message?: string } };
 
-    assert.equal(redirect.status, 307);
-    assert.equal(redirect.headers.get('location'), 'https://storage.test/attachments/att_1?X-Amz-Signature=proof');
+    assert.equal(download.status, 200);
+    assert.deepEqual(new Uint8Array(await download.arrayBuffer()), new Uint8Array([1, 2, 3]));
+    assert.equal(download.headers.get('cache-control'), 'no-store');
+    assert.equal(download.headers.get('location'), null);
     assert.equal(opaque.status, 409);
     assert.equal(opaqueBody.error?.code, 'ATTACHMENT_DOWNLOAD_TARGET_UNAVAILABLE');
     assert.equal(opaqueBody.error?.message, 'Download target is unavailable in this environment.');
     assert.equal(JSON.stringify(opaqueBody).includes('attdl_safe'), false);
     assert.deepEqual(calls.map((call) => String(call.input)), [
-      'http://api.test/complaints/cmp_1/attachments/att_1/download',
-      'http://api.test/complaints/cmp_1/attachments/att_1/download',
+      'http://api.test/complaints/cmp_1/attachments/att_1/download?download=1',
+      'https://storage.test/attachments/att_1?X-Amz-Signature=proof',
+      'http://api.test/complaints/cmp_1/attachments/att_1/download?download=1',
     ]);
-    assert.ok(calls.every((call) => !/branchId|redirect|attdl|token|credential/i.test(String(call.input))));
-    assert.ok(calls.every((call) => Object.fromEntries(new Headers(call.init?.headers).entries()).cookie === 'cms_staff_session=raw-session'));
+    assert.ok(calls.every((call) => !/branchId|redirect|attdl|credential/i.test(String(call.input))));
+    assert.equal(new Headers(calls[0]?.init?.headers).get('cookie'), 'cms_staff_session=raw-session');
+    assert.equal(new Headers(calls[1]?.init?.headers).get('cookie'), null);
+    assert.equal(new Headers(calls[2]?.init?.headers).get('cookie'), 'cms_staff_session=raw-session');
+  } finally {
+    globalThis.fetch = priorFetch;
+    if (priorApiUrl === undefined) delete process.env.API_URL;
+    else process.env.API_URL = priorApiUrl;
+  }
+});
+
+test('staff attachment download never redirects to a signed target when storage fails', async () => {
+  const priorFetch = globalThis.fetch;
+  const priorApiUrl = process.env.API_URL;
+  let calls = 0;
+  globalThis.fetch = (async () => {
+    calls += 1;
+    return calls === 1
+      ? jsonResponse({ download: { token: 'https://storage.test/private?X-Amz-Signature=secret' } })
+      : new Response(null, { status: 503 });
+  }) as typeof fetch;
+  process.env.API_URL = 'http://api.test';
+  try {
+    const response = await proxyDownloadAttachment(new Request('http://web.test/api/complaints/cmp_1/attachments/att_1/download?download=1', {
+      headers: { cookie: 'cms_staff_session=raw-session' },
+    }), { params: Promise.resolve({ id: 'cmp_1', attachmentId: 'att_1' }) });
+    const body = await response.text();
+    assert.equal(response.status, 409);
+    assert.equal(response.headers.get('location'), null);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    assert.equal(body.includes('secret'), false);
+    assert.equal(calls, 2);
   } finally {
     globalThis.fetch = priorFetch;
     if (priorApiUrl === undefined) delete process.env.API_URL;

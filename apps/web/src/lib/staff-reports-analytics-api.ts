@@ -12,6 +12,7 @@ export type ComplaintsAnalyticsFilter = {
   dateFrom?: string | null;
   dateTo?: string | null;
   search?: string | null;
+  view?: 'active' | 'resolved' | 'overdue' | 'unassigned' | 'none' | null;
 };
 
 export type ComplaintsAnalyticsResponse = {
@@ -74,6 +75,7 @@ export type TicketsAnalyticsFilter = {
   dateFrom?: string | null;
   dateTo?: string | null;
   search?: string | null;
+  view?: 'active' | 'resolved' | 'overdue' | 'unassigned' | 'none' | null;
 };
 
 export type TicketsAnalyticsResponse = {
@@ -159,6 +161,10 @@ export type ComplaintRecordRow = {
   isOverdue: boolean;
 };
 
+type ReportRequestOptions = {
+  signal?: AbortSignal;
+};
+
 export type TicketRecordRow = {
   id: string;
   referenceNumber: string;
@@ -177,7 +183,6 @@ export type TicketRecordRow = {
   closedAt: string | null;
   isOverdue: boolean;
 };
-
 function buildQuery(filter: Record<string, any>): string {
   const params = new URLSearchParams();
   for (const [k, v] of Object.entries(filter)) {
@@ -187,7 +192,6 @@ function buildQuery(filter: Record<string, any>): string {
   }
   return params.toString();
 }
-
 function getReportsBaseUrl(apiUrl?: string): string {
   if (typeof window !== 'undefined') {
     return '/api/reports';
@@ -195,95 +199,102 @@ function getReportsBaseUrl(apiUrl?: string): string {
   const base = apiUrl || process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
   return `${base}/reports`;
 }
-
 export async function fetchComplaintsAnalytics(
   filter: ComplaintsAnalyticsFilter,
   cookieHeader?: string,
   apiUrl?: string,
+  options: ReportRequestOptions = {},
 ): Promise<ComplaintsAnalyticsResponse | null> {
-  const cookies = cookieHeader ?? (await incomingCookieHeader());
-  if (!hasStaffSessionCookie(cookies)) return null;
+  const cookies = await reportCookieHeader(cookieHeader);
+  if (typeof window === 'undefined' && !hasStaffSessionCookie(cookies)) return null;
 
   try {
     const query = buildQuery(filter);
     const base = getReportsBaseUrl(apiUrl);
-    const res = await fetch(`${base}/complaints-analytics?${query}`, {
-      headers: { Accept: 'application/json', cookie: cookies },
-      cache: 'no-store',
-    });
+    const res = await reportFetch(`${base}/complaints-analytics?${query}`, cookies, options);
     if (!res.ok) return null;
     return await res.json();
   } catch {
     return null;
   }
 }
-
 export async function fetchComplaintsRecords(
   filter: ComplaintsAnalyticsFilter,
   limit = 25,
   offset = 0,
   cookieHeader?: string,
   apiUrl?: string,
+  options: ReportRequestOptions = {},
 ): Promise<{ total: number; items: ComplaintRecordRow[] } | null> {
-  const cookies = cookieHeader ?? (await incomingCookieHeader());
-  if (!hasStaffSessionCookie(cookies)) return null;
+  const cookies = await reportCookieHeader(cookieHeader);
+  if (typeof window === 'undefined' && !hasStaffSessionCookie(cookies)) return null;
 
   try {
     const query = buildQuery({ ...filter, limit, offset });
     const base = getReportsBaseUrl(apiUrl);
-    const res = await fetch(`${base}/complaints-records?${query}`, {
-      headers: { Accept: 'application/json', cookie: cookies },
-      cache: 'no-store',
-    });
+    const res = await reportFetch(`${base}/complaints-records?${query}`, cookies, options);
     if (!res.ok) return null;
     return await res.json();
   } catch {
     return null;
   }
 }
-
 export async function fetchTicketsAnalytics(
   filter: TicketsAnalyticsFilter,
   cookieHeader?: string,
   apiUrl?: string,
+  options: ReportRequestOptions = {},
 ): Promise<TicketsAnalyticsResponse | null> {
-  const cookies = cookieHeader ?? (await incomingCookieHeader());
-  if (!hasStaffSessionCookie(cookies)) return null;
+  const cookies = await reportCookieHeader(cookieHeader);
+  if (typeof window === 'undefined' && !hasStaffSessionCookie(cookies)) return null;
 
   try {
     const query = buildQuery(filter);
     const base = getReportsBaseUrl(apiUrl);
-    const res = await fetch(`${base}/tickets-analytics?${query}`, {
-      headers: { Accept: 'application/json', cookie: cookies },
-      cache: 'no-store',
-    });
+    const res = await reportFetch(`${base}/tickets-analytics?${query}`, cookies, options);
     if (!res.ok) return null;
     return await res.json();
   } catch {
     return null;
   }
 }
-
 export async function fetchTicketsRecords(
   filter: TicketsAnalyticsFilter,
   limit = 25,
   offset = 0,
   cookieHeader?: string,
   apiUrl?: string,
+  options: ReportRequestOptions = {},
 ): Promise<{ total: number; items: TicketRecordRow[] } | null> {
-  const cookies = cookieHeader ?? (await incomingCookieHeader());
-  if (!hasStaffSessionCookie(cookies)) return null;
+  const cookies = await reportCookieHeader(cookieHeader);
+  if (typeof window === 'undefined' && !hasStaffSessionCookie(cookies)) return null;
 
   try {
     const query = buildQuery({ ...filter, limit, offset });
     const base = getReportsBaseUrl(apiUrl);
-    const res = await fetch(`${base}/tickets-records?${query}`, {
-      headers: { Accept: 'application/json', cookie: cookies },
-      cache: 'no-store',
-    });
+    const res = await reportFetch(`${base}/tickets-records?${query}`, cookies, options);
     if (!res.ok) return null;
     return await res.json();
   } catch {
     return null;
   }
+}
+async function reportCookieHeader(cookieHeader?: string): Promise<string> {
+  if (cookieHeader !== undefined) return cookieHeader;
+  return typeof window === 'undefined' ? incomingCookieHeader() : '';
+}
+
+function reportHeaders(cookieHeader: string): HeadersInit {
+  return cookieHeader
+    ? { Accept: 'application/json', cookie: cookieHeader }
+    : { Accept: 'application/json' };
+}
+
+function reportFetch(url: string, cookieHeader: string, options: ReportRequestOptions) {
+  return fetch(url, {
+    headers: reportHeaders(cookieHeader),
+    credentials: 'same-origin',
+    cache: 'no-store',
+    ...(options.signal ? { signal: options.signal } : {}),
+  });
 }

@@ -18,6 +18,7 @@ import {
 import { fetchDepartmentPerformance } from '../../../lib/staff-reports-departments-api';
 import { EnterpriseReportsDashboard } from '../../../components/reports/enterprise-reports-dashboard';
 import { ReportsDashboard } from '../../../components/reports-dashboard';
+import { reportsAnalyticsI18n } from '../../../i18n/staff-reports-analytics';
 
 type SearchParams = {
   locale?: string | string[];
@@ -142,25 +143,30 @@ export default async function ReportsPage({
         ticketsRecords={ticketsRecords?.items ?? []}
       />
 
-      {/* Regulatory Delivery Matrix & Compliance Audits */}
-      <div className="pt-6 border-t">
-        <ReportsDashboard
-          canExport={Boolean(
-            principal?.permissions.includes('REPORT_EXPORT') ||
-            principal?.roleCode === 'ADMIN' ||
-            principal?.roleCode === 'CR_MANAGER' ||
-            principal?.roleCode === 'BRANCH_MANAGER',
-          )}
-          catalog={catalog.status === 'ready' ? catalog.data : undefined}
-          filters={filters}
-          kpis={kpis.status === 'ready' ? kpis.data : undefined}
-          locale={activeLocale}
-          options={options}
-          rows={rows.status === 'ready' ? rows.data : undefined}
-          staff={staff}
-          state={loadState}
-        />
-      </div>
+      <details className="group rounded-2xl border bg-card shadow-xs">
+        <summary className="cursor-pointer list-none px-5 py-4 text-sm font-semibold text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary">
+          {reportsAnalyticsI18n[activeLocale].hub.matrixTitle}
+          <span className="float-end text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true">⌄</span>
+        </summary>
+        <div className="border-t p-4 sm:p-6">
+          <ReportsDashboard
+            canExport={Boolean(
+              principal?.permissions.includes('REPORT_EXPORT') ||
+              principal?.roleCode === 'ADMIN' ||
+              principal?.roleCode === 'CR_MANAGER' ||
+              principal?.roleCode === 'BRANCH_MANAGER',
+            )}
+            catalog={catalog.status === 'ready' ? catalog.data : undefined}
+            filters={filters}
+            kpis={kpis.status === 'ready' ? kpis.data : undefined}
+            locale={activeLocale}
+            options={options}
+            rows={rows.status === 'ready' ? rows.data : undefined}
+            staff={staff}
+            state={loadState}
+          />
+        </div>
+      </details>
     </div>
   );
 }

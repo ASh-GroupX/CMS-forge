@@ -12,6 +12,7 @@ export type ComplaintsAnalyticsFilter = {
   dateFrom?: string | null;
   dateTo?: string | null;
   search?: string | null;
+  view?: 'active' | 'resolved' | 'overdue' | 'unassigned' | 'none' | null;
 };
 
 export type ComplaintsKpiSummary = {
@@ -115,6 +116,17 @@ export function buildComplaintWhere(filter: ComplaintsAnalyticsFilter, dateOverr
   if (filter.type) where.type = filter.type as any;
   if (filter.severity) where.severity = filter.severity;
   if (filter.status) where.status = filter.status;
+  if (filter.view === 'active') where.status = { notIn: ['RESOLVED', 'COMPLETED', 'CLOSED', 'REJECTED'] };
+  if (filter.view === 'resolved') where.status = { in: ['RESOLVED', 'COMPLETED', 'CLOSED'] };
+  if (filter.view === 'overdue') {
+    where.status = { notIn: ['RESOLVED', 'COMPLETED', 'CLOSED', 'REJECTED'] };
+    where.slaEvents = { some: { type: 'BREACH' } };
+  }
+  if (filter.view === 'unassigned') {
+    where.status = { notIn: ['RESOLVED', 'COMPLETED', 'CLOSED', 'REJECTED'] };
+    where.ownerId = null;
+  }
+  if (filter.view === 'none') where.id = '__no_matching_report_record__';
 
   if (dateOverride) {
     where[dimension] = { gte: dateOverride.from, lte: dateOverride.to };

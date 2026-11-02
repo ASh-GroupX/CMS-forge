@@ -16,9 +16,7 @@ for (const format of ['png','jpeg','webp']) {
     const calls: string[] = [];
     context.mock.method(globalThis,'fetch',async (input: string | URL) => {
       calls.push(String(input));
-      return String(input).endsWith('/download')
-        ? Response.json({download:{token:'/api/attachments/raw/objects%2Foriginal'}})
-        : new Response(bytes,{headers:{'content-type':mime,'content-disposition':`attachment; filename="colors.${format}"`}});
+      return new Response(bytes,{headers:{'content-type':mime,'content-disposition':`attachment; filename="colors.${format}"`}});
     });
     const response = await complaintDownload(new Request('http://localhost/api/complaints/c1/attachments/a1/download?download=1',{headers:{cookie:'cms_staff_session=proof'}}), {params:Promise.resolve({id:'c1',attachmentId:'a1'})});
     assert.equal(response.status,200);
@@ -26,7 +24,8 @@ for (const format of ['png','jpeg','webp']) {
     assert.equal(response.headers.get('content-type'),mime);
     assert.equal(response.headers.get('cache-control'),'no-store');
     assert.ok(calls[0]?.includes('/complaints/c1/attachments/a1/download'));
-    assert.ok(calls[1]?.includes('/attachments/raw/objects%2Foriginal'));
+    assert.equal(calls.length, 1);
+    assert.ok(calls[0]?.endsWith('/download?download=1'));
   });
 }
 
@@ -41,4 +40,24 @@ test('raw download proxy never publicly caches an image or replaces missing obje
   const response = await rawDownload(new Request('http://localhost/api/attachments/raw/missing'),{params:Promise.resolve({key:['missing']})});
   assert.equal(response.status,404);
   assert.match(response.headers.get('content-type') ?? '',/json/);
+});
+
+test('scoped download resolves a legacy raw token through the API without redirecting', async (context) => {
+  const bytes = readFileSync('apps/api/test/attachments/fixtures/colors.png');
+  const calls: Array<{ url: string; headers: Headers }> = [];
+  context.mock.method(globalThis, 'fetch', async (input: string | URL, init?: RequestInit) => {
+    calls.push({ url: String(input), headers: new Headers(init?.headers) });
+    return calls.length === 1
+      ? Response.json({ download: { token: '/api/attachments/raw/objects%2Foriginal' } })
+      : new Response(bytes, { headers: { 'content-type': 'image/png' } });
+  });
+  const response = await complaintDownload(new Request('http://localhost/api/complaints/c1/attachments/a1/download?download=1', {
+    headers: { cookie: 'cms_staff_session=proof' },
+  }), { params: Promise.resolve({ id: 'c1', attachmentId: 'a1' }) });
+  assert.equal(response.status, 200);
+  assert.equal(hash(new Uint8Array(await response.arrayBuffer())), hash(bytes));
+  assert.equal(response.headers.get('location'), null);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.ok(calls[1]?.url.endsWith('/attachments/raw/objects%2Foriginal'));
+  assert.equal(calls[1]?.headers.get('cookie'), 'cms_staff_session=proof');
 });

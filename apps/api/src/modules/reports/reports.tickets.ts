@@ -12,6 +12,7 @@ export type TicketsAnalyticsFilter = {
   dateFrom?: string | null;
   dateTo?: string | null;
   search?: string | null;
+  view?: 'active' | 'resolved' | 'overdue' | 'unassigned' | 'none' | null;
 };
 
 export type TicketsKpiSummary = {
@@ -97,6 +98,17 @@ export function buildTicketWhere(filter: TicketsAnalyticsFilter, dateOverride?: 
   if (filter.categoryId) where.categoryId = filter.categoryId;
   if (filter.priority) where.priority = filter.priority;
   if (filter.status) where.status = filter.status;
+  if (filter.view === 'active') where.status = { notIn: ['RESOLVED', 'CLOSED', 'REJECTED'] };
+  if (filter.view === 'resolved') where.status = { in: ['RESOLVED', 'CLOSED'] };
+  if (filter.view === 'overdue') {
+    where.status = { notIn: ['RESOLVED', 'CLOSED', 'REJECTED'] };
+    where.dueAt = { lt: new Date() };
+  }
+  if (filter.view === 'unassigned') {
+    where.status = { notIn: ['RESOLVED', 'CLOSED', 'REJECTED'] };
+    where.assignedEmployeeId = null;
+  }
+  if (filter.view === 'none') where.id = '__no_matching_report_record__';
 
   if (filter.branchId) {
     where.OR = [

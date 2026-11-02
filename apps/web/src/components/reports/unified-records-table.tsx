@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
-import { AlertCircle, ArrowRight, CheckCircle2, ChevronLeft, ChevronRight, Eye, Network, Search, ShieldCheck } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AlertCircle, ArrowRight, ChevronLeft, ChevronRight, Eye, Network, ShieldCheck } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Input } from '../ui/input';
 import { reportsAnalyticsI18n } from '../../i18n/staff-reports-analytics';
 import type { Locale } from '../../i18n/staff-shell';
 import type { ComplaintRecordRow, TicketRecordRow } from '../../lib/staff-reports-analytics-api';
@@ -32,6 +31,12 @@ interface UnifiedRecordsTableProps {
   complaints: ComplaintRecordRow[];
   tickets: TicketRecordRow[];
   activeTypeFilter?: 'all' | 'ticket' | 'complaint';
+  complaintsTotal?: number;
+  ticketsTotal?: number;
+  page?: number;
+  pageSize?: number;
+  isLoading?: boolean;
+  onPageChange?: (page: number) => void;
   onInspect: (record: UnifiedRecord) => void;
 }
 
@@ -40,14 +45,18 @@ export function UnifiedRecordsTable({
   complaints,
   tickets,
   activeTypeFilter = 'all',
+  complaintsTotal = complaints.length,
+  ticketsTotal = tickets.length,
+  page = 1,
+  pageSize = 25,
+  isLoading = false,
+  onPageChange,
   onInspect,
 }: UnifiedRecordsTableProps) {
   const t = reportsAnalyticsI18n[locale];
   const isRtl = locale === 'ar';
   const [tab, setTab] = useState<'all' | 'ticket' | 'complaint'>(activeTypeFilter);
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const pageSize = 15;
+  useEffect(() => setTab(activeTypeFilter), [activeTypeFilter]);
 
   const unifiedList = useMemo<UnifiedRecord[]>(() => {
     const list: UnifiedRecord[] = [];
@@ -75,20 +84,13 @@ export function UnifiedRecordsTable({
 
     list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    if (!search.trim()) return list;
-    const q = search.trim().toLowerCase();
-    return list.filter((r) =>
-      r.referenceNumber.toLowerCase().includes(q) ||
-      r.title.toLowerCase().includes(q) ||
-      r.departmentName.toLowerCase().includes(q) ||
-      (r.sourceDepartmentName && r.sourceDepartmentName.toLowerCase().includes(q)) ||
-      r.ownerName.toLowerCase().includes(q) ||
-      r.personName.toLowerCase().includes(q)
-    );
-  }, [complaints, tickets, tab, search]);
+    return list;
+  }, [complaints, tickets, tab]);
 
-  const totalPages = Math.ceil(unifiedList.length / pageSize) || 1;
-  const pagedRecords = unifiedList.slice((page - 1) * pageSize, page * pageSize);
+  const totalRecords = tab === 'all' ? complaintsTotal + ticketsTotal : tab === 'ticket' ? ticketsTotal : complaintsTotal;
+  const effectivePageSize = tab === 'all' ? pageSize * 2 : pageSize;
+  const totalPages = Math.ceil(totalRecords / effectivePageSize) || 1;
+  const pagedRecords = unifiedList;
 
   const formatJordanDate = (dateStr: string | null) => {
     if (!dateStr) return '—';
@@ -110,17 +112,17 @@ export function UnifiedRecordsTable({
           <p className="text-xs text-muted-foreground mt-0.5">{t.recordsTable.subtitle}</p>
         </div>
 
-        {/* Tab Selector & Search */}
+        {/* Server-backed record type views */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="inline-flex rounded-lg border bg-muted p-0.5 text-xs">
             {(['all', 'ticket', 'complaint'] as const).map((tabKey) => {
-              const count = tabKey === 'all' ? complaints.length + tickets.length : tabKey === 'ticket' ? tickets.length : complaints.length;
-              const label = tabKey === 'all' ? (isRtl ? 'الكل' : 'All') : tabKey === 'ticket' ? (isRtl ? 'التذاكر الداخلية' : 'Tickets') : (isRtl ? 'شكاوى CRM' : 'Complaints');
+              const count = tabKey === 'all' ? complaintsTotal + ticketsTotal : tabKey === 'ticket' ? ticketsTotal : complaintsTotal;
+              const label = tabKey === 'all' ? (isRtl ? 'الكل' : 'All') : tabKey === 'ticket' ? (isRtl ? 'التذاكر الداخلية' : 'Tickets') : (isRtl ? 'شكاوى العملاء' : 'Customer complaints');
               return (
                 <button
                   key={tabKey}
                   type="button"
-                  onClick={() => { setTab(tabKey); setPage(1); }}
+                  onClick={() => { setTab(tabKey); onPageChange?.(1); }}
                   className={`rounded-md px-2.5 py-1 font-semibold transition-all ${
                     tab === tabKey ? 'bg-background text-foreground shadow-xs' : 'text-muted-foreground'
                   }`}
@@ -131,17 +133,6 @@ export function UnifiedRecordsTable({
             })}
           </div>
 
-          <div className="relative w-48 sm:w-60">
-            <Search className="absolute start-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              placeholder={t.recordsTable.search}
-              aria-label={t.recordsTable.search}
-              className="h-9 ps-8 text-xs"
-            />
-          </div>
         </div>
       </div>
 
@@ -161,7 +152,13 @@ export function UnifiedRecordsTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {pagedRecords.length === 0 ? (
+            {isLoading ? (
+              <tr>
+                <td colSpan={8} className="py-10 text-center text-muted-foreground" role="status">
+                  {t.recordsTable.loading}
+                </td>
+              </tr>
+            ) : pagedRecords.length === 0 ? (
               <tr>
                 <td colSpan={8} className="py-8 text-center text-muted-foreground">
                   {t.recordsTable.empty}
@@ -255,7 +252,7 @@ export function UnifiedRecordsTable({
       {/* Pagination Footer */}
       <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
         <span>
-          {t.recordsTable.showingRecords} {pagedRecords.length} of {unifiedList.length}
+          {t.recordsTable.showingRecords} {pagedRecords.length} of {totalRecords}
         </span>
         <div className="flex items-center gap-1.5">
           <Button
@@ -263,7 +260,7 @@ export function UnifiedRecordsTable({
             variant="outline"
             size="sm"
             disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            onClick={() => onPageChange?.(Math.max(1, page - 1))}
             className="h-8 w-8 p-0"
             aria-label={isRtl ? 'الصفحة السابقة' : 'Previous page'}
           >
@@ -277,7 +274,7 @@ export function UnifiedRecordsTable({
             variant="outline"
             size="sm"
             disabled={page >= totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            onClick={() => onPageChange?.(Math.min(totalPages, page + 1))}
             className="h-8 w-8 p-0"
             aria-label={isRtl ? 'الصفحة التالية' : 'Next page'}
           >

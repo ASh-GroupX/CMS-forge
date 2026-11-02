@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
 const mode = process.argv.slice(2).find((arg) => arg !== '--');
-const webModes = new Set(['visual', 'accessibility', 'perf', 'ui-smoke']);
+const webModes = new Set(['visual', 'accessibility', 'perf', 'ui-smoke', 'reports']);
 
 if (!mode) {
   run('node', ['--import', 'tsx', 'tools/web-proof.mjs', 'ui-smoke']);
@@ -10,7 +10,7 @@ if (!mode) {
 }
 
 if (webModes.has(mode)) {
-  run('node', ['--import', 'tsx', 'tools/web-proof.mjs', mode]);
+  run('node', ['--import', 'tsx', 'tools/web-proof.mjs', mode === 'reports' ? 'visual' : mode]);
   process.exit(0);
 }
 
@@ -59,7 +59,7 @@ if (mode === 'board-drawer') {
   process.exit(0);
 }
 
-console.error('Use one of: visual, accessibility, perf, ui-smoke, runtime-smoke, customer-portal-track, customer-portal-submit, complaint-workflow, attachments, work-queues, task-board-dnd, complaint-board, board-drawer.');
+console.error('Use one of: visual, accessibility, perf, ui-smoke, reports, runtime-smoke, customer-portal-track, customer-portal-submit, complaint-workflow, attachments, work-queues, task-board-dnd, complaint-board, board-drawer.');
 process.exit(1);
 
 function run(command, args) {

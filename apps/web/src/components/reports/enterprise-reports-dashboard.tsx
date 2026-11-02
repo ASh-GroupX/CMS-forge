@@ -17,6 +17,8 @@ import { EnterpriseKpiGrid } from './enterprise-kpi-grid';
 import { EnterpriseAnalyticsCharts } from './enterprise-analytics-charts';
 import { UnifiedRecordsTable } from './unified-records-table';
 import { QuickCaseDrawer } from './quick-case-drawer';
+import { EnterpriseScopeHeader } from './enterprise-scope-header';
+import { useEnterpriseReportData } from './use-enterprise-report-data';
 import type { RecordTableItem } from './detailed-records-table';
 import {
   filterComplaintsList,
@@ -65,6 +67,24 @@ export function EnterpriseReportsDashboard({
   const [deepDiveDeptId, setDeepDiveDeptId] = useState<string | null>(null);
   const [inspectRecord, setInspectRecord] = useState<RecordTableItem | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<{ id: string; name: string } | null>(null);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const criteria = useMemo(() => ({
+    recordType,
+    departmentId: selectedDeptId,
+    branchId: selectedBranchId,
+    status: selectedStatus,
+    datePreset,
+    dateFrom,
+    dateTo,
+    search,
+  }), [recordType, selectedDeptId, selectedBranchId, selectedStatus, datePreset, dateFrom, dateTo, search]);
+  const reportData = useEnterpriseReportData(criteria, {
+    departments: departmentsPerformance,
+    complaintsAnalytics,
+    complaintsRecords,
+    ticketsAnalytics,
+    ticketsRecords,
+  });
 
   const handleClearAll = () => {
     setRecordType('all');
@@ -83,7 +103,7 @@ export function EnterpriseReportsDashboard({
   }), [recordType, selectedDeptId, selectedStatus, datePreset, dateFrom, dateTo, search, departments]);
 
   const filteredDepartments = useMemo(() => {
-    return departmentsPerformance.filter((d) => {
+    return reportData.departments.filter((d) => {
       if (selectedBranchId && d.branchId !== selectedBranchId) return false;
       if (selectedDeptId && d.departmentId !== selectedDeptId) return false;
       if (search.trim()) {
@@ -92,31 +112,31 @@ export function EnterpriseReportsDashboard({
       }
       return true;
     });
-  }, [departmentsPerformance, selectedBranchId, selectedDeptId, search]);
+  }, [reportData.departments, selectedBranchId, selectedDeptId, search]);
 
   const deepDiveDept = useMemo(() => {
     if (!deepDiveDeptId) return null;
-    return departmentsPerformance.find((d) => d.departmentId === deepDiveDeptId) ?? null;
-  }, [departmentsPerformance, deepDiveDeptId]);
+    return reportData.departments.find((d) => d.departmentId === deepDiveDeptId) ?? null;
+  }, [reportData.departments, deepDiveDeptId]);
 
   const filteredComplaints = useMemo(
-    () => filterComplaintsList(complaintsRecords, filterOpts),
-    [complaintsRecords, filterOpts],
+    () => filterComplaintsList(reportData.complaintsRecords, filterOpts),
+    [reportData.complaintsRecords, filterOpts],
   );
 
   const filteredTickets = useMemo(
-    () => filterTicketsList(ticketsRecords, filterOpts),
-    [ticketsRecords, filterOpts],
+    () => filterTicketsList(reportData.ticketsRecords, filterOpts),
+    [reportData.ticketsRecords, filterOpts],
   );
 
   const combinedKpis = useMemo(
-    () => computeCombinedKpis(filteredComplaints, filteredTickets, ticketsAnalytics),
-    [filteredComplaints, filteredTickets, ticketsAnalytics],
+    () => computeCombinedKpis(reportData.complaintsAnalytics, reportData.ticketsAnalytics, recordType),
+    [reportData.complaintsAnalytics, reportData.ticketsAnalytics, recordType],
   );
 
   const handleInspect = (task: { id: string; refNumber: string; title: string; type: 'ticket' | 'complaint' }) => {
     if (task.type === 'ticket') {
-      const tk = ticketsRecords.find((r) => r.id === task.id || r.referenceNumber === task.refNumber);
+      const tk = reportData.ticketsRecords.find((r) => r.id === task.id || r.referenceNumber === task.refNumber);
       setInspectRecord({
         id: task.id,
         referenceNumber: tk?.referenceNumber || task.refNumber,
@@ -132,7 +152,7 @@ export function EnterpriseReportsDashboard({
         linkHref: `/internal-tickets/${task.id}`,
       });
     } else {
-      const c = complaintsRecords.find((r) => r.id === task.id || r.referenceNumber === task.refNumber);
+      const c = reportData.complaintsRecords.find((r) => r.id === task.id || r.referenceNumber === task.refNumber);
       setInspectRecord({
         id: task.id,
         referenceNumber: c?.referenceNumber || task.refNumber,
@@ -150,14 +170,33 @@ export function EnterpriseReportsDashboard({
     }
   };
 
-  const handleExportCsv = () => {
-    const type = recordType === 'complaints' ? 'complaints' : recordType === 'tickets' ? 'internal_tickets' : 'departments';
-    const deptParam = selectedDeptId ? `&departmentId=${selectedDeptId}` : '';
-    window.location.href = `/api/reports/export-advanced?format=csv&type=${type}${deptParam}`;
+  const handleExport = (type: 'complaints' | 'internal_tickets' | 'departments' | 'employees', format: 'csv' | 'excel' = 'csv') => {
+    const params = new URLSearchParams({ format, type });
+    if (selectedDeptId) params.set('departmentId', selectedDeptId);
+    if (selectedBranchId) params.set('branchId', selectedBranchId);
+    if (dateFrom) params.set('dateFrom', dateFrom);
+    if (dateTo) params.set('dateTo', dateTo);
+    if (search.trim()) params.set('search', search.trim());
+    window.location.href = `/api/reports/export-advanced?${params.toString()}`;
+    setIsExportOpen(false);
   };
+
+  const handleExportCsv = () => handleExport(recordType === 'complaints' ? 'complaints' : recordType === 'tickets' ? 'internal_tickets' : 'departments');
 
   return (
     <div className="space-y-6 w-full min-w-0 max-w-full">
+      <EnterpriseScopeHeader
+        locale={locale}
+        isAdmin={isAdmin}
+        userDepartmentName={userDepartmentName}
+        departments={departments}
+        selectedDeptId={selectedDeptId}
+        onSelectDepartment={setSelectedDeptId}
+        isExportOpen={isExportOpen}
+        setIsExportOpen={setIsExportOpen}
+        onTriggerExport={handleExport}
+      />
+
       <UnifiedFilterBar
         locale={locale}
         recordType={recordType}
@@ -186,9 +225,9 @@ export function EnterpriseReportsDashboard({
         <DepartmentDeepDiveView
           locale={locale}
           department={deepDiveDept}
-          allTickets={ticketsRecords}
-          allComplaints={complaintsRecords}
-          officers={ticketsAnalytics?.officers ?? []}
+          allTickets={reportData.ticketsRecords}
+          allComplaints={reportData.complaintsRecords}
+          officers={reportData.ticketsAnalytics?.officers ?? []}
           onBackToComparison={() => setDeepDiveDeptId(null)}
           onSelectEmployee={(id, name) => setSelectedEmployee({ id, name })}
           onInspectTask={handleInspect}
@@ -207,16 +246,18 @@ export function EnterpriseReportsDashboard({
             locale={locale}
             kpis={combinedKpis}
             activeFilterKey={selectedStatus}
-            onFilterClick={(key) => setSelectedStatus(selectedStatus === key ? null : key)}
+            onFilterClick={(key) => setSelectedStatus(
+              key === 'all' || key === 'sla' || key === 'tat' || selectedStatus === key ? null : key,
+            )}
           />
 
           <EnterpriseAnalyticsCharts
             locale={locale}
-            timeline={ticketsAnalytics?.timeline ?? []}
-            statusBreakdown={ticketsAnalytics?.statusBreakdown ?? []}
-            agingBuckets={ticketsAnalytics?.agingBuckets ?? []}
-            ticketsCount={filteredTickets.length}
-            complaintsCount={filteredComplaints.length}
+            timeline={reportData.ticketsAnalytics?.timeline ?? reportData.complaintsAnalytics?.timeline ?? []}
+            statusBreakdown={reportData.ticketsAnalytics?.statusBreakdown ?? reportData.complaintsAnalytics?.statusBreakdown ?? []}
+            agingBuckets={reportData.ticketsAnalytics?.agingBuckets ?? reportData.complaintsAnalytics?.agingBuckets ?? []}
+            ticketsCount={reportData.ticketsTotal}
+            complaintsCount={reportData.complaintsTotal}
           />
 
           <UnifiedRecordsTable
@@ -224,6 +265,12 @@ export function EnterpriseReportsDashboard({
             complaints={filteredComplaints}
             tickets={filteredTickets}
             activeTypeFilter={recordType === 'complaints' ? 'complaint' : recordType === 'tickets' ? 'ticket' : 'all'}
+            complaintsTotal={recordType === 'tickets' ? 0 : reportData.complaintsTotal}
+            ticketsTotal={recordType === 'complaints' ? 0 : reportData.ticketsTotal}
+            page={reportData.page}
+            pageSize={reportData.pageSize}
+            isLoading={reportData.state === 'loading'}
+            onPageChange={reportData.setPage}
             onInspect={(rec) => handleInspect({ id: rec.id, refNumber: rec.referenceNumber, title: rec.title, type: rec.type })}
           />
         </div>
@@ -235,8 +282,8 @@ export function EnterpriseReportsDashboard({
         onClose={() => setSelectedEmployee(null)}
         employeeId={selectedEmployee?.id ?? null}
         employeeName={selectedEmployee?.name ?? null}
-        allTickets={ticketsRecords}
-        allComplaints={complaintsRecords}
+        allTickets={reportData.ticketsRecords}
+        allComplaints={reportData.complaintsRecords}
         onInspectTask={handleInspect}
       />
 

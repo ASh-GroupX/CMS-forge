@@ -15115,3 +15115,82 @@ functional release revision, avoiding an unnecessary second deployment.
   - Passed: `corepack pnpm lint`.
   - Passed: `corepack pnpm openapi:check`.
   - Passed: `corepack pnpm run build` (full Next.js + NestJS production build).
+
+---
+
+## F9-RPT-01 - Enterprise Reports Command Center
+
+- Date: 2026-11-02
+- Risk: High
+- Status: Passed on feature branch; not deployed
+- Requirement IDs: REQ-REPORT-001, REQ-RBAC-001, NFR-SEC-002,
+  NFR-PERF-001, ARCH-UI-001, UI-DESIGN-001, METHOD-API-001,
+  METHOD-TEST-001.
+- Evidence:
+  - Confirmed the CMS Forge monorepo and its PostgreSQL/Prisma reporting module;
+    no separate CRM repository, database, API, auth, deployment, or production
+    resource was accessed.
+  - Replaced first-50 browser filtering with debounced, server-side analytics and
+    record requests. Search, date, department, branch, concrete status, active,
+    resolved, overdue, and unassigned views now reach bounded Prisma queries.
+  - KPI cards derive from backend aggregates; record tables display backend totals
+    and request bounded pages rather than loading the full database.
+  - Added `GET /reports/records/{type}/{id}/archive`, protected by server session,
+    REPORT_EXPORT, RBAC, and branch/department scope. It streams sanitized ZIPs
+    containing PDF reports, JSON, manifest, and available original attachments.
+  - Added missing-file manifest behavior, path traversal filename sanitation,
+    audited exports, and streaming through the Next.js reports proxy.
+  - Restored the enterprise scope/export header, removed CRM wording from Reports,
+    and collapsed the legacy regulatory matrix into a governance appendix.
+  - OpenAPI canonical contract now documents the binary complete-record archive.
+- Verification:
+  - Passed: `corepack pnpm typecheck`.
+  - Passed: `corepack pnpm lint`.
+  - Passed: `corepack pnpm test:api -- reports` (41/41, including ZIP integrity,
+    original attachment bytes, and allowed/denied scope behavior).
+  - Passed: `corepack pnpm openapi:check`.
+  - Passed: `corepack pnpm test:visual` (92/92 route previews).
+  - Passed: `corepack pnpm test:e2e -- reports` (92/92 report-inclusive visual,
+    responsive, RTL/LTR route previews).
+  - Passed: `corepack pnpm web:visual-review`; EN desktop and AR mobile Reports
+    screenshots were visually inspected after the governance appendix collapse.
+  - Passed: `corepack pnpm test:web -- localization` (13/13).
+  - Passed: focused `report-export-route.test.ts` (2/2).
+  - Passed: `corepack pnpm build`.
+  - Passed: `corepack pnpm test` (70/70; 88.88% lines, 83.22% branches,
+    89.63% functions).
+  - Passed: `corepack pnpm security:check`, including report authorization,
+    scoped export, portal privacy, auth/RBAC, CSRF, and attachment policy suites.
+  - Failed, outside changed Reports paths: full `test:web -- api-client` has four
+    attachment-proxy expectations failing (three cache-control assertions and one
+    legacy 307 redirect assertion). The focused Reports proxy tests pass; no
+    attachment proxy implementation was modified in this task.
+
+---
+
+## F9-RPT-01 follow-up - Attachment download test failures
+
+- Date: 2026-11-02
+- Risk: High
+- Status: Passed on feature branch; not deployed
+- Requirement IDs: REQ-FILES-001, ARCH-FILES-001, REQ-RBAC-001,
+  METHOD-TEST-001.
+- Root cause: Three image-byte tests mocked a JSON preparation response for a
+  `download=1` request that now returns bytes directly. The signed-target test
+  expected a 307 redirect even though the proxy fetched the target. The proxy
+  still had a redirect fallback on target failure, exposing a signed or raw URL.
+- Repair: Stream the backend file response, handle only the expected raw API
+  paths and HTTPS signed targets for legacy JSON responses, and return a safe
+  no-store error when a token target fails. No signed target or opaque token is
+  sent as a browser redirect. Staff cookies stay on backend requests; storage
+  fetches receive no staff cookie.
+- Security self-check: Backend session and existing attachment guards retain
+  role and branch authority. This proxy makes no state change and does not log
+  credentials. It does not alter portal responses. Tests cover an allowed file
+  download, opaque-token denial, and failed signed-target denial.
+- Verification:
+  - Passed: `corepack pnpm test:web -- api-client` (95/95).
+  - Passed: `corepack pnpm typecheck`.
+  - Passed: `corepack pnpm lint`.
+  - Passed: `corepack pnpm security:check`.
+  - Passed: `git diff --check`.

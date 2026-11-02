@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ExternalLink, X, Clock, User, Building, AlertCircle, CheckCircle } from 'lucide-react';
+import { Download, ExternalLink, Clock, User, Building, AlertCircle, CheckCircle } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../ui/sheet';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -105,6 +105,12 @@ export function QuickCaseDrawer({
 
         {/* Action button */}
         <div className="pt-4 border-t">
+          <a href={`/api/reports/records/${record.linkHref.startsWith('/internal-tickets') ? 'ticket' : 'complaint'}/${encodeURIComponent(record.id)}/archive`} className="block w-full mb-2">
+            <Button type="button" variant="outline" className="w-full gap-2">
+              <Download className="h-4 w-4" />
+              <span>{t.drawer.downloadComplete}</span>
+            </Button>
+          </a>
           <Link href={record.linkHref} className="w-full">
             <Button type="button" className="w-full gap-2">
               <ExternalLink className="h-4 w-4" />
