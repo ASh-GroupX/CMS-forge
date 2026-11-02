@@ -17,3 +17,11 @@ and allowed/denied export cases. Do not deploy this feature branch.
 Follow-up completed 2026-11-02: repaired attachment download proxy behavior and
 the four failing API client assertions. The full `test:web -- api-client` suite
 now passes (95/95). The feature branch remains undeployed.
+
+Follow-up completed 2026-11-02: admin department selection now expands the
+department detail inline beneath the comparison table. The comparison remains
+visible, and the detail panel has a close control in its top header.
+
+Follow-up completed 2026-11-02: complete-record ZIP PDFs now embed IBM Plex Sans
+Arabic and apply Arabic shaping plus Unicode bidirectional ordering for mixed
+Arabic/English text. A regression test covers Arabic glyph embedding.

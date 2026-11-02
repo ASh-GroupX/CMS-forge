@@ -24,3 +24,9 @@ Risk: High
   legacy raw/signed targets. It never redirects a failed token target; staff
   cookies are sent only to the API origin. The previously failing full web API
   client suite now passes 95/95, with typecheck, lint, and security check passed.
+- Admin Reports department selection stays on the comparison surface and opens
+  an inline detail panel with an explicit close control; no route transition is
+  used for the department drill-down.
+- Complete-record report PDFs embed an Arabic-capable font and shape/reorder
+  mixed Arabic and English lines before writing them. The ZIP JSON remains UTF-8
+  and the PDF export has a regression test for Arabic font embedding.

@@ -62,7 +62,6 @@ export function EnterpriseReportsDashboard({
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [search, setSearch] = useState('');
-
   // Modals / Drawers State
   const [deepDiveDeptId, setDeepDiveDeptId] = useState<string | null>(null);
   const [inspectRecord, setInspectRecord] = useState<RecordTableItem | null>(null);
@@ -97,7 +96,6 @@ export function EnterpriseReportsDashboard({
     setSearch('');
     setDeepDiveDeptId(null);
   };
-
   const filterOpts = useMemo(() => ({
     recordType, selectedDeptId, selectedStatus, datePreset, dateFrom, dateTo, search, departments,
   }), [recordType, selectedDeptId, selectedStatus, datePreset, dateFrom, dateTo, search, departments]);
@@ -118,12 +116,10 @@ export function EnterpriseReportsDashboard({
     if (!deepDiveDeptId) return null;
     return reportData.departments.find((d) => d.departmentId === deepDiveDeptId) ?? null;
   }, [reportData.departments, deepDiveDeptId]);
-
   const filteredComplaints = useMemo(
     () => filterComplaintsList(reportData.complaintsRecords, filterOpts),
     [reportData.complaintsRecords, filterOpts],
   );
-
   const filteredTickets = useMemo(
     () => filterTicketsList(reportData.ticketsRecords, filterOpts),
     [reportData.ticketsRecords, filterOpts],
@@ -221,27 +217,30 @@ export function EnterpriseReportsDashboard({
         onExportCsv={handleExportCsv}
       />
 
-      {deepDiveDept ? (
-        <DepartmentDeepDiveView
+      <div className="space-y-6">
+        <DepartmentComparisonView
           locale={locale}
-          department={deepDiveDept}
-          allTickets={reportData.ticketsRecords}
-          allComplaints={reportData.complaintsRecords}
-          officers={reportData.ticketsAnalytics?.officers ?? []}
-          onBackToComparison={() => setDeepDiveDeptId(null)}
-          onSelectEmployee={(id, name) => setSelectedEmployee({ id, name })}
-          onInspectTask={handleInspect}
+          departments={filteredDepartments}
+          selectedDeptId={deepDiveDeptId}
+          onSelectDepartment={(deptId) => setDeepDiveDeptId((current) => current === deptId ? null : deptId)}
+          onExportCsv={handleExportCsv}
         />
-      ) : (
-        <div className="space-y-6">
-          <DepartmentComparisonView
-            locale={locale}
-            departments={filteredDepartments}
-            selectedDeptId={selectedDeptId}
-            onSelectDepartment={setDeepDiveDeptId}
-            onExportCsv={handleExportCsv}
-          />
-
+        {deepDiveDept && (
+          <div id="department-detail-panel" className="rounded-2xl border-2 border-primary/20 bg-primary/[0.02] p-1 shadow-sm">
+            <DepartmentDeepDiveView
+              locale={locale}
+              department={deepDiveDept}
+              allTickets={reportData.ticketsRecords}
+              allComplaints={reportData.complaintsRecords}
+              officers={reportData.ticketsAnalytics?.officers ?? []}
+              onBackToComparison={() => setDeepDiveDeptId(null)}
+              onSelectEmployee={(id, name) => setSelectedEmployee({ id, name })}
+              onInspectTask={handleInspect}
+            />
+          </div>
+        )}
+        {!deepDiveDept && (
+          <>
           <EnterpriseKpiGrid
             locale={locale}
             kpis={combinedKpis}
@@ -273,8 +272,9 @@ export function EnterpriseReportsDashboard({
             onPageChange={reportData.setPage}
             onInspect={(rec) => handleInspect({ id: rec.id, refNumber: rec.referenceNumber, title: rec.title, type: rec.type })}
           />
-        </div>
-      )}
+          </>
+        )}
+      </div>
 
       <EmployeeTasksDrawer
         locale={locale}
