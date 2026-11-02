@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { useServiceBooking } from './service-booking-context';
+import { getTodayDateString } from './service-booking-utils';
 
 export function TimelineTopbar() {
   const {
@@ -55,7 +56,18 @@ export function TimelineTopbar() {
   };
 
   const handleToday = () => {
-    setSelectedDate(new Date().toISOString().slice(0, 10));
+    const today = getTodayDateString();
+    setSelectedDate(today);
+    setTimeout(() => {
+      const marker = document.getElementById('timeline-current-time-marker');
+      if (marker) {
+        try {
+          marker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } catch {
+          marker.scrollIntoView(true);
+        }
+      }
+    }, 50);
   };
 
   return (

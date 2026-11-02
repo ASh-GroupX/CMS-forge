@@ -1,8 +1,14 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Clock, Plus, User, Wrench } from 'lucide-react';
+import { Clock, Plus, Wrench } from 'lucide-react';
 import { useServiceBooking } from './service-booking-context';
+import {
+  appointmentStatusStyle,
+  getNowTimeParts,
+  getTodayDateString,
+  matchesBranch,
+} from './service-booking-utils';
 import type { ServiceAppointment } from '../../../lib/staff-service-bookings-api';
 
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8:00 to 17:00 (ends 18:00)
@@ -22,24 +28,22 @@ export function TimelineDayView() {
   } = useServiceBooking();
 
   const isAr = locale === 'ar';
-  const todayLocal = new Date().toLocaleDateString('en-CA');
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const isToday = selectedDate === todayLocal || selectedDate === todayIso;
+  const todayAmman = getTodayDateString();
+  const isToday =
+    selectedDate === todayAmman ||
+    selectedDate === new Date().toLocaleDateString('en-CA') ||
+    selectedDate === new Date().toISOString().slice(0, 10);
 
   const timelineContainerRef = useRef<HTMLDivElement>(null);
+  const markerRef = useRef<HTMLDivElement>(null);
+  const scrolledDateRef = useRef<string | null>(null);
+
   const [markerTop, setMarkerTop] = useState<number | null>(null);
   const [formattedNowTime, setFormattedNowTime] = useState<string>('');
 
   const updateMarkerPosition = useCallback(() => {
+    const { hour, minute } = getNowTimeParts();
     const now = new Date();
-    const hour = now.getHours();
-    const minute = now.getMinutes();
-
-    // Timeline displays hours 8 to 17 (ends at 18:00)
-    if (hour < 8 || hour > 18 || (hour === 18 && minute > 0)) {
-      setMarkerTop(null);
-      return;
-    }
 
     const timeStr = now.toLocaleTimeString(isAr ? 'ar-JO' : 'en-US', {
       hour: '2-digit',
@@ -51,7 +55,15 @@ export function TimelineDayView() {
     const container = timelineContainerRef.current;
     if (!container) return;
 
-    if (hour === 18) {
+    if (hour < 8) {
+      const firstRow = container.querySelector('[data-hour="8"]') as HTMLElement | null;
+      if (firstRow) {
+        setMarkerTop(firstRow.offsetTop);
+      }
+      return;
+    }
+
+    if (hour >= 18) {
       const lastRow = container.querySelector('[data-hour="17"]') as HTMLElement | null;
       if (lastRow) {
         setMarkerTop(lastRow.offsetTop + lastRow.offsetHeight);
@@ -73,9 +85,7 @@ export function TimelineDayView() {
     const container = timelineContainerRef.current;
     let observer: ResizeObserver | null = null;
     if (container && typeof ResizeObserver !== 'undefined') {
-      observer = new ResizeObserver(() => {
-        updateMarkerPosition();
-      });
+      observer = new ResizeObserver(() => updateMarkerPosition());
       observer.observe(container);
     }
 
@@ -85,14 +95,27 @@ export function TimelineDayView() {
     };
   }, [updateMarkerPosition, appointments, selectedBranchId]);
 
-  function matchesBranch(apt: ServiceAppointment, branch: { id: string; code?: string }) {
-    if (!branch) return false;
-    const targetId = apt.branchId || apt.serviceCenterId || '';
-    if (targetId === branch.id || (branch.code && targetId === branch.code)) return true;
-    if ((branch.id === 'center_main' || branch.code === 'MAIN_CENTER') && (targetId === 'center_main' || targetId === 'MAIN_CENTER')) return true;
-    if ((branch.id === 'center_north' || branch.code === 'NORTH_CENTER') && (targetId === 'center_north' || targetId === 'NORTH_CENTER')) return true;
-    return false;
-  }
+  // Auto-scroll to the red line marker when today's view is opened or navigated to
+  useEffect(() => {
+    if (!isToday) {
+      scrolledDateRef.current = null;
+      return;
+    }
+
+    if (markerTop !== null && scrolledDateRef.current !== selectedDate) {
+      scrolledDateRef.current = selectedDate;
+
+      const timer = setTimeout(() => {
+        const el = markerRef.current || document.getElementById('timeline-current-time-marker');
+        try {
+          el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } catch {
+          el?.scrollIntoView(true);
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isToday, markerTop, selectedDate]);
 
   const activeBranches =
     selectedBranchId === 'ALL'
@@ -133,15 +156,18 @@ export function TimelineDayView() {
         {/* Live Red Current Time Marker */}
         {isToday && markerTop !== null && (
           <div
+            id="timeline-current-time-marker"
+            ref={markerRef}
             className="pointer-events-none absolute inset-x-0 z-30 flex -translate-y-1/2 items-center transition-[top] duration-300 ease-out"
             style={{
               top: `${markerTop}px`,
             }}
           >
-            <div className="size-3 rounded-full bg-rose-500 ring-4 ring-rose-500/25 -ms-1.5 shadow-sm" />
+            <div className="size-3.5 rounded-full bg-rose-500 ring-4 ring-rose-500/30 -ms-1.5 shadow-md animate-pulse" />
             <div className="h-0.5 flex-1 bg-rose-500 shadow-sm" />
-            <span className="rounded bg-rose-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm me-2 whitespace-nowrap">
-              {t.timeline.now}{formattedNowTime ? ` • ${formattedNowTime}` : ''}
+            <span className="rounded-md bg-rose-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-md me-3 whitespace-nowrap tracking-wide flex items-center gap-1.5">
+              <Clock className="size-3" />
+              <span>{t.timeline.now}{formattedNowTime ? ` • ${formattedNowTime}` : ''}</span>
             </span>
           </div>
         )}
@@ -207,7 +233,7 @@ export function TimelineDayView() {
                           >
                             {slotApt ? (
                               <button
-                                className={`w-full text-start rounded-xl border p-2.5 shadow-sm transition-all hover:shadow-md ${statusStyle(
+                                className={`w-full text-start rounded-xl border p-2.5 shadow-sm transition-all hover:shadow-md ${appointmentStatusStyle(
                                   slotApt.status,
                                 )}`}
                                 onClick={() => {
@@ -268,21 +294,4 @@ export function TimelineDayView() {
       </div>
     </div>
   );
-}
-
-function statusStyle(status: string): string {
-  switch (status) {
-    case 'CONFIRMED':
-      return 'border-sky-500/30 bg-sky-500/10 text-sky-950 dark:text-sky-100';
-    case 'IN_SERVICE':
-      return 'border-status-warning-border bg-status-warning-bg text-status-warning ring-1 ring-status-warning-border';
-    case 'COMPLETED':
-      return 'border-status-success-border bg-status-success-bg text-status-success';
-    case 'CANCELLED':
-      return 'border-status-error-border bg-status-error-bg text-status-error line-through';
-    case 'NO_SHOW':
-      return 'border-purple-500/20 bg-purple-500/5 text-purple-800 dark:text-purple-200';
-    default: // BOOKED
-      return 'border-brand/30 bg-brand/10 text-brand dark:text-brand-foreground';
-  }
 }

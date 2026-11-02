@@ -12,6 +12,7 @@ import {
   type ServiceAppointment,
   type ServiceCenter,
 } from '../../../lib/staff-service-bookings-api';
+import { getTodayDateString } from './service-booking-utils';
 import { ServiceBookingProvider } from './service-booking-context';
 import { ServiceBookingView } from './service-booking-view';
 
@@ -32,7 +33,7 @@ export default async function ServiceBookingPage({
   const locale = resolveLocale(params?.locale || requestHeaders.get('x-cms-locale') || undefined);
   const shell = staffShellText[locale];
 
-  const todayStr = params?.date || new Date().toISOString().slice(0, 10);
+  const todayStr = params?.date || getTodayDateString();
   const cookieHeader = requestHeaders.get('cookie') ?? '';
 
   // Parallel data fetching with forwarded cookie header
