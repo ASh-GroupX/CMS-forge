@@ -15194,3 +15194,21 @@ functional release revision, avoiding an unnecessary second deployment.
   - Passed: `corepack pnpm lint`.
   - Passed: `corepack pnpm security:check`.
   - Passed: `git diff --check`.
+
+---
+
+## F9-RPT-02 - Inline admin department drill-down
+
+- Date: 2026-11-02
+- Risk: Medium
+- Status: Passed on feature branch; not deployed
+- Requirement IDs: UI-DESIGN-001, METHOD-TEST-001, REQ-RBAC-001.
+- Repair: Department selection no longer replaces the comparison view with a
+  page-like deep dive. It keeps the department table visible, expands the
+  selected department detail inline below it, exposes `aria-expanded` and
+  `aria-controls`, and provides a top-level close control in English and Arabic.
+- Verification:
+  - Passed: `corepack pnpm typecheck`.
+  - Passed: `corepack pnpm lint`.
+  - Passed: `corepack pnpm test:web -- shell` (228/228).
+  - Passed: `corepack pnpm test:visual` (92/92 route previews).

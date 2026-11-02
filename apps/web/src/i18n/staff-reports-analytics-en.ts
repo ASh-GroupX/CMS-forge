@@ -191,6 +191,8 @@ export const reportsAnalyticsEn = {
     customers: 'Customers',
     viewDepartment: 'Deep-Dive',
     backToComparison: 'Back to Comparison',
+    closeDepartment: 'Close department',
+    departmentTabs: 'Department detail views',
     allTasksTitle: 'All Department Tasks (Sent & Received)',
     inboundTasksTitle: 'Incoming Tasks Received',
     outboundTasksTitle: 'Outgoing Tasks Sent',

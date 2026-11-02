@@ -159,6 +159,8 @@ export function DepartmentComparisonView({
                   return (
                     <tr
                       key={dept.departmentId}
+                      aria-expanded={isSelected}
+                      aria-controls={isSelected ? 'department-detail-panel' : undefined}
                       className={`border-b transition-colors hover:bg-muted/40 cursor-pointer ${
                         isSelected ? 'bg-primary/5 font-semibold' : ''
                       }`}

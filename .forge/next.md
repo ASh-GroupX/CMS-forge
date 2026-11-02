@@ -17,3 +17,7 @@ and allowed/denied export cases. Do not deploy this feature branch.
 Follow-up completed 2026-11-02: repaired attachment download proxy behavior and
 the four failing API client assertions. The full `test:web -- api-client` suite
 now passes (95/95). The feature branch remains undeployed.
+
+Follow-up completed 2026-11-02: admin department selection now expands the
+department detail inline beneath the comparison table. The comparison remains
+visible, and the detail panel has a close control in its top header.

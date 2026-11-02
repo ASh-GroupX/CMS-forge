@@ -191,6 +191,8 @@ export const reportsAnalyticsAr = {
     customers: 'العملاء',
     viewDepartment: 'عرض تفاصيل القسم',
     backToComparison: 'العودة لمقارنة الأقسام',
+    closeDepartment: 'إغلاق القسم',
+    departmentTabs: 'طرق عرض تفاصيل القسم',
     allTasksTitle: 'كافة مهام القسم (الصادرة والواردة)',
     inboundTasksTitle: 'المهام الواردة للقسم',
     outboundTasksTitle: 'المهام الصادرة من القسم',

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle2, History, Inbox, Layers, Send, Users } from 'lucide-react';
+import { CheckCircle2, History, Inbox, Layers, Send, Users, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Card } from '../ui/card';
@@ -38,7 +38,6 @@ export function DepartmentDeepDiveView({
   const t = reportsAnalyticsI18n[locale];
   const dt = t.departmentsTable;
   const isRtl = locale === 'ar';
-  const BackIcon = isRtl ? ArrowRight : ArrowLeft;
 
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('all');
 
@@ -96,10 +95,10 @@ export function DepartmentDeepDiveView({
             size="sm"
             onClick={onBackToComparison}
             className="h-9 gap-1.5 text-xs font-semibold"
-            aria-label={dt.backToComparison}
+            aria-label={dt.closeDepartment}
           >
-            <BackIcon className="h-4 w-4" />
-            <span>{dt.backToComparison}</span>
+            <X className="h-4 w-4" />
+            <span>{dt.closeDepartment}</span>
           </Button>
 
           <div>
@@ -135,7 +134,7 @@ export function DepartmentDeepDiveView({
       </div>
 
       {/* Sub-Tabs: All Tasks / Inbound Tasks / Outbound Tasks / Team / Activity Audit */}
-      <div className="flex items-center gap-1.5 border-b pb-2 text-xs font-semibold overflow-x-auto">
+      <div className="flex items-center gap-1.5 border-b pb-2 text-xs font-semibold overflow-x-auto" role="tablist" aria-label={dt.departmentTabs}>
         <button
           type="button"
           onClick={() => setActiveSubTab('all')}
