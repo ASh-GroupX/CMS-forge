@@ -15376,3 +15376,28 @@ functional release revision, avoiding an unnecessary second deployment.
 - Production push triggers the existing validation and VPS deployment workflow.
 - Only report feature, its checks/contracts, and Forge records are included;
   unrelated tmp/ and uploads/ remain outside the commit.
+
+## F9-RPT-05 - Configurable status column checkboxes
+
+- 2026-11-04; REQ-REPORT-001, UI-DESIGN-001. Medium presentation-only scope.
+- Added selector above all three report boards: all columns initially selected,
+  any subset, clear selection with guidance, select-all with mixed-state icon,
+  selected count. All labels EN/AR, logical RTL layout and shared tokens.
+- Checkbox primitive generated with shadcn CLI; correct project pnpm installed
+  Radix dependency. CLI initial global-pnpm mismatch resolved without replacing
+  existing modules or weakening checks.
+- Passed lint, typecheck, diff check; hydrated browser 38 assertions covering
+  0/2/all columns, localized guidance, no extra API requests, retained loaded
+  cards, prior filters/pagination/retry/stale behaviors. Inspected EN desktop and
+  AR mobile two-column screenshots in coverage/report-board-browser.
+- Accessibility initially flagged unnamed icon buttons in static check; explicit
+  localized checkbox labels added. Rerun passed all 24 accessibility previews.
+- Independent available GPT-6.1 reviewer found no confirmed blocker; named policy
+  tier unavailable, so not represented as policy-tier phase acceptance.
+- Security: presentation-only filtering; no API, RBAC, session, branch scope,
+  workflow, audit, portal, or secret changes. Previous server scope retained.
+- No push/merge for this follow-up; unrelated tmp/uploads preserved.
+
+Release authorization: user requested pushing this follow-up on 2026-11-04,
+continuing the established waleed-to-production release flow. Previously recorded
+verification results and reviewer-tier limitation remain unchanged.

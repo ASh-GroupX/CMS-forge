@@ -1,25 +1,16 @@
 # Current State
 
-Status: Needs Human Review before push/merge
-Phase: Reports board and navigation acceptance
-Risk: High
+Status: Report column selector implemented locally
 Date: 2026-11-04
+Risk: Medium
 
-- Status boards and context-aware Back links are implemented locally.
-- Fixed missing global status/date wiring, semantic-view status intersection,
-  ticket search preserving that intersection, and specialized visual proof setup.
-- Passed: full test 71/71 with 89.58% line coverage; reports API 45/45;
-  web API-client 101/101; shell 228/228; lint; typecheck; OpenAPI; security;
-  production build. Full test also runs visual, accessibility and performance.
-- Passed: hydrated board browser proof, 26 assertions; populated EN desktop
-  and AR mobile screenshots inspected. Covers filters, pagination, global and
-  load-more retry, empty state, stale response suppression and link URLs.
-- Independent reviewer found no remaining confirmed blocker in the search fix.
-  Available GPT-6.1 reviewer cannot meet policy's named High-risk review tier.
-- Still Not Run: live authenticated full-detail Back navigation and host-level
-  browser interactions for all three report workspaces (isolated component proof
-  does not claim these). Named-tier acceptance remains outstanding.
-- No commit, push, merge or deployment made. Unrelated tmp/ and uploads/ preserved.
-- Release authorized by direct user instruction on 2026-11-04 after limitations
-  were reported: push waleed and merge production. Outstanding checks above are
-  retained honestly; GitHub validation/deployment will be monitored.
+- Previous report board/navigation release pushed to waleed c8523f7 and merged
+  into production 3b25e28. Deployment status was not verified (gh unauthenticated).
+- Current follow-up: status checkboxes in all Detailed Case Records Drill-Down
+  boards; all/subset/none, selected count, EN/AR labels, mixed Select-all mark.
+- No API/workflow changes; hidden columns retain fetched cards and pagination.
+- Passed: lint, typecheck, diff check, browser 38 assertions and accessibility
+  24/24. Two-column EN desktop and AR mobile screenshots inspected.
+- Independent available reviewer found no confirmed blocker. Policy-named review
+  tier remains unavailable; no claim of named-tier phase acceptance.
+- Current follow-up uncommitted/unpushed; unrelated tmp/ and uploads/ preserved.

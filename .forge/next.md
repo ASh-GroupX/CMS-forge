@@ -1,29 +1,14 @@
-# Reports status board acceptance
-Status: Needs Human Review
-Risk: High
-SRS: REQ-REPORT-001, REQ-RBAC-001, NFR-SEC-002, NFR-PERF-001,
-UI-DESIGN-001, METHOD-API-001, METHOD-TEST-001
+# Report board column selection
+Status: Implemented; available independent review found no blocker
+Risk: Medium
+SRS: REQ-REPORT-001, UI-DESIGN-001
 
-Implemented: board in all three reports, context-aware detail Back links,
-bounded pagination, EN/AR copy, API/OpenAPI actor fields, global and board
-filters. Semantic views intersect each exact status even with search.
+Localized status checkboxes now sit above every report status board. All columns
+are shown by default; any subset, select-all and clear-to-zero guidance work.
+Visibility only filters rendered columns; data filters and loaded pages remain.
+Generated checkbox using shadcn CLI, then adapted its mixed icon/aria treatment.
 
-Passed on 2026-11-04: test (71/71, coverage thresholds), reports API (45/45),
-web API-client (101/101), web shell (228/228), lint, typecheck, OpenAPI check,
-security check, production build. Full test includes visual/accessibility/perf.
-Focused hydrated browser proof passed 26 assertions with inspected EN desktop
-and AR mobile populated-board screenshots. Run: pnpm test:reports:browser.
-
-Remaining acceptance: policy-named High-risk PHASE-REVIEWER (Opus 4.8 Max or
-GPT-5.5 Extra High) is unavailable in this runtime. Available independent review
-found and re-reviewed fixes but cannot satisfy the named-tier gate. Browser
-fixture isolates board/typed fetch with controlled responses; it does not prove
-live authenticated navigation through full detail pages or specialized report
-caller wiring. Obtain those focused navigation/host integration checks before
-release. Do not push/merge while acceptance gates remain; no deployment made.
-Keep unrelated tmp/ and uploads/ out.
-
-Release direction: user explicitly requested GitHub waleed push and production
-merge on 2026-11-04 after the above limitations were reported. Release authorized
-by direct user instruction; outstanding proof/review is recorded, not waived as
-passed. Production push triggers the existing deployment workflow.
+Passed: lint, typecheck, diff check; hydrated browser 38 assertions (EN/AR);
+accessibility 24/24 previews. EN desktop and AR mobile two-column screenshots
+rendered and inspected. Independent GPT-6.1 review found no confirmed blocker;
+it is not the policy-named phase acceptance reviewer. No push for this follow-up.
