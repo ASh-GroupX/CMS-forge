@@ -81,10 +81,6 @@ export function NewAppointmentModal() {
   }, [date, todayStr, nowTime, startTime]);
 
   useEffect(() => {
-    if (!carModelId && carModels.length > 0) setCarModelId(carModels[0]!.id);
-  }, [carModels, carModelId]);
-
-  useEffect(() => {
     if (!maintenanceTypeId && maintenanceTypes.length > 0) setMaintenanceTypeId(maintenanceTypes[0]!.id);
   }, [maintenanceTypes, maintenanceTypeId]);
 
@@ -102,13 +98,17 @@ export function NewAppointmentModal() {
       setErrorMsg(t.modal.mandatoryError);
       return;
     }
+    if (!carModels.some(car => car.id === carModelId && car.isActive)) {
+      setErrorMsg(t.modal.vehicleRequired);
+      return;
+    }
     if (date < todayStr || (date === todayStr && startTime < nowTime)) {
       setErrorMsg(t.modal.pastSlotError);
       return;
     }
 
     setLoading(true);
-    const effectiveCarModelId = carModelId || carModels[0]?.id || 'car_tiggo8_pro';
+    const effectiveCarModelId = carModelId;
     const effectiveMaintId = maintenanceTypeId || maintenanceTypes[0]?.id || 'maint_periodic_10k';
     const selectedMaint = maintenanceTypes.find((m) => m.id === effectiveMaintId);
     const res = await createAppointmentAction({

@@ -15401,3 +15401,52 @@ functional release revision, avoiding an unnecessary second deployment.
 Release authorization: user requested pushing this follow-up on 2026-11-04,
 continuing the established waleed-to-production release flow. Previously recorded
 verification results and reviewer-tier limitation remain unchanged.
+
+## F9-BOOK-01 - CSV catalog and dependent brand/model booking
+
+- 2026-11-04. SR-BOOK-001 / SR-BOOK-004 (service-bookings MODULE.md),
+  UI-DESIGN-001. Medium; bounded catalog/UI/validation steps in next.md.
+- Supplied CSV treated only as data: 128 rows, 12 brands, 127 distinct pairs
+  after whitespace normalization. Preserved source in prisma/data. Additive
+  migration uses deterministic IDs, skips existing matching brand/model pairs,
+  and never deletes/deactivates rows or changes appointment references.
+- Active brand-first model selection; switching brands clears selection; model
+  search only within chosen brand. Removed automatic first/default vehicle in
+  booking UI and parser. Server rejects nonexistent or inactive model IDs.
+- Admin form starts with blank brand, requires brand and at least one model name;
+  no brand-as-model fallback. Backend validates same rule. EN/AR copy included.
+- Passed booking API 17/17, web shell 228/228, catalog migration checks 2/2;
+  full test suite 73/73 (89.64% lines); lint/typecheck; OpenAPI check; production
+  build. OpenAPI generated file normalized to canonical whitespace before pass.
+- Hydrated browser checked EN desktop and AR mobile: disabled model before brand,
+  active-only options, no cross-brand options, selection reset, model search empty
+  feedback; actual admin form invalid without brand/model, valid with brand+one
+  language and correct save payload through test action double. Booking/admin
+  screenshots rendered and inspected in coverage/booking-brand-browser.
+- Security/workflow: catalog reads/validation only; existing session/access paths
+  retained; no new public API route, provider call, secret, portal payload or
+  workflow transition. Invalid model attempts tested to perform no create write.
+- Independent available GPT-6.1 review found no confirmed blocker. Policy-named
+  phase reviewer unavailable. Imported nameAr retains source English model text
+  since CSV supplies no Arabic translations; no invented translations added.
+- Not Run: executing migration against PostgreSQL, as local Docker daemon is
+  unavailable. Catalog additions are prepared, not installed in live database.
+- No push/deployment for this task; unrelated tmp/ and uploads/ preserved.
+
+## F9-BOOK-01 release verification - 2026-11-04
+
+- User authorized pushing and merging after verification. Found native PostgreSQL
+  18 binaries and started a separate trust-auth loopback-only temporary instance
+  on port 55439 under coverage/booking-pg-*. Existing PostgreSQL service untouched.
+- Executed actual catalog migration twice against fresh target schema: 127 rows,
+  12 brands; second run inserts zero. Executed twice against existing schema with
+  inactive normalized BAIC duplicate, Arabic label, legacy car and booking FK:
+  first run adds126; second adds0; all seeded rows, labels/activity/FK preserved.
+  All SQL assertions passed. Isolated database stopped after proof.
+- This closes the previous migration-runtime gap. Production deployment itself
+  remains unverified locally. No absolute guarantee of future runtime behavior
+  is claimed; tests/build/browser/API and migration evidence support release.
+- Prior independent available review found no confirmed blocker; policy-named
+  tier remains unavailable and is not relabeled passed. No production code changes
+  since prior successful test/build/browser checks. Release to waleed/production
+  authorized in this turn. Unrelated tmp/uploads excluded.

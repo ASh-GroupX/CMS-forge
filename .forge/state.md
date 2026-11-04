@@ -1,16 +1,17 @@
 # Current State
 
-Status: Report column selector implemented locally
+Status: Booking brand/model catalog verified for requested release
 Date: 2026-11-04
 Risk: Medium
 
-- Previous report board/navigation release pushed to waleed c8523f7 and merged
-  into production 3b25e28. Deployment status was not verified (gh unauthenticated).
-- Current follow-up: status checkboxes in all Detailed Case Records Drill-Down
-  boards; all/subset/none, selected count, EN/AR labels, mixed Select-all mark.
-- No API/workflow changes; hidden columns retain fetched cards and pagination.
-- Passed: lint, typecheck, diff check, browser 38 assertions and accessibility
-  24/24. Two-column EN desktop and AR mobile screenshots inspected.
-- Independent available reviewer found no confirmed blocker. Policy-named review
-  tier remains unavailable; no claim of named-tier phase acceptance.
-- Current follow-up uncommitted/unpushed; unrelated tmp/ and uploads/ preserved.
+- Brand-first active-model selection and required admin brand/model implemented.
+- CSV migration adds 127 unique pairs from 128 rows / 12 brands; no row deletion.
+- Passed full suite 73/73; API17; shell228; catalog2; lint; typecheck; OpenAPI;
+  build; EN/AR hydrated booking/admin proof and inspected screenshots.
+- PostgreSQL18 runtime import proof passed for fresh/existing catalogs, repeated
+  import, normalized duplicates, inactive rows, Arabic names, legacy rows and
+  existing booking FK preservation. Temporary loopback database stopped.
+- Available independent review: no confirmed blocker; named tier unavailable.
+- User authorized pushing waleed and merging production after verification.
+  Production push triggers existing validation/deployment; live outcome unverified.
+- Unrelated tmp/uploads preserved outside commit.

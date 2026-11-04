@@ -2,6 +2,22 @@ import assert from 'node:assert/strict';
 import test, { mock } from 'node:test';
 import { ServiceBookingsRepository } from './service-bookings.repository.js';
 import { ServiceBookingsService } from './service-bookings.service.js';
+import { parseUpsertCarModelBody } from './dto/service-master-data.dto.js';
+import { parseCreateServiceAppointmentBody } from './dto/create-service-appointment.dto.js';
+
+test('admin car catalog requires a brand and a separate model name', () => {
+  for (const brand of [undefined, '', '   ', 123]) {
+    assert.throws(() => parseUpsertCarModelBody({ brand, nameEn: 'BJ30' }), /brand.*required/i);
+  }
+  assert.throws(() => parseUpsertCarModelBody({ brand: 'BAIC' }), /model name.*required/i);
+  assert.deepEqual(parseUpsertCarModelBody({ brand: ' BAIC ', nameEn: ' BJ30 ' }), {
+    id: undefined, brand: 'BAIC', nameEn: 'BJ30', nameAr: 'BJ30', isActive: true,
+  });
+});
+
+test('booking parser never substitutes a default vehicle', () => {
+  assert.throws(() => parseCreateServiceAppointmentBody({ customerName: 'Test', customerPhone: '0790000000' }), /vehicle model.*required/i);
+});
 
 test.beforeEach(() => { mock.timers.enable({ apis: ['Date'], now: new Date('2026-10-01T00:00:00Z') }); });
 
@@ -33,6 +49,19 @@ function createMockRepository(overrides: Partial<Record<keyof ServiceBookingsRep
 
 test('service-bookings service can be constructed', () => {
   assert.ok(new ServiceBookingsService(createMockRepository()));
+});
+
+test('booking rejects missing or deactivated catalog models without creating an appointment', async () => {
+  for (const model of [null, { id: 'c1', nameEn: 'Patrol', brand: 'Nissan', isActive: false }]) {
+    let created = false;
+    const service = new ServiceBookingsService(createMockRepository({
+      findCarModelById: async () => model,
+      createAppointment: async () => { created = true; throw new Error('unexpected write'); },
+    }));
+    await assert.rejects(() => service.createAppointment({ customerName: 'Test', customerPhone: '0790000000',
+      carModelId: 'c1', maintenanceTypeId: 'm1', branchId: 'b_main', date: '2026-10-26', startTime: '09:00', notes: '' }), /active vehicle model/i);
+    assert.equal(created, false);
+  }
 });
 
 test('createAppointment rejects when branch is closed on that day', async () => {
