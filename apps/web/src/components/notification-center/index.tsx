@@ -59,13 +59,14 @@ export function NotificationCenter({
               <section aria-label={t.sections[bucket]} className="rounded-md border border-line-subtle bg-surface-raised p-3" key={bucket}>
                 <h3 className="text-sm font-semibold">{t.sections[bucket]}</h3>
                 <div className="mt-3 grid gap-2">
-                  {bucketRows.length ? bucketRows.map(({ href, id, kind, queuedAt, reference, status, title }) => (
-                  <article className="rounded-sm border border-line-subtle bg-surface p-3" key={id}>
+                  {bucketRows.length ? bucketRows.map(({ href, id, kind, message, queuedAt, reference, status, title }) => (
+                  <article className={`rounded-lg border p-4 ${status === 'unread' ? 'border-brand/30 border-s-4 border-s-brand bg-brand/5 shadow-sm' : 'border-line-subtle bg-surface'}`} key={id}>
                     <div className="flex flex-wrap gap-2">
                       <StatusBadge tone={status === 'unread' ? 'warning' : 'neutral'}>{t.badges[status]}</StatusBadge>
                       <StatusBadge tone={kind === 'task' ? 'info' : 'brand'}>{t.badges[kind]}</StatusBadge>
                     </div>
-                    <p className="mt-2 text-sm font-semibold">{title}</p>
+                    <p className="mt-2 text-base font-semibold break-words">{title}</p>
+                    {message && <p className="mt-1 text-sm leading-relaxed text-content-muted break-words">{message}</p>}
                     <p className="mt-1 text-xs text-content-muted">
                       {t.labels.time}: <LocalTime locale={locale} value={queuedAt} />
                     </p>
@@ -114,6 +115,7 @@ function notificationRow(item: StaffNotification, locale: Locale) {
     queuedAt: item.queuedAt,
     reference,
     title: item.payload.title ?? item.templateCode,
+    message: item.payload.message,
     href: href ? localeHref(href, locale) : null,
   };
 }

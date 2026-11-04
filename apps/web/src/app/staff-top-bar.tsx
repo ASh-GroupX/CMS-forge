@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, Moon, Search, Sun } from 'lucide-react';
+import { Moon, Search, Sun } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/
 import { Input } from '../components/ui/input';
 import type { Locale } from '../i18n/staff-shell';
 import { localeHref } from '../lib/locale-href';
+import { NotificationIndicator } from '../components/notification-center/notification-indicator';
 
 type Theme = 'light' | 'dark';
 type SearchType = 'COMPLAINT' | 'TASK' | 'CASE' | 'DEAL' | 'CUSTOMER';
@@ -62,48 +63,13 @@ export function StaffTopBar({ account = null, createLabel, heading, isRtl, langu
   const resolvedSubheading = subheading ?? signedIn ?? subtitle ?? '';
 
   const canShowNotifications = showNotifications && Boolean(account);
-  const [hasUnread, setHasUnread] = useState(false);
-
-  useEffect(() => {
-    if (!canShowNotifications) return;
-    let mounted = true;
-    const checkUnread = async () => {
-      try {
-        const response = await fetch('/api/notifications?view=unread&limit=1', { cache: 'no-store' });
-        if (!response.ok) return;
-        const body = await response.json() as { items?: unknown[] };
-        if (mounted && Array.isArray(body?.items) && body.items.length > 0) {
-          setHasUnread(true);
-        }
-      } catch {
-        // Best effort
-      }
-    };
-    void checkUnread();
-    return () => {
-      mounted = false;
-    };
-  }, [canShowNotifications]);
-
   return <>
     <header className="sticky top-4 z-30 mx-4 mb-8 md:mx-6 rounded-2xl border border-line-subtle/40 bg-surface/70 px-4 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] md:px-6 transition-all duration-300">
       <div className="flex min-h-16 items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-4"><div className="min-w-0"><h1 className="truncate text-lg font-bold tracking-tight md:text-xl bg-gradient-to-br from-content-strong to-content-muted bg-clip-text text-transparent">{resolvedHeading}</h1><p className="truncate text-xs font-medium text-content-muted md:text-sm">{resolvedSubheading}</p></div><Button aria-label={themeLabel} aria-pressed={theme === 'dark'} className="hidden size-10 shrink-0 rounded-xl md:inline-flex hover:bg-black/5" onClick={toggleTheme} size="icon" type="button" variant="ghost">{theme === 'dark' ? <Sun aria-hidden="true" className="size-5 text-status-warning" /> : <Moon aria-hidden="true" className="size-5" />}<span className="sr-only">{theme === 'dark' ? themeLight : themeDark}</span></Button></div>
         <div className="flex shrink-0 items-center gap-2">
           {showSearch ? <><Button className="hidden h-11 w-[19rem] justify-start rounded-lg text-content-muted xl:flex" onClick={() => setSearchOpen(true)} type="button" variant="outline"><Search aria-hidden="true" className="me-2 size-5" /><span className="truncate">{search.placeholder}</span></Button><Button aria-label={search.label} className="xl:hidden" onClick={() => setSearchOpen(true)} size="icon" type="button" variant="outline"><Search aria-hidden="true" className="size-5" /></Button></> : null}
-          {canShowNotifications ? (
-            <Button asChild className="relative" size="icon" variant="ghost">
-              <a aria-label="Notifications" href={notificationsHref}>
-                <Bell aria-hidden="true" className="size-5" />
-                {hasUnread ? (
-                  <span
-                    aria-hidden="true"
-                    className="absolute top-2 end-2 size-2 rounded-full bg-brand ring-2 ring-surface animate-pulse"
-                  />
-                ) : null}
-              </a>
-            </Button>
-          ) : null}
+          {canShowNotifications ? <NotificationIndicator key={account?.name} locale={locale} href={notificationsHref} /> : null}
           <Button asChild className="hidden sm:inline-flex" variant="ghost"><a aria-label={switchLabel} href={languageHref}>{switchTarget}</a></Button>
           <Button aria-label={themeLabel} aria-pressed={theme === 'dark'} className="md:hidden" onClick={toggleTheme} size="icon" type="button" variant="ghost">{theme === 'dark' ? <Sun aria-hidden="true" className="size-5" /> : <Moon aria-hidden="true" className="size-5" />}</Button>
           {account ? <div className="hidden items-center gap-3 border-s border-line-subtle/50 ps-4 sm:flex"><span className="grid size-10 place-items-center rounded-xl bg-gradient-to-br from-brand/20 to-brand/5 shadow-inner text-sm font-bold text-brand">{account.initials}</span><span className="max-w-28 truncate text-sm font-semibold">{account.name}</span></div> : null}

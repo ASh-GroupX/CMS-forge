@@ -15450,3 +15450,35 @@ verification results and reviewer-tier limitation remain unchanged.
   tier remains unavailable and is not relabeled passed. No production code changes
   since prior successful test/build/browser checks. Release to waleed/production
   authorized in this turn. Unrelated tmp/uploads excluded.
+
+## F9-NOTIFY-01 - Visible unread activity
+
+- 2026-11-04. REQ-NOTIFY-001, UI-DESIGN-001. Medium presentation task.
+- Replaced tiny latched unread dot with 48px bell, numeric badge (99+ when100
+  bounded unread rows), brand tint/ring for unread, localized desktop label and
+  accessible count/status. Zero clears highlight. Errors announce refresh failure
+  while retaining last-known count. Poll30seconds/focus/visibility, hidden pause,
+  serialized10second requests, abort/listener/timer cleanup.
+- Unread center cards use start-border accent, larger titles and supplied
+  payload.message rendered safely as text. Existing full-page link/read actions
+  remain; no implicit mark-read merely from opening the bell.
+- Passed lint/typecheck/build, shell228/228, accessibility24/24 and diff check.
+  Hydrated EN desktop/AR mobile proof checks count/zero/cap, refresh error/recovery,
+  polling, hidden suppression, visibility/focus, activity message and destination.
+  Screenshots in coverage/notification-indicator-browser inspected.
+- Independent available GPT-6.1 reviewer: no confirmed blocker; policy-named
+  reviewer tier unavailable. No provider, secret, auth/role/scope, backend route,
+  portal or workflow mutation introduced. Existing session-scoped route used.
+- No push/deployment for this task; unrelated tmp/uploads preserved.
+
+## Notification release verification - 2026-11-04
+
+- User requested push/merge if tests pass. Full suite rerun passed73/73 with
+  89.64% line coverage; notifications API45/45 and web API-client101/101 passed.
+  Prior current-source build, lint/typecheck, shell228, accessibility24 and
+  hydrated EN/AR browser proof also passed. No source edits since those checks.
+- Release to waleed then production authorized. Production push triggers the
+  existing validation/deployment workflow; live outcome not yet verified.
+- Available independent review found no confirmed blocker; named reviewer tier
+  limitation remains recorded and is not represented as a named-tier pass.
+- Unrelated tmp/ and uploads/ excluded.
