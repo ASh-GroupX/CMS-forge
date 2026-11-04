@@ -9,6 +9,7 @@ import { Badge } from '../ui/badge';
 import type { RecordTableItem } from './detailed-records-table';
 import { reportsAnalyticsI18n } from '../../i18n/staff-reports-analytics';
 import type { Locale } from '../../i18n/staff-shell';
+import { reportRecordDetailHref } from '../../lib/staff-report-navigation';
 
 interface QuickCaseDrawerProps {
   locale: Locale;
@@ -111,7 +112,7 @@ export function QuickCaseDrawer({
               <span>{t.drawer.downloadComplete}</span>
             </Button>
           </a>
-          <Link href={record.linkHref} className="w-full">
+          <Link href={reportRecordDetailHref(record.linkHref.startsWith('/internal-tickets') ? 'ticket' : 'complaint', record.id, locale)} className="w-full">
             <Button type="button" className="w-full gap-2">
               <ExternalLink className="h-4 w-4" />
               <span>{t.drawer.openFullPage}</span>

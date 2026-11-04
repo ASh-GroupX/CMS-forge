@@ -9,6 +9,66 @@ import type { AuditService } from '../../src/core/audit.service.js';
 import type { DashboardReportScope } from '../../src/modules/reports/reports.service.js';
 import { buildComplaintWhere } from '../../src/modules/reports/reports.complaints.js';
 import { buildTicketWhere } from '../../src/modules/reports/reports.tickets.js';
+import { fetchComplaintsRecords } from '../../src/modules/reports/reports.complaints.query.js';
+import { fetchTicketsRecords } from '../../src/modules/reports/reports.tickets.query.js';
+
+test('board columns intersect their exact status with semantic report views', () => {
+  for (const view of ['active', 'resolved', 'overdue', 'unassigned'] as const) {
+    assert.deepEqual(buildComplaintWhere({ view, status: 'IN_PROGRESS' }).AND, [{ status: 'IN_PROGRESS' }]);
+    assert.deepEqual(buildTicketWhere({ view, status: 'IN_PROGRESS' }).AND, [{ status: 'IN_PROGRESS' }]);
+    assert.deepEqual((buildTicketWhere({ view, status: 'IN_PROGRESS', search: 'brakes' }).AND as unknown[])[0], { status: 'IN_PROGRESS' });
+  }
+});
+
+test('ticket report records expose the accepting actor separately from the current assignee', async () => {
+  const createdAt = new Date('2026-10-20T09:00:00.000Z');
+  const prisma: any = {
+    internalTicket: {
+      count: async () => 1,
+      findMany: async (query: any) => {
+        assert.equal(query.select.activities.where.action, 'ACCEPTED');
+        assert.equal(query.take, 25);
+        assert.equal(query.skip, 0);
+        return [{
+          id: 'ticket-1', referenceNumber: 'TKT-1', title: 'Repair request', status: 'IN_PROGRESS', priority: 'HIGH',
+          createdAt, dueAt: null, resolvedAt: null, closedAt: null, targetDepartmentId: 'dept-1',
+          requestedBy: { nameEn: 'Requester', nameAr: null, departmentId: 'dept-2', department: { id: 'dept-2', nameEn: 'Sales', nameAr: null } },
+          targetDepartment: { id: 'dept-1', nameEn: 'Service', nameAr: null },
+          assignedEmployee: { nameEn: 'Current owner', nameAr: null },
+          activities: [{ actor: { nameEn: 'Acceptor', nameAr: null } }],
+        }];
+      },
+    },
+  };
+  const result = await fetchTicketsRecords(prisma, {});
+  assert.equal(result.items[0].acceptedByName, 'Acceptor');
+  assert.equal(result.items[0].assignedEmployeeName, 'Current owner');
+});
+
+test('complaint report records identify the actor who accepted or routed the complaint', async () => {
+  const createdAt = new Date('2026-10-20T09:00:00.000Z');
+  const prisma: any = {
+    complaint: {
+      count: async () => 1,
+      findMany: async (query: any) => {
+        assert.deepEqual(query.select.statusHistory.where.action.in, ['ACCEPT_INTAKE', 'APPROVE_AND_ROUTE']);
+        assert.equal(query.take, 25);
+        assert.equal(query.skip, 0);
+        return [{
+          id: 'complaint-1', referenceNumber: 'CMP-1', subject: 'Service concern', status: 'IN_PROGRESS',
+          severity: 'HIGH', createdAt, firstResponseAt: null, resolvedAt: null, closedAt: null, departmentId: 'dept-1',
+          customer: { nameEn: 'Customer', nameAr: null, phone: '000' }, createdBy: { nameEn: 'Creator', nameAr: null }, owner: { nameEn: 'Current owner', nameAr: null },
+          statusHistory: [{ actor: { nameEn: 'Acceptor', nameAr: null } }],
+          department: { id: 'dept-1', nameEn: 'Service', nameAr: null }, slaEvents: [],
+        }];
+      },
+    },
+  };
+  const result = await fetchComplaintsRecords(prisma, {});
+  assert.equal(result.items[0].createdByName, 'Creator');
+  assert.equal(result.items[0].acceptedByName, 'Acceptor');
+  assert.equal(result.items[0].ownerName, 'Current owner');
+});
 
 function createMockAnalyticsService() {
   const complaintsRepo: Partial<ReportsComplaintsRepository> = {

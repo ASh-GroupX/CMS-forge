@@ -9,9 +9,10 @@ import { getStaffComplaintSurveys } from '../../../../lib/staff-complaint-survey
 import { getStaffComplaintComments } from '../../../../lib/staff-complaint-comments-api';
 import { getStaffComplaintDetailLoadResult } from '../../../../lib/staff-detail-api';
 import { getStaffAuditLogs } from '../../../../lib/staff-audit-api';
+import { staffDetailBackHref } from '../../../../lib/staff-report-navigation';
 
 type RouteParams = { id?: string | string[] };
-type SearchParams = { locale?: string | string[] };
+type SearchParams = { locale?: string | string[]; returnTo?: string | string[] };
 
 export default async function ComplaintDetailPage({
   cookieHeader,
@@ -55,6 +56,7 @@ export default async function ComplaintDetailPage({
     getStaffComplaintSurveys(apiInput),
   ]) : [null, null, null, undefined, null, undefined, null] as const;
   const detailState = detailResult.status === 'ready' ? 'ready' : detailResult.status;
+  const backHref = staffDetailBackHref(readParam(query?.returnTo), resolveLocale(readParam(query?.locale)), 'complaints');
 
   return (
     <ComplaintWorkspace
@@ -65,6 +67,7 @@ export default async function ComplaintDetailPage({
       surveys={surveys}
       detail={detail ?? undefined}
       locale={resolveLocale(readParam(query?.locale))}
+      backHref={backHref}
       options={options}
       staff={staff}
       state={detailState}

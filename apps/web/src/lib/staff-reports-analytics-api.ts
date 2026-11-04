@@ -14,7 +14,6 @@ export type ComplaintsAnalyticsFilter = {
   search?: string | null;
   view?: 'active' | 'resolved' | 'overdue' | 'unassigned' | 'none' | null;
 };
-
 export type ComplaintsAnalyticsResponse = {
   kpis: {
     totalCreated: number;
@@ -62,7 +61,6 @@ export type ComplaintsAnalyticsResponse = {
     oldestActiveDays: number;
   }[];
 };
-
 export type TicketsAnalyticsFilter = {
   branchId?: string | null;
   targetDepartmentId?: string | null;
@@ -150,8 +148,10 @@ export type ComplaintRecordRow = {
   status: string;
   severity: string;
   customerName: string;
+  createdByName: string | null;
   customerPhone: string;
   ownerName: string;
+  acceptedByName: string | null;
   departmentId?: string | null;
   departmentName: string;
   createdAt: string;
@@ -164,7 +164,6 @@ export type ComplaintRecordRow = {
 type ReportRequestOptions = {
   signal?: AbortSignal;
 };
-
 export type TicketRecordRow = {
   id: string;
   referenceNumber: string;
@@ -177,6 +176,7 @@ export type TicketRecordRow = {
   targetDepartmentName: string;
   requestedByName: string;
   assignedEmployeeName: string;
+  acceptedByName: string | null;
   createdAt: string;
   dueAt: string | null;
   resolvedAt: string | null;

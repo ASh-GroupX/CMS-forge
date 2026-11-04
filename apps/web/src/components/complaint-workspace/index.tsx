@@ -30,6 +30,7 @@ export function ComplaintWorkspace({
   audit, comments, relations, surveys,
   detail,
   locale,
+  backHref,
   options,
   staff,
   state,
@@ -42,6 +43,7 @@ export function ComplaintWorkspace({
   surveys?: StaffComplaintSurvey[] | null | undefined;
   detail?: StaffComplaintDetailView | undefined;
   locale: Locale;
+  backHref?: string | undefined;
   options?: ComplaintFormOptions | null | undefined;
   staff?: AssignableStaff[] | null | undefined;
   state: ComplaintDetailState;
@@ -49,11 +51,14 @@ export function ComplaintWorkspace({
 }) {
   const shell = staffShellText[locale];
   const t = complaintDetailText[locale];
+  const resolvedBackHref = backHref ?? `/complaints?locale=${locale}`;
+  const backLabel = resolvedBackHref.startsWith('/reports') ? t.values.backToReports : t.values.backToBoard;
 
   if (state !== 'ready' || !detail) {
     return (
       <section aria-label={t.title} className="flex h-full flex-col bg-surface" dir={shell.dir}>
-        <div className="p-8">
+        <div className="space-y-5 p-8">
+          <a href={resolvedBackHref} className="inline-flex items-center gap-2 text-sm font-medium text-content-muted transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-sm"><ArrowLeft className="size-4 rtl:rotate-180" />{backLabel}</a>
           <StateBlock message={state === 'ready' ? t.states.error : t.states[state]} tone={state === 'error' || state === 'denied' || state === 'notFound' ? 'error' : 'neutral'} />
         </div>
       </section>
@@ -73,9 +78,9 @@ export function ComplaintWorkspace({
     <section aria-label={t.title} className="flex h-full flex-col overflow-hidden bg-surface-sunken" dir={shell.dir}>
       {/* ── Header ── */}
       <header className="flex h-14 shrink-0 items-center gap-4 border-b border-line-subtle bg-surface px-6">
-        <a href={`/complaints?locale=${locale}`} className="flex items-center gap-2 text-sm font-medium text-content-muted hover:text-brand transition-colors">
-          <ArrowLeft className="size-4" />
-          {t.values.backToBoard || 'Back'}
+        <a href={resolvedBackHref} className="flex items-center gap-2 text-sm font-medium text-content-muted hover:text-brand transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-sm">
+          <ArrowLeft className="size-4 rtl:rotate-180" />
+          {backLabel}
         </a>
         <div className="h-4 w-px bg-line-subtle" />
         <h1 className="truncate text-base font-bold text-content-strong">

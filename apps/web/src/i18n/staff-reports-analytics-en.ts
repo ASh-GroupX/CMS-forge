@@ -234,4 +234,21 @@ export const reportsAnalyticsEn = {
     clearAll: 'Clear All Filters',
     activeFiltersLabel: 'Active Filters',
   },
+  statusBoard: {
+    title: 'Detailed Case Records Drill-Down', subtitle: 'Browse every ticket and complaint by status, department, and date.',
+    backToReports: 'Back to reports', backToTickets: 'Back to tickets',
+    department: 'Department', allDepartments: 'All departments', createdFrom: 'Created from', createdThrough: 'Created through',
+    clearDates: 'Clear dates', loading: 'Loading matching records…', failed: 'Could not load the status board.', retry: 'Try again',
+    noMatches: 'No records match these filters.', noStateRecords: 'No records in this state', prioritySeverity: 'Priority / severity',
+    createdBy: 'Created by', acceptedBy: 'Accepted by', notRecorded: 'Not recorded', currentOwner: 'Current owner',
+    customerSource: 'Customer', unassigned: 'Unassigned', ticket: 'Ticket', complaint: 'Complaint',
+    loadingMore: 'Loading…', retryMore: 'Retry', loadMore: (count: number) => `Load ${count} more`,
+    statuses: {
+      DRAFT: 'Draft', SUBMITTED: 'Submitted', MANAGER_REVIEW: 'Manager review', BRANCH_REVIEW: 'Branch review',
+      PENDING_APPROVAL: 'Pending approval', NEW: 'New', ASSIGNED: 'Assigned', IN_PROGRESS: 'In progress',
+      WAITING: 'Waiting', REOPENED: 'Reopened', RESOLVED: 'Resolved', COMPLETED: 'Completed', CLOSED: 'Closed', REJECTED: 'Rejected',
+    },
+    priorities: { LOW: 'Low', NORMAL: 'Normal', HIGH: 'High', URGENT: 'Urgent' },
+    severities: { LOW: 'Low', MEDIUM: 'Medium', HIGH: 'High', CRITICAL: 'Critical' },
+  },
 };

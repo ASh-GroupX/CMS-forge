@@ -1,19 +1,29 @@
 import React from 'react';
+import Link from 'next/link';
 import { headers } from 'next/headers';
-import { FileText, Send, Paperclip, MessageSquare, History, UserPlus, Clock, Star, AlertCircle, CheckCircle2, ChevronRight, ChevronDown, User } from 'lucide-react';
+import { ArrowLeft, FileText, Send, Paperclip, MessageSquare, History, UserPlus, Clock, Star, AlertCircle, CheckCircle2, ChevronRight, ChevronDown, User } from 'lucide-react';
 import { getTicketDetails, getTicketOptions } from '../../../../lib/staff-internal-tickets-actions';
 import { getStaffSessionPrincipal } from '../../../../lib/staff-session-api';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { internalTicketStatusLabel } from '../../../../i18n/domain-labels';
+import { reportsAnalyticsI18n } from '../../../../i18n/staff-reports-analytics';
+import { staffDetailBackHref } from '../../../../lib/staff-report-navigation';
 import { TicketActionButtons } from './ticket-action-buttons';
 import { TicketNoteForm } from './ticket-note-form';
 import { TicketStopwatch } from '../ticket-stopwatch';
 
-export default async function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function TicketDetailPage({ params, searchParams }: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ locale?: string; returnTo?: string }>;
+}) {
   const { id } = await params;
+  const query = await searchParams;
   const requestHeaders = await headers();
-  const locale = resolveLocale(requestHeaders.get('x-cms-locale') ?? undefined);
+  const locale = resolveLocale(query?.locale ?? requestHeaders.get('x-cms-locale') ?? undefined);
   const isAr = locale === 'ar';
+  const backHref = staffDetailBackHref(query?.returnTo, locale, 'tickets');
+  const reportReturn = ['reports', 'complaint-reports', 'ticket-reports'].includes(query?.returnTo ?? '');
+  const backLabel = reportReturn ? reportsAnalyticsI18n[locale].statusBoard.backToReports : reportsAnalyticsI18n[locale].statusBoard.backToTickets;
   const principal = await getStaffSessionPrincipal();
   
   const [ticket, options] = await Promise.all([
@@ -22,11 +32,15 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
   ]);
 
   if (!ticket) {
-    return <div className="p-8 text-center text-content-muted">Ticket not found</div>;
+    return <div className="space-y-4 p-8 text-center text-content-muted"><Link href={backHref} className="inline-flex items-center gap-2 font-semibold text-brand hover:underline"><ArrowLeft className="size-4 rtl:rotate-180" />{backLabel}</Link><p>{isAr ? 'لم يتم العثور على التذكرة' : 'Ticket not found'}</p></div>;
   }
 
   return (
-    <div className="grid h-[calc(100vh-14rem)] min-h-[600px] grid-cols-1 md:grid-cols-[1fr_2fr] gap-6">
+    <div className="space-y-4">
+      <Link href={backHref} className="inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-content-muted transition-colors hover:bg-surface-raised hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
+        <ArrowLeft className="size-4 rtl:rotate-180" />{backLabel}
+      </Link>
+      <div className="grid h-[calc(100vh-17rem)] min-h-[600px] grid-cols-1 md:grid-cols-[1fr_2fr] gap-6">
       
       {/* LEFT PANE: Working Notes */}
       <div className="flex flex-col rounded-2xl border border-line-subtle bg-surface shadow-sm overflow-hidden">
@@ -268,6 +282,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
           </div>
         </details>
 
+      </div>
       </div>
     </div>
   );

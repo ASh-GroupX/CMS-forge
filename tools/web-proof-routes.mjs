@@ -19,6 +19,8 @@ import ComplaintBoardPage from '../apps/web/src/app/(staff)/complaints/(list)/bo
 // import ManagerTaskDetailPage from '../apps/web/src/app/(staff)/tasks/manager/[id]/page.tsx';
 import NewComplaintPage from '../apps/web/src/app/(staff)/complaints/new/page.tsx';
 import ReportsPage from '../apps/web/src/app/(staff)/reports/page.tsx';
+import ComplaintsReportPage from '../apps/web/src/app/(staff)/reports/complaints/page.tsx';
+import InternalTicketsReportPage from '../apps/web/src/app/(staff)/reports/internal-tickets/page.tsx';
 import PortalSubmissionPage from '../apps/web/src/app/portal/page.tsx';
 import PortalSurveyPage from '../apps/web/src/app/portal/survey/page.tsx';
 import PortalTrackingPage from '../apps/web/src/app/portal/track/page.tsx';
@@ -39,7 +41,7 @@ import { staffShellText } from '../apps/web/src/i18n/staff-shell.ts';
 const webRequire = createRequire(new URL('../apps/web/package.json', import.meta.url));
 const React = webRequire('react');
 
-export const STAFF_PROOF_PATHS = { 'staff-admin': '/admin', 'staff-audit': '/audit', 'staff-complaints': '/complaints', 'staff-complaint-detail': '/complaints/cmp-proof', 'staff-complaint-new': '/complaints/new', 'staff-reports': '/reports', 'staff-today': '/tasks/today', 'staff-task-detail': '/tasks/today/task-proof', 'staff-communication-groups': '/communication-groups' };
+export const STAFF_PROOF_PATHS = { 'staff-admin': '/admin', 'staff-audit': '/audit', 'staff-complaints': '/complaints', 'staff-complaint-detail': '/complaints/cmp-proof', 'staff-complaint-new': '/complaints/new', 'staff-reports': '/reports', 'staff-complaint-report': '/reports/complaints', 'staff-ticket-report': '/reports/internal-tickets', 'staff-today': '/tasks/today', 'staff-task-detail': '/tasks/today/task-proof', 'staff-communication-groups': '/communication-groups' };
 
 export async function routePage(testCase) {
   const params = Promise.resolve(testCase.params);
@@ -60,6 +62,8 @@ export async function routePage(testCase) {
   // if (testCase.route === 'staff-manager') return staffFrame(testCase, await ManagerControlRoomPage(staffProps));
   // if (testCase.route === 'staff-manager-detail') return staffFrame(testCase, await ManagerTaskDetailPage({ ...staffProps, params: Promise.resolve({ id: 'task_manager_proof' }) }));
   if (testCase.route === 'staff-reports') return staffFrame(testCase, await ReportsPage({ ...staffProps, locale: testCase.locale }));
+  if (testCase.route === 'staff-complaint-report') return staffFrame(testCase, await ComplaintsReportPage({ ...staffProps }));
+  if (testCase.route === 'staff-ticket-report') return staffFrame(testCase, await InternalTicketsReportPage({ ...staffProps }));
   if (testCase.route === 'staff-today') return staffFrame(testCase, await EmployeeTodayPage({ ...staffProps, locale: testCase.locale }));
   // if (testCase.route === 'staff-board') return staffFrame(testCase, await TaskBoardPage(staffProps));
   if (testCase.route === 'staff-complaint-board') return staffFrame(testCase, await ComplaintBoardPage({ ...staffProps, locale: testCase.locale }));

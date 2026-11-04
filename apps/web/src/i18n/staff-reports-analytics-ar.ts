@@ -234,4 +234,21 @@ export const reportsAnalyticsAr = {
     clearAll: 'إعادة ضبط الفلاتر',
     activeFiltersLabel: 'الفلاتر النشطة',
   },
+  statusBoard: {
+    title: 'سجل الحالات التفصيلي حسب الحالة', subtitle: 'استعرض كل التذاكر والشكاوى حسب الحالة والقسم والتاريخ.',
+    backToReports: 'العودة إلى التقارير', backToTickets: 'العودة إلى التذاكر',
+    department: 'القسم', allDepartments: 'كل الأقسام', createdFrom: 'من تاريخ الإنشاء', createdThrough: 'حتى تاريخ الإنشاء',
+    clearDates: 'مسح التاريخ', loading: 'جارٍ تحميل السجلات...', failed: 'تعذر تحميل لوحة الحالات.', retry: 'إعادة المحاولة',
+    noMatches: 'لا توجد سجلات تطابق عوامل التصفية.', noStateRecords: 'لا توجد سجلات بهذه الحالة', prioritySeverity: 'الأولوية / الخطورة',
+    createdBy: 'أنشأها', acceptedBy: 'قبلها', notRecorded: 'لم يتم التسجيل', currentOwner: 'المسؤول الحالي',
+    customerSource: 'العميل', unassigned: 'غير مسند', ticket: 'تذكرة', complaint: 'شكوى',
+    loadingMore: 'جارٍ التحميل...', retryMore: 'إعادة المحاولة', loadMore: (count: number) => `عرض ${count} إضافية`,
+    statuses: {
+      DRAFT: 'مسودة', SUBMITTED: 'مرسلة', MANAGER_REVIEW: 'مراجعة المدير', BRANCH_REVIEW: 'مراجعة الفرع',
+      PENDING_APPROVAL: 'بانتظار الموافقة', NEW: 'جديدة', ASSIGNED: 'مسندة', IN_PROGRESS: 'قيد التنفيذ',
+      WAITING: 'بانتظار', REOPENED: 'أعيد فتحها', RESOLVED: 'تم الحل', COMPLETED: 'مكتملة', CLOSED: 'مغلقة', REJECTED: 'مرفوضة',
+    },
+    priorities: { LOW: 'منخفضة', NORMAL: 'عادية', HIGH: 'مرتفعة', URGENT: 'عاجلة' },
+    severities: { LOW: 'منخفضة', MEDIUM: 'متوسطة', HIGH: 'مرتفعة', CRITICAL: 'حرجة' },
+  },
 };

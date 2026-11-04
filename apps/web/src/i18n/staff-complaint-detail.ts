@@ -19,7 +19,7 @@ export const complaintDetailText: Record<Locale, typeof enComplaintDetailText> =
       workflow: 'Workflow action',
     },
     labels: { reference: 'Reference', status: 'Status', severity: 'Severity', category: 'Category', owner: 'Current responsible staff', sla: 'Due status', nextAction: 'Next action', lastUpdated: 'Last updated', customer: 'Customer', contact: 'Contact', customerNumber: 'Customer number', customerSource: 'Customer source', manualCustomer: 'Manual customer', vehicle: 'Vehicle', vin: 'VIN', plate: 'Plate', vehicleRelated: 'Vehicle related', vehicleSource: 'Vehicle source', manualVehicle: 'Manual vehicle', vehicleDataUnavailableReason: 'Unavailable reason', rating: 'Rating', submitted: 'Submitted', author: 'Author', time: 'Time', visibility: 'Visibility', file: 'File', scan: 'Scan status', caseId: 'Case number', caseType: 'Case type', caseLifecycle: 'Case status', caseBranch: 'Case branch', caseOwner: 'Case owner', createdBy: 'Created by', approvedBy: 'Approved by', assignedBy: 'Assigned by' },
-    values: { reference: 'CMP-2026-001', status: 'Submitted', severity: 'High', category: 'Service concern', owner: 'CR team queue', sla: 'Backend scoped', customer: 'Customer data unavailable', contact: 'Contact unavailable in this scope', vehicle: 'Vehicle data unavailable', vin: 'VIN unavailable', customerSource: 'Local record', manualCustomer: 'No', vehicleRelated: 'No', vehicleSource: 'No vehicle source', manualVehicle: 'No', vehicleDataUnavailableReason: 'Not documented', yes: 'Yes', no: 'No', none: 'None', rating: '4 / 5', submitted: 'Survey submitted placeholder', author: 'Authorized staff', time: '2026-06-19 10:00', internalBody: 'Staff-only note placeholder', publicBody: 'Customer-visible update placeholder', file: 'supporting-document.pdf', backToBoard: 'Back to Board' },
+    values: { reference: 'CMP-2026-001', status: 'Submitted', severity: 'High', category: 'Service concern', owner: 'CR team queue', sla: 'Backend scoped', customer: 'Customer data unavailable', contact: 'Contact unavailable in this scope', vehicle: 'Vehicle data unavailable', vin: 'VIN unavailable', customerSource: 'Local record', manualCustomer: 'No', vehicleRelated: 'No', vehicleSource: 'No vehicle source', manualVehicle: 'No', vehicleDataUnavailableReason: 'Not documented', yes: 'Yes', no: 'No', none: 'None', rating: '4 / 5', submitted: 'Survey submitted placeholder', author: 'Authorized staff', time: '2026-06-19 10:00', internalBody: 'Staff-only note placeholder', publicBody: 'Customer-visible update placeholder', file: 'supporting-document.pdf', backToBoard: 'Back to Board', backToReports: 'Back to reports' },
     badges: {
       internal: 'Internal only',
       public: 'Customer visible',
@@ -181,6 +181,7 @@ export const complaintDetailText: Record<Locale, typeof enComplaintDetailText> =
       publicBody: 'عنصر تحديث مرئي للعميل',
       file: 'supporting-document.pdf',
       backToBoard: 'العودة للوحة',
+      backToReports: 'العودة إلى التقارير',
     },
     badges: {
       internal: 'داخلي فقط',
@@ -268,7 +269,7 @@ const enComplaintDetailText = {
   subtitle: '',
   sections: { facts: '', customer: '', vehicle: '', ownership: '', timeline: '', communicationTimeline: '', caseTimeline: '', survey: '', internalComments: '', publicUpdates: '', attachments: '', workflow: '' },
   labels: { reference: '', status: '', severity: '', category: '', owner: '', sla: '', nextAction: '', lastUpdated: '', customer: '', contact: '', customerNumber: '', customerSource: '', manualCustomer: '', vehicle: '', vin: '', plate: '', vehicleRelated: '', vehicleSource: '', manualVehicle: '', vehicleDataUnavailableReason: '', rating: '', submitted: '', author: '', time: '', visibility: '', file: '', scan: '', caseId: '', caseType: '', caseLifecycle: '', caseBranch: '', caseOwner: '', createdBy: '', approvedBy: '', assignedBy: '' },
-  values: { reference: '', status: '', severity: '', category: '', owner: '', sla: '', customer: '', contact: '', vehicle: '', vin: '', customerSource: '', manualCustomer: '', vehicleRelated: '', vehicleSource: '', manualVehicle: '', vehicleDataUnavailableReason: '', yes: '', no: '', none: '', rating: '', submitted: '', author: '', time: '', internalBody: '', publicBody: '', file: '', backToBoard: '' },
+  values: { reference: '', status: '', severity: '', category: '', owner: '', sla: '', customer: '', contact: '', vehicle: '', vin: '', customerSource: '', manualCustomer: '', vehicleRelated: '', vehicleSource: '', manualVehicle: '', vehicleDataUnavailableReason: '', yes: '', no: '', none: '', rating: '', submitted: '', author: '', time: '', internalBody: '', publicBody: '', file: '', backToBoard: '', backToReports: '' },
   badges: { internal: '', public: '', pending: '', clean: '', rejected: '' },
   timelineLegend: { latest: '', public: '', internal: '' },
   timelineFilters: { all: '', internal: '', public: '', tasks: '', system: '' },

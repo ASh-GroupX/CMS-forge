@@ -1,4 +1,5 @@
 import { adminHubText } from '../apps/web/src/i18n/staff-admin-hub.ts';
+import { reportsAnalyticsI18n as staffReportsAnalytics } from '../apps/web/src/i18n/staff-reports-analytics.ts';
 import { auditViewerText } from '../apps/web/src/i18n/staff-audit-viewer.ts';
 import { complaintDetailText } from '../apps/web/src/i18n/staff-complaint-detail.ts';
 import { complaintCommentText } from '../apps/web/src/i18n/staff-complaint-detail.ts';
@@ -58,6 +59,8 @@ function buildVisualCases(locale) {
     visualCase('workflow action panel', locale, 'staff-complaint-detail', { ...base, tab: 'work', workflow: 'validation' }, [detail.sections.workflow, detail.workflow.actions[0], detail.workflow.validation], [`aria-label="${detail.sections.workflow}"`, 'border-line-subtle']),
     visualCase('admin surfaces', locale, 'staff-admin', { ...base }, [adminHubText[locale].title, adminHubText[locale].workspaces.users[0], adminHubText[locale].workspaces.roles[0], adminHubText[locale].workspaces.branches[0], adminHubText[locale].workspaces.categories[0], adminHubText[locale].open], ['md:grid-cols-2', 'xl:grid-cols-3']),
     visualCase('reports', locale, 'staff-reports', { ...base }, [reportsDashboardText[locale].title, reportsDashboardText[locale].export.title, reportsDashboardText[locale].kpis.slaBreachRate, reportsDashboardText[locale].kpis.agingOverSeven, 'CMP-PROOF-RPT-001'], ['min-w-[56rem]', 'md:grid-cols-3']),
+    visualCase('complaint status board report', locale, 'staff-complaint-report', { ...base }, [staffReportsAnalytics[locale].statusBoard.title, staffReportsAnalytics[locale].statusBoard.loading], []),
+    visualCase('ticket status board report', locale, 'staff-ticket-report', { ...base }, [staffReportsAnalytics[locale].statusBoard.title, staffReportsAnalytics[locale].statusBoard.loading], []),
     visualCase('audit viewer', locale, 'staff-audit', { ...base, admin: 'success' }, [auditViewerText[locale].title, auditViewerText[locale].filters.correlationId, auditViewerText[locale].filters.export], ['xl:grid-cols-5']),
   ];
 }

@@ -1,27 +1,29 @@
-# Reports command center redesign
-Status: Verified, including attachment proxy test repair
+# Reports status board acceptance
+Status: Needs Human Review
 Risk: High
-Required model tier: High or equivalent
 SRS: REQ-REPORT-001, REQ-RBAC-001, NFR-SEC-002, NFR-PERF-001,
-ARCH-UI-001, UI-DESIGN-001, METHOD-API-001, METHOD-TEST-001
+UI-DESIGN-001, METHOD-API-001, METHOD-TEST-001
 
-Redesign the CMS Reports page as the primary enterprise reporting surface while
-keeping the separate CRM completely out of scope. Preserve server-session RBAC
-and department/branch scope. Replace browser-only filtering of the first page
-with backend-filtered, paginated reads and aggregate KPI queries. Add scoped,
-audited complete-record ZIP downloads containing PDF reports, JSON, a manifest,
-and original available attachments. Keep regulatory delivery material available
-as a collapsed appendix. Verify English/Arabic, desktop/mobile, OpenAPI, build,
-and allowed/denied export cases. Do not deploy this feature branch.
+Implemented: board in all three reports, context-aware detail Back links,
+bounded pagination, EN/AR copy, API/OpenAPI actor fields, global and board
+filters. Semantic views intersect each exact status even with search.
 
-Follow-up completed 2026-11-02: repaired attachment download proxy behavior and
-the four failing API client assertions. The full `test:web -- api-client` suite
-now passes (95/95). The feature branch remains undeployed.
+Passed on 2026-11-04: test (71/71, coverage thresholds), reports API (45/45),
+web API-client (101/101), web shell (228/228), lint, typecheck, OpenAPI check,
+security check, production build. Full test includes visual/accessibility/perf.
+Focused hydrated browser proof passed 26 assertions with inspected EN desktop
+and AR mobile populated-board screenshots. Run: pnpm test:reports:browser.
 
-Follow-up completed 2026-11-02: admin department selection now expands the
-department detail inline beneath the comparison table. The comparison remains
-visible, and the detail panel has a close control in its top header.
+Remaining acceptance: policy-named High-risk PHASE-REVIEWER (Opus 4.8 Max or
+GPT-5.5 Extra High) is unavailable in this runtime. Available independent review
+found and re-reviewed fixes but cannot satisfy the named-tier gate. Browser
+fixture isolates board/typed fetch with controlled responses; it does not prove
+live authenticated navigation through full detail pages or specialized report
+caller wiring. Obtain those focused navigation/host integration checks before
+release. Do not push/merge while acceptance gates remain; no deployment made.
+Keep unrelated tmp/ and uploads/ out.
 
-Follow-up completed 2026-11-02: complete-record ZIP PDFs now embed IBM Plex Sans
-Arabic and apply Arabic shaping plus Unicode bidirectional ordering for mixed
-Arabic/English text. A regression test covers Arabic glyph embedding.
+Release direction: user explicitly requested GitHub waleed push and production
+merge on 2026-11-04 after the above limitations were reported. Release authorized
+by direct user instruction; outstanding proof/review is recorded, not waived as
+passed. Production push triggers the existing deployment workflow.

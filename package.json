@@ -22,6 +22,7 @@
     "test:web": "node tools/web-test.mjs",
     "test:image-bytes": "corepack pnpm exec tsx --tsconfig apps/api/tsconfig.json tools/image-byte-proof.mjs",
     "test:visual": "node --import tsx tools/web-proof.mjs visual",
+    "test:reports:browser": "node --import tsx tools/report-board-browser.mjs",
     "web:visual-review": "node --import tsx tools/web-visual-review.mjs",
     "web:perf": "node --import tsx tools/web-proof.mjs perf",
     "test:performance": "node --import tsx tools/web-proof.mjs perf",

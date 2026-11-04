@@ -1488,12 +1488,16 @@ test('complaint detail route renders localized error shell when detail is unavai
   const arabic = renderToStaticMarkup(
     await ComplaintDetailPage({ cookieHeader: '', params: Promise.resolve({ id: 'cmp_1' }), searchParams: Promise.resolve({ locale: 'ar', workflow: 'validation' }) }),
   );
+  const reportReturn = renderToStaticMarkup(
+    await ComplaintDetailPage({ cookieHeader: '', params: Promise.resolve({ id: 'cmp_1' }), searchParams: Promise.resolve({ locale: 'en', returnTo: 'reports' }) }),
+  );
 
   assert.match(english, /Complaint detail/);
   assert.match(english, /You do not have permission to view this case\./);
   assert.match(arabic, /dir="rtl"/);
   assert.ok(arabic.includes(complaintDetailText.ar.title));
   assert.ok(arabic.includes(complaintDetailText.ar.states.denied));
+  assert.match(reportReturn, /href="\/reports\?locale=en"/);
 });
 
 test('complaint detail workspace preview states render loading empty and error messages', async () => {

@@ -409,6 +409,16 @@ Production deploy artifacts (Hostinger VPS):
   - [x] P9-08B: Backup/restore and object-storage operations runbook
   - [x] P9-08C: VPS hardening, secrets, domain, and TLS runbook
   - [x] P9-08D: Pilot smoke/UAT checklist and Phase 9 review handoff
+- [ ] P9-09: Reports status board follow-up reliability and contract repair.
+      Complete bounded status-filtered paging, OpenAPI record contracts, open-ended
+      date parity, localized labels, and populated-board proof before phase review.
+  - [ ] P9-09A: Document paginated complaint/ticket report record routes and fields;
+        add OpenAPI contract regression tests while retaining server-derived scope.
+  - [ ] P9-09B: Bound status-board reads to one page per state, page on demand,
+        localize all copy/enums, fix date parity, and prove populated EN/AR states.
+  - [ ] P9-09C: Replace the detailed records table with the status board in the
+        all-records, complaints, and tickets report views; reuse each view's
+        active filters; add originating-report Back links and hydrated browser proof.
 
 Ops (human-owned; tracked in `docs/PRODUCTION_READINESS.md` section B, not build tasks):
 - [ ] P9-OPS: O-01..O-09 - provision VPS, domain + TLS, secrets, R2 bucket, email

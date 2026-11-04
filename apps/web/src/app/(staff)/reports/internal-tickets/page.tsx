@@ -3,10 +3,7 @@ import { headers } from 'next/headers';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { getComplaintFormOptions } from '../../../../lib/staff-complaint-form-options-api';
 import { getAssignableStaff } from '../../../../lib/staff-assignable-staff-api';
-import {
-  fetchTicketsAnalytics,
-  fetchTicketsRecords,
-} from '../../../../lib/staff-reports-analytics-api';
+import { fetchTicketsAnalytics } from '../../../../lib/staff-reports-analytics-api';
 import { TicketsWorkspace } from '../../../../components/reports/tickets-workspace';
 
 type SearchParams = { locale?: string | string[] };
@@ -31,10 +28,9 @@ export default async function InternalTicketsReportPage({
 
   const apiUrl = process.env.API_URL ?? 'http://localhost:3000';
 
-  const [options, initialAnalytics, initialRecords, staff] = await Promise.all([
+  const [options, initialAnalytics, staff] = await Promise.all([
     getComplaintFormOptions({ cookieHeader, apiUrl }),
     fetchTicketsAnalytics({}, cookieHeader, apiUrl),
-    fetchTicketsRecords({}, 15, 0, cookieHeader, apiUrl),
     getAssignableStaff({ cookieHeader, apiUrl }),
   ]);
 
@@ -58,7 +54,6 @@ export default async function InternalTicketsReportPage({
         initialDepartments={departments}
         initialOfficers={initialOfficers}
         initialAnalytics={initialAnalytics}
-        initialRecords={initialRecords}
       />
     </div>
   );
