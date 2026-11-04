@@ -1499,3 +1499,13 @@ was interrupted. Current green counts are feature-branch checks.
 Release 1988dc8 deployed: GitHub validation/deployment succeeded, independent
 public health and revision checks passed, staff routes require sign-in.
 No remaining release repair items; authenticated production write UAT Not Run.
+
+## Reports status board repair review — 2026-11-03
+
+The independent re-review confirmed the bounded status reads, endpoint contract,
+date filter parity and EN/AR copy repairs. It returned Repair because no
+hydrated populated-board proof exists for filters, pagination, retry, or stale
+responses; the static route preview does not execute effects. Reviewer model was
+GPT-6 Astra Ultra, below the named High-risk reviewer tier. Keep this phase at
+Needs Repair and do not push/merge until the interactive proof and required
+independent review are complete. Production push triggers VPS deployment.

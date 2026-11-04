@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useMemo, useState } from 'react';
 import type { Locale } from '../../i18n/staff-shell';
 import type { DepartmentPerformanceRow } from '../../lib/staff-reports-departments-api';
@@ -15,17 +14,12 @@ import { DepartmentDeepDiveView } from './department-deep-dive-view';
 import { EmployeeTasksDrawer } from './employee-tasks-drawer';
 import { EnterpriseKpiGrid } from './enterprise-kpi-grid';
 import { EnterpriseAnalyticsCharts } from './enterprise-analytics-charts';
-import { UnifiedRecordsTable } from './unified-records-table';
+import { ReportStatusBoard } from './report-status-board';
 import { QuickCaseDrawer } from './quick-case-drawer';
 import { EnterpriseScopeHeader } from './enterprise-scope-header';
-import { useEnterpriseReportData } from './use-enterprise-report-data';
+import { resolveDates, useEnterpriseReportData } from './use-enterprise-report-data';
 import type { RecordTableItem } from './detailed-records-table';
-import {
-  filterComplaintsList,
-  filterTicketsList,
-  computeCombinedKpis,
-} from './enterprise-reports-filters';
-
+import { computeCombinedKpis } from './enterprise-reports-filters';
 interface EnterpriseReportsDashboardProps {
   locale: Locale;
   isAdmin: boolean;
@@ -96,10 +90,6 @@ export function EnterpriseReportsDashboard({
     setSearch('');
     setDeepDiveDeptId(null);
   };
-  const filterOpts = useMemo(() => ({
-    recordType, selectedDeptId, selectedStatus, datePreset, dateFrom, dateTo, search, departments,
-  }), [recordType, selectedDeptId, selectedStatus, datePreset, dateFrom, dateTo, search, departments]);
-
   const filteredDepartments = useMemo(() => {
     return reportData.departments.filter((d) => {
       if (selectedBranchId && d.branchId !== selectedBranchId) return false;
@@ -116,15 +106,6 @@ export function EnterpriseReportsDashboard({
     if (!deepDiveDeptId) return null;
     return reportData.departments.find((d) => d.departmentId === deepDiveDeptId) ?? null;
   }, [reportData.departments, deepDiveDeptId]);
-  const filteredComplaints = useMemo(
-    () => filterComplaintsList(reportData.complaintsRecords, filterOpts),
-    [reportData.complaintsRecords, filterOpts],
-  );
-  const filteredTickets = useMemo(
-    () => filterTicketsList(reportData.ticketsRecords, filterOpts),
-    [reportData.ticketsRecords, filterOpts],
-  );
-
   const combinedKpis = useMemo(
     () => computeCombinedKpis(reportData.complaintsAnalytics, reportData.ticketsAnalytics, recordType),
     [reportData.complaintsAnalytics, reportData.ticketsAnalytics, recordType],
@@ -259,21 +240,10 @@ export function EnterpriseReportsDashboard({
             complaintsCount={reportData.complaintsTotal}
           />
 
-          <UnifiedRecordsTable
-            locale={locale}
-            complaints={filteredComplaints}
-            tickets={filteredTickets}
-            activeTypeFilter={recordType === 'complaints' ? 'complaint' : recordType === 'tickets' ? 'ticket' : 'all'}
-            complaintsTotal={recordType === 'tickets' ? 0 : reportData.complaintsTotal}
-            ticketsTotal={recordType === 'complaints' ? 0 : reportData.ticketsTotal}
-            page={reportData.page}
-            pageSize={reportData.pageSize}
-            isLoading={reportData.state === 'loading'}
-            onPageChange={reportData.setPage}
-            onInspect={(rec) => handleInspect({ id: rec.id, refNumber: rec.referenceNumber, title: rec.title, type: rec.type })}
-          />
           </>
         )}
+        <ReportStatusBoard locale={locale} departmentId={selectedDeptId} branchId={selectedBranchId} search={search} type={recordType} departments={departments}
+          selectedStatus={selectedStatus} externalDateFrom={resolveDates(criteria).from} externalDateTo={resolveDates(criteria).to} />
       </div>
 
       <EmployeeTasksDrawer

@@ -199,6 +199,12 @@ export async function fetchTicketsRecords(
         requestedBy: { select: { nameEn: true, nameAr: true, departmentId: true, department: { select: { id: true, nameEn: true, nameAr: true } } } },
         targetDepartment: { select: { id: true, nameEn: true, nameAr: true } },
         assignedEmployee: { select: { nameEn: true, nameAr: true } },
+        activities: {
+          where: { action: 'ACCEPTED' },
+          orderBy: { createdAt: 'asc' },
+          take: 1,
+          select: { actor: { select: { nameEn: true, nameAr: true } } },
+        },
       },
     }),
   ]);
@@ -218,6 +224,7 @@ export async function fetchTicketsRecords(
       targetDepartmentName: r.targetDepartment?.nameEn || r.targetDepartment?.nameAr || '-',
       requestedByName: r.requestedBy?.nameEn || r.requestedBy?.nameAr || '-',
       assignedEmployeeName: r.assignedEmployee?.nameEn || r.assignedEmployee?.nameAr || 'Unassigned',
+      acceptedByName: r.activities[0]?.actor?.nameEn || r.activities[0]?.actor?.nameAr || null,
       createdAt: r.createdAt.toISOString(),
       dueAt: r.dueAt?.toISOString() || null,
       resolvedAt: r.resolvedAt?.toISOString() || null,

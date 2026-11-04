@@ -42,3 +42,20 @@ test('openapi check rejects non-canonical drift', () => {
 
   assert.ok(checkOpenApiText(text).includes('OpenAPI document is not canonical; run corepack pnpm openapi:generate'));
 });
+
+test('report record API documents pagination and creator/acceptor fields', () => {
+  const document = JSON.parse(canonicalOpenApiText());
+  assert.equal(document.paths['/reports/complaints-records'].get.operationId, 'reportsComplaintRecords');
+  assert.equal(document.paths['/reports/tickets-records'].get.operationId, 'reportsTicketRecords');
+  assert.equal(document.components.schemas.ReportComplaintRecord.properties.createdByName.type[1], 'null');
+  assert.equal(document.components.schemas.ReportComplaintRecord.properties.acceptedByName.type[1], 'null');
+  assert.equal(document.components.schemas.ReportTicketRecord.properties.acceptedByName.type[1], 'null');
+  for (const path of ['/reports/complaints-records', '/reports/tickets-records']) {
+    const parameters = document.paths[path].get.parameters;
+    const limit = parameters.find((parameter) => parameter.name === 'limit');
+    assert.equal(limit.schema.maximum, 100);
+    assert.ok(parameters.some((parameter) => parameter.name === 'view'));
+    assert.ok(parameters.some((parameter) => parameter.name === 'dateDimension'));
+  }
+  assert.ok(document.paths['/reports/complaints-records'].get.parameters.some((parameter) => parameter.name === 'type'));
+});

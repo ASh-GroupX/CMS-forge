@@ -1,32 +1,25 @@
 # Current State
 
-Status: Implemented and verified on feature branch
-Phase: CMS Reports enterprise command center redesign
-Next Task: Human review and merge decision; deployment was not requested
+Status: Needs Human Review before push/merge
+Phase: Reports board and navigation acceptance
 Risk: High
+Date: 2026-11-04
 
-- Branch: `codex/reports-command-center`.
-- CMS-only scope preserved; no CRM repository, database, API, authentication,
-  deployment configuration, or production data was accessed or changed.
-- Report filters, search, KPI drill-down views, totals, and pagination now query
-  the backend instead of filtering a fixed first-page browser payload.
-- Administrator and manager scope continues to come from the server session;
-  direct archive export reads apply branch/department scope and REPORT_EXPORT.
-- Complete complaint/internal-ticket ZIP export includes professional PDFs,
-  structured JSON, an export manifest, and accessible original attachments.
-  Missing attachment bytes are recorded as unavailable in the manifest.
-- The web proxy streams archives rather than buffering the full ZIP.
-- The enterprise dashboard is the primary Reports surface; the regulatory
-  matrix remains accessible in a collapsed governance appendix.
-- English/Arabic and responsive reports screenshots were rendered and visually
-  reviewed. No production deployment or production writes were performed.
-- Attachment download proxy now streams direct API bytes or safely proxies
-  legacy raw/signed targets. It never redirects a failed token target; staff
-  cookies are sent only to the API origin. The previously failing full web API
-  client suite now passes 95/95, with typecheck, lint, and security check passed.
-- Admin Reports department selection stays on the comparison surface and opens
-  an inline detail panel with an explicit close control; no route transition is
-  used for the department drill-down.
-- Complete-record report PDFs embed an Arabic-capable font and shape/reorder
-  mixed Arabic and English lines before writing them. The ZIP JSON remains UTF-8
-  and the PDF export has a regression test for Arabic font embedding.
+- Status boards and context-aware Back links are implemented locally.
+- Fixed missing global status/date wiring, semantic-view status intersection,
+  ticket search preserving that intersection, and specialized visual proof setup.
+- Passed: full test 71/71 with 89.58% line coverage; reports API 45/45;
+  web API-client 101/101; shell 228/228; lint; typecheck; OpenAPI; security;
+  production build. Full test also runs visual, accessibility and performance.
+- Passed: hydrated board browser proof, 26 assertions; populated EN desktop
+  and AR mobile screenshots inspected. Covers filters, pagination, global and
+  load-more retry, empty state, stale response suppression and link URLs.
+- Independent reviewer found no remaining confirmed blocker in the search fix.
+  Available GPT-6.1 reviewer cannot meet policy's named High-risk review tier.
+- Still Not Run: live authenticated full-detail Back navigation and host-level
+  browser interactions for all three report workspaces (isolated component proof
+  does not claim these). Named-tier acceptance remains outstanding.
+- No commit, push, merge or deployment made. Unrelated tmp/ and uploads/ preserved.
+- Release authorized by direct user instruction on 2026-11-04 after limitations
+  were reported: push waleed and merge production. Outstanding checks above are
+  retained honestly; GitHub validation/deployment will be monitored.

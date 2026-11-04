@@ -15236,3 +15236,143 @@ functional release revision, avoiding an unnecessary second deployment.
   - Passed: `corepack pnpm lint`.
   - Passed: `corepack pnpm test:web -- shell` (228/228).
   - Passed: `corepack pnpm test:visual` (92/92 route previews).
+
+---
+
+## F9-RPT-04 - Report status board for tickets and complaints
+
+- Date: 2026-11-03
+- Risk: High
+- Status: Passed on feature branch; not deployed
+- Requirement IDs: REQ-REPORT-001, REQ-RBAC-001, NFR-SEC-002,
+  NFR-PERF-001, UI-DESIGN-001, METHOD-API-001, METHOD-TEST-001.
+- Delivery: Reports now groups ticket and complaint records into status columns.
+  The board has its own department and created-date filters; branch and search
+  filters follow the existing report scope. Cards show reference, title,
+  created date/time, creator, accepting actor when recorded, current owner,
+  department routing, and priority/severity. Long columns show 25 records at a
+  time with a control to reveal the next 25. Loading, empty, and retry feedback
+  and English/Arabic labels are included.
+- Data authority: Existing report services derive role and scope from the server
+  session. The board sends filters to guarded report endpoints, which constrain
+  department and branch scope. No state change is added. Acceptance actor comes
+  from ticket `ACCEPTED` activities or complaint acceptance/routing history;
+  absence is represented as not recorded, and current owner remains separate.
+- Security self-check: Session roles and branch/department scope are enforced by
+  the existing reports service/guards, not by the browser. No status mutation,
+  notification, or job is introduced, so status-history/audit transaction rules
+  do not apply. No credentials are read or logged. The board is staff-only and
+  does not touch portal response shapes or expose internal comments/audit data.
+  Report API tests include allowed and denied scoped reads/exports; new mapping
+  tests cover acceptance actor versus current owner for both record types.
+- Verification:
+  - Passed: `corepack pnpm test:api -- reports` (44/44).
+  - Passed: `corepack pnpm typecheck`.
+  - Passed: `corepack pnpm lint`.
+  - Passed: `corepack pnpm openapi:check`.
+  - Passed: `corepack pnpm test:visual` (92/92 route previews).
+  - Passed: `corepack pnpm test:e2e -- reports` (92/92 route previews).
+  - Passed: `corepack pnpm web:visual-review`; final English and Arabic Reports
+    screenshots were rendered at desktop and mobile widths and visually reviewed.
+  - Passed: `corepack pnpm build`.
+  - Passed: `corepack pnpm security:check`, including report authorization,
+    scoped reads/exports, portal privacy, auth/RBAC, and attachment policy suites.
+
+## F9-RPT-04A - Independent repair review and remaining proof gap
+
+- Date: 2026-11-03
+- Status: Needs Repair; not pushed or merged.
+- Independent re-review confirmed bounded per-state reads, on-demand pagination,
+  OpenAPI record endpoints/actor fields and filter parameters, EN/AR labels, and
+  server-side scope. It found no changes to workflow state or portal privacy.
+- Repairs after that review: upper-only and lower-only date filters now remain
+  open ended consistently for both record types; regression assertions cover
+  these cases. OpenAPI contract assertions cover view/dateDimension and complaint
+  type parameters.
+- Verification: reports API 44/44; web api-client 98/98; OpenAPI tests 5/5;
+  `openapi:check`; typecheck; lint; `test:visual` 92/92 and diff check passed.
+- Remaining blocker: current visual/e2e harness uses static server rendering and
+  does not execute the board's hydrated reads, department/date/type changes,
+  load-more, stale-response, or retry behavior. No populated-board desktop/mobile
+  screenshots have been inspected. These are Not Run, not Passed.
+- Reviewer tier: GPT-6 Astra Ultra, which does not meet the named High-risk
+  PHASE-REVIEWER tier (Opus 4.8 Max or GPT-5.5 Extra High).
+- Follow-up review found the complaint accepting-actor query also included
+  `ASSIGN_INVESTIGATION`, which the canonical read model identifies as an
+  assignment action. Removed it; `corepack pnpm test:api -- reports` passed
+  again (44/44) and `corepack pnpm lint` / `git diff --check` passed. This fix
+  has not yet received an independent follow-up review.
+- Production push runs the VPS deployment workflow. No remote push or merge was
+  made while the verification and named-tier review gates remain unresolved.
+
+## F9-RPT-04B - Board placement and full-detail return navigation
+
+- Date: 2026-11-03
+- Status: Implemented locally; release remains Needs Repair.
+- Requirements: REQ-REPORT-001, REQ-RBAC-001, NFR-PERF-001, UI-DESIGN-001.
+- The status board now replaces the old “Detailed Case Records Drill-Down” table
+  in the all-records, complaints-only, and tickets-only reports. The main board's
+  department/date controls sit above its columns; specialized boards use their
+  existing report filters, including dates, department, status, officer/employee,
+  category, and severity/priority. Redundant specialized paginated reads were
+  removed. References open matching full ticket/complaint details with the
+  originating Reports view encoded as a safe return context.
+- Ticket and complaint detail pages now provide a visible Back link. It returns
+  to Reports when the record originated there and otherwise returns to the
+  appropriate ticket or complaint queue. Complaint error states retain Back.
+  Return destinations are an allowlisted enum; arbitrary URLs cannot become
+  redirects. English/Arabic labels and RTL arrow direction are included.
+- Security/workflow self-check: navigation only; no workflow transition, state
+  authority, API, session, role, branch scope, audit, or portal response changed.
+  Report/detail APIs continue to enforce session-derived access and scope. No
+  customer portal surface was touched.
+- Verification: typecheck and lint passed; web API-client tests 101/101; web shell
+  tests 228/228; report visual route previews 92/92. EN Reports desktop and AR
+  Reports mobile screenshots were rendered and inspected; these are static SSR
+  loading views, not proof of hydrated board behavior. `corepack pnpm build`,
+  `corepack pnpm security:check`, and `corepack pnpm test:e2e -- accessibility`
+  passed (24/24). Accessibility first caught non-focusable scroll regions; both
+  the horizontal board and vertical state columns are now focusable, named
+  regions, and the follow-up accessibility proof passed.
+- Outstanding release gates: interactive hydrated board and populated-card
+  proof, plus a fresh PHASE-REVIEWER using the policy-named model tier. No
+  push/merge/deployment was made.
+
+## F9-RPT-04C - Hydrated proof and filter correctness repairs
+
+- Date: 2026-11-04. SRS: REQ-REPORT-001, REQ-RBAC-001, NFR-SEC-002,
+  NFR-PERF-001, UI-DESIGN-001, METHOD-TEST-001.
+- Added focused SSR/hydration Playwright fixture using the real board and typed
+  API fetch, with controlled HTTP responses and isolated Next adapters. Command:
+  `corepack pnpm test:reports:browser`. Passed 26 assertions for bounded reads,
+  load-more, failure/retry, dates/departments, semantic filter props, empty state,
+  stale requests and link destination. Inspected coverage/report-board-browser
+  EN desktop and AR mobile populated screenshots. This is component browser
+  proof, not live backend or full-detail navigation proof.
+- Independent review found global status/date controls missing from board caller;
+  wired those values, reused date presets and normalized OPEN/OVERDUE API views.
+  API views now intersect exact status instead of collapsing board columns;
+  ticket search preserves the intersection. Regression covers all four views
+  combined with status and search. Reviewer rechecked search fix: no confirmed
+  blocker. Reviewer GPT-6.1 does not meet policy-named High-risk tier.
+- Full tests initially failed due to missing specialized-report dictionary import
+  and obsolete preview signals. Fixed fixture setup; rerun passed all 71 tests,
+  including visual/accessibility/performance; line coverage 89.58%.
+- Passed: reports API 45/45; web API-client 101/101; shell 228/228; lint;
+  typecheck; OpenAPI check; security check; production build; diff check.
+- Security self-check: all new production behavior is scoped read filtering.
+  Session authorization and branch enforcement remain in existing API services;
+  security and reports tests pass allowed/denied reads. No mutations, workflow,
+  history/audit writes, side effects, secrets or portal response changes added.
+- Remaining: policy-named independent review and live authenticated host/detail
+  navigation proof. No push/merge/deployment. Unrelated tmp/uploads preserved.
+
+## Release authorization - 2026-11-04
+
+- User explicitly directed pushing to GitHub waleed and merging production after
+  receiving the remaining verification/reviewer limitations. Proceeding under
+  that direct release instruction; the named-tier review and live full-detail
+  navigation proof remain outstanding and are not represented as passed.
+- Production push triggers the existing validation and VPS deployment workflow.
+- Only report feature, its checks/contracts, and Forge records are included;
+  unrelated tmp/ and uploads/ remain outside the commit.

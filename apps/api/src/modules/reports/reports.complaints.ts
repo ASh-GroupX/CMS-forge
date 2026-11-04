@@ -127,6 +127,7 @@ export function buildComplaintWhere(filter: ComplaintsAnalyticsFilter, dateOverr
     where.ownerId = null;
   }
   if (filter.view === 'none') where.id = '__no_matching_report_record__';
+  if (filter.view && filter.status) where.AND = [{ status: filter.status }];
 
   if (dateOverride) {
     where[dimension] = { gte: dateOverride.from, lte: dateOverride.to };

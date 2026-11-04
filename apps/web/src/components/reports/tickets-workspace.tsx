@@ -1,20 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ReportHeader } from './report-header';
 import { ReportFilters, type ReportFilterOption } from './report-filters';
 import { KpiOverviewCards } from './kpi-overview-cards';
 import { VisualAnalytics } from './visual-analytics';
 import { OfficerPerformanceTable } from './officer-performance-table';
-import { DetailedRecordsTable, type RecordTableItem } from './detailed-records-table';
-import { QuickCaseDrawer } from './quick-case-drawer';
+import { ReportStatusBoard } from './report-status-board';
 import { SavedViewsModal } from './saved-views-modal';
 import {
   fetchTicketsAnalytics,
-  fetchTicketsRecords,
   type TicketsAnalyticsFilter,
   type TicketsAnalyticsResponse,
-  type TicketRecordRow,
 } from '../../lib/staff-reports-analytics-api';
 import { reportsAnalyticsI18n } from '../../i18n/staff-reports-analytics';
 import type { Locale } from '../../i18n/staff-shell';
@@ -22,7 +19,6 @@ import { internalTicketStatusLabel } from '../../i18n/domain-labels';
 import {
   buildTicketsKpiCards,
   buildTicketsOfficerRows,
-  buildTicketsRecordItems,
 } from './tickets-workspace-helpers';
 import { periodToDateRange } from './report-date-helpers';
 
@@ -31,7 +27,6 @@ interface TicketsWorkspaceProps {
   initialDepartments?: ReportFilterOption[];
   initialOfficers?: ReportFilterOption[];
   initialAnalytics?: TicketsAnalyticsResponse | null;
-  initialRecords?: { total: number; items: TicketRecordRow[] } | null;
 }
 
 const TICKET_STATUS_KEYS = ['NEW', 'ASSIGNED', 'IN_PROGRESS', 'WAITING', 'RESOLVED', 'CLOSED', 'REJECTED'];
@@ -46,7 +41,6 @@ export function TicketsWorkspace({
   initialDepartments = [],
   initialOfficers = [],
   initialAnalytics = null,
-  initialRecords = null,
 }: TicketsWorkspaceProps) {
   const t = reportsAnalyticsI18n[locale];
 
@@ -61,20 +55,14 @@ export function TicketsWorkspace({
   const [employeeId, setEmployeeId] = useState('');
   const [status, setStatus] = useState('');
   const [priority, setPriority] = useState('');
-  const [page, setPage] = useState(1);
-  const pageSize = 15;
 
   // Analytics & Records Data
   const [analytics, setAnalytics] = useState<TicketsAnalyticsResponse | null>(initialAnalytics);
-  const [records, setRecords] = useState<{ total: number; items: TicketRecordRow[] }>(
-    initialRecords ?? { total: 0, items: [] },
-  );
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Modals & Drawers
   const [isSavedViewsOpen, setIsSavedViewsOpen] = useState(false);
-  const [inspectRecord, setInspectRecord] = useState<RecordTableItem | null>(null);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -91,16 +79,12 @@ export function TicketsWorkspace({
       search: search || null,
     };
 
-    const [analyticsRes, recordsRes] = await Promise.all([
-      fetchTicketsAnalytics(filter),
-      fetchTicketsRecords(filter, pageSize, (page - 1) * pageSize),
-    ]);
+    const analyticsRes = await fetchTicketsAnalytics(filter);
 
     if (analyticsRes) setAnalytics(analyticsRes);
-    if (recordsRes) setRecords(recordsRes);
     setIsLoading(false);
     setIsRefreshing(false);
-  }, [targetDepartmentId, creatingDepartmentId, employeeId, status, priority, dateDimension, period, customFrom, customTo, search, page]);
+  }, [targetDepartmentId, creatingDepartmentId, employeeId, status, priority, dateDimension, period, customFrom, customTo, search]);
 
   useEffect(() => {
     loadData();
@@ -122,7 +106,6 @@ export function TicketsWorkspace({
     setCustomFrom('');
     setCustomTo('');
     setDateDimension('createdAt');
-    setPage(1);
   };
 
   const handleExport = (format: 'csv' | 'excel') => {
@@ -156,8 +139,13 @@ export function TicketsWorkspace({
           name: locale === 'ar' ? o.nameAr : o.nameEn,
         }))
       : initialOfficers;
-  const recordItems = buildTicketsRecordItems(records.items);
   const kpiCards = buildTicketsKpiCards(analytics?.kpis, t);
+  const boardDateRange = periodToDateRange(period, customFrom, customTo);
+  const boardFilterExtras = useMemo(() => ({
+    creatingDepartmentId: creatingDepartmentId || null,
+    assignedEmployeeId: employeeId || null,
+    priority: priority || null,
+  }), [creatingDepartmentId, employeeId, priority]);
 
   return (
     <div className="space-y-6 pb-12">
@@ -188,31 +176,26 @@ export function TicketsWorkspace({
         onDepartmentChange={(id) => {
           setTargetDepartmentId(id);
           setEmployeeId('');
-          setPage(1);
         }}
         departments={initialDepartments}
         secondaryDepartmentId={creatingDepartmentId}
         onSecondaryDepartmentChange={(id) => {
           setCreatingDepartmentId(id);
-          setPage(1);
         }}
         secondaryDepartmentLabel={locale === 'ar' ? 'القسم الطالب' : 'Requesting Dept'}
         officerId={employeeId}
         onOfficerChange={(id) => {
           setEmployeeId(id);
-          setPage(1);
         }}
         officers={officerOptions}
         status={status}
         onStatusChange={(s) => {
           setStatus(s);
-          setPage(1);
         }}
         statuses={TICKET_STATUS_KEYS.map((k) => ({ key: k, label: internalTicketStatusLabel(locale, k) }))}
         severityOrPriority={priority}
         onSeverityOrPriorityChange={(p) => {
           setPriority(p);
-          setPage(1);
         }}
         severityOrPriorityOptions={PRIORITY_KEYS.map((k) => ({ key: k, label: PRIORITY_LABELS[locale][k] || k }))}
         onClearFilters={handleResetFilters}
@@ -240,27 +223,16 @@ export function TicketsWorkspace({
         selectedOfficerId={employeeId}
         onSelectOfficer={(id) => {
           setEmployeeId(id);
-          setPage(1);
         }}
         isTickets
       />
 
-      <DetailedRecordsTable
-        locale={locale}
-        records={recordItems}
-        total={records.total}
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onQuickInspect={setInspectRecord}
-        isLoading={isLoading}
-      />
-
-      <QuickCaseDrawer
-        locale={locale}
-        record={inspectRecord}
-        isOpen={Boolean(inspectRecord)}
-        onClose={() => setInspectRecord(null)}
+      <ReportStatusBoard
+        locale={locale} departmentId={targetDepartmentId || null} branchId={null} search={search}
+        type="tickets" departments={initialDepartments} showBoardFilters={false}
+        externalDateFrom={boardDateRange.dateFrom} externalDateTo={boardDateRange.dateTo}
+        dateDimension={dateDimension} selectedStatus={status || null} filterExtras={boardFilterExtras}
+        returnTo="ticket-reports"
       />
 
       <SavedViewsModal
@@ -282,7 +254,6 @@ export function TicketsWorkspace({
           setSearch(v.filters.search || '');
           setPeriod(v.period || 'this_month');
           setDateDimension((v.dateDimension as any) || 'createdAt');
-          setPage(1);
         }}
       />
     </div>

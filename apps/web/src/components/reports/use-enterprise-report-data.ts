@@ -103,12 +103,12 @@ export function useEnterpriseReportData(criteria: EnterpriseReportCriteria, init
 function buildReportQuery(criteria: EnterpriseReportCriteria) {
   const dates = resolveDates(criteria);
   const normalizedStatus = criteria.status?.toUpperCase() ?? null;
-  const pseudoView: 'active' | 'resolved' | 'overdue' | 'unassigned' | null = criteria.status === 'open'
+  const pseudoView: 'active' | 'resolved' | 'overdue' | 'unassigned' | null = normalizedStatus === 'OPEN'
     ? 'active'
     : criteria.status === 'resolved'
       ? 'resolved'
-      : criteria.status === 'overdue' || criteria.status === 'unassigned'
-        ? criteria.status
+      : normalizedStatus === 'OVERDUE' || normalizedStatus === 'UNASSIGNED'
+        ? normalizedStatus === 'OVERDUE' ? 'overdue' : 'unassigned'
         : null;
   const complaintStatuses = new Set(['DRAFT', 'SUBMITTED', 'MANAGER_REVIEW', 'BRANCH_REVIEW', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'REOPENED', 'REJECTED', 'COMPLETED']);
   const ticketStatuses = new Set(['PENDING_APPROVAL', 'NEW', 'ASSIGNED', 'IN_PROGRESS', 'WAITING', 'RESOLVED', 'CLOSED', 'REJECTED']);
@@ -132,7 +132,7 @@ function buildReportQuery(criteria: EnterpriseReportCriteria) {
   };
 }
 
-function resolveDates(criteria: Pick<EnterpriseReportCriteria, 'datePreset' | 'dateFrom' | 'dateTo'>) {
+export function resolveDates(criteria: Pick<EnterpriseReportCriteria, 'datePreset' | 'dateFrom' | 'dateTo'>) {
   if (criteria.datePreset === 'custom') return { from: criteria.dateFrom || null, to: criteria.dateTo || null };
   if (criteria.datePreset === 'all') return { from: null, to: null };
   const to = new Date();

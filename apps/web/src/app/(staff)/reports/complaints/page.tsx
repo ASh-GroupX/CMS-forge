@@ -3,10 +3,7 @@ import { headers } from 'next/headers';
 import { resolveLocale } from '../../../../i18n/staff-shell';
 import { getComplaintFormOptions } from '../../../../lib/staff-complaint-form-options-api';
 import { getAssignableStaff } from '../../../../lib/staff-assignable-staff-api';
-import {
-  fetchComplaintsAnalytics,
-  fetchComplaintsRecords,
-} from '../../../../lib/staff-reports-analytics-api';
+import { fetchComplaintsAnalytics } from '../../../../lib/staff-reports-analytics-api';
 import { ComplaintsWorkspace } from '../../../../components/reports/complaints-workspace';
 
 type SearchParams = { locale?: string | string[] };
@@ -31,10 +28,9 @@ export default async function ComplaintsReportPage({
 
   const apiUrl = process.env.API_URL ?? 'http://localhost:3000';
 
-  const [options, initialAnalytics, initialRecords, staff] = await Promise.all([
+  const [options, initialAnalytics, staff] = await Promise.all([
     getComplaintFormOptions({ cookieHeader, apiUrl }),
     fetchComplaintsAnalytics({}, cookieHeader, apiUrl),
-    fetchComplaintsRecords({}, 15, 0, cookieHeader, apiUrl),
     getAssignableStaff({ cookieHeader, apiUrl }),
   ]);
 
@@ -64,7 +60,6 @@ export default async function ComplaintsReportPage({
         initialCategories={categories}
         initialOfficers={initialOfficers}
         initialAnalytics={initialAnalytics}
-        initialRecords={initialRecords}
       />
     </div>
   );
