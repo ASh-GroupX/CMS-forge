@@ -1,19 +1,17 @@
-# Booking brand/model catalog release
-Status: Verified for release; user authorized push/merge
+# Notification visibility and unread feedback
+Status: Tests passed; release authorized by user
 Risk: Medium
-SRS: SR-BOOK-001, SR-BOOK-004 (service-bookings MODULE.md), UI-DESIGN-001
+SRS: REQ-NOTIFY-001, UI-DESIGN-001
 
-Brand-first active model selection and admin required brand/model implemented.
-CSV 128 rows -> 127 unique pairs / 12 brands. Existing catalog rows preserved.
+Larger 48px bell with localized numeric unread badge (99+ at API limit), readable
+desktop label and brand highlight when unread. Counter refreshes every30 seconds,
+on focus and visibility; clears highlight at zero and pauses while hidden.
+Full-page notification navigation retained. Unread activity cards have logical
+accent border, larger titles and supplied message text.
 
-Passed: full test 73/73 (89.64% lines), booking API 17/17, shell 228/228,
-catalog checks 2/2, lint, typecheck, OpenAPI, production build, hydrated EN/AR
-booking/admin form checks and inspected screenshots. PostgreSQL 18 isolated
-runtime proof passed fresh import, repeat import, preexisting normalized model,
-inactive preservation, Arabic label preservation, legacy models and booking FK.
-The isolated proof server was stopped after verification.
-
-Available independent review found no confirmed blocker; policy-named reviewer
-unavailable, not claimed as passed. Production migration/deployment remain the
-existing workflow's responsibility. User authorized waleed push and production
-merge on 2026-11-04 after verification. Preserve unrelated tmp/uploads.
+Passed lint, typecheck, build, shell228/228, accessibility24/24, diff check;
+hydrated EN desktop/AR mobile browser checks and inspected screenshots. Browser
+proof covers zero/count/cap, failure recovery, polling, hidden suppression,
+visibility/focus refresh, activity message and localized destination. Command:
+pnpm test:notifications:browser. Full suite73/73, notifications API45/45 and web API-client101/101 passed. User authorized waleed push/production merge. Available independent
+review found no confirmed blocker; named phase reviewer tier unavailable.

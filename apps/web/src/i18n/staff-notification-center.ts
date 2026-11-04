@@ -3,6 +3,7 @@ import type { Locale } from './staff-shell';
 export const notificationCenterText: Record<Locale, typeof enNotificationCenterText> = {
   en: {
     title: 'Notifications',
+    indicator: { unavailable: 'Notifications could not refresh. Open notifications to check.', newActivity: 'unread updates need your attention', caughtUp: 'You are all caught up' },
     subtitle: 'Open the updates that need your attention. If a link is disabled, the app cannot safely open it.',
     sections: { unread: 'Unread', read: 'Read' },
     labels: { complaint: 'Complaint link', markAllRead: 'Mark all read', markRead: 'Mark read', open: 'Open', task: 'Task link', time: 'Time', all: 'All', unread: 'Unread', mentions: 'Mentions' },
@@ -19,6 +20,7 @@ export const notificationCenterText: Record<Locale, typeof enNotificationCenterT
   },
   ar: {
     title: 'الإشعارات',
+    indicator: { unavailable: 'تعذر تحديث الإشعارات. افتح الإشعارات للتحقق.', newActivity: 'تحديثات غير مقروءة تتطلب متابعتك', caughtUp: 'لا توجد تحديثات غير مقروءة' },
     subtitle: 'متابعة أحدث التنبيهات والإشارات والمهام التي تتطلب اهتمامك.',
     sections: { unread: 'غير مقروء', read: 'مقروء' },
     labels: { complaint: 'رابط الشكوى', markAllRead: 'تحديد الكل كمقروء', markRead: 'تحديد كمقروء', open: 'فتح التفاصيل', task: 'رابط المهمة', time: 'الوقت', all: 'الكل', unread: 'غير مقروء', mentions: 'الإشارات' },
@@ -37,6 +39,7 @@ export const notificationCenterText: Record<Locale, typeof enNotificationCenterT
 
 const enNotificationCenterText = {
   title: '',
+  indicator: { unavailable: '', newActivity: '', caughtUp: '' },
   subtitle: '',
   sections: { unread: '', read: '' },
   labels: { complaint: '', markAllRead: '', markRead: '', open: '', task: '', time: '', all: '', unread: '', mentions: '' },
