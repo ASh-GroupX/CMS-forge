@@ -85,7 +85,19 @@ try {
     assert.match(await page.getByRole('link', { name: 'TK-all-0', exact: true }).getAttribute('href'), /returnTo=reports&locale=/); assertions++;
     await page.getByRole('link', { name: 'TK-all-0', exact: true }).scrollIntoViewIfNeeded();
     await page.getByRole('link', { name: 'TK-all-0', exact: true }).evaluate(link => link.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'instant' }));
+    const selection = page.getByRole('group', { name: locale === 'en' ? 'Status columns to display' : 'أعمدة الحالات المعروضة' });
+    const requestCountBeforeSelection = requests.length;
+    await selection.getByRole('button', { name: locale === 'en' ? 'Clear selection' : 'مسح التحديد', exact: true }).click();
+    assert.equal(await page.locator('section').count(), 0); assertions++;
+    assert.ok(await selection.getByText(locale === 'en' ? 'Select at least one status above to display its column.' : 'حدد حالة واحدة على الأقل أعلاه لعرض عمودها.', { exact: true }).isVisible()); assertions++;
+    await selection.getByRole('checkbox', { name: locale === 'en' ? 'In progress' : 'قيد التنفيذ', exact: true }).check();
+    await selection.getByRole('checkbox', { name: locale === 'en' ? 'Completed' : 'مكتملة', exact: true }).check();
+    assert.equal(await page.locator('section').count(), 2); assertions++;
+    assert.equal(await page.getByRole('link', { name: 'TK-all-25', exact: true }).count(), 1); assertions++;
     await page.screenshot({ path: `${output}/${locale}-populated.png`, fullPage: true });
+    await selection.getByRole('checkbox', { name: locale === 'en' ? 'Select all' : 'تحديد الكل', exact: true }).check();
+    assert.equal(await page.locator('section').count(), 14); assertions++;
+    assert.equal(requests.length, requestCountBeforeSelection); assertions++;
     const dates = page.locator('input[type=date]');
     await Promise.all([
       page.waitForRequest(request => new URL(request.url()).searchParams.get('dateFrom') === '2026-10-01'),

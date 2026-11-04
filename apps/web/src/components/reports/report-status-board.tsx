@@ -13,6 +13,7 @@ import { reportsAnalyticsI18n } from '../../i18n/staff-reports-analytics';
 import type { ComplaintRecordRow, TicketRecordRow } from '../../lib/staff-reports-analytics-api';
 import { fetchComplaintsRecords, fetchTicketsRecords } from '../../lib/staff-reports-analytics-api';
 import { reportRecordDetailHref, type ReportReturnContext } from '../../lib/staff-report-navigation';
+import { ReportColumnSelector } from './report-column-selector';
 
 type Item = {
   id: string; type: 'ticket' | 'complaint'; ref: string; title: string; status: string; kind: string; created: string;
@@ -106,6 +107,7 @@ export function ReportStatusBoard({
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [columns, setColumns] = useState<Record<string, StatusColumn>>(emptyColumns);
+  const [visibleStatuses, setVisibleStatuses] = useState(statuses);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [reload, setReload] = useState(0);
@@ -210,7 +212,7 @@ export function ReportStatusBoard({
     }
   };
 
-  const loadedTotal = Object.values(columns).reduce((sum, column) => sum + column.ticketTotal + column.complaintTotal, 0);
+  const loadedTotal = visibleStatuses.reduce((sum, status) => sum + (columns[status]?.ticketTotal ?? 0) + (columns[status]?.complaintTotal ?? 0), 0);
 
   const dateFormatter = useMemo(() => new Intl.DateTimeFormat(ar ? 'ar-JO' : 'en-GB', {
     dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Amman',
@@ -241,15 +243,16 @@ export function ReportStatusBoard({
           </label>
           {(from || to) && <Button type="button" variant="ghost" size="sm" onClick={() => { setFrom(''); setTo(''); }} className="h-9 px-3">{copy.clearDates}</Button>}
         </div>}
+        <ReportColumnSelector locale={locale} statuses={statuses} selected={visibleStatuses} onChange={setVisibleStatuses} />
       </div>
       {loading && <p role="status" className="text-sm text-muted-foreground">{copy.loading}</p>}
       {failed && <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-destructive">
         <span>{copy.failed}</span>
         <Button type="button" variant="outline" size="sm" onClick={() => setReload((n) => n + 1)}>{copy.retry}</Button>
       </div>}
-      {!loading && !failed && loadedTotal === 0 && <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">{copy.noMatches}</p>}
+      {!loading && !failed && visibleStatuses.length > 0 && loadedTotal === 0 && <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">{copy.noMatches}</p>}
       <div role="region" aria-label={copy.title} tabIndex={0} className="flex gap-3 overflow-x-auto pb-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md">
-        {statuses.map((status) => {
+        {statuses.filter(status => visibleStatuses.includes(status)).map((status) => {
           const column = columns[status] ?? emptyColumn();
           const group = [...column.tickets.map(toTicketItem), ...column.complaints.map(toComplaintItem)];
           const total = column.ticketTotal + column.complaintTotal;

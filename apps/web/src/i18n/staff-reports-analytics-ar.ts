@@ -235,6 +235,9 @@ export const reportsAnalyticsAr = {
     activeFiltersLabel: 'الفلاتر النشطة',
   },
   statusBoard: {
+    visibleColumns: 'أعمدة الحالات المعروضة', selectAllColumns: 'تحديد الكل', clearColumns: 'مسح التحديد',
+    columnsSelected: (count: number, total: number) => `تم تحديد ${count} من ${total} عمودًا`,
+    noColumnsSelected: 'حدد حالة واحدة على الأقل أعلاه لعرض عمودها.',
     title: 'سجل الحالات التفصيلي حسب الحالة', subtitle: 'استعرض كل التذاكر والشكاوى حسب الحالة والقسم والتاريخ.',
     backToReports: 'العودة إلى التقارير', backToTickets: 'العودة إلى التذاكر',
     department: 'القسم', allDepartments: 'كل الأقسام', createdFrom: 'من تاريخ الإنشاء', createdThrough: 'حتى تاريخ الإنشاء',
