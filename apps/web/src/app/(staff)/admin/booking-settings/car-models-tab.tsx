@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { Car, Edit2, Plus, Search, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
+import { Input } from '../../../../components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -52,12 +53,12 @@ export function CarModelsTab({
 
   const [nameEn, setNameEn] = useState('');
   const [nameAr, setNameAr] = useState('');
-  const [brand, setBrand] = useState('Nissan');
+  const [brand, setBrand] = useState('');
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const openAdd = () => {
-    setEditingCar(null); setNameEn(''); setNameAr(''); setBrand('Nissan'); setErrorMsg(null); setIsDialogOpen(true);
+    setEditingCar(null); setNameEn(''); setNameAr(''); setBrand(''); setErrorMsg(null); setIsDialogOpen(true);
   };
 
   const openEdit = (car: CarModel) => {
@@ -66,11 +67,11 @@ export function CarModelsTab({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const effectiveBrand = brand.trim() || 'Nissan';
-    const effectiveNameEn = nameEn.trim() || nameAr.trim() || brand.trim();
-    const effectiveNameAr = nameAr.trim() || nameEn.trim() || brand.trim();
-    if (!effectiveNameEn) {
-      const msg = isAr ? 'يرجى إدخال اسم الموديل أو الماركة' : 'Model or brand name is required';
+    const effectiveBrand = brand.trim();
+    const effectiveNameEn = nameEn.trim() || nameAr.trim();
+    const effectiveNameAr = nameAr.trim() || nameEn.trim();
+    if (!effectiveBrand || !effectiveNameEn) {
+      const msg = t.adminSettings.brandModelRequired;
       setErrorMsg(msg);
       toast.error(msg);
       return;
@@ -231,7 +232,7 @@ export function CarModelsTab({
 
       {/* Add / Edit Dialog */}
       <Dialog onOpenChange={setIsDialogOpen} open={isDialogOpen}>
-        <DialogContent className="max-w-md rounded-3xl p-6">
+        <DialogContent dir={isAr ? 'rtl' : 'ltr'} className="max-w-md rounded-3xl p-6">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold">
               {editingCar ? 'Edit Car Model' : t.adminSettings.addCar}
@@ -247,15 +248,15 @@ export function CarModelsTab({
           <form className="space-y-3 mt-2" onSubmit={handleSubmit}>
             <div>
               <label className="block text-xs font-bold text-content-muted mb-1">{t.adminSettings.brand}</label>
-              <input className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm" onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Nissan" required type="text" value={brand} />
+              <Input aria-label={t.adminSettings.brand} onChange={(e) => setBrand(e.target.value)} placeholder={t.modal.selectBrand} required type="text" value={brand} />
             </div>
             <div>
               <label className="block text-xs font-bold text-content-muted mb-1">{t.adminSettings.nameEn}</label>
-              <input className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm" onChange={(e) => setNameEn(e.target.value)} placeholder="e.g. Patrol" type="text" value={nameEn} />
+              <Input aria-label={t.adminSettings.nameEn} onChange={(e) => setNameEn(e.target.value)} required={!nameAr.trim()} type="text" value={nameEn} />
             </div>
             <div>
               <label className="block text-xs font-bold text-content-muted mb-1">{t.adminSettings.nameAr}</label>
-              <input className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm" dir="rtl" onChange={(e) => setNameAr(e.target.value)} placeholder="مثال: باترول" type="text" value={nameAr} />
+              <Input aria-label={t.adminSettings.nameAr} dir="rtl" onChange={(e) => setNameAr(e.target.value)} required={!nameEn.trim()} type="text" value={nameAr} />
             </div>
 
             <div className="flex justify-end gap-2 pt-3 border-t border-line-subtle">

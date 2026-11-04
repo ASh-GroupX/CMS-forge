@@ -1,3 +1,5 @@
+import { BadRequestException } from '@nestjs/common';
+
 export class CreateServiceAppointmentDto {
   customerName!: string;
   customerPhone!: string;
@@ -24,7 +26,8 @@ export function parseCreateServiceAppointmentBody(input: unknown): CreateService
   if (!customerPhone) throw new Error('Customer phone number is required');
 
   const branchId = String(body.branchId ?? '').trim() || 'center_main';
-  const carModelId = String(body.carModelId ?? '').trim() || 'car_tiggo8_pro';
+  const carModelId = String(body.carModelId ?? '').trim();
+  if (!carModelId) throw new BadRequestException('A vehicle model is required');
   const maintenanceTypeId = String(body.maintenanceTypeId ?? '').trim() || 'maint_periodic_10k';
 
   const date = String(body.date ?? '').trim();

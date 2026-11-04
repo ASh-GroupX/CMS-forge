@@ -78,6 +78,7 @@ export class ServiceBookingsService {
     }
 
     const carModel = dto.carModelId ? await this.repository.findCarModelById(dto.carModelId).catch(() => null) : null;
+    if (!carModel || carModel.isActive === false) throw new BadRequestException('Select an active vehicle model');
     const maintenanceType = dto.maintenanceTypeId ? await this.repository.findMaintenanceTypeById(dto.maintenanceTypeId).catch(() => null) : null;
     const duration = dto.durationMinutes || maintenanceType?.estimatedDurationMinutes || 30;
     const endTime = calculateEndTime(dto.startTime, duration);
@@ -86,8 +87,8 @@ export class ServiceBookingsService {
     const created = await this.repository.createAppointment({
       referenceNumber, serviceCenterId: centerId, branchId: null,
       customerName: dto.customerName, customerPhone: dto.customerPhone, vin: dto.vin || null,
-      carModelId: carModel ? carModel.id : null,
-      carModelName: carModel ? `${carModel.brand} ${carModel.nameEn}` : 'Chery Tiggo 8 Pro',
+      carModelId: carModel.id,
+      carModelName: `${carModel.brand} ${carModel.nameEn}`,
       maintenanceTypeId: maintenanceType ? maintenanceType.id : null,
       maintenanceTypeName: maintenanceType ? maintenanceType.nameEn : 'Periodic Maintenance',
       notes: dto.notes || 'Service appointment', date: dateObj, startTime: dto.startTime,
