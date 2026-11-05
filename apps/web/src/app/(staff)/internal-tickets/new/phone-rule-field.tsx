@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Input } from '../../../../components/ui/input';
 import { Button } from '../../../../components/ui/button';
 import { findTicketPhoneDuplicates, type PhoneDuplicateTicket } from '../../../../lib/staff-ticket-phone-actions';
@@ -40,7 +41,7 @@ export function PhoneRuleField({ field, value, onChange, onAcknowledge, isAr = f
     {state === 'ready' && matches?.length === 0 && <p role="status" className="text-xs text-muted-foreground">{t.noMatches}</p>}
     {state === 'ready' && !!matches?.length && <div className="space-y-3 rounded-lg border border-brand/30 bg-brand/5 p-4" role="status">
       <p className="text-sm font-semibold">{t.duplicate}</p><p className="text-sm text-muted-foreground">{t.followUp}</p>
-      <ul className="space-y-2">{matches.map(ticket => <li key={ticket.id}><a className="break-words text-sm font-semibold text-brand underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href={`/internal-tickets/${encodeURIComponent(ticket.id)}?locale=${isAr ? 'ar' : 'en'}`} target="_blank" rel="noopener noreferrer">{t.open}: {ticket.referenceNumber} — {ticket.title}</a></li>)}</ul>
+      <ul className="space-y-2">{matches.map(ticket => <li key={ticket.id}><Link data-preserve-client-navigation className="break-words text-sm font-semibold text-brand underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href={`/internal-tickets/${encodeURIComponent(ticket.id)}?returnTo=new-ticket&locale=${isAr ? 'ar' : 'en'}`}>{t.open}: {ticket.referenceNumber} — {ticket.title}</Link></li>)}</ul>
       <Button type="button" className="h-auto max-w-full whitespace-normal text-start" variant={confirmed ? 'secondary' : 'outline'} aria-pressed={confirmed} onClick={() => { setConfirmed(!confirmed); onAcknowledge(!confirmed); }}>{confirmed ? t.confirmed : t.separate}</Button>
     </div>}
   </div>;

@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 const file = 'packages/contracts/openapi.json';
 const canonicalFile = 'tools/openapi-canonical.json';
 
-export const canonicalOpenApiText = () => readFileSync(canonicalFile, 'utf8').replace(/\r?\n?$/, '\n');
+export const canonicalOpenApiText = () => readFileSync(canonicalFile, 'utf8').replace(/\r\n/g, '\n').replace(/\n?$/, '\n');
 
 function canonicalDocument() {
   return JSON.parse(canonicalOpenApiText());
@@ -45,7 +45,7 @@ export function checkOpenApiText(text) {
     if (!document.components?.schemas?.[schema]) errors.push(`OpenAPI document missing ${schema} schema`);
   }
 
-  if (text !== canonicalOpenApiText()) errors.push('OpenAPI document is not canonical; run corepack pnpm openapi:generate');
+  if (text.replace(/\r\n/g, '\n') !== canonicalOpenApiText()) errors.push('OpenAPI document is not canonical; run corepack pnpm openapi:generate');
   return errors;
 }
 

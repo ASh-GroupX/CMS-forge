@@ -217,8 +217,15 @@ test('root and textarea avoid hydration-prone client mutations', () => {
   const rootSource = readFileSync('apps/web/src/app/layout.tsx', 'utf8');
   const textareaSource = readFileSync('apps/web/src/components/ui/textarea.tsx', 'utf8');
 
-  assert.doesNotMatch(rootSource, /dangerouslySetInnerHTML|document\./);
-  assert.doesNotMatch(rootSource, /<script/);
+  // The static pre-router history bridge only dispatches events. It must never
+  // mutate document markup or interpolate request/user content before hydration.
+  const bridgeSource = readFileSync('apps/web/src/lib/staff-history-bridge.ts', 'utf8');
+  assert.match(rootSource, /<script id="staff-history-bridge" dangerouslySetInnerHTML=\{\{ __html: STAFF_HISTORY_BRIDGE \}\} \/>/);
+  assert.equal((rootSource.match(/<script/g) ?? []).length, 1);
+  assert.doesNotMatch(rootSource, /document\./);
+  assert.match(bridgeSource, /window\.addEventListener\('popstate'/);
+  assert.match(bridgeSource, /window\.dispatchEvent\(new CustomEvent\('cms:before-history'/);
+  assert.doesNotMatch(bridgeSource, /document\.|innerHTML|outerHTML|location|cookie|\$\{|<\/script/i);
   assert.match(textareaSource, /data-enable-grammarly="false"/);
   assert.match(textareaSource, /data-lt-active="false"/);
   assert.match(textareaSource, /spellCheck=\{false\}/);

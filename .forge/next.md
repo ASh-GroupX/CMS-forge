@@ -1,17 +1,19 @@
-# Web Docker contracts source repair
-Status: Fix verified locally; corrective release authorized
-Risk: Medium
-SRS: ARCH-STACK-001, METHOD-TEST-001
+# Report board default state columns
+Status: Implemented and locally verified; named-tier review unavailable
+Risk: Low
+SRS: UI-DESIGN-001, METHOD-TEST-001
 
-User deployment log failed web Docker build: missing packages/contracts/src/
-ticket-phone-client imported from staff-ticket-phone-actions. The image copied
-only package manifests and apps/web. Added contracts/src COPY before Next build.
-Regression resolves actual imports and checks Docker source/destination coverage.
+Set the eight checked states in the user's screenshot as the initial board view:
+ASSIGNED, IN_PROGRESS, WAITING, REOPENED, RESOLVED, COMPLETED, CLOSED, REJECTED.
+Keep all 14 options available and preserve deliberate session customization.
+Scope: board default only plus existing browser proof and Forge evidence.
+Proof: EN/AR report browser (default eight, select all, custom columns and return),
+lint, typecheck, API-client regression. No backend/workflow/auth changes.
+Prior navigation work remains in the workspace and must be preserved.
 
-Passed deployment artifact tests7/7 (also independently rerun), lint, local
-production build and diff check. Fresh review found no confirmed blocker. Local
-Docker image build Not Run: daemon unavailable; hidden Desktop startup failed.
-Local source build is not claimed as Docker image proof. Previous release
-instruction covers corrective waleed push and production merge to retry deployment.
-Do not claim live deploy success before workflow/public verification. Preserve
-unrelated tmp/uploads. Named policy reviewer tier remains unavailable.
+Passed: EN/AR report browser 46 assertions (screenshots inspected), API-client
+106 tests, lint, typecheck, diff check. Independent review found no blockers.
+Policy-named review tier unavailable; that acceptance is not claimed as passed.
+
+User now authorizes push to waleed and merge into production for both navigation
+and report defaults. Release uses existing workflow; monitor validation/deploy.

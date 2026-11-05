@@ -9,6 +9,10 @@ import { Paperclip } from 'lucide-react';
 import { DueDatePicker, TIME_OPTIONS } from './due-date-picker';
 import { CustomFieldsRenderer, CustomFieldDef } from './custom-fields-renderer';
 import { ticketPhoneRuleText } from '../../../../i18n/staff-ticket-phone-rule';
+import { useTicketDraft, type TicketDraft } from '../../../../lib/use-ticket-draft';
+import { staffNavigationText } from '../../../../i18n/staff-navigation';
+import { Button } from '../../../../components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../../components/ui/dialog';
 
 interface DepartmentConfig {
   enablePriorityField: boolean;
@@ -20,22 +24,28 @@ interface DepartmentConfig {
 export default function CreateInternalTicketForm({
   options,
   locale = 'en',
+  draftOwner = null,
 }: {
   options: { departments: any[]; categories: any[]; employees: any[] };
   locale?: 'en' | 'ar';
+  draftOwner?: string | null;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const [dateMode, setDateMode] = useState<'relative' | 'specific'>('relative');
-  const [timeIndex, setTimeIndex] = useState(4);
-  const [specificDate, setSpecificDate] = useState('');
-  const [assignmentMode, setAssignmentMode] = useState<'department' | 'officer'>('department');
-  const [selectedDepartmentId, setSelectedDepartmentId] = useState('');
-  const [selectedRequestedEmployeeId, setSelectedRequestedEmployeeId] = useState('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState('');
-  const [selectedPriority, setSelectedPriority] = useState('NORMAL');
+  const draftState = useTicketDraft(draftOwner);
+  const { draft, update, ready: draftReady } = draftState;
+  const { title, description, dateMode, timeIndex, specificDate, assignmentMode, selectedDepartmentId,
+    selectedRequestedEmployeeId, selectedCategoryId, selectedPriority, customFieldValues } = draft;
+  function draftField<K extends keyof TicketDraft>(key: K) { return (value: React.SetStateAction<TicketDraft[K]>) => update(key, value); }
+  const setDateMode = draftField('dateMode'), setTimeIndex = draftField('timeIndex'), setSpecificDate = draftField('specificDate');
+  const setAssignmentMode = draftField('assignmentMode'), setSelectedRequestedEmployeeId = draftField('selectedRequestedEmployeeId');
+  const setSelectedCategoryId = draftField('selectedCategoryId'), setSelectedPriority = draftField('selectedPriority');
+  const setCustomFieldValues = draftField('customFieldValues');
+  const setSelectedDepartmentId = (value: string) => { update('selectedDepartmentId', value); update('customFieldValues', {}); update('selectedRequestedEmployeeId', ''); };
+  const navigation = staffNavigationText[locale];
+  const [discardOpen, setDiscardOpen] = useState(false);
 
   // Department-specific dynamic fields & rules
   const [deptConfig, setDeptConfig] = useState<DepartmentConfig>({
@@ -45,12 +55,12 @@ export default function CreateInternalTicketForm({
     enableOfficerSelection: true,
   });
   const [deptCustomFields, setDeptCustomFields] = useState<CustomFieldDef[]>([]);
-  const [customFieldValues, setCustomFieldValues] = useState<Record<string, any>>({});
   const [loadingFields, setLoadingFields] = useState(false);
   const [phoneAcknowledgements, setPhoneAcknowledgements] = useState<Record<string, boolean>>({});
   const [phoneLookupVersion, setPhoneLookupVersion] = useState(0);
 
   useEffect(() => {
+    if (!draftReady) return;
     setPhoneAcknowledgements({});
     if (!selectedDepartmentId) {
       setDeptConfig({
@@ -84,7 +94,6 @@ export default function CreateInternalTicketForm({
           });
         }
         setDeptCustomFields(res.customFields || []);
-        setCustomFieldValues({});
       })
       .catch((err) => {
         console.error('Failed to load department fields:', err);
@@ -96,7 +105,7 @@ export default function CreateInternalTicketForm({
     return () => {
       isMounted = false;
     };
-  }, [selectedDepartmentId]);
+  }, [selectedDepartmentId, draftReady]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -182,8 +191,8 @@ export default function CreateInternalTicketForm({
         return;
       }
 
-      router.push('/internal-tickets');
-      router.refresh();
+      draftState.clear(true);
+      router.push(`/internal-tickets?locale=${locale}`);
     } catch (err: any) {
       setError(err?.message || 'Failed to create ticket');
       setLoading(false);
@@ -191,12 +200,21 @@ export default function CreateInternalTicketForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6 rounded-3xl border border-line-subtle bg-surface p-6 sm:p-8 shadow-sm max-w-2xl">
+    <form ref={draftState.formRef} onChangeCapture={draftState.captureFiles} data-draft-persisted={draftReady && draftState.available && Boolean(draftOwner)} data-draft-has-files={draft.attachmentNames.length > 0} onSubmit={handleSubmit} className="flex flex-col gap-6 rounded-3xl border border-line-subtle bg-surface p-6 sm:p-8 shadow-sm max-w-2xl">
       {error && <div className="rounded-xl bg-status-error/10 p-4 text-sm font-semibold text-status-error">{error}</div>}
+      <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3 text-sm">
+        <p role="status">{draftState.available ? draftState.restored ? navigation.restored : navigation.draftSaved : navigation.draftUnavailable}</p>
+        {draftState.missingFiles && <p role="alert" className="text-destructive">{navigation.missingFiles}</p>}
+        <Button type="button" size="sm" variant="outline" onClick={() => setDiscardOpen(true)}>{navigation.discard}</Button>
+      </div>
+      <Dialog open={discardOpen} onOpenChange={setDiscardOpen}><DialogContent dir={locale === 'ar' ? 'rtl' : 'ltr'}><DialogHeader><DialogTitle>{navigation.discard}</DialogTitle><DialogDescription>{navigation.discardHint}</DialogDescription></DialogHeader><DialogFooter>
+        <Button type="button" variant="outline" onClick={() => setDiscardOpen(false)}>{navigation.stay}</Button>
+        <Button type="button" onClick={() => { draftState.clear(true); setPhoneAcknowledgements({}); setDiscardOpen(false); }}>{navigation.discard}</Button>
+      </DialogFooter></DialogContent></Dialog>
 
       <div className="flex flex-col gap-2">
         <label htmlFor="title" className="text-sm font-bold text-content-strong">Title</label>
-        <input required id="title" name="title" className="rounded-xl border border-line-subtle bg-surface-canvas p-3.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand transition-colors" placeholder="Brief summary of request" />
+        <input required id="title" name="title" value={title} onChange={event => update('title', event.target.value)} className="rounded-xl border border-line-subtle bg-surface-canvas p-3.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand transition-colors" placeholder="Brief summary of request" />
       </div>
 
       <div className="flex flex-col gap-5 border border-line-subtle rounded-2xl p-5 bg-surface-canvas/50">
@@ -219,6 +237,7 @@ export default function CreateInternalTicketForm({
           </button>
           <button
             type="button"
+            aria-pressed={assignmentMode === 'officer'}
             disabled={!deptConfig.enableOfficerSelection}
             onClick={() => setAssignmentMode('officer')}
             className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
@@ -334,6 +353,7 @@ export default function CreateInternalTicketForm({
             ].map((p) => (
               <button
                 key={p.id}
+                aria-pressed={selectedPriority === p.id}
                 type="button"
                 onClick={() => setSelectedPriority(p.id)}
                 className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${
@@ -361,13 +381,14 @@ export default function CreateInternalTicketForm({
 
       <div className="flex flex-col gap-2">
         <label htmlFor="description" className="text-sm font-bold text-content-strong">Description</label>
-        <textarea required id="description" name="description" rows={5} className="rounded-xl border border-line-subtle bg-surface-canvas p-3.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand transition-colors" placeholder="Detailed explanation of the task or request..." />
+        <textarea required id="description" name="description" value={description} onChange={event => update('description', event.target.value)} rows={5} className="rounded-xl border border-line-subtle bg-surface-canvas p-3.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand transition-colors" placeholder="Detailed explanation of the task or request..." />
       </div>
 
       {deptConfig.enableAttachmentsField && (
         <div className="flex flex-col gap-2">
           <label htmlFor="attachments" className="text-sm font-bold text-content-strong flex items-center gap-1.5"><Paperclip className="size-4" /> Attachments</label>
           <input 
+            ref={draftState.attachmentRef}
             id="attachments" 
             name="attachments" 
             type="file" 
@@ -380,7 +401,7 @@ export default function CreateInternalTicketForm({
       )}
 
       <div className="flex justify-end gap-3 pt-4 mt-2 border-t border-line-subtle">
-        <button type="button" onClick={() => router.back()} className="rounded-xl px-5 py-2.5 text-sm font-bold text-content-muted hover:bg-surface-raised transition-colors">Cancel</button>
+        <Button asChild variant="outline"><a href={`/internal-tickets?locale=${locale}`}>{navigation.back}</a></Button>
         <button type="submit" disabled={loading} className="rounded-xl bg-brand px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-brand-hover hover:shadow disabled:opacity-50 transition-all">
           {loading ? 'Submitting...' : 'Submit Ticket'}
         </button>

@@ -9,6 +9,7 @@ import '@fontsource/ibm-plex-sans-arabic/600.css';
 import '@fontsource/ibm-plex-sans-arabic/700.css';
 import { resolveLocale, staffShellText, type Locale } from '../i18n/staff-shell';
 import '../globals.css';
+import { STAFF_HISTORY_BRIDGE } from '../lib/staff-history-bridge';
 
 export const metadata: Metadata = {
   title: { default: 'CMS-Auto', template: '%s · CMS-Auto' },
@@ -31,7 +32,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
 
   return (
     <html lang={locale} dir={rootDirection(locale)} suppressHydrationWarning>
-      <head />
+      <head><script id="staff-history-bridge" dangerouslySetInnerHTML={{ __html: STAFF_HISTORY_BRIDGE }} /></head>
       <body>
         {children}
       </body>

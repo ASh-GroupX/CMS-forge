@@ -4,6 +4,7 @@ import { canonicalOpenApiText, checkOpenApiText } from './openapi-check.mjs';
 
 test('openapi check accepts the canonical scaffold', () => {
   assert.deepEqual(checkOpenApiText(canonicalOpenApiText()), []);
+  assert.deepEqual(checkOpenApiText(canonicalOpenApiText().replace(/\n/g, '\r\n')), []);
 });
 
 test('openapi check rejects missing baseline error schemas', () => {

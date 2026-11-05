@@ -52,7 +52,7 @@ export function AuthPanel({
     return (
       <section className="mb-3 rounded-sm border border-brand-foreground/15 bg-brand-foreground/5 p-2" aria-label={t.auth.signedIn}>
         <p className="text-sm font-semibold">{t.auth.signedIn}</p>
-        <form action={logoutStaffAction}>
+        <form action={logoutStaffAction} data-staff-logout>
           <input name="locale" type="hidden" value={locale} />
           <button className="mt-2 inline-flex rounded-sm border border-brand-foreground/15 px-3 py-2 text-sm font-semibold hover:bg-brand/15 focus:outline-none focus:ring-2 focus:ring-brand" type="submit">
             {t.auth.logout}

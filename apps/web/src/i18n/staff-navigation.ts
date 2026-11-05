@@ -1,0 +1,18 @@
+export const staffNavigationText = {
+  en: { back: 'Back', forward: 'Forward', up: 'Back to section', navigation: 'Page navigation',
+    unsaved: 'You have unsaved changes', leaveHint: 'Leave this page and lose changes that have not been saved?', stay: 'Stay here', leave: 'Leave page',
+    draftSaved: 'Your ticket draft is saved in this tab for up to two hours. You can inspect another ticket and return here.',
+    draftUnavailable: 'Draft saving is unavailable. Keep this page open to avoid losing your entries.',
+    discard: 'Discard draft', discardHint: 'Clear this ticket draft and start again?',
+    missingFiles: 'Please reattach your files. Browsers cannot restore file selections after a full reload.',
+    backToDraft: 'Back to new ticket draft', restored: 'Your ticket draft has been restored.',
+  },
+  ar: { back: 'رجوع', forward: 'تقدم', up: 'العودة إلى القسم', navigation: 'التنقل بين الصفحات',
+    unsaved: 'لديك تغييرات غير محفوظة', leaveHint: 'هل تريد مغادرة الصفحة وفقدان التغييرات التي لم تحفظ؟', stay: 'البقاء هنا', leave: 'مغادرة الصفحة',
+    draftSaved: 'مسودة التذكرة محفوظة في علامة التبويب هذه لمدة تصل إلى ساعتين. يمكنك مراجعة تذكرة أخرى ثم العودة هنا.',
+    draftUnavailable: 'تعذر حفظ المسودة. أبقِ هذه الصفحة مفتوحة لتجنب فقدان البيانات.',
+    discard: 'حذف المسودة', discardHint: 'هل تريد مسح مسودة التذكرة والبدء من جديد؟',
+    missingFiles: 'أعد إرفاق الملفات. لا يستطيع المتصفح استعادة الملفات بعد إعادة تحميل الصفحة بالكامل.',
+    backToDraft: 'العودة إلى مسودة التذكرة الجديدة', restored: 'تمت استعادة مسودة التذكرة.',
+  },
+};

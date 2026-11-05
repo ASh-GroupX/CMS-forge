@@ -1,5 +1,9 @@
 import { Activity, Bell, Building2, CalendarDays, CheckSquare2, ClipboardList, Columns3, FilePlus2, FolderCog, Gauge, GitBranch, Handshake, History, Inbox, KanbanSquare, LayoutDashboard, Menu, Search, Send, UsersRound } from 'lucide-react';
-import React, { type ReactNode } from 'react';
+import React, { Suspense, type ReactNode } from 'react';
+import { StaffPageNavigation } from '../components/shared/staff-page-navigation';
+import { StaffNavAnchor } from '../components/shared/staff-nav-anchor';
+import { StaffNavigationScope } from '../lib/use-staff-ui-state';
+export { isActiveNav } from '../lib/staff-active-navigation';
 import { BrandMark } from '../components/brand-mark';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { modernUiText } from '../i18n/staff-modern-ui';
@@ -77,9 +81,9 @@ export function AppShell({ activePath = '', activeSearch = '', children, locale,
           <StaffTopBar account={identity ? { initials: identity.initials, name: identity.name } : null} createLabel={t.nav.create[0]} heading={heading} isRtl={locale === 'ar'} languageHref={languageHref(activePath, activeSearch, locale === 'ar' ? 'en' : 'ar')} locale={locale} notificationsHref={`/notifications?locale=${locale}`} search={modern.search} subheading={subheading} switchLabel={t.switchLabel} switchTarget={t.switchTarget} themeDark={t.theme.dark} themeLabel={t.theme.label} themeLight={t.theme.light} />
           <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-nav-border bg-nav/80 px-1 pb-[max(.25rem,env(safe-area-inset-bottom))] pt-1 text-nav-foreground shadow-[0_-10px_40px_rgba(0,0,0,0.05)] backdrop-blur-xl lg:hidden" aria-label={t.title}>
             {mobileKeys.flatMap((key) => { const item = visibleItems.find((candidate) => candidate.key === key); return item ? [<MobileNavLink activePath={activePath} item={item} key={item.key} label={mobileLabel(t, key)} locale={locale} />] : []; })}
-            <Dialog><DialogTrigger asChild><button className="grid min-h-11 min-w-0 place-items-center gap-1 rounded-md px-1 py-2 text-xs font-semibold text-content-muted focus:outline-none focus:ring-2 focus:ring-brand" type="button"><Menu aria-hidden="true" className="size-5" /><span className="truncate">{t.mobileNav.more}</span></button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>{t.mobileNav.title}</DialogTitle></DialogHeader><nav className="grid gap-1" aria-label={t.mobileNav.title}>{visibleItems.filter((item) => !(mobileKeys as readonly StaffNavKey[]).includes(item.key)).map((item) => <DesktopNavLink activePath={activePath} item={item} key={item.key} locale={locale} t={t} />)}</nav></DialogContent></Dialog>
+            <Dialog><DialogTrigger asChild><button className="grid min-h-11 min-w-0 place-items-center gap-1 rounded-md px-1 py-2 text-xs font-semibold text-content-muted focus:outline-none focus:ring-2 focus:ring-brand" type="button"><Menu aria-hidden="true" className="size-5" /><span className="truncate">{t.mobileNav.more}</span></button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>{t.mobileNav.title}</DialogTitle></DialogHeader><nav className="grid gap-1" aria-label={t.mobileNav.title}>{visibleItems.filter((item) => !(mobileKeys as readonly StaffNavKey[]).includes(item.key)).map((item) => <DesktopNavLink activePath={activePath} item={item} key={item.key} locale={locale} t={t} />)}</nav>{principal ? <div className="border-t border-line-subtle pt-3">{sidebarBefore}{sidebarAfter}</div> : null}</DialogContent></Dialog>
           </nav>
-          <section className="staff-workspace mx-auto grid min-w-0 w-full max-w-[96rem] content-start gap-5 p-4 pb-24 md:p-6 md:pb-24 lg:p-8 lg:pb-8 overflow-hidden" id="staff-main">{children}</section>
+          <section className="staff-workspace mx-auto grid min-w-0 w-full max-w-[96rem] content-start gap-5 p-4 pb-24 md:p-6 md:pb-24 lg:p-8 lg:pb-8 overflow-hidden" id="staff-main"><StaffNavigationScope owner={principal?.userId ?? null}>{principal ? <Suspense fallback={null}><StaffPageNavigation owner={principal.userId} locale={locale} /></Suspense> : null}{children}</StaffNavigationScope></section>
         </div>
       </div>
     </main>
@@ -88,8 +92,21 @@ export function AppShell({ activePath = '', activeSearch = '', children, locale,
 
 type NavItem = (typeof staffNavItems)[number];
 type ShellCopy = (typeof staffShellText)[Locale];
-function DesktopNavLink({ activePath, item: { key, Icon, href }, locale, t }: { activePath: string; item: NavItem; locale: Locale; t: ShellCopy }) { const [label, description] = t.nav[key]; const active = isActiveNav(key, href, activePath); return <a aria-current={active ? 'page' : undefined} aria-label={`${label}: ${description}`} className={`group relative grid min-h-[2.875rem] min-w-0 max-w-full grid-cols-[1.5rem_minmax(0,1fr)] items-center gap-3 overflow-hidden rounded-xl px-3 py-2 text-start text-sm font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-brand ${active ? 'bg-brand text-primary-foreground shadow-md shadow-brand/20' : 'text-nav-muted hover:bg-nav-raised hover:text-nav-foreground'}`} href={`${href}?locale=${locale}`} title={description}><Icon aria-hidden="true" className={`relative z-10 size-[1.125rem] transition-transform duration-300 group-hover:scale-110 ${active ? 'text-primary-foreground' : 'text-nav-muted group-hover:text-brand'}`} /><span className="relative z-10 min-w-0 truncate">{label}</span></a>; }
-function MobileNavLink({ activePath, item: { key, Icon, href }, label, locale }: { activePath: string; item: NavItem; label: string; locale: Locale }) { const active = isActiveNav(key, href, activePath); return <a aria-current={active ? 'page' : undefined} className={`grid min-h-11 min-w-0 place-items-center gap-1 rounded-md px-1 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand ${active ? 'text-white' : 'text-nav-muted'}`} href={`${href}?locale=${locale}`}><Icon aria-hidden="true" className={`size-5 ${active ? 'text-brand' : ''}`} /><span className="w-full truncate text-center">{label}</span></a>; }
+function DesktopNavLink({ activePath, item: { key, Icon, href }, locale, t }: { activePath: string; item: NavItem; locale: Locale; t: ShellCopy }) {
+  const [label, description] = t.nav[key];
+  return <StaffNavAnchor activePath={activePath} navKey={key} rootHref={href} href={`${href}?locale=${locale}`} label={`${label}: ${description}`} title={description}
+    className="group relative grid min-h-[2.875rem] min-w-0 max-w-full grid-cols-[1.5rem_minmax(0,1fr)] items-center gap-3 overflow-hidden rounded-xl px-3 py-2 text-start text-sm font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-brand"
+    activeClassName="bg-brand text-primary-foreground shadow-md shadow-brand/20" inactiveClassName="text-nav-muted hover:bg-nav-raised hover:text-nav-foreground">
+    <Icon aria-hidden="true" className="relative z-10 size-[1.125rem] text-current transition-transform duration-300 group-hover:scale-110" /><span className="relative z-10 min-w-0 truncate">{label}</span>
+  </StaffNavAnchor>;
+}
+function MobileNavLink({ activePath, item: { key, Icon, href }, label, locale }: { activePath: string; item: NavItem; label: string; locale: Locale }) {
+  return <StaffNavAnchor activePath={activePath} navKey={key} rootHref={href} href={`${href}?locale=${locale}`}
+    className="grid min-h-11 min-w-0 place-items-center gap-1 rounded-md px-1 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand"
+    activeClassName="text-primary-foreground bg-brand/15" inactiveClassName="text-nav-muted">
+    <Icon aria-hidden="true" className="size-5 text-current" /><span className="w-full truncate text-center">{label}</span>
+  </StaffNavAnchor>;
+}
 function mobileLabel(t: ShellCopy, key: (typeof mobileKeys)[number]): string { if (key === 'dashboard') return t.nav.dashboard[0]; if (key === 'complaints') return t.mobileNav.cases; if (key === 'internalTickets') return t.nav.internalTickets[0]; if (key === 'tasks') return t.mobileNav.today; return 'Nav'; }
 
 const ROLE_LABELS: Record<Locale, Record<string, string>> = {
@@ -111,4 +128,3 @@ function greetingFor(principal: StaffSessionPrincipal | null, locale: Locale, na
 }
 
 function languageHref(pathname: string, search: string, locale: Locale): string { const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search); params.set('locale', locale); const query = params.toString(); return `${pathname || '/'}${query ? `?${query}` : ''}`; }
-export function isActiveNav(key: StaffNavKey, href: string, activePath: string): boolean { if (!activePath) return false; if ((key as string) === 'operations') return activePath === '/operations' || activePath.startsWith('/operations/'); if (key === 'complaints') return activePath === '/complaints' || (activePath.startsWith('/complaints/') && activePath !== '/complaints/new'); return activePath === href || activePath.startsWith(`${href}/`); }

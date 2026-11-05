@@ -18,6 +18,8 @@ compileTailwind(output);
 await build({ entryPoints: ['apps/web/test/browser/ticket-phone-rule.fixture.tsx'], bundle: true, platform: 'browser',
   outfile: `${output}/fixture.js`, jsx: 'automatic', tsconfig: 'apps/web/tsconfig.json', define: { 'process.env.NODE_ENV': '"development"' },
   plugins: [{ name: 'action-test-doubles', setup(builder) {
+    builder.onResolve({ filter: /^next\/link$/ }, args => ({ path: args.path, namespace: 'phone-link' }));
+    builder.onLoad({ filter: /.*/, namespace: 'phone-link' }, () => ({ loader: 'js', resolveDir: resolve('apps/web'), contents: 'import React from "react";export default function Link(props){return React.createElement("a",props);}' }));
     builder.onResolve({ filter: /staff-ticket-phone-actions$/ }, args => ({ path: args.path, namespace: 'phone-action' }));
     builder.onLoad({ filter: /.*/, namespace: 'phone-action' }, () => ({ loader: 'js', contents: `
       export async function findTicketPhoneDuplicates(input) {
@@ -55,7 +57,8 @@ try {
     await phone.fill('+962790000000');
     await page.getByText(copy.duplicate, { exact: true }).waitFor();
     const link = page.getByRole('link');
-    assert.equal(await link.getAttribute('href'), `/internal-tickets/ticket-1?locale=${locale}`);
+    assert.equal(await link.getAttribute('href'), `/internal-tickets/ticket-1?returnTo=new-ticket&locale=${locale}`);
+    assert.equal(await link.getAttribute('target'), null);
     assert.ok(await page.getByText(copy.followUp, { exact: true }).isVisible());
     await page.getByRole('button', { name: copy.separate, exact: true }).click();
     assert.equal(await page.getByTestId('acknowledgement').textContent(), 'true');

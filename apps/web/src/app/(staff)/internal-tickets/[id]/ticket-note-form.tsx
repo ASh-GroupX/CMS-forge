@@ -31,6 +31,7 @@ export function TicketNoteForm({ ticketId }: { ticketId: string }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const form = e.currentTarget;
     if (!content.trim() && files.length === 0) return;
 
     for (const f of files) {
@@ -62,6 +63,8 @@ export function TicketNoteForm({ ticketId }: { ticketId: string }) {
       await addTicketNote(ticketId, content, attachmentsPayload);
       setContent('');
       setFiles([]);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      window.dispatchEvent(new CustomEvent('cms:form-saved', { detail: form }));
       router.refresh();
       toast.success('Note added successfully');
     } catch (err: any) {

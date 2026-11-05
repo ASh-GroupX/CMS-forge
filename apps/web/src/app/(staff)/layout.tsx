@@ -53,7 +53,7 @@ export default async function StaffLayout({ children }: { children: ReactNode })
       navKeys={allowedNav}
       principal={principal}
       sidebarBefore={principal ? (
-        <form action={logoutStaffAction} className="mb-4">
+        <form action={logoutStaffAction} className="mb-4" data-staff-logout>
           <input name="locale" type="hidden" value={locale} />
           <button className="rounded-sm border border-line-subtle bg-surface px-3 py-2 text-sm font-semibold hover:bg-surface-raised focus:outline-none focus:ring-2 focus:ring-brand" type="submit">
             {t.auth.logout}
