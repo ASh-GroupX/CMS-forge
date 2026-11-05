@@ -1,17 +1,32 @@
-# Notification visibility and unread feedback
-Status: Tests passed; release authorized by user
-Risk: Medium
-SRS: REQ-NOTIFY-001, UI-DESIGN-001
+# Department customer phone duplicate rule
+Status: Implemented locally; tests passed; policy-tier review pending
+Risk: High
+SRS: REQ-RBAC-001, METHOD-API-001, METHOD-TEST-001, UI-DESIGN-001
 
-Larger 48px bell with localized numeric unread badge (99+ at API limit), readable
-desktop label and brand highlight when unread. Counter refreshes every30 seconds,
-on focus and visibility; clears highlight at zero and pauses while hidden.
-Full-page notification navigation retained. Unread activity cards have logical
-accent border, larger titles and supplied message text.
+Admin adds a custom field with Customer phone duplicate rule. Server forces TEXT
+and required international phone; no default local country. Normalize +/00 prefix,
+spacing/punctuation and Arabic/Persian digits. Check all tickets readable by the
+session across accessible departments. Show at most20 minimal ticket links.
+User opens prior ticket to follow up in existing notes, or explicitly acknowledges
+that phone field for a different problem. Editing input clears acknowledgement.
 
-Passed lint, typecheck, build, shell228/228, accessibility24/24, diff check;
-hydrated EN desktop/AR mobile browser checks and inspected screenshots. Browser
-proof covers zero/count/cap, failure recovery, polling, hidden suppression,
-visibility/focus refresh, activity message and localized destination. Command:
-pnpm test:notifications:browser. Full suite73/73, notifications API45/45 and web API-client101/101 passed. User authorized waleed push/production merge. Available independent
-review found no confirmed blocker; named phase reviewer tier unavailable.
+Replanned bounded steps completed: schema/index, server helper+integration,
+admin/UI, generated contracts/client and verification. Existing fields default
+false; no existing values reinterpreted or indexed automatically. Rule is immutable
+on an existing field; add a new rule field to enable it. Phone records remain if
+field is later deleted, preserving prior duplicate detection history.
+
+Passed full suite74/74 (89.78% lines), internal ticket API8/8 incl real HTTP
+401/200/400/404, API-client103/103, shell228/228, lint/typecheck/build/OpenAPI and
+generated client check. EN/AR browser proof and screenshots inspected. PostgreSQL
+migration/defaults, cross-department allowed/denied/admin visibility and concurrent
+create lock/recheck passed. Temporary database stopped after proof.
+
+Independent fresh reviewer found no additional confirmed blocker after typed
+client/HTTP coverage repairs. Named High reviewer tier unavailable; not claimed
+as phase acceptance. No push/merge/deployment. Next release must retain this
+limitation honestly. Preserve unrelated tmp/ and uploads/.
+
+Release direction: user explicitly authorized pushing waleed and merging
+production on 2026-11-05 after the test report. Existing verification/reviewer
+limitations remain recorded; named-tier review is not relabeled as passed.

@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { createDepartmentCustomField } from './actions';
+import { Checkbox } from '../../../../components/ui/checkbox';
+import { ticketPhoneRuleAdmin } from '../../../../i18n/staff-ticket-phone-rule';
 
 interface AddCustomFieldFormProps {
   departmentId: string;
@@ -16,6 +18,7 @@ export function AddCustomFieldForm({ departmentId, onSuccess, onCancel }: AddCus
   const [fieldType, setFieldType] = useState('TEXT');
   const [optionsStr, setOptionsStr] = useState('');
   const [isRequired, setIsRequired] = useState(false);
+  const [phoneDuplicateCheck, setPhoneDuplicateCheck] = useState(false);
   const [placeholderEn, setPlaceholderEn] = useState('');
   const [placeholderAr, setPlaceholderAr] = useState('');
   const [saving, setSaving] = useState(false);
@@ -40,6 +43,7 @@ export function AddCustomFieldForm({ departmentId, onSuccess, onCancel }: AddCus
         placeholderEn: placeholderEn.trim() || undefined,
         placeholderAr: placeholderAr.trim() || undefined,
         isRequired,
+        phoneDuplicateCheck,
       });
       toast.success('Custom field created / تم إضافة الحقل بنجاح');
       onSuccess();
@@ -77,6 +81,7 @@ export function AddCustomFieldForm({ departmentId, onSuccess, onCancel }: AddCus
         <div>
           <label className="text-xs font-semibold text-content-strong">Field Type</label>
           <select
+            disabled={phoneDuplicateCheck}
             value={fieldType}
             onChange={(e) => setFieldType(e.target.value)}
             className="w-full mt-1 rounded-lg border border-line-subtle bg-surface p-2 text-xs focus:border-brand focus:outline-none"
@@ -105,13 +110,22 @@ export function AddCustomFieldForm({ departmentId, onSuccess, onCancel }: AddCus
         <label className="flex items-center gap-2 text-xs font-semibold text-content-strong cursor-pointer">
           <input
             type="checkbox"
-            checked={isRequired}
+            checked={phoneDuplicateCheck || isRequired}
+            disabled={phoneDuplicateCheck}
             onChange={(e) => setIsRequired(e.target.checked)}
             className="rounded text-brand"
           />
           Required field (حقل إلزامي عند إنشاء التذكرة)
         </label>
       </div>
+
+      <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-border p-3 text-sm">
+        <Checkbox aria-label={ticketPhoneRuleAdmin.label} checked={phoneDuplicateCheck} onCheckedChange={checked => {
+          setPhoneDuplicateCheck(checked === true);
+          if (checked === true) { setFieldType('TEXT'); setIsRequired(true); if (!nameEn) setNameEn(ticketPhoneRuleAdmin.nameEn); if (!nameAr) setNameAr(ticketPhoneRuleAdmin.nameAr); }
+        }} />
+        <span><span className="block font-semibold">{ticketPhoneRuleAdmin.label}</span><span className="mt-1 block text-xs text-muted-foreground">{ticketPhoneRuleAdmin.hint}</span></span>
+      </label>
 
       <div className="flex justify-end gap-2 mt-2">
         <button

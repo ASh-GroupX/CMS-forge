@@ -8,6 +8,7 @@ import { CreateInternalTicketDto } from './dto/create-internal-ticket.dto.js';
 import { TransferTicketDto, AssignTicketDto, ResolveTicketDto, WaitTicketDto, RejectTicketDto, AddNoteDto } from './dto/update-internal-ticket.dto.js';
 import { AttachmentsService } from '../attachments/attachments.service.js';
 import { UploadTicketAttachmentDto } from './dto/upload-attachment.dto.js';
+import { auditPhoneTicketCreate, enforcePhoneRule, normalizeTicketPhone, phoneMatches } from './internal-ticket-phone-rule.js';
 
 const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
 
@@ -134,17 +135,13 @@ export class InternalTicketsService {
         throw new BadRequestException('You are not permitted to directly assign tickets to specific officers.');
       }
 
-      if (dto.targetDepartmentId) {
-        const requiredCustomFields = await tx.departmentTicketCustomField.findMany({
-          where: { departmentId: dto.targetDepartmentId, isActive: true, isRequired: true },
-        });
-        for (const field of requiredCustomFields) {
-          const val = dto.customFields?.[field.id];
-          if (val === undefined || val === null || val === '') {
-            throw new BadRequestException(`Field "${field.nameEn}" is required.`);
-          }
-        }
-      }
+      const customFields = { ...(dto.customFields ?? {}) };
+      const fieldDefinitions = await tx.departmentTicketCustomField.findMany({
+        where: { departmentId: dto.targetDepartmentId, isActive: true },
+      });
+      const acknowledgedPhoneFields = Array.isArray(dto.acknowledgedPhoneFields) ? dto.acknowledgedPhoneFields.filter(value => typeof value === 'string') : [];
+      const phones = await enforcePhoneRule(tx, principal, fieldDefinitions, customFields, acknowledgedPhoneFields);
+      for (const value of phones) customFields[value.fieldId] = value.phone;
 
       const canBypassApproval = (
         userRule?.canSendWithoutManagerApproval === true ||
@@ -171,14 +168,19 @@ export class InternalTicketsService {
           priority: dto.priority || 'NORMAL',
           slaOptionId: dto.slaOptionId || null,
           dueAt: dto.dueAt ? new Date(dto.dueAt) : null,
-          customFields: (dto.customFields as any) ?? undefined,
+          customFields: customFields as any,
           status: needsApproval ? 'PENDING_APPROVAL' : (dto.requestedEmployeeId ? 'ASSIGNED' : 'NEW'),
         },
       });
 
       await this.logActivity(tx, ticket.id, actorId, 'CREATED', {
         targetDepartmentId: dto.targetDepartmentId,
+        acknowledgedPhoneFields: phones.filter(value => acknowledgedPhoneFields.includes(value.fieldId)).map(value => value.fieldId),
       });
+      if (phones.length) {
+        await tx.ticketCustomerPhone.createMany({ data: phones.map(value => ({ ...value, ticketId: ticket.id })) });
+        await auditPhoneTicketCreate(tx, ticket.id, actorId, phones.filter(value => acknowledgedPhoneFields.includes(value.fieldId)).map(value => value.fieldId));
+      }
 
       if (dto.attachments?.length) {
         await this.storeTicketAttachments(tx, ticket.id, actorId, dto.attachments);
@@ -600,6 +602,16 @@ export class InternalTicketsService {
     });
   }
 
+  async findPhoneDuplicates(principal: any, dto: { departmentId: string; fieldId: string; phone: string }) {
+    if (typeof dto?.departmentId !== 'string' || typeof dto.fieldId !== 'string') throw new BadRequestException('Department and field are required');
+    const phone = normalizeTicketPhone(dto.phone);
+    return this.repository.transaction(async tx => {
+      const field = await tx.departmentTicketCustomField.findFirst({ where: { id: dto.fieldId, departmentId: dto.departmentId, isActive: true, phoneDuplicateCheck: true } });
+      if (!field) throw new NotFoundException('Phone rule not found');
+      return { items: await phoneMatches(tx, phone, principal) };
+    });
+  }
+
   async createDepartmentCustomField(departmentId: string, dto: any, principal: any) {
     if (principal.roleCode !== 'ADMIN') throw new BadRequestException('Unauthorized');
     if (!dto.nameEn?.trim() || !dto.nameAr?.trim() || !dto.fieldType) {
@@ -615,11 +627,12 @@ export class InternalTicketsService {
           departmentId,
           nameEn: dto.nameEn.trim(),
           nameAr: dto.nameAr.trim(),
-          fieldType: dto.fieldType,
+          fieldType: dto.phoneDuplicateCheck === true ? 'TEXT' : dto.fieldType,
+          phoneDuplicateCheck: dto.phoneDuplicateCheck === true,
           options,
           placeholderEn: dto.placeholderEn?.trim() || null,
           placeholderAr: dto.placeholderAr?.trim() || null,
-          isRequired: Boolean(dto.isRequired),
+          isRequired: dto.phoneDuplicateCheck === true || Boolean(dto.isRequired),
           isActive: dto.isActive !== false,
           order: typeof dto.order === 'number' ? dto.order : count,
         },
@@ -634,6 +647,9 @@ export class InternalTicketsService {
         where: { id: fieldId, departmentId },
       });
       if (!field) throw new NotFoundException('Field not found');
+      if (dto.phoneDuplicateCheck !== undefined && dto.phoneDuplicateCheck !== field.phoneDuplicateCheck) {
+        throw new BadRequestException('Create a new phone-rule field instead of changing an existing field rule.');
+      }
 
       const data: any = {};
       if (dto.nameEn !== undefined) data.nameEn = dto.nameEn.trim();
@@ -647,6 +663,7 @@ export class InternalTicketsService {
       if (dto.isRequired !== undefined) data.isRequired = Boolean(dto.isRequired);
       if (dto.isActive !== undefined) data.isActive = Boolean(dto.isActive);
       if (dto.order !== undefined) data.order = Number(dto.order);
+      if (field.phoneDuplicateCheck) { data.isRequired = true; data.fieldType = 'TEXT'; }
 
       return tx.departmentTicketCustomField.update({
         where: { id: fieldId },

@@ -5,6 +5,282 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/internal-tickets": {
+      "post": {
+        "tags": [
+          "InternalTickets"
+        ],
+        "operationId": "internalTicketCreate",
+        "summary": "Create ticket with server-enforced custom phone rule",
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTicketPhoneRuleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created ticket",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "referenceNumber": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "customFields": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Required field or international phone invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "DUPLICATE_CUSTOMER_PHONE: review readable matching tickets or explicitly confirm another problem",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal-tickets/settings/departments/{departmentId}/custom-fields": {
+      "post": {
+        "tags": [
+          "InternalTickets"
+        ],
+        "operationId": "internalTicketCustomFieldCreate",
+        "summary": "Admin creates department field with optional required phone duplicate rule",
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "departmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDepartmentTicketPhoneCustomField"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created department custom field",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartmentTicketPhoneCustomField"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or non-admin configuration attempt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal-tickets/settings/departments/{departmentId}/fields": {
+      "get": {
+        "tags": [
+          "InternalTickets"
+        ],
+        "operationId": "internalTicketDepartmentFields",
+        "summary": "Load department form configuration and active custom fields including phone rules",
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "departmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Department form definition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "config": {
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "customFields": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/DepartmentTicketPhoneCustomField"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal-tickets/phone-duplicates": {
+      "post": {
+        "tags": [
+          "InternalTickets"
+        ],
+        "operationId": "internalTicketPhoneDuplicates",
+        "summary": "Check international phone against tickets readable by current session across accessible departments",
+        "security": [
+          {
+            "staffSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketPhoneDuplicateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "At most20 accessible matching tickets. No disclosure of hidden tickets.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketPhoneDuplicateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid international phone or rule request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Staff session required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Active phone rule not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/board-stages": {
       "get": {
         "tags": [
@@ -6279,7 +6555,243 @@
     }
   },
   "components": {
+    "securitySchemes": {
+      "staffSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "cms_staff_session"
+      }
+    },
     "schemas": {
+      "DepartmentTicketPhoneCustomField": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "departmentId": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "fieldType": {
+            "type": "string",
+            "enum": [
+              "TEXT",
+              "NUMBER",
+              "DROPDOWN",
+              "DATE",
+              "TEXTAREA"
+            ]
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "phoneDuplicateCheck": {
+            "type": "boolean",
+            "default": false,
+            "description": "Opt-in immutable rule; forces TEXT and required international phone; allows explicitly acknowledged different-problem reuse."
+          },
+          "isRequired": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "order": {
+            "type": "integer"
+          },
+          "placeholderEn": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "placeholderAr": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "CreateDepartmentTicketPhoneCustomField": {
+        "type": "object",
+        "required": [
+          "nameEn",
+          "nameAr",
+          "fieldType"
+        ],
+        "properties": {
+          "nameEn": {
+            "type": "string"
+          },
+          "nameAr": {
+            "type": "string"
+          },
+          "fieldType": {
+            "type": "string",
+            "enum": [
+              "TEXT",
+              "NUMBER",
+              "DROPDOWN",
+              "DATE",
+              "TEXTAREA"
+            ]
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "phoneDuplicateCheck": {
+            "type": "boolean",
+            "default": false,
+            "description": "Opt-in immutable rule; forces TEXT and required international phone; allows explicitly acknowledged different-problem reuse."
+          },
+          "isRequired": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "order": {
+            "type": "integer"
+          },
+          "placeholderEn": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "placeholderAr": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "CreateTicketPhoneRuleRequest": {
+        "type": "object",
+        "required": [
+          "title",
+          "description",
+          "targetDepartmentId",
+          "categoryId"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "targetDepartmentId": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string"
+          },
+          "customFields": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "acknowledgedPhoneFields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Phone-rule field IDs explicitly confirmed for a different problem. Confirmation is required when a matching readable ticket exists."
+          }
+        }
+      },
+      "TicketPhoneDuplicateRequest": {
+        "type": "object",
+        "required": [
+          "departmentId",
+          "fieldId",
+          "phone"
+        ],
+        "properties": {
+          "departmentId": {
+            "type": "string"
+          },
+          "fieldId": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string",
+            "description": "International phone with country code; + or 00 prefix. Formatting separators and Arabic digits normalized."
+          }
+        }
+      },
+      "TicketPhoneDuplicateResponse": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "referenceNumber",
+                "title",
+                "status"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "referenceNumber": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "InternalTicketPhoneRule": {
+        "type": "object",
+        "description": "Opt-in immutable rule on a new department custom field: phoneDuplicateCheck=true forces TEXT and isRequired=true.",
+        "properties": {
+          "phoneDuplicateCheck": {
+            "type": "boolean",
+            "default": false
+          },
+          "isRequired": {
+            "type": "boolean"
+          },
+          "fieldType": {
+            "type": "string"
+          },
+          "acknowledgedPhoneFields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Ticket creation: explicitly acknowledged phone-rule field IDs. Duplicate create without matching acknowledgement returns409 DUPLICATE_CUSTOMER_PHONE."
+          }
+        }
+      },
       "AssignmentOption": {
         "type": "object",
         "required": ["id", "nameEn", "nameAr", "branchId"],

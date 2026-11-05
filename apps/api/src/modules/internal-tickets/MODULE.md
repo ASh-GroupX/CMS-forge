@@ -23,6 +23,9 @@ module's boundary so you can work in a fresh context without scanning the tree.
 - `ticket_categories`
 - `ticket_waiting_reasons`
 - `ticket_sla_options`
+- `ticket_customer_phones` (normalized department phone-rule values; scoped lookups)
+- `department_ticket_custom_fields`
+- `audit_logs` (append-only phone-rule ticket creation audit in the create transaction)
 
 ## May depend on
 

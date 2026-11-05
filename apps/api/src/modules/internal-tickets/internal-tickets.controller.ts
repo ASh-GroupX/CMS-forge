@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Put, Delete, Body, Param, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Put, Delete, Body, Param, Query, Req, Res, UseGuards, HttpCode } from '@nestjs/common';
 import * as path from 'node:path';
 import { SessionAuthGuard } from '../../core/auth.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
@@ -109,6 +109,12 @@ export class InternalTicketsController {
   @Get('options')
   async getOptions(@Req() req: AuthenticatedRequest) {
     return this.service.getFormOptions(req.principal);
+  }
+
+  @Post('phone-duplicates')
+  @HttpCode(200)
+  async phoneDuplicates(@Req() req: AuthenticatedRequest, @Body() dto: { departmentId: string; fieldId: string; phone: string }) {
+    return this.service.findPhoneDuplicates(req.principal, dto);
   }
 
   @Get('team-workload')

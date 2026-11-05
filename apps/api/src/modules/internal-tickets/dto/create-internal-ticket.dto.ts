@@ -44,4 +44,8 @@ export class CreateInternalTicketDto {
 
   @IsOptional()
   customFields?: Record<string, any>;
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  acknowledgedPhoneFields?: string[];
 }

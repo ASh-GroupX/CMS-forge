@@ -8,6 +8,7 @@ import { staffAttachmentFiles } from '../../../../lib/staff-attachments-api';
 import { Paperclip } from 'lucide-react';
 import { DueDatePicker, TIME_OPTIONS } from './due-date-picker';
 import { CustomFieldsRenderer, CustomFieldDef } from './custom-fields-renderer';
+import { ticketPhoneRuleText } from '../../../../i18n/staff-ticket-phone-rule';
 
 interface DepartmentConfig {
   enablePriorityField: boolean;
@@ -18,8 +19,10 @@ interface DepartmentConfig {
 
 export default function CreateInternalTicketForm({
   options,
+  locale = 'en',
 }: {
   options: { departments: any[]; categories: any[]; employees: any[] };
+  locale?: 'en' | 'ar';
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -44,8 +47,11 @@ export default function CreateInternalTicketForm({
   const [deptCustomFields, setDeptCustomFields] = useState<CustomFieldDef[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, any>>({});
   const [loadingFields, setLoadingFields] = useState(false);
+  const [phoneAcknowledgements, setPhoneAcknowledgements] = useState<Record<string, boolean>>({});
+  const [phoneLookupVersion, setPhoneLookupVersion] = useState(0);
 
   useEffect(() => {
+    setPhoneAcknowledgements({});
     if (!selectedDepartmentId) {
       setDeptConfig({
         enablePriorityField: true,
@@ -129,6 +135,7 @@ export default function CreateInternalTicketForm({
 
     try {
       const payload: any = { title, description, targetDepartmentId, categoryId };
+      payload.acknowledgedPhoneFields = Object.keys(phoneAcknowledgements).filter(id => phoneAcknowledgements[id]);
       if (deptConfig.enableOfficerSelection && selectedRequestedEmployeeId) {
         payload.requestedEmployeeId = selectedRequestedEmployeeId;
       }
@@ -169,7 +176,8 @@ export default function CreateInternalTicketForm({
 
       const result = await createInternalTicket(payload);
       if (result && !result.success) {
-        setError(result.error || 'Failed to create ticket');
+        if (result.code === 'DUPLICATE_CUSTOMER_PHONE') setPhoneLookupVersion(version => version + 1);
+        setError(result.code === 'DUPLICATE_CUSTOMER_PHONE' ? ticketPhoneRuleText[locale].duplicate : result.error || 'Failed to create ticket');
         setLoading(false);
         return;
       }
@@ -305,6 +313,9 @@ export default function CreateInternalTicketForm({
 
       {/* Target Department Custom Fields */}
       <CustomFieldsRenderer
+        isAr={locale === 'ar'}
+        lookupVersion={phoneLookupVersion}
+        onPhoneAcknowledge={(id, accepted) => setPhoneAcknowledgements(previous => ({ ...previous, [id]: accepted }))}
         fields={deptCustomFields}
         values={customFieldValues}
         onChange={(fieldId, val) => setCustomFieldValues((prev) => ({ ...prev, [fieldId]: val }))}

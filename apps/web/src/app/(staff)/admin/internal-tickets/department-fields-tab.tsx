@@ -10,6 +10,8 @@ import {
   updateDepartmentCustomField,
 } from './actions';
 import { AddCustomFieldForm } from './add-custom-field-form';
+import { ticketPhoneRuleAdmin } from '../../../../i18n/staff-ticket-phone-rule';
+import { Badge } from '../../../../components/ui/badge';
 
 export function DepartmentFieldsTab({
   departments,
@@ -187,6 +189,7 @@ export function DepartmentFieldsTab({
                     <div className="text-sm font-semibold text-content-strong flex items-center gap-2">
                       {field.nameEn} <span className="text-xs text-content-muted">({field.nameAr})</span>
                       {field.isRequired && <span className="rounded bg-status-error/10 px-1.5 py-0.5 text-[10px] font-bold text-status-error">Required</span>}
+                      {field.phoneDuplicateCheck && <Badge variant="outline">{ticketPhoneRuleAdmin.badge}</Badge>}
                       {!field.isActive && <span className="rounded bg-surface-raised px-1.5 py-0.5 text-[10px] font-semibold text-content-muted">Disabled</span>}
                     </div>
                     <div className="text-xs text-content-subtle mt-0.5">

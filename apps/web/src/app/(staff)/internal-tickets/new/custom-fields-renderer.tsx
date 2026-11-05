@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { PhoneRuleField } from './phone-rule-field';
 
 export interface CustomFieldDef {
   id: string;
@@ -12,6 +13,7 @@ export interface CustomFieldDef {
   placeholderEn: string | null;
   placeholderAr: string | null;
   isRequired: boolean;
+  phoneDuplicateCheck?: boolean;
   isActive: boolean;
   order: number;
 }
@@ -21,9 +23,11 @@ interface CustomFieldsRendererProps {
   values: Record<string, any>;
   onChange: (fieldId: string, value: any) => void;
   isAr?: boolean;
+  onPhoneAcknowledge?: (fieldId: string, accepted: boolean) => void;
+  lookupVersion?: number;
 }
 
-export function CustomFieldsRenderer({ fields, values, onChange, isAr }: CustomFieldsRendererProps) {
+export function CustomFieldsRenderer({ fields, values, onChange, isAr, onPhoneAcknowledge, lookupVersion = 0 }: CustomFieldsRendererProps) {
   if (!fields || fields.length === 0) return null;
 
   return (
@@ -42,6 +46,8 @@ export function CustomFieldsRenderer({ fields, values, onChange, isAr }: CustomF
           const label = isAr && f.nameAr ? f.nameAr : f.nameEn;
           const placeholder = isAr && f.placeholderAr ? f.placeholderAr : (f.placeholderEn || '');
           const val = values[f.id] ?? '';
+          if (f.phoneDuplicateCheck) return <PhoneRuleField key={f.id} field={f} value={String(val)} isAr={isAr ?? false} lookupVersion={lookupVersion}
+            onChange={value => onChange(f.id, value)} onAcknowledge={accepted => onPhoneAcknowledge?.(f.id, accepted)} />;
 
           if (f.fieldType === 'TEXTAREA') {
             return (
