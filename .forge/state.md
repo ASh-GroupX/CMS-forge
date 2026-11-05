@@ -1,28 +1,21 @@
 # Current State
 
 Date: 2026-11-05
-Status: Navigation and report defaults verified; release authorized, live result pending
-Risk: Low (default-column follow-up)
+Status: Ticket draft notice fix verified; push/merge authorized, deployment pending
+Risk: Medium
 
-- Report board defaults to Assigned, In progress, Waiting, Reopened, Resolved,
-  Completed, Closed and Rejected. All 14 remain selectable; custom choices persist.
-- Follow-up Passed: EN/AR board browser 46 assertions, API-client 106, lint,
-  typecheck, diff check. Screenshots inspected; independent review no blockers.
-
-- Shared localized Back/Forward/section navigation covers all 43 staff routes.
-- Duplicate-ticket links stay in the same tab; Back to draft restores ticket
-  fields and same-tab attachments. Drafts expire and clear on create/discard/logout.
-- Unsaved-form guards protect links and native browser history before Next can
-  unmount the editor. Active menus follow client navigation; mobile logout works.
-- Reports retain department/date/column selections and workspace filters.
-- Passed: root tests 78, shell 228, API-client 106, internal-ticket API 8,
-  EN/AR hydrated and real production Next browser proofs, report board 42
-  assertions, phone browser regression, lint/typecheck/build, OpenAPI and diff.
-- Independent reviewer found no concrete blocker. Policy-named reviewer tier
-  unavailable: named-tier acceptance Needs Human Review, not represented as passed.
-- Real Next proof uses controlled backend fixtures. All 43 routes were audited
-  structurally; not all were manually tested against a populated live database.
-- Full reload requires reattaching file bytes; same-tab ticket review preserves
-  files in memory and the form warns when reattachment is needed.
-- User authorized push to waleed and merge to production. Existing workflow will
-  validate and deploy; live result pending. Unrelated tmp/uploads excluded.
+- Reproduced misleading saved banner remaining after Discard draft reset.
+- Entire draft notice disappears on empty/confirmed-discarded form and returns
+  only after meaningful new input. Confirmation resets fields/files/cache;
+  no persistent success box. Cancel preserves input, focus
+  returns to title, stale errors clear, discard disabled during submission.
+- Passed: real Next EN/AR full discard/cancel/reload/file proof, isolated EN/AR
+  navigation proof, API-client106, lint, typecheck, web production build, diff check.
+- Independent static review: no blockers. Required named-model tier unavailable;
+  named-tier acceptance is not claimed as passed.
+- User authorized releasing the new fix via waleed/production; live outcome
+  pending at commit time. Previous navigation/defaults release production62af884
+  was deployed successfully: GitHub run42026544385 succeeded; live site and API
+  health returned HTTP200 with matching release header.
+- Browser proof uses controlled API fixtures. No backend/auth/workflow changes.
+  Unrelated tmp/uploads preserved.

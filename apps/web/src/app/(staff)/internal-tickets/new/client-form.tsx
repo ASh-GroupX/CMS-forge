@@ -9,7 +9,7 @@ import { Paperclip } from 'lucide-react';
 import { DueDatePicker, TIME_OPTIONS } from './due-date-picker';
 import { CustomFieldsRenderer, CustomFieldDef } from './custom-fields-renderer';
 import { ticketPhoneRuleText } from '../../../../i18n/staff-ticket-phone-rule';
-import { useTicketDraft, type TicketDraft } from '../../../../lib/use-ticket-draft';
+import { hasTicketDraft, useTicketDraft, type TicketDraft } from '../../../../lib/use-ticket-draft';
 import { staffNavigationText } from '../../../../i18n/staff-navigation';
 import { Button } from '../../../../components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../../components/ui/dialog';
@@ -46,6 +46,9 @@ export default function CreateInternalTicketForm({
   const setSelectedDepartmentId = (value: string) => { update('selectedDepartmentId', value); update('customFieldValues', {}); update('selectedRequestedEmployeeId', ''); };
   const navigation = staffNavigationText[locale];
   const [discardOpen, setDiscardOpen] = useState(false);
+  const [draftDiscarded, setDraftDiscarded] = useState(false);
+  const hasDraft = draftReady && hasTicketDraft(draft);
+  useEffect(() => { if (hasDraft) setDraftDiscarded(false); }, [hasDraft]);
 
   // Department-specific dynamic fields & rules
   const [deptConfig, setDeptConfig] = useState<DepartmentConfig>({
@@ -202,14 +205,14 @@ export default function CreateInternalTicketForm({
   return (
     <form ref={draftState.formRef} onChangeCapture={draftState.captureFiles} data-draft-persisted={draftReady && draftState.available && Boolean(draftOwner)} data-draft-has-files={draft.attachmentNames.length > 0} onSubmit={handleSubmit} className="flex flex-col gap-6 rounded-3xl border border-line-subtle bg-surface p-6 sm:p-8 shadow-sm max-w-2xl">
       {error && <div className="rounded-xl bg-status-error/10 p-4 text-sm font-semibold text-status-error">{error}</div>}
-      <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3 text-sm">
+      {hasDraft && <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3 text-sm">
         <p role="status">{draftState.available ? draftState.restored ? navigation.restored : navigation.draftSaved : navigation.draftUnavailable}</p>
         {draftState.missingFiles && <p role="alert" className="text-destructive">{navigation.missingFiles}</p>}
-        <Button type="button" size="sm" variant="outline" onClick={() => setDiscardOpen(true)}>{navigation.discard}</Button>
-      </div>
-      <Dialog open={discardOpen} onOpenChange={setDiscardOpen}><DialogContent dir={locale === 'ar' ? 'rtl' : 'ltr'}><DialogHeader><DialogTitle>{navigation.discard}</DialogTitle><DialogDescription>{navigation.discardHint}</DialogDescription></DialogHeader><DialogFooter>
+        <Button type="button" size="sm" variant="outline" disabled={loading} onClick={() => setDiscardOpen(true)}>{navigation.discard}</Button>
+      </div>}
+      <Dialog open={discardOpen} onOpenChange={setDiscardOpen}><DialogContent dir={locale === 'ar' ? 'rtl' : 'ltr'} onCloseAutoFocus={event => { if (draftDiscarded) { event.preventDefault(); draftState.formRef.current?.querySelector<HTMLInputElement>('#title')?.focus(); } }}><DialogHeader><DialogTitle>{navigation.discard}</DialogTitle><DialogDescription>{navigation.discardHint}</DialogDescription></DialogHeader><DialogFooter>
         <Button type="button" variant="outline" onClick={() => setDiscardOpen(false)}>{navigation.stay}</Button>
-        <Button type="button" onClick={() => { draftState.clear(true); setPhoneAcknowledgements({}); setDiscardOpen(false); }}>{navigation.discard}</Button>
+        <Button type="button" disabled={loading} onClick={() => { draftState.clear(true); setPhoneAcknowledgements({}); setError(''); setDraftDiscarded(true); setDiscardOpen(false); }}>{navigation.discard}</Button>
       </DialogFooter></DialogContent></Dialog>
 
       <div className="flex flex-col gap-2">
