@@ -2,7 +2,8 @@ import React from 'react';
 import CreateInternalTicketForm from './client-form';
 import { getTicketOptions } from '../../../../lib/staff-internal-tickets-actions';
 
-export default async function NewInternalTicketPage() {
+export default async function NewInternalTicketPage({ searchParams }: { searchParams?: Promise<{ locale?: string }> } = {}) {
+  const locale = (await searchParams)?.locale === 'ar' ? 'ar' : 'en';
   const options = await getTicketOptions();
 
   return (
@@ -12,7 +13,7 @@ export default async function NewInternalTicketPage() {
         <p className="text-sm text-content-muted">Send a request or task to another department.</p>
       </div>
       
-      <CreateInternalTicketForm options={options} />
+      <CreateInternalTicketForm options={options} locale={locale} />
     </div>
   );
 }

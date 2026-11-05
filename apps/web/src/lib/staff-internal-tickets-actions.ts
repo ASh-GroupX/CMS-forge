@@ -33,13 +33,14 @@ export async function createInternalTicket(data: {
   priority?: string;
   dueAt?: string;
   customFields?: Record<string, any>;
+  acknowledgedPhoneFields?: string[];
   attachments?: Array<{
     fileName: string;
     contentType: string;
     sizeBytes: number;
     contentBase64: string;
   }>;
-}): Promise<{ success: boolean; data?: any; error?: string }> {
+}): Promise<{ success: boolean; data?: any; error?: string; code?: string }> {
   try {
     const res = await fetch(`${API_BASE_URL}/internal-tickets`, {
       method: 'POST',
@@ -49,9 +50,8 @@ export async function createInternalTicket(data: {
     });
 
     if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      console.error('[createInternalTicket] API error:', res.status, body);
-      return { success: false, error: `Failed to create ticket (${res.status}): ${body || 'Server error'}` };
+      const body = await res.json().catch(() => ({}));
+      return { success: false, error: body.error?.message ?? body.message ?? 'Failed to create ticket', code: body.error?.code ?? body.code };
     }
     revalidatePath('/internal-tickets', 'layout');
     const json = await res.json();

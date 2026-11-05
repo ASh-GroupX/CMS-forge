@@ -15482,3 +15482,54 @@ verification results and reviewer-tier limitation remain unchanged.
 - Available independent review found no confirmed blocker; named reviewer tier
   limitation remains recorded and is not represented as a named-tier pass.
 - Unrelated tmp/ and uploads/ excluded.
+
+## F9-PHONE-01 - Department required international customer-phone rule
+
+- 2026-11-05. REQ-RBAC-001, METHOD-API-001, METHOD-TEST-001, UI-DESIGN-001.
+  High; replanned into bounded schema/API/UI/verification steps in next.md.
+- User clarified: match across all accessible departments; require country code.
+  Duplicate handling is warning plus explicit different-problem override, not a
+  hard uniqueness constraint that would prevent legitimate repeat customers.
+- Admin opt-in forces TEXT+required on server; immutable rule on a new field.
+  Existing fields defaultfalse and remain unchanged. Indexed ticket_customer_phones
+  records are normalized from +/00 prefixes, separators and Arabic/Persian digits.
+- Preview uses authenticated principal only, matching existing getTicket access:
+  admin, own requester, assignee, receiving department, or requester's department.
+  Scope never comes from submitted identity/role; minimal metadata max20. No
+  disclosure of hidden matches. Frontend uses generated OpenAPI contracts client.
+- Create locks normalized values in stable order, rechecks readable matches and
+  requires per-field acknowledgement. Phone index, activity and append-only audit
+  are written in same create transaction. Audit never includes phone values.
+  No new lifecycle transition/notification/job/provider/portal path introduced.
+- EN/AR UI shows required phone, duplicate warning, accessible ticket hyperlinks
+  opening existing detail/notes, and separate-problem choice. Editing clears choice;
+  stale lookup discarded, errors retryable, zero-match state shown. Existing note
+  form handles follow-up without copying notes or auto-creating another ticket.
+- Independent fresh review initially found raw client/HTTP-proof gaps. Added
+  generated contracts client plus projection/error tests and real Nest HTTP
+  session-guard endpoint tests; reviewer rechecked: no additional confirmed blocker.
+  Available reviewer tier not policy-named High tier; do not claim that acceptance.
+- Passed: full suite74/74 (89.78% lines), internal-tickets API8/8, API-client103/103,
+  shell228/228, lint, typecheck, build, OpenAPI, generated client drift and diff check.
+  Root suite includes visual/accessibility/performance. Hydrated EN desktop/AR mobile
+  browser proof covers local-phone rejection, matching links, override/reset, stale
+  responses, retry and forced required admin rule. Screenshots inspected under
+  coverage/ticket-phone-browser. Test-only action doubles, no production provider calls.
+- Real PostgreSQL18 isolated proof applied actual migration over legacy baseline,
+  verified defaultfalse, exact allowed/denied/admin crossdepartment matches and
+  race serialization (first insert commits, unacknowledged concurrent create rejects).
+  Temporary loopback instance stopped; existing host PostgreSQL service untouched.
+- Deployment Not Run; new schema/data not installed live. No automatic department
+  selected; admin chooses where to add rule. Unrelated tmp/uploads preserved.
+
+## Phone-rule release authorization - 2026-11-05
+
+- User explicitly requested push and merge after implementation/test report.
+  Proceed with established waleed-to-production flow. Current test/build/browser,
+  contract and isolated PostgreSQL migration/RBAC/concurrency evidence recorded
+  above; no production source edits since final checks.
+- Available independent review found no confirmed blocker; policy-named High
+  reviewer remains unavailable and is not represented as passed. User release
+  direction proceeds with that recorded limitation.
+- Production push triggers existing validation/deployment and database migration.
+  Live deployment outcome is not yet verified. Exclude unrelated tmp/uploads.

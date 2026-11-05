@@ -1439,6 +1439,7 @@ model DepartmentTicketCustomField {
   placeholderEn String?         @map("placeholder_en")
   placeholderAr String?         @map("placeholder_ar")
   isRequired    Boolean         @default(false) @map("is_required")
+  phoneDuplicateCheck Boolean   @default(false) @map("phone_duplicate_check")
   isActive      Boolean         @default(true)  @map("is_active")
   order         Int             @default(0)
   createdAt     DateTime        @default(now()) @map("created_at")
@@ -1581,11 +1582,23 @@ model InternalTicket {
   notes       TicketNote[]
   rating      TicketRating?
   attachments TicketAttachment[]
+  customerPhones TicketCustomerPhone[]
 
   @@index([targetDepartmentId, status])
   @@index([assignedEmployeeId])
   @@index([requestedById])
   @@map("internal_tickets")
+}
+
+model TicketCustomerPhone {
+  id String @id @default(cuid())
+  ticketId String @map("ticket_id")
+  fieldId String @map("field_id")
+  phone String
+  ticket InternalTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  @@unique([ticketId, fieldId])
+  @@index([phone])
+  @@map("ticket_customer_phones")
 }
 
 model TicketNote {
