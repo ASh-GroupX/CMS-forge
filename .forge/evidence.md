@@ -15533,3 +15533,22 @@ verification results and reviewer-tier limitation remain unchanged.
   direction proceeds with that recorded limitation.
 - Production push triggers existing validation/deployment and database migration.
   Live deployment outcome is not yet verified. Exclude unrelated tmp/uploads.
+
+## F9-DEPLOY-01 - Missing web Docker contracts source
+
+- 2026-11-05; ARCH-STACK-001, METHOD-TEST-001. User supplied deployment failure
+  for production8e65b19: web Next build cannot resolve shared phone API client.
+- Root cause: local builds had contracts/src, but Dockerfile copied only its
+  package.json. Added contracts/src COPY before the Next build. Existing runtime
+  receives bundled Next output; imported generated client is self-contained.
+- Added regression resolving actual server-action imports and verifying source
+  exists and is copied to expected /app workspace path before build command.
+- Passed deployment artifacts7/7, lint, local production build and diff check.
+  Independent fresh reviewer found no confirmed blocker; independently ran7/7.
+  Named policy review tier unavailable. Actual local Docker build Not Run because
+  daemon unavailable; hidden Desktop startup did not start engine. No false Docker
+  image pass. The earlier local application tests did not cover this packaging gap.
+- Only build context/test/docs changed. No auth, scope, audit, workflow, provider,
+  secrets, portal data or migration logic changed. Corrective release authorized
+  by ongoing production deployment request. Public deployment still unverified.
+- Unrelated tmp/uploads excluded from release.

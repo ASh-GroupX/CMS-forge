@@ -13,6 +13,7 @@ COPY packages/contracts/package.json ./packages/contracts/package.json
 COPY packages/database/package.json ./packages/database/package.json
 RUN pnpm install --frozen-lockfile
 COPY apps/web ./apps/web
+COPY packages/contracts/src ./packages/contracts/src
 RUN pnpm --filter @cms-auto/web build
 
 FROM node:20-alpine AS runtime

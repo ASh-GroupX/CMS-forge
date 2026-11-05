@@ -1,11 +1,31 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { posix } from 'node:path';
 import test from 'node:test';
 
 const compose = readFileSync('docker-compose.prod.yml', 'utf8').replace(/\r\n/g, '\n');
 const caddy = readFileSync('Caddyfile', 'utf8').replace(/\r\n/g, '\n');
 const envExample = readFileSync('.env.production.example', 'utf8').replace(/\r\n/g, '\n');
 const workflow = readFileSync('.github/workflows/deploy.yml', 'utf8').replace(/\r\n/g, '\n');
+
+test('web Docker build includes shared phone client at its imported workspace path', () => {
+  const dockerfile = readFileSync('apps/web/Dockerfile', 'utf8').replace(/\r\n/g, '\n');
+  const buildStage = dockerfile.split('FROM node:20-alpine AS runtime')[0];
+  const buildCommand = buildStage.indexOf('RUN pnpm --filter @cms-auto/web build');
+  assert.ok(buildCommand > 0);
+  const action = readFileSync('apps/web/src/lib/staff-ticket-phone-actions.ts', 'utf8');
+  const imports = [...action.matchAll(/from ['"]([^'"]*packages\/contracts\/[^'"]+)['"]/g)].map(match => match[1]);
+  assert.ok(imports.length > 0, 'Expected phone lookup contract dependency');
+  const copies = [...buildStage.slice(0, buildCommand).matchAll(/^COPY (\S+) (\S+)$/gm)];
+  for (const imported of imports) {
+    const dependency = posix.normalize(posix.join('apps/web/src/lib', imported)) + '.ts';
+    assert.ok(existsSync(dependency), `Missing repository dependency: ${dependency}`);
+    assert.ok(copies.some(([, source, target]) => {
+      if (dependency !== source && !dependency.startsWith(`${source}/`)) return false;
+      return posix.join('/app', target, posix.relative(source, dependency)) === `/app/${dependency}`;
+    }), `Docker build lacks shared dependency at /app/${dependency}`);
+  }
+});
 
 test('production deploy artifacts define the required pilot stack', () => {
   for (const service of ['caddy', 'web', 'api', 'migrate', 'worker', 'postgres', 'redis']) {
