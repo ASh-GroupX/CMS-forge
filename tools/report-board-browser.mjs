@@ -38,7 +38,7 @@ const server = createServer((req, res) => {
   res.end(`<!doctype html><html lang="${locale}"><head><link rel="stylesheet" href="/proof.css"></head><body><div id="root">${renderToString(React.createElement(Fixture, { locale, status: query.get('status'), from: query.get('from') }))}</div><script src="/fixture.js"></script></body></html>`);
 });
 await new Promise(done => server.listen(0, '127.0.0.1', done));
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, args: ['--disable-features=BackForwardCache'] });
 let assertions = 0;
 try {
   for (const locale of ['en', 'ar']) {
@@ -72,6 +72,13 @@ try {
     const base = `http://127.0.0.1:${server.address().port}`;
     await page.goto(`${base}/?locale=${locale}`);
     await page.getByText('Brake inspection', { exact: true }).first().waitFor();
+    const selection = page.getByRole('group', { name: locale === 'en' ? 'Status columns to display' : 'أعمدة الحالات المعروضة' });
+    const defaults = locale === 'en'
+      ? ['Assigned', 'In progress', 'Waiting', 'Reopened', 'Resolved', 'Completed', 'Closed', 'Rejected']
+      : ['مسندة', 'قيد التنفيذ', 'بانتظار', 'أعيد فتحها', 'تم الحل', 'مكتملة', 'مغلقة', 'مرفوضة'];
+    assert.equal(await selection.getByRole('checkbox', { checked: true }).count(), 8); assertions++;
+    assert.deepEqual(await page.locator('section').evaluateAll(columns => columns.map(column => column.getAttribute('aria-label'))), defaults); assertions++;
+    await page.screenshot({ path: `${output}/${locale}-defaults.png`, fullPage: true });
     assert.equal(requests.length, 18); assertions++;
     assert.ok(requests.every(url => url.searchParams.get('limit') === '25' && url.searchParams.get('offset') === '0')); assertions++;
     const column = page.locator('section').filter({ has: page.getByText(locale === 'en' ? 'In progress' : 'قيد التنفيذ', { exact: true }) });
@@ -85,7 +92,6 @@ try {
     assert.match(await page.getByRole('link', { name: 'TK-all-0', exact: true }).getAttribute('href'), /returnTo=reports&locale=/); assertions++;
     await page.getByRole('link', { name: 'TK-all-0', exact: true }).scrollIntoViewIfNeeded();
     await page.getByRole('link', { name: 'TK-all-0', exact: true }).evaluate(link => link.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'instant' }));
-    const selection = page.getByRole('group', { name: locale === 'en' ? 'Status columns to display' : 'أعمدة الحالات المعروضة' });
     const requestCountBeforeSelection = requests.length;
     await selection.getByRole('button', { name: locale === 'en' ? 'Clear selection' : 'مسح التحديد', exact: true }).click();
     assert.equal(await page.locator('section').count(), 0); assertions++;
@@ -135,6 +141,19 @@ try {
     await page.goto(`${base}/?locale=${locale}&status=WAITING`);
     await page.getByText(locale === 'en' ? 'No records match these filters.' : 'لا توجد سجلات تطابق عوامل التصفية.', { exact: true }).waitFor();
     assertions++;
+    await page.goto(`${base}/?locale=${locale}`);
+    await page.getByRole('combobox').click();
+    await page.getByRole('option', { name: locale === 'en' ? 'Service' : 'الصيانة', exact: true }).click();
+    await page.locator('input[type=date]').first().fill('2026-10-05');
+    await page.getByRole('link', { name: 'TK-service-0', exact: true }).waitFor();
+    await page.getByRole('button', { name: locale === 'en' ? 'Clear selection' : 'مسح التحديد', exact: true }).click();
+    await page.getByRole('checkbox', { name: locale === 'en' ? 'In progress' : 'قيد التنفيذ', exact: true }).check();
+    await page.getByRole('checkbox', { name: locale === 'en' ? 'Completed' : 'مكتملة', exact: true }).check();
+    await page.goto(`${base}/detail?locale=${locale}`);
+    await page.goBack();
+    await page.waitForFunction(() => document.querySelector('input[type=date]')?.value === '2026-10-05');
+    assert.ok((await page.getByRole('combobox').textContent()).includes(locale === 'en' ? 'Service' : 'الصيانة')); assertions++;
+    assert.equal(await page.locator('section').count(), 2); assertions++;
     await page.close();
   }
   console.log(`Hydrated report board browser proof passed: ${assertions} assertions; EN desktop / AR mobile screenshots in ${output}`);

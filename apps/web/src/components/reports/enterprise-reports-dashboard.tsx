@@ -1,4 +1,5 @@
 'use client';
+import { useStaffUiState } from '../../lib/use-staff-ui-state';
 import React, { useMemo, useState } from 'react';
 import type { Locale } from '../../i18n/staff-shell';
 import type { DepartmentPerformanceRow } from '../../lib/staff-reports-departments-api';
@@ -48,16 +49,16 @@ export function EnterpriseReportsDashboard({
   ticketsRecords,
 }: EnterpriseReportsDashboardProps) {
   // Filters State
-  const [recordType, setRecordType] = useState<RecordTypeFilter>('all');
-  const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
-  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [datePreset, setDatePreset] = useState<DatePresetFilter>('all');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [search, setSearch] = useState('');
+  const [recordType, setRecordType] = useStaffUiState<RecordTypeFilter>("recordType", 'all');
+  const [selectedDeptId, setSelectedDeptId] = useStaffUiState<string | null>("selectedDeptId", null);
+  const [selectedBranchId, setSelectedBranchId] = useStaffUiState<string | null>("selectedBranchId", null);
+  const [selectedStatus, setSelectedStatus] = useStaffUiState<string | null>("selectedStatus", null);
+  const [datePreset, setDatePreset] = useStaffUiState<DatePresetFilter>("datePreset", 'all');
+  const [dateFrom, setDateFrom] = useStaffUiState("dateFrom", '');
+  const [dateTo, setDateTo] = useStaffUiState("dateTo", '');
+  const [search, setSearch] = useStaffUiState("search", '');
   // Modals / Drawers State
-  const [deepDiveDeptId, setDeepDiveDeptId] = useState<string | null>(null);
+  const [deepDiveDeptId, setDeepDiveDeptId] = useStaffUiState<string | null>("deepDiveDeptId", null);
   const [inspectRecord, setInspectRecord] = useState<RecordTableItem | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<{ id: string; name: string } | null>(null);
   const [isExportOpen, setIsExportOpen] = useState(false);

@@ -1,4 +1,5 @@
 'use client';
+import { useStaffUiState } from '../../lib/use-staff-ui-state';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ReportHeader } from './report-header';
@@ -45,16 +46,16 @@ export function TicketsWorkspace({
   const t = reportsAnalyticsI18n[locale];
 
   // Filters State
-  const [period, setPeriod] = useState('all');
-  const [customFrom, setCustomFrom] = useState('');
-  const [customTo, setCustomTo] = useState('');
-  const [dateDimension, setDateDimension] = useState<'createdAt' | 'dueAt' | 'resolvedAt' | 'closedAt'>('createdAt');
-  const [search, setSearch] = useState('');
-  const [targetDepartmentId, setTargetDepartmentId] = useState('');
-  const [creatingDepartmentId, setCreatingDepartmentId] = useState('');
-  const [employeeId, setEmployeeId] = useState('');
-  const [status, setStatus] = useState('');
-  const [priority, setPriority] = useState('');
+  const [period, setPeriod] = useStaffUiState("period", 'all');
+  const [customFrom, setCustomFrom] = useStaffUiState("customFrom", '');
+  const [customTo, setCustomTo] = useStaffUiState("customTo", '');
+  const [dateDimension, setDateDimension] = useStaffUiState<'createdAt' | 'dueAt' | 'resolvedAt' | 'closedAt'>("dateDimension", 'createdAt');
+  const [search, setSearch] = useStaffUiState("search", '');
+  const [targetDepartmentId, setTargetDepartmentId] = useStaffUiState("targetDepartmentId", '');
+  const [creatingDepartmentId, setCreatingDepartmentId] = useStaffUiState("creatingDepartmentId", '');
+  const [employeeId, setEmployeeId] = useStaffUiState("employeeId", '');
+  const [status, setStatus] = useStaffUiState("status", '');
+  const [priority, setPriority] = useStaffUiState("priority", '');
 
   // Analytics & Records Data
   const [analytics, setAnalytics] = useState<TicketsAnalyticsResponse | null>(initialAnalytics);

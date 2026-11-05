@@ -8,6 +8,7 @@ import { resolveLocale } from '../../../../i18n/staff-shell';
 import { internalTicketStatusLabel } from '../../../../i18n/domain-labels';
 import { reportsAnalyticsI18n } from '../../../../i18n/staff-reports-analytics';
 import { staffDetailBackHref } from '../../../../lib/staff-report-navigation';
+import { staffNavigationText } from '../../../../i18n/staff-navigation';
 import { TicketActionButtons } from './ticket-action-buttons';
 import { TicketNoteForm } from './ticket-note-form';
 import { TicketStopwatch } from '../ticket-stopwatch';
@@ -23,7 +24,7 @@ export default async function TicketDetailPage({ params, searchParams }: {
   const isAr = locale === 'ar';
   const backHref = staffDetailBackHref(query?.returnTo, locale, 'tickets');
   const reportReturn = ['reports', 'complaint-reports', 'ticket-reports'].includes(query?.returnTo ?? '');
-  const backLabel = reportReturn ? reportsAnalyticsI18n[locale].statusBoard.backToReports : reportsAnalyticsI18n[locale].statusBoard.backToTickets;
+  const backLabel = query?.returnTo === 'new-ticket' ? staffNavigationText[locale].backToDraft : reportReturn ? reportsAnalyticsI18n[locale].statusBoard.backToReports : reportsAnalyticsI18n[locale].statusBoard.backToTickets;
   const principal = await getStaffSessionPrincipal();
   
   const [ticket, options] = await Promise.all([
@@ -32,12 +33,12 @@ export default async function TicketDetailPage({ params, searchParams }: {
   ]);
 
   if (!ticket) {
-    return <div className="space-y-4 p-8 text-center text-content-muted"><Link href={backHref} className="inline-flex items-center gap-2 font-semibold text-brand hover:underline"><ArrowLeft className="size-4 rtl:rotate-180" />{backLabel}</Link><p>{isAr ? 'لم يتم العثور على التذكرة' : 'Ticket not found'}</p></div>;
+    return <div className="space-y-4 p-8 text-center text-content-muted"><Link data-preserve-client-navigation href={backHref} className="inline-flex items-center gap-2 font-semibold text-brand hover:underline"><ArrowLeft className="size-4 rtl:rotate-180" />{backLabel}</Link><p>{isAr ? 'لم يتم العثور على التذكرة' : 'Ticket not found'}</p></div>;
   }
 
   return (
     <div className="space-y-4">
-      <Link href={backHref} className="inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-content-muted transition-colors hover:bg-surface-raised hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
+      <Link data-preserve-client-navigation href={backHref} className="inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-content-muted transition-colors hover:bg-surface-raised hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
         <ArrowLeft className="size-4 rtl:rotate-180" />{backLabel}
       </Link>
       <div className="grid h-[calc(100vh-17rem)] min-h-[600px] grid-cols-1 md:grid-cols-[1fr_2fr] gap-6">

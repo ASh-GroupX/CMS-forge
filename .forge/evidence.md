@@ -15552,3 +15552,80 @@ verification results and reviewer-tier limitation remain unchanged.
   secrets, portal data or migration logic changed. Corrective release authorized
   by ongoing production deployment request. Public deployment still unverified.
 - Unrelated tmp/uploads excluded from release.
+
+## Staff navigation and safe draft return - 2026-11-05
+
+- UI-DESIGN-001, REQ-RBAC-001, METHOD-TEST-001. Replanned into shared shell,
+  ticket draft, report state and proof steps after duplicate review lost input.
+- Shared Back/Forward and safe section navigation covers 43 staff routes. Active
+  menus follow live pathname, language switching uses current URL; mobile logout
+  is accessible. Duplicate links now use same-tab Next navigation and allowlisted
+  Back to draft. Only attachment viewers retain separate tabs.
+- User/tab-scoped two-hour drafts retain title, description, assignment/officer,
+  department, category, priority, dates and custom fields. Async department fetch
+  no longer resets restored values. Separate-problem acknowledgement is rechecked,
+  not persisted as authority. Create/discard/logout clear drafts and files.
+- Same-tab file objects stay in memory. Full reload requires reattaching bytes;
+  notice and before-unload warning cover this limit. No tokens or fetched server
+  records are cached. Reports preserve UI filters and state columns; explicit
+  bookmarked queries take priority. Data fetching and backend scope unchanged.
+- Unsaved-form guards cover links, shared controls and native history. A static,
+  DOM-free root listener runs before Next's popstate listener so Stay preserves
+  notes. Successful note save clears dirty state. Removed redundant push+refresh
+  after create; server revalidation already refreshes queue data, and Back now
+  retains the create page. Fixed stale dirty-origin and metadata-only draft loss.
+- Passed: root suite 78/78 (89.36% lines, 83.53% branches, 90.48% functions),
+  shell 228/228, API-client 106/106, internal-ticket API 8/8, lint, typecheck,
+  full build, OpenAPI and diff check. Windows CRLF caused false generated contract
+  drift; comparisons normalize line endings and still reject semantic drift.
+  Canonical/missing-schema/drift and CRLF regressions pass. Root hydration test
+  explicitly verifies only the constant, DOM-free early bridge may run in head.
+- Passed EN desktop/AR mobile hydrated navigation proof: one-tab duplicate review,
+  notes, draft/file restore, separate create, reset/logout, report filter return,
+  Back/Forward, active menus and unsaved admin form guard. Report board proof passes
+  42 assertions, including BFCache-disabled remount retaining department/date/two
+  columns. Phone browser regression passes. Real production Next runtime proof
+  uses real layouts/server actions against controlled API fixtures: native Back
+  Stay/Leave and Forward, note save, field/file return, create, metadata-only draft, discard, and
+  desktop/mobile logout. Screenshots inspected under coverage/staff-navigation-next
+  and coverage/staff-navigation-browser; existing design system/theme retained.
+- Independent reviewer found no remaining concrete blocker; independently passed
+  six navigation unit/audit checks and five OpenAPI checks on final follow-up.
+  Inherited GPT-6.1 Sol is not the policy-named
+  tier, which is unavailable. Named-tier acceptance remains Needs Human Review;
+  it is not represented as Passed.
+- Security self-check: owner comes from server principal, not draft input. Backend
+  permissions, scope, workflow/audit transactions and portal are untouched. Existing
+  allowed/denied internal-ticket API cases pass. No credentials logged, external
+  messages sent, or real customer data used in browser fixtures.
+- Limitations: all 43 staff routes audited structurally; not manually exercised
+  against populated live data. No push/merge/deployment performed for this task.
+  Unrelated tmp/uploads preserved. Deployment status is not implied by local proof.
+
+## Report board default columns - 2026-11-05
+
+- UI-DESIGN-001, METHOD-TEST-001. User screenshot selects eight default columns:
+  ASSIGNED, IN_PROGRESS, WAITING, REOPENED, RESOLVED, COMPLETED, CLOSED, REJECTED.
+  Updated initial board selection only. All 14 options and saved custom choices
+  remain available; fetching, API scope, permissions and workflows unchanged.
+- Passed: hydrated EN desktop/AR mobile browser proof 46 assertions, including
+  exact default eight/column order, select-all, clear/custom selection and return
+  restoration; API-client 106/106, lint, typecheck, diff check. Default screenshots
+  inspected under coverage/report-board-browser/en-defaults.png and ar-defaults.png.
+  Initial browser run caught an incorrect Arabic label in the test expectation;
+  corrected to existing translation before passing. No production string changed.
+- Independent static reviewer found no concrete blocker. Policy-named tier
+  remains unavailable and is not claimed as passed. No new primitives/routes,
+  backend changes or deployment. Prior navigation changes and tmp/uploads kept.
+
+## Navigation and report defaults release authorization - 2026-11-05
+
+- User explicitly requested push and merge. Release both verified navigation
+  fixes and eight default board columns through waleed into production.
+- Latest board proof46/API-client106/lint/typecheck passed; broader navigation
+  root78/shell228/API8/build/OpenAPI/EN-AR real Next proofs recorded above.
+  Independent review found no blockers; unavailable named-tier review remains
+  disclosed and is not claimed as passed. No source changes beyond verified defaults.
+- Fetch remote first, commit only scoped source/tests/docs, preserve unrelated
+  tmp/uploads, push without force. Existing production workflow runs validation
+  before deployment. Live deployment outcome not yet verified at commit time.

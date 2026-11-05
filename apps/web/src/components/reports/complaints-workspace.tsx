@@ -1,4 +1,5 @@
 'use client';
+import { useStaffUiState } from '../../lib/use-staff-ui-state';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ReportHeader } from './report-header';
@@ -43,16 +44,16 @@ export function ComplaintsWorkspace({
   const t = reportsAnalyticsI18n[locale];
 
   // Filters State
-  const [period, setPeriod] = useState('all');
-  const [customFrom, setCustomFrom] = useState('');
-  const [customTo, setCustomTo] = useState('');
-  const [dateDimension, setDateDimension] = useState<'createdAt' | 'resolvedAt' | 'closedAt'>('createdAt');
-  const [search, setSearch] = useState('');
-  const [departmentId, setDepartmentId] = useState('');
-  const [officerId, setOfficerId] = useState('');
-  const [status, setStatus] = useState('');
-  const [severity, setSeverity] = useState('');
-  const [categoryId, setCategoryId] = useState('');
+  const [period, setPeriod] = useStaffUiState("period", 'all');
+  const [customFrom, setCustomFrom] = useStaffUiState("customFrom", '');
+  const [customTo, setCustomTo] = useStaffUiState("customTo", '');
+  const [dateDimension, setDateDimension] = useStaffUiState<'createdAt' | 'resolvedAt' | 'closedAt'>("dateDimension", 'createdAt');
+  const [search, setSearch] = useStaffUiState("search", '');
+  const [departmentId, setDepartmentId] = useStaffUiState("departmentId", '');
+  const [officerId, setOfficerId] = useStaffUiState("officerId", '');
+  const [status, setStatus] = useStaffUiState("status", '');
+  const [severity, setSeverity] = useStaffUiState("severity", '');
+  const [categoryId, setCategoryId] = useStaffUiState("categoryId", '');
 
   // Analytics & Records Data
   const [analytics, setAnalytics] = useState<ComplaintsAnalyticsResponse | null>(initialAnalytics);

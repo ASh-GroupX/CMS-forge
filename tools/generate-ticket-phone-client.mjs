@@ -28,5 +28,5 @@ export async function requestTicketPhoneDuplicates(input: TicketPhoneDuplicateRe
 `;
 const destination = 'packages/contracts/src/ticket-phone-client.ts';
 if (process.argv.includes('--check')) {
-  if (readFileSync(destination, 'utf8') !== source) throw new Error('Generated ticket phone client drift');
+  if (readFileSync(destination, 'utf8').replace(/\r\n/g, '\n') !== source) throw new Error('Generated ticket phone client drift');
 } else writeFileSync(destination, source);

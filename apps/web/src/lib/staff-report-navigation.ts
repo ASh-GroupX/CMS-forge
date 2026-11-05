@@ -10,6 +10,7 @@ export function reportRecordDetailHref(kind: ReportRecordKind, id: string, local
 }
 
 export function staffDetailBackHref(returnTo: string | undefined, locale: Locale, fallback: StaffDetailFallback): string {
+  if (fallback === 'tickets' && returnTo === 'new-ticket') return `/internal-tickets/new?locale=${locale}`;
   const reportPaths: Record<ReportReturnContext, string> = {
     reports: '/reports', 'complaint-reports': '/reports/complaints', 'ticket-reports': '/reports/internal-tickets',
   };

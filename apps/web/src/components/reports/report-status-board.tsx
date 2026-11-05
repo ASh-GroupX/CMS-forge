@@ -1,4 +1,5 @@
 'use client';
+import { useStaffUiState } from '../../lib/use-staff-ui-state';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -13,6 +14,7 @@ import { reportsAnalyticsI18n } from '../../i18n/staff-reports-analytics';
 import type { ComplaintRecordRow, TicketRecordRow } from '../../lib/staff-reports-analytics-api';
 import { fetchComplaintsRecords, fetchTicketsRecords } from '../../lib/staff-reports-analytics-api';
 import { reportRecordDetailHref, type ReportReturnContext } from '../../lib/staff-report-navigation';
+import { ReportBoardFilters } from './report-board-filters';
 import { ReportColumnSelector } from './report-column-selector';
 
 type Item = {
@@ -24,6 +26,7 @@ const statuses = [
   'DRAFT', 'SUBMITTED', 'MANAGER_REVIEW', 'BRANCH_REVIEW', 'PENDING_APPROVAL', 'NEW',
   'ASSIGNED', 'IN_PROGRESS', 'WAITING', 'REOPENED', 'RESOLVED', 'COMPLETED', 'CLOSED', 'REJECTED',
 ];
+const defaultVisibleStatuses = ['ASSIGNED', 'IN_PROGRESS', 'WAITING', 'REOPENED', 'RESOLVED', 'COMPLETED', 'CLOSED', 'REJECTED'];
 const ticketStatuses = ['PENDING_APPROVAL', 'NEW', 'ASSIGNED', 'IN_PROGRESS', 'WAITING', 'RESOLVED', 'CLOSED', 'REJECTED'];
 const complaintStatuses = ['DRAFT', 'SUBMITTED', 'MANAGER_REVIEW', 'BRANCH_REVIEW', 'IN_PROGRESS', 'REOPENED', 'RESOLVED', 'COMPLETED', 'CLOSED', 'REJECTED'];
 const pageSize = 25;
@@ -103,11 +106,11 @@ export function ReportStatusBoard({
 }: Props) {
   const ar = locale === 'ar';
   const copy = reportsAnalyticsI18n[locale].statusBoard;
-  const [boardDepartmentId, setBoardDepartmentId] = useState(departmentId);
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  const [boardDepartmentId, setBoardDepartmentId] = useStaffUiState("boardDepartmentId", departmentId);
+  const [from, setFrom] = useStaffUiState("from", externalDateFrom || '');
+  const [to, setTo] = useStaffUiState("to", externalDateTo || '');
   const [columns, setColumns] = useState<Record<string, StatusColumn>>(emptyColumns);
-  const [visibleStatuses, setVisibleStatuses] = useState(statuses);
+  const [visibleStatuses, setVisibleStatuses] = useStaffUiState("visibleStatuses", defaultVisibleStatuses);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [reload, setReload] = useState(0);
@@ -117,8 +120,16 @@ export function ReportStatusBoard({
   const activeFrom = showBoardFilters ? from : externalDateFrom || '';
   const activeTo = showBoardFilters ? to : externalDateTo || '';
 
-  useEffect(() => setBoardDepartmentId(departmentId), [departmentId]);
-  useEffect(() => { setFrom(externalDateFrom || ''); setTo(externalDateTo || ''); }, [externalDateFrom, externalDateTo]);
+  const previousDepartment = useRef(departmentId);
+  const previousDates = useRef([externalDateFrom, externalDateTo]);
+  useEffect(() => {
+    if (previousDepartment.current !== departmentId) setBoardDepartmentId(departmentId);
+    previousDepartment.current = departmentId;
+  }, [departmentId]);
+  useEffect(() => {
+    if (previousDates.current[0] !== externalDateFrom || previousDates.current[1] !== externalDateTo) { setFrom(externalDateFrom || ''); setTo(externalDateTo || ''); }
+    previousDates.current = [externalDateFrom, externalDateTo];
+  }, [externalDateFrom, externalDateTo]);
   const view = ({ open: 'active', overdue: 'overdue', unassigned: 'unassigned', resolved: 'resolved' } as const)[selectedStatus as 'open' | 'overdue' | 'unassigned' | 'resolved']
     ?? (selectedStatus === 'OPEN' ? 'active' : selectedStatus === 'OVERDUE' ? 'overdue' : undefined);
   const matchesStatus = (status: string) => !selectedStatus || !!view || selectedStatus.toUpperCase() === status;
@@ -225,24 +236,7 @@ export function ReportStatusBoard({
           <h3 className="text-base font-bold">{copy.title}</h3>
           <p className="text-xs text-muted-foreground">{copy.subtitle}</p>
         </div>
-        {showBoardFilters && <div className="flex flex-wrap items-end gap-2 border-y border-border/70 py-3 text-xs">
-          <label className="flex flex-col gap-1">{copy.department}
-            <Select value={boardDepartmentId ?? 'all'} onValueChange={(value) => setBoardDepartmentId(value === 'all' ? null : value)}>
-              <SelectTrigger aria-label={copy.department} className="h-9 min-w-40"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{copy.allDepartments}</SelectItem>
-                {departments.map((department) => <SelectItem key={department.id} value={department.id}>{ar ? department.nameAr || department.name : department.nameEn || department.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </label>
-          <label className="flex flex-col gap-1">{copy.createdFrom}
-            <Input aria-label={copy.createdFrom} type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} className="h-9 w-auto" />
-          </label>
-          <label className="flex flex-col gap-1">{copy.createdThrough}
-            <Input aria-label={copy.createdThrough} type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="h-9 w-auto" />
-          </label>
-          {(from || to) && <Button type="button" variant="ghost" size="sm" onClick={() => { setFrom(''); setTo(''); }} className="h-9 px-3">{copy.clearDates}</Button>}
-        </div>}
+        {showBoardFilters && <ReportBoardFilters locale={locale} departmentId={boardDepartmentId} departments={departments} from={from} to={to} onDepartment={setBoardDepartmentId} onFrom={setFrom} onTo={setTo} />}
         <ReportColumnSelector locale={locale} statuses={statuses} selected={visibleStatuses} onChange={setVisibleStatuses} />
       </div>
       {loading && <p role="status" className="text-sm text-muted-foreground">{copy.loading}</p>}
