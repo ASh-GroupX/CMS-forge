@@ -15629,3 +15629,53 @@ verification results and reviewer-tier limitation remain unchanged.
 - Fetch remote first, commit only scoped source/tests/docs, preserve unrelated
   tmp/uploads, push without force. Existing production workflow runs validation
   before deployment. Live deployment outcome not yet verified at commit time.
+
+## Navigation release result - 2026-11-05
+
+- Waleed95ce153 pushed and merged into production62af884. GitHub run42026544385
+  validation and VPS deployment both succeeded. Live / and /api/health returned
+  HTTP200 with x-cms-deployment62af884d7c109ae2892ddc8050bfde69a7b4ab67.
+
+## Ticket draft discard feedback - 2026-11-05
+
+- UI-DESIGN-001, METHOD-TEST-001. User reports Discard draft appears unresponsive.
+  Baseline real Next production-runtime proof reproduced saved banner remaining
+  after reset (form category cleared but saved-message count stayed1). Clarification
+  requested asynchronously; no answer received during implementation.
+- Show saved status/action only for a meaningful draft. Confirmed discard shows
+  localized success, hides action when empty, clears stale submission errors and
+  focuses title. Cancel preserves input; discard disabled during submission. Uses
+  existing shadcn Button/Dialog. Existing hook clears fields/files/cache unchanged.
+- Passed web production build, lint, typecheck, API-client106, isolated EN/AR
+  navigation browser and extended real Next production-runtime EN/AR proof. Real
+  layouts/server actions use controlled API fixtures. Tests cover initial blank
+  message/action absent, cancel retains full draft/file, confirm clears title,
+  description, department/category, officer, custom phone, priority/date and files,
+  cache removal, success feedback, reload without resurrection and new edits saving.
+  Screenshots inspected under coverage/staff-navigation-next/*discard*.png.
+- Independent static review found no concrete blocker. Policy-named reviewer tier
+  unavailable; named-tier acceptance not claimed. No backend/workflow/RBAC/portal
+  changes, no source secrets or external messages. Changes local, no new deployment.
+  Unrelated tmp/uploads kept. Prior release success recorded separately above.
+
+## Draft notice disappearance clarification - 2026-11-05
+
+- UI-DESIGN-001, METHOD-TEST-001. User confirmed discard already clears data;
+  wants whole saved message/action gone afterward and back only on new input.
+  Render the whole notice only for a meaningful draft. Removed persistent success
+  box and its unused i18n keys; confirmation/reset/focus behavior remains intact.
+- Passed lint, typecheck and production web build. Real Next EN/AR proof asserts
+  no draft status/action on blank or discarded forms, no data resurrection after
+  reload, and saved notice plus discard action return after entering a new title.
+  Independent static review found no blockers; policy-named tier unavailable.
+  Local only; no deployment or backend/authorization changes.
+
+## Draft notice fix release authorization - 2026-11-05
+
+- User explicitly requests push and merge. Release verified hide-empty-notice fix
+  and full discard/cancel/reload/return browser regression through waleed into
+  production. EN/AR real Next proof, lint/typecheck/web build passed on final code.
+- No code changes since verification. Independent static review found no blocker;
+  policy-named tier unavailable, not represented as passed. Existing production
+  workflow validates before deploying. Remote/live outcome pending at commit time.
+  Unrelated tmp/uploads excluded; no force push or backend/schema change.

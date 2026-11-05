@@ -1,19 +1,18 @@
-# Report board default state columns
-Status: Implemented and locally verified; named-tier review unavailable
-Risk: Low
+# Hide empty ticket draft notice
+Status: Implemented; final EN/AR browser proof recorded in evidence
+Risk: Medium
 SRS: UI-DESIGN-001, METHOD-TEST-001
 
-Set the eight checked states in the user's screenshot as the initial board view:
-ASSIGNED, IN_PROGRESS, WAITING, REOPENED, RESOLVED, COMPLETED, CLOSED, REJECTED.
-Keep all 14 options available and preserve deliberate session customization.
-Scope: board default only plus existing browser proof and Forge evidence.
-Proof: EN/AR report browser (default eight, select all, custom columns and return),
-lint, typecheck, API-client regression. No backend/workflow/auth changes.
-Prior navigation work remains in the workspace and must be preserved.
+User clarified the entire draft message and discard action must disappear after
+confirmed discard, then return only when new meaningful input exists. The form
+now renders the entire notice only when hasTicketDraft is true. No persistent
+success box. Retain confirmation, full reset/files/cache, cancel preservation,
+error clearing, submit-time disabling and title focus.
+Scope: existing ticket form and real Next browser proof plus Forge docs.
+Proof: real Next EN/AR discard/reset/reload/notice return; lint/typecheck/web build.
+Independent static review found no blockers; policy-named tier unavailable and
+not claimed as passed. Earlier navigation proofs remain recorded. No new backend,
+workflow/auth/portal changes. Keep unrelated tmp/uploads.
 
-Passed: EN/AR report browser 46 assertions (screenshots inspected), API-client
-106 tests, lint, typecheck, diff check. Independent review found no blockers.
-Policy-named review tier unavailable; that acceptance is not claimed as passed.
-
-User now authorizes push to waleed and merge into production for both navigation
-and report defaults. Release uses existing workflow; monitor validation/deploy.
+User authorizes push and merge. Release verified fix via waleed to production;
+monitor existing validation/deployment workflow and live revision/health.
