@@ -1160,6 +1160,37 @@ commands:
 - npm run test:api -- portal.tracking
 - npm run test:e2e -- customer-portal-track
 
+### REQ-BOOK-SMS-001: Service appointment SMS reminders
+type: integration-contract
+lane: T2_STANDARD
+risk: medium
+priority: must
+status: active
+source: approved user change request, 2026-11-09
+
+Admins can configure an optional SMS reminder for service appointments. The
+reminder is sent to the appointment customer before the booked service time,
+using its Asia/Amman local date and time, defaulting to 24 hours and allowing
+the Admin to choose a different lead time.
+The Admin controls message text and sender number. The message may use safe
+appointment placeholders such as customer name, appointment date/time, service
+center, maintenance type, and booking reference. Provider credentials remain
+server-side. Until a live provider is configured, local behavior uses the
+in-memory SMS adapter and must be clearly identified as a test delivery.
+
+#### Acceptance Criteria
+- AC1 [must] Admin can enable/disable reminders and configure message text, sender number, and lead time in hours.
+- AC2 [must] New and rescheduled appointments receive one reminder at the configured time before service; cancellation or rescheduling invalidates the old reminder.
+- AC3 [must] Delivery is idempotent, status is observable, and provider failure is recorded without logging customer message contents or credentials.
+- AC4 [must] The feature is testable without a live SMS API using the in-memory adapter.
+- AC5 [must] Admin UI supports English LTR and Arabic RTL; authorization and actor identity come from the server session.
+
+#### Proof Requirements
+minimum: L2
+commands:
+- npm run test:api -- service-bookings
+- npm run openapi:check
+
 ### REQ-NOTIFY-001: Notification templates and dispatch
 type: functional
 lane: T2_STANDARD

@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Clock, Plus, Wrench } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { useServiceBooking } from './service-booking-context';
 import {
-  appointmentStatusStyle,
   getNowTimeParts,
   getTodayDateString,
   matchesBranch,
 } from './service-booking-utils';
+import { TimelineSlotContent } from './timeline-slot-content';
 import type { ServiceAppointment } from '../../../lib/staff-service-bookings-api';
 
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8:00 to 17:00 (ends 18:00)
@@ -22,6 +22,7 @@ export function TimelineDayView() {
     openNewModalWithSlot,
     selectedBranchId,
     selectedDate,
+    slotAvailability,
     setIsDetailModalOpen,
     setSelectedAppointment,
     t,
@@ -192,7 +193,9 @@ export function TimelineDayView() {
                       matchesBranch(a, branch) &&
                       a.startTime.startsWith(String(hour).padStart(2, '0')),
                   );
-                  const isHourFull = branchHourApts.length >= 3;
+                  const availability = slotAvailability[branch.id];
+                  const hourLimit = availability?.slots.find((slot) => slot.hour === `${String(hour).padStart(2, '0')}:00`)?.maxPerHour;
+                  const isHourFull = hourLimit !== undefined && branchHourApts.length >= hourLimit;
                   const isHourPartial = branchHourApts.length > 0 && !isHourFull;
 
                   return (
@@ -209,20 +212,24 @@ export function TimelineDayView() {
                           }`}
                         />
                         <span className="text-content-muted">
-                          {branchHourApts.length}/3
+                          {branchHourApts.length}/{hourLimit ?? '—'}
                         </span>
                       </div>
 
                       {/* 4 x 15-minute slots */}
                       {SLOTS_PER_HOUR.map((slotMin) => {
                         const timeStr = `${String(hour).padStart(2, '0')}:${slotMin}`;
-                        const slotApt = dateAppointments.find(
+                        const slotApts = dateAppointments.filter(
                           (a) => matchesBranch(a, branch) && a.startTime === timeStr,
                         );
+                        const slotCapacity = availability?.slots.find((slot) => slot.slot === timeStr);
+                        const mayAdd = !!slotCapacity &&
+                          slotCapacity.remainingInSlot > 0 && slotCapacity.remainingInHour > 0 &&
+                          availability!.bookedDailyCount < availability!.maxDailyAppointments;
 
                         return (
                           <div
-                            className={`group relative min-h-[1.75rem] flex-1 px-2 py-1 transition-colors ${
+                            className={`group relative min-h-[1.75rem] shrink-0 px-2 py-1 transition-colors ${
                               isHourFull
                                 ? 'bg-status-error-bg/40'
                                 : isHourPartial
@@ -231,56 +238,17 @@ export function TimelineDayView() {
                             }`}
                             key={slotMin}
                           >
-                            {slotApt ? (
-                              <button
-                                className={`w-full text-start rounded-xl border p-2.5 shadow-sm transition-all hover:shadow-md ${appointmentStatusStyle(
-                                  slotApt.status,
-                                )}`}
-                                onClick={() => {
-                                  setSelectedAppointment(slotApt);
-                                  setIsDetailModalOpen(true);
-                                }}
-                                type="button"
-                              >
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="font-bold text-xs truncate">
-                                    {slotApt.customerName}
-                                  </span>
-                                  <span className="rounded-md bg-surface-sunken px-1.5 py-0.5 text-[10px] font-semibold">
-                                    {slotApt.startTime} - {slotApt.endTime}
-                                  </span>
-                                </div>
-                                <div className="mt-1 flex items-center gap-2 text-[11px] text-content-muted">
-                                  <Wrench className="size-3 text-brand" />
-                                  <span className="truncate">{slotApt.maintenanceTypeName}</span>
-                                  <span>•</span>
-                                  <span className="font-medium truncate">{slotApt.carModelName}</span>
-                                </div>
-                              </button>
-                            ) : (
-                              <button
-                                className={`flex size-full items-center justify-center opacity-0 group-hover:opacity-100 rounded text-xs transition-opacity ${
-                                  isHourFull
-                                    ? 'cursor-not-allowed text-status-error'
-                                    : 'text-brand hover:bg-brand/10'
-                                }`}
-                                disabled={isHourFull}
-                                onClick={() =>
-                                  openNewModalWithSlot({
-                                    branchId: branch.id,
-                                    date: selectedDate,
-                                    time: timeStr,
-                                  })
-                                }
-                                title={isHourFull ? t.timeline.hourFull : t.timeline.emptySlot}
-                                type="button"
-                              >
-                                <Plus className="size-3.5" />
-                                <span className="ms-1 text-[11px] font-medium">
-                                  {isHourFull ? t.timeline.hourFull : timeStr}
-                                </span>
-                              </button>
-                            )}
+                            <TimelineSlotContent
+                              appointments={slotApts}
+                              capacity={slotCapacity}
+                              mayAdd={mayAdd}
+                              onAdd={() => openNewModalWithSlot({ branchId: branch.id, date: selectedDate, time: timeStr })}
+                              onSelect={(appointment) => {
+                                setSelectedAppointment(appointment);
+                                setIsDetailModalOpen(true);
+                              }}
+                              timeline={t.timeline}
+                            />
                           </div>
                         );
                       })}

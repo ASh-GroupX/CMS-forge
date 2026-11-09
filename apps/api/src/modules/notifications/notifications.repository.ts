@@ -62,6 +62,8 @@ export type QueueInternalNotificationData = {
   templateCode: string;
   locale: string;
   payload: Prisma.InputJsonValue;
+  serviceAppointmentId?: string | null;
+  scheduledAt?: Date | null;
 };
 export type QueueInternalNotificationOnceData = QueueInternalNotificationData & {
   idempotencyKey: string;
@@ -96,6 +98,8 @@ export class NotificationsRepository {
         templateCode: data.templateCode,
         locale: data.locale,
         payload: data.payload,
+        ...(data.serviceAppointmentId ? { serviceAppointmentId: data.serviceAppointmentId } : {}),
+        ...(data.scheduledAt ? { scheduledAt: data.scheduledAt } : {}),
       },
       select: notificationSelect,
     });
@@ -111,7 +115,7 @@ export class NotificationsRepository {
       },
       select: notificationSelect,
     });
-    return existing ?? this.queueInternal(data);
+    return existing && existing.status !== NotificationStatus.CANCELLED ? existing : this.queueInternal(data);
   }
 
   async findCustomerPreference(customerId: string): Promise<CustomerNotificationPreferenceRecord | null> {
@@ -140,8 +144,8 @@ export class NotificationsRepository {
     return this.findQueued(NotificationChannel.EMAIL, limit);
   }
 
-  async findQueuedSms(limit = 25): Promise<NotificationRecord[]> {
-    return this.findQueued(NotificationChannel.SMS, limit);
+  async findQueuedSms(limit = 25, now = new Date()): Promise<NotificationRecord[]> {
+    return this.findQueued(NotificationChannel.SMS, limit, now);
   }
 
   async findQueuedWhatsApp(limit = 25): Promise<NotificationRecord[]> {
@@ -233,9 +237,12 @@ export class NotificationsRepository {
     return client.notificationTemplate.update({ where: { id }, data: { isActive }, select: notificationTemplateSelect });
   }
 
-  private async findQueued(channel: NotificationChannel, limit: number): Promise<NotificationRecord[]> {
+  private async findQueued(channel: NotificationChannel, limit: number, dueBefore?: Date): Promise<NotificationRecord[]> {
     return this.prisma.notification.findMany({
-      where: { channel, status: NotificationStatus.QUEUED },
+      where: {
+        channel, status: NotificationStatus.QUEUED,
+        ...(dueBefore ? { OR: [{ scheduledAt: null }, { scheduledAt: { lte: dueBefore } }] } : {}),
+      },
       orderBy: { queuedAt: 'asc' },
       take: limit,
       select: notificationSelect,

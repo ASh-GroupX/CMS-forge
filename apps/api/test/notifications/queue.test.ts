@@ -3,6 +3,7 @@ import test from 'node:test';
 import { NotificationChannel, NotificationStatus } from '@prisma/client';
 import { AppException } from '../../src/core/http-kernel.ts';
 import { IntegrationsService } from '../../src/modules/integrations/integrations.service.ts';
+import { InMemorySmsProvider, validateSmsMessage } from '../../src/modules/integrations/sms-provider.port.ts';
 import { NotificationsRepository } from '../../src/modules/notifications/notifications.repository.ts';
 import { NotificationsService } from '../../src/modules/notifications/notifications.service.ts';
 
@@ -209,6 +210,24 @@ test('notifications repository returns an existing idempotent internal row', asy
     },
   });
 });
+
+test('notifications repository requeues a cancelled reminder when the same revision is refreshed', async () => {
+  let created: any;
+  const repository = new NotificationsRepository({
+    notification: {
+      findFirst: async () => ({ status: NotificationStatus.CANCELLED }),
+      create: async (input: any) => { created = input; return { id: 'requeued', ...input.data, status: NotificationStatus.QUEUED }; },
+    },
+  } as never);
+  const result = await repository.queueInternalOnce({
+    serviceAppointmentId: 'apt-1', scheduledAt: new Date('2026-11-19T06:00:00.000Z'),
+    channel: NotificationChannel.SMS, templateCode: 'service_booking.reminder', locale: 'en',
+    payload: { to: '+962791234567', textBody: 'Reminder' }, idempotencyKey: 'booking:apt-1:revision',
+  });
+  assert.equal(result.status, NotificationStatus.QUEUED);
+  assert.equal(created.data.serviceAppointmentId, 'apt-1');
+});
+
 test('notifications repository persists queued in-app rows only', async () => {
   const calls: unknown[] = [];
   const repository = new NotificationsRepository({
@@ -265,6 +284,40 @@ test('notifications repository persists queued in-app rows only', async () => {
       complaint: { select: { customerId: true, severity: true } },
     },
   });
+});
+
+test('queued SMS lookup excludes reminders scheduled for a later time', async () => {
+  let query: any;
+  const repository = new NotificationsRepository({
+    notification: { findMany: async (input: any) => { query = input; return []; } },
+  } as never);
+  const now = new Date('2026-11-09T12:00:00.000Z');
+  await repository.findQueuedSms(25, now);
+  assert.deepEqual(query.where, {
+    channel: NotificationChannel.SMS,
+    status: NotificationStatus.QUEUED,
+    OR: [{ scheduledAt: null }, { scheduledAt: { lte: now } }],
+  });
+});
+
+test('scheduled service booking reminders dispatch through the in-memory SMS adapter', async () => {
+  const provider = new InMemorySmsProvider();
+  const sentRows: string[] = [];
+  const now = new Date('2026-11-19T06:00:00.000Z');
+  const service = new NotificationsService({
+    findQueuedSms: async (_limit: number, dueAt: Date) => {
+      assert.equal(dueAt, now);
+      return [{ id: 'reminder-1', complaint: null, payload: { to: '+962791234567', from: '+962790000000', textBody: 'Your appointment is tomorrow.' } }];
+    },
+    markSmsSent: async (id: string) => { sentRows.push(id); return true; },
+    markSmsFailed: async () => true,
+  } as any, {
+    sendSms: async (message: any) => provider.send(validateSmsMessage(message)),
+  } as any, {} as never);
+  const result = await service.dispatchQueuedSms(5, now);
+  assert.equal(result.sent, 1);
+  assert.equal(sentRows[0], 'reminder-1');
+  assert.equal(provider.sent[0]?.from, '+962790000000');
 });
 
 test('notification read state is recipient-scoped and does not alter delivery fields', async () => {

@@ -835,6 +835,8 @@ model SlaEvent {
 model Notification {
   id               String                        @id @default(cuid())
   complaintId      String?                       @map("complaint_id")
+  serviceAppointmentId String?                    @map("service_appointment_id")
+  scheduledAt      DateTime?                     @map("scheduled_at")
   recipientUserId  String?                       @map("recipient_user_id")
   channel          NotificationChannel
   status           NotificationStatus            @default(QUEUED)
@@ -848,10 +850,13 @@ model Notification {
   failedAt         DateTime?                     @map("failed_at")
   readAt           DateTime?                     @map("read_at")
   complaint        Complaint?                    @relation(fields: [complaintId], references: [id])
+  serviceAppointment ServiceAppointment?          @relation(fields: [serviceAppointmentId], references: [id], onDelete: Cascade)
   recipientUser    User?                         @relation("NotificationRecipient", fields: [recipientUserId], references: [id])
   deliveryAttempts NotificationDeliveryAttempt[]
 
   @@index([complaintId])
+  @@index([serviceAppointmentId, channel, status])
+  @@index([channel, status, scheduledAt])
   @@index([recipientUserId, status])
   @@index([recipientUserId, channel, readAt, queuedAt])
   @@map("notifications")
@@ -1847,10 +1852,24 @@ model ServiceAppointment {
   carModel            ServiceCarModel?         @relation(fields: [carModelId], references: [id])
   maintenanceType     ServiceMaintenanceType?  @relation(fields: [maintenanceTypeId], references: [id])
   createdBy           User?                    @relation("ServiceAppointmentCreatedBy", fields: [createdById], references: [id])
+  smsNotifications    Notification[]
 
   @@index([serviceCenterId, date])
   @@index([customerPhone])
   @@map("service_appointments")
+}
+
+model ServiceBookingSmsSetting {
+  id              String   @id @default("global")
+  enabled         Boolean  @default(false)
+  leadHours       Int      @default(24) @map("lead_hours")
+  senderNumber    String   @default("") @map("sender_number")
+  messageTemplate String   @default("") @map("message_template") @db.Text
+  updatedById     String?  @map("updated_by_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("service_booking_sms_settings")
 }
 
 model UserBookingRule {

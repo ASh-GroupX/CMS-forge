@@ -10,6 +10,8 @@ import { IntegrationsService } from '../integrations/integrations.service.js';
 import { NotificationsController } from './notifications.controller.js';
 import { NotificationsRepository } from './notifications.repository.js';
 import { NotificationDigestRepository } from './notification-digest.repository.js';
+import { NotificationScheduleRepository } from './notification-schedule.repository.js';
+import { NotificationSchedulesService } from './notification-schedules.service.js';
 import { NotificationsService } from './notifications.service.js';
 
 @Module({
@@ -24,6 +26,8 @@ import { NotificationsService } from './notifications.service.js';
       useFactory: (prisma: PrismaService) => new NotificationsRepository(prisma),
     },
     NotificationDigestRepository,
+    NotificationScheduleRepository,
+    NotificationSchedulesService,
     {
       provide: NotificationsService,
       inject: [NotificationsRepository, IntegrationsService, AuditService, NotificationDigestRepository],
@@ -39,6 +43,6 @@ import { NotificationsService } from './notifications.service.js';
     RbacGuard,
     CsrfGuard,
   ],
-  exports: [NotificationsService],
+  exports: [NotificationsService, NotificationSchedulesService],
 })
 export class NotificationsModule {}

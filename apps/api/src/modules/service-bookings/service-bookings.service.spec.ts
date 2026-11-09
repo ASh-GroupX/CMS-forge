@@ -202,12 +202,15 @@ test('createAppointment rejects when time slot is in the past', async () => {
 });
 
 test('createAppointment succeeds and generates reference when within limits', async () => {
+  let scheduled: { appointmentId: string; revision: string } | undefined;
   const repo = createMockRepository({
     countDailyActive: async () => 2,
     countInSlot: async () => 0,
     countInHourWindow: async () => 1,
   });
-  const service = new ServiceBookingsService(repo);
+  const service = new ServiceBookingsService(repo, undefined, {
+    sync: async (appointment: any, revision: string) => { scheduled = { appointmentId: appointment.id, revision }; },
+  } as any);
 
   const result = await service.createAppointment({
     customerName: 'Fahad',
@@ -225,4 +228,29 @@ test('createAppointment succeeds and generates reference when within limits', as
   assert.equal(result.endTime, '11:45');
   assert.equal(result.referenceNumber, 'APT-20261026-0001');
   assert.equal(result.status, 'BOOKED');
+  assert.equal(scheduled?.appointmentId, 'apt_1');
+  assert.ok(scheduled?.revision);
+});
+
+test('rescheduling replaces the reminder using the updated appointment revision', async () => {
+  let scheduledRevision = '';
+  const existing: any = {
+    id: 'apt-2', status: 'BOOKED', serviceCenterId: 'center_main', branchId: null,
+    date: new Date('2026-10-02T00:00:00.000Z'), startTime: '09:00', durationMinutes: 30,
+    customerName: 'Maya', customerPhone: '0791234567', createdAt: new Date(),
+  };
+  const repo = createMockRepository({
+    findAppointmentById: async () => existing,
+    updateAppointment: async (_id: string, data: any) => ({ ...existing, ...data, updatedAt: new Date('2026-10-01T12:00:00.000Z') }),
+    findAppointmentHistory: async () => [],
+    recordAppointmentAudit: async () => undefined,
+    countInSlot: async () => 0,
+    countInHourWindow: async () => 0,
+  });
+  const service = new ServiceBookingsService(repo, undefined, {
+    sync: async (_appointment: any, revision: string) => { scheduledRevision = revision; },
+  } as any);
+  const result = await service.updateAppointment('apt-2', { date: '2026-10-05', startTime: '09:30' }, 'admin-1', 'ADMIN');
+  assert.equal(result.startTime, '09:30');
+  assert.equal(scheduledRevision, '2026-10-01T12:00:00.000Z');
 });

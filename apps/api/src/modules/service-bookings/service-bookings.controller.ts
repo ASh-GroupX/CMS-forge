@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { SessionAuthGuard } from '../../core/auth.guard.js';
+import { CsrfGuard } from '../../core/csrf.guard.js';
 import type { AuthenticatedRequest } from '../../core/auth.guard.js';
 import { ServiceBookingsService } from './service-bookings.service.js';
 import { parseCreateServiceAppointmentBody } from './dto/create-service-appointment.dto.js';
@@ -11,12 +12,14 @@ import {
 } from './dto/service-master-data.dto.js';
 import { parseUpdateBranchBookingRulesBody } from './dto/service-booking-rules.dto.js';
 import { UserBookingRulesService } from './user-booking-rules.service.js';
+import { ServiceBookingSmsSettingsService } from './service-booking-sms-settings.service.js';
 
 @Controller('service-bookings')
 export class ServiceBookingsController {
   constructor(
     private readonly service: ServiceBookingsService,
     private readonly userRulesService?: UserBookingRulesService,
+    private readonly smsSettingsService?: ServiceBookingSmsSettingsService,
   ) {}
 
   // ── Service Centers ───────────────────────────────────────────────────────
@@ -154,6 +157,20 @@ export class ServiceBookingsController {
   async updateUserRules(@Param('userId') userId: string, @Req() req: AuthenticatedRequest, @Body() body: any) {
     if (!this.userRulesService) return { success: false };
     return this.userRulesService.updateUserBookingRule(userId, body, req.principal);
+  }
+
+  @Get('settings/sms-reminder')
+  @UseGuards(SessionAuthGuard)
+  async getSmsReminderSettings(@Req() req: AuthenticatedRequest) {
+    if (!this.smsSettingsService) throw new Error('SMS reminder settings service is unavailable');
+    return this.smsSettingsService.read(req.principal?.userId ?? null, req.principal?.roleCode);
+  }
+
+  @Put('settings/sms-reminder')
+  @UseGuards(SessionAuthGuard, CsrfGuard)
+  async updateSmsReminderSettings(@Req() req: AuthenticatedRequest, @Body() body: unknown) {
+    if (!this.smsSettingsService) throw new Error('SMS reminder settings service is unavailable');
+    return this.smsSettingsService.update(body, req.principal?.userId ?? null, req.principal?.roleCode);
   }
 
   // ── Appointments ──────────────────────────────────────────────────────────

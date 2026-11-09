@@ -5,6 +5,7 @@ export const SMS_PROVIDER = Symbol('SMS_PROVIDER');
 
 export type SmsMessageInput = {
   to: string;
+  from?: string;
   textBody: string;
   payload?: unknown;
 };
@@ -33,9 +34,11 @@ export class InMemorySmsProvider implements SmsProviderPort {
 export function validateSmsMessage(input: SmsMessageInput): SmsMessageInput {
   const to = text(input.to, 'to');
   if (!/^\+[1-9]\d{7,14}$/.test(to) || /[\r\n]/.test(to)) throw invalidSms('to');
+  const from = input.from === undefined ? undefined : text(input.from, 'from');
+  if (from && !/^\+[1-9]\d{7,14}$/.test(from)) throw invalidSms('from');
   const textBody = text(input.textBody, 'textBody');
   if (!isSafePayload(input.payload ?? {})) throw invalidSms('payload');
-  return { ...input, to, textBody };
+  return { ...input, to, ...(from ? { from } : {}), textBody };
 }
 
 const blockedKey = /(password|token|otp|hash|secret|credential)/i;
