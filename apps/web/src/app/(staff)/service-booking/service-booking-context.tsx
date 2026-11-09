@@ -10,6 +10,7 @@ import type {
   ServiceAppointment,
   UserBookingRule,
 } from '../../../lib/staff-service-bookings-api';
+import { fetchSlotAvailability } from '../../../lib/staff-service-bookings-api';
 
 export type BranchOption = {
   id: string;
@@ -33,6 +34,7 @@ interface ServiceBookingContextType {
   carModels: CarModel[];
   maintenanceTypes: MaintenanceType[];
   appointments: ServiceAppointment[];
+  slotAvailability: Record<string, DayAvailability | null>;
   setAppointments: React.Dispatch<React.SetStateAction<ServiceAppointment[]>>;
   isNewModalOpen: boolean;
   setIsNewModalOpen: (open: boolean) => void;
@@ -84,6 +86,7 @@ export function ServiceBookingProvider({
   const [view, setView] = useState<ServiceBookingView>('day');
   const [selectedBranchId, setSelectedBranchId] = useState<string>('ALL');
   const [appointments, setAppointments] = useState<ServiceAppointment[]>(initialAppointments);
+  const [slotAvailability, setSlotAvailability] = useState<Record<string, DayAvailability | null>>({});
   const [branches, setBranches] = useState<BranchOption[]>(initialBranches);
   const [carModels, setCarModels] = useState<CarModel[]>(initialCarModels);
   const [maintenanceTypes, setMaintenanceTypes] = useState<MaintenanceType[]>(initialMaintenanceTypes);
@@ -96,6 +99,18 @@ export function ServiceBookingProvider({
   React.useEffect(() => {
     setAppointments(initialAppointments);
   }, [initialAppointments]);
+
+  React.useEffect(() => {
+    let active = true;
+    setSlotAvailability({});
+    void Promise.all(initialBranches.map(async (branch) => [
+      branch.id,
+      await fetchSlotAvailability(branch.id, selectedDate).catch(() => null),
+    ] as const)).then((entries) => {
+      if (active) setSlotAvailability(Object.fromEntries(entries));
+    });
+    return () => { active = false; };
+  }, [appointments, initialBranches, selectedDate]);
 
   React.useEffect(() => {
     setBranches(initialBranches);
@@ -128,6 +143,7 @@ export function ServiceBookingProvider({
         openNewModalWithSlot,
         prefillSlot,
         selectedAppointment,
+        slotAvailability,
         selectedBranchId,
         selectedDate,
         setAppointments,

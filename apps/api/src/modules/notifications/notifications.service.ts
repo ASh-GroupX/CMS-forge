@@ -21,7 +21,7 @@ import type { NotificationResponseDto, NotificationTemplateResponseDto } from '.
 import { notificationReadAudit, type NotificationReadAuditContext } from './notification-read.audit.js';
 
 
-export type QueueInternalNotificationInput = { complaintId?: string | null; recipientUserId?: string | null; channel?: NotificationChannel | string; templateCode?: string; locale?: string; payload?: unknown; idempotencyKey?: string };
+export type QueueInternalNotificationInput = { complaintId?: string | null; serviceAppointmentId?: string | null; scheduledAt?: Date | null; recipientUserId?: string | null; channel?: NotificationChannel | string; templateCode?: string; locale?: string; payload?: unknown; idempotencyKey?: string };
 export type DispatchEmailNotificationsResult = { attempted: number; sent: number; failed: number; skipped: number };
 export type ResolveNotificationTemplateInput = { templateCode?: string; channel?: NotificationChannel | string; locale?: string; payload?: unknown };
 export type ResolvedNotificationTemplate = { templateId: string; templateCode: string; channel: NotificationChannel; locale: string; subject: string | null; body: string };
@@ -108,6 +108,8 @@ export class NotificationsService {
 
     const data = {
       complaintId: optionalText(input.complaintId),
+      ...(input.serviceAppointmentId ? { serviceAppointmentId: optionalText(input.serviceAppointmentId) } : {}),
+      ...(input.scheduledAt ? { scheduledAt: input.scheduledAt } : {}),
       recipientUserId: optionalText(input.recipientUserId),
       channel,
       templateCode,
@@ -137,7 +139,7 @@ export class NotificationsService {
   }
 
   async dispatchQueuedSms(limit = 25, now = new Date()): Promise<DispatchEmailNotificationsResult> {
-    const queued = await this.notificationsRepository.findQueuedSms(limit);
+    const queued = await this.notificationsRepository.findQueuedSms(limit, now);
     return this.dispatchQueued(
       queued,
       smsMessage,

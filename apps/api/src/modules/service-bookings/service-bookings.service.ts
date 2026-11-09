@@ -10,6 +10,7 @@ import {
   buildDayAvailability, calculateEndTime, mapAppointment,
 } from './service-bookings.utils.js';
 import { UserBookingRulesService } from './user-booking-rules.service.js';
+import { ServiceBookingSmsReminderService } from './service-booking-sms-reminder.service.js';
 
 export { DEFAULT_DAY_RULES };
 
@@ -18,6 +19,7 @@ export class ServiceBookingsService {
   constructor(
     private readonly repository: ServiceBookingsRepository,
     private readonly userRulesService?: UserBookingRulesService,
+    private readonly smsReminderService?: ServiceBookingSmsReminderService,
   ) {}
 
   // ── Appointments ──────────────────────────────────────────────────────────
@@ -94,6 +96,7 @@ export class ServiceBookingsService {
       notes: dto.notes || 'Service appointment', date: dateObj, startTime: dto.startTime,
       endTime, durationMinutes: duration, status: 'BOOKED', createdById: actorId || null,
     });
+    await this.smsReminderService?.sync(created, created.createdAt.toISOString());
     return mapAppointment(created);
   }
 
@@ -103,6 +106,8 @@ export class ServiceBookingsService {
 
     const updateData: Prisma.ServiceAppointmentUncheckedUpdateInput = {};
     const isStatusChanged = Boolean(dto.status && dto.status !== existing.status);
+    const isReminderDataChanged = dto.customerName !== undefined && dto.customerName !== existing.customerName
+      || dto.customerPhone !== undefined && dto.customerPhone !== existing.customerPhone;
     if (isStatusChanged && actorId && this.userRulesService) {
       await this.userRulesService.checkPermission(actorId, roleCode, 'canChangeStatus');
     }
@@ -162,6 +167,7 @@ export class ServiceBookingsService {
         metadata: { oldStatus: existing.status, newStatus: dto.status },
       });
     }
+    if (isRescheduled || isStatusChanged || isReminderDataChanged) await this.smsReminderService?.sync(updated, updated.updatedAt.toISOString());
     const history = await this.repository.findAppointmentHistory(id);
     return mapAppointment(updated, history);
   }

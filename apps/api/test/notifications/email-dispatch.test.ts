@@ -393,10 +393,11 @@ test('notifications dispatch skips terminal sms and whatsapp rows at repository 
     },
   } as never);
 
-  assert.deepEqual(await repository.findQueuedSms(2), []);
+  const dueBefore = new Date('2026-11-09T12:00:00.000Z');
+  assert.deepEqual(await repository.findQueuedSms(2, dueBefore), []);
   assert.deepEqual(await repository.findQueuedWhatsApp(4), []);
   assert.deepEqual(calls, [
-    { where: { channel: NotificationChannel.SMS, status: NotificationStatus.QUEUED }, orderBy: { queuedAt: 'asc' }, take: 2, select: notificationSelect() },
+    { where: { channel: NotificationChannel.SMS, status: NotificationStatus.QUEUED, OR: [{ scheduledAt: null }, { scheduledAt: { lte: dueBefore } }] }, orderBy: { queuedAt: 'asc' }, take: 2, select: notificationSelect() },
     { where: { channel: NotificationChannel.WHATSAPP, status: NotificationStatus.QUEUED }, orderBy: { queuedAt: 'asc' }, take: 4, select: notificationSelect() },
   ]);
 });

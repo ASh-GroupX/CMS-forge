@@ -5,6 +5,41 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/service-bookings/settings/sms-reminder": {
+      "get": {
+        "tags": ["ServiceBookings"],
+        "operationId": "serviceBookingSmsReminderSettingsRead",
+        "summary": "Read service booking SMS reminder settings",
+        "security": [{ "staffSession": [] }],
+        "responses": {
+          "200": {
+            "description": "Reminder settings",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServiceBookingSmsReminderSettings" } } }
+          },
+          "401": { "description": "Session required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Admin settings permission required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      },
+      "put": {
+        "tags": ["ServiceBookings"],
+        "operationId": "serviceBookingSmsReminderSettingsUpdate",
+        "summary": "Update service booking SMS reminder settings",
+        "security": [{ "staffSession": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateServiceBookingSmsReminderSettings" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated reminder settings",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServiceBookingSmsReminderSettings" } } }
+          },
+          "400": { "description": "Invalid reminder configuration", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "401": { "description": "Session required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Admin settings permission required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
     "/internal-tickets": {
       "post": {
         "tags": [
@@ -6563,6 +6598,32 @@
       }
     },
     "schemas": {
+      "UpdateServiceBookingSmsReminderSettings": {
+        "type": "object",
+        "required": ["enabled", "leadHours", "senderNumber", "messageTemplate"],
+        "properties": {
+          "enabled": { "type": "boolean" },
+          "leadHours": { "type": "integer", "minimum": 1, "maximum": 720, "default": 24 },
+          "senderNumber": { "type": "string", "pattern": "^\\+[1-9][0-9]{7,14}$" },
+          "messageTemplate": { "type": "string", "maxLength": 1000 }
+        }
+      },
+      "ServiceBookingSmsReminderSettings": {
+        "allOf": [
+          { "$ref": "#/components/schemas/UpdateServiceBookingSmsReminderSettings" },
+          { "type": "object", "required": ["providerReady", "providerMode"], "properties": {
+            "providerReady": { "type": "boolean", "const": false },
+            "providerMode": { "type": "string", "const": "test" },
+            "deliveries": { "type": "array", "items": { "type": "object", "required": ["id", "status"], "properties": {
+              "id": { "type": "string" },
+              "status": { "type": "string", "enum": ["QUEUED", "SENT", "FAILED", "CANCELLED"] },
+              "scheduledAt": { "type": ["string", "null"], "format": "date-time" },
+              "sentAt": { "type": ["string", "null"], "format": "date-time" },
+              "serviceAppointment": { "type": ["object", "null"], "properties": { "referenceNumber": { "type": "string" } } }
+            } } }
+          } }
+        ]
+      },
       "DepartmentTicketPhoneCustomField": {
         "type": "object",
         "properties": {

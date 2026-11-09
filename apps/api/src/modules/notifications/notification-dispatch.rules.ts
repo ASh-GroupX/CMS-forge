@@ -18,7 +18,8 @@ export function emailMessage(notification: NotificationRecord): EmailMessageInpu
 
 export function smsMessage(notification: NotificationRecord): SmsMessageInput {
   const payload = isPlainObject(notification.payload) ? notification.payload : {};
-  return { to: payloadText(payload.to) ?? '', textBody: payloadText(payload.textBody) ?? '', payload };
+  const from = payloadText(payload.from);
+  return { to: payloadText(payload.to) ?? '', ...(from ? { from } : {}), textBody: payloadText(payload.textBody) ?? '', payload };
 }
 
 export function whatsAppMessage(notification: NotificationRecord): WhatsAppMessageInput {

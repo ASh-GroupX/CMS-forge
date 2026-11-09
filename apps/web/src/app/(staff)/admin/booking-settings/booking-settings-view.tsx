@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Building2, Car, Clock, ShieldCheck, Wrench } from 'lucide-react';
+import { Building2, Car, Clock, MessageSquareText, ShieldCheck, Wrench } from 'lucide-react';
 import { BranchHoursTab } from './branch-hours-tab';
 import { CarModelsTab } from './car-models-tab';
 import { MaintenanceTypesTab } from './maintenance-types-tab';
 import { ServiceCentersTab } from './service-centers-tab';
 import { UserRulesTab } from './user-rules-tab';
+import { SmsReminderTab } from './sms-reminder-tab';
 import type { CarModel, DayRule, MaintenanceType, ServiceCenter } from '../../../../lib/staff-service-bookings-api';
 import type { Locale } from '../../../../i18n/staff-shell';
 import type { ServiceBookingCopy } from '../../../../i18n/staff-service-booking';
@@ -27,7 +28,7 @@ export function BookingSettingsView({
   t: ServiceBookingCopy;
 }) {
   const isAr = locale === 'ar';
-  const [activeTab, setActiveTab] = useState<'hours' | 'cars' | 'maintenance' | 'centers' | 'user-rules'>('hours');
+  const [activeTab, setActiveTab] = useState<'hours' | 'cars' | 'maintenance' | 'centers' | 'user-rules' | 'sms-reminder'>('hours');
   const [centersList, setCentersList] = useState(centers);
   const [carList, setCarList] = useState(carModels);
   const [typesList, setTypesList] = useState(maintenanceTypes);
@@ -91,6 +92,15 @@ export function BookingSettingsView({
           >
             <Clock className="size-4" />
             <span>{t.adminSettings.tabHours}</span>
+          </button>
+
+          <button
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all ${activeTab === 'sms-reminder' ? 'bg-brand text-primary-foreground shadow-sm' : 'border border-line-subtle bg-surface text-content-muted hover:text-content-strong'}`}
+            onClick={() => setActiveTab('sms-reminder')}
+            type="button"
+          >
+            <MessageSquareText className="size-4" />
+            <span>{t.adminSettings.tabSmsReminder}</span>
           </button>
 
           <button
@@ -183,6 +193,9 @@ export function BookingSettingsView({
         </div>
         <div style={{ display: activeTab === 'user-rules' ? undefined : 'none' }}>
           <UserRulesTab locale={locale} />
+        </div>
+        <div style={{ display: activeTab === 'sms-reminder' ? undefined : 'none' }}>
+          <SmsReminderTab locale={locale} t={t} />
         </div>
       </div>
     </div>

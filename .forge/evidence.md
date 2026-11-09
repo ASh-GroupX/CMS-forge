@@ -15679,3 +15679,63 @@ verification results and reviewer-tier limitation remain unchanged.
   policy-named tier unavailable, not represented as passed. Existing production
   workflow validates before deploying. Remote/live outcome pending at commit time.
   Unrelated tmp/uploads excluded; no force push or backend/schema change.
+
+## Service appointment SMS reminders - 2026-11-09
+
+- SRS: REQ-BOOK-SMS-001, REQ-NOTIFY-001, METHOD-API-001, UI-DESIGN-001.
+- Added Admin booking settings for enablement, custom message, sender number, and
+  configurable lead time (24-hour default). Settings are persisted and audited in
+  one transaction. Server session and booking-settings permission govern the API;
+  update route uses CSRF protection. Audit metadata excludes message body.
+- Appointment create/reschedule and contact/status edits synchronize reminder
+  queue rows. Settings saves refresh pending future bookings; cancellation,
+  completion, and disablement cancel pending reminders. Existing worker dispatches
+  due SMS once per minute. Notification idempotency key includes appointment and
+  settings revisions. Recent delivery activity is visible in Admin settings.
+- API has no live SMS provider/credential configured. UI states test mode; local
+  dispatch is verified with the in-memory adapter. No provider secret is returned
+  or placed in frontend code. Appointment date/time is interpreted in Asia/Amman.
+- Passed: `npm run test:api -- service-bookings`, `npm run test:api -- notifications`,
+  `npm run typecheck`, `npm run lint`, `npm run openapi:check`,
+  `npm run prisma:validate`, `npm run db:migrate:test`,
+  `npm run test:booking-sms:browser`, `git diff --check`.
+- EN desktop and AR mobile booking settings screenshots rendered and inspected at
+  `coverage/sms-reminder-browser/en-settings.png` and `ar-settings.png`.
+- Unrelated `tmp/` and `uploads/` preserved. Feature remains local; no push or
+  deployment performed.
+
+## Service booking timeline visibility and Add action - 2026-11-09
+
+- SRS: UI-DESIGN-001. Related service booking module requirements: SR-BOOK-001,
+  SR-BOOK-002 (the module manifest references these identifiers).
+- Fixed same-slot rendering by mapping every active appointment at the slot instead
+  of selecting only the first. Each slot now shows an explicit Add appointment
+  action with occupancy while configured slot, hourly, and daily capacity remains.
+- Capacity is read from the existing backend availability endpoint; no client-side
+  limits are used to decide if a slot can be booked. API remains final authority.
+- English and Arabic labels included. Verification pending at time of entry.
+- Verification: `npm run lint` Passed; `npm run typecheck` Passed after fixing a
+  frontend availability status mismatch; `git diff --check` Passed. Visual
+  screenshot Not Run: the local staff page preview timed out/returned 404 while
+  compiling, so screenshot review could not be completed. No new tests were added
+  or run.
+
+## Service booking features release verification - 2026-11-09
+
+- SRS: REQ-BOOK-SMS-001, REQ-NOTIFY-001, METHOD-API-001, UI-DESIGN-001;
+  module references SR-BOOK-001 and SR-BOOK-002.
+- Passed `npm test` (78/78), `npm run test:web` (228/228), focused
+  `npm run test:api -- service-bookings` (24/24) and
+  `npm run test:api -- notifications` (48/48), `npm run lint`,
+  `npm run typecheck`, `npm run openapi:check`, `npm run prisma:validate`, and
+  `npm run db:migrate:test` (migration SQL sanity).
+- Passed browser proofs for SMS settings and booking catalog in EN desktop / AR
+  mobile, plus new timeline capacity proof in EN desktop / AR mobile with both
+  appointments at 12:00, available Add state, and daily-full blocked state.
+  Screenshots: `coverage/service-booking-timeline/en-capacity-available.png` and
+  `coverage/service-booking-timeline/ar-capacity-available.png`.
+- `npm run test:api` without a suite name returns “Unknown API test suite”; the
+  two feature-relevant named suites above were run and passed.
+- Live SMS provider is not configured. Test-mode adapter verified; no live SMS
+  delivery is claimed. User explicitly requests push to waleed and production
+  merge. Production workflow/deployment outcome pending.

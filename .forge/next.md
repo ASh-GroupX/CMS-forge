@@ -1,18 +1,19 @@
-# Hide empty ticket draft notice
-Status: Implemented; final EN/AR browser proof recorded in evidence
+# Service booking improvements release
+Status: Release requested; verification in progress
 Risk: Medium
-SRS: UI-DESIGN-001, METHOD-TEST-001
+SRS: REQ-BOOK-SMS-001, REQ-NOTIFY-001, METHOD-API-001, UI-DESIGN-001
+Related module requirements: SR-BOOK-001, SR-BOOK-002
 
-User clarified the entire draft message and discard action must disappear after
-confirmed discard, then return only when new meaningful input exists. The form
-now renders the entire notice only when hasTicketDraft is true. No persistent
-success box. Retain confirmation, full reset/files/cache, cancel preservation,
-error clearing, submit-time disabling and title focus.
-Scope: existing ticket form and real Next browser proof plus Forge docs.
-Proof: real Next EN/AR discard/reset/reload/notice return; lint/typecheck/web build.
-Independent static review found no blockers; policy-named tier unavailable and
-not claimed as passed. Earlier navigation proofs remain recorded. No new backend,
-workflow/auth/portal changes. Keep unrelated tmp/uploads.
+Release the Admin-configured service appointment SMS reminder (test adapter,
+no live provider configured) and service booking day timeline fix. The timeline
+shows all appointments in a 15-minute slot, displays slot capacity, and offers
+Add only while backend slot, hourly, and daily limits permit. Preserve EN/AR,
+audit, session-derived RBAC, OpenAPI, and transaction/outbox patterns.
 
-User authorizes push and merge. Release verified fix via waleed to production;
-monitor existing validation/deployment workflow and live revision/health.
+User explicitly requested tests, push to `waleed`, and merge to `production`.
+Keep tmp/ and uploads/ out of the release. Follow deployment validation and
+report the live outcome; do not claim real SMS delivery without a provider.
+
+Proof: focused API + notification suites, browser proofs, lint, typecheck,
+OpenAPI, Prisma validation, migration SQL sanity, and diff checks. Add final
+release revision and live health evidence after merge.

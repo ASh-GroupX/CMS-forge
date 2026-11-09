@@ -20,6 +20,7 @@ Agent context manifest for the service center booking module.
 - `service_car_models`
 - `service_centers`
 - `service_maintenance_types`
+- `service_booking_sms_settings`
 - `audit_logs`
 
 ## May depend on
@@ -27,6 +28,7 @@ Agent context manifest for the service center booking module.
 - `core/*` (prisma, errors, audit, rbac, correlation).
 - `modules/branches`
 - `modules/auth`
+- `modules/notifications` (SMS adapter dispatch through NotificationsService)
 
 ## SRS
 
@@ -34,3 +36,4 @@ Agent context manifest for the service center booking module.
 - SR-BOOK-002 (Slot capacity, 15-minute resolution, hourly and daily booking rules)
 - SR-BOOK-003 (Multi-branch view and branch name management)
 - SR-BOOK-004 (Master data for car models and maintenance types)
+- REQ-BOOK-SMS-001 (Admin-configured service appointment SMS reminders)

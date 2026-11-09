@@ -53,3 +53,33 @@ export async function updateUserBookingRulesAction(userId: string, data: any) {
     return { success: false, error: err?.message || 'Network error' };
   }
 }
+
+export async function getSmsReminderSettingsAction() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/service-bookings/settings/sms-reminder`, {
+      headers: await getAuthHeaders(), cache: 'no-store',
+    });
+    if (!res.ok) return { success: false, error: 'Unable to load reminder settings' };
+    return { success: true, settings: await res.json() };
+  } catch {
+    return { success: false, error: 'Unable to load reminder settings' };
+  }
+}
+
+export async function updateSmsReminderSettingsAction(data: {
+  enabled: boolean; leadHours: number; senderNumber: string; messageTemplate: string;
+}) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/service-bookings/settings/sms-reminder`, {
+      method: 'PUT', headers: await getAuthHeaders(), body: JSON.stringify(data), cache: 'no-store',
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}));
+      return { success: false, error: error.message || 'Unable to save reminder settings' };
+    }
+    revalidatePath('/admin/booking-settings');
+    return { success: true, settings: await res.json() };
+  } catch {
+    return { success: false, error: 'Unable to save reminder settings' };
+  }
+}
