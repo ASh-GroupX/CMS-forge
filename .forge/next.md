@@ -1,5 +1,5 @@
 # Service booking improvements release
-Status: Release requested; verification in progress
+Status: Released; production deployment verified
 Risk: Medium
 SRS: REQ-BOOK-SMS-001, REQ-NOTIFY-001, METHOD-API-001, UI-DESIGN-001
 Related module requirements: SR-BOOK-001, SR-BOOK-002
@@ -15,5 +15,7 @@ Keep tmp/ and uploads/ out of the release. Follow deployment validation and
 report the live outcome; do not claim real SMS delivery without a provider.
 
 Proof: focused API + notification suites, browser proofs, lint, typecheck,
-OpenAPI, Prisma validation, migration SQL sanity, and diff checks. Add final
-release revision and live health evidence after merge.
+OpenAPI, Prisma validation, migration SQL sanity, and diff checks all passed.
+Production run 42607361788 succeeded; live site/API health report revision
+716f6d5b6b703f71720b5ef46c055469f4946b5f. SMS remains test mode until a provider
+is configured.

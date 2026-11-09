@@ -1,18 +1,18 @@
 # Current State
 
 Date: 2026-11-09
-Status: Service booking SMS reminders and timeline capacity display release in verification
+Status: Service appointment SMS settings and capacity-aware timeline deployed to production
 Risk: Medium
 
-- Admin can configure appointment SMS reminders (toggle, template, sender
-  number, lead hours). No live provider credentials/API are configured; UI and
-  browser proof use the in-memory adapter and do not claim live delivery.
-- Day timeline renders every appointment sharing a 15-minute start, displays
-  slot occupancy, and exposes Add only while existing backend capacity permits.
-- Passed focused service-bookings API (24), notifications API (48), SMS browser,
-  booking catalog browser, and timeline capacity browser proofs (EN/AR, available
-  and daily-full states). Lint, typecheck, OpenAPI, Prisma, and migration SQL
-  sanity checks also passed; full-suite checks and release not yet complete.
-- User requested push to `waleed` and merge to `production`. Keep tmp/uploads out.
-  Do not claim live SMS delivery; capture release revision and production health
-  after deployment.
+- Admin can configure reminder enablement, message, sender number, and lead time.
+  Test-mode SMS adapter only; live provider credentials/API are not configured and
+  live delivery is not claimed.
+- Calendar displays every appointment in a 15-minute slot, shows per-slot
+  occupancy, and exposes Add only while backend slot/hour/day limits permit.
+- Passed: npm test (78), npm run test:web (228), service-bookings API (24),
+  notifications API (48), EN/AR SMS, catalog, and timeline browser proofs,
+  lint, typecheck, OpenAPI, Prisma, migration SQL sanity, and diff check.
+- Merged via waleed into production. Deployment workflow 42607361788 succeeded;
+  public site and API health return HTTP 200 and X-CMS-Deployment
+  716f6d5b6b703f71720b5ef46c055469f4946b5f.
+- tmp/ and uploads/ remain untracked and were excluded from the release.

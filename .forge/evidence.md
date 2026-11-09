@@ -15739,3 +15739,16 @@ verification results and reviewer-tier limitation remain unchanged.
 - Live SMS provider is not configured. Test-mode adapter verified; no live SMS
   delivery is claimed. User explicitly requests push to waleed and production
   merge. Production workflow/deployment outcome pending.
+
+## Production release verified - 2026-11-09
+
+- Release commit `5c3dc9e` pushed to `waleed`, then merged to `production` as
+  `716f6d5b6b703f71720b5ef46c055469f4946b5f`.
+- GitHub production deployment run `42607361788` completed with `success`.
+- Verified `https://cms.laith-alobaidi-crm.com/` and
+  `https://cms.laith-alobaidi-crm.com/api/health`: both HTTP 200 and returned
+  `X-CMS-Deployment: 716f6d5b6b703f71720b5ef46c055469f4946b5f`; API body reported
+  `status: ok`, database and Redis configured.
+- SMS integration remains in test mode because the live provider/API is not set
+  up. This release does not claim live customer SMS delivery.
+- tmp/ and uploads/ stayed untracked and were excluded.
