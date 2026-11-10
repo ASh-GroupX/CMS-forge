@@ -1,12 +1,10 @@
 # Current State
 
 Date: 2026-11-10
-Status: Released — admin key workspace
+Status: Released — detailed complaint and internal ticket external API
 Risk: High
 
-- Commit cb120afa63366ec8088a1cf11f414e7a1e94aa9b reached both waleed and production. GitHub validation and VPS deployment completed successfully.
-- Passed: integrations 48/48, complaints 98/98, tasks 45/45, service-bookings 24/24, typecheck, lint, OpenAPI check, production build, security check, root tests 78/78, migration SQL sanity, diff check.
-- Isolated PostgreSQL 18 live proof applied all 56 migrations and exercised staff HTTP key create/list/revoke, nonempty paginated pulls of all four feeds, branch/resource 403, revoked-key 401, page-read audit count, and real audit-failure rollback.
-- Production smoke passed: public revision cb120af, /api/health 200 with database configured, all four feed paths 401 without a key, and management list 401 without a staff session. Deployment workflow passed its migrations, container health, and revision gates.
-- Independent GPT-6 Sol source re-review: Accept With Conditions. Preferred named reviewer tier unavailable; do not claim it ran. No production key was issued and no production data was transmitted. Production keyed data pull remains operator UAT. Preserve tmp/ and uploads/.
-- Admin key workspace released at c962856 on waleed and production. Passed: build, typecheck, lint, OpenAPI, shell 231/231, API-client 109/109, accessibility preview 24/24, focused 6/6, and local browser EN/AR create/test/revoke with axe zero serious/critical. Independent GPT-6 Sol re-review: Accept With Conditions. GitHub workflow 42778141279 completed success; public revision matched, health 200, unsigned admin route redirected to sign-in, feed without key 401. No production key has been issued because no authenticated administrator session was available.
+- Commit 2aedef24ac6ee83b3c6b2f202eeec7b415db3358 reached both waleed and production. GitHub validation and VPS deployment workflow 42819848903 completed successfully. Public revision matched, /api/health returned 200 with database configured, and new routes returned 401 without an API key.
+- Rich complaint and internal ticket feeds include staff creator/requester, current owner/assignee, earliest acceptance, descriptions, and bounded previews. Complete events are cursor paginated with branch checks. Existing keys need tickets:read on a newly issued key; no credential was generated or exposed here.
+- Passed: integrations 52/52, complaints 98/98, internal-tickets 8/8, web shell 231/231, API client 109/109, root coverage tests, typecheck, lint, OpenAPI, build, security, diff check. Live isolated PostgreSQL HTTP proof passed long-history pagination, acceptance beyond preview, out-of-branch event 404, explicit branch 403, and revoked key 401. EN/AR screenshots inspected.
+- Independent GPT-6.1 Sol review: Accept With Conditions after repairs. Requested GPT-5.6 Sol unavailable. Production keyed pull remains operator UAT. Preserve tmp/ and uploads/.

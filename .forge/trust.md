@@ -1574,3 +1574,7 @@ Commit c962856 reached waleed and production. GitHub validation and VPS deployme
 ## Rich complaint and internal-ticket export review — 2026-11-10
 
 The independent GPT-6.1 Sol reviewer found that global target departments made department-based ticket branch filtering empty, that unbounded nested histories could grow pages indefinitely, and that acceptance could lie beyond a capped preview. The implementation now scopes tickets by requester branch, caps event previews at 100 with complete cursor event routes, and queries earliest acceptance separately. Live local HTTP proof verified both existing out-of-branch record event routes return 404, plus pagination and acceptance beyond preview. EN/AR screenshots were rendered and inspected. Verdict: Accept With Conditions; preferred named GPT-5.6 Sol reviewer unavailable. Production keyed reads require operator UAT with an issued key.
+
+## Rich external feeds release — 2026-11-10
+
+Commit 2aedef2 reached waleed and production. Workflow 42819848903 passed validation and VPS deployment. The public revision matched, health returned 200 with database configured, and the new protected routes returned 401 without a key. No production key was created in this task. Existing administrators can create a tickets:read key in the hub and run a keyed production pull.
