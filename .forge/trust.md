@@ -1558,3 +1558,7 @@ The independent GPT-6 Sol reviewer recommended Needs Repair before production be
 ## External system data API runtime repair and re-review — 2026-11-10
 
 An isolated PostgreSQL 18 UTF8 instance applied all 56 migrations and served the compiled API over HTTP. The proof found missing Nest guard repository DI export and repaired it. Final live local proof passed HTTP admin key create/list/revoke, scoped one-row pagination across all four nonempty resources, branch and resource 403, revoked-key 401, matching page-read audits, and actual audit-failure transaction rollback. Independent GPT-6 Sol re-review said Accept With Conditions and reran integrations 48/48, OpenAPI, and diff checks. This reviewer is not the repository's preferred named tier. Production deployment and production-database read remain unverified until release.
+
+## External system data API production release — 2026-11-10
+
+The user authorized push to waleed and merge into production after testing. Commit cb120af reached both branches. GitHub validation and VPS deployment workflow 42771205143 completed successfully, including migration, container health, public revision, and health gates. Public feed and management routes returned 401 without credentials. No production key or production record export was created during the smoke test. A keyed data pull from the production database is operator UAT. This release used the available GPT-6 Sol independent reviewer; it does not claim the repository's preferred named reviewer tier.
