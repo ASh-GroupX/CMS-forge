@@ -1566,3 +1566,7 @@ The user authorized push to waleed and merge into production after testing. Comm
 ## External data API admin workspace phase review — 2026-11-10
 
 The independent GPT-6 Sol reviewer first returned Needs Repair: the connection test covered only one selected resource, the route lacked an initial loading state, and feature/client files were outside the canonical UI locations. All three were repaired. Re-review returned Accept With Conditions, independently passing focused tests, lint, OpenAPI, and diff checks, and finding no credential leak or authorization bypass. Browser proof passed signed-in hub navigation, key create/test/revoke, EN/AR screenshots, and focused axe scans. The reviewer is not the preferred named tier. Production key creation still requires an authenticated admin session; do not bypass it or claim a key exists before one is issued.
+
+## External data API admin workspace release — 2026-11-10
+
+Commit c962856 reached waleed and production. GitHub validation and VPS deployment workflow 42778141279 completed success. Public revision and health checks passed; the unsigned admin route redirected to sign-in, and a feed without a key returned 401. No production key was created because no authorized website session was available. The admin workspace provides one-time key display and revocation once an administrator signs in.
