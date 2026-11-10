@@ -26,10 +26,13 @@ export function TimelineDayView() {
     setIsDetailModalOpen,
     setSelectedAppointment,
     t,
+    userRules,
   } = useServiceBooking();
 
   const isAr = locale === 'ar';
   const todayAmman = getTodayDateString();
+  const nowParts = getNowTimeParts();
+  const currentTime = `${String(nowParts.hour).padStart(2, '0')}:${String(nowParts.minute).padStart(2, '0')}`;
   const isToday =
     selectedDate === todayAmman ||
     selectedDate === new Date().toLocaleDateString('en-CA') ||
@@ -201,7 +204,7 @@ export function TimelineDayView() {
                   return (
                     <div className="relative flex flex-col divide-y divide-line-subtle/30" key={branch.id}>
                       {/* Hour Capacity Badge */}
-                      <div className="absolute top-1 end-1 z-10 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold">
+                      <div className="flex h-6 items-center justify-end gap-1 border-b border-line-subtle/30 px-2 text-[10px] font-bold">
                         <span
                           className={`size-1.5 rounded-full ${
                             isHourFull
@@ -223,9 +226,14 @@ export function TimelineDayView() {
                           (a) => matchesBranch(a, branch) && a.startTime === timeStr,
                         );
                         const slotCapacity = availability?.slots.find((slot) => slot.slot === timeStr);
-                        const mayAdd = !!slotCapacity &&
+                        const isPastSlot = selectedDate < todayAmman || (selectedDate === todayAmman && timeStr < currentTime);
+                        const mayAdd = userRules.canCreateBookings && !isPastSlot && !!slotCapacity &&
                           slotCapacity.remainingInSlot > 0 && slotCapacity.remainingInHour > 0 &&
                           availability!.bookedDailyCount < availability!.maxDailyAppointments;
+                        const blockedReason = slotCapacity?.remainingInSlot === 0 ? t.timeline.slotFull
+                          : slotCapacity?.remainingInHour === 0 ? t.timeline.hourFull
+                          : availability && availability.bookedDailyCount >= availability.maxDailyAppointments ? t.timeline.dayFull
+                          : isPastSlot ? t.modal.pastTime : !userRules.canCreateBookings ? t.timeline.noCreatePermission : undefined;
 
                         return (
                           <div
@@ -236,10 +244,13 @@ export function TimelineDayView() {
                                   ? 'bg-status-warning-bg/40'
                                   : 'hover:bg-brand/[0.03]'
                             }`}
+                            data-branch-id={branch.id}
+                            data-slot-time={timeStr}
                             key={slotMin}
                           >
                             <TimelineSlotContent
                               appointments={slotApts}
+                              blockedReason={blockedReason}
                               capacity={slotCapacity}
                               mayAdd={mayAdd}
                               onAdd={() => openNewModalWithSlot({ branchId: branch.id, date: selectedDate, time: timeStr })}
@@ -247,6 +258,7 @@ export function TimelineDayView() {
                                 setSelectedAppointment(appointment);
                                 setIsDetailModalOpen(true);
                               }}
+                              slotTime={timeStr}
                               timeline={t.timeline}
                             />
                           </div>

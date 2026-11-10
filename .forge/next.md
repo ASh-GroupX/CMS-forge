@@ -1,7 +1,7 @@
-# Rich complaint and internal-ticket external feeds
+# Booking sidebar: next three available slots
 
-Status: Complete
-Risk: High
-SRS: REQ-INT-DATA-001, REQ-RBAC-001, METHOD-API-001, METHOD-AUDIT-001
+Status: In Progress
+Risk: Medium
+SRS: UI-DESIGN-001, SR-BOOK-002, METHOD-API-001
 
-Implemented and released in 2aedef2 on waleed and production. Complaint pages include creator, current owner, first acceptance, description, and a 100-event preview. A separately scoped tickets feed includes requester, current assignee, first acceptance, description, and a 100-event preview. Complete event histories are available through cursor-paginated event routes. Branch and resource scope, explicit projections, and metadata-only audit are enforced in Nest. Passed focused tests, root tests, build, lint, typecheck, security, OpenAPI, live isolated PostgreSQL HTTP proof, and EN/AR screenshot review. Independent GPT-6.1 Sol review: Accept With Conditions; requested GPT-5.6 Sol unavailable. GitHub workflow 42819848903 succeeded; public revision and health matched. Existing keys require a new tickets:read grant through a new key. Production keyed data pull is operator UAT. Preserve `tmp/` and `uploads/`.
+Phase 1 is complete and independently reviewed. Phase 2: add a Nest read endpoint for the next three bookable 15-minute slots across the selected active service center(s), using existing server availability rules and Amman time. Show the three choices under the capacity card with date, time, branch, remaining seats, loading/empty/error states, and a Book action that preselects the clicked slot. Keep the server authoritative and document the route in OpenAPI. Then phase 3 adds the maintenance dropdown and separately persisted periodic mileage. Final proof and release follow. Preserve `tmp/` and `uploads/`.

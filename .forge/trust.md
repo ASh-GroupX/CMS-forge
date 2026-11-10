@@ -1578,3 +1578,7 @@ The independent GPT-6.1 Sol reviewer found that global target departments made d
 ## Rich external feeds release — 2026-11-10
 
 Commit 2aedef2 reached waleed and production. Workflow 42819848903 passed validation and VPS deployment. The public revision matched, health returned 200 with database configured, and the new protected routes returned 401 without a key. No production key was created in this task. Existing administrators can create a tickets:read key in the hub and run a keyed production pull.
+
+## Booking calendar phase 1 review — 2026-11-10
+
+The independent GPT-6.1 Sol reviewer first returned Needs Repair because empty subslots collapsed beside occupied subslots, the plus button scrolled away, the badge treated past/read-only slots as full, and the hourly text hardcoded three. These were repaired. The second reviewer returned Accept With Conditions after inspecting EN/AR detail screenshots and independently passing the two-branch browser proof and diff check. Final accessibility/build checks remain for release; the requested preferred named reviewer was unavailable.

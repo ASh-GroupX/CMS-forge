@@ -6,8 +6,10 @@ import { resolve } from 'node:path';
 import { chromium } from 'playwright-core';
 import { compileTailwind } from './web-browser-check.mjs';
 import { serviceBookingText } from '../apps/web/src/i18n/staff-service-booking.ts';
+import { getTodayDateString } from '../apps/web/src/app/(staff)/service-booking/service-booking-utils.ts';
 
 const output = resolve('coverage/service-booking-timeline');
+const proofDate = new Date(Date.parse(`${getTodayDateString()}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
 const webRequire = createRequire(new URL('../apps/web/package.json', import.meta.url));
 const React = webRequire('react');
 const { renderToString } = webRequire('react-dom/server');
@@ -41,33 +43,56 @@ try {
       const errors = [];
       page.on('pageerror', (error) => errors.push(error.message));
       page.on('requestfailed', (request) => errors.push(`request failed ${request.url()}`));
-      await page.route('**/service-bookings/slots-availability**', (route) => route.fulfill({
+      await page.route('**/service-bookings/slots-availability**', (route) => {
+        const branchId = new URL(route.request().url()).searchParams.get('branchId');
+        const main = branchId === 'center_main';
+        return route.fulfill({
         status: 200, contentType: 'application/json', body: JSON.stringify({
-          date: '2026-11-10', dayOfWeek: 2, branchId: 'center_main', isOpen: true,
-          startTime: '08:00', endTime: '18:00', maxDailyAppointments: full ? 2 : 20, bookedDailyCount: 2,
+          date: proofDate, dayOfWeek: new Date(`${proofDate}T00:00:00Z`).getUTCDay(), branchId, isOpen: true,
+          startTime: '08:00', endTime: '18:00', maxDailyAppointments: full ? (main ? 2 : 0) : 20, bookedDailyCount: main ? 2 : 0,
           slots: Array.from({ length: 10 }, (_, hourOffset) => 8 + hourOffset).flatMap((hour) =>
             ['00', '15', '30', '45'].map((minute) => {
-              const isBooked = hour === 12 && minute === '00';
+              const isBooked = main && hour === 12 && minute === '00';
               return {
                 slot: `${String(hour).padStart(2, '0')}:${minute}`, hour: `${String(hour).padStart(2, '0')}:00`,
-                bookedCount: isBooked ? 2 : 0, hourBookedCount: hour === 12 ? 2 : 0,
+                bookedCount: isBooked ? 2 : 0, hourBookedCount: main && hour === 12 ? 2 : 0,
                 maxPerSlot: 3, maxPerHour: 3, status: isBooked ? 'PARTIAL' : 'AVAILABLE',
-                remainingInSlot: isBooked ? 1 : 3, remainingInHour: hour === 12 ? 1 : 3,
+                remainingInSlot: isBooked ? 1 : 3, remainingInHour: main && hour === 12 ? 1 : 3,
               };
             })),
         }),
-      }));
+      });
+      });
       const params = new URLSearchParams({ locale, full: full ? '1' : '0' });
       await page.goto(`http://127.0.0.1:${server.address().port}/?${params}`);
       await page.getByText('Customer One', { exact: true }).waitFor({ state: 'visible' });
       await page.getByText('Customer Two', { exact: true }).waitFor({ state: 'visible' });
-      await page.getByText(`${serviceBookingText[locale].timeline.slotOccupancy}: 2/3`, { exact: true }).waitFor({ state: 'visible', timeoutMs: 2000 });
-      const add = page.getByRole('button', { name: /2\/3/ });
+      const mainSlot = page.locator('[data-branch-id="center_main"][data-slot-time="12:00"]');
+      const northSlot = page.locator('[data-branch-id="center_north"][data-slot-time="12:00"]');
+      const region = mainSlot.getByRole('region', { name: `12:00 ${serviceBookingText[locale].timeline.appointment}` });
+      await region.waitFor({ state: 'visible' });
+      await page.getByText(new RegExp(`${serviceBookingText[locale].timeline.slotOccupancy}: 2/3`)).first().waitFor({ state: 'visible', timeoutMs: 2000 });
+      const add = mainSlot.getByRole('button', { name: `${serviceBookingText[locale].timeline.addAppointment} 12:00` });
       assert.equal(await add.count(), full ? 0 : 1, `${locale} full=${full}: Add capacity state; ${JSON.stringify(errors)}`);
-      if (!full) assert.match(await add.innerText(), new RegExp(serviceBookingText[locale].timeline.addAppointment));
+      const mainBox = await mainSlot.boundingBox();
+      const northBox = await northSlot.boundingBox();
+      assert.ok(mainBox && northBox && Math.abs(mainBox.y - northBox.y) < 1 && Math.abs(mainBox.height - northBox.height) < 1,
+        `${locale}: branch subslots must align`);
+      if (!full) {
+        const plus = await add.boundingBox();
+        const first = await region.getByRole('button', { name: /Customer One/ }).boundingBox();
+        const second = await region.getByRole('button', { name: /Customer Two/ }).boundingBox();
+        assert.ok(plus && first && second && plus.x < first.x && first.x < second.x, `${locale}: plus and bookings must sit left to right`);
+        await region.evaluate((el) => { el.scrollLeft = el.scrollWidth; });
+        const pinned = await add.boundingBox();
+        assert.ok(pinned && Math.abs(pinned.x - plus.x) < 1, `${locale}: add button stays pinned when cards scroll`);
+      }
+      assert.equal(await region.evaluate((el) => getComputedStyle(el).overflowX), 'scroll');
       assert.deepEqual(errors, [], `${locale} full=${full}: browser errors`);
-      if (locale === 'en' && !full) await page.screenshot({ path: `${output}/en-capacity-available.png`, fullPage: true });
-      if (locale === 'ar' && !full) await page.screenshot({ path: `${output}/ar-capacity-available.png`, fullPage: true });
+      if (!full) {
+        await page.screenshot({ path: `${output}/${locale}-capacity-available.png`, fullPage: true });
+        await page.locator('[data-hour="12"]').screenshot({ path: `${output}/${locale}-noon-detail.png` });
+      }
       await page.close();
     }
   }
