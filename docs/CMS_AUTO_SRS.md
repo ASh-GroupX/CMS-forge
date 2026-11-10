@@ -452,6 +452,7 @@ database, and schema changes use the deployment migration workflow.
 - AC5 [must] Key creation/revocation and each data page read an audit event containing actor/key, resource, branch scope, and row count without record content or credential material.
 - AC6 [must] OpenAPI documents every endpoint, bearer-key auth, resource scopes, pagination, and auth/validation errors.
 - AC7 [must] The deployed API reads feed records from its configured PostgreSQL database at request time using the server-side Prisma connection.
+- AC8 [must] The admin hub lets an authorized signed-in administrator create, copy once, list, test, and revoke integration keys without a separate password prompt. It shows resource and branch scopes, hides previously issued secrets, and never displays exported record contents in the key test result.
 
 #### Proof Requirements
 minimum: L2

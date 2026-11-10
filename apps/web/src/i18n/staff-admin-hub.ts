@@ -18,6 +18,7 @@ const en = {
     complaintSettings: ['Complaint CRM Settings', 'Manage Root Cause Categories and Sales Advisors for complaints.'],
     sla: ['SLA Policies', 'Manage complaint resolution SLA durations, warning thresholds, calendar modes, and escalation levels.'],
     bookingSettings: ['Service Booking Settings', 'Manage branch hours, daily and hourly appointment limits, car models, and maintenance types.'],
+    apiKeys: ['External Data API', 'Create and revoke keys for customer, complaint, task, and appointment data.'],
   },
 };
 
@@ -41,6 +42,7 @@ export const adminHubText: Record<Locale, typeof en> = {
       complaintSettings: ['إعدادات شكاوى العملاء (CRM)', 'إدارة تصنيفات الأسباب الجذرية وقائمة مستشاري المبيعات.'],
       sla: ['سياسات اتفاقية مستوى الخدمة (SLA)', 'إدارة مدد معالجة الشكاوى ونسب التحذير وساعات العمل ومستويات التصعيد.'],
       bookingSettings: ['إعدادات حجز الصيانة', 'إدارة ساعات عمل الفروع، الحد الأقصى للمواعيد اليومية والساعية، وموديلات السيارات وأنواع الصيانة.'],
+      apiKeys: ['واجهة بيانات النظام', 'إنشاء وإيقاف مفاتيح بيانات العملاء والشكاوى والمهام والمواعيد.'],
     },
   },
 };

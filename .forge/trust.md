@@ -1562,3 +1562,7 @@ An isolated PostgreSQL 18 UTF8 instance applied all 56 migrations and served the
 ## External system data API production release — 2026-11-10
 
 The user authorized push to waleed and merge into production after testing. Commit cb120af reached both branches. GitHub validation and VPS deployment workflow 42771205143 completed successfully, including migration, container health, public revision, and health gates. Public feed and management routes returned 401 without credentials. No production key or production record export was created during the smoke test. A keyed data pull from the production database is operator UAT. This release used the available GPT-6 Sol independent reviewer; it does not claim the repository's preferred named reviewer tier.
+
+## External data API admin workspace phase review — 2026-11-10
+
+The independent GPT-6 Sol reviewer first returned Needs Repair: the connection test covered only one selected resource, the route lacked an initial loading state, and feature/client files were outside the canonical UI locations. All three were repaired. Re-review returned Accept With Conditions, independently passing focused tests, lint, OpenAPI, and diff checks, and finding no credential leak or authorization bypass. Browser proof passed signed-in hub navigation, key create/test/revoke, EN/AR screenshots, and focused axe scans. The reviewer is not the preferred named tier. Production key creation still requires an authenticated admin session; do not bypass it or claim a key exists before one is issued.

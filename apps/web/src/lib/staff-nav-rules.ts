@@ -37,6 +37,7 @@ export const ADMIN_SECTIONS = [
   { key: 'admin:internal-tickets', path: '/admin/internal-tickets', labelEn: 'Internal Tickets Admin', labelAr: 'إدارة التذاكر الداخلية', requiredPerm: 'TICKET_SETTINGS_MANAGE' },
   { key: 'admin:complaint-settings', path: '/admin/complaint-settings', labelEn: 'Complaint Settings', labelAr: 'إعدادات الشكاوى', requiredPerm: 'COMPLAINT_SETTINGS_MANAGE' },
   { key: 'admin:booking-settings', path: '/admin/booking-settings', labelEn: 'Service Booking Settings', labelAr: 'إعدادات حجز الصيانة', requiredPerm: 'BOOKING_SETTINGS_MANAGE' },
+  { key: 'admin:api-keys', path: '/admin/api-keys', labelEn: 'External Data API', labelAr: 'واجهة بيانات النظام', requiredPerm: 'INTEGRATIONS_MANAGE' },
 ] as const;
 
 export function canAccessAdminSection(
@@ -45,6 +46,7 @@ export function canAccessAdminSection(
   permissions?: readonly string[],
   roleCode?: string,
 ): boolean {
+  if (sectionKey === 'admin:api-keys' && !permissions?.includes('INTEGRATIONS_MANAGE')) return false;
   if (!roleCode && !permissions && (!allowedNavKeys || allowedNavKeys.length === 0)) {
     return true;
   }
@@ -121,6 +123,7 @@ export function navForPrincipal(
     has('MASTER_DATA_MANAGE') ||
     has('NOTIFICATIONS_MANAGE') ||
     has('BOOKING_SETTINGS_MANAGE') ||
+    has('INTEGRATIONS_MANAGE') ||
     has('COMPLAINT_SETTINGS_MANAGE') ||
     has('TICKET_SETTINGS_MANAGE');
   const hasAdminNavKey = Boolean(

@@ -15,6 +15,8 @@ history from another project.
   audit events.
 - [x] REQ-INT-DATA-P3: Add scoped, paginated task and appointment feeds through
   their owning modules' public services and prove a full paginated pull.
+- [x] REQ-INT-DATA-P4: Add a signed-in admin hub workspace to create, copy once,
+  test, list, and revoke scoped integration keys with EN/AR states.
 
 ## Phase 0 - Repository Foundation
 

@@ -21,6 +21,7 @@ const WORKSPACE_SECTION_KEYS: Record<string, string> = {
   internalTickets: 'admin:internal-tickets',
   complaintSettings: 'admin:complaint-settings',
   bookingSettings: 'admin:booking-settings',
+  apiKeys: 'admin:api-keys',
 };
 
 export default async function AdminPage({
@@ -49,6 +50,7 @@ export default async function AdminPage({
     ['internalTickets', '/admin/internal-tickets'],
     ['complaintSettings', '/admin/complaint-settings'],
     ['bookingSettings', '/admin/booking-settings'],
+    ['apiKeys', '/admin/api-keys'],
   ] as const;
 
   const allowedWorkspaces = workspaces.filter(([key]) => {

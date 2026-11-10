@@ -5,6 +5,13 @@ each request arrives. Requests use `Authorization: Bearer <api-key>`. The key is
 created by an administrator with `INTEGRATIONS_MANAGE` using the staff session
 and CSRF token. Store the returned `secret` securely; it is shown only once.
 
+An authorized administrator can manage keys in the website at
+`/admin/api-keys`. This workspace uses the existing website sign-in; it does
+not ask for an additional password. Choose resources and branches, create a
+key, copy its one-time secret or ready request, test the selected resources,
+and stop access later from the issued-key list. Previously issued secrets
+cannot be recovered from the list.
+
 ## Key management
 
 - `POST /api/integrations/data-api-keys` with `name`, `scopes`, and either

@@ -21,6 +21,7 @@ const MAIN_NAV_KEYS = [
 
 const ADMIN_WORKSPACES = [
   { key: 'admin:booking-settings', labelEn: 'Service Booking Settings', labelAr: 'إعدادات حجز الصيانة' },
+  { key: 'admin:api-keys', labelEn: 'External Data API', labelAr: 'واجهة بيانات النظام' },
   { key: 'admin:complaint-settings', labelEn: 'Complaint Settings', labelAr: 'إعدادات الشكاوى' },
   { key: 'admin:ticket-settings', labelEn: 'Ticket Settings', labelAr: 'إعدادات التذاكر' },
   { key: 'admin:internal-tickets', labelEn: 'Internal Tickets Admin', labelAr: 'إدارة التذاكر الداخلية' },
