@@ -12,7 +12,8 @@ module's boundary so you can work in a fresh context without scanning the tree.
 
 ## Public surface
 
-- `InternalTicketsService` is the only export other modules may import.
+- `InternalTicketsService` is the only export other modules may import, including
+  the bounded, branch-scoped external read projection.
 
 ## Owns tables
 

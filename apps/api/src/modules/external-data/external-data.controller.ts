@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { IntegrationApiKeyGuard, IntegrationApiScopes } from '../integrations/integration-api-key.guard.js';
 import type { IntegrationApiRequest } from '../integrations/integration-api-key.guard.js';
 import { ExternalDataService } from './external-data.service.js';
@@ -33,5 +33,26 @@ export class ExternalDataController {
   @IntegrationApiScopes('appointments:read')
   appointments(@Query() query: Record<string, unknown>, @Req() request: IntegrationApiRequest) {
     return this.data.page('appointments', query, request);
+  }
+
+  @Get('tickets')
+  @UseGuards(IntegrationApiKeyGuard)
+  @IntegrationApiScopes('tickets:read')
+  tickets(@Query() query: Record<string, unknown>, @Req() request: IntegrationApiRequest) {
+    return this.data.page('tickets', query, request);
+  }
+
+  @Get('complaints/:id/events')
+  @UseGuards(IntegrationApiKeyGuard)
+  @IntegrationApiScopes('complaints:read')
+  complaintEvents(@Param('id') id: string, @Query() query: Record<string, unknown>, @Req() request: IntegrationApiRequest) {
+    return this.data.events('complaints', id, query, request);
+  }
+
+  @Get('tickets/:id/events')
+  @UseGuards(IntegrationApiKeyGuard)
+  @IntegrationApiScopes('tickets:read')
+  ticketEvents(@Param('id') id: string, @Query() query: Record<string, unknown>, @Req() request: IntegrationApiRequest) {
+    return this.data.events('tickets', id, query, request);
   }
 }

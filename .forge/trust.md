@@ -1570,3 +1570,7 @@ The independent GPT-6 Sol reviewer first returned Needs Repair: the connection t
 ## External data API admin workspace release — 2026-11-10
 
 Commit c962856 reached waleed and production. GitHub validation and VPS deployment workflow 42778141279 completed success. Public revision and health checks passed; the unsigned admin route redirected to sign-in, and a feed without a key returned 401. No production key was created because no authorized website session was available. The admin workspace provides one-time key display and revocation once an administrator signs in.
+
+## Rich complaint and internal-ticket export review — 2026-11-10
+
+The independent GPT-6.1 Sol reviewer found that global target departments made department-based ticket branch filtering empty, that unbounded nested histories could grow pages indefinitely, and that acceptance could lie beyond a capped preview. The implementation now scopes tickets by requester branch, caps event previews at 100 with complete cursor event routes, and queries earliest acceptance separately. Live local HTTP proof verified both existing out-of-branch record event routes return 404, plus pagination and acceptance beyond preview. EN/AR screenshots were rendered and inspected. Verdict: Accept With Conditions; preferred named GPT-5.6 Sol reviewer unavailable. Production keyed reads require operator UAT with an issued key.

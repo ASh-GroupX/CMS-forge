@@ -15,7 +15,7 @@ import type { Locale } from '@/i18n/staff-shell';
 import { createDataApiKeyAction, loadDataApiKeysAction, revokeDataApiKeyAction, testDataApiKeyAction } from '@/app/(staff)/admin/api-keys/actions';
 import type { BranchOption, DataApiKey, DataResource, DataScope } from '@/lib/staff-integration-keys-api';
 
-const resources: DataResource[] = ['customers', 'complaints', 'tasks', 'appointments'];
+const resources: DataResource[] = ['customers', 'complaints', 'tasks', 'appointments', 'tickets'];
 type Initial = Awaited<ReturnType<typeof loadDataApiKeysAction>>;
 
 export function ApiKeysWorkspace({ initial, locale }: { initial: Initial; locale: Locale }) {

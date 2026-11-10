@@ -15,6 +15,7 @@ test('admin API key workspace shows stored metadata and create controls without 
   const html = renderToStaticMarkup(<ApiKeysWorkspace initial={{ status: 'ok', keys: [existing], branches: [{ id: 'branch-1', nameEn: 'Main', nameAr: 'الرئيسي' }] }} locale="en" />);
   assert.match(html, /External Data API/);
   assert.match(html, /Create an API key/);
+  assert.match(html, /Internal tickets/);
   assert.match(html, /Reports/);
   assert.match(html, /cms_live_abc/);
   assert.match(html, /Stop access/);
@@ -27,6 +28,8 @@ test('admin API key workspace renders Arabic direction and actionable error stat
   assert.match(html, /dir="rtl"/);
   assert.match(html, /تعذر تحميل مفاتيح API/);
   assert.match(html, /تحديث/);
+  const ready = renderToStaticMarkup(<ApiKeysWorkspace initial={{ status: 'ok', keys: [], branches: [] }} locale="ar" />);
+  assert.match(ready, /التذاكر الداخلية/);
 });
 
 test('admin navigation permission includes integration management', () => {

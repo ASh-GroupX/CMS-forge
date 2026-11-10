@@ -429,8 +429,8 @@ priority: must
 status: active
 
 Authorized administrators can provision revocable, read-only credentials for
-external systems to retrieve explicitly scoped customer, complaint, task, and
-service-appointment records. Each credential has explicit resource scopes and
+external systems to retrieve explicitly scoped customer, complaint, task,
+internal-ticket, and service-appointment records. Each credential has explicit resource scopes and
 branch scope. Credentials are shown only once, stored only as a cryptographic
 hash, and can be revoked by an authorized administrator.
 

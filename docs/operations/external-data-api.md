@@ -16,7 +16,8 @@ cannot be recovered from the list.
 
 - `POST /api/integrations/data-api-keys` with `name`, `scopes`, and either
   `allBranches: true` or `branchIds: ["branch-id"]`. Supported scopes are
-  `customers:read`, `complaints:read`, `tasks:read`, `appointments:read`.
+  `customers:read`, `complaints:read`, `tasks:read`, `appointments:read`,
+  `tickets:read`.
 - `GET /api/integrations/data-api-keys` lists key metadata without secrets.
 - `POST /api/integrations/data-api-keys/{id}/revoke` immediately disables a key.
 
@@ -26,6 +27,9 @@ cannot be recovered from the list.
 - `GET /api/external-data/complaints`
 - `GET /api/external-data/tasks`
 - `GET /api/external-data/appointments`
+- `GET /api/external-data/tickets`
+- `GET /api/external-data/complaints/{id}/events`
+- `GET /api/external-data/tickets/{id}/events`
 
 Each endpoint accepts `limit` (1–100, default 100), `cursor`, and optional
 `branchId`. The branch filter can narrow the key's stored scope. Use the
@@ -51,3 +55,21 @@ Customer phone and email require `customers:read`. Appointment exports omit
 phone numbers and internal notes. Task exports omit confidential and restricted
 tasks. The API never returns audit logs, internal comments, attachments, API key
 hashes, or provider credentials in these feeds.
+
+Complaint pages include the description, creator, current owner, first response,
+up to 100 status transitions (actor and time), and the first recorded intake
+acceptance. Ticket pages include the description, requester,
+current assignee, target department, up to 100 activity actions (actor and time),
+and the first recorded `ACCEPTED` event. If
+`statusHistoryHasMore` or `activitiesHasMore` is true, use the corresponding
+`/events` endpoint with `limit` and `cursor` to retrieve the complete history.
+The acceptance fields are queried independently, so they remain accurate even
+when the acceptance event is beyond the preview. These fields are read from the
+deployed database at request time. Event
+details, notes, attachments, arbitrary custom fields, staff contact information,
+and audit records stay excluded. A ticket is in a branch-scoped key's feed only
+when the requesting employee belongs to that branch. Target departments can be
+shared across branches, so their branch does not decide export scope.
+
+Existing keys do not gain `tickets:read` automatically. Create a new key with
+that scope in the admin hub, then revoke the old one if it is no longer needed.

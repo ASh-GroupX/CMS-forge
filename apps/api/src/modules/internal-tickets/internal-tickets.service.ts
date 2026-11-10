@@ -37,6 +37,27 @@ export class InternalTicketsService {
     private readonly attachmentsService: AttachmentsService,
   ) {}
 
+  async exportPage(branchIds: string[] | null, limit: number, cursor?: string) {
+    const rows = await this.repository.exportPage(branchIds, limit, cursor);
+    const acceptances = await this.repository.exportAcceptances(rows.slice(0, limit).map((row) => row.id));
+    const acceptedById = new Map(acceptances.map((record) => [record.id, record.activities[0]]));
+    const items = rows.slice(0, limit).map((row) => {
+      const accepted = acceptedById.get(row.id);
+      const { branchId, ...requestedBy } = row.requestedBy;
+      return { ...row, requestedBy, branchId, activities: row.activities.slice(0, 100),
+        activitiesHasMore: row.activities.length > 100,
+        acceptedBy: accepted?.actor ?? null, acceptedAt: accepted?.createdAt ?? null };
+    });
+    return { items, nextCursor: rows.length > limit ? items.at(-1)?.id ?? null : null };
+  }
+
+  async exportEventsPage(id: string, branchIds: string[] | null, limit: number, cursor?: string) {
+    const rows = await this.repository.exportEventsPage(id, branchIds, limit, cursor);
+    if (!rows) throw new AppException('TICKET_NOT_FOUND', 'Ticket not found', HttpStatus.NOT_FOUND);
+    const items = rows.slice(0, limit);
+    return { items, nextCursor: rows.length > limit ? items.at(-1)?.id ?? null : null };
+  }
+
   private async storeTicketAttachments(tx: any, ticketId: string, actorId: string, attachments: UploadTicketAttachmentDto[]) {
     for (const attachment of attachments) {
       const contentType = validateTicketImageAttachment(attachment);

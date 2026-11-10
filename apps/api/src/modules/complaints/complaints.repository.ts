@@ -98,8 +98,41 @@ export class ComplaintsRepository {
       orderBy: { id: 'asc' }, take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       select: { id: true, referenceNumber: true, branchId: true, customerId: true, subject: true,
-        status: true, type: true, severity: true, categoryId: true, departmentId: true,
-        incidentAt: true, resolvedAt: true, closedAt: true, createdAt: true, updatedAt: true },
+        descriptionEn: true, descriptionAr: true, status: true, type: true, severity: true,
+        source: true, categoryId: true, departmentId: true, vehicleId: true,
+        createdById: true, ownerId: true, firstResponseAt: true,
+        incidentAt: true, resolvedAt: true, closedAt: true, createdAt: true, updatedAt: true,
+        createdBy: { select: { id: true, nameEn: true, nameAr: true } },
+        owner: { select: { id: true, nameEn: true, nameAr: true } },
+        statusHistory: { orderBy: { id: 'asc' }, take: 101, select: {
+          id: true, fromStatus: true, toStatus: true, action: true, actorId: true, createdAt: true,
+          actor: { select: { id: true, nameEn: true, nameAr: true } },
+        } },
+      },
+    });
+  }
+
+  async exportEventsPage(id: string, branchIds: string[] | null, limit: number, cursor?: string) {
+    const complaint = await this.prisma.complaint.findFirst({
+      where: { id, ...(branchIds === null ? {} : { branchId: { in: branchIds } }) },
+      select: { id: true },
+    });
+    if (!complaint) return null;
+    return this.prisma.complaintStatusHistory.findMany({
+      where: { complaintId: id }, orderBy: { id: 'asc' }, take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      select: { id: true, fromStatus: true, toStatus: true, action: true,
+        actorId: true, createdAt: true, actor: { select: { id: true, nameEn: true, nameAr: true } } },
+    });
+  }
+
+  async exportAcceptances(complaintIds: string[]) {
+    return this.prisma.complaint.findMany({
+      where: { id: { in: complaintIds } }, select: { id: true,
+        statusHistory: { where: { action: 'ACCEPT_INTAKE' },
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], take: 1,
+          select: { createdAt: true, actor: { select: { id: true, nameEn: true, nameAr: true } } } },
+      },
     });
   }
 
