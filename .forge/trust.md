@@ -1509,3 +1509,52 @@ responses; the static route preview does not execute effects. Reviewer model was
 GPT-6 Astra Ultra, below the named High-risk reviewer tier. Keep this phase at
 Needs Repair and do not push/merge until the interactive proof and required
 independent review are complete. Production push triggers VPS deployment.
+
+## External system data API key foundation — 2026-11-09
+
+Builder proof initially overstated role and lifecycle coverage. Fresh review found
+that key routes did not enforce ADMIN, OpenAPI did not fully match runtime, and
+denied branch audits could fail on an untrusted branch foreign key. Repair added
+role enforcement, contract updates, safer audit attribution, and focused route and
+lifecycle tests. The phase repair suite now reports integrations 42/42,
+notifications 48/48, typecheck, lint, OpenAPI, Prisma validation, and migration SQL
+sanity passing. Audit failure tests verify the service callback does not resolve
+before audit success with mock transaction wrappers; they do not prove real
+database rollback. Successful data-page audit is deferred to the resource feeds
+and must include resource, branch scope, and row count. The independent reviewer used GPT-6 Astra Ultra because
+the named Opus 4.8 Max and GPT-5.5 Extra High models were not available in the
+session; this review must not be represented as using either required named model.
+Do not start data-feed phases until a qualifying PHASE-REVIEWER accepts the repair.
+Real database migration application remains unverified because Docker is not
+running. No API key was issued and no external data was transmitted.
+
+## External system data API repair re-review — 2026-11-09
+
+Fresh source re-review recommendation: Accept With Conditions; no blocking source
+defect remains in the bounded key-management foundation. Reviewer reran
+integrations 42/42 and OpenAPI. Not Run: live HTTP request/response, PostgreSQL
+migration application, and real rollback proof. Tests cover direct guard calls and
+mock transaction callback ordering. Successful page-read audit remains a required
+phase 2/3 implementation. Formal phase acceptance is still pending because this
+session exposes GPT-6 Astra Ultra only; it cannot claim the mandated Opus 4.8 Max or
+GPT-5.5 Extra High tier. Keep data-feed work gated and do not merge or deploy.
+
+## External system data API phase 1 judge — 2026-11-09
+
+The user explicitly selected GPT-5.6 Sol as the independent judge, overriding
+the repository's preferred reviewer-model list for this gate. Decision: Accept.
+Builder honesty is Honest after evidence corrections; code quality is Good.
+Independent checks passed: integrations 42/42, notifications 48/48, RBAC 2/2,
+admin 43/43, full security check, typecheck, lint, OpenAPI, Prisma validation,
+migration SQL sanity, and diff check. Structural OpenAPI comparison found no
+semantic changes to existing paths or schemas. Phase 2 may proceed. Live HTTP,
+PostgreSQL migration application, and real transaction rollback proof remain
+required before production release; acceptance does not claim those ran.
+
+## External system data API phases 2/3 source review — 2026-11-09
+
+The independent GPT-6 Sol reviewer recommended Needs Repair before production because OpenAPI lacked explicit resource scope descriptions and live PostgreSQL HTTP proof had not run. Scope descriptions were added and regenerated; a concurrent revoke lookup/use race was also hardened. The reviewer is below the repository's preferred named model tier. Build and focused checks pass, but local PostgreSQL refuses TCP and Docker is unavailable. Keep release blocked until migration, live scoped pagination, audit, lifecycle, and rollback proof pass.
+
+## External system data API runtime repair and re-review — 2026-11-10
+
+An isolated PostgreSQL 18 UTF8 instance applied all 56 migrations and served the compiled API over HTTP. The proof found missing Nest guard repository DI export and repaired it. Final live local proof passed HTTP admin key create/list/revoke, scoped one-row pagination across all four nonempty resources, branch and resource 403, revoked-key 401, matching page-read audits, and actual audit-failure transaction rollback. Independent GPT-6 Sol re-review said Accept With Conditions and reran integrations 48/48, OpenAPI, and diff checks. This reviewer is not the repository's preferred named tier. Production deployment and production-database read remain unverified until release.

@@ -38,6 +38,12 @@ type ManagerRollupScope = { roleCode: string; branchId: string | null };
 export class TasksService {
   constructor(private readonly tasksRepository: TasksRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly usersService?: Pick<AdminUsersService, 'assertAssignable'>, private readonly relatedRecordsService?: TasksRelatedRecordsService, private readonly groupsService?: CommunicationGroupsService, private readonly boardRepository?: TasksBoardRepository, private readonly assignmentsService?: AssignmentsService, private readonly taskRecipientsRepository?: TaskRecipientsRepository) {}
 
+  async exportPage(branchIds: string[] | null, limit: number, cursor?: string) {
+    const rows = await this.tasksRepository.exportPage(branchIds, limit, cursor);
+    const items = rows.slice(0, limit);
+    return { items, nextCursor: rows.length > limit ? items.at(-1)?.id ?? null : null };
+  }
+
   async create(input: CreateTaskInput, audit: TaskAuditContext = {}): Promise<TaskResponseDto> {
     return this.tasksRepository.transaction((client) => this.createInTransaction(input, audit, client));
   }

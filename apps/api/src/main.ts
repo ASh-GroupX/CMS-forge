@@ -26,6 +26,7 @@ import { CustomersModule } from './modules/customers/customers.module.js';
 import { InternalTicketsModule } from './modules/internal-tickets/internal-tickets.module.js';
 import { ComplaintsModule } from './modules/complaints/complaints.module.js';
 import { ServiceBookingsModule } from './modules/service-bookings/service-bookings.module.js';
+import { ExternalDataModule } from './modules/external-data/external-data.module.js';
 
 @Controller()
 class HealthController {
@@ -68,6 +69,7 @@ class HealthController {
     InternalTicketsModule,
     ComplaintsModule,
     ServiceBookingsModule,
+    ExternalDataModule,
   ],
   controllers: [HealthController],
 })

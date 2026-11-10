@@ -6,6 +6,12 @@ import type { CustomerResponseDto } from './dto/customer-response.dto.js';
 export class CustomersService {
   constructor(private readonly repository: CustomersRepository) {}
 
+  async exportPage(branchIds: string[] | null, limit: number, cursor?: string) {
+    const rows = await this.repository.exportPage(branchIds, limit, cursor);
+    const items = rows.slice(0, limit);
+    return { items, nextCursor: rows.length > limit ? items.at(-1)?.id ?? null : null };
+  }
+
   async search(query: string): Promise<CustomerResponseDto[]> {
     const customers = await this.repository.search(query);
     return customers.map(this.mapToDto);

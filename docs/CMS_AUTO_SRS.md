@@ -420,6 +420,44 @@ External systems are connected through backend adapters with stable internal int
 minimum: L2
 commands:
 - npm run test:api -- integrations
+
+### REQ-INT-DATA-001: Scoped read-only system data API
+type: security-contract
+lane: T2_STANDARD
+risk: high
+priority: must
+status: active
+
+Authorized administrators can provision revocable, read-only credentials for
+external systems to retrieve explicitly scoped customer, complaint, task, and
+service-appointment records. Each credential has explicit resource scopes and
+branch scope. Credentials are shown only once, stored only as a cryptographic
+hash, and can be revoked by an authorized administrator.
+
+The external feed uses bounded cursor pagination and explicit response field
+projections. It must never expose passwords, session/reset tokens, API key hashes
+or secrets, audit/security logs, provider credentials, internal-only comments or
+notes, or attachments. Customer contact data is available only under the explicit
+customer read scope. All branch and resource authorization is derived from the
+stored integration credential; request filters may only narrow that scope.
+Feed queries run through the deployed API's Prisma connection to the PostgreSQL
+database configured for that deployment. Data is read at request time from that
+database, and schema changes use the deployment migration workflow.
+
+#### Acceptance Criteria
+- AC1 [must] Only administrators with `INTEGRATIONS_MANAGE` can create, list, or revoke integration data credentials.
+- AC2 [must] A credential secret is returned once at creation; only its hash is persisted and responses never return hashes or secrets later.
+- AC3 [must] Read requests accept only active read-only credentials and enforce their stored resource and branch scopes.
+- AC4 [must] Resource responses use explicit field projections, omit internal-only notes/comments and audit/security data, and cap page size at 100.
+- AC5 [must] Key creation/revocation and each data page read an audit event containing actor/key, resource, branch scope, and row count without record content or credential material.
+- AC6 [must] OpenAPI documents every endpoint, bearer-key auth, resource scopes, pagination, and auth/validation errors.
+- AC7 [must] The deployed API reads feed records from its configured PostgreSQL database at request time using the server-side Prisma connection.
+
+#### Proof Requirements
+minimum: L2
+commands:
+- npm run test:api -- integrations
+- npm run openapi:check
 - npm run test:api -- notifications
 
 ### ARCH-FILES-001: Secure attachment storage

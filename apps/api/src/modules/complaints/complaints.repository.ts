@@ -92,6 +92,17 @@ export type ComplaintTimelineFacts = {
 export class ComplaintsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async exportPage(branchIds: string[] | null, limit: number, cursor?: string) {
+    return this.prisma.complaint.findMany({
+      where: branchIds === null ? {} : { branchId: { in: branchIds } },
+      orderBy: { id: 'asc' }, take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      select: { id: true, referenceNumber: true, branchId: true, customerId: true, subject: true,
+        status: true, type: true, severity: true, categoryId: true, departmentId: true,
+        incidentAt: true, resolvedAt: true, closedAt: true, createdAt: true, updatedAt: true },
+    });
+  }
+
   async transaction<T>(work: (client: Prisma.TransactionClient) => Promise<T>): Promise<T> { return this.prisma.$transaction(work); }
 
   async nextReferenceNumber(branchId: string, at: Date, client: ComplaintTransitionClient = this.prisma): Promise<string> {

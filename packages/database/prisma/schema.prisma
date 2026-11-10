@@ -472,6 +472,7 @@ model User {
   complaintsAsBackup        Complaint[]                @relation("ComplaintBackupOfficer")
   complaintsAsCollaborator  Complaint[]                @relation("ComplaintCollaborator")
   createdServiceAppointments ServiceAppointment[]       @relation("ServiceAppointmentCreatedBy")
+  integrationApiKeys        IntegrationApiKey[]           @relation("IntegrationApiKeyCreatedBy")
 
   @@index([roleId])
   @@index([branchId])
@@ -492,6 +493,25 @@ model StaffSession {
   @@index([userId])
   @@index([expiresAt])
   @@map("staff_sessions")
+}
+
+model IntegrationApiKey {
+  id           String    @id @default(cuid())
+  name         String
+  keyPrefix    String    @map("key_prefix")
+  tokenHash    String    @unique @map("token_hash")
+  scopes       String[]
+  branchIds    String[]  @default([]) @map("branch_ids")
+  allBranches  Boolean   @default(false) @map("all_branches")
+  createdById  String    @map("created_by_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  lastUsedAt   DateTime? @map("last_used_at")
+  revokedAt    DateTime? @map("revoked_at")
+  createdBy    User      @relation("IntegrationApiKeyCreatedBy", fields: [createdById], references: [id])
+
+  @@index([createdById])
+  @@index([revokedAt])
+  @@map("integration_api_keys")
 }
 
 model StaffPasswordResetToken {

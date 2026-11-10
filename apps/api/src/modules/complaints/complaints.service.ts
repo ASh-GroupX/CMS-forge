@@ -97,6 +97,12 @@ function transition(fromStatus: ComplaintStatus, action: ComplaintTransitionActi
 export class ComplaintsService {
   constructor(private readonly complaintsRepository: ComplaintsRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly casesService?: CasesService, private readonly slaService?: SlaService, private readonly surveysService?: SurveysService, private readonly tasksService?: TasksService, private readonly groupsService?: CommunicationGroupsService, private readonly assignmentsService?: AssignmentsService) {}
 
+  async exportPage(branchIds: string[] | null, limit: number, cursor?: string) {
+    const rows = await this.complaintsRepository.exportPage(branchIds, limit, cursor);
+    const items = rows.slice(0, limit);
+    return { items, nextCursor: rows.length > limit ? items.at(-1)?.id ?? null : null };
+  }
+
   async createInternal(input: CreateInternalComplaintInput): Promise<ComplaintCreationResult> {
     const data = createComplaintData(input);
 

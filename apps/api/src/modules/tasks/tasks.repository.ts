@@ -112,6 +112,18 @@ export type CreateTaskCommentData = {
 export class TasksRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async exportPage(branchIds: string[] | null, limit: number, cursor?: string) {
+    return this.prisma.task.findMany({
+      where: { confidentialityLevel: 'NORMAL',
+        ...(branchIds === null ? {} : { owner: { branchId: { in: branchIds } } }) },
+      orderBy: { id: 'asc' }, take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      select: { id: true, title: true, status: true, ownerId: true, assigneeId: true,
+        assignedDepartmentId: true, dueAt: true, isCustomerPromise: true,
+        createdAt: true, updatedAt: true },
+    });
+  }
+
   async transaction<T>(work: (client: Prisma.TransactionClient) => Promise<T>): Promise<T> { return this.prisma.$transaction(work); }
 
   async create(data: CreateTaskData, client: TaskClient = this.prisma): Promise<TaskRecord> {

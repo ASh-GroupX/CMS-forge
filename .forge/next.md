@@ -1,21 +1,9 @@
-# Service booking improvements release
-Status: Released; production deployment verified
-Risk: Medium
-SRS: REQ-BOOK-SMS-001, REQ-NOTIFY-001, METHOD-API-001, UI-DESIGN-001
-Related module requirements: SR-BOOK-001, SR-BOOK-002
+# External read-only system data API — release
 
-Release the Admin-configured service appointment SMS reminder (test adapter,
-no live provider configured) and service booking day timeline fix. The timeline
-shows all appointments in a 15-minute slot, displays slot capacity, and offers
-Add only while backend slot, hourly, and daily limits permit. Preserve EN/AR,
-audit, session-derived RBAC, OpenAPI, and transaction/outbox patterns.
+Status: Ready for release
+Risk: High
+SRS: REQ-INT-DATA-001, REQ-RBAC-001, NFR-SEC-002, ARCH-API-001, ARCH-INTEGRATION-001, METHOD-API-001, METHOD-AUDIT-001
 
-User explicitly requested tests, push to `waleed`, and merge to `production`.
-Keep tmp/ and uploads/ out of the release. Follow deployment validation and
-report the live outcome; do not claim real SMS delivery without a provider.
+Phases 1–3 are implemented. The user authorized completion and production release after testing. Local PostgreSQL 18 proof applied all 56 migrations to an isolated UTF8 database, seeded records, started compiled Nest, and exercised staff key create/list/revoke, all four paginated feeds, branch and resource denial, revoked-key denial, page audits, and real transaction rollback. Required suites, build, security check, lint, typecheck, and OpenAPI check pass. Independent GPT-6 Sol source re-review: Accept With Conditions; this is not the repository's preferred named reviewer tier. The user previously selected GPT-5.6 Sol as the phase 1 judge, which is unavailable now.
 
-Proof: focused API + notification suites, browser proofs, lint, typecheck,
-OpenAPI, Prisma validation, migration SQL sanity, and diff checks all passed.
-Production run 42607361788 succeeded; live site/API health report revision
-716f6d5b6b703f71720b5ef46c055469f4946b5f. SMS remains test mode until a provider
-is configured.
+Next: commit the tested diff, push to waleed, merge into production per the user's authorization, wait for deployment workflow migration/health checks, then verify the public revision and unauthenticated feed denial. A production data pull requires an administrator to issue a scoped key through the deployed endpoint; do not create a production key or expose customer data as a release smoke. Preserve tmp/ and uploads/.

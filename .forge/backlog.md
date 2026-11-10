@@ -3,6 +3,19 @@
 Planned from `docs/CMS_AUTO_SRS.md`. Keep this file current; do not copy old
 history from another project.
 
+## External System Data API
+
+- [x] REQ-INT-DATA-P1: Add key storage, scope/auth guard, admin key routes,
+  OpenAPI, and baseline proof.
+- [x] REPAIR-INT-DATA-P1-AUTH-CONTRACT-PROOF: Enforce ADMIN plus permission,
+  align API contract and CSRF/status behavior, harden audit branch attribution,
+  and prove key lifecycle/denial behavior.
+- [x] REQ-INT-DATA-P2: Add scoped, paginated customer and complaint feeds through
+  their owning modules' public services, with explicit projections and page-read
+  audit events.
+- [x] REQ-INT-DATA-P3: Add scoped, paginated task and appointment feeds through
+  their owning modules' public services and prove a full paginated pull.
+
 ## Phase 0 - Repository Foundation
 
 - [x] F0-00: Agent rulebook and architecture blueprint (`CLAUDE.md`, `AGENTS.md`, `docs/ARCHITECTURE.md`)

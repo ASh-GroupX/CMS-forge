@@ -2,13 +2,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import 'reflect-metadata';
-import { GUARDS_METADATA } from '@nestjs/common/constants';
+import { GUARDS_METADATA, HTTP_CODE_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
 import type { ExecutionContext } from '@nestjs/common';
 import type { AuditRecordInput, AuditService } from '../../src/core/audit.service.ts';
-import { PermissionGuard, SessionAuthGuard } from '../../src/core/auth.guard.ts';
+import { PermissionGuard, RbacGuard, SessionAuthGuard } from '../../src/core/auth.guard.ts';
 import type { AuthenticatedRequest, StaffPrincipal } from '../../src/core/auth.guard.ts';
 import { AppException } from '../../src/core/http-kernel.ts';
+import { CsrfGuard } from '../../src/core/csrf.guard.ts';
 import { InMemoryDmsProvider, type DmsProviderPort } from '../../src/modules/integrations/dms-provider.port.ts';
 import { IntegrationsController } from '../../src/modules/integrations/integrations.controller.ts';
 import { IntegrationsRepository } from '../../src/modules/integrations/integrations.repository.ts';
@@ -189,6 +190,53 @@ test('staff dms lookup OpenAPI documents safe read-only route', () => {
   assert.equal(operation.operationId, 'integrationDmsCustomerVehicleLookup');
   assert.equal(JSON.stringify(operation).includes('DmsLookupResponse'), true);
   assert.equal(JSON.stringify(openapi.components.schemas.DmsCustomerVehicleMatch).includes('source'), true);
+});
+
+test('data API key management routes require session, ADMIN RBAC, permission, and CSRF for mutations', () => {
+  assert.deepEqual(guardNames('createDataApiKey'), ['SessionAuthGuard', 'RbacGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.deepEqual(guardNames('listDataApiKeys'), ['SessionAuthGuard', 'RbacGuard', 'PermissionGuard']);
+  assert.deepEqual(guardNames('revokeDataApiKey'), ['SessionAuthGuard', 'RbacGuard', 'PermissionGuard', 'CsrfGuard']);
+  assert.equal(Reflect.getMetadata(HTTP_CODE_METADATA, IntegrationsController.prototype.createDataApiKey), undefined);
+  assert.equal(Reflect.getMetadata(HTTP_CODE_METADATA, IntegrationsController.prototype.revokeDataApiKey), 200);
+});
+
+test('data API management denies a non-admin even when permission is granted and allows an authorized admin', async () => {
+  const auditRecords: AuditRecordInput[] = [];
+  const guard = new RbacGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
+  const handler = IntegrationsController.prototype.listDataApiKeys;
+  const officer = { ...staff, permissions: ['INTEGRATIONS_MANAGE'] };
+  const admin = { ...officer, roleCode: 'ADMIN' };
+  await assert.rejects(guard.canActivate(context(request(officer), handler as never)),
+    (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN');
+  assert.equal(await guard.canActivate(context(request(admin), handler as never)), true);
+  assert.equal(auditRecords[0]?.action, 'rbac_forbidden');
+  const permission = new PermissionGuard(new Reflector(), { record: async (input) => auditRecords.push(input) } as AuditService);
+  await assert.rejects(permission.canActivate(context(request({ ...admin, permissions: [] }), handler as never)),
+    (error: unknown) => error instanceof AppException && error.code === 'RBAC_FORBIDDEN');
+  assert.equal(await permission.canActivate(context(request(admin), handler as never)), true);
+});
+
+test('data API key create and revoke routes retain enforced CSRF guard', async () => {
+  const auditRecords: AuditRecordInput[] = [];
+  const guard = new CsrfGuard({ record: async (input) => auditRecords.push(input) } as AuditService);
+  const invalid = request({ ...staff, roleCode: 'ADMIN' });
+  invalid.method = 'POST';
+  invalid.url = '/integrations/data-api-keys';
+  await assert.rejects(guard.canActivate(context(invalid, IntegrationsController.prototype.createDataApiKey as never)),
+    (error: unknown) => error instanceof AppException && error.code === 'CSRF_INVALID');
+  assert.equal(auditRecords[0]?.action, 'csrf_rejected');
+});
+
+test('data API key OpenAPI contract matches runtime status, CSRF, errors, and revocation payload', () => {
+  const openapi = JSON.parse(readFileSync('packages/contracts/openapi.json', 'utf8'));
+  const create = openapi.paths['/integrations/data-api-keys'].post;
+  const revoke = openapi.paths['/integrations/data-api-keys/{id}/revoke'].post;
+  assert.ok(create.responses['201']);
+  assert.ok(create.responses['400']);
+  assert.equal(create.parameters.some((param: { name: string }) => param.name === 'x-csrf-token'), true);
+  assert.ok(revoke.responses['200'].content['application/json'].schema.properties.revoked);
+  assert.ok(revoke.responses['400']);
+  assert.equal(revoke.parameters.some((param: { name: string }) => param.name === 'x-csrf-token'), true);
 });
 
 function serviceWith(provider: DmsProviderPort): IntegrationsService {

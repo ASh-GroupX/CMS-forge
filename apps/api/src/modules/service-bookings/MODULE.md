@@ -11,7 +11,9 @@ Agent context manifest for the service center booking module.
 
 ## Public surface
 
-- `ServiceBookingsService` is the only export other modules may import.
+- `ServiceBookingsService` and `ServiceBookingsExportService` are the public
+  services other modules may import. The export service returns a safe, bounded
+  appointment page for an integration key's branch scope.
 
 ## Owns tables
 
@@ -37,3 +39,4 @@ Agent context manifest for the service center booking module.
 - SR-BOOK-003 (Multi-branch view and branch name management)
 - SR-BOOK-004 (Master data for car models and maintenance types)
 - REQ-BOOK-SMS-001 (Admin-configured service appointment SMS reminders)
+- REQ-INT-DATA-001 (Scoped external appointment reads)

@@ -8,6 +8,15 @@ export type CustomerSearchRecord = Pick<Customer, 'id' | 'nameEn' | 'nameAr' | '
 export class CustomersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async exportPage(branchIds: string[] | null, limit: number, cursor?: string) {
+    const where: Prisma.CustomerWhereInput = branchIds === null ? {} : { complaints: { some: { branchId: { in: branchIds } } } };
+    return this.prisma.customer.findMany({
+      where, orderBy: { id: 'asc' }, take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      select: { id: true, nameEn: true, nameAr: true, phone: true, email: true, dataSource: true, createdAt: true, updatedAt: true },
+    });
+  }
+
   async search(query: string, limit = 20): Promise<CustomerSearchRecord[]> {
     return this.prisma.customer.findMany({
       where: query ? {

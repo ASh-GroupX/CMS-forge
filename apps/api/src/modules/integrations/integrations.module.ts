@@ -1,26 +1,30 @@
 import { Module } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { AuditService } from '../../core/audit.service.js';
-import { PermissionGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../core/auth.guard.js';
+import { PermissionGuard, RbacGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../core/auth.guard.js';
 import { PrismaService } from '../../core/http-kernel.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { AuthService } from '../auth/auth.service.js';
+import { BranchesModule } from '../branches/branches.module.js';
 import { DMS_PROVIDER, InMemoryDmsProvider } from './dms-provider.port.js';
 import { emailProviderFromEnv } from './email-provider.factory.js';
 import { EMAIL_PROVIDER } from './email-provider.port.js';
 import { IntegrationsController } from './integrations.controller.js';
 import { IntegrationsRepository } from './integrations.repository.js';
 import { IntegrationsService } from './integrations.service.js';
+import { IntegrationApiKeyGuard } from './integration-api-key.guard.js';
 import { InMemorySmsProvider, SMS_PROVIDER } from './sms-provider.port.js';
 import { InMemoryWhatsAppProvider, WHATSAPP_PROVIDER } from './whatsapp-provider.port.js';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, BranchesModule],
   controllers: [IntegrationsController],
   providers: [
     PrismaService,
     AuditService,
     IntegrationsRepository,
     IntegrationsService,
+    IntegrationApiKeyGuard,
     {
       provide: SESSION_AUTH_SERVICE,
       inject: [AuthService],
@@ -28,6 +32,11 @@ import { InMemoryWhatsAppProvider, WHATSAPP_PROVIDER } from './whatsapp-provider
     },
     SessionAuthGuard,
     PermissionGuard,
+    {
+      provide: RbacGuard,
+      inject: [Reflector, AuditService],
+      useFactory: (reflector: Reflector, audit: AuditService) => new RbacGuard(reflector, audit),
+    },
     { provide: EMAIL_PROVIDER, useFactory: () => emailProviderFromEnv() },
     { provide: SMS_PROVIDER, useClass: InMemorySmsProvider },
     { provide: WHATSAPP_PROVIDER, useClass: InMemoryWhatsAppProvider },
@@ -53,6 +62,6 @@ import { InMemoryWhatsAppProvider, WHATSAPP_PROVIDER } from './whatsapp-provider
       }) 
     },
   ],
-  exports: [IntegrationsService],
+  exports: [IntegrationsService, IntegrationsRepository, IntegrationApiKeyGuard],
 })
 export class IntegrationsModule {}

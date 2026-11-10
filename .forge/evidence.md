@@ -15752,3 +15752,79 @@ verification results and reviewer-tier limitation remain unchanged.
 - SMS integration remains in test mode because the live provider/API is not set
   up. This release does not claim live customer SMS delivery.
 - tmp/ and uploads/ stayed untracked and were excluded.
+
+## External system data API request and scope - 2026-11-09
+
+- User selected customer, complaint, task, and service appointment data, exposed
+  through revocable read-only API keys with explicit resource and branch scopes.
+- Security boundary: exclude staff/portal credentials, audit/security logs,
+  provider secrets, internal-only notes/comments, and attachments. Use explicit
+  field projections and bounded pagination; API key secrets shown once and
+  hashed at rest.
+- Replanned into key lifecycle/auth, customer/complaint feeds, and task/appointment
+  feeds because these resources belong to separate modules and must use their
+  public services. Phase 1 in progress. No key issued or data transmitted.
+- 2026-11-09 REQ-INT-DATA-001 phase 1: API key management is ADMIN permission
+  guarded; raw keys are returned only at creation, SHA-256 hashes are persisted,
+  and list/auth queries use safe field projections. Read guard requires GET,
+  checks stored scopes and branch restrictions, audits denials without
+  payloads/secrets, and updates last-used metadata. Tests cover
+  allowed branch, denied branch, missing scope, write method, unknown/revoked
+  credentials, secret/hash redaction, and invalid scope config. Prisma validation
+  passed; API integration suite passed 27/27 before the new key tests were
+  included. Remaining verification is recorded in the phase state.
+- 2026-11-09 REQ-INT-DATA-001 high-risk security self-check: (1) key-management
+  roles use server session and INTEGRATIONS_MANAGE (`integrations.controller.ts`);
+  external branch scope comes only from stored key scope and is enforced by
+  `integration-api-key.guard.ts`; (2) key create/revoke writes CONFIG audit in
+  the same DB transaction (`integrations.service.ts`); (3) key secrets are only
+  returned once, hashes are not selected for listing, and denial audit metadata
+  excludes payloads and tokens; successful page-read audit is deferred to feed
+  endpoints and must include resource/branch/row count; (4) this server API does not
+  touch customer portal visibility or expose portal routes; (5) tests cover
+  allowed branch, denied branch, missing scope, POST denial, invalid/revoked key,
+  and one-time key redaction. Review still required by the mandatory phase gate.
+- 2026-11-09 REPAIR-INT-DATA-P1-AUTH-CONTRACT-PROOF: Initial independent
+  PHASE-REVIEWER returned Repair Required. Findings were missing ADMIN role
+  enforcement, OpenAPI/runtime mismatch, invalid branch id in audit foreign key,
+  and insufficient lifecycle/route proof. Repairs now add ADMIN + permission
+  guards, explicit 200 revoke status and response schema, CSRF/error OpenAPI
+  details, null trusted audit branch attribution for untrusted branch filters,
+  revocation scope metadata, explicit safe key-list projection, and focused route,
+  listing, create/revoke, same-transaction audit, rollback-failure, and revoked-key
+  authentication tests. Integrations API suite passed 42/42, notifications
+  suite passed 48/48, typecheck passed, lint passed, OpenAPI check passed, Prisma
+  validation passed, and migration SQL sanity passed. Live migration application
+  was Not Run because Docker was unavailable. Create/revoke audit-failure tests
+  prove the service awaits audit before its transaction callback resolves; they
+  use mock transaction wrappers and do not independently prove PostgreSQL rollback.
+- Fresh repair re-review (GPT-6 Astra Ultra, 2026-11-09) independently reran
+  integrations 42/42 and OpenAPI check and recommended Accept With Conditions;
+  no blocking source defect remained. This does not satisfy the named-model gate:
+  Opus 4.8 Max and GPT-5.5 Extra High are unavailable in this session. Route
+  proof is guard metadata/direct invocation, not live HTTP; PostgreSQL migration
+  application and actual rollback are Not Run. No data-page read audit exists
+  yet; phase 2/3 feed routes must write one after each successful page with
+  resource, branch scope, and row count, without payload or key material.
+- User clarified the API must read deployed database records. Deployment
+  inspection confirmed `.github/workflows/deploy.yml` runs the Prisma migration
+  container before the application, and the API relies on server-side
+  `DATABASE_URL`. REQ-INT-DATA-001 AC7 now states that feeds read the deployed
+  API's configured PostgreSQL database at request time through Prisma. Feed
+  routes remain unimplemented pending the formal phase-review gate.
+- PHASE-1 JUDGE DECISION — 2026-11-09, GPT-5.6 Sol, selected explicitly by the
+  user as the judge and therefore overriding the repository's preferred model
+  list for this gate. Builder honesty: Honest after corrections. Code quality:
+  Good. Recommendation: Accept. Independent reruns passed integrations 42/42,
+  notifications 48/48, RBAC 2/2, admin 43/43, security check, typecheck, lint,
+  OpenAPI check, Prisma validation, migration SQL sanity, and `git diff --check`.
+  A structural JSON comparison showed that the large formatted OpenAPI diff adds
+  only `/integrations/data-api-keys`, its revoke path, and two key schemas; it
+  changes no existing path or schema semantically. Phase 2 is authorized to
+  proceed. Conditions before production: apply the migration to PostgreSQL and
+  run live HTTP/database lifecycle proof. No key was issued and no external data
+  was transmitted during review.
+
+- REQ-INT-DATA-001 phases 2/3 build, 2026-11-09: Four external-data GET routes use the integration-key guard and matching resource scopes. Owning modules use explicit safe Prisma projections, stored-key branch filtering, 100-row maximum cursor pages, and successful metadata-only page-read audits. OpenAPI names each required scope. Passed: integrations 48/48, complaints 98/98, tasks 45/45, service-bookings 24/24, typecheck, lint, OpenAPI check, production build, security check, root tests 78/78, migration SQL sanity, diff check. Security self-check: authority is stored server-side key scope, never query-supplied scope; no workflow state changes occur in these reads; key create/revoke transaction audit is covered by phase 1; no tokens, hashes, credentials, comments, notes, attachments, or audit rows appear in feed projections; allowed/denied key scope and branch tests pass. At this point live database migration, HTTP pull, and real rollback were Not Run; see the later runtime proof entry. Independent GPT-6 Sol review found OpenAPI scope and revocation-race repairs, applied; no preferred named reviewer acceptance is claimed.
+
+- REQ-INT-DATA-001 runtime proof, 2026-11-10: Started isolated PostgreSQL 18 on 127.0.0.1:55432 with UTF8 cms_auto_proof, applied all 56 migrations and seeded it. Compiled Nest served HTTP. The local proof fetched nonempty customers (1), complaints (2), tasks (1), and appointments (8) in one-row cursor pages without repeated IDs; 12 successful pages produced 12 matching page-read audits. A scoped key got branch and resource 403, then 401 after revocation. Staff-session HTTP create/list/revoke succeeded without returning a listed secret. A forced audit write failure rolled back key creation in a real Prisma transaction. The proof used synthetic local records and no production data. The original localhost:5432 service and Docker engine were unavailable, so isolated port 55432 was used. Independent GPT-6 Sol re-review: Accept With Conditions; preferred named reviewer unavailable. Production migration/health and production data pull remain Not Run.
