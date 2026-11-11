@@ -1585,6 +1585,8 @@ An independent GPT-6.1 Sol reviewer found hardcoded modal times, mismatched peri
 
 Fresh independent GPT-6.1 Sol re-review accepted the repaired booking code on 2026-11-11 after an initial conditional verdict. The reviewer independently passed booking API 34/34, EN/AR browser proof with axe, and diff check. The builder passed the full local release gates recorded in evidence. The preferred named tier remains unavailable; production migration and public smoke are release operations still to verify.
 
+Production workflow 42971822189 completed success for d0e7e89. Live health and revision matched, and a production capacity query exercised the migrated appointment projection without exposing customer records. The unauthenticated suggestion route returned 401. A signed-in booking creation was not performed in production; that is operator UAT.
+
 ## Booking calendar phase 1 review — 2026-11-10
 
 The independent GPT-6.1 Sol reviewer first returned Needs Repair because empty subslots collapsed beside occupied subslots, the plus button scrolled away, the badge treated past/read-only slots as full, and the hourly text hardcoded three. These were repaired. The second reviewer returned Accept With Conditions after inspecting EN/AR detail screenshots and independently passing the two-branch browser proof and diff check. Final accessibility/build checks remain for release; the requested preferred named reviewer was unavailable.
