@@ -18,6 +18,7 @@ export function TimelineSlotContent({
   timeline,
   locale,
   periodicName,
+  cancelledLabel,
 }: {
   appointments: ServiceAppointment[];
   blockedReason: string | undefined;
@@ -29,6 +30,7 @@ export function TimelineSlotContent({
   timeline: ServiceBookingCopy['timeline'];
   locale: 'en' | 'ar';
   periodicName: string;
+  cancelledLabel: string;
 }) {
   return (
     <div className="min-w-0 space-y-1">
@@ -60,10 +62,10 @@ export function TimelineSlotContent({
             <Plus className="size-4" />
           </Button>
         )}
-        <div aria-label={`${slotTime} ${timeline.appointment}`} className="flex h-[4.5rem] min-w-0 flex-1 items-start gap-2 overflow-x-scroll pb-2 [scrollbar-gutter:stable] [scrollbar-width:thin]" role="region" tabIndex={0}>
+        <div aria-label={`${slotTime} ${timeline.appointment}`} className="flex h-[4.5rem] min-w-0 flex-1 items-start gap-2 overflow-x-auto pb-2 [scrollbar-width:thin]" role="region" tabIndex={0}>
           {appointments.map((appointment, index) => (
             <button
-              aria-label={`${timeline.appointment} ${index + 1}: ${appointment.customerName}, ${appointment.startTime}`}
+              aria-label={`${timeline.appointment} ${index + 1}: ${appointment.customerName}, ${appointment.startTime}${appointment.status === 'CANCELLED' ? `, ${cancelledLabel}` : ''}`}
               className={`h-[4rem] min-w-44 max-w-52 shrink-0 rounded-lg border p-2 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${appointmentStatusStyle(appointment.status)}`}
               dir="auto"
               key={appointment.id}
@@ -78,7 +80,9 @@ export function TimelineSlotContent({
                 <Wrench className="size-3 shrink-0 text-brand" />
                 <span className="truncate">{maintenanceLabel(appointment, locale, periodicName)}</span>
               </div>
-              <span className="block truncate text-[10px] text-content-muted">{appointment.carModelName}</span>
+              {appointment.status === 'CANCELLED'
+                ? <span className="inline-block rounded bg-status-error-bg px-1.5 text-[10px] font-bold text-status-error">{cancelledLabel}</span>
+                : <span className="block truncate text-[10px] text-content-muted">{appointment.carModelName}</span>}
             </button>
           ))}
         </div>

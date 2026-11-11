@@ -188,10 +188,8 @@ export function NewAppointmentModal() {
           />
 
           <div>
-            <label className="block text-xs font-bold text-content-strong mb-1">
-              {t.modal.maintenanceType} <span className="text-status-error">*</span>
-            </label>
             <MaintenanceTypeSelector
+              maintenanceTypeLabel={t.modal.maintenanceType}
               isAr={isAr}
               maintenanceTypeId={maintenanceTypeId}
               maintenanceTypes={maintenanceTypes}

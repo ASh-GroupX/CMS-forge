@@ -115,7 +115,6 @@ export function TimelineSidebar() {
             const hasApts = appointments.some(
               (a) =>
                 a.date === dateStr &&
-                a.status !== 'CANCELLED' &&
                 (selectedBranchId === 'ALL' || a.branchId === selectedBranchId),
             );
 

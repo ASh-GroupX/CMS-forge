@@ -29,9 +29,10 @@ const server = createServer((req, res) => {
   const url = new URL(req.url ?? '/', 'http://localhost');
   const locale = url.searchParams.get('locale') === 'ar' ? 'ar' : 'en';
   const full = url.searchParams.get('full') === '1';
-  const markup = renderToString(React.createElement(TimelineCapacityFixture, { locale }));
+  const history = url.searchParams.get('history') === '1';
+  const markup = renderToString(React.createElement(TimelineCapacityFixture, { locale, history }));
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.end(`<!doctype html><html lang="${locale}"><head><link rel="stylesheet" href="/proof.css"></head><body><div id="root">${markup}</div><script src="/fixture.js"></script></body></html>`);
+  res.end(`<!doctype html><html lang="${locale}" data-history="${history ? '1' : '0'}"><head><link rel="stylesheet" href="/proof.css"></head><body><div id="root">${markup}</div><script src="/fixture.js"></script></body></html>`);
 });
 const { TimelineCapacityFixture } = await import('../apps/web/test/browser/timeline-capacity.fixture.tsx');
 await new Promise((done) => server.listen(0, '127.0.0.1', done));
@@ -87,7 +88,7 @@ try {
         const pinned = await add.boundingBox();
         assert.ok(pinned && Math.abs(pinned.x - plus.x) < 1, `${locale}: add button stays pinned when cards scroll`);
       }
-      assert.equal(await region.evaluate((el) => getComputedStyle(el).overflowX), 'scroll');
+      assert.equal(await region.evaluate((el) => getComputedStyle(el).overflowX), 'auto');
       assert.deepEqual(errors, [], `${locale} full=${full}: browser errors`);
       if (!full) {
         await page.screenshot({ path: `${output}/${locale}-capacity-available.png`, fullPage: true });
@@ -95,9 +96,73 @@ try {
       }
       await page.close();
     }
+    const page = await browser.newPage({ viewport: { width: locale === 'en' ? 1440 : 390, height: 950 } });
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    let cancelled = false;
+    await page.route('**/service-bookings/slots-availability**', (route) => {
+      const branchId = new URL(route.request().url()).searchParams.get('branchId');
+      const booked = branchId === 'center_main' && !cancelled ? 1 : 0;
+      const slots = Array.from({ length: 10 }, (_, offset) => 8 + offset).flatMap((hour) =>
+        ['00', '15', '30', '45'].map((minute) => ({
+          slot: `${String(hour).padStart(2, '0')}:${minute}`, hour: `${String(hour).padStart(2, '0')}:00`,
+          bookedCount: hour === 12 && minute === '00' ? booked : 0,
+          hourBookedCount: hour === 12 ? booked : 0,
+          maxPerSlot: 3, maxPerHour: 3, status: 'AVAILABLE',
+          remainingInSlot: 3 - booked, remainingInHour: 3 - booked,
+        })));
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        branchId, isOpen: true, maxDailyAppointments: 20, bookedDailyCount: booked, slots,
+      }) });
+    });
+    await page.goto(`http://127.0.0.1:${server.address().port}/?locale=${locale}&history=1`);
+    const expand = page.getByRole('button', { name: new RegExp(serviceBookingText[locale].timeline.showPastHours.split('{count}')[0]) });
+    await expand.waitFor({ state: 'visible' });
+    assert.equal(await page.locator('[data-hour="12"]').count(), 0, `${locale}: past hours start collapsed`);
+    await expand.click();
+    await page.locator('[data-hour="12"]').waitFor({ state: 'visible' });
+    cancelled = true;
+    await page.getByRole('button', { name: 'Cancel booking' }).click();
+    assert.equal(await page.locator('[data-appointment-status="CANCELLED"]').count(), 1);
+    const slot = page.locator('[data-branch-id="center_main"][data-slot-time="12:00"]');
+    await slot.getByText(serviceBookingText[locale].status.CANCELLED, { exact: true }).waitFor({ state: 'visible' });
+    await slot.getByText(new RegExp(`${serviceBookingText[locale].timeline.slotOccupancy}: 0/3`)).waitFor({ state: 'visible' });
+    await page.screenshot({ path: `${output}/${locale}-cancelled-day.png`, fullPage: true });
+    await page.getByRole('button', { name: serviceBookingText[locale].timeline.hidePastHours }).click();
+    assert.equal(await page.locator('[data-hour="12"]').count(), 0, `${locale}: earlier hours collapse again`);
+    assert.match(await expand.innerText(), new RegExp(serviceBookingText[locale].status.CANCELLED));
+    await page.getByRole('button', { name: 'week view' }).click();
+    await page.getByRole('button', { name: /Historical Customer/ }).waitFor({ state: 'visible' });
+    await page.getByText(serviceBookingText[locale].status.CANCELLED, { exact: true }).waitFor({ state: 'visible' });
+    if (locale === 'ar') {
+      await page.waitForFunction(() => {
+        const selected = document.querySelector('[data-selected-date="true"]');
+        const viewport = selected?.closest('.overflow-x-auto');
+        if (!selected || !viewport) return false;
+        const day = selected.getBoundingClientRect();
+        const frame = viewport.getBoundingClientRect();
+        return viewport.scrollWidth > viewport.clientWidth && day.width >= 120 && day.left >= frame.left && day.right <= frame.right;
+      });
+    }
+    await page.screenshot({ path: `${output}/${locale}-cancelled-week.png`, fullPage: true });
+    await page.getByRole('button', { name: 'month view' }).click();
+    await page.getByText(serviceBookingText[locale].status.CANCELLED, { exact: true }).waitFor({ state: 'visible' });
+    if (locale === 'ar') {
+      await page.waitForFunction(() => {
+        const selected = document.querySelector('[data-selected-date="true"]');
+        const viewport = selected?.closest('.overflow-x-auto');
+        if (!selected || !viewport) return false;
+        const day = selected.getBoundingClientRect();
+        const frame = viewport.getBoundingClientRect();
+        return viewport.scrollWidth > viewport.clientWidth && day.width >= 120 && day.left >= frame.left && day.right <= frame.right;
+      });
+    }
+    await page.screenshot({ path: `${output}/${locale}-cancelled-month.png`, fullPage: true });
+    assert.deepEqual(errors, [], `${locale}: history browser errors`);
+    await page.close();
   }
 } finally {
   await browser.close();
   await new Promise((done) => server.close(done));
 }
-console.log('Timeline capacity browser proof passed for EN/AR and available/full states.');
+console.log('Timeline capacity and cancellation browser proof passed for EN/AR.');

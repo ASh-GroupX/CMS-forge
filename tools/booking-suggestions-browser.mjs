@@ -69,7 +69,7 @@ try {
     await dialog.waitFor();
     assert.equal(await dialog.locator('input[type="date"]').inputValue(), proofDate);
     assert.equal(await dialog.locator('select').last().inputValue(), '12:15');
-    await dialog.getByRole('combobox', { name: copy.modal.selectMaintenanceType }).click();
+    await dialog.getByRole('combobox', { name: copy.modal.maintenanceType }).click();
     await page.getByRole('option', { name: copy.modal.periodicMaintenance }).click();
     await dialog.getByRole('combobox', { name: copy.modal.periodicMileage }).click();
     assert.equal(await page.getByRole('option').count(), 17);

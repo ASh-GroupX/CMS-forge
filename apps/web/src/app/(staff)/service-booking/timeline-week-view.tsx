@@ -7,6 +7,7 @@ import type { ServiceAppointment } from '../../../lib/staff-service-bookings-api
 import { maintenanceLabel } from './service-booking-utils';
 
 export function TimelineWeekView() {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
   const {
     appointments,
     branches,
@@ -21,6 +22,9 @@ export function TimelineWeekView() {
   } = useServiceBooking();
 
   const isAr = locale === 'ar';
+  React.useEffect(() => {
+    scrollRef.current?.querySelector('[data-selected-date="true"]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }, [selectedDate]);
   const currentDate = new Date(`${selectedDate}T00:00:00Z`);
   const dayOfWeek = currentDate.getUTCDay();
 
@@ -46,13 +50,14 @@ export function TimelineWeekView() {
   };
 
   const weekApts = appointments.filter(
-    (a) => a.status !== 'CANCELLED' && matchesSelectedBranch(a),
+    (a) => matchesSelectedBranch(a),
   );
 
   const defaultBranchId = selectedBranchId === 'ALL' ? branches[0]?.id || '' : selectedBranchId;
 
   return (
-    <div className="rounded-2xl border border-line-subtle bg-surface shadow-sm overflow-hidden">
+    <div className="overflow-x-auto rounded-2xl border border-line-subtle bg-surface shadow-sm" ref={scrollRef}>
+      <div className="min-w-[980px]">
       <div className="grid grid-cols-7 divide-x divide-line-subtle border-b border-line-subtle bg-surface-canvas/60 text-center">
         {weekDays.map((dateObj, i) => {
           const dateStr = dateObj.toISOString().slice(0, 10);
@@ -74,6 +79,7 @@ export function TimelineWeekView() {
               className={`p-3 transition-colors ${
                 isSelected ? 'bg-brand/10' : ''
               } ${isFriday ? 'bg-rose-500/[0.04]' : ''}`}
+              data-selected-date={isSelected}
               key={dateStr}
             >
               <p className="text-xs font-semibold text-content-muted">{dayName}</p>
@@ -100,7 +106,7 @@ export function TimelineWeekView() {
                           : 'bg-surface-sunken text-content-muted'
                   }`}
                 >
-                  {isFriday ? t.dailyStats.closed : `${dayApts.length} apts`}
+                  {isFriday && dayApts.length === 0 ? t.dailyStats.closed : `${dayApts.length} apts`}
                 </span>
               </div>
             </div>
@@ -124,7 +130,7 @@ export function TimelineWeekView() {
               }`}
               key={dateStr}
             >
-              {isFriday ? (
+              {isFriday && dayApts.length === 0 ? (
                 <div className="flex h-32 items-center justify-center text-center text-xs font-medium text-content-muted/60">
                   {t.dailyStats.closed}
                 </div>
@@ -132,7 +138,7 @@ export function TimelineWeekView() {
                 <>
                   {dayApts.map((apt) => (
                     <button
-                      className="w-full text-start rounded-xl border border-line-subtle bg-surface-canvas/50 p-2.5 shadow-sm transition-all hover:border-brand/40 hover:shadow-md"
+                      className={`w-full text-start rounded-xl border p-2.5 shadow-sm transition-all hover:border-brand/40 hover:shadow-md ${apt.status === 'CANCELLED' ? 'border-status-error-border bg-status-error-bg/40' : 'border-line-subtle bg-surface-canvas/50'}`}
                       key={apt.id}
                       onClick={() => {
                         setSelectedAppointment(apt);
@@ -142,8 +148,8 @@ export function TimelineWeekView() {
                     >
                       <div className="flex items-center justify-between text-[11px]">
                         <span className="font-semibold text-brand">{apt.startTime}</span>
-                        <span className="rounded bg-surface-sunken px-1 text-[9px] font-bold">
-                          {apt.durationMinutes}m
+                        <span className={`rounded px-1 text-[9px] font-bold ${apt.status === 'CANCELLED' ? 'bg-status-error-bg text-status-error' : 'bg-surface-sunken'}`}>
+                          {apt.status === 'CANCELLED' ? t.status.CANCELLED : `${apt.durationMinutes}m`}
                         </span>
                       </div>
                       <p className="mt-1 font-bold text-xs truncate text-content-strong">
@@ -159,7 +165,7 @@ export function TimelineWeekView() {
                     </button>
                   ))}
 
-                  <button
+                  {!isFriday && <button
                     className="flex w-full items-center justify-center gap-1 rounded-xl border border-dashed border-line-subtle py-2 text-xs font-medium text-content-muted transition-colors hover:border-brand hover:text-brand"
                     onClick={() =>
                       openNewModalWithSlot({
@@ -172,12 +178,13 @@ export function TimelineWeekView() {
                   >
                     <Plus className="size-3.5" />
                     <span>{t.timeline.emptySlot}</span>
-                  </button>
+                  </button>}
                 </>
               )}
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );

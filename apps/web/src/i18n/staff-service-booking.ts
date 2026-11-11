@@ -47,8 +47,8 @@ export const serviceBookingText = {
       addAppointment: 'Add appointment',
       appointment: 'Appointment',
       slotOccupancy: 'Slot capacity',
-      loadingAvailability: 'Checking capacity…',
-      noAppointments: 'No appointments scheduled for this day',
+      loadingAvailability: 'Checking capacity…', noAppointments: 'No appointments scheduled for this day',
+      showPastHours: 'Show {count} earlier hours', hidePastHours: 'Hide earlier hours',
     },
     appointmentCard: {
       reference: 'Ref',
@@ -194,8 +194,8 @@ export const serviceBookingText = {
       addAppointment: 'إضافة موعد',
       appointment: 'الموعد',
       slotOccupancy: 'سعة الفترة',
-      loadingAvailability: 'جارٍ التحقق من السعة…',
-      noAppointments: 'لا توجد مواعيد مجدولة لهذا اليوم',
+      loadingAvailability: 'جارٍ التحقق من السعة…', noAppointments: 'لا توجد مواعيد مجدولة لهذا اليوم',
+      showPastHours: 'إظهار {count} ساعات سابقة', hidePastHours: 'إخفاء الساعات السابقة',
     },
     appointmentCard: {
       reference: 'رقم المرجع',

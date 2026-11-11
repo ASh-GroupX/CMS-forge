@@ -7,6 +7,7 @@ import type { ServiceAppointment } from '../../../lib/staff-service-bookings-api
 import { maintenanceLabel } from './service-booking-utils';
 
 export function TimelineMonthView() {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
   const {
     appointments,
     branches,
@@ -19,6 +20,9 @@ export function TimelineMonthView() {
   } = useServiceBooking();
 
   const isAr = locale === 'ar';
+  React.useEffect(() => {
+    scrollRef.current?.querySelector('[data-selected-date="true"]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }, [selectedDate]);
   const currentObj = new Date(`${selectedDate}T00:00:00Z`);
   const year = currentObj.getUTCFullYear();
   const month = currentObj.getUTCMonth();
@@ -46,11 +50,12 @@ export function TimelineMonthView() {
   };
 
   const monthApts = appointments.filter(
-    (a) => a.status !== 'CANCELLED' && matchesSelectedBranch(a),
+    (a) => matchesSelectedBranch(a),
   );
 
   return (
-    <div className="rounded-2xl border border-line-subtle bg-surface shadow-sm overflow-hidden">
+    <div className="overflow-x-auto rounded-2xl border border-line-subtle bg-surface shadow-sm" ref={scrollRef}>
+      <div className="min-w-[980px]">
       {/* Day of Week Headers */}
       <div className="grid grid-cols-7 divide-x divide-line-subtle border-b border-line-subtle bg-surface-canvas/60 text-center font-bold text-xs text-content-muted">
         {weekDayLabels.map((lbl, idx) => (
@@ -85,6 +90,7 @@ export function TimelineMonthView() {
               className={`group min-h-[7.5rem] p-2 transition-all hover:bg-surface-canvas/40 cursor-pointer ${
                 isSelected ? 'bg-brand/5' : ''
               } ${isFriday ? 'bg-rose-500/[0.02]' : ''}`}
+              data-selected-date={isSelected}
               key={dateStr}
               onClick={() => {
                 setSelectedDate(dateStr);
@@ -113,7 +119,7 @@ export function TimelineMonthView() {
 
               {/* Preview top 2 appointments */}
               <div className="space-y-1">
-                {isFriday ? (
+                {isFriday && dayApts.length === 0 ? (
                   <p className="text-[10px] text-content-muted italic">
                     {t.dailyStats.closed}
                   </p>
@@ -121,14 +127,15 @@ export function TimelineMonthView() {
                   <>
                     {dayApts.slice(0, 2).map((apt) => (
                       <div
-                        className="truncate rounded-md bg-surface-canvas border border-line-subtle/80 px-1.5 py-0.5 text-[10px] font-medium text-content-strong shadow-2xs"
+                        className={`rounded-md border px-1.5 py-0.5 text-[10px] font-medium text-content-strong shadow-2xs ${apt.status === 'CANCELLED' ? 'border-status-error-border bg-status-error-bg/40' : 'border-line-subtle/80 bg-surface-canvas'}`}
                         key={apt.id}
                         title={`${apt.startTime} - ${apt.customerName} (${maintenanceLabel(apt, locale, t.modal.periodicMaintenance)})`}
                       >
                         <span className="font-semibold text-brand me-1">
                           {apt.startTime}
                         </span>
-                        <span>{apt.customerName}</span>
+                        <span className="truncate">{apt.customerName}</span>
+                        {apt.status === 'CANCELLED' && <span className="block font-bold text-status-error">{t.status.CANCELLED}</span>}
                       </div>
                     ))}
                     {dayApts.length > 2 && (
@@ -142,6 +149,7 @@ export function TimelineMonthView() {
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );
