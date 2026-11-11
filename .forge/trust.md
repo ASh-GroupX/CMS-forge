@@ -1591,6 +1591,8 @@ Production workflow 42971822189 completed success for d0e7e89. Live health and r
 
 Independent GPT-6.1 Sol review initially found Arabic mobile week/month columns compressed and a stale current-time marker after 18:00. The builder added a single horizontal scroll area, centered the selected date, and cleared the stale marker. Fresh EN/AR browser screenshots and geometry assertions passed; cancelled status remains legible. Final verdict: Accept With Conditions. The named preferred reviewer tiers were unavailable, and a signed-in production status change remains operator UAT.
 
+Production workflow 42976174211 passed for 2ec14c9. Public health returned 200 with the matching revision after deployment. No live appointment was mutated in verification.
+
 ## Booking calendar phase 1 review — 2026-11-10
 
 The independent GPT-6.1 Sol reviewer first returned Needs Repair because empty subslots collapsed beside occupied subslots, the plus button scrolled away, the badge treated past/read-only slots as full, and the hourly text hardcoded three. These were repaired. The second reviewer returned Accept With Conditions after inspecting EN/AR detail screenshots and independently passing the two-branch browser proof and diff check. Final accessibility/build checks remain for release; the requested preferred named reviewer was unavailable.
