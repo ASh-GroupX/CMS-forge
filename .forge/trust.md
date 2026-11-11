@@ -1597,6 +1597,8 @@ Production workflow 42976174211 passed for 2ec14c9. Public health returned 200 w
 
 Independent GPT-6.1 Sol review found that appointment API failures were displayed as no search matches and repeated result buttons lacked unique accessible names. Both were repaired; EN/AR browser proof and lint passed on re-review, with readable Arabic mobile results and error state. Final verdict: Accept With Conditions. The preferred named reviewer models were unavailable. Signed-in production lookup UAT remains; past calendar hours stay collapsed after closing a searched booking's detail until staff expands them.
 
+Production workflow 43011906177 passed for cad0532. Public health returned 200 with the matching revision after deployment. No production booking data was queried in the unsigned smoke check.
+
 ## Booking calendar phase 1 review — 2026-11-10
 
 The independent GPT-6.1 Sol reviewer first returned Needs Repair because empty subslots collapsed beside occupied subslots, the plus button scrolled away, the badge treated past/read-only slots as full, and the hourly text hardcoded three. These were repaired. The second reviewer returned Accept With Conditions after inspecting EN/AR detail screenshots and independently passing the two-branch browser proof and diff check. Final accessibility/build checks remain for release; the requested preferred named reviewer was unavailable.
