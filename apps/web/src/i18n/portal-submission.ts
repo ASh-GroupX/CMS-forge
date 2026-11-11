@@ -26,6 +26,9 @@ export const portalSubmissionText = {
       description: 'What happened?',
       vehicleRelated: 'This complaint is vehicle-related',
       vehicleVin: 'Vehicle VIN',
+      vehicleBrand: 'Car make',
+      vehicleModel: 'Car model',
+      odometer: 'Odometer (km)',
       attachment: 'Attachment',
     },
     choices: {
@@ -99,6 +102,9 @@ export const portalSubmissionText = {
       description: 'تفاصيل ما حدث',
       vehicleRelated: 'الشكوى تتعلق بمركبة',
       vehicleVin: 'رقم هيكل المركبة (VIN)',
+      vehicleBrand: 'الشركة المصنعة للمركبة',
+      vehicleModel: 'طراز المركبة',
+      odometer: 'عداد المسافة (كم)',
       attachment: 'المرفق',
     },
     choices: {

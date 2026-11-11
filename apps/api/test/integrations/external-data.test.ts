@@ -18,10 +18,11 @@ const key = { keyId: 'key-1', name: 'ERP', createdById: 'admin-1', scopes: ['cus
 const request = (): IntegrationApiRequest => ({ headers: {}, method: 'GET', integrationApiKey: { ...key, scopes: [...key.scopes] } });
 
 test('all external routes use integration key guard', () => {
-  for (const method of ['customers', 'complaints', 'tasks', 'appointments', 'tickets', 'complaintEvents', 'ticketEvents'] as const) {
+  for (const method of ['customers', 'complaints', 'portalComplaints', 'tasks', 'appointments', 'tickets', 'complaintEvents', 'ticketEvents'] as const) {
     const guards = Reflect.getMetadata(GUARDS_METADATA, ExternalDataController.prototype[method]) as Array<{ name: string }>;
     assert.deepEqual(guards.map((guard) => guard.name), ['IntegrationApiKeyGuard']);
   }
+  assert.deepEqual(Reflect.getMetadata('cms:auto:integration-api-scopes', ExternalDataController.prototype.portalComplaints), ['portal-complaints:read', 'customers:read']);
 });
 
 test('customer page uses stored branch scope, limit and cursor, then audits row count', async () => {
@@ -76,12 +77,41 @@ test('owning repositories query stored branches with bounded cursor pages and sa
   assert.deepEqual(calls[0]?.where, { complaints: { some: { branchId: { in: ['b1'] } } } });
   assert.deepEqual(calls[1]?.where, { branchId: { in: ['b1'] } });
   assert.deepEqual(calls[2]?.where, { confidentialityLevel: 'NORMAL', owner: { branchId: { in: ['b1'] } } });
-  assert.deepEqual(calls[3]?.where, { branchId: { in: ['b1'] } });
+  assert.deepEqual(calls[3]?.where, { OR: [{ branchId: { in: ['b1'] } }, { serviceCenterId: { in: ['b1'] } }] });
   assert.deepEqual(calls[4]?.where, { requestedBy: { branchId: { in: ['b1'] } } });
   assert.equal(calls[4]?.select.notes, undefined);
   assert.equal(calls[4]?.select.activities.select.details, undefined);
   assert.equal(calls[1]?.select.createdBy.select.passwordHash, undefined);
   assert.equal(calls[1]?.select.statusHistory.select.reason, undefined);
+});
+
+test('portal complaint customer export requires its own scope and stored branch', async () => {
+  const calls: unknown[][] = [];
+  const complaints = { exportPortalCustomerPage: async (...args: unknown[]) => { calls.push(args); return { items: [{ id: 'portal-1', customerName: 'Maya', customerPhone: '+962790000000' }], nextCursor: null }; } };
+  const service = new ExternalDataService({} as never, complaints as never, {} as never, {} as never, {} as never, { record: async () => undefined } as never);
+  await assert.rejects(service.page('portal-complaints', {}, request()), { code: 'RBAC_FORBIDDEN' });
+  const allowed = request(); allowed.integrationApiKey!.scopes = ['portal-complaints:read'];
+  await assert.rejects(service.page('portal-complaints', {}, allowed), { code: 'RBAC_FORBIDDEN' });
+  allowed.integrationApiKey!.scopes.push('customers:read');
+  await assert.rejects(service.page('portal-complaints', { branchId: 'b2' }, allowed), { code: 'RBAC_FORBIDDEN' });
+  const page = await service.page('portal-complaints', { limit: '1' }, allowed);
+  assert.deepEqual(calls, [[['b1'], 1, undefined]]);
+  assert.equal(page.items[0]?.customerPhone, '+962790000000');
+});
+
+test('portal complaint export contains submitted customer fields without internal data', async () => {
+  const prisma = { complaint: { findMany: async (query: Record<string, any>) => {
+    assert.deepEqual(query.where, { branchId: { in: ['b1'] }, statusHistory: { some: { requestSource: 'CUSTOMER_PORTAL', fromStatus: null, action: 'SUBMIT' } } });
+    assert.equal(query.select.customer.select.dmsCode, undefined);
+    assert.equal(query.select.statusHistory, undefined);
+    return [{ id: 'c1', referenceNumber: 'CMS-1', branchId: 'b1', status: 'SUBMITTED', descriptionEn: 'Noise', createdAt: new Date(), incidentAt: new Date(), odometer: 50210, vehicleMakeSnapshot: 'Nissan', vehicleModelSnapshot: 'Patrol', customer: { nameEn: 'Maya', phone: '+962790000000' }, vehicle: null }];
+  } } };
+  const service = new ComplaintsService(new ComplaintsRepository(prisma as never), {} as never);
+  const page = await service.exportPortalCustomerPage(['b1'], 1);
+  assert.equal(page.items[0]?.vehicleMake, 'Nissan');
+  assert.equal(page.items[0]?.vehicleModel, 'Patrol');
+  assert.equal(page.items[0]?.customerPhone, '+962790000000');
+  assert.doesNotMatch(JSON.stringify(page), /dmsCode|statusHistory|audit|staff/i);
 });
 
 test('complaint export identifies the employee who accepted intake from history', async () => {

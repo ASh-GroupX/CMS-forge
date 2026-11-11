@@ -112,6 +112,18 @@ export class ComplaintsRepository {
     });
   }
 
+  async exportPortalCustomerPage(branchIds: string[] | null, limit: number, cursor?: string) {
+    return this.prisma.complaint.findMany({
+      where: { ...(branchIds === null ? {} : { branchId: { in: branchIds } }), statusHistory: { some: { requestSource: 'CUSTOMER_PORTAL', fromStatus: null, action: 'SUBMIT' } } },
+      orderBy: { id: 'asc' }, take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      select: { id: true, referenceNumber: true, branchId: true, status: true, createdAt: true, incidentAt: true,
+        vehicleMakeSnapshot: true, vehicleModelSnapshot: true,
+        descriptionEn: true, odometer: true, customer: { select: { nameEn: true, phone: true } },
+        vehicle: { select: { vin: true, makeEn: true, modelEn: true } } },
+    });
+  }
+
   async exportEventsPage(id: string, branchIds: string[] | null, limit: number, cursor?: string) {
     const complaint = await this.prisma.complaint.findFirst({
       where: { id, ...(branchIds === null ? {} : { branchId: { in: branchIds } }) },
@@ -174,6 +186,8 @@ export class ComplaintsRepository {
         vehicleDataSource: data.vehicleDataSource ?? null,
         manualVehicleFlag: data.manualVehicleFlag,
         vehicleRelated: data.vehicleRelated,
+        vehicleMakeSnapshot: data.vehicleBrand ?? null,
+        vehicleModelSnapshot: data.vehicleModel ?? null,
         vehicleDataUnavailableReason: data.vehicleDataUnavailableReason ?? null,
         channel: data.channel ?? null,
         customerType: data.customerType ?? null,

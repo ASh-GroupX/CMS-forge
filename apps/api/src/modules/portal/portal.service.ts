@@ -82,11 +82,13 @@ export class PortalService {
     ]);
     return {
       ...input,
-      branchId: optionalText(input.branchId) ?? defaults.branchId,
-      departmentId: optionalText(input.departmentId) ?? defaults.departmentId,
-      categoryId: optionalText(input.categoryId) ?? defaults.categoryId,
-
-      severity: input.severity ?? ComplaintSeverity.MEDIUM,
+      branchId: defaults.branchId,
+      departmentId: defaults.departmentId,
+      categoryId: defaults.categoryId,
+      subject: `${input.vehicleBrand?.trim() ?? ''} ${input.vehicleModel?.trim() ?? ''}`.trim(),
+      vehicleRelated: true,
+      vehicleDataUnavailableReason: input.vehicleVin ? null : 'Customer did not provide VIN at intake',
+      severity: ComplaintSeverity.MEDIUM,
       manualTriage: true,
     };
   }

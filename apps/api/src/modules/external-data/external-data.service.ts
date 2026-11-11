@@ -8,7 +8,7 @@ import { ServiceBookingsExportService } from '../service-bookings/service-bookin
 import { InternalTicketsService } from '../internal-tickets/internal-tickets.service.js';
 import type { IntegrationApiRequest } from '../integrations/integration-api-key.guard.js';
 
-export type ExportResource = 'customers' | 'complaints' | 'tasks' | 'appointments' | 'tickets';
+export type ExportResource = 'customers' | 'complaints' | 'portal-complaints' | 'tasks' | 'appointments' | 'tickets';
 
 @Injectable()
 export class ExternalDataService {
@@ -24,7 +24,7 @@ export class ExternalDataService {
   async page(resource: ExportResource, query: Record<string, unknown>, request: IntegrationApiRequest) {
     const key = request.integrationApiKey;
     if (!key) throw new AppException('AUTH_INVALID_CREDENTIALS', 'Integration key required', HttpStatus.UNAUTHORIZED);
-    if (!key.scopes.includes(`${resource}:read`)) {
+    if (!key.scopes.includes(`${resource}:read`) || (resource === 'portal-complaints' && !key.scopes.includes('customers:read'))) {
       throw new AppException('RBAC_FORBIDDEN', 'Resource outside integration key scope', HttpStatus.FORBIDDEN);
     }
     const limit = pageLimit(query.limit);
@@ -36,6 +36,7 @@ export class ExternalDataService {
     const branchIds = requestedBranch ? [requestedBranch] : key.allBranches ? null : key.branchIds;
     const page = resource === 'customers' ? await this.customers.exportPage(branchIds, limit, cursor)
       : resource === 'complaints' ? await this.complaints.exportPage(branchIds, limit, cursor)
+      : resource === 'portal-complaints' ? await this.complaints.exportPortalCustomerPage(branchIds, limit, cursor)
       : resource === 'tasks' ? await this.tasks.exportPage(branchIds, limit, cursor)
       : resource === 'appointments' ? await this.bookings.exportPage(branchIds, limit, cursor)
       : await this.tickets.exportPage(branchIds, limit, cursor);

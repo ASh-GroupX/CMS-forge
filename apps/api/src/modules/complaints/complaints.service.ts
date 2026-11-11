@@ -18,7 +18,7 @@ import { complaintCreatedAudit, createComplaintData, isReferenceConflict, refere
 import { complaintCorrectionAudit, complaintCorrectionData, correctionConflictError } from './complaint-correction.js';
 import type { ApplyComplaintCorrectionInput, ApplyComplaintCorrectionResult } from './complaint-correction.js';
 import { detailItem, queueItem, reportItem, searchItem, shouldMask } from './complaint-read-models.js';
-import { exportComplaintEventsPage, exportComplaintPage } from './complaint-external-export.js';
+import { exportComplaintEventsPage, exportComplaintPage, exportPortalComplaintCustomerPage } from './complaint-external-export.js';
 import { timelineItems } from './complaint-timeline.js';
 import { queueComplaintCreationSideEffects, queueWorkflowSideEffects } from './complaint-workflow-side-effects.js';
 import { ComplaintsRepository } from './complaints.repository.js';
@@ -97,10 +97,10 @@ function transition(fromStatus: ComplaintStatus, action: ComplaintTransitionActi
 @Injectable()
 export class ComplaintsService {
   constructor(private readonly complaintsRepository: ComplaintsRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly casesService?: CasesService, private readonly slaService?: SlaService, private readonly surveysService?: SurveysService, private readonly tasksService?: TasksService, private readonly groupsService?: CommunicationGroupsService, private readonly assignmentsService?: AssignmentsService) {}
-
   async exportPage(branchIds: string[] | null, limit: number, cursor?: string) {
     return exportComplaintPage(this.complaintsRepository, branchIds, limit, cursor);
   }
+  async exportPortalCustomerPage(branchIds: string[] | null, limit: number, cursor?: string) { return exportPortalComplaintCustomerPage(this.complaintsRepository, branchIds, limit, cursor); }
   async exportEventsPage(id: string, branchIds: string[] | null, limit: number, cursor?: string) {
     return exportComplaintEventsPage(this.complaintsRepository, id, branchIds, limit, cursor);
   }

@@ -24,6 +24,7 @@ export type PortalComplaintRequestDto = {
   manualTriage?: boolean;
   vehicleRelated?: boolean;
   vehicleVin?: string | null;
+  odometer?: number | null;
   vehicleId?: string | null;
   vehiclePlate?: string | null;
   vehicleBrand?: string | null;
@@ -36,24 +37,24 @@ export type PortalComplaintRequestDto = {
 export function parsePortalComplaintBody(body: unknown): PortalComplaintRequestDto {
   const input = objectBody(body);
   const attachments = attachmentList(input.attachments);
-  const manualTriage = input.manualTriage === true;
   return {
     customerName: requiredText(input.customerName, 'customerName'),
     customerPhone: requiredText(input.customerPhone, 'customerPhone'),
-    categoryId: manualTriage ? optionalText(input.categoryId, 'categoryId') : requiredText(input.categoryId, 'categoryId'),
-    departmentId: manualTriage ? optionalText(input.departmentId, 'departmentId') : requiredText(input.departmentId, 'departmentId'),
+    categoryId: null,
+    departmentId: null,
     description: requiredText(input.description, 'description'),
     incidentAt: requiredText(input.incidentAt, 'incidentAt'),
-    branchId: manualTriage ? optionalText(input.branchId, 'branchId') : requiredText(input.branchId, 'branchId'),
-    subject: requiredText(input.subject, 'subject'),
-    severity: manualTriage ? optionalEnum(input.severity, ComplaintSeverity, 'severity') : enumValue(input.severity, ComplaintSeverity, 'severity'),
-    ...(manualTriage ? { manualTriage } : {}),
-    vehicleRelated: input.vehicleRelated === true,
+    branchId: null,
+    subject: '',
+    severity: null,
+    manualTriage: true,
+    vehicleRelated: true,
     vehicleVin: optionalText(input.vehicleVin, 'vehicleVin'),
+    vehicleBrand: requiredText(input.vehicleBrand, 'vehicleBrand'),
+    vehicleModel: requiredText(input.vehicleModel, 'vehicleModel'),
+    odometer: optionalNumber(input.odometer, 'odometer'),
     vehicleId: optionalText(input.vehicleId, 'vehicleId'),
     vehiclePlate: optionalText(input.vehiclePlate, 'vehiclePlate'),
-    vehicleBrand: optionalText(input.vehicleBrand, 'vehicleBrand'),
-    vehicleModel: optionalText(input.vehicleModel, 'vehicleModel'),
     vehicleModelYear: optionalNumber(input.vehicleModelYear, 'vehicleModelYear'),
 
     ...(attachments.length ? { attachments } : {}),
@@ -93,7 +94,7 @@ function optionalNumber(value: unknown, field: string): number | null {
   if (value === undefined || value === null) {
     return null;
   }
-  if (typeof value === 'number' && Number.isInteger(value)) {
+  if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) {
     return value;
   }
   throw invalid(field, `${field} is invalid.`);

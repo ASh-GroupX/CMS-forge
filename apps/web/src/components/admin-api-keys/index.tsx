@@ -15,7 +15,7 @@ import type { Locale } from '@/i18n/staff-shell';
 import { createDataApiKeyAction, loadDataApiKeysAction, revokeDataApiKeyAction, testDataApiKeyAction } from '@/app/(staff)/admin/api-keys/actions';
 import type { BranchOption, DataApiKey, DataResource, DataScope } from '@/lib/staff-integration-keys-api';
 
-const resources: DataResource[] = ['customers', 'complaints', 'tasks', 'appointments', 'tickets'];
+const resources: DataResource[] = ['customers', 'complaints', 'portal-complaints', 'tasks', 'appointments', 'tickets'];
 type Initial = Awaited<ReturnType<typeof loadDataApiKeysAction>>;
 
 export function ApiKeysWorkspace({ initial, locale }: { initial: Initial; locale: Locale }) {
@@ -24,7 +24,7 @@ export function ApiKeysWorkspace({ initial, locale }: { initial: Initial; locale
   const [branches, setBranches] = useState<BranchOption[]>(initial.status === 'ok' ? initial.branches : []);
   const [loadStatus, setLoadStatus] = useState(initial.status);
   const [name, setName] = useState('');
-  const [scopes, setScopes] = useState<DataScope[]>(resources.map((resource): DataScope => `${resource}:read`));
+  const [scopes, setScopes] = useState<DataScope[]>(resources.filter((resource) => resource !== 'portal-complaints').map((resource): DataScope => `${resource}:read`));
   const [allBranches, setAllBranches] = useState(true);
   const [branchIds, setBranchIds] = useState<string[]>([]);
   const [issued, setIssued] = useState<{ key: DataApiKey; secret: string } | null>(null);
@@ -43,7 +43,10 @@ export function ApiKeysWorkspace({ initial, locale }: { initial: Initial; locale
   }
 
   function toggleScope(scope: DataScope) {
-    setScopes((current) => current.includes(scope) ? current.filter((item) => item !== scope) : [...current, scope]);
+    setScopes((current) => {
+      if (current.includes(scope)) return current.filter((item) => item !== scope && !(scope === 'customers:read' && item === 'portal-complaints:read'));
+      return [...new Set([...current, scope, ...(scope === 'portal-complaints:read' ? ['customers:read' as DataScope] : [])])];
+    });
   }
 
   async function create() {

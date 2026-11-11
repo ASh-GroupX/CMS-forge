@@ -46,7 +46,13 @@ test('portal submission route delegates parsed public request context', async ()
   assert.deepEqual(calls[0], {
     ...validBody(),
     customerName: 'Faisal Al-Otaibi',
-    branchId: 'branch_main',
+    branchId: null,
+    categoryId: null,
+    departmentId: null,
+    severity: null,
+    subject: '',
+    manualTriage: true,
+    odometer: null,
     correlationId: 'req_portal',
     ipAddress: '203.0.113.90',
     userAgent: 'node:test',
@@ -141,6 +147,8 @@ test('portal manual triage fills missing catalog IDs from active defaults', asyn
     categoryId: 'cat_default',
     severity: ComplaintSeverity.MEDIUM,
     manualTriage: true,
+    subject: 'Nissan Patrol',
+    vehicleDataUnavailableReason: null,
     actorId: null,
     customerNumber: null,
     saveAsDraft: false,
@@ -251,6 +259,13 @@ test('portal submission route rejects invalid body before service call', async (
     (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED',
   );
   assert.equal(called, false);
+});
+
+test('portal form requires make and model and rejects negative odometer', async () => {
+  const controller = controllerWith({ submitComplaint: async () => { throw new Error('should not submit'); } });
+  await assert.rejects(controller.submitComplaint({ ...validBody(), vehicleBrand: '' }, request()), (error: unknown) => error instanceof AppException && error.fieldErrors.some((item) => item.field === 'vehicleBrand'));
+  await assert.rejects(controller.submitComplaint({ ...validBody(), vehicleModel: '' }, request()), (error: unknown) => error instanceof AppException && error.fieldErrors.some((item) => item.field === 'vehicleModel'));
+  await assert.rejects(controller.submitComplaint({ ...validBody(), odometer: -1 }, request()), (error: unknown) => error instanceof AppException && error.fieldErrors.some((item) => item.field === 'odometer'));
 });
 
 test('portal submission route uses the portal rate limit guard', () => {

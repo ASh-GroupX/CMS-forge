@@ -1,5 +1,10 @@
 import { forwardRef, Module } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { AuditService } from '../../core/audit.service.js';
+import { RbacGuard, SESSION_AUTH_SERVICE, SessionAuthGuard } from '../../core/auth.guard.js';
+import { CsrfGuard } from '../../core/csrf.guard.js';
+import { AuthModule } from '../auth/auth.module.js';
+import { AuthService } from '../auth/auth.service.js';
 import { PrismaService } from '../../core/http-kernel.js';
 import {
   InMemoryLoginRateLimitStore,
@@ -16,12 +21,19 @@ import { NotificationsService } from '../notifications/notifications.service.js'
 import { PortalController } from './portal.controller.js';
 import { PortalRepository } from './portal.repository.js';
 import { PortalService } from './portal.service.js';
+import { PortalIntakeSettingsController } from './portal-intake-settings.controller.js';
+import { PortalIntakeSettingsService } from './portal-intake-settings.service.js';
 
 @Module({
-  imports: [ComplaintsModule, NotificationsModule, forwardRef(() => AttachmentsModule)],
-  controllers: [PortalController],
+  imports: [AuthModule, ComplaintsModule, NotificationsModule, forwardRef(() => AttachmentsModule)],
+  controllers: [PortalController, PortalIntakeSettingsController],
   providers: [
     PrismaService,
+    { provide: SESSION_AUTH_SERVICE, inject: [AuthService], useFactory: (auth: AuthService) => auth },
+    SessionAuthGuard,
+    { provide: RbacGuard, inject: [Reflector, AuditService], useFactory: (reflector: Reflector, audit: AuditService) => new RbacGuard(reflector, audit) },
+    CsrfGuard,
+    PortalIntakeSettingsService,
     { provide: AuditService, inject: [PrismaService], useFactory: (prisma: PrismaService) => new AuditService(prisma) },
     { provide: LOGIN_RATE_LIMIT_STORE, useClass: InMemoryLoginRateLimitStore },
     PortalSubmissionRateLimitGuard,

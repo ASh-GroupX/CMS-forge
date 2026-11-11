@@ -4,7 +4,7 @@ import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
 
 type PortalClient = Pick<Prisma.TransactionClient, 'portalVerification' | 'portalSession'>;
-type PortalCatalogClient = Pick<Prisma.TransactionClient, 'branch' | 'department' | 'category'>;
+type PortalCatalogClient = Pick<Prisma.TransactionClient, 'portalIntakeSetting' | 'department'>;
 
 export type CreatePortalVerificationData = {
   complaintId: string;
@@ -95,16 +95,10 @@ export class PortalRepository {
   }
 
   async findManualTriageDefaults(client: PortalCatalogClient = this.prisma): Promise<PortalManualTriageDefaults | null> {
-    const [branch, department, category] = await Promise.all([
-      client.branch.findFirst({ orderBy: [{ nameEn: 'asc' }, { id: 'asc' }], select: { id: true }, where: { isActive: true } }),
-      client.department.findFirst({ orderBy: [{ nameEn: 'asc' }, { id: 'asc' }], select: { id: true }, where: { isActive: true } }),
-      client.category.findFirst({
-        orderBy: [{ nameEn: 'asc' }, { id: 'asc' }],
-        select: { id: true },
-        where: { isActive: true },
-      }),
-    ]);
-    return branch && department && category ? { branchId: branch.id, departmentId: department.id, categoryId: category.id } : null;
+    const settings = await client.portalIntakeSetting.findUnique({ where: { id: 'default' }, select: { branchId: true, categoryId: true } });
+    if (!settings) return null;
+    const department = await client.department.findFirst({ where: { isActive: true, OR: [{ branchId: settings.branchId }, { branchId: null }] }, select: { id: true } });
+    return department ? { branchId: settings.branchId, departmentId: department.id, categoryId: settings.categoryId } : null;
   }
 }
 

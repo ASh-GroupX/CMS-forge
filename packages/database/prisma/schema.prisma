@@ -318,6 +318,7 @@ model Branch {
   Category                    Category[]
   serviceBookingRules         ServiceBookingRule[]
   serviceAppointments         ServiceAppointment[]
+  portalIntakeSettings        PortalIntakeSetting[]
 
   @@map("branches")
 }
@@ -411,6 +412,7 @@ model User {
   uploadedNoteAttachments   TicketNoteAttachment[] @relation("TicketNoteAttachmentUploadedBy")
   ticketRule                UserTicketRule?
   bookingRule               UserBookingRule?
+  portalIntakeMemberships   PortalIntakeMember[]
 
   id                        String                     @id @default(cuid())
   email                     String?                    @unique
@@ -549,6 +551,7 @@ model Category {
   parent      Category?   @relation("CategoryTree", fields: [parentId], references: [id])
   children    Category[]  @relation("CategoryTree")
   complaints  Complaint[]
+  portalIntakeSettings PortalIntakeSetting[]
   slaPolicies SlaPolicy[]
 
   @@index([parentId])
@@ -594,6 +597,8 @@ model Vehicle {
 }
 
 model Complaint {
+  vehicleMakeSnapshot String? @map("vehicle_make_snapshot")
+  vehicleModelSnapshot String? @map("vehicle_model_snapshot")
   rootCauseCategory String?                    @map("root_cause_category")
   salesAdvisorName String?                     @map("sales_advisor_name")
   odometer        Int?                         @map("odometer")
@@ -673,6 +678,35 @@ model Complaint {
   @@index([ownerId])
   @@index([referenceNumber])
   @@map("complaints")
+}
+
+model PortalIntakeSetting {
+  id               String   @id @default("default")
+  branchId         String   @map("branch_id")
+  categoryId       String   @map("category_id")
+  phoneCountryCode String   @default("+962") @map("phone_country_code")
+  version          Int      @default(1)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  branch           Branch   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  category         Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  members          PortalIntakeMember[]
+
+  @@map("portal_intake_settings")
+}
+
+model PortalIntakeMember {
+  id        String    @id @default(cuid())
+  settingId String    @map("setting_id")
+  userId    String    @map("user_id")
+  removedAt DateTime? @map("removed_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  setting   PortalIntakeSetting @relation(fields: [settingId], references: [id], onDelete: Restrict)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([settingId, removedAt])
+  @@index([userId, removedAt])
+  @@map("portal_intake_members")
 }
 
 model ComplaintStatusHistory {

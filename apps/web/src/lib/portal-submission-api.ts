@@ -20,6 +20,9 @@ export type PortalComplaintCreateRequest = {
   manualTriage?: boolean;
   vehicleRelated?: boolean;
   vehicleVin?: string | null;
+  vehicleBrand: string;
+  vehicleModel: string;
+  odometer?: number | null;
   attachments?: PortalComplaintAttachmentRequest[];
 };
 

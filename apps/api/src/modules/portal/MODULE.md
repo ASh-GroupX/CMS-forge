@@ -20,6 +20,8 @@ Agent context manifest. Read this before editing the module.
 
 - `portal_verifications`
 - `portal_sessions`
+- `portal_intake_settings`
+- `portal_intake_members`
 - `branches`
 - `categories`
 - `departments`
@@ -29,6 +31,7 @@ Agent context manifest. Read this before editing the module.
 - `core/http-kernel` for stable API errors and request context.
 - `core/audit.service` for portal verification/security audit entries.
 - `core/rate-limit.guard` for public portal abuse protection.
+- `modules/auth` public service for Admin session guards.
 - ComplaintsService through ComplaintsModule for complaint creation and tracking reads.
 - ComplaintFormOptionsService through ComplaintsModule for public-safe branch,
   category, and severity option catalogs.
@@ -44,6 +47,7 @@ Agent context manifest. Read this before editing the module.
 - REQ-PORTAL-002
 - PORTAL-SEC-001
 - REQ-NOTIFY-001
+- REQ-ADMIN-001
 - REQ-SURVEY-001
 - ARCH-WORKFLOW-001
 - METHOD-AUDIT-001

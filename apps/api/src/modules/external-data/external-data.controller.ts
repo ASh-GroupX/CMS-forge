@@ -21,6 +21,13 @@ export class ExternalDataController {
     return this.data.page('complaints', query, request);
   }
 
+  @Get('portal-complaints')
+  @UseGuards(IntegrationApiKeyGuard)
+  @IntegrationApiScopes('portal-complaints:read', 'customers:read')
+  portalComplaints(@Query() query: Record<string, unknown>, @Req() request: IntegrationApiRequest) {
+    return this.data.page('portal-complaints', query, request);
+  }
+
   @Get('tasks')
   @UseGuards(IntegrationApiKeyGuard)
   @IntegrationApiScopes('tasks:read')

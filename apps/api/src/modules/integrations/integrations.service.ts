@@ -123,7 +123,7 @@ export class IntegrationsService {
   }
 }
 
-export const DATA_API_KEY_SCOPES = ['customers:read', 'complaints:read', 'tasks:read', 'appointments:read', 'tickets:read'] as const;
+export const DATA_API_KEY_SCOPES = ['customers:read', 'complaints:read', 'portal-complaints:read', 'tasks:read', 'appointments:read', 'tickets:read'] as const;
 export type DataApiKeyScope = (typeof DATA_API_KEY_SCOPES)[number];
 export type SafeIntegrationApiKey = Omit<IntegrationApiKeyRecord, 'createdAt' | 'lastUsedAt' | 'revokedAt'> & {
   createdAt: string; lastUsedAt: string | null; revokedAt: string | null;

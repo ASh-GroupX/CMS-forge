@@ -1,9 +1,11 @@
 # Current State
 
 Date: 2026-11-11
-Status: Complete — booking lookup
-Risk: Medium
+Status: In progress — QR complaint intake
+Risk: High
 
-- Previous booking polish is live at 2ec14c9; release evidence is recorded in `.forge/evidence.md`.
-- Implemented search of the existing protected appointment list by name or normalized phone, including Arabic numerals and local/international phone formats. Results show status/date/time/center and open the selected booking in its day and branch. Load failure shows localized error and retry instead of false no-match.
-- Passed: EN desktop/AR mobile browser proof with axe, web 231/231, booking API 34/34, root 78/78 with 89.95% line coverage, typecheck, lint, OpenAPI, security, build, diff check. Independent GPT-6.1 Sol review accepted with conditions: preferred named reviewer unavailable; signed-in production UAT and calendar past-hour expansion after closing detail remain. Commit cad0532 reached waleed and production; workflow 43011906177 succeeded, live health returned 200 and matching revision. Preserve `tmp/` and `uploads/`.
+- Intake configuration backend slice added: versioned branch/category/phone prefix, soft-preserved member rows, Admin-only GET/PUT, optimistic conflict, target validation, configuration audit, and explicit portal fallback lookup.
+- External Data API slice added: `portal-complaints:read` plus `customers:read` exposes an explicit, branch-scoped, paginated projection of QR form customer name, phone, reference, description, vehicle, and dates. The Admin API-key screen offers the resource and automatically selects the customer scope. Only creation-time portal history identifies eligible records, excluding later follow-ups to staff-created complaints.
+- Passed: Prisma validate/generate, `typecheck`, `lint`, `test:api -- integrations` (54/54), `test:api -- portal` (15/15), `openapi:check`, `db:migrate:test`, `security:check`, `git diff --check`. Earlier form visual/accessibility previews passed before this API-only edit.
+- Not run: live database migration and keyed HTTP pull, current screenshot review, full suite, deployment. No production SMS provider is configured; SMS is deferred per user request.
+- Customer form now has required name/phone/make/model/description, optional VIN/odometer/files, editable default date, and server-owned routing defaults. Country-code UX, detailed input validation, screenshot review, Admin settings UI/QR, shared staff queue, claim, and redirect remain. No push or deployment has occurred. Preserve `tmp/` and `uploads/`.

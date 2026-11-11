@@ -3,7 +3,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { FormSelect } from '../ui/form-select';
 import { Textarea } from '../ui/textarea';
 import { StateBlock } from '../shared/ui-primitives';
 import { LocalizedFileInput } from '../shared/localized-file-input';
@@ -14,7 +13,6 @@ import {
   type PortalAttachmentWarning,
   type PortalComplaintCreateRequest,
   type PortalFieldError,
-  type PortalSubmissionOption,
   type PortalSubmissionOptions,
 } from '../../lib/portal-submission-api';
 export type PortalSubmissionFixtureState = 'loading' | 'validation' | 'success' | 'error';
@@ -37,15 +35,7 @@ export function PortalSubmissionScreen({
   state?: PortalSubmissionFixtureState | undefined;
 }) {
   const t = portalSubmissionText[locale];
-  const resolvedOptions = options ?? emptyOptions;
-
-  const optionsUnavailable = !hasRequiredOptions(resolvedOptions);
   const [submitState, setSubmitState] = useState<SubmitState>({ kind: 'idle' });
-  const [branchId, setBranchId] = useState('');
-  const [departmentId, setDepartmentId] = useState('');
-  const [vehicleRelated, setVehicleRelated] = useState(false);
-  const departments = resolvedOptions.departments.filter((option) => !branchId || option.branchId === branchId);
-  const categories = resolvedOptions.categories.filter((option) => !departmentId || option.departmentId === departmentId);
   const visibleState = submitState.kind === 'idle' ? previewState(state, reference, locale, attachmentWarning) : submitState;
   const messageState = visibleState;
   const fieldErrors = visibleState.kind === 'validation' ? visibleState.fieldErrors : [];
@@ -99,26 +89,12 @@ export function PortalSubmissionScreen({
             <TextField error={fieldError(fieldErrors, 'customerPhone', locale)} label={t.fields.customerPhone} name="customerPhone" type="tel" />
           </FieldGroup>
           <FieldGroup title={t.sections.complaint}>
-            <input name="manualTriage" type="hidden" value={optionsUnavailable ? 'true' : 'false'} />
-            {optionsUnavailable ? (
-              <div className="grid gap-2 md:col-span-2">
-                <StateBlock message={t.states.options} tone="warning" />
-                <Button asChild type="button" variant="outline"><a href={`?locale=${locale}`}>{t.actions.retryOptions}</a></Button>
-              </div>
-            ) : (
-              <>
-                <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'branchId', locale)} label={t.fields.branch} name="branchId" onChange={setBranchId} options={selectOptions(resolvedOptions.branches, locale)} />
-                <SelectField choose={t.choices.choose} disabled={!branchId} error={fieldError(fieldErrors, 'departmentId', locale)} key={branchId} label={t.fields.department} name="departmentId" onChange={setDepartmentId} options={selectOptions(departments, locale)} />
-                <SelectField choose={t.choices.choose} disabled={!departmentId} error={fieldError(fieldErrors, 'categoryId', locale)} key={`${branchId}-${departmentId}`} label={t.fields.category} name="categoryId" options={selectOptions(categories, locale)} />
-                <SelectField choose={t.choices.choose} error={fieldError(fieldErrors, 'severity', locale)} label={t.fields.severity} name="severity" options={resolvedOptions.severities.map((value) => ({ label: t.severityLabels[value], value }))} />
-              </>
-            )}
+            <input name="manualTriage" type="hidden" value="true" />
             <Label className="grid gap-1 text-sm font-medium" htmlFor="incidentAt">
               {t.fields.incidentAt}
-              <Input aria-describedby={fieldError(fieldErrors, 'incidentAt', locale) ? 'incidentAt-error' : undefined} aria-invalid={Boolean(fieldError(fieldErrors, 'incidentAt', locale))} className="min-h-11" id="incidentAt" name="incidentAt" type="date" />
+              <Input aria-describedby={fieldError(fieldErrors, 'incidentAt', locale) ? 'incidentAt-error' : undefined} aria-invalid={Boolean(fieldError(fieldErrors, 'incidentAt', locale))} className="min-h-11" defaultValue={new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Amman', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())} id="incidentAt" name="incidentAt" type="date" />
               <FieldError id="incidentAt-error" message={fieldError(fieldErrors, 'incidentAt', locale)} />
             </Label>
-            <TextField error={fieldError(fieldErrors, 'subject', locale)} label={t.fields.subject} name="subject" />
             <Label className="grid gap-1 text-sm font-medium md:col-span-2" htmlFor="description">
               {t.fields.description}
               <Textarea aria-describedby={fieldError(fieldErrors, 'description', locale) ? 'description-error' : undefined} aria-invalid={Boolean(fieldError(fieldErrors, 'description', locale))} className="min-h-28" id="description" name="description" />
@@ -126,11 +102,10 @@ export function PortalSubmissionScreen({
             </Label>
           </FieldGroup>
           <FieldGroup title={t.sections.vehicle}>
-            <Label className="flex items-center gap-2 text-sm font-medium">
-              <Input className="size-4" name="vehicleRelated" onChange={(event) => setVehicleRelated(event.currentTarget.checked)} type="checkbox" />
-              {t.fields.vehicleRelated}
-            </Label>
-            {vehicleRelated ? <TextField error={fieldError(fieldErrors, 'vehicleVin', locale)} label={t.fields.vehicleVin} name="vehicleVin" /> : null}
+            <TextField error={fieldError(fieldErrors, 'vehicleBrand', locale)} label={t.fields.vehicleBrand} name="vehicleBrand" />
+            <TextField error={fieldError(fieldErrors, 'vehicleModel', locale)} label={t.fields.vehicleModel} name="vehicleModel" />
+            <TextField error={fieldError(fieldErrors, 'vehicleVin', locale)} label={t.fields.vehicleVin} name="vehicleVin" />
+            <TextField error={fieldError(fieldErrors, 'odometer', locale)} label={t.fields.odometer} name="odometer" type="number" />
           </FieldGroup>
           <FieldGroup title={t.sections.attachments}>
             <details className="rounded-sm border border-line-subtle bg-surface px-3 py-2 md:col-span-2">
@@ -148,7 +123,7 @@ export function PortalSubmissionScreen({
           </FieldGroup>
 
           <Button className="min-h-12 w-full text-base font-medium transition-transform active:scale-95 shadow-md md:col-span-2" disabled={visibleState.kind === 'loading'} type="submit">
-            {visibleState.kind === 'loading' ? t.actions.submitting : optionsUnavailable ? t.actions.submitManualReview : t.actions.submit}
+            {visibleState.kind === 'loading' ? t.actions.submitting : t.actions.submit}
           </Button>
       </form>
       )}
@@ -162,10 +137,13 @@ export function buildPortalComplaintSubmission(formData: FormData): PortalCompla
     customerPhone: textValue(formData, 'customerPhone'),
     description: textValue(formData, 'description'),
     incidentAt: incidentAtValue(textValue(formData, 'incidentAt')),
-    subject: textValue(formData, 'subject'),
-    ...(formData.get('manualTriage') === 'true' ? { manualTriage: true } : {}),
-    vehicleRelated: formData.get('vehicleRelated') === 'on',
+    subject: '',
+    manualTriage: true,
+    vehicleRelated: true,
     vehicleVin: optionalTextValue(formData, 'vehicleVin'),
+    vehicleBrand: textValue(formData, 'vehicleBrand'),
+    vehicleModel: textValue(formData, 'vehicleModel'),
+    odometer: optionalNumberValue(formData, 'odometer'),
   };
   const branchId = optionalTextValue(formData, 'branchId');
   const departmentId = optionalTextValue(formData, 'departmentId');
@@ -241,20 +219,10 @@ function TextField({ error, label, name, type = 'text' }: { error?: string | und
   return <Label className="grid gap-1 text-sm font-medium" htmlFor={name}>{label}<Input aria-describedby={error ? `${name}-error` : undefined} aria-invalid={Boolean(error)} className="min-h-11" id={name} name={name} type={type} /><FieldError id={`${name}-error`} message={error} /></Label>;
 }
 
-function SelectField({ choose, disabled = false, error, label, name, onChange, options }: { choose: string; disabled?: boolean; error?: string | undefined; label: string; name: string; onChange?: (value: string) => void; options: Array<{ label: string; value: string }> }) {
-  return (
-    <Label className="grid gap-1 text-sm font-medium" htmlFor={name}>
-      {label}
-      <FormSelect aria-describedby={error ? `${name}-error` : undefined} aria-invalid={Boolean(error)} className="min-h-11" disabled={disabled} id={name} name={name} onValueChange={onChange} options={options} placeholder={choose} />
-      <FieldError id={`${name}-error`} message={error} />
-    </Label>
-  );
-}
-
 function FieldError({ id, message }: { id?: string; message?: string | undefined }) { return message ? <span className="text-xs font-semibold text-status-error" id={id} role="alert">{message}</span> : null; }
 
 function validateSubmission(input: PortalComplaintCreateRequest): PortalFieldError[] {
-  const required = input.manualTriage ? ['customerName', 'customerPhone', 'description', 'incidentAt', 'subject'] : ['customerName', 'customerPhone', 'branchId', 'departmentId', 'categoryId', 'description', 'incidentAt', 'subject', 'severity'];
+  const required = ['customerName', 'customerPhone', 'vehicleBrand', 'vehicleModel', 'description', 'incidentAt'];
   return required
     .filter((field) => !String(input[field as keyof PortalComplaintCreateRequest] ?? '').trim())
     .map((field) => ({ field, code: 'REQUIRED', message: `${field} is required.` }));
@@ -282,6 +250,10 @@ function textValue(formData: FormData, field: string): string {
 function optionalTextValue(formData: FormData, field: string): string | null {
   return textValue(formData, field) || null;
 }
+function optionalNumberValue(formData: FormData, field: string): number | null {
+  const value = textValue(formData, field);
+  return value && /^\d+$/.test(value) ? Number(value) : null;
+}
 function incidentAtValue(value: string): string {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00.000Z` : value;
 }
@@ -289,12 +261,3 @@ function portalAttachmentFiles(formData: FormData): File[] {
   if (typeof File === 'undefined') return [];
   return formData.getAll('attachments').filter((value): value is File => value instanceof File && value.size > 0 && Boolean(value.name.trim()));
 }
-function selectOptions(options: PortalSubmissionOption[], locale: PortalLocale): Array<{ label: string; value: string }> {
-  return options.map((option) => ({ label: locale === 'ar' ? option.nameAr : option.nameEn, value: option.id }));
-}
-
-function hasRequiredOptions(options: PortalSubmissionOptions): boolean {
-  return Boolean(options.branches.length && options.departments.length && options.categories.length && options.severities.length);
-}
-
-const emptyOptions: PortalSubmissionOptions = { branches: [], departments: [], categories: [], severities: [] };

@@ -1,4 +1,4 @@
-const resources = ['customers', 'complaints', 'tasks', 'appointments', 'tickets'] as const;
+const resources = ['customers', 'complaints', 'portal-complaints', 'tasks', 'appointments', 'tickets'] as const;
 export type DataResource = (typeof resources)[number];
 export type DataScope = `${DataResource}:read`;
 export type DataApiKey = {

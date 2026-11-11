@@ -1,7 +1,12 @@
-# Booking lookup by customer name or phone
+# QR complaint intake — external customer data API
 
-Status: Complete
-Risk: Medium
-SRS: UI-DESIGN-001, METHOD-API-001, REQ-RBAC-001
+Status: Implemented locally; subsequent slices pending
+Risk: High
+Required model tier: GPT-6 Sol or higher
+SRS: REQ-INT-DATA-001, REQ-PORTAL-001, PORTAL-SEC-001, REQ-RBAC-001, METHOD-API-001
 
-Implemented and deployed: English/Arabic booking search above the calendar using the existing protected appointment list. It matches customer name and normalized phone, shows status/date/time/center, limits visible results to 20, and opens the selected appointment after setting its day and branch. API load failure has a localized retry state. Browser proof, visual review, all checks, independent review, production workflow, health, and revision passed. Preserve `tmp/` and `uploads/`. Next task awaits user direction.
+Scope: add a distinct read-only External Data API option for QR/portal complaint customer details (name, phone, vehicle, description, reference, date). Require its own key scope, enforce stored branch scope, exclude DMS/staff-private data, document in OpenAPI, and add a selectable option in the Admin API-key UI. No SMS delivery. Preserve `tmp/` and `uploads/`.
+
+Proof: `typecheck`, `lint`, `test:api -- integrations`, `openapi:check`, `security:check`, and a focused API key branch-scope/PII test.
+
+Next slice: finish the customer form validation and states, then Admin settings UI and QR download with Admin Hub tile/per-user visibility. Subsequent slices add the protected redirect queue, claim, audited correction, and atomic routing. SMS delivery is deferred. Push only after the complete non-SMS flow and proof gates pass.
