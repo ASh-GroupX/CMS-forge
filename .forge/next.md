@@ -1,7 +1,7 @@
-# Booking sidebar: next three available slots
+# Booking enhancements: final proof and release
 
 Status: In Progress
 Risk: Medium
-SRS: UI-DESIGN-001, SR-BOOK-002, METHOD-API-001
+SRS: UI-DESIGN-001, METHOD-API-001, REQ-AUDIT-001, REQ-RBAC-001, REQ-INT-DATA-001
 
-Phase 1 is complete and independently reviewed. Phase 2: add a Nest read endpoint for the next three bookable 15-minute slots across the selected active service center(s), using existing server availability rules and Amman time. Show the three choices under the capacity card with date, time, branch, remaining seats, loading/empty/error states, and a Book action that preselects the clicked slot. Keep the server authoritative and document the route in OpenAPI. Then phase 3 adds the maintenance dropdown and separately persisted periodic mileage. Final proof and release follow. Preserve `tmp/` and `uploads/`.
+Phases 1–3 are implemented locally: horizontal 15-minute calendar rows; next-three server availability under the selected day's capacity; a maintenance dropdown with separately stored periodic mileage from 1,000 to 150,000 km. Final task: run focused and full proof, inspect EN/AR screenshots, obtain fresh phase review, then push to waleed and merge/deploy production under the user's standing authorization. Verify public revision and health. Preserve `tmp/` and `uploads/`. The service-booking module manifest's SR-BOOK identifiers are absent from the numbered SRS; use the listed real IDs and record that gap.

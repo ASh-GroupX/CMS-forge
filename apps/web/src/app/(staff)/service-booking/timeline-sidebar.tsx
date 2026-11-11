@@ -3,6 +3,7 @@
 import React from 'react';
 import { Calendar as CalendarIcon, CheckCircle2, ChevronLeft, ChevronRight, Clock, Info } from 'lucide-react';
 import { useServiceBooking } from './service-booking-context';
+import { NextAvailableCard } from './next-available-card';
 
 export function TimelineSidebar() {
   const {
@@ -12,6 +13,7 @@ export function TimelineSidebar() {
     selectedBranchId,
     selectedDate,
     setSelectedDate,
+    slotAvailability,
     t,
   } = useServiceBooking();
 
@@ -54,8 +56,13 @@ export function TimelineSidebar() {
     return false;
   }).length;
 
-  const dayOfWeek = currentObj.getUTCDay();
-  const isWeekend = dayOfWeek === 5; // Friday closed
+  const capacityDays = selectedBranchId === 'ALL'
+    ? branches.map((branch) => slotAvailability[branch.id])
+    : [slotAvailability[selectedBranchId]];
+  const isLoadingCapacity = capacityDays.some((day) => !day);
+  const isClosed = !isLoadingCapacity && capacityDays.every((day) => !day?.isOpen);
+  const isFull = !isLoadingCapacity && !isClosed && capacityDays.every((day) =>
+    !day?.isOpen || day.bookedDailyCount >= day.maxDailyAppointments);
 
   const weekDayLabels = isAr
     ? ['أح', 'إث', 'ثل', 'أر', 'خم', 'جم', 'سب']
@@ -93,7 +100,7 @@ export function TimelineSidebar() {
         {/* Days of week header */}
         <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-content-muted mb-1">
           {weekDayLabels.map((lbl, idx) => (
-            <div className={idx === 5 ? 'text-rose-500' : ''} key={idx}>
+            <div className={idx === 5 ? 'text-content-strong' : ''} key={idx}>
               {lbl}
             </div>
           ))}
@@ -149,18 +156,20 @@ export function TimelineSidebar() {
             <span className="text-xs text-content-muted">{t.dailyStats.status}</span>
             <span
               className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${
-                isWeekend
+                isClosed || isFull
                   ? 'bg-status-error-bg text-status-error'
-                  : 'bg-status-success-bg text-status-success'
+                  : 'bg-status-success-bg text-content-strong'
               }`}
             >
-              {isWeekend ? t.dailyStats.closed : t.dailyStats.open}
+              {isLoadingCapacity ? t.timeline.loadingAvailability : isClosed ? t.dailyStats.closed : isFull ? t.timeline.dayFull : t.dailyStats.open}
             </span>
           </div>
         </div>
       </div>
 
       {/* Capacity & Slot Legend */}
+      <NextAvailableCard />
+
       <div className="rounded-2xl border border-line-subtle bg-surface p-4 shadow-sm">
         <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-content-muted mb-3">
           <Info className="size-3.5 text-brand" />
@@ -170,7 +179,7 @@ export function TimelineSidebar() {
           <div className="flex items-start gap-2.5 rounded-xl border border-status-success-border bg-status-success-bg/40 p-2">
             <span className="mt-0.5 size-2.5 shrink-0 rounded-full bg-status-success ring-4 ring-status-success/20" />
             <div>
-              <p className="font-semibold text-status-success">
+              <p className="font-semibold text-content-strong">
                 {t.legend.available}
               </p>
               <p className="text-[11px] text-content-muted">{t.legend.availableDesc}</p>
@@ -180,7 +189,7 @@ export function TimelineSidebar() {
           <div className="flex items-start gap-2.5 rounded-xl border border-status-warning-border bg-status-warning-bg/40 p-2">
             <span className="mt-0.5 size-2.5 shrink-0 rounded-full bg-status-warning ring-4 ring-status-warning/20" />
             <div>
-              <p className="font-semibold text-status-warning">
+              <p className="font-semibold text-content-strong">
                 {t.legend.partial}
               </p>
               <p className="text-[11px] text-content-muted">{t.legend.partialDesc}</p>

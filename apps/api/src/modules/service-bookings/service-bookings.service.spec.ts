@@ -19,6 +19,17 @@ test('booking parser never substitutes a default vehicle', () => {
   assert.throws(() => parseCreateServiceAppointmentBody({ customerName: 'Test', customerPhone: '0790000000' }), /vehicle model.*required/i);
 });
 
+test('periodic mileage accepts the offered values and rejects invalid values', () => {
+  const base = { customerName: 'Test', customerPhone: '0790000000', carModelId: 'c1',
+    maintenanceTypeId: 'maint_periodic_10k', date: '2026-11-02', startTime: '11:15' };
+  for (const value of [1000, 5000, 10000, 150000]) {
+    assert.equal(parseCreateServiceAppointmentBody({ ...base, periodicMileageKm: value }).periodicMileageKm, value);
+  }
+  for (const value of [0, 999, 6000, 160000, 'oops']) {
+    assert.throws(() => parseCreateServiceAppointmentBody({ ...base, periodicMileageKm: value }), /valid periodic maintenance mileage/i);
+  }
+});
+
 test.beforeEach(() => { mock.timers.enable({ apis: ['Date'], now: new Date('2026-10-01T00:00:00Z') }); });
 
 test.afterEach(() => { mock.timers.reset(); });
@@ -64,6 +75,15 @@ test('booking rejects missing or deactivated catalog models without creating an 
   }
 });
 
+test('booking rejects an inactive maintenance type', async () => {
+  const service = new ServiceBookingsService(createMockRepository({
+    findMaintenanceTypeById: async () => ({ id: 'maint_periodic_20k', nameEn: 'Periodic Maintenance 20,000 km', isActive: false }),
+  }));
+  await assert.rejects(service.createAppointment({ customerName: 'Test', customerPhone: '0790000000',
+    carModelId: 'c1', maintenanceTypeId: 'maint_periodic_20k', periodicMileageKm: 20000,
+    branchId: 'b_main', date: '2026-11-02', startTime: '09:00', notes: '' }), /active maintenance type/i);
+});
+
 test('createAppointment rejects when branch is closed on that day', async () => {
   const repo = createMockRepository({
     findRuleForDay: async () => ({
@@ -96,6 +116,26 @@ test('createAppointment rejects when branch is closed on that day', async () => 
     },
     /branch is closed on this day/i,
   );
+});
+
+test('booking rejects times outside configured slots and invalid 15-minute boundaries', async () => {
+  const service = new ServiceBookingsService(createMockRepository());
+  for (const startTime of ['19:15', '12:10']) {
+    await assert.rejects(service.createAppointment({ customerName: 'Test', customerPhone: '0790000000',
+      carModelId: 'c1', maintenanceTypeId: 'm1', branchId: 'b_main', date: '2026-11-02',
+      startTime, notes: '' }), /within the branch booking slots/i);
+  }
+});
+
+test('booking accepts an evening slot when the branch rule opens in the evening', async () => {
+  const service = new ServiceBookingsService(createMockRepository({ findRuleForDay: async () => ({
+    isOpen: true, startTime: '19:00', endTime: '21:00', maxDailyAppointments: 24,
+    maxPerHour: 3, maxPerSlot: 3, slotDurationMinutes: 15,
+  }) }));
+  const result = await service.createAppointment({ customerName: 'Test', customerPhone: '0790000000',
+    carModelId: 'c1', maintenanceTypeId: 'm1', branchId: 'b_main', date: '2026-11-02',
+    startTime: '19:15', notes: '' });
+  assert.equal(result.startTime, '19:15');
 });
 
 test('createAppointment rejects when daily limit is reached', async () => {
@@ -230,6 +270,29 @@ test('createAppointment succeeds and generates reference when within limits', as
   assert.equal(result.status, 'BOOKED');
   assert.equal(scheduled?.appointmentId, 'apt_1');
   assert.ok(scheduled?.revision);
+});
+
+test('periodic mileage is stored and returned with the booking', async () => {
+  let saved: any;
+  const repo = createMockRepository({
+    findMaintenanceTypeById: async (id: string) => id === 'maint_periodic_10k'
+      ? { id, nameEn: 'Periodic Maintenance 10,000 km', estimatedDurationMinutes: 30 }
+      : { id, nameEn: 'Oil and Filter Change', estimatedDurationMinutes: 30 },
+    createAppointment: async (data: any) => {
+      saved = data;
+      return { ...data, id: 'apt-periodic', createdAt: new Date(), updatedAt: new Date(), branch: null };
+    },
+  });
+  const service = new ServiceBookingsService(repo);
+  const result = await service.createAppointment({ customerName: 'Test', customerPhone: '0790000000',
+    carModelId: 'c1', maintenanceTypeId: 'maint_periodic_10k', periodicMileageKm: 150000,
+    branchId: 'b_main', date: '2026-11-02', startTime: '11:15', notes: '' });
+  assert.equal(saved.periodicMileageKm, 150000);
+  assert.equal(result.periodicMileageKm, 150000);
+  assert.equal(result.maintenanceTypeName, 'Periodic Maintenance 150,000 km');
+  await assert.rejects(service.createAppointment({ customerName: 'Test', customerPhone: '0790000000',
+    carModelId: 'c1', maintenanceTypeId: 'maint_oil_filter', periodicMileageKm: 1000,
+    branchId: 'b_main', date: '2026-11-02', startTime: '11:15', notes: '' }), /only valid for periodic maintenance/i);
 });
 
 test('rescheduling replaces the reminder using the updated appointment revision', async () => {

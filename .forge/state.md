@@ -1,8 +1,10 @@
 # Current State
 
-Date: 2026-11-10
-Status: In Progress — booking enhancements, phase 2
+Date: 2026-11-11
+Status: In Progress — booking final proof and release
 Risk: Medium
 
-- Phase 1 booking calendar rows completed locally: horizontal cards in each 15-minute slot, pinned left add button, per-slot scroll, aligned two-branch rows, no add action when full/past/unauthorized. EN/AR browser proof, typecheck, lint, and diff check passed. Independent GPT-6.1 Sol review: Accept With Conditions.
-- Phase 2 next-three-available suggestions is in progress. Phase 3 maintenance dropdown and periodic mileage follows. No booking changes have been deployed yet. Preserve tmp/ and uploads/.
+- Phase 1 calendar layout is committed locally as 718955e and independently reviewed with conditions. Phase 2 availability API/card and phase 3 maintenance dropdown/persisted mileage are implemented locally, with uncommitted repairs from review.
+- Final local proof passed: service-bookings 34/34, web 231/231, root 78/78, build, typecheck, lint, security, Prisma validation, migration SQL sanity, OpenAPI, EN/AR browser and axe. Screenshots were inspected.
+- A fresh independent GPT-6.1 Sol reviewer accepted the code after repairs. The preferred named tier was unavailable. Existing booking update/status audit transaction behavior remains a documented baseline gap outside these phases.
+- No booking changes are deployed. Preserve tmp/ and uploads/.

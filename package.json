@@ -25,6 +25,7 @@
     "test:reports:browser": "node --import tsx tools/report-board-browser.mjs",
     "test:booking:browser": "node --import tsx tools/booking-brand-browser.mjs",
     "test:booking-timeline:browser": "node --import tsx tools/timeline-capacity-browser.mjs",
+    "test:booking-suggestions:browser": "node --import tsx tools/booking-suggestions-browser.mjs",
     "test:booking-sms:browser": "node --import tsx tools/sms-reminder-browser.mjs",
     "test:notifications:browser": "node --import tsx tools/notification-indicator-browser.mjs",
     "test:ticket-phone:browser": "node --import tsx tools/ticket-phone-browser.mjs",

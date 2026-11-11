@@ -25,12 +25,16 @@ export const serviceBookingText = {
       fullDesc: 'Hour or daily capacity reached',
     },
     dailyStats: {
-      title: "Today's Capacity",
+      title: 'Selected Day Capacity',
       totalBooked: 'Booked Appointments',
       maxDaily: 'Daily Limit',
       status: 'Center Status',
       open: 'Open for Bookings',
       closed: 'Closed on this Day',
+    },
+    nextAvailable: {
+      title: 'Next available', subtitle: 'The next three bookable times', loading: 'Checking next available times',
+      error: 'Could not load available times.', retry: 'Try again', empty: 'No available times found in the next 30 days.', places: '{count} places left', book: 'Book',
     },
     timeline: {
       time: 'Time',
@@ -76,6 +80,8 @@ export const serviceBookingText = {
       noCarFound: 'No car models found',
       maintenanceType: 'Maintenance Type',
       selectMaintenanceType: 'Select service type',
+      periodicMaintenance: 'Periodic Maintenance', periodicMileage: 'Service mileage',
+      selectMileage: 'Select mileage', mileageRequired: 'Select a mileage for periodic maintenance.',
       branch: 'Service Branch',
       date: 'Appointment Date',
       timeSlot: '15-Minute Slot',
@@ -166,12 +172,16 @@ export const serviceBookingText = {
       fullDesc: 'تم الوصول للحد الأقصى للساعة أو اليوم',
     },
     dailyStats: {
-      title: 'سعة اليوم',
+      title: 'سعة اليوم المحدد',
       totalBooked: 'المواعيد المحجوزة',
       maxDaily: 'الحد الأقصى اليومي',
       status: 'حالة المركز',
       open: 'مفتوح للحجوزات',
       closed: 'مغلق في هذا اليوم',
+    },
+    nextAvailable: {
+      title: 'المواعيد المتاحة التالية', subtitle: 'أقرب ثلاثة مواعيد قابلة للحجز', loading: 'جارٍ البحث عن المواعيد المتاحة',
+      error: 'تعذر تحميل المواعيد المتاحة.', retry: 'إعادة المحاولة', empty: 'لم نجد موعداً متاحاً خلال الثلاثين يوماً القادمة.', places: '{count} أماكن متبقية', book: 'حجز',
     },
     timeline: {
       time: 'الوقت',
@@ -217,6 +227,8 @@ export const serviceBookingText = {
       noCarFound: 'لم يتم العثور على سيارات مطابقة',
       maintenanceType: 'نوع الصيانة المطلوبة',
       selectMaintenanceType: 'اختر نوع الصيانة',
+      periodicMaintenance: 'الصيانة الدورية', periodicMileage: 'مسافة الصيانة',
+      selectMileage: 'اختر المسافة', mileageRequired: 'يرجى اختيار المسافة للصيانة الدورية.',
       branch: 'فرع الصيانة',
       date: 'تاريخ الموعد',
       timeSlot: 'الفترة (كل 15 دقيقة)',

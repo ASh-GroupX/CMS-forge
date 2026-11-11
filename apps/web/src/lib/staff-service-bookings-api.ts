@@ -31,6 +31,7 @@ export type ServiceAppointment = {
   carModelName: string;
   maintenanceTypeId: string;
   maintenanceTypeName: string;
+  periodicMileageKm?: number | null;
   notes: string;
   date: string;
   startTime: string;
@@ -105,6 +106,7 @@ export type CreateAppointmentInput = {
   vin?: string | null;
   carModelId: string;
   maintenanceTypeId: string;
+  periodicMileageKm?: number | null;
   date: string;
   startTime: string;
   durationMinutes?: number;

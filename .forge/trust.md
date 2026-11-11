@@ -1579,6 +1579,12 @@ The independent GPT-6.1 Sol reviewer found that global target departments made d
 
 Commit 2aedef2 reached waleed and production. Workflow 42819848903 passed validation and VPS deployment. The public revision matched, health returned 200 with database configured, and the new protected routes returned 401 without a key. No production key was created in this task. Existing administrators can create a tickets:read key in the hub and run a keyed production pull.
 
+## Booking enhancements review — 2026-11-11
+
+An independent GPT-6.1 Sol reviewer found hardcoded modal times, mismatched periodic variant durations, stale suggestions, Arabic label gaps, and missing mileage in the external appointment projection. The builder repaired these and added browser/API proof. The reviewer then hit a usage limit before a fresh final verdict. The repository's named preferred reviewer tier was unavailable; no acceptance verdict is claimed for the repaired phases yet. A fresh phase review remains required before release. The existing appointment update/status audit transaction gap is recorded in evidence.
+
+Fresh independent GPT-6.1 Sol re-review accepted the repaired booking code on 2026-11-11 after an initial conditional verdict. The reviewer independently passed booking API 34/34, EN/AR browser proof with axe, and diff check. The builder passed the full local release gates recorded in evidence. The preferred named tier remains unavailable; production migration and public smoke are release operations still to verify.
+
 ## Booking calendar phase 1 review — 2026-11-10
 
 The independent GPT-6.1 Sol reviewer first returned Needs Repair because empty subslots collapsed beside occupied subslots, the plus button scrolled away, the badge treated past/read-only slots as full, and the hourly text hardcoded three. These were repaired. The second reviewer returned Accept With Conditions after inspecting EN/AR detail screenshots and independently passing the two-branch browser proof and diff check. Final accessibility/build checks remain for release; the requested preferred named reviewer was unavailable.

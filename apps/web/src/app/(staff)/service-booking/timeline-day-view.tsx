@@ -260,6 +260,8 @@ export function TimelineDayView() {
                               }}
                               slotTime={timeStr}
                               timeline={t.timeline}
+                              locale={locale}
+                              periodicName={t.modal.periodicMaintenance}
                             />
                           </div>
                         );

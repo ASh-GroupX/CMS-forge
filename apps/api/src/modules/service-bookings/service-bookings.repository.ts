@@ -163,11 +163,14 @@ export class ServiceBookingsRepository {
 
   async createAppointment(
     data: Prisma.ServiceAppointmentUncheckedCreateInput,
-    client: ServiceBookingClient = this.prisma,
+    actorId?: string | null,
   ): Promise<AppointmentRecord> {
-    return client.serviceAppointment.create({
-      data,
-      select: appointmentSelect,
+    return this.prisma.$transaction(async (client) => {
+      const created = await client.serviceAppointment.create({ data, select: appointmentSelect });
+      await client.auditLog.create({ data: { eventType: 'WORKFLOW', action: 'service_booking_created',
+        actorId: actorId ?? null, targetType: 'ServiceAppointment', targetId: created.id,
+        metadata: { branchId: data.serviceCenterId, date: created.date.toISOString().slice(0, 10), startTime: data.startTime } } });
+      return created;
     });
   }
 

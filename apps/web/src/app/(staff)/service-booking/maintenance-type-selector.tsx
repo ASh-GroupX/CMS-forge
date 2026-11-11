@@ -1,45 +1,48 @@
 'use client';
 
 import React from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import type { MaintenanceType } from '../../../lib/staff-service-bookings-api';
 
+export const PERIODIC_MILEAGES = [1000, 5000, ...Array.from({ length: 15 }, (_, index) => (index + 1) * 10000)];
+export const isPeriodicMaintenanceType = (type: MaintenanceType) =>
+  type.id.startsWith('maint_periodic') || /^Periodic Maintenance\b/i.test(type.nameEn);
+
 export function MaintenanceTypeSelector({
-  durationUnit,
-  isAr,
-  maintenanceTypeId,
-  maintenanceTypes,
-  onSelect,
+  isAr, maintenanceTypeId, maintenanceTypes, onSelect, periodicMileageKm, onMileageChange,
+  selectTypeLabel, periodicLabel, mileageLabel, selectMileageLabel,
 }: {
-  durationUnit: string;
   isAr: boolean;
   maintenanceTypeId: string;
   maintenanceTypes: MaintenanceType[];
   onSelect: (id: string) => void;
+  periodicMileageKm: number | null;
+  onMileageChange: (value: number | null) => void;
+  selectTypeLabel: string;
+  periodicLabel: string;
+  mileageLabel: string;
+  selectMileageLabel: string;
 }) {
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-      {maintenanceTypes.map((m) => {
-        const isSelected = maintenanceTypeId === m.id;
-        return (
-          <button
-            className={`flex flex-col items-start rounded-xl border p-2.5 text-start transition-all ${
-              isSelected
-                ? 'border-brand bg-brand/10 text-brand shadow-xs ring-1 ring-brand'
-                : 'border-line-subtle bg-surface hover:border-brand/40 text-content-strong'
-            }`}
-            key={m.id}
-            onClick={() => onSelect(m.id)}
-            type="button"
-          >
-            <span className="font-semibold text-xs truncate w-full">
-              {isAr ? m.nameAr : m.nameEn}
-            </span>
-            <span className="mt-1 text-[10px] text-content-muted">
-              {m.estimatedDurationMinutes} {durationUnit}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
+  const periodic = maintenanceTypes.find((type) => type.isActive && isPeriodicMaintenanceType(type));
+  const selectedPeriodic = maintenanceTypes.some((type) => type.id === maintenanceTypeId && type.isActive && isPeriodicMaintenanceType(type));
+  const choices = maintenanceTypes.filter((type) => type.isActive && !isPeriodicMaintenanceType(type));
+  return <div className="grid gap-3 sm:grid-cols-2">
+    <Select onValueChange={(value) => { onSelect(value); onMileageChange(null); }} value={selectedPeriodic ? periodic?.id ?? '' : maintenanceTypeId}>
+      <SelectTrigger aria-label={selectTypeLabel} className="h-11 rounded-xl border-line-subtle bg-surface">
+        <SelectValue placeholder={selectTypeLabel} />
+      </SelectTrigger>
+      <SelectContent>
+        {periodic && <SelectItem value={periodic.id}>{periodicLabel}</SelectItem>}
+        {choices.map((type) => <SelectItem key={type.id} value={type.id}>{isAr ? type.nameAr : type.nameEn}</SelectItem>)}
+      </SelectContent>
+    </Select>
+    {selectedPeriodic && <div><span className="mb-1 block text-xs font-semibold text-content-muted">{mileageLabel}</span><Select onValueChange={(value) => onMileageChange(Number(value))} value={periodicMileageKm == null ? '' : String(periodicMileageKm)}>
+      <SelectTrigger aria-label={mileageLabel} className="h-11 rounded-xl border-line-subtle bg-surface">
+        <SelectValue placeholder={selectMileageLabel} />
+      </SelectTrigger>
+      <SelectContent className="max-h-64">
+        {PERIODIC_MILEAGES.map((value) => <SelectItem key={value} value={String(value)}>{value.toLocaleString(isAr ? 'ar-JO' : 'en-US')} {isAr ? 'كم' : 'km'}</SelectItem>)}
+      </SelectContent>
+    </Select></div>}
+  </div>;
 }

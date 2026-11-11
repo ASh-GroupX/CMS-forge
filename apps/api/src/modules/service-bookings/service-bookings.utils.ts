@@ -1,5 +1,6 @@
 import type { DayRuleInput } from './dto/service-booking-rules.dto.js';
 import type { AppointmentRecord } from './service-bookings.types.js';
+import { BadRequestException } from '@nestjs/common';
 import type {
   DayAvailabilityDto,
   ServiceAppointmentDto,
@@ -41,6 +42,31 @@ export const DEFAULT_MAINTENANCE_TYPES = [
   { id: 'maint_general_check', nameEn: 'Comprehensive Inspection', nameAr: 'فحص شامل وفحص كمبيوتر', estimatedDurationMinutes: 60, isActive: true },
 ];
 
+export function getAmmanNow(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Amman', year: 'numeric',
+    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(now);
+  const value = (part: string) => parts.find((item) => item.type === part)?.value ?? '00';
+  return { date: `${value('year')}-${value('month')}-${value('day')}`, time: `${value('hour')}:${value('minute')}` };
+}
+
+export function isBookableTime(rule: { startTime: string; endTime: string; slotDurationMinutes?: number }, time: string) {
+  const minutes = (value: string) => { const [hour = 0, minute = 0] = value.split(':').map(Number); return hour * 60 + minute; };
+  const start = minutes(rule.startTime);
+  const requested = minutes(time);
+  const interval = rule.slotDurationMinutes ?? 15;
+  return requested >= start && requested < minutes(rule.endTime)
+    && interval > 0 && (requested - start) % interval === 0;
+}
+
+export function periodicMaintenance(mileage: number | null | undefined, typeId: string, typeName?: string) {
+  const periodic = typeId.startsWith('maint_periodic') || /^Periodic Maintenance\b/i.test(typeName ?? '');
+  if (!periodic && mileage != null) throw new BadRequestException('Mileage is only valid for periodic maintenance');
+  if (!periodic) return { mileage: null, name: typeName ?? 'Service appointment' };
+  const legacyMileage = Number(typeId.match(/_(\d+)k$/)?.[1] ?? 10) * 1000;
+  const value = mileage ?? legacyMileage;
+  return { mileage: value, name: `Periodic Maintenance ${value.toLocaleString('en-US')} km` };
+}
+
 export function calculateEndTime(startTime: string, durationMinutes: number): string {
   const [h = 0, m = 0] = startTime.split(':').map(Number);
   const totalMinutes = (h ?? 0) * 60 + (m ?? 0) + durationMinutes;
@@ -69,6 +95,7 @@ export function mapAppointment(record: AppointmentRecord, historyRecords: any[] 
     carModelName: record.carModelName,
     maintenanceTypeId: record.maintenanceTypeId,
     maintenanceTypeName: record.maintenanceTypeName,
+    periodicMileageKm: record.periodicMileageKm,
     notes: record.notes,
     date: record.date.toISOString().slice(0, 10),
     startTime: record.startTime,

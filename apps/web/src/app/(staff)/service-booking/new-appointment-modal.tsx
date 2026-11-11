@@ -14,8 +14,10 @@ import {
 import { useServiceBooking } from './service-booking-context';
 import { createAppointmentAction } from './actions';
 import { BookingCustomerFields } from './booking-customer-fields';
-import { MaintenanceTypeSelector } from './maintenance-type-selector';
+import { MaintenanceTypeSelector, isPeriodicMaintenanceType } from './maintenance-type-selector';
 import type { ServiceAppointment } from '../../../lib/staff-service-bookings-api';
+import { getNowTimeParts, getTodayDateString } from './service-booking-utils';
+import { useBookingTimeOptions } from './use-booking-time-options';
 
 const TIME_SLOTS: string[] = [];
 for (let h = 8; h < 18; h++) {
@@ -45,8 +47,9 @@ export function NewAppointmentModal() {
     prefillSlot?.branchId ||
     (selectedBranchId !== 'ALL' ? selectedBranchId : branches[0]?.id || '');
 
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const nowTime = new Date().toTimeString().slice(0, 5);
+  const todayStr = getTodayDateString();
+  const nowParts = getNowTimeParts();
+  const nowTime = `${String(nowParts.hour).padStart(2, '0')}:${String(nowParts.minute).padStart(2, '0')}`;
 
   // Form State
   const [customerName, setCustomerName] = useState('');
@@ -54,6 +57,7 @@ export function NewAppointmentModal() {
   const [vin, setVin] = useState('');
   const [carModelId, setCarModelId] = useState('');
   const [maintenanceTypeId, setMaintenanceTypeId] = useState('');
+  const [periodicMileageKm, setPeriodicMileageKm] = useState<number | null>(null);
   const [branchId, setBranchId] = useState(defaultBranch);
   const [date, setDate] = useState(prefillSlot?.date || (selectedDate < todayStr ? todayStr : selectedDate));
   const initialSlot = prefillSlot?.time || (date === todayStr ? (TIME_SLOTS.find((s) => s >= nowTime) || '09:00') : '09:00');
@@ -61,6 +65,7 @@ export function NewAppointmentModal() {
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const timeOptions = useBookingTimeOptions(isNewModalOpen, branchId, date, startTime, todayStr, nowTime);
 
   useEffect(() => {
     if (prefillSlot) {
@@ -81,15 +86,10 @@ export function NewAppointmentModal() {
   }, [date, todayStr, nowTime, startTime]);
 
   useEffect(() => {
-    if (!maintenanceTypeId && maintenanceTypes.length > 0) setMaintenanceTypeId(maintenanceTypes[0]!.id);
+    if (!maintenanceTypeId && maintenanceTypes.length > 0) setMaintenanceTypeId(maintenanceTypes.find((type) => type.isActive)?.id ?? '');
   }, [maintenanceTypes, maintenanceTypeId]);
 
-  const selectedHour = startTime.split(':')[0] || '09';
-  const hourBookedCount = appointments.filter(
-    (a) => (a.serviceCenterId === branchId || a.branchId === branchId) && a.date.slice(0, 10) === date && a.status !== 'CANCELLED' && a.startTime.startsWith(selectedHour),
-  ).length;
-
-  const isHourAtLimit = hourBookedCount >= 3;
+  const isHourAtLimit = timeOptions.find((slot) => slot.time === startTime)?.full ?? false;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,6 +102,11 @@ export function NewAppointmentModal() {
       setErrorMsg(t.modal.vehicleRequired);
       return;
     }
+    const isPeriodic = maintenanceTypes.some((type) => type.id === maintenanceTypeId && type.isActive && isPeriodicMaintenanceType(type));
+    if (isPeriodic && periodicMileageKm == null) {
+      setErrorMsg(t.modal.mileageRequired);
+      return;
+    }
     if (date < todayStr || (date === todayStr && startTime < nowTime)) {
       setErrorMsg(t.modal.pastSlotError);
       return;
@@ -109,8 +114,10 @@ export function NewAppointmentModal() {
 
     setLoading(true);
     const effectiveCarModelId = carModelId;
-    const effectiveMaintId = maintenanceTypeId || maintenanceTypes[0]?.id || 'maint_periodic_10k';
-    const selectedMaint = maintenanceTypes.find((m) => m.id === effectiveMaintId);
+    const effectiveMaintId = maintenanceTypeId || maintenanceTypes.find((type) => type.isActive)?.id || 'maint_periodic_10k';
+    const matchedPeriodic = isPeriodic && periodicMileageKm != null
+      ? maintenanceTypes.find((m) => m.isActive && m.id === `maint_periodic_${periodicMileageKm / 1000}k`) : null;
+    const selectedMaint = matchedPeriodic ?? maintenanceTypes.find((m) => m.id === effectiveMaintId);
     const res = await createAppointmentAction({
       branchId: branchId || branches[0]?.id || 'center_main',
       carModelId: effectiveCarModelId,
@@ -118,7 +125,8 @@ export function NewAppointmentModal() {
       customerPhone: customerPhone.trim(),
       date,
       durationMinutes: selectedMaint?.estimatedDurationMinutes || 30,
-      maintenanceTypeId: effectiveMaintId,
+      maintenanceTypeId: selectedMaint?.id ?? effectiveMaintId,
+      periodicMileageKm: isPeriodic ? periodicMileageKm : null,
       notes: notes.trim() || 'Service appointment',
       startTime,
       vin: vin.trim() || null,
@@ -141,6 +149,7 @@ export function NewAppointmentModal() {
     setVin('');
     setCarModelId('');
     setMaintenanceTypeId('');
+    setPeriodicMileageKm(null);
     setNotes('');
   };
 
@@ -183,20 +192,26 @@ export function NewAppointmentModal() {
               {t.modal.maintenanceType} <span className="text-status-error">*</span>
             </label>
             <MaintenanceTypeSelector
-              durationUnit={t.appointmentCard.duration}
               isAr={isAr}
               maintenanceTypeId={maintenanceTypeId}
               maintenanceTypes={maintenanceTypes}
               onSelect={(id) => setMaintenanceTypeId(id)}
+              periodicMileageKm={periodicMileageKm}
+              onMileageChange={setPeriodicMileageKm}
+              selectTypeLabel={t.modal.selectMaintenanceType}
+              periodicLabel={t.modal.periodicMaintenance}
+              mileageLabel={t.modal.periodicMileage}
+              selectMileageLabel={t.modal.selectMileage}
             />
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <label className="block text-xs font-bold text-content-strong mb-1">
+              <label className="block text-xs font-bold text-content-strong mb-1" htmlFor="booking-branch">
                 {t.modal.branch}
               </label>
               <select
+                id="booking-branch"
                 className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm focus:border-brand focus:outline-none"
                 onChange={(e) => setBranchId(e.target.value)}
                 value={branchId}
@@ -208,10 +223,11 @@ export function NewAppointmentModal() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-content-strong mb-1">
+              <label className="block text-xs font-bold text-content-strong mb-1" htmlFor="booking-date">
                 {t.modal.date}
               </label>
               <input
+                id="booking-date"
                 className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 text-sm focus:border-brand focus:outline-none"
                 min={todayStr}
                 onChange={(e) => setDate(e.target.value)}
@@ -221,10 +237,11 @@ export function NewAppointmentModal() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-content-strong mb-1">
+              <label className="block text-xs font-bold text-content-strong mb-1" htmlFor="booking-time">
                 {t.modal.timeSlot}
               </label>
               <select
+                id="booking-time"
                 className={`w-full rounded-xl border bg-surface px-3 py-2 text-sm ${
                   isHourAtLimit
                     ? 'border-status-error text-status-error'
@@ -233,16 +250,10 @@ export function NewAppointmentModal() {
                 onChange={(e) => setStartTime(e.target.value)}
                 value={startTime}
               >
-                {TIME_SLOTS.map((slot) => {
-                  const hr = slot.split(':')[0] || '08';
-                  const countInHr = appointments.filter(
-                    (a) => (a.serviceCenterId === branchId || a.branchId === branchId) && a.date.slice(0, 10) === date && a.status !== 'CANCELLED' && a.startTime.startsWith(hr),
-                  ).length;
-                  const isPast = date === todayStr && slot < nowTime;
-                  const full = countInHr >= 3;
+                {timeOptions.map(({ time: slot, past: isPast, full, bookedCount, maxPerSlot }) => {
                   return (
-                    <option disabled={isPast} key={slot} value={slot}>
-                      {slot} {isPast ? `(${t.modal.pastTime})` : full ? `(${t.timeline.hourFull})` : countInHr > 0 ? `(${countInHr}/3)` : ''}
+                    <option disabled={isPast || full} key={slot} value={slot}>
+                      {slot} {isPast ? `(${t.modal.pastTime})` : full ? `(${t.timeline.slotFull})` : bookedCount > 0 ? `(${bookedCount}/${maxPerSlot})` : ''}
                     </option>
                   );
                 })}

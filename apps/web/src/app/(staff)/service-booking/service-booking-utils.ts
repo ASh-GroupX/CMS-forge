@@ -1,5 +1,10 @@
 import type { ServiceAppointment } from '../../../lib/staff-service-bookings-api';
 
+export function maintenanceLabel(appointment: ServiceAppointment, locale: 'en' | 'ar', periodicName: string) {
+  if (appointment.periodicMileageKm == null) return appointment.maintenanceTypeName;
+  return `${periodicName} ${appointment.periodicMileageKm.toLocaleString(locale === 'ar' ? 'ar-JO' : 'en-US')} ${locale === 'ar' ? 'كم' : 'km'}`;
+}
+
 /**
  * Returns today's date formatted as YYYY-MM-DD in the specified timezone (default Asia/Amman).
  */

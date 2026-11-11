@@ -4,6 +4,7 @@ import React from 'react';
 import { Calendar, Plus, Wrench } from 'lucide-react';
 import { useServiceBooking } from './service-booking-context';
 import type { ServiceAppointment } from '../../../lib/staff-service-bookings-api';
+import { maintenanceLabel } from './service-booking-utils';
 
 export function TimelineWeekView() {
   const {
@@ -150,7 +151,7 @@ export function TimelineWeekView() {
                       </p>
                       <div className="mt-1 flex items-center gap-1 text-[10px] text-content-muted truncate">
                         <Wrench className="size-2.5 text-brand shrink-0" />
-                        <span className="truncate">{apt.maintenanceTypeName}</span>
+                        <span className="truncate">{maintenanceLabel(apt, locale, t.modal.periodicMaintenance)}</span>
                       </div>
                       <p className="text-[10px] text-content-muted truncate font-medium">
                         {apt.carModelName}

@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useServiceBooking } from './service-booking-context';
 import { getAppointmentAction, updateAppointmentStatusAction } from './actions';
 import { AppointmentRescheduleForm } from './appointment-reschedule-form';
+import { maintenanceLabel } from './service-booking-utils';
 import type {
   ServiceAppointment,
   ServiceAppointmentHistoryItem,
@@ -139,7 +140,7 @@ export function AppointmentDetailModal() {
                 <p className="text-[11px] font-semibold text-content-muted">{t.modal.maintenanceType}</p>
                 <p className="font-bold text-content-strong flex items-center gap-1.5 mt-0.5">
                   <Wrench className="size-3.5 text-brand" />
-                  <span>{apt.maintenanceTypeName}</span>
+                  <span>{maintenanceLabel(apt, locale, t.modal.periodicMaintenance)}</span>
                 </p>
               </div>
 

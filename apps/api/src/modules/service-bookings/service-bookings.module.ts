@@ -16,6 +16,7 @@ import { ServiceBookingSmsReminderService } from './service-booking-sms-reminder
 import { ServiceBookingSmsReminderRepository } from './service-booking-sms-reminder.repository.js';
 import { ServiceBookingsExportRepository } from './service-bookings.export.repository.js';
 import { ServiceBookingsExportService } from './service-bookings.export.service.js';
+import { ServiceBookingNextAvailableService } from './service-booking-next-available.service.js';
 
 @Module({
   imports: [AuthModule, NotificationsModule],
@@ -32,6 +33,7 @@ import { ServiceBookingsExportService } from './service-bookings.export.service.
     ServiceBookingSmsReminderRepository,
     ServiceBookingsExportRepository,
     ServiceBookingsExportService,
+    ServiceBookingNextAvailableService,
     {
       provide: SESSION_AUTH_SERVICE,
       inject: [AuthService],

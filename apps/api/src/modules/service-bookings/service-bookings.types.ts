@@ -12,6 +12,7 @@ export const appointmentSelect = {
   carModelName: true,
   maintenanceTypeId: true,
   maintenanceTypeName: true,
+  periodicMileageKm: true,
   notes: true,
   date: true,
   startTime: true,

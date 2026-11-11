@@ -1857,6 +1857,7 @@ model ServiceAppointment {
   carModelName        String                   @map("car_model_name")
   maintenanceTypeId   String?                  @map("maintenance_type_id")
   maintenanceTypeName String                   @map("maintenance_type_name")
+  periodicMileageKm   Int?                     @map("periodic_mileage_km")
   notes               String                   @map("notes")
   date                DateTime                 @map("date")
   startTime           String                   @map("start_time")

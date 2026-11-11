@@ -5,7 +5,7 @@ import { Plus, Wrench } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import type { ServiceBookingCopy } from '../../../i18n/staff-service-booking';
 import type { ServiceAppointment, SlotAvailability } from '../../../lib/staff-service-bookings-api';
-import { appointmentStatusStyle } from './service-booking-utils';
+import { appointmentStatusStyle, maintenanceLabel } from './service-booking-utils';
 
 export function TimelineSlotContent({
   appointments,
@@ -16,6 +16,8 @@ export function TimelineSlotContent({
   onSelect,
   slotTime,
   timeline,
+  locale,
+  periodicName,
 }: {
   appointments: ServiceAppointment[];
   blockedReason: string | undefined;
@@ -25,6 +27,8 @@ export function TimelineSlotContent({
   onSelect: (appointment: ServiceAppointment) => void;
   slotTime: string;
   timeline: ServiceBookingCopy['timeline'];
+  locale: 'en' | 'ar';
+  periodicName: string;
 }) {
   return (
     <div className="min-w-0 space-y-1">
@@ -72,7 +76,7 @@ export function TimelineSlotContent({
               </div>
               <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-content-muted">
                 <Wrench className="size-3 shrink-0 text-brand" />
-                <span className="truncate">{appointment.maintenanceTypeName}</span>
+                <span className="truncate">{maintenanceLabel(appointment, locale, periodicName)}</span>
               </div>
               <span className="block truncate text-[10px] text-content-muted">{appointment.carModelName}</span>
             </button>

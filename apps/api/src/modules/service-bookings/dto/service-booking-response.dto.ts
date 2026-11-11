@@ -14,6 +14,7 @@ export interface ServiceAppointmentDto {
   carModelName: string;
   maintenanceTypeId: string | null;
   maintenanceTypeName: string;
+  periodicMileageKm: number | null;
   notes: string;
   date: string;
   startTime: string;

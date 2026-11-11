@@ -13,6 +13,7 @@ import {
 import { parseUpdateBranchBookingRulesBody } from './dto/service-booking-rules.dto.js';
 import { UserBookingRulesService } from './user-booking-rules.service.js';
 import { ServiceBookingSmsSettingsService } from './service-booking-sms-settings.service.js';
+import { ServiceBookingNextAvailableService } from './service-booking-next-available.service.js';
 
 @Controller('service-bookings')
 export class ServiceBookingsController {
@@ -20,6 +21,7 @@ export class ServiceBookingsController {
     private readonly service: ServiceBookingsService,
     private readonly userRulesService?: UserBookingRulesService,
     private readonly smsSettingsService?: ServiceBookingSmsSettingsService,
+    private readonly nextAvailableService?: ServiceBookingNextAvailableService,
   ) {}
 
   // ── Service Centers ───────────────────────────────────────────────────────
@@ -112,6 +114,13 @@ export class ServiceBookingsController {
   }
 
   // ── Slot Availability ─────────────────────────────────────────────────────
+  @Get('next-available')
+  @UseGuards(SessionAuthGuard)
+  async nextAvailable(@Req() req: AuthenticatedRequest, @Query('branchId') branchId?: string) {
+    if (!this.nextAvailableService) throw new Error('Next available service is unavailable');
+    return this.nextAvailableService.nextThree(branchId, req.principal?.userId, req.principal?.roleCode);
+  }
+
   @Get(['slots-availability', 'availability'])
   async getSlotAvailability(
     @Query('branchId') branchId: string,
@@ -187,7 +196,7 @@ export class ServiceBookingsController {
   }
 
   @Post(['appointments', ''])
-  @UseGuards(SessionAuthGuard)
+  @UseGuards(SessionAuthGuard, CsrfGuard)
   async createAppointment(@Req() req: AuthenticatedRequest, @Body() body: unknown) {
     const dto = parseCreateServiceAppointmentBody(body);
     return this.service.createAppointment(dto, req.principal?.userId ?? null, req.principal?.roleCode);

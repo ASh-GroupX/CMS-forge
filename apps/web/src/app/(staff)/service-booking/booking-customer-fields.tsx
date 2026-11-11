@@ -35,12 +35,13 @@ export function BookingCustomerFields({
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label className="block text-xs font-bold text-content-strong mb-1">
+          <label className="block text-xs font-bold text-content-strong mb-1" htmlFor="booking-customer-name">
             {t.modal.customerName} <span className="text-status-error">*</span>
           </label>
           <div className="relative">
             <User className="absolute start-3 top-2.5 size-4 text-content-muted" />
             <input
+              id="booking-customer-name"
               className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 ps-9 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
               onChange={(e) => onNameChange(e.target.value)}
               placeholder="e.g. Ahmad Al-Mansoor"
@@ -52,12 +53,13 @@ export function BookingCustomerFields({
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-content-strong mb-1">
+          <label className="block text-xs font-bold text-content-strong mb-1" htmlFor="booking-customer-phone">
             {t.modal.customerPhone} <span className="text-status-error">*</span>
           </label>
           <div className="relative">
             <Phone className="absolute start-3 top-2.5 size-4 text-content-muted" />
             <input
+              id="booking-customer-phone"
               className="w-full rounded-xl border border-line-subtle bg-surface px-3 py-2 ps-9 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
               onChange={(e) => onPhoneChange(e.target.value)}
               placeholder="05XXXXXXXX"

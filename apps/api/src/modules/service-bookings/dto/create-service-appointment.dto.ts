@@ -11,6 +11,7 @@ export class CreateServiceAppointmentDto {
   startTime!: string; // HH:mm (e.g. "09:15")
   notes!: string;
   durationMinutes?: number;
+  periodicMileageKm?: number | null;
 }
 
 export function parseCreateServiceAppointmentBody(input: unknown): CreateServiceAppointmentDto {
@@ -44,6 +45,11 @@ export function parseCreateServiceAppointmentBody(input: unknown): CreateService
 
   const vin = body.vin ? String(body.vin).trim() : null;
   const durationMinutes = Number(body.durationMinutes) > 0 ? Number(body.durationMinutes) : 30;
+  const rawMileage = body.periodicMileageKm;
+  const periodicMileageKm = rawMileage == null || rawMileage === '' ? null : Number(rawMileage);
+  const validMileage = periodicMileageKm == null || [1000, 5000].includes(periodicMileageKm)
+    || (periodicMileageKm >= 10000 && periodicMileageKm <= 150000 && periodicMileageKm % 10000 === 0);
+  if (!validMileage) throw new BadRequestException('Select a valid periodic maintenance mileage');
 
   return {
     customerName,
@@ -56,5 +62,6 @@ export function parseCreateServiceAppointmentBody(input: unknown): CreateService
     startTime,
     notes,
     durationMinutes,
+    periodicMileageKm,
   };
 }

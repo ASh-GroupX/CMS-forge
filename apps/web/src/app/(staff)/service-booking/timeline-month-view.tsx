@@ -4,6 +4,7 @@ import React from 'react';
 import { Calendar, Wrench } from 'lucide-react';
 import { useServiceBooking } from './service-booking-context';
 import type { ServiceAppointment } from '../../../lib/staff-service-bookings-api';
+import { maintenanceLabel } from './service-booking-utils';
 
 export function TimelineMonthView() {
   const {
@@ -122,7 +123,7 @@ export function TimelineMonthView() {
                       <div
                         className="truncate rounded-md bg-surface-canvas border border-line-subtle/80 px-1.5 py-0.5 text-[10px] font-medium text-content-strong shadow-2xs"
                         key={apt.id}
-                        title={`${apt.startTime} - ${apt.customerName} (${apt.maintenanceTypeName})`}
+                        title={`${apt.startTime} - ${apt.customerName} (${maintenanceLabel(apt, locale, t.modal.periodicMaintenance)})`}
                       >
                         <span className="font-semibold text-brand me-1">
                           {apt.startTime}

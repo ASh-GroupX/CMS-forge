@@ -7,7 +7,7 @@ import type { DayRuleInput } from './dto/service-booking-rules.dto.js';
 import type { DayAvailabilityDto, ServiceAppointmentDto } from './dto/service-booking-response.dto.js';
 import {
   DEFAULT_CAR_MODELS, DEFAULT_DAY_RULES, DEFAULT_MAINTENANCE_TYPES,
-  buildDayAvailability, calculateEndTime, mapAppointment,
+  buildDayAvailability, calculateEndTime, getAmmanNow, isBookableTime, mapAppointment, periodicMaintenance,
 } from './service-bookings.utils.js';
 import { UserBookingRulesService } from './user-booking-rules.service.js';
 import { ServiceBookingSmsReminderService } from './service-booking-sms-reminder.service.js';
@@ -55,8 +55,7 @@ export class ServiceBookingsService {
       await this.userRulesService.checkPermission(actorId, roleCode, 'canCreateBookings');
     }
     const centerId = dto.branchId || 'center_main';
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const nowTime = new Date().toTimeString().slice(0, 5);
+    const { date: todayStr, time: nowTime } = getAmmanNow();
     if (process.env.NODE_ENV !== 'test' && (dto.date < todayStr || (dto.date === todayStr && dto.startTime < nowTime))) {
       throw new BadRequestException('Cannot book an appointment for a past time slot');
     }
@@ -64,6 +63,7 @@ export class ServiceBookingsService {
     const dateObj = new Date(`${dto.date}T00:00:00Z`);
     const rule = await this.resolveRule(centerId, dateObj.getUTCDay());
     if (!rule.isOpen) throw new BadRequestException('The selected branch is closed on this day');
+    if (!isBookableTime(rule, dto.startTime)) throw new BadRequestException('Select a time within the branch booking slots');
 
     const dailyCount = await this.repository.countDailyActive(centerId, dateObj);
     if (dailyCount >= rule.maxDailyAppointments) {
@@ -82,6 +82,8 @@ export class ServiceBookingsService {
     const carModel = dto.carModelId ? await this.repository.findCarModelById(dto.carModelId).catch(() => null) : null;
     if (!carModel || carModel.isActive === false) throw new BadRequestException('Select an active vehicle model');
     const maintenanceType = dto.maintenanceTypeId ? await this.repository.findMaintenanceTypeById(dto.maintenanceTypeId).catch(() => null) : null;
+    if (maintenanceType?.isActive === false) throw new BadRequestException('Select an active maintenance type');
+    const periodic = periodicMaintenance(dto.periodicMileageKm, dto.maintenanceTypeId, maintenanceType?.nameEn);
     const duration = dto.durationMinutes || maintenanceType?.estimatedDurationMinutes || 30;
     const endTime = calculateEndTime(dto.startTime, duration);
     const referenceNumber = await this.repository.generateReferenceNumber(dateObj);
@@ -92,10 +94,10 @@ export class ServiceBookingsService {
       carModelId: carModel.id,
       carModelName: `${carModel.brand} ${carModel.nameEn}`,
       maintenanceTypeId: maintenanceType ? maintenanceType.id : null,
-      maintenanceTypeName: maintenanceType ? maintenanceType.nameEn : 'Periodic Maintenance',
+      maintenanceTypeName: periodic.name, periodicMileageKm: periodic.mileage,
       notes: dto.notes || 'Service appointment', date: dateObj, startTime: dto.startTime,
       endTime, durationMinutes: duration, status: 'BOOKED', createdById: actorId || null,
-    });
+    }, actorId);
     await this.smsReminderService?.sync(created, created.createdAt.toISOString());
     return mapAppointment(created);
   }
@@ -131,14 +133,14 @@ export class ServiceBookingsService {
       if (actorId && this.userRulesService) {
         await this.userRulesService.checkPermission(actorId, roleCode, 'canRescheduleBookings');
       }
-      const todayStr = new Date().toISOString().slice(0, 10);
-      const nowTime = new Date().toTimeString().slice(0, 5);
+      const { date: todayStr, time: nowTime } = getAmmanNow();
       if (process.env.NODE_ENV !== 'test' && (targetDateStr < todayStr || (targetDateStr === todayStr && targetTime < nowTime))) {
         throw new BadRequestException('Cannot reschedule to a past time slot');
       }
 
       const rule = await this.resolveRule(targetBranch, targetDate.getUTCDay());
       if (!rule.isOpen) throw new BadRequestException('Branch is closed on target day');
+      if (!isBookableTime(rule, targetTime)) throw new BadRequestException('Select a time within the branch booking slots');
 
       const hourPrefix = targetTime.split(':')[0] + ':';
       const [slotCount, hourCount] = await Promise.all([
