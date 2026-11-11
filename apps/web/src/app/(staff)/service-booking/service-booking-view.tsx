@@ -9,8 +9,9 @@ import { TimelineWeekView } from './timeline-week-view';
 import { TimelineMonthView } from './timeline-month-view';
 import { NewAppointmentModal } from './new-appointment-modal';
 import { AppointmentDetailModal } from './appointment-detail-modal';
+import { BookingSearch } from './booking-search';
 
-export function ServiceBookingView() {
+export function ServiceBookingView({ bookingLoadError = false }: { bookingLoadError?: boolean }) {
   const { view, userRules, locale } = useServiceBooking();
   const isAr = locale === 'ar';
 
@@ -33,6 +34,7 @@ export function ServiceBookingView() {
   return (
     <div className="flex flex-col gap-5 w-full">
       <TimelineTopbar />
+      <BookingSearch loadError={bookingLoadError} />
       <div className="flex flex-col lg:flex-row gap-5 items-start w-full">
         <TimelineSidebar />
         <div className="flex-1 w-full min-w-0">

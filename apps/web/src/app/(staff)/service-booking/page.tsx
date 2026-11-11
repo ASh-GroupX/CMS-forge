@@ -37,11 +37,11 @@ export default async function ServiceBookingPage({
   const cookieHeader = requestHeaders.get('cookie') ?? '';
 
   // Parallel data fetching with forwarded cookie header
-  const [fetchedCenters, carModels, maintenanceTypes, appointments, userRules] = await Promise.all([
+  const [fetchedCenters, carModels, maintenanceTypes, appointmentsResult, userRules] = await Promise.all([
     fetchServiceCenters(true, cookieHeader).catch(() => [] as ServiceCenter[]),
     fetchCarModels(true, cookieHeader).catch(() => [] as CarModel[]),
     fetchMaintenanceTypes(true, cookieHeader).catch(() => [] as MaintenanceType[]),
-    fetchServiceAppointments({}, cookieHeader).catch(() => [] as ServiceAppointment[]),
+    fetchServiceAppointments({}, cookieHeader).then((items) => ({ items, error: false })).catch(() => ({ items: [] as ServiceAppointment[], error: true })),
     fetchMyBookingRules(cookieHeader).catch(() => ({
       userId: '', canViewBookings: true, canCreateBookings: true, canRescheduleBookings: true,
       canChangeStatus: true, canCancelBookings: true, canManageSettings: false,
@@ -94,7 +94,7 @@ export default async function ServiceBookingPage({
   return (
     <section aria-label="Service Center Booking" className="grid gap-4 w-full" dir={shell.dir}>
       <ServiceBookingProvider
-        initialAppointments={appointments}
+        initialAppointments={appointmentsResult.items}
         initialBranches={branches}
         initialCarModels={effectiveCarModels}
         initialDate={todayStr}
@@ -102,7 +102,7 @@ export default async function ServiceBookingPage({
         initialUserRules={userRules}
         locale={locale}
       >
-        <ServiceBookingView />
+        <ServiceBookingView bookingLoadError={appointmentsResult.error} />
       </ServiceBookingProvider>
     </section>
   );

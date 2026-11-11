@@ -160,9 +160,11 @@ export async function fetchServiceAppointments(params: {
 
   const url = `${getApiBaseUrl()}/service-bookings/appointments?${query.toString()}`;
   const res = await fetch(url, { headers: await getAuthHeaders(cookieHeader), cache: 'no-store' });
-  if (!res.ok) return [];
-  const json = await res.json().catch(() => []);
-  return Array.isArray(json) ? json : (json.appointments ?? []);
+  if (!res.ok) throw new Error('Could not load service appointments');
+  const json = await res.json();
+  if (Array.isArray(json)) return json;
+  if (Array.isArray(json?.appointments)) return json.appointments;
+  throw new Error('Invalid service appointments response');
 }
 
 export async function fetchSlotAvailability(branchId: string, date: string, cookieHeader?: string): Promise<DayAvailability | null> {

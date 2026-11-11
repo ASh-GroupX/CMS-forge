@@ -1,7 +1,7 @@
-# Booking timeline polish and cancelled visibility
+# Booking lookup by customer name or phone
 
-Status: Complete
+Status: Ready for release
 Risk: Medium
-SRS: UI-DESIGN-001, METHOD-API-001, REQ-AUDIT-001, REQ-RBAC-001, REQ-INT-DATA-001
+SRS: UI-DESIGN-001, METHOD-API-001, REQ-RBAC-001
 
-Implemented and deployed: aligned Periodic Maintenance and mileage selectors; collapsed elapsed hours with a cancelled count and reopen control; removed forced empty-slot scrollbars; retained cancelled appointments in day, week, month, and mini-calendar while excluding them from capacity. EN/AR desktop/mobile browser proof, independent review, production workflow, health, and revision passed. Preserve `tmp/` and `uploads/`. User-specific booking requests map to UI-DESIGN-001 and METHOD-API-001; existing status update audit transaction gap remains recorded separately. Next task awaits user direction.
+Implemented: English/Arabic booking search above the calendar using the existing protected appointment list. It matches customer name and normalized phone, shows status/date/time/center, limits visible results to 20, and opens the selected appointment after setting its day and branch. API load failure has a localized retry state. Browser proof, visual review, typecheck/lint/web/API/root/security/build, and independent review passed. Push to waleed and production under standing authorization and verify workflow/health/revision. Preserve `tmp/` and `uploads/`.
