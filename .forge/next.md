@@ -1,12 +1,10 @@
-# QR complaint intake — external customer data API
+# QR intake — release verified non-SMS workflow
 
-Status: Implemented locally; subsequent slices pending
+Status: Release in progress
 Risk: High
 Required model tier: GPT-6 Sol or higher
-SRS: REQ-INT-DATA-001, REQ-PORTAL-001, PORTAL-SEC-001, REQ-RBAC-001, METHOD-API-001
+SRS: REQ-PORTAL-001, REQ-WORKFLOW-002, REQ-NOTIFY-001/002, REQ-ADMIN-001, REQ-INT-DATA-001, PORTAL-SEC-001, WORKFLOW-MATRIX-001, UI-DESIGN-001
 
-Scope: add a distinct read-only External Data API option for QR/portal complaint customer details (name, phone, vehicle, description, reference, date). Require its own key scope, enforce stored branch scope, exclude DMS/staff-private data, document in OpenAPI, and add a selectable option in the Admin API-key UI. No SMS delivery. Preserve `tmp/` and `uploads/`.
+Scope: commit/push verified workflow, monitor migration-before-API deployment, verify revision/health and protected routes, record release outcome. SMS acknowledgement remains deferred. Preserve tmp/ and uploads/.
 
-Proof: `typecheck`, `lint`, `test:api -- integrations`, `openapi:check`, `security:check`, and a focused API key branch-scope/PII test.
-
-Next slice: finish the customer form validation and states, then Admin settings UI and QR download with Admin Hub tile/per-user visibility. Subsequent slices add the protected redirect queue, claim, audited correction, and atomic routing. SMS delivery is deferred. Push only after the complete non-SMS flow and proof gates pass.
+Implementation/proof slices completed: settings persistence/authority and generated module boundary; public form/snapshots; scoped customer export; claim/queue/correction; atomic redirect/assignment/history/audit; staff UI/visibility; post-commit team notifications; isolated database + HTTP/browser/security proof. No live-provider SMS integration is claimed.

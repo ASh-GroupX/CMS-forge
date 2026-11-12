@@ -48,6 +48,8 @@ export type PortalComplaintCreateResponse = {
 };
 export type PortalSubmissionOption = { id: string; nameEn: string; nameAr: string; departmentId?: string | null; branchId?: string | null };
 export type PortalSubmissionOptions = {
+  phoneCountryCode?: string;
+  incidentDate?: string;
   branches: PortalSubmissionOption[];
   departments: Array<{ id: string; nameEn: string; nameAr: string; branchId?: string | null }>;
   categories: PortalSubmissionOption[];

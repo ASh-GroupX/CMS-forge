@@ -60,6 +60,7 @@ export type ComplaintCustomerDetail = { id: string; name: string; phone: string 
 export type ComplaintVehicleDetail = { id: string; vin: string; plate: string; make: string; model: string; year: number; source: 'LOCAL' | 'MANUAL' | 'DMS' };
 
 export type ComplaintDetail = ComplaintQueueItem & {
+  submittedVehicle?: { make: string; model: string; vin: string | null } | null;
   categoryId: string;
   categoryName: string;
   categoryNameAr: string;

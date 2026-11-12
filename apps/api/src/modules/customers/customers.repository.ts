@@ -8,6 +8,10 @@ export type CustomerSearchRecord = Pick<Customer, 'id' | 'nameEn' | 'nameAr' | '
 export class CustomersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  resolveIntake(name: string, phone: string, tx: Prisma.TransactionClient) {
+    return tx.customer.upsert({ where: { phone }, update: {}, create: { phone, nameEn: name, nameAr: name, dataSource: 'MANUAL' }, select: { id: true } });
+  }
+
   async exportPage(branchIds: string[] | null, limit: number, cursor?: string) {
     const where: Prisma.CustomerWhereInput = branchIds === null ? {} : { complaints: { some: { branchId: { in: branchIds } } } };
     return this.prisma.customer.findMany({

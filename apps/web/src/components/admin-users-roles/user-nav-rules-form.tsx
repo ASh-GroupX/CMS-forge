@@ -8,6 +8,7 @@ import type { Locale } from '../../i18n/staff-shell';
 import type { AdminUser } from '../../lib/staff-admin-users-api';
 
 const MAIN_NAV_KEYS = [
+  { key: 'redirectComplaints', labelEn: 'Redirect complaints', labelAr: 'توجيه الشكاوى' },
   { key: 'dashboard', labelEn: 'Dashboard', labelAr: 'لوحة التحكم' },
   { key: 'internalTickets', labelEn: 'Internal Tickets', labelAr: 'التذاكر الداخلية' },
   { key: 'serviceBooking', labelEn: 'Service Booking', labelAr: 'حجوزات الصيانة' },
@@ -20,6 +21,7 @@ const MAIN_NAV_KEYS = [
 ] as const;
 
 const ADMIN_WORKSPACES = [
+  { key: 'admin:portal-intake', labelEn: 'QR complaint intake', labelAr: 'استقبال شكاوى QR' },
   { key: 'admin:booking-settings', labelEn: 'Service Booking Settings', labelAr: 'إعدادات حجز الصيانة' },
   { key: 'admin:api-keys', labelEn: 'External Data API', labelAr: 'واجهة بيانات النظام' },
   { key: 'admin:complaint-settings', labelEn: 'Complaint Settings', labelAr: 'إعدادات الشكاوى' },

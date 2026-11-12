@@ -128,7 +128,7 @@ export const staffShellText = {
       management: 'Management',
       adminHidden: 'Admin-only surfaces hidden',
     },
-    nav: {
+    nav: { redirectComplaints: ['Redirect complaints', 'Claim, prepare and route customer complaints'],
       operations: ['Operations', 'Live board of all complaints'],
       complaints: ['CRM Complaints', 'All CRM complaints and workspaces'],
       customers: ['Customers', 'Customer and vehicle context'],
@@ -281,7 +281,7 @@ export const staffShellText = {
       management: 'الإدارة',
       adminHidden: 'تم إخفاء شاشات المشرف فقط',
     },
-    nav: {
+    nav: { redirectComplaints: ['توجيه الشكاوى', 'استلام وتجهيز وتوجيه شكاوى العملاء'],
       operations: ['العمليات', 'لوحة مباشرة لجميع الشكاوى'],
       complaints: ['شكاوى CRM', 'جميع شكاوى CRM ومساحات العمل'],
       customers: ['العملاء', 'سياق العميل والمركبة'],

@@ -51,6 +51,8 @@ export function PortalSubmissionScreen({
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const complaint = buildPortalComplaintSubmission(formData);
+    const phone = complaint.customerPhone.replace(/[\s()\-]/g, '');
+    complaint.customerPhone = phone.startsWith('+') ? phone : `${options?.phoneCountryCode ?? '+962'}${phone.replace(/^0+/, '')}`;
     const localErrors = validateSubmission(complaint);
     const attachmentResult = await portalSubmissionAttachments(portalAttachmentFiles(formData));
     if (!attachmentResult.ok) localErrors.push(attachmentResult.error);
@@ -92,7 +94,7 @@ export function PortalSubmissionScreen({
             <input name="manualTriage" type="hidden" value="true" />
             <Label className="grid gap-1 text-sm font-medium" htmlFor="incidentAt">
               {t.fields.incidentAt}
-              <Input aria-describedby={fieldError(fieldErrors, 'incidentAt', locale) ? 'incidentAt-error' : undefined} aria-invalid={Boolean(fieldError(fieldErrors, 'incidentAt', locale))} className="min-h-11" defaultValue={new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Amman', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())} id="incidentAt" name="incidentAt" type="date" />
+              <Input aria-describedby={fieldError(fieldErrors, 'incidentAt', locale) ? 'incidentAt-error' : undefined} aria-invalid={Boolean(fieldError(fieldErrors, 'incidentAt', locale))} className="min-h-11" defaultValue={options?.incidentDate ?? new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Amman', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())} id="incidentAt" name="incidentAt" type="date" />
               <FieldError id="incidentAt-error" message={fieldError(fieldErrors, 'incidentAt', locale)} />
             </Label>
             <Label className="grid gap-1 text-sm font-medium md:col-span-2" htmlFor="description">
@@ -145,14 +147,6 @@ export function buildPortalComplaintSubmission(formData: FormData): PortalCompla
     vehicleModel: textValue(formData, 'vehicleModel'),
     odometer: optionalNumberValue(formData, 'odometer'),
   };
-  const branchId = optionalTextValue(formData, 'branchId');
-  const departmentId = optionalTextValue(formData, 'departmentId');
-  const categoryId = optionalTextValue(formData, 'categoryId');
-  const severity = optionalTextValue(formData, 'severity') as PortalComplaintCreateRequest['severity'] | undefined;
-  if (branchId) request.branchId = branchId;
-  if (departmentId) request.departmentId = departmentId;
-  if (categoryId) request.categoryId = categoryId;
-  if (severity) request.severity = severity;
   return request;
 }
 
@@ -216,16 +210,19 @@ function FieldGroup({ children, title }: { children: React.ReactNode; title: str
 }
 
 function TextField({ error, label, name, type = 'text' }: { error?: string | undefined; label: string; name: string; type?: string }) {
-  return <Label className="grid gap-1 text-sm font-medium" htmlFor={name}>{label}<Input aria-describedby={error ? `${name}-error` : undefined} aria-invalid={Boolean(error)} className="min-h-11" id={name} name={name} type={type} /><FieldError id={`${name}-error`} message={error} /></Label>;
+  return <Label className="grid gap-1 text-sm font-medium" htmlFor={name}>{label}<Input aria-describedby={error ? `${name}-error` : undefined} aria-invalid={Boolean(error)} className="min-h-11" id={name} name={name} type={type} required={['customerName', 'customerPhone', 'vehicleBrand', 'vehicleModel'].includes(name)} autoComplete={name === 'customerName' ? 'name' : name === 'customerPhone' ? 'tel' : 'off'} {...(name === 'odometer' ? { min: 0, max: 10000000, step: 1 } : { maxLength: name === 'vehicleVin' ? 17 : 200 })} /><FieldError id={`${name}-error`} message={error} /></Label>;
 }
 
 function FieldError({ id, message }: { id?: string; message?: string | undefined }) { return message ? <span className="text-xs font-semibold text-status-error" id={id} role="alert">{message}</span> : null; }
 
 function validateSubmission(input: PortalComplaintCreateRequest): PortalFieldError[] {
   const required = ['customerName', 'customerPhone', 'vehicleBrand', 'vehicleModel', 'description', 'incidentAt'];
-  return required
+  const errors = required
     .filter((field) => !String(input[field as keyof PortalComplaintCreateRequest] ?? '').trim())
     .map((field) => ({ field, code: 'REQUIRED', message: `${field} is required.` }));
+  if (input.vehicleVin && !/^[A-HJ-NPR-Z0-9]{17}$/i.test(input.vehicleVin)) errors.push({ field: 'vehicleVin', code: 'INVALID', message: 'Invalid VIN.' });
+  if (input.odometer !== null && input.odometer !== undefined && (!Number.isSafeInteger(input.odometer) || input.odometer < 0 || input.odometer > 10000000)) errors.push({ field: 'odometer', code: 'INVALID', message: 'Invalid odometer.' });
+  return errors;
 }
 
 function fieldError(errors: PortalFieldError[], field: string, locale: PortalLocale): string | undefined {
@@ -252,7 +249,7 @@ function optionalTextValue(formData: FormData, field: string): string | null {
 }
 function optionalNumberValue(formData: FormData, field: string): number | null {
   const value = textValue(formData, field);
-  return value && /^\d+$/.test(value) ? Number(value) : null;
+  return value ? Number(value) : null;
 }
 function incidentAtValue(value: string): string {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00.000Z` : value;

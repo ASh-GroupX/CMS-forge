@@ -49,6 +49,17 @@ export class AssignmentsService {
     return assignment ? response(assignment) : null;
   }
 
+  async releaseInTransaction(entityType: string, entityId: string, actor: AssignmentActor, client: Prisma.TransactionClient) {
+    const current = await this.assignmentsRepository.findCurrent(entityType, entityId, client);
+    if (!current?.assignedUserId) return;
+    if (current.assignedUserId !== actor.userId && actor.roleCode !== 'ADMIN') throw new AppException('RBAC_FORBIDDEN', 'Forbidden', HttpStatus.FORBIDDEN);
+    const assignment = await this.assignmentsRepository.release(current, actor.userId, client);
+    await this.auditService.record({ eventType: 'COMPLAINT', action: 'intake_claim_released', actorId: actor.userId, branchId: current.scopeBranchId, targetType: 'assignment', targetId: assignment.id, metadata: { entityType, entityId } }, client);
+  }
+
+  getInTransaction(entityType: string, entityId: string, client: Prisma.TransactionClient) { return this.assignmentsRepository.findCurrent(entityType, entityId, client); }
+  async claimedIds(entityType: string, userId?: string) { return (await this.assignmentsRepository.claimedIds(entityType, userId)).map((row) => row.entityId); }
+
   async options(actor: AssignmentActor): Promise<AssignmentOptionsResponseDto> {
     const branchId = actor.roleCode === 'ADMIN' ? null : requiredBranch(actor);
     const result = await this.assignmentsRepository.options(branchId);

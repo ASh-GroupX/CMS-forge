@@ -18,6 +18,7 @@ export const staffNavItems = [
   { key: 'internalTickets', Icon: CheckSquare2, href: '/internal-tickets' },
   { key: 'serviceBooking', Icon: CalendarDays, href: '/service-booking' },
   { key: 'complaints', Icon: Inbox, href: '/complaints' },
+  { key: 'redirectComplaints', Icon: Inbox, href: '/redirect-complaints' },
   { key: 'customers', Icon: UsersRound, href: '/customers' },
   { key: 'tasks', Icon: CheckSquare2, href: '/tasks' },
   { key: 'communication', Icon: Send, href: '/communication' },
@@ -31,7 +32,7 @@ export type StaffNavKey = (typeof staffNavItems)[number]['key'];
 export type StaffIdentity = { branch: string; initials: string; name: string; role: string };
 
 const desktopSections = [
-  { key: 'work', items: ['dashboard', 'internalTickets', 'serviceBooking', 'complaints', 'customers', 'tasks', 'communication'] },
+  { key: 'work', items: ['dashboard', 'internalTickets', 'serviceBooking', 'complaints', 'redirectComplaints', 'customers', 'tasks', 'communication'] },
   { key: 'administration', items: ['reports', 'admin', 'audit'] },
 ] as const;
 const mobileKeys = ['dashboard', 'complaints', 'internalTickets', 'tasks'] as const satisfies readonly StaffNavKey[];

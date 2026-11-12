@@ -37,6 +37,15 @@ export class AdminUsersRepository {
     return this.prisma.user.findMany({ orderBy: [{ nameEn: 'asc' }, { email: 'asc' }], select: userSelect });
   }
 
+  async intakeOptions(tx: Prisma.TransactionClient | PrismaService = this.prisma) {
+    const [branches, categories, members] = await Promise.all([
+      tx.branch.findMany({ where: { isActive: true }, select: { id: true, nameEn: true, nameAr: true }, orderBy: { nameEn: 'asc' } }),
+      tx.category.findMany({ where: { isActive: true }, select: { id: true, branchId: true, nameEn: true, nameAr: true }, orderBy: { nameEn: 'asc' } }),
+      tx.user.findMany({ where: { isActive: true, lockedAt: null, role: { OR: [{ code: { in: ['ADMIN', 'CR_MANAGER'] } }, { permissions: { some: { permission: { code: 'COMPLAINT_MANAGE', isActive: true } } } }] } }, select: { id: true, nameEn: true, nameAr: true, branchId: true, role: { select: { code: true } } }, orderBy: { nameEn: 'asc' } }),
+    ]);
+    return { branches, categories, members: members.map(({ role, ...member }) => ({ ...member, roleCode: role.code })) };
+  }
+
   async listAssignableStaff(branchId: string | null): Promise<AssignableStaffRecord[]> {
     return this.prisma.user.findMany({
       where: { isActive: true, lockedAt: null, role: { code: { not: 'CUSTOMER_PORTAL' } }, ...(branchId ? { branchId } : {}) },

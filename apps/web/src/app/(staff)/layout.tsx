@@ -13,6 +13,7 @@ import {
   shouldRedirectStaffRoute,
 } from '../../lib/staff-nav-rules';
 import { AppShell } from '../app-shell';
+import { canAccessRedirectIntake } from './redirect-complaints/actions';
 
 export {
   firstAllowedPath,
@@ -34,12 +35,14 @@ export default async function StaffLayout({ children }: { children: ReactNode })
   if (shouldRedirectStaffRoute(Boolean(principal), activePath)) {
     redirect(`/?locale=${locale}`);
   }
-  const allowedNav = principal
+  let allowedNav = principal
     ? navForPrincipal(principal.roleCode, principal.permissions, {
         viewMode: principal.viewMode,
         allowedNavKeys: principal.allowedNavKeys,
       })
     : STAFF_NAV;
+
+  if (principal && await canAccessRedirectIntake() && (!principal.allowedNavKeys?.length || principal.allowedNavKeys.includes('redirectComplaints'))) allowedNav = [...allowedNav, 'redirectComplaints'];
 
   if (activePath && isRouteForbidden(activePath, allowedNav, principal?.allowedNavKeys)) {
     redirect(firstAllowedPath(allowedNav, locale));

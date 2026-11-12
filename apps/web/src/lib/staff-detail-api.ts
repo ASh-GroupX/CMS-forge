@@ -42,6 +42,7 @@ export type StaffComplaintDetailView = {
   manualCustomer: boolean;
   vehicleRelated: boolean;
   vehicle: ComplaintDetail['vehicle'];
+  submittedVehicle?: ComplaintDetail['submittedVehicle'];
   vehicleSource: ComplaintDetail['vehicleSource'];
   manualVehicle: boolean;
   vehicleDataUnavailableReason: string | null;
@@ -171,6 +172,7 @@ function viewFromDetail(detail: ComplaintDetail, caseTimeline: DetailTimelineIte
     manualCustomer: detail.manualCustomer,
     vehicleRelated: detail.vehicleRelated,
     vehicle: detail.vehicle,
+    submittedVehicle: detail.submittedVehicle,
     vehicleSource: detail.vehicleSource,
     manualVehicle: detail.manualVehicle,
     vehicleDataUnavailableReason: detail.vehicleDataUnavailableReason,

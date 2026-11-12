@@ -15,8 +15,8 @@ export class PortalController {
   ) {}
 
   @Get('options')
-  async options(): Promise<PublicComplaintFormOptions> {
-    return this.formOptions.listPublic();
+  async options() {
+    return this.portalService.publicOptions();
   }
 
   @Post('complaints')

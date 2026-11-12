@@ -426,20 +426,12 @@ test('portal submission renders English responsive complaint form', async () => 
   assert.match(html, /href="\/portal\/track\?locale=en"/);
   assert.match(html, /Customer name/);
   assert.match(html, /Customer phone/);
-  assert.match(html, /Branch/);
-  assert.match(html, /Category/);
-  assert.match(html, /Department/);
-  assert.match(html, /Severity/);
-  assert.match(html, /Service Branch/);
-  assert.match(html, /Vehicle service/);
-  assert.match(html, /Engine noise/);
-  assert.match(html, /Critical/);
-  assert.match(html, /Low/);
+  assert.doesNotMatch(html, /name="branchId"|name="categoryId"|name="departmentId"|name="severity"|name="subject"/);
   assert.match(html, /Incident date/);
-  assert.match(html, /Subject/);
   assert.match(html, /What happened\?/);
-  assert.match(html, /This complaint is vehicle-related/);
-  assert.doesNotMatch(html, /Vehicle VIN/);
+  assert.match(html, /Car make/);
+  assert.match(html, /Car model/);
+  assert.match(html, /Vehicle VIN/);
   assert.ok(html.includes(portalSubmissionText.en.rules[0]));
   assert.match(html, /Files are optional/);
   assert.match(html, /name="attachments"/);
@@ -533,7 +525,7 @@ test('portal submission production route ignores preview query strings', async (
   assert.match(html, /Submit complaint/);
 });
 
-test('portal submission option-load failure allows manual triage and retry', async () => {
+test('portal submission submits with server defaults when catalog options are unavailable', async () => {
   const html = renderToStaticMarkup(
     await PortalSubmissionPage({
       fetchImpl: async () => new Response('', { status: 503 }),
@@ -541,11 +533,11 @@ test('portal submission option-load failure allows manual triage and retry', asy
     }),
   );
 
-  assert.match(html, /We could not load the list choices\. You can still submit\. Staff will classify it\./);
+  assert.match(html, /Submit complaint/);
   assert.match(html, /name="manualTriage" value="true"/);
-  assert.match(html, /Retry loading options/);
-  assert.match(html, /role="alert"/);
-  assert.match(html, /Submit for manual review/);
+
+
+  assert.match(html, /Submit complaint/);
   assert.doesNotMatch(html, /name="branchId"|name="categoryId"|name="severity"/);
   assert.doesNotMatch(html, /Service Branch|Vehicle service|Engine noise/);
 });
@@ -578,17 +570,14 @@ test('portal submission builds backend request without staff authority fields', 
   const body = buildPortalComplaintSubmission(formData) as Record<string, unknown>;
 
   assert.deepEqual(body, {
-    customerName: 'Faisal Al-Otaibi',
-    customerPhone: '+966500000001',
-    categoryId: 'cat_parent',
-    description: 'Engine makes a knocking noise.',
-    incidentAt: '2026-06-19T00:00:00.000Z',
-    branchId: 'branch_main',
-    subject: 'Engine noise',
-    severity: 'HIGH',
-    vehicleRelated: true,
-    vehicleVin: 'SEEDDEMO00001',
+    customerName: 'Faisal Al-Otaibi', customerPhone: '+966500000001',
+    description: 'Engine makes a knocking noise.', incidentAt: '2026-06-19T00:00:00.000Z',
+    subject: '', manualTriage: true, vehicleRelated: true, vehicleVin: 'SEEDDEMO00001',
+    vehicleBrand: '', vehicleModel: '', odometer: null,
   });
+  assert.equal('branchId' in body, false);
+  assert.equal('categoryId' in body, false);
+  assert.equal('severity' in body, false);
   assert.equal('actorId' in body, false);
   assert.equal('workflow' in body, false);
   assert.equal('token' in body, false);

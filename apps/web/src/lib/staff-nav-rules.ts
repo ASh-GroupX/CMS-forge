@@ -10,6 +10,7 @@ export const ROLE_NAV: Record<string, readonly StaffNavKey[]> = {
 export const STAFF_NAV: readonly StaffNavKey[] = ['dashboard', 'internalTickets', 'serviceBooking', 'complaints', 'customers', 'tasks', 'communication', 'reports'];
 
 export const ROUTE_NAV_MAP: Array<{ prefix: string; key: StaffNavKey; defaultPath: string }> = [
+  { prefix: '/redirect-complaints', key: 'redirectComplaints', defaultPath: '/redirect-complaints' },
   { prefix: '/dashboard', key: 'dashboard', defaultPath: '/dashboard' },
   { prefix: '/internal-tickets', key: 'internalTickets', defaultPath: '/internal-tickets' },
   { prefix: '/complaints', key: 'complaints', defaultPath: '/complaints' },
@@ -25,6 +26,7 @@ export const ROUTE_NAV_MAP: Array<{ prefix: string; key: StaffNavKey; defaultPat
 ];
 
 export const ADMIN_SECTIONS = [
+  { key: 'admin:portal-intake', path: '/admin/portal-intake', labelEn: 'QR complaint intake', labelAr: 'استقبال شكاوى QR', requiredPerm: 'MASTER_DATA_MANAGE' },
   { key: 'admin:users', path: '/admin/users', labelEn: 'Users & Staff', labelAr: 'المستخدمين والموظفين', requiredPerm: 'USERS_MANAGE' },
   { key: 'admin:roles', path: '/admin/roles', labelEn: 'Roles & Permissions', labelAr: 'الأدوار والصلاحيات', requiredPerm: 'ROLES_MANAGE' },
   { key: 'admin:branches', path: '/admin/branches', labelEn: 'Branches', labelAr: 'الفروع', requiredPerm: 'MASTER_DATA_MANAGE' },
@@ -46,6 +48,7 @@ export function canAccessAdminSection(
   permissions?: readonly string[],
   roleCode?: string,
 ): boolean {
+  if (sectionKey === 'admin:portal-intake' && roleCode !== 'ADMIN') return false;
   if (sectionKey === 'admin:api-keys' && !permissions?.includes('INTEGRATIONS_MANAGE')) return false;
   if (!roleCode && !permissions && (!allowedNavKeys || allowedNavKeys.length === 0)) {
     return true;

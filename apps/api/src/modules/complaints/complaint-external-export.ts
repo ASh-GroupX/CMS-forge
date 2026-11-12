@@ -15,9 +15,9 @@ export async function exportComplaintPage(repository: ComplaintsRepository, bran
 
 export async function exportPortalComplaintCustomerPage(repository: ComplaintsRepository, branchIds: string[] | null, limit: number, cursor?: string) {
   const rows = await repository.exportPortalCustomerPage(branchIds, limit, cursor);
-  const items = rows.slice(0, limit).map(({ customer, vehicle, vehicleMakeSnapshot, vehicleModelSnapshot, ...row }) => ({
-    ...row, customerName: customer.nameEn, customerPhone: customer.phone,
-    vehicleVin: vehicle?.vin ?? null, vehicleMake: vehicleMakeSnapshot ?? vehicle?.makeEn ?? null,
+  const items = rows.slice(0, limit).map(({ customer, vehicle, vehicleMakeSnapshot, vehicleModelSnapshot, vehicleVinSnapshot, customerNameSnapshot, ...row }) => ({
+    ...row, customerName: customerNameSnapshot ?? customer.nameEn, customerPhone: customer.phone,
+    vehicleVin: vehicleVinSnapshot ?? vehicle?.vin ?? null, vehicleMake: vehicleMakeSnapshot ?? vehicle?.makeEn ?? null,
     vehicleModel: vehicleModelSnapshot ?? vehicle?.modelEn ?? null,
   }));
   return { items, nextCursor: rows.length > limit ? items.at(-1)?.id ?? null : null };

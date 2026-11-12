@@ -1,5 +1,6 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { RoleCode } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import argon2 from 'argon2';
 import { AuditService } from '../../core/audit.service.js';
 import type { AuditRecordInput } from '../../core/audit.service.js';
@@ -26,6 +27,8 @@ export class AdminUsersService {
     const [users, options] = await Promise.all([this.repository.listUsers(), this.repository.options()]);
     return { users: users.map(userDto), ...options };
   }
+
+  intakeOptions(tx?: Prisma.TransactionClient) { return this.repository.intakeOptions(tx); }
 
   async assignableStaff(actor: StaffLookupActor): Promise<AssignableStaffResponse> {
     const branchId = actor.roleCode === RoleCode.ADMIN ? null : requiredBranch(actor);

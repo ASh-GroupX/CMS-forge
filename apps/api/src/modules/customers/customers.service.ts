@@ -1,10 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import { CustomersRepository, type CustomerSearchRecord } from './customers.repository.js';
 import type { CustomerResponseDto } from './dto/customer-response.dto.js';
 
 @Injectable()
 export class CustomersService {
   constructor(private readonly repository: CustomersRepository) {}
+
+  resolveIntake(name: string, phone: string, tx: Prisma.TransactionClient) { return this.repository.resolveIntake(name, phone, tx); }
 
   async exportPage(branchIds: string[] | null, limit: number, cursor?: string) {
     const rows = await this.repository.exportPage(branchIds, limit, cursor);

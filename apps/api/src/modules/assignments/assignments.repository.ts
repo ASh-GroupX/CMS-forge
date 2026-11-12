@@ -75,7 +75,13 @@ export class AssignmentsRepository {
   }
 
   findCurrent(entityType: string, entityId: string, client: AssignmentClient = this.prisma): Promise<AssignmentRecord | null> {
-    return client.assignment.findUnique({ where: { entityType_entityId: { entityType, entityId } }, select: assignmentSelect });
+    return client.assignment.findUnique({ where: { entityType_entityId: { entityType, entityId }, releasedAt: null }, select: assignmentSelect });
+  }
+  claimedIds(entityType: string, userId?: string) { return this.prisma.assignment.findMany({ where: { entityType, releasedAt: null, assignedUserId: userId ?? { not: null } }, select: { entityId: true } }); }
+  async release(current: AssignmentRecord, actorId: string, client: AssignmentClient) {
+    const assignment = await client.assignment.update({ where: { id: current.id }, data: { releasedAt: new Date(), version: { increment: 1 } }, select: assignmentSelect });
+    await client.assignmentHistory.create({ data: { assignmentId: current.id, entityType: current.entityType, entityId: current.entityId, action: 'RELEASED', assignedUserId: current.assignedUserId, assignedDepartmentId: current.assignedDepartmentId, assignedById: actorId } });
+    return assignment;
   }
 
   findActiveUser(id: string, client: AssignmentClient = this.prisma) {
@@ -101,6 +107,7 @@ export class AssignmentsRepository {
         assignedById: data.assignedById,
       },
       update: {
+        releasedAt: null,
         assignedUserId: data.assignedUserId,
         assignedDepartmentId: data.assignedDepartmentId,
         scopeBranchId: data.scopeBranchId,

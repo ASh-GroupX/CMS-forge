@@ -6,6 +6,7 @@ export const permissionDefinitions = [
   ['COMPLAINT_VIEW_BRANCH', 'View branch complaints', 'عرض شكاوى الفرع'],
   ['COMPLAINT_VIEW_ALL', 'View all branch complaints', 'عرض شكاوى جميع الفروع'],
   ['COMPLAINT_EDIT', 'Edit complaint facts', 'تعديل بيانات الشكوى'],
+  ['COMPLAINT_MANAGE', 'Manage complaints, including intake and routing', 'إدارة الشكاوى بما فيها الاستقبال والتوجيه'],
   ['COMPLAINT_SUBMIT', 'Submit complaint for review', 'إرسال الشكوى للمراجعة'],
   ['COMPLAINT_APPROVE', 'Approve complaint', 'اعتماد الشكوى'],
   ['COMPLAINT_ASSIGN', 'Assign investigation owner', 'تعيين مالك التحقيق'],

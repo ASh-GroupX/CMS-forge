@@ -5,6 +5,12 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/complaints/{id}/intake-redirect": {"post":{"tags":["Complaints"],"operationId":"intakeRedirect","summary":"intakeRedirect","description":"Requires configured intake team membership and CR_MANAGER or COMPLAINT_MANAGE authority; Admin allowed. Branch scope comes from the server session. Mutations require CSRF. Stale versions and competing claims return 409.","security":[{"cookieAuth":[]}],"parameters":[{"name":"id","in":"path","required":true,"schema":{"type":"string"}},{"name":"x-csrf-token","in":"header","required":true,"schema":{"type":"string"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/IntakeCorrection"}}}},"responses":{"201":{"description":"Success","content":{"application/json":{"schema":{"$ref":"#/components/schemas/IntakeComplaint"}}}},"400":{"description":"Invalid input"},"401":{"description":"No session"},"403":{"description":"Forbidden"},"404":{"description":"Not found"},"409":{"description":"Stale version or claim conflict"}}}},
+    "/complaints/{id}/intake-claim": {"post":{"tags":["Complaints"],"operationId":"intakeClaim","summary":"intakeClaim","description":"Requires configured intake team membership and CR_MANAGER or COMPLAINT_MANAGE authority; Admin allowed. Branch scope comes from the server session. Mutations require CSRF. Stale versions and competing claims return 409.","security":[{"cookieAuth":[]}],"parameters":[{"name":"id","in":"path","required":true,"schema":{"type":"string"}},{"name":"x-csrf-token","in":"header","required":true,"schema":{"type":"string"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"type":"object","required":["expectedVersion"],"properties":{"expectedVersion":{"type":"string","format":"date-time"}},"additionalProperties":false}}}},"responses":{"201":{"description":"Success","content":{"application/json":{"schema":{"$ref":"#/components/schemas/IntakeComplaint"}}}},"400":{"description":"Invalid input"},"401":{"description":"No session"},"403":{"description":"Forbidden"},"404":{"description":"Not found"},"409":{"description":"Stale version or claim conflict"}}},"delete":{"tags":["Complaints"],"operationId":"intakeRelease","summary":"intakeRelease","description":"Requires configured intake team membership and CR_MANAGER or COMPLAINT_MANAGE authority; Admin allowed. Branch scope comes from the server session. Mutations require CSRF. Stale versions and competing claims return 409.","security":[{"cookieAuth":[]}],"parameters":[{"name":"id","in":"path","required":true,"schema":{"type":"string"}},{"name":"x-csrf-token","in":"header","required":true,"schema":{"type":"string"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"type":"object","required":["expectedVersion"],"properties":{"expectedVersion":{"type":"string","format":"date-time"}},"additionalProperties":false}}}},"responses":{"200":{"description":"Success","content":{"application/json":{"schema":{"$ref":"#/components/schemas/IntakeComplaint"}}}},"400":{"description":"Invalid input"},"401":{"description":"No session"},"403":{"description":"Forbidden"},"404":{"description":"Not found"},"409":{"description":"Stale version or claim conflict"}}}},
+    "/complaints/{id}/intake": {"get":{"tags":["Complaints"],"operationId":"intakeDetail","summary":"intakeDetail","description":"Requires configured intake team membership and CR_MANAGER or COMPLAINT_MANAGE authority; Admin allowed. Branch scope comes from the server session. Mutations require CSRF. Stale versions and competing claims return 409.","security":[{"cookieAuth":[]}],"responses":{"200":{"description":"Success","content":{"application/json":{"schema":{"$ref":"#/components/schemas/IntakeComplaint"}}}},"400":{"description":"Invalid input"},"401":{"description":"No session"},"403":{"description":"Forbidden"},"404":{"description":"Not found"},"409":{"description":"Stale version or claim conflict"}},"parameters":[{"name":"id","in":"path","required":true,"schema":{"type":"string"}}]},"patch":{"tags":["Complaints"],"operationId":"intakeCorrect","summary":"intakeCorrect","description":"Requires configured intake team membership and CR_MANAGER or COMPLAINT_MANAGE authority; Admin allowed. Branch scope comes from the server session. Mutations require CSRF. Stale versions and competing claims return 409.","security":[{"cookieAuth":[]}],"parameters":[{"name":"id","in":"path","required":true,"schema":{"type":"string"}},{"name":"x-csrf-token","in":"header","required":true,"schema":{"type":"string"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/IntakeCorrection"}}}},"responses":{"200":{"description":"Success","content":{"application/json":{"schema":{"$ref":"#/components/schemas/IntakeComplaint"}}}},"400":{"description":"Invalid input"},"401":{"description":"No session"},"403":{"description":"Forbidden"},"404":{"description":"Not found"},"409":{"description":"Stale version or claim conflict"}}}},
+    "/complaints/redirect-queue": {"get":{"tags":["Complaints"],"operationId":"redirectQueue","summary":"redirectQueue","description":"Requires configured intake team membership and CR_MANAGER or COMPLAINT_MANAGE authority; Admin allowed. Branch scope comes from the server session. Mutations require CSRF. Stale versions and competing claims return 409.","security":[{"cookieAuth":[]}],"responses":{"200":{"description":"Success","content":{"application/json":{"schema":{"type":"object","properties":{"items":{"type":"array","items":{"$ref":"#/components/schemas/IntakeComplaint"}},"hasMore":{"type":"boolean"},"page":{"type":"integer"}}}}}},"400":{"description":"Invalid input"},"401":{"description":"No session"},"403":{"description":"Forbidden"},"404":{"description":"Not found"},"409":{"description":"Stale version or claim conflict"}},"parameters":[{"name":"filter","in":"query","schema":{"type":"string","enum":["all","unclaimed","mine","claimed"],"default":"all"}},{"name":"page","in":"query","schema":{"type":"integer","minimum":1,"maximum":100000,"default":1}}]}},
+    "/complaints/intake-options": {"get":{"tags":["Complaints"],"operationId":"intakeChoices","summary":"intakeChoices","description":"Requires configured intake team membership and CR_MANAGER or COMPLAINT_MANAGE authority; Admin allowed. Branch scope comes from the server session. Mutations require CSRF. Stale versions and competing claims return 409.","security":[{"cookieAuth":[]}],"responses":{"200":{"description":"Success","content":{"application/json":{"schema":{"$ref":"#/components/schemas/IntakeChoices"}}}},"400":{"description":"Invalid input"},"401":{"description":"No session"},"403":{"description":"Forbidden"},"404":{"description":"Not found"},"409":{"description":"Stale version or claim conflict"}}}},
+    "/complaints/intake-access": {"get":{"tags":["Complaints"],"operationId":"intakeAccess","summary":"intakeAccess","description":"Requires configured intake team membership and CR_MANAGER or COMPLAINT_MANAGE authority; Admin allowed. Branch scope comes from the server session. Mutations require CSRF. Stale versions and competing claims return 409.","security":[{"cookieAuth":[]}],"responses":{"200":{"description":"Success","content":{"application/json":{"schema":{"type":"object","properties":{"allowed":{"type":"boolean"}}}}}},"400":{"description":"Invalid input"},"401":{"description":"No session"},"403":{"description":"Forbidden"},"404":{"description":"Not found"},"409":{"description":"Stale version or claim conflict"}}}},
     "/service-bookings/settings/sms-reminder": {
       "get": {
         "tags": [
@@ -4608,24 +4614,8 @@
         }
       }
     },
-    "/admin/portal-intake-settings": {
-      "get": {
-        "tags": ["Admin"],
-        "operationId": "portalIntakeSettingsGet",
-        "summary": "Read portal intake configuration",
-        "security": [{ "cookieAuth": [] }],
-        "responses": { "200": { "description": "Configured intake settings or null" }, "401": { "description": "Session required" }, "403": { "description": "Admin required" } }
-      },
-      "put": {
-        "tags": ["Admin"],
-        "operationId": "portalIntakeSettingsUpdate",
-        "summary": "Update portal intake configuration and team",
-        "security": [{ "cookieAuth": [] }],
-        "parameters": [{ "in": "header", "name": "x-csrf-token", "required": true, "schema": { "type": "string" } }],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["branchId", "categoryId", "phoneCountryCode", "memberIds", "expectedVersion"], "properties": { "branchId": { "type": "string" }, "categoryId": { "type": "string" }, "phoneCountryCode": { "type": "string" }, "memberIds": { "type": "array", "items": { "type": "string" } }, "expectedVersion": { "type": ["integer", "null"] } } } } } },
-        "responses": { "200": { "description": "Updated intake settings" }, "400": { "description": "Invalid settings" }, "401": { "description": "Session required" }, "403": { "description": "Admin required" }, "409": { "description": "Settings version conflict" } }
-      }
-    },
+    "/admin/portal-intake-settings/options": {"get":{"tags":["Admin"],"operationId":"portalIntakeSettingsOptions","summary":"Active branches, categories and eligible intake staff (Admin only)","security":[{"cookieAuth":[]}],"responses":{"200":{"description":"Intake configuration choices","content":{"application/json":{"schema":{"type":"object","required":["branches","categories","members"],"properties":{"branches":{"type":"array","items":{"type":"object","required":["id","nameEn","nameAr"],"properties":{"id":{"type":"string"},"nameEn":{"type":"string"},"nameAr":{"type":"string"},"branchId":{"type":["string","null"]}},"additionalProperties":false}},"categories":{"type":"array","items":{"type":"object","required":["id","nameEn","nameAr"],"properties":{"id":{"type":"string"},"nameEn":{"type":"string"},"nameAr":{"type":"string"},"branchId":{"type":["string","null"]}},"additionalProperties":false}},"members":{"type":"array","items":{"type":"object","required":["id","nameEn","nameAr"],"properties":{"id":{"type":"string"},"nameEn":{"type":"string"},"nameAr":{"type":"string"},"branchId":{"type":["string","null"]},"roleCode":{"type":"string"}},"additionalProperties":false}}},"additionalProperties":false}}}},"401":{"description":"Session required"},"403":{"description":"Admin required"}}}},
+    "/admin/portal-intake-settings": {"get":{"tags":["Admin"],"operationId":"portalIntakeSettingsGet","summary":"Read portal intake configuration","security":[{"cookieAuth":[]}],"responses":{"200":{"description":"Configuration, with empty IDs and null version before first setup","content":{"application/json":{"schema":{"type":"object","required":["branchId","categoryId","phoneCountryCode","memberIds","version"],"properties":{"branchId":{"type":"string"},"categoryId":{"type":"string"},"phoneCountryCode":{"type":"string"},"memberIds":{"type":"array","items":{"type":"string"}},"version":{"type":["integer","null"]}}}}}},"401":{"description":"Session required"},"403":{"description":"Admin required"}}},"put":{"tags":["Admin"],"operationId":"portalIntakeSettingsUpdate","summary":"Update portal intake configuration and team","security":[{"cookieAuth":[]}],"parameters":[{"in":"header","name":"x-csrf-token","required":true,"schema":{"type":"string"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"type":"object","required":["branchId","categoryId","phoneCountryCode","memberIds","expectedVersion"],"properties":{"branchId":{"type":"string"},"categoryId":{"type":"string"},"phoneCountryCode":{"type":"string"},"memberIds":{"type":"array","items":{"type":"string"}},"expectedVersion":{"type":["integer","null"]}}}}}},"responses":{"200":{"description":"Saved configuration","content":{"application/json":{"schema":{"type":"object","required":["branchId","categoryId","phoneCountryCode","memberIds","version"],"properties":{"branchId":{"type":"string"},"categoryId":{"type":"string"},"phoneCountryCode":{"type":"string"},"memberIds":{"type":"array","items":{"type":"string"}},"version":{"type":["integer","null"]}}}}}},"400":{"description":"Invalid settings"},"401":{"description":"Session required"},"403":{"description":"Admin required"},"409":{"description":"Settings version conflict"}}}},
     "/portal/complaints": {
       "post": {
         "tags": [
@@ -7946,6 +7936,9 @@
       }
     },
     "schemas": {
+      "IntakeChoices": {"type":"object","properties":{"branches":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"nameEn":{"type":"string"},"nameAr":{"type":"string"},"branchId":{"type":["string","null"]},"departmentId":{"type":["string","null"]}}}},"categories":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"nameEn":{"type":"string"},"nameAr":{"type":"string"},"branchId":{"type":["string","null"]},"departmentId":{"type":["string","null"]}}}},"departments":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"nameEn":{"type":"string"},"nameAr":{"type":"string"},"branchId":{"type":["string","null"]},"departmentId":{"type":["string","null"]}}}},"users":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"nameEn":{"type":"string"},"nameAr":{"type":"string"},"branchId":{"type":["string","null"]},"departmentId":{"type":["string","null"]}}}},"severities":{"type":"array","items":{"type":"string"}}}},
+      "IntakeCorrection": {"type":"object","required":["expectedVersion","customerName","customerPhone","vehicleMake","vehicleModel","incidentAt","description","branchId","categoryId","severity","reason"],"properties":{"expectedVersion":{"type":"string","format":"date-time"},"customerName":{"type":"string"},"customerPhone":{"type":"string","pattern":"^\\+[1-9]\\d{7,14}$"},"vehicleMake":{"type":"string"},"vehicleModel":{"type":"string"},"vehicleVin":{"type":["string","null"]},"odometer":{"type":["integer","null"],"minimum":0,"maximum":10000000},"incidentAt":{"type":"string","format":"date-time"},"description":{"type":"string"},"branchId":{"type":"string"},"categoryId":{"type":"string"},"severity":{"type":"string","enum":["LOW","MEDIUM","HIGH","CRITICAL"]},"departmentId":{"type":["string","null"]},"ownerId":{"type":["string","null"]},"reason":{"type":"string"}},"additionalProperties":false},
+      "IntakeComplaint": {"type":"object","required":["id","referenceNumber","expectedVersion","customerName","customerPhone","vehicleMake","vehicleModel","status","claim"],"properties":{"expectedVersion":{"type":"string","format":"date-time"},"customerName":{"type":"string"},"customerPhone":{"type":"string","pattern":"^\\+[1-9]\\d{7,14}$"},"vehicleMake":{"type":"string"},"vehicleModel":{"type":"string"},"vehicleVin":{"type":["string","null"]},"odometer":{"type":["integer","null"],"minimum":0,"maximum":10000000},"incidentAt":{"type":"string","format":"date-time"},"branchId":{"type":"string"},"categoryId":{"type":"string"},"severity":{"type":"string","enum":["LOW","MEDIUM","HIGH","CRITICAL"]},"departmentId":{"type":["string","null"]},"ownerId":{"type":["string","null"]},"id":{"type":"string"},"referenceNumber":{"type":"string"},"status":{"type":"string"},"descriptionEn":{"type":"string"},"createdAt":{"type":"string","format":"date-time"},"claim":{"type":["object","null"],"properties":{"assignedUserId":{"type":["string","null"]},"assignedUser":{"type":["object","null"],"properties":{"nameEn":{"type":"string"},"nameAr":{"type":"string"}}}}}}},
       "UpdateServiceBookingSmsReminderSettings": {
         "type": "object",
         "required": [
@@ -10889,7 +10882,8 @@
                       }
                     ]
                   },
-                  "customerSource": {
+                  "submittedVehicle": {"type":["object","null"],"properties":{"make":{"type":"string"},"model":{"type":"string"},"vin":{"type":["string","null"]}}},
+                    "customerSource": {
                     "type": "string",
                     "enum": [
                       "LOCAL",
@@ -15175,41 +15169,7 @@
         },
         "additionalProperties": false
       },
-      "PortalOptionsResponse": {
-        "type": "object",
-        "required": [
-          "branches",
-          "categories",
-          "severities"
-        ],
-        "properties": {
-          "branches": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PortalPublicOption"
-            }
-          },
-          "categories": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PortalPublicCategoryOption"
-            }
-          },
-          "severities": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "CRITICAL",
-                "HIGH",
-                "MEDIUM",
-                "LOW"
-              ]
-            }
-          }
-        },
-        "additionalProperties": false
-      },
+      "PortalOptionsResponse": {"type":"object","required":["branches","categories","departments","severities","phoneCountryCode","incidentDate","fieldRules","acknowledgementStatus"],"properties":{"branches":{"type":"array","maxItems":0,"items":{}},"categories":{"type":"array","maxItems":0,"items":{}},"departments":{"type":"array","maxItems":0,"items":{}},"severities":{"type":"array","maxItems":0,"items":{}},"phoneCountryCode":{"type":"string"},"incidentDate":{"type":"string","format":"date"},"fieldRules":{"type":"object","properties":{"required":{"type":"array","items":{"type":"string"}},"optional":{"type":"array","items":{"type":"string"}}}},"acknowledgementStatus":{"type":"string","enum":["DISABLED"]}}},
       "AdminCategoryListResponse": {
         "type": "object",
         "required": [

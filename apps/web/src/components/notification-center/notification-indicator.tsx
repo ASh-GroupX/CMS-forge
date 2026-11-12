@@ -53,7 +53,7 @@ export function NotificationIndicator({ locale, href }: { locale: Locale; href: 
     className={`relative h-12 min-w-12 shrink-0 gap-2 rounded-xl px-3 [&_svg]:size-6 ${hasUnread ? 'border-brand/40 bg-brand/10 text-brand shadow-sm ring-2 ring-brand/15 hover:bg-brand/15' : 'text-content-muted'}`}>
     <a aria-label={label} href={href} title={label}>
       <Icon aria-hidden="true" className="size-6 shrink-0" />
-      <span className="hidden text-sm font-semibold lg:inline">{copy.title}</span>
+      <span className="hidden text-sm font-semibold text-content-strong lg:inline">{copy.title}</span>
       {unread !== null && <Badge aria-hidden="true" variant={hasUnread ? 'default' : 'secondary'}
         className={`absolute -end-1 -top-2 min-w-6 justify-center rounded-full px-1.5 py-0.5 text-xs font-bold ring-2 ring-surface ${hasUnread ? 'bg-brand text-primary-foreground' : ''}`}>{count}</Badge>}
       <span className="sr-only" role="status" aria-live="polite">{failed ? copy.indicator.unavailable : hasUnread ? `${count} ${copy.indicator.newActivity}` : unread === 0 ? copy.indicator.caughtUp : ''}</span>

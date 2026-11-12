@@ -37,9 +37,14 @@ export type PortalComplaintRequestDto = {
 export function parsePortalComplaintBody(body: unknown): PortalComplaintRequestDto {
   const input = objectBody(body);
   const attachments = attachmentList(input.attachments);
+  const phone = requiredText(input.customerPhone, 'customerPhone');
+  if (!/^\+?[\d\s()\-]{7,20}$/.test(phone)) throw invalid('customerPhone', 'Invalid phone.');
+  const vin = optionalText(input.vehicleVin, 'vehicleVin');
+  if (vin && !/^[A-HJ-NPR-Z0-9]{17}$/i.test(vin)) throw invalid('vehicleVin', 'Invalid VIN.');
+  if (!Number.isFinite(Date.parse(requiredText(input.incidentAt, 'incidentAt')))) throw invalid('incidentAt', 'Invalid date.');
   return {
     customerName: requiredText(input.customerName, 'customerName'),
-    customerPhone: requiredText(input.customerPhone, 'customerPhone'),
+    customerPhone: phone,
     categoryId: null,
     departmentId: null,
     description: requiredText(input.description, 'description'),
@@ -49,11 +54,11 @@ export function parsePortalComplaintBody(body: unknown): PortalComplaintRequestD
     severity: null,
     manualTriage: true,
     vehicleRelated: true,
-    vehicleVin: optionalText(input.vehicleVin, 'vehicleVin'),
+    vehicleVin: vin?.toUpperCase() ?? null,
     vehicleBrand: requiredText(input.vehicleBrand, 'vehicleBrand'),
     vehicleModel: requiredText(input.vehicleModel, 'vehicleModel'),
     odometer: optionalNumber(input.odometer, 'odometer'),
-    vehicleId: optionalText(input.vehicleId, 'vehicleId'),
+    vehicleId: null,
     vehiclePlate: optionalText(input.vehiclePlate, 'vehiclePlate'),
     vehicleModelYear: optionalNumber(input.vehicleModelYear, 'vehicleModelYear'),
 
@@ -79,6 +84,7 @@ function requiredText(value: unknown, field: string): string {
   if (typeof value !== 'string' || !value.trim()) {
     throw invalid(field, `${field} is required.`);
   }
+  if (!['contentBase64'].includes(field) && value.length > (field === 'description' ? 10000 : 200)) throw invalid(field, 'Value is too long.');
   return value.trim();
 }
 
@@ -94,7 +100,7 @@ function optionalNumber(value: unknown, field: string): number | null {
   if (value === undefined || value === null) {
     return null;
   }
-  if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) {
+  if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= 10000000) {
     return value;
   }
   throw invalid(field, `${field} is invalid.`);

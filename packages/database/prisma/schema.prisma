@@ -597,6 +597,8 @@ model Vehicle {
 }
 
 model Complaint {
+  vehicleVinSnapshot String? @map("vehicle_vin_snapshot")
+  customerNameSnapshot String? @map("customer_name_snapshot")
   vehicleMakeSnapshot String? @map("vehicle_make_snapshot")
   vehicleModelSnapshot String? @map("vehicle_model_snapshot")
   rootCauseCategory String?                    @map("root_cause_category")
@@ -1081,6 +1083,7 @@ model BoardStage {
 }
 
 model Assignment {
+  releasedAt           DateTime?           @map("released_at")
   id                   String              @id @default(cuid())
   entityType           String              @map("entity_type") @db.VarChar(80)
   entityId             String              @map("entity_id")
@@ -1098,6 +1101,7 @@ model Assignment {
   history              AssignmentHistory[]
 
   @@unique([entityType, entityId])
+  @@index([entityType, releasedAt])
   @@index([assignedUserId, entityType])
   @@index([assignedDepartmentId, entityType])
   @@index([scopeBranchId, entityType])

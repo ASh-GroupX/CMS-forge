@@ -113,7 +113,7 @@ export class ComplaintsService {
           const referenceNumber = data.status === ComplaintStatus.DRAFT
             ? `DRAFT-${randomUUID()}`
             : await this.complaintsRepository.nextReferenceNumber(data.branchId, new Date(), client);
-          const complaint = await this.complaintsRepository.create({ ...data, referenceNumber }, client);
+          const complaint = await this.complaintsRepository.create({ ...data, referenceNumber, ...(input.requestSource === ComplaintTransitionRequestSource.CUSTOMER_PORTAL ? { publicIntake: true } : {}) }, client);
           await this.complaintsRepository.createStatusHistory({
             complaintId: complaint.id,
             fromStatus: null,

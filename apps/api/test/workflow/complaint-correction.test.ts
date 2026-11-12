@@ -78,6 +78,7 @@ test('complaint correction repository persists provided fields with optimistic p
   const repository = new ComplaintsRepository({
     complaint: {
       updateMany: async (input: unknown) => { calls.push({ updateMany: input }); return { count: 1 }; },
+      findFirst: async () => null,
       findUniqueOrThrow: async (input: unknown) => { calls.push({ findUniqueOrThrow: input }); return { id: 'cmp_1', branchId: 'branch_main' }; },
     },
   } as never);

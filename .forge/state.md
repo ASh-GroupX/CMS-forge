@@ -1,11 +1,12 @@
 # Current State
 
-Date: 2026-11-11
-Status: In progress — QR complaint intake
+Date: 2026-11-12
+Status: Verified locally — non-SMS QR intake release pending push
 Risk: High
 
-- Intake configuration backend slice added: versioned branch/category/phone prefix, soft-preserved member rows, Admin-only GET/PUT, optimistic conflict, target validation, configuration audit, and explicit portal fallback lookup.
-- External Data API slice added: `portal-complaints:read` plus `customers:read` exposes an explicit, branch-scoped, paginated projection of QR form customer name, phone, reference, description, vehicle, and dates. The Admin API-key screen offers the resource and automatically selects the customer scope. Only creation-time portal history identifies eligible records, excluding later follow-ups to staff-created complaints.
-- Passed: Prisma validate/generate, `typecheck`, `lint`, `test:api -- integrations` (54/54), `test:api -- portal` (15/15), `openapi:check`, `db:migrate:test`, `security:check`, `git diff --check`. Earlier form visual/accessibility previews passed before this API-only edit.
-- Not run: live database migration and keyed HTTP pull, current screenshot review, full suite, deployment. No production SMS provider is configured; SMS is deferred per user request.
-- Customer form now has required name/phone/make/model/description, optional VIN/odometer/files, editable default date, and server-owned routing defaults. Country-code UX, detailed input validation, screenshot review, Admin settings UI/QR, shared staff queue, claim, and redirect remain. Progress commit `2307f68` was pushed to `origin/codex/system-data-read-api`; no production merge or deployment occurred. Preserve `tmp/` and `uploads/`.
+- Complete public QR form, Admin defaults/team/QR workspace, Admin hub/user visibility controls, branch-scoped paginated redirect queue, dedicated detail editor, atomic claims/releases, corrections, department/owner redirects and team notifications implemented.
+- Generated portal-intake module owns settings/membership; related reads use public Admin/Assignments/Customers services. Released assignment records/history are preserved. Legacy correction/transition routes cannot bypass pending portal intake.
+- External Data API offers explicit portal customer export with customer + portal scopes. SMS acknowledgement remains deferred; no live SMS claim.
+- Passed: build, typecheck, lint, OpenAPI, portal 24/24, workflow 98/98, assignments 7/7, integration 54/54, notifications 48/48, settings 2/2, web 231/231, root 78/78 (89.95% lines), security, migration sanity, actual PostgreSQL 60 migrations/indexes, static visual 96/a11y 24/perf 5 previews.
+- Live isolated API/database proof passed concurrent claims and settings conflicts, real audit rollback, customer export, team notification dedupe, legacy guard, both redirect destinations, release and PII-free audits. Live development browser passed QR decode/download, settings save, submit/error preservation, queue/detail EN/AR at 390/430/768/1280/1440, claim/correct/read-only/redirect with axe. Separate browser fixture passed conflict preservation/reload EN/AR phone/desktop. Screenshots inspected.
+- Independent GPT-6.1 Sol review: Accept With Conditions, no remaining blocker; preferred named reviewer unavailable. Local production-server browser launch was rejected by automatic approval review with only 'blocked by policy'; production build passed and development browser proof is real. Production release/smoke pending. Preserve tmp/ and uploads/.

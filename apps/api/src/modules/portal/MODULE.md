@@ -28,6 +28,8 @@ Agent context manifest. Read this before editing the module.
 
 ## May depend on
 
+- modules/portal-intake public PortalIntakeService for defaults and intake notification recipients.
+
 - `core/http-kernel` for stable API errors and request context.
 - `core/audit.service` for portal verification/security audit entries.
 - `core/rate-limit.guard` for public portal abuse protection.

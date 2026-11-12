@@ -480,6 +480,7 @@ test('draft submit assigns one CMS reference inside the status transaction', asy
   const repository = new ComplaintsRepository({
     complaint: {
       findUnique: async () => ({ branchId: 'branch_main', referenceNumber: 'DRAFT-abc' }),
+      findFirst: async () => null,
       updateMany: async (input: unknown) => {
         calls.push({ updateMany: input });
         return { count: 1 };

@@ -21,19 +21,18 @@ import { NotificationsService } from '../notifications/notifications.service.js'
 import { PortalController } from './portal.controller.js';
 import { PortalRepository } from './portal.repository.js';
 import { PortalService } from './portal.service.js';
-import { PortalIntakeSettingsController } from './portal-intake-settings.controller.js';
-import { PortalIntakeSettingsService } from './portal-intake-settings.service.js';
+import { PortalIntakeModule } from '../portal-intake/portal-intake.module.js';
+import { PortalIntakeService } from '../portal-intake/portal-intake.service.js';
 
 @Module({
-  imports: [AuthModule, ComplaintsModule, NotificationsModule, forwardRef(() => AttachmentsModule)],
-  controllers: [PortalController, PortalIntakeSettingsController],
+  imports: [AuthModule, PortalIntakeModule, ComplaintsModule, NotificationsModule, forwardRef(() => AttachmentsModule)],
+  controllers: [PortalController],
   providers: [
     PrismaService,
     { provide: SESSION_AUTH_SERVICE, inject: [AuthService], useFactory: (auth: AuthService) => auth },
     SessionAuthGuard,
     { provide: RbacGuard, inject: [Reflector, AuditService], useFactory: (reflector: Reflector, audit: AuditService) => new RbacGuard(reflector, audit) },
     CsrfGuard,
-    PortalIntakeSettingsService,
     { provide: AuditService, inject: [PrismaService], useFactory: (prisma: PrismaService) => new AuditService(prisma) },
     { provide: LOGIN_RATE_LIMIT_STORE, useClass: InMemoryLoginRateLimitStore },
     PortalSubmissionRateLimitGuard,
@@ -45,14 +44,15 @@ import { PortalIntakeSettingsService } from './portal-intake-settings.service.js
     },
     {
       provide: PortalService,
-      inject: [ComplaintsService, PortalRepository, NotificationsService, AuditService, AttachmentsService],
+      inject: [ComplaintsService, PortalRepository, NotificationsService, AuditService, AttachmentsService, PortalIntakeService],
       useFactory: (
         complaints: ComplaintsService,
         repository: PortalRepository,
         notifications: NotificationsService,
         audit: AuditService,
         attachments: AttachmentsService,
-      ) => new PortalService(complaints, repository, notifications, audit, attachments),
+        configuration: PortalIntakeService,
+      ) => new PortalService(complaints, repository, notifications, audit, attachments, configuration),
     },
   ],
   exports: [PortalService],

@@ -126,9 +126,10 @@ test('portal manual triage fills missing catalog IDs from active defaults', asyn
       calls.push(input);
       return { id: 'cmp_portal', referenceNumber: 'CMS-2026-MAIN-000011', status: ComplaintStatus.SUBMITTED };
     },
-  } as ComplaintsService, {
-    findManualTriageDefaults: async () => ({ branchId: 'branch_default', departmentId: 'dep_default', categoryId: 'cat_default' }),
-  } as never, {} as never, {} as never);
+  } as ComplaintsService, {} as never, {} as never, {} as never, undefined, {
+    defaults: async () => ({ branchId: 'branch_default', departmentId: 'dep_default', categoryId: 'cat_default' }),
+    publicDefaults: async () => null, recipients: async () => [],
+  } as never);
 
   const result = await service.submitComplaint({
     ...validBody(),
@@ -273,23 +274,16 @@ test('portal submission route uses the portal rate limit guard', () => {
   assert.deepEqual(guards.map((guard) => guard.name), ['PortalSubmissionRateLimitGuard']);
 });
 
-test('portal options route returns only public-safe catalog fields', async () => {
-  const controller = controllerWith({}, {
-    listPublic: async () => ({
-      branches: [{ id: 'branch_service', nameEn: 'Service Branch', nameAr: 'فرع الصيانة' }],
-      categories: [{ id: 'cat_engine', nameEn: 'Engine', nameAr: 'المحرك', departmentId: 'dep_vehicle' }],
-      severities: [ComplaintSeverity.HIGH, ComplaintSeverity.LOW],
-    }),
-  });
-
+test('portal options route returns safe form defaults without routing or members', async () => {
+  const service = new PortalService({} as never, {} as never, {} as never, {} as never, undefined, { publicDefaults: async () => ({ phoneCountryCode: '+962', branch: { timezone: 'Asia/Amman' } }) } as never);
+  const controller = new PortalController(service, {} as never);
   const response = await controller.options();
-
-  assert.deepEqual(response, {
-    branches: [{ id: 'branch_service', nameEn: 'Service Branch', nameAr: 'فرع الصيانة' }],
-    categories: [{ id: 'cat_engine', nameEn: 'Engine', nameAr: 'المحرك', departmentId: 'dep_vehicle' }],
-    severities: [ComplaintSeverity.HIGH, ComplaintSeverity.LOW],
-  });
-  assert.doesNotMatch(JSON.stringify(response), /staff\|owner\|code\|branchScope/i);
+  assert.equal(response.phoneCountryCode, '+962');
+  assert.deepEqual(response.branches, []);
+  assert.deepEqual(response.categories, []);
+  assert.deepEqual(response.departments, []);
+  assert.ok(response.fieldRules.required.includes('vehicleModel'));
+  assert.doesNotMatch(JSON.stringify(response), /memberIds|userId|departmentId|branchId/);
 });
 
 test('public complaint options query omits departments and internal codes', async () => {
@@ -347,7 +341,7 @@ function validBody() {
     subject: 'Engine noise',
     severity: ComplaintSeverity.HIGH,
     vehicleRelated: true,
-    vehicleVin: 'SEEDDEMO00001',
+    vehicleVin: '1HGCM82633A004352',
     vehiclePlate: 'ABC123',
     vehicleBrand: 'Nissan',
     vehicleModel: 'Patrol',

@@ -1,3 +1,10 @@
+import { PortalIntakeModule } from '../portal-intake/portal-intake.module.js';
+import { PortalIntakeService } from '../portal-intake/portal-intake.service.js';
+import { CustomersModule } from '../customers/customers.module.js';
+import { CustomersService } from '../customers/customers.service.js';
+import { ComplaintIntakeController } from './complaint-intake.controller.js';
+import { ComplaintIntakeService } from './complaint-intake.service.js';
+import { ComplaintIntakeRepository } from './complaint-intake.repository.js';
 import { Module, forwardRef } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuditService } from '../../core/audit.service.js';
@@ -35,9 +42,11 @@ import { ComplaintSettingsController } from './complaint-settings.controller.js'
 import { ComplaintSettingsService } from './complaint-settings.service.js';
 
 @Module({
-  imports: [AuthModule, AssignmentsModule, NotificationsModule, CasesModule, SlaModule, TasksModule, CommunicationGroupsModule, forwardRef(() => SurveysModule)],
-  controllers: [ComplaintsController, ComplaintTemplatesController, ComplaintSettingsController],
+  imports: [AuthModule, PortalIntakeModule, CustomersModule, AssignmentsModule, NotificationsModule, CasesModule, SlaModule, TasksModule, CommunicationGroupsModule, forwardRef(() => SurveysModule)],
+  controllers: [ComplaintIntakeController, ComplaintsController, ComplaintTemplatesController, ComplaintSettingsController],
   providers: [
+    { provide: ComplaintIntakeRepository, inject: [PrismaService], useFactory: (prisma: PrismaService) => new ComplaintIntakeRepository(prisma) },
+    { provide: ComplaintIntakeService, inject: [ComplaintIntakeRepository, AuditService, AssignmentsService, CustomersService, ComplaintFormOptionsService, SlaService, PortalIntakeService], useFactory: (repo: ComplaintIntakeRepository, audit: AuditService, assignments: AssignmentsService, customers: CustomersService, catalog: ComplaintFormOptionsService, sla: SlaService, configuration: PortalIntakeService) => new ComplaintIntakeService(repo, audit, assignments, customers, catalog, sla, configuration) },
     PrismaService,
     {
       provide: AuditService,

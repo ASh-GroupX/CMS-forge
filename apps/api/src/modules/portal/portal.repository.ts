@@ -94,12 +94,7 @@ export class PortalRepository {
     });
   }
 
-  async findManualTriageDefaults(client: PortalCatalogClient = this.prisma): Promise<PortalManualTriageDefaults | null> {
-    const settings = await client.portalIntakeSetting.findUnique({ where: { id: 'default' }, select: { branchId: true, categoryId: true } });
-    if (!settings) return null;
-    const department = await client.department.findFirst({ where: { isActive: true, OR: [{ branchId: settings.branchId }, { branchId: null }] }, select: { id: true } });
-    return department ? { branchId: settings.branchId, departmentId: department.id, categoryId: settings.categoryId } : null;
-  }
+
 }
 
 const verificationSelect = {

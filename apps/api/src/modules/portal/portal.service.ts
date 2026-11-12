@@ -1,4 +1,5 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { PortalIntakeService } from '../portal-intake/portal-intake.service.js';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { CommentVisibility, ComplaintSeverity, ComplaintStatus, ComplaintTransitionRequestSource, ComplaintTransitionAction, NotificationChannel, RoleCode } from '@prisma/client';
 import { AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
@@ -42,7 +43,14 @@ const MAX_OTP_ATTEMPTS = 5;
 
 @Injectable()
 export class PortalService {
-  constructor(private readonly complaintsService: ComplaintsService, private readonly portalRepository: PortalRepository, private readonly notificationsService: NotificationsService, private readonly auditService: AuditService, private readonly attachmentsService?: AttachmentsService) {}
+  private readonly logger = new Logger(PortalService.name);
+  constructor(private readonly complaintsService: ComplaintsService, private readonly portalRepository: PortalRepository, private readonly notificationsService: NotificationsService, private readonly auditService: AuditService, private readonly attachmentsService?: AttachmentsService, private readonly configuration?: PortalIntakeService) {}
+
+  async publicOptions() {
+    const defaults = await this.configuration?.publicDefaults();
+    const timeZone = defaults?.branch.timezone ?? 'Asia/Amman';
+    return { branches: [], categories: [], departments: [], severities: [], phoneCountryCode: defaults?.phoneCountryCode ?? '+962', incidentDate: new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()), fieldRules: { required: ['customerName', 'customerPhone', 'vehicleBrand', 'vehicleModel', 'description', 'incidentAt'], optional: ['vehicleVin', 'odometer', 'attachments'] }, acknowledgementStatus: 'DISABLED' as const };
+  }
 
   async submitComplaint(input: SubmitPortalComplaintInput): Promise<PortalComplaintSubmissionResult> {
     const { attachments = [], ...submittedInput } = input;
@@ -58,6 +66,12 @@ export class PortalService {
       saveAsDraft: false,
       requestSource: ComplaintTransitionRequestSource.CUSTOMER_PORTAL,
     });
+    if (this.configuration?.recipients) {
+      try {
+      const recipients = await this.configuration.recipients();
+      await Promise.all(recipients.map(({ userId }) => this.notificationsService.queueInternal({ complaintId: complaint.id, recipientUserId: userId, templateCode: 'complaint.submitted.internal', locale: 'ar', idempotencyKey: `portal-intake:${complaint.id}:${userId}`, payload: { href: `/redirect-complaints/${complaint.id}`, title: complaint.referenceNumber, referenceNumber: complaint.referenceNumber } })));
+      } catch { this.logger.warn('Portal intake team notification enqueue failed after commit'); }
+    }
     const uploaded: AttachmentUploadResult[] = [];
     let failedCount = 0;
     for (const attachment of attachmentInputs) {
@@ -76,12 +90,17 @@ export class PortalService {
 
   private async resolveComplaintInput(input: Omit<SubmitPortalComplaintInput, 'attachments'>): Promise<CreateInternalComplaintInput> {
     if (input.manualTriage !== true) return input as CreateInternalComplaintInput;
-    const defaults = await this.portalRepository.findManualTriageDefaults();
+    const defaults = await this.configuration?.defaults();
     if (!defaults) throw new AppException('PORTAL_OPTIONS_REQUIRED', 'Complaint form options are required before portal submission.', HttpStatus.BAD_REQUEST, [
       { field: 'manualTriage', code: 'UNAVAILABLE', message: 'Manual triage defaults are not configured.' },
     ]);
+    const phoneDefaults = await this.configuration?.publicDefaults();
+    const digits = input.customerPhone?.replace(/[\s()\-]/g, '') ?? '';
+    const customerPhone = digits.startsWith('+') ? digits : `${phoneDefaults?.phoneCountryCode ?? '+962'}${digits.replace(/^0+/, '')}`;
+    if (!/^\+[1-9]\d{7,14}$/.test(customerPhone)) throw new AppException('VALIDATION_FAILED', 'Invalid phone', HttpStatus.BAD_REQUEST, [{ field: 'customerPhone', code: 'INVALID', message: 'Invalid phone.' }]);
     return {
       ...input,
+      customerPhone,
       branchId: defaults.branchId,
       departmentId: defaults.departmentId,
       categoryId: defaults.categoryId,

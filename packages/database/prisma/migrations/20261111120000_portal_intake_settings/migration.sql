@@ -26,3 +26,5 @@ CREATE UNIQUE INDEX "portal_intake_members_active_user_key" ON "portal_intake_me
 
 ALTER TABLE "complaints" ADD COLUMN "vehicle_make_snapshot" TEXT;
 ALTER TABLE "complaints" ADD COLUMN "vehicle_model_snapshot" TEXT;
+ALTER TABLE "complaints" ADD COLUMN "vehicle_vin_snapshot" TEXT;
+ALTER TABLE "complaints" ADD COLUMN "customer_name_snapshot" TEXT;

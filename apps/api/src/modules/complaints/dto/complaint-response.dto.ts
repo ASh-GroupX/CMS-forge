@@ -93,6 +93,7 @@ export type ComplaintVehicleDetailDto = {
 };
 
 export type ComplaintDetailDto = ComplaintQueueItemDto & {
+  submittedVehicle?: { make: string; model: string; vin: string | null } | null;
   categoryId: string;
   categoryName: string;
   categoryNameAr: string;

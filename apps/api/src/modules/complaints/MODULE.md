@@ -42,6 +42,9 @@ in the `board-stages` module).
 
 ## May depend on
 
+- modules/customers public CustomersService for safe intake customer resolution.
+- modules/portal-intake public PortalIntakeService for configured membership.
+
 - `core/http-kernel` for Prisma and stable errors.
 - `core/audit.service` for complaint creation and workflow audit entries.
 - `core/auth.guard` for server-session-derived roles and branch scope.

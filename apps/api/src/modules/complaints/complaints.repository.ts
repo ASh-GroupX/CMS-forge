@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { AuditEventType, NotificationChannel } from '@prisma/client';
 import type { CommentVisibility, ComplaintSeverity, ComplaintStatus, ComplaintTransitionAction, ComplaintTransitionRequestSource, Prisma, RoleCode } from '@prisma/client';
-import { PrismaService } from '../../core/http-kernel.js';
+import { PrismaService, AppException } from '../../core/http-kernel.js';
 import type { ComplaintCorrectionData, ComplaintCorrectionRecord } from './complaint-correction.js';
 import { correctionUpdateData } from './complaint-correction-update.js';
 import { nextReferenceNumber, upsertVehicle } from './complaint-reference.repository.js';
@@ -17,6 +17,7 @@ export type ComplaintRecord = { id: string; branchId: string; customerId: string
 
 export type ComplaintQueueRecord = ComplaintRecord & { ownerId: string | null; backupOfficerId?: string | null; owner: { nameEn: string; nameAr?: string | null; email?: string | null; phone?: string | null } | null; backupOfficer?: { nameEn: string; nameAr?: string | null; email?: string | null; phone?: string | null } | null; department?: { nameEn: string; nameAr: string } | null; category?: { id: string; nameEn: string; nameAr: string } | null; branch: { code: string; nameEn: string; nameAr: string; timezone: string }; createdAt: Date; updatedAt: Date };
 export type ComplaintDetailRecord = Omit<ComplaintQueueRecord, 'category'> & {
+  customerNameSnapshot?: string | null; vehicleMakeSnapshot?: string | null; vehicleModelSnapshot?: string | null; vehicleVinSnapshot?: string | null;
   category: { id: string; nameEn: string; nameAr: string };
   descriptionEn: string;
   descriptionAr?: string | null;
@@ -53,6 +54,7 @@ export type ComplaintDetailRecord = Omit<ComplaintQueueRecord, 'category'> & {
   statusHistory: Array<{ id: string; fromStatus: ComplaintStatus | null; toStatus: ComplaintStatus; action: ComplaintTransitionAction | null; actorId: string | null; actorRole: string | null; requestSource: ComplaintTransitionRequestSource | null; reason: string | null; correlationId: string | null; createdAt: Date; actor: { nameEn: string; nameAr: string; phone?: string | null; department: { nameEn: string; nameAr: string } | null } | null }>;
 };
 export type CreateComplaintData = {
+  publicIntake?: boolean;
   referenceNumber: string; status: ComplaintStatus; type: any; subject: string; severity: ComplaintSeverity; branchId: string; categoryId: string; customerName: string; customerPhone?: string | null; customerNumber?: string | null; customerDataSource: DataSource; manualCustomerFlag: boolean; vehicleId?: string | null; vehicleVin?: string | null; vehiclePlate?: string | null; vehicleBrand?: string | null; vehicleModel?: string | null; vehicleModelYear?: number | null; vehicleDataSource?: DataSource | null; manualVehicleFlag: boolean; vehicleRelated: boolean; vehicleDataUnavailableReason?: string | null; channel?: string | null; customerType?: string | null; lastServiceDate?: Date | null; odometer?: number | null; warrantyActive?: boolean | null; salesAdvisorName?: string | null; rootCauseCategory?: string | null; repeatCustomer?: boolean | null; departmentId?: string | null; ownerId?: string | null; backupOfficerId?: string | null; collaboratorId?: string | null; alternativeCarProvided?: boolean; createdById?: string | null; descriptionEn: string; incidentAt: Date; templateId?: string | null; templateData?: any;
 };
 
@@ -118,7 +120,7 @@ export class ComplaintsRepository {
       orderBy: { id: 'asc' }, take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       select: { id: true, referenceNumber: true, branchId: true, status: true, createdAt: true, incidentAt: true,
-        vehicleMakeSnapshot: true, vehicleModelSnapshot: true,
+        vehicleMakeSnapshot: true, vehicleModelSnapshot: true, vehicleVinSnapshot: true, customerNameSnapshot: true,
         descriptionEn: true, odometer: true, customer: { select: { nameEn: true, phone: true } },
         vehicle: { select: { vin: true, makeEn: true, modelEn: true } } },
     });
@@ -168,7 +170,7 @@ export class ComplaintsRepository {
       select: { id: true },
     });
 
-    const vehicleId = data.vehicleId ?? await upsertVehicle(data, customer.id, client);
+    const vehicleId = data.publicIntake ? null : data.vehicleId ?? await upsertVehicle(data, customer.id, client);
 
     return client.complaint.create({
       data: {
@@ -188,6 +190,8 @@ export class ComplaintsRepository {
         vehicleRelated: data.vehicleRelated,
         vehicleMakeSnapshot: data.vehicleBrand ?? null,
         vehicleModelSnapshot: data.vehicleModel ?? null,
+        vehicleVinSnapshot: data.vehicleVin ?? null,
+        customerNameSnapshot: data.publicIntake ? data.customerName : null,
         vehicleDataUnavailableReason: data.vehicleDataUnavailableReason ?? null,
         channel: data.channel ?? null,
         customerType: data.customerType ?? null,
@@ -349,6 +353,7 @@ export class ComplaintsRepository {
         ...complaintSelect,
         ownerId: true, owner: { select: { nameEn: true, email: true, phone: true } }, department: { select: { nameEn: true, nameAr: true } }, branch: { select: { code: true, nameEn: true, nameAr: true, timezone: true } },
         descriptionEn: true, descriptionAr: true, incidentAt: true,
+        customerNameSnapshot: true, vehicleMakeSnapshot: true, vehicleModelSnapshot: true, vehicleVinSnapshot: true,
         category: { select: { id: true, nameEn: true, nameAr: true } },
         customer: { select: { id: true, nameEn: true, phone: true, dmsCode: true, dataSource: true } },
         vehicle: { select: { id: true, vin: true, plate: true, makeEn: true, modelEn: true, year: true, dataSource: true } },
@@ -498,9 +503,15 @@ export class ComplaintsRepository {
     });
   }
 
-  async updateCorrection(data: ComplaintCorrectionData, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintCorrectionRecord | null> { const update = await client.complaint.updateMany({ where: { id: data.complaintId, updatedAt: data.expectedUpdatedAt }, data: correctionUpdateData(data) }); return update.count === 0 ? null : client.complaint.findUniqueOrThrow({ where: { id: data.complaintId }, select: { id: true, branchId: true } }); }
+  async updateCorrection(data: ComplaintCorrectionData, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintCorrectionRecord | null> { await this.requireNormalWorkflow(data.complaintId, client); const update = await client.complaint.updateMany({ where: { id: data.complaintId, updatedAt: data.expectedUpdatedAt }, data: correctionUpdateData(data) }); return update.count === 0 ? null : client.complaint.findUniqueOrThrow({ where: { id: data.complaintId }, select: { id: true, branchId: true } }); }
+
+  private async requireNormalWorkflow(id: string, client: ComplaintTransitionClient) {
+    const pending = await client.complaint.findFirst({ where: { id, status: 'SUBMITTED', statusHistory: { some: { fromStatus: null, action: 'SUBMIT', requestSource: 'CUSTOMER_PORTAL' } } }, select: { id: true } });
+    if (pending) throw new AppException('COMPLAINT_INVALID_TRANSITION', 'Use the claimed intake workspace for this complaint.', HttpStatus.CONFLICT);
+  }
 
   async updateStatus(data: UpdateComplaintStatusData, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintStatusRecord | null> {
+    await this.requireNormalWorkflow(data.complaintId, client);
     const referenceNumber = await submittedReference(data, client);
     const updateData = {
       status: data.toStatus,
