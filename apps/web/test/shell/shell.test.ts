@@ -35,6 +35,7 @@ import { PortalSurveyScreen } from '../../src/components/portal-survey';
 import { PortalTrackingPreview } from '../../src/components/portal-tracking';
 import { ComplaintAttachmentControls } from '../../src/components/complaint-attachment-controls';
 import { ComplaintDetailWorkspace } from '../../src/components/complaint-detail-workspace';
+import { ContextRail } from '../../src/components/complaint-workspace/context-rail';
 import { ComplaintIntakeWorkspace } from '../../src/components/complaint-intake-workspace';
 import { ComplaintWorkflowModal } from '../../src/components/complaint-workflow-modal';
 import { ComplaintAuditLogSection } from '../../src/components/complaint-workspace/audit-log-section';
@@ -1456,6 +1457,25 @@ test('complaint detail workspace renders core regions and safe placeholders', as
   assert.ok(html.includes(complaintTabsText.en.deadlineState));
   assert.match(html, /Fixture Customer/);
   assert.match(html, /None/);
+});
+
+test('redirected public complaint shows submitted car below customer-name subject', () => {
+  const detail = complaintDetailViewFixture({
+    subject: 'WALEED ALETAYWI', customer: { id: 'cust_fixture', name: 'WALEED ALETAYWI', phone: null, identifier: null, source: 'MANUAL' },
+    vehicleRelated: true, vehicle: null, submittedVehicle: { make: 'BYD', model: 'BYD Yuan Plus EV CCC', vin: 'LGX00000000000001' },
+    vehicleDataUnavailableReason: 'Vehicle identity requires staff verification',
+  }) as never;
+  const html = renderToStaticMarkup(React.createElement(ComplaintDetailWorkspace, { detail, initialTab: 'details', locale: 'en' }));
+  assert.match(html, /WALEED ALETAYWI/);
+  const vehicleSection = html.slice(html.indexOf('Vehicle data'));
+  assert.match(vehicleSection, /BYD BYD Yuan Plus EV CCC/);
+  assert.match(vehicleSection, /LGX00000000000001/);
+  assert.match(vehicleSection, /Vehicle identity requires staff verification/);
+  const rail = renderToStaticMarkup(React.createElement(ContextRail, { detail, locale: 'en', t: complaintDetailText.en }));
+  const railVehicle = rail.slice(rail.indexOf('Vehicle data'));
+  assert.match(railVehicle, /BYD BYD Yuan Plus EV CCC/);
+  assert.match(railVehicle, /LGX00000000000001/);
+  assert.match(railVehicle, /Vehicle identity requires staff verification/);
 });
 
 test('Arabic complaint detail workspace keeps RTL localized labels', async () => {

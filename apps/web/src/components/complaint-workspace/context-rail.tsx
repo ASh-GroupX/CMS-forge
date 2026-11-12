@@ -110,25 +110,25 @@ export function ContextRail({ detail, locale, t }: { detail: StaffComplaintDetai
           )}
           
           {(detail.createdBy || detail.approvedBy || detail.assignedBy) && (
-            <div className="mt-2 grid gap-3 border-t border-line-subtle pt-4">
+            <div className="mt-2 grid gap-1 border-t border-line-subtle pt-4">
               {detail.createdBy && (
-                <div className="grid gap-1">
+                <>
                   <dt className="text-xs text-content-muted">{t.labels?.createdBy || 'Created by'}</dt>
-                  <dd className="font-semibold text-content-strong">
+                  <dd className="mb-2 font-semibold text-content-strong">
                     {isArabic ? (detail.createdBy.nameAr || detail.createdBy.name) : detail.createdBy.name}
                   </dd>
-                </div>
+                </>
               )}
               {detail.approvedBy && (
-                <div className="grid gap-1">
+                <>
                   <dt className="text-xs text-content-muted">{t.labels?.approvedBy || 'Approved by'}</dt>
-                  <dd className="font-semibold text-content-strong">
+                  <dd className="mb-2 font-semibold text-content-strong">
                     {isArabic ? (detail.approvedBy.nameAr || detail.approvedBy.name) : detail.approvedBy.name}
                   </dd>
-                </div>
+                </>
               )}
               {detail.assignedBy && (
-                <div className="grid gap-1">
+                <>
                   <dt className="text-xs text-content-muted">{t.labels?.assignedBy || 'Assigned by'}</dt>
                   <dd className="flex flex-col font-semibold text-content-strong">
                     <span>{isArabic ? (detail.assignedBy.nameAr || detail.assignedBy.name) : detail.assignedBy.name}</span>
@@ -138,7 +138,7 @@ export function ContextRail({ detail, locale, t }: { detail: StaffComplaintDetai
                       </span>
                     )}
                   </dd>
-                </div>
+                </>
               )}
             </div>
           )}
@@ -176,7 +176,7 @@ export function ContextRail({ detail, locale, t }: { detail: StaffComplaintDetai
         {vehicle ? (
           <dl className="grid gap-3 text-sm">
             <div>
-              <dt className="text-xs text-content-muted">{t.labels?.make || 'Make & Model'}</dt>
+              <dt className="text-xs text-content-muted">{t.labels?.make || t.labels?.vehicle || 'Vehicle'}</dt>
               <dd className="font-semibold text-content-strong">
                 {(() => {
                   const parts = [
@@ -209,6 +209,7 @@ export function ContextRail({ detail, locale, t }: { detail: StaffComplaintDetai
             </p>
           </div>
         )}
+        {!detail.vehicle && vehicle && detail.vehicleDataUnavailableReason ? <p className="mt-3 text-xs text-content-muted">{detail.vehicleDataUnavailableReason}</p> : null}
       </section>
     </div>
   );

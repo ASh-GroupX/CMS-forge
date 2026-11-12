@@ -248,9 +248,11 @@ function vehicleRows(detail: StaffComplaintDetailView | undefined, t: typeof com
     ];
   }
   if (!detail.vehicle) {
+    const submitted = detail.submittedVehicle;
+    const submittedType = [submitted?.make, submitted?.model].filter(Boolean).join(' ').trim();
     return [
-      [t.labels.vehicle, detail.vehicleRelated ? detail.vehicleDataUnavailableReason ?? t.values.vehicleDataUnavailableReason : t.values.none],
-      [t.labels.vin, t.values.none],
+      [t.labels.vehicle, submittedType || (detail.vehicleRelated ? detail.vehicleDataUnavailableReason ?? t.values.vehicleDataUnavailableReason : t.values.none)],
+      [t.labels.vin, submitted?.vin || t.values.none],
       [t.labels.vehicleRelated, provenance?.vehicleRelated ?? t.values.vehicleRelated],
       [t.labels.vehicleSource, provenance?.vehicleSource ?? t.values.vehicleSource],
       [t.labels.manualVehicle, provenance?.manualVehicle ?? t.values.manualVehicle],

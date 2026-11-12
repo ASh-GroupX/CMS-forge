@@ -1,10 +1,10 @@
-# Complaint form configuration and booking vehicle catalog
+# Redirected portal complaint subject and vehicle display
 
-Status: Complete — implementation and local proof; production deployment tracked in state/evidence
+Status: In progress
 Date: 2026-11-12
 Risk: High
-SRS: REQ-PORTAL-001, REQ-WORKFLOW-002, REQ-NOTIFY-001/002, REQ-ADMIN-001, REQ-INT-DATA-001, PORTAL-SEC-001, WORKFLOW-MATRIX-001, UI-DESIGN-001
+SRS: REQ-PORTAL-001, REQ-WORKFLOW-002, PORTAL-SEC-001, UI-DESIGN-001
 
-Scope: sequential slices (1) versioned field definitions, required VIN default and custom answer persistence with all fields configurable as optional per explicit user reply; (2) shared active booking make/model catalog for public and normal complaint creation plus backend validation; (3) Admin fields page, dynamic public form and intake custom-answer editing/display; (4) migration, privacy/RBAC, browser/OpenAPI/review and release proof. Preserve existing complaint data and shared customers/vehicles. SMS remains deferred.
+Scope: Sequential repair slices: (1) make customer name the subject for new public complaints and staff redirect corrections; (2) backfill only existing redirected public complaints whose subject still exactly matches the generated make/model string, recovering missing snapshots from a unique booking catalog match, with metadata-only audit; (3) retain submitted make/model/VIN and added answers through the staff API mapper, show submitted vehicle data with its verification reason in the receiving complaint, and keep that detail usable on phones. Use CMS-2026-KHALDA-000004 screenshots as regression evidence. Preserve public privacy, verified vehicle identity, and all other complaint subjects.
 
-Proof: focused API suites, settings allowed/denied/conflict, required/optional/custom field validation, stale/invalid make-model pairs, typecheck, lint, OpenAPI, migration/index checks, public/staff EN/AR responsive browser/axe and end-to-end persistence. Preserve tmp/ and uploads/.
+Proof: focused portal/redirect API tests, targeted web rendering, migration validation and isolated PostgreSQL backfill proof, typecheck, lint, OpenAPI, browser visual/axe at phone and desktop, production read-only case check after deployment where authorized. Preserve tmp/ and uploads/.

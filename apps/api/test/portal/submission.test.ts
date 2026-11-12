@@ -148,7 +148,7 @@ test('portal manual triage fills missing catalog IDs from active defaults', asyn
     categoryId: 'cat_default',
     severity: ComplaintSeverity.MEDIUM,
     manualTriage: true,
-    subject: 'Nissan Patrol',
+    subject: 'Faisal Al-Otaibi',
     vehicleDataUnavailableReason: null,
     actorId: null,
     customerNumber: null,

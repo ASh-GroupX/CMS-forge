@@ -34,6 +34,8 @@ test('redirect atomically writes ordered workflow history and PII-free audits be
   assert.ok(f.effects.includes('assign:COMPLAINT')); assert.ok(f.effects.includes('notify')); assert.ok(f.effects.includes('sla'));
   assert.doesNotMatch(JSON.stringify(f.audits), /Corrected description|962790|Verified with customer/);
   assert.equal(f.row().customer.nameEn, 'Shared name'); assert.equal(f.row().customerNameSnapshot, 'Corrected');
+  assert.equal(f.row().subject, 'Corrected');
+  assert.equal(f.row().vehicleMakeSnapshot, 'Nissan'); assert.equal(f.row().vehicleModelSnapshot, 'Patrol');
 });
 test('specific owner enters investigation; audit failure rolls back writes and schedules no notifications', async () => {
   const f = fixture(); f.owner('u1'); const changes = correction(); changes.ownerId = 'employee';

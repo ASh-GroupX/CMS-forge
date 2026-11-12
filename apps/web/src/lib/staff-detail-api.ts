@@ -258,6 +258,8 @@ function detailFrom(body: DetailResponse): ComplaintDetail | null {
     incidentAt: typeof complaint.incidentAt === 'string' ? complaint.incidentAt : null,
     customer,
     vehicle,
+    submittedVehicle: submittedVehicleDetail(complaint.submittedVehicle),
+    portalAnswers: portalAnswersDetail(complaint.portalAnswers),
     customerSource: dataSource(complaint.customerSource) ?? 'LOCAL',
     manualCustomer: complaint.manualCustomer === true,
     vehicleRelated: complaint.vehicleRelated === true,
@@ -325,6 +327,21 @@ function vehicleDetail(value: unknown): ComplaintDetail['vehicle'] {
     year: typeof item.year === 'number' ? item.year : new Date().getFullYear(),
     source,
   };
+}
+
+function submittedVehicleDetail(value: unknown): NonNullable<ComplaintDetail['submittedVehicle']> | null {
+  if (!value || typeof value !== 'object') return null;
+  const item = value as Record<string, unknown>;
+  return typeof item.make === 'string' && typeof item.model === 'string'
+    ? { make: item.make, model: item.model, vin: typeof item.vin === 'string' ? item.vin : null }
+    : null;
+}
+
+function portalAnswersDetail(value: unknown): NonNullable<ComplaintDetail['portalAnswers']> {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item) => item && typeof item === 'object'
+    && typeof item.key === 'string' && typeof item.labelEn === 'string' && typeof item.labelAr === 'string'
+    && (item.value === null || ['string', 'number', 'boolean'].includes(typeof item.value)));
 }
 
 function transitionAction(value: unknown): value is ComplaintDetail['allowedActions'][number] {

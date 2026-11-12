@@ -75,18 +75,18 @@ export function ComplaintWorkspace({
   });
 
   return (
-    <section aria-label={t.title} className="flex h-full flex-col overflow-hidden bg-surface-sunken" dir={shell.dir}>
+    <section aria-label={t.title} className="flex h-full min-w-0 flex-col overflow-hidden bg-surface-sunken" dir={shell.dir}>
       {/* ── Header ── */}
-      <header className="flex h-14 shrink-0 items-center gap-4 border-b border-line-subtle bg-surface px-6">
+      <header className="flex min-h-14 min-w-0 shrink-0 flex-wrap items-center gap-2 border-b border-line-subtle bg-surface px-4 py-2 sm:h-14 sm:flex-nowrap sm:gap-4 sm:py-0 md:px-6">
         <a href={resolvedBackHref} className="flex items-center gap-2 text-sm font-medium text-content-muted hover:text-brand transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-sm">
           <ArrowLeft className="size-4 rtl:rotate-180" />
           {backLabel}
         </a>
-        <div className="h-4 w-px bg-line-subtle" />
-        <h1 className="truncate text-base font-bold text-content-strong">
+        <div className="hidden h-4 w-px bg-line-subtle sm:block" />
+        <h1 className="order-3 min-w-0 w-full truncate text-base font-bold text-content-strong sm:order-none sm:w-auto sm:flex-1">
           {detail.subject}
         </h1>
-        <span className="rounded-md bg-surface-raised px-2 py-0.5 text-xs font-semibold text-content-muted">
+        <span className="max-w-[12rem] truncate rounded-md bg-surface-raised px-2 py-0.5 text-xs font-semibold text-content-muted">
           {detail.reference}
         </span>
       </header>
@@ -121,11 +121,11 @@ export function ComplaintWorkspace({
       <ResolutionVerdictBanner detail={detail} locale={locale} />
 
       {/* ── Workspace ── */}
-      <div className="flex-1 p-6 overflow-y-auto">
-        <div className="mx-auto grid md:h-[calc(100vh-14rem)] md:min-h-[600px] max-w-7xl grid-cols-1 gap-6 md:grid-cols-[1fr_2fr]">
+      <div className="min-w-0 flex-1 overflow-y-auto p-4 md:p-6">
+        <div className="mx-auto grid min-w-0 max-w-7xl grid-cols-1 gap-6 md:h-[calc(100vh-14rem)] md:min-h-[600px] md:grid-cols-[1fr_2fr]">
           
           {/* Left: Working Notes */}
-          <div className="flex flex-col overflow-hidden rounded-2xl border border-line-subtle bg-surface shadow-sm">
+          <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-line-subtle bg-surface shadow-sm">
             <div className="border-b border-line-subtle bg-surface-canvas/50 px-4 py-3">
               <h3 className="flex items-center gap-2 font-semibold text-content-strong">
                 <FileText className="size-4 text-brand" />
@@ -141,7 +141,7 @@ export function ComplaintWorkspace({
           </div>
 
           {/* Right: Details & Activity Log */}
-          <div className="flex flex-col gap-6 overflow-y-auto pr-2">
+          <div className="flex min-w-0 flex-col gap-6 overflow-y-auto md:pr-2">
             
             {/* Prominent Voice of Customer (VOC) Card - Top Priority */}
             <VoiceOfCustomerCard detail={detail} locale={locale} />

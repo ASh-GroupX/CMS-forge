@@ -104,7 +104,7 @@ function DesktopNavLink({ activePath, item: { key, Icon, href }, locale, t }: { 
 function MobileNavLink({ activePath, item: { key, Icon, href }, label, locale }: { activePath: string; item: NavItem; label: string; locale: Locale }) {
   return <StaffNavAnchor activePath={activePath} navKey={key} rootHref={href} href={`${href}?locale=${locale}`}
     className="grid min-h-11 min-w-0 place-items-center gap-1 rounded-md px-1 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand"
-    activeClassName="text-primary-foreground bg-brand/15" inactiveClassName="text-nav-muted">
+    activeClassName="text-content-strong bg-brand/15" inactiveClassName="text-nav-muted">
     <Icon aria-hidden="true" className="size-5 text-current" /><span className="w-full truncate text-center">{label}</span>
   </StaffNavAnchor>;
 }
