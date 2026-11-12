@@ -1,14 +1,13 @@
 # Current State
 
 Date: 2026-11-12
-Status: Deployed — final setup edge repair pending release
+Status: Complete — non-SMS QR complaint intake deployed
 Risk: High
 
-- Complete public QR form, Admin defaults/team/QR workspace, Admin hub/user visibility controls, branch-scoped paginated redirect queue, dedicated detail editor, atomic claims/releases, corrections, department/owner redirects and team notifications implemented.
-- Generated portal-intake module owns settings/membership; related reads use public Admin/Assignments/Customers services. Released assignment records/history are preserved. Legacy correction/transition routes cannot bypass pending portal intake.
-- External Data API offers explicit portal customer export with customer + portal scopes. SMS acknowledgement remains deferred; no live SMS claim.
-- Passed: build, typecheck, lint, OpenAPI, portal 24/24, workflow 98/98, assignments 7/7, integration 54/54, notifications 48/48, settings 3/3, web 231/231, root 78/78 (89.95% lines), security, migration sanity, actual PostgreSQL 60 migrations/indexes, static visual 96/a11y 24/perf 5 previews.
-- Live isolated API/database proof passed concurrent claims and settings conflicts, real audit rollback, customer export, team notification dedupe, legacy guard, both redirect destinations, release and PII-free audits. Live development browser passed QR decode/download, settings save, submit/error preservation, queue/detail EN/AR at 390/430/768/1280/1440, claim/correct/read-only/redirect with axe. Separate browser fixture passed conflict preservation/reload EN/AR phone/desktop. Screenshots inspected.
-- Independent GPT-6.1 Sol review: Accept With Conditions, no remaining blocker; preferred named reviewer unavailable. Local production-server browser launch was rejected by automatic approval review with only 'blocked by policy'; production build passed and development browser proof is real. Main workflow commit bcb9be0 deployed successfully in run 43171918909; live revision/health, safe public defaults and protected routes passed. Public production browser EN/AR at 390/1440 passed geometry/axe and Arabic screenshot was inspected. Final copy correction removes misleading optional vehicle-section label. Preserve tmp/ and uploads/.
-
-- Final setup repair: an active fallback category need not have a department; intake stays unclassified until staff choose the redirect destination. Focused review accepted, tests passed; release in progress.
+- Production code revision: 6bd1e74f1494b92b4b1a3e3b7f877a8794b2a359. GitHub run 43173957066 passed validation and VPS deployment. Live health/revision, portal EN/AR, safe defaults and protected routes passed.
+- Public form, Admin defaults/team/QR, Admin hub/user navigation controls, branch-scoped paginated queue, dedicated editor, atomic assignment-backed claims/releases, customer-safe corrections, department/owner redirects and team notifications complete. Default department stays unset until staff classify. Receiving department retains submitted vehicle/name snapshots.
+- External Data API includes explicit scoped customer details export. SMS acknowledgement deliberately deferred.
+- Passed: build, typecheck, lint, OpenAPI, portal 24/24, workflow 98/98, assignments 7/7, integrations 54/54, notifications 48/48, settings 3/3, web 231/231, root 78/78 (89.95% line coverage), security, migration sanity, actual isolated PostgreSQL 60 migrations and indexes, visual 96/accessibility 24/performance 5 previews.
+- Real database/HTTP proof covered concurrent claims/configuration, real audit rollback, scoped export/revocation, both redirect outcomes and team notifications. Live development browser covered QR decoding/download, settings, failed submission preservation, submission/reference, five widths EN/AR, claim/correction/read-only/redirect and axe. Separate browser fixture covered conflict preservation/reload. Production public browser EN/AR phone/desktop passed geometry/axe; screenshots inspected. No production test complaint or customer-data pull was made.
+- Independent GPT-6.1 Sol reviews accepted the workflow with proof conditions subsequently recorded, and accepted final setup repair. Preferred named reviewer unavailable. Authenticated production UAT remains operator-only. Admin must select actual defaults/team once and print the generic QR.
+- Preserve user tmp/ and uploads/. Documentation release record follows code deployment; no outstanding implementation task in this scope.

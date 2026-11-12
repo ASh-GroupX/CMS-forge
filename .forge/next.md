@@ -1,10 +1,10 @@
-# QR intake — release verified non-SMS workflow
+# QR complaint intake — complete
 
-Status: Release in progress
+Status: Complete
+Date: 2026-11-12
 Risk: High
-Required model tier: GPT-6 Sol or higher
 SRS: REQ-PORTAL-001, REQ-WORKFLOW-002, REQ-NOTIFY-001/002, REQ-ADMIN-001, REQ-INT-DATA-001, PORTAL-SEC-001, WORKFLOW-MATRIX-001, UI-DESIGN-001
 
-Scope: commit/push verified workflow, monitor migration-before-API deployment, verify revision/health and protected routes, record release outcome. SMS acknowledgement remains deferred. Preserve tmp/ and uploads/.
+Completed the authorized non-SMS scope and pushed to feature/waleed/production. Code revision 6bd1e74 deployed successfully in run 43173957066. Evidence contains API/database/browser/accessibility/security/review and live revision/health proof. SMS is deliberately deferred.
 
-Implementation/proof slices completed: settings persistence/authority and generated module boundary; public form/snapshots; scoped customer export; claim/queue/correction; atomic redirect/assignment/history/audit; staff UI/visibility; post-commit team notifications; isolated database + HTTP/browser/security proof. No live-provider SMS integration is claimed.
+Operator setup: choose the real branch/category and intake team in Admin Hub -> QR complaint intake, enable desired per-user navigation visibility, then download/print the canonical QR. No further implementation work is required for this scope. Preserve tmp/ and uploads/.
