@@ -127,7 +127,7 @@ test('portal manual triage fills missing catalog IDs from active defaults', asyn
       return { id: 'cmp_portal', referenceNumber: 'CMS-2026-MAIN-000011', status: ComplaintStatus.SUBMITTED };
     },
   } as ComplaintsService, {} as never, {} as never, {} as never, undefined, {
-    defaults: async () => ({ branchId: 'branch_default', departmentId: 'dep_default', categoryId: 'cat_default' }),
+    defaults: async () => ({ branchId: 'branch_default', departmentId: null, categoryId: 'cat_default' }),
     publicDefaults: async () => null, recipients: async () => [],
   } as never);
 
@@ -144,7 +144,7 @@ test('portal manual triage fills missing catalog IDs from active defaults', asyn
   assert.deepEqual(calls[0], {
     ...validBody(),
     branchId: 'branch_default',
-    departmentId: 'dep_default',
+    departmentId: null,
     categoryId: 'cat_default',
     severity: ComplaintSeverity.MEDIUM,
     manualTriage: true,

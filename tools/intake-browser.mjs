@@ -61,6 +61,7 @@ try {
   assert.equal(await page.getByLabel('Customer name', { exact: true }).isDisabled(), true);
   await page.getByRole('button', { name: 'Claim complaint', exact: true }).click();
   await page.getByLabel('Customer name', { exact: true }).fill('Edited browser customer');
+  await page.getByLabel('Department', { exact: true }).click(); await page.getByRole('option', { name: 'Intake proof department', exact: true }).click();
   await page.getByLabel('Correction / redirect reason', { exact: true }).fill('Verified browser details');
   await page.getByRole('button', { name: 'Save corrections', exact: true }).click(); await page.getByText('Corrections saved.', { exact: true }).waitFor();
   const other = await context('intake_two'); const otherPage = await other.newPage();

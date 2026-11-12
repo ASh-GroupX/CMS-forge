@@ -16,8 +16,7 @@ export class PortalIntakeService {
   async defaults() {
     const record = await this.repository.defaults();
     if (!record || !record.branch.isActive || !record.category.isActive || record.category.branchId && record.category.branchId !== record.branchId) return null;
-    const departmentId = record.category.department?.isActive ? record.category.department.id : record.branch.departments[0]?.id;
-    return departmentId ? { branchId: record.branchId, categoryId: record.categoryId, departmentId } : null;
+    return { branchId: record.branchId, categoryId: record.categoryId, departmentId: null };
   }
   async save(input: PortalIntakeSettingsInput, actorId: string) {
     const memberIds = [...new Set(input.memberIds)];
