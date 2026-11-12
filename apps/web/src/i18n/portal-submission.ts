@@ -11,7 +11,7 @@ export const portalSubmissionText = {
     sections: {
       contact: '1. Your contact',
       complaint: '2. Complaint details',
-      vehicle: '3. Vehicle, if needed',
+      vehicle: '3. Vehicle details',
       attachments: '4. Files, if any',
     },
     fields: {
@@ -25,10 +25,10 @@ export const portalSubmissionText = {
       subject: 'Subject',
       description: 'What happened?',
       vehicleRelated: 'This complaint is vehicle-related',
-      vehicleVin: 'Vehicle VIN',
+      vehicleVin: 'Vehicle VIN (optional)',
       vehicleBrand: 'Car make',
       vehicleModel: 'Car model',
-      odometer: 'Odometer (km)',
+      odometer: 'Odometer (km, optional)',
       attachment: 'Attachment',
     },
     choices: {
@@ -87,7 +87,7 @@ export const portalSubmissionText = {
     sections: {
       contact: '1. بيانات التواصل',
       complaint: '2. تفاصيل الشكوى',
-      vehicle: '3. بيانات المركبة (اختياري)',
+      vehicle: '3. بيانات المركبة',
       attachments: '4. المرفقات والمستندات (اختياري)',
     },
     fields: {
@@ -101,10 +101,10 @@ export const portalSubmissionText = {
       subject: 'الموضوع',
       description: 'تفاصيل ما حدث',
       vehicleRelated: 'الشكوى تتعلق بمركبة',
-      vehicleVin: 'رقم هيكل المركبة (VIN)',
+      vehicleVin: 'رقم هيكل المركبة (VIN، اختياري)',
       vehicleBrand: 'الشركة المصنعة للمركبة',
       vehicleModel: 'طراز المركبة',
-      odometer: 'عداد المسافة (كم)',
+      odometer: 'عداد المسافة (كم، اختياري)',
       attachment: 'المرفق',
     },
     choices: {
