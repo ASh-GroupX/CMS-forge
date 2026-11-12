@@ -256,16 +256,15 @@ test('portal submission route rejects invalid body before service call', async (
   });
 
   await assert.rejects(
-    controller.submitComplaint({ ...validBody(), customerPhone: ' ' }, request()),
+    controller.submitComplaint({ ...validBody(), customerPhone: 'not-a-phone' }, request()),
     (error: unknown) => error instanceof AppException && error.code === 'VALIDATION_FAILED',
   );
   assert.equal(called, false);
 });
 
-test('portal form requires make and model and rejects negative odometer', async () => {
-  const controller = controllerWith({ submitComplaint: async () => { throw new Error('should not submit'); } });
-  await assert.rejects(controller.submitComplaint({ ...validBody(), vehicleBrand: '' }, request()), (error: unknown) => error instanceof AppException && error.fieldErrors.some((item) => item.field === 'vehicleBrand'));
-  await assert.rejects(controller.submitComplaint({ ...validBody(), vehicleModel: '' }, request()), (error: unknown) => error instanceof AppException && error.fieldErrors.some((item) => item.field === 'vehicleModel'));
+test('portal route permits configured optional make and model while rejecting negative odometer', async () => {
+  const controller = controllerWith({ submitComplaint: async () => ({ id: 'c', referenceNumber: 'CMS-1', status: ComplaintStatus.SUBMITTED }) });
+  assert.equal((await controller.submitComplaint({ ...validBody(), vehicleBrand: '', vehicleModel: '' }, request())).complaint.referenceNumber, 'CMS-1');
   await assert.rejects(controller.submitComplaint({ ...validBody(), odometer: -1 }, request()), (error: unknown) => error instanceof AppException && error.fieldErrors.some((item) => item.field === 'odometer'));
 });
 

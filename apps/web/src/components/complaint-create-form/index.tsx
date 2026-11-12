@@ -8,6 +8,7 @@ import { FormSelect } from '@/components/ui/form-select';
 import { Textarea } from '@/components/ui/textarea';
 import { Field, StateBlock } from '../shared/ui-primitives';
 import { LocalizedFileInput } from '../shared/localized-file-input';
+import { ComplaintVehicleSelect } from '../shared/complaint-vehicle-select';
 import { complaintStatusLabel, complaintTypeLabel } from '../../i18n/domain-labels';
 import { complaintCreateText } from '../../i18n/staff-complaint-create';
 import { staffShellText, type Locale } from '../../i18n/staff-shell';
@@ -117,6 +118,7 @@ export function ComplaintCreateForm({
   const selectedMatch = lookupSelection?.source === 'DMS' ? lookupSelection.match : null;
   const sourceState = selectedMatch ? 'dms' : lookupSelection?.source === 'MANUAL' ? 'manual' : 'none';
   const defaults = formDefaults(selectedMatch, autoCustomerNumber);
+  const [vehicleRelated, setVehicleRelated] = useState(defaults.vehicleRelated);
 
   const ARABIC_TEXT_REGEX = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
   const [vinValue, setVinValue] = useState(defaults.vehicleVin);
@@ -527,7 +529,7 @@ export function ComplaintCreateForm({
             </h3>
             <div className="grid gap-3 md:grid-cols-2">
               <label className="flex items-center gap-2 text-sm font-medium md:col-span-2">
-                <input className="size-4 rounded text-brand-primary" name="vehicleRelated" type="checkbox" defaultChecked={defaults.vehicleRelated} />
+                <input className="size-4 rounded text-brand-primary" name="vehicleRelated" type="checkbox" checked={vehicleRelated} onChange={(event) => setVehicleRelated(event.target.checked)} />
                 {extra.fields.vehicleRelated}
               </label>
 
@@ -566,12 +568,7 @@ export function ComplaintCreateForm({
                 />
               </Field>
 
-              <Field id="vehicleBrand" label={extra.fields.vehicleMake}>
-                <Input id="vehicleBrand" name="vehicleBrand" defaultValue={defaults.vehicleBrand} />
-              </Field>
-              <Field id="vehicleModel" label={extra.fields.vehicleModel}>
-                <Input id="vehicleModel" name="vehicleModel" defaultValue={defaults.vehicleModel} />
-              </Field>
+              <ComplaintVehicleSelect key={`${defaults.vehicleBrand}:${defaults.vehicleModel}`} models={options?.carModels ?? []} locale={locale} defaultBrand={defaults.vehicleBrand} defaultModel={defaults.vehicleModel} brandLabel={extra.fields.vehicleMake} modelLabel={extra.fields.vehicleModel} requiredBrand={vehicleRelated} requiredModel={vehicleRelated} />
               <Field id="vehicleModelYear" label={extra.fields.vehicleYear}>
                 <Input id="vehicleModelYear" max="2100" min="1900" name="vehicleModelYear" type="number" defaultValue={defaults.vehicleModelYear} />
               </Field>

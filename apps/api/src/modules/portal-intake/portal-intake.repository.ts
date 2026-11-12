@@ -5,6 +5,12 @@ import { PrismaService } from '../../core/http-kernel.js';
 @Injectable()
 export class PortalIntakeRepository {
   constructor(private readonly prisma: PrismaService) {}
+  form(tx: Prisma.TransactionClient | PrismaService = this.prisma) { return tx.portalIntakeForm.findUnique({ where: { id: 'default' } }); }
+  async saveForm(fields: Prisma.InputJsonValue, version: number | null, tx: Prisma.TransactionClient) {
+    if (version === null) return tx.portalIntakeForm.create({ data: { id: 'default', fields } });
+    const changed = await tx.portalIntakeForm.updateMany({ where: { id: 'default', version }, data: { fields, version: { increment: 1 } } });
+    return changed.count === 1 ? tx.portalIntakeForm.findUniqueOrThrow({ where: { id: 'default' } }) : null;
+  }
   transaction<T>(work: (tx: Prisma.TransactionClient) => Promise<T>) { return this.prisma.$transaction(work); }
   get(tx: Prisma.TransactionClient | PrismaService = this.prisma) { return tx.portalIntakeSetting.findUnique({ where: { id: 'default' }, include: { members: { where: { removedAt: null }, select: { id: true, userId: true } } } }); }
   async advance(input: { branchId: string; categoryId: string; phoneCountryCode: string }, expectedVersion: number | null, tx: Prisma.TransactionClient) {

@@ -1,5 +1,6 @@
+import { PortalIntakeService } from '../portal-intake/portal-intake.service.js';
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { ComplaintSeverity, ComplaintStatus, ComplaintTransitionAction, ComplaintTransitionRequestSource, RoleCode } from '@prisma/client';
+import { ComplaintSeverity, ComplaintStatus, ComplaintTransitionAction, ComplaintTransitionRequestSource, RoleCode, type Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
@@ -36,7 +37,6 @@ export type ApplyComplaintTransitionInput = ValidateComplaintTransitionInput & {
   correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null;
 };
 export type ApplyComplaintTransitionResult = ComplaintTransitionDecision & { complaintId: string };
-
 export type CreateInternalComplaintInput = {
   customerName: string; customerPhone?: string | null; customerNumber?: string | null; customerSource?: DataSource | null; categoryId: string;
   description: string; incidentAt: Date | string; branchId: string; subject: string;
@@ -47,9 +47,8 @@ export type CreateInternalComplaintInput = {
   vehicleSource?: DataSource | null; vehicleDataUnavailableReason?: string | null;
   departmentId?: string | null; ownerId?: string | null; backupOfficerId?: string | null; collaboratorId?: string | null; alternativeCarProvided?: boolean; saveAsDraft?: boolean;
   actorId?: string | null; requestSource?: ComplaintTransitionRequestSource; correlationId?: string | null; ipAddress?: string | null; userAgent?: string | null;
-  manualTriage?: boolean; templateId?: string | null; templateData?: any;
+  manualTriage?: boolean; templateId?: string | null; templateData?: any; portalData?: Prisma.InputJsonValue;
 };
-
 export type ComplaintCreationResult = { id: string; referenceNumber: string; status: ComplaintStatus };
 
 export type ComplaintQueueFilter = { branchId?: string | null; role?: string | null; userId?: string | null; userDepartmentId?: string | null; permissions?: string[]; departmentId?: string | null; direction?: 'RECEIVED' | 'SENT' | 'ALL' | null };
@@ -96,7 +95,7 @@ function transition(fromStatus: ComplaintStatus, action: ComplaintTransitionActi
 
 @Injectable()
 export class ComplaintsService {
-  constructor(private readonly complaintsRepository: ComplaintsRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly casesService?: CasesService, private readonly slaService?: SlaService, private readonly surveysService?: SurveysService, private readonly tasksService?: TasksService, private readonly groupsService?: CommunicationGroupsService, private readonly assignmentsService?: AssignmentsService) {}
+  constructor(private readonly complaintsRepository: ComplaintsRepository, private readonly auditService: AuditService, private readonly notificationsService?: NotificationsService, private readonly casesService?: CasesService, private readonly slaService?: SlaService, private readonly surveysService?: SurveysService, private readonly tasksService?: TasksService, private readonly groupsService?: CommunicationGroupsService, private readonly assignmentsService?: AssignmentsService, private readonly configuration?: PortalIntakeService) {}
   async exportPage(branchIds: string[] | null, limit: number, cursor?: string) {
     return exportComplaintPage(this.complaintsRepository, branchIds, limit, cursor);
   }
@@ -105,6 +104,7 @@ export class ComplaintsService {
     return exportComplaintEventsPage(this.complaintsRepository, id, branchIds, limit, cursor);
   }
   async createInternal(input: CreateInternalComplaintInput): Promise<ComplaintCreationResult> {
+    if (input.requestSource !== ComplaintTransitionRequestSource.CUSTOMER_PORTAL && input.saveAsDraft !== true) await this.configuration?.assertVehicle(input.vehicleBrand, input.vehicleModel, input.vehicleRelated !== false);
     const data = createComplaintData(input);
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -240,11 +240,11 @@ export class ComplaintsService {
     }
 
     validateRequiredTransitionData(input);
-
     let committed: { result: ApplyComplaintTransitionResult; complaint: ComplaintStatusRecord };
     try {
       committed = await this.complaintsRepository.transaction(async (client) => {
-        const subject = (input.action === ComplaintTransitionAction.CLOSE && this.complaintsRepository.findTransitionSubject) ? await this.complaintsRepository.findTransitionSubject(input.complaintId, client) : null;
+        const subject = ((input.action === ComplaintTransitionAction.CLOSE || input.action === ComplaintTransitionAction.SUBMIT) && this.complaintsRepository.findTransitionSubject) ? await this.complaintsRepository.findTransitionSubject(input.complaintId, client) : null;
+        if (input.action === ComplaintTransitionAction.SUBMIT && input.fromStatus === ComplaintStatus.DRAFT && subject) await this.configuration?.assertVehicle(subject.vehicleMakeSnapshot ?? subject.vehicle?.makeEn, subject.vehicleModelSnapshot ?? subject.vehicle?.modelEn, subject.vehicleRelated);
         if (input.action === ComplaintTransitionAction.CLOSE) assertVehicleClosureAllowed(input, subject);
         const complaint = await this.complaintsRepository.updateStatus(statusUpdateData(input, decision.toStatus), client);
 

@@ -22,11 +22,12 @@ export function createComplaintData(input: CreateInternalComplaintInput): Omit<C
   ];
   if (errors.length) throw new AppException('VALIDATION_FAILED', 'Invalid complaint request', HttpStatus.BAD_REQUEST, errors);
   const customerNumber = optionalText(input.customerNumber) ?? generateDefaultCustomerNumber();
-  const customerDataSource = sourceOrDefault(input.customerSource, input.customerNumber && !input.customerNumber.startsWith('CUST-') ? 'DMS' : 'MANUAL');
+  const customerDataSource = sourceOrDefault(input.customerSource, input.customerNumber && !/^(CUST-|PORTAL-)/.test(input.customerNumber) ? 'DMS' : 'MANUAL');
   const vehicleDataSource = input.vehicleRelated !== false
     ? sourceOrDefault(input.vehicleSource, input.vehicleId ? 'LOCAL' : 'MANUAL')
     : null;
   return {
+    ...(input.portalData ? { portalData: input.portalData } : {}),
     status: input.saveAsDraft === true ? ComplaintStatus.DRAFT : ComplaintStatus.SUBMITTED,
     type: (input.type as any) ?? 'COMPLAINT',
     subject,
@@ -70,7 +71,7 @@ export function createComplaintData(input: CreateInternalComplaintInput): Omit<C
 }
 
 export function complaintCreatedAudit(input: CreateInternalComplaintInput, complaint: ComplaintRecord): AuditRecordInput {
-  const customerSource = sourceOrDefault(input.customerSource, input.customerNumber && !input.customerNumber.startsWith('CUST-') ? 'DMS' : 'MANUAL');
+  const customerSource = sourceOrDefault(input.customerSource, input.customerNumber && !/^(CUST-|PORTAL-)/.test(input.customerNumber) ? 'DMS' : 'MANUAL');
   const vehicleSource = input.vehicleRelated ? sourceOrDefault(input.vehicleSource, input.vehicleId ? 'LOCAL' : 'MANUAL') : null;
   return {
     eventType: 'COMPLAINT', action: 'complaint_created', actorId: input.actorId ?? null,
@@ -106,7 +107,7 @@ function optionalText(value: string | null | undefined): string | null { return 
 function sourceOrDefault(value: DataSource | null | undefined, fallback: DataSource): DataSource { return value ?? fallback; }
 function requiredTextError(value: unknown, field: string) { return typeof value === 'string' && value.trim() ? [] : [{ field, code: 'REQUIRED', message: `${field} is required.` }]; }
 function contactErrors(input: CreateInternalComplaintInput) {
-  return optionalText(input.customerPhone)
+  return optionalText(input.customerPhone) || input.portalData
     ? []
     : [{ field: 'customerPhone', code: 'REQUIRED', message: 'customerPhone is required.' }];
 }

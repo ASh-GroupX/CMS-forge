@@ -93,6 +93,7 @@ export type ComplaintVehicleDetailDto = {
 };
 
 export type ComplaintDetailDto = ComplaintQueueItemDto & {
+  portalAnswers?: Array<{ key: string; labelEn: string; labelAr: string; value: string | number | boolean | null }>;
   submittedVehicle?: { make: string; model: string; vin: string | null } | null;
   categoryId: string;
   categoryName: string;

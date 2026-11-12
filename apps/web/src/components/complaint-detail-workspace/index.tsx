@@ -133,6 +133,7 @@ export function ComplaintDetailWorkspace({
               <DetailsContent>
                 <div className="grid min-w-0 content-start gap-3">
                   <DetailPanel title={t.sections.customer} rows={[[t.labels.customer, detail?.customer.name ?? t.values.customer], [t.labels.contact, detail?.customer.phone ?? t.values.contact], [t.labels.customerNumber, detail?.customer.identifier ?? t.values.none], [t.labels.customerSource, provenance?.customerSource ?? t.values.customerSource], [t.labels.manualCustomer, provenance?.manualCustomer ?? t.values.manualCustomer]]} />
+                  {detail?.portalAnswers?.length ? <DetailPanel title={locale === 'ar' ? 'معلومات إضافية من العميل' : 'Additional customer information'} rows={detail.portalAnswers.map((answer) => [locale === 'ar' ? answer.labelAr : answer.labelEn, answer.value === null ? t.values.none : String(answer.value)])} /> : null}
                   <DetailPanel title={t.sections.vehicle} rows={vehicleRows(detail, t, provenance)} />
                   <DetailPanel title={locale === 'ar' ? 'بيانات CRM' : 'CRM Data'} rows={crmRows(detail, locale, t)} />
                   {detail && detail.templateData && Object.keys(detail.templateData).length > 0 && (

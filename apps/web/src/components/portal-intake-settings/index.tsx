@@ -48,7 +48,7 @@ export function PortalIntakeSettings({ initial, locale }: { initial: Awaited<Ret
     const anchor = document.createElement('a'); anchor.href = blobUrl; anchor.download = 'complaint-portal-qr.svg'; anchor.click(); URL.revokeObjectURL(blobUrl);
   }
   return <section dir={locale === 'ar' ? 'rtl' : 'ltr'} className="mx-auto grid max-w-6xl gap-6">
-    <header><h1 className="text-2xl font-semibold text-content-strong">{t.title}</h1><p className="mt-2 max-w-2xl text-sm text-content-muted">{t.intro}</p></header>
+    <header><h1 className="text-2xl font-semibold text-content-strong">{t.title}</h1><p className="mt-2 max-w-2xl text-sm text-content-muted">{t.intro}</p><Button asChild variant="outline" className="mt-3"><a href={`/admin/portal-intake/fields?locale=${locale}`}>{locale === 'ar' ? 'تخصيص حقول الشكوى' : 'Customize complaint fields'}</a></Button></header>
     {message && <Alert><AlertDescription role="status">{message}</AlertDescription></Alert>}
     {data.status !== 'ok' ? <Alert><AlertDescription>{t[data.status]} <Button disabled={busy} onClick={reload}>{t.retry}</Button></AlertDescription></Alert> :
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">

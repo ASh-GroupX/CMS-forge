@@ -18,12 +18,14 @@ module's boundary so you can work in a fresh context without scanning the tree.
 
 - `portal_intake_settings`
 - `portal_intake_members`
+- `portal_intake_forms`
 
 ## May depend on
 
 - `core/*` (prisma, errors, audit, rbac, correlation).
 - modules/admin public AdminUsersService for eligible active configuration choices and transactional target validation.
 - modules/auth public AuthService for server session validation.
+- modules/service-bookings public ServiceBookingsService for the active vehicle catalog.
 - Other modules' public services only. Never import another module repository,
   `dto/`, or Prisma model type.
 

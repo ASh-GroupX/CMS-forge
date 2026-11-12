@@ -1,10 +1,10 @@
-# QR complaint intake — complete
+# Complaint form configuration and booking vehicle catalog
 
-Status: Complete
+Status: Complete — implementation and local proof; production deployment tracked in state/evidence
 Date: 2026-11-12
 Risk: High
 SRS: REQ-PORTAL-001, REQ-WORKFLOW-002, REQ-NOTIFY-001/002, REQ-ADMIN-001, REQ-INT-DATA-001, PORTAL-SEC-001, WORKFLOW-MATRIX-001, UI-DESIGN-001
 
-Completed the authorized non-SMS scope and pushed to feature/waleed/production. Code revision 6bd1e74 deployed successfully in run 43173957066. Evidence contains API/database/browser/accessibility/security/review and live revision/health proof. SMS is deliberately deferred.
+Scope: sequential slices (1) versioned field definitions, required VIN default and custom answer persistence with all fields configurable as optional per explicit user reply; (2) shared active booking make/model catalog for public and normal complaint creation plus backend validation; (3) Admin fields page, dynamic public form and intake custom-answer editing/display; (4) migration, privacy/RBAC, browser/OpenAPI/review and release proof. Preserve existing complaint data and shared customers/vehicles. SMS remains deferred.
 
-Operator setup: choose the real branch/category and intake team in Admin Hub -> QR complaint intake, enable desired per-user navigation visibility, then download/print the canonical QR. No further implementation work is required for this scope. Preserve tmp/ and uploads/.
+Proof: focused API suites, settings allowed/denied/conflict, required/optional/custom field validation, stale/invalid make-model pairs, typecheck, lint, OpenAPI, migration/index checks, public/staff EN/AR responsive browser/axe and end-to-end persistence. Preserve tmp/ and uploads/.

@@ -7,11 +7,11 @@
     "node": ">=20.11.0"
   },
   "scripts": {
-    "build": "tsc -p apps/api/tsconfig.json && corepack pnpm --filter @cms-auto/web build && tsc -p packages/database/tsconfig.json && tsc -p packages/contracts/tsconfig.json && tsc -p packages/config/tsconfig.json",
+    "build": "tsc -p packages/contracts/tsconfig.json && tsc -p apps/api/tsconfig.json && corepack pnpm --filter @cms-auto/web build && tsc -p packages/database/tsconfig.json && tsc -p packages/contracts/tsconfig.json && tsc -p packages/config/tsconfig.json",
     "lint": "node tools/lint.mjs",
     "start:api": "node --env-file=.env apps/api/dist/main.js",
     "dev": "corepack pnpm --filter @cms-auto/web dev",
-    "typecheck": "tsc -p apps/api/tsconfig.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit && tsc -p packages/database/tsconfig.json --noEmit && tsc -p packages/database/prisma/tsconfig.json --noEmit && tsc -p packages/contracts/tsconfig.json --noEmit && tsc -p packages/config/tsconfig.json --noEmit",
+    "typecheck": "tsc -p packages/contracts/tsconfig.json && tsc -p apps/api/tsconfig.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit && tsc -p packages/database/tsconfig.json --noEmit && tsc -p packages/database/prisma/tsconfig.json --noEmit && tsc -p packages/contracts/tsconfig.json --noEmit && tsc -p packages/config/tsconfig.json --noEmit",
     "generate:module": "node tools/generate-module.mjs",
     "db:seed": "corepack pnpm --dir packages/database db:seed",
     "staff:bootstrap": "corepack pnpm --dir apps/api staff:bootstrap",

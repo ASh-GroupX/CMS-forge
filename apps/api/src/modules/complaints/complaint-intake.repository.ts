@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../core/http-kernel.js';
 
 const portalOrigin = { statusHistory: { some: { requestSource: 'CUSTOMER_PORTAL' as const, fromStatus: null, action: 'SUBMIT' as const } } };
-const select = { id: true, referenceNumber: true, branchId: true, categoryId: true, departmentId: true, ownerId: true, status: true, severity: true, descriptionEn: true, incidentAt: true, odometer: true, updatedAt: true, createdAt: true, customerNameSnapshot: true, vehicleVinSnapshot: true, vehicleMakeSnapshot: true, vehicleModelSnapshot: true, customer: { select: { nameEn: true, phone: true } }, vehicle: { select: { vin: true, makeEn: true, modelEn: true } } } satisfies Prisma.ComplaintSelect;
+const select = { id: true, referenceNumber: true, branchId: true, categoryId: true, departmentId: true, ownerId: true, status: true, severity: true, descriptionEn: true, incidentAt: true, odometer: true, updatedAt: true, createdAt: true, portalData: true, customerNameSnapshot: true, vehicleVinSnapshot: true, vehicleMakeSnapshot: true, vehicleModelSnapshot: true, customer: { select: { nameEn: true, phone: true } }, vehicle: { select: { vin: true, makeEn: true, modelEn: true } } } satisfies Prisma.ComplaintSelect;
 export type IntakeRecord = Prisma.ComplaintGetPayload<{ select: typeof select }>;
 @Injectable()
 export class ComplaintIntakeRepository {

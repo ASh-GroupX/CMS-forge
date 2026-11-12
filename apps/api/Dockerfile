@@ -15,8 +15,9 @@ COPY packages/database/package.json ./packages/database/package.json
 RUN pnpm install --frozen-lockfile
 COPY packages/database/prisma ./packages/database/prisma
 COPY apps/api ./apps/api
+COPY packages/contracts ./packages/contracts
 RUN pnpm --filter @cms-auto/database exec prisma generate --schema prisma/schema.prisma
-RUN pnpm exec tsc -p apps/api/tsconfig.json
+RUN pnpm exec tsc -p packages/contracts/tsconfig.json && pnpm exec tsc -p apps/api/tsconfig.json
 
 FROM node:20-alpine AS runtime
 WORKDIR /app/apps/api
@@ -27,5 +28,6 @@ COPY --from=build /app/node_modules /app/node_modules
 COPY --from=build /app/apps/api/node_modules ./node_modules
 COPY --from=build /app/apps/api/dist ./dist
 COPY --from=build /app/packages/database/prisma /app/packages/database/prisma
+COPY --from=build /app/packages/contracts /app/packages/contracts
 EXPOSE 3000
 CMD ["node", "dist/main.js"]

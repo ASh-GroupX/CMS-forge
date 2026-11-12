@@ -68,9 +68,10 @@ export function detailItem(complaint: ComplaintDetailRecord, masked = false, sla
     templateId: (complaint as any).templateId ?? null,
     templateData: (complaint as any).templateData ?? null,
     incidentAt: complaint.incidentAt?.toISOString() ?? null,
-    customer: complaint.customer ? { id: complaint.customer.id, name: complaint.customerNameSnapshot ?? complaint.customer.nameEn ?? '', phone: masked ? MASKED : complaint.customer.phone, identifier: masked ? MASKED : complaint.customer.dmsCode, source: complaint.customer.dataSource ?? 'LOCAL' } : { id: '', name: 'Unknown Customer', phone: null, identifier: null, source: 'LOCAL' },
+    customer: complaint.customer ? { id: complaint.customer.id, name: complaint.customerNameSnapshot ?? complaint.customer.nameEn ?? '', phone: masked ? MASKED : complaint.customer.phone.startsWith('DMS-PORTAL-') ? null : complaint.customer.phone, identifier: masked ? MASKED : complaint.customer.dmsCode?.startsWith('PORTAL-') ? null : complaint.customer.dmsCode, source: complaint.customer.dataSource ?? 'LOCAL' } : { id: '', name: 'Unknown Customer', phone: null, identifier: null, source: 'LOCAL' },
     vehicle,
     submittedVehicle: complaint.vehicleMakeSnapshot || complaint.vehicleModelSnapshot ? { make: complaint.vehicleMakeSnapshot ?? '', model: complaint.vehicleModelSnapshot ?? '', vin: masked ? MASKED : complaint.vehicleVinSnapshot ?? null } : null,
+    portalAnswers: masked ? [] : submittedPortalAnswers(complaint.portalData),
     customerSource: complaint.customerDataSource ?? 'LOCAL',
     manualCustomer: complaint.manualCustomerFlag ?? false,
     vehicleRelated: complaint.vehicleRelated ?? false,
@@ -104,6 +105,20 @@ export function detailItem(complaint: ComplaintDetailRecord, masked = false, sla
     approvedBy,
     assignedBy,
   };
+}
+
+function submittedPortalAnswers(raw: unknown): Array<{ key: string; labelEn: string; labelAr: string; value: string | number | boolean | null }> {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return [];
+  const data = raw as { fields?: unknown; values?: unknown };
+  if (!Array.isArray(data.fields) || !data.values || typeof data.values !== 'object' || Array.isArray(data.values)) return [];
+  const values = data.values as Record<string, unknown>;
+  return data.fields.flatMap((field: unknown) => {
+    if (!field || typeof field !== 'object' || Array.isArray(field)) return [];
+    const item = field as { key?: unknown; labelEn?: unknown; labelAr?: unknown; enabled?: unknown };
+    if (typeof item.key !== 'string' || !/^custom_[a-zA-Z0-9_]{1,60}$/.test(item.key) || item.enabled !== true || typeof item.labelEn !== 'string' || typeof item.labelAr !== 'string') return [];
+    const value = values[item.key];
+    return [{ key: item.key, labelEn: item.labelEn, labelAr: item.labelAr, value: typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ? value : null }];
+  });
 }
 
 export function shouldMask(input: { role?: string | null }): boolean {

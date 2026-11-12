@@ -12,11 +12,12 @@ type ComplaintTransitionClient = Pick<Prisma.TransactionClient, 'comment' | 'com
 export type DataSource = 'LOCAL' | 'MANUAL' | 'DMS';
 
 export type ComplaintStatusRecord = { id: string; branchId: string; customerId: string; status: ComplaintStatus; ownerId: string | null; backupOfficerId?: string | null; severity: ComplaintSeverity; categoryId: string; departmentId: string | null; createdById: string | null; referenceNumber: string };
-export type ComplaintTransitionSubject = { id: string; vehicleRelated: boolean; vehicleId: string | null; vehicleDataUnavailableReason: string | null };
+export type ComplaintTransitionSubject = { id: string; vehicleRelated: boolean; vehicleId: string | null; vehicleDataUnavailableReason: string | null; vehicleMakeSnapshot?: string | null; vehicleModelSnapshot?: string | null; vehicle?: { makeEn: string; modelEn: string } | null };
 export type ComplaintRecord = { id: string; branchId: string; customerId: string; status: ComplaintStatus; type: any; referenceNumber: string; subject: string; severity: ComplaintSeverity; categoryId: string; departmentId: string | null; ownerId: string | null; backupOfficerId?: string | null; createdById: string | null; resolvedAt: Date | null; closedAt: Date | null; templateId?: string | null; templateData?: any; };
 
 export type ComplaintQueueRecord = ComplaintRecord & { ownerId: string | null; backupOfficerId?: string | null; owner: { nameEn: string; nameAr?: string | null; email?: string | null; phone?: string | null } | null; backupOfficer?: { nameEn: string; nameAr?: string | null; email?: string | null; phone?: string | null } | null; department?: { nameEn: string; nameAr: string } | null; category?: { id: string; nameEn: string; nameAr: string } | null; branch: { code: string; nameEn: string; nameAr: string; timezone: string }; createdAt: Date; updatedAt: Date };
 export type ComplaintDetailRecord = Omit<ComplaintQueueRecord, 'category'> & {
+  portalData?: Prisma.JsonValue | null;
   customerNameSnapshot?: string | null; vehicleMakeSnapshot?: string | null; vehicleModelSnapshot?: string | null; vehicleVinSnapshot?: string | null;
   category: { id: string; nameEn: string; nameAr: string };
   descriptionEn: string;
@@ -54,6 +55,7 @@ export type ComplaintDetailRecord = Omit<ComplaintQueueRecord, 'category'> & {
   statusHistory: Array<{ id: string; fromStatus: ComplaintStatus | null; toStatus: ComplaintStatus; action: ComplaintTransitionAction | null; actorId: string | null; actorRole: string | null; requestSource: ComplaintTransitionRequestSource | null; reason: string | null; correlationId: string | null; createdAt: Date; actor: { nameEn: string; nameAr: string; phone?: string | null; department: { nameEn: string; nameAr: string } | null } | null }>;
 };
 export type CreateComplaintData = {
+  portalData?: Prisma.InputJsonValue;
   publicIntake?: boolean;
   referenceNumber: string; status: ComplaintStatus; type: any; subject: string; severity: ComplaintSeverity; branchId: string; categoryId: string; customerName: string; customerPhone?: string | null; customerNumber?: string | null; customerDataSource: DataSource; manualCustomerFlag: boolean; vehicleId?: string | null; vehicleVin?: string | null; vehiclePlate?: string | null; vehicleBrand?: string | null; vehicleModel?: string | null; vehicleModelYear?: number | null; vehicleDataSource?: DataSource | null; manualVehicleFlag: boolean; vehicleRelated: boolean; vehicleDataUnavailableReason?: string | null; channel?: string | null; customerType?: string | null; lastServiceDate?: Date | null; odometer?: number | null; warrantyActive?: boolean | null; salesAdvisorName?: string | null; rootCauseCategory?: string | null; repeatCustomer?: boolean | null; departmentId?: string | null; ownerId?: string | null; backupOfficerId?: string | null; collaboratorId?: string | null; alternativeCarProvided?: boolean; createdById?: string | null; descriptionEn: string; incidentAt: Date; templateId?: string | null; templateData?: any;
 };
@@ -191,7 +193,8 @@ export class ComplaintsRepository {
         vehicleMakeSnapshot: data.vehicleBrand ?? null,
         vehicleModelSnapshot: data.vehicleModel ?? null,
         vehicleVinSnapshot: data.vehicleVin ?? null,
-        customerNameSnapshot: data.publicIntake ? data.customerName : null,
+        customerNameSnapshot: data.publicIntake ? data.portalData ? String((data.portalData as { values?: { customerName?: string } }).values?.customerName ?? '') : data.customerName : null,
+        ...(data.portalData ? { portalData: data.portalData } : {}),
         vehicleDataUnavailableReason: data.vehicleDataUnavailableReason ?? null,
         channel: data.channel ?? null,
         customerType: data.customerType ?? null,
@@ -299,7 +302,7 @@ export class ComplaintsRepository {
     }).then((items) => items.map(({ customer, ...item }) => ({
       ...item,
       customerName: customer.nameEn,
-      customerPhone: customer.phone,
+      customerPhone: customer.phone.startsWith('DMS-PORTAL-') ? '' : customer.phone,
       customerIdentifier: customer.dmsCode,
     })));
   }
@@ -352,7 +355,7 @@ export class ComplaintsRepository {
       select: {
         ...complaintSelect,
         ownerId: true, owner: { select: { nameEn: true, email: true, phone: true } }, department: { select: { nameEn: true, nameAr: true } }, branch: { select: { code: true, nameEn: true, nameAr: true, timezone: true } },
-        descriptionEn: true, descriptionAr: true, incidentAt: true,
+        descriptionEn: true, descriptionAr: true, incidentAt: true, portalData: true,
         customerNameSnapshot: true, vehicleMakeSnapshot: true, vehicleModelSnapshot: true, vehicleVinSnapshot: true,
         category: { select: { id: true, nameEn: true, nameAr: true } },
         customer: { select: { id: true, nameEn: true, phone: true, dmsCode: true, dataSource: true } },
@@ -499,7 +502,7 @@ export class ComplaintsRepository {
   async findTransitionSubject(id: string, client: ComplaintTransitionClient = this.prisma): Promise<ComplaintTransitionSubject | null> {
     return client.complaint.findUnique({
       where: { id },
-      select: { id: true, vehicleRelated: true, vehicleId: true, vehicleDataUnavailableReason: true },
+      select: { id: true, vehicleRelated: true, vehicleId: true, vehicleDataUnavailableReason: true, vehicleMakeSnapshot: true, vehicleModelSnapshot: true, vehicle: { select: { makeEn: true, modelEn: true } } },
     });
   }
 

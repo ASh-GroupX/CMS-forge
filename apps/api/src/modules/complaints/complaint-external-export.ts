@@ -16,7 +16,7 @@ export async function exportComplaintPage(repository: ComplaintsRepository, bran
 export async function exportPortalComplaintCustomerPage(repository: ComplaintsRepository, branchIds: string[] | null, limit: number, cursor?: string) {
   const rows = await repository.exportPortalCustomerPage(branchIds, limit, cursor);
   const items = rows.slice(0, limit).map(({ customer, vehicle, vehicleMakeSnapshot, vehicleModelSnapshot, vehicleVinSnapshot, customerNameSnapshot, ...row }) => ({
-    ...row, customerName: customerNameSnapshot ?? customer.nameEn, customerPhone: customer.phone,
+    ...row, customerName: customerNameSnapshot ?? customer.nameEn, customerPhone: customer.phone.startsWith('DMS-PORTAL-') ? null : customer.phone,
     vehicleVin: vehicleVinSnapshot ?? vehicle?.vin ?? null, vehicleMake: vehicleMakeSnapshot ?? vehicle?.makeEn ?? null,
     vehicleModel: vehicleModelSnapshot ?? vehicle?.modelEn ?? null,
   }));

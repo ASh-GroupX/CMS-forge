@@ -1,4 +1,5 @@
 import { PortalIntakeService } from '../portal-intake/portal-intake.service.js';
+import { updatePortalAnswers } from '../portal-intake/portal-form-answers.js';
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { AuditService } from '../../core/audit.service.js';
@@ -44,7 +45,7 @@ export class ComplaintIntakeService {
     await this.access(actor);
     const options = await this.catalog.list(actor);
     const global = actor.roleCode === 'ADMIN';
-    return { branches: options.branches.filter((item) => global || item.id === actor.branchId), categories: options.categories.filter((item) => global || !item.branchId || item.branchId === actor.branchId), departments: options.departments.filter((item) => global || !item.branchId || item.branchId === actor.branchId), severities: options.severities, users: options.users.filter((item) => global || item.branchId === actor.branchId).map(({ id, nameEn, nameAr, departmentId, branchId }) => ({ id, nameEn, nameAr, departmentId, branchId })) };
+    return { branches: options.branches.filter((item) => global || item.id === actor.branchId), categories: options.categories.filter((item) => global || !item.branchId || item.branchId === actor.branchId), departments: options.departments.filter((item) => global || !item.branchId || item.branchId === actor.branchId), severities: options.severities, users: options.users.filter((item) => global || item.branchId === actor.branchId).map(({ id, nameEn, nameAr, departmentId, branchId }) => ({ id, nameEn, nameAr, departmentId, branchId })), carModels: options.carModels ?? [] };
   }
   async claim(id: string, expectedVersion: string, actor: StaffPrincipal, release = false) {
     await this.access(actor);
@@ -63,6 +64,7 @@ export class ComplaintIntakeService {
   }
   async correct(id: string, expectedVersion: string, changes: IntakeCorrection, actor: StaffPrincipal, redirect: boolean) {
     await this.access(actor);
+    await this.configuration.assertVehicle?.(changes.vehicleMake, changes.vehicleModel, true);
     const options = await this.catalog.list(actor);
     const branch = options.branches.find((item) => item.id === changes.branchId);
     const category = options.categories.find((item) => item.id === changes.categoryId && (!item.branchId || item.branchId === changes.branchId));
@@ -75,7 +77,8 @@ export class ComplaintIntakeService {
       const claim = await this.assignments.getInTransaction(claimType, id, tx);
       if (claim?.assignedUserId !== actor.userId) conflict();
       const customer = await this.customers.resolveIntake(changes.customerName, changes.customerPhone, tx);
-      const data = { customerId: customer.id, customerNameSnapshot: changes.customerName, vehicleId: null, vehicleVinSnapshot: changes.vehicleVin, vehicleMakeSnapshot: changes.vehicleMake, vehicleModelSnapshot: changes.vehicleModel, vehicleDataUnavailableReason: changes.vehicleVin ? 'Vehicle identity requires staff verification' : 'VIN not provided at intake', subject: `${changes.vehicleMake} ${changes.vehicleModel}`, descriptionEn: changes.description, incidentAt: changes.incidentAt, odometer: changes.odometer, branchId: changes.branchId, categoryId: changes.categoryId, departmentId: changes.departmentId, severity: changes.severity, ownerId: changes.ownerId };
+      const portalData = updatePortalAnswers(row.portalData, { customerName: changes.customerName, customerPhone: changes.customerPhone, vehicleBrand: changes.vehicleMake, vehicleModel: changes.vehicleModel, vehicleVin: changes.vehicleVin, odometer: changes.odometer, incidentAt: changes.incidentAt.toISOString(), description: changes.description }, changes.customFields);
+      const data = { customerId: customer.id, customerNameSnapshot: changes.customerName, vehicleId: null, vehicleVinSnapshot: changes.vehicleVin, vehicleMakeSnapshot: changes.vehicleMake, vehicleModelSnapshot: changes.vehicleModel, vehicleDataUnavailableReason: changes.vehicleVin ? 'Vehicle identity requires staff verification' : 'VIN not provided at intake', subject: `${changes.vehicleMake} ${changes.vehicleModel}`, descriptionEn: changes.description, incidentAt: changes.incidentAt, odometer: changes.odometer, branchId: changes.branchId, categoryId: changes.categoryId, departmentId: changes.departmentId, severity: changes.severity, ownerId: changes.ownerId, ...(portalData ? { portalData } : {}) };
       let updated = await this.repository.bump(row, data, tx);
       await this.audit.record({ eventType: 'COMPLAINT', action: 'intake_corrected', actorId: actor.userId, branchId: changes.branchId, targetType: 'complaint', targetId: id, metadata: { changedFields: Object.keys(data), reasonCode: 'INTAKE_CORRECTION' } }, tx);
       if (redirect) {
@@ -107,5 +110,5 @@ function checkVersion(row: IntakeRecord, version: string) { if (row.updatedAt.to
 function conflict(): never { throw new AppException('COMPLAINT_INVALID_TRANSITION', 'Complaint changed. Reload and retry.', HttpStatus.CONFLICT); }
 function present(row: IntakeRecord & { claim: { assignedUserId: string | null; assignedUser?: { nameEn: string; nameAr: string } | null } | null }) {
   const { customer, vehicle, customerNameSnapshot, vehicleVinSnapshot, vehicleMakeSnapshot, vehicleModelSnapshot, updatedAt, ...rest } = row;
-  return { ...rest, claim: row.claim ? { assignedUserId: row.claim.assignedUserId, assignedUser: row.claim.assignedUser ?? null } : null, expectedVersion: updatedAt.toISOString(), customerName: customerNameSnapshot ?? customer.nameEn, customerPhone: customer.phone, vehicleVin: vehicleVinSnapshot ?? vehicle?.vin ?? null, vehicleMake: vehicleMakeSnapshot ?? vehicle?.makeEn ?? '', vehicleModel: vehicleModelSnapshot ?? vehicle?.modelEn ?? '' };
+  return { ...rest, claim: row.claim ? { assignedUserId: row.claim.assignedUserId, assignedUser: row.claim.assignedUser ?? null } : null, expectedVersion: updatedAt.toISOString(), customerName: customerNameSnapshot ?? customer.nameEn, customerPhone: customer.phone.startsWith('DMS-PORTAL-') ? '' : customer.phone, vehicleVin: vehicleVinSnapshot ?? vehicle?.vin ?? null, vehicleMake: vehicleMakeSnapshot ?? vehicle?.makeEn ?? '', vehicleModel: vehicleModelSnapshot ?? vehicle?.modelEn ?? '' };
 }

@@ -11,15 +11,19 @@ import { AdminUsersService } from '../admin/admin-users.service.js';
 import { PortalIntakeController } from './portal-intake.controller.js';
 import { PortalIntakeRepository } from './portal-intake.repository.js';
 import { PortalIntakeService } from './portal-intake.service.js';
+import { PortalFormService } from './portal-form.service.js';
+import { ServiceBookingsModule } from '../service-bookings/service-bookings.module.js';
+import { ServiceBookingsService } from '../service-bookings/service-bookings.service.js';
 
 @Module({
-  imports: [AuthModule, AdminModule],
+  imports: [AuthModule, AdminModule, ServiceBookingsModule],
   controllers: [PortalIntakeController],
   providers: [PrismaService, AuditService, SessionAuthGuard, CsrfGuard,
     { provide: SESSION_AUTH_SERVICE, inject: [AuthService], useFactory: (auth: AuthService) => auth },
     { provide: RbacGuard, inject: [Reflector, AuditService], useFactory: (reflector: Reflector, audit: AuditService) => new RbacGuard(reflector, audit) },
     { provide: PortalIntakeRepository, inject: [PrismaService], useFactory: (prisma: PrismaService) => new PortalIntakeRepository(prisma) },
-    { provide: PortalIntakeService, inject: [PortalIntakeRepository, AdminUsersService, AuditService], useFactory: (repository: PortalIntakeRepository, admin: AdminUsersService, audit: AuditService) => new PortalIntakeService(repository, admin, audit) },
+    { provide: PortalFormService, inject: [PortalIntakeRepository, AuditService, ServiceBookingsService], useFactory: (repository: PortalIntakeRepository, audit: AuditService, booking: ServiceBookingsService) => new PortalFormService(repository, audit, booking) },
+    { provide: PortalIntakeService, inject: [PortalIntakeRepository, AdminUsersService, AuditService, PortalFormService], useFactory: (repository: PortalIntakeRepository, admin: AdminUsersService, audit: AuditService, forms: PortalFormService) => new PortalIntakeService(repository, admin, audit, forms) },
   ],
   exports: [PortalIntakeService],
 })

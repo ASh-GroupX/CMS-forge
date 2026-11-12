@@ -21,6 +21,7 @@ try {
   await prisma.branch.upsert({ where: { id: 'intake_branch' }, update: {}, create: { id: 'intake_branch', code: 'INTAKE_PROOF', nameEn: 'Intake proof branch', nameAr: 'فرع اختبار الاستقبال', timezone: 'Asia/Amman' } });
   await prisma.department.upsert({ where: { id: 'intake_department' }, update: {}, create: { id: 'intake_department', code: 'INTAKE_PROOF', nameEn: 'Intake proof department', nameAr: 'قسم اختبار الاستقبال', branchId: 'intake_branch' } });
   await prisma.category.upsert({ where: { id: 'intake_category' }, update: {}, create: { id: 'intake_category', code: 'INTAKE_PROOF', nameEn: 'Intake proof category', nameAr: 'تصنيف اختبار الاستقبال', branchId: 'intake_branch', departmentId: 'intake_department' } });
+  await prisma.serviceCarModel.upsert({ where: { id: 'intake_patrol' }, update: { isActive: true }, create: { id: 'intake_patrol', brand: 'Nissan', nameEn: 'Patrol', nameAr: 'باترول', isActive: true } });
   const hash = await argon.hash(password);
   for (const [id, roleCode] of [['intake_admin', 'ADMIN'], ['intake_one', 'CR_MANAGER'], ['intake_two', 'CR_MANAGER'], ['intake_denied', 'CR_MANAGER']]) {
     const role = await prisma.role.findUniqueOrThrow({ where: { code: roleCode } });
@@ -38,7 +39,7 @@ try {
   await call('/complaints/redirect-queue', denied, 'GET', undefined, 403);
   const publicOptions = await call('/portal/options'); assert.equal(publicOptions.phoneCountryCode, '+962'); assert.deepEqual(publicOptions.categories, []);
   const suffix = String(Date.now()).slice(-6);
-  async function submit(number) { return (await call('/portal/complaints', null, 'POST', { customerName: 'Proof customer', customerPhone: `+96279${suffix}${number}`, vehicleBrand: 'Nissan', vehicleModel: 'Patrol', description: 'Synthetic intake workflow proof', incidentAt: '2026-11-12', odometer: 12000 }, 201)).complaint; }
+  async function submit(number) { return (await call('/portal/complaints', null, 'POST', { customerName: 'Proof customer', customerPhone: `+96279${suffix}${number}`, vehicleBrand: 'Nissan', vehicleModel: 'Patrol', vehicleVin: '1HGCM82633A004352', description: 'Synthetic intake workflow proof', incidentAt: '2026-11-12', odometer: 12000 }, 201)).complaint; }
   const first = await submit(1); const second = await submit(2);
   const key = await call('/integrations/data-api-keys', admin, 'POST', { name: 'Isolated intake proof', scopes: ['customers:read', 'portal-complaints:read'], allBranches: false, branchIds: ['intake_branch'] }, 201);
   const feed = await fetch(`${api}/external-data/portal-complaints?limit=100`, { headers: { Authorization: `Bearer ${key.secret}` } });

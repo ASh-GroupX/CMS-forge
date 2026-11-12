@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select"
 
 const EMPTY_VALUE = "__cms_auto_empty_select_value__"
+const EMPTY_OPTION_VALUE = "__cms_auto_none_select_value__"
 
 export type FormSelectOption = {
   disabled?: boolean
@@ -20,6 +21,7 @@ export type FormSelectOption = {
 }
 
 type FormSelectProps = {
+  "aria-label"?: string | undefined
   "aria-describedby"?: string | undefined
   "aria-invalid"?: boolean | undefined
   className?: string | undefined
@@ -54,7 +56,7 @@ export function FormSelect({
   const selectedLabel = options.find((option) => option.value === selectedValue)?.label
 
   function changeValue(nextValue: string) {
-    const normalizedValue = nextValue === EMPTY_VALUE ? "" : nextValue
+    const normalizedValue = nextValue === EMPTY_VALUE || nextValue === EMPTY_OPTION_VALUE ? "" : nextValue
     if (!controlled) setInternalValue(normalizedValue)
     onValueChange?.(normalizedValue)
   }
@@ -72,14 +74,14 @@ export function FormSelect({
         {...(ariaProps["aria-invalid"] === undefined ? {} : { "aria-invalid": ariaProps["aria-invalid"] })}
         className={cn("min-w-0", className)}
         {...(id === undefined ? {} : { id })}
-        aria-label={selectedLabel || placeholder}
+        aria-label={ariaProps["aria-label"] ?? selectedLabel ?? placeholder}
         >
           <SelectValue placeholder={placeholder}>{selectedLabel}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           {placeholder ? <SelectItem value={EMPTY_VALUE}>{placeholder}</SelectItem> : null}
           {options.map((option) => (
-            <SelectItem {...(option.disabled === undefined ? {} : { disabled: option.disabled })} key={option.value} value={option.value}>
+              <SelectItem {...(option.disabled === undefined ? {} : { disabled: option.disabled })} key={option.value} value={option.value === "" ? EMPTY_OPTION_VALUE : option.value}>
               {option.label}
             </SelectItem>
           ))}

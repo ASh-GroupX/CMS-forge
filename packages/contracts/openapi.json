@@ -7918,7 +7918,8 @@
     "/external-data/appointments": { "get": { "tags": ["ExternalData"], "operationId": "externalAppointmentsPage", "summary": "Read a page of scoped service appointments", "description": "Requires appointments:read on the integration API key. The optional branchId may narrow its stored branch scope.", "security": [{ "integrationApiKey": [] }], "parameters": [{ "$ref": "#/components/parameters/ExternalLimit" }, { "$ref": "#/components/parameters/ExternalCursor" }, { "$ref": "#/components/parameters/ExternalBranch" }], "responses": { "200": { "description": "Appointment page", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ExternalAppointmentPage" } } } }, "400": { "$ref": "#/components/responses/ExternalDataError" }, "401": { "$ref": "#/components/responses/ExternalDataError" }, "403": { "$ref": "#/components/responses/ExternalDataError" } } } },
     "/external-data/tickets": {"get":{"tags":["ExternalData"],"operationId":"externalTicketsPage","summary":"Read a page of scoped internal tickets","description":"Requires tickets:read on the integration API key. The optional branchId may narrow its stored branch scope.","security":[{"integrationApiKey":[]}],"parameters":[{"$ref":"#/components/parameters/ExternalLimit"},{"$ref":"#/components/parameters/ExternalCursor"},{"$ref":"#/components/parameters/ExternalBranch"}],"responses":{"200":{"description":"Ticket page","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ExternalTicketPage"}}}},"400":{"$ref":"#/components/responses/ExternalDataError"},"401":{"$ref":"#/components/responses/ExternalDataError"},"403":{"$ref":"#/components/responses/ExternalDataError"}}}},
     "/external-data/complaints/{id}/events": {"get":{"tags":["ExternalData"],"operationId":"externalComplaintEventsPage","summary":"Read a page of scoped complaints events","description":"Requires complaints:read. The record must belong to the integration key branch scope.","security":[{"integrationApiKey":[]}],"parameters":[{"name":"id","in":"path","required":true,"schema":{"type":"string"}},{"$ref":"#/components/parameters/ExternalLimit"},{"$ref":"#/components/parameters/ExternalCursor"},{"$ref":"#/components/parameters/ExternalBranch"}],"responses":{"200":{"description":"Event page","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ExternalComplaintEventsPage"}}}},"400":{"$ref":"#/components/responses/ExternalDataError"},"401":{"$ref":"#/components/responses/ExternalDataError"},"403":{"$ref":"#/components/responses/ExternalDataError"},"404":{"$ref":"#/components/responses/ExternalDataError"}}}},
-    "/external-data/tickets/{id}/events": {"get":{"tags":["ExternalData"],"operationId":"externalTicketEventsPage","summary":"Read a page of scoped tickets events","description":"Requires tickets:read. The record must belong to the integration key branch scope.","security":[{"integrationApiKey":[]}],"parameters":[{"name":"id","in":"path","required":true,"schema":{"type":"string"}},{"$ref":"#/components/parameters/ExternalLimit"},{"$ref":"#/components/parameters/ExternalCursor"},{"$ref":"#/components/parameters/ExternalBranch"}],"responses":{"200":{"description":"Event page","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ExternalTicketEventsPage"}}}},"400":{"$ref":"#/components/responses/ExternalDataError"},"401":{"$ref":"#/components/responses/ExternalDataError"},"403":{"$ref":"#/components/responses/ExternalDataError"},"404":{"$ref":"#/components/responses/ExternalDataError"}}}}
+    "/external-data/tickets/{id}/events": {"get":{"tags":["ExternalData"],"operationId":"externalTicketEventsPage","summary":"Read a page of scoped tickets events","description":"Requires tickets:read. The record must belong to the integration key branch scope.","security":[{"integrationApiKey":[]}],"parameters":[{"name":"id","in":"path","required":true,"schema":{"type":"string"}},{"$ref":"#/components/parameters/ExternalLimit"},{"$ref":"#/components/parameters/ExternalCursor"},{"$ref":"#/components/parameters/ExternalBranch"}],"responses":{"200":{"description":"Event page","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ExternalTicketEventsPage"}}}},"400":{"$ref":"#/components/responses/ExternalDataError"},"401":{"$ref":"#/components/responses/ExternalDataError"},"403":{"$ref":"#/components/responses/ExternalDataError"},"404":{"$ref":"#/components/responses/ExternalDataError"}}}},
+    "/admin/portal-intake-settings/fields": {"get":{"tags":["Admin"],"operationId":"portalIntakeFieldsGet","summary":"Read versioned QR complaint form fields","security":[{"cookieAuth":[]}],"responses":{"200":{"description":"Field settings","content":{"application/json":{"schema":{"$ref":"#/components/schemas/PortalFormConfiguration"}}}},"401":{"description":"Session required"},"403":{"description":"Admin required"}}},"put":{"tags":["Admin"],"operationId":"portalIntakeFieldsUpdate","summary":"Update QR complaint field labels, required flags, and custom fields","security":[{"cookieAuth":[]}],"parameters":[{"in":"header","name":"x-csrf-token","required":true,"schema":{"type":"string"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/PortalFormUpdate"}}}},"responses":{"200":{"description":"Saved fields","content":{"application/json":{"schema":{"$ref":"#/components/schemas/PortalFormConfiguration"}}}},"400":{"description":"Invalid field definitions"},"401":{"description":"Session required"},"403":{"description":"Admin required"},"409":{"description":"Stale version"}}}}
   },
   "components": {
     "parameters": {
@@ -7936,9 +7937,9 @@
       }
     },
     "schemas": {
-      "IntakeChoices": {"type":"object","properties":{"branches":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"nameEn":{"type":"string"},"nameAr":{"type":"string"},"branchId":{"type":["string","null"]},"departmentId":{"type":["string","null"]}}}},"categories":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"nameEn":{"type":"string"},"nameAr":{"type":"string"},"branchId":{"type":["string","null"]},"departmentId":{"type":["string","null"]}}}},"departments":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"nameEn":{"type":"string"},"nameAr":{"type":"string"},"branchId":{"type":["string","null"]},"departmentId":{"type":["string","null"]}}}},"users":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"nameEn":{"type":"string"},"nameAr":{"type":"string"},"branchId":{"type":["string","null"]},"departmentId":{"type":["string","null"]}}}},"severities":{"type":"array","items":{"type":"string"}}}},
-      "IntakeCorrection": {"type":"object","required":["expectedVersion","customerName","customerPhone","vehicleMake","vehicleModel","incidentAt","description","branchId","categoryId","severity","reason"],"properties":{"expectedVersion":{"type":"string","format":"date-time"},"customerName":{"type":"string"},"customerPhone":{"type":"string","pattern":"^\\+[1-9]\\d{7,14}$"},"vehicleMake":{"type":"string"},"vehicleModel":{"type":"string"},"vehicleVin":{"type":["string","null"]},"odometer":{"type":["integer","null"],"minimum":0,"maximum":10000000},"incidentAt":{"type":"string","format":"date-time"},"description":{"type":"string"},"branchId":{"type":"string"},"categoryId":{"type":"string"},"severity":{"type":"string","enum":["LOW","MEDIUM","HIGH","CRITICAL"]},"departmentId":{"type":["string","null"]},"ownerId":{"type":["string","null"]},"reason":{"type":"string"}},"additionalProperties":false},
-      "IntakeComplaint": {"type":"object","required":["id","referenceNumber","expectedVersion","customerName","customerPhone","vehicleMake","vehicleModel","status","claim"],"properties":{"expectedVersion":{"type":"string","format":"date-time"},"customerName":{"type":"string"},"customerPhone":{"type":"string","pattern":"^\\+[1-9]\\d{7,14}$"},"vehicleMake":{"type":"string"},"vehicleModel":{"type":"string"},"vehicleVin":{"type":["string","null"]},"odometer":{"type":["integer","null"],"minimum":0,"maximum":10000000},"incidentAt":{"type":"string","format":"date-time"},"branchId":{"type":"string"},"categoryId":{"type":"string"},"severity":{"type":"string","enum":["LOW","MEDIUM","HIGH","CRITICAL"]},"departmentId":{"type":["string","null"]},"ownerId":{"type":["string","null"]},"id":{"type":"string"},"referenceNumber":{"type":"string"},"status":{"type":"string"},"descriptionEn":{"type":"string"},"createdAt":{"type":"string","format":"date-time"},"claim":{"type":["object","null"],"properties":{"assignedUserId":{"type":["string","null"]},"assignedUser":{"type":["object","null"],"properties":{"nameEn":{"type":"string"},"nameAr":{"type":"string"}}}}}}},
+      "IntakeChoices": {"type":"object","properties":{"branches":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"nameEn":{"type":"string"},"nameAr":{"type":"string"},"branchId":{"type":["string","null"]},"departmentId":{"type":["string","null"]}}}},"categories":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"nameEn":{"type":"string"},"nameAr":{"type":"string"},"branchId":{"type":["string","null"]},"departmentId":{"type":["string","null"]}}}},"departments":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"nameEn":{"type":"string"},"nameAr":{"type":"string"},"branchId":{"type":["string","null"]},"departmentId":{"type":["string","null"]}}}},"users":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"nameEn":{"type":"string"},"nameAr":{"type":"string"},"branchId":{"type":["string","null"]},"departmentId":{"type":["string","null"]}}}},"severities":{"type":"array","items":{"type":"string"}},"carModels":{"type":"array","items":{"$ref":"#/components/schemas/BookingCarOption"}}}},
+      "IntakeCorrection": {"type":"object","required":["expectedVersion","customerName","customerPhone","vehicleMake","vehicleModel","incidentAt","description","branchId","categoryId","severity","reason"],"properties":{"expectedVersion":{"type":"string","format":"date-time"},"customerName":{"type":"string"},"customerPhone":{"type":"string","pattern":"^\\+[1-9]\\d{7,14}$"},"vehicleMake":{"type":"string"},"vehicleModel":{"type":"string"},"vehicleVin":{"type":["string","null"]},"odometer":{"type":["integer","null"],"minimum":0,"maximum":10000000},"incidentAt":{"type":"string","format":"date-time"},"description":{"type":"string"},"branchId":{"type":"string"},"categoryId":{"type":"string"},"severity":{"type":"string","enum":["LOW","MEDIUM","HIGH","CRITICAL"]},"departmentId":{"type":["string","null"]},"ownerId":{"type":["string","null"]},"reason":{"type":"string"},"customFields":{"type":"object","additionalProperties":true,"description":"Corrected answers for custom fields from this complaint submission snapshot"}},"additionalProperties":false},
+      "IntakeComplaint": {"type":"object","required":["id","referenceNumber","expectedVersion","customerName","customerPhone","vehicleMake","vehicleModel","status","claim"],"properties":{"expectedVersion":{"type":"string","format":"date-time"},"customerName":{"type":"string"},"customerPhone":{"type":"string"},"vehicleMake":{"type":"string"},"vehicleModel":{"type":"string"},"vehicleVin":{"type":["string","null"]},"odometer":{"type":["integer","null"],"minimum":0,"maximum":10000000},"incidentAt":{"type":"string","format":"date-time"},"branchId":{"type":"string"},"categoryId":{"type":"string"},"severity":{"type":"string","enum":["LOW","MEDIUM","HIGH","CRITICAL"]},"departmentId":{"type":["string","null"]},"ownerId":{"type":["string","null"]},"id":{"type":"string"},"referenceNumber":{"type":"string"},"status":{"type":"string"},"descriptionEn":{"type":"string"},"createdAt":{"type":"string","format":"date-time"},"claim":{"type":["object","null"],"properties":{"assignedUserId":{"type":["string","null"]},"assignedUser":{"type":["object","null"],"properties":{"nameEn":{"type":"string"},"nameAr":{"type":"string"}}}}},"portalData":{"type":["object","null"],"description":"Submission-time field definitions, original answers, and corrected answers. Visible only to authorized redirect staff.","properties":{"version":{"type":["integer","null"]},"fields":{"type":"array","items":{"$ref":"#/components/schemas/PortalFormField"}},"values":{"type":"object"},"originalValues":{"type":"object"}}}}},
       "UpdateServiceBookingSmsReminderSettings": {
         "type": "object",
         "required": [
@@ -9611,107 +9612,7 @@
         },
         "additionalProperties": false
       },
-      "PortalComplaintRequest": {
-        "type": "object",
-        "required": [
-          "customerName",
-          "customerPhone",
-          "description",
-          "incidentAt",
-          "subject"
-        ],
-        "anyOf": [
-          {
-            "required": [
-              "categoryId",
-              "subcategoryId",
-              "branchId",
-              "severity"
-            ]
-          },
-          {
-            "required": [
-              "manualTriage"
-            ],
-            "properties": {
-              "manualTriage": {
-                "const": true
-              }
-            }
-          }
-        ],
-        "properties": {
-          "customerName": {
-            "type": "string",
-            "minLength": 1
-          },
-          "customerPhone": {
-            "type": "string",
-            "minLength": 1
-          },
-          "categoryId": {
-            "type": "string",
-            "minLength": 1
-          },
-          "subcategoryId": {
-            "type": "string",
-            "minLength": 1
-          },
-          "description": {
-            "type": "string",
-            "minLength": 1
-          },
-          "incidentAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "branchId": {
-            "type": "string",
-            "minLength": 1
-          },
-          "subject": {
-            "type": "string",
-            "minLength": 1
-          },
-          "severity": {
-            "type": "string",
-            "enum": [
-              "CRITICAL",
-              "HIGH",
-              "MEDIUM",
-              "LOW"
-            ]
-          },
-          "manualTriage": {
-            "type": "boolean",
-            "description": "When true, the API resolves missing branch/category/severity fields to configured manual triage defaults."
-          },
-          "vehicleRelated": {
-            "type": "boolean"
-          },
-          "vehicleVin": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "minLength": 1
-          },
-          "vehicleId": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "minLength": 1
-          },
-          "attachments": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AttachmentUploadRequest"
-            }
-          }
-        },
-        "additionalProperties": false
-      },
+      "PortalComplaintRequest": {"type":"object","properties":{"customerName":{"type":"string"},"customerPhone":{"type":"string"},"categoryId":{"type":"string","minLength":1},"subcategoryId":{"type":"string","minLength":1},"description":{"type":"string"},"incidentAt":{"type":"string","description":"ISO date or date-time; may be omitted when optional"},"branchId":{"type":"string","minLength":1},"subject":{"type":"string"},"severity":{"type":"string","enum":["CRITICAL","HIGH","MEDIUM","LOW"]},"manualTriage":{"type":"boolean","description":"When true, the API resolves missing branch/category/severity fields to configured manual triage defaults."},"vehicleRelated":{"type":"boolean"},"vehicleVin":{"type":["string","null"],"minLength":1},"vehicleId":{"type":["string","null"],"minLength":1},"attachments":{"type":"array","items":{"$ref":"#/components/schemas/AttachmentUploadRequest"}},"vehicleBrand":{"type":"string"},"vehicleModel":{"type":"string"},"odometer":{"type":["integer","null"],"minimum":0,"maximum":10000000},"customFields":{"type":"object","additionalProperties":{"oneOf":[{"type":"string"},{"type":"number"},{"type":"boolean"},{"type":"null"}]}}},"additionalProperties":false,"description":"Required fields are controlled by versioned Admin QR form configuration; internal routing fields are ignored by public intake."},
       "PortalOtpRequest": {
         "type": "object",
         "required": [
@@ -10080,48 +9981,7 @@
         },
         "additionalProperties": false
       },
-      "ComplaintFormOptionsResponse": {
-        "type": "object",
-        "required": [
-          "branches",
-          "categories",
-          "departments",
-          "severities"
-        ],
-        "properties": {
-          "branches": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ComplaintFormOption"
-            }
-          },
-          "categories": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ComplaintFormOption"
-            }
-          },
-          "departments": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ComplaintFormOption"
-            }
-          },
-          "severities": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "CRITICAL",
-                "HIGH",
-                "MEDIUM",
-                "LOW"
-              ]
-            }
-          }
-        },
-        "additionalProperties": false
-      },
+      "ComplaintFormOptionsResponse": {"type":"object","required":["branches","categories","departments","severities"],"properties":{"branches":{"type":"array","items":{"$ref":"#/components/schemas/ComplaintFormOption"}},"categories":{"type":"array","items":{"$ref":"#/components/schemas/ComplaintFormOption"}},"departments":{"type":"array","items":{"$ref":"#/components/schemas/ComplaintFormOption"}},"severities":{"type":"array","items":{"type":"string","enum":["CRITICAL","HIGH","MEDIUM","LOW"]}},"carModels":{"type":"array","items":{"$ref":"#/components/schemas/BookingCarOption"}}},"additionalProperties":false},
       "ComplaintQueueItem": {
         "type": "object",
         "required": [
@@ -10745,203 +10605,7 @@
         },
         "additionalProperties": false
       },
-      "ComplaintDetailResponse": {
-        "type": "object",
-        "required": [
-          "complaint"
-        ],
-        "properties": {
-          "complaint": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ComplaintQueueItem"
-              },
-              {
-                "type": "object",
-                "required": [
-                  "categoryId",
-                  "categoryName",
-                  "categoryNameAr",
-                  "description",
-                  "incidentAt",
-                  "customer",
-                  "vehicle",
-                  "customerSource",
-                  "manualCustomer",
-                  "vehicleRelated",
-                  "vehicleSource",
-                  "manualVehicle",
-                  "vehicleDataUnavailableReason",
-                  "statusHistory",
-                  "caseSummary"
-                ],
-                "properties": {
-                  "categoryId": {
-                    "type": "string"
-                  },
-                  "categoryName": {
-                    "type": "string"
-                  },
-                  "categoryNameAr": {
-                    "type": "string"
-                  },
-                  "description": {
-                    "type": "string"
-                  },
-                  "incidentAt": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "date-time"
-                  },
-                  "customer": {
-                    "type": "object",
-                    "required": [
-                      "id",
-                      "name",
-                      "phone",
-                      "identifier",
-                      "source"
-                    ],
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "phone": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
-                      "identifier": {
-                        "type": [
-                          "string",
-                          "null"
-                        ]
-                      },
-                      "source": {
-                        "type": "string",
-                        "enum": [
-                          "LOCAL",
-                          "MANUAL",
-                          "DMS"
-                        ]
-                      }
-                    },
-                    "additionalProperties": false
-                  },
-                  "vehicle": {
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "required": [
-                          "id",
-                          "vin",
-                          "plate",
-                          "make",
-                          "model",
-                          "year",
-                          "source"
-                        ],
-                        "properties": {
-                          "id": {
-                            "type": "string"
-                          },
-                          "vin": {
-                            "type": "string"
-                          },
-                          "plate": {
-                            "type": "string"
-                          },
-                          "make": {
-                            "type": "string"
-                          },
-                          "model": {
-                            "type": "string"
-                          },
-                          "year": {
-                            "type": "integer"
-                          },
-                          "source": {
-                            "type": "string",
-                            "enum": [
-                              "LOCAL",
-                              "MANUAL",
-                              "DMS"
-                            ]
-                          }
-                        },
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "submittedVehicle": {"type":["object","null"],"properties":{"make":{"type":"string"},"model":{"type":"string"},"vin":{"type":["string","null"]}}},
-                    "customerSource": {
-                    "type": "string",
-                    "enum": [
-                      "LOCAL",
-                      "MANUAL",
-                      "DMS"
-                    ]
-                  },
-                  "manualCustomer": {
-                    "type": "boolean"
-                  },
-                  "vehicleRelated": {
-                    "type": "boolean"
-                  },
-                  "vehicleSource": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "enum": [
-                      "LOCAL",
-                      "MANUAL",
-                      "DMS",
-                      null
-                    ]
-                  },
-                  "manualVehicle": {
-                    "type": "boolean"
-                  },
-                  "vehicleDataUnavailableReason": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "statusHistory": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/components/schemas/ComplaintStatusTimelineItem"
-                    }
-                  },
-                  "caseSummary": {
-                    "anyOf": [
-                      {
-                        "$ref": "#/components/schemas/ComplaintCaseSummary"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  }
-                },
-                "additionalProperties": false
-              }
-            ]
-          }
-        },
-        "additionalProperties": false
-      },
+      "ComplaintDetailResponse": {"type":"object","required":["complaint"],"properties":{"complaint":{"allOf":[{"$ref":"#/components/schemas/ComplaintQueueItem"},{"type":"object","required":["categoryId","categoryName","categoryNameAr","description","incidentAt","customer","vehicle","customerSource","manualCustomer","vehicleRelated","vehicleSource","manualVehicle","vehicleDataUnavailableReason","statusHistory","caseSummary"],"properties":{"categoryId":{"type":"string"},"categoryName":{"type":"string"},"categoryNameAr":{"type":"string"},"description":{"type":"string"},"incidentAt":{"type":["string","null"],"format":"date-time"},"customer":{"type":"object","required":["id","name","phone","identifier","source"],"properties":{"id":{"type":"string"},"name":{"type":"string"},"phone":{"type":["string","null"]},"identifier":{"type":["string","null"]},"source":{"type":"string","enum":["LOCAL","MANUAL","DMS"]}},"additionalProperties":false},"vehicle":{"anyOf":[{"type":"object","required":["id","vin","plate","make","model","year","source"],"properties":{"id":{"type":"string"},"vin":{"type":"string"},"plate":{"type":"string"},"make":{"type":"string"},"model":{"type":"string"},"year":{"type":"integer"},"source":{"type":"string","enum":["LOCAL","MANUAL","DMS"]}},"additionalProperties":false},{"type":"null"}]},"submittedVehicle":{"type":["object","null"],"properties":{"make":{"type":"string"},"model":{"type":"string"},"vin":{"type":["string","null"]}}},"customerSource":{"type":"string","enum":["LOCAL","MANUAL","DMS"]},"manualCustomer":{"type":"boolean"},"vehicleRelated":{"type":"boolean"},"vehicleSource":{"type":["string","null"],"enum":["LOCAL","MANUAL","DMS",null]},"manualVehicle":{"type":"boolean"},"vehicleDataUnavailableReason":{"type":["string","null"]},"statusHistory":{"type":"array","items":{"$ref":"#/components/schemas/ComplaintStatusTimelineItem"}},"caseSummary":{"anyOf":[{"$ref":"#/components/schemas/ComplaintCaseSummary"},{"type":"null"}]},"portalAnswers":{"type":"array","description":"Current custom form answers for authorized staff; empty for masked views. Baseline originals are excluded.","items":{"$ref":"#/components/schemas/PortalAnswer"}}},"additionalProperties":false}]}},"additionalProperties":false},
       "ComplaintCommentRequest": {
         "type": "object",
         "required": [
@@ -15169,7 +14833,7 @@
         },
         "additionalProperties": false
       },
-      "PortalOptionsResponse": {"type":"object","required":["branches","categories","departments","severities","phoneCountryCode","incidentDate","fieldRules","acknowledgementStatus"],"properties":{"branches":{"type":"array","maxItems":0,"items":{}},"categories":{"type":"array","maxItems":0,"items":{}},"departments":{"type":"array","maxItems":0,"items":{}},"severities":{"type":"array","maxItems":0,"items":{}},"phoneCountryCode":{"type":"string"},"incidentDate":{"type":"string","format":"date"},"fieldRules":{"type":"object","properties":{"required":{"type":"array","items":{"type":"string"}},"optional":{"type":"array","items":{"type":"string"}}}},"acknowledgementStatus":{"type":"string","enum":["DISABLED"]}}},
+      "PortalOptionsResponse": {"type":"object","required":["branches","categories","departments","severities","phoneCountryCode","incidentDate","fieldRules","acknowledgementStatus","fields","formVersion","carModels"],"properties":{"branches":{"type":"array","maxItems":0,"items":{}},"categories":{"type":"array","maxItems":0,"items":{}},"departments":{"type":"array","maxItems":0,"items":{}},"severities":{"type":"array","maxItems":0,"items":{}},"phoneCountryCode":{"type":"string"},"incidentDate":{"type":"string","format":"date"},"fieldRules":{"type":"object","properties":{"required":{"type":"array","items":{"type":"string"}},"optional":{"type":"array","items":{"type":"string"}}}},"acknowledgementStatus":{"type":"string","enum":["DISABLED"]},"fields":{"type":"array","items":{"$ref":"#/components/schemas/PortalFormField"}},"formVersion":{"type":["integer","null"]},"carModels":{"type":"array","items":{"$ref":"#/components/schemas/BookingCarOption"}}}},
       "AdminCategoryListResponse": {
         "type": "object",
         "required": [
@@ -16099,9 +15763,14 @@
       "ExternalTicket": {"type":"object","properties":{"id":{"type":"string"},"referenceNumber":{"type":"string"},"title":{"type":"string"},"description":{"type":"string"},"status":{"type":"string"},"priority":{"type":"string"},"requestedById":{"type":"string"},"targetDepartmentId":{"type":"string"},"assignedEmployeeId":{"type":["string","null"]},"requestedEmployeeId":{"type":["string","null"]},"categoryId":{"type":"string"},"branchId":{"type":["string","null"]},"dueAt":{"type":["string","null"],"format":"date-time"},"inProgressAt":{"type":["string","null"],"format":"date-time"},"resolvedAt":{"type":["string","null"],"format":"date-time"},"closedAt":{"type":["string","null"],"format":"date-time"},"createdAt":{"type":"string","format":"date-time"},"updatedAt":{"type":"string","format":"date-time"},"acceptedAt":{"type":["string","null"],"format":"date-time"},"requestedBy":{"anyOf":[{"$ref":"#/components/schemas/ExternalStaff"},{"type":"null"}]},"assignedEmployee":{"anyOf":[{"$ref":"#/components/schemas/ExternalStaff"},{"type":"null"}]},"acceptedBy":{"anyOf":[{"$ref":"#/components/schemas/ExternalStaff"},{"type":"null"}]},"targetDepartment":{"$ref":"#/components/schemas/ExternalTicketDepartment"},"activities":{"type":"array","items":{"$ref":"#/components/schemas/ExternalTicketActivity"}},"activitiesHasMore":{"type":"boolean"}},"additionalProperties":false},
       "ExternalCustomer": { "type": "object", "properties": { "id": { "type": "string" }, "nameEn": { "type": "string" }, "nameAr": { "type": "string" }, "phone": { "type": "string" }, "email": { "type": ["string", "null"] }, "dataSource": { "type": "string" }, "createdAt": { "type": "string", "format": "date-time" }, "updatedAt": { "type": "string", "format": "date-time" } }, "additionalProperties": false },
       "ExternalComplaint": {"type":"object","properties":{"id":{"type":"string"},"referenceNumber":{"type":"string"},"branchId":{"type":"string"},"customerId":{"type":"string"},"subject":{"type":"string"},"status":{"type":"string"},"type":{"type":"string"},"severity":{"type":"string"},"categoryId":{"type":"string"},"departmentId":{"type":["string","null"]},"incidentAt":{"type":["string","null"],"format":"date-time"},"resolvedAt":{"type":["string","null"],"format":"date-time"},"closedAt":{"type":["string","null"],"format":"date-time"},"createdAt":{"type":"string","format":"date-time"},"updatedAt":{"type":"string","format":"date-time"},"descriptionEn":{"type":"string"},"descriptionAr":{"type":["string","null"]},"source":{"type":"string"},"vehicleId":{"type":["string","null"]},"createdById":{"type":["string","null"]},"ownerId":{"type":["string","null"]},"firstResponseAt":{"type":["string","null"],"format":"date-time"},"acceptedAt":{"type":["string","null"],"format":"date-time"},"createdBy":{"anyOf":[{"$ref":"#/components/schemas/ExternalStaff"},{"type":"null"}]},"owner":{"anyOf":[{"$ref":"#/components/schemas/ExternalStaff"},{"type":"null"}]},"acceptedBy":{"anyOf":[{"$ref":"#/components/schemas/ExternalStaff"},{"type":"null"}]},"statusHistory":{"type":"array","items":{"$ref":"#/components/schemas/ExternalComplaintTransition"}},"statusHistoryHasMore":{"type":"boolean"}},"additionalProperties":false},
-      "ExternalPortalComplaint": {"type":"object","required":["id","referenceNumber","branchId","status","customerName","customerPhone","descriptionEn","createdAt"],"properties":{"id":{"type":"string"},"referenceNumber":{"type":"string"},"branchId":{"type":"string"},"status":{"type":"string"},"customerName":{"type":"string"},"customerPhone":{"type":"string"},"descriptionEn":{"type":"string"},"incidentAt":{"type":["string","null"],"format":"date-time"},"createdAt":{"type":"string","format":"date-time"},"odometer":{"type":["integer","null"]},"vehicleVin":{"type":["string","null"]},"vehicleMake":{"type":["string","null"]},"vehicleModel":{"type":["string","null"]}},"additionalProperties":false},
+      "ExternalPortalComplaint": {"type":"object","required":["id","referenceNumber","branchId","status","customerName","customerPhone","descriptionEn","createdAt"],"properties":{"id":{"type":"string"},"referenceNumber":{"type":"string"},"branchId":{"type":"string"},"status":{"type":"string"},"customerName":{"type":"string"},"customerPhone":{"type":["string","null"]},"descriptionEn":{"type":"string"},"incidentAt":{"type":["string","null"],"format":"date-time"},"createdAt":{"type":"string","format":"date-time"},"odometer":{"type":["integer","null"]},"vehicleVin":{"type":["string","null"]},"vehicleMake":{"type":["string","null"]},"vehicleModel":{"type":["string","null"]}},"additionalProperties":false},
       "ExternalTask": { "type": "object", "properties": { "id": { "type": "string" }, "title": { "type": "string" }, "status": { "type": "string" }, "ownerId": { "type": "string" }, "assigneeId": { "type": ["string", "null"] }, "assignedDepartmentId": { "type": ["string", "null"] }, "dueAt": { "type": "string", "format": "date-time" }, "isCustomerPromise": { "type": "boolean" }, "createdAt": { "type": "string", "format": "date-time" }, "updatedAt": { "type": "string", "format": "date-time" } }, "additionalProperties": false },
-      "ExternalAppointment": { "type": "object", "properties": { "id": { "type": "string" }, "referenceNumber": { "type": "string" }, "branchId": { "type": ["string", "null"] }, "serviceCenterId": { "type": "string" }, "customerName": { "type": "string" }, "vin": { "type": ["string", "null"] }, "carModelName": { "type": "string" }, "maintenanceTypeName": { "type": "string" }, "periodicMileageKm": { "type": ["integer", "null"] }, "date": { "type": "string", "format": "date-time" }, "startTime": { "type": "string" }, "endTime": { "type": "string" }, "durationMinutes": { "type": "integer" }, "status": { "type": "string" }, "createdAt": { "type": "string", "format": "date-time" }, "updatedAt": { "type": "string", "format": "date-time" } }, "additionalProperties": false }
+      "ExternalAppointment": { "type": "object", "properties": { "id": { "type": "string" }, "referenceNumber": { "type": "string" }, "branchId": { "type": ["string", "null"] }, "serviceCenterId": { "type": "string" }, "customerName": { "type": "string" }, "vin": { "type": ["string", "null"] }, "carModelName": { "type": "string" }, "maintenanceTypeName": { "type": "string" }, "periodicMileageKm": { "type": ["integer", "null"] }, "date": { "type": "string", "format": "date-time" }, "startTime": { "type": "string" }, "endTime": { "type": "string" }, "durationMinutes": { "type": "integer" }, "status": { "type": "string" }, "createdAt": { "type": "string", "format": "date-time" }, "updatedAt": { "type": "string", "format": "date-time" } }, "additionalProperties": false },
+      "PortalFormField": {"type":"object","required":["key","labelEn","labelAr","type","required","enabled"],"properties":{"key":{"type":"string"},"labelEn":{"type":"string"},"labelAr":{"type":"string"},"type":{"type":"string","enum":["text","textarea","number","date","select","checkbox","brand","model","file"]},"required":{"type":"boolean"},"enabled":{"type":"boolean"},"options":{"type":"array","items":{"type":"object","required":["value","labelEn","labelAr"],"properties":{"value":{"type":"string"},"labelEn":{"type":"string"},"labelAr":{"type":"string"}}}}}},
+      "BookingCarOption": {"type":"object","required":["id","brand","nameEn","nameAr"],"properties":{"id":{"type":"string"},"brand":{"type":"string"},"nameEn":{"type":"string"},"nameAr":{"type":"string"}}},
+      "PortalFormConfiguration": {"type":"object","required":["version","fields"],"properties":{"version":{"type":["integer","null"]},"fields":{"type":"array","items":{"$ref":"#/components/schemas/PortalFormField"}}}},
+      "PortalFormUpdate": {"type":"object","required":["expectedVersion","fields"],"properties":{"expectedVersion":{"type":["integer","null"]},"fields":{"type":"array","items":{"$ref":"#/components/schemas/PortalFormField"}}}},
+      "PortalAnswer": {"type":"object","required":["key","labelEn","labelAr","value"],"properties":{"key":{"type":"string"},"labelEn":{"type":"string"},"labelAr":{"type":"string"},"value":{"oneOf":[{"type":"string"},{"type":"number"},{"type":"boolean"},{"type":"null"}]}}}
     }
   }
 }

@@ -3,11 +3,17 @@ import { AuditService } from '../../core/audit.service.js';
 import { AppException } from '../../core/http-kernel.js';
 import { AdminUsersService } from '../admin/admin-users.service.js';
 import { PortalIntakeRepository } from './portal-intake.repository.js';
+import { PortalFormService } from './portal-form.service.js';
+import { defaultPortalFields } from '@cms-auto/contracts';
 export type PortalIntakeSettingsInput = { branchId: string; categoryId: string; phoneCountryCode: string; memberIds: string[]; expectedVersion: number | null };
 
 @Injectable()
 export class PortalIntakeService {
-  constructor(private readonly repository: PortalIntakeRepository, private readonly admin: AdminUsersService, private readonly audit: AuditService) {}
+  constructor(private readonly repository: PortalIntakeRepository, private readonly admin: AdminUsersService, private readonly audit: AuditService, private readonly forms?: PortalFormService) {}
+  form() { return this.forms?.get() ?? Promise.resolve({ version: null, fields: structuredClone(defaultPortalFields) }); }
+  catalog() { return this.forms?.catalog() ?? Promise.resolve([]); }
+  validateForm(input: Record<string, unknown>) { return this.forms!.validate(input); }
+  assertVehicle(brand: string | null | undefined, model: string | null | undefined, required = false) { if (required && (!brand || !model)) throw new AppException('VALIDATION_FAILED', 'Choose a vehicle make and model.', HttpStatus.BAD_REQUEST, [{ field: !brand ? 'vehicleBrand' : 'vehicleModel', code: 'REQUIRED', message: 'Choose a vehicle.' }]); return this.forms!.assertVehicle(brand, model); }
   async get() { const record = await this.repository.get(); return record ? { branchId: record.branchId, categoryId: record.categoryId, phoneCountryCode: record.phoneCountryCode, version: record.version, memberIds: record.members.map((member) => member.userId) } : { branchId: '', categoryId: '', phoneCountryCode: '+962', version: null, memberIds: [] }; }
   options() { return this.admin.intakeOptions(); }
   recipients() { return this.repository.recipients(); }

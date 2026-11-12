@@ -1,4 +1,5 @@
 import { attachmentFileToBase64, validateAttachmentFile } from './attachment-file-policy';
+import type { BookingCarOption, PortalField } from '../../../../packages/contracts/src/portal-form';
 
 export type PortalComplaintAttachmentRequest = {
   fileName: string;
@@ -24,6 +25,7 @@ export type PortalComplaintCreateRequest = {
   vehicleModel: string;
   odometer?: number | null;
   attachments?: PortalComplaintAttachmentRequest[];
+  customFields?: Record<string, string | number | boolean>;
 };
 
 export type PortalFieldError = { field: string; code: string; message: string };
@@ -48,6 +50,9 @@ export type PortalComplaintCreateResponse = {
 };
 export type PortalSubmissionOption = { id: string; nameEn: string; nameAr: string; departmentId?: string | null; branchId?: string | null };
 export type PortalSubmissionOptions = {
+  fields?: PortalField[];
+  formVersion?: number | null;
+  carModels?: BookingCarOption[];
   phoneCountryCode?: string;
   incidentDate?: string;
   branches: PortalSubmissionOption[];

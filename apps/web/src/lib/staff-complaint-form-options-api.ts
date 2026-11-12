@@ -20,6 +20,7 @@ export type StaffUserOption = {
 };
 
 export type ComplaintFormOptions = {
+  carModels?: import('../../../../packages/contracts/src/portal-form').BookingCarOption[];
   branches: ComplaintFormOption[];
   categories: ComplaintFormOption[];
   departments: Array<ComplaintFormOption & { branchId: string | null }>;

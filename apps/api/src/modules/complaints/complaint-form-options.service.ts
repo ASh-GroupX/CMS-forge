@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ComplaintSeverity, RoleCode, ComplaintType } from '@prisma/client';
 import type { StaffPrincipal } from '../../core/auth.guard.js';
 import { PrismaService } from '../../core/http-kernel.js';
+import { PortalIntakeService } from '../portal-intake/portal-intake.service.js';
+import type { BookingCarOption } from '@cms-auto/contracts';
 
 function hasGlobalView(principal: StaffPrincipal): boolean {
   if (principal.roleCode === RoleCode.ADMIN || principal.roleCode === RoleCode.CR_MANAGER || principal.roleCode === RoleCode.CR_OFFICER) return true;
@@ -9,6 +11,7 @@ function hasGlobalView(principal: StaffPrincipal): boolean {
 }
 
 export type ComplaintFormOptions = {
+  carModels?: BookingCarOption[];
   branches: Array<{ id: string; code: string; nameEn: string; nameAr: string }>;
   categories: Array<{ id: string; code: string; nameEn: string; nameAr: string; departmentId: string | null; branchId: string | null }>;
   departments: Array<{ id: string; code: string; nameEn: string; nameAr: string; branchId: string | null }>;
@@ -29,7 +32,7 @@ export type PublicComplaintFormOptions = {
 
 @Injectable()
 export class ComplaintFormOptionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly configuration?: PortalIntakeService) {}
 
   async listPublic(): Promise<PublicComplaintFormOptions> {
     const [branches, departments, categories] = await Promise.all([
@@ -97,6 +100,6 @@ export class ComplaintFormOptionsService {
       branchId: u.branchId,
       roleCode: u.role.code as RoleCode,
     }));
-    return { branches, categories, departments, severities: Object.values(ComplaintSeverity), types: Object.values(ComplaintType), rootCauses, salesAdvisors, users: mappedUsers };
+    return { branches, categories, departments, severities: Object.values(ComplaintSeverity), types: Object.values(ComplaintType), rootCauses, salesAdvisors, users: mappedUsers, carModels: await this.configuration?.catalog() ?? [] };
   }
 }

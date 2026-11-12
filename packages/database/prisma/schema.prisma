@@ -597,6 +597,7 @@ model Vehicle {
 }
 
 model Complaint {
+  portalData Json? @map("portal_data")
   vehicleVinSnapshot String? @map("vehicle_vin_snapshot")
   customerNameSnapshot String? @map("customer_name_snapshot")
   vehicleMakeSnapshot String? @map("vehicle_make_snapshot")
@@ -695,6 +696,14 @@ model PortalIntakeSetting {
   members          PortalIntakeMember[]
 
   @@map("portal_intake_settings")
+}
+
+model PortalIntakeForm {
+  id String @id @default("default")
+  version Int @default(1)
+  fields Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("portal_intake_forms")
 }
 
 model PortalIntakeMember {

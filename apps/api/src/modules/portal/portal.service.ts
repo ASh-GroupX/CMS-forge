@@ -1,4 +1,6 @@
 import { PortalIntakeService } from '../portal-intake/portal-intake.service.js';
+import { defaultPortalFields } from '@cms-auto/contracts';
+import { resolvePortalSubmission } from './portal-submission.js';
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { CommentVisibility, ComplaintSeverity, ComplaintStatus, ComplaintTransitionRequestSource, ComplaintTransitionAction, NotificationChannel, RoleCode } from '@prisma/client';
 import { AuditService } from '../../core/audit.service.js';
@@ -17,6 +19,7 @@ export type PortalComplaintAttachmentInput = { fileName: string; contentType: st
 export type PortalAttachmentDto = { id: string; complaintId: string; fileName: string; contentType: string; sizeBytes: number; scanStatus: string; customerVisible: boolean };
 type SubmitPortalComplaintBase = Omit<CreateInternalComplaintInput, 'actorId' | 'branchId' | 'categoryId' | 'customerNumber' | 'requestSource' | 'severity'>;
 export type SubmitPortalComplaintInput = SubmitPortalComplaintBase & {
+  customFields?: Record<string, unknown>;
   branchId?: string | null;
   categoryId?: string | null;
 
@@ -49,12 +52,14 @@ export class PortalService {
   async publicOptions() {
     const defaults = await this.configuration?.publicDefaults();
     const timeZone = defaults?.branch.timezone ?? 'Asia/Amman';
-    return { branches: [], categories: [], departments: [], severities: [], phoneCountryCode: defaults?.phoneCountryCode ?? '+962', incidentDate: new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()), fieldRules: { required: ['customerName', 'customerPhone', 'vehicleBrand', 'vehicleModel', 'description', 'incidentAt'], optional: ['vehicleVin', 'odometer', 'attachments'] }, acknowledgementStatus: 'DISABLED' as const };
+    const form = this.configuration?.form ? await this.configuration.form() : { version: null, fields: defaultPortalFields };
+    const carModels = this.configuration?.catalog ? await this.configuration.catalog() : [];
+    return { branches: [], categories: [], departments: [], severities: [], phoneCountryCode: defaults?.phoneCountryCode ?? '+962', incidentDate: new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()), fields: form.fields, formVersion: form.version, carModels, fieldRules: { required: form.fields.filter((field) => field.enabled && field.required).map((field) => field.key), optional: form.fields.filter((field) => field.enabled && !field.required).map((field) => field.key) }, acknowledgementStatus: 'DISABLED' as const };
   }
 
   async submitComplaint(input: SubmitPortalComplaintInput): Promise<PortalComplaintSubmissionResult> {
     const { attachments = [], ...submittedInput } = input;
-    const complaintInput = await this.resolveComplaintInput(submittedInput);
+    const complaintInput = await resolvePortalSubmission({ ...submittedInput, attachments }, this.configuration);
     const attachmentInputs = attachments.map((attachment) => this.portalAttachmentInput('__pending__', attachment, complaintInput));
     const service = attachments.length ? requiredAttachmentsService(this.attachmentsService) : null;
     for (const attachment of attachmentInputs) service?.validateUploadMetadata(attachment);
@@ -62,7 +67,6 @@ export class PortalService {
     const complaint = await this.complaintsService.createInternal({
       ...complaintInput,
       actorId: null,
-      customerNumber: null,
       saveAsDraft: false,
       requestSource: ComplaintTransitionRequestSource.CUSTOMER_PORTAL,
     });
@@ -85,30 +89,6 @@ export class PortalService {
       ...complaint,
       ...(uploaded.length ? { attachments: uploaded.map(portalAttachmentDto) } : {}),
       ...(failedCount ? { attachmentWarning: { code: 'PORTAL_ATTACHMENT_UPLOAD_FAILED' as const, message: 'Complaint submitted, but one or more attachments could not be uploaded.', failedCount, uploadedCount: uploaded.length } } : {}),
-    };
-  }
-
-  private async resolveComplaintInput(input: Omit<SubmitPortalComplaintInput, 'attachments'>): Promise<CreateInternalComplaintInput> {
-    if (input.manualTriage !== true) return input as CreateInternalComplaintInput;
-    const defaults = await this.configuration?.defaults();
-    if (!defaults) throw new AppException('PORTAL_OPTIONS_REQUIRED', 'Complaint form options are required before portal submission.', HttpStatus.BAD_REQUEST, [
-      { field: 'manualTriage', code: 'UNAVAILABLE', message: 'Manual triage defaults are not configured.' },
-    ]);
-    const phoneDefaults = await this.configuration?.publicDefaults();
-    const digits = input.customerPhone?.replace(/[\s()\-]/g, '') ?? '';
-    const customerPhone = digits.startsWith('+') ? digits : `${phoneDefaults?.phoneCountryCode ?? '+962'}${digits.replace(/^0+/, '')}`;
-    if (!/^\+[1-9]\d{7,14}$/.test(customerPhone)) throw new AppException('VALIDATION_FAILED', 'Invalid phone', HttpStatus.BAD_REQUEST, [{ field: 'customerPhone', code: 'INVALID', message: 'Invalid phone.' }]);
-    return {
-      ...input,
-      customerPhone,
-      branchId: defaults.branchId,
-      departmentId: defaults.departmentId,
-      categoryId: defaults.categoryId,
-      subject: `${input.vehicleBrand?.trim() ?? ''} ${input.vehicleModel?.trim() ?? ''}`.trim(),
-      vehicleRelated: true,
-      vehicleDataUnavailableReason: input.vehicleVin ? null : 'Customer did not provide VIN at intake',
-      severity: ComplaintSeverity.MEDIUM,
-      manualTriage: true,
     };
   }
 

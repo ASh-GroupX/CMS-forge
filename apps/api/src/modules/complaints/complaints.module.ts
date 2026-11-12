@@ -46,7 +46,8 @@ import { ComplaintSettingsService } from './complaint-settings.service.js';
   controllers: [ComplaintIntakeController, ComplaintsController, ComplaintTemplatesController, ComplaintSettingsController],
   providers: [
     { provide: ComplaintIntakeRepository, inject: [PrismaService], useFactory: (prisma: PrismaService) => new ComplaintIntakeRepository(prisma) },
-    { provide: ComplaintIntakeService, inject: [ComplaintIntakeRepository, AuditService, AssignmentsService, CustomersService, ComplaintFormOptionsService, SlaService, PortalIntakeService], useFactory: (repo: ComplaintIntakeRepository, audit: AuditService, assignments: AssignmentsService, customers: CustomersService, catalog: ComplaintFormOptionsService, sla: SlaService, configuration: PortalIntakeService) => new ComplaintIntakeService(repo, audit, assignments, customers, catalog, sla, configuration) },
+    { provide: ComplaintIntakeService, inject: [ComplaintIntakeRepository, AuditService, AssignmentsService, CustomersService, ComplaintFormOptionsService, SlaService, PortalIntakeService], useFactory: (repo: ComplaintIntakeRepository, audit: AuditService, assignments: AssignmentsService,
+        customers: CustomersService, catalog: ComplaintFormOptionsService, sla: SlaService, configuration: PortalIntakeService) => new ComplaintIntakeService(repo, audit, assignments, customers, catalog, sla, configuration) },
     PrismaService,
     {
       provide: AuditService,
@@ -55,8 +56,8 @@ import { ComplaintSettingsService } from './complaint-settings.service.js';
     },
     {
       provide: ComplaintFormOptionsService,
-      inject: [PrismaService],
-      useFactory: (prisma: PrismaService) => new ComplaintFormOptionsService(prisma),
+      inject: [PrismaService, PortalIntakeService],
+      useFactory: (prisma: PrismaService, configuration: PortalIntakeService) => new ComplaintFormOptionsService(prisma, configuration),
     },
     {
       provide: ComplaintsRepository,
@@ -75,7 +76,7 @@ import { ComplaintSettingsService } from './complaint-settings.service.js';
     },
     {
       provide: ComplaintsService,
-      inject: [ComplaintsRepository, AuditService, NotificationsService, CasesService, SlaService, SurveysService, TasksService, CommunicationGroupsService, AssignmentsService],
+      inject: [ComplaintsRepository, AuditService, NotificationsService, CasesService, SlaService, SurveysService, TasksService, CommunicationGroupsService, AssignmentsService, PortalIntakeService],
       useFactory: (
         repository: ComplaintsRepository,
         audit: AuditService,
@@ -86,7 +87,8 @@ import { ComplaintSettingsService } from './complaint-settings.service.js';
         tasks: TasksService,
         groups: CommunicationGroupsService,
         assignments: AssignmentsService,
-      ) => new ComplaintsService(repository, audit, notifications, cases, sla, surveys, tasks, groups, assignments),
+        configuration: PortalIntakeService,
+      ) => new ComplaintsService(repository, audit, notifications, cases, sla, surveys, tasks, groups, assignments, configuration),
     },
     {
       provide: ComplaintTemplatesService,

@@ -128,6 +128,11 @@ export function VoiceOfCustomerCard({
         )}
       </div>
 
+      {detail.portalAnswers?.length ? <div className="mt-4 rounded-xl border border-line-subtle bg-surface-raised p-4 text-sm">
+        <h3 className="mb-3 font-semibold text-content-strong">{isArabic ? 'معلومات إضافية من العميل' : 'Additional customer information'}</h3>
+        <dl className="grid gap-3 sm:grid-cols-2">{detail.portalAnswers.map((answer) => <div key={answer.key}><dt className="text-content-muted">{isArabic ? answer.labelAr : answer.labelEn}</dt><dd className="mt-1 whitespace-pre-wrap font-medium text-content-strong">{answer.value === null ? '—' : typeof answer.value === 'boolean' ? answer.value ? isArabic ? 'نعم' : 'Yes' : isArabic ? 'لا' : 'No' : String(answer.value)}</dd></div>)}</dl>
+      </div> : null}
+
       {/* Dynamic Template Fields (if template was used) */}
       {detail.templateData && typeof detail.templateData === 'object' && Object.keys(detail.templateData).length > 0 && (
         <div className="mt-4 rounded-xl border border-line-subtle bg-surface-raised p-4 text-xs">

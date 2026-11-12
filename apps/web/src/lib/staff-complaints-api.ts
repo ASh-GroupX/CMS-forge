@@ -61,6 +61,7 @@ export type ComplaintVehicleDetail = { id: string; vin: string; plate: string; m
 
 export type ComplaintDetail = ComplaintQueueItem & {
   submittedVehicle?: { make: string; model: string; vin: string | null } | null;
+  portalAnswers?: Array<{ key: string; labelEn: string; labelAr: string; value: string | number | boolean | null }>;
   categoryId: string;
   categoryName: string;
   categoryNameAr: string;

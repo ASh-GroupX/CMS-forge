@@ -433,7 +433,7 @@ test('portal submission renders English responsive complaint form', async () => 
   assert.match(html, /Car model/);
   assert.match(html, /Vehicle VIN/);
   assert.ok(html.includes(portalSubmissionText.en.rules[0]));
-  assert.match(html, /Files are optional/);
+  assert.match(html, /Add photos, invoices, or PDFs/);
   assert.match(html, /name="attachments"/);
   assert.match(html, /multiple=""/);
   assert.match(html, /accept="\.jpg,\.jpeg,image\/jpeg"/);
@@ -1883,7 +1883,7 @@ test('complaint detail workspace source is privacy-safe and render-only', () => 
   assert.doesNotMatch(combined, /fetch\(|localStorage|sessionStorage|document\.cookie|https?:\/\//);
   assert.doesNotMatch(combined, /[\w.-]+@[\w.-]+/);
   assert.doesNotMatch(combined, /\b\+?\d{10,}\b/);
-  assert.doesNotMatch(combined, /portal|staff PII|provider|storage URL/i);
+  assert.doesNotMatch(combined, /staff PII|provider|storage URL|portalData|originalValues/i);
   assert.doesNotMatch(correctionSource, /branchId|roleCode|actorId|ownerId|workflow|password|otp|token|credential|localStorage|sessionStorage/i);
   assert.match(correctionSource, /expectedUpdatedAt/);
   assert.match(wrapper, /components\/complaint-detail-workspace/);
@@ -3706,10 +3706,10 @@ test('complaint create form uses selected DMS match as source metadata', () => {
   });
 });
 
-test('complaint create form exposes optional make model and year for manual vehicle data', () => {
+test('complaint create form exposes booking make/model selectors and optional year', () => {
   const html = renderToStaticMarkup(React.createElement(ComplaintCreateForm, { locale: 'en' }));
-  assert.match(html, /Vehicle make \(optional\)/);
-  assert.match(html, /Vehicle model \/ type \(optional\)/);
+  assert.match(html, /Vehicle make/);
+  assert.match(html, /Vehicle model \/ type/);
   assert.match(html, /Vehicle year \(optional\)/);
   assert.match(html, /name="vehicleBrand"/);
   assert.match(html, /name="vehicleModel"/);

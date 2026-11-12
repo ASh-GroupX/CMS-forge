@@ -2,12 +2,16 @@ import { Body, Controller, Get, Inject, Put, Req, UseGuards } from '@nestjs/comm
 import { RbacGuard, Roles, SessionAuthGuard, type AuthenticatedRequest } from '../../core/auth.guard.js';
 import { CsrfGuard } from '../../core/csrf.guard.js';
 import { PortalIntakeService, type PortalIntakeSettingsInput } from './portal-intake.service.js';
+import { PortalFormService } from './portal-form.service.js';
 
 @Controller('admin/portal-intake-settings')
 @UseGuards(SessionAuthGuard, RbacGuard)
 @Roles('ADMIN')
 export class PortalIntakeController {
-  constructor(@Inject(PortalIntakeService) private readonly settings: PortalIntakeService) {}
+  constructor(@Inject(PortalIntakeService) private readonly settings: PortalIntakeService, @Inject(PortalFormService) private readonly forms: PortalFormService) {}
+  @Get('fields') fields() { return this.forms.get(); }
+  @Put('fields') @UseGuards(CsrfGuard)
+  saveFields(@Body() body: unknown, @Req() request: AuthenticatedRequest) { return this.forms.save(body, request.principal!.userId); }
 
   @Get()
   get() { return this.settings.get(); }

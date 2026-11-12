@@ -782,6 +782,7 @@ test('workflow transition persistence rejects stale persisted status before hist
   );
   assert.deepEqual(calls, [
     'transaction',
+    { subject: 'cmp_1' },
     {
       updateStatus: {
         complaintId: 'cmp_1',

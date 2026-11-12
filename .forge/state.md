@@ -1,7 +1,7 @@
 # Current State
 
 Date: 2026-11-12
-Status: Complete — non-SMS QR complaint intake deployed
+Status: Complete — QR complaint field configuration and booking vehicle catalog locally verified; release pending
 Risk: High
 
 - Production code revision: 6bd1e74f1494b92b4b1a3e3b7f877a8794b2a359. GitHub run 43173957066 passed validation and VPS deployment. Live health/revision, portal EN/AR, safe defaults and protected routes passed.
@@ -10,4 +10,6 @@ Risk: High
 - Passed: build, typecheck, lint, OpenAPI, portal 24/24, workflow 98/98, assignments 7/7, integrations 54/54, notifications 48/48, settings 3/3, web 231/231, root 78/78 (89.95% line coverage), security, migration sanity, actual isolated PostgreSQL 60 migrations and indexes, visual 96/accessibility 24/performance 5 previews.
 - Real database/HTTP proof covered concurrent claims/configuration, real audit rollback, scoped export/revocation, both redirect outcomes and team notifications. Live development browser covered QR decoding/download, settings, failed submission preservation, submission/reference, five widths EN/AR, claim/correction/read-only/redirect and axe. Separate browser fixture covered conflict preservation/reload. Production public browser EN/AR phone/desktop passed geometry/axe; screenshots inspected. No production test complaint or customer-data pull was made.
 - Independent GPT-6.1 Sol reviews accepted the workflow with proof conditions subsequently recorded, and accepted final setup repair. Preferred named reviewer unavailable. Authenticated production UAT remains operator-only. Admin must select actual defaults/team once and print the generic QR.
-- Preserve user tmp/ and uploads/. Documentation release record follows code deployment; no outstanding implementation task in this scope.
+- New Admin QR complaint fields screen supports enabled/required controls for every built-in field and bilingual custom fields, with VIN initially required. Active booking make/model choices replace free text in public and normal complaint creation. Custom answers remain visible to authorized receiving staff after redirect; customer export exposes only safe current contact details. SMS remains deferred.
+- Passed on the new change: production build, typecheck, lint, OpenAPI, security, portal 29/29, workflow 100/100, web API client 110/110, shell 231/231, localization 13/13, root 78/78 with 89.36% line coverage, migration sanity and isolated PostgreSQL 61-migration application, real database/HTTP intake and form proofs, 14 EN/AR browser viewport/axe checks, visual 96 previews, performance 5 previews. Independent final read-only review: Accept, no release blocker.
+- Preserve user tmp/ and uploads/. Deployment and live revision check remain before release is complete.
