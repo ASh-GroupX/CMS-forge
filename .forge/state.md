@@ -1,7 +1,7 @@
 # Current State
 
 Date: 2026-11-12
-Status: Complete — QR complaint field configuration and booking vehicle catalog locally verified; release pending
+Status: Complete — QR complaint field configuration and booking vehicle catalog deployed
 Risk: High
 
 - Production code revision: 6bd1e74f1494b92b4b1a3e3b7f877a8794b2a359. GitHub run 43173957066 passed validation and VPS deployment. Live health/revision, portal EN/AR, safe defaults and protected routes passed.
@@ -12,4 +12,5 @@ Risk: High
 - Independent GPT-6.1 Sol reviews accepted the workflow with proof conditions subsequently recorded, and accepted final setup repair. Preferred named reviewer unavailable. Authenticated production UAT remains operator-only. Admin must select actual defaults/team once and print the generic QR.
 - New Admin QR complaint fields screen supports enabled/required controls for every built-in field and bilingual custom fields, with VIN initially required. Active booking make/model choices replace free text in public and normal complaint creation. Custom answers remain visible to authorized receiving staff after redirect; customer export exposes only safe current contact details. SMS remains deferred.
 - Passed on the new change: production build, typecheck, lint, OpenAPI, security, portal 29/29, workflow 100/100, web API client 110/110, shell 231/231, localization 13/13, root 78/78 with 89.36% line coverage, migration sanity and isolated PostgreSQL 61-migration application, real database/HTTP intake and form proofs, 14 EN/AR browser viewport/axe checks, visual 96 previews, performance 5 previews. Independent final read-only review: Accept, no release blocker.
-- Preserve user tmp/ and uploads/. Deployment and live revision check remain before release is complete.
+- Production code revision: e23804d4847035df109e2605a85c544f974a70d0 on `production` and `waleed`. GitHub run 43222510675 passed validation and VPS deployment. Live health returned 200 with database/Redis configured and matching revision; safe portal options showed VIN required and 127 booking car entries; EN/AR public portal passed 390/1440 browser geometry and axe. Admin field screen redirects unsigned users and Admin field API returns 401 without a session. No production complaint was submitted or customer data exported.
+- Operator can now configure the QR fields in Admin Hub. Production currently has the default field set; Admin must select the actual intake defaults/team as before. Preserve user tmp/ and uploads/.
